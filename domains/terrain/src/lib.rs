@@ -70,7 +70,7 @@ pub use strata::{
     geothermal_gradient, temperature_at_depth, unconformity,
 };
 pub use water::{RIVER_MIN_DRAINAGE, RIVER_REACH, WaterKind, river_proximity};
-pub use water_table::{is_phreatic, water_table_depth_m};
+pub use water_table::{ARABIKA_POROSITY, earth_table_depth_m, is_phreatic, water_table_depth_m};
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Lexicalization, Manifest,

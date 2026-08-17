@@ -94,16 +94,24 @@
 //!
 //! ## What each constant does and does not control
 //!
-//! **Neither metre scale decides H3 — their ratio does**, and that ratio is
-//! fixed by the par datum rather than chosen.
-//! `the_par_ratio_and_not_the_magnitudes_decides_who_drowns` holds it. The
-//! first landing made the stronger claim that its single scale could not move
-//! H3 at all; with two scales that claim is no longer available, and it is
-//! withdrawn here rather than left standing.
+//! **Neither metre MAGNITUDE decides H3 — their ratio does**, and
+//! `the_par_ratio_and_not_the_magnitudes_decides_who_drowns` holds that.
+//!
+//! **H3 IS NOT STRUCTURALLY PROTECTED, and this paragraph exists so nobody
+//! reads the one above as saying it is.** The drowned set is
+//! `T(p)·R(h) ≤ par·W(q)` with `par = RECHARGE_RISE_M / DRAWDOWN_SCALE_M`, and
+//! `par` is *itself* a function of [`RELIEF_HALF_M`], because the par datum
+//! solves it as `relief(mean land elevation) / 0.5`. The §4.2.1 correction moved
+//! `par` from 1.0 to 0.1658 — a factor of six — and reshaped `R(h)` at the same
+//! time. **H3 was fully exposed to that change and survived it EMPIRICALLY, not
+//! by construction** (31.9/43.6/41.5% against 29.9/45.5/42.5% before). A future
+//! campaign moving any shape constant must re-measure H3; only a change to the
+//! two magnitudes *in proportion* is free, and only
+//! [`UNDERWORLD_DRYNESS_GAIN`] is that by construction.
 //!
 //! [`DRAWDOWN_SCALE_M`] sets the absolute depth of every table, and therefore
 //! which delve rungs can ever be dry. [`RELIEF_SOFT_M`], which looks like a
-//! pure smoothing detail, moved the drowned share by 10–20 points across a 20×
+//! pure smoothing detail, moves the drowned share by ~15 points across a 20×
 //! sweep, because a sixth of all cave columns sit at *exactly* sea level; its
 //! doc carries that sweep. Both were claims this module made loosely in an
 //! earlier draft and now states from measurement.
@@ -155,8 +163,18 @@ const ARABIKA_VADOSE_M: f64 = 2200.0;
 /// `underworld_water_table_probe` measures at 0.819 over the three seeds. Using
 /// a literal Earth porosity would calibrate against a rock the model cannot
 /// produce.
-#[cfg(test)]
-const ARABIKA_POROSITY: f64 = 0.819;
+///
+/// **`pub`, and not `#[cfg(test)]` like the other four, because it is the one
+/// datum coordinate read off the MODEL rather than off the world.** The other
+/// four are facts about Earth and cannot go stale; this one is a frozen
+/// measurement of a population, and `crate::lithology`'s induration/porosity
+/// coupling is exactly the kind of thing a later campaign moves. If the ceiling
+/// drifts, [`DRAWDOWN_SCALE_M`] is silently calibrated against a rock the model
+/// no longer makes — a decalibration with no symptom. So the probe pins it:
+/// `the_calibration_coordinate_still_matches_the_model` fails if the measured
+/// ceiling has moved away from this value, and says to re-solve.
+/// type-audit: bare-ok(ratio)
+pub const ARABIKA_POROSITY: f64 = 0.819;
 
 /// The drainage coordinate the vadose datum is instantiated at. A massif's
 /// entrance plateau is a *recharge* area by definition — water enters there and
@@ -234,6 +252,18 @@ const TRANSMISSIVITY_SPAN: f64 = 100.0;
 /// proportional across all real relief and saturates only at the top of the
 /// world.
 ///
+/// **Which half is datum and which is choice** (spec §4.2.1 clause 3 asks for
+/// exactly this split, and it applies here as much as to the gain). The
+/// *requirement* is the datum: karst says the term must stay near-proportional
+/// across the range deep vadose caves occupy, and the test below turns that
+/// into a floor. The *value* is a choice within the range that requirement
+/// admits — the floor of 1.75 is met by **any half-point at or above ~6900 m**,
+/// so 8848 is not uniquely determined by the physics. It is chosen as the
+/// smallest principled stopping point above that floor: the top of the
+/// terrestrial domain, which is a scale rather than a coincidence, and picking
+/// the domain's edge avoids fitting a number inside an admissible interval.
+/// Anything from ~6900 m up would satisfy the same argument.
+///
 /// **This was 800 m, and 800 m was a category error** (spec §4.2.1, clause 1).
 /// That figure is Earth's *mean land elevation* — a hypsometric datum, a
 /// statement about where land sits — and it was used as the half-point of a
@@ -251,8 +281,16 @@ const TRANSMISSIVITY_SPAN: f64 = 100.0;
 /// **The test the value is chosen against, stated so it can be re-run:** across
 /// the karst range a doubling of height above base level must still roughly
 /// double the vadose thickness. At `h = 1150 → 2300` this value gives a ratio
-/// of **1.79** against the proportional ideal of 2.0; at 800 m it gave 1.32.
-/// `the_relief_term_stays_proportional_across_the_karst_range` holds it.
+/// of **1.7937** against the proportional ideal of 2.0; at 800 m it gave
+/// **1.2581**. `the_relief_term_stays_proportional_across_the_karst_range`
+/// holds it.
+///
+/// (An earlier draft of this line said 1.32 for the retired value. That was an
+/// estimate presented as a measurement — 1.32 corresponds to a half-point near
+/// 1082 m — and it is corrected here rather than quietly overwritten, because
+/// it is the same defect class this module has now produced three times. The
+/// conclusion is untouched: 1.2581 fails the floor just as 1.32 would.
+/// `c9dfee34`'s commit message carries the wrong figure and stays as history.)
 const RELIEF_HALF_M: f64 = 8848.0;
 
 /// The scale (m) over which the relief term is smoothed through sea level.
@@ -272,18 +310,31 @@ const RELIEF_HALF_M: f64 = 8848.0;
 ///
 /// ```text
 /// RELIEF_SOFT_M     seed 42   seed 7   seed 1234
-///        10 m        39.7%    54.3%     49.1%
-///        50 m        29.9%    45.5%     42.5%
-///       200 m        19.6%    36.5%     32.9%
+///        10 m        38.6%    49.9%     46.4%
+///        50 m        31.9%    43.6%     41.5%   <- shipped
+///       200 m        23.8%    35.0%     34.6%
 /// ```
 ///
-/// H3 held across that whole span, which is the claim worth making; the
+/// H3 holds across that whole span, which is the claim worth making; the
 /// *value* of the statistic is not robust to it, which is the claim that would
 /// have been wrong. 50 m is kept — it is small against [`RELIEF_HALF_M`], so it
 /// perturbs the term only near sea level — and the sweep is recorded rather
-/// than used to choose. **The sweep predates the §4.2.1 recalibration**; the
-/// shares it lists are the pre-correction ones and it is kept as the record of
-/// why this constant is not treated as negligible, not as a current reading.
+/// than used to choose.
+///
+/// **Re-run after the §4.2.1 recalibration, and it had to be.** The correction
+/// changed `relief(0)` by roughly 10× (0.0415 → 0.0039), and cells at exactly
+/// sea level are this constant's entire population, so the earlier sweep was
+/// measuring a term that no longer exists. Its rows were 39.7/54.3/49.1,
+/// 29.9/45.5/42.5 and 19.6/36.5/32.9 — close enough to the current ones that
+/// leaving them would have looked harmless, which is the reason to re-measure
+/// rather than eyeball. The sensitivity is unchanged in kind: ~15 points across
+/// a 20× sweep.
+///
+/// Unlike [`UNDERWORLD_DRYNESS_GAIN`]'s table, this one is **not regenerable
+/// from the tree** — it is produced by editing this constant three times and
+/// re-running `the_water_table_is_not_degenerate`, because the smoothing scale
+/// sits inside a private helper and exposing it would widen the API for a
+/// sweep. Stated so no reader mistakes it for a probe output.
 const RELIEF_SOFT_M: f64 = 50.0;
 
 /// Flow accumulation at which the recharge term reaches half its maximum.
@@ -434,7 +485,20 @@ pub fn water_table_depth_m(drainage: f64, porosity: f64, height_asl_m: f64) -> f
 /// against the shipped function, so a later campaign can move the gain without
 /// silently invalidating the physics, or retune the physics without having to
 /// disentangle it from the gain first.
-fn earth_table_depth_m(drainage: f64, porosity: f64, height_asl_m: f64) -> f64 {
+///
+/// **`pub` so the gain sweep is reproducible from the tree.** With this exposed,
+/// any caller can evaluate the model at an arbitrary gain as
+/// `gain * earth_table_depth_m(..)` — which is the shipped function's definition
+/// — so `underworld_water_table_probe`'s `how_far_does_the_dryness_gain_reach`
+/// regenerates [`UNDERWORLD_DRYNESS_GAIN`]'s six-row table in one run instead of
+/// requiring six hand-edits of a private constant and six transcriptions. That
+/// table is the whole evidence for shipping at Earth, and a record that cannot
+/// tell a real row from a typo is not evidence — this module has already
+/// produced one sweep drafted from estimate and one probe edit silently
+/// defeated by a formatter.
+///
+/// type-audit: bare-ok(count: drainage), bare-ok(ratio: porosity), bare-ok(diagnostic-value: height_asl_m), bare-ok(diagnostic-value: return)
+pub fn earth_table_depth_m(drainage: f64, porosity: f64, height_asl_m: f64) -> f64 {
     let drawdown = DRAWDOWN_SCALE_M * transmissivity(porosity) * relief(height_asl_m);
     let recharge = RECHARGE_RISE_M * wetness(drainage);
     (drawdown - recharge).max(0.0)
@@ -652,7 +716,7 @@ mod tests {
     /// relief must still roughly double the term.
     ///
     /// The floor is 1.75 against a proportional ideal of 2.0. The retired 800 m
-    /// half-point scored 1.32 and would fail this.
+    /// half-point scores **1.2581** and fails it.
     #[test]
     fn the_relief_term_stays_proportional_across_the_karst_range() {
         let ratio = relief(ARABIKA_RELIEF_M) / relief(ARABIKA_RELIEF_M / 2.0);

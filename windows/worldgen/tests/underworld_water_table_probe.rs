@@ -143,7 +143,8 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_terrain::{
-    DelveRung, TerrainPins, delta_t_range_of, is_phreatic, rungs, water_table_depth_m,
+    ARABIKA_POROSITY, DelveRung, TerrainPins, delta_t_range_of, earth_table_depth_m, is_phreatic,
+    rungs, water_table_depth_m,
 };
 use hornvale_worldgen::chamber::{ChamberOrigin, is_sump};
 use hornvale_worldgen::{
@@ -432,6 +433,176 @@ fn the_water_table_is_not_degenerate() {
             100.0 * drowned_share,
             100.0 * H3_MIN_DROWNED,
             100.0 * H3_MAX_DROWNED
+        );
+    }
+}
+
+/// The gains [`hornvale_terrain`]'s `UNDERWORLD_DRYNESS_GAIN` doc tabulates.
+/// `1.0` is the shipped value and doubles as this arm's positive control: its
+/// row must reproduce `the_water_table_is_not_degenerate`'s numbers exactly,
+/// because at gain 1 the swept expression IS the shipped function.
+const SWEPT_GAINS: [f64; 6] = [1.0, 2.0, 3.0, 4.0, 8.0, 16.0];
+
+/// How far the calibration coordinate may drift from the model's measured
+/// porosity ceiling before the vadose datum needs re-solving. Wide enough that
+/// ordinary noise in the lithology pipeline does not cry wolf, tight enough
+/// that a real change to the induration/porosity coupling — which is what would
+/// silently decalibrate `DRAWDOWN_SCALE_M` — cannot pass.
+const POROSITY_CEILING_TOLERANCE: f64 = 0.03;
+
+/// claim: readout(off-gate, heavy:, prints the sweep, asserts only that the
+/// gain cannot move H3) — regenerates the six-row table in
+/// `hornvale_terrain::water_table`'s `UNDERWORLD_DRYNESS_GAIN` doc, which is the
+/// entire evidence for shipping the gain at Earth.
+///
+/// **This arm exists because that table was not reproducible from the tree.**
+/// It was produced by hand-editing a private constant six times and
+/// transcribing the output, in a task that had already caught one sweep drafted
+/// from estimate and one probe edit silently defeated by `cargo fmt`. The record
+/// could not distinguish a real row from a typo. It can now: the sweep is one
+/// run, and `earth_table_depth_m` is `pub` for exactly this.
+///
+/// The swept quantity is `gain * earth_table_depth_m(..)`, which is the shipped
+/// `water_table_depth_m`'s definition, so the gain-1 row is a positive control
+/// rather than a separate computation — it is asserted against the shipped
+/// function cell by cell.
+#[test]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+fn how_far_does_the_dryness_gain_reach() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    println!("gain    Deeps            Underdeep      Sunless        H3");
+    // [gain][seed] for each reported statistic.
+    let mut deeps = vec![vec![]; SWEPT_GAINS.len()];
+    let mut underdeep = vec![vec![]; SWEPT_GAINS.len()];
+    let mut sunless = vec![vec![]; SWEPT_GAINS.len()];
+    let mut h3 = vec![vec![]; SWEPT_GAINS.len()];
+
+    for seed_value in SEEDS {
+        let seed = hornvale_kernel::Seed(seed_value);
+        let artifacts = build_world_to_with_artifacts(
+            seed,
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            &wc,
+            BuildDepth::Terrain,
+        )
+        .expect("probe seed builds");
+        let terrain = artifacts
+            .terrain
+            .expect("terrain is Some at BuildDepth::Terrain");
+        let geo = terrain.geosphere();
+        let sea = terrain.sea_level().get();
+
+        // One pass over the world, then every gain evaluated off the same
+        // cached columns — the world build is the expensive part and it must
+        // not be paid six times.
+        // (drainage, porosity, height_asl_m, metres per kelvin, cave reach).
+        // Gathered in ONE pass so a column and its reach cannot come apart —
+        // an earlier draft collected the reaches in a second traversal and
+        // guarded the pairing with a length assert, which is a weaker thing
+        // than not having two traversals.
+        let mut columns: Vec<(f64, f64, f64, f64, f64)> = Vec::new();
+        let mut ceiling = f64::MIN;
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                continue;
+            }
+            let Some(cave) = terrain.cave_at(cell) else {
+                continue;
+            };
+            let porosity = terrain.material_at(cell).porosity;
+            ceiling = ceiling.max(porosity);
+            columns.push((
+                terrain.drainage_at(cell),
+                porosity,
+                terrain.elevation_at(cell).get() - sea,
+                1000.0 / terrain.geothermal_gradient_at(cell).get(),
+                cave.depth_reach_m,
+            ));
+        }
+
+        for (gi, gain) in SWEPT_GAINS.iter().enumerate() {
+            let mut drowned = 0usize;
+            // Rung floors in ΔT: Deeps, Underdeep, Sunless.
+            let mut dry = [0usize; 3];
+            let mut reached = [0usize; 3];
+            for &(q, p, h, m_per_k, reach) in columns.iter() {
+                let table = gain * earth_table_depth_m(q, p, h);
+                if *gain == 1.0 {
+                    assert_eq!(
+                        table,
+                        water_table_depth_m(q, p, h),
+                        "the gain-1 control diverged from the shipped function"
+                    );
+                }
+                if table == 0.0 {
+                    drowned += 1;
+                }
+                for (ri, rung) in [DelveRung::Deeps, DelveRung::Underdeep, DelveRung::Sunless]
+                    .iter()
+                    .enumerate()
+                {
+                    let top_m = delta_t_range_of(*rung).0 * m_per_k;
+                    if top_m > reach {
+                        continue;
+                    }
+                    reached[ri] += 1;
+                    if !is_phreatic(top_m, table) {
+                        dry[ri] += 1;
+                    }
+                }
+            }
+            let share = |a: usize, b: usize| {
+                if b == 0 {
+                    f64::NAN
+                } else {
+                    100.0 * a as f64 / b as f64
+                }
+            };
+            deeps[gi].push(share(dry[0], reached[0]));
+            underdeep[gi].push(share(dry[1], reached[1]));
+            sunless[gi].push(share(dry[2], reached[2]));
+            h3[gi].push(100.0 * drowned as f64 / columns.len() as f64);
+        }
+
+        // Item 5: the one calibration coordinate read off the MODEL rather than
+        // off Earth. If the porosity ceiling has moved, the vadose datum is
+        // being instantiated at a rock this model no longer produces and
+        // DRAWDOWN_SCALE_M is quietly decalibrated.
+        assert!(
+            (ceiling - ARABIKA_POROSITY).abs() <= POROSITY_CEILING_TOLERANCE,
+            "seed {seed_value}: the model's porosity ceiling is {ceiling:.3}, but the vadose \
+             datum is instantiated at ARABIKA_POROSITY = {ARABIKA_POROSITY}. Re-solve \
+             DRAWDOWN_SCALE_M against the new ceiling."
+        );
+    }
+
+    let row = |v: &Vec<f64>| {
+        v.iter()
+            .map(|x| format!("{x:.1}"))
+            .collect::<Vec<_>>()
+            .join("/")
+    };
+    for (gi, gain) in SWEPT_GAINS.iter().enumerate() {
+        println!(
+            "{gain:>4.1}    {:<16} {:<14} {:<14} {}",
+            row(&deeps[gi]),
+            row(&underdeep[gi]),
+            row(&sunless[gi]),
+            row(&h3[gi])
+        );
+    }
+
+    // The structural claim the gain's doc rests on, checked on live worlds
+    // rather than only in the algebra: scaling a floored quantity cannot move
+    // anyone into or out of the drowned set.
+    for gi in 1..SWEPT_GAINS.len() {
+        assert_eq!(
+            h3[gi], h3[0],
+            "the gain moved H3 between {} and {}",
+            SWEPT_GAINS[0], SWEPT_GAINS[gi]
         );
     }
 }

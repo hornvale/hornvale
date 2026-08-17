@@ -474,12 +474,22 @@ pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> Ch
 /// about the maker.
 ///
 /// **This ships the rule; the producer is spec §4.6's capacity task**, as an
-/// acceptance criterion rather than a note. Nothing in the shipped path emits
-/// `Made` yet, so *today* this function is `is_phreatic` with an unreachable
-/// arm — and that is precisely the shape (`ChamberOrigin` itself,
-/// `EnvironmentNiche`, `temperature_at_depth`) this campaign's §3.9 finding is
-/// about. It is written down here so the next reader sees a deadline rather
-/// than a fourth dangling seam.
+/// acceptance criterion rather than a note.
+///
+/// **The full disclosure, because half of it is easy to miss.** Two things are
+/// absent, not one. (a) Nothing in the shipped path emits `Made`, so the
+/// `Made` arm is unreachable today. (b) **Nothing in the shipped path calls
+/// this function at all** — the only callers are this module's tests and
+/// `underworld_water_table_probe`. So `is_sump` is not "a live rule with one
+/// dormant branch"; it is a rule with no production caller, which is a fuller
+/// version of exactly the shape (`ChamberOrigin` itself, `EnvironmentNiche`,
+/// `temperature_at_depth`) this campaign's §3.9 finding counts three times.
+/// Writing only (a) down would have understated it in the campaign whose
+/// headline finding is dangling seams.
+///
+/// Both close together: the capacity task gains the writer, and the passage
+/// graph gains the caller when it turns a sump into a missing edge. Until then
+/// this is a stated deferral with a named deadline, not an oversight.
 ///
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(flag: return)
 pub fn is_sump(origin: ChamberOrigin, depth_m: f64, water_table_m: f64) -> bool {
