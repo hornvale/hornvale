@@ -83,11 +83,18 @@ const LITHOSTATIC_MPA_PER_M: f64 = 0.026_5;
 /// Absolute ceiling (m) on any cave's depth budget — a rail, not a target.
 /// Spec §4.0 states the window the delve ladder covers as 0–3 km, and Earth's
 /// deepest known cave system (Veryovkina, 2212 m) sits inside it. The closure
-/// term alone would reach 3774 m at `induration = 1`; no rock in the measured
-/// worlds gets there (the observed maximum, 0.93, gives 2732 m), so this clamp
-/// is a guarantee about the function's range rather than something that shapes
-/// the distribution.
-const CAVE_REACH_CEILING_M: f64 = 3000.0;
+/// term alone would reach 3774 m at `induration = 1`, so the clamp is real —
+/// but it binds on **37 of 48,316 caves (0.077%) over 30 worlds**
+/// (`hollow_readout`'s `at-ceiling` figure), which makes it a guarantee about
+/// the function's range rather than something that shapes the distribution.
+/// The three probe seeds alone showed a maximum of 2732 m and no binding at
+/// all; the 30-world figure is the one to quote.
+///
+/// **Public because it is the function's declared range**, and a consumer that
+/// wants to partition the budget must read the range from here rather than
+/// duplicate the literal — `hollow_readout`'s restated H2 bins against it.
+/// type-audit: bare-ok(diagnostic-value)
+pub const CAVE_REACH_CEILING_M: f64 = 3000.0;
 
 /// Ceiling (m) on a lava tube's depth below the surface. A tube is a *primary*
 /// void — the drained interior of a single flow unit, and flow units are metres

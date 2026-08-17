@@ -59,6 +59,42 @@ const PROB_BUCKETS: [(f64, f64); 20] = [
     (0.95, 1.00),
 ];
 
+/// How many classes the restated H2 partitions the depth budget into.
+///
+/// **Five, deliberately** — the same cardinality as the five `BandKind` rungs
+/// the original H2 counted, so the restatement changes the *classifier* and
+/// nothing else. A finer partition would make "at least 3 occupied" easier to
+/// satisfy, which would be a widening; this is not one.
+const REACH_BINS: usize = 5;
+
+/// Which of the [`REACH_BINS`] equal-width classes a depth budget falls in.
+///
+/// The partition is over `[0, CAVE_REACH_CEILING_M]` — the range
+/// `cave_depth_reach_m` itself declares and clamps to — read from the terrain
+/// crate rather than duplicated here, so the classifier cannot drift from the
+/// quantity it classifies. A reach exactly at the ceiling lands in the last
+/// bin.
+fn reach_bin(reach_m: f64) -> usize {
+    let width = hornvale_terrain::CAVE_REACH_CEILING_M / REACH_BINS as f64;
+    ((reach_m / width) as usize).min(REACH_BINS - 1)
+}
+
+/// How many of `bins` are occupied, and the modal bin's share of the total.
+/// The two statistics the restated H2 asserts on — extracted so the criterion's
+/// arithmetic can be exercised against a synthetic distribution without
+/// building thirty worlds (see
+/// `the_restated_h2_rejects_a_collapsed_and_a_two_valued_depth`).
+fn variety_of(bins: &[usize; REACH_BINS]) -> (usize, f64) {
+    let total: usize = bins.iter().sum();
+    let occupied = bins.iter().filter(|&&c| c > 0).count();
+    let modal = if total == 0 {
+        0.0
+    } else {
+        *bins.iter().max().expect("REACH_BINS is non-empty") as f64 / total as f64
+    };
+    (occupied, modal)
+}
+
 /// Everything the campaign measures, accumulated over all seeds.
 #[derive(Default)]
 struct Readout {
@@ -80,8 +116,16 @@ struct Readout {
     /// about worlds, not about a share of a pooled total.
     kind_worlds: [usize; 3],
     /// Cave cells by `deepest_band`, in `BandKind` declaration order
-    /// (Regolith, Cover, Basement, Roots, Underneath).
+    /// (Regolith, Cover, Basement, Roots, Underneath). REPORTED, and no
+    /// longer asserted on — see H2's disclosure in
+    /// `cave_substrate_meets_preregistered_criteria`.
     bands: [usize; 5],
+    /// Cave cells by [`reach_bin`] — the restated H2's classifier. Five equal
+    /// bins over the depth budget's own declared range.
+    reach_bins: [usize; REACH_BINS],
+    /// Every cave's `depth_reach_m`, for the distributional readout H2's
+    /// restatement rests on. Unsorted until `report` sorts a copy.
+    reaches: Vec<f64>,
     /// Cave cells with at least one caved neighbour.
     clustered: usize,
     /// Cave cells with no caved neighbour.
@@ -197,6 +241,8 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
                 BandKind::Roots => 3,
                 BandKind::Underneath => 4,
             }] += 1;
+            out.reach_bins[reach_bin(cave.depth_reach_m)] += 1;
+            out.reaches.push(cave.depth_reach_m);
         }
         match bucket {
             Some(b) => {
@@ -307,6 +353,53 @@ fn report(r: &Readout) {
             }
         );
     }
+
+    // The depth coordinate itself (The Underworld, spec §4.0) — the quantity
+    // the restated H2 asserts on, and the independent evidence that the
+    // property H2 protects is intact whatever the band histogram above says.
+    let mut reaches = r.reaches.clone();
+    reaches.sort_by(f64::total_cmp);
+    let rpct = |q: f64| -> f64 {
+        if reaches.is_empty() {
+            return f64::NAN;
+        }
+        reaches[((reaches.len() - 1) as f64 * q) as usize]
+    };
+    let mut distinct: Vec<f64> = reaches.clone();
+    distinct.dedup_by(|a, b| a == b);
+    // How often the ceiling actually binds. Reported because a clamp that
+    // binds often is shaping the distribution rather than merely bounding it,
+    // and `CAVE_REACH_CEILING_M`'s own doc claims the latter.
+    let at_ceiling = reaches
+        .iter()
+        .filter(|r| **r >= hornvale_terrain::CAVE_REACH_CEILING_M)
+        .count();
+    println!(
+        "depth reach m: n={} distinct={} p05={:.1} p25={:.1} p50={:.1} p75={:.1} p95={:.1} max={:.1} at-ceiling={at_ceiling}",
+        reaches.len(),
+        distinct.len(),
+        rpct(0.05),
+        rpct(0.25),
+        rpct(0.50),
+        rpct(0.75),
+        rpct(0.95),
+        rpct(1.0)
+    );
+    let (occupied, modal) = variety_of(&r.reach_bins);
+    let width = hornvale_terrain::CAVE_REACH_CEILING_M / REACH_BINS as f64;
+    for (i, &count) in r.reach_bins.iter().enumerate() {
+        println!(
+            "reach bin [{:.0}, {:.0}) m: {count} ({:.4}% of caves)",
+            i as f64 * width,
+            (i + 1) as f64 * width,
+            if r.caves == 0 {
+                0.0
+            } else {
+                100.0 * count as f64 / r.caves as f64
+            }
+        );
+    }
+    println!("depth variety: {occupied}/{REACH_BINS} bins occupied, modal {modal:.4}");
 
     let placed = r.clustered + r.solitary;
     println!(
@@ -426,14 +519,64 @@ fn cave_substrate_meets_preregistered_criteria() {
         );
     }
 
-    // H2 — at least 3 distinct bands occur, and the mode is under 90%.
-    let distinct = r.bands.iter().filter(|&&c| c > 0).count();
+    // H2 — the depth coordinate must not collapse. RESTATED by The Underworld
+    // (spec §4.0) under decision 0138, which permits restatement only when the
+    // property is independently verified intact, the estimator's defect is
+    // DEMONSTRATED rather than asserted, and the restated criterion is
+    // re-proved against the defect the original existed to catch. All three
+    // are discharged; this comment is the disclosure 0138 requires.
+    //
+    // WHAT THE ORIGINAL SAID. "At least 3 distinct `BandKind`s occur among
+    // caves' `deepest_band`, and the modal band holds under 90%." Its property
+    // is The Hollow's spec §2.2 defect: `depth_reach_bands` was arithmetically
+    // incapable of returning anything but 2, so "every cave in every world sat
+    // at band 2" — a depth coordinate collapsed to one value.
+    //
+    // WHY THE ESTIMATOR WAS INVALID. `deepest_band` was not a measurement of
+    // the world; it was the return value of a three-armed match on
+    // `(kind, proneness >= 0.5, column.unconformity)`. Its range over its
+    // ENTIRE input domain is exactly {Cover, Basement, Roots} — three values,
+    // by enumeration of the arms, with no reference to any world. So "at least
+    // 3 distinct bands" was satisfied by the generator's arity alone, and
+    // would have passed over a world whose every cave had an identical depth.
+    // A criterion that a constant-depth world satisfies cannot be testing
+    // whether depth collapsed. This is demonstrated, not argued, by
+    // `the_retired_h2_estimator_is_satisfied_by_its_own_generator` below, which
+    // holds the column fixed so the world contributes nothing.
+    //
+    // The band histogram then went 2-valued not because depth collapsed but
+    // because depth became REAL: a budget in metres capped at 3 km cannot reach
+    // `Roots` (~14 km) or `Underneath` (~28 km), and `depth_to_basement_m` is 0
+    // over most land so `Basement`'s top is 0 m and absorbs nearly everything.
+    // The band lookup is now archival — which rungs a void penetrates — and
+    // spec §4.0 states in as many words that it is no longer the depth
+    // coordinate. Asserting depth variety on it is a category error.
+    //
+    // WHAT THE RESTATEMENT MEASURES. The same two statistics, with the same two
+    // thresholds (3 and 0.90, both untouched), over the same number of classes
+    // (5, see REACH_BINS), applied to the depth coordinate itself: five
+    // equal-width bins over `cave_depth_reach_m`'s own declared range. Only the
+    // classifier changed. It cannot be satisfied by the generator's arity the
+    // way the original was, because `cave_depth_reach_m` is a continuous
+    // function with no finite range of outputs.
+    //
+    // RESOLUTION, and where it is blind (0138's second consequence): with five
+    // 600 m bins this resolves a collapse of the budget onto fewer than three
+    // 600 m-wide classes. A distribution spread across three bins but degenerate
+    // *within* them would pass; the honest way to sharpen that is finer bins
+    // against more worlds, not a different threshold.
+    let (occupied, modal) = variety_of(&r.reach_bins);
     assert!(
-        distinct >= 3,
-        "H2: only {distinct} distinct depth bands occur"
+        occupied >= 3,
+        "H2: the depth budget occupies only {occupied} of {REACH_BINS} classes \
+         ({:?}) — the depth coordinate has collapsed",
+        r.reach_bins
     );
-    let modal = *r.bands.iter().max().expect("five bands") as f64 / r.caves as f64;
-    assert!(modal < 0.90, "H2: the modal band holds {modal:.4} of caves");
+    assert!(
+        modal < 0.90,
+        "H2: the modal depth class holds {modal:.4} of caves ({:?})",
+        r.reach_bins
+    );
 
     // H3 — prevalence off the floor, with an absurd-high ceiling.
     assert_eq!(
@@ -621,5 +764,152 @@ fn cave_substrate_meets_preregistered_criteria() {
     assert!(
         clustered >= 0.90,
         "H5: clustering fell to {clustered:.4}, under the 0.90 guard"
+    );
+}
+
+/// **Decision 0138 clause 2 for H2's restatement: the estimator's defect,
+/// demonstrated rather than asserted, and not inferred from the failure.**
+///
+/// The retired `features::cave_depth` (verbatim below, from `1e92c152`) is
+/// reproduced here as a fixture, not called — it no longer exists. Its range
+/// over its *entire* input domain is enumerated: three cave kinds x the
+/// `proneness >= 0.5` predicate x the `unconformity` flag is eight cases, and
+/// that is every distinguishable input the function had.
+///
+/// The column is held FIXED, so the world contributes nothing. The retired
+/// estimator still yields three distinct bands. Therefore the original H2's
+/// "at least 3 distinct bands" was satisfied by the generator's arity alone —
+/// it would have passed over a world in which every single cave had an
+/// identical depth, which is exactly the defect H2 existed to catch.
+///
+/// This is a property of a function, provable without building a world, so it
+/// is independent of the failure that occasioned the restatement.
+#[test]
+fn the_retired_h2_estimator_is_satisfied_by_its_own_generator() {
+    /// Verbatim body of the retired `hornvale_terrain::features::cave_depth`
+    /// at `1e92c152`, before The Underworld cut `MAP-cave-depth-weld`. Kept
+    /// here only as the subject of this demonstration.
+    fn retired_cave_depth(kind: CaveKind, unconformity: bool, proneness: f64) -> BandKind {
+        const DEEP_PROCESS_PRONENESS: f64 = 0.5;
+        let strong = proneness >= DEEP_PROCESS_PRONENESS;
+        match kind {
+            CaveKind::Karst => {
+                if strong || unconformity {
+                    BandKind::Basement
+                } else {
+                    BandKind::Cover
+                }
+            }
+            CaveKind::LavaTube => BandKind::Cover,
+            CaveKind::Fracture => {
+                if strong {
+                    BandKind::Roots
+                } else {
+                    BandKind::Basement
+                }
+            }
+        }
+    }
+
+    /// `BandKind` is not `Ord`, so name it to collect a set.
+    fn name_of(band: BandKind) -> &'static str {
+        match band {
+            BandKind::Regolith => "Regolith",
+            BandKind::Cover => "Cover",
+            BandKind::Basement => "Basement",
+            BandKind::Roots => "Roots",
+            BandKind::Underneath => "Underneath",
+        }
+    }
+
+    // The whole input domain. `proneness` enters only through one predicate,
+    // so two values on either side of it exhaust its influence; `unconformity`
+    // is a bool; `kind` has three variants. Eight cases is total.
+    let mut range: BTreeSet<&'static str> = BTreeSet::new();
+    for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+        for unconformity in [false, true] {
+            for proneness in [0.0, 1.0] {
+                range.insert(name_of(retired_cave_depth(kind, unconformity, proneness)));
+            }
+        }
+    }
+
+    assert_eq!(
+        range.len(),
+        3,
+        "the retired estimator's total range was {range:?}"
+    );
+    assert!(
+        range.len() >= 3,
+        "…and 3 is exactly what the original H2 demanded, so the criterion was \
+         satisfied by the match statement's arity and never by the world"
+    );
+
+    // The other half of the same point: the count above is reached without any
+    // world at all, so a world of perfectly uniform depth produces it too. A
+    // criterion a constant-depth world satisfies is not a test of collapse.
+    let uniform_world_bands: BTreeSet<&'static str> =
+        [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture]
+            .into_iter()
+            .map(|k| name_of(retired_cave_depth(k, false, 1.0)))
+            .collect();
+    assert_eq!(
+        uniform_world_bands.len(),
+        3,
+        "three kinds at one identical depth still spell three bands: {uniform_world_bands:?}"
+    );
+}
+
+/// **Decision 0138 clause 3 for H2's restatement: the restated criterion
+/// re-proved against the defect the original existed to catch.**
+///
+/// The live half of this is the mutation run recorded in The Underworld's
+/// Task 1b report — `cave_depth_reach_m` forced to a constant, the whole
+/// battery run, `cave_substrate_meets_preregistered_criteria` red. This is its
+/// permanent, cheap counterpart: the criterion's own arithmetic, fed the two
+/// collapse shapes by hand.
+///
+/// Both shapes are the real thing, not inventions. The first is a fully
+/// collapsed budget (The Hollow's §2.2 defect: one depth everywhere). The
+/// second is the pre-1b two-valued coordinate Task 1 measured — ~0 m or
+/// ~14 km, which the ceiling clamps into the top class — in the 65/35 ratio the
+/// probe found on seed 42. The original H2 passed on that second shape; the
+/// restatement must not.
+#[test]
+fn the_restated_h2_rejects_a_collapsed_and_a_two_valued_depth() {
+    // Positive control FIRST: the criterion must be capable of passing, or
+    // every rejection below is vacuous.
+    let healthy = [400usize, 300, 200, 100, 50];
+    let (occupied, modal) = variety_of(&healthy);
+    assert!(
+        occupied >= 3 && modal < 0.90,
+        "the control distribution must PASS: {occupied} occupied, modal {modal:.4}"
+    );
+
+    // Collapse: every cave at one depth.
+    let mut collapsed = [0usize; REACH_BINS];
+    collapsed[reach_bin(500.0)] = 1000;
+    let (occupied, modal) = variety_of(&collapsed);
+    assert!(
+        occupied < 3,
+        "a fully collapsed budget must fail the occupancy arm, got {occupied}"
+    );
+    assert!(modal >= 0.90, "…and the modal arm, got {modal:.4}");
+
+    // The pre-1b two-valued coordinate: `top_depth_m(deepest_band)` was ~0 m
+    // or ~14 km, the latter clamped by the ceiling into the top class.
+    let mut two_valued = [0usize; REACH_BINS];
+    two_valued[reach_bin(0.0)] = 655;
+    two_valued[reach_bin(hornvale_terrain::CAVE_REACH_CEILING_M)] = 345;
+    let (occupied, modal) = variety_of(&two_valued);
+    assert!(
+        occupied < 3,
+        "the pre-1b two-valued coordinate must fail the occupancy arm, got \
+         {occupied} ({two_valued:?})"
+    );
+    assert!(
+        modal < 0.90,
+        "the modal arm alone does NOT catch it ({modal:.4}) — recorded so the \
+         occupancy arm is known to be the load-bearing one here"
     );
 }
