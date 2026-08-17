@@ -1583,6 +1583,37 @@ picture state the document's geometry" stops being taste and becomes a
 comparison — which is the first time a row on this ledger has been converted by
 something other than a human remembering to look.
 
+**Re-scored by [The Rhumb](./chronicle/the-rhumb.md) (2026-08-16): the
+over-admission direction finally produced a defect, and it was in the oldest
+verb in the game.** The Blocking's parity contract mechanized one row of this
+ledger — *every destination the render depicts must be reachable by a named
+command* — and The Handle then narrowed it twice: the check covers declared
+nouns only, in one direction, and is structurally blind to over-admission,
+which was left "held by regression tests rather than by a rule." The Rhumb is
+what that blindness was hiding. `go` accepted eight compass tokens and
+dispatched all eight correctly, over a triangular lattice with exactly three
+edges per cell, so **five of eight were answered with a refusal** — and which
+three worked depended on the orientation of the triangle underfoot, so no
+sequence of `go e` walked east. Nothing here is a seam failure: the document
+was right, the picture was right, the parser was right, and the dispatch arm
+The Occlusion had added was right. What was wrong is that the interface's
+*vocabulary* was larger than the world's geometry could honour, and no test in
+either direction was looking at the ratio between them. So the ledger gains an
+entry of a new kind — **the interface over-admits, and the substrate silently
+declines** — and the honest note is that its detection was, once again, a human
+typing a direction and watching what happened.
+
+The row also gains its first hard limit on what a mechanization *could* have
+caught. The repair keeps the graph fixed and puts the heading in the walker
+(decision 0141), which makes all eight directions resolve — but the campaign's
+preregistered bound on how faithfully a walked cell can track the ideal course
+is **false, and false without limit**: 172.6 step-lengths of drift at 2,000
+steps, growing linearly, governed by the local triad's alignment rather than by
+latitude. That is not a defect any parity check can convert, because both sides
+are behaving correctly; it is the tiling declining to represent a continuous
+curve. A checkable contract can require that every offered destination exists.
+It cannot require that the ground be able to go there straight.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

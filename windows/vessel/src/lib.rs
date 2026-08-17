@@ -8,6 +8,7 @@ pub mod band;
 pub mod brief;
 pub mod chamber_prose;
 pub mod clock;
+pub mod course;
 pub mod eyes;
 pub mod fabric;
 mod focalize;

@@ -58,14 +58,24 @@ assert.equal(hv_start(42n), 0, "seed-42 genesis succeeds");
 const genesisMs = performance.now() - t0;
 assert.equal(readOut(), golden, "wasm opening === native transcript opening");
 
-// 2. Walking works and returns different prose. The direction comes from the
-// opening's own "Ways on:" line, not a hardcoded compass point — a worldgen
-// epoch may reshape the seed-42 opening room's exits, and this smoke asserts
-// "walking works", not any particular geography.
-const ways = golden.match(/^Ways on: (.+)\.$/m);
-assert.notEqual(ways, null, "opening lists its ways on");
-const dir = ways[1].split(", ")[0].toLowerCase();
-assert.equal(send(`go ${dir}`), 0);
+// 2. Walking works and returns different prose. This used to parse a direction
+// out of the opening's own "Ways on:" line rather than hardcode one, because a
+// worldgen epoch could reshape the seed-42 opening room's exits and the smoke
+// asserts "walking works", not any particular geography.
+//
+// That reason is gone. Since decision 0141 a compass heading is an OVERLAY on
+// the three-edge adjacency rather than a lookup among three labelled exits, so
+// all eight points resolve from every walk-band cell regardless of which way
+// the triangle underfoot happens to point. A fixed direction is therefore the
+// stronger check now, not the weaker one: if any of the eight ever stops
+// resolving, this fails, whereas a parse would quietly follow the prose
+// wherever it went. The exits sentence is pinned separately, just below.
+assert.match(
+  golden,
+  /No direction here is closed; the nearest ground lies /,
+  "opening states that nothing is closed and names the nearest ground",
+);
+assert.equal(send("go n"), 0);
 const stepped = readOut();
 assert.notEqual(stepped, golden, "moving changed the room");
 assert.match(stepped, /^\[room /, "room header present");

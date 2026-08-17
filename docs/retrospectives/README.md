@@ -136,6 +136,7 @@ under review. This file is.
 
 ### The Walk (game-layer liveness arc — M2)
 
+- [The Rhumb](the-rhumb.md) — 0141; `go` offered 8 compass points over a 3-edge lattice and refused 5 — fixed by an **overlay** (a carried rhumb course), graph untouched. H1's second clause **falsified, error unbounded** (172× a step at 2,000 steps; mechanism is triad alignment, NOT latitude). 4 vacuous assertions, all caught by mutation; **almost every defect was in MY plan text**; a board-claimed decision number tells you a claim exists, **not how many**
 - [The Quire](the-quire.md) — native character-grid game client; 13 defects
 - [The Seam](the-seam.md) — walkable Chunk 0 of The Walk, first game campaign; spec'd 2026-07-13 on branch the-seam (possess/verb loop/five interfaces in windows/vessel)
 - [The Panes](the-panes.md) — (2026-08-06) shipped the two-pane roguelike+text view; EVERY review finding traced to my plan text, and 4 of 5 were invisible to a green suite

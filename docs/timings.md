@@ -1184,6 +1184,14 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-16T13:40:50Z | sluice:gate | 330.142 | 9002.093 | 460.972 | 28.66 | 0 | ecc799f5 |  | lefford | 40 |
 | 2026-08-16T13:46:23Z | sluice:clients | 332.612 | 703.320 | 69.189 | 2.32 | 0 | b2aebbcc |  | lefford | 40 |
 | 2026-08-16T14:17:47Z | sluice:heavy | 1883.754 | 30553.913 | 615.708 | 16.55 | 0 | 8ab963e5 |  | lefford | 40 |
+| 2026-08-16T19:19:00Z | gate-commit | 29.011 | 44.173 | 19.406 | 2.19 | 0 | f8e937a8 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T19:23:27Z | gate-commit | 228.531 | 647.536 | 64.419 | 3.12 | 0 | f8e937a8 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T19:42:38Z | gate-commit | 54.129 | 71.761 | 37.999 | 2.03 | 0 | 24cd985e | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T20:05:07Z | gate-commit | 66.418 | 86.547 | 35.585 | 1.84 | 0 | 83ec4890 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T20:42:25Z | gate-commit | 53.524 | 61.547 | 38.379 | 1.87 | 0 | 8339603c | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T21:14:21Z | gate-commit | 50.478 | 61.522 | 40.305 | 2.02 | 0 | 54f00563 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T21:45:25Z | gate-commit | 53.961 | 62.620 | 41.929 | 1.94 | 0 | a5bc7445 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T21:57:50Z | rebaseline | 47.691 | 215.698 | 11.253 | 4.76 | 0 | cfc71ac7 | campaign/the-rhumb | MacBookPro | 10 |
 | 2026-08-16T15:13:33Z | gate-commit | 83.046 | 1150.303 | 205.303 | 16.32 | 0 | 89928b7c | campaign/the-sluice | lefford | 40 |
 | 2026-08-16T15:39:33Z | gate-commit | 60.736 | 389.759 | 159.832 | 9.05 | 0 | d839ba31 | campaign/the-sluice | lefford | 40 |
 | 2026-08-16T16:25:28Z | gate-commit | 58.958 | 378.289 | 153.573 | 9.02 | 0 | e2012af4 | campaign/the-sluice | lefford | 40 |
@@ -1223,3 +1231,21 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T01:46:17Z | sluice:seam-guard | 953.421 | 19376.201 | 1049.566 | 21.42 | 0 | 81c4d1f2 |  | lefford | 40 |
 | 2026-08-17T01:50:24Z | sluice:clients | 247.207 | 427.562 | 33.407 | 1.86 | 0 | 991cb9e4 |  | lefford | 40 |
 | 2026-08-17T02:21:38Z | sluice:heavy | 1873.557 | 29789.874 | 672.800 | 16.26 | 0 | 87e8bf1a |  | lefford | 40 |
+| 2026-08-16T23:28:27Z | rebaseline | 81.991 | 214.778 | 11.980 | 2.77 | 0 | ec62ac56 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T23:32:45Z | gate-commit | 234.486 | 750.463 | 132.149 | 3.76 | 0 | ec62ac56 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T23:42:11Z | rebaseline | 44.934 | 219.707 | 15.544 | 5.24 | 0 | dc1238dc | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T23:43:20Z | gate-commit | 23.271 | 50.873 | 13.247 | 2.76 | 0 | 92a4b059 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T23:47:36Z | gate-commit | 24.862 | 51.709 | 13.213 | 2.61 | 0 | 7c1d3e24 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:05:01Z | vessel-check | 49.883 | 70.386 | 5.942 | 1.53 | 0 | c1ac3568 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:11:15Z | gate-commit | 101.615 | 118.068 | 68.745 | 1.84 | 0 | 35227e3b | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:20:09Z | vessel-check | 75.126 | 38.377 | 2.533 | 0.54 | 0 | a21dceb7 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:21:00Z | game-check | 47.844 | 123.110 | 5.502 | 2.69 | 0 | a21dceb7 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:22:30Z | gate-commit | 81.638 | 77.031 | 61.220 | 1.69 | 0 | a21dceb7 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:23:28Z | gate-commit | 27.535 | 51.768 | 13.438 | 2.37 | 0 | a21dceb7 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:24:25Z | gate-commit | 29.056 | 52.949 | 14.222 | 2.31 | 0 | 3dcbdf25 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:33:53Z | gate-commit | 28.160 | 39.303 | 10.489 | 1.77 | 0 | cc8cb292 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:34:47Z | gate-commit | 31.633 | 53.614 | 14.803 | 2.16 | 0 | cc8cb292 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:36:17Z | gate-commit | 28.307 | 53.562 | 14.363 | 2.40 | 0 | cc8cb292 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:38:35Z | gate-commit | 23.484 | 51.058 | 12.983 | 2.73 | 0 | 3908bdd4 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:38:49Z | vessel-check | 14.159 | 14.825 | 0.702 | 1.10 | 0 | 3908bdd4 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T00:39:31Z | game-check | 42.139 | 118.535 | 2.752 | 2.88 | 0 | 3908bdd4 | campaign/the-rhumb | MacBookPro | 10 |
