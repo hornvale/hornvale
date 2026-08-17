@@ -496,15 +496,28 @@ count cells landing in an occupied box.
 
 `make worktree-take` printed a freshness warning for this campaign's
 worktree and **its printed remedy does not work**: re-running exits at
-`worktree-take.sh:43-46` before the invalidation step. Worse, running
-`scripts/test-worktree-freshness.sh` by hand reports **"clean"** — a false
-clean, because its sibling list comes from a live `git worktree list` and
-the recycled sibling is no longer in it. Passing the old path as `argv1`
-reddens immediately. The working fix (already applied to this worktree, 52
-files touched) is `grep -rl` for `CARGO_MANIFEST_DIR`,
-`CARGO_TARGET_TMPDIR`, `CARGO_BIN_EXE_` and `touch` the hits. Recorded on
-the board as technique `e7c5bcb8`. **Force a rebuild before trusting any
-red** — these failures read exactly like a red main and are not one.
+`worktree-take.sh:43-46` before the invalidation step ever runs. 756 files
+under `target/debug/deps` were still baking a foreign path afterwards.
+
+The trap is that **both** recovery paths a reader naturally reaches for
+fail. The warning sends you to `make worktree-take`, which early-exits and
+does nothing. Re-running the checker itself
+(`scripts/test-worktree-freshness.sh`) by hand returns **clean** — and that
+one is *not* a bug: its usage header (lines 5-20) documents the fallback,
+explains that `worktree-take.sh` passes the old path as `$recycled`
+(line 224), and says a caller without that knowledge may omit it and get
+sibling-only behaviour. Pass the old worktree path as `argv1` or you are
+running the documented sibling-only mode. So one recovery path does
+nothing, and the other quietly reports a pass.
+
+The working fix, already applied to this worktree (52 files touched):
+`grep -rl` for `CARGO_MANIFEST_DIR`, `CARGO_TARGET_TMPDIR`,
+`CARGO_BIN_EXE_` and `touch` the hits. Board technique `e7c5bcb8`,
+**corrected by `5fd03dec`** — the original post called the argument-less
+clean a second defect, which it is not.
+
+**Force a rebuild before trusting any red** — these failures read exactly
+like a red main and are not one.
 
 ---
 
