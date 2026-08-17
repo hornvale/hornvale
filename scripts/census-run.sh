@@ -45,7 +45,7 @@ fi
 
 # shellcheck source=scripts/census-canonical-host.sh
 . "$(dirname "$0")/census-canonical-host.sh"
-require_canonical_census_host || exit 1
+require_canonical_census_host census || exit 1
 
 # An ANCESTOR already holds this lock (HV_CENSUS_LOCK_HELD names a live pid):
 # flock is per open-file-description, so re-flocking the same path on a fresh
