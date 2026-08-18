@@ -24,7 +24,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.071782178 | 0.18369718 | 0.37442922 | 0.99514563 | 0.25152237 |
+| 0 | 0.06918239 | 0.18386127 | 0.37438424 | 1 | 0.25255748 |
 
 ### `composition-variance`
 
@@ -44,18 +44,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `temperate-forest` | 536 | 53.6% |
-| `tropical-seasonal-forest` | 210 | 21.0% |
-| `taiga` | 209 | 20.9% |
-| `tropical-rainforest` | 13 | 1.3% |
-| `alpine` | 10 | 1.0% |
-| `temperate-rainforest` | 6 | 0.6% |
+| `temperate-forest` | 529 | 52.9% |
+| `taiga` | 219 | 21.9% |
+| `tropical-seasonal-forest` | 213 | 21.3% |
+| `alpine` | 9 | 0.9% |
+| `temperate-rainforest` | 7 | 0.7% |
+| `tropical-rainforest` | 7 | 0.7% |
 | `savanna` | 5 | 0.5% |
 | `epipelagic` | 4 | 0.4% |
 | `kelp-forest` | 4 | 0.4% |
-| `shrubland` | 1 | 0.1% |
-| `tundra` | 1 | 0.1% |
-| `upwelling` | 1 | 0.1% |
+| `upwelling` | 2 | 0.2% |
+| `coral-reef` | 1 | 0.1% |
 
 ### `flagship-coastal`
 
@@ -65,8 +64,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 189 | 18.9% |
-| `false` | 811 | 81.1% |
+| `true` | 181 | 18.1% |
+| `false` | 819 | 81.9% |
 
 ### `flagship-structure-size`
 
@@ -76,7 +75,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 3 | 3 | 3 | 3 | 2.943 |
+| 2 | 3 | 3 | 3 | 3 | 2.954 |
 
 ### `flagship-subsistence`
 
@@ -86,10 +85,9 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `farming` | 979 | 97.9% |
-| `foraging` | 11 | 1.1% |
-| `fishing` | 9 | 0.9% |
-| `herding` | 1 | 0.1% |
+| `farming` | 980 | 98.0% |
+| `fishing` | 11 | 1.1% |
+| `foraging` | 9 | 0.9% |
 
 ### `goblin-flagship-coastal`
 
@@ -99,8 +97,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 189 | 18.9% |
-| `false` | 811 | 81.1% |
+| `true` | 181 | 18.1% |
+| `false` | 819 | 81.9% |
 
 ### `goblin-flagship-roles`
 
@@ -110,11 +108,10 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `farmer,shaman,chief` | 943 | 94.3% |
-| `farmer,chief` | 36 | 3.6% |
-| `forager,chief` | 11 | 1.1% |
-| `fisher,chief` | 9 | 0.9% |
-| `herder,chief` | 1 | 0.1% |
+| `farmer,shaman,chief` | 954 | 95.4% |
+| `farmer,chief` | 26 | 2.6% |
+| `fisher,chief` | 11 | 1.1% |
+| `forager,chief` | 9 | 0.9% |
 
 ### `goblin-flagship-surplus`
 
@@ -124,7 +121,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.046627014 | 0.47957214 | 0.51156628 | 0.5352195 | 0.72 | 0.50127058 |
+| 0.046627014 | 0.48200598 | 0.51127257 | 0.53332683 | 0.71835843 | 0.50199685 |
 
 ### `goblin-settlement-count`
 
@@ -134,7 +131,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 4 | 12 | 27 | 110 | 18.517 |
+| 1 | 4 | 11 | 26 | 119 | 18.667 |
 
 ### `kobold-flagship-coastal`
 
@@ -144,8 +141,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 9 | 0.9% |
-| `false` | 973 | 99.1% |
+| `true` | 4 | 0.4% |
+| `false` | 978 | 99.6% |
 
 ### `kobold-flagship-roles`
 
@@ -155,9 +152,9 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `digger,keeper,elders` | 694 | 70.7% |
-| `digger,elders` | 285 | 29.0% |
-| `digger,warden,keeper,elders` | 3 | 0.3% |
+| `digger,keeper,elders` | 683 | 69.6% |
+| `digger,elders` | 298 | 30.3% |
+| `digger,warden,keeper,elders` | 1 | 0.1% |
 
 ### `kobold-flagship-surplus`
 
@@ -167,7 +164,7 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0054824858 | 0.38576172 | 0.44863246 | 0.48845809 | 0.72 | 0.40405241 |
+| 0.0083511618 | 0.38193861 | 0.44267746 | 0.48757012 | 0.61493388 | 0.39997085 |
 
 ### `kobold-settlement-count`
 
@@ -177,7 +174,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 7 | 26 | 50 | 197 | 33.218 |
+| 0 | 7 | 25 | 48 | 195 | 32.162 |
 
 ### `largest-holding-share`
 
@@ -187,7 +184,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0048845471 | 0.0087385167 | 0.01064025 | 0.014072709 | 0.064 | 0.012948304 |
+| 0.0046880052 | 0.0085786703 | 0.010972216 | 0.014557671 | 0.067114094 | 0.013426035 |
 
 ### `per-cell-diversity`
 
@@ -207,7 +204,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 4.4025005 | 12.676559 | 15.600462 | 19.732805 | 57.534294 | 17.376625 |
+| 6.0539337 | 12.420613 | 15.713819 | 19.460286 | 58.400603 | 17.339737 |
 
 ### `rank-size-slope`
 
@@ -217,7 +214,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -1.0689988 | -0.60424983 | -0.56136521 | -0.51367556 | -0.32811709 | -0.56511822 |
+| -1.1270738 | -0.59815981 | -0.55815538 | -0.51146337 | -0.34088936 | -0.5631312 |
 
 ### `settlement-count`
 
@@ -227,13 +224,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 40 | 196 | 260 | 320 | 548 | 257.515 |
+| 36 | 193 | 258 | 317 | 548 | 254.171 |
 
 ## Weaknesses found here
 
 ### `flagship-coastal`
 
-- **D1**: "false" holds 811/1000 worlds (81.1%), at or above the 80% threshold
+- **D1**: "false" holds 819/1000 worlds (81.9%), at or above the 80% threshold
 
 ### `flagship-structure-size`
 
@@ -242,27 +239,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `flagship-subsistence`
 
-- **D1**: "farming" holds 979/1000 worlds (97.9%), at or above the 80% threshold
+- **D1**: "farming" holds 980/1000 worlds (98.0%), at or above the 80% threshold
 
 ### `goblin-flagship-coastal`
 
-- **D1**: "false" holds 811/1000 worlds (81.1%), at or above the 80% threshold
+- **D1**: "false" holds 819/1000 worlds (81.9%), at or above the 80% threshold
 
 ### `goblin-flagship-roles`
 
-- **D1**: "farmer,shaman,chief" holds 943/1000 worlds (94.3%), at or above the 80% threshold
+- **D1**: "farmer,shaman,chief" holds 954/1000 worlds (95.4%), at or above the 80% threshold
 
 ### `kobold-flagship-coastal`
 
-- **D1**: "false" holds 973/982 worlds (99.1%), at or above the 80% threshold
+- **D1**: "false" holds 978/982 worlds (99.6%), at or above the 80% threshold
 
 ### `pop-weighted-abs-latitude`
 
-- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.144 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.154 (1000 pairs) is weak (positive)
 
 ### `settlement-count`
 
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.218 (1000 pairs) is weak (positive)
-- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.002 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.044 (1000 pairs) is none
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.219 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.016 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.063 (1000 pairs) is none
 
