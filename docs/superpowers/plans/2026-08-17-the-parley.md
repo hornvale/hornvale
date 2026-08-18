@@ -61,6 +61,10 @@ The plan argues from the spec; both travel together.
 
 **Files:**
 - Modify: `windows/hearsay/src/stance.rs`
+- Modify: `windows/hearsay/src/derive.rs` — `is_lossy` is called at
+  `derive.rs:198` inside `variants_about`; adding the parameter cannot compile
+  without touching it. Pass `Perpetration::Singleton` there for now; Task 4
+  replaces it with `walk.policy.perpetration`.
 - Modify: `windows/hearsay/tests/stance.rs`
 
 **Interfaces:**
@@ -278,7 +282,7 @@ after, and put the mutation and its output in your report.
 cargo fmt
 make gate-commit 2>&1 | tail -3
 cargo test -p hornvale-hearsay --test stance 2>&1 | tail -5
-git add windows/hearsay/src/stance.rs windows/hearsay/tests/stance.rs
+git add windows/hearsay/src/stance.rs windows/hearsay/src/derive.rs windows/hearsay/tests/stance.rs
 git commit -m "feat(hearsay): stance geometry gains an Inherited arm"
 ```
 
