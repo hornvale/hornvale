@@ -335,3 +335,60 @@ the report could not silently rewrite it — and what actually rewrote it was a
 change to the *world*, from a campaign that never touched the report. The pin
 worked: the re-read was forced rather than skipped. It simply caught a
 different mover than the one it was watching for.
+
+## Second postscript: a third world, and the same answer (2026-08-17)
+
+The pin fired again, thirteen days later, for the same reason and with a
+different outcome — and the difference is worth more than either number.
+
+The Underworld gave the world a subterranean layer and refreshed the canonical
+census against it. Seventy-six of two hundred and twenty-four distributions
+moved. As with The Glasshouse, the report was untouched: no change to
+`REPORT_SIZE`, `TAIL_DEPTH_BAR`, the scorer, or the evaluable surface. Only the
+worlds were different, and this time they were different in a way that has
+nothing to do with temperature.
+
+Re-measured: **recall@10 = 0.6000, 72 hits over the same 120 pairs.** The bar
+is 0.60. The measurement is the bar.
+
+There is no reading to be had from that, and saying so precisely is the point.
+A proportion that lands exactly on its own threshold decides nothing in either
+direction; it is the single most uninformative position a reading can occupy.
+Laid out against the standard error at the bar — `sqrt(0.6 × 0.4 / 120) =
+0.0447` — the three measurements of one unchanged report now read:
+
+| campaign | hits | recall@10 | distance from the bar |
+|---|---|---|---|
+| The Gnomon (2026-08-13) | 68/120 | 0.5667 | −0.75 SE |
+| The Glasshouse (2026-08-15) | 73/120 | 0.6083 | +0.19 SE |
+| The Underworld (2026-08-17) | 72/120 | 0.6000 | 0.00 SE |
+
+So the verdict stands exactly where The Glasshouse left it: **the question is
+open, the instrument is underpowered, and the fix is more pairs rather than a
+moved bar.** The registry row is neither `refuted` nor `shipped`, and this
+campaign did not change its status.
+
+What is new is the standing of that verdict rather than its content. The
+Glasshouse argued from two readings straddling the bar that a 120-pair battery
+cannot resolve a 0.60 threshold — a sound argument, but an inference from two
+points, and two points are exactly how this chapter's original mistake was
+made. A third census epoch, moved by an unrelated mechanism, has now produced a
+third reading inside the same one-standard-error band. The underpowered
+diagnosis is no longer an inference; it is an observation, repeated.
+
+**A witness that fires twice is worth more than one that never moves.** The
+first firing overturned a verdict, which is the dramatic case and the one the
+pin was written for. The second firing overturned nothing — it corroborated the
+correction the first one forced, which is the quieter case and, over the life
+of a result, the more common one. A pin that only ever announces reversals
+would be a pin nobody trusted when it stayed silent. This one has now
+demonstrated both halves: it caught a wrong verdict, and it confirmed the
+replacement.
+
+The obvious temptation, on a reading that sits precisely on the line, is to
+adjust something small enough to make the sentence readable again. That is
+the retuning the preregistration forbids, and it is worth naming plainly here
+rather than only in the test: the bar is not to be widened, and the battery is
+not to be re-read until it lands somewhere comfortable. Three epochs have now
+established that the direction of the error is smaller than the noise in either
+direction. The next thing to change should be `n`.
