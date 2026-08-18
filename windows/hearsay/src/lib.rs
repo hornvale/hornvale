@@ -8,6 +8,7 @@
 
 pub mod accumulate;
 pub mod amplitude;
+pub mod clock;
 pub mod derive;
 pub mod divergence;
 pub mod durations;
