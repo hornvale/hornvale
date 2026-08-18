@@ -16,6 +16,7 @@ pub mod durations;
 pub mod ladder;
 pub mod lineage;
 pub mod stance;
+pub mod transmission;
 
 /// The hop count of every holder of a claim about `(subject, predicate)`.
 /// Empty when the subject holds no such committed fact.
@@ -160,13 +161,12 @@ pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64> {
 /// `None` when fewer than three holders qualify (§6's population rule).
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(count: return)
 pub fn variant_count(
-    ledger: &hornvale_kernel::ledger::Ledger,
-    lineage: &lineage::Lineage,
+    walk: &transmission::Walk,
     ladder: &ladder::PrecisionLadder,
     subject: hornvale_kernel::ledger::EntityId,
     predicate: &str,
 ) -> Option<usize> {
-    let vs = derive::variants_about(ledger, lineage, ladder, subject, predicate);
+    let vs = derive::variants_about(walk, ladder, subject, predicate);
     if vs.len() < 3 {
         return None;
     }
@@ -181,13 +181,12 @@ pub fn variant_count(
 /// The hop counts of holders still at the FINEST precision — H1's population.
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(count: return)
 pub fn finest_precision_hops(
-    ledger: &hornvale_kernel::ledger::Ledger,
-    lineage: &lineage::Lineage,
+    walk: &transmission::Walk,
     ladder: &ladder::PrecisionLadder,
     subject: hornvale_kernel::ledger::EntityId,
     predicate: &str,
 ) -> Vec<u32> {
-    derive::variants_about(ledger, lineage, ladder, subject, predicate)
+    derive::variants_about(walk, ladder, subject, predicate)
         .into_iter()
         .filter(|c| c.precision == hornvale_kernel::Precision::FINEST)
         .map(|c| c.hops)

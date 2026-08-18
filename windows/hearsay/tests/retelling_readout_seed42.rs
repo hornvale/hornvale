@@ -5,9 +5,11 @@
 //! REPORTED, because a falsified prediction is a finding and this file must
 //! not be edited to rescue one.
 
+use hornvale_hearsay::contact::contact_of;
 use hornvale_hearsay::derive::{variants_about, witnesses_of};
 use hornvale_hearsay::divergence::maximum_antichain;
 use hornvale_hearsay::ladder::PrecisionLadder;
+use hornvale_hearsay::transmission::{Transmission, Walk};
 use hornvale_hearsay::{finest_precision_hops, lineage::lineage_of, spearman, variant_count};
 
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loop binds
@@ -24,13 +26,20 @@ fn the_retelling_readout_on_seed_42() {
     .expect("seed 42 builds");
     let led = &world.ledger;
     let lin = lineage_of(led);
+    let graph = contact_of(led);
+    let walk = Walk {
+        ledger: led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let ladder = PrecisionLadder::of(led);
 
     // --- H1: per-hop counts of claims still at the finest precision ---
     let mut by_hop: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
     let mut finest_total = 0usize;
     for s in lin.all() {
-        for h in finest_precision_hops(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) {
+        for h in finest_precision_hops(&walk, &ladder, s, hornvale_history::OCC_ENDED) {
             *by_hop.entry(h).or_default() += 1;
             finest_total += 1;
         }
@@ -57,7 +66,7 @@ fn the_retelling_readout_on_seed_42() {
     let mut counts: Vec<f64> = Vec::new();
     let mut widths: Vec<f64> = Vec::new();
     for s in lin.all() {
-        let Some(n) = variant_count(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) else {
+        let Some(n) = variant_count(&walk, &ladder, s, hornvale_history::OCC_ENDED) else {
             continue;
         };
         let ws = witnesses_of(led, &lin, s, hornvale_history::OCC_ENDED);
@@ -104,7 +113,7 @@ fn the_retelling_readout_on_seed_42() {
     // different rungs.
     let mut rungs: std::collections::BTreeMap<u8, usize> = std::collections::BTreeMap::new();
     for s in lin.all() {
-        for v in variants_about(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) {
+        for v in variants_about(&walk, &ladder, s, hornvale_history::OCC_ENDED) {
             *rungs.entry(v.precision.rung()).or_default() += 1;
         }
     }

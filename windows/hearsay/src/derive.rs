@@ -3,6 +3,7 @@
 use crate::ladder::PrecisionLadder;
 use crate::lineage::Lineage;
 use crate::stance;
+use crate::transmission::Walk;
 use hornvale_kernel::Claim;
 use hornvale_kernel::Precision;
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
@@ -144,12 +145,13 @@ pub fn claims_about(
 ///
 /// type-audit: bare-ok(identifier-text: predicate)
 pub fn variants_about(
-    ledger: &Ledger,
-    lineage: &Lineage,
+    walk: &Walk,
     ladder: &PrecisionLadder,
     subject: EntityId,
     predicate: &str,
 ) -> Vec<Claim> {
+    let ledger = walk.ledger;
+    let lineage = walk.lineage;
     let Some(object) = ledger.value_of(subject, predicate) else {
         return Vec::new();
     };
@@ -198,7 +200,7 @@ pub fn variants_about(
                 if stance::is_lossy(
                     ledger,
                     lineage,
-                    stance::Perpetration::Singleton,
+                    walk.policy.perpetration,
                     subject,
                     teller,
                     hearer,
@@ -253,14 +255,15 @@ pub fn variants_about(
 ///
 /// type-audit: bare-ok(identifier-text: predicate)
 pub fn variants_about_accumulating(
-    ledger: &Ledger,
-    lineage: &Lineage,
+    walk: &Walk,
     ladders: &crate::ladder::PeopleLadders,
     durations: &crate::durations::PeopleDurations,
     rule: crate::accumulate::Accumulation,
     subject: EntityId,
     predicate: &str,
 ) -> Vec<Claim> {
+    let ledger = walk.ledger;
+    let lineage = walk.lineage;
     let Some(object) = ledger.value_of(subject, predicate) else {
         return Vec::new();
     };

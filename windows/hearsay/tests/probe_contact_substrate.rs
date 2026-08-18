@@ -23,10 +23,12 @@
 
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::accumulate::Accumulation;
+use hornvale_hearsay::contact::contact_of;
 use hornvale_hearsay::derive::{variants_about_accumulating, witnesses_of};
 use hornvale_hearsay::durations::PeopleDurations;
 use hornvale_hearsay::ladder::{PeopleLadders, PrecisionLadder};
 use hornvale_hearsay::lineage::lineage_of;
+use hornvale_hearsay::transmission::{Transmission, Walk};
 use hornvale_kernel::Precision;
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -245,6 +247,13 @@ fn how_far_an_account_reaches_and_whether_the_sides_disagree() {
         let world = build(seed);
         let led = &world.ledger;
         let lin = lineage_of(led);
+        let graph = contact_of(led);
+        let walk = Walk {
+            ledger: led,
+            lineage: &lin,
+            contact: &graph,
+            policy: Transmission::AS_SHIPPED,
+        };
         let Some((ladders, durations)) = read_world(led, &components) else {
             println!("seed {seed}: no ladder; skipped");
             continue;
@@ -252,8 +261,7 @@ fn how_far_an_account_reaches_and_whether_the_sides_disagree() {
 
         for e in endings_of(led) {
             let held = variants_about_accumulating(
-                led,
-                &lin,
+                &walk,
                 &ladders,
                 &durations,
                 Accumulation::Multiplicative,
@@ -493,6 +501,13 @@ fn is_the_seams_disagreement_real() {
         let world = build(seed);
         let led = &world.ledger;
         let lin = lineage_of(led);
+        let graph = contact_of(led);
+        let walk = Walk {
+            ledger: led,
+            lineage: &lin,
+            contact: &graph,
+            policy: Transmission::AS_SHIPPED,
+        };
         let Some((ladders, durations)) = read_world(led, &components) else {
             continue;
         };
@@ -505,8 +520,7 @@ fn is_the_seams_disagreement_real() {
                 continue;
             }
             let held = variants_about_accumulating(
-                led,
-                &lin,
+                &walk,
                 &ladders,
                 &durations,
                 Accumulation::Multiplicative,
