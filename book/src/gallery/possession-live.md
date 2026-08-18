@@ -113,6 +113,11 @@ the CLI runs.</p>
     white-space: pre;
   }
   .casement-echo { opacity: 0.6; }
+  /* The map pane's EPISTEMIC channel: a remembered cell draws the same
+     glyph as a sensed one, fainter (spec §2 — weight is a modulator, not a
+     second alphabet). Expressed here rather than inline so the page decides
+     how faint faint is, as it already does for .casement-echo. */
+  .casement-dim { opacity: 0.55; }
   .casement-error { color: #b3554d; }
   .casement-controls, .casement-promptrow { margin: 0.5em 0; }
   .casement-seed, .casement-input {

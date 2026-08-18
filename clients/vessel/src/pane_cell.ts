@@ -30,6 +30,22 @@ export interface PaneCell {
   glyph: string;
   /** An 8-bit-per-channel RGB triple, or `null` for an uncoloured cell. */
   color: [number, number, number] | null;
+  /** The **epistemic channel** (spec §2): set when the cell is
+   * `remembered` rather than currently sensed. Weight is a *modulator* over
+   * the glyph and colour a cell already has — a remembered cell draws the
+   * SAME glyph, dimmer. It does not substitute a different one.
+   *
+   * `pane_chart.ts` used to draw `,` for a remembered land cell and `.` for
+   * a sensed one, which is the specific move spec §2.3 forbids: recovering
+   * a lost axis by reallocating another channel. The sim's renderer had the
+   * identical defect (`surrounds_ascii.rs::faded()`, seven glyph
+   * substitutions) and deleted it; this is its twin.
+   *
+   * Optional, and absent means "not dim". The floor plan
+   * (`pane_plan.ts`) has no epistemic channel on the wire to carry — a
+   * `vessel/plan/v1` cell is present or it is not — so it omits the field
+   * rather than asserting `false` about a question its schema never asks. */
+  dim?: boolean;
 }
 
 /** A pane's whole grid, row-major — `grid[row][col]`. */
@@ -61,21 +77,28 @@ function sameColor(
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 
-/** Coalesce a row of cells into runs of adjacent, identically-coloured
- * glyphs. A terminal-style renderer wraps one `<span>` (or one escape
- * sequence) per run rather than per cell, which is the whole reason a pane
- * returns cells instead of strings: colour needs a boundary somewhere, and
- * the boundary is a colour *change*, not every character. */
+/** Coalesce a row of cells into runs of adjacent glyphs sharing both
+ * attributes a run can carry: colour and weight. A terminal-style renderer
+ * wraps one `<span>` (or one escape sequence) per run rather than per cell,
+ * which is the whole reason a pane returns cells instead of strings —
+ * an attribute needs a boundary somewhere, and the boundary is a *change*,
+ * not every character.
+ *
+ * **Weight breaks a run exactly as colour does.** A dim cell beside a
+ * bright one of the same colour is two runs, not one: merging them would
+ * hand the whole run one weight and silently repaint one of the two cells,
+ * which is the same class of error `sameColor` exists to prevent. */
 export function runsOf(
   row: PaneCell[],
-): { text: string; color: [number, number, number] | null }[] {
-  const runs: { text: string; color: [number, number, number] | null }[] = [];
+): { text: string; color: [number, number, number] | null; dim: boolean }[] {
+  const runs: { text: string; color: [number, number, number] | null; dim: boolean }[] = [];
   for (const cell of row) {
     const last = runs[runs.length - 1];
-    if (last !== undefined && sameColor(last.color, cell.color)) {
+    const dim = cell.dim === true;
+    if (last !== undefined && sameColor(last.color, cell.color) && last.dim === dim) {
       last.text += cell.glyph;
     } else {
-      runs.push({ text: cell.glyph, color: cell.color });
+      runs.push({ text: cell.glyph, color: cell.color, dim });
     }
   }
   return runs;

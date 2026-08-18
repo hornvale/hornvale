@@ -597,3 +597,73 @@ Deno.test("rounding is half away from zero, matching the sim and not Math.round"
   assertEquals(rows[0][0], "~", "the north cell draws one row above the observer");
   assertEquals(rows[1][0], "@");
 });
+
+Deno.test("a remembered cell keeps its glyph and changes only its weight", () => {
+  // Spec §2: epistemic is a MODULATOR (weight), not a peer of the ordinal
+  // (glyph) channel. This pane used to draw `,` for a remembered land cell
+  // and `.` for a sensed one — a second alphabet, which is the specific
+  // move §2.3 forbids: recovering a lost axis by reallocating another
+  // channel. The sim's renderer had the identical defect
+  // (`surrounds_ascii.rs::faded()`) and deleted it; this is its twin.
+  //
+  // Both clauses of the sim's own equivalent
+  // (`a_remembered_cell_keeps_its_glyph_and_changes_only_its_weight`) are
+  // asserted here, and the second is what stops the first passing
+  // vacuously if the pane simply stopped distinguishing the two states.
+  const band = (state: string) => [
+    { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+    { bearing_deg: 90, distance_rad: 1, seam: false, state, water: 3 },
+  ];
+  const sensed = chartCells(snapshotWithChart(band("sensed")))!;
+  const remembered = chartCells(snapshotWithChart(band("remembered")))!;
+
+  // Clause 1: the GLYPHS are identical. This is the rule.
+  assertEquals(
+    glyphRows(sensed),
+    glyphRows(remembered),
+    "a remembered cell must draw the same glyph as a sensed one, only dimmer",
+  );
+
+  // Clause 2: the two renders must still DIFFER — the weight moved onto the
+  // remembered cell.
+  assertEquals(sensed.flat().filter((c) => c.dim === true).length, 0);
+  assertEquals(
+    remembered.flat().filter((c) => c.dim === true).length,
+    1,
+    "the remembered cell must carry the weight the glyph no longer carries",
+  );
+});
+
+Deno.test("weight applies to water and to the observer, not only to land", () => {
+  // Weight modulates BOTH encoding channels rather than sitting beside one
+  // of them (spec §2), so it is read off the cell's own `state` regardless
+  // of which glyph that cell drew. The old substitution could only ever
+  // reach a land glyph, which is another way of saying it was not a
+  // channel at all.
+  const grid = chartCells(snapshotWithChart([
+    { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+    { bearing_deg: 90, distance_rad: 1, seam: false, state: "remembered", water: 0 },
+  ]))!;
+  const water = grid.flat().find((c) => c.glyph === "~")!;
+  assertEquals(water.dim, true, "a remembered river dims like remembered land");
+});
+
+Deno.test("a remembered cell keeps its colour as well as its glyph", () => {
+  // Weight is composed WITH colour, never instead of it — the same shape as
+  // the sim's `dimmed(colored(glyph, rgb))`. Dimming by desaturating the
+  // colour instead would be the reallocation this whole fix removes, and
+  // would leave an uncoloured remembered cell with no epistemic signal at
+  // all.
+  const cell = chartCells(snapshotWithChart([
+    {
+      bearing_deg: 0,
+      distance_rad: 0,
+      seam: false,
+      state: "remembered",
+      water: 3,
+      color: [10, 20, 30],
+    },
+  ]))!.flat()[0];
+  assertEquals(cell.color, [10, 20, 30]);
+  assertEquals(cell.dim, true);
+});

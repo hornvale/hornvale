@@ -142,11 +142,12 @@ function placeAt(
  * 3. Ties break on document order, which the producer fixes as ascending
  *    `room`.
  *
- * The epistemic state is deliberately absent. This pane has no weight
- * channel at all (a `PaneCell` is a glyph and a colour), so per spec §2.3
- * it loses the epistemic axis rather than recovering it through the
- * ranking — a remembered cell is neither promoted nor demoted by being
- * remembered. */
+ * The epistemic state is deliberately absent from the ranking. It is not
+ * absent from the pane — `PaneCell.dim` carries it — which is exactly why
+ * it must be kept out of here: weight is a modulator over what a cell
+ * draws, never a claim about which cell deserves the box. A remembered
+ * cell holding the flagship settlement wins its box on salience AND draws
+ * dim; it is neither promoted nor demoted by being remembered. */
 function boxRank(
   cell: ChartCell,
   index: number,
@@ -241,7 +242,12 @@ export function chartCells(snap: Snapshot): PaneGrid | null {
     // not merely unparsed, on a non-ground glyph (`YOU`, a water glyph) —
     // regardless of what the payload sent.
     const color = ground ? parseColor(cell.color) : null;
-    placed.set(key, { glyph, color });
+    // The epistemic channel is a WEIGHT here, not a glyph. It applies to
+    // whatever the cell drew — land, water or the observer — because weight
+    // modulates both encoding channels rather than sitting beside them
+    // (spec §2), and it is read off the winning cell's own `state`, never
+    // off its rank.
+    placed.set(key, { glyph, color, dim: cell.state === "remembered" });
     rMin = Math.min(rMin, row);
     rMax = Math.max(rMax, row);
     cMin = Math.min(cMin, col);
@@ -328,5 +334,12 @@ function glyphFor(cell: ChartCell, waterLegend: string[]): { glyph: string; grou
   const water = waterLegend[cell.water];
   // Not ground: water covers the surface the colour would describe.
   if (water !== undefined && WATER_KINDS.has(water)) return { glyph: "~", ground: false };
-  return { glyph: cell.state === "remembered" ? "," : ".", ground: true };
+  // ONE glyph for land, whatever the observer's memory of it. This used to
+  // read `cell.state === "remembered" ? "," : "."`, which is the move spec
+  // §2.3 forbids by name: a client that lacks a channel loses that
+  // channel's whole axis and says so — it does not recover the axis by
+  // reallocating another one. Epistemic weight has its own channel here
+  // (`PaneCell.dim`, set by the caller), so the glyph carries the ordinal
+  // axis alone.
+  return { glyph: ".", ground: true };
 }
