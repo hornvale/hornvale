@@ -37,6 +37,25 @@
 //! [`the_candidate_fit_tables_and_the_elevation_precondition`] is that record.
 //! It builds no world, is not `#[ignore]`d, and runs in the commit gate.
 //!
+//! **The disclosure discharges PER KIND, and only one kind carries the strong
+//! form.** Stating it jointly ("neither kind's modal rung equals its argmax")
+//! is true but flattens the difference that matters:
+//!
+//! - **duergar** — argmaxes `Sunless` / `Sunless` / `Underdeep`; measured modal
+//!   rungs `Undercroft` / `Underdeep` / `Undercroft`. On two of three seeds the
+//!   mode is `Undercroft`, which is **no formation's argmax at all**, so
+//!   terrain did not merely pick between authored answers — it produced one
+//!   that was not on offer. This is the strong form, and it is what makes the
+//!   seed-1234 floor failure world-caused rather than authoring-caused.
+//! - **mountain-dwarf** — argmaxes `Shallows` / `Shallows` / `Undercroft`;
+//!   measured modal rungs `Shallows` / `Undercroft` / `Undercroft`. Every
+//!   measured mode **is** one of its own three formation argmaxes, so terrain
+//!   only ever selected among them. That is the weak form: consistent with
+//!   truncation biting, and equally consistent with the formation mix deciding
+//!   which authored answer won. For this kind the disclosure is NOT fully
+//!   discharged, and a reader should treat mountain's mode as substantially
+//!   an authoring artefact.
+//!
 //! # The elevation precondition (spec §4.3's amendment)
 //!
 //! `tolerance_liebig` floors temperature/moisture/insolation at
@@ -771,26 +790,93 @@ fn the_separation_readout() {
         }
 
         // --------------------------------------------------------------
-        // THE ATTRIBUTION CONTROL, and it is the difference between "the two
-        // kinds separated" and "THE DELVE AXIS separated them".
+        // THE ATTRIBUTION CONTROL, and it separates the SEATING MULTIPLIER
+        // from everything else — which is NOT the same as separating "depth"
+        // from everything else. Read the scope note below before quoting a
+        // number off it.
         //
         // The composed capacity above is `per_species_capacity_at(..) *
-        // seating.multiplier`, and only the second factor is this campaign's
-        // work. Two candidates authored with different condition niches would
-        // separate on the FIRST factor alone, in a world where the delve
-        // ladder had never been built — so an overlap taken on the composed
-        // field cannot say which half did it. These two arms can:
+        // seating.multiplier`, and only the second factor is Task 8's work.
+        // Two candidates authored with different condition niches would
+        // separate on the FIRST factor alone — so an overlap taken on the
+        // composed field cannot say which half did it. These two arms can:
         //
         //   unscaled   the condition niches against the chamber substrate,
-        //              with the seating removed entirely — the pre-campaign
-        //              mechanism, plus Task 5's depth-routed conditions.
+        //              with the seating removed entirely.
         //   multiplier `chamber_fit` times the works discount and NOTHING
-        //              else — this campaign's contribution, alone.
+        //              else — the delve SEATING, alone.
+        //
+        // **SCOPE, and it is easy to overstate — this comment did, in its
+        // first draft.** The unscaled arm is NOT a depth-free control. It
+        // reads `subterranean_substrate`, which since Task 5 routes chamber
+        // temperature through `temperature_at_depth` and derives moisture from
+        // the water table — and the two candidate niches differ chiefly on
+        // exactly those two axes (temperature 12 vs 45 °C, moisture 0.35 vs
+        // 0.90). So the unscaled arm carries this campaign's depth work too,
+        // through a different factor.
+        //
+        // What the control therefore establishes, stated at the width the
+        // evidence supports: **the seating multiplier had no resolution, and
+        // the depth-routed condition niches did the separating.** It does NOT
+        // establish that depth contributed nothing — Task 5's half of the
+        // depth apparatus is inside the arm that separated them, and a
+        // genuinely depth-free control would need a third fixture whose
+        // conditions do not vary with the chamber. This task does not build
+        // one.
         //
         // The multiplier arm is expected to be tie-dense (a handful of
         // distinct values, per spec §5's own guard), and its quartile is
         // reported undefined when it is, rather than computed.
         // --------------------------------------------------------------
+        // --------------------------------------------------------------
+        // MAYBE_RAID'S OWN-RUNG LOOKUP, measured rather than inferred from
+        // the modal rungs (spec §5 requires this task to state whether it
+        // suppresses H2's one-family clause).
+        //
+        // `Bake::maybe_raid` resolves the target cell through
+        // `rung_for(raider_pidx, n)`, which is PER CELL, not per people. So
+        // "the two kinds have different modal rungs" does NOT imply "the two
+        // kinds can never meet": they meet wherever they happen to seat at the
+        // SAME rung in the same column, which the modal rung cannot tell you.
+        // The suppression is therefore PARTIAL, and this is its size.
+        // --------------------------------------------------------------
+        println!("-- maybe_raid: where the two kinds could meet at all --");
+        if readings.len() == 2 {
+            let (a, b) = (&readings[0], &readings[1]);
+            let mut same = 0usize;
+            let mut total = 0usize;
+            let mut by_rung: BTreeMap<usize, usize> = BTreeMap::new();
+            for ((cell_a, rung_a), (cell_b, rung_b)) in a.1.seated.iter().zip(b.1.seated.iter()) {
+                debug_assert_eq!(cell_a, cell_b, "the two seatings walk the same cells");
+                total += 1;
+                if rung_a == rung_b {
+                    same += 1;
+                    let rank = ladder
+                        .iter()
+                        .position(|x| x == rung_a)
+                        .unwrap_or(usize::MAX);
+                    *by_rung.entry(rank).or_default() += 1;
+                }
+            }
+            println!(
+                "  columns where {} and {} seat at the SAME rung: {same} / {total} ({:.1}%)",
+                a.0,
+                b.0,
+                100.0 * same as f64 / total.max(1) as f64
+            );
+            for (rank, n) in &by_rung {
+                let name = ladder
+                    .get(*rank)
+                    .map_or("?".to_string(), |r| format!("{r:?}"));
+                println!("    {name:<12} {n}");
+            }
+            println!(
+                "  so the own-rung lookup suppresses interaction on {:.1}% of shared \
+                 cave-bearing columns, NOT on all of them",
+                100.0 * (total - same) as f64 / total.max(1) as f64
+            );
+        }
+
         println!("-- attribution: which factor separated them --");
         for (label, pick) in [
             ("unscaled (condition niches only)", 0usize),

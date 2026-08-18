@@ -673,10 +673,6 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
         }
 
         // FINDING 2: unique among the alive settlements — the wrapper's domain.
-        let mut alive_keys: Vec<(u32, i64)> = rows.iter().filter(|r| r.1).map(|r| r.0).collect();
-        let alive_total = alive_keys.len();
-        alive_keys.sort_unstable();
-        alive_keys.dedup();
         // The colliding keys, NAMED. A bare cardinality mismatch says the
         // contract broke and nothing about where, and this assertion's whole
         // value is telling the next reader which column to look at — a
@@ -694,7 +690,6 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
             }
             by_key.into_iter().filter(|(_, v)| v.len() > 1).collect()
         };
-        let _ = (alive_keys.len(), alive_total);
         // FINDING 2, in the form that survives Task 8's re-key — see this
         // test's own disclosure. A collision between two SURFACE peoples would
         // mean one cell holding two alive surface communities, which

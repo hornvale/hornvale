@@ -492,6 +492,7 @@ pub fn made_chambers(
 mod tests {
     use super::*;
     use hornvale_species::environment_niche_registry;
+    use std::collections::BTreeSet;
 
     fn drow() -> EnvironmentNiche {
         environment_niche_registry()
@@ -527,6 +528,15 @@ mod tests {
     /// This is the assertion that was missing when Task 8 shipped, and it fails
     /// on the exact defect Task 9 found: two of the three formations were
     /// filtered on a name no corpus row carries.
+    ///
+    /// **It is NOT sufficient on its own, and neither is its sibling.** Both
+    /// were written against the defect that was found, and a *transposed*
+    /// mapping — `Karst => "fracture-cave"` — satisfies both: it names a real
+    /// row, and karst still scores differently from fracture. That is this
+    /// campaign's own theme (a guard that catches the instance rather than the
+    /// class) landing on the fix for this campaign's theme, and it matters here
+    /// because [`genus_of`] decides where every underworld people sits.
+    /// `the_genus_extends_the_cave_kinds_own_name` below closes it.
     #[test]
     fn every_cave_kind_matches_a_corpus_genus() {
         for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
@@ -541,6 +551,47 @@ mod tests {
                  row carries — every column of this formation would fall through to \
                  the genus-blind fallback and be scored against other formations' \
                  communities"
+            );
+        }
+    }
+
+    /// **The mapping is RIGHT, not merely non-empty** — the guard that catches
+    /// a transposition, which neither of its two siblings can.
+    ///
+    /// The corpus spells a cave formation as the `CaveKind`'s own name plus an
+    /// optional `-cave` suffix (`karst` → `karst-cave`, `lava-tube` →
+    /// `lava-tube`, `fracture` → `fracture-cave`), so the prefix relation is
+    /// the naming convention itself and holds for all three. Every one of the
+    /// five non-identity permutations of the mapping breaks it.
+    ///
+    /// **Why this rather than a structural join through
+    /// `hornvale_climate::Formation`**, which would be better and was
+    /// considered first: `Formation` carries no name. The corpus's `genera` are
+    /// raw `&'static str` literals in `climate::axes`, so joining structurally
+    /// means adding a `const fn Formation::name`, re-pointing three corpus
+    /// constants at it, and deciding where a second `CaveKind` → `Formation`
+    /// map may live given that decision 0094 puts the canonical one in
+    /// `cli/tests/cave_kind_correspondence.rs` precisely to stop it being
+    /// duplicated. That is a domain-crate API change and an 0094 question, not
+    /// a guard; it is the right shape and it is recorded here rather than done
+    /// under a fix round.
+    #[test]
+    fn the_genus_extends_the_cave_kinds_own_name() {
+        let mut seen: BTreeSet<&'static str> = BTreeSet::new();
+        for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+            let genus = genus_of(kind);
+            assert!(
+                genus.starts_with(kind.name()),
+                "{kind:?} is joined to the underworld corpus as {genus:?}, which does \
+                 not extend its own name {:?} — the mapping is TRANSPOSED, and every \
+                 column of this formation would be scored against another \
+                 formation's communities while both sibling guards stayed green",
+                kind.name()
+            );
+            assert!(
+                seen.insert(genus),
+                "{kind:?} is joined to {genus:?}, which another cave kind already \
+                 claims — two formations sharing one genus would collapse them"
             );
         }
     }
