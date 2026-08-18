@@ -1542,3 +1542,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T21:18:09Z | sluice:seam-guard | 1072.291 | 21142.952 | 1104.774 | 20.75 | 0 | 1ddef5087 |  | lefford | 40 |
 | 2026-08-18T21:22:18Z | sluice:clients | 249.609 | 445.282 | 33.529 | 1.92 | 0 | 2289bf021 |  | lefford | 40 |
 | 2026-08-18T21:55:49Z | sluice:heavy | 2010.228 | 32681.298 | 682.128 | 16.60 | 0 | 4ed029135 |  | lefford | 40 |
+| 2026-08-18T22:55:25Z | prewarm | 75.116 | 354.051 | 73.199 | 5.69 | 0 | 7e786b18 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:11:07Z | gate-commit | 541.450 | 134.433 | 219.381 | 0.65 | 0 | 7e786b18 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:12:31Z | gate-commit | 24.029 | 54.167 | 14.684 | 2.87 | 0 | 7e786b18 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:18:32Z | gate-commit | 24.789 | 55.429 | 15.074 | 2.84 | 0 | 0ff93088 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:19:39Z | gate-commit | 23.539 | 54.317 | 14.792 | 2.94 | 0 | 0ff93088 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:24:43Z | gate-commit | 7.292 | 6.240 | 9.038 | 2.10 | 0 | 7493115f | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:37:23Z | gate-commit | 744.793 | 879.928 | 468.806 | 1.81 | 0 | 7493115f | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:38:15Z | gate-commit | 25.877 | 55.232 | 15.162 | 2.72 | 0 | 7493115f | campaign/the-gazetteer | MacBookPro | 10 |

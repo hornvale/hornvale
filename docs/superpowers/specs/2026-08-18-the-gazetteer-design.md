@@ -116,6 +116,7 @@ magnitude  the integer scalar that ranks it within its class
 | Sea | `WaterKind::Ocean` cells | lowest `CellId` in it | cell count |
 | SaltLake | `WaterKind::SaltBasin` cells | lowest `CellId` in it | cell count |
 | River | maximal subtree of the flow forest | its **terminal** cell (sea mouth or interior sink) | catchment size |
+| Volcano | already individuated by `volcano_at` | its `source` cell | edifice cell count |
 
 Lowest-cell-id is canonical, integer, order-independent and requires no
 tie-break. It is also **not stable under anything that moves a coastline**: a
@@ -248,8 +249,26 @@ be extended to the new callers rather than duplicated.
   falls out of a graph traversal over already-committed fields ships; every
   class needing a new clustering pass waits. Mountain ranges, bays, capes,
   straits, peninsulas and biome regions are all on the far side of that line
-  (§9). Volcanoes are already individuated and already named — this campaign
-  reuses them and mints nothing for them.
+  (§9).
+
+**Volcanoes are the exception, and the reason is a correction.** An earlier
+draft of this section said volcanoes were "already individuated and already
+named", and used that to argue peaks had coverage from day one. **They do not.**
+Measured: `volcano_at` and `volcano_name` have *only test callers*, and no
+committed artifact anywhere carries a volcano name.
+
+```
+$ grep -rn "volcano_name" --include="*.rs" . | grep -v "fn volcano_name"
+(windows/worldgen/src/volcano.rs test module, and re-exports, only)
+$ grep -rl "volcano" book/src/gallery/
+(no output)
+```
+
+So a volcano is an individuated object with a naming function and **no
+surface**. Adding the caller is a join, not a new algorithm — it sits on this
+campaign's side of the scope line by the same rule the four component classes
+do, and it is the only thing in reach that answers "there is a big mountain to
+the north" with a name. It ships as a fifth class.
 - **No borrowing between cultures.** The Watershed decided borrowing ships
   (its §7 flag 2), selecting the Steeped people with the most settlements on
   the river. It "buys realism, not the criterion" — and it is a *fog* concern:
