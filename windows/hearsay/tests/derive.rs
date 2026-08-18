@@ -2,9 +2,11 @@ mod common;
 
 use common::{chain_with_a_survivor_shortcut, chain_with_foundings, eid, ledger_with, put, put_on};
 use hornvale_astronomy::units::StdDays;
+use hornvale_hearsay::contact::contact_of;
 use hornvale_hearsay::derive::{claims_about, variants_about, witnesses_of};
 use hornvale_hearsay::ladder::PrecisionLadder;
 use hornvale_hearsay::lineage::lineage_of;
+use hornvale_hearsay::transmission::{Transmission, Walk};
 use hornvale_hearsay::{divergent_witnesses, echo_ratio};
 use hornvale_kernel::Precision;
 use hornvale_kernel::ledger::{Ledger, Value};
@@ -309,8 +311,15 @@ fn a_chain_of_one_stance_carries_the_day_unchanged() {
         Value::Number(372.4),
     );
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let ladder = PrecisionLadder::of(&led);
-    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    let vs = variants_about(&walk, &ladder, eid(1), hornvale_history::OCC_ENDED);
     assert!(!vs.is_empty(), "the subtree holds the claim");
     for v in &vs {
         assert_eq!(v.precision, Precision::FINEST, "no stance change: {v:?}");
@@ -354,8 +363,15 @@ fn crossing_a_stance_boundary_coarsens_the_day() {
         Value::Number(372.4),
     );
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let ladder = PrecisionLadder::of(&led);
-    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    let vs = variants_about(&walk, &ladder, eid(1), hornvale_history::OCC_ENDED);
     // 5 descends from the perpetrator 4, so its telling crossed a stance
     // boundary and MUST have lost a rung. Asserted unconditionally: an
     // earlier draft guarded this behind `if let Some(v) = five && v.precision
@@ -423,8 +439,15 @@ fn precision_and_object_never_disagree_anywhere() {
         Value::Number(372.4),
     );
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let ladder = PrecisionLadder::of(&led);
-    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+    for v in variants_about(&walk, &ladder, eid(1), hornvale_history::OCC_ENDED) {
         let Value::Number(d) = v.object else {
             panic!("occ-ended is Number-valued")
         };
@@ -456,9 +479,16 @@ fn an_empty_ladder_leaves_every_claim_at_finest() {
         Value::Entity(eid(4)),
     );
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let ladder = PrecisionLadder::of(&led);
     assert!(ladder.is_empty());
-    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+    for v in variants_about(&walk, &ladder, eid(1), hornvale_history::OCC_ENDED) {
         assert_eq!(v.precision, Precision::FINEST);
         assert_eq!(v.object, Value::Number(745.0));
     }
@@ -482,8 +512,15 @@ fn witnesses_hold_first_hand_and_are_never_demoted() {
         Value::Number(745.0),
     );
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let ladder = PrecisionLadder::of(&led);
-    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    let vs = variants_about(&walk, &ladder, eid(1), hornvale_history::OCC_ENDED);
     for w in [eid(1), eid(2)] {
         let v = vs.iter().find(|v| v.holder == w).expect("witness holds");
         assert_eq!(v.hops, 0, "{w:?} is a witness");
@@ -498,6 +535,13 @@ fn accumulating_distortion_can_pass_more_than_one_rung() {
     // rung. The property under test is that the accumulating model does not.
     let led = chain_with_foundings();
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let mut d = hornvale_hearsay::durations::PeopleDurations::default();
     d.insert(
         "human",
@@ -507,8 +551,7 @@ fn accumulating_distortion_can_pass_more_than_one_rung() {
     let ladders = hornvale_hearsay::ladder::PeopleLadders::of(&led, &d);
 
     let out = hornvale_hearsay::derive::variants_about_accumulating(
-        &led,
-        &lin,
+        &walk,
         &ladders,
         &d,
         hornvale_hearsay::accumulate::Accumulation::Additive,
@@ -534,14 +577,20 @@ fn every_rule_preserves_precision_rank_monotonicity_along_a_path() {
     // 2's retrospective is about.
     let led = chain_with_foundings();
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let mut d = hornvale_hearsay::durations::PeopleDurations::default();
     d.insert("human", Some(StdDays::new(50.0).expect("positive")), None);
     let ladders = hornvale_hearsay::ladder::PeopleLadders::of(&led, &d);
 
     for rule in hornvale_hearsay::accumulate::Accumulation::ALL {
         let mut out = hornvale_hearsay::derive::variants_about_accumulating(
-            &led,
-            &lin,
+            &walk,
             &ladders,
             &d,
             rule,
@@ -581,13 +630,19 @@ fn a_holder_reachable_by_two_paths_keeps_the_least_corrupted_telling() {
     // smaller -- it must be the telling 3 ends up holding.
     let led = chain_with_a_survivor_shortcut();
     let lin = lineage_of(&led);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lin,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let mut d = hornvale_hearsay::durations::PeopleDurations::default();
     d.insert("human", Some(StdDays::new(50.0).expect("positive")), None);
     let ladders = hornvale_hearsay::ladder::PeopleLadders::of(&led, &d);
 
     let out = hornvale_hearsay::derive::variants_about_accumulating(
-        &led,
-        &lin,
+        &walk,
         &ladders,
         &d,
         hornvale_hearsay::accumulate::Accumulation::Additive,

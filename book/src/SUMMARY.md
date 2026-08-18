@@ -374,6 +374,7 @@
 - [The Rhumb](./chronicle/the-rhumb.md)
 - [The Palimpsest](./chronicle/the-palimpsest.md)
 - [The Underworld](./chronicle/the-underworld.md)
+- [The Parley](./chronicle/the-parley.md)
 
 # Appendix: The Frontier
 

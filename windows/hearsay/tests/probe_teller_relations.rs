@@ -55,7 +55,7 @@ fn labels(
     who: EntityId,
 ) -> [u8; 5] {
     // 0: stance, the control.
-    let s = match stance::stance_of(led, lin, subject, who) {
+    let s = match stance::stance_of(led, lin, stance::Perpetration::Singleton, subject, who) {
         stance::Stance::Perpetrator => 0,
         stance::Stance::VictimLine => 1,
         stance::Stance::Bystander => 2,
