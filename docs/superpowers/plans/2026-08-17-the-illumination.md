@@ -1121,7 +1121,7 @@ fn a_seam_cell_is_drawn_under_north_up() {
 flip `NAV-north-up-needs-per-cell-position` to `shipped`. Full list in
 `.superpowers/sdd/followups.md`. Check `campaign/the-burr`'s hold-off on
 `book/src/frontier/` is clear first: `make board-sync && make board`.
-- [ ] **Step 2: Decision 0142** — write the record; re-verify the number is
+- [ ] **Step 2: Decision 0142** (released to the-underworld at the close, then returned on the first-to-merge precedent) — write the record; re-verify the number is
 still free (`make board-sync && make board`), because `ls docs/decisions/`
 cannot see a number an unmerged branch holds.
 - [ ] **Step 3: Chronicle entry** (`book/src/chronicle/`) + freshness sweep;

@@ -98,8 +98,16 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   before you claim: `possess --seed 42` then `enter; map` emits **414 escape
   bytes**, while the same session outdoors emits **0** — and the chart's own
   disclosure line says why, `0 tinted, 31 withheld (water, a mark, or you)`,
-  because seed 42's flagship stands on water. Seed 13 outdoors reports `30
-  tinted, 1 withheld`. **A single seed is not evidence about the renderer**, and
+  because seed 42's flagship stands on water. **The "seed 13 outdoors reports
+  `30 tinted, 1 withheld`" figure that used to sit here does not reproduce**,
+  and its replacement is the sharper fact: The Illumination measured the
+  flagship walk band as **100% river on all five seeds sampled** (42, 13, 7, 1,
+  100), so the counter-example this sentence was reaching for does not exist at
+  the default observer on any of them. Re-measured directly —
+  `printf 'map\nrelease\n' > /tmp/m.txt && hornvale possess --seed 13 --script
+  /tmp/m.txt --lens lantern` — seed 13 prints `0 tinted, 31 withheld`, byte-identical
+  to seed 42's line. Whatever produced 30/1 was a different observer construction
+  and nobody recorded which. **A single seed is not evidence about the renderer**, and
   neither is `windows/scene/src/surrounds_ascii.rs`'s `\x1b[38;2;` path on its
   own: a code path is not a default, a default is not a screen, and a screen at
   one seed is not the program. Say **which surface, which seed, and whether the

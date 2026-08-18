@@ -370,7 +370,7 @@ that has never heard of `color` reads exactly the bytes it read before. The
 committed example, [`scene-surrounds-seed-42.json`](../gallery/scene-surrounds-seed-42.json),
 is produced through the uncoloured path and carries neither key.
 
-`sight` is one object with six fields:
+`sight` is one object with nine fields:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -380,17 +380,29 @@ is produced through the uncoloured path and carries neither key.
 | `projection` | string | The registered name of the mapping from signal to sRGB — `"native"`, `"native-anomalous"`, `"yellow-blue"`, or `"none"` when the eye carries no projection. |
 | `preserves` | string | What that projection keeps, in words. The caption's load-bearing half. |
 | `sun_altitude_deg` | number | The sun's elevation above the horizon, degrees, that lit these colours; quantized at the emit boundary. **Caller-supplied.** |
+| `channel_roles` | array of string | `"chromatic"` or `"achromatic"` per channel, in channel order — which index of a carried `signal` carries hue and which carries brightness only. Appended after `sun_altitude_deg` by The Illumination. |
+| `projection_slots` | array of 3 integers, or null | Which channel drives R, G and B; `null` when the eye carries no projection to sRGB. |
+| `projection_norms` | array of 3 numbers, or null | The per-output-slot normalizers, quantized; `null` when the eye carries no projection. **Per-observer** — the standard observer's are `1.98`/`3.51`/`3.95` and a species observer's differ — which is why `projection_slots` alone is not enough to reproject. |
 
-**Four of the six are overwritten by the builder, and that is why they can
-be trusted.** `channels`, `chromatic`, `projection` and `preserves` are read
+The last three are the **calibration**: with them a client can recompute
+`color` from `signal` itself, `(signal[slots[i]] / norms[i]).clamp(0, 1)`
+followed by the sRGB transfer, which reproduces the carried triple
+byte-for-byte on the photopic path. `Observer::to_srgb`'s low-light branch
+reads global kernel constants that are deliberately **not** on the wire; a
+scotopic cell falls back to the carried `color`, which is present on every
+such cell.
+
+**Seven of the nine are overwritten by the builder, and that is why they can
+be trusted.** `channels`, `chromatic`, `projection`, `preserves`,
+`channel_roles`, `projection_slots` and `projection_norms` are read
 back off the `Observer` actually used to colour the chart, discarding
 whatever the caller put in those slots. A caller can therefore name an eye
 and state a sun angle — the two things an `Observer` cannot supply, since a
 set of sensitivity curves does not know its own species or what time it is —
-but a caller **cannot** make a document claim an arity or a projection its
-colours did not actually come from. A consumer may read those four as fact
-about the pixels; it must read `observer` and `sun_altitude_deg` as the
-producer's assertion.
+but a caller **cannot** make a document claim an arity, a projection or a
+calibration its colours did not actually come from. A consumer may read
+those seven as fact about the pixels; it must read `observer` and
+`sun_altitude_deg` as the producer's assertion.
 
 The projection is named for the reason a map projection is named. Every
 projection of a signal onto three screen channels loses something, and the
@@ -404,10 +416,14 @@ opposition; the red–green axis is not carried."*
 
 A renderer is expected to surface `preserves` beside the picture rather than
 in a footnote. `render_surrounds_ascii`'s `colour` lens does exactly that,
-and adds its own disclosure: the tint is **bedrock**, so it is applied only
-where the glyph is drawing that ground and withheld from water, from marks,
-and from the observer's own cell — with three counts that partition the
-chart, so a reader can check the sentence against the picture.
+and adds its own disclosure: the tint is the cell's **surface cover**, so it
+is applied only where the glyph is drawing that ground and withheld from
+water, from marks, and from the observer's own cell — with three counts that
+partition the chart, so a reader can check the sentence against the picture.
+When *every* placed cell is bare it adds a second line stating the
+conclusion outright, because a chart carrying no chromatic information at
+all has lost the nominal axis and says so rather than reading as an
+unremarkable band (decision 0142).
 
 ## Resolution: what a uniform field is telling you
 
@@ -430,14 +446,19 @@ already applies to colour (see above):
 |---|---|---|
 | `grid_level` | integer | The canonical grid's own refinement level. |
 | `depth_below_grid` | integer | How many levels below `grid_level` this chart's cells sit (`depth - grid_level`). `4^depth_below_grid` rooms share one grid cell. |
-| `grid_resolution_fields` | array of string | The names of this document's fields decided at grid resolution, in stable order: `["biome", "color", "water"]`. |
+| `grid_resolution_fields` | array of string | The names of this document's fields decided at grid resolution, in stable order: `["biome", "water"]`. It read `["biome", "color", "water"]` until The Illumination — see below. |
 
 `biome` and `water` are both read from a room's **dominant corner** — the
 canonical-grid cell with the greatest blend weight at that room's centroid,
 tie-broken to the lowest cell id — never a blend, because both are
 categorical: averaging "granite" and "basalt" would name a rock that is not
-there. `color` reads that same dominant corner's rock class, so all three
-move together and never contradict each other. **`relief` is deliberately
+there. **`color` used to read that same dominant corner's rock class and no
+longer does.** The Illumination made a cell's colour a *surface* mixture —
+vegetation, litter, snow, sand or silt over the mineral blend — modulated
+per room by `micro`, so it genuinely varies below grid resolution and was
+removed from the list. Leaving it there would have been a falsehood on a
+cross-repo contract: a client optimising on the declaration would render a
+flat chart and would not be wrong to. **`relief` is deliberately
 absent from the list**: it is banded from `height_asl_m`, a three-corner
 *blend*, so it genuinely varies below grid resolution — that is real signal,
 not noise to be disclosed away. **`micro` is absent for a different reason**:
@@ -448,12 +469,12 @@ grid-resolution in the first place. That remains true of all four axes since
 is decided by a sub-cell drainage network finer than the grid rather than
 coarser, so neither belongs on a list of fields a wide view will render flat.
 
-A consumer reading a flat `biome`/`water`/`color` across a wide view should
+A consumer reading a flat `biome`/`water` across a wide view should
 caption the resolution (*"grid resolution — every room here reads one
 coarse cell"*) rather than infer a defect. A campaign attempted to refine
 `water` below grid resolution instead of disclosing it — thresholding a
 blend of a categorical field's underlay — and reverted it: the change split
-`biome`/`water`/`color`'s documented agreement on one cell, and shrank a
+`biome`/`water`/`color`'s then-documented agreement on one cell, and shrank a
 calibrated coarse statistic (fresh water at walking depth) by 29%, halving
 thirst-driven fauna movement in the process. Sub-cell water belongs to a
 hydrology model with an actual flow graph, not to a resolution disclosure.
@@ -483,6 +504,7 @@ in this order (field order **is** the JSON key order and is contract):
 | `legend` | array of object | The chart's noun catalog, ascending by `noun` — see the `LegendEntry` table below. |
 | `sight` | object, **key omitted when absent** | The eye this chart was coloured for and what its projection preserves — see "Colour, and the eye that computed it" above. Present only on a document built through the colouring path. |
 | `resolution` | object | Which fields are decided at canonical-grid resolution and are therefore constant below it — see "Resolution: what a uniform field is telling you" above. Always present. |
+| `cover_legend` | array of string | `["bare", "chlorophyll", "litter", "snow", "sand", "silt"]`; a cell's `cover` indexes into it. **Always present**, on a coloured document and an uncoloured one alike — a legend is a vocabulary declaration of the schema version, not a per-document datum, so gating it on a property it has nothing to do with would be the wrong shape. Appended after `resolution` by The Illumination. |
 
 `observer` is itself an object, in this field order:
 
@@ -513,9 +535,13 @@ Each element of `cells` is an object, in this field order:
 | `moisture` | number or null | Dimensionless moisture index, quantized; `null` when the cell is not `"here"`. |
 | `elevation_m` | number or null | Elevation, metres, quantized; `null` when the cell is not `"here"`. |
 | `height_asl_m` | number or null | Height above sea level, metres, quantized; signed, negative below; `null` when the cell is not `"here"`. `relief` is banded from this. |
-| `color` | array of 3 integers, **key omitted when absent** | The cell's bedrock as it appears to the document's declared eye under the document's declared light — `[r, g, b]`, each `0..=255`. Absent entirely on an uncoloured document. |
+| `color` | array of 3 integers, **key omitted when absent** | The cell's **surface cover** as it appears to the document's declared eye under the document's declared light — `[r, g, b]`, each `0..=255`. A mixture over `cover_legend`'s endmembers, weighted by cover and modulated per room by `micro`; it read the cell's *bedrock* until The Illumination. Absent entirely on an uncoloured document. |
 | `micro` | object | The sub-cell micro-field at this room — **always present, on every cell and every state**. See the `Micro` table below and "`micro`: the finest layer the document carries" above. |
 | `marks` | array of object | Salience-ranked things standing here, ordered by `(salience, noun)` — see the `Mark` table below. |
+| `signal` | array of number, **key omitted when absent** | The post-eye per-channel signal this cell's `color` was projected from, quantized — one entry per channel the document's eye senses with, interpreted through `sight`'s `channel_roles`. Absent on an uncoloured document. |
+| `cover` | integer, **key omitted when absent** | Index into `cover_legend` — the categorical surface cover class. **Not derivable by thresholding `color`**: two clients would threshold one continuous mixture differently and produce two disagreeing worlds from one document. Absent on an uncoloured document. |
+| `bearing_deg` | number | Great-circle initial azimuth from the observer to this cell's centroid, degrees clockwise from north, quantized. **Always present, including on a seam cell.** |
+| `distance_rad` | number | Great-circle angular distance from the observer to this cell's centroid, radians, quantized. With `bearing_deg`, this cell's polar coordinate about the observer — the whole north-up unblock. **Always present.** |
 
 A cell's `micro` (`Micro`) is an object of four numbers, in this field order,
 each in `[-1, 1]` and quantized at the emit boundary:
@@ -616,14 +642,13 @@ so no client outside this repository read the wrong values either.
 
 ## What has been appended since v2, and why none of it minted v3
 
-Six things have been added to this schema since it shipped, and every one is
+Seven things have been added to this schema since it shipped, and every one is
 additive in the strict sense decision 0055 requires: a new key in an
 already-open object, or a new value in an already-open vocabulary. No
 existing field changed meaning — including `orientation`, whose *value* moved
 from `"lattice"` to `"north-up"` while the key, its type and its job stayed
-exactly as they were. Three of the four are also trailing appends —
-the new key gains a slot after the previous last one and no other key's bytes
-move. **`micro` is not**: `SurroundsCell` declares it *before* `marks`
+exactly as they were. Most are also trailing appends — the new key gains a
+slot after the previous last one and no other key's bytes move. **`micro` is not**: `SurroundsCell` declares it *before* `marks`
 (`windows/scene/src/surrounds.rs`), which was already the struct's last field,
 so `micro` lands mid-object and every cell's bytes move — visible in
 `book/src/gallery/scene-surrounds-seed-42.json` as
@@ -637,11 +662,11 @@ is additive at the schema level but not at the byte level.
 
 | Addition | Shape | Why it is additive |
 |---|---|---|
-| `color` on a cell, `sight` on the document | both `skip_serializing_if`, trailing | an uncoloured document emits neither key and is byte-identical to what it was before the colour layer existed |
+| `color` on a cell, `sight` on the document | both `skip_serializing_if`, trailing | an uncoloured document emits neither key. It **was** byte-identical to a pre-colour-layer document until The Illumination, which added three unconditional keys below; the *optionality* argument is unchanged, the byte-identity claim is not |
 | `micro` on a cell | always present, declared **before** `marks` — a mid-object insertion, not a trailing append | a new key; additive at the schema level, but every cell's bytes shift because `marks` (the prior last field) now serializes after it |
 | `resolution` on the document | always present, appended after `sight`, trailing | a new key; it *describes* existing fields rather than changing them |
 | `"cave"` as a mark `kind` | a new value in an open vocabulary | `kind` was never a closed enumeration, and no consumer needs a case for it |
-| `signal`/`cover` on a cell, `cover_legend` on the document | `signal`/`cover` `skip_serializing_if`, trailing | an uncoloured document emits neither cell key, exactly as with `color`/`sight` |
+| `signal`/`cover` on a cell, `cover_legend` on the document | `signal`/`cover` `skip_serializing_if`, trailing; `cover_legend` **always present**, trailing | an uncoloured document emits neither cell key, exactly as with `color`/`sight`. `cover_legend` is unconditional on purpose: a legend is a vocabulary declaration of the schema version — a compile-time constant, identical in every document ever emitted — not a per-document datum, so gating it on a property it has nothing to do with would be the wrong shape |
 | `bearing_deg`/`distance_rad` on a cell | always present, trailing, non-`Option` — present on a seam cell too | new keys; they *add* a coordinate rather than changing the lattice one, which is still emitted unchanged |
 | `"north-up"` as the `orientation` value | a new value in an open vocabulary | `orientation` exists to be read, never to be assumed; a consumer that switched on it already had to handle a value it did not recognise |
 

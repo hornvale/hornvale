@@ -26,8 +26,8 @@ axes. Scale is arc, not metres: the simulation defines no planetary radius, and 
 depth-12 room's edge subtends roughly 0.015° -- a radius-4 neighbourhood
 spans about one five-thousandth of the globe. `@` is always the observer's
 own room. Every other glyph is the `terrain` lens's reading of a cell's
-`water` and `relief` fields (a settlement or agent mark, where one stands,
-pre-empts the terrain glyph):
+`water` field, or — on dry land — of its `relief` and `micro` together (a
+settlement or agent mark, where one stands, pre-empts the terrain glyph):
 
 | Glyph | Meaning |
 |---|---|
@@ -35,13 +35,22 @@ pre-empts the terrain glyph):
 | `~` | ocean |
 | `=` | salt-basin |
 | `+` | river |
-| `_` | dry land, `abyss` or `shelf` relief |
-| `.` | dry land, `lowland` relief |
-| `:` | dry land, `upland` relief |
-| `^` | dry land, `highland` relief |
-| `A` | dry land, `alpine` relief |
+| `_` | dry land, lowest impedance |
+| `.` | dry land, low impedance |
+| `:` | dry land, middling impedance |
+| `^` | dry land, high impedance |
+| `A` | dry land, highest impedance |
 | `#` | a settlement mark |
 | `&` | an agent mark |
+
+The five land glyphs are an **ordinal ladder of impedance** -- how hard the
+ground is to cross -- and not of relief alone. Since
+[The Illumination](../chronicle/the-illumination.md) a cell's rung is its
+elevation band plus half its canopy closure plus half its terrain roughness,
+each of the two perturbations bounded so that vegetation and unevenness
+together raise a cell at most one rung above its bare relief. The flattest,
+most open cell of a given band therefore renders exactly as the older
+relief-only ladder did.
 
 A `remembered` cell would draw the same glyph, dimmed -- the epistemic
 channel is a weight, not a second alphabet -- and the escape-free `terrain`

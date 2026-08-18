@@ -4,8 +4,27 @@
 decision 0141), which settled the chart's *orientation semantics* before
 this campaign rewrites how the chart is *drawn*.
 
-**Decision claimed:** 0142 (board notice `6f240b0f`, posted after
-`make board-sync && make board`).
+**Decision promoted:** **0142** (board notice `6f240b0f`). **The number
+moved twice and landed back where it started**, which is worth the four lines
+because the round trip is itself a finding. It was claimed as 0142 at
+brainstorm; at the close `campaign/the-underworld` — which did not exist when
+that claim was posted — turned out to hold 0142, 0143 and 0144 committed on
+its branch, so this campaign released the number and took 0145 (notice
+`c1095728`). That left this branch spanning `0001..0145` with three holes, and
+`no_gaps_in_the_decision_log` correctly refused every commit. The Underworld's
+own merge was then held on heavy-tier failures of its own, so the wait was
+unbounded, and repo precedent from the 0132/0133 collision — **first to merge
+keeps the number** — returned 0142 here. The Underworld renumbers to
+0143–0145 during a repair already touching those sites.
+
+The durable lesson is the one the release was reasoned from: a claim announced
+on the board but not yet written is invisible to `git ls-tree`, so "no
+collision in the tree" and "no collision" are different propositions. The
+lesson the *reclaim* adds is sharper and is not this campaign's discovery —
+The Sluice's retrospective already filed it: the no-gaps and no-collision
+invariants on `docs/decisions/` are **mutually exclusive under parallel
+campaigns**, and the gap check pushes an author into the collision the
+uniqueness check exists to catch.
 
 **Branch:** `campaign/the-illumination`.
 
@@ -824,7 +843,9 @@ down, and taken on report rather than measured.
 
 ## 11. Decision to promote
 
-**0142**, claimed after `make board-sync && make board` (§0 header).
+**0142**, claimed after `make board-sync && make board`, released to
+`campaign/the-underworld` at the close, and returned here on the
+first-to-merge precedent — see the §0 header.
 
 > **A rendering channel carries one measurement axis, and a client that
 > lacks the channel loses the axis and says so.** Colour carries the

@@ -180,3 +180,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0138](0138-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong.md) | A preregistered criterion may be restated when its estimator is wrong | Accepted |
 | [0139](0139-main-advances-only-through-the-lock.md) | Main advances only through the lock | Accepted |
 | [0140](0140-the-stage-gate-is-a-kind-of-queue-request.md) | The stage gate is a kind of queue request, not a dispatch path | Accepted |
+| [0141](0141-compass-navigation-is-an-overlay.md) | Compass navigation is an overlay, never the graph | Accepted |
+| [0142](0142-a-channel-carries-one-axis-and-a-lost-axis-is-declared.md) | A rendering channel carries one axis, and a lost axis is declared | Accepted |
