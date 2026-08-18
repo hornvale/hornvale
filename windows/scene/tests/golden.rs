@@ -345,3 +345,49 @@ fn surrounds_ascii_seam_bytes_are_pinned() {
          deliberately, re-run with REBASELINE=1, and review the diff",
     );
 }
+
+/// Spec §5.2 on the one REAL band in the repo that is known to contain seam
+/// cells: room 724698318's radius-4 neighbourhood, 12 of whose 31 cells lie
+/// across a base-face edge. Under the lattice projection those twelve had no
+/// coordinate and were counted in a footer instead of drawn — the golden
+/// above recorded exactly that, `19` placed and `12 cells beyond a face
+/// seam`. Bearing and distance exist for a seam cell, so all 31 draw now.
+///
+/// Asserted here rather than left to the byte pin because a byte pin says
+/// only "the render did not change since someone accepted it"; this says
+/// what the render must CONTAIN, and it is what would catch a future
+/// projection that quietly went back to dropping cells it could not place.
+#[test]
+fn every_cell_of_the_seam_band_is_drawn_including_the_seam_cells() {
+    let w = seed_42_world();
+    let room = seam_room();
+    let scene = surrounds_scene(&w, &room, 4, hornvale_kernel::WorldTime::GENESIS).unwrap();
+    let seams = scene.cells.iter().filter(|c| c.seam).count();
+    assert_eq!(
+        (scene.cells.len(), seams),
+        (31, 12),
+        "this test is only meaningful on a band that really does cross a face \
+         seam — if these counts moved, re-point `seam_room` before touching \
+         the assertions below"
+    );
+    let out = surrounds_ascii_seam();
+    assert!(
+        out.contains("31 of 31 cells drawn, 0 occluded"),
+        "every cell of a seam band must be drawn now, seam cells included: {out}"
+    );
+    assert!(
+        !out.contains("beyond a face seam"),
+        "the seam footer is retired; a seam cell has an honest place on a \
+         north-up chart: {out}"
+    );
+    // The picture, not just the caption's arithmetic: 31 drawn boxes must
+    // actually be on the page. Counting glyphs is what separates "the
+    // renderer believes it placed 31" from "31 are visible".
+    let glyphs = out
+        .lines()
+        .filter(|l| !l.starts_with('[') && !l.contains(": "))
+        .flat_map(str::chars)
+        .filter(|c| !c.is_whitespace())
+        .count();
+    assert_eq!(glyphs, 31, "the picture must carry 31 glyphs: {out}");
+}

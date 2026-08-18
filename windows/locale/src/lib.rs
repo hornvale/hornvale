@@ -12,6 +12,9 @@ mod substrate;
 
 mod micro;
 
+mod surface;
+pub use surface::CoverClass;
+
 mod grammar;
 
 mod budget;
@@ -596,10 +599,41 @@ impl LocaleContext {
     /// would name a rock that is not there. Sharing that one rule is what
     /// makes the colour and the prose agree about which ground a room
     /// stands on.
+    ///
+    /// `micro` is the room's own sub-cell [`MicroField`] (`describe`'s
+    /// `Locale::regime.micro` on a `Locale` already built for this address,
+    /// or [`crate::surface`]'s doc for why a *second* `describe` call is the
+    /// wrong way to get one) and `at` is when to read the seasonal cover
+    /// term at (spec §3.2) — see [`Self::reflectance_mixture_at`], which
+    /// this integrates.
     pub fn reflectance_at(
         &self,
         addr: &RoomAddr,
+        micro: &MicroField,
+        at: WorldTime,
     ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        Ok(self.reflectance_mixture_at(addr, micro, at)?.integrate())
+    }
+
+    /// The surface mixture at `addr` on `at`, un-integrated, so a caller can
+    /// reach the components. [`LocaleContext::reflectance_at`] is this,
+    /// integrated.
+    ///
+    /// Composes the mineral mixture [`hornvale_terrain::lithology::
+    /// reflectance`] already produced with a surface cover layer
+    /// ([`surface::cover_weights`]) weighted by the covered fraction, per
+    /// spec §3.2: `mineral * (1 - covered) + cover`, integrated once. Takes
+    /// `micro` from the caller rather than re-deriving it (which would mean
+    /// either re-running the whole `describe`/`grammar::render` pipeline, or
+    /// duplicating the wetness-grounding call into `hornvale_terrain::
+    /// branch::rill_reading` a second time for the same room) — see
+    /// [`surface`]'s module doc.
+    pub fn reflectance_mixture_at(
+        &self,
+        addr: &RoomAddr,
+        micro: &MicroField,
+        at: WorldTime,
+    ) -> Result<hornvale_kernel::color::Mixture, LocaleError> {
         let geo = self.climate.geosphere();
         let weights = addr
             .corner_weights(geo, &self.index)
@@ -607,7 +641,63 @@ impl LocaleContext {
         let cell = dominant_corner(&weights).0;
         let buffer = self.terrain.material_at(cell);
         let rock = self.terrain.rock_at(cell);
-        Ok(hornvale_terrain::lithology::reflectance(&buffer, rock).integrate())
+        let mineral = hornvale_terrain::lithology::reflectance(&buffer, rock);
+        // `(1.0 - covered)` below is only "the mineral's share of the
+        // ground" if `mineral.weights()` already sums to `1.0` — but
+        // `Mixture::weights()` is documented (`kernel/src/color.rs`) as
+        // explicitly UNNORMALIZED, so `domains/terrain` is free to change
+        // that sum without this crate noticing. Pinned here rather than
+        // trusted: today it always sums to 1.0 algebraically (`lithology::
+        // reflectance`'s four weights reduce to `silicate_share + carbonate
+        // == 1.0` for any input — see `mineral_weights_sum_to_one_across_a_
+        // buffer_spread` in this module's tests for the swept, non-debug
+        // check), so a debug build catches a `domains/terrain` change here,
+        // at the one call site that assumes it, rather than every colour in
+        // the world silently shifting with nothing red anywhere (Task 2b
+        // fix round, FINDING 2).
+        let mineral_weight_sum: f64 = mineral.weights().iter().sum();
+        debug_assert!(
+            (mineral_weight_sum - 1.0).abs() < 1e-6,
+            "lithology::reflectance's weights summed to {mineral_weight_sum}, not ~1.0 — \
+             reflectance_mixture_at's `(1 - covered)` mineral scaling assumes a normalized \
+             mineral mixture; domains/terrain changed its own weight convention and this \
+             composition needs to change with it"
+        );
+        let cover = surface::cover_weights(&self.climate, cell, micro, at);
+        let covered: f64 = cover.iter().map(|(_, w)| w).sum();
+        let mut components: Vec<hornvale_kernel::color::Reflectance> =
+            mineral.components().to_vec();
+        let mut mix_weights: Vec<f64> = mineral
+            .weights()
+            .iter()
+            .map(|w| w * (1.0 - covered))
+            .collect();
+        for (r, w) in cover {
+            components.push(r);
+            mix_weights.push(w);
+        }
+        hornvale_kernel::color::Mixture::new(components, mix_weights)
+            .map_err(|e| LocaleError::Build(e.to_string()))
+    }
+
+    /// The dominant surface cover class at `addr` on `at`, modulated by this
+    /// room's own sub-cell `micro` field — the categorical read
+    /// [`surface::cover_class_at`] computes, resolved from the same
+    /// dominant corner [`Self::reflectance_mixture_at`] uses, so a cell's
+    /// `cover` always names the ground its `color` was actually drawn from
+    /// (Task 9).
+    pub fn cover_class_at(
+        &self,
+        addr: &RoomAddr,
+        micro: &MicroField,
+        at: WorldTime,
+    ) -> Result<CoverClass, LocaleError> {
+        let geo = self.climate.geosphere();
+        let weights = addr
+            .corner_weights(geo, &self.index)
+            .ok_or(LocaleError::AboveGrid)?;
+        let cell = dominant_corner(&weights).0;
+        Ok(surface::cover_class_at(&self.climate, cell, micro, at))
     }
 
     /// The water column at a marine cell: every stratum from the sunlit water
@@ -1498,6 +1588,47 @@ mod tests {
         World::new(Seed(42))
     }
 
+    /// FINDING 2 (Task 2b fix round): `reflectance_mixture_at` scales
+    /// `lithology::reflectance(..).weights()` by `(1 - covered)` and
+    /// appends absolute cover weights, which composes correctly only if
+    /// the mineral weights already sum to `1.0` — but `Mixture::weights()`
+    /// is documented as explicitly unnormalized, so nothing outside
+    /// `domains/terrain` enforces that sum. This is the swept check the
+    /// composition site's own `debug_assert!` comment points to: real
+    /// generated terrain, several seeds, many cells, not hand-built
+    /// buffers — so a change to `lithology::reflectance`'s weight formula
+    /// (not just an out-of-range input) is what this is watching for.
+    ///
+    /// claim: invariant(forall-seed) — the mineral-weights-sum-to-one
+    /// property is asserted for every (seed, cell) pair swept, not sampled
+    /// to find one instance of it.
+    #[allow(clippy::disallowed_methods)] // named construction site (decision 0092)
+    #[test]
+    fn mineral_weights_sum_to_one_across_a_buffer_spread() {
+        let mut checked = 0;
+        for seed in [1u64, 42, 7, 100] {
+            let world = World::new(Seed(seed));
+            let terrain = terrain_of(&world).expect("terrain sculpts");
+            let geo = terrain.geosphere();
+            for i in (0..geo.cell_count() as u32).step_by(53) {
+                let cell = CellId(i);
+                let buffer = terrain.material_at(cell);
+                let rock = terrain.rock_at(cell);
+                let mineral = hornvale_terrain::lithology::reflectance(&buffer, rock);
+                let sum: f64 = mineral.weights().iter().sum();
+                assert!(
+                    (sum - 1.0).abs() < 1e-6,
+                    "seed {seed} cell {cell:?}: mineral weights summed to {sum}, not ~1.0"
+                );
+                checked += 1;
+            }
+        }
+        assert!(
+            checked > 500,
+            "too few (seed, cell) pairs swept to trust this check; got {checked}"
+        );
+    }
+
     #[test]
     fn describe_is_deterministic_across_two_contexts() {
         let world = land_world();
@@ -1796,12 +1927,29 @@ mod tests {
     /// rather than one fixed address: a single room's three corner weights
     /// can coincidentally agree across categories even when the underlying
     /// wiring has split, so one address is not enough to trust a pass.
+    ///
+    /// **The final block is narrowed, not deleted, by the illumination
+    /// campaign's Task 2b.** `reflectance_at`/`reflectance_mixture_at` now
+    /// compose a surface cover layer above the mineral mixture
+    /// (`surface::cover_weights`), so `reflectance_at(addr)` no longer
+    /// equals the bare mineral reflectance of the dominant cell whenever
+    /// anything covers it — legitimately: a forested cell reads green now,
+    /// not granite-grey, and that is the whole point of this campaign. The
+    /// exact byte-identity assertion this test used to make (colour layer's
+    /// rock == recomputed mineral reflectance) still holds, but only where
+    /// `covered == 0.0` — an uncovered cell (open water, unfrozen, since
+    /// `on_land` gates vegetation/sand-silt and freezing gates snow) has no
+    /// cover layer to disturb it. `bare_checked` is the positive control
+    /// that this narrowed subset is not empty (see the memory note "an
+    /// empty diff needs a positive control" — a vacuously-true narrowed
+    /// assertion would be worse than no assertion at all).
     #[test]
     fn describe_and_reflectance_agree_on_one_dominant_cell() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let geo = ctx.climate.geosphere();
         let mut checked = 0;
+        let mut bare_checked = 0;
         for i in 0..200u32 {
             let t = i as f64;
             let dir = [
@@ -1832,20 +1980,38 @@ mod tests {
                 "substrate must name the dominant corner at {addr:?}"
             );
 
-            let reflectance = ctx.reflectance_at(&addr).unwrap();
+            let micro = locale.regime.micro;
+            let reflectance = ctx
+                .reflectance_at(&addr, &micro, WorldTime::GENESIS)
+                .unwrap();
             let buffer = ctx.terrain.material_at(expected_cell);
             let rock = ctx.terrain.rock_at(expected_cell);
             let expected_reflectance =
                 hornvale_terrain::lithology::reflectance(&buffer, rock).integrate();
-            assert_eq!(
-                reflectance, expected_reflectance,
-                "the colour layer's rock must name the dominant corner at {addr:?}"
+            let cover = crate::surface::cover_weights(
+                &ctx.climate,
+                expected_cell,
+                &micro,
+                WorldTime::GENESIS,
             );
+            let covered: f64 = cover.iter().map(|(_, w)| w).sum();
+            if covered == 0.0 {
+                assert_eq!(
+                    reflectance, expected_reflectance,
+                    "the colour layer's rock must name the dominant corner at {addr:?} \
+                     (uncovered — bare mineral ground)"
+                );
+                bare_checked += 1;
+            }
             checked += 1;
         }
         assert!(
             checked > 50,
             "too few addresses resolved on the grid to trust this test"
+        );
+        assert!(
+            bare_checked > 0,
+            "no uncovered address was sampled — the covered == 0.0 narrowing would be vacuous"
         );
     }
 

@@ -248,6 +248,36 @@ gen_possession_overtime() {
     rm -f "$possess_ot_tmp"
 }
 
+# The chart reference fixture (Task 11, the-illumination; spec §5.3): the
+# sim's own ASCII renderer's SHAPE for the seed-42 walk band, generated so
+# `clients/game/core/tests/chart.rs`'s `the_shape_matches_the_sims_own_ascii_render`
+# golden reads a committed artifact instead of the hand-pasted raw-string
+# literal it replaces — a replica of the sim's answer that only a doc comment
+# kept anyone re-deriving correctly. This reproduces exactly what that doc
+# comment already told a human to do by hand: type `map` at the flagship
+# possession's opening room and keep the five grid lines between the `sight:`
+# caption and the `ways on:` footer — the same "terrain"/"colour" render this
+# module's own comment already established as identical for this fixture.
+#
+# Captured through a command substitution, which strips the trailing newline
+# `sed` leaves after its last printed line, so the fixture is byte-identical
+# to the raw-string literal it replaces: `include_str!` would otherwise hand
+# the test a string one byte longer than every `assert_eq!` in that file has
+# ever compared against, silently changing what the golden means while
+# looking like a pure relocation.
+#
+# `--seed 42` here is self-contained, same note as the turn-0 fixture below:
+# it builds its own internal genesis and never reads $w42/$wsky/$wlocked.
+gen_chart_reference() {
+    local script_tmp shape
+    script_tmp="$(mktemp)"
+    printf 'map\n' >"$script_tmp"
+    shape="$(run -p hornvale -- possess --seed 42 --script "$script_tmp" |
+        sed -n '/^  sight:/,/^  ways on:/p' | sed '1d;$d')"
+    printf '%s' "$shape"
+    rm -f "$script_tmp"
+}
+
 # The legibility surface (living-community, T7): a real seed-42 site read back
 # off the ledger as prose — its stratigraphy of occupation layers plus the
 # derived flesh in the present-day grass. The framing paragraph below is
@@ -708,6 +738,8 @@ spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt
 # (Same note as above: `--seed 42` is self-contained, no Group A dependency.)
 spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
     --snapshot clients/game/core/tests/fixtures/session-seed-42-chamber.json > /dev/null
+
+spawn gen_chart_reference > clients/game/core/tests/fixtures/chart-reference-seed-42.txt
 
 spawn gen_possession_overtime > book/src/gallery/possession-over-time-seed-42.md
 spawn gen_history > book/src/gallery/history-seed-42.md

@@ -56,7 +56,7 @@ Deno.test("empty lines are preserved as prose spacers", () => {
 
 Deno.test("a chart's lines take the map class, not the prose one", () => {
   const lines = splitResponse(
-    "[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]\n  ..@..\n  ways on: E, Nw, Sw",
+    "[lens: terrain · depth 12 · radius 4 · north-up]\n  ..@..\n  ways on: E, Nw, Sw",
   );
   assertEquals(lines.every((l) => l.cls === "casement-map"), true);
 });
@@ -69,7 +69,7 @@ Deno.test("map mode ends at the chart's own legend line, not only on a blank lin
   // regression that leaves map mode stuck on forever (every line after
   // the first chart misread as a grid) cannot pass silently.
   const lines = splitResponse(
-    "[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]\n" +
+    "[lens: terrain · depth 12 · radius 4 · north-up]\n" +
       "  ..@..\n" +
       "  ways on: E, Nw, Sw\n" +
       "  legend: a settlement, a biome\n" +

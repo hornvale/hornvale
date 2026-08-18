@@ -94,3 +94,25 @@ Deno.test("the caption states whose eyes and what the projection drops", () => {
   assertStringIncludes(text, "yellow-blue");
   assertStringIncludes(text, "the short-to-long opposition; the red-green axis is not carried");
 });
+
+Deno.test("a dim run reaches the DOM as a class, composed with its colour", () => {
+  // The epistemic channel's last mile. `renderInto` is where a `PaneCell`'s
+  // weight becomes something a reader can actually see, and the pane's own
+  // tests stop at the cell — so without this, `dim` could be set correctly
+  // on every cell and rendered by nothing.
+  //
+  // The colour assertion is not incidental: weight composes WITH colour
+  // (the sim's `dimmed(colored(...))` shape). A renderer that expressed dim
+  // by dropping or altering the colour would satisfy a class-only check.
+  const host = document.createElement("pre");
+  const c: [number, number, number] = [10, 20, 30];
+  renderInto(host, [[
+    { glyph: ".", color: c },
+    { glyph: ",", color: c, dim: true },
+  ]], null);
+  const spans = host.querySelectorAll("span");
+  assertEquals(spans.length, 2, "a weight change breaks the run, as a colour change does");
+  assertEquals(spans[0].className, "");
+  assertEquals(spans[1].className, "casement-dim");
+  assertStringIncludes(spans[1].getAttribute("style") ?? "", "10");
+});

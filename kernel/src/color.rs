@@ -373,6 +373,20 @@ impl Signal {
     }
 }
 
+/// Reconstruct a signal from its raw per-channel values — the round trip a
+/// wire `SurroundsCell.signal` takes back into a `Signal` so a client (or
+/// the migration-control test) can re-run [`Observer::to_srgb`] over it and
+/// check it reproduces the committed `color` byte-for-byte. A trait impl
+/// rather than a validating constructor: unlike [`Spectrum::new`], there is
+/// no shape to validate here — any length is a legal (if perhaps
+/// wrong-observer) signal, and [`Observer::to_srgb`]'s own length check is
+/// what catches a mismatch.
+impl From<Vec<f64>> for Signal {
+    fn from(value: Vec<f64>) -> Self {
+        Signal(value)
+    }
+}
+
 /// What a channel contributes to sight.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelRole {
@@ -466,6 +480,24 @@ impl Projection {
     /// type-audit: bare-ok(ratio: return)
     pub fn norms(&self) -> &[f64; 3] {
         &self.norms
+    }
+
+    /// Which channel drives R, G, B, exactly as carried — the wire's own
+    /// calibration slot indices (`Sight::projection_slots`). Paired with
+    /// [`Projection::norms`] (`Sight::projection_norms`), a client can
+    /// reproject a carried [`Signal`] itself for the **photopic** path —
+    /// `(signal[rgb[i]] / norms[i]).clamp(0, 1)` per output slot — without
+    /// re-deriving the projection. `rgb` alone says which index to read;
+    /// `norms` says what to divide it by, and the two must ship together
+    /// (spec §4.1). **This does not cover [`Observer::to_srgb`]'s scotopic
+    /// branch**: below the photopic threshold, `to_srgb` mixes in the rod
+    /// response through `SCOTOPIC_GAIN`/`SCOTOPIC_NORM`, kernel constants
+    /// that are not on the wire, so a cell that took that branch cannot be
+    /// reprojected from `signal` alone — a client must fall back to the
+    /// carried `color` for it.
+    /// type-audit: bare-ok(index: return)
+    pub fn rgb(&self) -> &[usize; 3] {
+        &self.rgb
     }
 }
 
