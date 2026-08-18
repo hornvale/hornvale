@@ -401,8 +401,9 @@ pub fn seating_for(
 ///
 /// # NOTHING IN THE SHIPPED PATH CALLS THIS, AND THAT IS THE WHOLE DISCLOSURE
 ///
-/// The only callers are `underworld_capacity_probe.rs` (`#[ignore]`d) and this
-/// module's own tests. `bake_history_from` does not call it; `windows/vessel`'s
+/// The only caller anywhere in the tree is `underworld_capacity_probe.rs`
+/// (`#[ignore]`d); this module's own tests do not call it either.
+/// `bake_history_from` does not call it; `windows/vessel`'s
 /// `delve_at` — the one production caller of [`crate::chamber::chamber_at`]
 /// anywhere in the tree — hands it a freshly-constructed **empty**
 /// [`ChamberOverrides`]. **So in every world a player can reach, every chamber
