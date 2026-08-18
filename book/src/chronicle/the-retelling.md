@@ -147,9 +147,28 @@ carry a witness of another people. What is missing is a transmission edge that
 is not descent. Once damage accumulates as a continuous width rather than one
 rung per firing, the retained distribution spans up to seven rungs.
 
+**Corrected again by [The Parley](the-parley.md), which supplied that edge.**
+The transmission graph now carries an undirected contact edge along every
+attributed raid, so "what is missing is a transmission edge that is not
+descent" is answered rather than outstanding. Two consequences run back into
+the paragraph above. The crossing count stopping at two rests on the attacker
+label holding exactly one community, and that is now one of two co-equal
+stance geometries — under the other, all three labels are closed under
+descent and the argument does not apply. And a claim now travels a step that
+is not parent → child at all, so lineage closure no longer covers the whole
+graph.
+
 ## What this leaves
 
 Corroboration is still not measured, and now for a stated reason rather than a
 failed attempt: it needs accounts that could differ, which now exist, and a
 notion of belief that changes on confirmation, which does not. The precondition
 has a measure that works. The event still waits on contact.
+
+**Corrected by [The Parley](the-parley.md): the contact arrived, and the
+event moved away rather than closer.** Two peoples joined by a raid seam
+converge on the same telling — identical day sets rise on every accumulation
+rule, and two-sided divergence falls to 0.52–0.77× of the descent baseline —
+so contact is *homogenising* on the frozen measure. Corroboration still wants
+accounts that could have differed. Contact supplies the channel and, in the
+undirected form measured there, makes the difference smaller.

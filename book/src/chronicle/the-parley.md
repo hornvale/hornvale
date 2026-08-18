@@ -135,6 +135,24 @@ deliberately cyclic case: **5 relaxations** under the shipped rule against
 float underflows to zero and the width component finally ties. That is
 floating-point exhaustion, not termination.
 
+**Termination is the argument this section makes at length; correctness got
+an oracle instead, twice, and neither oracle survives.** The first ran the
+old path enumeration and the new best-first relaxation side by side on the
+real seed-42 substrate under the shipped policy — 1,755 (rule, event) pairs,
+30,936 claims, 26,562 of them retold — and found **0 mismatches**. That is
+the direct evidence that the rewrite left the descent arm's answers alone.
+The second asks the harder question, because agreeing with the old walk only
+shows the descent case is unchanged and says nothing about the cyclic one a
+tree could never present: a brute-force enumerator over forty synthetic
+tangled worlds checked that the relaxation returns the genuine minimum for
+every holder — 3,936 cases across four clock × contact policies and three
+accumulation rules, again **0 mismatches**. It carries its own positive
+control, without which the zero would be unreadable: a worst-first mutant of
+the frontier order, run through the same harness, produces 102 mismatches.
+Both oracles were reporting instruments rather than committed tests, and the
+second one — which pins a property no shipped test covers — should probably
+have been kept.
+
 The campaign's one real correctness risk gets its own test, and it is the one
 the campaign is named for: an account that leaves its lineage, crosses to
 another people, and comes home to a descendant of its own witness — by a route

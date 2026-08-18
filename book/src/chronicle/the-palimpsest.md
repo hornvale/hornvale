@@ -49,6 +49,16 @@ travel along an edge that is not descent, which is why the suite pins it with
 a deliberately artificial two-people case that production data can never
 produce.
 
+**Corrected by [The Parley](the-parley.md), which added the edge this
+paragraph waits on.** The conditional has fired. A claim can now cross a
+people boundary along a contact edge stamped on a raid, so teller and hearer
+are no longer always of the same people, and the artificial two-people case
+that production data "can never produce" is exactly what production data
+produces on the contact arm — 4,112 of 23,594 endings over a forty-world
+panel reach two or more peoples. The freeze itself is deliberately unchanged:
+the amplitude still reads the *teller's* generation length. What changed is
+that it is now a choice with consequences rather than one free of them.
+
 **What the unit buys that a boundary model could not.** The same gap in days
 is 0.18 generations for an elven lineage and 0.70 for a gnoll one. Two peoples
 therefore remember the same event at different resolutions **with no contact
@@ -267,6 +277,17 @@ A second ceiling was predicted from that retention rule and does not exist: for
 every candidate axis, the retained maximum equals the all-paths maximum.
 Retention binds on exactly one axis, and only there.
 
+**Corrected by [The Parley](the-parley.md), which turned both of this
+section's premises into settings.** Transmission is strictly parent → child
+only where the contact edge is off: a raid seam is a horizontal step between
+two peoples, and no argument from lineage closure reaches it. And the stance
+geometry is now two co-equal arms, of which the inherited one closes *all
+three* labels under descent — which makes stance exactly the kind of
+predicate this section says it is not, and stops the crossing maximum of two
+following from the reason given for it. Descent-closure is still the right
+cause of the ceiling on the descent arm under the singleton geometry, which
+is the arm these 209 paths were counted on.
+
 ## What this leaves
 
 The thing three campaigns have called a scarcity of contact is not one.
@@ -283,6 +304,18 @@ and nothing else, so a claim cannot reach another people no matter how much
 contact the world contains. Corroboration and the ingroup/outgroup direction
 of distortion are both waiting on one edge that nobody has added, not on a
 world that has yet to supply something.
+
+**Corrected by [The Parley](the-parley.md), which added the edge.** The gap
+is closed: the transmission graph now carries a horizontal, undirected edge
+for every ending that names an attacker, stamped with the ending's day and
+traversable only forward in time. Accounts reach up to six peoples where
+descent reaches three on exactly zero of 23,594 endings. What did not survive
+is the expectation attached to that edge. Supplying contact was expected to
+make the two sides *disagree*; two-sided divergence instead falls on every
+accumulation rule (0.59×, 0.52×, 0.77×), because a seam is a channel in both
+directions and each side keeps whichever of the other's tellings it can reach
+least corrupted. Corroboration's precondition is supplied, and its motive is
+weaker than this paragraph assumes.
 
 And the amplitude is still symmetric: it does not care which party stands
 further from the event. A signed version — damaging a claim more as it flows

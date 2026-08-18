@@ -165,8 +165,13 @@ independent reasons, neither of which is "the drift check is broken".
 1. **Neither artifact reads the registry when it renders.** `systems report`
    calls `systems::render(&corpus, path)`, whose signature does not even take
    `RepoFacts` — the corpus alone decides every byte. `systems matrix` calls
-   `render_matrix(corpora, facts)` and touches only `facts.subsystems`, the
-   source tree. The registry *is* read, by `RepoFacts::gather`, and consumed by
+   `render_matrix(corpora, facts)`, which reads `facts.subsystems` itself and
+   hands `facts` on to `surplus` and `citation_counts` (`cli/src/systems.rs`
+   `:1080` and `:1033`); between them those read `facts.subsystems` and
+   `facts.crates`, both of which describe the source tree. Nothing on that
+   path reads `facts.registry`, which is what the conclusion actually needs —
+   "touches only `facts.subsystems`" was too narrow a statement of it. The
+   registry *is* read, by `RepoFacts::gather`, and consumed by
    `systems::audit` — whose findings surface through `hornvale systems check`
    and `cli/tests/system_coverage.rs`, and reach no committed artifact.
 2. **No corpus item anchors a `KNOW-` row anyway.** The report's twelve
@@ -186,6 +191,37 @@ under this one. What actually verifies a registry flip is
 `cargo test -p hornvale --test docs_consistency` (form, cap, uniqueness, links)
 and `cli/tests/system_coverage.rs` (anchors), and a future campaign reading an
 empty drift on those audits as reassurance would be reading noise.
+
+## The one finding that was not a defect: decompose, then ask which layer each campaign varied
+
+The recommendation this campaign inherited was "add the contact edge" — one
+change, named by its mechanism. Decomposing the transmission model into three
+separable layers *before* accepting that framing is what produced the
+headline, and the decomposition is cheap:
+
+1. **Topology** — which pairs of nodes may pass a claim at all (descent; now
+   descent plus the raid seam).
+2. **Node labelling** — how the two ends of a step are coloured (the stance
+   geometry: which entities carry the perpetrator label, and whether it is
+   closed under descent).
+3. **Edge cost** — what a step does to a claim (the accumulation rule and the
+   amplitude).
+
+The layers are ordered by dependence, not importance: cost *reads* labels, so
+labelling is upstream of cost, and topology is upstream of both. Put the two
+predecessor campaigns against that ladder and the gap is immediate — both
+varied **cost** (a boundary rule, then an accumulator) and neither had ever
+varied **labelling**. Layer 2 had not been questioned once. That is exactly
+where the 3,694-of-3,694 asymmetry was sitting, in code that had shipped
+through two campaigns, and it is why this campaign's headline is not the edge
+it was asked for.
+
+**The transferable method is one sentence: list the model's separable layers,
+then check which layer every prior campaign varied.** It costs a paragraph
+and it reliably surfaces the layer nobody has questioned — which is, by
+construction, the layer that never appears in anyone's recommendation,
+because a recommendation names a mechanism and a mechanism lives in one
+layer. Accepting the mechanism accepts a framing nobody argued for.
 
 ## Process notes
 
@@ -209,6 +245,30 @@ empty drift on those audits as reassurance would be reading noise.
   rather than by diffstat: the spec was last touched 22 commits before the
   readout, and the two derivation files two commits before it.
 
+- **The claim that no census golden could move had a method, and the method is
+  the transferable half.** `windows/lab` reaches this crate at exactly one
+  call site: `windows/lab/src/metrics.rs`'s `history-myth-hop-median`
+  extractor calls `hornvale_hearsay::median_hops`, which reaches `hops_about`
+  and then `claims_about` — none of the three touched by this campaign. One
+  grep for the crate name under `windows/lab`, then read down the call chain.
+  Worth writing down because "the census cannot have moved", asserted bare, is
+  unfalsifiable; asserted with a call site, it is checkable in a minute.
+- **`docs/timings.md` rows are stamped with the PARENT commit.** `timed.sh`
+  appends its row before the commit carrying that row exists, so the SHA in a
+  timing row names the state the command ran *against*, never the state it
+  attests. A reviewer cannot verify "gate-commit was green at X" from the
+  ledger, and one spent a ⚠️ on exactly that this campaign. Read a timings SHA
+  as "the parent of the commit this row landed in".
+- **Two correctness oracles were built, reported, and then thrown away**, and
+  for a while only their conclusion reached the chronicle: the rewrite from
+  path enumeration to best-first relaxation was argued for *termination* at
+  length while nothing said it had been validated against the algorithm it
+  replaced. The numbers are now in the chronicle beside the relaxation — 1,755
+  (rule, event) pairs on the real substrate at 0 mismatches, and 3,936
+  brute-force optimality cases at 0 mismatches with a worst-first mutant
+  scoring 102 as the positive control. An oracle that runs once and is deleted
+  leaves no trace that the check ever happened.
+
 ## Deferred, with homes
 
 - **The readout could be a committed, drift-checked artifact** instead of stdout
@@ -229,3 +289,22 @@ empty drift on those audits as reassurance would be reading noise.
 - **The unit erratum stays frozen** for a session that has not read the
   exploratory column — unchanged from where campaign 3 left it, and untouched
   here on purpose.
+
+- **The registry-ID lint is blind to slug-form IDs, and decision 0026 makes it
+  blinder every campaign.** `find_registry_id` in
+  `cli/tests/docs_consistency.rs` requires an ASCII digit after the prefix
+  hyphen, and `registry_id_prefixes()` will not collect a prefix at all unless
+  some row uses the numbered form — so `KNOW` is not even in the prefix set,
+  on top of the digit gate. Every ID minted from now on is a slug, so the
+  check reads green while its coverage shrinks. Banked as
+  `TOOL-registry-id-lint-is-digit-gated`; the fix is `[a-z0-9]` in both
+  places.
+- **The brute-force optimality oracle should probably have been a committed
+  test.** It pins a property nothing shipped covers — that the relaxation
+  returns the true minimum on a cyclic graph — and it came with its own
+  positive control. It was discarded with the rest of the scaffolding.
+- **Nothing cheap proves the readout's H2-gap counter or its divergence
+  counters can move.** The two non-ignored controls prove panel accounting
+  only, so a counter wired to a constant would still print as a finding. Its
+  three batch-mates reached this list during the campaign; this one was
+  dropped from the batch and is recorded here.

@@ -124,3 +124,15 @@ no ideology ranking peoples may ever be an input, only a generated output; this
 measurement says the world does not currently generate the conditions that
 would produce one. Contact must precede prejudice, and contact is what the
 world is short of.
+
+**Corrected by [The Parley](the-parley.md), and it is the third campaign to
+correct this sentence.** "Contact is what the world is short of" was wrong
+about where the scarcity lived. The contact is in the ledger — it is the raid
+seam these very numbers count — and what was missing was an *edge* in the
+transmission model to carry a claim across it. The Parley added one; over a
+forty-world panel, endings whose account reaches two or more peoples went
+from 548 of 23,594 to 4,112, and three peoples went from structurally
+impossible to 554. The measurement above stands unchanged: violence here is
+still intramural twice over, and 17 of 234 attributed raids crossing a people
+boundary is still a thin seam. It is a thin seam that carries, which is a
+different claim from an absent one.

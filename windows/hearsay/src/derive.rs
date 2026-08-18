@@ -40,9 +40,14 @@ fn admits(walk: &Walk, event_day: Option<f64>, occ: EntityId) -> bool {
 /// peer it met on or after `event_day`.
 ///
 /// The day condition is spec §5.3's first: a meeting cannot carry news of
-/// something that has not happened. It is pinned by
-/// `tests/augmented_walk.rs::the_seam_refuses_a_raid_that_predates_the_event`,
-/// which is the only test in the crate that reddens when it is deleted.
+/// something that has not happened. Two tests in `tests/augmented_walk.rs`
+/// pin it, and they pin different halves:
+/// `the_seam_refuses_a_raid_that_predates_the_event` is the only test in the
+/// crate that reddens when the condition is DELETED, and
+/// `the_seam_admits_a_raid_on_the_event_day` is the only one that reddens
+/// when `>=` is weakened to `>` — every other fixture straddles the
+/// comparison without landing on it, so the whole suite stayed green under
+/// either operator until that boundary case was added.
 fn tellable(walk: &Walk, node: EntityId, event_day: Option<f64>) -> Vec<EntityId> {
     let mut out: Vec<EntityId> = walk.lineage.children_of(node).to_vec();
     if walk.policy.contact == Contact::WithRaidSeam {
