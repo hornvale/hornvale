@@ -790,14 +790,28 @@ fn whether_the_raiders_line_forgets_faster() {
             // The victim's first retelling step: subject -> each child.
             for child in lin.children_of(e.subject) {
                 victim_first_steps += 1;
-                if hornvale_hearsay::stance::is_lossy(led, &lin, e.subject, e.subject, *child) {
+                if hornvale_hearsay::stance::is_lossy(
+                    led,
+                    &lin,
+                    hornvale_hearsay::stance::Perpetration::Singleton,
+                    e.subject,
+                    e.subject,
+                    *child,
+                ) {
                     victim_first_steps_lossy += 1;
                 }
             }
             // The raider's first retelling step: attacker -> each child.
             for child in lin.children_of(attacker) {
                 raider_first_steps += 1;
-                if hornvale_hearsay::stance::is_lossy(led, &lin, e.subject, attacker, *child) {
+                if hornvale_hearsay::stance::is_lossy(
+                    led,
+                    &lin,
+                    hornvale_hearsay::stance::Perpetration::Singleton,
+                    e.subject,
+                    attacker,
+                    *child,
+                ) {
                     raider_first_steps_lossy += 1;
                 }
                 // WHICH label the raider's child lands on decides whether the
@@ -807,7 +821,13 @@ fn whether_the_raiders_line_forgets_faster() {
                 // `Perpetrator`, so the 100% survives either way -- but the
                 // REASON differs, and a spec stating the wrong reason is the
                 // defect class this campaign is trying not to repeat.
-                match hornvale_hearsay::stance::stance_of(led, &lin, e.subject, *child) {
+                match hornvale_hearsay::stance::stance_of(
+                    led,
+                    &lin,
+                    hornvale_hearsay::stance::Perpetration::Singleton,
+                    e.subject,
+                    *child,
+                ) {
                     hornvale_hearsay::stance::Stance::Bystander => raider_child_bystander += 1,
                     hornvale_hearsay::stance::Stance::VictimLine => raider_child_victimline += 1,
                     hornvale_hearsay::stance::Stance::Perpetrator => raider_child_perp += 1,

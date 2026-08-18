@@ -195,7 +195,14 @@ pub fn variants_about(
             let mut lossy_steps: u32 = 0;
             for pair in path.windows(2) {
                 let (teller, hearer) = (pair[0], pair[1]);
-                if stance::is_lossy(ledger, lineage, subject, teller, hearer) {
+                if stance::is_lossy(
+                    ledger,
+                    lineage,
+                    stance::Perpetration::Singleton,
+                    subject,
+                    teller,
+                    hearer,
+                ) {
                     lossy_steps += 1;
                     let precision = ladder.coarser(c.precision);
                     let object = match &c.object {
