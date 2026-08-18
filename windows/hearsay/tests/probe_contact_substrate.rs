@@ -7,8 +7,14 @@
 //! a claim about the MODEL: `variants_about` and its accumulating sibling
 //! only ever step parent->child down the founding tree, and descent never
 //! crosses a people boundary. Before freezing any hypothesis about a
-//! cross-people edge, this probe establishes five facts the design depends
-//! on, none of which any campaign has measured.
+//! cross-people edge, this probe establishes the facts the design depends on,
+//! none of which any campaign has measured: how wide the raid seam is (S1),
+//! whether the far side has a line to tell anything to (S2), how far an
+//! account reaches today and whether the two sides of a raid already disagree
+//! (S3/S3b/S4), whether transmission already runs backwards in time (S5), what
+//! reach a contact edge would actually buy (S6), and whether the shipped
+//! stance rule already degrades the raider's account faster than the victim's
+//! (S7).
 //!
 //! Reports only. Every assertion here is a POSITIVE CONTROL on the substrate
 //! — reproducing a published count, or proving the probe can see the thing it
@@ -768,6 +774,10 @@ fn whether_the_raiders_line_forgets_faster() {
     let mut victim_first_steps_lossy = 0usize;
     let mut raider_first_steps = 0usize;
     let mut raider_first_steps_lossy = 0usize;
+    let mut raider_child_bystander = 0usize;
+    let mut raider_child_victimline = 0usize;
+    let mut raider_child_perp = 0usize;
+    let mut victim_child_is_the_attacker = 0usize;
 
     for seed in PANEL {
         let world = build(seed);
@@ -790,6 +800,25 @@ fn whether_the_raiders_line_forgets_faster() {
                 if hornvale_hearsay::stance::is_lossy(led, &lin, e.subject, attacker, *child) {
                     raider_first_steps_lossy += 1;
                 }
+                // WHICH label the raider's child lands on decides whether the
+                // spec's stated mechanism is right. `Bystander` is NOT forced:
+                // if the attacker itself descends from the subject, its child
+                // does too and lands on `VictimLine`. Both are lossy against
+                // `Perpetrator`, so the 100% survives either way -- but the
+                // REASON differs, and a spec stating the wrong reason is the
+                // defect class this campaign is trying not to repeat.
+                match hornvale_hearsay::stance::stance_of(led, &lin, e.subject, *child) {
+                    hornvale_hearsay::stance::Stance::Bystander => raider_child_bystander += 1,
+                    hornvale_hearsay::stance::Stance::VictimLine => raider_child_victimline += 1,
+                    hornvale_hearsay::stance::Stance::Perpetrator => raider_child_perp += 1,
+                }
+            }
+            // The victim line's residual: is a lossy `subject -> child` step
+            // exactly the case where the child IS the named attacker?
+            for child in lin.children_of(e.subject) {
+                if *child == attacker {
+                    victim_child_is_the_attacker += 1;
+                }
             }
         }
     }
@@ -804,6 +833,15 @@ fn whether_the_raiders_line_forgets_faster() {
         "raider line, first step (attacker -> child): {raider_first_steps_lossy} lossy of \
          {raider_first_steps} ({:.2}%)",
         pct(raider_first_steps_lossy, raider_first_steps)
+    );
+
+    println!(
+        "  raider's child lands on: Bystander {raider_child_bystander}, VictimLine \
+         {raider_child_victimline}, Perpetrator {raider_child_perp}"
+    );
+    println!(
+        "  victim's child IS the named attacker: {victim_child_is_the_attacker} (vs \
+         {victim_first_steps_lossy} lossy victim steps)"
     );
 
     // POSITIVE CONTROLS: both lines must have been reached, or the two
