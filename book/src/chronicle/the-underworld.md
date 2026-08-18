@@ -343,8 +343,8 @@ composition at an inclusion threshold, not on the world. Across the whole roster
 the rank correlation between authored horizon and median relation age reads
 **0.384** on `main` and **0.546** here against the roster's own noise bar of
 **0.693** — inside noise on both — and peoples the registry authors at an
-*identical* horizon differ by as much as **2.33×**, which is more than the 1.421
-the endpoint pair read across the entire 0.20 → 0.95 span. The assertion is now
+*identical* horizon differ by **1.80×** here and **2.33×** on `main`, which is
+more than the 1.421 the endpoint pair read across the entire 0.20 → 0.95 span. The assertion is now
 that whole-roster statistic, and it was mutation-proved: replace each people's
 median with its horizon and rho goes to 1.0000 and the test reddens.
 
