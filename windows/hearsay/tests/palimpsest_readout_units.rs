@@ -95,12 +95,14 @@ mod common;
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::accumulate::{Accumulation, precision_at};
 use hornvale_hearsay::amplitude::gen_span;
+use hornvale_hearsay::contact::contact_of;
 use hornvale_hearsay::derive::{variants_about_accumulating, witnesses_of};
 use hornvale_hearsay::divergence::maximum_antichain;
 use hornvale_hearsay::durations::PeopleDurations;
 use hornvale_hearsay::ladder::{PeopleLadders, PrecisionLadder};
 use hornvale_hearsay::lineage::{Lineage, lineage_of};
 use hornvale_hearsay::spearman;
+use hornvale_hearsay::transmission::{Transmission, Walk};
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
 use hornvale_kernel::provenance::Provenance;
 use hornvale_kernel::{Claim, Precision};
@@ -929,9 +931,15 @@ fn ended_subject() -> EntityId {
 /// (frozen, local).
 fn both_walks(ledger: Ledger, generation: f64, rule: Accumulation) -> (Vec<Claim>, Vec<Claim>) {
     let (led, lineage, ladders, durations) = fixture(ledger, generation);
+    let graph = contact_of(&led);
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lineage,
+        contact: &graph,
+        policy: Transmission::AS_SHIPPED,
+    };
     let frozen = variants_about_accumulating(
-        &led,
-        &lineage,
+        &walk,
         &ladders,
         &durations,
         rule,

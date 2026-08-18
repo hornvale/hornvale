@@ -1313,3 +1313,36 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T20:32:36Z | sluice:seam-guard | 951.976 | 19331.583 | 1052.161 | 21.41 | 0 | 9bfef696 |  | lefford | 40 |
 | 2026-08-17T20:36:31Z | sluice:clients | 234.165 | 421.496 | 33.061 | 1.94 | 0 | 0d89a6f3 |  | lefford | 40 |
 | 2026-08-17T21:08:14Z | sluice:heavy | 1903.133 | 30358.416 | 690.625 | 16.31 | 0 | 8e723b81 |  | lefford | 40 |
+| 2026-08-18T01:57:41Z | gate-commit | 156.953 | 109.637 | 44.518 | 0.98 | 0 | 0c37a4c3 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T01:58:32Z | gate-commit | 26.207 | 51.915 | 13.189 | 2.48 | 0 | 0c37a4c3 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T02:04:04Z | gate-commit | 24.330 | 52.540 | 12.803 | 2.69 | 0 | cd8221be | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T02:04:41Z | gate-commit | 24.264 | 51.222 | 12.911 | 2.64 | 0 | cd8221be | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T02:08:18Z | gate-commit | 53.023 | 50.445 | 12.358 | 1.18 | 0 | a6d0f21e | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:22:54Z | gate-commit | 45.418 | 54.984 | 14.074 | 1.52 | 0 | d64f34db | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:28:37Z | gate-commit | 18.206 | 19.652 | 12.508 | 1.77 | 0 | 19818345 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:29:55Z | gate-commit | 62.772 | 71.664 | 31.534 | 1.64 | 0 | 19818345 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:31:11Z | gate-commit | 33.102 | 52.874 | 13.784 | 2.01 | 0 | 19818345 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:39:54Z | gate-commit | 118.925 | 88.466 | 48.446 | 1.15 | 0 | a515ae62 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:41:51Z | gate-commit | 56.718 | 55.498 | 13.550 | 1.22 | 0 | a515ae62 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:51:39Z | gate-commit | 100.793 | 138.681 | 56.363 | 1.94 | 0 | f6b7ce01 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T03:52:29Z | gate-commit | 25.013 | 51.733 | 12.729 | 2.58 | 0 | f6b7ce01 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T04:01:28Z | gate-commit | 60.485 | 75.028 | 45.136 | 1.99 | 0 | 58d66894 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T04:02:06Z | gate-commit | 22.288 | 50.169 | 12.497 | 2.81 | 0 | 58d66894 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T04:23:03Z | gate-commit | 240.160 | 98.539 | 90.574 | 0.79 | 0 | f8757936 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T04:24:23Z | gate-commit | 22.764 | 50.516 | 12.735 | 2.78 | 0 | f8757936 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T04:39:42Z | gate-commit | 64.153 | 74.878 | 46.619 | 1.89 | 0 | 8d760577 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T04:40:33Z | gate-commit | 22.001 | 49.909 | 12.396 | 2.83 | 0 | 8d760577 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:04:12Z | gate-commit | 59.725 | 70.854 | 42.110 | 1.89 | 0 | b0678cdd | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:04:56Z | gate-commit | 21.702 | 49.766 | 12.389 | 2.86 | 0 | b0678cdd | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:16:05Z | gate-commit | 57.643 | 72.711 | 46.347 | 2.07 | 0 | 3c26ee30 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:16:42Z | gate-commit | 21.677 | 49.869 | 12.328 | 2.87 | 0 | 3c26ee30 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:38:06Z | gate-commit | 21.919 | 49.831 | 12.047 | 2.82 | 0 | 36845820 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:38:57Z | gate-commit | 21.685 | 49.854 | 12.392 | 2.87 | 0 | 36845820 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:53:10Z | gate-commit | 21.925 | 49.988 | 12.133 | 2.83 | 0 | e22ae141 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:53:53Z | gate-commit | 21.652 | 49.807 | 12.474 | 2.88 | 0 | e22ae141 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T07:10:49Z | rebaseline | 48.577 | 214.439 | 11.456 | 4.65 | 0 | 87f1962a | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T07:13:21Z | gate-commit | 23.007 | 49.826 | 12.339 | 2.70 | 0 | 87f1962a | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T07:50:34Z | gate-commit | 69.989 | 77.351 | 54.818 | 1.89 | 0 | 68a8a61d | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T07:52:02Z | gate-commit | 21.919 | 49.978 | 12.455 | 2.85 | 0 | 68a8a61d | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T11:41:17Z | gate-commit | 88.630 | 79.679 | 53.038 | 1.50 | 0 | d2f0363a | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T11:42:49Z | gate-commit | 36.440 | 55.286 | 13.477 | 1.89 | 0 | d2f0363a | campaign/the-parley | MacBookPro | 10 |
