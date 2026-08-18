@@ -217,3 +217,43 @@ has a registry row.
 - **The dim-over-tint composition is exercised by no committed test**,
   because no committed chart carries a tinted cell at all — which is the
   same finding as the invisibility one, arriving from the coverage side.
+
+## Five lessons a closing audit found, that the merge did not carry
+
+The campaign's own scratch dies with its worktree. Asked the one question
+that matters at a close — *what did NOT survive into a committed file?* — a
+reviewer found ten lost items and eight degraded. Most became registry rows;
+these five are process lessons with nowhere else to land.
+
+**Legibility deleted the evidence.** Summarising a seven-row trace by
+collapsing two row-count-identical rows deleted the two strongest rows —
+chamber rewrites that moved content *without* moving the count, which is
+what proves the mechanism fires more often than a count-keyed view can show.
+General form: when you summarise a trace by a column, you delete every row
+whose evidence is not in that column. Same operation as `head -10` capping a
+list and as counting rows while meaning tests. Guard: before trimming a
+trace for readability, ask what each dropped row was evidence *of*.
+
+**Independent confirmation is not corroboration when both readers read the
+same lines.** A two-part finding was confirmed by a peer session citing the
+same line numbers; half was wrong, and the refutation sat twenty lines above
+the code both had read, in the file's own usage header. Two readers agreeing
+is one observation when the sampling is identical. Guard: read the *file*,
+not the function. Aggravating: it happened immediately after correcting two
+inherited claims by doing exactly that reading — doing the discipline once
+does not bank it.
+
+**A registry row can carry a wrong mechanism through two campaigns.**
+`RENDER-surface-mixture`'s layering violation originated in The Rhumb's §8,
+was copied into the row, and copied again into this campaign's brief. Three
+artifacts, one unverified claim, each restatement making it look better
+established. First recorded instance of the registry transporting a defect.
+
+**The 756-vs-361 instance**, which the rule kept but the evidence lost: a
+count published without its criterion travelled into a peer session's
+reasoning, and the two sessions nearly jointly confirmed a defect that did
+not occur.
+
+**Four instances of one pattern**, currently landed as four unconnected
+anecdotes: a correction reproducing, at smaller scale, the defect it
+corrects (the Repose pattern). Name it as a scoreable count.
