@@ -472,17 +472,22 @@ gen_possession_overtime() {
 # years taking the ground off one another, and 5585 is the one whose standing
 # layer has a NAMED founder to read.
 #
-# Read off the live block for 5585: nine layers from the year 50, eight
-# completed, and the split is exactly even — FOUR left because they had taken
-# a neighbour's ground and carried the settlement onto it (22173, 22170,
-# 22173, 22193), FOUR were put to flight. One layer lasted no time at all
-# (founded and ended in 675). All nine arrived fleeing ice, from four distinct
-# clearings (22170 x5, 22173 x2, 22169 x1, 22193 x1), and none ends in ice —
-# the one shape every cell this page has ever pointed at has shared. Tech runs
-# the full arc: neolithic at the base, bronze, iron, classical at the top. The
-# standing ninth was founded in 750, holds 82 souls, and was founded by
-# Xomjon. Depth across nine changes:
-# 16 -> 11 -> 10 -> 12 -> 10 -> 18 -> 15 -> 15 -> 9.
+# RE-READ 2026-08-17 (The Underworld, Task 9), and the column moved. The
+# genus join between `CaveKind` and the underworld corpus was repaired
+# (`windows/worldgen/src/delve_seating.rs`), which moved drow's seating, which
+# moved the bake — so this cell's stratigraphy is a different one and the
+# framing prose below was re-derived from the new block rather than patched.
+#
+# Read off the live block for 5585: SIX layers from the year 100, five
+# completed, and the split is no longer even — THREE were put to flight, TWO
+# left because they had taken a neighbour's ground and carried the settlement
+# onto it (22170, 22193). No layer is a same-year founding-and-ending any
+# more; the shortest holds 25 years. All six arrived fleeing ice, from TWO
+# distinct clearings (22170 x4, 22169 x2), and none ends in ice — the one
+# shape every cell this page has ever pointed at has shared. Tech runs a
+# shorter arc than before: bronze at the base, then iron, then classical, with
+# no neolithic layer left. The standing sixth was founded in 800 by
+# Venggomnjen and holds 84 souls.
 history_site=5585
 gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
@@ -494,25 +499,25 @@ gen_history() {
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — cell %s — and\n' "$history_site"
-    printf 'nine hobgoblin steadings have risen on it, one settling atop the ruins of\n'
-    printf 'the last, from the year 50 down to the present. Every one of the eight\n'
-    printf 'completed layers ended at the hands of other hobgoblins, and the split\n'
-    printf 'is exactly even. Four were not evictions at all: the occupants had\n'
-    printf 'taken better ground from a neighbour and carried the settlement onto\n'
-    printf 'it, so the layer closes on a departure. The other four fell to a rival\n'
-    printf 'band. This is a people with only itself to fight, and on this rise it\n'
-    printf 'has been the taker exactly as often as the taken.\n\n'
+    printf 'six hobgoblin steadings have risen on it, one settling atop the ruins of\n'
+    printf 'the last, from the year 100 down to the present. Every one of the five\n'
+    printf 'completed layers ended at the hands of other hobgoblins, but the split\n'
+    printf 'is uneven. Two were not evictions at all: the occupants had taken\n'
+    printf 'better ground from a neighbour and carried the settlement onto it, so\n'
+    printf 'the layer closes on a departure. The other three fell to a rival band.\n'
+    printf 'This is a people with only itself to fight, and on this rise it has\n'
+    printf 'been the taken rather more often than the taker.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
     printf 'here fell to ice. Every layer instead *arrived* fleeing it — all\n'
-    printf 'nine, the deepest included, driven off one of four distinct\n'
-    printf 'neighbouring clearings, and one of those four is the clearing this\n'
-    printf 'ground kept taking in return. No one ever broke this soil by choice:\n'
-    printf 'it has been a refuge from its first layer to its last, and a staging\n'
-    printf 'ground for the next advance as often as a last resort. One of the\n'
-    printf 'nine failed to last a single year. Read bottom to top, the column\n'
-    printf 'carries the full technological arc: neolithic at the base, bronze\n'
-    printf 'above it, then iron, then classical. The ninth was founded in the\n'
-    printf 'year 750 by Xomjon and stands yet, 1250 years on: some 82 souls, two\n'
+    printf 'six, the deepest included, driven off one of two neighbouring\n'
+    printf 'clearings, and one of those two is the clearing this ground took\n'
+    printf 'from in return. No one ever broke this soil by choice: it has been\n'
+    printf 'a refuge from its first layer to its last, and a staging ground for\n'
+    printf 'the next advance rather less often than a last resort. Read bottom\n'
+    printf 'to top, the column carries a technological arc that starts already\n'
+    printf 'underway: bronze at the base, then iron, then classical, with no\n'
+    printf 'neolithic layer left to read. The sixth was founded in the year 800\n'
+    printf 'by Venggomnjen and stands yet, 1200 years on: some 84 souls, two\n'
     printf 'huts and a granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"

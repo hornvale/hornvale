@@ -4,7 +4,7 @@ The land holds 152 settlement(s).
 The chief bugbear settlement, Godo, holds 64 souls amid tropical-seasonal-forest.
 The chief desert-dwarf settlement, Snopsnoddnad, holds 62 souls amid alpine.
 The chief desert-elf settlement, Pkeezngashpvozhgos, holds 27 souls amid savanna.
-The chief drow settlement, Do, holds 12 souls amid ice.
+The chief drow settlement, Boadpkoovozhgo, holds 12 souls amid ice.
 The chief gnoll settlement, Dzapsoxsma, holds 27 souls amid savanna.
 The chief goblin settlement, Te, holds 32 souls amid taiga.
 The chief gully-dwarf settlement, Nobnngotqatgoqnga, holds 35 souls amid savanna.
@@ -25,11 +25,11 @@ The chief wood-elf settlement, Deuduazdxuu, holds 24 souls amid tropical-seasona
                                                     oo                  
                                    o                                    
                                                                         
+                                                        o               
                                                                         
-                                       o                                
-                                                                o       
-      o                                                     o           
                                                                         
+ o                                                          o           
+  o                                                                     
                                                                         
                         o               o                               
                     @o o o                 o                            

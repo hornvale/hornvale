@@ -64,10 +64,10 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Pkeezngashpvozhgos** — savanna
 - **Ngoozh** — savanna
 - **Pozhzaospoazpkooz** — savanna
-- **Do** — ice
-- **Goshbopabashpa** — desert
-- **Podo** — ice
-- **Goshbopa** — ice
+- **Boadpkoovozhgo** — ice
+- **Po** — ice
+- **Vozhgoboadpkoo** — ice
+- **Boasgoo** — ice
 - **Dzapsoxsma** — savanna
 - **Te** — taiga
 - **Betoebootoe** — tropical-seasonal-forest
@@ -260,7 +260,7 @@ The land holds 152 settlement(s).
 The chief bugbear settlement, Godo, holds 64 souls amid tropical-seasonal-forest.
 The chief desert-dwarf settlement, Snopsnoddnad, holds 62 souls amid alpine.
 The chief desert-elf settlement, Pkeezngashpvozhgos, holds 27 souls amid savanna.
-The chief drow settlement, Do, holds 12 souls amid ice.
+The chief drow settlement, Boadpkoovozhgo, holds 12 souls amid ice.
 The chief gnoll settlement, Dzapsoxsma, holds 27 souls amid savanna.
 The chief goblin settlement, Te, holds 32 souls amid taiga.
 The chief gully-dwarf settlement, Nobnngotqatgoqnga, holds 35 souls amid savanna.
@@ -291,9 +291,9 @@ Pkeezngashpvozhgos lives by farming.
 Its roles, lowest to highest: waterfinder, pathkeeper.
 The desert-elf run a basal metabolism of 64 W; slow, long-lived, and sparse, lifespan ~317 yr, matures ~63 yr.
 
-The drow hold of **Do**, population 12.
+The drow hold of **Boadpkoovozhgo**, population 12.
 
-Do lives by foraging.
+Boadpkoovozhgo lives by foraging.
 Its roles, lowest to highest: delver, matron.
 The drow run a basal metabolism of 66 W; slow, long-lived, and sparse, lifespan ~320 yr, matures ~64 yr.
 
@@ -419,7 +419,7 @@ The wellcamp of **Pkeezngashpvozhgos** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The hold of **Do** keeps its own folk pantheon:
+The hold of **Boadpkoovozhgo** keeps its own folk pantheon:
 
 > Gaashga the Kxzhookxgaashga is felt, not counted. So it was, so it is.
 >

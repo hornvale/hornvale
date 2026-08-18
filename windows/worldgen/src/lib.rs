@@ -10222,7 +10222,20 @@ mod tests {
         // occupations, and -16% of glosses against -28% of sites is the right
         // order of magnitude for that cause. Post-unblinding re-measure,
         // declared per decision 0016.
-        assert_eq!(count("name-gloss"), 317);
+        //
+        // THE UNDERWORLD (Task 9, the genus join): 317 -> 346, and the three
+        // counts above are UNCHANGED at 145 for the third campaign running.
+        // Same lever as Task 8's entry, moved a second time: `chamber_fit`
+        // filtered the underworld corpus on `CaveKind::name()` (`"karst"`,
+        // `"fracture"`) against genera spelled `"karst-cave"` and
+        // `"fracture-cave"`, so two of the three formations never matched
+        // their own rows and read the genus-blind fallback. Repairing the join
+        // changes which rung drow seats at in karst and fracture columns,
+        // which changes which surface cells it leaves free, which changes
+        // settlement VOLUME again — this time upward. The peopled ROSTER is
+        // untouched, which is again why the pantheon and the three counts do
+        // not move. Post-unblinding re-measure, declared per decision 0016.
+        assert_eq!(count("name-gloss"), 346);
     }
 
     #[test]

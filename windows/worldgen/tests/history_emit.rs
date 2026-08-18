@@ -791,8 +791,25 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // changes; it has still never held a value twice running, which is the
     // standing reading restated once more by a ninth reading rather than
     // narrated. Post-unblinding re-measure, declared per decision 0016.
+    //
+    // THE UNDERWORLD, Task 9 (the genus join): 0 -> 1, over 4713 pairs
+    // compared (DOWN from 5569). Same campaign, same lever, second pull:
+    // `chamber_fit` filtered the underworld corpus on `CaveKind::name()`
+    // against genera spelled with a `-cave` suffix, so karst and fracture
+    // columns never matched their own rows; repairing the join moves drow's
+    // seating and re-places every seed's settlements again. The sequence is
+    // now 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2 -> 0 -> 1 across ten changes.
+    //
+    // **It has still never held a value twice running** — ten readings now,
+    // and the standing reading is unchanged: this count is a coincidence of
+    // which particular occupation chains a world happens to grow, not a
+    // property of `layer_key`, and it must not be cited as evidence about the
+    // key. At 1 tie the per-tie assertions in the loop above are load-bearing
+    // rather than vacuous, which is the better of the two states this witness
+    // alternates between — recovered here by accident, not by hunting for it.
+    // Post-unblinding re-measure, declared per decision 0016.
     assert_eq!(
-        ties, 0,
+        ties, 1,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1064,9 +1081,22 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // the same commit. Both are recorded as costs rather than rescued by
     // hunting a seed that would keep them busy. Post-unblinding re-measure,
     // declared per decision 0016.
+    //
+    // THE UNDERWORLD re-pin, Task 9 (the genus join): [0, 0, 0] -> [0, 1, 1],
+    // total 0 -> 2. Same campaign, same lever, second pull — `chamber_fit`
+    // filtered the underworld corpus on `CaveKind::name()` against genera
+    // spelled with a `-cave` suffix, so karst and fracture columns read the
+    // genus-blind fallback; repairing it moves drow's seating and re-places
+    // settlements a sixth time. Recorded, not narrated: 2 is no more "worse"
+    // for `barely moves` than 0 was "better", and three seeds cannot
+    // distinguish them (decision 0097). The one thing worth stating is the
+    // vacuity note above going the other way — at a total of 2 the per-site
+    // comparisons have something to compare again, so the witness is
+    // load-bearing at this reading. That recovery is an accident of where the
+    // settlements landed, not something this task went looking for.
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 0), (1000, 0)],
+        vec![(42u64, 0usize), (7, 1), (1000, 1)],
         "the per-seed order-change counts moved"
     );
 }

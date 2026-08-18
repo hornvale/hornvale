@@ -5392,6 +5392,25 @@ mod tests {
         // neither from the other. Re-keying the deep-history node index on
         // `(cell, rung)` takes drow out of the competition for surface cells;
         // its congregation at this seed is what crossed the caste threshold.
+        //
+        // THE UNDERWORLD (Task 9, the genus join): back to TEN organized —
+        // **the Kxoqboq lose the priesthood run they gained one task ago**,
+        // and nothing else at this seed moves. Both witnessed counts (81 and
+        // 49) and the taught day (36337) are unchanged for the sixth
+        // consecutive re-pin. Same people, same lever, opposite direction:
+        // Task 8 moved drow's competition for surface cells by re-keying the
+        // node index, and Task 9 moves it again by repairing `chamber_fit`'s
+        // genus join, so drow seats at a different rung in karst and fracture
+        // columns and its seed-2 congregation falls back under the caste
+        // threshold. The margin line goes with it — a people with no
+        // priesthood teaches nothing to be wrong about.
+        //
+        // **The paired `diachronic` row moves back too**, and the pairing is
+        // the point: `LADDER_TABLE`'s seed-2 drow row returns `Predictive` ->
+        // `Counted`, 81 witnessed and unchanged, re-pinned from its own
+        // scaffold rather than from this one. A single fact reaching two
+        // instruments that agree without consulting each other is the check
+        // this comment has been building across two campaigns.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -5403,9 +5422,6 @@ mod tests {
                 "Among the Wazwo, the sky has darkened, now and again.".to_string(),
                 "Among the Feqboq, the sky has darkened, now and again.".to_string(),
                 "Among the Kxoqboq, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kxoqboq numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Kxoqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Loshjo, the sky has darkened, now and again.".to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Mepmee numbers the darkenings: 49.".to_string(),
@@ -5450,7 +5466,6 @@ mod tests {
             seed2.reckoning[1].margin,
             vec![
                 "In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Kxoqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),

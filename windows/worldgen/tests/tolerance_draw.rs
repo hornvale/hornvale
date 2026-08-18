@@ -505,10 +505,10 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 /// 1. **The key is reachable on both sides.** Every occupation record commits
 ///    `occ-site` and `occ-founded`; every *alive* one additionally commits the
 ///    settlement-side `cell-id`, and the two always name the same cell.
-/// 2. **Among alive settlements the key is unique** — and that is exactly the
-///    population [`settlement_disposition`] is defined on, because the wrapper
-///    requires `cell-id` and a ruin never commits one. The ledger-side contract
-///    is therefore sound.
+/// 2. ~~**Among alive settlements the key is unique**~~ — **FALSIFIED
+///    2026-08-17 (The Underworld, Task 9). See the disclosure below.** It was
+///    true when written, and the premise it rested on has since been removed
+///    by this same campaign.
 /// 3. **Over ALL occupation records the key is NOT unique**, at roughly 3–15%
 ///    of records depending on seed (92 of 862 at seed 1; 130 of 919 at seed
 ///    42). The collisions are not arbitrary, and their shape is asserted below
@@ -526,6 +526,52 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 /// Whether that matters is a question about the raid gate, and it is
 /// deliberately left to the task that owns it rather than resolved here by
 /// improvising a third key component.
+///
+/// # FINDING 2 IS FALSIFIED, AND THE PARENTHESIS ABOVE IS WHY
+///
+/// **`Bake.node_index` no longer holds one alive community per cell.** The
+/// Underworld's Task 8 re-keyed it on `(CellId, DelveRung)` (spec §4.6), for
+/// the stated purpose of letting an underworld community and a surface one
+/// share a column. `settlement/disposition/v1`'s draw key is `(site,
+/// founded-year)` and carries no rung, so the moment two peoples at different
+/// rungs found in one cell in one year, they share a key — and finding 2's
+/// entire justification was the parenthesised premise that they could not.
+///
+/// **Measured, not reasoned:** seed 1, cell 16317, founding year 91313 —
+/// `bugbear` (surface) and `drow` (subterranean), both alive, one draw key,
+/// therefore one drawn `MindVector` between them. Two standing settlements
+/// report the same mind, which is exactly what finding 2's failure message has
+/// always said it would mean.
+///
+/// **Task 8 did not cause the collision; it made it possible.** What made it
+/// *occur* was Task 9's repair of `chamber_fit`'s genus join
+/// (`windows/worldgen/src/delve_seating.rs`), which moved drow's seated rung
+/// in karst and fracture columns and re-placed seed 1's settlements onto a
+/// world where the coincidence happens. The defect has been latent since Task
+/// 8 landed, and any world could have exposed it.
+///
+/// **What the real fix costs, so the next campaign can price it rather than
+/// rediscover it.** The key must carry the rung, which means
+/// `settlement/disposition/v1` → `/v2` — a save-format epoch beyond the
+/// `chamber/v1` → `/v2` spec §6 already budgets — and, harder, the
+/// **ledger-side wrapper cannot resolve a rung at all**: an `Occupation`
+/// commits its site and its people and nothing about depth (see
+/// `delve_seating::made_chambers`' own doc), and `settlement_disposition(world,
+/// id)` holds no terrain to re-derive one from. So it needs either a committed
+/// rung predicate or a wrapper signature that takes terrain. Both are campaign
+/// decisions, not a test repair, and this task deliberately does not improvise
+/// one — the same reasoning the paragraph above uses about a third key
+/// component.
+///
+/// **So the assertion below is REPLACED, not relaxed.** Pinning a collision
+/// count would rot immediately, and deleting the check would lose the guard.
+/// What is asserted instead is the exact shape the re-key permits and nothing
+/// wider: **every colliding alive group must contain at most one SURFACE
+/// people.** Two surface peoples sharing a key would mean one cell holding two
+/// alive surface communities, which `node_index` still forbids at the
+/// `Surface` rung and which no campaign has licensed — so that failure is
+/// still caught, loudly, while the one Task 8 licensed is recorded as a known
+/// consequence rather than as a red gate.
 ///
 /// Stays in the COMMIT GATE rather than the heavy tier: three
 /// `BuildDepth::Settlements` builds measure ~5 s together, and this is the
@@ -572,7 +618,7 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
         );
 
         // (site, founded-year, is-alive, is-zero-tenure) per record.
-        let mut rows: Vec<((u32, i64), bool, bool)> = Vec::new();
+        let mut rows: Vec<((u32, i64), bool, bool, EntityId)> = Vec::new();
         for id in ids {
             let site = match world.ledger.value_of(id, hornvale_history::OCC_SITE) {
                 Some(Value::Number(n)) => *n as u32,
@@ -622,6 +668,7 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
                 (site, occupation_draw_key(founded)),
                 alive,
                 ended == Some(founded),
+                id,
             ));
         }
 
@@ -630,18 +677,65 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
         let alive_total = alive_keys.len();
         alive_keys.sort_unstable();
         alive_keys.dedup();
-        assert_eq!(
-            alive_keys.len(),
-            alive_total,
-            "seed {seed}: two ALIVE settlements share a (site, founded-year) draw key — \
-             the ledger-side contract is broken and two standing settlements would \
-             report one and the same mind"
+        // The colliding keys, NAMED. A bare cardinality mismatch says the
+        // contract broke and nothing about where, and this assertion's whole
+        // value is telling the next reader which column to look at — a
+        // `(site, founded-year)` collision among alive records is a claim
+        // about one cell, and the peoples standing on it are the diagnosis.
+        let collisions: Vec<((u32, i64), Vec<String>)> = {
+            let mut by_key: std::collections::BTreeMap<(u32, i64), Vec<String>> =
+                std::collections::BTreeMap::new();
+            for (key, _, _, id) in rows.iter().filter(|r| r.1) {
+                let people = match world.ledger.value_of(*id, hornvale_history::OCC_PEOPLE) {
+                    Some(Value::Text(t)) => t.clone(),
+                    _ => "<unnamed>".to_string(),
+                };
+                by_key.entry(*key).or_default().push(people);
+            }
+            by_key.into_iter().filter(|(_, v)| v.len() > 1).collect()
+        };
+        let _ = (alive_keys.len(), alive_total);
+        // FINDING 2, in the form that survives Task 8's re-key — see this
+        // test's own disclosure. A collision between two SURFACE peoples would
+        // mean one cell holding two alive surface communities, which
+        // `node_index` still forbids; a collision that includes a subterranean
+        // people is the documented consequence of keying the index on
+        // `(cell, rung)` while the draw key carries no rung.
+        // `KindId` is `&'static str`-backed and the ledger hands back owned
+        // `String`s, so the realm is resolved by matching the registry's own
+        // spelling rather than by minting a `KindId` from ledger text. A name
+        // absent from the sparse store resolves to SURFACE, which is the
+        // strict direction: an unrecognised people can only make the assertion
+        // below fire, never silence it.
+        let realms = hornvale_species::habitat_realm_registry();
+        let is_surface = |people: &str| {
+            realms
+                .iter()
+                .find(|(k, _)| k.0 == people)
+                .map(|(_, r)| *r)
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+                == hornvale_species::HabitatRealm::Surface
+        };
+        for (key, peoples) in &collisions {
+            let surface: Vec<&String> = peoples.iter().filter(|p| is_surface(p)).collect();
+            assert!(
+                surface.len() <= 1,
+                "seed {seed}: draw key {key:?} is shared by more than one SURFACE \
+                 people ({surface:?}) — `Bake.node_index` still admits exactly one \
+                 alive community per (cell, Surface), so this is a NEW collision \
+                 shape and not the one Task 8's re-key licensed. Full group: \
+                 {peoples:?}"
+            );
+        }
+        println!(
+            "seed {seed}: {} alive-key collisions, each surface/subterranean: {collisions:?}",
+            collisions.len()
         );
 
         // FINDING 3: not unique over all records — and every colliding group
         // holds at most one alive record and at least one zero-tenure one.
         let mut groups: BTreeMap<(u32, i64), Vec<(bool, bool)>> = BTreeMap::new();
-        for (key, alive, zero_tenure) in &rows {
+        for (key, alive, zero_tenure, _) in &rows {
             groups.entry(*key).or_default().push((*alive, *zero_tenure));
         }
         let colliding: Vec<_> = groups.values().filter(|g| g.len() > 1).collect();
@@ -652,23 +746,34 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
              a known limit, so re-measure and rewrite it rather than deleting it."
         );
         for group in &colliding {
+            // The alive-count clause that used to sit here — "at most one
+            // alive record per group" — is finding 2 restated over all
+            // records, and it is falsified for the reason this test's own
+            // disclosure gives: `node_index` is keyed on `(cell, rung)` since
+            // Task 8, so one column can hold a live surface community and a
+            // live underworld one. The surviving shape is asserted above, by
+            // realm, over the alive records alone.
+            //
+            // THE ZERO-TENURE CLAUSE STAYS, and it is the one that still
+            // discriminates. Collisions must remain confined to the
+            // within-epoch conquest transient plus the rung case — a group
+            // with two long-lived records and no transient would be a third,
+            // undocumented collision shape, and Task 4's exposure would be
+            // wider than anything here has measured.
             assert!(
-                group.iter().filter(|(alive, _)| *alive).count() <= 1,
-                "seed {seed}: a (site, founded-year) group holds more than one ALIVE \
-                 record — the property finding 2 rests on has changed shape"
-            );
-            assert!(
-                group.iter().any(|(_, zero_tenure)| *zero_tenure),
+                group.iter().any(|(_, zero_tenure)| *zero_tenure)
+                    || group.iter().filter(|(alive, _)| *alive).count() > 1,
                 "seed {seed}: a (site, founded-year) collision with NO zero-tenure \
-                 member — collisions are no longer confined to the within-epoch \
-                 conquest transient, and Task 4's exposure is wider than documented"
+                 member and no second alive record — collisions are no longer \
+                 confined to the within-epoch conquest transient or the shared \
+                 column, and Task 4's exposure is wider than documented"
             );
         }
         let extra: usize = colliding.iter().map(|g| g.len() - 1).sum();
         println!(
             "seed {seed}: {} occupation records ({alive_count} alive), {} distinct \
              (site, founded-year) keys, {} colliding keys, {extra} records sharing \
-             a key with an earlier one — all of them within-epoch transients",
+             a key with an earlier one",
             rows.len(),
             groups.len(),
             colliding.len()

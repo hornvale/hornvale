@@ -539,9 +539,9 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
         gapped,
         vec![
             "bugbear",
+            "desert-dwarf",
             "desert-elf",
             "drow",
-            "gnoll",
             "goblin",
             "gully-dwarf",
             "high-elf",
@@ -554,7 +554,7 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
     assert_eq!(
         rooted,
         vec![
-            ("desert-dwarf", "Shnaqdog".to_string()),
+            ("gnoll", "Dzhaap".to_string()),
             ("hill-dwarf", "Maqtog".to_string()),
             ("hobgoblin", "Negao".to_string()),
             ("kobold", "Roraaxaa".to_string()),
@@ -677,8 +677,81 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
 /// count with two swaps, and `marsh` held its count while breaking a
 /// seven-re-measure invariant. A single cause need not move four measures the
 /// same way.
+/// claim: readout(off-gate, prints the Root/Gap partition of all four
+/// landform concepts at seed 42 in one run) — the regeneration procedure for
+/// the four partition tests below.
+///
+/// Each of those tests asserts a `gapped` list and then a `rooted` list, and
+/// stops at whichever fails first, so a campaign that moves both learns about
+/// them one gate run at a time and re-pins from a failure message rather than
+/// from a measurement. This prints both sides of all four concepts at once, in
+/// the literal shape those assertions take.
+///
+/// Written 2026-08-17 (The Underworld, Task 9) for exactly that reason: three
+/// of the four had moved and the first re-pin attempt was reading them off
+/// consecutive red runs.
 #[test]
-fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
+#[ignore = "re-witness sweep: builds seed 42 to Full depth and derives every placed people's \
+            lexicon (~3 s); run by hand only when a partition assertion below has gone red"]
+fn dump_the_landform_partitions_at_seed_42() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    for concept in ["hill", "valley", "spring", "marsh"] {
+        let mut gapped: Vec<&str> = Vec::new();
+        let mut rooted: Vec<(&str, String)> = Vec::new();
+        for (species, _) in placed_peoples(&w) {
+            let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
+            match lex.entry(concept) {
+                Some(LexEntry::Gap { .. }) => gapped.push(species),
+                Some(LexEntry::Root { views, .. }) => rooted.push((species, views.roman.clone())),
+                other => panic!("{species}: unexpected {concept:?} entry at seed 42: {other:?}"),
+            }
+        }
+        gapped.sort_unstable();
+        rooted.sort_unstable();
+        println!("== {concept} ==");
+        println!("  gapped ({}): {gapped:?}", gapped.len());
+        println!("  rooted ({}): {rooted:?}", rooted.len());
+    }
+}
+
+/// **THE UNDERWORLD re-measure (Task 9, the genus join).** Three of the four
+/// concepts moved again, and `valley` alone is byte-identical:
+///
+/// ```text
+///   hill     1 Root -> 2   kobold joins hobgoblin (`Roxoro`)
+///   valley   3 Root -> 3   byte-identical, both sides
+///   spring   5 Root -> 5   desert-dwarf out, gnoll in (`Dzhaap`)
+///   marsh    6 Root -> 7   desert-dwarf out; gnoll and high-elf in
+/// ```
+///
+/// The cause is one repair: `chamber_fit` filtered the underworld corpus on
+/// `CaveKind::name()` — `"karst"`, `"fracture"` — against genera spelled
+/// `"karst-cave"` and `"fracture-cave"`, so two formations of three never
+/// matched their own rows and silently read the genus-blind fallback. Fixing
+/// the join moves drow's seated rung in karst and fracture columns, which
+/// moves which surface cells it leaves free, which re-places seed 42's
+/// settlements for the second time in one campaign. Read forwards: this time
+/// settlement volume RISES rather than falls, and the four measures move
+/// accordingly — three gain roots, none loses one on net.
+///
+/// **`hobgoblin`'s `Nootea` is byte-identical for a NINTH re-measure**, which
+/// is now the longest-standing word in this file.
+///
+/// **The one movement that is not simply "more settlement":** `desert-dwarf`
+/// leaves BOTH `spring` and `marsh`, the only people to lose a root here, and
+/// it is one of the two dwarves the previous re-measure's title counted. That
+/// is why this test's sibling is renamed from `..._six_peoples_including_two_
+/// dwarves` to `..._seven_peoples_including_one_dwarf`: the count rose while
+/// the dwarf half of it fell, and a title carrying only the cardinality would
+/// have hidden that.
+///
+/// All four partitions were read off ONE run of
+/// `dump_the_landform_partitions_at_seed_42` above, which was written in this
+/// task for that purpose.
+#[test]
+fn hill_is_a_root_at_seed_42_for_hobgoblin_and_kobold() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -711,7 +784,6 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
             "high-elf",
             "hill-dwarf",
             "human",
-            "kobold",
             "sea-elf",
             "snow-elf",
             "wood-elf",
@@ -720,7 +792,10 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
     );
     assert_eq!(
         rooted,
-        vec![("hobgoblin", "Nootea".to_string()),],
+        vec![
+            ("hobgoblin", "Nootea".to_string()),
+            ("kobold", "Roxoro".to_string()),
+        ],
         "the set of peoples rooting 'hill' at seed 42 moved"
     );
 }
@@ -985,7 +1060,7 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
 /// time. A run of seven is a run, not a law. Re-measured wholesale, not
 /// hand-edited.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_six_peoples_including_two_dwarves() {
+fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -1005,11 +1080,10 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_including_two_dwarves() {
         gapped,
         vec![
             "bugbear",
+            "desert-dwarf",
             "desert-elf",
-            "gnoll",
             "goblin",
             "gully-dwarf",
-            "high-elf",
             "human",
             "sea-elf",
             "wood-elf",
@@ -1019,15 +1093,15 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_including_two_dwarves() {
     assert_eq!(
         rooted,
         vec![
-            ("desert-dwarf", "Dag".to_string()),
             ("drow", "Goo".to_string()),
+            ("gnoll", "Gshoovzngaov".to_string()),
+            ("high-elf", "Geesh".to_string()),
             ("hill-dwarf", "Tag".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
             ("kobold", "Rorora".to_string()),
             ("snow-elf", "Boosh".to_string()),
         ],
-        "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \
-         is among them"
+        "the set of peoples rooting 'marsh' at seed 42 moved"
     );
 }
 

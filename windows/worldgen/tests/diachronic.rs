@@ -354,6 +354,43 @@ type Row = (
 // from either end, and each was re-pinned from its own scaffold rather than
 // from the other.
 //
+// THE UNDERWORLD, TASK 9 re-measure (the genus join, 2026-08-17). The row
+// COUNT is unchanged at 75 and **exactly TWO of the 75 rows moved, both of
+// them drow, and both in the same direction**:
+//
+//   seed 2 drow          Predictive -> Counted    (81 witnessed, unchanged)
+//   seed 5 drow          Predictive -> Counted    (500 witnessed, unchanged)
+//
+// Seed 2's is the row Task 8 moved one task ago, moving back. Seed 5's has sat
+// at `Predictive` since the row above it in this comment put it there, and
+// falls now for the same reason seed 2's does.
+//
+// **The two rows were read off ONE run, not found one gate failure at a
+// time.** `dump_the_live_ladder_table` below is that run: it prints all 75
+// rows in this table's own literal shape and marks the ones that moved. It was
+// written here because this re-measure began by fixing seed 2 alone, on the
+// evidence of a row-by-row assertion that stops at the first mismatch — and
+// the next run then revealed seed 5. A table asserted row by row cannot tell
+// you how many rows moved, only which one moved first, and eight re-measures
+// have now been performed against that limitation.
+//
+// **Every witnessed COUNT held, for the eighth re-measure running.** The cause
+// is the same lever pulled a second time inside one campaign: `chamber_fit`
+// filtered the underworld corpus on `CaveKind::name()` — `"karst"`,
+// `"fracture"` — against genera spelled `"karst-cave"` and `"fracture-cave"`,
+// so two of the three formations never matched their own rows and silently
+// read the genus-blind fallback. Repairing the join changes which rung drow
+// seats at in those columns, which changes which surface cells it competes
+// for, which is the same mechanism Task 8's entry describes — so the same one
+// row moves, and this time downward.
+//
+// **Corroborated on the same second surface, again measured independently.**
+// `book::the_reckoning_renders_the_epoch_pair`'s seed-2 volume LOSES the
+// priesthood run it gained one task ago — the Kxoqboq's — while every other
+// autonym, both witnessed counts (81 and 49) and the taught day (36337) stay
+// byte-identical. Two surfaces, one fact, each re-pinned from its own scaffold
+// and neither from the other, for the second consecutive task.
+//
 // The seed-1 row is independently corroborated on three other surfaces —
 // `book::seed_1_doctrine_sections_render` (organized 12 -> 11),
 // `book::the_reckoning_renders_the_epoch_pair` (the Beba's priesthood run
@@ -612,9 +649,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
@@ -972,9 +1009,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
@@ -1065,6 +1102,46 @@ const LADDER_TABLE: &[Row] = &[
         Some(36556.47532198732),
     ),
 ];
+
+/// claim: readout(off-gate, prints the whole live 75-row ladder table so a
+/// re-measure reads a number off a run) — the regeneration procedure for
+/// [`LADDER_TABLE`], which every previous re-measure performed by hand.
+///
+/// `the_ladder_and_prophecy_laws` below asserts row by row and stops at the
+/// first mismatch, so a campaign that moves several rows learns about them one
+/// gate run at a time. This prints all 75 in `LADDER_TABLE`'s own literal
+/// shape, so the diff is taken once.
+#[test]
+#[ignore = "re-witness sweep: builds five worlds to Full depth (~16 s); run by hand only when \
+            the ladder law below has gone red"]
+fn dump_the_live_ladder_table() {
+    let mut moved = 0usize;
+    for seed in 1..=5u64 {
+        let w = generated(seed);
+        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+        for (kind, _) in &placed_peoples(&w) {
+            let kind = *kind;
+            let (rung_1, _) = ladder_from(&w, kind, at(EPOCH_1), &terrain, &climate).unwrap();
+            let (rung_2, pred_2) = ladder_from(&w, kind, at(EPOCH_2), &terrain, &climate).unwrap();
+            let n_2 = observations_from(&w, kind, at(EPOCH_2), &terrain, &climate)
+                .unwrap()
+                .events
+                .len();
+            let committed = LADDER_TABLE.iter().find(|r| r.0 == seed && r.1 == kind);
+            let same = committed
+                .is_some_and(|r| r.2 == rung_1 && r.3 == rung_2 && r.4 == n_2 && r.5 == pred_2);
+            if !same {
+                moved += 1;
+            }
+            println!(
+                "    ({seed}, {kind:?}, LadderRung::{rung_1:?}, LadderRung::{rung_2:?}, {n_2}, {pred_2:?}),{}",
+                if same { "" } else { "   // MOVED" }
+            );
+        }
+    }
+    println!("  {moved} of {} rows moved", LADDER_TABLE.len());
+}
 
 /// Two laws over the same five worlds, in one test because they share a build.
 ///

@@ -96,6 +96,35 @@ fn zone_of(rung: DelveRung) -> Option<DelveZone> {
     }
 }
 
+/// The corpus's spelling of one cave formation — the third leg of decision
+/// 0094's duplicate roster, and the one nobody had joined.
+///
+/// **This exists because the two spellings are genuinely different words.**
+/// `hornvale_terrain::CaveKind::name` answers `"karst"` / `"lava-tube"` /
+/// `"fracture"` (its scene-emission legend), while
+/// `hornvale_climate::underworld`'s `genera` carry the *surface corpus's*
+/// formation names from `climate::axes` — `"karst-cave"` / `"lava-tube"` /
+/// `"fracture-cave"` — because an underworld community is a community *of* one
+/// of the formations The Axes already named. One of the three agrees by
+/// coincidence, which is exactly why the mismatch survived: `lava-tube` matched
+/// and looked like the rule working.
+///
+/// Exhaustive over `CaveKind` with no wildcard, following
+/// `cli/tests/cave_kind_correspondence.rs`'s own enforcement pattern: a fourth
+/// formation fails to compile here rather than silently falling through
+/// [`chamber_fit`]'s genus-blind branch.
+///
+/// See [`chamber_fit`]'s "Genus first" paragraph for what went wrong while this
+/// function did not exist, and `every_cave_kind_matches_a_corpus_genus` for the
+/// assertion that would have caught it.
+fn genus_of(cave: CaveKind) -> &'static str {
+    match cave {
+        CaveKind::Karst => "karst-cave",
+        CaveKind::LavaTube => "lava-tube",
+        CaveKind::Fracture => "fracture-cave",
+    }
+}
+
 /// How well `niche` suits the underworld communities that occur in a `cave`
 /// formation at `rung`'s depth class, in `[0, 1]` — or `None` where the corpus
 /// describes nothing at that depth at all.
@@ -120,6 +149,19 @@ fn zone_of(rung: DelveRung) -> Option<DelveZone> {
 /// `None` is reserved for a depth class the corpus does not describe at all,
 /// which today never happens and is kept total rather than asserted.
 ///
+/// **CORRECTED 2026-08-17, Task 9, before H2 was measured.** As Task 8 shipped
+/// it, this function filtered on `cave.name()` — `"karst"` and `"fracture"` —
+/// against corpus genera spelled `"karst-cave"` and `"fracture-cave"`, so the
+/// genus branch matched for **one** formation of three and the other two fell
+/// silently through to the genus-blind fallback. Karst and fracture columns
+/// were therefore scored against *every* community at their depth, including
+/// lava-tube ones, and the two formations returned bit-identical fit tables.
+/// Nothing objected: this module's own `every_formation_and_depth_class_scores`
+/// asks only that a fit *exists*, and the fallback always produces one. The
+/// join now goes through [`genus_of`], and
+/// `every_cave_kind_matches_a_corpus_genus` asserts the thing that was actually
+/// false — that each formation's genus string occurs in the corpus at all.
+///
 /// **Unassigned rows are excluded, not scored as zero.** The two resisters
 /// (`breakdown-fall`, `flood-pulse`) carry the empty vector, and
 /// `environment_fit` correctly answers `0.0` for a place sharing no axis with
@@ -133,7 +175,7 @@ fn zone_of(rung: DelveRung) -> Option<DelveZone> {
 /// type-audit: bare-ok(ratio: return)
 pub fn chamber_fit(niche: &EnvironmentNiche, cave: CaveKind, rung: DelveRung) -> Option<f64> {
     let zone = zone_of(rung)?;
-    let genus = cave.name();
+    let genus = genus_of(cave);
     let assigned = || {
         underworld_assignment()
             .iter()
@@ -370,18 +412,38 @@ pub fn seating_for(
 /// than a value with no reader, and it is stated here rather than left to be
 /// discovered.
 ///
-/// **Wiring `delve_at` alone would have been VACUOUS, and that is measured
-/// rather than argued.** `delve_at` enters at a hardcoded `band: 0`
-/// (`Undercroft`), `describe_underground_here` renders `"Ways on: out."`, the
-/// only other underground verb is `climb`, and
-/// [`crate::chamber::passages_from`] has no production caller — so a player
-/// reaches exactly one chamber per column and it is always the shallowest rung.
-/// Meanwhile **every** settled underworld column in the campaign's three seeds
-/// seats at `Shallows` (band 1): 14 / 8 / 7 occupied columns on seeds 42 / 7 /
-/// 1234, band histogram `{1: N}` in all three. Passing the real overrides into
-/// a band-0 lookup would therefore have produced an empty map in every measured
-/// world — a call site that makes the seam look closed while changing nothing
-/// observable, which is exactly the shape this campaign exists to name.
+/// **The vacuity argument that used to stand here is now HALF FALSE, and the
+/// half that fell is the measurement.** `delve_at` still enters at a hardcoded
+/// `band: 0` (`Undercroft`), `describe_underground_here` still renders
+/// `"Ways on: out."`, the only other underground verb is still `climb`, and
+/// [`crate::chamber::passages_from`] still has no production caller — so a
+/// player still reaches exactly one chamber per column and it is always the
+/// shallowest rung. All of that is unchanged.
+///
+/// What has changed is the number the argument rested on. Task 8 measured that
+/// **every** settled underworld column in the campaign's three seeds seated at
+/// `Shallows` (band 1) — 14 / 8 / 7 occupied columns, band histogram `{1: N}`,
+/// band 0 holding ZERO in all three — and concluded that passing the real
+/// overrides into a band-0 lookup would hand it an empty map in every measured
+/// world.
+///
+/// **Task 9 repaired [`chamber_fit`]'s genus join and band 0 stopped being
+/// empty.** Re-measured on the same three seeds with
+/// `underworld_capacity_probe`: occupied-column band histograms `{0: 1, 1: 4}`
+/// / `{0: 1, 1: 11}` / `{0: 15, 1: 10}` on seeds 42 / 7 / 1234 — so band 0
+/// holds 1, 1 and 15 columns rather than none, and seed 1234 seats a clear
+/// majority of its underworld columns at the one band a player can reach.
+/// Drow's fit table now scores karst and fracture columns against their own
+/// corpus rows instead of the genus-blind fallback, and its argmax in a
+/// fracture column is `Undercroft`.
+///
+/// **The disclosure below therefore stands, but for a weaker reason than it
+/// was given.** Wiring `delve_at` is no longer provably vacuous — it would now
+/// resolve `Made` for a real, if small, set of columns. It is still not done
+/// here, because the rest of the pricing is unchanged and unpaid: without a
+/// descent verb the seam is closed for exactly one band out of five, which is
+/// a partial closure presented as a whole one. A campaign that wants this
+/// should read the paragraph below and do all of it.
 ///
 /// **What closing it actually needs**, so the next campaign can price it: a
 /// descent verb walking [`crate::chamber::passages_from`]; chamber state that
@@ -454,6 +516,60 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// **The join decision 0094 leaves to a reader, asserted.** Every
+    /// `CaveKind`'s corpus spelling ([`genus_of`]) must name at least one row
+    /// of `underworld_assignment()`; a spelling that names none makes
+    /// [`chamber_fit`]'s genus branch dead for that formation and silently
+    /// promotes the genus-blind fallback into the answer.
+    ///
+    /// This is the assertion that was missing when Task 8 shipped, and it fails
+    /// on the exact defect Task 9 found: two of the three formations were
+    /// filtered on a name no corpus row carries.
+    #[test]
+    fn every_cave_kind_matches_a_corpus_genus() {
+        for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+            let genus = genus_of(kind);
+            let rows = underworld_assignment()
+                .iter()
+                .filter(|n| n.genera.contains(&genus))
+                .count();
+            assert!(
+                rows > 0,
+                "{kind:?} is joined to the underworld corpus as {genus:?}, which no \
+                 row carries — every column of this formation would fall through to \
+                 the genus-blind fallback and be scored against other formations' \
+                 communities"
+            );
+        }
+    }
+
+    /// The genus branch must actually **discriminate**: two formations whose
+    /// fit tables are identical everywhere are evidence that neither is being
+    /// filtered. A companion to the test above, because a genus string can
+    /// match rows and still not be the one being used.
+    #[test]
+    fn two_formations_do_not_score_identically() {
+        let niche = drow();
+        let differs = [
+            DelveRung::Undercroft,
+            DelveRung::Shallows,
+            DelveRung::Deeps,
+            DelveRung::Underdeep,
+            DelveRung::Sunless,
+        ]
+        .into_iter()
+        .any(|rung| {
+            chamber_fit(&niche, CaveKind::Karst, rung)
+                != chamber_fit(&niche, CaveKind::Fracture, rung)
+        });
+        assert!(
+            differs,
+            "karst and fracture score identically at every depth class, which \
+             means the genus filter is matching neither and both are reading the \
+             genus-blind fallback"
+        );
     }
 
     /// `Surface` is not a depth class any underworld community occupies, so it
