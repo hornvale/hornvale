@@ -5,7 +5,6 @@
 //! approximations; each is deterministic and consistent across metrics.
 
 use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, math};
-use std::collections::VecDeque;
 
 /// Half-width of the shelf band around sea level, meters (Earth's
 /// continental shelf lies within ~200 m of the sea surface).
@@ -158,26 +157,11 @@ pub fn land_component_sizes(
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
 ) -> Vec<usize> {
-    let mut visited = vec![false; geo.cell_count()];
-    let mut sizes = Vec::new();
-    for start in geo.cells() {
-        if visited[start.0 as usize] || *elevation.get(start) < sea_level {
-            continue;
-        }
-        visited[start.0 as usize] = true;
-        let mut queue = VecDeque::from([start]);
-        let mut size = 0usize;
-        while let Some(cell) = queue.pop_front() {
-            size += 1;
-            for &neighbor in geo.neighbors(cell) {
-                if !visited[neighbor.0 as usize] && *elevation.get(neighbor) >= sea_level {
-                    visited[neighbor.0 as usize] = true;
-                    queue.push_back(neighbor);
-                }
-            }
-        }
-        sizes.push(size);
-    }
+    let mut sizes: Vec<usize> =
+        crate::landscape::components(geo, |c| *elevation.get(c) >= sea_level)
+            .iter()
+            .map(std::collections::BTreeSet::len)
+            .collect();
     sizes.sort_unstable_by(|a, b| b.cmp(a));
     sizes
 }
