@@ -485,10 +485,16 @@ impl Projection {
     /// Which channel drives R, G, B, exactly as carried — the wire's own
     /// calibration slot indices (`Sight::projection_slots`). Paired with
     /// [`Projection::norms`] (`Sight::projection_norms`), a client can
-    /// reproject a carried [`Signal`] itself — `(signal[rgb[i]] /
-    /// norms[i]).clamp(0, 1)` per output slot — without re-deriving the
-    /// projection. `rgb` alone says which index to read; `norms` says what
-    /// to divide it by, and the two must ship together (spec §4.1).
+    /// reproject a carried [`Signal`] itself for the **photopic** path —
+    /// `(signal[rgb[i]] / norms[i]).clamp(0, 1)` per output slot — without
+    /// re-deriving the projection. `rgb` alone says which index to read;
+    /// `norms` says what to divide it by, and the two must ship together
+    /// (spec §4.1). **This does not cover [`Observer::to_srgb`]'s scotopic
+    /// branch**: below the photopic threshold, `to_srgb` mixes in the rod
+    /// response through `SCOTOPIC_GAIN`/`SCOTOPIC_NORM`, kernel constants
+    /// that are not on the wire, so a cell that took that branch cannot be
+    /// reprojected from `signal` alone — a client must fall back to the
+    /// carried `color` for it.
     /// type-audit: bare-ok(index: return)
     pub fn rgb(&self) -> &[usize; 3] {
         &self.rgb

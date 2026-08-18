@@ -272,6 +272,15 @@ pub struct Micro {
 /// than merely caption a lost axis. All three are per-observer: a species
 /// observer's roles, slots, and norms all differ from the standard
 /// observer's.
+///
+/// **This covers the photopic path only.** [`hornvale_kernel::color::
+/// Observer::to_srgb`] has a second, scotopic branch below the photopic
+/// threshold that mixes in the rod response through global kernel constants
+/// (`SCOTOPIC_GAIN`, `SCOTOPIC_NORM`) that are not carried on this wire, so a
+/// cell that took that branch cannot be reprojected from `signal` and this
+/// calibration alone — a client must fall back to the cell's own carried
+/// `color` for it. See [`hornvale_kernel::color::Projection::rgb`] for the
+/// same caveat stated on the kernel side.
 /// type-audit: bare-ok(identifier-text: observer), bare-ok(count: channels), bare-ok(count: chromatic), bare-ok(identifier-text: projection), bare-ok(prose: preserves), bare-ok(diagnostic-value: sun_altitude_deg), bare-ok(identifier-text: channel_roles), bare-ok(index: projection_slots), bare-ok(ratio: projection_norms)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Sight {
