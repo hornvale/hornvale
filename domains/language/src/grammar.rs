@@ -484,7 +484,12 @@ mod tests {
     /// tests below vary the `species` argument to `tongue_grammar` itself,
     /// not this shared phonology.
     fn test_phonology() -> Phonology {
-        draw_phonology(&Seed(1), "test-tongue", &test_envelope())
+        draw_phonology(
+            &Seed(1),
+            "test-tongue",
+            &test_envelope(),
+            &crate::typology::concatenative(),
+        )
     }
 
     /// claim: structural(seed: 42) — determinism/species-keying at one fixed

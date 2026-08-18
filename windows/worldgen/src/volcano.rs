@@ -258,6 +258,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
+            &hornvale_language::typology::concatenative(),
         )
     }
 

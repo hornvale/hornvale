@@ -413,6 +413,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
+            &crate::typology::concatenative(),
         )
     }
 

@@ -2105,6 +2105,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::Trill,
             },
+            &crate::typology::concatenative(),
         )
     }
 
@@ -2123,6 +2124,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
+            &crate::typology::concatenative(),
         )
     }
 
@@ -3442,7 +3444,17 @@ mod tests {
         // phonology whose nucleus set has more than one member, so the test
         // states which one it found rather than assuming a fixture's shape.
         let (seed, ph) = (0..64u64)
-            .map(|s| (s, draw_phonology(&Seed(s), "swept", &swept_envelope(s))))
+            .map(|s| {
+                (
+                    s,
+                    draw_phonology(
+                        &Seed(s),
+                        "swept",
+                        &swept_envelope(s),
+                        &crate::typology::concatenative(),
+                    ),
+                )
+            })
             .find(|(_, ph)| ph.nuclei.len() > 1)
             .expect("some drawn phonology in 0..64 must admit a complex nucleus");
         assert_eq!(
@@ -3500,7 +3512,12 @@ mod tests {
         // compound repairs to itself.
         for seed in 0..64u64 {
             let proto = wordy_ph();
-            let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+            let ph = draw_phonology(
+                &Seed(seed),
+                "swept",
+                &swept_envelope(seed),
+                &crate::typology::concatenative(),
+            );
             let mut exposures = BTreeMap::new();
             for c in ["water", "fire", "moon", "shadow"] {
                 exposures.insert(c.to_string(), ExposureClass::Steeped);
@@ -3696,7 +3713,12 @@ mod tests {
         let mut long_first = 0usize;
         let mut polysyllabic = 0usize;
         for seed in 0..64u64 {
-            let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+            let ph = draw_phonology(
+                &Seed(seed),
+                "swept",
+                &swept_envelope(seed),
+                &crate::typology::concatenative(),
+            );
             if ph.nuclei.iter().any(|&n| n > 1) {
                 admitting += 1;
             }

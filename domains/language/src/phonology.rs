@@ -11,6 +11,7 @@ use crate::phoneme::{
     Manner, Place, Segment, Tone, canonical_segments, sonority, sonority_of_manner,
 };
 use crate::streams;
+use crate::typology::{CodaLaw, Typology};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -667,6 +668,7 @@ fn draw_nuclei(stream: &mut Stream) -> Vec<usize> {
 fn draw_phonotactics(
     stream: &mut Stream,
     inventory: &[Segment],
+    typ: &Typology,
 ) -> (Vec<Vec<Manner>>, Vec<usize>, Vec<Vec<Manner>>) {
     let manners = consonant_manners(inventory);
 
@@ -677,7 +679,14 @@ fn draw_phonotactics(
 
     let nuclei = draw_nuclei(stream);
 
-    let coda_count = stream.range_u32(1, 2) as usize;
+    // Task 10 gives this match effect; every arm delegates to today's draw
+    // for now, so threading `typ` here moves no bytes.
+    let coda_count = match typ.coda_law {
+        CodaLaw::Drawn => stream.range_u32(1, 2) as usize,
+        CodaLaw::ObstruentObligatory => stream.range_u32(1, 2) as usize,
+        CodaLaw::SonorantClosed => stream.range_u32(1, 2) as usize,
+        CodaLaw::OpenOrNasal => stream.range_u32(1, 2) as usize,
+    };
     let codas = (0..coda_count)
         .map(|_| draw_manner_slots(stream, &manners, 0, 1, false))
         .collect();
@@ -692,9 +701,11 @@ fn draw_phonotactics(
 /// `seed.derive(streams::ROOT)
 /// .derive(StreamLabel::dynamic(species)).derive(streams::PHONOLOGY)`,
 /// split into an `"inventory"` sub-stream and a `"phonotactics"` sub-stream
-/// so adding a new draw to one never perturbs the other.
+/// so adding a new draw to one never perturbs the other. `typ` names the
+/// family's [`Typology`] bundle; every path it reaches today still
+/// delegates to the pre-typology draw, unchanged in effect.
 /// type-audit: bare-ok(identifier-text: species)
-pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
+pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope, typ: &Typology) -> Phonology {
     let phonology_seed = seed
         .derive(streams::ROOT)
         .derive(StreamLabel::dynamic(species))
@@ -730,7 +741,7 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
     ensure_minimum_sonorants(&candidates, &mut inventory);
 
     let mut phonotactics_stream = phonology_seed.derive(streams::PHONOTACTICS).stream();
-    let (onsets, nuclei, codas) = draw_phonotactics(&mut phonotactics_stream, &inventory);
+    let (onsets, nuclei, codas) = draw_phonotactics(&mut phonotactics_stream, &inventory, typ);
 
     let mut ph = Phonology {
         inventory,
@@ -797,7 +808,12 @@ mod tests {
     fn a_quiet_species_admits_its_trill_rarely_or_not_at_all() {
         // Kobold is Trill-capable but low-loudness: the drawn inventory should
         // contain few/no trills relative to a loud species with the same manner.
-        let quiet = draw_phonology(&Seed(42), "kobold", &kobold_env());
+        let quiet = draw_phonology(
+            &Seed(42),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
         let trills = quiet
             .inventory
             .iter()
@@ -813,7 +829,12 @@ mod tests {
             .count();
         let mut loud = kobold_env();
         loud.voice_loudness = 0.9;
-        let loud_ph = draw_phonology(&Seed(42), "kobold", &loud);
+        let loud_ph = draw_phonology(
+            &Seed(42),
+            "kobold",
+            &loud,
+            &crate::typology::concatenative(),
+        );
         let loud_trills = loud_ph
             .inventory
             .iter()
@@ -835,8 +856,18 @@ mod tests {
 
     #[test]
     fn draw_is_deterministic() {
-        let a = draw_phonology(&Seed(7), "kobold", &kobold_env());
-        let b = draw_phonology(&Seed(7), "kobold", &kobold_env());
+        let a = draw_phonology(
+            &Seed(7),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
+        let b = draw_phonology(
+            &Seed(7),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
         assert_eq!(a.inventory, b.inventory);
         assert_eq!(a.onsets, b.onsets);
     }
@@ -845,7 +876,12 @@ mod tests {
     /// Segment, single fixed seed
     #[test]
     fn inventory_respects_the_envelope() {
-        let ph = draw_phonology(&Seed(3), "kobold", &kobold_env());
+        let ph = draw_phonology(
+            &Seed(3),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
         assert!(ph.inventory.iter().all(|s| permits(&kobold_env(), s)));
         assert!(!ph.inventory.is_empty());
     }
@@ -865,7 +901,7 @@ mod tests {
             (Seed(42), "kobold", kobold_env()),
             (Seed(99), "kobold", kobold_env()),
         ] {
-            let ph = draw_phonology(&seed, species, &env);
+            let ph = draw_phonology(&seed, species, &env, &crate::typology::concatenative());
             for seg in &ph.inventory {
                 assert!(
                     canonical.contains(seg),
@@ -897,7 +933,12 @@ mod tests {
         // tonality 0.0 ⇒ tone inventory {Neutral} ⇒ no toned vowel is admitted,
         // so the vowel set is exactly the pre-tone (Neutral-only) set.
         for seed in 0..12u64 {
-            let ph = draw_phonology(&Seed(seed), "goblin", &manikin_env());
+            let ph = draw_phonology(
+                &Seed(seed),
+                "goblin",
+                &manikin_env(),
+                &crate::typology::concatenative(),
+            );
             assert!(
                 !ph.inventory.iter().any(is_toned_vowel),
                 "seed {seed}: an atonal species must carry no toned vowel"
@@ -911,7 +952,12 @@ mod tests {
         // tonality 1.0 ⇒ tone inventory {Neutral, High, Low} ⇒ the inventory
         // carries toned vowels, and every vowel quality present appears in each
         // drawn tone.
-        let ph = draw_phonology(&Seed(1), "serpent", &tonal_env());
+        let ph = draw_phonology(
+            &Seed(1),
+            "serpent",
+            &tonal_env(),
+            &crate::typology::concatenative(),
+        );
         assert!(
             ph.inventory.iter().any(is_toned_vowel),
             "a fully tonal species must admit toned vowels"
@@ -982,7 +1028,12 @@ mod tests {
             vowel_space: 0.70,
             ..manikin_env()
         };
-        let ph = draw_phonology(&Seed(1), "quiet-probe", &env);
+        let ph = draw_phonology(
+            &Seed(1),
+            "quiet-probe",
+            &env,
+            &crate::typology::concatenative(),
+        );
         assert!(
             ph.inventory.iter().any(is_sonorant_seg),
             "a quiet envelope drew no sonorant at all; inventory: {:?}",
@@ -1001,7 +1052,12 @@ mod tests {
             ..manikin_env()
         };
         for seed in 0..64u64 {
-            let ph = draw_phonology(&Seed(seed), "quiet-probe", &env);
+            let ph = draw_phonology(
+                &Seed(seed),
+                "quiet-probe",
+                &env,
+                &crate::typology::concatenative(),
+            );
             assert!(
                 ph.inventory.iter().any(is_sonorant_seg),
                 "seed {seed} drew no sonorant"
@@ -1081,7 +1137,8 @@ mod tests {
         let mut complex_seen = 0usize;
         for (label, env) in [("goblin", manikin_env()), ("kobold", kobold_env())] {
             for seed in 0..200u64 {
-                let ph = draw_phonology(&Seed(seed), label, &env);
+                let ph =
+                    draw_phonology(&Seed(seed), label, &env, &crate::typology::concatenative());
                 assert!(
                     ph.nuclei.contains(&1),
                     "{label} seed {seed}: every syllable is obligatorily complex ({:?})",
@@ -1161,8 +1218,18 @@ mod tests {
         // The tone draw lives on its own `phonology/tones` leg, so raising
         // tonality must not perturb the consonant inventory (drawn on the
         // separate `inventory` leg) — only add toned vowels.
-        let atonal = draw_phonology(&Seed(5), "x", &manikin_env());
-        let tonal = draw_phonology(&Seed(5), "x", &tonal_env());
+        let atonal = draw_phonology(
+            &Seed(5),
+            "x",
+            &manikin_env(),
+            &crate::typology::concatenative(),
+        );
+        let tonal = draw_phonology(
+            &Seed(5),
+            "x",
+            &tonal_env(),
+            &crate::typology::concatenative(),
+        );
         let consonants = |ph: &Phonology| -> Vec<Segment> {
             ph.inventory
                 .iter()

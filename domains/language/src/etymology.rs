@@ -1067,6 +1067,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
+            &crate::typology::concatenative(),
         )
     }
 
@@ -1912,7 +1913,12 @@ mod tests {
         };
         for seed in 0u64..64 {
             for sp in ["goblin", "kobold", "gnoll"] {
-                let ph = draw_phonology(&Seed(seed), sp, &probe_env);
+                let ph = draw_phonology(
+                    &Seed(seed),
+                    sp,
+                    &probe_env,
+                    &crate::typology::concatenative(),
+                );
                 for cascade in [
                     draw_cascade(&Seed(seed), sp, &ph),
                     draw_wear_cascade(&Seed(seed), sp, &ph),
@@ -2077,6 +2083,7 @@ mod tests {
             &Seed(seed),
             "goblinoid",
             &gob_env(0.5, 0.5, 0.55, 0.45, 0.55),
+            &crate::typology::concatenative(),
         );
         let daughters = [
             ("goblin", gob_env(0.5, 0.5, 0.5, 0.5, 0.5)),
@@ -2085,7 +2092,8 @@ mod tests {
         ]
         .iter()
         .map(|(name, env)| {
-            let phonology = draw_phonology(&Seed(seed), name, env);
+            let phonology =
+                draw_phonology(&Seed(seed), name, env, &crate::typology::concatenative());
             Daughter {
                 cascade: draw_cascade(&Seed(seed), name, &phonology),
                 phonology,

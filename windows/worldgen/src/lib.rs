@@ -4727,7 +4727,8 @@ fn language_of_wc(
     let art = wc.articulation.get(&KindId(name)).unwrap_or_else(|| {
         panic!("language_of_wc: '{name}' is not a speaking kind in the component set")
     });
-    hornvale_language::draw_phonology(&world.seed, name, &envelope_of(art))
+    let typ = hornvale_language::typology_for(wc.family_of.get_by_label(name).copied());
+    hornvale_language::draw_phonology(&world.seed, name, &envelope_of(art), &typ)
 }
 
 /// Draw a species' phonology, resolving `species` within the shipped
@@ -4771,7 +4772,8 @@ fn proto_phonology_of_in(
         .family_proto
         .get(&KindId(family))
         .unwrap_or_else(|| panic!("proto_phonology_of: family '{family}' has no proto vector"));
-    hornvale_language::draw_phonology(&world.seed, family, &envelope_of(art))
+    let typ = hornvale_language::typology_for(Some(family));
+    hornvale_language::draw_phonology(&world.seed, family, &envelope_of(art), &typ)
 }
 
 /// Map a species' perception vector onto the color pack's two acquisition

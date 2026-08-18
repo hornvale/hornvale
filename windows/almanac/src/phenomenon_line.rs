@@ -211,6 +211,7 @@ pub(crate) fn test_speaker(concepts: &[&str]) -> Speaker {
             tonality: 0.0,
             exotic: ExoticSeg::None,
         },
+        &hornvale_language::typology::concatenative(),
     );
     let exposures: BTreeMap<String, ExposureClass> = concepts
         .iter()
