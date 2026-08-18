@@ -690,65 +690,61 @@ fn draw_candidate(
     crate::naming::segments_of(&syllables)
 }
 
-/// Assign `concept` a three-consonant skeleton from `ph`'s consonant
-/// subset, for [`crate::typology::Morphology::Templatic`] families —
-/// [`draw_candidate`]'s root-and-pattern counterpart. Draws over the SAME
-/// family-salted leg `draw_candidate` uses for concatenative roots —
-/// `ROOT`/family/`LEXICON`/`PROTO_ROOT`/`ROOT_EPOCH`/concept — and probes
-/// on collision the same way, `.derive(PROBE).derive(dynamic(probe))`, so
-/// the two morphologies share one collision-resolution shape rather than
-/// diverging into a second, silent convention in the same module. The
-/// consonant picks are independent and with replacement — repeats within
-/// one skeleton are allowed (Arabic-style geminate roots) — so the
-/// codomain is n^3 for an n-consonant inventory, large enough that a
-/// sufficiently rich `ph` keeps the assignment injective over a real
-/// concept universe (see the injectivity test below).
+/// Draw one candidate three-consonant skeleton for `concept` at probe index
+/// `probe`, from `ph`'s consonant subset — [`draw_candidate`]'s
+/// root-and-pattern counterpart, and deliberately the SAME division of
+/// labor: this function is single-shot, not a collision-resolution loop.
+/// Draws over the SAME family-salted leg `draw_candidate` uses for
+/// concatenative roots —
+/// `ROOT`/family/`LEXICON`/`PROTO_ROOT`/`ROOT_EPOCH`/concept — and, at
+/// `probe > 0`, re-derives from `.derive(PROBE).derive(dynamic(probe))` so
+/// distinct probes scatter independently (the same double-hash
+/// `draw_candidate` uses). The consonant picks are independent and with
+/// replacement — repeats within one skeleton are allowed (Arabic-style
+/// geminate roots) — so the codomain is n^3 for an n-consonant inventory.
 ///
-/// Reserved integration seam: Task 13 (The Burr) wires this into
-/// `assign_proto_roots` for [`crate::typology::Morphology::Templatic`]
-/// families; nothing calls it yet. Present in all builds (not
+/// **This function does not resolve collisions on its own.** Exactly like
+/// `draw_candidate`, injectivity over a concept universe is the CALLER's
+/// job: drive a `used: BTreeSet<Vec<Segment>>` retry loop over increasing
+/// `probe` — the same open-addressing loop
+/// `assign_proto_roots_with_epoch` already runs around `draw_candidate` —
+/// and Task 13 (The Burr) will wire that loop's templatic branch to call
+/// this in `draw_candidate`'s place. Nothing calls it yet.
+///
+/// Reserved integration seam: present in all builds (not
 /// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
 /// module's tests until it lands.
 #[allow(dead_code)]
-fn assign_skeleton(seed: &Seed, family: &str, concept: &str, ph: &Phonology) -> Vec<Segment> {
+fn assign_skeleton(
+    seed: &Seed,
+    family: &str,
+    concept: &str,
+    ph: &Phonology,
+    probe: u32,
+) -> Vec<Segment> {
     let consonants: Vec<Segment> = ph
         .inventory
         .iter()
         .filter(|s| matches!(s, Segment::Consonant { .. }))
         .copied()
         .collect();
-    let mut probe = 0u32;
-    loop {
-        let base = seed
-            .derive(streams::ROOT)
-            .derive(StreamLabel::dynamic(family))
-            .derive(streams::LEXICON)
-            .derive(streams::PROTO_ROOT)
-            .derive(StreamLabel::dynamic(ROOT_EPOCH))
-            .derive(StreamLabel::dynamic(concept));
-        let mut stream = if probe == 0 {
-            base.stream()
-        } else {
-            base.derive(streams::PROBE)
-                .derive(StreamLabel::dynamic(&probe.to_string()))
-                .stream()
-        };
-        let candidate: Vec<Segment> = (0..3)
-            .filter_map(|_| stream.pick(&consonants).copied())
-            .collect();
-        if candidate.len() == 3 {
-            return candidate;
-        }
-        // `consonants` is empty (a phonology with no consonants at all) —
-        // probing further would never help, but the loop shape stays
-        // identical to `draw_candidate`'s so a reader recognizes the
-        // pattern; an empty inventory is a caller error the phonology
-        // draw's own `ensure_minimum_consonants` floor already prevents.
-        probe += 1;
-        if probe > PROBE_BUDGET {
-            return candidate;
-        }
-    }
+    let base = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(family))
+        .derive(streams::LEXICON)
+        .derive(streams::PROTO_ROOT)
+        .derive(StreamLabel::dynamic(ROOT_EPOCH))
+        .derive(StreamLabel::dynamic(concept));
+    let mut stream = if probe == 0 {
+        base.stream()
+    } else {
+        base.derive(streams::PROBE)
+            .derive(StreamLabel::dynamic(&probe.to_string()))
+            .stream()
+    };
+    (0..3)
+        .filter_map(|_| stream.pick(&consonants).copied())
+        .collect()
 }
 
 /// The vowel target [`realize_skeleton`] threads through the first
@@ -2349,65 +2345,81 @@ mod tests {
         )
     }
 
-    /// The real concept universe (universal ∪ body ∪ kin strata) —
-    /// [`core_concepts`] without the domain tag, since injectivity is
-    /// checked over concept ids alone.
-    fn reference_concepts() -> Vec<&'static str> {
-        crate::packs::universal_stratum()
-            .iter()
-            .chain(crate::packs::body_pack())
-            .chain(crate::packs::kin_pack())
-            .map(|e| e.concept)
-            .collect()
-    }
-
-    /// A templatic root is a three-consonant skeleton, and skeletons are
+    /// A templatic root is a three-consonant skeleton, and the assignment is
     /// injective over the concept universe: two concepts never share one, or
     /// the template system would generate systematic homophony rather than
-    /// systematic morphology.
+    /// systematic morphology. Injectivity here is demonstrated BY THE
+    /// COLLISION-PROBING MECHANISM, not by luck: `cramped_phonology` (3
+    /// consonants, n^3 = 27 skeletons) over 12 concepts forces at least one
+    /// real probe-0 collision by the birthday paradox (`C(12,2)` = 66 pairs
+    /// against 27 slots), so the test drives the SAME open-addressing
+    /// `used`-set retry loop `assign_proto_roots_with_epoch` runs around
+    /// `draw_candidate` — the loop Task 13 will reuse for the templatic
+    /// branch — and asserts the loop actually advanced past probe 0 at
+    /// least once. Remove the probing (or make every probe draw the same
+    /// candidate) and this test goes red; it does not merely happen to pass.
     ///
-    /// claim: structural(seed: 42) — false-positive seed-loop flag; `c` binds
-    /// a &str concept id from the real concept universe, single fixed seed
+    /// claim: structural(seed: 1) — false-positive seed-loop flag; `c` binds
+    /// a &str concept id, single fixed seed
     #[test]
     fn templatic_skeletons_are_three_consonants_and_injective() {
-        let seed = Seed(42);
-        let ph = reference_phonology(&seed);
-        let concepts = reference_concepts();
-        // Verified at Seed(42): `reference_phonology` draws 19 consonants
-        // (n^3 = 6,859) against 43 concepts (universal ∪ body ∪ kin) —
-        // comfortably enough room that this loop's collision assertion
-        // below is not a coin flip. The floor here is a canary, not the
-        // proof: if a future phonology-draw change shrinks the inventory,
-        // this fires loudly before the injectivity assertion below fires
-        // confusingly.
-        assert!(
-            ph.inventory
-                .iter()
-                .filter(|s| matches!(s, Segment::Consonant { .. }))
-                .count()
-                >= 10,
-            "reference phonology is too cramped for an injective n^3 \
-             skeleton space over {} concepts: {:?}",
-            concepts.len(),
-            ph.inventory
-        );
-        let mut seen: std::collections::BTreeSet<Vec<Segment>> = std::collections::BTreeSet::new();
+        let seed = Seed(1);
+        let ph = cramped_phonology();
+        let concepts = [
+            "c00", "c01", "c02", "c03", "c04", "c05", "c06", "c07", "c08", "c09", "c10", "c11",
+        ];
+        let mut used: std::collections::BTreeSet<Vec<Segment>> = std::collections::BTreeSet::new();
+        let mut probe_advance_witnessed = false;
         for c in &concepts {
-            let sk = assign_skeleton(&seed, "dwarf", c, &ph);
-            assert_eq!(
-                sk.len(),
-                3,
-                "concept '{c}' skeleton was not 3 consonants: {sk:?}"
-            );
-            assert!(
-                sk.iter().all(|s| matches!(s, Segment::Consonant { .. })),
-                "concept '{c}' skeleton contains a vowel: {sk:?}"
-            );
-            assert!(
-                seen.insert(sk.clone()),
-                "concept '{c}' collided on skeleton {sk:?}"
-            );
+            let mut probe = 0u32;
+            let mut first_candidate: Option<Vec<Segment>> = None;
+            let sk = loop {
+                let candidate = assign_skeleton(&seed, "dwarf", c, &ph, probe);
+                assert_eq!(
+                    candidate.len(),
+                    3,
+                    "concept '{c}' skeleton was not 3 consonants: {candidate:?}"
+                );
+                assert!(
+                    candidate
+                        .iter()
+                        .all(|s| matches!(s, Segment::Consonant { .. })),
+                    "concept '{c}' skeleton contains a vowel: {candidate:?}"
+                );
+                if first_candidate.is_none() {
+                    first_candidate = Some(candidate.clone());
+                }
+                if !used.contains(&candidate) {
+                    if probe > 0 {
+                        probe_advance_witnessed = true;
+                        assert_ne!(
+                            first_candidate.as_ref().unwrap(),
+                            &candidate,
+                            "concept '{c}' probing left the candidate unchanged — \
+                             distinct probes must scatter independently or the \
+                             retry loop could never terminate on a genuine collision"
+                        );
+                    }
+                    break candidate;
+                }
+                probe += 1;
+                assert!(
+                    probe <= 64,
+                    "concept '{c}' never resolved its collision within 64 probes"
+                );
+            };
+            used.insert(sk);
         }
+        assert_eq!(
+            used.len(),
+            concepts.len(),
+            "assignment must be injective: a distinct skeleton per concept"
+        );
+        assert!(
+            probe_advance_witnessed,
+            "fixture never forced a probe-0 collision — this test would pass even \
+             with collision-probing entirely removed from assign_skeleton"
+        );
     }
 
     /// Two paradigm slots over the same skeleton give distinct surface forms
@@ -2417,7 +2429,7 @@ mod tests {
     fn one_skeleton_yields_distinct_forms_per_template() {
         let seed = Seed(42);
         let ph = reference_phonology(&seed);
-        let sk = assign_skeleton(&seed, "dwarf", "fire", &ph);
+        let sk = assign_skeleton(&seed, "dwarf", "fire", &ph, 0);
         let a = realize_skeleton(&sk, VocalicTemplate::Singular, &ph);
         let b = realize_skeleton(&sk, VocalicTemplate::Plural, &ph);
         assert_ne!(a, b, "singular and plural realized identically: {a:?}");
