@@ -94,6 +94,12 @@ const BASELINE_PREFIX: u64 = 12;
 /// `probe_contact_substrate.rs` under `Accumulation::Multiplicative`.
 const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 19;
 
+/// Spec §3.1, seeds 0–11: endings in the panel.
+const BASELINE_ENDINGS_12: usize = 5913;
+
+/// Spec §3.1, seeds 0–11: endings whose attacker is of another people.
+const BASELINE_FOREIGN_12: usize = 138;
+
 /// Spec §3.5: the share of holders that had already ended when the event they
 /// hold took place. H1's prediction is stated against this number.
 const BASELINE_DEAD_HOLDER_PERCENT: f64 = 1.19;
@@ -980,6 +986,13 @@ fn the_parley_readout_over_a_seed_panel() {
          definition). Under contact a claim may have been resolved against a foreign, longer \
          ladder — the 'beyond' column counts exactly those."
     );
+    println!(
+        "  READ 'beyond' AS A TRIPWIRE, NOT AS EVIDENCE: every people on this panel carries \
+         the same NUMBER of rungs (the astronomical rungs plus generation and lifespan), so \
+         a foreign resolving ladder is never LONGER than the holder's own and the column is \
+         0 throughout. It makes spec §5.4's originating-witness freeze VISIBLE only in a \
+         world where ladder lengths differ; it says nothing about this one."
+    );
     for (ri, rule) in Accumulation::ALL.iter().enumerate() {
         println!("\n  === RULE: {} ===", rule.label());
         println!(
@@ -1054,23 +1067,69 @@ fn the_parley_readout_over_a_seed_panel() {
         );
         println!(
             "    WHERE THE FALSIFICATION WENT, over the same compared population: mutually \
-             exclusive {} -> {}, one-sided {} -> {}, identical {} -> {}. Contact does not \
-             merely fail to raise disagreement between the two sides of a raid — the two \
-             sides AGREE MORE OFTEN under it, on every rule. A seam is a channel in BOTH \
-             directions, so each side receives the other's tellings and each keeps whichever \
-             it can reach least corrupted; the accounts pool rather than diverge. That is a \
-             mechanism §6.5 did not consider and §6.6's named null does not describe.",
+             exclusive {} -> {}, one-sided {} -> {}, identical {} -> {}.",
             mutex[0], mutex[1], one_sided[0], one_sided[1], identical[0], identical[1],
         );
+        // CONDITIONAL, like every other interpretive line here. An earlier
+        // draft printed the pooling conclusion unconditionally beside these
+        // six numbers, which would have read as a derivation on a future run
+        // that contradicted it. A sentence that cannot be wrong is not a
+        // finding.
+        println!(
+            "      {}",
+            if identical[1] > identical[0] && mutex[1] < mutex[0] {
+                "POOLING: identical day sets RISE while mutually-exclusive ones FALL, so \
+                 contact does not merely fail to raise disagreement between the two sides of \
+                 a raid — the two sides agree MORE often under it. A seam is a channel in \
+                 BOTH directions, so each side receives the other's tellings and each keeps \
+                 whichever it can reach least corrupted; the accounts pool rather than \
+                 diverge. That is a mechanism §6.5 did not consider and §6.6's named null \
+                 does not describe."
+            } else {
+                "NOT POOLING on this rule: identical day sets did not rise while \
+                 mutually-exclusive ones fell, so whatever moved H4 here is not the two \
+                 sides' accounts converging, and the pooling reading must not be carried \
+                 over from another rule."
+            }
+        );
+        // AS A RATE, NOT A COUNT. `any_pair_exclusive`'s eligible population
+        // is "endings reaching 2+ peoples", and contact grows THAT population
+        // by construction, because contact is strictly adding. A bare count
+        // ratio here is therefore mostly the denominator moving, not the
+        // phenomenon: on the 40-seed panel the counts read 15-33x while the
+        // rates read 2.1-4.5x, a roughly four-fold inflation — and the count
+        // was the number about to reach the chronicle.
+        let eligible = [
+            rows.iter().map(|r| r.reach[0].two_plus).sum::<usize>(),
+            rows.iter().map(|r| r.reach[1].two_plus).sum::<usize>(),
+        ];
+        let any_rate = [pct(any_pair[0], eligible[0]), pct(any_pair[1], eligible[1])];
         println!(
             "    SECONDARY, NOT PREREGISTERED and therefore unable to discharge H4: endings \
-             where SOME pair of holding peoples is mutually exclusive, descent {} -> contact \
-             {} = {:.2}x. §6.5's measure compares the VICTIM's people against the RAIDER's \
-             people and no other pair, so it is blind to the pairs contact actually creates. \
-             Reported for interpretation only; the verdict above stands as frozen.",
+             where SOME pair of holding peoples is mutually exclusive. AS A RATE over the \
+             eligible population (endings reaching 2+ peoples): descent {}/{} = {:.2}% -> \
+             contact {}/{} = {:.2}%, a {:.2}x RATE change.",
             any_pair[0],
+            eligible[0],
+            any_rate[0],
             any_pair[1],
+            eligible[1],
+            any_rate[1],
+            any_rate[1] / any_rate[0].max(f64::MIN_POSITIVE),
+        );
+        println!(
+            "      the bare COUNT ratio is {:.2}x and must not be quoted: the eligible \
+             population itself grows {:.2}x under contact ({} -> {} endings) because contact \
+             is strictly adding, so most of a count ratio is the denominator. §6.5's frozen \
+             measure compares the VICTIM's people against the RAIDER's people and no other \
+             pair — its population is pinned at {} on both arms — so it is blind by \
+             definition to the pairs contact creates. Reported for interpretation only; the \
+             verdict above stands as frozen.",
             any_pair[1] as f64 / any_pair[0].max(1) as f64,
+            eligible[1] as f64 / eligible[0].max(1) as f64,
+            eligible[0],
+            eligible[1],
+            rows.iter().map(|r| r.div[0][ri].compared).sum::<usize>(),
         );
         println!(
             "    §6.6 null under {}: saturated {:.2}% (descent) -> {:.2}% (contact); the null \
@@ -1154,6 +1213,55 @@ fn the_parley_readout_over_a_seed_panel() {
         rule_disagreements, 0,
         "control: reach is graph reachability and cannot depend on the accumulation rule, \
          which only orders rival tellings; {rule_disagreements} endings disagreed"
+    );
+
+    // ---- THE TIGHTEST CONTROL THIS CAMPAIGN HAS ----
+    //
+    // Spec §3's substrate panel (seeds 0–11) is a strict PREFIX of this one,
+    // so §3.1's and §3.4's published figures are re-derivable IN THIS RUN by
+    // this readout's own instrument. They were printed before and asserted
+    // now, because a printed figure that drifts reddens nothing: the only
+    // asserted shape check above is `descent_two_pct < 10.0`, a 4x margin
+    // against a measured 2.32%.
+    //
+    // WHAT A RED HERE MEANS, and it is not "the readout broke". These are
+    // facts about the BAKE, and spec §3.1 already warns the denominator moves
+    // with main (campaign 2 published 17 of 474 for seed 42 where §3 measured
+    // 16 of 585). So a red is this ratchet firing: re-derive the figures,
+    // decide deliberately whether the move was intended, and update these
+    // constants IN THE COMMIT THAT MOVED THE BAKE. Never rebaseline them to
+    // go green on a run whose cause is unexplained.
+    let prefix_endings_measured: usize = rows
+        .iter()
+        .filter(|r| r.seed < BASELINE_PREFIX)
+        .map(|r| r.endings)
+        .sum();
+    let prefix_foreign_measured: usize = rows
+        .iter()
+        .filter(|r| r.seed < BASELINE_PREFIX)
+        .map(|r| r.foreign)
+        .sum();
+    assert_eq!(
+        prefix_endings_measured, BASELINE_ENDINGS_12,
+        "control: seeds 0-11 must re-derive spec §3.1's ending count exactly"
+    );
+    assert_eq!(
+        prefix_foreign_measured, BASELINE_FOREIGN_12,
+        "control: seeds 0-11 must re-derive spec §3.1's foreign-attacker count exactly"
+    );
+    let multiplicative = Accumulation::ALL
+        .iter()
+        .position(|r| *r == Accumulation::Multiplicative)
+        .expect("Accumulation::ALL carries Multiplicative");
+    let prefix_mutex_measured: usize = rows
+        .iter()
+        .filter(|r| r.seed < BASELINE_PREFIX)
+        .map(|r| r.div[0][multiplicative].mutually_exclusive)
+        .sum();
+    assert_eq!(
+        prefix_mutex_measured, BASELINE_MUTUALLY_EXCLUSIVE_12,
+        "control: seeds 0-11 under descent + multiplicative must re-derive spec §3.4's \
+         mutually-exclusive count exactly"
     );
 }
 
