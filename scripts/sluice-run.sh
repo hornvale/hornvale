@@ -345,6 +345,26 @@ else
     phases="${HV_SLUICE_PHASES:-$merge_phases}"
 fi
 
+# PROSE-ONLY CANDIDATES SKIP THE THREE EXPENSIVE PHASES. The rule, the
+# allowlist and the reasoning live in scripts/sluice-phases.sh so they can be
+# tested without standing up a chamber; this is only the wiring.
+#
+# Guarded by `-z HV_SLUICE_PHASES` so an explicit override always wins, and
+# `git diff` failure leaves `changed` empty, which sluice_is_prose_only treats
+# as NOT prose-only — the classifier failing is never a reason to skip a phase.
+# shellcheck source=scripts/sluice-phases.sh
+. "$repo_root/scripts/sluice-phases.sh"
+if [ -z "${HV_SLUICE_PHASES:-}" ]; then
+    changed="$(git diff --name-only "$base_sha".."$sha" 2>/dev/null || true)"
+    if sluice_is_prose_only "$changed"; then
+        phases="$(sluice_drop_expensive_phases "$phases")"
+        echo "sluice-run: PROSE-ONLY candidate — every changed path is hand-written prose."
+        echo "sluice-run:   skipping seam-guard, clients and heavy; none can observe a prose change."
+        echo "sluice-run:   phases now: $phases"
+        printf '%s\n' "$changed" | sed 's/^/sluice-run:     /'
+    fi
+fi
+
 # `census` MUST NEVER run as a chamber phase. `census-run.sh:132-145`
 # unconditionally overwrites and `rm -f`s the SAME shared claim path this
 # script just wrote — even under HV_CENSUS_LOCK_HELD, which only skips its

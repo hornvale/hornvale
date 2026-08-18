@@ -376,6 +376,69 @@ else
     ok "sluice-request.sh never sets HV_SLUICE_SKIP_HEADLINE, so the test knob cannot leak into production"
 fi
 
+echo "== phases: a prose-only candidate skips seam-guard, clients and heavy"
+# campaign/the-illumination's docs-recovery merge paid the full ladder for three
+# files: 3561 s, of which 3124 s (88%) went to phases that cannot observe a
+# prose change. The rule that fixes that must be right in BOTH directions, and
+# the dangerous direction is the false positive — skipping heavy for something
+# that is not prose. Every negative case below is one of those.
+# shellcheck source=scripts/sluice-phases.sh
+. "$repo_root/scripts/sluice-phases.sh"
+
+if sluice_is_prose_only "book/src/frontier/idea-registry.md
+docs/retrospectives/the-illumination.md
+docs/timings.md"; then
+    ok "the real docs-recovery path set classifies as prose-only"
+else
+    bad "the docs-recovery path set was NOT classified prose-only, so the saving never applies"
+fi
+
+for bad_case in "kernel/src/lib.rs" "Cargo.toml" "clients/game/core/tests/fixtures/x.json" \
+                "book/src/gallery/atlas.js" "book/src/laboratory/generated/the-sounding/rows.csv" \
+                "book/src/reference/concept-registry-generated.md"; do
+    if sluice_is_prose_only "docs/a-real-doc.md
+$bad_case"; then
+        bad "'$bad_case' alongside prose classified as PROSE-ONLY — heavy would be skipped for a change it must see"
+    else
+        ok "'$bad_case' forces the full ladder even when the rest of the range is prose"
+    fi
+done
+
+# FAILS TOWARD RUNNING MORE. An empty list means the diff could not be read;
+# a classifier that cannot see the change must not be why a phase is skipped.
+if sluice_is_prose_only ""; then
+    bad "an EMPTY path list classified as prose-only — a failed diff would skip heavy"
+else
+    ok "an empty path list is not prose-only, so a failed diff keeps every phase"
+fi
+
+case "$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients heavy')" in
+    "artifacts outboard gate") ok "dropping leaves exactly artifacts, outboard and gate, in order" ;;
+    *) bad "unexpected phase list after dropping: '$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients heavy')'" ;;
+esac
+
+echo "== phases: MUTATION — an allowlist without its exclusions would skip heavy for a generated artifact"
+# Non-vacuity: widen the allowlist to bare `book/*` — the obvious, wrong
+# version of this rule — and confirm a heavy-authored artifact then passes as
+# prose. If it does not, the negative cases above are not pinning the
+# exclusions.
+mut_prose_only() {
+    local changed="$1" pth
+    [ -n "$changed" ] || return 1
+    while IFS= read -r pth; do
+        [ -n "$pth" ] || continue
+        case "$pth" in docs/*|book/*) ;; *) return 1 ;; esac
+    done <<MEOF
+$changed
+MEOF
+    return 0
+}
+if mut_prose_only "book/src/laboratory/generated/the-sounding/rows.csv"; then
+    ok "MUTATION CONFIRMED: a bare book/* allowlist accepts a heavy-authored artifact (the real one refuses it)"
+else
+    bad "the mutant also refused — the exclusion cases above are not pinning anything"
+fi
+
 echo "== queue: a note cannot corrupt the queue file"
 # The reviewer's finding: set-state's note was written into the TSV
 # unsanitized. A physical newline in the note splits the row in two on the
@@ -926,6 +989,7 @@ cp "$repo_root/scripts/timed.sh" "$chamber_repo/scripts/timed.sh"
 # unrelated failures (out-of-order phases, an empty last-pushed). If you add a
 # `. "$repo_root/scripts/…"` to sluice-run.sh, add its copy here.
 cp "$repo_root/scripts/sluice-headline.sh" "$chamber_repo/scripts/sluice-headline.sh"
+cp "$repo_root/scripts/sluice-phases.sh" "$chamber_repo/scripts/sluice-phases.sh"
 
 chamber_host_file="$tmp/chamber-host.txt"
 printf '%s\n' "$(hostname -s)" > "$chamber_host_file"
