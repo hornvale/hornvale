@@ -20,7 +20,7 @@ use crate::naming::Namer;
 use crate::phoneme::{Backness, Height, Manner, Segment, Tone};
 use crate::phonology::{Phonology, tone_inventory};
 use crate::streams;
-use crate::typology::VocalicTemplate;
+use crate::typology::{Morphology, Typology, VocalicTemplate};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -511,6 +511,7 @@ pub fn assign_proto_roots(
     seed: &Seed,
     family: &str,
     proto_ph: &Phonology,
+    typ: &Typology,
     concepts: &[&str],
     daughters: &[Daughter],
 ) -> std::collections::BTreeMap<String, Vec<Segment>> {
@@ -518,6 +519,7 @@ pub fn assign_proto_roots(
         seed,
         family,
         proto_ph,
+        typ,
         concepts,
         daughters,
         crate::accession::concept_epoch,
@@ -533,6 +535,7 @@ pub(crate) fn assign_proto_roots_with_epoch(
     seed: &Seed,
     family: &str,
     proto_ph: &Phonology,
+    typ: &Typology,
     concepts: &[&str],
     daughters: &[Daughter],
     epoch_of: impl Fn(&str) -> u32,
@@ -578,7 +581,22 @@ pub(crate) fn assign_proto_roots_with_epoch(
         let epoch = epoch_of(concept);
         let mut probe = 0u32;
         let form = loop {
-            let candidate = draw_candidate(seed, family, concept, proto_ph, probe, epoch);
+            // Templatic families (dwarf) build root-and-pattern: a
+            // consonantal skeleton threaded with the citation-form vocalic
+            // melody, so the candidate probed for collision is the REALIZED
+            // (vocalized) form, not the bare skeleton — a bare `[C,C,C]`
+            // would romanize as an unpronounceable cluster (The Burr, Task
+            // 13's load-bearing decision). Every other morphology takes
+            // today's `draw_candidate` path, byte-for-byte unchanged.
+            let candidate = if typ.morphology == Morphology::Templatic {
+                realize_skeleton(
+                    &assign_skeleton(seed, family, concept, proto_ph, probe),
+                    VocalicTemplate::Singular,
+                    proto_ph,
+                )
+            } else {
+                draw_candidate(seed, family, concept, proto_ph, probe, epoch)
+            };
             let taken = used.contains(&candidate);
             let too_close = core
                 && core_forms
@@ -706,15 +724,10 @@ fn draw_candidate(
 /// **This function does not resolve collisions on its own.** Exactly like
 /// `draw_candidate`, injectivity over a concept universe is the CALLER's
 /// job: drive a `used: BTreeSet<Vec<Segment>>` retry loop over increasing
-/// `probe` — the same open-addressing loop
-/// `assign_proto_roots_with_epoch` already runs around `draw_candidate` —
-/// and Task 13 (The Burr) will wire that loop's templatic branch to call
-/// this in `draw_candidate`'s place. Nothing calls it yet.
-///
-/// Reserved integration seam: present in all builds (not
-/// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
-/// module's tests until it lands.
-#[allow(dead_code)]
+/// `probe` — the same open-addressing loop `assign_proto_roots_with_epoch`
+/// runs around `draw_candidate`, and now runs around this function too (via
+/// [`realize_skeleton`]) for `Morphology::Templatic` families (The Burr,
+/// Task 13).
 fn assign_skeleton(
     seed: &Seed,
     family: &str,
@@ -742,7 +755,17 @@ fn assign_skeleton(
             .derive(StreamLabel::dynamic(&probe.to_string()))
             .stream()
     };
-    (0..3)
+    // Length grows with the probe tier, exactly as `draw_candidate` lengthens
+    // its syllable count: a `MIN_CONSONANTS`-poor phonology (the floor is 2, so
+    // the base 3-consonant space can be as small as 2^3 = 8) cannot host a
+    // concept universe of dozens at a fixed length, and the caller's used-set
+    // retry would never find a free skeleton. Every `PROBE_BUDGET` probes the
+    // skeleton takes one more consonant, so the space `n^(3+tier)` eventually
+    // exceeds any finite concept count and the loop always terminates. A
+    // 3-consonant skeleton is still the common case (tier 0 = probes 0..8).
+    let tier = (probe / PROBE_BUDGET) as usize;
+    let radicals = 3 + tier;
+    (0..radicals)
         .filter_map(|_| stream.pick(&consonants).copied())
         .collect()
 }
@@ -788,28 +811,57 @@ const TEMPLATE_I: Segment = Segment::Vowel {
 /// feature the segment model does not carry), so it differs from
 /// [`VocalicTemplate::Singular`] in shape as well as quality.
 ///
-/// Reserved integration seam: Task 13 (The Burr) wires this alongside
-/// [`assign_skeleton`]; nothing calls it yet. Present in all builds (not
-/// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
-/// module's tests until it lands.
-#[allow(dead_code)]
+/// Wired alongside [`assign_skeleton`] into `assign_proto_roots_with_epoch`'s
+/// templatic branch at [`VocalicTemplate::Singular`] (The Burr, Task 13): the
+/// realized, vocalized form is what gets probed for collision and assigned
+/// as a dwarf concept's proto root — a bare skeleton alone would romanize as
+/// an unpronounceable consonant cluster.
 fn realize_skeleton(skeleton: &[Segment], tmpl: VocalicTemplate, ph: &Phonology) -> Vec<Segment> {
-    let (gap1, gap2): (Vec<Segment>, Vec<Segment>) = match tmpl {
-        VocalicTemplate::Singular => (vec![TEMPLATE_A], vec![TEMPLATE_A]),
-        VocalicTemplate::Plural => (vec![TEMPLATE_A], vec![TEMPLATE_A, TEMPLATE_A]),
-        VocalicTemplate::Derived => (vec![TEMPLATE_U], vec![TEMPLATE_I]),
-    };
-    let mut out = Vec::with_capacity(skeleton.len() + gap1.len() + gap2.len());
-    let mut gaps = [gap1, gap2].into_iter();
+    // A vowel is threaded through EVERY consonant gap, for a skeleton of any
+    // length — a skeleton can grow past three radicals when a cramped
+    // phonology forces the assignment loop to lengthen (see `assign_skeleton`),
+    // and a gap left unfilled would surface as a consonant cluster, the exact
+    // "unpronounceable" failure the templatic path exists to avoid. `n_gaps`
+    // is the number of inter-consonant gaps; `gap_melody` gives the vowels for
+    // gap `i` of `n_gaps`, so each template's shape extends to any length while
+    // staying byte-identical at the common three-radical (two-gap) case.
+    let n_gaps = skeleton.len().saturating_sub(1);
+    let mut out = Vec::with_capacity(skeleton.len() + n_gaps + 1);
     for (i, &c) in skeleton.iter().enumerate() {
         out.push(c);
-        if i + 1 < skeleton.len()
-            && let Some(gap) = gaps.next()
-        {
-            out.extend(nativize(&gap, ph));
+        if i < n_gaps {
+            out.extend(nativize(&gap_melody(tmpl, i, n_gaps), ph));
         }
     }
     out
+}
+
+/// The vowel melody for gap `i` of `n_gaps` under `tmpl`. At the common
+/// two-gap (three-radical) shape this reproduces the citation forms exactly —
+/// Singular `a…a`, Plural `a…aa` (a lengthened final melody), Derived `u…i` —
+/// and extends each shape to any number of gaps so a lengthened skeleton still
+/// realizes to a pronounceable, alternating C-V word.
+fn gap_melody(tmpl: VocalicTemplate, i: usize, n_gaps: usize) -> Vec<Segment> {
+    match tmpl {
+        // Uniform `a` across every gap.
+        VocalicTemplate::Singular => vec![TEMPLATE_A],
+        // `a` everywhere, with the FINAL gap lengthened to `aa`.
+        VocalicTemplate::Plural => {
+            if i + 1 == n_gaps {
+                vec![TEMPLATE_A, TEMPLATE_A]
+            } else {
+                vec![TEMPLATE_A]
+            }
+        }
+        // Alternating `u`, `i`, `u`, `i`, … starting on `u`.
+        VocalicTemplate::Derived => {
+            if i.is_multiple_of(2) {
+                vec![TEMPLATE_U]
+            } else {
+                vec![TEMPLATE_I]
+            }
+        }
+    }
 }
 
 /// Whether `seg` is a consonant (used by the two structural rules, which
@@ -1342,7 +1394,14 @@ mod tests {
         let concepts = [
             "c00", "c01", "c02", "c03", "c04", "c05", "c06", "c07", "c08", "c09", "c10", "c11",
         ];
-        let assigned = assign_proto_roots(&Seed(1), "fam", &ph, &concepts, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(1),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &concepts,
+            &[],
+        );
         assert_eq!(assigned.len(), concepts.len(), "one form per concept");
         let forms: std::collections::BTreeSet<&Vec<Segment>> = assigned.values().collect();
         assert_eq!(
@@ -1378,7 +1437,14 @@ mod tests {
         let ph = minuscule_phonology();
         let concepts: Vec<String> = (0..16).map(|i| format!("c{i:02}")).collect();
         let refs: Vec<&str> = concepts.iter().map(|s| s.as_str()).collect();
-        let assigned = assign_proto_roots(&Seed(2), "fam", &ph, &refs, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(2),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &refs,
+            &[],
+        );
         let forms: std::collections::BTreeSet<&Vec<Segment>> = assigned.values().collect();
         assert_eq!(forms.len(), refs.len(), "still injective under saturation");
         // Non-vacuity: growth must actually have fired — a base draw is at
@@ -1423,7 +1489,14 @@ mod tests {
         let mut concepts = vec!["water"];
         let fillers: Vec<String> = (0..6).map(|i| format!("aa{i}")).collect();
         concepts.extend(fillers.iter().map(|s| s.as_str()));
-        let assigned = assign_proto_roots(&Seed(3), "fam", &ph, &concepts, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(3),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &concepts,
+            &[],
+        );
 
         let core_len = assigned["water"].len();
         let max_periph = fillers.iter().map(|f| assigned[f].len()).max().unwrap();
@@ -1453,7 +1526,14 @@ mod tests {
         let ph = cramped_phonology();
         let concepts = core_concept_batch();
         for seed in 0..8u64 {
-            let assigned = assign_proto_roots(&Seed(seed), "fam", &ph, &concepts, &[]);
+            let assigned = assign_proto_roots(
+                &Seed(seed),
+                "fam",
+                &ph,
+                &crate::typology::concatenative(),
+                &concepts,
+                &[],
+            );
             let forms: Vec<&Vec<Segment>> = assigned.values().collect();
             for i in 0..forms.len() {
                 for j in (i + 1)..forms.len() {
@@ -1485,13 +1565,27 @@ mod tests {
         // `ROOT_EPOCH` v4 reseeded every draw and Seed(10) stopped displacing
         // anything at all, which is precisely the vacuous pass the control
         // exists to detect. Same search, same criterion, new answer.
-        let before = assign_proto_roots(&Seed(256), "fam", &ph, &base, &[]);
+        let before = assign_proto_roots(
+            &Seed(256),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &base,
+            &[],
+        );
 
         // "zzz-late" is non-core (sorts after every core concept) and its id
         // sorts after "aa1" — so it lands strictly last.
         let mut grown = base.clone();
         grown.push("zzz-late");
-        let after = assign_proto_roots(&Seed(256), "fam", &ph, &grown, &[]);
+        let after = assign_proto_roots(
+            &Seed(256),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &grown,
+            &[],
+        );
 
         for concept in &base {
             assert_eq!(
@@ -1526,7 +1620,15 @@ mod tests {
         // displaces ZERO, the vacuous case. Swept 0..300 on the same criterion
         // — 139 seeds displace at least one, and Seed(256) displaces FIVE, the
         // strongest available and stronger than the old fixture ever was.
-        let before = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &base, &[], epoch0);
+        let before = assign_proto_roots_with_epoch(
+            &Seed(256),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &base,
+            &[],
+            epoch0,
+        );
 
         // "moon" is core and sorts into the MIDDLE of the core block (between
         // "many" and "mouth") -- the position that was unsafe before this
@@ -1535,8 +1637,15 @@ mod tests {
         let mut grown = base.clone();
         grown.push("moon");
         let epoch1_for_newcomer = |c: &str| u32::from(c == "moon");
-        let after =
-            assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &grown, &[], epoch1_for_newcomer);
+        let after = assign_proto_roots_with_epoch(
+            &Seed(256),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &grown,
+            &[],
+            epoch1_for_newcomer,
+        );
 
         for concept in &base {
             assert_eq!(
@@ -1565,11 +1674,27 @@ mod tests {
         // shipped. Re-searched at the 2026-07-29 v4 reversal (Seed(10) fell to
         // zero displacements there): Seed(256) displaces 5 of the base
         // assignments, the largest over 0..300.
-        let before = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &base, &[], epoch0);
+        let before = assign_proto_roots_with_epoch(
+            &Seed(256),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &base,
+            &[],
+            epoch0,
+        );
 
         let mut grown = base.clone();
         grown.push("moon");
-        let after = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &grown, &[], epoch0);
+        let after = assign_proto_roots_with_epoch(
+            &Seed(256),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &grown,
+            &[],
+            epoch0,
+        );
 
         let moved = base.iter().filter(|c| before[**c] != after[**c]).count();
         assert!(
@@ -1584,8 +1709,22 @@ mod tests {
     fn assign_proto_roots_is_deterministic() {
         let ph = cramped_phonology();
         let concepts = ["water", "night", "hand", "many", "c00", "c01", "c02"];
-        let a = assign_proto_roots(&Seed(7), "fam", &ph, &concepts, &[]);
-        let b = assign_proto_roots(&Seed(7), "fam", &ph, &concepts, &[]);
+        let a = assign_proto_roots(
+            &Seed(7),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &concepts,
+            &[],
+        );
+        let b = assign_proto_roots(
+            &Seed(7),
+            "fam",
+            &ph,
+            &crate::typology::concatenative(),
+            &concepts,
+            &[],
+        );
         assert_eq!(a, b, "same inputs must yield an identical assignment");
     }
 
@@ -2289,8 +2428,22 @@ mod tests {
         let n = seeds.clone().count();
         for seed in seeds {
             let (proto_ph, daughters) = goblinoid_family(seed);
-            let base = assign_proto_roots(&Seed(seed), "goblinoid", &proto_ph, &refs, &[]);
-            let ma = assign_proto_roots(&Seed(seed), "goblinoid", &proto_ph, &refs, &daughters);
+            let base = assign_proto_roots(
+                &Seed(seed),
+                "goblinoid",
+                &proto_ph,
+                &crate::typology::concatenative(),
+                &refs,
+                &[],
+            );
+            let ma = assign_proto_roots(
+                &Seed(seed),
+                "goblinoid",
+                &proto_ph,
+                &crate::typology::concatenative(),
+                &refs,
+                &daughters,
+            );
             let (ba, bc) = core_homophony(&base, &daughters, &concepts);
             let (ma_a, ma_c) = core_homophony(&ma, &daughters, &concepts);
             base_all += ba;
@@ -2422,6 +2575,82 @@ mod tests {
         );
     }
 
+    /// The saturation guard: a `MIN_CONSONANTS`-poor phonology (the floor is
+    /// 2, so a real dwarf world CAN draw just two) has a base skeleton space
+    /// of only 2^3 = 8, far below a concept universe of dozens — so a
+    /// fixed-length skeleton assignment could NEVER place them injectively and
+    /// the caller's used-set retry loop would spin forever. This is not
+    /// hypothetical: it hung a 50-world census study for ~3 hours (The Burr,
+    /// Task 13). The assignment must lengthen the skeleton as the probe tier
+    /// climbs, exactly as `draw_candidate` lengthens its syllable count, so
+    /// the space eventually exceeds any concept count and the loop terminates.
+    ///
+    /// The probe cap makes a regression a clean RED, not a hang: remove the
+    /// `radicals = 3 + tier` growth in `assign_skeleton` and this test hits
+    /// the cap and fails instead of spinning.
+    #[test]
+    fn a_two_consonant_phonology_lengthens_rather_than_spinning() {
+        let seed = Seed(3);
+        // Two consonants only: base space 2^3 = 8.
+        let ph = Phonology {
+            inventory: vec![
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                c(Place::Velar, Manner::Stop, false),     // k
+                v(Height::Low, Backness::Central, false), // a
+            ],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: vec![1],
+            codas: vec![vec![]],
+            harmony: crate::typology::Harmony::None,
+        };
+        // Thirty concepts: 30 > 8, so NO fixed-length-3 assignment can be
+        // injective — only lengthening resolves it.
+        let concepts: Vec<String> = (0..30).map(|i| format!("s{i:02}")).collect();
+        let mut used: std::collections::BTreeSet<Vec<Segment>> = std::collections::BTreeSet::new();
+        let mut lengthened_witnessed = false;
+        for concept in &concepts {
+            let mut probe = 0u32;
+            let sk = loop {
+                let candidate = realize_skeleton(
+                    &assign_skeleton(&seed, "dwarf", concept, &ph, probe),
+                    VocalicTemplate::Singular,
+                    &ph,
+                );
+                if !used.contains(&candidate) {
+                    break candidate;
+                }
+                probe += 1;
+                assert!(
+                    probe < 10_000,
+                    "concept '{concept}' never resolved — the skeleton is not \
+                     lengthening on saturation, so the assignment loop cannot \
+                     terminate for a 2-consonant phonology"
+                );
+            };
+            // A skeleton longer than the 5-segment (3-radical) base means the
+            // length grew — the mechanism the cap protects actually fired.
+            if sk.len() > 5 {
+                lengthened_witnessed = true;
+            }
+            assert!(
+                skeleton_shaped(&sk),
+                "a lengthened skeleton must still be an alternating C-V word, \
+                 not a cluster: {sk:?}"
+            );
+            used.insert(sk);
+        }
+        assert_eq!(
+            used.len(),
+            concepts.len(),
+            "every concept must get a distinct skeleton even under saturation"
+        );
+        assert!(
+            lengthened_witnessed,
+            "no skeleton ever grew past three radicals — the 2-consonant \
+             fixture did not actually exercise the lengthening path"
+        );
+    }
+
     /// Two paradigm slots over the same skeleton give distinct surface forms
     /// — this is the whole point of templatic morphology, and without it the
     /// skeleton is just a differently-shaped root.
@@ -2433,5 +2662,108 @@ mod tests {
         let a = realize_skeleton(&sk, VocalicTemplate::Singular, &ph);
         let b = realize_skeleton(&sk, VocalicTemplate::Plural, &ph);
         assert_ne!(a, b, "singular and plural realized identically: {a:?}");
+    }
+
+    // ---- Task 13: wire skeletons into assign_proto_roots.
+
+    /// A templatic proto root, as `assign_proto_roots_with_epoch`'s
+    /// templatic branch produces it: the realized (vocalized) form of a
+    /// consonantal skeleton under [`VocalicTemplate::Singular`] — an
+    /// ALTERNATING consonant/vowel/…/consonant word of odd length ≥ 5
+    /// (three radicals is the common case; a cramped phonology lengthens the
+    /// skeleton, so 7, 9, … are legitimate). Deliberately checks the
+    /// alternation, not merely "has a vowel somewhere" or "is not all
+    /// consonants" — a definition that only excluded the bare `[C,C,C]`
+    /// cluster case would still pass a malformed realization, and the whole
+    /// point of root-and-pattern morphology is the C-V-C-V-…-C shape itself,
+    /// not just pronounceability.
+    fn skeleton_shaped(r: &[Segment]) -> bool {
+        r.len() >= 5
+            && !r.len().is_multiple_of(2)
+            && r.iter().enumerate().all(|(i, s)| {
+                if i.is_multiple_of(2) {
+                    matches!(s, Segment::Consonant { .. })
+                } else {
+                    matches!(s, Segment::Vowel { .. })
+                }
+            })
+    }
+
+    /// The dwarf family's own phonology, drawn under [`crate::typology::templatic`]
+    /// — mirrors [`reference_phonology`], keyed to the real family label so
+    /// the test below draws over the same seed-derivation leg
+    /// `assign_proto_roots` itself would use for a dwarf world.
+    fn dwarf_phonology(seed: &Seed) -> Phonology {
+        draw_phonology(
+            seed,
+            "dwarf",
+            &Envelope {
+                labiality: 1.0,
+                vowel_space: 1.0,
+                voicing: 1.0,
+                sibilance: 1.0,
+                voice_loudness: 1.0,
+                tonality: 0.0,
+                exotic: ExoticSeg::None,
+            },
+            &crate::typology::templatic(),
+        )
+    }
+
+    /// The goblinoid family's own phonology, drawn under
+    /// [`crate::typology::concatenative`] — the control family: goblinoid is
+    /// NOT mapped to `Morphology::Templatic`, so its assignment must take
+    /// the unchanged `draw_candidate` path.
+    fn goblin_phonology(seed: &Seed) -> Phonology {
+        draw_phonology(
+            seed,
+            "goblinoid",
+            &Envelope {
+                labiality: 1.0,
+                vowel_space: 1.0,
+                voicing: 1.0,
+                sibilance: 1.0,
+                voice_loudness: 1.0,
+                tonality: 0.0,
+                exotic: ExoticSeg::None,
+            },
+            &crate::typology::concatenative(),
+        )
+    }
+
+    /// The dwarf family's proto roots are skeleton-realized; every other
+    /// family's are drawn as before. The second half is the control,
+    /// deliberately inverted: it fails if goblinoid roots ALSO become
+    /// skeleton-shaped, which is what an unconditionally applied morphology
+    /// would look like and what a one-sided test would miss.
+    #[test]
+    fn only_the_templatic_family_uses_skeletons() {
+        let seed = Seed(42);
+        let concepts = core_concept_batch();
+        let dwarf = assign_proto_roots(
+            &seed,
+            "dwarf",
+            &dwarf_phonology(&seed),
+            &crate::typology::templatic(),
+            &concepts,
+            &[],
+        );
+        let goblin = assign_proto_roots(
+            &seed,
+            "goblinoid",
+            &goblin_phonology(&seed),
+            &crate::typology::concatenative(),
+            &concepts,
+            &[],
+        );
+        assert!(
+            dwarf.values().all(|r| skeleton_shaped(r)),
+            "a dwarf root was not skeleton-shaped: {dwarf:?}"
+        );
+        assert!(
+            !goblin.values().all(|r| skeleton_shaped(r)),
+            "goblinoid roots became skeleton-shaped — the morphology is being \
+             applied unconditionally and the control is compromised"
+        );
     }
 }

@@ -554,7 +554,12 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
         vec![
             ("gnoll", "Qshoox".to_string()),
             ("goblin", "Tebae".to_string()),
-            ("hill-dwarf", "Ngabgob".to_string()),
+            // The Burr (Task 13): the dwarf family builds words root-and-pattern
+            // now, so hill-dwarf's word moves from the concatenative `Ngabgob`
+            // to the templatic `Qangab` (Q-a-ng-a-b, a three-radical C-V-C-V-C
+            // skeleton). Only the dwarf row moves; the four non-dwarf words and
+            // the rooter/gapper partition are unchanged.
+            ("hill-dwarf", "Qangab".to_string()),
             ("hobgoblin", "Qebae".to_string()),
             ("snow-elf", "Zroongtong".to_string()),
         ],

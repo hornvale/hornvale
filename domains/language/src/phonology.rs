@@ -1552,7 +1552,8 @@ mod tests {
         let concept_refs: Vec<&str> = concepts.iter().map(String::as_str).collect();
         for seed in 0..8u64 {
             let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
-            let roots = crate::assign_proto_roots(&Seed(seed), "probe", &ph, &concept_refs, &[]);
+            let roots =
+                crate::assign_proto_roots(&Seed(seed), "probe", &ph, &typ, &concept_refs, &[]);
             let has_liquid = roots.values().any(|segments| {
                 segments.iter().any(|s| {
                     matches!(

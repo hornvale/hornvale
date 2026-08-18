@@ -439,46 +439,46 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): desert-dwarf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): desert-dwarf has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Snog | /snog/ | Snog | Snog → no change → Snog |
+| `blood` | the circulating fluid of a body | Napad | /napad/ | Nabad | Nabad → no change → Napad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.65 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Dad | /dad/ | Tad | Tad → lenition → Dad |
+| `bone` | the rigid frame of a body | Jagap | /jagap/ | Jagab | Jagab → no change → Jagap |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.65 |
-| `bugbear-kind` | a bugbear | Dad | /dad/ | Tat | Tat → lenition → Dad |
+| `bugbear-kind` | a bugbear | Xaqad | /xaqad/ | Xaqad | Xaqad → no change → Xaqad |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): desert-dwarf has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Dodqod | /dodqod/ | Dotqod | Dotqod → lenition → Dodqod |
+| `child` | one's son or daughter | Sapaj | /sapaj/ | Sabaj | Sabaj → no change → Sapaj |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Shngoqsngadqod | /ʃŋoqsŋadqod/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Xanapdavag | /xanapdavag/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): desert-dwarf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'crevasse-field' |
-| `damp-hollow` | A shaded, wet fold in the forest floor. | Paqqop | /paqqop/ | Baqqob | Baqqob → no change → Paqqop |
-| `dark` | the color term for black/dark hues | Dngog | /dŋog/ | Zngog | Zngog → no change → Dngog |
-| `day` | the light half of the day-night cycle | Gag | /gag/ | Gag | Gag → no change → Gag |
+| `damp-hollow` | A shaded, wet fold in the forest floor. | Dadag | /dadag/ | Datag | Datag → lenition → Dadag |
+| `dark` | the color term for black/dark hues | Dadang | /dadaŋ/ | Zazang | Zazang → no change → Dadang |
+| `day` | the light half of the day-night cycle | Shanaj | /ʃanaj/ | Shanaj | Shanaj → no change → Shanaj |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `desert-dwarf-kind` | a desert dwarf | Dnapqop | /dnapqop/ | Znabqob | Znabqob → no change → Dnapqop |
-| `desert-elf-kind` | a desert elf | Dngaddoq | /dŋaddoq/ | Zngadtoq | Zngadtoq → lenition → Dngaddoq |
-| `die` | to cease living | Dadshnod | /dadʃnod/ | Tadshnot | Tadshnot → lenition → Dadshnod |
+| `desert-dwarf-kind` | a desert dwarf | Dadash | /dadaʃ/ | Datash | Datash → lenition → Dadash |
+| `desert-elf-kind` | a desert elf | Dangad | /daŋad/ | Tangat | Tangat → lenition → Dangad |
+| `die` | to cease living | Jasan | /jasan/ | Jasan | Jasan → no change → Jasan |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Qaddngoq | /qaddŋoq/ | Qatzngoq | Qatzngoq → lenition → Qaddngoq |
-| `drow-kind` | a drow | Pap | /pap/ | Bab | Bab → no change → Pap |
-| `earth` | the ground underfoot | Qod | /qod/ | Qod | Qod → no change → Qod |
-| `east` | the direction of increasing longitude | Shnaqdaq | /ʃnaqdaq/ | Shnaqtaq | Shnaqtaq → lenition → Shnaqdaq |
-| `eat` | to consume food | Popdad | /popdad/ | Bobdad | Bobdad → no change → Popdad |
+| `drink` | to swallow liquid | Nangaj | /naŋaj/ | Nangaj | Nangaj → no change → Nangaj |
+| `drow-kind` | a drow | Shavad | /ʃavad/ | Shavaz | Shavaz → no change → Shavad |
+| `earth` | the ground underfoot | Davag | /davag/ | Zavag | Zavag → no change → Davag |
+| `east` | the direction of increasing longitude | Gashagav | /gaʃagav/ | Gashagav | Gashagav → no change → Gashagav |
+| `eat` | to consume food | Shadang | /ʃadaŋ/ | Shadang | Shadang → no change → Shadang |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): desert-dwarf has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'erg' |
-| `eye` | the organ of sight | Paq | /paq/ | Baq | Baq → no change → Paq |
+| `eye` | the organ of sight | Sadan | /sadan/ | Satan | Satan → lenition → Sadan |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Dappad | /dappad/ | Tabbat | Tabbat → lenition → Dappad |
+| `fire` | flame and heat | Vadad | /vadad/ | Vadad | Vadad → no change → Vadad |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Qaqdnaq | /qaqdnaq/ | Qaqznaq | Qaqznaq → no change → Qaqdnaq |
-| `ford` | where a river runs shallow enough to cross | Qaddnoq | /qaddnoq/ | Qadznoq | Qadznoq → no change → Qaddnoq |
+| `foot` | the walking limb-end | Nadax | /nadax/ | Nazax | Nazax → no change → Nadax |
+| `ford` | where a river runs shallow enough to cross | Shaxas | /ʃaxas/ | Shaxas | Shaxas → no change → Shaxas |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'frost-heave' |
 | `gallery-forest` | Forest following a watercourse. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'gallery-forest' |
@@ -490,27 +490,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): desert-dwarf has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): desert-dwarf has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): desert-dwarf has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Dap | /dap/ | Tab | Tab → lenition → Dap |
-| `gnoll-kind` | a gnoll | Dod | /dod/ | Dot | Dot → lenition → Dod |
-| `goblin-kind` | a goblin | Shnoqdngoq | /ʃnoqdŋoq/ | Shnoqzngoq | Shnoqzngoq → no change → Shnoqdngoq |
-| `god` | a deity | Gop | /gop/ | Gob | Gob → no change → Gop |
+| `gloom` | the deepest, starless dark | Sasad | /sasad/ | Sasat | Sasat → lenition → Sasad |
+| `gnoll-kind` | a gnoll | Vangaj | /vaŋaj/ | Vangaj | Vangaj → no change → Vangaj |
+| `goblin-kind` | a goblin | Daqaj | /daqaj/ | Taqaj | Taqaj → lenition → Daqaj |
+| `god` | a deity | Jagan | /jagan/ | Jagan | Jagan → no change → Jagan |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Dopdap | /dopdap/ | Tobdab | Tobdab → lenition → Dopdap |
-| `green` | the color term for green | Snoddngap | /snoddŋap/ | Snodzngab | Snodzngab → no change → Snoddngap |
-| `gully-dwarf-kind` | a gully dwarf | Sngap | /sŋap/ | Sngab | Sngab → no change → Sngap |
+| `great` | large in size or extent | Gagan | /gagan/ | Gagan | Gagan → no change → Gagan |
+| `green` | the color term for green | Ganav | /ganav/ | Ganav | Ganav → no change → Ganav |
+| `gully-dwarf-kind` | a gully dwarf | Xaxang | /xaxaŋ/ | Xaxang | Xaxang → no change → Xaxang |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Dngad | /dŋad/ | Zngad | Zngad → no change → Dngad |
-| `hearth` | the fire at the center of a home | Shngaddngog | /ʃŋaddŋog/ | Shngatzngog | Shngatzngog → lenition → Shngaddngog |
+| `hand` | the manipulating limb-end | Javas | /javas/ | Javas | Javas → no change → Javas |
+| `hearth` | the fire at the center of a home | Xadad | /xadad/ | Xadat | Xadat → lenition → Xadad |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'heat' |
-| `high` | far above the ground | Snagdog | /snagdog/ | Snagtog | Snagtog → lenition → Snagdog |
-| `high-elf-kind` | a high elf | Pogdngag | /pogdŋag/ | Bogzngag | Bogzngag → no change → Pogdngag |
+| `high` | far above the ground | Nganas | /ŋanas/ | Nganas | Nganas → no change → Nganas |
+| `high-elf-kind` | a high elf | Qaxav | /qaxav/ | Qaxav | Qaxav → no change → Qaxav |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): desert-dwarf has no exposure to 'hill' |
-| `hill-dwarf-kind` | a hill dwarf | Sngog | /sŋog/ | Sngog | Sngog → no change → Sngog |
-| `hobgoblin-kind` | a hobgoblin | Daq | /daq/ | Daq | Daq → no change → Daq |
+| `hill-dwarf-kind` | a hill dwarf | Ngashax | /ŋaʃax/ | Ngashax | Ngashax → no change → Ngashax |
+| `hobgoblin-kind` | a hobgoblin | Papaj | /papaj/ | Babaj | Babaj → no change → Papaj |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'holdfast-tangle' |
-| `home` | one's dwelling | Qodshngad | /qodʃŋad/ | Qotshngad | Qotshngad → lenition → Qodshngad |
-| `human-kind` | a human | Shngodgad | /ʃŋodgad/ | Shngodgad | Shngodgad → no change → Shngodgad |
+| `home` | one's dwelling | Jadan | /jadan/ | Jadan | Jadan → no change → Jadan |
+| `human-kind` | a human | Vavap | /vavap/ | Vavab | Vavab → no change → Vavap |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'ice-lead' |
@@ -518,97 +518,97 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): desert-dwarf has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Dnad | /dnad/ | Znad | Znad → no change → Dnad |
-| `lake` | still water held in a hollow that has no outlet to the sea | Shngoqsngaddodsngog | /ʃŋoqsŋaddodsŋog/ | — | compound: `little` + `water` |
+| `kobold-kind` | a kobold | Sadag | /sadag/ | Satag | Satag → lenition → Sadag |
+| `lake` | still water held in a hollow that has no outlet to the sea | Xanapdanag | /xanapdanag/ | — | compound: `little` + `water` |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Poqshngap | /poqʃŋap/ | Boqshngab | Boqshngab → no change → Poqshngap |
+| `light` | the color term for white/light hues | Pangas | /paŋas/ | Bangas | Bangas → no change → Pangas |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Dodsngog | /dodsŋog/ | Dotsngog | Dotsngog → lenition → Dodsngog |
-| `low` | near the ground | Dngodqaq | /dŋodqaq/ | Zngodqaq | Zngodqaq → no change → Dngodqaq |
-| `many` | an indefinitely large count | Shnoq | /ʃnoq/ | Shnoq | Shnoq → no change → Shnoq |
+| `little` | small in size or extent | Danag | /danag/ | Danag | Danag → no change → Danag |
+| `low` | near the ground | Xasash | /xasaʃ/ | Xasash | Xasash → no change → Xasash |
+| `many` | an indefinitely large count | Dangang | /daŋaŋ/ | Dangang | Dangang → no change → Dangang |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): desert-dwarf has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): desert-dwarf has no exposure to 'millet' |
-| `moon` | a moon | Daqshngop | /daqʃŋop/ | Daqshngob | Daqshngob → no change → Daqshngop |
+| `moon` | a moon | Vapad | /vapad/ | Vabat | Vabat → lenition → Vapad |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): desert-dwarf has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Sngad | /sŋad/ | Sngat | Sngat → lenition → Sngad |
-| `move` | to go from one place to another | Popqop | /popqop/ | Bobqob | Bobqob → no change → Popqop |
+| `mouth` | the organ of eating and speech | Naqang | /naqaŋ/ | Naqang | Naqang → no change → Naqang |
+| `move` | to go from one place to another | Sanash | /sanaʃ/ | Sanash | Sanash → no change → Sanash |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Dnopsngoq | /dnopsŋoq/ | Znobsngoq | Znobsngoq → no change → Dnopsngoq |
-| `new` | recently come to be | Shngapdog | /ʃŋapdog/ | Shngabdog | Shngabdog → no change → Shngapdog |
-| `night` | the dark half of the day-night cycle | Dngoq | /dŋoq/ | Zngoq | Zngoq → no change → Dngoq |
+| `name` | a word that identifies one who bears it | Gavash | /gavaʃ/ | Gavash | Gavash → no change → Gavash |
+| `new` | recently come to be | Gadap | /gadap/ | Gatab | Gatab → lenition → Gadap |
+| `night` | the dark half of the day-night cycle | Ngaxash | /ŋaxaʃ/ | Ngaxash | Ngaxash → no change → Ngaxash |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Dnoqdod | /dnoqdod/ | Znoqtod | Znoqtod → lenition → Dnoqdod |
-| `north-east` | between north and east | Shnaqdaqdnoqdod | /ʃnaqdaqdnoqdod/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Snaddnoqdod | /snaddnoqdod/ | — | compound: `north` + `west` |
-| `old` | long in existence | Qodgoq | /qodgoq/ | Qodgoq | Qodgoq → no change → Qodgoq |
+| `north` | toward the pole of increasing latitude | Pashap | /paʃap/ | Bashab | Bashab → no change → Pashap |
+| `north-east` | between north and east | Gashagavpashap | /gaʃagavpaʃap/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Vashajpashap | /vaʃajpaʃap/ | — | compound: `north` + `west` |
+| `old` | long in existence | Nasap | /nasap/ | Nasab | Nasab → no change → Nasap |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'old-growth' |
-| `one` | the cardinal number 1 | Dnod | /dnod/ | Znot | Znot → lenition → Dnod |
+| `one` | the cardinal number 1 | Dashad | /daʃad/ | Dashat | Dashat → lenition → Dashad |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): desert-dwarf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Qapdoq | /qapdoq/ | Qabdoq | Qabdoq → no change → Qapdoq |
+| `over` | above; atop | Japang | /japaŋ/ | Jabang | Jabang → no change → Japang |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): desert-dwarf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Qaqqod | /qaqqod/ | Qaqqod | Qaqqod → no change → Qaqqod |
-| `person` | a person; a member of a people (the autonym root) | Dnodsnad | /dnodsnad/ | Znotsnat | Znotsnat → lenition → Dnodsnad |
+| `parent` | one's father or mother | Shajap | /ʃajap/ | Shajab | Shajab → no change → Shajap |
+| `person` | a person; a member of a people (the autonym root) | Vadav | /vadav/ | Vazav | Vazav → no change → Vadav |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rain' |
-| `red` | the color term for red | Gagqog | /gagqog/ | Gagqog | Gagqog → no change → Gagqog |
+| `red` | the color term for red | Dadad | /dadad/ | Zatat | Zatat → lenition → Dadad |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): desert-dwarf has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): desert-dwarf has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Shnoqshngop | /ʃnoqʃŋop/ | Shnoqshngob | Shnoqshngob → no change → Shnoqshngop |
+| `rest` | to stop and recover strength | Jashash | /jaʃaʃ/ | Jashash | Jashash → no change → Jashash |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rice' |
-| `river` | fresh water running across land | Dadsnad | /dadsnad/ | Tadsnat | Tadsnat → lenition → Dadsnad |
+| `river` | fresh water running across land | Dadash | /dadaʃ/ | Tadash | Tadash → lenition → Dadash |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Shngoqsngadshnoq | /ʃŋoqsŋadʃnoq/ | — | compound: `many` + `water` |
-| `sea-elf-kind` | a sea elf | Dodshngop | /dodʃŋop/ | Dotshngob | Dotshngob → lenition → Dodshngop |
+| `sea` | a body of salt water | Xanapdangang | /xanapdaŋaŋ/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | Ngadax | /ŋadax/ | Ngatax | Ngatax → lenition → Ngadax |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Gaddad | /gaddad/ | Gattad | Gattad → lenition → Gaddad |
+| `shadow` | cast dark, distinct from open gloom | Naxav | /naxav/ | Naxav | Naxav → no change → Naxav |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): desert-dwarf has no exposure to 'shrieker-kind' |
-| `shrubland` | a biome class | Sngoqsngaq | /sŋoqsŋaq/ | Sngoqsngaq | Sngoqsngaq → no change → Sngoqsngaq |
-| `sibling` | one's brother or sister | Dap | /dap/ | Dab | Dab → no change → Dap |
-| `sleep` | to rest unconscious | Dngoddngog | /dŋoddŋog/ | Zngotzngog | Zngotzngog → lenition → Dngoddngog |
+| `shrubland` | a biome class | Sadad | /sadad/ | Sadad | Sadad → no change → Sadad |
+| `sibling` | one's brother or sister | Xadag | /xadag/ | Xazag | Xazag → no change → Xadag |
+| `sleep` | to rest unconscious | Qaqaj | /qaqaj/ | Qaqaj | Qaqaj → no change → Qaqaj |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): desert-dwarf has no exposure to 'snow' |
-| `snow-elf-kind` | a snow elf | Sngadgog | /sŋadgog/ | Sngatgog | Sngatgog → lenition → Sngadgog |
+| `snow-elf-kind` | a snow elf | Shashad | /ʃaʃad/ | Shashad | Shashad → no change → Shashad |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Dadpad | /dadpad/ | Tadbad | Tadbad → lenition → Dadpad |
-| `south-east` | between south and east | Shnaqdaqdadpad | /ʃnaqdaqdadpad/ | — | compound: `south` + `east` |
-| `south-west` | between south and west | Snaddadpad | /snaddadpad/ | — | compound: `south` + `west` |
-| `spirit` | a lesser or unseen supernatural presence | Qaq | /qaq/ | Qaq | Qaq → no change → Qaq |
+| `south` | toward the pole of decreasing latitude | Dajaj | /dajaj/ | Tajaj | Tajaj → lenition → Dajaj |
+| `south-east` | between south and east | Gashagavdajaj | /gaʃagavdajaj/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Vashajdajaj | /vaʃajdajaj/ | — | compound: `south` + `west` |
+| `spirit` | a lesser or unseen supernatural presence | Javav | /javav/ | Javav | Javav → no change → Javav |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): desert-dwarf has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Sngodsngad | /sŋodsŋad/ | Sngotsngat | Sngotsngat → lenition → Sngodsngad |
-| `starlit` | dark faintly lit by stars | Shngad | /ʃŋad/ | Shngat | Shngat → lenition → Shngad |
-| `stone` | rock | Podgod | /podgod/ | Bodgot | Bodgot → lenition → Podgod |
-| `sun` | the sun | Dngagdad | /dŋagdad/ | Zngagtat | Zngagtat → lenition → Dngagdad |
+| `star` | a fixed point of light in the night sky | Nashas | /naʃas/ | Nashas | Nashas → no change → Nashas |
+| `starlit` | dark faintly lit by stars | Javap | /javap/ | Javab | Javab → no change → Javap |
+| `stone` | rock | Shadaq | /ʃadaq/ | Shazaq | Shazaq → no change → Shadaq |
+| `sun` | the sun | Qashax | /qaʃax/ | Qashax | Qashax → no change → Qashax |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
-| `temperate-forest` | a biome class | Shnaddngad | /ʃnaddŋad/ | Shnatzngad | Shnatzngad → lenition → Shnaddngad |
+| `temperate-forest` | a biome class | Nadash | /nadaʃ/ | Nadash | Nadash → no change → Nadash |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
-| `thorn-scrub` | Dry scrub of thorned shrubs. | Shngogsngop | /ʃŋogsŋop/ | Shngogsngob | Shngogsngob → no change → Shngogsngop |
+| `thorn-scrub` | Dry scrub of thorned shrubs. | Qadad | /qadad/ | Qatat | Qatat → lenition → Qadad |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): desert-dwarf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): desert-dwarf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Sngop | /sŋop/ | Sngob | Sngob → no change → Sngop |
+| `tree` | a woody plant | Najan | /najan/ | Najan | Najan → no change → Najan |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
@@ -618,25 +618,25 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): desert-dwarf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Shnadshngaq | /ʃnadʃŋaq/ | Shnadshngaq | Shnadshngaq → no change → Shnadshngaq |
-| `under` | beneath; below | Dngopsnod | /dŋopsnod/ | Zngobsnot | Zngobsnot → lenition → Dngopsnod |
+| `two` | the cardinal number 2 | Davad | /davad/ | Tavad | Tavad → lenition → Davad |
+| `under` | beneath; below | Qavad | /qavad/ | Qavaz | Qavaz → no change → Qavad |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): desert-dwarf has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'vent-plume' |
-| `vine` | a staple crop | Qagsngop | /qagsŋop/ | Qagsngob | Qagsngob → no change → Qagsngop |
-| `water` | the drinkable liquid | Shngoqsngad | /ʃŋoqsŋad/ | Shngoqsngad | Shngoqsngad → no change → Shngoqsngad |
-| `west` | the direction of decreasing longitude | Snad | /snad/ | Snad | Snad → no change → Snad |
+| `vine` | a staple crop | Panang | /panaŋ/ | Banang | Banang → no change → Panang |
+| `water` | the drinkable liquid | Xanap | /xanap/ | Xanab | Xanab → no change → Xanap |
+| `west` | the direction of decreasing longitude | Vashaj | /vaʃaj/ | Vashaj | Vashaj → no change → Vashaj |
 | `wheat` | a staple crop | — | — | — | gap (experiential): desert-dwarf has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): desert-dwarf has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Qad | /qad/ | Qat | Qat → lenition → Qad |
+| `wind` | moving air | Nadaq | /nadaq/ | Nataq | Nataq → lenition → Nadaq |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'wind-scour' |
-| `wood-elf-kind` | a wood elf | Snoddngod | /snoddŋod/ | Snodzngod | Snodzngod → no change → Snoddngod |
+| `wood-elf-kind` | a wood elf | Vaxad | /vaxad/ | Vaxad | Vaxad → no change → Vaxad |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): desert-dwarf has no exposure to 'xorn-kind' |
-| `yellow` | the color term for yellow | Qaqqod | /qaqqod/ | Qaqqot | Qaqqot → lenition → Qaqqod |
+| `yellow` | the color term for yellow | Qadan | /qadan/ | Qadan | Qadan → no change → Qadan |
 | `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 
@@ -1499,49 +1499,49 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): gully-dwarf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): gully-dwarf has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Nog | /nog/ | Snog | Snog → clustersimplify → Nog |
+| `blood` | the circulating fluid of a body | Nabab | /nabab/ | Nabad | Nabad → no change → Nabab |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Tab | /tab/ | Tad | Tad → no change → Tab |
+| `bone` | the rigid frame of a body | Jagab | /jagab/ | Jagab | Jagab → no change → Jagab |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
-| `bugbear-kind` | a bugbear | Tat | /tat/ | Tat | Tat → no change → Tat |
+| `bugbear-kind` | a bugbear | Xaqab | /xaqab/ | Xaqad | Xaqad → no change → Xaqab |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): gully-dwarf has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Botqob | /botqob/ | Dotqod | Dotqod → no change → Botqob |
+| `child` | one's son or daughter | Tabaj | /tabaj/ | Sabaj | Sabaj → no change → Tabaj |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Ngoqtngabqob | /ŋoqtŋabqob/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Xanabnabag | /xanabnabag/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): gully-dwarf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Ngog | /ŋog/ | Zngog | Zngog → clustersimplify → Ngog |
-| `day` | the light half of the day-night cycle | Gag | /gag/ | Gag | Gag → no change → Gag |
+| `dark` | the color term for black/dark hues | Nanang | /nanaŋ/ | Zazang | Zazang → no change → Nanang |
+| `day` | the light half of the day-night cycle | Shanaj | /ʃanaj/ | Shanaj | Shanaj → no change → Shanaj |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `desert-dwarf-kind` | a desert dwarf | Nabqob | /nabqob/ | Znabqob | Znabqob → clustersimplify → Nabqob |
-| `desert-elf-kind` | a desert elf | Ngabtoq | /ŋabtoq/ | Zngadtoq | Zngadtoq → clustersimplify → Ngabtoq |
-| `die` | to cease living | Tabshnot | /tabʃnot/ | Tadshnot | Tadshnot → no change → Tabshnot |
+| `desert-dwarf-kind` | a desert dwarf | Batash | /bataʃ/ | Datash | Datash → no change → Batash |
+| `desert-elf-kind` | a desert elf | Tangat | /taŋat/ | Tangat | Tangat → no change → Tangat |
+| `die` | to cease living | Jatan | /jatan/ | Jasan | Jasan → no change → Jatan |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Qatnngoq | /qatnŋoq/ | Qatzngoq | Qatzngoq → no change → Qatnngoq |
-| `drow-kind` | a drow | Bab | /bab/ | Bab | Bab → no change → Bab |
-| `earth` | the ground underfoot | Qob | /qob/ | Qod | Qod → no change → Qob |
-| `east` | the direction of increasing longitude | Naqtaq | /naqtaq/ | Shnaqtaq | Shnaqtaq → clustersimplify → Naqtaq |
-| `eat` | to consume food | Bobbab | /bobbab/ | Bobdad | Bobdad → no change → Bobbab |
+| `drink` | to swallow liquid | Nangaj | /naŋaj/ | Nangaj | Nangaj → no change → Nangaj |
+| `drow-kind` | a drow | Shaban | /ʃaban/ | Shavaz | Shavaz → no change → Shaban |
+| `earth` | the ground underfoot | Nabag | /nabag/ | Zavag | Zavag → no change → Nabag |
+| `east` | the direction of increasing longitude | Gashagab | /gaʃagab/ | Gashagav | Gashagav → no change → Gashagab |
+| `eat` | to consume food | Shabang | /ʃabaŋ/ | Shadang | Shadang → no change → Shabang |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): gully-dwarf has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'erg' |
-| `eye` | the organ of sight | Baq | /baq/ | Baq | Baq → no change → Baq |
+| `eye` | the organ of sight | Tatan | /tatan/ | Satan | Satan → no change → Tatan |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Tabbat | /tabbat/ | Tabbat | Tabbat → no change → Tabbat |
-| `fire-scrub` | Scrub regrowing after fire. | Totnngob | /totnŋob/ | Totzngod | Totzngod → no change → Totnngob |
+| `fire` | flame and heat | Babab | /babab/ | Vadad | Vadad → no change → Babab |
+| `fire-scrub` | Scrub regrowing after fire. | Tanan | /tanan/ | Sazaz | Sazaz → no change → Tanan |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Qaqnnaq | /qaqnnaq/ | Qaqznaq | Qaqznaq → no change → Qaqnnaq |
-| `ford` | where a river runs shallow enough to cross | Qabnnoq | /qabnnoq/ | Qadznoq | Qadznoq → no change → Qabnnoq |
+| `foot` | the walking limb-end | Nanax | /nanax/ | Nazax | Nazax → no change → Nanax |
+| `ford` | where a river runs shallow enough to cross | Shaxat | /ʃaxat/ | Shaxas | Shaxas → no change → Shaxat |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'frost-heave' |
-| `gallery-forest` | Forest following a watercourse. | Ngobbaq | /ŋobbaq/ | Shngobdaq | Shngobdaq → clustersimplify → Ngobbaq |
+| `gallery-forest` | Forest following a watercourse. | Bataq | /bataq/ | Vataq | Vataq → no change → Bataq |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): gully-dwarf has no exposure to 'giant-constrictor-snake-kind' |
 | `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): gully-dwarf has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): gully-dwarf has no exposure to 'giant-elk-kind' |
@@ -1550,27 +1550,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): gully-dwarf has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): gully-dwarf has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): gully-dwarf has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Tab | /tab/ | Tab | Tab → no change → Tab |
-| `gnoll-kind` | a gnoll | Bot | /bot/ | Dot | Dot → no change → Bot |
-| `goblin-kind` | a goblin | Noqnngoq | /noqnŋoq/ | Shnoqzngoq | Shnoqzngoq → clustersimplify → Noqnngoq |
-| `god` | a deity | Gob | /gob/ | Gob | Gob → no change → Gob |
+| `gloom` | the deepest, starless dark | Tatat | /tatat/ | Sasat | Sasat → no change → Tatat |
+| `gnoll-kind` | a gnoll | Bangaj | /baŋaj/ | Vangaj | Vangaj → no change → Bangaj |
+| `goblin-kind` | a goblin | Taqaj | /taqaj/ | Taqaj | Taqaj → no change → Taqaj |
+| `god` | a deity | Jagan | /jagan/ | Jagan | Jagan → no change → Jagan |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Tobbab | /tobbab/ | Tobdab | Tobdab → no change → Tobbab |
-| `green` | the color term for green | Nobnngab | /nobnŋab/ | Snodzngab | Snodzngab → clustersimplify → Nobnngab |
-| `gully-dwarf-kind` | a gully dwarf | Ngab | /ŋab/ | Sngab | Sngab → clustersimplify → Ngab |
+| `great` | large in size or extent | Gagan | /gagan/ | Gagan | Gagan → no change → Gagan |
+| `green` | the color term for green | Ganab | /ganab/ | Ganav | Ganav → no change → Ganab |
+| `gully-dwarf-kind` | a gully dwarf | Xaxang | /xaxaŋ/ | Xaxang | Xaxang → no change → Xaxang |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Ngab | /ŋab/ | Zngad | Zngad → clustersimplify → Ngab |
-| `hearth` | the fire at the center of a home | Ngatnngog | /ŋatnŋog/ | Shngatzngog | Shngatzngog → clustersimplify → Ngatnngog |
+| `hand` | the manipulating limb-end | Jabat | /jabat/ | Javas | Javas → no change → Jabat |
+| `hearth` | the fire at the center of a home | Xabat | /xabat/ | Xadat | Xadat → no change → Xabat |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'heat' |
-| `high` | far above the ground | Nagtog | /nagtog/ | Snagtog | Snagtog → clustersimplify → Nagtog |
-| `high-elf-kind` | a high elf | Bognngag | /bognŋag/ | Bogzngag | Bogzngag → no change → Bognngag |
+| `high` | far above the ground | Nganat | /ŋanat/ | Nganas | Nganas → no change → Nganat |
+| `high-elf-kind` | a high elf | Qaxab | /qaxab/ | Qaxav | Qaxav → no change → Qaxab |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): gully-dwarf has no exposure to 'hill' |
-| `hill-dwarf-kind` | a hill dwarf | Ngog | /ŋog/ | Sngog | Sngog → clustersimplify → Ngog |
-| `hobgoblin-kind` | a hobgoblin | Baq | /baq/ | Daq | Daq → no change → Baq |
+| `hill-dwarf-kind` | a hill dwarf | Ngashax | /ŋaʃax/ | Ngashax | Ngashax → no change → Ngashax |
+| `hobgoblin-kind` | a hobgoblin | Babaj | /babaj/ | Babaj | Babaj → no change → Babaj |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'holdfast-tangle' |
-| `home` | one's dwelling | Qotshngab | /qotʃŋab/ | Qotshngad | Qotshngad → no change → Qotshngab |
-| `human-kind` | a human | Ngobgab | /ŋobgab/ | Shngodgad | Shngodgad → clustersimplify → Ngobgab |
+| `home` | one's dwelling | Jaban | /jaban/ | Jadan | Jadan → no change → Jaban |
+| `human-kind` | a human | Babab | /babab/ | Vavab | Vavab → no change → Babab |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'ice-lead' |
@@ -1578,88 +1578,88 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): gully-dwarf has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Nab | /nab/ | Znad | Znad → clustersimplify → Nab |
-| `lake` | still water held in a hollow that has no outlet to the sea | Ngoqtngabbottngog | /ŋoqtŋabbottŋog/ | — | compound: `little` + `water` |
+| `kobold-kind` | a kobold | Tatag | /tatag/ | Satag | Satag → no change → Tatag |
+| `lake` | still water held in a hollow that has no outlet to the sea | Xanabbanag | /xanabbanag/ | — | compound: `little` + `water` |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Boqshngab | /boqʃŋab/ | Boqshngab | Boqshngab → no change → Boqshngab |
+| `light` | the color term for white/light hues | Bangat | /baŋat/ | Bangas | Bangas → no change → Bangat |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Bottngog | /bottŋog/ | Dotsngog | Dotsngog → no change → Bottngog |
-| `low` | near the ground | Ngobqaq | /ŋobqaq/ | Zngodqaq | Zngodqaq → clustersimplify → Ngobqaq |
-| `many` | an indefinitely large count | Noq | /noq/ | Shnoq | Shnoq → clustersimplify → Noq |
+| `little` | small in size or extent | Banag | /banag/ | Danag | Danag → no change → Banag |
+| `low` | near the ground | Xatash | /xataʃ/ | Xasash | Xasash → no change → Xatash |
+| `many` | an indefinitely large count | Bangang | /baŋaŋ/ | Dangang | Dangang → no change → Bangang |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): gully-dwarf has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): gully-dwarf has no exposure to 'millet' |
-| `moon` | a moon | Baqshngob | /baqʃŋob/ | Daqshngob | Daqshngob → no change → Baqshngob |
+| `moon` | a moon | Babat | /babat/ | Vabat | Vabat → no change → Babat |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): gully-dwarf has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Ngat | /ŋat/ | Sngat | Sngat → clustersimplify → Ngat |
-| `move` | to go from one place to another | Bobqob | /bobqob/ | Bobqob | Bobqob → no change → Bobqob |
+| `mouth` | the organ of eating and speech | Naqang | /naqaŋ/ | Naqang | Naqang → no change → Naqang |
+| `move` | to go from one place to another | Tanash | /tanaʃ/ | Sanash | Sanash → no change → Tanash |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Nobtngoq | /nobtŋoq/ | Znobsngoq | Znobsngoq → clustersimplify → Nobtngoq |
-| `new` | recently come to be | Ngabbog | /ŋabbog/ | Shngabdog | Shngabdog → clustersimplify → Ngabbog |
-| `night` | the dark half of the day-night cycle | Ngoq | /ŋoq/ | Zngoq | Zngoq → clustersimplify → Ngoq |
+| `name` | a word that identifies one who bears it | Gabash | /gabaʃ/ | Gavash | Gavash → no change → Gabash |
+| `new` | recently come to be | Gatab | /gatab/ | Gatab | Gatab → no change → Gatab |
+| `night` | the dark half of the day-night cycle | Ngaxash | /ŋaxaʃ/ | Ngaxash | Ngaxash → no change → Ngaxash |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Noqtob | /noqtob/ | Znoqtod | Znoqtod → clustersimplify → Noqtob |
-| `north-east` | between north and east | Naqtaqnoqtob | /naqtaqnoqtob/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Nabnoqtob | /nabnoqtob/ | — | compound: `north` + `west` |
-| `old` | long in existence | Qobgoq | /qobgoq/ | Qodgoq | Qodgoq → no change → Qobgoq |
+| `north` | toward the pole of increasing latitude | Bashab | /baʃab/ | Bashab | Bashab → no change → Bashab |
+| `north-east` | between north and east | Gashagabbashab | /gaʃagabbaʃab/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Bashajbashab | /baʃajbaʃab/ | — | compound: `north` + `west` |
+| `old` | long in existence | Natab | /natab/ | Nasab | Nasab → no change → Natab |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'old-growth' |
-| `one` | the cardinal number 1 | Not | /not/ | Znot | Znot → clustersimplify → Not |
+| `one` | the cardinal number 1 | Bashat | /baʃat/ | Dashat | Dashat → no change → Bashat |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): gully-dwarf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Qabboq | /qabboq/ | Qabdoq | Qabdoq → no change → Qabboq |
+| `over` | above; atop | Jabang | /jabaŋ/ | Jabang | Jabang → no change → Jabang |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): gully-dwarf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Qaqqob | /qaqqob/ | Qaqqod | Qaqqod → no change → Qaqqob |
-| `person` | a person; a member of a people (the autonym root) | Nottnat | /nottnat/ | Znotsnat | Znotsnat → clustersimplify → Nottnat |
+| `parent` | one's father or mother | Shajab | /ʃajab/ | Shajab | Shajab → no change → Shajab |
+| `person` | a person; a member of a people (the autonym root) | Banab | /banab/ | Vazav | Vazav → no change → Banab |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rain' |
-| `red` | the color term for red | Gagqog | /gagqog/ | Gagqog | Gagqog → no change → Gagqog |
+| `red` | the color term for red | Natat | /natat/ | Zatat | Zatat → no change → Natat |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): gully-dwarf has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): gully-dwarf has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Noqshngob | /noqʃŋob/ | Shnoqshngob | Shnoqshngob → clustersimplify → Noqshngob |
+| `rest` | to stop and recover strength | Jashash | /jaʃaʃ/ | Jashash | Jashash → no change → Jashash |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rhinoceros-kind' |
-| `rice` | a staple crop | Nabshngog | /nabʃŋog/ | Snadshngog | Snadshngog → clustersimplify → Nabshngog |
-| `river` | fresh water running across land | Tabtnat | /tabtnat/ | Tadsnat | Tadsnat → no change → Tabtnat |
+| `rice` | a staple crop | Qangaj | /qaŋaj/ | Qangaj | Qangaj → no change → Qangaj |
+| `river` | fresh water running across land | Tabash | /tabaʃ/ | Tadash | Tadash → no change → Tabash |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Ngoqtngabnoq | /ŋoqtŋabnoq/ | — | compound: `many` + `water` |
-| `sea-elf-kind` | a sea elf | Botshngob | /botʃŋob/ | Dotshngob | Dotshngob → no change → Botshngob |
+| `sea` | a body of salt water | Xanabbangang | /xanabbaŋaŋ/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | Ngatax | /ŋatax/ | Ngatax | Ngatax → no change → Ngatax |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Gattab | /gattab/ | Gattad | Gattad → no change → Gattab |
+| `shadow` | cast dark, distinct from open gloom | Naxab | /naxab/ | Naxav | Naxav → no change → Naxab |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): gully-dwarf has no exposure to 'shrieker-kind' |
-| `shrubland` | a biome class | Ngoqtngaq | /ŋoqtŋaq/ | Sngoqsngaq | Sngoqsngaq → clustersimplify → Ngoqtngaq |
-| `sibling` | one's brother or sister | Bab | /bab/ | Dab | Dab → no change → Bab |
-| `sleep` | to rest unconscious | Ngotnngog | /ŋotnŋog/ | Zngotzngog | Zngotzngog → clustersimplify → Ngotnngog |
+| `shrubland` | a biome class | Tabab | /tabab/ | Sadad | Sadad → no change → Tabab |
+| `sibling` | one's brother or sister | Xanag | /xanag/ | Xazag | Xazag → no change → Xanag |
+| `sleep` | to rest unconscious | Qaqaj | /qaqaj/ | Qaqaj | Qaqaj → no change → Qaqaj |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): gully-dwarf has no exposure to 'snow' |
-| `snow-elf-kind` | a snow elf | Ngatgog | /ŋatgog/ | Sngatgog | Sngatgog → clustersimplify → Ngatgog |
+| `snow-elf-kind` | a snow elf | Shashab | /ʃaʃab/ | Shashad | Shashad → no change → Shashab |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Tabbab | /tabbab/ | Tadbad | Tadbad → no change → Tabbab |
-| `south-east` | between south and east | Naqtaqtabbab | /naqtaqtabbab/ | — | compound: `south` + `east` |
-| `south-west` | between south and west | Nabtabbab | /nabtabbab/ | — | compound: `south` + `west` |
-| `spirit` | a lesser or unseen supernatural presence | Qaq | /qaq/ | Qaq | Qaq → no change → Qaq |
+| `south` | toward the pole of decreasing latitude | Tajaj | /tajaj/ | Tajaj | Tajaj → no change → Tajaj |
+| `south-east` | between south and east | Gashagabtajaj | /gaʃagabtajaj/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Bashajtajaj | /baʃajtajaj/ | — | compound: `south` + `west` |
+| `spirit` | a lesser or unseen supernatural presence | Jabab | /jabab/ | Javav | Javav → no change → Jabab |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): gully-dwarf has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Ngottngat | /ŋottŋat/ | Sngotsngat | Sngotsngat → clustersimplify → Ngottngat |
-| `starlit` | dark faintly lit by stars | Ngat | /ŋat/ | Shngat | Shngat → clustersimplify → Ngat |
-| `stone` | rock | Bobgot | /bobgot/ | Bodgot | Bodgot → no change → Bobgot |
-| `sun` | the sun | Ngagtat | /ŋagtat/ | Zngagtat | Zngagtat → clustersimplify → Ngagtat |
+| `star` | a fixed point of light in the night sky | Nashat | /naʃat/ | Nashas | Nashas → no change → Nashat |
+| `starlit` | dark faintly lit by stars | Jabab | /jabab/ | Javab | Javab → no change → Jabab |
+| `stone` | rock | Shanaq | /ʃanaq/ | Shazaq | Shazaq → no change → Shanaq |
+| `sun` | the sun | Qashax | /qaʃax/ | Qashax | Qashax → no change → Qashax |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-forest' |
@@ -1668,35 +1668,35 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): gully-dwarf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): gully-dwarf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Ngob | /ŋob/ | Sngob | Sngob → clustersimplify → Ngob |
+| `tree` | a woody plant | Najan | /najan/ | Najan | Najan → no change → Najan |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
-| `tropical-seasonal-forest` | a biome class | Gaqnngot | /gaqnŋot/ | Gaqzngot | Gaqzngot → no change → Gaqnngot |
+| `tropical-seasonal-forest` | a biome class | Babab | /babab/ | Badad | Badad → no change → Babab |
 | `tuber` | a staple crop | — | — | — | gap (experiential): gully-dwarf has no exposure to 'tuber' |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'tubeworm-thicket' |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): gully-dwarf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Nabshngaq | /nabʃŋaq/ | Shnadshngaq | Shnadshngaq → clustersimplify → Nabshngaq |
-| `under` | beneath; below | Ngobtnot | /ŋobtnot/ | Zngobsnot | Zngobsnot → clustersimplify → Ngobtnot |
+| `two` | the cardinal number 2 | Tabab | /tabab/ | Tavad | Tavad → no change → Tabab |
+| `under` | beneath; below | Qaban | /qaban/ | Qavaz | Qavaz → no change → Qaban |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): gully-dwarf has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): gully-dwarf lives by fishing here and raises no staple |
-| `water` | the drinkable liquid | Ngoqtngab | /ŋoqtŋab/ | Shngoqsngad | Shngoqsngad → clustersimplify → Ngoqtngab |
-| `west` | the direction of decreasing longitude | Nab | /nab/ | Snad | Snad → clustersimplify → Nab |
+| `water` | the drinkable liquid | Xanab | /xanab/ | Xanab | Xanab → no change → Xanab |
+| `west` | the direction of decreasing longitude | Bashaj | /baʃaj/ | Vashaj | Vashaj → no change → Bashaj |
 | `wheat` | a staple crop | — | — | — | gap (experiential): gully-dwarf has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): gully-dwarf has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Qat | /qat/ | Qat | Qat → no change → Qat |
+| `wind` | moving air | Nataq | /nataq/ | Nataq | Nataq → no change → Nataq |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'wind-scour' |
-| `wood-elf-kind` | a wood elf | Nobnngob | /nobnŋob/ | Snodzngod | Snodzngod → clustersimplify → Nobnngob |
+| `wood-elf-kind` | a wood elf | Baxab | /baxab/ | Vaxad | Vaxad → no change → Baxab |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): gully-dwarf has no exposure to 'xorn-kind' |
-| `yellow` | the color term for yellow | Qaqqot | /qaqqot/ | Qaqqot | Qaqqot → no change → Qaqqot |
+| `yellow` | the color term for yellow | Qaban | /qaban/ | Qadan | Qadan → no change → Qaban |
 | `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 
@@ -1923,47 +1923,47 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): hill-dwarf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): hill-dwarf has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Mog | /mog/ | Snog | Snog → clustersimplify → Mog |
+| `blood` | the circulating fluid of a body | Mabab | /mabab/ | Nabad | Nabad → no change → Mabab |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Tab | /tab/ | Tad | Tad → no change → Tab |
+| `bone` | the rigid frame of a body | Jagab | /jagab/ | Jagab | Jagab → no change → Jagab |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
-| `bugbear-kind` | a bugbear | Tat | /tat/ | Tat | Tat → no change → Tat |
+| `bugbear-kind` | a bugbear | Xaqab | /xaqab/ | Xaqad | Xaqad → no change → Xaqab |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): hill-dwarf has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Botqob | /botqob/ | Dotqod | Dotqod → no change → Botqob |
+| `child` | one's son or daughter | Sabaj | /sabaj/ | Sabaj | Sabaj → no change → Sabaj |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Ngoqsngabqob | /ŋoqsŋabqob/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Xamabsavag | /xamabsavag/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): hill-dwarf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Ngog | /ŋog/ | Zngog | Zngog → clustersimplify → Ngog |
-| `day` | the light half of the day-night cycle | Gag | /gag/ | Gag | Gag → no change → Gag |
+| `dark` | the color term for black/dark hues | Sasang | /sasaŋ/ | Zazang | Zazang → no change → Sasang |
+| `day` | the light half of the day-night cycle | Shamaj | /ʃamaj/ | Shanaj | Shanaj → no change → Shamaj |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `desert-dwarf-kind` | a desert dwarf | Mabqob | /mabqob/ | Znabqob | Znabqob → clustersimplify → Mabqob |
-| `desert-elf-kind` | a desert elf | Ngabtoq | /ŋabtoq/ | Zngadtoq | Zngadtoq → clustersimplify → Ngabtoq |
-| `die` | to cease living | Tabshmot | /tabʃmot/ | Tadshnot | Tadshnot → no change → Tabshmot |
+| `desert-dwarf-kind` | a desert dwarf | Batash | /bataʃ/ | Datash | Datash → no change → Batash |
+| `desert-elf-kind` | a desert elf | Tangat | /taŋat/ | Tangat | Tangat → no change → Tangat |
+| `die` | to cease living | Jasam | /jasam/ | Jasan | Jasan → no change → Jasam |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Qatsngoq | /qatsŋoq/ | Qatzngoq | Qatzngoq → no change → Qatsngoq |
-| `drow-kind` | a drow | Bab | /bab/ | Bab | Bab → no change → Bab |
-| `earth` | the ground underfoot | Qob | /qob/ | Qod | Qod → no change → Qob |
-| `east` | the direction of increasing longitude | Maqtaq | /maqtaq/ | Shnaqtaq | Shnaqtaq → clustersimplify → Maqtaq |
-| `eat` | to consume food | Bobbab | /bobbab/ | Bobdad | Bobdad → no change → Bobbab |
+| `drink` | to swallow liquid | Mangaj | /maŋaj/ | Nangaj | Nangaj → no change → Mangaj |
+| `drow-kind` | a drow | Shavas | /ʃavas/ | Shavaz | Shavaz → no change → Shavas |
+| `earth` | the ground underfoot | Savag | /savag/ | Zavag | Zavag → no change → Savag |
+| `east` | the direction of increasing longitude | Gashagav | /gaʃagav/ | Gashagav | Gashagav → no change → Gashagav |
+| `eat` | to consume food | Shabang | /ʃabaŋ/ | Shadang | Shadang → no change → Shabang |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): hill-dwarf has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'erg' |
-| `eye` | the organ of sight | Baq | /baq/ | Baq | Baq → no change → Baq |
+| `eye` | the organ of sight | Satam | /satam/ | Satan | Satan → no change → Satam |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Tabbat | /tabbat/ | Tabbat | Tabbat → no change → Tabbat |
+| `fire` | flame and heat | Vabab | /vabab/ | Vadad | Vadad → no change → Vabab |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Qaqsmaq | /qaqsmaq/ | Qaqznaq | Qaqznaq → no change → Qaqsmaq |
-| `ford` | where a river runs shallow enough to cross | Qabsmoq | /qabsmoq/ | Qadznoq | Qadznoq → no change → Qabsmoq |
-| `forest-gap` | A break in the canopy where light reaches the ground. | Mobbog | /mobbog/ | Shnobbog | Shnobbog → clustersimplify → Mobbog |
+| `foot` | the walking limb-end | Masax | /masax/ | Nazax | Nazax → no change → Masax |
+| `ford` | where a river runs shallow enough to cross | Shaxas | /ʃaxas/ | Shaxas | Shaxas → no change → Shaxas |
+| `forest-gap` | A break in the canopy where light reaches the ground. | Sabax | /sabax/ | Sadax | Sadax → no change → Sabax |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'frost-heave' |
 | `gallery-forest` | Forest following a watercourse. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'gallery-forest' |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): hill-dwarf has no exposure to 'giant-constrictor-snake-kind' |
@@ -1974,27 +1974,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): hill-dwarf has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): hill-dwarf has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): hill-dwarf has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Tab | /tab/ | Tab | Tab → no change → Tab |
-| `gnoll-kind` | a gnoll | Bot | /bot/ | Dot | Dot → no change → Bot |
-| `goblin-kind` | a goblin | Moqsngoq | /moqsŋoq/ | Shnoqzngoq | Shnoqzngoq → clustersimplify → Moqsngoq |
-| `god` | a deity | Gob | /gob/ | Gob | Gob → no change → Gob |
+| `gloom` | the deepest, starless dark | Sasat | /sasat/ | Sasat | Sasat → no change → Sasat |
+| `gnoll-kind` | a gnoll | Vangaj | /vaŋaj/ | Vangaj | Vangaj → no change → Vangaj |
+| `goblin-kind` | a goblin | Taqaj | /taqaj/ | Taqaj | Taqaj → no change → Taqaj |
+| `god` | a deity | Jagam | /jagam/ | Jagan | Jagan → no change → Jagam |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Tobbab | /tobbab/ | Tobdab | Tobdab → no change → Tobbab |
-| `green` | the color term for green | Mobsngab | /mobsŋab/ | Snodzngab | Snodzngab → clustersimplify → Mobsngab |
-| `gully-dwarf-kind` | a gully dwarf | Ngab | /ŋab/ | Sngab | Sngab → clustersimplify → Ngab |
+| `great` | large in size or extent | Gagam | /gagam/ | Gagan | Gagan → no change → Gagam |
+| `green` | the color term for green | Gamav | /gamav/ | Ganav | Ganav → no change → Gamav |
+| `gully-dwarf-kind` | a gully dwarf | Xaxang | /xaxaŋ/ | Xaxang | Xaxang → no change → Xaxang |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Ngab | /ŋab/ | Zngad | Zngad → clustersimplify → Ngab |
-| `hearth` | the fire at the center of a home | Ngatsngog | /ŋatsŋog/ | Shngatzngog | Shngatzngog → clustersimplify → Ngatsngog |
+| `hand` | the manipulating limb-end | Javas | /javas/ | Javas | Javas → no change → Javas |
+| `hearth` | the fire at the center of a home | Xabat | /xabat/ | Xadat | Xadat → no change → Xabat |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'heat' |
-| `high` | far above the ground | Magtog | /magtog/ | Snagtog | Snagtog → clustersimplify → Magtog |
-| `high-elf-kind` | a high elf | Bogsngag | /bogsŋag/ | Bogzngag | Bogzngag → no change → Bogsngag |
+| `high` | far above the ground | Ngamas | /ŋamas/ | Nganas | Nganas → no change → Ngamas |
+| `high-elf-kind` | a high elf | Qaxav | /qaxav/ | Qaxav | Qaxav → no change → Qaxav |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): hill-dwarf has no exposure to 'hill' |
-| `hill-dwarf-kind` | a hill dwarf | Ngog | /ŋog/ | Sngog | Sngog → clustersimplify → Ngog |
-| `hobgoblin-kind` | a hobgoblin | Baq | /baq/ | Daq | Daq → no change → Baq |
+| `hill-dwarf-kind` | a hill dwarf | Ngashax | /ŋaʃax/ | Ngashax | Ngashax → no change → Ngashax |
+| `hobgoblin-kind` | a hobgoblin | Babaj | /babaj/ | Babaj | Babaj → no change → Babaj |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'holdfast-tangle' |
-| `home` | one's dwelling | Qotshngab | /qotʃŋab/ | Qotshngad | Qotshngad → no change → Qotshngab |
-| `human-kind` | a human | Ngobgab | /ŋobgab/ | Shngodgad | Shngodgad → clustersimplify → Ngobgab |
+| `home` | one's dwelling | Jabam | /jabam/ | Jadan | Jadan → no change → Jabam |
+| `human-kind` | a human | Vavab | /vavab/ | Vavab | Vavab → no change → Vavab |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'ice-lead' |
@@ -2002,97 +2002,97 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): hill-dwarf has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Mab | /mab/ | Znad | Znad → clustersimplify → Mab |
-| `lake` | still water held in a hollow that has no outlet to the sea | Ngoqsngabbotsngog | /ŋoqsŋabbotsŋog/ | — | compound: `little` + `water` |
+| `kobold-kind` | a kobold | Satag | /satag/ | Satag | Satag → no change → Satag |
+| `lake` | still water held in a hollow that has no outlet to the sea | Xamabbamag | /xamabbamag/ | — | compound: `little` + `water` |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Boqshngab | /boqʃŋab/ | Boqshngab | Boqshngab → no change → Boqshngab |
+| `light` | the color term for white/light hues | Bangas | /baŋas/ | Bangas | Bangas → no change → Bangas |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Botsngog | /botsŋog/ | Dotsngog | Dotsngog → no change → Botsngog |
-| `low` | near the ground | Ngobqaq | /ŋobqaq/ | Zngodqaq | Zngodqaq → clustersimplify → Ngobqaq |
-| `many` | an indefinitely large count | Moq | /moq/ | Shnoq | Shnoq → clustersimplify → Moq |
+| `little` | small in size or extent | Bamag | /bamag/ | Danag | Danag → no change → Bamag |
+| `low` | near the ground | Xasash | /xasaʃ/ | Xasash | Xasash → no change → Xasash |
+| `many` | an indefinitely large count | Bangang | /baŋaŋ/ | Dangang | Dangang → no change → Bangang |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): hill-dwarf has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): hill-dwarf has no exposure to 'millet' |
-| `moon` | a moon | Baqshngob | /baqʃŋob/ | Daqshngob | Daqshngob → no change → Baqshngob |
+| `moon` | a moon | Vabat | /vabat/ | Vabat | Vabat → no change → Vabat |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): hill-dwarf has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Ngat | /ŋat/ | Sngat | Sngat → clustersimplify → Ngat |
-| `move` | to go from one place to another | Bobqob | /bobqob/ | Bobqob | Bobqob → no change → Bobqob |
+| `mouth` | the organ of eating and speech | Maqang | /maqaŋ/ | Naqang | Naqang → no change → Maqang |
+| `move` | to go from one place to another | Samash | /samaʃ/ | Sanash | Sanash → no change → Samash |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Mobsngoq | /mobsŋoq/ | Znobsngoq | Znobsngoq → clustersimplify → Mobsngoq |
-| `new` | recently come to be | Ngabbog | /ŋabbog/ | Shngabdog | Shngabdog → clustersimplify → Ngabbog |
-| `night` | the dark half of the day-night cycle | Ngoq | /ŋoq/ | Zngoq | Zngoq → clustersimplify → Ngoq |
+| `name` | a word that identifies one who bears it | Gavash | /gavaʃ/ | Gavash | Gavash → no change → Gavash |
+| `new` | recently come to be | Gatab | /gatab/ | Gatab | Gatab → no change → Gatab |
+| `night` | the dark half of the day-night cycle | Ngaxash | /ŋaxaʃ/ | Ngaxash | Ngaxash → no change → Ngaxash |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Moqtob | /moqtob/ | Znoqtod | Znoqtod → clustersimplify → Moqtob |
-| `north-east` | between north and east | Maqtaqmoqtob | /maqtaqmoqtob/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Mabmoqtob | /mabmoqtob/ | — | compound: `north` + `west` |
-| `old` | long in existence | Qobgoq | /qobgoq/ | Qodgoq | Qodgoq → no change → Qobgoq |
-| `old-growth` | Mature forest, closed above and open beneath. | Ngag | /ŋag/ | Sngag | Sngag → clustersimplify → Ngag |
-| `one` | the cardinal number 1 | Mot | /mot/ | Znot | Znot → clustersimplify → Mot |
+| `north` | toward the pole of increasing latitude | Bashab | /baʃab/ | Bashab | Bashab → no change → Bashab |
+| `north-east` | between north and east | Gashagavbashab | /gaʃagavbaʃab/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Vashajbashab | /vaʃajbaʃab/ | — | compound: `north` + `west` |
+| `old` | long in existence | Masab | /masab/ | Nasab | Nasab → no change → Masab |
+| `old-growth` | Mature forest, closed above and open beneath. | Sajat | /sajat/ | Zajat | Zajat → no change → Sajat |
+| `one` | the cardinal number 1 | Bashat | /baʃat/ | Dashat | Dashat → no change → Bashat |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): hill-dwarf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Qabboq | /qabboq/ | Qabdoq | Qabdoq → no change → Qabboq |
+| `over` | above; atop | Jabang | /jabaŋ/ | Jabang | Jabang → no change → Jabang |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): hill-dwarf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Qaqqob | /qaqqob/ | Qaqqod | Qaqqod → no change → Qaqqob |
-| `person` | a person; a member of a people (the autonym root) | Motsmat | /motsmat/ | Znotsnat | Znotsnat → clustersimplify → Motsmat |
+| `parent` | one's father or mother | Shajab | /ʃajab/ | Shajab | Shajab → no change → Shajab |
+| `person` | a person; a member of a people (the autonym root) | Vasav | /vasav/ | Vazav | Vazav → no change → Vasav |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rain' |
-| `red` | the color term for red | Gagqog | /gagqog/ | Gagqog | Gagqog → no change → Gagqog |
+| `red` | the color term for red | Satat | /satat/ | Zatat | Zatat → no change → Satat |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): hill-dwarf has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): hill-dwarf has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Moqshngob | /moqʃŋob/ | Shnoqshngob | Shnoqshngob → clustersimplify → Moqshngob |
+| `rest` | to stop and recover strength | Jashash | /jaʃaʃ/ | Jashash | Jashash → no change → Jashash |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rice' |
-| `river` | fresh water running across land | Tabsmat | /tabsmat/ | Tadsnat | Tadsnat → no change → Tabsmat |
+| `river` | fresh water running across land | Tabash | /tabaʃ/ | Tadash | Tadash → no change → Tabash |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Ngoqsngabmoq | /ŋoqsŋabmoq/ | — | compound: `many` + `water` |
-| `sea-elf-kind` | a sea elf | Botshngob | /botʃŋob/ | Dotshngob | Dotshngob → no change → Botshngob |
+| `sea` | a body of salt water | Xamabbangang | /xamabbaŋaŋ/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | Ngatax | /ŋatax/ | Ngatax | Ngatax → no change → Ngatax |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): hill-dwarf has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Bab | /bab/ | Dab | Dab → no change → Bab |
-| `sleep` | to rest unconscious | Ngotsngog | /ŋotsŋog/ | Zngotzngog | Zngotzngog → clustersimplify → Ngotsngog |
+| `sibling` | one's brother or sister | Xasag | /xasag/ | Xazag | Xazag → no change → Xasag |
+| `sleep` | to rest unconscious | Qaqaj | /qaqaj/ | Qaqaj | Qaqaj → no change → Qaqaj |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): hill-dwarf has no exposure to 'snow' |
-| `snow-elf-kind` | a snow elf | Ngatgog | /ŋatgog/ | Sngatgog | Sngatgog → clustersimplify → Ngatgog |
+| `snow-elf-kind` | a snow elf | Shashab | /ʃaʃab/ | Shashad | Shashad → no change → Shashab |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Tabbab | /tabbab/ | Tadbad | Tadbad → no change → Tabbab |
-| `south-east` | between south and east | Maqtaqtabbab | /maqtaqtabbab/ | — | compound: `south` + `east` |
-| `south-west` | between south and west | Mabtabbab | /mabtabbab/ | — | compound: `south` + `west` |
-| `spirit` | a lesser or unseen supernatural presence | Qaq | /qaq/ | Qaq | Qaq → no change → Qaq |
-| `spring` | where water rises from the ground | Ngabgob | /ŋabgob/ | Shngadgod | Shngadgod → clustersimplify → Ngabgob |
+| `south` | toward the pole of decreasing latitude | Tajaj | /tajaj/ | Tajaj | Tajaj → no change → Tajaj |
+| `south-east` | between south and east | Gashagavtajaj | /gaʃagavtajaj/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Vashajtajaj | /vaʃajtajaj/ | — | compound: `south` + `west` |
+| `spirit` | a lesser or unseen supernatural presence | Javav | /javav/ | Javav | Javav → no change → Javav |
+| `spring` | where water rises from the ground | Qangab | /qaŋab/ | Qangab | Qangab → no change → Qangab |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Ngotsngat | /ŋotsŋat/ | Sngotsngat | Sngotsngat → clustersimplify → Ngotsngat |
+| `star` | a fixed point of light in the night sky | Mashas | /maʃas/ | Nashas | Nashas → no change → Mashas |
 | `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6 |
-| `stone` | rock | Bobgot | /bobgot/ | Bodgot | Bodgot → no change → Bobgot |
-| `sun` | the sun | Ngagtat | /ŋagtat/ | Zngagtat | Zngagtat → clustersimplify → Ngagtat |
+| `stone` | rock | Shasaq | /ʃasaq/ | Shazaq | Shazaq → no change → Shasaq |
+| `sun` | the sun | Qashax | /qaʃax/ | Qashax | Qashax → no change → Qashax |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
-| `temperate-forest` | a biome class | Matsngab | /matsŋab/ | Shnatzngad | Shnatzngad → clustersimplify → Matsngab |
+| `temperate-forest` | a biome class | Mabash | /mabaʃ/ | Nadash | Nadash → no change → Mabash |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): hill-dwarf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): hill-dwarf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Ngob | /ŋob/ | Sngob | Sngob → clustersimplify → Ngob |
+| `tree` | a woody plant | Majam | /majam/ | Najan | Najan → no change → Majam |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
@@ -2102,25 +2102,25 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): hill-dwarf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Mabshngaq | /mabʃŋaq/ | Shnadshngaq | Shnadshngaq → clustersimplify → Mabshngaq |
-| `under` | beneath; below | Ngobsmot | /ŋobsmot/ | Zngobsnot | Zngobsnot → clustersimplify → Ngobsmot |
+| `two` | the cardinal number 2 | Tavab | /tavab/ | Tavad | Tavad → no change → Tavab |
+| `under` | beneath; below | Qavas | /qavas/ | Qavaz | Qavaz → no change → Qavas |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): hill-dwarf has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): hill-dwarf has no exposure to 'vine' |
-| `water` | the drinkable liquid | Ngoqsngab | /ŋoqsŋab/ | Shngoqsngad | Shngoqsngad → clustersimplify → Ngoqsngab |
-| `west` | the direction of decreasing longitude | Mab | /mab/ | Snad | Snad → clustersimplify → Mab |
-| `wheat` | a staple crop | Ngatsmot | /ŋatsmot/ | Shngatznot | Shngatznot → clustersimplify → Ngatsmot |
+| `water` | the drinkable liquid | Xamab | /xamab/ | Xanab | Xanab → no change → Xamab |
+| `west` | the direction of decreasing longitude | Vashaj | /vaʃaj/ | Vashaj | Vashaj → no change → Vashaj |
+| `wheat` | a staple crop | Xaxaj | /xaxaj/ | Xaxaj | Xaxaj → no change → Xaxaj |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): hill-dwarf has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Qat | /qat/ | Qat | Qat → no change → Qat |
+| `wind` | moving air | Mataq | /mataq/ | Nataq | Nataq → no change → Mataq |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'wind-scour' |
-| `wood-elf-kind` | a wood elf | Mobsngob | /mobsŋob/ | Snodzngod | Snodzngod → clustersimplify → Mobsngob |
+| `wood-elf-kind` | a wood elf | Vaxab | /vaxab/ | Vaxad | Vaxad → no change → Vaxab |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): hill-dwarf has no exposure to 'xorn-kind' |
-| `yellow` | the color term for yellow | Qaqqot | /qaqqot/ | Qaqqot | Qaqqot → no change → Qaqqot |
+| `yellow` | the color term for yellow | Qabam | /qabam/ | Qadan | Qadan → no change → Qabam |
 | `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 
@@ -3882,76 +3882,76 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 
 | Concept | Gloss | Proto | Desert-dwarf | Gully-dwarf | Hill-dwarf | Descent |
 |---|---|---|---|---|---|---|
-| `blood` | the circulating fluid of a body | *Snog /snog/ | Snog /snog/ | Nog /nog/ | Mog /mog/ | *Snog → Snog / Nog / Mog |
-| `bone` | the rigid frame of a body | *Tad /tad/ | Dad /dad/ | Tab /tab/ | Tab /tab/ | *Tad → Dad / Tab / Tab |
-| `bugbear-kind` | a bugbear | *Tat /tat/ | Dad /dad/ | Tat /tat/ | Tat /tat/ | *Tat → Dad / Tat / Tat |
-| `child` | one's son or daughter | *Dotqod /dotqod/ | Dodqod /dodqod/ | Botqob /botqob/ | Botqob /botqob/ | *Dotqod → Dodqod / Botqob / Botqob |
-| `dark` | the color term for black/dark hues | *Zngog /zŋog/ | Dngog /dŋog/ | Ngog /ŋog/ | Ngog /ŋog/ | *Zngog → Dngog / Ngog / Ngog |
-| `day` | the light half of the day-night cycle | *Gag /gag/ | Gag /gag/ | Gag /gag/ | Gag /gag/ | *Gag → Gag / Gag / Gag |
-| `desert-dwarf-kind` | a desert dwarf | *Znabqob /znabqob/ | Dnapqop /dnapqop/ | Nabqob /nabqob/ | Mabqob /mabqob/ | *Znabqob → Dnapqop / Nabqob / Mabqob |
-| `desert-elf-kind` | a desert elf | *Zngadtoq /zŋadtoq/ | Dngaddoq /dŋaddoq/ | Ngabtoq /ŋabtoq/ | Ngabtoq /ŋabtoq/ | *Zngadtoq → Dngaddoq / Ngabtoq / Ngabtoq |
-| `die` | to cease living | *Tadshnot /tadʃnot/ | Dadshnod /dadʃnod/ | Tabshnot /tabʃnot/ | Tabshmot /tabʃmot/ | *Tadshnot → Dadshnod / Tabshnot / Tabshmot |
-| `drink` | to swallow liquid | *Qatzngoq /qatzŋoq/ | Qaddngoq /qaddŋoq/ | Qatnngoq /qatnŋoq/ | Qatsngoq /qatsŋoq/ | *Qatzngoq → Qaddngoq / Qatnngoq / Qatsngoq |
-| `drow-kind` | a drow | *Bab /bab/ | Pap /pap/ | Bab /bab/ | Bab /bab/ | *Bab → Pap / Bab / Bab |
-| `earth` | the ground underfoot | *Qod /qod/ | Qod /qod/ | Qob /qob/ | Qob /qob/ | *Qod → Qod / Qob / Qob |
-| `east` | the direction of increasing longitude | *Shnaqtaq /ʃnaqtaq/ | Shnaqdaq /ʃnaqdaq/ | Naqtaq /naqtaq/ | Maqtaq /maqtaq/ | *Shnaqtaq → Shnaqdaq / Naqtaq / Maqtaq |
-| `eat` | to consume food | *Bobdad /bobdad/ | Popdad /popdad/ | Bobbab /bobbab/ | Bobbab /bobbab/ | *Bobdad → Popdad / Bobbab / Bobbab |
-| `eye` | the organ of sight | *Baq /baq/ | Paq /paq/ | Baq /baq/ | Baq /baq/ | *Baq → Paq / Baq / Baq |
-| `fire` | flame and heat | *Tabbat /tabbat/ | Dappad /dappad/ | Tabbat /tabbat/ | Tabbat /tabbat/ | *Tabbat → Dappad / Tabbat / Tabbat |
-| `foot` | the walking limb-end | *Qaqznaq /qaqznaq/ | Qaqdnaq /qaqdnaq/ | Qaqnnaq /qaqnnaq/ | Qaqsmaq /qaqsmaq/ | *Qaqznaq → Qaqdnaq / Qaqnnaq / Qaqsmaq |
-| `ford` | where a river runs shallow enough to cross | *Qadznoq /qadznoq/ | Qaddnoq /qaddnoq/ | Qabnnoq /qabnnoq/ | Qabsmoq /qabsmoq/ | *Qadznoq → Qaddnoq / Qabnnoq / Qabsmoq |
-| `gloom` | the deepest, starless dark | *Tab /tab/ | Dap /dap/ | Tab /tab/ | Tab /tab/ | *Tab → Dap / Tab / Tab |
-| `gnoll-kind` | a gnoll | *Dot /dot/ | Dod /dod/ | Bot /bot/ | Bot /bot/ | *Dot → Dod / Bot / Bot |
-| `goblin-kind` | a goblin | *Shnoqzngoq /ʃnoqzŋoq/ | Shnoqdngoq /ʃnoqdŋoq/ | Noqnngoq /noqnŋoq/ | Moqsngoq /moqsŋoq/ | *Shnoqzngoq → Shnoqdngoq / Noqnngoq / Moqsngoq |
-| `god` | a deity | *Gob /gob/ | Gop /gop/ | Gob /gob/ | Gob /gob/ | *Gob → Gop / Gob / Gob |
-| `great` | large in size or extent | *Tobdab /tobdab/ | Dopdap /dopdap/ | Tobbab /tobbab/ | Tobbab /tobbab/ | *Tobdab → Dopdap / Tobbab / Tobbab |
-| `green` | the color term for green | *Snodzngab /snodzŋab/ | Snoddngap /snoddŋap/ | Nobnngab /nobnŋab/ | Mobsngab /mobsŋab/ | *Snodzngab → Snoddngap / Nobnngab / Mobsngab |
-| `gully-dwarf-kind` | a gully dwarf | *Sngab /sŋab/ | Sngap /sŋap/ | Ngab /ŋab/ | Ngab /ŋab/ | *Sngab → Sngap / Ngab / Ngab |
-| `hand` | the manipulating limb-end | *Zngad /zŋad/ | Dngad /dŋad/ | Ngab /ŋab/ | Ngab /ŋab/ | *Zngad → Dngad / Ngab / Ngab |
-| `hearth` | the fire at the center of a home | *Shngatzngog /ʃŋatzŋog/ | Shngaddngog /ʃŋaddŋog/ | Ngatnngog /ŋatnŋog/ | Ngatsngog /ŋatsŋog/ | *Shngatzngog → Shngaddngog / Ngatnngog / Ngatsngog |
-| `high` | far above the ground | *Snagtog /snagtog/ | Snagdog /snagdog/ | Nagtog /nagtog/ | Magtog /magtog/ | *Snagtog → Snagdog / Nagtog / Magtog |
-| `high-elf-kind` | a high elf | *Bogzngag /bogzŋag/ | Pogdngag /pogdŋag/ | Bognngag /bognŋag/ | Bogsngag /bogsŋag/ | *Bogzngag → Pogdngag / Bognngag / Bogsngag |
-| `hill-dwarf-kind` | a hill dwarf | *Sngog /sŋog/ | Sngog /sŋog/ | Ngog /ŋog/ | Ngog /ŋog/ | *Sngog → Sngog / Ngog / Ngog |
-| `hobgoblin-kind` | a hobgoblin | *Daq /daq/ | Daq /daq/ | Baq /baq/ | Baq /baq/ | *Daq → Daq / Baq / Baq |
-| `home` | one's dwelling | *Qotshngad /qotʃŋad/ | Qodshngad /qodʃŋad/ | Qotshngab /qotʃŋab/ | Qotshngab /qotʃŋab/ | *Qotshngad → Qodshngad / Qotshngab / Qotshngab |
-| `human-kind` | a human | *Shngodgad /ʃŋodgad/ | Shngodgad /ʃŋodgad/ | Ngobgab /ŋobgab/ | Ngobgab /ŋobgab/ | *Shngodgad → Shngodgad / Ngobgab / Ngobgab |
-| `kobold-kind` | a kobold | *Znad /znad/ | Dnad /dnad/ | Nab /nab/ | Mab /mab/ | *Znad → Dnad / Nab / Mab |
-| `light` | the color term for white/light hues | *Boqshngab /boqʃŋab/ | Poqshngap /poqʃŋap/ | Boqshngab /boqʃŋab/ | Boqshngab /boqʃŋab/ | *Boqshngab → Poqshngap / Boqshngab / Boqshngab |
-| `little` | small in size or extent | *Dotsngog /dotsŋog/ | Dodsngog /dodsŋog/ | Bottngog /bottŋog/ | Botsngog /botsŋog/ | *Dotsngog → Dodsngog / Bottngog / Botsngog |
-| `low` | near the ground | *Zngodqaq /zŋodqaq/ | Dngodqaq /dŋodqaq/ | Ngobqaq /ŋobqaq/ | Ngobqaq /ŋobqaq/ | *Zngodqaq → Dngodqaq / Ngobqaq / Ngobqaq |
-| `many` | an indefinitely large count | *Shnoq /ʃnoq/ | Shnoq /ʃnoq/ | Noq /noq/ | Moq /moq/ | *Shnoq → Shnoq / Noq / Moq |
-| `moon` | a moon | *Daqshngob /daqʃŋob/ | Daqshngop /daqʃŋop/ | Baqshngob /baqʃŋob/ | Baqshngob /baqʃŋob/ | *Daqshngob → Daqshngop / Baqshngob / Baqshngob |
-| `mouth` | the organ of eating and speech | *Sngat /sŋat/ | Sngad /sŋad/ | Ngat /ŋat/ | Ngat /ŋat/ | *Sngat → Sngad / Ngat / Ngat |
-| `move` | to go from one place to another | *Bobqob /bobqob/ | Popqop /popqop/ | Bobqob /bobqob/ | Bobqob /bobqob/ | *Bobqob → Popqop / Bobqob / Bobqob |
-| `name` | a word that identifies one who bears it | *Znobsngoq /znobsŋoq/ | Dnopsngoq /dnopsŋoq/ | Nobtngoq /nobtŋoq/ | Mobsngoq /mobsŋoq/ | *Znobsngoq → Dnopsngoq / Nobtngoq / Mobsngoq |
-| `new` | recently come to be | *Shngabdog /ʃŋabdog/ | Shngapdog /ʃŋapdog/ | Ngabbog /ŋabbog/ | Ngabbog /ŋabbog/ | *Shngabdog → Shngapdog / Ngabbog / Ngabbog |
-| `night` | the dark half of the day-night cycle | *Zngoq /zŋoq/ | Dngoq /dŋoq/ | Ngoq /ŋoq/ | Ngoq /ŋoq/ | *Zngoq → Dngoq / Ngoq / Ngoq |
-| `north` | toward the pole of increasing latitude | *Znoqtod /znoqtod/ | Dnoqdod /dnoqdod/ | Noqtob /noqtob/ | Moqtob /moqtob/ | *Znoqtod → Dnoqdod / Noqtob / Moqtob |
-| `old` | long in existence | *Qodgoq /qodgoq/ | Qodgoq /qodgoq/ | Qobgoq /qobgoq/ | Qobgoq /qobgoq/ | *Qodgoq → Qodgoq / Qobgoq / Qobgoq |
-| `one` | the cardinal number 1 | *Znot /znot/ | Dnod /dnod/ | Not /not/ | Mot /mot/ | *Znot → Dnod / Not / Mot |
-| `over` | above; atop | *Qabdoq /qabdoq/ | Qapdoq /qapdoq/ | Qabboq /qabboq/ | Qabboq /qabboq/ | *Qabdoq → Qapdoq / Qabboq / Qabboq |
-| `parent` | one's father or mother | *Qaqqod /qaqqod/ | Qaqqod /qaqqod/ | Qaqqob /qaqqob/ | Qaqqob /qaqqob/ | *Qaqqod → Qaqqod / Qaqqob / Qaqqob |
-| `person` | a person; a member of a people (the autonym root) | *Znotsnat /znotsnat/ | Dnodsnad /dnodsnad/ | Nottnat /nottnat/ | Motsmat /motsmat/ | *Znotsnat → Dnodsnad / Nottnat / Motsmat |
-| `red` | the color term for red | *Gagqog /gagqog/ | Gagqog /gagqog/ | Gagqog /gagqog/ | Gagqog /gagqog/ | *Gagqog → Gagqog / Gagqog / Gagqog |
-| `rest` | to stop and recover strength | *Shnoqshngob /ʃnoqʃŋob/ | Shnoqshngop /ʃnoqʃŋop/ | Noqshngob /noqʃŋob/ | Moqshngob /moqʃŋob/ | *Shnoqshngob → Shnoqshngop / Noqshngob / Moqshngob |
-| `river` | fresh water running across land | *Tadsnat /tadsnat/ | Dadsnad /dadsnad/ | Tabtnat /tabtnat/ | Tabsmat /tabsmat/ | *Tadsnat → Dadsnad / Tabtnat / Tabsmat |
-| `sea-elf-kind` | a sea elf | *Dotshngob /dotʃŋob/ | Dodshngop /dodʃŋop/ | Botshngob /botʃŋob/ | Botshngob /botʃŋob/ | *Dotshngob → Dodshngop / Botshngob / Botshngob |
-| `sibling` | one's brother or sister | *Dab /dab/ | Dap /dap/ | Bab /bab/ | Bab /bab/ | *Dab → Dap / Bab / Bab |
-| `sleep` | to rest unconscious | *Zngotzngog /zŋotzŋog/ | Dngoddngog /dŋoddŋog/ | Ngotnngog /ŋotnŋog/ | Ngotsngog /ŋotsŋog/ | *Zngotzngog → Dngoddngog / Ngotnngog / Ngotsngog |
-| `snow-elf-kind` | a snow elf | *Sngatgog /sŋatgog/ | Sngadgog /sŋadgog/ | Ngatgog /ŋatgog/ | Ngatgog /ŋatgog/ | *Sngatgog → Sngadgog / Ngatgog / Ngatgog |
-| `south` | toward the pole of decreasing latitude | *Tadbad /tadbad/ | Dadpad /dadpad/ | Tabbab /tabbab/ | Tabbab /tabbab/ | *Tadbad → Dadpad / Tabbab / Tabbab |
-| `spirit` | a lesser or unseen supernatural presence | *Qaq /qaq/ | Qaq /qaq/ | Qaq /qaq/ | Qaq /qaq/ | *Qaq → Qaq / Qaq / Qaq |
-| `star` | a fixed point of light in the night sky | *Sngotsngat /sŋotsŋat/ | Sngodsngad /sŋodsŋad/ | Ngottngat /ŋottŋat/ | Ngotsngat /ŋotsŋat/ | *Sngotsngat → Sngodsngad / Ngottngat / Ngotsngat |
-| `stone` | rock | *Bodgot /bodgot/ | Podgod /podgod/ | Bobgot /bobgot/ | Bobgot /bobgot/ | *Bodgot → Podgod / Bobgot / Bobgot |
-| `sun` | the sun | *Zngagtat /zŋagtat/ | Dngagdad /dŋagdad/ | Ngagtat /ŋagtat/ | Ngagtat /ŋagtat/ | *Zngagtat → Dngagdad / Ngagtat / Ngagtat |
-| `tree` | a woody plant | *Sngob /sŋob/ | Sngop /sŋop/ | Ngob /ŋob/ | Ngob /ŋob/ | *Sngob → Sngop / Ngob / Ngob |
-| `two` | the cardinal number 2 | *Shnadshngaq /ʃnadʃŋaq/ | Shnadshngaq /ʃnadʃŋaq/ | Nabshngaq /nabʃŋaq/ | Mabshngaq /mabʃŋaq/ | *Shnadshngaq → Shnadshngaq / Nabshngaq / Mabshngaq |
-| `under` | beneath; below | *Zngobsnot /zŋobsnot/ | Dngopsnod /dŋopsnod/ | Ngobtnot /ŋobtnot/ | Ngobsmot /ŋobsmot/ | *Zngobsnot → Dngopsnod / Ngobtnot / Ngobsmot |
-| `water` | the drinkable liquid | *Shngoqsngad /ʃŋoqsŋad/ | Shngoqsngad /ʃŋoqsŋad/ | Ngoqtngab /ŋoqtŋab/ | Ngoqsngab /ŋoqsŋab/ | *Shngoqsngad → Shngoqsngad / Ngoqtngab / Ngoqsngab |
-| `west` | the direction of decreasing longitude | *Snad /snad/ | Snad /snad/ | Nab /nab/ | Mab /mab/ | *Snad → Snad / Nab / Mab |
-| `wind` | moving air | *Qat /qat/ | Qad /qad/ | Qat /qat/ | Qat /qat/ | *Qat → Qad / Qat / Qat |
-| `wood-elf-kind` | a wood elf | *Snodzngod /snodzŋod/ | Snoddngod /snoddŋod/ | Nobnngob /nobnŋob/ | Mobsngob /mobsŋob/ | *Snodzngod → Snoddngod / Nobnngob / Mobsngob |
-| `yellow` | the color term for yellow | *Qaqqot /qaqqot/ | Qaqqod /qaqqod/ | Qaqqot /qaqqot/ | Qaqqot /qaqqot/ | *Qaqqot → Qaqqod / Qaqqot / Qaqqot |
+| `blood` | the circulating fluid of a body | *Nabad /nabad/ | Napad /napad/ | Nabab /nabab/ | Mabab /mabab/ | *Nabad → Napad / Nabab / Mabab |
+| `bone` | the rigid frame of a body | *Jagab /jagab/ | Jagap /jagap/ | Jagab /jagab/ | Jagab /jagab/ | *Jagab → Jagap / Jagab / Jagab |
+| `bugbear-kind` | a bugbear | *Xaqad /xaqad/ | Xaqad /xaqad/ | Xaqab /xaqab/ | Xaqab /xaqab/ | *Xaqad → Xaqad / Xaqab / Xaqab |
+| `child` | one's son or daughter | *Sabaj /sabaj/ | Sapaj /sapaj/ | Tabaj /tabaj/ | Sabaj /sabaj/ | *Sabaj → Sapaj / Tabaj / Sabaj |
+| `dark` | the color term for black/dark hues | *Zazang /zazaŋ/ | Dadang /dadaŋ/ | Nanang /nanaŋ/ | Sasang /sasaŋ/ | *Zazang → Dadang / Nanang / Sasang |
+| `day` | the light half of the day-night cycle | *Shanaj /ʃanaj/ | Shanaj /ʃanaj/ | Shanaj /ʃanaj/ | Shamaj /ʃamaj/ | *Shanaj → Shanaj / Shanaj / Shamaj |
+| `desert-dwarf-kind` | a desert dwarf | *Datash /dataʃ/ | Dadash /dadaʃ/ | Batash /bataʃ/ | Batash /bataʃ/ | *Datash → Dadash / Batash / Batash |
+| `desert-elf-kind` | a desert elf | *Tangat /taŋat/ | Dangad /daŋad/ | Tangat /taŋat/ | Tangat /taŋat/ | *Tangat → Dangad / Tangat / Tangat |
+| `die` | to cease living | *Jasan /jasan/ | Jasan /jasan/ | Jatan /jatan/ | Jasam /jasam/ | *Jasan → Jasan / Jatan / Jasam |
+| `drink` | to swallow liquid | *Nangaj /naŋaj/ | Nangaj /naŋaj/ | Nangaj /naŋaj/ | Mangaj /maŋaj/ | *Nangaj → Nangaj / Nangaj / Mangaj |
+| `drow-kind` | a drow | *Shavaz /ʃavaz/ | Shavad /ʃavad/ | Shaban /ʃaban/ | Shavas /ʃavas/ | *Shavaz → Shavad / Shaban / Shavas |
+| `earth` | the ground underfoot | *Zavag /zavag/ | Davag /davag/ | Nabag /nabag/ | Savag /savag/ | *Zavag → Davag / Nabag / Savag |
+| `east` | the direction of increasing longitude | *Gashagav /gaʃagav/ | Gashagav /gaʃagav/ | Gashagab /gaʃagab/ | Gashagav /gaʃagav/ | *Gashagav → Gashagav / Gashagab / Gashagav |
+| `eat` | to consume food | *Shadang /ʃadaŋ/ | Shadang /ʃadaŋ/ | Shabang /ʃabaŋ/ | Shabang /ʃabaŋ/ | *Shadang → Shadang / Shabang / Shabang |
+| `eye` | the organ of sight | *Satan /satan/ | Sadan /sadan/ | Tatan /tatan/ | Satam /satam/ | *Satan → Sadan / Tatan / Satam |
+| `fire` | flame and heat | *Vadad /vadad/ | Vadad /vadad/ | Babab /babab/ | Vabab /vabab/ | *Vadad → Vadad / Babab / Vabab |
+| `foot` | the walking limb-end | *Nazax /nazax/ | Nadax /nadax/ | Nanax /nanax/ | Masax /masax/ | *Nazax → Nadax / Nanax / Masax |
+| `ford` | where a river runs shallow enough to cross | *Shaxas /ʃaxas/ | Shaxas /ʃaxas/ | Shaxat /ʃaxat/ | Shaxas /ʃaxas/ | *Shaxas → Shaxas / Shaxat / Shaxas |
+| `gloom` | the deepest, starless dark | *Sasat /sasat/ | Sasad /sasad/ | Tatat /tatat/ | Sasat /sasat/ | *Sasat → Sasad / Tatat / Sasat |
+| `gnoll-kind` | a gnoll | *Vangaj /vaŋaj/ | Vangaj /vaŋaj/ | Bangaj /baŋaj/ | Vangaj /vaŋaj/ | *Vangaj → Vangaj / Bangaj / Vangaj |
+| `goblin-kind` | a goblin | *Taqaj /taqaj/ | Daqaj /daqaj/ | Taqaj /taqaj/ | Taqaj /taqaj/ | *Taqaj → Daqaj / Taqaj / Taqaj |
+| `god` | a deity | *Jagan /jagan/ | Jagan /jagan/ | Jagan /jagan/ | Jagam /jagam/ | *Jagan → Jagan / Jagan / Jagam |
+| `great` | large in size or extent | *Gagan /gagan/ | Gagan /gagan/ | Gagan /gagan/ | Gagam /gagam/ | *Gagan → Gagan / Gagan / Gagam |
+| `green` | the color term for green | *Ganav /ganav/ | Ganav /ganav/ | Ganab /ganab/ | Gamav /gamav/ | *Ganav → Ganav / Ganab / Gamav |
+| `gully-dwarf-kind` | a gully dwarf | *Xaxang /xaxaŋ/ | Xaxang /xaxaŋ/ | Xaxang /xaxaŋ/ | Xaxang /xaxaŋ/ | *Xaxang → Xaxang / Xaxang / Xaxang |
+| `hand` | the manipulating limb-end | *Javas /javas/ | Javas /javas/ | Jabat /jabat/ | Javas /javas/ | *Javas → Javas / Jabat / Javas |
+| `hearth` | the fire at the center of a home | *Xadat /xadat/ | Xadad /xadad/ | Xabat /xabat/ | Xabat /xabat/ | *Xadat → Xadad / Xabat / Xabat |
+| `high` | far above the ground | *Nganas /ŋanas/ | Nganas /ŋanas/ | Nganat /ŋanat/ | Ngamas /ŋamas/ | *Nganas → Nganas / Nganat / Ngamas |
+| `high-elf-kind` | a high elf | *Qaxav /qaxav/ | Qaxav /qaxav/ | Qaxab /qaxab/ | Qaxav /qaxav/ | *Qaxav → Qaxav / Qaxab / Qaxav |
+| `hill-dwarf-kind` | a hill dwarf | *Ngashax /ŋaʃax/ | Ngashax /ŋaʃax/ | Ngashax /ŋaʃax/ | Ngashax /ŋaʃax/ | *Ngashax → Ngashax / Ngashax / Ngashax |
+| `hobgoblin-kind` | a hobgoblin | *Babaj /babaj/ | Papaj /papaj/ | Babaj /babaj/ | Babaj /babaj/ | *Babaj → Papaj / Babaj / Babaj |
+| `home` | one's dwelling | *Jadan /jadan/ | Jadan /jadan/ | Jaban /jaban/ | Jabam /jabam/ | *Jadan → Jadan / Jaban / Jabam |
+| `human-kind` | a human | *Vavab /vavab/ | Vavap /vavap/ | Babab /babab/ | Vavab /vavab/ | *Vavab → Vavap / Babab / Vavab |
+| `kobold-kind` | a kobold | *Satag /satag/ | Sadag /sadag/ | Tatag /tatag/ | Satag /satag/ | *Satag → Sadag / Tatag / Satag |
+| `light` | the color term for white/light hues | *Bangas /baŋas/ | Pangas /paŋas/ | Bangat /baŋat/ | Bangas /baŋas/ | *Bangas → Pangas / Bangat / Bangas |
+| `little` | small in size or extent | *Danag /danag/ | Danag /danag/ | Banag /banag/ | Bamag /bamag/ | *Danag → Danag / Banag / Bamag |
+| `low` | near the ground | *Xasash /xasaʃ/ | Xasash /xasaʃ/ | Xatash /xataʃ/ | Xasash /xasaʃ/ | *Xasash → Xasash / Xatash / Xasash |
+| `many` | an indefinitely large count | *Dangang /daŋaŋ/ | Dangang /daŋaŋ/ | Bangang /baŋaŋ/ | Bangang /baŋaŋ/ | *Dangang → Dangang / Bangang / Bangang |
+| `moon` | a moon | *Vabat /vabat/ | Vapad /vapad/ | Babat /babat/ | Vabat /vabat/ | *Vabat → Vapad / Babat / Vabat |
+| `mouth` | the organ of eating and speech | *Naqang /naqaŋ/ | Naqang /naqaŋ/ | Naqang /naqaŋ/ | Maqang /maqaŋ/ | *Naqang → Naqang / Naqang / Maqang |
+| `move` | to go from one place to another | *Sanash /sanaʃ/ | Sanash /sanaʃ/ | Tanash /tanaʃ/ | Samash /samaʃ/ | *Sanash → Sanash / Tanash / Samash |
+| `name` | a word that identifies one who bears it | *Gavash /gavaʃ/ | Gavash /gavaʃ/ | Gabash /gabaʃ/ | Gavash /gavaʃ/ | *Gavash → Gavash / Gabash / Gavash |
+| `new` | recently come to be | *Gatab /gatab/ | Gadap /gadap/ | Gatab /gatab/ | Gatab /gatab/ | *Gatab → Gadap / Gatab / Gatab |
+| `night` | the dark half of the day-night cycle | *Ngaxash /ŋaxaʃ/ | Ngaxash /ŋaxaʃ/ | Ngaxash /ŋaxaʃ/ | Ngaxash /ŋaxaʃ/ | *Ngaxash → Ngaxash / Ngaxash / Ngaxash |
+| `north` | toward the pole of increasing latitude | *Bashab /baʃab/ | Pashap /paʃap/ | Bashab /baʃab/ | Bashab /baʃab/ | *Bashab → Pashap / Bashab / Bashab |
+| `old` | long in existence | *Nasab /nasab/ | Nasap /nasap/ | Natab /natab/ | Masab /masab/ | *Nasab → Nasap / Natab / Masab |
+| `one` | the cardinal number 1 | *Dashat /daʃat/ | Dashad /daʃad/ | Bashat /baʃat/ | Bashat /baʃat/ | *Dashat → Dashad / Bashat / Bashat |
+| `over` | above; atop | *Jabang /jabaŋ/ | Japang /japaŋ/ | Jabang /jabaŋ/ | Jabang /jabaŋ/ | *Jabang → Japang / Jabang / Jabang |
+| `parent` | one's father or mother | *Shajab /ʃajab/ | Shajap /ʃajap/ | Shajab /ʃajab/ | Shajab /ʃajab/ | *Shajab → Shajap / Shajab / Shajab |
+| `person` | a person; a member of a people (the autonym root) | *Vazav /vazav/ | Vadav /vadav/ | Banab /banab/ | Vasav /vasav/ | *Vazav → Vadav / Banab / Vasav |
+| `red` | the color term for red | *Zatat /zatat/ | Dadad /dadad/ | Natat /natat/ | Satat /satat/ | *Zatat → Dadad / Natat / Satat |
+| `rest` | to stop and recover strength | *Jashash /jaʃaʃ/ | Jashash /jaʃaʃ/ | Jashash /jaʃaʃ/ | Jashash /jaʃaʃ/ | *Jashash → Jashash / Jashash / Jashash |
+| `river` | fresh water running across land | *Tadash /tadaʃ/ | Dadash /dadaʃ/ | Tabash /tabaʃ/ | Tabash /tabaʃ/ | *Tadash → Dadash / Tabash / Tabash |
+| `sea-elf-kind` | a sea elf | *Ngatax /ŋatax/ | Ngadax /ŋadax/ | Ngatax /ŋatax/ | Ngatax /ŋatax/ | *Ngatax → Ngadax / Ngatax / Ngatax |
+| `sibling` | one's brother or sister | *Xazag /xazag/ | Xadag /xadag/ | Xanag /xanag/ | Xasag /xasag/ | *Xazag → Xadag / Xanag / Xasag |
+| `sleep` | to rest unconscious | *Qaqaj /qaqaj/ | Qaqaj /qaqaj/ | Qaqaj /qaqaj/ | Qaqaj /qaqaj/ | *Qaqaj → Qaqaj / Qaqaj / Qaqaj |
+| `snow-elf-kind` | a snow elf | *Shashad /ʃaʃad/ | Shashad /ʃaʃad/ | Shashab /ʃaʃab/ | Shashab /ʃaʃab/ | *Shashad → Shashad / Shashab / Shashab |
+| `south` | toward the pole of decreasing latitude | *Tajaj /tajaj/ | Dajaj /dajaj/ | Tajaj /tajaj/ | Tajaj /tajaj/ | *Tajaj → Dajaj / Tajaj / Tajaj |
+| `spirit` | a lesser or unseen supernatural presence | *Javav /javav/ | Javav /javav/ | Jabab /jabab/ | Javav /javav/ | *Javav → Javav / Jabab / Javav |
+| `star` | a fixed point of light in the night sky | *Nashas /naʃas/ | Nashas /naʃas/ | Nashat /naʃat/ | Mashas /maʃas/ | *Nashas → Nashas / Nashat / Mashas |
+| `stone` | rock | *Shazaq /ʃazaq/ | Shadaq /ʃadaq/ | Shanaq /ʃanaq/ | Shasaq /ʃasaq/ | *Shazaq → Shadaq / Shanaq / Shasaq |
+| `sun` | the sun | *Qashax /qaʃax/ | Qashax /qaʃax/ | Qashax /qaʃax/ | Qashax /qaʃax/ | *Qashax → Qashax / Qashax / Qashax |
+| `tree` | a woody plant | *Najan /najan/ | Najan /najan/ | Najan /najan/ | Majam /majam/ | *Najan → Najan / Najan / Majam |
+| `two` | the cardinal number 2 | *Tavad /tavad/ | Davad /davad/ | Tabab /tabab/ | Tavab /tavab/ | *Tavad → Davad / Tabab / Tavab |
+| `under` | beneath; below | *Qavaz /qavaz/ | Qavad /qavad/ | Qaban /qaban/ | Qavas /qavas/ | *Qavaz → Qavad / Qaban / Qavas |
+| `water` | the drinkable liquid | *Xanab /xanab/ | Xanap /xanap/ | Xanab /xanab/ | Xamab /xamab/ | *Xanab → Xanap / Xanab / Xamab |
+| `west` | the direction of decreasing longitude | *Vashaj /vaʃaj/ | Vashaj /vaʃaj/ | Bashaj /baʃaj/ | Vashaj /vaʃaj/ | *Vashaj → Vashaj / Bashaj / Vashaj |
+| `wind` | moving air | *Nataq /nataq/ | Nadaq /nadaq/ | Nataq /nataq/ | Mataq /mataq/ | *Nataq → Nadaq / Nataq / Mataq |
+| `wood-elf-kind` | a wood elf | *Vaxad /vaxad/ | Vaxad /vaxad/ | Baxab /baxab/ | Vaxab /vaxab/ | *Vaxad → Vaxad / Baxab / Vaxab |
+| `yellow` | the color term for yellow | *Qadan /qadan/ | Qadan /qadan/ | Qaban /qaban/ | Qabam /qabam/ | *Qadan → Qadan / Qaban / Qabam |
 
 ### Elf
 

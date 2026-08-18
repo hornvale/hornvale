@@ -59,7 +59,7 @@ The air organizes into a single day–night overturning (tidally locked); 10 lan
 Some 5% of the surface is habitable — land with water and a tolerable season.
 
 - **Gaodao** — tropical-seasonal-forest
-- **Qaddnoqngagdad (21.1°S, 53.7°W)** — savanna
+- **Shaxasqashax (21.1°S, 53.7°W)** — savanna
 - **Zzoanggengngongshzang** — savanna
 - **Szoang** — savanna
 - **Ngengpengpang** — savanna
@@ -72,13 +72,13 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Deota** — taiga
 - **Notata** — tropical-seasonal-forest
 - **Tataba** — savanna
-- **Ngogtngobngoqtngabqob** — savanna
-- **Battngaqngogtngob** — savanna
+- **Katankanabnabag** — savanna
+- **Shababkatan** — savanna
 - **Zromgo** — tropical-seasonal-forest
 - **Momshra** — temperate-forest
-- **Batsngaqngogsngob** — savanna
-- **Totbaq** — taiga
-- **Qabsmoq** — tropical-seasonal-forest
+- **Shababkasas** — savanna
+- **Bashag** — taiga
+- **Shakas** — tropical-seasonal-forest
 - **Noabano of the hobgoblins** — tropical-seasonal-forest
 - **Gaebaebobeqa** — tropical-seasonal-forest
 - **Vaerope** — savanna
@@ -103,41 +103,41 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Xooxo** — taiga
 - **Vaeroere** — savanna
 - **Babo** — tropical-seasonal-forest
-- **Shnaddagqaddnoq** — alpine
-- **Qaddnoq (51.6°S, 18.6°E)** — savanna
+- **Vagavshaxas** — alpine
+- **Shaxas (51.6°S, 18.6°E)** — savanna
 - **Domzhreo (40.3°S, 75.6°W)** — temperate-forest
 - **Babobodeta** — tropical-seasonal-forest
 - **Ga** — tropical-seasonal-forest
 - **Domzhreo (41.2°S, 76.2°W)** — temperate-forest
-- **Qaddnoq (21.4°S, 51.6°W)** — savanna
-- **Ngagdad (21.0°S, 50.5°W)** — savanna
+- **Shaxas (21.4°S, 51.6°W)** — savanna
+- **Qashax (21.0°S, 50.5°W)** — savanna
 - **Bongsrong** — temperate-forest
 - **Naabee** — tropical-seasonal-forest
-- **Qaddnoqdod** — savanna
-- **Shngogsngoddadsngad** — savanna
+- **Shaxasdadag** — savanna
+- **Xasadnganax** — savanna
 - **Bobeqaqeba** — tropical-seasonal-forest
-- **Dadsngaddadsngaq** — savanna
+- **Nganaxshavav** — savanna
 - **Nobeno** — tropical-seasonal-forest
 - **Babono** — tropical-seasonal-forest
 - **Noabe (37.2°S, 66.1°W)** — tropical-seasonal-forest
-- **Ngagdad (20.6°S, 49.3°W)** — savanna
+- **Qashax (20.6°S, 49.3°W)** — savanna
 - **Nobebagokoto** — tropical-seasonal-forest
 - **Boongbang** — taiga
 - **Zrongbong** — taiga
 - **Doo** — tropical-seasonal-forest
-- **Ngagdad (20.2°S, 48.1°W)** — savanna
+- **Qashax (20.2°S, 48.1°W)** — savanna
 - **Doaba** — tropical-rainforest
 - **Takebagono** — tropical-seasonal-forest
 - **Neenebago** — tropical-seasonal-forest
-- **Qaddnoqngagdad (19.2°S, 47.9°W)** — savanna
-- **Ngagdadshngogsngod** — savanna
+- **Shaxasqashax (19.2°S, 47.9°W)** — savanna
+- **Qashaxxasad** — savanna
 - **Bobeqaneene** — tropical-seasonal-forest
 - **Naabeenoabea** — tropical-seasonal-forest
 - **Bagonobe** — tropical-seasonal-forest
 - **Bodoqa** — savanna
 - **Qobao** — tropical-seasonal-forest
 - **Zrongbongbongbong** — taiga
-- **Dadsnadngagdad** — savanna
+- **Dadashqashax** — savanna
 - **Xao (24.9°S, 76.1°W)** — alpine
 - **Doabo (55.1°S, 42.7°E)** — tropical-seasonal-forest
 - **Xoraro (24.7°S, 74.8°W)** — alpine
@@ -269,14 +269,14 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 The land holds 163 settlement(s).
 The chief bugbear settlement, Gaodao, holds 66 souls amid tropical-seasonal-forest.
-The chief desert-dwarf settlement, Qaddnoqngagdad, holds 57 souls amid savanna.
+The chief desert-dwarf settlement, Shaxasqashax, holds 57 souls amid savanna.
 The chief desert-elf settlement, Zzoanggengngongshzang, holds 27 souls amid savanna.
 The chief drow settlement, Roggo, holds 14 souls amid desert.
 The chief gnoll settlement, Psosngashma, holds 30 souls amid savanna.
 The chief goblin settlement, Deota, holds 32 souls amid taiga.
-The chief gully-dwarf settlement, Ngogtngobngoqtngabqob, holds 35 souls amid savanna.
+The chief gully-dwarf settlement, Katankanabnabag, holds 35 souls amid savanna.
 The chief high-elf settlement, Zromgo, holds 24 souls amid tropical-seasonal-forest.
-The chief hill-dwarf settlement, Batsngaqngogsngob, holds 35 souls amid savanna.
+The chief hill-dwarf settlement, Shababkasas, holds 35 souls amid savanna.
 The chief hobgoblin settlement, Noabano, holds 85 souls amid tropical-seasonal-forest.
 The chief human settlement, Vaerope, holds 34 souls amid savanna.
 The chief kobold settlement, Rooxaro, holds 45 souls amid savanna.
@@ -290,9 +290,9 @@ Gaodao lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The desert-dwarf waterhold of **Qaddnoqngagdad**, population 57.
+The desert-dwarf waterhold of **Shaxasqashax**, population 57.
 
-Qaddnoqngagdad lives by farming.
+Shaxasqashax lives by farming.
 Its roles, lowest to highest: well-tender, waterwarden.
 The desert-dwarf run a basal metabolism of 79 W; slow, long-lived, and sparse, lifespan ~272 yr, matures ~54 yr.
 
@@ -320,9 +320,9 @@ Deota lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The gully-dwarf midden of **Ngogtngobngoqtngabqob**, population 35.
+The gully-dwarf midden of **Katankanabnabag**, population 35.
 
-Ngogtngobngoqtngabqob lives by farming.
+Katankanabnabag lives by farming.
 Its roles, lowest to highest: scrounger, eldest.
 The gully-dwarf run a basal metabolism of 75 W; slow, long-lived, and sparse, lifespan ~268 yr, matures ~54 yr.
 
@@ -332,9 +332,9 @@ Zromgo lives by farming.
 Its roles, lowest to highest: steward, loresinger, archivist.
 The high-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
-The hill-dwarf steading of **Batsngaqngogsngob**, population 35.
+The hill-dwarf steading of **Shababkasas**, population 35.
 
-Batsngaqngogsngob lives by farming.
+Shababkasas lives by farming.
 Its roles, lowest to highest: crofter, thane.
 The hill-dwarf run a basal metabolism of 82 W; slow, long-lived, and sparse, lifespan ~276 yr, matures ~55 yr.
 
@@ -398,25 +398,25 @@ In the lair of **Gaodao**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-The waterhold of **Qaddnoqngagdad** keeps its own folk pantheon:
+The waterhold of **Shaxasqashax** keeps its own folk pantheon:
 
-> Dngagdad Dngagdadpoqshngap is: Dngagdad Dngagdadpoqshngap is always watching. That's how it's always been. That's how it's always been. Dngagdad is a great one among the gods.
+> Qashax Qashaxpangas is: Qashax Qashaxpangas is always watching. That's how it's always been. That's how it's always been. Qashax is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Gaddad Gaddad comes back every 71.04 days. That's how it's always been. That's how it's always been. Gaddad is a great one among the gods.
+> Naxav Naxav comes back every 71.04 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Gaddad Gaddad comes back every 1991.56 days. That's how it's always been. That's how it's always been. Gaddad is a great one among the gods.
+> Naxav Naxav comes back every 1991.56 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Dap Dap is felt more than seen. That's how it's always been. That's how it's always been. Dap is a great one among the gods.
+> Sasad Sasad is felt more than seen. That's how it's always been. That's how it's always been. Sasad is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Dap Dap is felt more than seen. That's how it's always been. That's how it's always been. Dap is a great one among the gods.
+> Sasad Sasad is felt more than seen. That's how it's always been. That's how it's always been. Sasad is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
@@ -512,33 +512,33 @@ In the village of **Deota**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The midden of **Ngogtngobngoqtngabqob** keeps its own folk pantheon:
+The midden of **Katankanabnabag** keeps its own folk pantheon:
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Ngagtat Boqshngabngagtat is: Ngagtat Boqshngabngagtat is always watching. That's how it's always been. That's how it's always been. Ngagtat is a great one among the gods.
+> Qashak Bangatqashak is: Qashak Bangatqashak is always watching. That's how it's always been. That's how it's always been. Qashak is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
-> Gattab Gattab comes back every 71.04 days. That's how it's always been. That's how it's always been. Gattab is a great one among the gods.
+> Nakab Nakab comes back every 71.04 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Gattab Gattab comes back every 1991.56 days. That's how it's always been. That's how it's always been. Gattab is a great one among the gods.
+> Nakab Nakab comes back every 1991.56 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
@@ -568,9 +568,9 @@ In the citadel of **Zromgo**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The steading of **Batsngaqngogsngob** keeps its own folk pantheon:
+The steading of **Shababkasas** keeps its own folk pantheon:
 
-> Ngagtat Ngagtat is: Ngagtat Ngagtat is always watching. That's how it's always been.
+> Qashak Qashak is: Qashak Qashak is always watching. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -582,15 +582,15 @@ The steading of **Batsngaqngogsngob** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Tab Tab is felt more than seen. That's how it's always been.
+> Sasat Sasat is felt more than seen. That's how it's always been.
 >
 > — derived from the phenomenon *tide*
 
-> Tab Tab is felt more than seen. That's how it's always been.
+> Sasat Sasat is felt more than seen. That's how it's always been.
 >
 > — derived from the phenomenon *heat*
 
-> Tab Tab is felt more than seen. That's how it's always been.
+> Sasat Sasat is felt more than seen. That's how it's always been.
 >
 > — derived from the phenomenon *tide*
 

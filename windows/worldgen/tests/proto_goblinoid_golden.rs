@@ -10,7 +10,7 @@
 //! either assertion below breaks, the ancestor moved, and every daughter's
 //! cognate forms moved with it.
 use hornvale_kernel::{Correspondent, Seed, Void, World};
-use hornvale_language::{assign_proto_roots, ipa, render_views, romanize};
+use hornvale_language::{assign_proto_roots, ipa, render_views, romanize, typology_for};
 use hornvale_worldgen::{WorldComponents, family_daughters, proto_phonology_of, register_all};
 
 /// The family this golden pins — the campaign's only multi-member family.
@@ -78,7 +78,9 @@ fn render_root_table_snapshot(world: &World) -> String {
         .map(|c| c.name.as_str())
         .filter(|name| !is_unnameable(world, name))
         .collect();
-    let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe, &daughters);
+    let typ = typology_for(Some(FAMILY));
+    let assignment =
+        assign_proto_roots(&world.seed, FAMILY, &phonology, &typ, &universe, &daughters);
     let mut lines = Vec::new();
     for concept in world.registry.concepts() {
         if is_unnameable(world, &concept.name) {

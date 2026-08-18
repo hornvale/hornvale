@@ -75,8 +75,8 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 
 - **Doaba** — tropical-rainforest
 - **Gaodadodo** — tropical-seasonal-forest
-- **Qaddnoqngoqsngadqod** — shrubland
-- **Qagsngop** — temperate-forest
+- **Shaxasxanapdavag** — shrubland
+- **Panang** — temperate-forest
 - **Ngoangszaong** — shrubland
 - **Zaangngoong (33.4°S, 156.4°W)** — shrubland
 - **Goo (16.6°N, 131.8°E)** — temperate-forest
@@ -85,11 +85,11 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Nenotata** — temperate-forest
 - **Naadee** — temperate-forest
 - **Bote (21.7°N, 145.0°E)** — temperate-forest
-- **Qabnnoq** — tropical-seasonal-forest
-- **Totnngob** — shrubland
-- **Matsngabngag** — temperate-forest
-- **Matsngabmobbog** — temperate-forest
-- **Tabsmatngoqsngabqob** — temperate-forest
+- **Shakat** — tropical-seasonal-forest
+- **Tanan** — shrubland
+- **Mabashsajat** — temperate-forest
+- **Mabashsabag** — temperate-forest
+- **Tabashgamabsabag** — temperate-forest
 - **Rororararo** — shrubland
 - **Shreannaensraunduundun** — kelp-forest
 - **Srunzhruun** — coral-reef
@@ -367,14 +367,14 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 The land holds 241 settlement(s).
 The chief bugbear settlement, Doaba, holds 68 souls amid tropical-rainforest.
-The chief desert-dwarf settlement, Qaddnoqngoqsngadqod, holds 51 souls amid shrubland.
+The chief desert-dwarf settlement, Shaxasxanapdavag, holds 51 souls amid shrubland.
 The chief desert-elf settlement, Ngoangszaong, holds 22 souls amid shrubland.
 The chief drow settlement, Goo, holds 29 souls amid temperate-forest.
 The chief gnoll settlement, Psaxqsoxpshapzhaznoqzha, holds 32 souls amid shrubland.
 The chief goblin settlement, Nenotata, holds 37 souls amid temperate-forest.
-The chief gully-dwarf settlement, Qabnnoq, holds 37 souls amid tropical-seasonal-forest.
+The chief gully-dwarf settlement, Shakat, holds 37 souls amid tropical-seasonal-forest.
 The chief high-elf settlement, Shromdee, holds 34 souls amid temperate-forest.
-The chief hill-dwarf settlement, Matsngabngag, holds 35 souls amid temperate-forest.
+The chief hill-dwarf settlement, Mabashsajat, holds 35 souls amid temperate-forest.
 The chief hobgoblin settlement, Bobeqa, holds 73 souls amid temperate-forest.
 The chief human settlement, Pere, holds 32 souls amid temperate-forest.
 The chief kobold settlement, Rororararo, holds 48 souls amid shrubland.
@@ -388,9 +388,9 @@ Doaba lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The desert-dwarf waterhold of **Qaddnoqngoqsngadqod**, population 51.
+The desert-dwarf waterhold of **Shaxasxanapdavag**, population 51.
 
-Qaddnoqngoqsngadqod lives by fishing.
+Shaxasxanapdavag lives by fishing.
 Its roles, lowest to highest: well-tender, waterwarden.
 The desert-dwarf run a basal metabolism of 79 W; slow, long-lived, and sparse, lifespan ~272 yr, matures ~54 yr.
 
@@ -418,9 +418,9 @@ Nenotata lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The gully-dwarf midden of **Qabnnoq**, population 37.
+The gully-dwarf midden of **Shakat**, population 37.
 
-Qabnnoq lives by farming.
+Shakat lives by farming.
 Its roles, lowest to highest: scrounger, mutterer, eldest.
 The gully-dwarf run a basal metabolism of 75 W; slow, long-lived, and sparse, lifespan ~268 yr, matures ~54 yr.
 
@@ -430,9 +430,9 @@ Shromdee lives by farming.
 Its roles, lowest to highest: steward, loresinger, archivist.
 The high-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
-The hill-dwarf steading of **Matsngabngag**, population 35.
+The hill-dwarf steading of **Mabashsajat**, population 35.
 
-Matsngabngag lives by farming.
+Mabashsajat lives by farming.
 Its roles, lowest to highest: crofter, stonespeaker, thane.
 The hill-dwarf run a basal metabolism of 82 W; slow, long-lived, and sparse, lifespan ~276 yr, matures ~55 yr.
 
@@ -512,41 +512,41 @@ In the lair of **Doaba**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-The waterhold of **Qaddnoqngoqsngadqod** keeps its own folk pantheon:
+The waterhold of **Shaxasxanapdavag** keeps its own folk pantheon:
 
-> Gaddad Gaddad comes back every 112.53 days. That's how it's always been. That's how it's always been. Gaddad is a great one among the gods.
+> Naxav Naxav comes back every 112.53 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Gaddad Gaddad comes back every 3111.86 days. That's how it's always been. That's how it's always been. Gaddad is a great one among the gods.
+> Naxav Naxav comes back every 3111.86 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Gaddad Gaddad comes back every 386.98 days. That's how it's always been. That's how it's always been. Gaddad is a great one among the gods.
+> Naxav Naxav comes back every 386.98 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *wandering-star*
 
-> Gaddaddaqshngop Gaddad comes back every 15.99 days. That's how it's always been. That's how it's always been. Gaddaddaqshngop is a great one among the gods.
+> Naxavvapad Naxav comes back every 15.99 days. That's how it's always been. That's how it's always been. Naxavvapad is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dngagdadgaddad Gaddaddngagdad comes back every 0.88 days. That's how it's always been. That's how it's always been. Dngagdadgaddad is a great one among the gods.
+> Qashaxnaxav Naxavqashax comes back every 0.88 days. That's how it's always been. That's how it's always been. Qashaxnaxav is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Gaddad Gaddad comes back every 71.04 days. That's how it's always been. That's how it's always been. Gaddad is a great one among the gods.
+> Naxav Naxav comes back every 71.04 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Gaddaddaqshngop Gaddad comes back every 32.55 days. That's how it's always been. That's how it's always been. Gaddaddaqshngop is a great one among the gods.
+> Naxavvapad Naxav comes back every 32.55 days. That's how it's always been. That's how it's always been. Naxavvapad is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Gaddad Gaddad comes back every 1991.56 days. That's how it's always been. That's how it's always been. Gaddad is a great one among the gods.
+> Naxav Naxav comes back every 1991.56 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Dap Dap is felt more than seen. That's how it's always been. That's how it's always been. Dap is a great one among the gods.
+> Sasad Sasad is felt more than seen. That's how it's always been. That's how it's always been. Sasad is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
@@ -706,49 +706,49 @@ In the village of **Nenotata**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the midden of **Qabnnoq**, an organized priesthood tends its own pantheon:
+In the midden of **Shakat**, an organized priesthood tends its own pantheon:
 
-> Gattab Gattab comes back every 112.53 days. That's how it's always been. That's how it's always been. Gattab is a great one among the gods.
+> Nakab Nakab comes back every 112.53 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Gattab Gattab comes back every 3111.86 days. That's how it's always been. That's how it's always been. Gattab is a great one among the gods.
+> Nakab Nakab comes back every 3111.86 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Gattab Gattab comes back every 386.98 days. That's how it's always been. That's how it's always been. Gattab is a great one among the gods.
+> Nakab Nakab comes back every 386.98 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *wandering-star*
 
-> Baqshngob Gattab comes back every 15.99 days. That's how it's always been. That's how it's always been. Baqshngob is a great one among the gods.
+> Babat Nakab comes back every 15.99 days. That's how it's always been. That's how it's always been. Babat is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Ngagtat Gattab comes back every 0.88 days. That's how it's always been. That's how it's always been. Ngagtat is a great one among the gods.
+> Qashak Nakab comes back every 0.88 days. That's how it's always been. That's how it's always been. Qashak is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Gattab Gattab comes back every 71.04 days. That's how it's always been. That's how it's always been. Gattab is a great one among the gods.
+> Nakab Nakab comes back every 71.04 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Baqshngob Baqshngob comes back every 32.55 days. That's how it's always been. That's how it's always been. Baqshngob is a great one among the gods.
+> Babat Babat comes back every 32.55 days. That's how it's always been. That's how it's always been. Babat is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Gattab Gattab comes back every 1991.56 days. That's how it's always been. That's how it's always been. Gattab is a great one among the gods.
+> Nakab Nakab comes back every 1991.56 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
@@ -794,9 +794,9 @@ In the citadel of **Shromdee**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the steading of **Matsngabngag**, an organized priesthood tends its own pantheon:
+In the steading of **Mabashsajat**, an organized priesthood tends its own pantheon:
 
-> Ngagtat Ngagtat comes back every 0.88 days. That's how it's always been.
+> Qashak Qashak comes back every 0.88 days. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -820,19 +820,19 @@ In the steading of **Matsngabngag**, an organized priesthood tends its own panth
 >
 > — derived from the phenomenon *wandering-star*
 
-> Baqshngob Baqshngob comes back every 15.99 days. That's how it's always been.
+> Babat Babat comes back every 15.99 days. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Baqshngob Baqshngob comes back every 32.55 days. That's how it's always been.
+> Babat Babat comes back every 32.55 days. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Tab Tab is felt more than seen. That's how it's always been.
+> Sasat Sasat is felt more than seen. That's how it's always been.
 >
 > — derived from the phenomenon *tide*
 
-> Tab Tab is felt more than seen. That's how it's always been.
+> Sasat Sasat is felt more than seen. That's how it's always been.
 >
 > — derived from the phenomenon *tide*
 

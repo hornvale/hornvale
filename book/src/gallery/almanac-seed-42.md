@@ -26,8 +26,8 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 
 - **Daadoo** — tropical-rainforest
 - **Doabo** — tropical-seasonal-forest
-- **Sngoqsngaq** — shrubland
-- **Snaddngodqaddnoq** — shrubland
+- **Sadad** — shrubland
+- **Dapavshaxas** — shrubland
 - **Zzoanggengshzeangngaengszaong** — temperate-grassland
 - **Goongshzoengngongshzang** — temperate-grassland
 - **Szoang** — temperate-grassland
@@ -37,12 +37,12 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Na (21.6°S, 44.4°W)** — temperate-forest
 - **Naadee** — temperate-forest
 - **Babo (14.0°S, 48.6°W)** — temperate-forest
-- **Tabtnat** — tropical-seasonal-forest
-- **Qabnnoqtabtnat** — shrubland
+- **Tabash** — tropical-seasonal-forest
+- **Shakattabash** — shrubland
 - **Shromdeemomshra** — temperate-forest
 - **Sraoshreammaedomzhreo** — temperate-forest
-- **Matsngabmobbog** — temperate-forest
-- **Tabsmatngoqsngabqob** — temperate-forest
+- **Mabashsabag** — temperate-forest
+- **Tabashgamabsabag** — temperate-forest
 - **Naabee** — temperate-forest
 - **To** — temperate-forest
 - **Gaebae** — tropical-seasonal-forest
@@ -66,10 +66,10 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Qata** — temperate-forest
 - **Rora** — temperate-forest
 - **Qata** — tropical-seasonal-forest
-- **Tabsmatngatsmot** — temperate-forest
+- **Tabashkakaj** — temperate-forest
 - **Perareko** — temperate-forest
 - **Poogpao** — temperate-forest
-- **Ngoqsngabbotsngog** — temperate-forest
+- **Gamabbamag** — temperate-forest
 - **Do** — temperate-forest
 - **Reko** — temperate-forest
 - **Dagga (17.5°S, 32.6°E)** — temperate-forest
@@ -93,12 +93,12 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Googshroo** — temperate-forest
 - **Bago (27.3°N, 15.6°E)** — temperate-forest
 - **Na (28.0°N, 16.4°E)** — temperate-forest
-- **Dadsnad** — shrubland
-- **Qaddnoq** — shrubland
+- **Dadash** — shrubland
+- **Shaxas** — shrubland
 - **Roere** — temperate-forest
 - **Pogsrorogdoo (16.4°S, 30.7°E)** — temperate-forest
 - **Daadoo** — temperate-forest
-- **Shngoqsngaddodsngogdngagdadshngogsngop** — shrubland
+- **Xanapdanagqashaxqadad** — shrubland
 - **Da (21.3°N, 138.7°E)** — temperate-forest
 - **Poo** — temperate-forest
 - **Rogdoo (15.2°S, 32.6°E)** — temperate-forest
@@ -313,14 +313,14 @@ The residue's dominant hazard is structural collapse — 735 layers so afflicted
 
 The land holds 242 settlement(s).
 The chief bugbear settlement, Daadoo, holds 70 souls amid tropical-rainforest.
-The chief desert-dwarf settlement, Sngoqsngaq, holds 63 souls amid shrubland.
+The chief desert-dwarf settlement, Sadad, holds 63 souls amid shrubland.
 The chief desert-elf settlement, Zzoanggengshzeangngaengszaong, holds 24 souls amid temperate-grassland.
 The chief drow settlement, Bogaoggoo, holds 24 souls amid tropical-seasonal-forest.
 The chief gnoll settlement, Dzhap, holds 30 souls amid shrubland.
 The chief goblin settlement, Na, holds 40 souls amid temperate-forest.
-The chief gully-dwarf settlement, Tabtnat, holds 37 souls amid tropical-seasonal-forest.
+The chief gully-dwarf settlement, Tabash, holds 37 souls amid tropical-seasonal-forest.
 The chief high-elf settlement, Shromdeemomshra, holds 35 souls amid temperate-forest.
-The chief hill-dwarf settlement, Matsngabmobbog, holds 37 souls amid temperate-forest.
+The chief hill-dwarf settlement, Mabashsabag, holds 37 souls amid temperate-forest.
 The chief hobgoblin settlement, Naabee, holds 83 souls amid temperate-forest.
 The chief human settlement, Perevae, holds 36 souls amid temperate-forest.
 The chief kobold settlement, Xaxaro, holds 43 souls amid taiga.
@@ -334,9 +334,9 @@ Daadoo lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The desert-dwarf waterhold of **Sngoqsngaq**, population 63.
+The desert-dwarf waterhold of **Sadad**, population 63.
 
-Sngoqsngaq lives by fishing.
+Sadad lives by fishing.
 Its roles, lowest to highest: well-tender, waterwarden.
 The desert-dwarf run a basal metabolism of 79 W; slow, long-lived, and sparse, lifespan ~272 yr, matures ~54 yr.
 
@@ -364,9 +364,9 @@ Na lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The gully-dwarf midden of **Tabtnat**, population 37.
+The gully-dwarf midden of **Tabash**, population 37.
 
-Tabtnat lives by farming.
+Tabash lives by farming.
 Its roles, lowest to highest: scrounger, mutterer, eldest.
 The gully-dwarf run a basal metabolism of 75 W; slow, long-lived, and sparse, lifespan ~268 yr, matures ~54 yr.
 
@@ -376,9 +376,9 @@ Shromdeemomshra lives by farming.
 Its roles, lowest to highest: steward, loresinger, archivist.
 The high-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
-The hill-dwarf steading of **Matsngabmobbog**, population 37.
+The hill-dwarf steading of **Mabashsabag**, population 37.
 
-Matsngabmobbog lives by farming.
+Mabashsabag lives by farming.
 Its roles, lowest to highest: crofter, stonespeaker, thane.
 The hill-dwarf run a basal metabolism of 82 W; slow, long-lived, and sparse, lifespan ~276 yr, matures ~55 yr.
 
@@ -426,9 +426,9 @@ In the lair of **Daadoo**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-The waterhold of **Sngoqsngaq** keeps its own folk pantheon:
+The waterhold of **Sadad** keeps its own folk pantheon:
 
-> Dngagdad Dngagdadpoqshngap is: Dngagdad Dngagdadpoqshngap is always watching. That's how it's always been. That's how it's always been. Dngagdad is a great one among the gods.
+> Qashax Qashaxpangas is: Qashax Qashaxpangas is always watching. That's how it's always been. That's how it's always been. Qashax is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -456,13 +456,13 @@ In the village of **Na**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-In the midden of **Tabtnat**, an organized priesthood tends its own pantheon:
+In the midden of **Tabash**, an organized priesthood tends its own pantheon:
 
-> Boqshngab Boqshngabngagtat is: Boqshngab Boqshngabngagtat is always watching. That's how it's always been. That's how it's always been. Boqshngab is a great one among the gods.
+> Bangat Bangatqashak is: Bangat Bangatqashak is always watching. That's how it's always been. That's how it's always been. Bangat is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Tab Tab is felt more than seen. That's how it's always been. That's how it's always been. Tab is a great one among the gods.
+> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
@@ -472,9 +472,9 @@ In the citadel of **Shromdeemomshra**, an organized priesthood tends its own pan
 >
 > — derived from the phenomenon *celestial-body*
 
-In the steading of **Matsngabmobbog**, an organized priesthood tends its own pantheon:
+In the steading of **Mabashsabag**, an organized priesthood tends its own pantheon:
 
-> Ngagtat Ngagtat is: Ngagtat Ngagtat is always watching. That's how it's always been.
+> Qashak Qashak is: Qashak Qashak is always watching. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 

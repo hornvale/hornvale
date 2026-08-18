@@ -34,201 +34,201 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
-| `abyssal` | a biome class | *Qag | /qag/ |
-| `abyssal-plain` | The flat floor of the deep ocean. | *Shnaq | /ʃnaq/ |
-| `alpine` | a biome class | *Tog | /tog/ |
-| `bait-ball` | A dense turning mass of fish. | *Shnatshngoq | /ʃnatʃŋoq/ |
-| `barley` | a staple crop | *Shnaddog | /ʃnaddog/ |
-| `bathypelagic` | a biome class | *Shngad | /ʃŋad/ |
-| `black-dragon-kind` | a black dragon | *Taqsngaq | /taqsŋaq/ |
-| `blood` | the circulating fluid of a body | *Snog | /snog/ |
-| `blue` | the color term for blue | *Gat | /gat/ |
-| `bone` | the rigid frame of a body | *Tad | /tad/ |
-| `boreal-stand` | A stand of northern conifers. | *Snab | /snab/ |
-| `brown` | the color term for brown | *Gabzngot | /gabzŋot/ |
-| `bugbear-kind` | a bugbear | *Tat | /tat/ |
-| `burn` | Ground recovering from fire. | *Snodznad | /snodznad/ |
-| `carrion-crawler-kind` | a carrion crawler | *Bot | /bot/ |
-| `child` | one's son or daughter | *Dotqod | /dotqod/ |
-| `closed-canopy` | Tall closed-canopy tropical forest. | *Shnoqsngab | /ʃnoqsŋab/ |
-| `coast` | where the land meets the sea | *Gab | /gab/ |
-| `cold` | felt, biting chill | *Dob | /dob/ |
-| `cold-upwelling` | Cold nutrient-rich water rising from below. | *Shnabbob | /ʃnabbob/ |
-| `coral-head` | A massive coral colony standing proud of the reef. | *Shngaq | /ʃŋaq/ |
-| `coral-reef` | a biome class | *Goggob | /goggob/ |
-| `crevasse-field` | Ice split by crevasses. | *Shnadzngod | /ʃnadzŋod/ |
-| `damp-hollow` | A shaded, wet fold in the forest floor. | *Baqqob | /baqqob/ |
-| `dark` | the color term for black/dark hues | *Zngog | /zŋog/ |
-| `day` | the light half of the day-night cycle | *Gag | /gag/ |
-| `desert` | a biome class | *Dat | /dat/ |
-| `desert-dwarf-kind` | a desert dwarf | *Znabqob | /znabqob/ |
-| `desert-elf-kind` | a desert elf | *Zngadtoq | /zŋadtoq/ |
-| `die` | to cease living | *Tadshnot | /tadʃnot/ |
-| `dire-wolf-kind` | a dire wolf | *Taqzngob | /taqzŋob/ |
-| `drink` | to swallow liquid | *Qatzngoq | /qatzŋoq/ |
-| `drow-kind` | a drow | *Bab | /bab/ |
-| `earth` | the ground underfoot | *Qod | /qod/ |
-| `east` | the direction of increasing longitude | *Shnaqtaq | /ʃnaqtaq/ |
-| `eat` | to consume food | *Bobdad | /bobdad/ |
-| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Babdog | /babdog/ |
-| `epipelagic` | a biome class | *Bottat | /bottat/ |
-| `erg` | A sand sea of dunes. | *God | /god/ |
-| `eye` | the organ of sight | *Baq | /baq/ |
-| `felsenmeer` | A field of frost-shattered boulders. | *Sngadgot | /sŋadgot/ |
-| `fire` | flame and heat | *Tabbat | /tabbat/ |
-| `fire-scrub` | Scrub regrowing after fire. | *Totzngod | /totzŋod/ |
-| `fish-shoal` | A shoal moving as one body. | *Bat | /bat/ |
-| `foot` | the walking limb-end | *Qaqznaq | /qaqznaq/ |
-| `ford` | where a river runs shallow enough to cross | *Qadznoq | /qadznoq/ |
-| `forest-gap` | A break in the canopy where light reaches the ground. | *Shnobbog | /ʃnobbog/ |
-| `frost-heave` | Ground churned and patterned by freezing. | *Shnatdag | /ʃnatdag/ |
-| `gallery-forest` | Forest following a watercourse. | *Shngobdaq | /ʃŋobdaq/ |
-| `giant-constrictor-snake-kind` | a giant constrictor snake | *Dadqog | /dadqog/ |
-| `giant-crocodile-kind` | a giant crocodile | *Shngadsnag | /ʃŋadsnag/ |
-| `giant-elk-kind` | a giant elk | *Gogsnag | /gogsnag/ |
-| `giant-goat-kind` | a giant goat | *Shnobtab | /ʃnobtab/ |
-| `giant-hyena-kind` | a giant hyena | *Goq | /goq/ |
-| `giant-octopus-kind` | a giant octopus | *Qagshngod | /qagʃŋod/ |
-| `giant-scorpion-kind` | a giant scorpion | *Zngobtob | /zŋobtob/ |
-| `giant-squid-kind` | a giant squid | *Dag | /dag/ |
-| `gloom` | the deepest, starless dark | *Tab | /tab/ |
-| `gnoll-kind` | a gnoll | *Dot | /dot/ |
-| `goblin-kind` | a goblin | *Shnoqzngoq | /ʃnoqzŋoq/ |
-| `god` | a deity | *Gob | /gob/ |
-| `grass-sward` | Open grassland, unbroken by trees. | *Tadsngad | /tadsŋad/ |
-| `great` | large in size or extent | *Tobdab | /tobdab/ |
-| `green` | the color term for green | *Snodzngab | /snodzŋab/ |
-| `gully-dwarf-kind` | a gully dwarf | *Sngab | /sŋab/ |
-| `hadal-trench` | a biome class | *Sngaddot | /sŋaddot/ |
-| `hamada` | A stony desert pavement of bare rock. | *Qodzngot | /qodzŋot/ |
-| `hand` | the manipulating limb-end | *Zngad | /zŋad/ |
-| `hearth` | the fire at the center of a home | *Shngatzngog | /ʃŋatzŋog/ |
-| `heat` | felt, oppressive warmth | *Sngadzngad | /sŋadzŋad/ |
-| `high` | far above the ground | *Snagtog | /snagtog/ |
-| `high-elf-kind` | a high elf | *Bogzngag | /bogzŋag/ |
-| `hill` | ground that rises above what surrounds it | *Shngobshngad | /ʃŋobʃŋad/ |
-| `hill-dwarf-kind` | a hill dwarf | *Sngog | /sŋog/ |
-| `hobgoblin-kind` | a hobgoblin | *Daq | /daq/ |
-| `holdfast-tangle` | The anchored base of a kelp forest. | *Sngobshnob | /sŋobʃnob/ |
-| `home` | one's dwelling | *Qotshngad | /qotʃŋad/ |
-| `human-kind` | a human | *Shngodgad | /ʃŋodgad/ |
-| `hydrothermal-vent` | a biome class | *Znat | /znat/ |
-| `ice` | frozen water | *Znabsngod | /znabsŋod/ |
-| `ice-lead` | A channel of open water through sea ice. | *Snogtot | /snogtot/ |
-| `island` | land the water surrounds | *Dobshnag | /dobʃnag/ |
-| `kelp-canopy` | The floating canopy of a kelp forest. | *Shngobshnad | /ʃŋobʃnad/ |
-| `kelp-forest` | a biome class | *Sngobgaq | /sŋobgaq/ |
-| `killer-whale-kind` | a killer whale | *Gad | /gad/ |
-| `kobold-kind` | a kobold | *Znad | /znad/ |
-| `lake` | still water held in a hollow that has no outlet to the sea | *Snabznab | /snabznab/ |
-| `liana-forest` | Tropical forest tangled with climbing vines. | *Babgod | /babgod/ |
-| `light` | the color term for white/light hues | *Boqshngab | /boqʃŋab/ |
-| `lightless-water` | Water below all light. | *Shngag | /ʃŋag/ |
-| `little` | small in size or extent | *Dotsngog | /dotsŋog/ |
-| `low` | near the ground | *Zngodqaq | /zŋodqaq/ |
-| `many` | an indefinitely large count | *Shnoq | /ʃnoq/ |
-| `marine-snow` | Organic debris drifting endlessly down. | *Doq | /doq/ |
-| `marsh` | soft wet ground | *Shnadzngad | /ʃnadzŋad/ |
-| `melt-pond` | A pool of meltwater on sea ice. | *Shnoqqaq | /ʃnoqqaq/ |
-| `mesopelagic` | a biome class | *Toddat | /toddat/ |
-| `millet` | a staple crop | *Shngogsngod | /ʃŋogsŋod/ |
-| `moon` | a moon | *Daqshngob | /daqʃŋob/ |
-| `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Shnodqag | /ʃnodqag/ |
-| `mountain` | high ground | *Bod | /bod/ |
-| `mouth` | the organ of eating and speech | *Sngat | /sŋat/ |
-| `move` | to go from one place to another | *Bobqob | /bobqob/ |
-| `muskeg` | Waterlogged peat ground in the boreal forest. | *Znaq | /znaq/ |
-| `name` | a word that identifies one who bears it | *Znobsngoq | /znobsŋoq/ |
-| `new` | recently come to be | *Shngabdog | /ʃŋabdog/ |
-| `night` | the dark half of the day-night cycle | *Zngoq | /zŋoq/ |
-| `nodule-field` | Seafloor strewn with mineral nodules. | *Znod | /znod/ |
-| `north` | toward the pole of increasing latitude | *Znoqtod | /znoqtod/ |
-| `north-east` | between north and east | *Tadzngot | /tadzŋot/ |
-| `north-west` | between north and west | *Shngoq | /ʃŋoq/ |
-| `old` | long in existence | *Qodgoq | /qodgoq/ |
-| `old-growth` | Mature forest, closed above and open beneath. | *Sngag | /sŋag/ |
-| `one` | the cardinal number 1 | *Znot | /znot/ |
-| `open-blue` | Open sunlit water, far from any shore. | *Snotshnag | /snotʃnag/ |
-| `otyugh-kind` | an otyugh | *Shngabshnog | /ʃŋabʃnog/ |
-| `over` | above; atop | *Qabdoq | /qabdoq/ |
-| `owlbear-kind` | an owlbear | *Tatqaq | /tatqaq/ |
-| `parent` | one's father or mother | *Qaqqod | /qaqqod/ |
-| `person` | a person; a member of a people (the autonym root) | *Znotsnat | /znotsnat/ |
-| `plankton-bloom` | Water thick with plankton. | *Dog | /dog/ |
-| `playa` | A dry lake bed of salt and cracked clay. | *Boq | /boq/ |
-| `pressure-ridge` | Sea ice buckled into a ridge. | *Bobdog | /bobdog/ |
-| `rafted-floe` | Ice floes driven over one another. | *Daqtot | /daqtot/ |
-| `rain` | liquid precipitation | *Qobdab | /qobdab/ |
-| `red` | the color term for red | *Gagqog | /gagqog/ |
-| `red-dragon-kind` | a red dragon | *Gatboq | /gatboq/ |
-| `reef-rubble` | Broken coral debris behind a reef. | *Zngat | /zŋat/ |
-| `reef-shark-kind` | a reef shark | *Boddat | /boddat/ |
-| `reg` | A desert floor of wind-swept gravel. | *Goqtob | /goqtob/ |
-| `rest` | to stop and recover strength | *Shnoqshngob | /ʃnoqʃŋob/ |
-| `rhinoceros-kind` | a rhinoceros | *Bog | /bog/ |
-| `rice` | a staple crop | *Snadshngog | /snadʃŋog/ |
-| `river` | fresh water running across land | *Tadsnat | /tadsnat/ |
-| `rust-monster-kind` | a rust monster | *Doqsngob | /doqsŋob/ |
-| `sargassum-drift` | A drifting raft of floating weed. | *Sngaqzngot | /sŋaqzŋot/ |
-| `savanna` | a biome class | *Datsngaq | /datsŋaq/ |
-| `scattering-layer` | The daily-rising layer of small sea life. | *Dogznad | /dogznad/ |
-| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Snadzngot | /snadzŋot/ |
-| `scoured-ice` | Ice swept bare and carved by wind. | *Qog | /qog/ |
-| `sea` | a body of salt water | *Gaq | /gaq/ |
-| `sea-elf-kind` | a sea elf | *Dotshngob | /dotʃŋob/ |
-| `sea-ice` | a biome class | *Snot | /snot/ |
-| `shadow` | cast dark, distinct from open gloom | *Gattad | /gattad/ |
-| `shrieker-kind` | a shrieker | *Daqsngod | /daqsŋod/ |
-| `shrubland` | a biome class | *Sngoqsngaq | /sŋoqsŋaq/ |
-| `sibling` | one's brother or sister | *Dab | /dab/ |
-| `sleep` | to rest unconscious | *Zngotzngog | /zŋotzŋog/ |
-| `smoker-field` | A field of hydrothermal chimneys. | *Znodsnag | /znodsnag/ |
-| `snow` | frozen precipitation | *Znodtaq | /znodtaq/ |
-| `snow-elf-kind` | a snow elf | *Sngatgog | /sŋatgog/ |
-| `snowfield` | An unbroken field of snow. | *Bobzngot | /bobzŋot/ |
-| `south` | toward the pole of decreasing latitude | *Tadbad | /tadbad/ |
-| `south-east` | between south and east | *Sngoqsngot | /sŋoqsŋot/ |
-| `south-west` | between south and west | *Bobsngot | /bobsŋot/ |
-| `spirit` | a lesser or unseen supernatural presence | *Qaq | /qaq/ |
-| `spring` | where water rises from the ground | *Shngadgod | /ʃŋadgod/ |
-| `spur-and-groove` | The ribbed seaward face of a reef. | *Znab | /znab/ |
-| `staghorn-stand` | A thicket of branching coral. | *Znoqshnog | /znoqʃnog/ |
-| `star` | a fixed point of light in the night sky | *Sngotsngat | /sŋotsŋat/ |
-| `starlit` | dark faintly lit by stars | *Shngat | /ʃŋat/ |
-| `stone` | rock | *Bodgot | /bodgot/ |
-| `sun` | the sun | *Zngagtat | /zŋagtat/ |
-| `taiga` | a biome class | *Bobtat | /bobtat/ |
-| `temperate-forest` | a biome class | *Shnatzngad | /ʃnatzŋad/ |
-| `temperate-grassland` | a biome class | *Got | /got/ |
-| `temperate-rainforest` | a biome class | *Todsngat | /todsŋat/ |
-| `thorn-scrub` | Dry scrub of thorned shrubs. | *Shngogsngob | /ʃŋogsŋob/ |
-| `tide` | the rise and fall of the waters under the moons | *Gogznat | /gogznat/ |
-| `treant-kind` | a treant | *Godshnat | /godʃnat/ |
-| `tree` | a woody plant | *Sngob | /sŋob/ |
-| `trench-floor` | The deepest floor of an ocean trench. | *Sngatbag | /sŋatbag/ |
-| `trench-wall` | The steep side of an ocean trench. | *Toq | /toq/ |
-| `tropical-rainforest` | a biome class | *Dodzngag | /dodzŋag/ |
-| `tropical-seasonal-forest` | a biome class | *Gaqzngot | /gaqzŋot/ |
-| `tuber` | a staple crop | *Totdaq | /totdaq/ |
-| `tubeworm-thicket` | Vent fauna crowded around hot water. | *Znodtog | /znodtog/ |
-| `tundra` | a biome class | *Sngaqsngob | /sŋaqsŋob/ |
-| `twig-blight-kind` | a twig blight | *Znogdaq | /znogdaq/ |
-| `twilight-water` | Water at the edge of the light. | *Znog | /znog/ |
-| `two` | the cardinal number 2 | *Shnadshngaq | /ʃnadʃŋaq/ |
-| `under` | beneath; below | *Zngobsnot | /zŋobsnot/ |
-| `upwelling` | a biome class | *Qob | /qob/ |
-| `urchin-barren` | Seabed grazed bare of kelp. | *Zngottod | /zŋottod/ |
-| `valley` | low ground between heights | *Dotshngab | /dotʃŋab/ |
-| `vent-plume` | Shimmering hot water rising from a vent. | *Daggad | /daggad/ |
-| `vine` | a staple crop | *Qagsngob | /qagsŋob/ |
-| `water` | the drinkable liquid | *Shngoqsngad | /ʃŋoqsŋad/ |
-| `west` | the direction of decreasing longitude | *Snad | /snad/ |
-| `wheat` | a staple crop | *Shngatznot | /ʃŋatznot/ |
-| `white-dragon-kind` | a white dragon | *Gadtoq | /gadtoq/ |
-| `wind` | moving air | *Qat | /qat/ |
-| `wind-scour` | Ground swept bare by wind. | *Sngodzngag | /sŋodzŋag/ |
-| `wood-elf-kind` | a wood elf | *Snodzngod | /snodzŋod/ |
-| `wooded-grassland` | Grassland with scattered trees. | *Tot | /tot/ |
-| `woolly-mammoth-kind` | a woolly mammoth | *Snag | /snag/ |
-| `xorn-kind` | a xorn | *Zngob | /zŋob/ |
-| `yellow` | the color term for yellow | *Qaqqot | /qaqqot/ |
+| `abyssal` | a biome class | *Tatash | /tataʃ/ |
+| `abyssal-plain` | The flat floor of the deep ocean. | *Nganash | /ŋanaʃ/ |
+| `alpine` | a biome class | *Shasaz | /ʃasaz/ |
+| `bait-ball` | A dense turning mass of fish. | *Tajat | /tajat/ |
+| `barley` | a staple crop | *Zajaj | /zajaj/ |
+| `bathypelagic` | a biome class | *Vajan | /vajan/ |
+| `black-dragon-kind` | a black dragon | *Ngavas | /ŋavas/ |
+| `blood` | the circulating fluid of a body | *Nabad | /nabad/ |
+| `blue` | the color term for blue | *Qanas | /qanas/ |
+| `bone` | the rigid frame of a body | *Jagab | /jagab/ |
+| `boreal-stand` | A stand of northern conifers. | *Vadat | /vadat/ |
+| `brown` | the color term for brown | *Zanash | /zanaʃ/ |
+| `bugbear-kind` | a bugbear | *Xaqad | /xaqad/ |
+| `burn` | Ground recovering from fire. | *Tavan | /tavan/ |
+| `carrion-crawler-kind` | a carrion crawler | *Nangat | /naŋat/ |
+| `child` | one's son or daughter | *Sabaj | /sabaj/ |
+| `closed-canopy` | Tall closed-canopy tropical forest. | *Bazag | /bazag/ |
+| `coast` | where the land meets the sea | *Sasaz | /sasaz/ |
+| `cold` | felt, biting chill | *Baxat | /baxat/ |
+| `cold-upwelling` | Cold nutrient-rich water rising from below. | *Gaxab | /gaxab/ |
+| `coral-head` | A massive coral colony standing proud of the reef. | *Xajab | /xajab/ |
+| `coral-reef` | a biome class | *Zangad | /zaŋad/ |
+| `crevasse-field` | Ice split by crevasses. | *Xashav | /xaʃav/ |
+| `damp-hollow` | A shaded, wet fold in the forest floor. | *Datag | /datag/ |
+| `dark` | the color term for black/dark hues | *Zazang | /zazaŋ/ |
+| `day` | the light half of the day-night cycle | *Shanaj | /ʃanaj/ |
+| `desert` | a biome class | *Vavaz | /vavaz/ |
+| `desert-dwarf-kind` | a desert dwarf | *Datash | /dataʃ/ |
+| `desert-elf-kind` | a desert elf | *Tangat | /taŋat/ |
+| `die` | to cease living | *Jasan | /jasan/ |
+| `dire-wolf-kind` | a dire wolf | *Gaxang | /gaxaŋ/ |
+| `drink` | to swallow liquid | *Nangaj | /naŋaj/ |
+| `drow-kind` | a drow | *Shavaz | /ʃavaz/ |
+| `earth` | the ground underfoot | *Zavag | /zavag/ |
+| `east` | the direction of increasing longitude | *Gashagav | /gaʃagav/ |
+| `eat` | to consume food | *Shadang | /ʃadaŋ/ |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Bangaj | /baŋaj/ |
+| `epipelagic` | a biome class | *Jagang | /jagaŋ/ |
+| `erg` | A sand sea of dunes. | *Qajat | /qajat/ |
+| `eye` | the organ of sight | *Satan | /satan/ |
+| `felsenmeer` | A field of frost-shattered boulders. | *Baxax | /baxax/ |
+| `fire` | flame and heat | *Vadad | /vadad/ |
+| `fire-scrub` | Scrub regrowing after fire. | *Sazaz | /sazaz/ |
+| `fish-shoal` | A shoal moving as one body. | *Shasab | /ʃasab/ |
+| `foot` | the walking limb-end | *Nazax | /nazax/ |
+| `ford` | where a river runs shallow enough to cross | *Shaxas | /ʃaxas/ |
+| `forest-gap` | A break in the canopy where light reaches the ground. | *Sadax | /sadax/ |
+| `frost-heave` | Ground churned and patterned by freezing. | *Vagav | /vagav/ |
+| `gallery-forest` | Forest following a watercourse. | *Vataq | /vataq/ |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | *Gazaz | /gazaz/ |
+| `giant-crocodile-kind` | a giant crocodile | *Sangag | /saŋag/ |
+| `giant-elk-kind` | a giant elk | *Zagas | /zagas/ |
+| `giant-goat-kind` | a giant goat | *Qanag | /qanag/ |
+| `giant-hyena-kind` | a giant hyena | *Nganang | /ŋanaŋ/ |
+| `giant-octopus-kind` | a giant octopus | *Tanad | /tanad/ |
+| `giant-scorpion-kind` | a giant scorpion | *Batav | /batav/ |
+| `giant-squid-kind` | a giant squid | *Vajat | /vajat/ |
+| `gloom` | the deepest, starless dark | *Sasat | /sasat/ |
+| `gnoll-kind` | a gnoll | *Vangaj | /vaŋaj/ |
+| `goblin-kind` | a goblin | *Taqaj | /taqaj/ |
+| `god` | a deity | *Jagan | /jagan/ |
+| `grass-sward` | Open grassland, unbroken by trees. | *Nganax | /ŋanax/ |
+| `great` | large in size or extent | *Gagan | /gagan/ |
+| `green` | the color term for green | *Ganav | /ganav/ |
+| `gully-dwarf-kind` | a gully dwarf | *Xaxang | /xaxaŋ/ |
+| `hadal-trench` | a biome class | *Ngashat | /ŋaʃat/ |
+| `hamada` | A stony desert pavement of bare rock. | *Davash | /davaʃ/ |
+| `hand` | the manipulating limb-end | *Javas | /javas/ |
+| `hearth` | the fire at the center of a home | *Xadat | /xadat/ |
+| `heat` | felt, oppressive warmth | *Naxaz | /naxaz/ |
+| `high` | far above the ground | *Nganas | /ŋanas/ |
+| `high-elf-kind` | a high elf | *Qaxav | /qaxav/ |
+| `hill` | ground that rises above what surrounds it | *Shagag | /ʃagag/ |
+| `hill-dwarf-kind` | a hill dwarf | *Ngashax | /ŋaʃax/ |
+| `hobgoblin-kind` | a hobgoblin | *Babaj | /babaj/ |
+| `holdfast-tangle` | The anchored base of a kelp forest. | *Basat | /basat/ |
+| `home` | one's dwelling | *Jadan | /jadan/ |
+| `human-kind` | a human | *Vavab | /vavab/ |
+| `hydrothermal-vent` | a biome class | *Zajang | /zajaŋ/ |
+| `ice` | frozen water | *Ngangang | /ŋaŋaŋ/ |
+| `ice-lead` | A channel of open water through sea ice. | *Ngaqas | /ŋaqas/ |
+| `island` | land the water surrounds | *Ngaqab | /ŋaqab/ |
+| `kelp-canopy` | The floating canopy of a kelp forest. | *Sasax | /sasax/ |
+| `kelp-forest` | a biome class | *Qaqas | /qaqas/ |
+| `killer-whale-kind` | a killer whale | *Naqash | /naqaʃ/ |
+| `kobold-kind` | a kobold | *Satag | /satag/ |
+| `lake` | still water held in a hollow that has no outlet to the sea | *Dangas | /daŋas/ |
+| `liana-forest` | Tropical forest tangled with climbing vines. | *Saxaz | /saxaz/ |
+| `light` | the color term for white/light hues | *Bangas | /baŋas/ |
+| `lightless-water` | Water below all light. | *Xavab | /xavab/ |
+| `little` | small in size or extent | *Danag | /danag/ |
+| `low` | near the ground | *Xasash | /xasaʃ/ |
+| `many` | an indefinitely large count | *Dangang | /daŋaŋ/ |
+| `marine-snow` | Organic debris drifting endlessly down. | *Zadas | /zadas/ |
+| `marsh` | soft wet ground | *Nadaz | /nadaz/ |
+| `melt-pond` | A pool of meltwater on sea ice. | *Nashaz | /naʃaz/ |
+| `mesopelagic` | a biome class | *Saxan | /saxan/ |
+| `millet` | a staple crop | *Xasaz | /xasaz/ |
+| `moon` | a moon | *Vabat | /vabat/ |
+| `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Gadash | /gadaʃ/ |
+| `mountain` | high ground | *Dabab | /dabab/ |
+| `mouth` | the organ of eating and speech | *Naqang | /naqaŋ/ |
+| `move` | to go from one place to another | *Sanash | /sanaʃ/ |
+| `muskeg` | Waterlogged peat ground in the boreal forest. | *Gaqav | /gaqav/ |
+| `name` | a word that identifies one who bears it | *Gavash | /gavaʃ/ |
+| `new` | recently come to be | *Gatab | /gatab/ |
+| `night` | the dark half of the day-night cycle | *Ngaxash | /ŋaxaʃ/ |
+| `nodule-field` | Seafloor strewn with mineral nodules. | *Qazas | /qazas/ |
+| `north` | toward the pole of increasing latitude | *Bashab | /baʃab/ |
+| `north-east` | between north and east | *Ngatav | /ŋatav/ |
+| `north-west` | between north and west | *Dangav | /daŋav/ |
+| `old` | long in existence | *Nasab | /nasab/ |
+| `old-growth` | Mature forest, closed above and open beneath. | *Zajat | /zajat/ |
+| `one` | the cardinal number 1 | *Dashat | /daʃat/ |
+| `open-blue` | Open sunlit water, far from any shore. | *Xanax | /xanax/ |
+| `otyugh-kind` | an otyugh | *Vaxab | /vaxab/ |
+| `over` | above; atop | *Jabang | /jabaŋ/ |
+| `owlbear-kind` | an owlbear | *Vagat | /vagat/ |
+| `parent` | one's father or mother | *Shajab | /ʃajab/ |
+| `person` | a person; a member of a people (the autonym root) | *Vazav | /vazav/ |
+| `plankton-bloom` | Water thick with plankton. | *Xabash | /xabaʃ/ |
+| `playa` | A dry lake bed of salt and cracked clay. | *Jajav | /jajav/ |
+| `pressure-ridge` | Sea ice buckled into a ridge. | *Nanat | /nanat/ |
+| `rafted-floe` | Ice floes driven over one another. | *Xaxab | /xaxab/ |
+| `rain` | liquid precipitation | *Xangag | /xaŋag/ |
+| `red` | the color term for red | *Zatat | /zatat/ |
+| `red-dragon-kind` | a red dragon | *Shanaq | /ʃanaq/ |
+| `reef-rubble` | Broken coral debris behind a reef. | *Shangav | /ʃaŋav/ |
+| `reef-shark-kind` | a reef shark | *Zangas | /zaŋas/ |
+| `reg` | A desert floor of wind-swept gravel. | *Xagaq | /xagaq/ |
+| `rest` | to stop and recover strength | *Jashash | /jaʃaʃ/ |
+| `rhinoceros-kind` | a rhinoceros | *Zangaq | /zaŋaq/ |
+| `rice` | a staple crop | *Qangaj | /qaŋaj/ |
+| `river` | fresh water running across land | *Tadash | /tadaʃ/ |
+| `rust-monster-kind` | a rust monster | *Basas | /basas/ |
+| `sargassum-drift` | A drifting raft of floating weed. | *Sagang | /sagaŋ/ |
+| `savanna` | a biome class | *Shavav | /ʃavav/ |
+| `scattering-layer` | The daily-rising layer of small sea life. | *Vagaj | /vagaj/ |
+| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Tabav | /tabav/ |
+| `scoured-ice` | Ice swept bare and carved by wind. | *Vajad | /vajad/ |
+| `sea` | a body of salt water | *Shaqash | /ʃaqaʃ/ |
+| `sea-elf-kind` | a sea elf | *Ngatax | /ŋatax/ |
+| `sea-ice` | a biome class | *Vangang | /vaŋaŋ/ |
+| `shadow` | cast dark, distinct from open gloom | *Naxav | /naxav/ |
+| `shrieker-kind` | a shrieker | *Vaxas | /vaxas/ |
+| `shrubland` | a biome class | *Sadad | /sadad/ |
+| `sibling` | one's brother or sister | *Xazag | /xazag/ |
+| `sleep` | to rest unconscious | *Qaqaj | /qaqaj/ |
+| `smoker-field` | A field of hydrothermal chimneys. | *Zashax | /zaʃax/ |
+| `snow` | frozen precipitation | *Shabaz | /ʃabaz/ |
+| `snow-elf-kind` | a snow elf | *Shashad | /ʃaʃad/ |
+| `snowfield` | An unbroken field of snow. | *Vavaj | /vavaj/ |
+| `south` | toward the pole of decreasing latitude | *Tajaj | /tajaj/ |
+| `south-east` | between south and east | *Vashan | /vaʃan/ |
+| `south-west` | between south and west | *Shasad | /ʃasad/ |
+| `spirit` | a lesser or unseen supernatural presence | *Javav | /javav/ |
+| `spring` | where water rises from the ground | *Qangab | /qaŋab/ |
+| `spur-and-groove` | The ribbed seaward face of a reef. | *Dangash | /daŋaʃ/ |
+| `staghorn-stand` | A thicket of branching coral. | *Nganab | /ŋanab/ |
+| `star` | a fixed point of light in the night sky | *Nashas | /naʃas/ |
+| `starlit` | dark faintly lit by stars | *Javab | /javab/ |
+| `stone` | rock | *Shazaq | /ʃazaq/ |
+| `sun` | the sun | *Qashax | /qaʃax/ |
+| `taiga` | a biome class | *Nangab | /naŋab/ |
+| `temperate-forest` | a biome class | *Nadash | /nadaʃ/ |
+| `temperate-grassland` | a biome class | *Qadaq | /qadaq/ |
+| `temperate-rainforest` | a biome class | *Qajang | /qajaŋ/ |
+| `thorn-scrub` | Dry scrub of thorned shrubs. | *Qatat | /qatat/ |
+| `tide` | the rise and fall of the waters under the moons | *Xangash | /xaŋaʃ/ |
+| `treant-kind` | a treant | *Vajaq | /vajaq/ |
+| `tree` | a woody plant | *Najan | /najan/ |
+| `trench-floor` | The deepest floor of an ocean trench. | *Vaqang | /vaqaŋ/ |
+| `trench-wall` | The steep side of an ocean trench. | *Danash | /danaʃ/ |
+| `tropical-rainforest` | a biome class | *Jagaj | /jagaj/ |
+| `tropical-seasonal-forest` | a biome class | *Badad | /badad/ |
+| `tuber` | a staple crop | *Dashag | /daʃag/ |
+| `tubeworm-thicket` | Vent fauna crowded around hot water. | *Taxan | /taxan/ |
+| `tundra` | a biome class | *Saxas | /saxas/ |
+| `twig-blight-kind` | a twig blight | *Bazat | /bazat/ |
+| `twilight-water` | Water at the edge of the light. | *Shashav | /ʃaʃav/ |
+| `two` | the cardinal number 2 | *Tavad | /tavad/ |
+| `under` | beneath; below | *Qavaz | /qavaz/ |
+| `upwelling` | a biome class | *Zanav | /zanav/ |
+| `urchin-barren` | Seabed grazed bare of kelp. | *Najaq | /najaq/ |
+| `valley` | low ground between heights | *Shavax | /ʃavax/ |
+| `vent-plume` | Shimmering hot water rising from a vent. | *Bavad | /bavad/ |
+| `vine` | a staple crop | *Banang | /banaŋ/ |
+| `water` | the drinkable liquid | *Xanab | /xanab/ |
+| `west` | the direction of decreasing longitude | *Vashaj | /vaʃaj/ |
+| `wheat` | a staple crop | *Xaxaj | /xaxaj/ |
+| `white-dragon-kind` | a white dragon | *Qagaz | /qagaz/ |
+| `wind` | moving air | *Nataq | /nataq/ |
+| `wind-scour` | Ground swept bare by wind. | *Nadab | /nadab/ |
+| `wood-elf-kind` | a wood elf | *Vaxad | /vaxad/ |
+| `wooded-grassland` | Grassland with scattered trees. | *Dazag | /dazag/ |
+| `woolly-mammoth-kind` | a woolly mammoth | *Vabash | /vabaʃ/ |
+| `xorn-kind` | a xorn | *Qaxash | /qaxaʃ/ |
+| `yellow` | the color term for yellow | *Qadan | /qadan/ |

@@ -15,7 +15,9 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{Correspondent, Seed, Void, World};
-use hornvale_language::{Manner, Segment, assign_proto_roots, ipa, render_views, romanize};
+use hornvale_language::{
+    Manner, Segment, assign_proto_roots, ipa, render_views, romanize, typology_for,
+};
 use hornvale_worldgen as world_builder;
 
 /// The reference seed this page's proto-root table is drawn from — the
@@ -167,7 +169,9 @@ pub fn render_proto(family: &str) -> Result<String, String> {
     // composition root feeds `build_lexicon`, so this page's proto-roots are
     // exactly the ones the dictionary's modern forms descend from.
     let daughters = world_builder::family_daughters(&world, &wc, family);
-    let assignment = assign_proto_roots(&world.seed, family, &phonology, &universe, &daughters);
+    let typ = typology_for(Some(family));
+    let assignment =
+        assign_proto_roots(&world.seed, family, &phonology, &typ, &universe, &daughters);
     for concept in world.registry.concepts() {
         if is_unnameable(&world, &concept.name) {
             continue;

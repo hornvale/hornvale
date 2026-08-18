@@ -2,14 +2,14 @@
 
 The land holds 163 settlement(s).
 The chief bugbear settlement, Gaodao, holds 66 souls amid tropical-seasonal-forest.
-The chief desert-dwarf settlement, Qaddnoqngagdad, holds 57 souls amid savanna.
+The chief desert-dwarf settlement, Shaxasqashax, holds 57 souls amid savanna.
 The chief desert-elf settlement, Zzoanggengngongshzang, holds 27 souls amid savanna.
 The chief drow settlement, Roggo, holds 14 souls amid desert.
 The chief gnoll settlement, Psosngashma, holds 30 souls amid savanna.
 The chief goblin settlement, Deota, holds 32 souls amid taiga.
-The chief gully-dwarf settlement, Ngogtngobngoqtngabqob, holds 35 souls amid savanna.
+The chief gully-dwarf settlement, Katankanabnabag, holds 35 souls amid savanna.
 The chief high-elf settlement, Zromgo, holds 24 souls amid tropical-seasonal-forest.
-The chief hill-dwarf settlement, Batsngaqngogsngob, holds 35 souls amid savanna.
+The chief hill-dwarf settlement, Shababkasas, holds 35 souls amid savanna.
 The chief hobgoblin settlement, Noabano, holds 85 souls amid tropical-seasonal-forest.
 The chief human settlement, Vaerope, holds 34 souls amid savanna.
 The chief kobold settlement, Rooxaro, holds 45 souls amid savanna.

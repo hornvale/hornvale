@@ -29,12 +29,22 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// baseline — P2 CONFIRMED. The contrast is the campaign's thesis: a *global*
 /// change (Stage 2) homogenises a diverse population, while a *per-family*
 /// rule (Stage 3) differentiates it. Half of each elf lexicon now carries a
-/// liquid where all four had none. This is the value the pin should have
-/// carried since Task 10, which landed the readout but omitted the pin move
-/// the plan's own step prescribed; Task 11's readout surfaced the stale pin
-/// and this repairs it. Pinned from the measured run per decision 0016;
-/// never tuned.
-const BASELINE: f64 = 0.7899728997289973;
+/// liquid where all four had none.
+///
+/// Stage 4 (root-and-pattern morphology, the dwarf family): 0.7791327913279132.
+/// Accuracy **fell** −0.0108. Not a regression: the three dwarf sub-tongues
+/// (desert-, gully-, hill-dwarf) all adopt the SAME templatic structure with
+/// the SAME uniform citation melody (Singular, an all-`a` C-a-C-a-C shape), so
+/// they become measurably more similar *to each other* even as the family as a
+/// whole becomes structurally distinct from the concatenative tongues. The
+/// metric rewards inter-tongue distance; a single shared template trades
+/// within-family distinguishability for a distinctive family character a reader
+/// registers instantly but a trigram classifier does not (the FINDING-1
+/// character-vs-capacity distinction, measured again). A richer paradigm
+/// (varying the melody per daughter) would differentiate them; this campaign
+/// ships the citation form uniformly and reports its cost. Pinned from the
+/// measured run per decision 0016; never tuned.
+const BASELINE: f64 = 0.7791327913279132;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

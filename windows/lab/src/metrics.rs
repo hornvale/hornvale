@@ -8388,7 +8388,15 @@ fn family_proto_assignment(
     };
     let universe = hornvale_language::proto_root_universe(&exposures);
     let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), family);
-    hornvale_language::assign_proto_roots(&v.world().seed, family, &proto_ph, &universe, &daughters)
+    let typ = hornvale_language::typology_for(Some(family));
+    hornvale_language::assign_proto_roots(
+        &v.world().seed,
+        family,
+        &proto_ph,
+        &typ,
+        &universe,
+        &daughters,
+    )
 }
 
 /// Whether every daughter of `family` has a Root `derivation.proto` matching

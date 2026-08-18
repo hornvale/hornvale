@@ -333,7 +333,8 @@ pub fn build_lexicon(
     // distinct, so core homophony is zero. See [`proto_root_universe`] for
     // which concepts the universe includes.
     let universe = proto_root_universe(exposures);
-    let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe, daughters);
+    let typ = crate::typology::typology_for(Some(family));
+    let proto_roots = assign_proto_roots(seed, family, proto_ph, &typ, &universe, daughters);
 
     // Pass 1: roots for every Steeped concept — pass 2's compounds need these
     // already present in `entries`. Each concept's assigned family-level
@@ -465,7 +466,14 @@ mod tests {
             CascadeRegime::SETTLED,
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(1),
+            "test",
+            &ph,
+            &crate::typology::concatenative(),
+            &universe,
+            &[],
+        );
         let expected = evolve(
             &assigned["water"],
             &draw_cascade(&Seed(1), "test", &ph),
@@ -499,7 +507,14 @@ mod tests {
             CascadeRegime::SETTLED,
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(1),
+            "test",
+            &ph,
+            &crate::typology::concatenative(),
+            &universe,
+            &[],
+        );
         let expected = evolve(
             &assigned["water"],
             &draw_cascade(&Seed(1), "test", &ph),
@@ -539,7 +554,14 @@ mod tests {
             CascadeRegime::SETTLED,
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(5), "kobold", &ph, &universe, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(5),
+            "kobold",
+            &ph,
+            &crate::typology::concatenative(),
+            &universe,
+            &[],
+        );
         assert_eq!(
             root_proto(&lex, "water"),
             assigned["water"],

@@ -113,11 +113,14 @@ pub fn assign_proto_roots_with_epoch_for_test(
     seed: &hornvale_kernel::Seed,
     family: &str,
     proto_ph: &Phonology,
+    typ: &typology::Typology,
     concepts: &[&str],
     daughters: &[Daughter],
     epoch_of: impl Fn(&str) -> u32,
 ) -> std::collections::BTreeMap<String, Vec<Segment>> {
-    etymology::assign_proto_roots_with_epoch(seed, family, proto_ph, concepts, daughters, epoch_of)
+    etymology::assign_proto_roots_with_epoch(
+        seed, family, proto_ph, typ, concepts, daughters, epoch_of,
+    )
 }
 pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
