@@ -223,6 +223,28 @@ The line that must not be crossed, stated so a later campaign can check it: **no
 constant may encode a preference between two peoples.** If a magnitude cannot be
 traced to a ledger fact, it is authored.
 
+**Nathan's ratification of §5.4 at G3 sharpens 0021's intent past what its text
+states, and it is recorded here because it governs every future campaign in
+this thread:**
+
+> The thing to avoid is **the game** assuming kobolds are stupid and evil and
+> elves are good and pure. The player, and the creatures within the world, are
+> likely to have very strong opinions on these questions.
+
+So the target was never *an absence of prejudice*. It is a question of **whose**
+prejudice it is. A world where nobody holds a view about anybody is not the goal
+and would be a worse simulation than one where views are held and are wrong.
+What 0021 forbids is the **engine** holding the view — a species carrying a
+valence, a lookup table deciding conduct. What this thread is building toward is
+the opposite: creatures with strong, situated, mistaken opinions about each
+other, arrived at because of how their accounts of shared history actually
+travelled.
+
+That reframing is why §5.1 is admissible and why a *constant* would not be. A
+derived crossing penalty gives communities a reason to keep their own account;
+whatever they come to believe about the people across the seam is then theirs,
+not ours.
+
 ## 6. Preregistration
 
 Frozen before the code in §5 exists. A falsified prediction is a finding.
