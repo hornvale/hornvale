@@ -11,7 +11,7 @@ use crate::phoneme::{
     Manner, Place, Segment, Tone, canonical_segments, sonority, sonority_of_manner,
 };
 use crate::streams;
-use crate::typology::{CodaLaw, OnsetLaw, Typology};
+use crate::typology::{CodaLaw, Harmony, OnsetLaw, Typology};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -105,6 +105,13 @@ pub struct Phonology {
     /// Coda templates: each is a sequence of manner slots a syllable-final
     /// cluster may fill, in order (an empty template is an open syllable).
     pub codas: Vec<Vec<Manner>>,
+    /// Whether vowels within a word must agree, and on what — copied from
+    /// the [`Typology`] this phonology was drawn under, so a later name-time
+    /// call (`naming::build_name`) has something to read `Harmony` from
+    /// without threading `Typology` itself down that call path. Not a save-
+    /// format field: `Phonology` carries no `serde` derive and is re-derived
+    /// from the seed on every load, never persisted.
+    pub harmony: Harmony,
 }
 
 /// Below this labiality, every labial segment is forbidden outright.
@@ -876,6 +883,7 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope, typ: &Typology
         onsets,
         nuclei,
         codas,
+        harmony: typ.harmony,
     };
     // Capacity floor (spec §5): widen a tone-capable species' tone inventory
     // until it clears the floor. A no-op for atonal species (byte-identical
@@ -1277,6 +1285,7 @@ mod tests {
             onsets: vec![vec![Manner::Stop]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
+            harmony: Harmony::None,
         }
     }
 

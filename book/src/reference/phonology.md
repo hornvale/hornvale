@@ -143,9 +143,9 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Vjongmjem | /vjoŋmjem/ | `[[vj'oNmjem]]` | <audio controls preload="none" src="../audio/b6334d78.mp3"></audio> |
+| Settlement | Vjongmjom | /vjoŋmjom/ | `[[vj'oNmjom]]` | <audio controls preload="none" src="../audio/d98ead1c.mp3"></audio> |
 | Settlement | Ngemvjamngeng | /ŋemvjamŋeŋ/ | `[[N'emvjamNeN]]` | <audio controls preload="none" src="../audio/111cb9f7.mp3"></audio> |
-| Settlement | Ngemmongngjeng | /ŋemmoŋŋjeŋ/ | `[[N'emmoNNjeN]]` | <audio controls preload="none" src="../audio/fbe5dc16.mp3"></audio> |
+| Settlement | Ngemmengngjeng | /ŋemmeŋŋjeŋ/ | `[[N'emmeNNjeN]]` | <audio controls preload="none" src="../audio/6a25c0de.mp3"></audio> |
 | Deity | Mjangngjang | /mjaŋŋjaŋ/ | `[[mj'aNNjaN]]` | <audio controls preload="none" src="../audio/1a3f04b3.mp3"></audio> |
 
 ## Drow
@@ -343,7 +343,7 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 |---|---|---|---|---|
 | Settlement | Grejqrel | /grejqrel/ | `[[gr'ejqrel]]` | <audio controls preload="none" src="../audio/6246e2bc.mp3"></audio> |
 | Settlement | Qroajjal | /qroajjal/ | `[[qr'oajjal]]` | <audio controls preload="none" src="../audio/01211d4a.mp3"></audio> |
-| Settlement | Lejjoltraj | /lejjoltraj/ | `[[l'ejjoltraj]]` | <audio controls preload="none" src="../audio/b30ffd4e.mp3"></audio> |
+| Settlement | Lejjeltraj | /lejjeltraj/ | `[[l'ejjeltraj]]` | <audio controls preload="none" src="../audio/22cfe186.mp3"></audio> |
 | Deity | Trollol | /trollol/ | `[[tr'ollol]]` | <audio controls preload="none" src="../audio/d9aa75d3.mp3"></audio> |
 
 ## Hill-dwarf
@@ -563,8 +563,8 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
 | Settlement | Qonro | /qonro/ | `[[q'onro]]` | <audio controls preload="none" src="../audio/7f4bc287.mp3"></audio> |
-| Settlement | Benro | /benro/ | `[[b'enro]]` | <audio controls preload="none" src="../audio/2ce4d729.mp3"></audio> |
-| Settlement | Nrudede | /nrudede/ | `[[nr'udede]]` | <audio controls preload="none" src="../audio/131bfbe0.mp3"></audio> |
+| Settlement | Benre | /benre/ | `[[b'enre]]` | <audio controls preload="none" src="../audio/217352ff.mp3"></audio> |
+| Settlement | Nrudodo | /nrudodo/ | `[[nr'udodo]]` | <audio controls preload="none" src="../audio/543c6697.mp3"></audio> |
 | Deity | Ponra | /ponra/ | `[[p'onra]]` | <audio controls preload="none" src="../audio/b97fef13.mp3"></audio> |
 
 ## Snow-elf

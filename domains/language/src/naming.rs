@@ -81,6 +81,7 @@ use crate::phoneme::{
 };
 use crate::phonology::Phonology;
 use crate::streams;
+use crate::typology::harmonize;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 use std::collections::BTreeMap;
@@ -1206,7 +1207,15 @@ impl<'a> Namer<'a> {
                 syllables
             }
         };
-        views_of(&reduce_syllable_nuclei(&syllables, self.ph)).1
+        // Harmony is the campaign's only word-level constraint, so it must
+        // run over the whole flattened segment sequence AFTER the syllable
+        // count and positional-nucleus reduction have settled (both are
+        // syllable-local) and BEFORE `render_views` calls `romanize`, so
+        // both the romanization and the IPA see the harmonized form.
+        // `Harmony::None` is the identity, so every other bundle's output is
+        // byte-identical through this call.
+        let segments = segments_of(&reduce_syllable_nuclei(&syllables, self.ph));
+        render_views(&harmonize(&segments, self.ph.harmony))
     }
 
     /// Double a randomly chosen syllable of `syllables` in place, with
@@ -1331,8 +1340,9 @@ impl<'a> Namer<'a> {
 }
 
 /// Render a bare segment sequence's three surface views in one pass — the
-/// segment-level half of the reduction [`views_of`] performs over
-/// [`Syllable`]s, factored out so a caller that already holds a flat
+/// segment-level half of the flatten-then-render pipeline
+/// [`Namer::build_name`] runs over [`Syllable`]s, factored out so a caller
+/// that already holds a flat
 /// `Vec<Segment>` (lexicon's roots and recipe compounds, over `evolve`'s
 /// modern forms) reuses the same romanization/IPA/espeak logic instead of
 /// re-deriving it. `pub`, not `pub(crate)`: a [`crate::etymology::Derivation`]'s
@@ -1364,29 +1374,21 @@ pub fn render_views(segments: &[Segment]) -> GeneratedName {
 
 /// Flatten `syllables` (onset → nucleus → coda, in sequence) into their
 /// ordered segments, without rendering any surface view — the draw-free,
-/// string-free half of [`views_of`]. For callers that need only the
-/// segments: etymology's `proto_root` (one call per species × concept) and
-/// `glossed_name`'s settlement stem, which would otherwise build and
-/// discard three rendered strings per draw. Rendering is a pure function of
-/// the segments ([`render_views`]), so which half a caller takes can never
-/// change what was drawn. `pub(crate)` for the cross-module reuse — the
-/// carry-forward invariant stands: no caller constructs a [`Segment`]
-/// outside this module's machinery.
+/// string-free half of the flatten-then-render pipeline. For callers that
+/// need only the segments: etymology's `proto_root` (one call per species ×
+/// concept), `glossed_name`'s settlement stem (which would otherwise build
+/// and discard three rendered strings per draw), and
+/// [`Namer::build_name`], which harmonizes the flattened segments before
+/// rendering. Rendering is a pure function of the segments
+/// ([`render_views`]), so which half a caller takes can never change what
+/// was drawn. `pub(crate)` for the cross-module reuse — the carry-forward
+/// invariant stands: no caller constructs a [`Segment`] outside this
+/// module's machinery.
 pub(crate) fn segments_of(syllables: &[Syllable]) -> Vec<Segment> {
     syllables
         .iter()
         .flat_map(|syllable| syllable.segments().copied())
         .collect()
-}
-
-/// Flatten `syllables` via [`segments_of`] and render all three surface
-/// views via [`render_views`]. `Namer::build_name` uses the
-/// `GeneratedName` half; callers that would discard it use [`segments_of`]
-/// directly. `pub(crate)` for that cross-module reuse.
-pub(crate) fn views_of(syllables: &[Syllable]) -> (Vec<Segment>, GeneratedName) {
-    let segments = segments_of(syllables);
-    let name = render_views(&segments);
-    (segments, name)
 }
 
 /// Consume one exact phonotactic template from `segments` at `pos`: each
@@ -2567,6 +2569,7 @@ mod tests {
             onsets: vec![vec![Manner::Stop]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
+            harmony: crate::typology::Harmony::None,
         }
     }
 

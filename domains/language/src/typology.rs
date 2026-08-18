@@ -9,6 +9,7 @@
 //! rows rather than admitting combinations is the same discipline
 //! `family_proto()` uses and decision 0011 applies to studies.
 
+use crate::phoneme::{Backness, Segment};
 use hornvale_kernel::{Component, ComponentStore, KindId};
 
 /// How a family builds words from roots.
@@ -175,6 +176,62 @@ pub fn concatenative() -> Typology {
     }
 }
 
+/// Coerce every vowel in `word` to agree under `harmony`.
+///
+/// **The first vowel sets the class.** A global default would erase the
+/// difference between a front word and a back word, which is the difference
+/// harmony exists to create — so the rule is "agree with the first", never
+/// "agree with a constant".
+///
+/// A `Central` vowel is **transparent**: it neither sets the class nor is
+/// coerced, matching the neutral-vowel behaviour of the natural systems this
+/// models (Finnish `i`/`e`). Consonants pass through untouched.
+///
+/// **Rounding follows the class, not the original vowel.** The curated
+/// inventory ([`crate::phoneme::canonical_segments`]) correlates backness
+/// with rounding for every non-central vowel — front is always unrounded
+/// (`i`, `e`), back is always rounded (`o`, `u`) — so a rule that copied the
+/// input's own `rounded` bit through a backness flip could mint a
+/// height/backness/rounded tuple no canonical segment carries (e.g. `e`
+/// forced to `Back` at `rounded: false`, which is neither `o` nor anything
+/// else `romanize`/`ipa` know how to render, and surfaces as a literal `"?"`
+/// in every later name). An end-to-end regen against the elf bundle caught
+/// this before the fix landed — `docs/generated-paths.txt`'s
+/// `book/src/reference/phonology.md` briefly carried `"Vjongmj?m"` and
+/// `"Benr?"` for exactly this reason. Setting `rounded` from `class` alone
+/// keeps every coerced vowel inside the canonical set.
+///
+/// [`Harmony::None`] is the identity, so a bundle that does not declare
+/// harmony is byte-identical through this function.
+pub fn harmonize(word: &[Segment], harmony: Harmony) -> Vec<Segment> {
+    if harmony == Harmony::None {
+        return word.to_vec();
+    }
+    let class = word.iter().find_map(|s| match s {
+        Segment::Vowel { backness, .. } if *backness != Backness::Central => Some(*backness),
+        _ => None,
+    });
+    let Some(class) = class else {
+        return word.to_vec();
+    };
+    word.iter()
+        .map(|s| match s {
+            Segment::Vowel {
+                height,
+                backness,
+                tone,
+                ..
+            } if *backness != Backness::Central => Segment::Vowel {
+                height: *height,
+                backness: class,
+                rounded: class == Backness::Back,
+                tone: *tone,
+            },
+            other => *other,
+        })
+        .collect()
+}
+
 /// Typology bundles keyed by **family label**, exactly as `family_proto()` is
 /// keyed. A kind with no family falls back to [`concatenative`].
 pub fn family_typology() -> ComponentStore<KindId, Typology> {
@@ -208,6 +265,120 @@ pub fn typology_for(family: Option<&str>) -> Typology {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::phoneme::{Height, Manner, Place, Tone};
+
+    fn vowel(height: Height, backness: Backness) -> Segment {
+        Segment::Vowel {
+            height,
+            backness,
+            rounded: false,
+            tone: Tone::Neutral,
+        }
+    }
+
+    fn consonant(place: Place, manner: Manner, voiced: bool) -> Segment {
+        Segment::Consonant {
+            place,
+            manner,
+            voiced,
+        }
+    }
+
+    /// Under backness harmony every vowel in a word agrees. This is the only
+    /// constraint in the phonology that spans a whole word — every other rule
+    /// is syllable-local — which is why it changes how a word *coheres*
+    /// rather than merely which segments it contains.
+    ///
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s`
+    /// binds a Segment in `filter_map`, single hand-built disharmonic word
+    #[test]
+    fn backness_harmony_makes_every_vowel_agree() {
+        // A deliberately disharmonic input: front, then back.
+        let word = vec![
+            consonant(Place::Alveolar, Manner::Stop, false),
+            vowel(Height::Mid, Backness::Front),
+            consonant(Place::Alveolar, Manner::Nasal, true),
+            vowel(Height::Mid, Backness::Back),
+        ];
+        let out = harmonize(&word, Harmony::Backness);
+        let backnesses: Vec<Backness> = out
+            .iter()
+            .filter_map(|s| match s {
+                Segment::Vowel { backness, .. } => Some(*backness),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(backnesses.len(), 2, "harmony dropped a vowel: {out:?}");
+        assert_eq!(
+            backnesses[0], backnesses[1],
+            "vowels disagree after harmony: {backnesses:?}"
+        );
+    }
+
+    /// The first vowel sets the class — a harmony that picked a global default
+    /// would erase the distinction between a front word and a back word, which
+    /// is the distinction harmony exists to create.
+    #[test]
+    fn the_first_vowel_sets_the_harmony_class() {
+        let front_first = vec![
+            vowel(Height::Mid, Backness::Front),
+            consonant(Place::Alveolar, Manner::Stop, false),
+            vowel(Height::Mid, Backness::Back),
+        ];
+        let back_first = vec![
+            vowel(Height::Mid, Backness::Back),
+            consonant(Place::Alveolar, Manner::Stop, false),
+            vowel(Height::Mid, Backness::Front),
+        ];
+        let a = harmonize(&front_first, Harmony::Backness);
+        let b = harmonize(&back_first, Harmony::Backness);
+        assert_ne!(a, b, "both words harmonized to the same class");
+    }
+
+    /// The control: `Harmony::None` is the identity, so a bundle that does not
+    /// declare harmony is byte-identical through this function.
+    #[test]
+    fn no_harmony_is_the_identity() {
+        let word = vec![
+            vowel(Height::Mid, Backness::Front),
+            vowel(Height::Mid, Backness::Back),
+        ];
+        assert_eq!(harmonize(&word, Harmony::None), word);
+    }
+
+    /// A coerced vowel must land on a segment `romanize`/`ipa` actually know
+    /// how to render, never an off-menu height/backness/rounded tuple. A
+    /// naive "copy the original `rounded` bit through the backness flip"
+    /// implementation passes the three tests above (none of them render
+    /// anything) while minting exactly this defect — caught only by
+    /// regenerating a real artifact and finding a literal `"?"` in it. `e`
+    /// (`Mid`/`Front`/unrounded) forced to `Back` must become `o`
+    /// (`Mid`/`Back`/**rounded**), not a rounding-mismatched ghost segment.
+    #[test]
+    fn a_coerced_vowel_is_always_a_canonical_segment() {
+        let word = vec![
+            vowel(Height::Mid, Backness::Back),  // sets the class: Back
+            vowel(Height::Mid, Backness::Front), // e — must become o, not a ghost
+        ];
+        let out = harmonize(&word, Harmony::Backness);
+        let canonical = crate::phoneme::canonical_segments();
+        for seg in &out {
+            assert!(
+                canonical.contains(seg),
+                "harmonize minted a non-canonical segment: {seg:?}"
+            );
+        }
+        assert_eq!(
+            out[1],
+            Segment::Vowel {
+                height: Height::Mid,
+                backness: Backness::Back,
+                rounded: true,
+                tone: Tone::Neutral,
+            },
+            "front e forced to Back must round to o, not carry unrounded through: {out:?}"
+        );
+    }
 
     /// Every bundle must be reached by at least one family. An unexercised
     /// bundle is an unmeasured code path that reads as supported (a rule

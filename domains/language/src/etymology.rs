@@ -1207,6 +1207,7 @@ mod tests {
             onsets: vec![vec![Manner::Stop]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
+            harmony: crate::typology::Harmony::None,
         }
     }
 
@@ -1243,6 +1244,7 @@ mod tests {
             onsets: vec![vec![Manner::Stop]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
+            harmony: crate::typology::Harmony::None,
         }
     }
 
@@ -1656,6 +1658,7 @@ mod tests {
             onsets: vec![vec![Manner::Stop]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![Manner::Stop], vec![]],
+            harmony: crate::typology::Harmony::None,
         }
     }
 

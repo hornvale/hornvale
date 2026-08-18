@@ -304,6 +304,7 @@ mod tests {
             onsets: vec![vec![]],
             nuclei: vec![1],
             codas: vec![vec![]],
+            harmony: crate::typology::Harmony::None,
         }
     }
 
@@ -391,6 +392,7 @@ mod tests {
             onsets: vec![vec![]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Stop], vec![]],
+            harmony: crate::typology::Harmony::None,
         }
     }
 
