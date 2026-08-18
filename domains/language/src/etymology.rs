@@ -17,9 +17,10 @@
 #![warn(missing_docs)]
 
 use crate::naming::Namer;
-use crate::phoneme::{Height, Manner, Segment, Tone};
+use crate::phoneme::{Backness, Height, Manner, Segment, Tone};
 use crate::phonology::{Phonology, tone_inventory};
 use crate::streams;
+use crate::typology::VocalicTemplate;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -687,6 +688,132 @@ fn draw_candidate(
     let weighty = epoch > 0;
     let syllables = namer.draw_syllables(&mut stream, min, max, weighty);
     crate::naming::segments_of(&syllables)
+}
+
+/// Assign `concept` a three-consonant skeleton from `ph`'s consonant
+/// subset, for [`crate::typology::Morphology::Templatic`] families —
+/// [`draw_candidate`]'s root-and-pattern counterpart. Draws over the SAME
+/// family-salted leg `draw_candidate` uses for concatenative roots —
+/// `ROOT`/family/`LEXICON`/`PROTO_ROOT`/`ROOT_EPOCH`/concept — and probes
+/// on collision the same way, `.derive(PROBE).derive(dynamic(probe))`, so
+/// the two morphologies share one collision-resolution shape rather than
+/// diverging into a second, silent convention in the same module. The
+/// consonant picks are independent and with replacement — repeats within
+/// one skeleton are allowed (Arabic-style geminate roots) — so the
+/// codomain is n^3 for an n-consonant inventory, large enough that a
+/// sufficiently rich `ph` keeps the assignment injective over a real
+/// concept universe (see the injectivity test below).
+///
+/// Reserved integration seam: Task 13 (The Burr) wires this into
+/// `assign_proto_roots` for [`crate::typology::Morphology::Templatic`]
+/// families; nothing calls it yet. Present in all builds (not
+/// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
+/// module's tests until it lands.
+#[allow(dead_code)]
+fn assign_skeleton(seed: &Seed, family: &str, concept: &str, ph: &Phonology) -> Vec<Segment> {
+    let consonants: Vec<Segment> = ph
+        .inventory
+        .iter()
+        .filter(|s| matches!(s, Segment::Consonant { .. }))
+        .copied()
+        .collect();
+    let mut probe = 0u32;
+    loop {
+        let base = seed
+            .derive(streams::ROOT)
+            .derive(StreamLabel::dynamic(family))
+            .derive(streams::LEXICON)
+            .derive(streams::PROTO_ROOT)
+            .derive(StreamLabel::dynamic(ROOT_EPOCH))
+            .derive(StreamLabel::dynamic(concept));
+        let mut stream = if probe == 0 {
+            base.stream()
+        } else {
+            base.derive(streams::PROBE)
+                .derive(StreamLabel::dynamic(&probe.to_string()))
+                .stream()
+        };
+        let candidate: Vec<Segment> = (0..3)
+            .filter_map(|_| stream.pick(&consonants).copied())
+            .collect();
+        if candidate.len() == 3 {
+            return candidate;
+        }
+        // `consonants` is empty (a phonology with no consonants at all) —
+        // probing further would never help, but the loop shape stays
+        // identical to `draw_candidate`'s so a reader recognizes the
+        // pattern; an empty inventory is a caller error the phonology
+        // draw's own `ensure_minimum_consonants` floor already prevents.
+        probe += 1;
+        if probe > PROBE_BUDGET {
+            return candidate;
+        }
+    }
+}
+
+/// The vowel target [`realize_skeleton`] threads through the first
+/// consonant gap of every template — a low central vowel ("a" in the
+/// module docs' C1 a C2 ... shorthand).
+const TEMPLATE_A: Segment = Segment::Vowel {
+    height: Height::Low,
+    backness: Backness::Central,
+    rounded: false,
+    tone: Tone::Neutral,
+};
+
+/// The high back rounded vowel target ("u") for
+/// [`crate::typology::VocalicTemplate::Derived`].
+const TEMPLATE_U: Segment = Segment::Vowel {
+    height: Height::High,
+    backness: Backness::Back,
+    rounded: true,
+    tone: Tone::Neutral,
+};
+
+/// The high front unrounded vowel target ("i") for
+/// [`crate::typology::VocalicTemplate::Derived`].
+const TEMPLATE_I: Segment = Segment::Vowel {
+    height: Height::High,
+    backness: Backness::Front,
+    rounded: false,
+    tone: Tone::Neutral,
+};
+
+/// Thread a vocalic template through a three-consonant `skeleton`,
+/// producing a surface form: C1 <gap1> C2 <gap2> C3. Each gap's target
+/// vowel(s) are nativized against `ph` (see [`nativize`]) — the same
+/// nearest-in-inventory convention `nativize` already uses to keep an
+/// off-menu segment inside a phonology's actual inventory — so the
+/// realized form stays inside the language's phonology even when `ph`
+/// lacks the canonical "a"/"u"/"i" outright. Purely deterministic (no
+/// stream draw): the template IS the melody, not a choice among melodies.
+/// [`VocalicTemplate::Plural`] doubles its second gap (the lengthened
+/// melody, spelled here as the same vowel twice rather than a length
+/// feature the segment model does not carry), so it differs from
+/// [`VocalicTemplate::Singular`] in shape as well as quality.
+///
+/// Reserved integration seam: Task 13 (The Burr) wires this alongside
+/// [`assign_skeleton`]; nothing calls it yet. Present in all builds (not
+/// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
+/// module's tests until it lands.
+#[allow(dead_code)]
+fn realize_skeleton(skeleton: &[Segment], tmpl: VocalicTemplate, ph: &Phonology) -> Vec<Segment> {
+    let (gap1, gap2): (Vec<Segment>, Vec<Segment>) = match tmpl {
+        VocalicTemplate::Singular => (vec![TEMPLATE_A], vec![TEMPLATE_A]),
+        VocalicTemplate::Plural => (vec![TEMPLATE_A], vec![TEMPLATE_A, TEMPLATE_A]),
+        VocalicTemplate::Derived => (vec![TEMPLATE_U], vec![TEMPLATE_I]),
+    };
+    let mut out = Vec::with_capacity(skeleton.len() + gap1.len() + gap2.len());
+    let mut gaps = [gap1, gap2].into_iter();
+    for (i, &c) in skeleton.iter().enumerate() {
+        out.push(c);
+        if i + 1 < skeleton.len()
+            && let Some(gap) = gaps.next()
+        {
+            out.extend(nativize(&gap, ph));
+        }
+    }
+    out
 }
 
 /// Whether `seg` is a consonant (used by the two structural rules, which
@@ -2194,5 +2321,105 @@ mod tests {
             ma_len as f64 / (n * refs.len()) as f64,
             (ma_len as f64 - base_len as f64) / (n * refs.len()) as f64
         );
+    }
+
+    // ---- Task 12: consonantal skeletons (root-and-pattern morphology).
+
+    /// A rich reference phonology for the skeleton-injectivity test:
+    /// [`test_phonology`]'s maximal envelope (all axes at 1.0, so every
+    /// envelope-permitted consonant survives its probabilistic keep-draw
+    /// with high odds), adapted to [`crate::typology::templatic`] rather
+    /// than `concatenative` since a skeleton is drawn for a templatic
+    /// family. A cramped inventory here would make the n^3 skeleton space
+    /// too small to stay injective over a real concept universe.
+    fn reference_phonology(seed: &Seed) -> Phonology {
+        draw_phonology(
+            seed,
+            "test",
+            &Envelope {
+                labiality: 1.0,
+                vowel_space: 1.0,
+                voicing: 1.0,
+                sibilance: 1.0,
+                voice_loudness: 1.0,
+                tonality: 0.0,
+                exotic: ExoticSeg::None,
+            },
+            &crate::typology::templatic(),
+        )
+    }
+
+    /// The real concept universe (universal ∪ body ∪ kin strata) —
+    /// [`core_concepts`] without the domain tag, since injectivity is
+    /// checked over concept ids alone.
+    fn reference_concepts() -> Vec<&'static str> {
+        crate::packs::universal_stratum()
+            .iter()
+            .chain(crate::packs::body_pack())
+            .chain(crate::packs::kin_pack())
+            .map(|e| e.concept)
+            .collect()
+    }
+
+    /// A templatic root is a three-consonant skeleton, and skeletons are
+    /// injective over the concept universe: two concepts never share one, or
+    /// the template system would generate systematic homophony rather than
+    /// systematic morphology.
+    ///
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `c` binds
+    /// a &str concept id from the real concept universe, single fixed seed
+    #[test]
+    fn templatic_skeletons_are_three_consonants_and_injective() {
+        let seed = Seed(42);
+        let ph = reference_phonology(&seed);
+        let concepts = reference_concepts();
+        // Verified at Seed(42): `reference_phonology` draws 19 consonants
+        // (n^3 = 6,859) against 43 concepts (universal ∪ body ∪ kin) —
+        // comfortably enough room that this loop's collision assertion
+        // below is not a coin flip. The floor here is a canary, not the
+        // proof: if a future phonology-draw change shrinks the inventory,
+        // this fires loudly before the injectivity assertion below fires
+        // confusingly.
+        assert!(
+            ph.inventory
+                .iter()
+                .filter(|s| matches!(s, Segment::Consonant { .. }))
+                .count()
+                >= 10,
+            "reference phonology is too cramped for an injective n^3 \
+             skeleton space over {} concepts: {:?}",
+            concepts.len(),
+            ph.inventory
+        );
+        let mut seen: std::collections::BTreeSet<Vec<Segment>> = std::collections::BTreeSet::new();
+        for c in &concepts {
+            let sk = assign_skeleton(&seed, "dwarf", c, &ph);
+            assert_eq!(
+                sk.len(),
+                3,
+                "concept '{c}' skeleton was not 3 consonants: {sk:?}"
+            );
+            assert!(
+                sk.iter().all(|s| matches!(s, Segment::Consonant { .. })),
+                "concept '{c}' skeleton contains a vowel: {sk:?}"
+            );
+            assert!(
+                seen.insert(sk.clone()),
+                "concept '{c}' collided on skeleton {sk:?}"
+            );
+        }
+    }
+
+    /// Two paradigm slots over the same skeleton give distinct surface forms
+    /// — this is the whole point of templatic morphology, and without it the
+    /// skeleton is just a differently-shaped root.
+    #[test]
+    fn one_skeleton_yields_distinct_forms_per_template() {
+        let seed = Seed(42);
+        let ph = reference_phonology(&seed);
+        let sk = assign_skeleton(&seed, "dwarf", "fire", &ph);
+        let a = realize_skeleton(&sk, VocalicTemplate::Singular, &ph);
+        let b = realize_skeleton(&sk, VocalicTemplate::Plural, &ph);
+        assert_ne!(a, b, "singular and plural realized identically: {a:?}");
     }
 }

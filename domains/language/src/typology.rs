@@ -28,6 +28,20 @@ pub enum Morphology {
     Concatenative,
 }
 
+/// A vocalic template: the vowel melody threaded through a consonantal
+/// skeleton. Which template applies is chosen by a paradigm slot, so one
+/// skeleton yields a family of related forms — the whole point of
+/// [`Morphology::Templatic`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VocalicTemplate {
+    /// The citation form: C1 a C2 a C3.
+    Singular,
+    /// C1 a C2 aa C3 — the lengthened melody.
+    Plural,
+    /// C1 u C2 i C3 — the derived-noun melody.
+    Derived,
+}
+
 /// What a syllable may begin with.
 ///
 /// Load-bearing for the `sonorant-open` bundle specifically: the sonorant
