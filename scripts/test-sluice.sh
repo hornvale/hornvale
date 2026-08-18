@@ -1137,6 +1137,47 @@ else
     bad "origin main is '$origin1_main_sha', expected '$wt1_final_sha' — last-pushed does not reflect what actually landed"
 fi
 
+echo "== chamber: the phase-selection block RUNS when HV_SLUICE_PHASES is unset"
+# THE TEST THAT WOULD HAVE CAUGHT THE REGRESSION, and its absence is the whole
+# lesson. The prose-only skip is guarded by `[ -z "${HV_SLUICE_PHASES:-}" ]`,
+# and EVERY chamber case in this file exports HV_SLUICE_PHASES to keep phases
+# cheap — so not one of them ever entered the block. The helper's own unit
+# tests were green, `bash -n` parsed, shellcheck was clean, and the chamber
+# still died on its first real merge with
+#
+#   scripts/sluice-run.sh: line 358: base_sha: unbound variable
+#
+# because the block read a variable assigned ~90 lines below it, and `set -u`
+# is fatal. A unit-tested helper wired in wrong is indistinguishable from an
+# untested one at the point where it matters.
+#
+# So: drive the real script with HV_SLUICE_PHASES UNSET and assert it gets
+# PAST the decision. It will fail later — a scratch repo has no `make
+# gate-suite-run` — and that is fine; the assertion is about the block, and
+# specifically that no unbound variable kills the run before any phase starts.
+# sluice-run.sh writes its own run log to $HV_SLUICE_DIR/<job>.log rather than
+# stdout — verified: a real chamber invocation left its caller's redirect file
+# at 0 bytes while the run log had the whole run. So point HV_SLUICE_DIR at a
+# scratch dir and read the log the script actually writes.
+unset_dir="$tmp/unsetphases-state"; mkdir -p "$unset_dir"
+( unset HV_SLUICE_PHASES
+  HV_SLUICE_DIR="$unset_dir" timeout 90 bash "$repo_root/scripts/sluice-run.sh" \
+    campaign/x "$(g -C "$chamber_repo" rev-parse HEAD)" stage >/dev/null 2>&1 ) || true
+cat "$unset_dir"/*.log > "$tmp/unsetphases.out" 2>/dev/null || true
+# NON-VACUITY FIRST. This assertion's own first draft sat ABOVE the chamber
+# setup, so $chamber_repo was unbound, the subshell died, `|| true` swallowed
+# it, and grep found nothing in an EMPTY file — which the check below reads as
+# success. The test for an unbound-variable bug was itself vacuous because of
+# an unbound variable. Assert the run produced output before believing what is
+# not in it.
+if [ ! -s "$tmp/unsetphases.out" ]; then
+    bad "the chamber produced NO output with HV_SLUICE_PHASES unset — this assertion would pass vacuously"
+elif grep -q 'unbound variable' "$tmp/unsetphases.out"; then
+    bad "the chamber died on an unbound variable with HV_SLUICE_PHASES unset: $(grep 'unbound variable' "$tmp/unsetphases.out" | head -1)"
+else
+    ok "the phase-selection block runs to completion with HV_SLUICE_PHASES unset (no unbound variable)"
+fi
+
 echo "== chamber: the merge subject is a valid census epoch label (merge(<campaign>): <headline>, not git's own auto-generated default) =="
 # tools/census/history.sh:59 tags every committed census snapshot with an
 # epoch label taken from `git log --follow --first-parent main -- <path>`'s
