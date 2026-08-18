@@ -414,6 +414,36 @@ identified. Deterministic, seeded, Lab-resident.
   change should be expected to differentiate — which is precisely what Stage
   3 tests next. That is an **interpretation**, offered as one, not a result;
   the result is the fall itself.
+
+  **CORRECTION (2026-08-17, after Task 9): the homogenisation attribution above
+  is withdrawn. The fall is real; its cause was never measured.**
+
+  Task 9 made the sonorant floor bundle-conditioned, removing it from 17 of the
+  18 tongues. Assignment accuracy did not move at all — byte-identical
+  `0.6795392953929539`. That is a control nobody designed, and it settles the
+  question: **an inventory-only change is invisible to this instrument.** The
+  classifier reads *words*, and words descend from proto roots, so a change that
+  alters which segments a language *could* say without altering its roots cannot
+  register. The floor was exactly such a change, so it cannot have caused the
+  fall.
+
+  What remains is Task 4, which bumped the epoch and thereby reseeded every
+  proto root — an arbitrary reshuffle of the whole lexicon, not a homogenising
+  force, moving the number in whichever direction the new draws happen to land.
+  **No measurement separates Task 4 from Task 5**: the calibration was
+  deliberately left red across Task 4 and first read after Task 5, so the drop is
+  honestly unattributed between them. Task 9's null makes Task 4 the
+  overwhelmingly likely cause.
+
+  The withdrawn reading was a plausible mechanism fitted to a number after the
+  fact — the "right measure, wrong attribution" failure — and it reached this
+  document before the control existed to test it.
+
+  **Consequence for Task 10, stated before it runs so it cannot be fitted
+  afterwards.** Task 10 changes phonotactic *templates*, which do reach roots
+  (§3.7), so it is the first change in this campaign the instrument is capable of
+  registering on its own terms. If accuracy does not move there, that is a real
+  null about the bundles rather than an artefact of what the metric can see.
 - **P3 (sonorant fraction).** `sonorant-open` tongues reach a non-zero
   sonorant-segment fraction on every seed in the sweep. This is the one
   prediction with a hard floor: **any** seed producing a liquid-free
