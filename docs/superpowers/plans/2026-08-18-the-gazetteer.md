@@ -39,6 +39,28 @@ forbids.
   campaign. If you reach for `total_cmp`, something has gone wrong — report it.
 - **Gate:** `make gate-commit` before every commit (a `domains/`-layer edit
   costs ~84 s).
+- **A SYNTHETIC-PREDICATE TEST MUST ASSERT ITS FIXTURE IS NON-DEGENERATE.**
+  Every test in this plan that builds components from a toy predicate like
+  `|c| c.0 % 7 < 4` must assert, in the test body, that the predicate actually
+  yields enough components to exercise what the test claims to check:
+
+  ```rust
+  assert!(comps.len() >= N, "predicate must yield many components, got {}", comps.len());
+  ```
+
+  Pick `N` from what your predicate really produces — measure it, do not copy a
+  number from another test. **This rule exists because the plan author got it
+  wrong**: `!c.0.is_multiple_of(3)` on `Geosphere::new(3)` yields exactly ONE
+  component, so the partition test written against it could not fail for the
+  reason it was written, and `c.0 % 5 < 3` yields two, so the ordering test
+  would pass about half the time under a shuffled-order bug. The predicates
+  below Task 2 are from the same family and are assumed guilty until measured.
+  A test that cannot fail is worse than no test, because it produces evidence.
+
+  For any test about **ordering**, additionally confirm the component sizes are
+  not monotonically related to identity order, and say so in the doc comment —
+  a fixture where size order and identity order coincide cannot tell them apart.
+
 - **Run the suite ONCE, inspect many.** Capture to a file and grep it; never
   re-run to ask a second question.
 
@@ -404,6 +426,14 @@ git commit -m "feat(terrain): connected components as cell sets, not just sizes"
 
 - [ ] **Step 1: Write the failing tests**
 
+**Apply the non-degenerate-fixture rule from Global Constraints to every test
+below.** The predicates shown (`c.0 % 7 < 4`, `c.0 % 4 == 0`) are inherited
+from the same family that proved vacuous in Task 2 — measure what each yields
+on `Geosphere::new(3)` before trusting it, and change the predicate if it
+yields too few. `the_floor_excludes_components_below_it` in particular needs
+components on BOTH sides of floor 3, or its `floored.len() < all.len()`
+assertion is not testing a floor.
+
 ```rust
     /// A feature's identity is the lowest cell in its extent — canonical,
     /// integer, needing no tie-break.
@@ -716,6 +746,13 @@ git commit -m "feat(terrain): rivers as maximal subtrees of the flow forest"
   comment cites Task 1's measured counts.
 
 - [ ] **Step 1: Write the failing tests**
+
+**Apply the non-degenerate-fixture rule from Global Constraints.** These
+ordering tests are the ones most damaged by a thin fixture: with two features
+a shuffled order passes half the time, and if magnitude order happens to match
+identity order the test cannot tell the two apart — which is precisely the bug
+it exists to catch. Use a predicate yielding many features with sizes that are
+NOT monotonic in identity, and assert both facts in the test.
 
 ```rust
     /// Within a class, features order by magnitude descending, ties broken by
