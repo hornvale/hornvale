@@ -337,19 +337,30 @@ struct Telling<'a> {
 /// instead: each node keeps its best-known telling, and is re-expanded only
 /// when a STRICTLY smaller key reaches it.
 ///
-/// **Termination** rests on the key rising along every edge, and `hops` alone
-/// is enough for that: it is in the key and goes up by exactly one per step,
-/// so a cyclic re-traversal always yields a strictly LARGER key whatever the
-/// width does. Width is non-decreasing too
-/// ([`crate::accumulate::Accumulation::step`], pinned by
-/// `tests/accumulate.rs::every_rule_is_non_decreasing`), which is what makes
-/// the ordering meaningful, but the frontier would drain on a cycle without
-/// it. **What the comparison's DIRECTION buys is everything**: accept a
-/// strictly larger key instead and a two-cycle widens forever, which is a
-/// genuine hang and was measured as one. Strictness itself — `<=` rather than
-/// `<` — buys a stable first-arrival tie-break and cheap insurance, NOT
-/// termination; an earlier draft of this comment said otherwise and was
-/// wrong. `tests/augmented_walk.rs` pins draining on a real cycle.
+/// **Termination** rests on the key rising strictly along every edge, and the
+/// key is `(width.to_bits(), hops, witness)` compared LEXICOGRAPHICALLY WITH
+/// WIDTH FIRST. That shape is why it takes two halves, both load-bearing:
+///
+/// 1. **width is non-decreasing**
+///    ([`crate::accumulate::Accumulation::step`], pinned by
+///    `tests/accumulate.rs::every_rule_is_non_decreasing`), so the PRIMARY
+///    component can never fall. This is the half that makes that test
+///    load-bearing here rather than belt-and-braces, and it was measured, not
+///    argued: a rule that halved the width instead — hops still rising by one
+///    per edge — relaxed the cycle fixture **1,078 times against the shipped
+///    5**, halting only once the `f64` underflowed to 0.0 and the primary
+///    component finally tied. That is floating-point exhaustion, not
+///    termination.
+/// 2. **at equal width, `hops` rises by exactly one per edge**, so a lap of a
+///    cycle still strictly increases the key rather than tying forever.
+///
+/// Together they give a strict increase on every edge, which is what makes a
+/// node final when it is popped and drains the frontier. **The comparison's
+/// DIRECTION is load-bearing too**: accept a strictly larger key instead and a
+/// two-cycle widens forever, which is a genuine hang and was measured as one.
+/// Strictness itself — `<=` rather than `<` — is the one part that is NOT
+/// about termination: it buys a stable first-arrival tie-break and cheap
+/// insurance. `tests/augmented_walk.rs` pins draining on a real cycle.
 ///
 /// **The clock** ([`crate::clock::Clock`]) is applied to every holder as it is
 /// admitted, WITNESSES INCLUDED, and refusing a hearer refuses the step: a
@@ -470,11 +481,11 @@ pub fn variants_about_accumulating(
             let next_key = (next_width.to_bits(), next_claim.hops, witness);
             match reached.get(&hearer) {
                 // Strictly smaller, never equal. This is a tie-break, not the
-                // termination argument (see the doc comment): an equal key
-                // re-expanded would still not loop, because a lap of a cycle
-                // raises `hops`. What it does buy is that the FIRST telling to
-                // arrive at a given key is the one kept, so two exactly-equal
-                // routes cannot race.
+                // termination argument (see the doc comment, which needs BOTH
+                // a non-falling width and a rising hop count): given those, an
+                // equal key re-expanded would still not loop. What strictness
+                // buys is that the FIRST telling to arrive at a given key is
+                // the one kept, so two exactly-equal routes cannot race.
                 Some(held) if held.key <= next_key => continue,
                 Some(held) => {
                     frontier.remove(&(held.key, hearer));
