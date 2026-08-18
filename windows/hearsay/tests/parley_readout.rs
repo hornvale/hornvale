@@ -91,14 +91,67 @@ const PANEL: [u64; 40] = [
 const BASELINE_PREFIX: u64 = 12;
 
 /// Spec §3.4: mutually-exclusive cross-people day sets, 12 seeds, measured by
-/// `probe_contact_substrate.rs` under `Accumulation::Multiplicative`.
-const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 19;
+/// `probe_contact_substrate.rs` under `Accumulation::Multiplicative`. **19 as
+/// published; 15 as re-derived at The Underworld's merge — see the
+/// re-derivation block on [`BASELINE_ENDINGS_12`] below.**
+const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 
-/// Spec §3.1, seeds 0–11: endings in the panel.
-const BASELINE_ENDINGS_12: usize = 5913;
+/// # RE-DERIVED AT THE UNDERWORLD'S MERGE (2026-08-18)
+///
+/// The three `BASELINE_*_12` constants below are the ONLY figures this file
+/// asserts, and all three moved when The Underworld merged. Re-derived by this
+/// readout's own procedure on the merge product `main` `95cbaa70` +
+/// `campaign/the-underworld` `ea95434f`, `PANEL`, `BASELINE_PREFIX` and the
+/// scorer all untouched:
+///
+/// ```text
+///                                 spec §3.1/§3.4   merge product    move
+///   endings, seeds 0-11                    5913            4975    -15.9%
+///   foreign-attacker endings                138             102    -26.1%
+///   mutually-exclusive day sets              19              15    -21.1%
+/// ```
+///
+/// **WHY, AND THE ATTRIBUTION IS NOT THE OBVIOUS ONE.** The Underworld re-keyed
+/// the history bake's node index from `CellId` to `(CellId, DelveRung)` —
+/// decision 0144, one community per *place* rather than per cell — which is the
+/// change that most visibly touches settlement placement, and the natural
+/// reading is that it accounts for the move. It does not. Neutralising it
+/// alone (`Bake::rung_for` forced to `DelveRung::Surface`, which makes every
+/// node-index key `(cell, Surface)` and so restores the old one-per-cell
+/// semantics exactly, with everything else about the campaign intact) reads:
+///
+/// ```text
+///                          main    re-key neutralised    as merged
+///   endings                5913                  5038         4975
+///   foreign                 138                   143          102
+///   mutually exclusive       19                    13           15
+/// ```
+///
+/// So the re-key explains **63 of the 938 lost endings (6.7%)**. The other
+/// 93% is the rest of the campaign — the terrain, water-table, cave-depth and
+/// species work that changed the *surface* world as well as adding the
+/// underworld. The foreign-attacker count is the opposite case: neutralising
+/// the re-key takes it to 143, *above* main's 138, so the re-key accounts for
+/// the whole of that column's fall and slightly more.
+///
+/// **AND THE MOVE IS ~6x LARGER HERE THAN IN THE POPULATION IT SAMPLES.** Over
+/// the full 1000-world census the same campaign moved settlement count -1.30%
+/// (257.515 -> 254.171), total population -1.04% and standing tribute
+/// relations -3.24%. Over seeds 0-11 specifically those same columns moved
+/// -8.39%, -8.92% and -14.44%. The twelve-seed prefix is a small, high-variance
+/// subsample, so a double-digit move in it is what a low-single-digit move in
+/// the world looks like through this control. That is a fact about the
+/// control's sensitivity, not a defect in it: it fired on a real world change,
+/// which is its job.
+///
+/// Spec §3.1, seeds 0–11: endings in the panel. **5913 as published; 4975 as
+/// re-derived above, which is what this constant now holds.**
+const BASELINE_ENDINGS_12: usize = 4975;
 
-/// Spec §3.1, seeds 0–11: endings whose attacker is of another people.
-const BASELINE_FOREIGN_12: usize = 138;
+/// Spec §3.1, seeds 0–11: endings whose attacker is of another people. **138
+/// as published; 102 as re-derived at The Underworld's merge — see the
+/// re-derivation block above.**
+const BASELINE_FOREIGN_12: usize = 102;
 
 /// Spec §3.5: the share of holders that had already ended when the event they
 /// hold took place. H1's prediction is stated against this number.
