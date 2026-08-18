@@ -871,7 +871,7 @@ fn the_cascade_distribution_is_adjudicated() {
 ///    standing-relation age) reads **0.384** on `main` and **0.546** here,
 ///    against the roster's own two-tailed 5% bar of `NOISE_Z / sqrt(n - 1)` =
 ///    **0.693** at n = 9. A third state was measured as a control — decision
-///    0144's node-index re-key neutralised on the merge product, everything
+///    0145's node-index re-key neutralised on the merge product, everything
 ///    else of the campaign intact — and reads **0.629**, still under the bar
 ///    but *higher* than either shipped tree, with the endpoint ratio at
 ///    **2.20** (high-elf 825 d over gnoll 375 d). Three world states spread

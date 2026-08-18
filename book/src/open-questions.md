@@ -534,6 +534,62 @@ disturb. That is [The Ell](./chronicle/the-ell.md)'s question — *which test
 goes red if this crossing is deleted?* — answered once more in the negative,
 and closed with a cross-check rather than a threshold.
 
+A fourteenth campaign returns the family to the place the first one found it —
+a check written from a plan's own text — and contributes the largest tally yet
+alongside a corner about *where a check is pointed*.
+[The Illumination](./chronicle/the-illumination.md) (2026-08-18) rewrote what
+a chart's colour, glyph and weight each mean, and produced **twenty-two**
+defects, essentially all of them originating in planning and dispatch text
+rather than in implementation. **Twelve share one shape**: a check that reads
+as protection while not being pointed at what it claims.
+
+Three of the twelve are worth stating individually, because each fails
+differently. A **ceiling guard** was written to catch a rejected continuous
+colouring that would produce a unique colour per cell; asked to *demonstrate*
+rather than assert that it would fire, the rejected design measured eighteen
+distinct colours against a bound of twenty and **passed silently on the exact
+regression the guard existed for**. A **test whose comment claimed it pinned a
+field** so that "a future change cannot add either by accident" never asserted
+anything about that field at all — the predicted red, on removing the field,
+never came, and the implementer reported the absence instead of implying
+otherwise. And a **guard on an escape-free rendering surface** rendered a
+scene containing none of the cells whose behaviour it guarded, so it stayed
+green while precisely that path changed underneath it.
+
+**Score: the bet holds; the practice gains a third clause, aimed at
+positive controls rather than at checks.** This chapter already asks that a
+check be made to fail on command, and that it be answerable to an enumeration.
+This campaign adds: **a positive control must be shown to discriminate, not
+merely to exist.** One control took the absolute value of a signed quantity to
+prove the sign was irrelevant — and removing the absolute value left the test
+green, because at the fixture's magnitudes both signs rounded into the same
+band. It was found only because a review brief instructed the reviewer to
+assume another instance existed. A control that cannot separate the two
+hypotheses it names is the cannot-fire family with better manners.
+
+**One bet moves, and it moves on a null rather than a result.** The chapter's
+standing caution about drift-checked artifacts with no external anchor gains a
+sampling twin. A seasonal signal was measured at eight points across a year,
+declined monotonically at every one, and read as a clean null — while the same
+cell's reported annual mean was arithmetically inconsistent with all eight
+readings. A denser resample found the minimum sitting in the unsampled tail,
+and the mechanism was a roughly twenty-three-day oscillation **aliasing**
+against a forty-six-day sampling grid. The smooth decline was the beat
+frequency of the instrument. So the floor gains a question asked of any
+periodic measurement: *does this sampling interval share a period with
+anything in the system, and would a null look identical if it did?*
+
+**And one finding is about the world rather than about instruments, recorded
+here because it scores a bet the map below carries.** The campaign's entire
+colour rewrite is invisible at the view a player opens first: the settlement
+walk band is 100% river on all five seeds sampled, so the default outdoor
+chart withholds every tint and reports so in its own caption. That is
+settlement siting behaving correctly, not a renderer defect — and no committed
+page in this book reaches the colour rendering either, since the scripted path
+runs with the eye off. It is the self-scorability floor in an unfamiliar
+costume: a capability can be built, measured, correct, and **unobservable
+through every artifact the project checks itself with**.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

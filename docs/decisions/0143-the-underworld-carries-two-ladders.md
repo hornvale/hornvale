@@ -1,8 +1,8 @@
-# 0142. The underworld carries two ladders, and neither derives the other
+# 0143. The underworld carries two ladders, and neither derives the other
 
 **Status:** Accepted (2026-08-18) · **Decider:** Nathan · **Relates:**
 [0105](0105-water-keeps-bands-rock-becomes-a-graph.md),
-[0143](0143-a-caves-depth-is-a-budget-in-metres.md)
+[0144](0144-a-caves-depth-is-a-budget-in-metres.md)
 
 In the context of The Delvers having withdrawn two subterranean dwarf kinds
 because nothing could tell them apart by depth, and The Underworld's first task
@@ -42,7 +42,7 @@ Re-spacing the rungs cannot repair that, and the campaign proved it by trying:
 ΔT = gradient × depth, and the measured gradient spans **1.27×** (p10 21.795 →
 p90 27.780 K/km) against a depth spread of ~10⁴×, so ΔT is depth rescaled by a
 near-constant and inherits its shape exactly. **The second ladder is only worth
-having because its input is independent** — which is decision 0143.
+having because its input is independent** — which is decision 0144.
 
 ## What this costs
 
@@ -54,7 +54,7 @@ having because its input is independent** — which is decision 0143.
   archive keeps answering "which bands does this void penetrate" correctly
   while no longer being the depth coordinate. That derivation is by construction
   in `Cave::new` and `Cave::from_reach`, not by convention — see
-  [0143](0143-a-caves-depth-is-a-budget-in-metres.md) for the third
+  [0144](0144-a-caves-depth-is-a-budget-in-metres.md) for the third
   constructor, `Cave::from_parts_unchecked`, which exists to build a
   disagreeing pair for exactly one test and which the *generator* never
   reaches.

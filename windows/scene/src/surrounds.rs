@@ -6,7 +6,7 @@
 
 use crate::{Feature, SceneError, features_of};
 use hornvale_kernel::{RoomAddr, SeaLevelHeight, World, WorldTime};
-use hornvale_locale::{Locale, LocaleContext, biome_prose_name};
+use hornvale_locale::{CoverClass, Locale, LocaleContext, biome_prose_name};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -101,7 +101,7 @@ pub struct LegendEntry {
 /// the value is discarded rather than absent. See [`SurroundsCell::regime`]
 /// for the full explanation. [`SurroundsCell::micro`] is the field that
 /// genuinely is emitted for every cell, sub-cell grain included.
-/// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m), bare-ok(diagnostic-value: height_asl_m), bare-ok(artifact: color)
+/// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m), bare-ok(diagnostic-value: height_asl_m), bare-ok(artifact: color), bare-ok(artifact: signal), bare-ok(index: cover), bare-ok(diagnostic-value: bearing_deg), bare-ok(diagnostic-value: distance_rad)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsCell {
     /// Packed room id.
@@ -165,6 +165,41 @@ pub struct SurroundsCell {
     pub micro: Micro,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
+    /// The observer's raw per-channel response at this cell — the producer's
+    /// own render, rung 2 of spec §4.2's ladder — absent unless this scene
+    /// was built through [`surrounds_scene_colored_in`], same key-omission
+    /// discipline as `color`. Projecting this through the carried
+    /// observer's [`Sight`] must reproduce `color` byte-for-byte (the
+    /// migration control, spec §4.2) — that is what makes shipping both in
+    /// one document strictly stronger than the cross-version comparison the
+    /// spec's `RENDER-appearance-signal-protocol` proposal described.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_vec_f64_field"
+    )]
+    pub signal: Option<Vec<f64>>,
+    /// Index into [`SurroundsScene::cover_legend`] — the categorical surface
+    /// cover class (spec §4.3), absent unless this scene was built through
+    /// [`surrounds_scene_colored_in`], same key-omission discipline as
+    /// `color`. Not derivable by thresholding `color`: two clients would
+    /// threshold a continuous mixture differently, producing two
+    /// disagreeing worlds from one document.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover: Option<u32>,
+    /// Great-circle initial azimuth from the observer to this cell's own
+    /// centroid, degrees clockwise from north (`RoomAddr::bearing_to`).
+    /// `Option`-free and present on every cell, including a seam cell (whose
+    /// `room` is a plain `u64`, not the `Option`al lattice offsets above) —
+    /// this and `distance_rad` are the whole north-up unblock (spec §5.1):
+    /// together they are `other`'s polar coordinate about the observer,
+    /// which is what a thin client needs to place a cell without doing
+    /// spherical trigonometry itself.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub bearing_deg: f64,
+    /// Great-circle angular distance from the observer to this cell's own
+    /// centroid, radians (`RoomAddr::distance_rad_to`). See `bearing_deg`.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub distance_rad: f64,
 }
 
 /// The sub-cell micro-field at a room: four independent axes in `[-1, 1]`,
@@ -215,7 +250,8 @@ pub struct Micro {
 /// The eye a coloured chart was seen through, and what its projection to
 /// sRGB preserves. Declared rather than derived because a document alone
 /// cannot say which species looked, and a caller must be able to say so —
-/// but `channels`, `chromatic`, `projection`, and `preserves` are
+/// but `channels`, `chromatic`, `projection`, `preserves`, `channel_roles`,
+/// `projection_slots`, and `projection_norms` are
 /// **overwritten by the builder** from the [`hornvale_kernel::color::Observer`]
 /// actually used to colour the chart, discarding whatever the caller put
 /// there. That overwrite is the whole reason this block can be trusted: a
@@ -223,7 +259,29 @@ pub struct Micro {
 /// — the two things a bare `Observer` cannot supply — but it cannot make
 /// the document claim an arity or a projection the eye did not actually
 /// have.
-/// type-audit: bare-ok(identifier-text: observer), bare-ok(count: channels), bare-ok(count: chromatic), bare-ok(identifier-text: projection), bare-ok(prose: preserves), bare-ok(diagnostic-value: sun_altitude_deg)
+///
+/// **`channel_roles`, `projection_slots`, and `projection_norms` are the
+/// calibration spec §4.1 requires alongside `signal`, or `signal` is
+/// decoration**: a client receiving `signal: [0.31, 0.44, 0.09]` cannot
+/// otherwise tell which index is chromatic, which drives R, G, and B, or
+/// what to divide each by. Read together with `channels`/`chromatic`
+/// (counts) and `projection`/`preserves` (a name and a caption), they are
+/// what lets a client reproject `signal` itself — `(signal[projection_slots[i]]
+/// / projection_norms[i]).clamp(0, 1)` per output slot, then the sRGB
+/// transfer function (`kernel/src/color.rs`'s `encode_srgb_byte`) — rather
+/// than merely caption a lost axis. All three are per-observer: a species
+/// observer's roles, slots, and norms all differ from the standard
+/// observer's.
+///
+/// **This covers the photopic path only.** [`hornvale_kernel::color::
+/// Observer::to_srgb`] has a second, scotopic branch below the photopic
+/// threshold that mixes in the rod response through global kernel constants
+/// (`SCOTOPIC_GAIN`, `SCOTOPIC_NORM`) that are not carried on this wire, so a
+/// cell that took that branch cannot be reprojected from `signal` and this
+/// calibration alone — a client must fall back to the cell's own carried
+/// `color` for it. See [`hornvale_kernel::color::Projection::rgb`] for the
+/// same caveat stated on the kernel side.
+/// type-audit: bare-ok(identifier-text: observer), bare-ok(count: channels), bare-ok(count: chromatic), bare-ok(identifier-text: projection), bare-ok(prose: preserves), bare-ok(diagnostic-value: sun_altitude_deg), bare-ok(identifier-text: channel_roles), bare-ok(index: projection_slots), bare-ok(ratio: projection_norms)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Sight {
     /// The species (or other named eye) the caller asserts this chart was
@@ -244,6 +302,32 @@ pub struct Sight {
     /// datum; the builder does not know or check it.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub sun_altitude_deg: f64,
+    /// `"chromatic"` or `"achromatic"` per channel, in channel order (see
+    /// [`hornvale_kernel::color::ChannelRole`]) — the calibration a client
+    /// needs to know which index of a carried `signal` carries hue and
+    /// which carries brightness only. Appended after `sun_altitude_deg`, the
+    /// same additive-at-the-end discipline `sight`/`resolution` follow on
+    /// [`SurroundsScene`]. Overwritten by the builder like `channels` and
+    /// `chromatic` above — see this struct's own doc.
+    pub channel_roles: Vec<String>,
+    /// Which channel drives R, G, B (`Projection::rgb`), or `None` when the
+    /// observer carries no projection to sRGB — half of the calibration
+    /// `signal` needs to be reprojected. Overwritten by the builder, same as
+    /// `projection`/`preserves` above.
+    pub projection_slots: Option<[u32; 3]>,
+    /// The per-output-slot normalizers (`Projection::norms`), or `None` when
+    /// the observer carries no projection to sRGB — the **other** half of
+    /// the calibration, and per-observer: a species observer's differ from
+    /// the standard observer's (1.98/3.51/3.95). Without this, `signal[idx]
+    /// / norm` cannot be computed at all — `projection_slots` alone says
+    /// *which* index to read, not what to divide it by — so a client still
+    /// could not reproject before this field existed. Overwritten by the
+    /// builder, same as `projection_slots` above. A derived (non-`native`)
+    /// observer's norms are computed live (`windows/worldgen/src/
+    /// observer.rs::build`), not carried as a clean literal, so this is
+    /// quantized at emit like every other computed float on this schema.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_array3_f64_field")]
+    pub projection_norms: Option<[f64; 3]>,
 }
 
 /// What resolution this chart's fields are decided at.
@@ -277,13 +361,26 @@ pub struct Resolution {
 }
 
 /// One `scene/surrounds/v2` document. Field order is the JSON key order and
-/// is contract — never reorder. `sight` and `resolution` are the exceptions
-/// to "never reorder" in letter only: each was appended after the previous
-/// last field rather than inserted, so every document built before it existed
-/// is still byte-identical. `#[serde(skip_serializing_if)]` means an
-/// uncoloured document emits no `sight` key at all; `resolution` carries no
-/// such gate and is always present.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(diagnostic-value: day), bare-ok(count: radius), bare-ok(count: depth), bare-ok(identifier-text: orientation), bare-ok(identifier-text: biome_legend), bare-ok(identifier-text: water_legend), bare-ok(identifier-text: relief_legend), bare-ok(diagnostic-value: sea_level_m)
+/// is contract — never reorder. `sight`, `resolution`, and `cover_legend` are
+/// the exceptions to "never reorder" in letter only: each was appended after
+/// the previous last field rather than inserted, so every document built
+/// before it existed is still byte-identical. `#[serde(skip_serializing_if)]`
+/// means an uncoloured document emits no `sight` key at all; `resolution` and
+/// `cover_legend` carry no such gate and are always present — `cover_legend`
+/// is a static catalog (like `biome_legend`/`water_legend`/`relief_legend`),
+/// unconditionally cheap to emit even though the per-cell `cover` index it
+/// backs is itself gated the same way `color` is.
+///
+/// **The rule this document follows for any future legend (fix round 1,
+/// FINDING 5): a legend is an unconditional vocabulary declaration of the
+/// schema version, not a per-document datum.** Its contents are a
+/// compile-time constant, identical in every `scene/surrounds/v2` document
+/// ever emitted, and as true of an uncoloured document as a coloured one —
+/// so it is never gated, even when every per-cell index that resolves
+/// against it is. A **per-cell index** may still be gated (`cover` follows
+/// `color`'s `skip_serializing_if` discipline); the legend backing it may
+/// not. Follow this precedent rather than re-arguing it.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(diagnostic-value: day), bare-ok(count: radius), bare-ok(count: depth), bare-ok(identifier-text: orientation), bare-ok(identifier-text: biome_legend), bare-ok(identifier-text: water_legend), bare-ok(identifier-text: relief_legend), bare-ok(diagnostic-value: sea_level_m), bare-ok(identifier-text: cover_legend)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsScene {
     /// Always `scene/surrounds/v2`.
@@ -299,8 +396,18 @@ pub struct SurroundsScene {
     pub radius: u32,
     /// The refinement depth every cell sits at.
     pub depth: u32,
-    /// Always `"lattice"`: the chart is lattice-aligned, never north-up. A
-    /// consumer that wants north must ask the rooms for their bearings.
+    /// Always `"north-up"`: every cell's box is its own polar coordinate
+    /// about the observer — `bearing_deg` clockwise from north, scaled by
+    /// `distance_rad` — so the top of a chart drawn from this document is
+    /// true north and the observer is its centre.
+    ///
+    /// It read `"lattice"` until The Illumination, when `bearing_deg` and
+    /// `distance_rad` arrived on every cell and a consumer stopped needing
+    /// spherical trigonometry to place one. That is a VALUE change, not a
+    /// schema change: the tag stays `scene/surrounds/v2` and the lattice
+    /// offsets (`u`/`v`/`w`/`up`) stay on the wire for a consumer that wants
+    /// adjacency rather than direction — none of the three shipped
+    /// renderers reads them any more.
     pub orientation: String,
     /// The biome catalog, stable append-only order.
     pub biome_legend: Vec<String>,
@@ -330,6 +437,12 @@ pub struct SurroundsScene {
     /// resolution and are therefore constant below it. Appended after
     /// `sight` so the change is additive to the wire.
     pub resolution: Resolution,
+    /// The cover catalog, stable index order (`CoverClass::LEGEND`) — the
+    /// legend a cell's `cover` index resolves against. Appended after
+    /// `resolution` rather than beside the other three legends, so the
+    /// change is additive to the wire; always present regardless of whether
+    /// any cell in this document actually carries a `cover` index.
+    pub cover_legend: Vec<String>,
 }
 
 /// Build the `scene/surrounds/v2` document for `room` at `radius` rings,
@@ -475,6 +588,16 @@ pub fn surrounds_scene_in(
                 openness: locale.regime.micro.openness,
             },
             marks,
+            // Same posture as `color` above: only `surrounds_scene_colored_in`
+            // populates `signal`/`cover`, so the default path's committed
+            // artifacts stay byte-identical.
+            signal: None,
+            cover: None,
+            // Option-free and present on every cell, seams included — the
+            // north-up unblock (spec §5.1). `room`/`addr` are both already
+            // `RoomAddr`s in scope; no lattice offset is needed.
+            bearing_deg: hornvale_kernel::quantize(room.bearing_to(addr)),
+            distance_rad: hornvale_kernel::quantize(room.distance_rad_to(addr)),
         });
     }
     cells.sort_by_key(|c| c.room);
@@ -499,7 +622,7 @@ pub fn surrounds_scene_in(
         },
         radius,
         depth: room.depth(),
-        orientation: "lattice".to_string(),
+        orientation: "north-up".to_string(),
         biome_legend: catalog.iter().map(|b| b.name().to_string()).collect(),
         water_legend: hornvale_terrain::WaterKind::LEGEND
             .iter()
@@ -530,11 +653,28 @@ pub fn surrounds_scene_in(
             // wire. So the disclosure stays field-shaped and silent about
             // marks; `the_chart_declares_which_fields_are_grid_resolution`
             // pins this so a future change cannot add either by accident.
-            grid_resolution_fields: ["biome", "color", "water"]
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+            //
+            // `"color"` was REMOVED here by the illumination campaign's
+            // Task 2b fix round (a wire VALUE change, not a shape change —
+            // the `grid_resolution_fields` key itself is untouched, its
+            // contents shrink by one entry). Before that campaign colour was
+            // read from a room's dominant *canonical-grid* corner alone, so
+            // it genuinely was constant below grid resolution and belonged
+            // in this list. `surface::cover_weights` now composes in the
+            // room's own `MicroField`, which — like `relief`, deliberately
+            // NOT in this list — genuinely varies below the grid. Leaving
+            // `"color"` here after that change would have this document
+            // actively lie to a cross-repo client (`scene/surrounds/v2` is
+            // a cross-repo contract): a client entitled to read one colour
+            // per grid cell and reuse it would render a flat chart while the
+            // sim disagrees.
+            grid_resolution_fields: ["biome", "water"].iter().map(|s| s.to_string()).collect(),
         },
+        // A static catalog (spec §4.3), unconditionally cheap — unlike the
+        // per-cell `cover` index it backs, this needs no observer and no
+        // colour layer, so it is populated here rather than only in
+        // `surrounds_scene_colored_in`.
+        cover_legend: CoverClass::LEGEND.iter().map(|s| s.to_string()).collect(),
     })
 }
 
@@ -611,10 +751,38 @@ pub fn surrounds_scene_colored_in(
         let addr = hornvale_kernel::RoomId(cell.room)
             .unpack()
             .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?;
+        // `cell.micro` was already computed once, for every cell, in the
+        // first pass this scene came from (`surrounds_scene_in`'s own build
+        // loop, which drops the `Locale` it came from after copying this
+        // struct-for-struct). Re-deriving it here via `ctx.describe(&addr,
+        // at)` would rebuild an entire `Locale` — prose descriptor,
+        // strangeness placement, and all — once per cell just to read four
+        // floats already sitting on `cell`. Inverting the copy back into
+        // `hornvale_locale::MicroField` is the cheap, correct alternative:
+        // both are the same four axes in the same order, so this is a
+        // straight field-for-field re-tag, not a re-derivation.
+        let micro = hornvale_locale::MicroField {
+            relief: cell.micro.relief,
+            aspect: cell.micro.aspect,
+            wetness: cell.micro.wetness,
+            openness: cell.micro.openness,
+        };
         let reflectance = ctx
-            .reflectance_at(&addr)
+            .reflectance_at(&addr, &micro, at)
             .map_err(|e| SceneError::Build(e.to_string()))?;
-        cell.color = observer.to_srgb(&observer.sense(&reflectance, light));
+        // One `Signal`, used for both `color` and `signal` below — never
+        // recomputed — so the migration control (projecting `signal` through
+        // the observer must reproduce `color` byte-for-byte, spec §4.2) holds
+        // by construction rather than by coincidence of two independent
+        // computations agreeing.
+        let signal = observer.sense(&reflectance, light);
+        cell.color = observer.to_srgb(&signal);
+        cell.signal = Some(signal.get().to_vec());
+        cell.cover = Some(
+            ctx.cover_class_at(&addr, &micro, at)
+                .map_err(|e| SceneError::Build(e.to_string()))?
+                .index(),
+        );
     }
     scene.sight = Some(Sight {
         channels: observer.channels() as u32,
@@ -627,6 +795,16 @@ pub fn surrounds_scene_colored_in(
             .projection()
             .map_or("nothing (no projection)", |p| p.preserves())
             .to_string(),
+        channel_roles: observer
+            .roles()
+            .iter()
+            .map(|r| match r {
+                hornvale_kernel::color::ChannelRole::Chromatic => "chromatic".to_string(),
+                hornvale_kernel::color::ChannelRole::Achromatic => "achromatic".to_string(),
+            })
+            .collect(),
+        projection_slots: observer.projection().map(|p| p.rgb().map(|i| i as u32)),
+        projection_norms: observer.projection().map(|p| *p.norms()),
         ..sight
     });
     Ok(scene)
@@ -828,6 +1006,52 @@ mod tests {
         }
     }
 
+    /// Step 6 of Task 9's brief: a seam cell has no honest lattice
+    /// coordinate (`u`/`v`/`w`/`up` are all `None`), but it still carries a
+    /// packed `room` id — a plain `u64`, not an `Option` — so `bearing_deg`
+    /// and `distance_rad` must be computable and finite there too. This is
+    /// the whole north-up unblock (spec §5.1/§5.2): a client that cannot
+    /// draw a seam cell today gets a polar coordinate for it regardless of
+    /// the lattice bending underneath. Reuses the exact verified
+    /// seam-crossing fixture `a_seam_observer_carries_no_coordinate_on_seam_
+    /// cells` establishes above (12 of 31 cells are seam cells at radius 4).
+    #[test]
+    fn a_seam_observer_still_carries_bearing_and_distance_on_seam_cells() {
+        let w = world();
+        let seam_observer = RoomAddr::containing(
+            hornvale_kernel::math::unit_sphere_from_lat_lon(-10.0, 0.0),
+            12,
+        );
+        let s = surrounds_scene(&w, &seam_observer, 4, WorldTime::GENESIS).unwrap();
+        let seam_cells: Vec<&SurroundsCell> = s.cells.iter().filter(|c| c.seam).collect();
+        assert_ne!(
+            seam_cells.len(),
+            0,
+            "fixture observer must actually see seam cells, or this test is vacuous"
+        );
+        for c in &seam_cells {
+            assert!(
+                c.bearing_deg.is_finite(),
+                "seam cell {} has a non-finite bearing_deg",
+                c.room
+            );
+            assert!(
+                c.distance_rad.is_finite(),
+                "seam cell {} has a non-finite distance_rad",
+                c.room
+            );
+        }
+        // A positive control: the observer's own cell (never a seam cell,
+        // since it sits at ring 0 on its own face) has distance_rad == 0, so
+        // a build that silently zeroed every cell's distance would still
+        // pass an "is finite" check alone.
+        assert!(
+            seam_cells.iter().any(|c| c.distance_rad > 0.0),
+            "every seam cell reported distance_rad == 0.0 — the field reads as a stub, \
+             not a real great-circle distance"
+        );
+    }
+
     #[test]
     fn the_document_is_byte_identical_on_rebuild() {
         let w = world();
@@ -907,7 +1131,7 @@ mod tests {
         hornvale_astronomy::illuminant::daylight(&star)
     }
 
-    /// A `Sight` whose four builder-owned fields are deliberately wrong
+    /// A `Sight` whose seven builder-owned fields are deliberately wrong
     /// placeholders — every caller of this helper is exercising a path that
     /// either overwrites them or doesn't care what they say, and a
     /// plausible-looking placeholder would hide a builder that forgot to
@@ -920,6 +1144,9 @@ mod tests {
             projection: String::new(),
             preserves: String::new(),
             sun_altitude_deg,
+            channel_roles: Vec::new(),
+            projection_slots: None,
+            projection_norms: None,
         }
     }
 
@@ -988,8 +1215,12 @@ mod tests {
         // serde skip_serializing_if means an absent colour emits no key at
         // all, so the committed gallery JSON cannot move. Checked as a KEY
         // (`"color":`), not a bare substring: `resolution.grid_resolution_fields`
-        // legitimately carries the string "color" as an array element, which
-        // a bare `"\"color\""` search would also match.
+        // used to carry the string "color" as an array element (removed by
+        // the illumination campaign's Task 2b fix round, FINDING 0 — see
+        // `the_chart_declares_which_fields_are_grid_resolution`), which a
+        // bare `"\"color\""` search would also have matched. Checked as a
+        // KEY rather than a substring on principle, not because the
+        // collision is live today.
         let w = world();
         let s = surrounds_scene(&w, &observer(&w), 1, WorldTime::GENESIS).unwrap();
         let json = crate::surrounds_json(&s);
@@ -1059,8 +1290,11 @@ mod tests {
     /// only difference: the colour layer is additive, and if it perturbed a
     /// biome index or a mark the committed artifacts would be at risk the
     /// moment anything switched builders. `sight` is stripped alongside
-    /// `color` — both are new, additive-only fields the coloured builder
-    /// sets and the uncoloured one never does.
+    /// `color` — `sight`, `color`, `signal`, and `cover` are all new,
+    /// additive-only fields the coloured builder sets and the uncoloured one
+    /// never does; `bearing_deg`/`distance_rad`/`cover_legend` are NOT
+    /// stripped, because both builders set those identically (Task 9) and a
+    /// divergence there is exactly what this test exists to catch.
     #[test]
     fn coloring_changes_nothing_but_the_color() {
         let w = world();
@@ -1068,30 +1302,169 @@ mod tests {
         let mut stripped = colored(&w, 2);
         for cell in stripped.cells.iter_mut() {
             cell.color = None;
+            cell.signal = None;
+            cell.cover = None;
         }
         stripped.sight = None;
         assert_eq!(plain, stripped);
     }
 
-    /// **A colour chart at walking depth is one flat wash, and that is the
-    /// honest answer.**
+    /// Task 9's migration control (spec §4.2): for every cell that carries
+    /// both `signal` and `color`, projecting `signal` back through the
+    /// observer's own `to_srgb` must reproduce `color` byte-for-byte. This
+    /// is spec's `RENDER-appearance-signal-protocol` control made strictly
+    /// stronger — a live invariant inside ONE document, not a comparison
+    /// across two schema versions.
     ///
-    /// Rock class is read from the room's dominant *canonical-grid* corner
-    /// (`LocaleContext::reflectance_at`), and the vessel walks at
-    /// `globe_level + 6` — rooms roughly 64× finer per axis than a globe
-    /// cell. A radius-8 neighbourhood of those rooms (109 cells) lies inside
-    /// a single grid cell, so it reports one rock, one biome, one water
-    /// kind, one relief band — and now one colour. Measured on seed 42: at
-    /// `globe_level + 6` every radius from 2 to 8 yields exactly one
-    /// distinct sRGB value (`#828074`), while at `globe_level` a radius-4
-    /// chart yields six.
+    /// FINDING 3 (fix round 1): asserts on `serde_json::to_value(&s)` — the
+    /// SERIALIZED, quantized wire form — rather than on `s.cells` directly.
+    /// A client only ever reads the wire, and quantize-at-emit (decision
+    /// 0033) means the in-memory `f64` and its serialized value are not
+    /// guaranteed identical in general, even though they measure equal
+    /// today (the emit-boundary rounding is well under a `u8` colour
+    /// channel's resolution at this document's magnitudes). Asserting on
+    /// the struct alone cannot see a future quantization regression widen
+    /// that gap; asserting on the JSON can.
     ///
-    /// This test exists so a consumer cannot mistake the flatness for a bug
-    /// in the colour layer. The colour is exactly as spatially resolved as
-    /// every categorical field the chart already carried; a finer colour
-    /// would need a finer lithology, not a different builder.
+    /// The final assertion (`count > 0`) is not optional: an empty scene, or
+    /// a scene whose cells all lack one of the two fields, would pass the
+    /// loop above vacuously. `colored(&w, 2)` builds through the standard
+    /// observer, which has a truthful sRGB image, so every one of its cells
+    /// carries both fields — this asserts that population directly rather
+    /// than trusting it.
     #[test]
-    fn the_color_is_no_finer_grained_than_the_chart_already_was() {
+    fn projecting_a_cells_signal_reproduces_its_colour_exactly() {
+        let w = world();
+        let s = colored(&w, 2);
+        let obs = hornvale_kernel::color::standard_observer();
+        let json = serde_json::to_value(&s).expect("the scene serializes");
+        let cells = json["cells"].as_array().expect("cells is a JSON array");
+        let mut count = 0;
+        for cell in cells {
+            let (Some(signal_json), Some(color_json)) = (cell.get("signal"), cell.get("color"))
+            else {
+                continue;
+            };
+            let signal: Vec<f64> = serde_json::from_value(signal_json.clone())
+                .expect("the wire's signal is an array of numbers");
+            let color: [u8; 3] = serde_json::from_value(color_json.clone())
+                .expect("the wire's color is a 3-element byte array");
+            let round = obs
+                .to_srgb(&hornvale_kernel::color::Signal::from(signal))
+                .expect("the standard observer projects every real signal it emitted");
+            assert_eq!(
+                round, color,
+                "cell {} diverged under round-trip through the wire's own bytes",
+                cell["room"]
+            );
+            count += 1;
+        }
+        assert!(
+            count > 0,
+            "the migration control ran over zero cells — the loop body never executed"
+        );
+        assert_eq!(
+            count,
+            cells.len(),
+            "the standard observer has a truthful sRGB image, so every cell should have \
+             carried both signal and color on the wire — {count} of {} did",
+            cells.len()
+        );
+    }
+
+    /// FINDING 2 (fix round 1): `cover` was unguarded in its own crate —
+    /// mutating `cell.cover = Some(0)` left every `hornvale-scene` test,
+    /// goldens included, green, because this crate's byte-goldens are all
+    /// uncoloured and carry no `cover` key at all. This is the cheap,
+    /// crate-local guard the finding asked for: every emitted `cover`
+    /// index is in-bounds for `cover_legend`, and — the positive control —
+    /// `cover` is not constant across a real band, so a mutation that
+    /// collapses every cell to one class cannot pass silently.
+    ///
+    /// Reuses the exact walk-depth flagship band
+    /// `the_color_now_varies_within_one_grid_cell_via_the_micro_field`
+    /// measures colour variation over (radius 8, `globe_level + 6`):
+    /// measured here, that band draws 2 distinct cover classes
+    /// (`chlorophyll`, `litter`) across its cells.
+    #[test]
+    fn every_covers_index_is_in_bounds_and_cover_varies_across_a_real_band() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let gl = ctx.globe_level();
+        let v = hornvale_settlement::village_info(&w).expect("seed 42 has a village");
+        let (lat, lon) = place_latlon(&w, v.id).expect("the flagship has coordinates");
+        let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+        let light = daylight_for(&w);
+        let s = surrounds_scene_colored_in(
+            &w,
+            &ctx,
+            &RoomAddr::containing(pos, gl + 6),
+            8,
+            WorldTime::GENESIS,
+            &hornvale_kernel::color::standard_observer(),
+            &light,
+            sight_of("standard", 0.0),
+        )
+        .unwrap();
+        let mut seen = 0;
+        let mut distinct: BTreeSet<u32> = BTreeSet::new();
+        for cell in &s.cells {
+            let Some(cover) = cell.cover else {
+                continue;
+            };
+            assert!(
+                (cover as usize) < s.cover_legend.len(),
+                "cell {} carries cover index {cover}, out of bounds for a {}-entry legend",
+                cell.room,
+                s.cover_legend.len()
+            );
+            distinct.insert(cover);
+            seen += 1;
+        }
+        assert!(
+            seen > 0,
+            "no cell carried a cover index at all — the loop body never executed"
+        );
+        assert!(
+            distinct.len() > 1,
+            "every one of {seen} cells carried the same cover index {distinct:?} — either \
+             this band no longer varies (re-pick a fixture) or `cover_class_at` is not \
+             reading the room's own micro-field the way the colour layer beside it does"
+        );
+    }
+
+    /// **A colour chart at walking depth is now a HANDFUL of distinct
+    /// colours, not one flat wash — that flatness was the H1 defect the
+    /// illumination campaign's Task 2b exists to fix, and this test's own
+    /// name and assertion predate that campaign.**
+    ///
+    /// Before Task 2b, rock class was the *only* colour input, read from the
+    /// room's dominant *canonical-grid* corner
+    /// (`LocaleContext::reflectance_at`), so a radius-8 walking-depth
+    /// neighbourhood (109 cells, `globe_level + 6` — rooms roughly 64× finer
+    /// per axis than a globe cell) reported one rock, one biome, one water
+    /// kind, one relief band, and one colour: colour was exactly as
+    /// spatially resolved as every OTHER categorical field the chart
+    /// carried. Task 2b composes a surface-cover layer above the mineral
+    /// mixture, weighted in part by each room's own [`Micro`] field — which,
+    /// unlike rock class, biome, water kind or relief, is already emitted
+    /// at ROOM grain (this module's own doc on [`SurroundsCell::micro`]) —
+    /// so colour is now deliberately finer-grained than the categorical
+    /// fields it used to match exactly. `walk_biomes == 1` still holds:
+    /// nothing about *categorical* resolution moved, only colour's.
+    ///
+    /// The colour count is bounded, not unbounded, by design (spec §3's H1
+    /// ceiling: a band must not read as address noise, "31 cells, 31
+    /// colours"): `surface::cover_weights` bands the micro-field's three
+    /// perturbing axes (aspect, openness, wetness) into three tiers each
+    /// (`surface.rs::tier3`), so one climate regime can produce at most a
+    /// handful of distinguishable mixtures, never a continuum. Measured on
+    /// this world: a radius-8 walking-depth chart around the flagship now
+    /// draws **3** distinct colours (was 1 pre-Task-2b); a radius-4
+    /// grid-level chart still draws several more, unaffected (colour there
+    /// was already varying with climate/lithology, not micro).
+    #[test]
+    fn the_color_now_varies_within_one_grid_cell_via_the_micro_field() {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let gl = ctx.globe_level();
@@ -1117,12 +1490,36 @@ mod tests {
             (colors.len(), biomes.len())
         };
 
-        // At walking depth the whole neighbourhood is one grid cell.
+        // At walking depth the whole neighbourhood is one grid cell — still
+        // true of every CATEGORICAL field, but no longer true of colour.
         let (walk_colors, walk_biomes) = distinct(gl + 6, 8);
-        assert_eq!(
-            walk_colors, 1,
-            "a radius-8 walking-depth chart drew {walk_colors} colours; the \
-             fixture is one flat wash"
+        assert!(
+            walk_colors > 1,
+            "a radius-8 walking-depth chart drew only {walk_colors} colour(s); \
+             the micro-field modulation (surface::cover_weights) is absent or \
+             is not reaching the colour layer"
+        );
+        // `9`, not a round "generous" number — chosen and PROVEN to fire on
+        // the regression it names, not merely asserted to (Task 2b fix
+        // round, FINDING 1). The tiered design (`surface.rs::tier3`) bounds
+        // one climate regime to at most 3 (aspect) x 3 (openness) x 3
+        // (wetness) = 27 combinations in the worst case, but this specific
+        // band (unfrozen, so aspect's snow-only effect never activates)
+        // measures 3 today. The design this guard exists to catch — reading
+        // `aspect`/`openness`/`wetness` continuously instead of banding them
+        // into tiers — was reinstated on this exact band as an experiment
+        // and measured **18** distinct colours, comfortably under an
+        // earlier, unproven `<= 20` ceiling (which is why that ceiling was
+        // wrong: 15-18 colours from address noise passed it silently). `9`
+        // sits strictly between the shipped design's 3 and the rejected
+        // design's 18, and was confirmed to redden the continuous variant
+        // and stay green on the shipped one before landing — see the Task
+        // 2b fix-round report for both runs.
+        assert!(
+            walk_colors <= 9,
+            "a radius-8 walking-depth chart drew {walk_colors} colours across \
+             one climate cell — that reads as address noise (H1's ceiling), \
+             not a bounded regime perturbation"
         );
         assert_eq!(
             walk_biomes, 1,
@@ -1325,9 +1722,11 @@ mod tests {
         // path must emit not one extra byte. This is what protects the three
         // committed gallery charts and the gallery scene JSON. `color` is
         // checked as a KEY (`"color":`), not a bare substring: `resolution.
-        // grid_resolution_fields` legitimately carries the string "color" as
-        // an array element, which a bare `"\"color\""` search would also
-        // match.
+        // grid_resolution_fields` used to carry the string "color" as an
+        // array element (removed by the illumination campaign's Task 2b fix
+        // round, FINDING 0), which a bare `"\"color\""` search would also
+        // have matched. Checked as a KEY on principle, not because the
+        // collision is live today.
         let (w, ctx, room) = fixture_world();
         let s = surrounds_scene_in(&w, &ctx, &room, 2, WorldTime::GENESIS).unwrap();
         let json = crate::surrounds_json(&s);
@@ -1359,6 +1758,9 @@ mod tests {
             projection: "a lie".to_string(),
             preserves: "everything".to_string(),
             sun_altitude_deg: 12.5,
+            channel_roles: vec!["a lie too".to_string()],
+            projection_slots: Some([99, 99, 99]),
+            projection_norms: Some([9.9, 9.9, 9.9]),
         };
         let s = surrounds_scene_colored_in(
             &w,
@@ -1380,9 +1782,121 @@ mod tests {
         );
         assert_eq!(sight.channels, 4);
         assert_eq!(sight.chromatic, 3);
+        assert_eq!(
+            sight.channel_roles,
+            vec!["chromatic", "chromatic", "chromatic", "achromatic"],
+            "the builder overwrites the claimed channel roles too"
+        );
+        assert_eq!(
+            sight.projection_slots,
+            Some([2, 1, 0]),
+            "the builder overwrites the claimed projection slots too"
+        );
+        assert_eq!(
+            sight.projection_norms,
+            Some([3.95, 3.51, 1.98]),
+            "the builder overwrites the claimed projection norms too"
+        );
         // The two fields the builder CANNOT know are the caller's and survive.
         assert_eq!(sight.observer, "bugbear");
         assert_eq!(sight.sun_altitude_deg, 12.5);
+    }
+
+    /// Task 8: `Sight` must carry enough to interpret a `signal`, not just
+    /// caption a lost axis. The cross-check is the point (per the task
+    /// brief): two independently emitted facts about the same observer
+    /// (`channels`/`chromatic`, the counts, and `channel_roles`, the
+    /// per-channel detail) must agree, so a wrong one cannot pass quietly.
+    #[test]
+    fn sight_carries_enough_to_interpret_a_signal() {
+        let w = world();
+        let s = colored(&w, 2);
+        let sight = s
+            .sight
+            .expect("a coloured document carries its declaration");
+        assert_eq!(
+            sight.channel_roles.len(),
+            sight.channels as usize,
+            "one role per channel"
+        );
+        assert_eq!(
+            sight
+                .channel_roles
+                .iter()
+                .filter(|r| *r == "chromatic")
+                .count(),
+            sight.chromatic as usize,
+            "the chromatic role count must agree with the declared chromatic count"
+        );
+        // The standard observer carries a projection, so the wire's other
+        // halves of the calibration — which channel drives which output
+        // slot, and what to divide each by — must be present too.
+        let slots = sight
+            .projection_slots
+            .expect("the standard observer carries a projection");
+        for idx in slots {
+            assert!(
+                (idx as usize) < sight.channels as usize,
+                "projection slot {idx} names a channel the observer does not have \
+                 ({} channels)",
+                sight.channels
+            );
+        }
+        // FINDING 1 (fix round 1): `projection_slots` alone says which index
+        // to read; without a normalizer beside it, a client still cannot
+        // compute `signal[idx] / norm` at all. Every normalizer must be
+        // finite and non-zero (`Projection::new`'s own validating
+        // constructor already guarantees this at construction; this test
+        // guards the WIRE copy of that guarantee, not the kernel's).
+        let norms = sight
+            .projection_norms
+            .expect("the standard observer carries a projection");
+        for norm in norms {
+            assert!(
+                norm.is_finite() && norm != 0.0,
+                "projection norm {norm} is not usable as a divisor"
+            );
+        }
+    }
+
+    /// The dichromat fixture from `a_non_standard_observer_is_left_uncolored`
+    /// has no projection, so `projection_slots` must say so honestly rather
+    /// than carrying a stale or invented value — the same posture `color`
+    /// itself takes for this observer.
+    #[test]
+    fn an_observer_with_no_projection_declares_no_projection_slots() {
+        use hornvale_kernel::color::{Observer, Spectrum};
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let dichromat = Observer::new(vec![
+            Spectrum::new([1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).unwrap(),
+            Spectrum::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0]).unwrap(),
+        ])
+        .unwrap();
+        let light = daylight_for(&w);
+        let s = surrounds_scene_colored_in(
+            &w,
+            &ctx,
+            &observer(&w),
+            2,
+            WorldTime::GENESIS,
+            &dichromat,
+            &light,
+            sight_of("dichromat", 0.0),
+        )
+        .unwrap();
+        let sight = s
+            .sight
+            .expect("a coloured document carries its declaration");
+        assert_eq!(sight.channel_roles.len(), 2);
+        assert_eq!(
+            sight.projection_slots, None,
+            "an observer with no projection must declare no projection slots"
+        );
+        assert_eq!(
+            sight.projection_norms, None,
+            "an observer with no projection must declare no projection norms either"
+        );
     }
 
     /// `micro` is emitted for EVERY cell, not just the observer's. The mutation
@@ -1537,6 +2051,26 @@ mod tests {
                 .grid_resolution_fields
                 .contains(&"relief".to_string()),
             "relief is banded from the blend and DOES vary below the grid"
+        );
+        // The illumination campaign, Task 2b fix round (FINDING 0): before
+        // that campaign, colour was read from a room's dominant
+        // canonical-grid corner alone (bedrock only), so it genuinely
+        // belonged in this list. `surface::cover_weights` now composes in
+        // the room's own MicroField, which — like `relief` above — varies
+        // below the grid, so declaring `"color"` here would state a
+        // falsehood a cross-repo client is entitled to optimise on (read
+        // one colour per grid cell and reuse it). This assertion did NOT
+        // exist before the fix round; its absence is exactly why removing
+        // `"color"` from the production array did not turn this test red —
+        // nothing here was checking for it. Added now so a future
+        // regression (re-adding `"color"` to the list) is caught.
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"color".to_string()),
+            "color now varies below grid resolution (the room's own MicroField), \
+             so it must NOT be declared grid-resolution — a cross-repo client is \
+             entitled to read a declared field as constant below the grid"
         );
         // The Grain, Task 3: a cave is ALSO a dominant-corner fact, and it is
         // deliberately NOT declared here — see the comment at this field's

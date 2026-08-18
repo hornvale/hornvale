@@ -1,7 +1,7 @@
-# 0143. A cave's depth is a budget in metres, not a stratigraphic band
+# 0144. A cave's depth is a budget in metres, not a stratigraphic band
 
 **Status:** Accepted (2026-08-18) · **Decider:** Nathan · **Relates:**
-[0142](0142-the-underworld-carries-two-ladders.md),
+[0143](0143-the-underworld-carries-two-ladders.md),
 [0137](0137-the-craton-clamp-is-a-budget-not-a-limit.md)
 
 In the context of The Hollow having given a cave's *kind* its own fields while

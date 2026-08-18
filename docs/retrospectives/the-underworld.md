@@ -214,13 +214,52 @@ claimed 0142 on the board at brainstorm. `docs_consistency`'s
 `no_gaps_in_the_decision_log` refuses a hole, and 0142 does not exist on main —
 so numbering from 0143 fails the gate that runs on every commit.
 
-The records are 0142–0144, contiguous from main's 0141. A collision with the
-peer is resolved by renumbering at merge, which is routine; a gap is a red gate
-and cannot merge at all. The test's own failure message names "shifting too far
-to resolve a collision" as the usual cause of a hole, which is exactly the
-manoeuvre the plan text prescribed.
+The records were written as 0142–0144, contiguous from main's 0141. A collision
+with the peer is resolved by renumbering at merge, which is routine; a gap is a
+red gate and cannot merge at all. The test's own failure message names "shifting
+too far to resolve a collision" as the usual cause of a hole, which is exactly
+the manoeuvre the plan text prescribed.
 
 **A board claim tells you a number is taken. It cannot tell you to leave a hole.**
+
+### The renumber, and what only the merge product could see
+
+The peer — The Illumination — closed first and landed 0142 on main, so by the
+repo's own precedent from the 0132/0133 collision (first to merge keeps the
+number) these records became **0143–0145** at the final absorption. Every
+citation moved with them: the three records' front matter and cross-links,
+`docs/decisions/README.md`, two idea-registry rows carrying the number in both a
+status cell and a Where link, the spec, and three test files whose doc comments
+cite the one-community-per-place record.
+
+**The order was load-bearing, and a guard proved it.** The renumber was done
+against the merged tree, not before it, because only the merge product holds
+both 0142s. Absorbing main first produced a tree with two files beginning 0142 —
+different slugs, so `git merge` raised nothing — and it was `docs_consistency`'s
+`decision_numbers_are_unique` that refused the merge commit. That is the useful
+half of the ordering: the collision is invisible to the merge machinery and
+visible only to a check running on the merged tree, which is the same shape as
+this campaign's other findings and the same shape as the argument for gating the
+merge product rather than a branch tip. Renumbering first would instead have
+left 0142 unoccupied here until the peer's record arrived, and
+`no_gaps_in_the_decision_log` is in the sub-floor roster — red on a branch whose
+merge product is perfectly contiguous.
+
+**Three things about the citation sweep are worth keeping.** First,
+`git grep -E '\b0142\b'` returns *nothing* — POSIX ERE has no `\b`, so the whole
+search is silently empty, and an empty result reads exactly like "no citations to
+fix". It needs `-P`. A plain `git grep -l 0142` found 36 files. That was caught
+only by running the search against a number known to be present and watching the
+control come back empty too. **Run a positive control on a search before trusting
+its emptiness** is this campaign's subject, and it nearly bit at the last step.
+Second, the inverse: a bare-number sweep across the whole tree hits numeric
+data — `-0.0142` in a disposition doc table, `1.8150142892666530` repeated in a
+chronicle, a plan and a calibration freeze, and four-digit runs inside census
+CSVs, terrain fixtures and a geojson — so the sweep must be scoped to prose and
+every hit eyeballed. Third, a prepared patch is
+not an enumeration: the one written for this renumber predated a commit that
+added a fourth citation site (`windows/hearsay/tests/parley_readout.rs`), and
+applying it without re-running the sweep would have left that one behind.
 
 ## 7. Two pre-commit guards fired on the ledger prose describing them
 
@@ -282,7 +321,7 @@ than trusting the sentence.
 
 **U-2 — the disposition draw key carries no rung.** Two alive communities in one
 column share a key and draw one mind vector. Accepted unrepaired by decision
-0144; the repair needs an epoch *and* a way for the ledger-side wrapper to
+0145; the repair needs an epoch *and* a way for the ledger-side wrapper to
 resolve a rung, which it cannot do today.
 
 **U-3 — the deep may be dry for a modelling reason rather than a physical one.**

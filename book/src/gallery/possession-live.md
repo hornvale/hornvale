@@ -29,7 +29,7 @@ what `map` would have printed had you typed it.
 
 Since [The Beholding](../chronicle/the-beholding.md) the chart is **coloured,
 through the eyes of whoever you are possessing**. Colour is not a property of
-a cell: it is the product of the rock's reflectance, the light actually
+a cell: it is the product of the surface's reflectance, the light actually
 falling on it at your latitude and hour, and the sensitivity curves the
 possessed species' perception vector implies — so the pane carries a caption
 naming the eye, its channel count, and what its projection to a
@@ -37,8 +37,16 @@ three-channel screen *preserves*. A dichromat's map is captioned as one,
 because a two-chromatic-channel signal on an RGB screen is a false-colour
 mapping and the honest place for that admission is the caption rather than
 the picture. Type `eyes kobold`, `eyes human`, `eyes own` or `eyes off` to
-change the eye without changing anything else. The tint is bedrock, so it is
-withheld wherever the glyph is drawing water, a mark, or you.
+change the eye without changing anything else. Since
+[The Illumination](../chronicle/the-illumination.md) the tint is the ground's
+**surface cover** — vegetation, litter, snow, sand or silt over the mineral
+blend, varying room to room — rather than the bedrock underneath it, which is
+not what anyone standing there would see. It is still withheld wherever the
+glyph is drawing water, a mark, or you, because a river painted meadow-green
+is a false claim and the honest response to one is to withhold it. The chart
+is drawn **north-up** now, with each cell placed by its own bearing and
+distance from you, so the cells across a face seam of the underlying
+icosahedron draw rather than being disclosed as unplaceable.
 
 Since [The Lantern](../chronicle/the-lantern.md) the **floor plan** is
 coloured too, and by a different light. Indoors there is no sun: a cell's
@@ -113,6 +121,11 @@ the CLI runs.</p>
     white-space: pre;
   }
   .casement-echo { opacity: 0.6; }
+  /* The map pane's EPISTEMIC channel: a remembered cell draws the same
+     glyph as a sensed one, fainter (spec §2 — weight is a modulator, not a
+     second alphabet). Expressed here rather than inline so the page decides
+     how faint faint is, as it already does for .casement-echo. */
+  .casement-dim { opacity: 0.55; }
   .casement-error { color: #b3554d; }
   .casement-controls, .casement-promptrow { margin: 0.5em 0; }
   .casement-seed, .casement-input {

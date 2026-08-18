@@ -1,8 +1,8 @@
-# 0144. One community per place, where a place is a cell and a rung
+# 0145. One community per place, where a place is a cell and a rung
 
 **Status:** Accepted (2026-08-18) · **Decider:** Nathan · **Relates:**
 [0102](0102-one-per-cell-was-an-index-artifact.md),
-[0142](0142-the-underworld-carries-two-ladders.md)
+[0143](0143-the-underworld-carries-two-ladders.md)
 
 In the context of decision 0102 having established twelve days earlier that the
 one-community-per-cell rule is a lookup optimisation's artifact carrying no

@@ -47,6 +47,14 @@ export function renderInto(host: HTMLElement, grid: PaneGrid | null, sight: Sigh
           const [r, g, b] = run.color;
           span.style.color = `rgb(${r} ${g} ${b})`;
         }
+        // The epistemic channel (spec §2), as a class rather than an inline
+        // style: `possession-live.md` already expresses every other "this
+        // is fainter" state as an `opacity` rule on a `casement-` class
+        // (`casement-echo`, `casement-map`), so the page keeps deciding how
+        // faint faint is. Composed WITH the colour, never instead of it — a
+        // remembered coloured cell keeps its colour and loses weight, the
+        // same shape as the sim's `dimmed(colored(glyph, rgb))`.
+        if (run.dim) span.className = "casement-dim";
         host.appendChild(span);
       }
     });

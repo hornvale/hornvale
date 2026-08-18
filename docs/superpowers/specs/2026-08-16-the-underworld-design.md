@@ -8,8 +8,8 @@
 > two kinds were not authored. The subtitle is left as written because it is
 > what this document predicted, and §4.0, §4.2.1, §4.3 and §5 are amendments
 > rather than rewrites for the same reason — the falsified reasoning is more
-> instructive beside its replacement than deleted. Decisions 0142, 0143 and
-> 0144 carry what settled.
+> instructive beside its replacement than deleted. Decisions 0143, 0144 and
+> 0145 carry what settled.
 
 **Program:** [The Chorography](2026-08-12-the-chorography-metaplan.md) ·
 **Predecessors:** [The Fathom](2026-08-12-the-fathom-design.md),

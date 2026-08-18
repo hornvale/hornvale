@@ -31,6 +31,7 @@ function snapshotWithChart(cells: unknown[]): Snapshot {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 1,
         water_legend: ["ocean", "salt-basin", "river", "dry-land"],
         cells,
       },
@@ -50,23 +51,16 @@ Deno.test("the observer is marked, and exactly once", () => {
 });
 
 Deno.test("the ball is symmetric about the observer, not sheared", () => {
-  // The `+ w` term in the column formula is what makes this true. Drop it
-  // and the ball leans right — a plausible-looking, wrong map.
+  // Under the lattice projection this guarded the `+ w` term, which
+  // cancelled a shear. North-up has no such term — a shear is impossible by
+  // construction — but the assertion still earns its place, because it now
+  // catches the projection getting the SIGN of a component wrong. Flip
+  // `-cos` to `+cos` and the band still draws; mirror its rows and it does
+  // not.
   //
-  // A prior version of this test compared each row's total *span* (last
-  // non-space minus first non-space) and asked whether the widest row sat
-  // at the vertical centre. Both checks are blind to a pure horizontal
-  // shear: dropping `+ cell.w` shifts every row's *start* column but not
-  // its *width*, so the span sequence and the widest-row position are
-  // identical whether the term is present or absent. Confirmed by mutation
-  // (see the fix-round report) — the old assertions stayed green with the
-  // term removed while the render visibly leaned right.
-  //
-  // What a shear actually moves is each row's *leading*-space count, and a
-  // true (unsheared) hexagon's leading-space counts mirror around the
-  // centre row: row i and row (n-1-i) indent equally. A shear breaks that
-  // mirror because indentation grows (or shrinks) monotonically down the
-  // rows instead of tapering symmetrically toward the ends.
+  // What it measures is each row's *leading*-space count. A band drawn
+  // about its own observer has leading-space counts that mirror around the
+  // centre row: row i and row (n-1-i) indent equally.
   const rows = glyphRows(chartCells(parseSnapshot(WALK)!))!;
   const lead = rows.map((r) => r.length - r.trimStart().length);
   const n = lead.length;
@@ -91,9 +85,10 @@ Deno.test("a chart with no schema tag draws nothing", () => {
     spatial: {
       band: "walk",
       chart: {
+        radius: 1,
         water_legend: ["none"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
         ],
       },
     },
@@ -111,9 +106,10 @@ Deno.test("a chart with an unrecognised schema tag draws nothing", () => {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v3",
+        radius: 1,
         water_legend: ["none"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
         ],
       },
     },
@@ -128,9 +124,10 @@ Deno.test("a chart with the current schema tag renders", () => {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 1,
         water_legend: ["none"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
         ],
       },
     },
@@ -153,31 +150,24 @@ Deno.test("a snapshot with no spatial channel draws no chart", () => {
   );
 });
 
-Deno.test("seam cells are skipped, not drawn at a wrong place", () => {
-  // A seam cell has null u/v/w: no honest local coordinate exists, so there
-  // is nowhere correct to draw it. Dropping it is the honest choice.
+Deno.test("a seam cell is drawn, at the box its bearing puts it in", () => {
+  // A seam cell's lattice offsets are null — the lattice bends across a
+  // base face there — and that is exactly why the old projection dropped
+  // it, leaving half of a seam-crossing band blank. Its bearing and
+  // distance are not null, so it draws like any other cell now.
   const snap = parseSnapshot(JSON.stringify({
     schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 1,
         biome_legend: ["forest"],
         water_legend: ["none"],
         relief_legend: ["flat"],
         cells: [
           {
-            v: 0,
-            w: 0,
-            up: true,
-            seam: false,
-            state: "here",
-            biome: 0,
-            water: 0,
-            relief: 0,
-            marks: [],
-          },
-          {
+            u: null,
             v: null,
             w: null,
             up: null,
@@ -187,13 +177,36 @@ Deno.test("seam cells are skipped, not drawn at a wrong place", () => {
             water: 0,
             relief: 0,
             marks: [],
+            bearing_deg: 90,
+            distance_rad: 1,
+          },
+          {
+            u: 0,
+            v: 0,
+            w: 0,
+            up: true,
+            seam: false,
+            state: "here",
+            biome: 0,
+            water: 0,
+            relief: 0,
+            marks: [],
+            bearing_deg: 0,
+            distance_rad: 0,
           },
         ],
       },
     },
   }))!;
   const rows = glyphRows(chartCells(snap))!;
-  assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
+  assertEquals(
+    rows.join("").split("").filter((c) => c !== " ").length,
+    2,
+    "both the observer and the seam cell must be drawn",
+  );
+  // Due east on the rim: same row as `@`, two columns right of it.
+  const row = rows.find((r) => r.includes("@"))!;
+  assertEquals(row.indexOf(".") - row.indexOf("@"), 2);
 });
 
 Deno.test("a chart with no cells array draws nothing", () => {
@@ -227,9 +240,10 @@ Deno.test("a malformed cell (not an object) is skipped, not thrown on", () => {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 1,
         water_legend: ["none"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
           "not a cell",
           42,
           null,
@@ -241,16 +255,22 @@ Deno.test("a malformed cell (not an object) is skipped, not thrown on", () => {
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
 });
 
-Deno.test("a cell missing v/w/up entirely (not even null) is skipped", () => {
+Deno.test("a cell with no bearing or distance is skipped, not placed at the observer", () => {
+  // A `scene/surrounds/v2` payload predating the north-up fields carries
+  // the same schema tag, so the allowlist alone does not catch it. Placing
+  // such a cell would default it to the observer's own box and draw a band
+  // claiming everything is right here — the class of silently-wrong map
+  // this client exists to refuse.
   const snap = parseSnapshot(JSON.stringify({
     schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 1,
         water_legend: ["none"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
           { seam: false, state: "sensed", water: 0 },
         ],
       },
@@ -260,29 +280,52 @@ Deno.test("a cell missing v/w/up entirely (not even null) is skipped", () => {
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
 });
 
-Deno.test("a cell past the coordinate ceiling is refused, not drawn", () => {
-  // With no bound, a cell at v: 20000 builds a 40,002-character row, and at
-  // v: 1e9 the row exceeds V8's max string length and throws a RangeError —
-  // landing on the same main.ts lockup path an uncaught TypeError would.
-  // This pins MAX_COORD against that class of payload: only the in-bound
-  // cell should ever be placed.
-  const snap = parseSnapshot(JSON.stringify({
+Deno.test("a chart whose radius is absent, fractional or past the ceiling draws nothing", () => {
+  // The radius sets the scale AND bounds the grid: the pane builds
+  // 2*radius+1 rows by 4*radius+1 columns, so `radius: 1e9` would try for
+  // ~8e18 cells and hang the worker — the same main.ts lockup path an
+  // uncaught TypeError lands on. It replaced a ceiling on the lattice
+  // coordinates, which is the quantity the OLD projection's grid size
+  // depended on and no longer the one that binds.
+  //
+  // The absent and fractional arms are here because a chart that does not
+  // say how many rings it spans cannot be placed honestly, and defaulting
+  // would be a guess: the pane refuses instead.
+  for (const radius of [undefined, 1e9, 65, -1, 2.5, "4"]) {
+    const snap = parseSnapshot(JSON.stringify({
+      schema: "vessel/session/v2",
+      spatial: {
+        band: "walk",
+        chart: {
+          schema: "scene/surrounds/v2",
+          radius,
+          water_legend: ["none"],
+          cells: [
+            { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
+          ],
+        },
+      },
+    }))!;
+    assertEquals(chartCells(snap), null, `radius ${radius} must be refused`);
+  }
+  // The positive control: the same chart with a real radius DOES draw, so
+  // the refusals above are the radius check firing and not the fixture
+  // being unrenderable for some other reason.
+  const ok = parseSnapshot(JSON.stringify({
     schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 4,
         water_legend: ["none"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
-          { v: 20000, w: 0, up: true, seam: false, state: "sensed", water: 0 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
         ],
       },
     },
   }))!;
-  const rows = glyphRows(chartCells(snap))!;
-  assert(rows.every((r) => r.length < 100), "a past-ceiling cell widened the chart");
-  assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
+  assertEquals(glyphRows(chartCells(ok)), ["@"]);
 });
 
 Deno.test("a non-string water_legend entry does not shift subsequent indices", () => {
@@ -298,12 +341,13 @@ Deno.test("a non-string water_legend entry does not shift subsequent indices", (
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 1,
         // Index 0 is malformed (not a string). If it were dropped instead
         // of preserved as "", "river" would shift from index 3 to index 2.
         water_legend: [null, "ocean", "salt-basin", "river"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
-          { v: 1, w: 0, up: false, seam: false, state: "sensed", water: 3 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 0 },
+          { bearing_deg: 90, distance_rad: 1, seam: false, state: "sensed", water: 3 },
         ],
       },
     },
@@ -326,11 +370,12 @@ Deno.test("a real dry-land cell does not render as water", () => {
       band: "walk",
       chart: {
         schema: "scene/surrounds/v2",
+        radius: 1,
         water_legend: ["ocean", "salt-basin", "river", "dry-land"],
         cells: [
-          { v: 0, w: 0, up: true, seam: false, state: "here", water: 3 },
-          { v: 1, w: 0, up: false, seam: false, state: "sensed", water: 3 },
-          { v: -1, w: 0, up: false, seam: false, state: "sensed", water: 0 },
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+          { bearing_deg: 90, distance_rad: 1, seam: false, state: "sensed", water: 3 },
+          { bearing_deg: 270, distance_rad: 1, seam: false, state: "sensed", water: 0 },
         ],
       },
     },
@@ -343,8 +388,22 @@ Deno.test("a real dry-land cell does not render as water", () => {
 
 Deno.test("a chart cell carries the sim's colour, and only where it is ground", () => {
   const snap = snapshotWithChart([
-    { v: 0, w: 0, up: true, seam: false, state: "sensed", water: 3, color: [10, 20, 30] },
-    { v: 1, w: 0, up: false, seam: false, state: "sensed", water: 0, color: [40, 50, 60] },
+    {
+      bearing_deg: 0,
+      distance_rad: 0,
+      seam: false,
+      state: "sensed",
+      water: 3,
+      color: [10, 20, 30],
+    },
+    {
+      bearing_deg: 90,
+      distance_rad: 1,
+      seam: false,
+      state: "sensed",
+      water: 0,
+      color: [40, 50, 60],
+    },
   ]);
   const grid = chartCells(snap)!;
   const flat = grid.flat();
@@ -354,18 +413,18 @@ Deno.test("a chart cell carries the sim's colour, and only where it is ground", 
   assertEquals(
     water.color,
     null,
-    "the tint is BEDROCK; a river must not be drawn the colour of the rock beneath it",
+    "the tint is the SURFACE; a river must not be drawn the colour of the ground beneath it",
   );
 });
 
 Deno.test("the observer's own cell withholds colour even when the payload supplies one", () => {
   // Ground rule (see `PaneCell`'s doc in `pane_cell.ts`): `@` names the
-  // observer, not the bedrock beneath them. The payload supplies a real
+  // observer, not the surface beneath them. The payload supplies a real
   // colour here on purpose — an absent colour would let this pass whether
   // or not the withholding actually ran, which is not a discriminating
   // assertion (fix-round 1 verified this by mutation: see the task report).
   const snap = snapshotWithChart([
-    { v: 0, w: 0, up: true, seam: false, state: "here", water: 3, color: [99, 88, 77] },
+    { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3, color: [99, 88, 77] },
   ]);
   const cell = chartCells(snap)!.flat()[0];
   assertEquals(cell.glyph, "@");
@@ -374,7 +433,7 @@ Deno.test("the observer's own cell withholds colour even when the payload suppli
 
 Deno.test("a cell with no colour key is uncoloured, not crashed", () => {
   const snap = snapshotWithChart([
-    { v: 0, w: 0, up: true, seam: false, state: "sensed", water: 3 },
+    { bearing_deg: 0, distance_rad: 0, seam: false, state: "sensed", water: 3 },
   ]);
   assertEquals(chartCells(snap)!.flat()[0].color, null);
 });
@@ -382,7 +441,7 @@ Deno.test("a cell with no colour key is uncoloured, not crashed", () => {
 Deno.test("a malformed colour is refused, not passed through", () => {
   for (const bad of [[1, 2], [1, 2, 3, 4], ["1", 2, 3], "red", 7, [1, 2, 300], [1, 2, -1]]) {
     const snap = snapshotWithChart([
-      { v: 0, w: 0, up: true, seam: false, state: "sensed", water: 3, color: bad },
+      { bearing_deg: 0, distance_rad: 0, seam: false, state: "sensed", water: 3, color: bad },
     ]);
     assertEquals(
       chartCells(snap)!.flat()[0].color,
@@ -390,4 +449,221 @@ Deno.test("a malformed colour is refused, not passed through", () => {
       `${JSON.stringify(bad)} must not survive`,
     );
   }
+});
+
+/** The sim's own render of the same seed-42 walk band, generated by
+ * `scripts/regenerate-artifacts.sh` and drift-checked
+ * (`docs/generated-paths.txt`). It is read from
+ * `clients/game/core/tests/fixtures/` rather than copied here on purpose:
+ * a copy is a second thing to keep in step, and the whole value of this
+ * reference is that it can only ever be re-captured FROM THE SIM. */
+const SIM_REFERENCE = Deno.readTextFileSync(
+  new URL(
+    "../../game/core/tests/fixtures/chart-reference-seed-42.txt",
+    import.meta.url,
+  ),
+);
+
+/** Reduce a picture to which boxes are filled, not what fills them. This is
+ * what makes comparing two renderers with deliberately different glyph
+ * vocabularies legitimate: decision 0022 licenses the vocabulary to differ,
+ * never the geometry. */
+function shapeOf(lines: string[]): string[] {
+  return lines.map((l) => l.replace(/[^ ]/g, "#").replace(/\s+$/, ""));
+}
+
+Deno.test("the pane places cells exactly where the sim's own renderer does", () => {
+  // The Casement had no cross-renderer control at all before this: its
+  // projection was checked only against its own expectations, which is
+  // exactly the shape of the defect `clients/game/core/src/chart.rs`'s
+  // module doc records — a plausible-looking wrong formula that passed
+  // every test in its own file and was caught only by comparing against the
+  // sim. `hornvale-game-core` has had that comparison since The Quire; this
+  // gives the vessel pane the same one.
+  const rows = glyphRows(chartCells(parseSnapshot(WALK)!))!;
+  assertEquals(shapeOf(rows), shapeOf(SIM_REFERENCE.split("\n")));
+});
+
+Deno.test("the more salient of two colliding cells keeps the box", () => {
+  // A FORCED collision: two cells at the identical bearing and distance
+  // cannot help landing in one box. Measured across seventy real bands the
+  // shipped projection collided zero times, so nothing but a forced fixture
+  // exercises this rule at all — and an unreachable rule is exactly the
+  // kind this project has repeatedly found pointed at nothing.
+  //
+  // `salience` is a RANK where lower is more salient, so the salience-5
+  // ocean cell must beat the salience-20 dry-land one. Both document orders
+  // are asserted, which is what separates "the rule ran" from "whichever
+  // cell was written last won".
+  const marked = (salience: number, water: number) => ({
+    bearing_deg: 90,
+    distance_rad: 1,
+    seam: false,
+    state: "sensed",
+    water,
+    marks: [{ noun: "x", kind: "settlement", datum: "d", salience }],
+  });
+  for (
+    const cells of [
+      [
+        { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+        marked(20, 3),
+        marked(5, 0),
+      ],
+      [
+        { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+        marked(5, 0),
+        marked(20, 3),
+      ],
+    ]
+  ) {
+    const glyphs = glyphRows(chartCells(snapshotWithChart(cells)))!.join("").split("");
+    assertEquals(glyphs.filter((c) => c === "~").length, 1, "the salience-5 cell keeps the box");
+    assertEquals(glyphs.filter((c) => c === ".").length, 0, "the salience-20 cell lost it");
+  }
+});
+
+Deno.test("a marked cell outranks an unmarked one in either document order", () => {
+  const marked = {
+    bearing_deg: 90,
+    distance_rad: 1,
+    seam: false,
+    state: "sensed",
+    water: 0,
+    marks: [{ noun: "Ka", kind: "settlement", datum: "d", salience: 40 }],
+  };
+  const bare = { bearing_deg: 90, distance_rad: 1, seam: false, state: "sensed", water: 3 };
+  const here = { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 };
+  for (const cells of [[here, marked, bare], [here, bare, marked]]) {
+    const glyphs = glyphRows(chartCells(snapshotWithChart(cells)))!.join("").split("");
+    assertEquals(glyphs.filter((c) => c === "~").length, 1, "the marked cell keeps the box");
+  }
+});
+
+Deno.test("the observer never loses their own box", () => {
+  // Clause 1 of the collision rule: the chart is egocentric, so `@` wins
+  // its box against the most salient mark in the band. A chart that drew
+  // over the observer would have lost the one cell the reader is standing
+  // in.
+  const rows = glyphRows(chartCells(snapshotWithChart([
+    { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+    {
+      bearing_deg: 0,
+      distance_rad: 0,
+      seam: false,
+      state: "sensed",
+      water: 0,
+      marks: [{ noun: "Ka", kind: "settlement", datum: "d", salience: 0 }],
+    },
+  ])))!;
+  assertEquals(rows, ["@"]);
+});
+
+Deno.test("rounding is half away from zero, matching the sim and not Math.round", () => {
+  // `Math.round(-0.5)` is `-0`; Rust's `f64::round` — which the sim and
+  // `clients/game/core` both use — gives `-1`. A bare `Math.round` here
+  // would put a cell one row or column out from where the other two
+  // renderers put it, on exactly the half-integers a symmetric chart is
+  // full of.
+  //
+  // The fixture lands a row on EXACTLY -0.5, using only values JavaScript
+  // represents exactly: `Math.cos(0)` is exactly `1`, `rings` is 1, and the
+  // north cell sits at half the band's farthest distance, so its row is
+  // `-1 * 0.5`. Under the correct rule it is one row above the observer;
+  // under `Math.round` it lands in the observer's own box, loses it to
+  // clause 1, and disappears — a one-row chart instead of a two-row one.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v2",
+    spatial: {
+      band: "walk",
+      chart: {
+        schema: "scene/surrounds/v2",
+        radius: 1,
+        water_legend: ["ocean", "salt-basin", "river", "dry-land"],
+        cells: [
+          { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+          { bearing_deg: 90, distance_rad: 1, seam: false, state: "sensed", water: 3 },
+          { bearing_deg: 0, distance_rad: 0.5, seam: false, state: "sensed", water: 0 },
+        ],
+      },
+    },
+  }))!;
+  const rows = glyphRows(chartCells(snap))!;
+  assertEquals(
+    rows.length,
+    2,
+    `a row at exactly -0.5 must round AWAY from zero, to -1: ${JSON.stringify(rows)}`,
+  );
+  assertEquals(rows[0][0], "~", "the north cell draws one row above the observer");
+  assertEquals(rows[1][0], "@");
+});
+
+Deno.test("a remembered cell keeps its glyph and changes only its weight", () => {
+  // Spec §2: epistemic is a MODULATOR (weight), not a peer of the ordinal
+  // (glyph) channel. This pane used to draw `,` for a remembered land cell
+  // and `.` for a sensed one — a second alphabet, which is the specific
+  // move §2.3 forbids: recovering a lost axis by reallocating another
+  // channel. The sim's renderer had the identical defect
+  // (`surrounds_ascii.rs::faded()`) and deleted it; this is its twin.
+  //
+  // Both clauses of the sim's own equivalent
+  // (`a_remembered_cell_keeps_its_glyph_and_changes_only_its_weight`) are
+  // asserted here, and the second is what stops the first passing
+  // vacuously if the pane simply stopped distinguishing the two states.
+  const band = (state: string) => [
+    { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+    { bearing_deg: 90, distance_rad: 1, seam: false, state, water: 3 },
+  ];
+  const sensed = chartCells(snapshotWithChart(band("sensed")))!;
+  const remembered = chartCells(snapshotWithChart(band("remembered")))!;
+
+  // Clause 1: the GLYPHS are identical. This is the rule.
+  assertEquals(
+    glyphRows(sensed),
+    glyphRows(remembered),
+    "a remembered cell must draw the same glyph as a sensed one, only dimmer",
+  );
+
+  // Clause 2: the two renders must still DIFFER — the weight moved onto the
+  // remembered cell.
+  assertEquals(sensed.flat().filter((c) => c.dim === true).length, 0);
+  assertEquals(
+    remembered.flat().filter((c) => c.dim === true).length,
+    1,
+    "the remembered cell must carry the weight the glyph no longer carries",
+  );
+});
+
+Deno.test("weight applies to water and to the observer, not only to land", () => {
+  // Weight modulates BOTH encoding channels rather than sitting beside one
+  // of them (spec §2), so it is read off the cell's own `state` regardless
+  // of which glyph that cell drew. The old substitution could only ever
+  // reach a land glyph, which is another way of saying it was not a
+  // channel at all.
+  const grid = chartCells(snapshotWithChart([
+    { bearing_deg: 0, distance_rad: 0, seam: false, state: "here", water: 3 },
+    { bearing_deg: 90, distance_rad: 1, seam: false, state: "remembered", water: 0 },
+  ]))!;
+  const water = grid.flat().find((c) => c.glyph === "~")!;
+  assertEquals(water.dim, true, "a remembered river dims like remembered land");
+});
+
+Deno.test("a remembered cell keeps its colour as well as its glyph", () => {
+  // Weight is composed WITH colour, never instead of it — the same shape as
+  // the sim's `dimmed(colored(glyph, rgb))`. Dimming by desaturating the
+  // colour instead would be the reallocation this whole fix removes, and
+  // would leave an uncoloured remembered cell with no epistemic signal at
+  // all.
+  const cell = chartCells(snapshotWithChart([
+    {
+      bearing_deg: 0,
+      distance_rad: 0,
+      seam: false,
+      state: "remembered",
+      water: 3,
+      color: [10, 20, 30],
+    },
+  ]))!.flat()[0];
+  assertEquals(cell.color, [10, 20, 30]);
+  assertEquals(cell.dim, true);
 });

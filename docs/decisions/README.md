@@ -180,7 +180,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0138](0138-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong.md) | A preregistered criterion may be restated when its estimator is wrong | Accepted |
 | [0139](0139-main-advances-only-through-the-lock.md) | Main advances only through the lock | Accepted |
 | [0140](0140-the-stage-gate-is-a-kind-of-queue-request.md) | The stage gate is a kind of queue request, not a dispatch path | Accepted |
-| [0141](0141-compass-navigation-is-an-overlay.md) | Compass navigation is an overlay, not a graph change | Accepted |
-| [0142](0142-the-underworld-carries-two-ladders.md) | The underworld carries two ladders, and neither derives the other | Accepted |
-| [0143](0143-a-caves-depth-is-a-budget-in-metres.md) | A cave's depth is a budget in metres, not a stratigraphic band | Accepted |
-| [0144](0144-one-community-per-place-not-per-cell.md) | One community per place, where a place is a cell and a rung | Accepted |
+| [0141](0141-compass-navigation-is-an-overlay.md) | Compass navigation is an overlay, never the graph | Accepted |
+| [0142](0142-a-channel-carries-one-axis-and-a-lost-axis-is-declared.md) | A rendering channel carries one axis, and a lost axis is declared | Accepted |
+| [0143](0143-the-underworld-carries-two-ladders.md) | The underworld carries two ladders, and neither derives the other | Accepted |
+| [0144](0144-a-caves-depth-is-a-budget-in-metres.md) | A cave's depth is a budget in metres, not a stratigraphic band | Accepted |
+| [0145](0145-one-community-per-place-not-per-cell.md) | One community per place, where a place is a cell and a rung | Accepted |

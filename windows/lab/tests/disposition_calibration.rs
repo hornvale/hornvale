@@ -750,7 +750,7 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// refute the floor's stated mechanism exactly as 14 did, and sea-elf at 0/60
 /// still shows what a dead branch actually looks like.
 ///
-/// **THE ATTRIBUTION IS NOT DECISION 0144, AND THIS WAS WORTH MEASURING
+/// **THE ATTRIBUTION IS NOT DECISION 0145, AND THIS WAS WORTH MEASURING
 /// RATHER THAN ASSUMING.** The campaign re-keyed the history bake's node index
 /// from `CellId` to `(CellId, DelveRung)` (one community per *place*, not per
 /// cell), which is the change that most obviously touches settlement placement,
@@ -768,7 +768,7 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// ```
 ///
 /// So the rest of the campaign moves drow **−4** and the re-key gives back
-/// **+2**, for a net −2. 0144 explains none of the fall; it opposes it. **The
+/// **+2**, for a net −2. 0145 explains none of the fall; it opposes it. **The
 /// mechanism behind either half is NOT established here** — this is a
 /// difference of three measured readings, and naming a cause for it would be
 /// exactly the invention this pin exists to prevent.
@@ -787,7 +787,7 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
          every_raider_clears_the_floor_preregistered_not_met, its roster entry in \
          cli/tests/heavy_tier.rs and the BIO-raid-partition-order-statistic registry row in \
          the SAME commit. THIS HAS NOW HAPPENED ONCE (The Underworld, 2026-08-18, 14/60 → \
-         12/60). BEFORE ASSUMING A CAUSE, MEASURE ONE: that re-read expected decision 0144's \
+         12/60). BEFORE ASSUMING A CAUSE, MEASURE ONE: that re-read expected decision 0145's \
          node-index re-key and found it moving the reading the OTHER way — see the doc \
          comment's mutation arm."
     );
