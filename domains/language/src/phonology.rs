@@ -1486,6 +1486,83 @@ mod tests {
         }
     }
 
+    /// Regression guard for the near-miss The Burr's controller caught by
+    /// mutation: the test above accepts `Nasal` as satisfying "sonorant
+    /// second slot", so reverting the onset helpers' predicate from
+    /// [`is_liquid_manner`] back to the wider [`is_sonorant_manner`] passes
+    /// every test in this file (nasal is always available and never
+    /// gated) while silently returning `proto elf`'s liquid-root count to
+    /// its pre-campaign 0 (spec §3.7's whole motivation). This test pins
+    /// the FORCED template specifically (index 0 — see
+    /// `draw_phonotactics`'s `i == 0` arm) to a liquid, not merely a
+    /// sonorant, second slot. It must NOT be widened into a blanket claim
+    /// over every onset: `sonorize_onset_cluster` leaves other templates'
+    /// naturally-drawn clusters alone unless they are already non-liquid,
+    /// and a nasal-second cluster elsewhere is legitimate — only the
+    /// designated template's guarantee is a liquid by construction.
+    /// claim: invariant(forall-seed) — sonorant-open's forced onset
+    /// template (index 0) has a liquid, not merely a sonorant, second
+    /// slot, for every seed in 0..32.
+    #[test]
+    fn the_forced_onset_template_carries_a_liquid_not_merely_a_sonorant() {
+        let env = manikin_env();
+        let typ = crate::typology::sonorant_open();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            let forced = &ph.onsets[0];
+            assert_eq!(
+                forced.len(),
+                2,
+                "seed {seed}: the forced onset template {forced:?} is not a two-slot cluster"
+            );
+            assert!(
+                matches!(forced[1], Manner::Trill | Manner::Approximant),
+                "seed {seed}: the forced onset template's second slot {:?} is not a liquid                  (Trill or Approximant) — a Nasal there is the exact regression this test                  guards against",
+                forced[1]
+            );
+        }
+    }
+
+    /// The outcome half of the regression guard above: not just that the
+    /// mechanism seats a liquid in a template, but that assigning real
+    /// proto roots over that phonology actually surfaces one — the direct
+    /// end-to-end claim spec §3.7 makes and the campaign's own readout
+    /// measures via `proto elf`. Harder to satisfy vacuously than the
+    /// mechanism test: a synthetic concept universe large enough that at
+    /// least one concept's per-concept draw lands on the forced template
+    /// (`draw_candidate` re-derives its own stream per concept, so this is
+    /// not guaranteed by any single draw the way the mechanism test is).
+    /// claim: invariant(forall-seed) — assigning 200 synthetic proto roots
+    /// over a sonorant-open phonology yields at least one root containing
+    /// a liquid, for every seed in 0..8.
+    #[test]
+    fn sonorant_open_proto_roots_actually_contain_a_liquid() {
+        let env = manikin_env();
+        let typ = crate::typology::sonorant_open();
+        let concepts: Vec<String> = (0..200).map(|i| format!("probe-concept-{i}")).collect();
+        let concept_refs: Vec<&str> = concepts.iter().map(String::as_str).collect();
+        for seed in 0..8u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            let roots = crate::assign_proto_roots(&Seed(seed), "probe", &ph, &concept_refs, &[]);
+            let has_liquid = roots.values().any(|segments| {
+                segments.iter().any(|s| {
+                    matches!(
+                        s,
+                        Segment::Consonant {
+                            manner: Manner::Trill | Manner::Approximant,
+                            ..
+                        }
+                    )
+                })
+            });
+            assert!(
+                has_liquid,
+                "seed {seed}: none of {} assigned proto roots contain a liquid segment",
+                roots.len()
+            );
+        }
+    }
+
     /// The single-slot law admits no clusters at all.
     /// claim: invariant(forall-seed) — isolating-tonal never draws an onset
     /// cluster, for every seed in 0..32.
