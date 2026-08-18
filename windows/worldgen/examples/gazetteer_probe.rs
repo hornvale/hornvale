@@ -127,4 +127,68 @@ fn main() {
     }
     let mut sizes: Vec<usize> = catchment.values().copied().collect();
     report("river (by catchment)", &mut sizes, &[4, 12, 24, 50, 100]);
+
+    // Coordinator follow-up: this probe's 183 land components at floor 1
+    // disagrees with the committed census's landmass-count=23 for
+    // seed=42/pin_set=default. Head-to-head on the SAME `GeneratedTerrain`
+    // this run already built, against the shipped extractor the census
+    // metric actually calls.
+    println!();
+    println!("=== coordinator follow-up: shipped fn vs. this probe's fn ===");
+    println!("geo.cell_count() = {}", geo.cell_count());
+
+    let shipped_sizes =
+        hornvale_terrain::shape::land_component_sizes(&geo, &globe.elevation, globe.sea_level);
+    println!(
+        "shipped land_component_sizes(): {} components",
+        shipped_sizes.len()
+    );
+    println!(
+        "  ten largest: {:?}",
+        &shipped_sizes[..shipped_sizes.len().min(10)]
+    );
+    let shipped_total_land: usize = shipped_sizes.iter().sum();
+    println!("  sum of sizes (total land cells): {shipped_total_land}");
+
+    let probe_components = components(&geo, &land);
+    let mut probe_sizes: Vec<usize> = probe_components.iter().map(BTreeSet::len).collect();
+    probe_sizes.sort_unstable_by(|a, b| b.cmp(a));
+    println!(
+        "probe's own components(&land): {} components",
+        probe_sizes.len()
+    );
+    println!(
+        "  ten largest: {:?}",
+        &probe_sizes[..probe_sizes.len().min(10)]
+    );
+    let probe_total_land: usize = probe_sizes.iter().sum();
+    println!("  sum of sizes (total land cells): {probe_total_land}");
+
+    let land_cell_count_direct = geo.cells().filter(|&c| land(c)).count();
+    println!("geo.cells().filter(land).count() = {land_cell_count_direct}");
+
+    println!(
+        "AGREE at count level: {}",
+        shipped_sizes.len() == probe_sizes.len()
+    );
+    println!(
+        "AGREE at size-multiset level: {}",
+        shipped_sizes == probe_sizes
+    );
+
+    // continent-count's own rule, run against this probe's own traversal:
+    // floor = 0.5% of total land cells, count components >= floor.
+    let continent_floor = 0.005 * probe_total_land as f64;
+    let continent_count_from_probe = probe_sizes
+        .iter()
+        .filter(|&&s| s as f64 >= continent_floor)
+        .count();
+    println!(
+        "continent-count rule (floor=0.005*land={continent_floor:.3}) over this probe's sizes: {continent_count_from_probe}"
+    );
+    let continent_count_from_shipped = shipped_sizes
+        .iter()
+        .filter(|&&s| s as f64 >= 0.005 * shipped_total_land as f64)
+        .count();
+    println!("continent-count rule over the shipped fn's sizes: {continent_count_from_shipped}");
 }
