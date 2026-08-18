@@ -37,19 +37,29 @@ neighbourhood holds
 
 The default radius of 4 is therefore 31 cells.
 
-## Placement: integer lattice, not compass bearing
+## Placement: two coordinates, and which one draws
 
 Every cell carries `u`, `v`, `w` and `up`: its position in the observer's
 own base-face triangular lattice, **relative to the observer**, together
-with the triangle's orientation. These are exact integers.
+with the triangle's orientation. These are exact integers, and they are the
+schema's statement of *adjacency*.
 
-They have to be. The obvious alternative — placing each cell at the compass
-bearing of its exit — fails on a sphere. A room's three exits bucket to
-three distinct compass points everywhere, but *which* three varies from cell
-to cell: an observer in one place may read `E, Nw, Sw` and another `E, N, S`.
-The lattice's rotation relative to north drifts across the globe, so laying
-cells out by bearing would distort the very mesh the chart claims to depict,
-and would do it differently in every part of the world.
+They have to be exact. The obvious alternative — placing each cell at the
+compass bearing of its **exit** — fails on a sphere. A room's three exits
+bucket to three distinct compass points everywhere, but *which* three varies
+from cell to cell: an observer in one place may read `E, Nw, Sw` and another
+`E, N, S`. The lattice's rotation relative to north drifts across the globe,
+so laying cells out by exit bearing would distort the very mesh the chart
+claims to depict, and would do it differently in every part of the world.
+
+Every cell **also** carries `bearing_deg` and `distance_rad`: its polar
+coordinate about the observer, computed on the sphere itself rather than
+read off the lattice. That is a different quantity from the exit bearing the
+paragraph above rules out, and it is not subject to the same drift — it is a
+great-circle azimuth between two centroids, exact for any pair of rooms,
+including a pair on different base faces. It is the schema's statement of
+*direction and metric distance*, and since The Illumination it is what a
+renderer draws with.
 
 What governs that variation is the **local triangle's orientation**, not
 latitude. [The Rhumb](../chronicle/the-rhumb.md) measured this directly while
@@ -87,31 +97,46 @@ on every platform.
 
 ### The normative screen projection
 
-A renderer that wants a flat picture maps each cell to a character grid by:
+A renderer that wants a flat picture maps each cell to a character grid by
+its polar coordinate:
 
 ```
-row        = -w
-screen_col = 2·v + (up ? 0 : 1) + w
+r    = distance_rad / farthest × radius
+row  = round(−cos(bearing_deg) × r)
+col  = round( sin(bearing_deg) × r × 2)
 ```
 
-Rows increase downward. Within one row, consecutive `screen_col` values are
-edge-adjacent triangles alternating up and down — which is why one glyph per
-cell reads as a triangular strip.
+where `farthest` is the largest `distance_rad` in the band. Rows increase
+downward, so north is up and east is right; the observer, at distance zero
+from itself, is the origin.
 
-The `+ w` term is the part worth explaining. Without it, a cell's
-across-the-horizontal-edge neighbour — the one that ought to sit *directly
-below* it — lands one column to the right as well as one row down, because
-the lattice's rows are themselves offset. Accumulated over a neighbourhood
-that shear turns a symmetric hexagonal ball into a leaning parallelogram.
-Subtracting the row index cancels it exactly: the cell sits at
-`col − row`, its below-neighbour at `(col + 1) − (row + 1)`, the same
-column. Same-row neighbours shift by the same amount and stay adjacent.
+Three parts of that are decisions rather than arithmetic. The **scale** is
+read off the band — its own outermost cell lands `radius` row-units out, one
+row per BFS ring — because a consumer has no way to compute a room's angular
+size from `depth`, and pushing that computation into every client is exactly
+what putting bearing and distance on the wire avoids. The **column doubles**
+because a monospace character cell is about twice as tall as it is wide;
+without the factor the chart is an ellipse claiming to be a circle. And
+**rounding is half away from zero** — a renderer using a half-up rule
+(JavaScript's `Math.round`, notably) lands one row out from the others on
+every negative half-integer.
 
-The mapping is injective, so no two cells can collide on one glyph: for a
-fixed row, `2·v + (up ? 0 : 1)` is the even/odd decomposition of an integer
-into `(v, up)`, and distinct rows are distinct `w`.
+Unlike the lattice projection this replaced, **it is not injective**: two
+cells can round into one box. A renderer must therefore state which cell
+keeps a contested box, and Hornvale's three renderers state the same rule —
+the observer never loses their own box; a marked cell beats an unmarked one
+and the numerically smallest `salience` wins among marked ones; ties break on
+document order. The cell's epistemic `state` deliberately plays no part: a
+`remembered` cell holding the most salient mark wins its box *and* draws at
+its remembered weight.
 
-## Seam cells: real ground with no honest place
+The lattice projection this replaced was
+`row = −w`, `col = 2·v + (up ? 0 : 1) + w`. It was injective by construction
+and it drew the mesh's adjacency faithfully, but it was lattice-aligned — the
+page's top was whatever direction the base face happened to point — and it
+could not place a seam cell at all.
+
+## Seam cells: real ground, and now a place for it
 
 The lattice is face-local. Two rooms on *different* base icosahedron faces
 have no meaningful relative offset — the surface genuinely bends between
@@ -120,9 +145,14 @@ them, and no flat coordinate can say by how much without inventing one.
 A neighbourhood that reaches across a base-face edge therefore emits those
 cells with `seam: true` and `u`, `v`, `w`, `up` all `null`. They are not
 dropped: their room id, epistemic state and semantic layers are all present,
-and a consumer that works in room ids rather than pictures loses nothing. It
-is only the *drawing* that cannot place them, and a renderer is expected to
-say so in its caption rather than quietly omit them or fabricate a position.
+and a consumer that works in room ids rather than pictures loses nothing.
+
+Until The Illumination it was the *drawing* that could not place them, and a
+renderer was expected to say so in its caption rather than quietly omit them
+or fabricate a position — one committed gallery chart declared twelve of its
+thirty-one cells unplaceable. A great-circle bearing and distance are
+well-defined across a face seam, so the north-up projection above places them
+like any other cell and the disclosure is retired.
 
 This is rare — a base face at depth 12 carries 4¹² ≈ 16.7 million triangles
 and only the outermost few rings of each are within reach of an edge — which
@@ -302,11 +332,12 @@ boundary, or the quantity they are measured against, mints
 `cells` is ordered by ascending packed `room` id — a total order over `u64`
 that needs no float comparison and cannot vary between runs.
 
-`orientation` is always the string `"lattice"`. It is present to state
-plainly that the chart is lattice-aligned and **not** north-up. A document
-that wanted to claim north would have to carry a bearing, and a bearing is
-exactly the drifting quantity this schema was built to avoid; a consumer
-that needs north can ask the rooms for it.
+`orientation` is always the string `"north-up"`. It read `"lattice"` until
+The Illumination, when `bearing_deg` and `distance_rad` arrived on every cell
+and a consumer stopped needing spherical trigonometry to place one. That is a
+change of **value**, not of shape: the key is the same key, the vocabulary it
+draws from was never closed, and the lattice offsets are still on the wire
+for a consumer that wants adjacency rather than direction.
 
 ## Scale is stated in arc, never in metres
 
@@ -443,7 +474,7 @@ in this order (field order **is** the JSON key order and is contract):
 | `observer` | object | Where the observer stands — see the table below. |
 | `radius` | integer | Neighbourhood radius, in BFS rings, `0..=8`. |
 | `depth` | integer | The refinement depth every cell sits at. |
-| `orientation` | string | Always the literal `"lattice"` — the chart is lattice-aligned, never north-up. |
+| `orientation` | string | Always the literal `"north-up"` — every cell's box is its own polar coordinate about the observer. Read `"lattice"` before The Illumination. |
 | `biome_legend` | array of string | The biome catalog, stable append-only order; a cell's `biome` indexes into it. |
 | `water_legend` | array of string | The water catalog, stable order; a cell's `water` indexes into it. |
 | `relief_legend` | array of string | `["abyss", "shelf", "lowland", "upland", "highland", "alpine"]`; a cell's `relief` indexes into it. |
@@ -585,10 +616,12 @@ so no client outside this repository read the wrong values either.
 
 ## What has been appended since v2, and why none of it minted v3
 
-Four things have been added to this schema since it shipped, and every one is
+Six things have been added to this schema since it shipped, and every one is
 additive in the strict sense decision 0055 requires: a new key in an
 already-open object, or a new value in an already-open vocabulary. No
-existing field changed meaning. Three of the four are also trailing appends —
+existing field changed meaning — including `orientation`, whose *value* moved
+from `"lattice"` to `"north-up"` while the key, its type and its job stayed
+exactly as they were. Three of the four are also trailing appends —
 the new key gains a slot after the previous last one and no other key's bytes
 move. **`micro` is not**: `SurroundsCell` declares it *before* `marks`
 (`windows/scene/src/surrounds.rs`), which was already the struct's last field,
@@ -608,6 +641,9 @@ is additive at the schema level but not at the byte level.
 | `micro` on a cell | always present, declared **before** `marks` — a mid-object insertion, not a trailing append | a new key; additive at the schema level, but every cell's bytes shift because `marks` (the prior last field) now serializes after it |
 | `resolution` on the document | always present, appended after `sight`, trailing | a new key; it *describes* existing fields rather than changing them |
 | `"cave"` as a mark `kind` | a new value in an open vocabulary | `kind` was never a closed enumeration, and no consumer needs a case for it |
+| `signal`/`cover` on a cell, `cover_legend` on the document | `signal`/`cover` `skip_serializing_if`, trailing | an uncoloured document emits neither cell key, exactly as with `color`/`sight` |
+| `bearing_deg`/`distance_rad` on a cell | always present, trailing, non-`Option` — present on a seam cell too | new keys; they *add* a coordinate rather than changing the lattice one, which is still emitted unchanged |
+| `"north-up"` as the `orientation` value | a new value in an open vocabulary | `orientation` exists to be read, never to be assumed; a consumer that switched on it already had to handle a value it did not recognise |
 
 One near miss belongs in this list, because a reader of the diff history will
 find it and should not have to reconstruct why it is absent. A campaign

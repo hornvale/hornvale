@@ -13,9 +13,16 @@ query can see.
 
 ## Reading the chart
 
-The chart is lattice-aligned, never north-up -- see [the schema's note on
-why](../reference/scene-surrounds-v2.md#placement-integer-lattice-not-compass-bearing).
-Scale is arc, not metres: the simulation defines no planetary radius, and a
+The chart is drawn **north-up**: the top of the picture is true north and
+`@` is the observer, at the centre. Each cell's box comes from its own
+great-circle bearing and distance about the observer, scaled so the band's
+outermost ring lands at the edge of the picture and doubled horizontally
+because a character cell is about twice as tall as it is wide -- see [the
+schema's note on the
+projection](../reference/scene-surrounds-v2.md#the-normative-screen-projection).
+The gaps between glyphs are not missing ground: they are what a triangular
+lattice looks like once it is drawn to true bearing rather than to its own
+axes. Scale is arc, not metres: the simulation defines no planetary radius, and a
 depth-12 room's edge subtends roughly 0.015° -- a radius-4 neighbourhood
 spans about one five-thousandth of the globe. `@` is always the observer's
 own room. Every other glyph is the `terrain` lens's reading of a cell's
@@ -36,10 +43,10 @@ pre-empts the terrain glyph):
 | `#` | a settlement mark |
 | `&` | an agent mark |
 
-A `remembered` cell would draw a faded twin of its glyph instead --
-`~=+_` fade to `-`, `.` to `,`, `:` to `;`, `^` to `n`, `A` to `a`, `#` to
-`o`, `&` to `%` -- but no cell below is ever `remembered`, for the reason
-above.
+A `remembered` cell would draw the same glyph, dimmed -- the epistemic
+channel is a weight, not a second alphabet -- and the escape-free `terrain`
+lens carries no weight channel at all, so it says so in its caption instead.
+No cell below is ever `remembered`, for the reason above.
 
 ## The flagship settlement
 
@@ -62,24 +69,30 @@ sea-lane as well as by land). Here the neighbourhood itself is split: `~`
 ocean glyphs fill the lower-left of the chart below, `_` dry land the upper
 rows and the right, meeting close by `@` -- the first chart on this page
 where the terrain, not just the observer, reads as ground meeting water.
-(The chart is lattice-aligned, not north-up -- see above -- so this is a
-description of the picture, not a compass bearing.)
+(The chart is north-up, so "lower-left" and "upper rows" really are
+south-west and north -- but they describe where the *drawn boxes* fall, and
+the projection rounds onto a character grid.)
 
 ```text
 {{#include generated/surrounds-seed-42/coastline.txt}}
 ```
 
-## A seam, disclosed
+## A seam, drawn
 
 Room 724698318 -- latitude -10°, longitude 0° at depth 12 -- lands on base
 icosahedron face 14, whose radius-4 neighbourhood reaches across a
 different face's edge for 12 of its 31 cells. Those cells carry their room
-id, state and semantics same as any other -- they are only unplaceable on a
-flat chart, because the surface genuinely bends between two base faces and
-no flat coordinate can say by how much without inventing one (see [the
-schema's seam section](../reference/scene-surrounds-v2.md#seam-cells-real-ground-with-no-honest-place)).
-The renderer states the count in its caption rather than dropping the cells
-or fabricating a position for them.
+id, state and semantics same as any other, but they carry **no lattice
+coordinate**: the surface genuinely bends between two base faces and no flat
+coordinate can say by how much without inventing one (see [the schema's seam
+section](../reference/scene-surrounds-v2.md#seam-cells-real-ground-and-now-a-place-for-it)).
+
+Under the lattice projection this chart drew nineteen cells and disclosed
+twelve it could not place -- the whole eastern side of the picture was
+blank. A great-circle bearing and distance are well defined across a face
+seam, so all thirty-one draw now, and the caption's `placement:` line counts
+them. The eastern cells are visibly on a different lattice from the western
+ones, which is the honest picture: they are.
 
 ```text
 {{#include generated/surrounds-seed-42/seam.txt}}

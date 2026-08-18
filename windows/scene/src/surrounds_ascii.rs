@@ -3,6 +3,36 @@
 //! render is a registered LENS, never ground truth (RENDER-9), and the
 //! caption — not the picture — carries the honesty: it names the lens, the
 //! orientation, and everything the picture had to leave out.
+//!
+//! ## The chart is north-up, and this module is the reference projection
+//!
+//! [`project_north_up`] is the **spatial channel** spec §2 names as the
+//! fourth: it turns a cell's polar coordinate about the observer
+//! (`bearing_deg`, `distance_rad`) into a box on the character grid. Two
+//! client renderers — `clients/game/core/src/chart.rs` and
+//! `clients/vessel/src/pane_chart.ts` — implement the same geometry
+//! independently, because neither may depend on this crate; the agreement
+//! test (`clients/game/core/tests/chart.rs`) compares the first of those
+//! against a fixture generated from THIS renderer, so this file is the
+//! authority and those two are replicas.
+//!
+//! This replaced a lattice-aligned projection (`row = -w`,
+//! `col = 2v + up-parity + w`) that could place only the cells carrying
+//! lattice offsets — seam cells, where the lattice bends across a base
+//! face, had none and were counted in a footer instead of drawn. Bearing
+//! and distance exist for every cell including a seam one, so the whole
+//! band draws now.
+//!
+//! Two consequences the lattice projection did not have, and both are
+//! handled explicitly rather than assumed away:
+//!
+//! - **It is not injective.** A lattice projection is bijective by
+//!   construction; rounding a polar coordinate onto a character grid is
+//!   not. [`box_rank`] decides who keeps a contested box, and the caption
+//!   states how many cells lost one.
+//! - **It has a scale.** See [`project_north_up`] for what sets it and why
+//!   it is read off the band itself rather than from the sphere's geometry
+//!   (which a thin client does not have).
 
 use crate::SurroundsScene;
 use std::collections::BTreeMap;
@@ -87,6 +117,86 @@ fn impedance_glyph(cell: &crate::SurroundsCell) -> char {
     }
 }
 
+/// A cell's box on the character grid, from its polar coordinate about the
+/// observer — the **spatial channel** (spec §2), and the one thing all three
+/// of Hornvale's chart renderers must agree on.
+///
+/// `bearing_deg` is the great-circle initial azimuth clockwise from north
+/// and `distance_rad` is the great-circle angle, so the cell's offset from
+/// the observer is `(north, east) = distance * (cos θ, sin θ)`. North is up,
+/// which is *negative* row; east is right, positive column.
+///
+/// **The scale.** `farthest` is the largest `distance_rad` in the band and
+/// `rings` is the band's BFS radius, so the outermost cell lands `rings`
+/// row-units from the observer — one row per BFS ring. Row-units, not rows:
+/// a cell due east spends its whole radius on columns and reaches row 0, so
+/// a band whose farthest cell happens to lie east draws shorter than one
+/// whose farthest cell lies north. Both inputs are read off the
+/// document rather than derived from the sphere, deliberately: a client that
+/// could compute a room's angular size from `depth` would be doing the
+/// spherical trigonometry spec §5.1 put on the wire precisely to avoid. A
+/// band whose cells are all at distance zero (radius 0, the observer alone)
+/// collapses to the origin rather than dividing by it.
+///
+/// **The column doubles.** A monospace character cell is about twice as
+/// tall as it is wide, so an eastward degree needs two columns to cover the
+/// screen distance a northward degree covers in one row. Without it the
+/// chart is an ellipse claiming to be a circle.
+///
+/// **Rounding is half-away-from-zero**, which is Rust's `f64::round` and is
+/// NOT JavaScript's `Math.round` (that one rounds half toward `+∞`, so it
+/// disagrees on every negative half-integer). The TypeScript replica states
+/// this and compensates; it is written here because this is the definition
+/// the other two copy.
+fn project_north_up(bearing_deg: f64, distance_rad: f64, farthest: f64, rings: i64) -> (i64, i64) {
+    if !farthest.is_finite() || farthest <= 0.0 {
+        return (0, 0);
+    }
+    let theta = bearing_deg.to_radians();
+    let r = distance_rad / farthest * rings as f64;
+    let row = (-hornvale_kernel::math::cos(theta) * r).round() as i64;
+    let col = (hornvale_kernel::math::sin(theta) * r * 2.0).round() as i64;
+    (row, col)
+}
+
+/// The ordering key [`box_rank`] returns; see its doc for the three clauses,
+/// in the tuple's own order.
+type BoxRank = (bool, bool, u32, usize);
+
+/// The rank that decides which cell keeps a box when two of them land in the
+/// same one. Smallest wins.
+///
+/// **The rule, stated once: salience ranks, weight inks, and neither becomes
+/// the other.** Spec §2 leaves this open and §2.3 licenses the three
+/// renderers to differ in *vocabulary* but never in the *rule*, so this is
+/// the rule, and `clients/game/core/src/chart.rs` and
+/// `clients/vessel/src/pane_chart.ts` implement the identical ordering:
+///
+/// 1. **The observer never loses their own box.** The chart is egocentric
+///    (decision 0076); a band that drew over `@` would have lost the one
+///    cell the reader is standing in.
+/// 2. **A marked cell beats an unmarked one, and among marked cells the
+///    numerically smallest `salience` wins** — `salience` is a RANK where
+///    lower is more salient, never a magnitude.
+/// 3. **Ties break on document order**, which `surrounds.rs` fixes as
+///    ascending `room`. Deterministic, and available to a renderer that
+///    does not mirror `room` at all.
+///
+/// What is deliberately absent is the epistemic state. A `remembered` cell
+/// holding the flagship settlement **wins its box and draws dim**: it is the
+/// most salient thing standing there, and the chart still says you are
+/// remembering it rather than looking at it. Weight never promotes a cell
+/// and salience never brightens one.
+fn box_rank(cell: &crate::SurroundsCell, index: usize) -> BoxRank {
+    let dominant = cell.marks.iter().map(|m| m.salience).min();
+    (
+        cell.state != "here",
+        dominant.is_none(),
+        dominant.unwrap_or(0),
+        index,
+    )
+}
+
 /// One placed glyph: what to draw, the colour its cell carries (if any), and
 /// whether the glyph is drawing the ground that colour describes.
 struct Placed {
@@ -136,8 +246,8 @@ fn dimmed(s: &str) -> String {
 }
 
 /// Render `scene` through `lens`. `ways` are the compass names of the
-/// observer's real exits — the chart is lattice-aligned rather than north-up,
-/// so the exits are how a reader orients.
+/// observer's real exits — a reader who wants to walk still needs those,
+/// because the chart is oriented to north and the lattice underfoot is not.
 /// type-audit: bare-ok(identifier-text: lens), bare-ok(identifier-text: ways), bare-ok(prose: return)
 pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String]) -> String {
     if !SURROUNDS_LENSES.contains(&lens) {
@@ -147,40 +257,65 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         );
     }
 
-    // Place every non-seam cell. row = -w; col = 2v + (up ? 0 : 1) + w. The
-    // `+ w` term cancels the lattice's row offset: an up-triangle's
-    // horizontal-edge neighbour below it (row + 1, col + 1 in the un-sheared
-    // formula) would otherwise land down-and-to-the-right instead of
-    // directly below, drawing a breadth-first ball as a right-leaning
-    // parallelogram rather than the symmetric hexagon it actually is.
-    let mut placed: BTreeMap<(i64, i64), Placed> = BTreeMap::new();
-    let mut seams = 0usize;
-    for c in &scene.cells {
-        let (Some(v), Some(w), Some(up)) = (c.v, c.w, c.up) else {
-            seams += 1;
+    // Place EVERY cell, seam cells included — see [`project_north_up`] for
+    // the geometry and [`box_rank`] for who keeps a contested box. The
+    // winner is decided by rank rather than by insertion order, so the
+    // picture does not depend on which cell the document happened to list
+    // last.
+    let farthest = scene
+        .cells
+        .iter()
+        .map(|c| c.distance_rad)
+        .fold(0.0f64, f64::max);
+    let rings = i64::from(scene.radius.max(1));
+    let mut placed: BTreeMap<(i64, i64), (BoxRank, Placed)> = BTreeMap::new();
+    for (i, c) in scene.cells.iter().enumerate() {
+        let at = project_north_up(c.bearing_deg, c.distance_rad, farthest, rings);
+        let rank = box_rank(c, i);
+        if placed.get(&at).is_some_and(|(held, _)| *held <= rank) {
             continue;
-        };
-        let row = -w;
-        let col = 2 * v + i64::from(!up) + w;
+        }
         let (g, ground) = terrain_glyph(scene, c);
         placed.insert(
-            (row, col),
-            Placed {
-                glyph: g,
-                color: c.color,
-                ground,
-                remembered: c.state == "remembered",
-            },
+            at,
+            (
+                rank,
+                Placed {
+                    glyph: g,
+                    color: c.color,
+                    ground,
+                    remembered: c.state == "remembered",
+                },
+            ),
         );
     }
+    let occluded = scene.cells.len().saturating_sub(placed.len());
+    let placed: BTreeMap<(i64, i64), Placed> =
+        placed.into_iter().map(|(at, (_, p))| (at, p)).collect();
 
     let mut out = String::new();
     // Interpolate `lens`, never a literal: the caption's whole job is to name
     // which lens you are wearing, so a hardcoded name would make every render
     // through a second lens caption a lie.
     out.push_str(&format!(
-        "[lens: {lens} · depth {} · radius {} · lattice-aligned, not north-up]\n",
+        "[lens: {lens} · depth {} · radius {} · north-up]\n",
         scene.depth, scene.radius
+    ));
+
+    // The spatial channel's own disclosure, and the counterpart to the
+    // `colour:`/`epistemic:` lines below: the projection is not injective,
+    // so a cell can lose its box to a more salient one and vanish from the
+    // picture entirely. The count is what makes that checkable against the
+    // chart in front of the reader rather than trusted on the renderer's
+    // word — and it sits ABOVE the `sight:` line on purpose, because
+    // `scripts/regenerate-artifacts.sh`'s `gen_chart_reference` slices the
+    // grid out of this render by the range between `sight:` and `ways on:`.
+    out.push_str(&format!(
+        "  placement: north-up, one row per ring, east doubled for the \
+         character cell — {} of {} cells drawn, {occluded} occluded where two \
+         fell in one box (the more salient kept it).\n",
+        placed.len(),
+        scene.cells.len()
     ));
 
     // The colour lens's own disclosure, and the reason it is a caption line
@@ -303,12 +438,13 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
     if !ways.is_empty() {
         out.push_str(&format!("  ways on: {}\n", ways.join(", ")));
     }
-    if seams > 0 {
-        out.push_str(&format!(
-            "  {seams} cell{} beyond a face seam: real ground, no honest place on this chart.\n",
-            if seams == 1 { "" } else { "s" }
-        ));
-    }
+    // No seam footer any more, and its absence is the change: a seam cell
+    // used to be counted here ("real ground, no honest place on this
+    // chart") because the lattice offsets it needs were `null`. Bearing and
+    // distance are not, so it is drawn like every other cell and there is
+    // nothing left to disclose. The `placement:` line above is what
+    // replaced it — it discloses the loss the projection can actually
+    // still cause, which is occlusion, not the seam.
     if !scene.legend.is_empty() {
         out.push_str("  legend: ");
         let nouns: Vec<&str> = scene.legend.iter().map(|e| e.noun.as_str()).collect();
@@ -324,13 +460,23 @@ mod tests {
     use crate::{Mark, Resolution, SurroundsCell, SurroundsObserver, SurroundsScene};
     use hornvale_locale::CoverClass;
 
-    fn cell(u: i64, v: i64, w: i64, up: bool, state: &str, relief: u32) -> SurroundsCell {
+    /// One test cell, addressed the way the renderer now reads a cell: by
+    /// its POLAR coordinate about the observer, not by lattice offsets.
+    /// `bearing_deg` is clockwise from north and `distance_rad` is in units
+    /// of the band's own outermost ring (the fixtures below use `1.0` for
+    /// "on the rim" and `0.0` for the observer), which is what
+    /// [`project_north_up`] normalises against.
+    ///
+    /// The lattice offsets are still filled in, because a non-seam cell
+    /// carries them on the wire — but nothing in this module reads them any
+    /// more, so they are a constant rather than a parameter.
+    fn cell(bearing_deg: f64, distance_rad: f64, state: &str, relief: u32) -> SurroundsCell {
         SurroundsCell {
-            room: (u * 1000 + v * 10 + w).unsigned_abs() + u64::from(up),
-            u: Some(u),
-            v: Some(v),
-            w: Some(w),
-            up: Some(up),
+            room: (bearing_deg * 1000.0 + distance_rad * 7.0) as u64,
+            u: Some(0),
+            v: Some(0),
+            w: Some(0),
+            up: Some(true),
             seam: false,
             state: state.to_string(),
             biome: 0,
@@ -351,8 +497,8 @@ mod tests {
             marks: vec![],
             signal: None,
             cover: None,
-            bearing_deg: 0.0,
-            distance_rad: 0.0,
+            bearing_deg,
+            distance_rad,
         }
     }
 
@@ -370,7 +516,7 @@ mod tests {
             },
             radius: 1,
             depth: 12,
-            orientation: "lattice".to_string(),
+            orientation: "north-up".to_string(),
             biome_legend: vec!["tundra".to_string()],
             water_legend: ["ocean", "salt-basin", "river", "dry-land"]
                 .iter()
@@ -390,23 +536,112 @@ mod tests {
         }
     }
 
+    /// The four cardinal cells of a rim, plus the observer at the centre.
+    /// Every fixture below that needs a placeable chart is built from this
+    /// shape or a subset of it, so "two cells collide" is always a
+    /// deliberate act rather than an accident of the fixture.
+    fn compass_rose(states: [&str; 4]) -> SurroundsScene {
+        scene(vec![
+            cell(0.0, 0.0, "here", 2),
+            cell(0.0, 1.0, states[0], 2),
+            cell(90.0, 1.0, states[1], 2),
+            cell(180.0, 1.0, states[2], 2),
+            cell(270.0, 1.0, states[3], 2),
+        ])
+    }
+
+    /// The rendered picture alone, caption block and footers stripped.
+    ///
+    /// A north-up chart is sparse, so a grid row very often DOES begin with
+    /// two spaces — the old "not indented two spaces" filter this replaces
+    /// was safe only while the lattice projection kept the picture dense,
+    /// and would silently have eaten the top and bottom rows of every
+    /// hexagon here. What actually distinguishes a caption line is that it
+    /// opens with a lowercase keyword and a colon (`colour:`, `sight:`,
+    /// `epistemic:`, `placement:`, `ways on:`, `legend:`); the glyph
+    /// alphabet contains no lowercase letter at all, so no grid row can.
+    fn picture(out: &str) -> Vec<String> {
+        out.lines()
+            .filter(|l| {
+                if l.is_empty() || l.starts_with('[') {
+                    return false;
+                }
+                let Some(rest) = l.strip_prefix("  ") else {
+                    return true;
+                };
+                let keyword: String = rest
+                    .chars()
+                    .take_while(|c| c.is_ascii_lowercase() || *c == ' ')
+                    .collect();
+                let is_caption = !keyword.trim().is_empty()
+                    && rest[keyword.len()..].starts_with(':')
+                    || rest.starts_with('(');
+                !is_caption
+            })
+            .map(str::to_string)
+            .collect()
+    }
+
+    /// `(row, col)` of the first `glyph` in a rendered picture.
+    fn find(out: &str, glyph: char) -> Option<(usize, usize)> {
+        picture(out)
+            .iter()
+            .enumerate()
+            .find_map(|(r, line)| line.chars().position(|c| c == glyph).map(|c| (r, c)))
+    }
+
+    /// The whole point of the campaign's third stage, pinned on the one
+    /// fixture where the answer is not a matter of taste: a cell due north
+    /// of the observer draws ABOVE the `@`, due east draws to its RIGHT,
+    /// and the two southern/western ones mirror them. The old projection
+    /// could not make this claim at all — it was lattice-aligned, and
+    /// `orientation` said so.
     #[test]
-    fn the_observer_is_an_at_sign_and_its_row_reads_left_to_right() {
-        // An up observer at the origin, its same-row neighbours either side.
-        let s = scene(vec![
-            cell(0, 0, 0, true, "here", 2),
-            cell(-1, 0, 0, false, "sensed", 2), // col +1: to the right
-            cell(0, -1, 0, false, "sensed", 2), // col -1: to the left
-        ]);
+    fn north_is_up_and_east_is_right() {
+        // Distinct reliefs so each arm is identifiable by its own glyph
+        // rather than by position alone.
+        let mut s = compass_rose(["sensed"; 4]);
+        for (c, relief) in s.cells[1..].iter_mut().zip([0, 2, 3, 5]) {
+            c.relief = relief;
+        }
         let out = render_surrounds_ascii(&s, "terrain", &[]);
-        let grid: Vec<&str> = out
-            .lines()
-            .filter(|l| !l.starts_with('[') && !l.starts_with("  "))
-            .collect();
-        assert!(
-            grid.iter().any(|l| l.contains(".@.")),
-            "the observer sits between its two same-row neighbours: {out}"
-        );
+        let at = find(&out, '@').expect("the observer is drawn");
+        let north = find(&out, '_').expect("the north cell is drawn");
+        let east = find(&out, '.').expect("the east cell is drawn");
+        let south = find(&out, ':').expect("the south cell is drawn");
+        let west = find(&out, 'A').expect("the west cell is drawn");
+        assert_eq!(north.1, at.1, "north must share the observer's column");
+        assert!(north.0 < at.0, "north must be ABOVE the observer: {out}");
+        assert_eq!(south.1, at.1, "south must share the observer's column");
+        assert!(south.0 > at.0, "south must be BELOW the observer: {out}");
+        assert_eq!(east.0, at.0, "east must share the observer's row");
+        assert!(east.1 > at.1, "east must be RIGHT of the observer: {out}");
+        assert_eq!(west.0, at.0, "west must share the observer's row");
+        assert!(west.1 < at.1, "west must be LEFT of the observer: {out}");
+    }
+
+    /// The 2x column factor, pinned on its own rather than left implicit in
+    /// the picture above: a monospace cell is about twice as tall as it is
+    /// wide, so the same angular distance east must cover twice the columns
+    /// it covers rows going north. Drop the factor and the chart is an
+    /// ellipse claiming to be a circle — and every other assertion in this
+    /// file still passes.
+    #[test]
+    fn an_eastward_degree_covers_twice_the_columns_a_northward_one_covers_rows() {
+        let (north_row, north_col) = project_north_up(0.0, 1.0, 1.0, 4);
+        let (east_row, east_col) = project_north_up(90.0, 1.0, 1.0, 4);
+        assert_eq!((north_row, north_col), (-4, 0));
+        assert_eq!((east_row, east_col), (0, 8));
+    }
+
+    /// A band with nothing but the observer in it (radius 0) has no
+    /// farthest cell to scale against. The projection must collapse to the
+    /// origin rather than divide by zero and place a NaN.
+    #[test]
+    fn a_band_with_no_distance_collapses_to_the_origin() {
+        assert_eq!(project_north_up(137.0, 0.0, 0.0, 1), (0, 0));
+        let out = render_surrounds_ascii(&scene(vec![cell(0.0, 0.0, "here", 2)]), "terrain", &[]);
+        assert_eq!(picture(&out), vec!["@".to_string()], "{out}");
     }
 
     #[test]
@@ -424,12 +659,12 @@ mod tests {
         // and `the_terrain_lens_emits_no_escape_sequences` for that half.
         // `colour` is the lens that actually carries the weight channel.
         let sensed = scene(vec![
-            cell(0, 0, 0, true, "here", 2),
-            cell(-1, 0, 0, false, "sensed", 2),
+            cell(0.0, 0.0, "here", 2),
+            cell(90.0, 1.0, "sensed", 2),
         ]);
         let remembered = scene(vec![
-            cell(0, 0, 0, true, "here", 2),
-            cell(-1, 0, 0, false, "remembered", 2),
+            cell(0.0, 0.0, "here", 2),
+            cell(90.0, 1.0, "remembered", 2),
         ]);
         let out_sensed = render_surrounds_ascii(&sensed, "colour", &[]);
         let out_remembered = render_surrounds_ascii(&remembered, "colour", &[]);
@@ -456,14 +691,20 @@ mod tests {
 
     #[test]
     fn the_caption_names_the_lens_and_declares_the_orientation() {
-        let s = scene(vec![cell(0, 0, 0, true, "here", 2)]);
+        let s = scene(vec![cell(0.0, 0.0, "here", 2)]);
         let out = render_surrounds_ascii(&s, "terrain", &["E".to_string(), "Nw".to_string()]);
         let caption = out.lines().next().unwrap();
         assert!(caption.contains("lens: terrain"), "{caption}");
-        assert!(caption.contains("lattice-aligned"), "{caption}");
+        assert!(caption.contains("north-up"), "{caption}");
+        assert!(
+            !caption.contains("lattice-aligned"),
+            "the chart is no longer lattice-aligned and the caption must not \
+             say it is: {caption}"
+        );
         assert!(
             out.contains("ways on: E, Nw"),
-            "the exits are the orientation hint, since the chart is not north-up: {out}"
+            "the chart is oriented to north but the lattice underfoot is not, \
+             so a reader who wants to WALK still needs the exits: {out}"
         );
     }
 
@@ -472,7 +713,7 @@ mod tests {
         // Registry-driven rather than hardcoded, so this gains real teeth the
         // moment a second lens is registered: a caption that named a literal
         // would then lie about which lens produced the picture.
-        let s = scene(vec![cell(0, 0, 0, true, "here", 2)]);
+        let s = scene(vec![cell(0.0, 0.0, "here", 2)]);
         for lens in SURROUNDS_LENSES {
             let caption = render_surrounds_ascii(&s, lens, &[])
                 .lines()
@@ -486,20 +727,178 @@ mod tests {
         }
     }
 
+    /// A seam cell — lattice offsets all `None`, because the lattice bends
+    /// across a base face there — is DRAWN now, at the box its bearing and
+    /// distance put it in. It used to be counted in a footer and omitted
+    /// from the picture, which is what the footer's own wording admitted
+    /// ("real ground, no honest place on this chart").
+    ///
+    /// Both halves are asserted: the mark lands where the projection says
+    /// it should, AND the retired disclosure is gone. Without the second
+    /// clause a renderer that drew the cell and *also* went on claiming it
+    /// had nowhere to put it would pass.
     #[test]
-    fn a_seam_is_disclosed_not_hidden() {
-        let mut seam = cell(0, 0, 0, true, "sensed", 2);
+    fn a_seam_cell_is_drawn_under_north_up() {
+        let mut seam = cell(90.0, 1.0, "sensed", 2);
         seam.seam = true;
         seam.u = None;
         seam.v = None;
         seam.w = None;
         seam.up = None;
         seam.room = 999;
-        let s = scene(vec![cell(0, 0, 0, true, "here", 2), seam]);
+        let s = scene(vec![cell(0.0, 0.0, "here", 2), seam]);
         let out = render_surrounds_ascii(&s, "terrain", &[]);
+        let at = find(&out, '@').expect("the observer is drawn");
+        let drawn = find(&out, '.').expect("the seam cell must be drawn, not dropped");
+        assert_eq!(drawn.0, at.0, "the seam cell is due east: same row: {out}");
+        assert!(drawn.1 > at.1, "the seam cell is due east: to the right");
         assert!(
-            out.contains("1 cell beyond a face seam"),
-            "an unplaceable cell must be stated, not dropped silently: {out}"
+            !out.contains("beyond a face seam"),
+            "the seam footer is retired — a seam cell has an honest place now: {out}"
+        );
+        assert!(
+            out.contains("2 of 2 cells drawn"),
+            "the placement disclosure must count the seam cell as drawn: {out}"
+        );
+    }
+
+    /// The collision rule (see [`box_rank`]), on a FORCED collision: two
+    /// cells at the identical bearing and distance cannot help landing in
+    /// one box. Measured across ten observers x seven radii (70 real bands,
+    /// 2,380 cells) the shipped projection collided zero times, so this is
+    /// the guard's only coverage and it must not depend on a real band ever
+    /// producing one — spec §6.4's "never trust unreachability".
+    #[test]
+    fn the_more_salient_of_two_colliding_cells_keeps_the_box() {
+        fn marked(salience: u32, kind: &str) -> SurroundsCell {
+            let mut c = cell(90.0, 1.0, "sensed", 2);
+            c.marks = vec![Mark {
+                noun: "x".to_string(),
+                kind: kind.to_string(),
+                datum: "d".to_string(),
+                salience,
+            }];
+            c
+        }
+        // A settlement (`#`) at salience 20 and an agent (`&`) at 5, in
+        // both document orders. `salience` is a RANK — lower is more
+        // salient — so the AGENT wins both times. Asserting both orders is
+        // what separates "the rule ran" from "the later insert won".
+        for cells in [
+            vec![
+                cell(0.0, 0.0, "here", 2),
+                marked(20, "settlement"),
+                marked(5, "agent"),
+            ],
+            vec![
+                cell(0.0, 0.0, "here", 2),
+                marked(5, "agent"),
+                marked(20, "settlement"),
+            ],
+        ] {
+            let out = render_surrounds_ascii(&scene(cells), "terrain", &[]);
+            assert!(
+                find(&out, '&').is_some(),
+                "the lower salience number is the MORE salient mark and must \
+                 keep the box: {out}"
+            );
+            assert!(
+                find(&out, '#').is_none(),
+                "the less salient mark must have lost the box: {out}"
+            );
+            assert!(
+                out.contains("2 of 3 cells drawn, 1 occluded"),
+                "the caption must count the cell that lost its box: {out}"
+            );
+        }
+    }
+
+    /// An unmarked cell never takes a box from a marked one, whichever way
+    /// round the document lists them — the second clause of [`box_rank`].
+    #[test]
+    fn a_marked_cell_outranks_an_unmarked_one_in_either_document_order() {
+        let mut marked = cell(90.0, 1.0, "sensed", 2);
+        marked.marks = vec![Mark {
+            noun: "Ka".to_string(),
+            kind: "settlement".to_string(),
+            datum: "d".to_string(),
+            salience: 40,
+        }];
+        for cells in [
+            vec![
+                cell(0.0, 0.0, "here", 2),
+                marked.clone(),
+                cell(90.0, 1.0, "sensed", 2),
+            ],
+            vec![
+                cell(0.0, 0.0, "here", 2),
+                cell(90.0, 1.0, "sensed", 2),
+                marked.clone(),
+            ],
+        ] {
+            let out = render_surrounds_ascii(&scene(cells), "terrain", &[]);
+            assert!(
+                find(&out, '#').is_some(),
+                "the mark must keep the box: {out}"
+            );
+        }
+    }
+
+    /// The first clause of [`box_rank`]: the chart is egocentric (decision
+    /// 0076), so the observer keeps their own box even against the most
+    /// salient mark in the band. A chart that drew over `@` would have lost
+    /// the one cell the reader is standing in.
+    #[test]
+    fn the_observer_never_loses_its_own_box() {
+        let mut rival = cell(0.0, 0.0, "sensed", 2);
+        rival.marks = vec![Mark {
+            noun: "Ka".to_string(),
+            kind: "settlement".to_string(),
+            datum: "d".to_string(),
+            salience: 0,
+        }];
+        let out = render_surrounds_ascii(
+            &scene(vec![cell(0.0, 0.0, "here", 2), rival]),
+            "terrain",
+            &[],
+        );
+        assert_eq!(picture(&out), vec!["@".to_string()], "{out}");
+    }
+
+    /// **Salience ranks; weight inks.** The interaction spec §2 leaves open
+    /// and this campaign had to settle: a `remembered` cell holding the
+    /// flagship mark is bold-because-salient and dim-because-remembered at
+    /// once. It wins its box on salience AND draws dim on epistemic —
+    /// neither channel is allowed to become the other.
+    ///
+    /// Both halves are load-bearing. Without the first, weight would be
+    /// silently acting as a rank (a remembered cell demoted out of the
+    /// picture); without the second, salience would be silently acting as a
+    /// weight (a salient cell drawn bright though it is only remembered).
+    #[test]
+    fn a_remembered_cell_holding_a_mark_wins_its_box_and_still_draws_dim() {
+        let mut flagship = cell(90.0, 1.0, "remembered", 2);
+        flagship.marks = vec![Mark {
+            noun: "Dooga".to_string(),
+            kind: "settlement".to_string(),
+            datum: "the flagship".to_string(),
+            salience: 5,
+        }];
+        flagship.color = Some([200, 30, 30]);
+        let mut rival = cell(90.0, 1.0, "sensed", 2);
+        rival.color = Some([30, 200, 30]);
+        let out = render_surrounds_ascii(
+            &scene(vec![cell(0.0, 0.0, "here", 2), flagship, rival]),
+            "colour",
+            &[],
+        );
+        assert!(
+            strip_escapes(&out).contains('#'),
+            "the remembered flagship must WIN its box on salience: {out}"
+        );
+        assert!(
+            out.contains("\u{1b}[2m#"),
+            "and must still draw DIM, because it is remembered: {out:?}"
         );
     }
 
@@ -522,7 +921,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("{glyph} is not a land-ladder rung"))
         }
         fn land_cell(relief: u32, openness: f64, micro_relief: f64) -> SurroundsCell {
-            let mut c = cell(0, 0, 0, true, "sensed", relief); // water: 3 (dry-land)
+            let mut c = cell(0.0, 0.0, "sensed", relief); // water: 3 (dry-land)
             c.micro.openness = openness;
             c.micro.relief = micro_relief;
             c
@@ -581,7 +980,7 @@ mod tests {
 
     #[test]
     fn an_unknown_lens_is_refused_loudly() {
-        let s = scene(vec![cell(0, 0, 0, true, "here", 2)]);
+        let s = scene(vec![cell(0.0, 0.0, "here", 2)]);
         let out = render_surrounds_ascii(&s, "nonesuch", &[]);
         assert!(out.contains("no lens 'nonesuch'"), "{out}");
         assert!(
@@ -593,8 +992,8 @@ mod tests {
     #[test]
     fn the_render_is_deterministic() {
         let s = scene(vec![
-            cell(0, 0, 0, true, "here", 2),
-            cell(-1, 0, 0, false, "sensed", 4),
+            cell(0.0, 0.0, "here", 2),
+            cell(90.0, 1.0, "sensed", 4),
         ]);
         assert_eq!(
             render_surrounds_ascii(&s, "terrain", &[]),
@@ -637,12 +1036,12 @@ mod tests {
         // the caption states the loss with a checkable count rather than
         // staying silent about it or lying with a constant one.
         let sensed = scene(vec![
-            cell(0, 0, 0, true, "here", 2),
-            cell(-1, 0, 0, false, "sensed", 2),
+            cell(0.0, 0.0, "here", 2),
+            cell(90.0, 1.0, "sensed", 2),
         ]);
         let remembered = scene(vec![
-            cell(0, 0, 0, true, "here", 2),
-            cell(-1, 0, 0, false, "remembered", 2),
+            cell(0.0, 0.0, "here", 2),
+            cell(90.0, 1.0, "remembered", 2),
         ]);
         let out_sensed = render_surrounds_ascii(&sensed, "terrain", &[]);
         let out_remembered = render_surrounds_ascii(&remembered, "terrain", &[]);
@@ -744,7 +1143,7 @@ mod tests {
         // and the observer's own '@'.
         let mut s = uncolored_test_scene();
         s.cells[1].water = 2; // river
-        let mut marked = cell(3, 2, 0, false, "sensed", 3);
+        let mut marked = cell(270.0, 1.0, "sensed", 3);
         marked.marks = vec![Mark {
             noun: "Ka".to_string(),
             kind: "settlement".to_string(),
@@ -831,9 +1230,9 @@ mod tests {
     /// helper's signature — every existing test keeps compiling untouched.
     fn uncolored_test_scene() -> SurroundsScene {
         scene(vec![
-            cell(0, 0, 0, true, "here", 2),
-            cell(1, 0, 0, false, "sensed", 3),
-            cell(0, 1, 0, false, "sensed", 4),
+            cell(0.0, 0.0, "here", 2),
+            cell(90.0, 1.0, "sensed", 3),
+            cell(180.0, 1.0, "sensed", 4),
         ])
     }
 

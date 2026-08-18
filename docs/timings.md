@@ -1323,3 +1323,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T11:25:06Z | game-check | 52.086 | 124.245 | 2.347 | 2.43 | 0 | e75631e2 | campaign/the-illumination | MacBookPro | 10 |
 | 2026-08-18T11:26:33Z | gate-commit | 68.495 | 52.373 | 13.882 | 0.97 | 0 | e75631e2 | campaign/the-illumination | MacBookPro | 10 |
 | 2026-08-18T11:28:01Z | gate-commit | 22.034 | 50.246 | 12.395 | 2.84 | 0 | e75631e2 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T12:00:45Z | rebaseline | 47.309 | 213.856 | 11.033 | 4.75 | 0 | f20656fe | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T12:13:31Z | rebaseline | 119.294 | 211.903 | 9.920 | 1.86 | 0 | f20656fe | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T12:26:14Z | game-check | 0.889 | 0.803 | 0.171 | 1.10 | 0 | f20656fe | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T12:27:22Z | game-check | 45.375 | 124.504 | 4.994 | 2.85 | 0 | f20656fe | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T12:28:01Z | vessel-check | 34.831 | 33.518 | 1.092 | 0.99 | 0 | f20656fe | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T12:28:33Z | gate-commit | 25.504 | 29.088 | 59.824 | 3.49 | 0 | f20656fe | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T12:32:10Z | gate-commit | 199.896 | 130.718 | 190.449 | 1.61 | 0 | f20656fe | campaign/the-illumination | MacBookPro | 10 |

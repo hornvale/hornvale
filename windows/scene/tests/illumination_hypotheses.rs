@@ -97,7 +97,7 @@ fn is_meta_line(line: &str) -> bool {
         || trimmed.starts_with("sight:")
         || trimmed.starts_with("ways on:")
         || trimmed.starts_with("legend:")
-        || line.contains("beyond a face seam")
+        || trimmed.starts_with("placement:")
 }
 
 /// One rendered grid position's parsed content: the glyph drawn, and — if a
@@ -322,9 +322,8 @@ fn h3_a_monochrome_observer_loses_the_nominal_axis_and_says_so() {
 #[allow(clippy::too_many_arguments)]
 fn fixture_cell(
     room: u64,
-    v: i64,
-    w: i64,
-    up: bool,
+    bearing_deg: f64,
+    distance_rad: f64,
     state: &str,
     water: u32,
     relief: u32,
@@ -335,9 +334,9 @@ fn fixture_cell(
     SurroundsCell {
         room,
         u: Some(0),
-        v: Some(v),
-        w: Some(w),
-        up: Some(up),
+        v: Some(0),
+        w: Some(0),
+        up: Some(true),
         seam: false,
         state: state.to_string(),
         biome: 0,
@@ -358,8 +357,8 @@ fn fixture_cell(
         marks: vec![],
         signal: None,
         cover: None,
-        bearing_deg: 0.0,
-        distance_rad: 0.0,
+        bearing_deg,
+        distance_rad,
     }
 }
 
@@ -377,61 +376,17 @@ fn fixture_scene(colored: bool) -> SurroundsScene {
     let tint = |rgb: [u8; 3]| colored.then_some(rgb);
     let cells = vec![
         // Observer: always bare regardless of colour or water.
-        fixture_cell(1, 0, 0, true, "here", 3, 2, 1.0, 0.0, None),
+        fixture_cell(1, 0.0, 0.0, "here", 3, 2, 1.0, 0.0, None),
         // Land, rung 2 ('.'), colour A.
-        fixture_cell(
-            2,
-            1,
-            0,
-            false,
-            "sensed",
-            3,
-            2,
-            1.0,
-            0.0,
-            tint([200, 30, 30]),
-        ),
+        fixture_cell(2, 0.0, 1.0, "sensed", 3, 2, 1.0, 0.0, tint([200, 30, 30])),
         // Land, SAME rung 2 ('.'), colour B — the pair that makes colour add
         // distinguishability the glyph alone does not carry.
-        fixture_cell(
-            3,
-            -1,
-            0,
-            false,
-            "sensed",
-            3,
-            2,
-            1.0,
-            0.0,
-            tint([30, 200, 30]),
-        ),
+        fixture_cell(3, 90.0, 1.0, "sensed", 3, 2, 1.0, 0.0, tint([30, 200, 30])),
         // Land, rung 4 ('^'), colour A again (reused on purpose: distinctness
         // here must come from the glyph, not the colour).
-        fixture_cell(
-            4,
-            0,
-            1,
-            false,
-            "sensed",
-            3,
-            4,
-            1.0,
-            0.0,
-            tint([200, 30, 30]),
-        ),
+        fixture_cell(4, 180.0, 1.0, "sensed", 3, 4, 1.0, 0.0, tint([200, 30, 30])),
         // River: never tinted, colour or not — the control.
-        fixture_cell(
-            5,
-            0,
-            -1,
-            false,
-            "sensed",
-            2,
-            2,
-            1.0,
-            0.0,
-            tint([10, 10, 10]),
-        ),
+        fixture_cell(5, 270.0, 1.0, "sensed", 2, 2, 1.0, 0.0, tint([10, 10, 10])),
     ];
     SurroundsScene {
         schema: SURROUNDS_SCHEMA.to_string(),
@@ -446,7 +401,7 @@ fn fixture_scene(colored: bool) -> SurroundsScene {
         },
         radius: 1,
         depth: 12,
-        orientation: "lattice".to_string(),
+        orientation: "north-up".to_string(),
         biome_legend: vec!["tundra".to_string()],
         water_legend: ["ocean", "salt-basin", "river", "dry-land"]
             .iter()

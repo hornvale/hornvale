@@ -396,8 +396,18 @@ pub struct SurroundsScene {
     pub radius: u32,
     /// The refinement depth every cell sits at.
     pub depth: u32,
-    /// Always `"lattice"`: the chart is lattice-aligned, never north-up. A
-    /// consumer that wants north must ask the rooms for their bearings.
+    /// Always `"north-up"`: every cell's box is its own polar coordinate
+    /// about the observer — `bearing_deg` clockwise from north, scaled by
+    /// `distance_rad` — so the top of a chart drawn from this document is
+    /// true north and the observer is its centre.
+    ///
+    /// It read `"lattice"` until The Illumination, when `bearing_deg` and
+    /// `distance_rad` arrived on every cell and a consumer stopped needing
+    /// spherical trigonometry to place one. That is a VALUE change, not a
+    /// schema change: the tag stays `scene/surrounds/v2` and the lattice
+    /// offsets (`u`/`v`/`w`/`up`) stay on the wire for a consumer that wants
+    /// adjacency rather than direction — none of the three shipped
+    /// renderers reads them any more.
     pub orientation: String,
     /// The biome catalog, stable append-only order.
     pub biome_legend: Vec<String>,
@@ -612,7 +622,7 @@ pub fn surrounds_scene_in(
         },
         radius,
         depth: room.depth(),
-        orientation: "lattice".to_string(),
+        orientation: "north-up".to_string(),
         biome_legend: catalog.iter().map(|b| b.name().to_string()).collect(),
         water_legend: hornvale_terrain::WaterKind::LEGEND
             .iter()
