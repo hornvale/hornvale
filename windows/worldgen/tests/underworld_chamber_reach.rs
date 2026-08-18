@@ -78,6 +78,9 @@
 //!    all. That is the defect the re-point closes, and it is a worse one than
 //!    a count shortfall would have been: a count can be noticed, and a
 //!    constant that happens to sit at the right average cannot.
+//!
+//! Test fixture (decision 0092): calls the composition-root entry points
+//! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;

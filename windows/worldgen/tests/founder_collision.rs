@@ -71,12 +71,30 @@
 //!
 //! It is legible for exactly the reason the paragraph above is, running the
 //! other way: re-keying the node index on `(cell, rung)` takes drow out of the
-//! competition for surface cells, and seed 42 falls from 826 occupations
-//! across 302 sites to **521 across 217**. Fewer occupations are fewer chances
-//! that two of them agree on every material fact `founder_handle` reads. The
+//! competition for surface cells, and seed 42 falls from 826 occupations across
+//! 302 sites to **625 across 264**. Fewer occupations are fewer chances that
+//! two of them agree on every material fact `founder_handle` reads. The
 //! independent quantity and the collision rate have now moved together, in the
 //! same direction, on two consecutive epochs and in OPPOSITE directions — which
 //! is a better test of the reading than two rises would have been.
+//!
+//! **That "625 across 264" is a CORRECTION, and the correction is the point.**
+//! The figure first published here was 521 across 217, measured mid-campaign
+//! and before Task 9 repaired `chamber_fit`'s genus join. The repair moved
+//! every underworld seating and therefore re-placed every world again, and
+//! nothing re-ran this paragraph's arithmetic — the sweep it argues from is a
+//! 744 s job and the paragraph is prose. Re-measured 2026-08-18 on this tree.
+//! The direction of the argument is unchanged (826 → 625 is still a fall) and
+//! the magnitude is about half what was claimed.
+//!
+//! **What was NOT re-run, stated so nobody reads more into the table below
+//! than it holds.** `the_dropped_founders_are_pinned_per_seed` is green on this
+//! tree, so every pinned per-seed value is still exact. What has not been
+//! re-established post-repair is the *completeness* claim — that `[2208, 2465]`
+//! is the whole 0–2999 positive set — because that needs a fresh full sweep and
+//! this wave did not pay for one. Read the table as "these nineteen seeds drop
+//! exactly these counts", which is what it asserts, and not as "no other seed
+//! in 0–2999 drops a founder", which it does not.
 //!
 //! What this battery pins:
 //!
@@ -219,6 +237,18 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// cleared seed is kept as a zero row by the standing convention, so the table
 /// is nineteen rows now, of which two are the live positive set and seventeen
 /// are the record of what five epochs cleared.
+///
+/// **The sweep predates Task 9's genus repair; the ROWS were re-verified and
+/// the SWEEP was not.** Every value below is green on this tree, re-run
+/// 2026-08-18, so each named seed's drop count is exact post-repair. The
+/// sentence "2208 and 2465 are the whole of the current positive set over seeds
+/// 0–2999" rests on the pre-repair sweep and has **not** been re-established:
+/// the repair re-placed every world, and a fresh sweep is a 744 s job nobody
+/// has paid for since. A seed outside these nineteen may now drop a founder
+/// without anything here noticing. That is a gap in coverage, not a suspected
+/// defect, and it is written down rather than left implicit — a completeness
+/// claim inherited across an epoch it was not re-run under is exactly the
+/// shape this campaign spent itself finding.
 ///
 /// claim: structural(seed: [20, 42, 238, 514, 1412, 1439, 1505, 1738, 1741,
 /// 1866, 1892, 2031, 2078, 2208, 2465, 2634, 2793, 2871, 2898]) — nineteen

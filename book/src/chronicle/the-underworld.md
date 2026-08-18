@@ -99,14 +99,18 @@ It moved to 8 K — into `[7, 9)`, which is empty on all three seeds — and the
 rule stated for the move is that an edge goes inside a measured *valley*, never
 at a percentile and never at a round number. The rule was then applied exactly
 once, to the boundary that had been flagged. The two interior edges left alone
-carry ±0.5 K masses of 0.0–0.2% and 0.6–1.1%, an order of magnitude under the
-19.6% that condemned the third; moving an unflagged edge after seeing the data
-is the metric-chasing that having a rule is supposed to prevent.
+carry ±0.5 K masses of 0.0–0.2% (the 2 K edge) and 0.2–1.1% (the 25 K edge:
+0.6% on seed 42, 1.1% on seed 7, 0.2% on seed 1234), an order of magnitude
+under the 19.6% that condemned the third; moving an unflagged edge after seeing
+the data is the metric-chasing that having a rule is supposed to prevent.
 
 One edge is known to be badly placed and could not move. The habitable ceiling
 at 50 K is an *authored* fidelity constant, frozen in the spec before the fit,
-and the re-bin showed it sitting on 1.5% of seed 1234 with occupied bins at 48
-and 49 K. Moving it after unblinding would be retuning a frozen value. It is
+and the re-bin showed 1.5% of seed 1234 lying within ±0.5 K of it, with
+occupied 1 K bins immediately below on two seeds — 48 **and** 49 K on seed 7,
+49 K alone on seed 1234. (Seed 1234 supplies the 1.5%; seed 7 supplies the 48 K
+bin. This paragraph used to attribute both to seed 1234.) Moving it after
+unblinding would be retuning a frozen value. It is
 recorded as an accepted cost of having authored it rather than left it as a
 silence.
 
@@ -236,9 +240,14 @@ multiplier, and only the second factor is new. Decomposed:
 values with hundreds of cells tied at the quartile boundary, which is the
 failure mode the spec's own guard predicted in as many words. What separated the
 two candidates was the depth-routed *conditions* built earlier in the campaign,
-and they separated them **nearly completely**, at 0.0–0.5% overlap. Composing
-the multiplier on top *raises* overlap toward 16%, pulling the two kinds
-slightly back together.
+and they separated them **nearly completely** — at 0.5% overlap on seed 42 and
+0.0% on seed 7. **On seed 1234 the statistic is undefined**, its quartile
+boundary falling inside a tie of 12, exactly as the table one line above
+records; the honest range is therefore "0.0–0.5% on two seeds of three", never
+a flat three-seed 0.0–0.5%. The multiplier's own overlap is undefined on *every*
+seed, and this paragraph already says so — the asymmetry between how the two
+were reported was the defect. Composing the multiplier on top *raises* overlap
+toward 16%, pulling the two kinds slightly back together.
 
 So the depth work succeeded and then separated the candidates into different
 **peoples** rather than different **dwarves** — which is the third branch the
@@ -287,9 +296,10 @@ line it existed to differ on. A mutation silently defeated by `cargo fmt`
 rewrapping the line it was searching for, twice. A test selector matching
 nothing and reporting `0 passed`. A shell idiom whose `grep -v grep` deleted
 every hit, because the process being hunted was ri**pgrep**. A distinguishability
-claim with no control. Five numbers written as measurements that were estimates.
-One was in the campaign's own plan text, and one was a report's strongest
-framing repeated without anyone asking for its scope.
+claim with no control. Five numbers written as measurements that were estimates
+— of those five, one was in the campaign's own plan text rather than an
+implementer's. And one further instance that was not a number at all: a
+report's strongest framing repeated without anyone asking for its scope.
 
 The best statement of the pattern came from the author of five of them,
 summarising: *"numbers written while explaining, when the arithmetic felt too
@@ -314,7 +324,9 @@ the niche type has one, wired to drow so that its closure did not depend on the
 dwarves landing. The third is **not**, and saying it is would be the exact
 defect this campaign is about. `ChamberOrigin` moved from *a seam with no
 writer* to *a writer with no call site*: the producer exists, is correct, and
-counts 29 / 14 / 15 made chambers across the three seeds, and nothing in the
+counts **7 / 25 / 42** made chambers across seeds 42 / 7 / 1234 — re-measured
+2026-08-18 against the repaired genus join; the 29 / 14 / 15 first published
+here was taken before that repair moved every seating — and nothing in the
 shipped path calls it. The one production caller of the chamber lookup hands it
 a freshly-constructed empty override map, so in every world a player can reach,
 every chamber still resolves `Found`.
@@ -354,8 +366,17 @@ artifact — ratified twelve days earlier and never executed — is executed her
 The bake's node index is keyed on `(cell, rung)`, so an underworld community no
 longer evicts whoever lives overhead. Surface density is unchanged structurally
 rather than hopefully: the surface is one rung, so a cell still holds exactly one
-surface community, and twelve pinned single-people worlds are byte-identical
-before and after, including an order-sensitive record-stream digest.
+surface community. That structural argument was corroborated by building twelve
+species-pinned single-people worlds — four peoples across three seeds — before
+and after the re-key and finding an order-sensitive record-stream digest
+identical on all twelve. **The corroboration is a one-off comparison, not a
+standing check.** `a_pinned_surface_people_builds_the_same_world` deliberately
+*prints* its digests rather than asserting a committed literal, because the
+comparison that matters is against the same command on the parent commit and a
+literal re-pinned after the change would prove nothing; it is also `heavy:`-
+gated, so no everyday gate runs it. Nothing re-checks the twelve worlds today.
+The property itself does not need one — it is a consequence of the key's
+shape — which is why the readout was written the way it was.
 
 ## The proof
 

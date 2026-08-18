@@ -373,8 +373,18 @@ Glasshouse argued from two readings straddling the bar that a 120-pair battery
 cannot resolve a 0.60 threshold — a sound argument, but an inference from two
 points, and two points are exactly how this chapter's original mistake was
 made. A third census epoch, moved by an unrelated mechanism, has now produced a
-third reading inside the same one-standard-error band. The underpowered
-diagnosis is no longer an inference; it is an observation, repeated.
+third reading inside the same one-standard-error band.
+
+**Careful about what that third reading buys, because it is less than it
+sounds.** Three readings clustered inside ±1 SE corroborate that the report's
+recall is *stable* across three unrelated world epochs — which is a real and
+useful thing to know, and is not the same as demonstrating underpower. The
+underpower claim does not need the readings at all: it follows from n = 120
+alone, whose standard error at the bar is 0.0447, so a battery this size cannot
+distinguish 0.60 from anything inside roughly 0.51–0.69 at two SE. What the
+three readings add is that nothing has moved the estimate *out* of that
+interval, so no amount of re-measuring at this n will settle the question. The
+fix remains more pairs rather than a moved bar.
 
 **A witness that fires twice is worth more than one that never moves.** The
 first firing overturned a verdict, which is the dramatic case and the one the

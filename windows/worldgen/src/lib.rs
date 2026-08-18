@@ -2694,11 +2694,20 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// `stratum_at` samples a rung's *top*, which makes rank 0 degenerate
 /// (`Undercroft` begins at ΔT = 0 → 0 m → the topmost band in every column);
 /// nothing here samples a rung landmark at all, so there is no analogous
-/// degeneracy to trade against. Were a caller to need a per-rung reading —
-/// spec §4.6's re-key of `node_index` to `(CellId, Rung)` is the obvious one —
-/// it should choose a depth *inside* the rung (its ΔT midpoint) and pass that,
+/// degeneracy to trade against. Were a caller to need a per-rung reading, it
+/// should choose a depth *inside* the rung (its ΔT midpoint) and pass that,
 /// rather than this function growing a second, redundant depth coordinate that
 /// could disagree with the first.
+///
+/// **That advice was written naming spec §4.6's `(CellId, Rung)` re-key as the
+/// obvious caller, and the re-key shipped without taking it.** Task 8
+/// ([`delve_seating`]) needs a depth per rung and uses the rung's **top**
+/// (`delta_t_range_of(rung).0`), matching `chamber`'s `stratum_at` so the
+/// seating and the lattice cannot disagree about where a rung is — and
+/// inheriting rank 0's degeneracy in exchange, which
+/// [`delve_seating::RungSeat::works`] now discloses. Nothing calls this
+/// function per rung today; the midpoint recommendation stands for whoever
+/// first does, and is no longer addressed to a named task.
 ///
 /// Each axis:
 ///
@@ -2766,15 +2775,21 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 ///
 /// **This function does not consult [`chamber::is_sump`], and the omission is
 /// deliberate.** That is the rule that a `ChamberOrigin::Made` chamber is dry
-/// regardless of the water table (spec §4.2.1 clause 2), and it still has no
-/// production caller. It does not gain one here: no origin is available at
-/// this call site — the live callers derive one substrate *per cell*, before
-/// any chamber address exists — so consuming `is_sump` would mean passing a
-/// literal `ChamberOrigin::Found`, at which point the call is exactly
-/// `is_phreatic` with a constant discriminant. That would read as closing the
-/// disclosed gap while closing nothing. The rule's real consumer is spec
-/// §4.6's capacity task, which is where a settled community's own chambers
-/// become `Made` and where an origin exists to pass.
+/// regardless of the water table (spec §4.2.1 clause 2). It does not gain a
+/// caller here: no origin is available at this call site — the live callers
+/// derive one substrate *per cell*, before any chamber address exists — so
+/// consuming `is_sump` would mean passing a literal `ChamberOrigin::Found`, at
+/// which point the call is exactly `is_phreatic` with a constant discriminant.
+/// That would read as closing the disclosed gap while closing nothing.
+///
+/// **`is_sump` DOES have a production caller now, and this paragraph used to
+/// say it did not.** Spec §4.6's capacity task shipped one:
+/// [`delve_seating::seat_at`] asks it per candidate rung, with `Found`, to
+/// decide whether a seat is priced at
+/// [`delve_seating::UNDERWORLD_WORKS_COST`]. What is still missing is a caller
+/// for the `Made` arm, which needs a shipped path that constructs a non-empty
+/// [`chamber::ChamberOverrides`] — see [`delve_seating::made_chambers`] for
+/// that disclosure in full.
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: porosity)
 pub fn subterranean_substrate(
     surface: Substrate,
@@ -2887,9 +2902,18 @@ pub fn chamber_moisture_at_reach(
 /// so the substrate and the lattice agree about how deep a column goes rather
 /// than each having its own opinion. It is also the pessimistic choice on
 /// temperature, deliberately: a deep-reaching column reads hot, which is what
-/// spec §4.1's habitable ceiling *means*, and a per-rung reading that lets a
-/// people pick a comfortable depth is spec §4.6's `(CellId, Rung)` re-key, not
-/// this task's.
+/// spec §4.1's habitable ceiling *means*.
+///
+/// **A per-rung substrate is still deferred, and this doc used to defer it to
+/// a task that has since shipped without doing it.** Spec §4.6's
+/// `(CellId, Rung)` re-key landed (Task 8, [`delve_seating`]); it re-keyed the
+/// node index and added **no** per-rung substrate at all. This field is still
+/// evaluated once per cell at `depth_reach_m`, and
+/// [`delve_seating::chamber_fit`] scores a rung against the corpus rather than
+/// against a substrate read at that rung's depth. So the deferral is real and
+/// now points nowhere: **it is unowned work, not scheduled work**, and it is
+/// carried as `MAP-per-rung-substrate` in the idea registry rather than as a
+/// pointer to somebody else's task. What it needs is stated below.
 ///
 /// **Beware the atom.** `cave_depth_reach_m` clamps at both ends, so reach is
 /// a row of spikes rather than a spread — seed 42's fattest single value holds

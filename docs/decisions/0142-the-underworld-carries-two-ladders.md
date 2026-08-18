@@ -53,7 +53,11 @@ having because its input is independent** — which is decision 0143.
   from* its depth budget by comparing that budget against the column, so the
   archive keeps answering "which bands does this void penetrate" correctly
   while no longer being the depth coordinate. That derivation is by construction
-  in both constructors, not by convention.
+  in `Cave::new` and `Cave::from_reach`, not by convention — see
+  [0143](0143-a-caves-depth-is-a-budget-in-metres.md) for the third
+  constructor, `Cave::from_parts_unchecked`, which exists to build a
+  disagreeing pair for exactly one test and which the *generator* never
+  reaches.
 - **Any future reader must ask which ladder it wants.** A rung name is not a
   rock unit and a rock unit is not a depth. The names were chosen to be
   unconfusable (`Undercroft`, `Shallows`, `Deeps`, `Underdeep`, `Sunless`
@@ -64,7 +68,8 @@ having because its input is independent** — which is decision 0143.
 The habitable ceiling — the ΔT beyond which the campaign declares a chamber
 uninhabitable, and therefore where the bottom rung begins — is an **authored
 fidelity constant** at 50 K, frozen in the spec before any fit. A later re-bin
-established it is the least well-placed edge in the table (1.5% of one seed
-within a kelvin of it) and it was **not moved**, because moving a frozen
+established it is the least well-placed edge in the table (1.5% of seed 1234
+lies within **±0.5 K** of it, and seed 7 carries occupied 1 K bins at both 48
+and 49 K) and it was **not moved**, because moving a frozen
 authored value after unblinding is a retune. That cost is accepted as the price
 of having authored it rather than leaving it as a silence.

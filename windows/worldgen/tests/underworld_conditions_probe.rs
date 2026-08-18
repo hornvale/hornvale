@@ -174,9 +174,12 @@
 //! `underworld_water_table_probe`'s own "sumped (cave bottom below the table)
 //! = 68.5 / 82.7 / 83.5%" seen from the other side, and spec §4.2.1 clause 2 is
 //! the model's answer to it — a `Made` chamber is drained regardless of the
-//! table. **Nothing writes `Made` yet** (bound to §4.6's capacity task), so the
-//! shipped reading says the deep is wet and will keep saying so until the
-//! drainage rule gains its writer. Stated here rather than left inside a
+//! table. **`Made` has a writer now and still no call site**: §4.6's capacity
+//! task shipped `delve_seating::made_chambers`, but nothing in the shipped
+//! path constructs the override map it writes into, so the reading below says
+//! the deep is wet and will keep saying so until the drainage rule gains a
+//! *caller*, not merely a writer. (This block said "nothing writes `Made` yet"
+//! after the writer landed.) Stated here rather than left inside a
 //! percentile, because "moisture is no longer a constant" is true and would
 //! mislead a reader about how much.
 //!
@@ -213,6 +216,9 @@
 //! plainly because it is the opposite of the naive expectation from finding 3,
 //! and because it means the collapsed light axis spec §4.4 preregisters as a
 //! *finding* is simultaneously the strongest signal a subterranean kind has.
+//!
+//! Test fixture (decision 0092): calls the composition-root entry points
+//! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;

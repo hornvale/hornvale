@@ -64,9 +64,12 @@
 //! **What does open them is the drainage rule** (clause 2), exercised here
 //! through the shipped `is_sump`: a `Made` chamber is dry regardless of the
 //! table, recovering **100% of every reached `Underdeep` and `Sunless`
-//! column**. Nothing writes `Made` yet — that is bound to the capacity task —
-//! so `dry-if-made` measures the size of the population the rule can reach,
-//! not chambers in any world.
+//! column**. `Made` now HAS a writer — Task 8's
+//! `delve_seating::made_chambers` — but no shipped path constructs the
+//! override map it writes into, so no world a player can reach carries the
+//! variant. `dry-if-made` therefore still measures the size of the population
+//! the rule *can* reach, not chambers in any world. (This block said "nothing
+//! writes `Made` yet" after the writer landed.)
 //!
 //! Per-rung figures are REPORTED, never asserted: nothing preregistered a
 //! per-rung criterion, and inventing one after seeing this is the move
@@ -139,6 +142,9 @@
 //! seed 1234: H3 538/1266 = 42.5%  table p50= 5.6 p90=264.0 max=470.3   distinct=523
 //!            walkable share p50=0.003   rungs dry 100/23.1/ 4.7/0.0/0.0 %
 //! ```
+//!
+//! Test fixture (decision 0092): calls the composition-root entry points
+//! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
@@ -238,9 +244,10 @@ fn the_water_table_is_not_degenerate() {
         let mut rung_vadose = [0usize; 5];
         // The same rungs judged through the SHIPPED drainage rule with a
         // `Made` origin (spec §4.2.1, clause 2), so the probe exercises
-        // `is_sump` rather than restating it. Nothing produces `Made` yet, so
-        // this measures the SIZE OF THE POPULATION the rule can reach if the
-        // capacity task writes it — not a count of chambers in any world.
+        // `is_sump` rather than restating it. `made_chambers` writes `Made`
+        // now, but nothing in the shipped path constructs the override map it
+        // writes into, so this still measures the SIZE OF THE POPULATION the
+        // rule can reach — not a count of chambers in any world.
         let mut rung_dry_if_made = [0usize; 5];
         // WHY the gain saturates: `cave_depth_reach_m` rises with `induration`
         // while `assemble_material` builds porosity with a `(1 - induration)`

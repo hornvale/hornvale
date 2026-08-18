@@ -121,6 +121,9 @@
 //!   [ 25.0,  50.0) K : 129  (band-derived: 3)
 //!   [ 50.0,   inf) K : 536  (band-derived: 0)
 //! ```
+//!
+//! Test fixture (decision 0092): calls the composition-root entry points
+//! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;

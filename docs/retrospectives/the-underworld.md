@@ -25,14 +25,20 @@ mechanism twice:
 | 8 | an implementer's own test | vacuous, found by its own mutation sweep |
 | 9 | a test selector in the plan text | matched nothing and reported `0 passed` |
 | 10 | a distinguishability claim | a genus filter can match rows and still not be the one in use — no control |
-| 11 | five prose figures | estimates presented as measurements, two of them uncaught until a later round |
+| 11 | five prose figures | estimates presented as measurements, two of them uncaught until a later round. All five were an implementer's; a **sixth** instance of the same shape, counted separately below, was in the campaign's own plan text |
 | 12 | a genus join | `"karst"` compared against `"karst-cave"`; one of three agreed by coincidence |
 
-**The countermeasure that works is mechanical, not attentional**, and the best
-statement of why came from the implementer that had authored five of the eleventh
-kind: *"numbers written while explaining, when the arithmetic felt too small to
-run. The three that were caught were caught by running something; the two that
-weren't were the two where I ran nothing."*
+The best statement of the pattern came from the implementer that had authored
+five of the eleventh kind, and the closing sentence is **theirs, not mine**:
+*"numbers written while explaining, when the arithmetic felt too small to run.
+The three that were caught were caught by running something; the two that
+weren't were the two where I ran nothing. The countermeasure that works is
+mechanical, not attentional."*
+
+An earlier draft of this section lifted that last clause out of the quotation
+and asserted it in my own voice. In a campaign whose subject is attribution,
+that is the wrong direction to move a sentence, and the chronicle — which keeps
+it inside the quote — had it right.
 
 Every remedy this campaign shipped for one of these is of the same shape: make
 the measurement re-runnable from the tree rather than correct in a report. The
@@ -104,10 +110,24 @@ three times over:
   four tasks before a criterion would have failed *by construction* rather than
   by measurement.
 - **Task 8 measured the founding circularity rather than reasoning about it.**
-  The first design ranked rungs by fit × drainage cost and measured 0 of 23
+  The first design ranked rungs by fit × drainage cost and measured **zero**
   communities founding below the water table on any seed, because the shallowest
-  rung is dry in 100% of columns — a rule unreachable in exactly the case it was
+  rung is dry in every column — a rule unreachable in exactly the case it was
   written for. Reasoned about, it would have shipped.
+
+  **Two corrections to that measurement, made in the closing review and worth
+  more than the original.** First, "the shallowest rung is dry in 100% of
+  columns" was cited as a probe reading and is an **identity**: a rung is judged
+  at its top, `Undercroft`'s top is 0 m, the water table is floored at zero and
+  `is_phreatic` is strict, so `works` is `false` at rank 0 in every possible
+  world. A figure that cannot come back any other way is not evidence, and it
+  was disclosed as evidence for a campaign. Second, the figure itself — 0 of 23
+  — was taken **before** Task 9 repaired the genus join, and so describes a tree
+  that no longer exists. Re-run 2026-08-18: the counterfactual is now **0 of
+  81** and the shipped rule fires on **3 of 93**, having moved off seed 42 and
+  onto seeds 7 and 1234. The design conclusion survives both corrections and is
+  better evidenced by the second, which is the outcome you hope for and cannot
+  assume.
 
 The one place this discipline was applied *to itself* is worth recording: when
 the review asked whether a failing criterion should be restated under decision

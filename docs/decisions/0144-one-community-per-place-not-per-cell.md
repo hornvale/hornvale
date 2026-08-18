@@ -21,10 +21,21 @@ appears in the key.
 **Surface density is unchanged structurally rather than by measurement.**
 `Surface` is one rung, so `(cell, Surface)` is one key, so a cell still holds
 exactly one surface community — the property is a consequence of the key's shape,
-not an empirical result that could drift. It was nonetheless pinned: twelve
-single-surface-people worlds (four peoples × three seeds) are byte-identical
-before and after, including an order-sensitive record-stream digest, and all
-pre-existing history-bake tests are unchanged.
+not an empirical result that could drift. It was nonetheless **corroborated by
+measurement, which is not the same as pinned**: twelve species-pinned
+single-surface-people worlds (four peoples × three seeds) produced an
+identical order-sensitive record-stream digest before and after the re-key, and
+all pre-existing history-bake tests are unchanged.
+
+**Nothing re-checks those twelve worlds.**
+`underworld_capacity_probe::a_pinned_surface_people_builds_the_same_world`
+*prints* its digests rather than asserting a committed literal — deliberately,
+and its own doc gives the reason: the honest comparison is against the same
+command run on the parent commit, and a literal re-pinned after the change
+proves nothing. It is additionally `heavy:`-gated, so no everyday gate runs it
+at all. An earlier draft of this record said the result was "pinned", which
+reads as a standing guarantee that does not exist. The guarantee is structural;
+the measurement was a one-off control on it.
 
 What the wider key buys is the two things a `BTreeMap<CellId, _>` could not
 express: an underworld community no longer competes with the surface one for a

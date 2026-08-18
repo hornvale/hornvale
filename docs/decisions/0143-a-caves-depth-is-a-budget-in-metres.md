@@ -51,19 +51,51 @@ stream consumption order.
    inside a flow and are shallow; karst follows dissolution to ~1–2.2 km
    (Veryovkina, 2212 m); fracture voids close under load within a few km.
 
-Post-split, all five classes are occupied on every seed at a modal share of
-42–44%, against a preregistered 70% ceiling that the pre-split world failed at
-75%. The spread came from the world, not from a moved threshold.
+Post-split, all five classes are occupied on every seed against a preregistered
+70% ceiling that the pre-split world failed at 75%. The spread came from the
+world, not from a moved threshold.
+
+**The modal share depends on which bin set you read it in, and this record
+previously gave one figure without naming either.** Measured against the
+**shipped** ladder (`domains/terrain/src/delve.rs`, ΔT edges 0 / 2 / 8 / 25 /
+50 K), the modal shares are **45.7% / 43.2% / 42.3%** on seeds 42 / 7 / 1234.
+The `42–44%` this paragraph used to give is the **Task-1b probe's** bin set —
+edges 0 / 2 / 10 / 25 / 50 K, the spec's a-priori illustration, which is what
+the criterion was evaluated against pre-unblinding — where the shares are
+43.6% / 43.2% / 42.3%. Both clear 70% comfortably and the decision is
+unaffected either way; the chronicle publishes the second table with its bins
+labelled, and this record did not, which made a labelled figure read as an
+unlabelled one.
 
 ## Two consequences that are not obvious
 
 **`deepest_band` survives and inverts its dependency.** It is now *derived from*
 the budget by comparing it against the column, so the archive keeps answering
 "which bands does this void penetrate" while no longer being the depth
-coordinate. Both `Cave` constructors derive the band from the budget through one
-definition, so a disagreeing pair cannot be constructed; `Cave` is
-`#[non_exhaustive]`, which forbids struct-literal construction outside the
-defining crate while leaving every field read untouched.
+coordinate. `Cave::new` and `Cave::from_reach` both derive the band from the
+budget through one definition, so **neither of them can produce a disagreeing
+pair**; `Cave` is `#[non_exhaustive]`, which forbids struct-literal
+construction outside the defining crate while leaving every field read
+untouched.
+
+**There is a THIRD constructor, and it exists precisely to build the pair the
+other two cannot.** `Cave::from_parts_unchecked` takes the band and the budget
+separately and checks nothing; its own doc says so, names itself `_unchecked`
+so the violation is visible at the call site, and points at
+`Cave::band_agrees_with_reach` as the invariant in checkable form. Exactly one
+test uses it — `underworld_chamber_reach`, whose entire content is fabricating
+a budget the generator cannot author and showing the chamber lattice can tell
+the difference — so the hatch is load-bearing rather than a concession.
+
+This record originally read *"Both `Cave` constructors derive the band from the
+budget through one definition, so a disagreeing pair cannot be constructed"*,
+which asserts more than the code holds and is contradicted by a doc comment in
+the file it describes. **The invariant this decision actually establishes is
+narrower and is the one worth having**: every `Cave` the *generator* produces
+satisfies `band_agrees_with_reach`, because the generator reaches `Cave` only
+through the two deriving constructors; a `Cave` obtained any other way must be
+checked, and the escape hatch is spelled `_unchecked` so that obligation
+travels with it.
 
 **The budget has atoms, and a downstream consumer must expect them.** The
 derivation clamps — lava tubes at 200 m, the general ceiling at 3 km, and a

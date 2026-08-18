@@ -154,10 +154,15 @@ pub enum ChamberOrigin {
     /// [`is_sump`]. Keeping a working depth dry is what mining is, and this is
     /// what lets a people inhabit a depth the hydrology would otherwise flood.
     ///
-    /// **The writer is bound to spec §4.6's capacity task as an acceptance
-    /// criterion**, not deferred again: a settled subterranean community's own
-    /// chambers resolve to `Made`. Until that lands, nothing in the shipped
-    /// generation path produces this variant.
+    /// **The writer landed with spec §4.6's capacity task**, which bound it as
+    /// an acceptance criterion rather than deferring it again:
+    /// [`crate::delve_seating::made_chambers`] resolves a settled subterranean
+    /// community's own chambers to `Made`. What it does **not** have is a call
+    /// site — nothing in the shipped generation path builds the
+    /// [`ChamberOverrides`] it writes into, so no world a player can reach
+    /// carries this variant. See [`is_sump`] and `made_chambers` for the full
+    /// disclosure; this sentence used to read "until that lands" and the
+    /// landing did not change what a player sees.
     Made,
 }
 
@@ -329,7 +334,7 @@ fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
     }
 }
 
-/// The one place the `chamber/v1` stream key is spelled — mirrors
+/// The one place the `chamber/v2` stream key is spelled — mirrors
 /// `deity_base_seed`'s discipline (`windows/worldgen/src/lib.rs`): "the one
 /// place the stream label is spelled, so [every caller] can never diverge."
 /// [`chamber_stream`] is the only caller.
@@ -482,24 +487,34 @@ pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> Ch
 /// chamber" — the hydrology is a fact about the rock, the exemption is a fact
 /// about the maker.
 ///
-/// **This ships the rule; the producer is spec §4.6's capacity task**, as an
-/// acceptance criterion rather than a note.
+/// **This ships the rule; spec §4.6's capacity task shipped its producer**,
+/// as an acceptance criterion rather than a note.
 ///
-/// **The full disclosure, because half of it is easy to miss.** Two things are
-/// absent, not one. (a) Nothing in the shipped path emits `Made`, so the
-/// `Made` arm is unreachable today. (b) **Nothing in the shipped path calls
-/// this function at all** — the only callers are this module's tests and
-/// `underworld_water_table_probe`. So `is_sump` is not "a live rule with one
-/// dormant branch"; it is a rule with no production caller, which is a fuller
-/// version of exactly the shape (`ChamberOrigin` itself, `EnvironmentNiche`,
-/// `temperature_at_depth`) this campaign's §3.9 finding counts three times.
-/// Writing only (a) down would have understated it in the campaign whose
-/// headline finding is dangling seams.
+/// **The disclosure, UPDATED, because half of it has closed and half has
+/// not.** Two things were absent when this function landed. (a) Nothing in the
+/// shipped path emitted `Made`, so the `Made` arm was unreachable. (b) Nothing
+/// in the shipped path called this function at all.
 ///
-/// Both close together: the capacity task gains the writer, and the passage
-/// graph gains the caller when it turns a sump into a missing edge. Until then
-/// this is a stated deferral with a named deadline, not an oversight.
+/// **(b) is CLOSED.** [`crate::delve_seating::seat_at`] calls it on every
+/// candidate rung of every cave-bearing column, with `ChamberOrigin::Found`,
+/// to decide whether a seat is priced at [`crate::delve_seating::UNDERWORLD_WORKS_COST`]
+/// — the first and only production caller. The tests and
+/// `underworld_water_table_probe` are no longer the whole of the roster, and
+/// this doc claimed they were for one campaign after they stopped being.
 ///
+/// **(a) is HALF closed, and the half that remains is worse than it was.**
+/// [`crate::delve_seating::made_chambers`] *writes* `Made`, so the value is
+/// produced; but nothing in the shipped path constructs the
+/// [`ChamberOverrides`] it writes into — `windows/vessel`'s `delve_at` hands
+/// [`chamber_at`] a freshly-built empty map — so in every world a player can
+/// reach, every chamber still resolves `Found` and the `Made` arm here is
+/// still never taken. That is a **writer with no call site**, which
+/// `made_chambers`' own docs state at length and which is the shape this
+/// campaign's §3.9 finding exists to name.
+///
+/// The remaining consumer is the passage graph, which turns a sump into a
+/// missing edge ([`passages_from`] has no production caller either). Until
+/// then this is a stated deferral, not an oversight.
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(flag: return)
 pub fn is_sump(origin: ChamberOrigin, depth_m: f64, water_table_m: f64) -> bool {
     match origin {

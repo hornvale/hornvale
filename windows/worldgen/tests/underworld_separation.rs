@@ -68,6 +68,184 @@
 //! computes the floor live from [`hornvale_kernel::sovereignty_floor`] rather
 //! than reading it off a table — The Delvers' own plan table was wrong in the
 //! fourth decimal for two of its three kinds.
+//!
+//! # THE READOUT ITSELF — measured 2026-08-18, seeds 42 / 7 / 1234
+//!
+//! **Every number the campaign's verdict turns on lives here, in the file that
+//! produces it.** It did not, until this was added: the module doc recorded
+//! the mandatory disclosure and the elevation precondition and no readout at
+//! all, so the decisive figures existed only in a report and in a
+//! `println!` inside a heavy-tier-ignored test. The campaign's own
+//! stated remedy for its headline defect is *make the measurement re-runnable
+//! from the tree rather than correct in a report*, and this file was the one
+//! result it had not been applied to. Every sibling probe in this campaign
+//! already carries its numbers in its doc (the water table's 141 lines,
+//! chamber conditions' 215, the ladder's 123); this one carried none.
+//!
+//! Regenerate the whole block with:
+//!
+//! ```text
+//! cargo test -p hornvale-worldgen --test underworld_separation --release \
+//!     -- --ignored --nocapture the_separation_readout
+//! ```
+//!
+//! ## H1 — the ladder varies (needs ≥ 4 of 5 rungs, and ≤ 70% in one)
+//!
+//! ```text
+//! seed    caves  chambers   Undercroft  Shallows    Deeps  Underdeep  Sunless   worst rung
+//!   42      874      5604        31.3%     28.7%    23.9%       9.0%     7.1%        31.3%
+//!    7     1681     11747        27.9%     26.9%    17.4%      15.1%    12.7%        27.9%
+//! 1234     1266      9384        26.8%     25.0%    22.1%      14.4%    11.8%        26.8%
+//! ```
+//!
+//! **HOLDS**: 5 of 5 rungs occupied on every seed, worst share 31.3%.
+//!
+//! ## H2 floor — the modal seated rung (needs the two kinds to differ)
+//!
+//! ```text
+//! seed   mountain-dwarf              duergar                       differ?
+//!   42   Shallows   (58.7%)          Undercroft (69.0%)            yes
+//!    7   Undercroft (57.3%)          Underdeep  (50.1%)            yes
+//! 1234   Undercroft (56.1%)          Undercroft (49.8%)            NO
+//!
+//! lattice band histograms (band 0 = Undercroft)
+//!   42   {0: 361, 1: 513}            {0: 603, 1:  14, 3: 257}
+//!    7   {0: 963, 1: 718}            {0: 823, 1:  13, 3: 843, 4: 2}
+//! 1234   {0: 710, 1: 556}            {0: 631, 1:  32, 3: 598, 4: 5}
+//! ```
+//!
+//! **FAILS on seed 1234.** Viability half passes everywhere by four to five
+//! orders of magnitude (max suitability 0.113 / 0.113 / 0.093 mountain,
+//! 0.080 / 0.078 / 0.076 duergar, against a floor of 1e-6).
+//!
+//! ## H2c — distinct seated rungs (needs > 1)
+//!
+//! **HOLDS on every seed for both kinds**: mountain 2 / 2 / 2, duergar
+//! 3 / 4 / 4. This is the terrain property — prefix truncation genuinely
+//! bites — and the one clause no choice of niche could have satisfied.
+//!
+//! ## H2 overlap — the decisive number, and it is WELL-DEFINED
+//!
+//! ```text
+//! seed   quartile   |A ∩ B|   share of each   Jaccard   ≥ 20%?
+//!   42        218        16            7.3%      3.8%   no
+//!    7        420        69           16.4%      8.9%   no
+//! 1234        316        52           16.5%      9.0%   no
+//! ```
+//!
+//! Spec §5's tie guard anticipated a tie-dense capacity field and it is not
+//! one: the composed field carries **862 / 1515 / 1180** distinct values
+//! (mountain) and **870 / 1579 / 1255** (duergar), and the quartile boundary
+//! is a **singleton — tie size 1 — on every seed for both kinds**, so
+//! `boundary_splits_a_tie` is `false` throughout and the statistic is computed
+//! rather than withheld. **The threshold was not widened. The kinds were not
+//! admitted.**
+//!
+//! ### The broken-join arm — HISTORICAL, AND NOT REGENERABLE FROM THIS TREE
+//!
+//! ```text
+//! seed                                   42       7    1234
+//! H2 overlap, broken genus join       34.4%   93.3%   84.5%     <- pre-repair
+//! H2 overlap, repaired genus join      7.3%   16.4%   16.5%     <- shipped
+//! ```
+//!
+//! **This row cannot be re-run and must not be read as a live measurement.**
+//! It was taken while `chamber_fit` filtered the corpus on
+//! `CaveKind::name()` (`"karst"`) against genera spelled in the surface
+//! corpus's vocabulary (`"karst-cave"`) — one of three agreed by coincidence,
+//! so karst and fracture columns scored against a genus-blind fallback and
+//! returned bit-identical fit tables. `genus_of` is exhaustive over `CaveKind`
+//! with no wildcard and the defect is gone from the tree, which is exactly why
+//! the number is unreproducible: recovering it would mean reintroducing the
+//! bug. It is kept because it is the campaign's single most consequential
+//! measurement — **measuring H2 on the broken instrument would have reported a
+//! 20%-clearing pass that means nothing** — and a figure that cannot be
+//! regenerated is recorded as history, with its date and its cause, never as
+//! evidence about this tree.
+//!
+//! ## The attribution decomposition — which factor separated them
+//!
+//! ```text
+//! seed   composed   condition niches only        the delve axis only
+//!   42       7.3%   0.5%  (|A∩B| = 1)            UNDEFINED  4/5 distinct, ties 284 / 576
+//!    7      16.4%   0.0%  (|A∩B| = 0)            UNDEFINED  4/4 distinct, ties 879 / 787
+//! 1234      16.5%   UNDEFINED (tie 12)           UNDEFINED  4/5 distinct, ties 619 / 610
+//! ```
+//!
+//! **The finding, and it is not the one the campaign expected.** The delve
+//! seating multiplier — the only factor this campaign's Task 8 built — has no
+//! quartile at all: four or five distinct values with 284–879 cells tied at
+//! the boundary on every seed, spec §5's predicted failure mode arriving
+//! exactly as written. The condition niches alone separate the two kinds
+//! essentially completely on the two seeds where the statistic is defined, and
+//! composing the multiplier on top *raises* overlap toward 16%, pulling the
+//! kinds slightly back together.
+//!
+//! **Seed 1234's condition-niche cell is UNDEFINED, not 0.0%**, and the
+//! three-seed range is therefore "0.0–0.5% on two of three seeds", never
+//! "0.0–0.5%" flat. See the scope note on the control below: the unscaled arm
+//! is **not** depth-free — it reads `subterranean_substrate`, which routes
+//! chamber temperature through `temperature_at_depth` and derives moisture
+//! from the water table, and the two candidates differ chiefly on exactly
+//! those axes. What the control establishes is that *the seating multiplier
+//! had no resolution and the depth-routed conditions did the separating* — not
+//! that depth contributed nothing.
+//!
+//! ## Distinct capacity values — the anti-tie evidence, in full
+//!
+//! ```text
+//! seed   mountain-dwarf   duergar        boundary tie size (both kinds)
+//!   42              862       870        1
+//!    7             1515      1579        1
+//! 1234             1180      1255        1
+//! ```
+//!
+//! **862–1579 distinct values** over 874–1681 cave-bearing cells. The unscaled
+//! arm is similarly rich (862 / 1510 / 1177 mountain, 870 / 1578 / 1255
+//! duergar, boundary tie 1 except seed 1234's duergar at 12); the multiplier
+//! arm is the tie-dense one, at four or five values.
+//!
+//! ## `maybe_raid`'s own-rung lookup — the suppression is PARTIAL
+//!
+//! ```text
+//! seed   co-seating columns            suppressed
+//!   42   118 / 874  (13.5%)  — Undercroft 104, Shallows 14      86.5%
+//!    7   133 / 1681 ( 7.9%)  — Undercroft 120, Shallows 13      92.1%
+//! 1234   144 / 1266 (11.4%)  — Undercroft 112, Shallows 32      88.6%
+//! ```
+//!
+//! `Bake::maybe_raid` resolves the target through `rung_for(pidx, n)`, which
+//! is **per cell, not per people** — so "the two kinds have different modal
+//! rungs" does not imply "they can never meet". Measured rather than inferred
+//! from the modes: on 7.9–13.5% of shared cave-bearing columns the two
+//! candidates would have been able to interact. An overlap that *had* cleared
+//! 20% would not have demonstrated one family; it would have shown shared
+//! ground between peoples the raid gate keeps apart on ~90% of columns.
+//!
+//! ## The works discount — how many seats are priced
+//!
+//! ```text
+//! seed   mountain-dwarf          duergar
+//!   42   189 / 874  (21.6%)      270 / 874  (30.9%)
+//!    7   356 / 1681 (21.2%)      858 / 1681 (51.0%)
+//! 1234   259 / 1266 (20.5%)      634 / 1266 (50.1%)
+//! ```
+//!
+//! `seat_at` chooses on fit and charges the works afterwards, so a reader
+//! comparing capacities needs to know how many seats were discounted. None of
+//! these is a seat at `Undercroft`: `works` is structurally `false` at rank 0
+//! (see `delve_seating::RungSeat::works`), so every count here falls on ranks
+//! 1–4.
+//!
+//! ## THE VERDICT
+//!
+//! **The gate is CLOSED. `mountain-dwarf` and `duergar` are NOT authored.**
+//! H2's floor fails on seed 1234 and H2's overlap fails on all three, against
+//! a criterion frozen before any of it was measured. That is spec §5's
+//! preregistered outcome and it is a result, not a failure.
+//!
+//! Test fixture (decision 0092): calls the composition-root entry points
+//! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};

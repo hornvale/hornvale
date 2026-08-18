@@ -1799,7 +1799,9 @@ not metres above sea level, communities declared as places (twenty-two of them,
 in the same five-axis basis the surface uses), chamber conditions that vary from
 each other and from the surface, a water table that is non-degenerate on every
 seed, and a people settled at a rung rather than at a mouth. Two dwarf kinds
-were authored against a criterion frozen before any of it was measured, and the
+were **drafted as candidates** — in a test-local fixture, deliberately not in
+the species registry, so the roster could not become the thing under test — and
+scored against a criterion frozen before any of it was measured. The
 criterion **failed**: their modal delve rungs are equal on one of three seeds,
 and their top-quartile habitats overlap at 7.3 / 16.4 / 16.5% against a floor of
 20%. They were not admitted. That is the same conclusion The Delvers reached and
@@ -1809,7 +1811,10 @@ the first time it has been reached from a measurement.
 decomposition run alongside the criterion asked which half of the capacity field
 did the separating, and the answer is not the half this campaign built. The
 depth-routed *conditions* — chamber temperature and moisture — separate the two
-candidates almost completely, at 0.0–0.5% top-quartile overlap. The delve
+candidates almost completely, at 0.5% top-quartile overlap on seed 42 and 0.0%
+on seed 7; **on seed 1234 that statistic is undefined**, its quartile boundary
+falling inside a tie of 12, so the reading is two seeds of three and not a flat
+three-seed range. The delve
 seating multiplier has no quartile at all: four or five distinct values with
 284–879 cells tied at the boundary, so its own overlap is undefined on every
 seed, and composing it onto the conditions *raises* the overlap toward 16% —

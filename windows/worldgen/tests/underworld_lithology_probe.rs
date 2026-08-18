@@ -74,6 +74,9 @@
 //!
 //! (Abridged in this doc to the axes the derivation reads plus the ones it
 //! rejected; the run prints all eight for every kind on every seed.)
+//!
+//! Test fixture (decision 0092): calls the composition-root entry points
+//! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;

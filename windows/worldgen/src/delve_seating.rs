@@ -37,8 +37,9 @@
 //! [`crate::chamber::is_sump`] is called here with `ChamberOrigin::Found`,
 //! deliberately: the question capacity asks is "will this need works", not
 //! "is this wet", and the `Made` answer is trivially `false` because the
-//! settler is the one who will make it. This is that function's first
-//! production caller — its own doc records that it had none.
+//! settler is the one who will make it. **This is that function's first
+//! production caller**, and its own doc now records this call site rather than
+//! the absence of one.
 
 use hornvale_climate::underworld::{DelveZone, underworld_assignment};
 use hornvale_kernel::{CellId, CellMap, Geosphere};
@@ -211,6 +212,17 @@ pub struct RungSeat {
     pub multiplier: f64,
     /// Whether the chamber at that rung is phreatic **as found**, and so
     /// costs its settlers the works that keep it dry.
+    ///
+    /// **Structurally `false` whenever `rung` is `Undercroft`, and that is an
+    /// identity rather than a measurement** — see [`seat_at`]'s own docs for
+    /// the derivation. A rung is judged at its top, `Undercroft`'s top is
+    /// `0.0` m in every column, the water table is floored at zero, and
+    /// [`hornvale_terrain::is_phreatic`] is strict; so no world can produce a
+    /// seat with `rung: Undercroft, works: true`. A reader counting works over
+    /// a seating is counting over ranks 1–4 only, and a per-rung share for
+    /// rank 0 says nothing. This mirrors the rank-0 degeneracy
+    /// [`crate::chamber`]'s `stratum_at` discloses for `Chamber::stratum`; it
+    /// is disclosed here for the same reason and was not, for one campaign.
     pub works: bool,
     /// The undiscounted [`chamber_fit`] at that rung — the quantity the rung
     /// was **chosen** on, kept beside the quantity capacity is **scaled** by
@@ -233,14 +245,81 @@ pub struct RungSeat {
 /// **This was measured, not assumed, and the other way round was tried
 /// first.** The obvious alternative is to rank rungs by the whole multiplier —
 /// fit *times* [`UNDERWORLD_WORKS_COST`] — so that a people weighs a good seat
-/// against the price of draining it. Run over seeds 42 / 7 / 1234 that rule
-/// seated **0 of 23** underworld communities below the water table, on any
-/// rung, in any world: `Undercroft` is dry in 100% of cave-bearing columns
-/// (`underworld_water_table_probe.rs`), so a dry seat is *always* available,
-/// and at a flat halving no deeper rung's discounted score could beat it. The
-/// drainage rule would then have had a producer that never once produced the
-/// case it exists for — the fourth dangling seam this campaign is trying not
-/// to create, arrived at by a route that looked like careful economics.
+/// against the price of draining it.
+///
+/// ## Half of that argument is an IDENTITY, disclosed here as a measurement
+///
+/// **`works` is `false` at `Undercroft` in every possible world**, and no
+/// probe can report otherwise. A rung is judged at its own **top**; the ΔT
+/// range of `Undercroft` begins at 0 K, so its top is `0.0` m in every column
+/// under every gradient; [`hornvale_terrain::water_table_depth_m`] is
+/// `.max(0.0)`-floored and so is never negative; and
+/// [`hornvale_terrain::is_phreatic`] is a **strict** `depth > table`. So
+/// `is_phreatic(0.0, table)` is `false` for every table this crate can
+/// produce — including the `0.0` of a drowned column, which the strictness is
+/// there to make vadose. [`RungSeat::works`] is therefore structurally
+/// unreachable at rank 0.
+///
+/// This paragraph previously cited *"`Undercroft` is dry in 100% of
+/// cave-bearing columns (`underworld_water_table_probe.rs`)"* as **evidence**.
+/// The probe does print that row, and the row is correct; but it is reporting
+/// an identity rather than a contingent fact, and a reader entitled to think
+/// it might have come back 99% was being misled about what had been tested. It
+/// is the same rank-0 degeneracy [`crate::chamber`]'s `stratum_at` discloses
+/// for `stratum`, in a second quantity — and nothing disclosed it here.
+///
+/// **The ranking rule's justification survives being restated as an identity,
+/// and is stronger for it.** What the identity buys is that the alternative is
+/// bad *structurally* rather than bad on three seeds: a dry seat exists in
+/// every cave-bearing column of every world by construction, so under
+/// multiplier ranking a **phreatic** rung — the only kind the drainage rule
+/// exists for — can win only by beating that dry seat on fit by a factor of
+/// `1 / UNDERWORLD_WORKS_COST`. (A deeper rung that is itself dry competes at
+/// full fit and is unaffected, which is why the v1 arm below still seats at
+/// `Shallows`: 41.8 / 24.9 / 26.1% of reached `Shallows` columns are vadose.)
+/// So the condition that decides whether the rule is ever reachable is a
+/// condition on the **authored fit table**, not on the hydrology — the
+/// alternative makes the rule's reachability a property of a constant nobody
+/// calibrated, in the one place the campaign wanted hydrology to speak.
+///
+/// ## The counterfactual, RE-MEASURED 2026-08-18 against the repaired join
+///
+/// Both arms were first measured before Task 9 repaired [`chamber_fit`]'s
+/// genus join (`"karst"` against `"karst-cave"`), which moved every seating in
+/// every world; the pre-repair figures are not evidence about this tree. Re-run
+/// by the same method —
+/// `underworld_capacity_probe::where_underworld_communities_found_and_what_they_cut`,
+/// with the fold below temporarily ranking on `candidate.multiplier` for the v1
+/// arm and restored afterwards:
+///
+/// ```text
+///                                    seed 42   seed 7   seed 1234   total
+///   v1  rank on the multiplier
+///     underworld occupations               7       21          53      81
+///     founded below the table            0/7     0/21        0/53    0/81
+///     `Made` chambers below the table      0        0           0       0
+///   v2  rank on fit (SHIPPED)
+///     underworld occupations               7       22          64      93
+///     founded below the table            0/7     1/22        2/64    3/93
+///     `Made` chambers below the table      0        3           4       7
+/// ```
+///
+/// **Every number moved; the conclusion did not.** The figures this doc used
+/// to carry were **0 of 23** (v1) and **2 of 28 on seed 42** (v2). Post-repair
+/// the counterfactual is 0 of **81** — a larger denominator and the same zero —
+/// while the shipped rule fires on 3 of **93**, having moved off seed 42
+/// entirely and onto seeds 7 and 1234. So the design claim is unchanged in kind
+/// and better evidenced: under multiplier ranking the drainage rule would have
+/// a producer that never once produces the case it exists for — not one
+/// community founded under water, and not one `Made` chamber below the table,
+/// on any seed — the fourth dangling seam this campaign is trying not to
+/// create, arrived at by a route that looked like careful economics.
+///
+/// **What it costs to say honestly: the rule now fires on 3 of 93, on two
+/// seeds of three.** That is thinner than "2 of 28 on seed 42" sounded and it
+/// is the real margin; it is reachable rather than unreachable by
+/// construction, which is the whole of the claim, and nothing here should be
+/// read as calibration.
 ///
 /// So the two questions are kept apart, which is also the better statement of
 /// what a people is: **where it belongs is its niche; what that seat costs it
