@@ -365,24 +365,46 @@ const MIN_POOLED_REVOLTS: u64 = 5;
 /// reading was taken*; pinned at 100.
 const MIN_RELATIONS_PER_PEOPLE: usize = 100;
 
-/// Spec §8.0 — the variety margin. Pooled median standing-relation lifetime
-/// measured **325** standard days for the longest-horizon patron people
-/// (kobold, 0.8) against **175** for the shortest sampled at the time (bugbear,
-/// 0.3), a ratio of **1.857**. Pinned at 1.30 — a real margin, clear of the
-/// measurement, and low enough that ordinary seed noise cannot trip it. Below
-/// this the strategy family has collapsed back toward the single attractor
-/// §8.0 exists to detect.
+/// Spec §8.0 — **the retired two-point margin, kept as a printed readout and
+/// asserted on nothing.** Pooled median standing-relation lifetime measured
+/// **325** standard days for the longest-horizon patron people (kobold, 0.8)
+/// against **175** for the shortest sampled at the time (bugbear, 0.3), a
+/// ratio of **1.857**; the criterion required 1.30.
 ///
-/// **Bugbear is no longer the shortest-horizon patron people, and the count is
-/// no longer three.** The Vacancy's gnoll is authored at horizon 0.2 — shorter
-/// than bugbear's 0.3 — and has always cleared the raid gate, and since The
-/// Tolerance made `threat_response` a per-settlement draw all six peoples reach
-/// patronhood. **The gate is unaffected and needs no re-measurement**: the
-/// assertion below sorts the live rows by authored horizon and takes
-/// `rows[0]`/`rows[last]`, so it always compares the actual extremes of
-/// whatever the run produced. The numbers above are preserved as the historical
-/// reading that set the 1.30 pin, not as a claim about today's roster.
-const MIN_LIFETIME_RATIO: f64 = 1.30;
+/// **This number is no longer a bar, because the quantity it read is not a
+/// property of the world.** The assertion it drove compared `rows[0]` against
+/// `rows[last]` — two order statistics off a roster of nine — and The
+/// Underworld measured it flipping verdict without the relationship moving at
+/// all. On `main` at `95cbaa70` the top row was *desert-dwarf* (horizon 0.90,
+/// 116 relations, median 400 d) against gnoll's 350 d: ratio **1.143**, green.
+/// On the same campaign's tree the top row was *high-elf* (horizon 0.95, 196
+/// relations, median 675 d) against gnoll's 475 d: ratio **1.421**, red. The
+/// two peoples at the top **are not the same people**: desert-dwarf fell below
+/// [`MIN_RELATIONS_PER_PEOPLE`] and high-elf rose above it, so the verdict
+/// turned on which people crossed the inclusion threshold, not on how lifetime
+/// tracks horizon. Meanwhile the whole-roster rank correlation moved only
+/// 0.384 → 0.546, both inside the noise bar below.
+///
+/// See [`NOISE_Z`] for what replaced it and
+/// [`the_strategy_family_is_various`] for the derivation.
+const RETIRED_ENDPOINT_RATIO_BAR: f64 = 1.30;
+
+/// Spec §8.0 — **the whole-roster tripwire's constant**, and the only thing
+/// this file asserts about the horizon/lifetime relationship.
+///
+/// The two-sided 5% standard-normal quantile. Under the null of no
+/// association, Spearman's rho over `n` points has mean 0 and standard
+/// deviation ≈ `1/sqrt(n - 1)`, so `NOISE_Z / sqrt(n - 1)` is the roster's own
+/// 5% critical value and it re-derives itself whenever the roster grows or
+/// shrinks. At the nine patron peoples measured here that is **0.6930**, which
+/// agrees with the tabulated exact value for n = 9 (0.683–0.700) to within the
+/// table's own spread; at n = 15 the formula gives 0.524 against a tabulated
+/// 0.521.
+///
+/// Chosen this way deliberately: a hard-coded bar would be a claim with a date
+/// the moment a people entered or left the roster — which is *exactly* the
+/// failure the retired endpoint ratio above just demonstrated.
+const NOISE_Z: f64 = 1.96;
 
 /// Build seed 42's history through the standalone measurement entry point —
 /// the same assembly `history_tumult.rs` uses, so the two files' readings are
@@ -792,8 +814,99 @@ fn the_cascade_distribution_is_adjudicated() {
 ///
 /// The horizons are read from the psyche registry rather than written down, so
 /// re-authoring a people cannot leave this test asserting a stale ordering.
+///
+/// # THE INSTRUMENT IS WHOLE-ROSTER NOW (The Underworld, 2026-08-18)
+///
+/// The Tense (2026-08-06) measured §4.3a's ordering **falsified** and left an
+/// inverted two-point assertion behind as a tripwire: `rows[last]`'s median
+/// against `rows[0]`'s, red if the ratio ever cleared 1.30 again. It fired on
+/// this campaign's tree at **1.421** — and re-deriving it over the whole
+/// roster, exactly as its own message instructed, showed the fire was the
+/// instrument's and not the world's.
+///
+/// Both rosters, `SHAPE_SAMPLE` pooled. Nine peoples clear
+/// [`MIN_RELATIONS_PER_PEOPLE`] on each tree — but **not the same nine**. The
+/// sub-threshold rows are printed on this tree because the printout above now
+/// reports every patron people; `main`'s run predates that and reported only
+/// the nine it counted, so its sub-threshold rows read `under` rather than a
+/// number:
+///
+/// ```text
+///   people        horizon    n (main)  med (main)    n (ours)  med (ours)
+///   gnoll            0.20         263      350 d          234      475 d
+///   bugbear          0.30         442      275 d          335      250 d
+///   goblin           0.50         102      525 d          115      350 d
+///   hobgoblin        0.50         590      225 d          581      225 d
+///   human            0.75         100      675 d          105      600 d
+///   gully-dwarf      0.80       under          —           21     1325 d
+///   kobold           0.80         527      175 d          484      175 d
+///   drow             0.85         164      675 d          112      900 d
+///   hill-dwarf       0.85         157      550 d          133      500 d
+///   snow-elf         0.88       under          —           31      700 d
+///   desert-dwarf     0.90         116      400 d           67      475 d
+///   desert-elf       0.90       under          —           20      975 d
+///   wood-elf         0.90       under          —           77      575 d
+///   high-elf         0.95       under          —          196      675 d
+/// ```
+///
+/// Note what the sub-threshold rows are doing at the top of the horizon range:
+/// five of the six sit at horizon ≥ 0.80 with n between 20 and 77, and their
+/// medians run from 475 d to 1325 d. Small-n medians of a survivorship-biased
+/// age distribution are extremely noisy, and the highest horizons are exactly
+/// where the roster is thinnest — which is the structural reason a top-end
+/// order statistic is a poor instrument here whichever tree it is read on.
+///
+/// Three readings, and the third is the one that settles it:
+///
+/// 1. **The endpoint ratio changed which peoples it compares.** `main`'s top
+///    row is desert-dwarf at 400 d (ratio 400/350 = **1.143**, green); ours is
+///    high-elf at 675 d (675/475 = **1.421**, red). Desert-dwarf dropped under
+///    [`MIN_RELATIONS_PER_PEOPLE`] and high-elf rose over it, so the verdict
+///    turned on **roster composition at the inclusion threshold**. Neither
+///    endpoint people is at an extreme of the *medians*: gnoll's 475 d is
+///    fifth of nine on our tree, and kobold — second-highest horizon of all —
+///    holds the shortest median on both trees.
+/// 2. **The whole-roster rank correlation stays inside noise on every state
+///    measured.** Spearman rho over (authored horizon, median
+///    standing-relation age) reads **0.384** on `main` and **0.546** here,
+///    against the roster's own two-tailed 5% bar of `NOISE_Z / sqrt(n - 1)` =
+///    **0.693** at n = 9. A third state was measured as a control — decision
+///    0144's node-index re-key neutralised on the merge product, everything
+///    else of the campaign intact — and reads **0.629**, still under the bar
+///    but *higher* than either shipped tree, with the endpoint ratio at
+///    **2.20** (high-elf 825 d over gnoll 375 d). Three world states spread
+///    rho across 0.245 and the endpoint ratio across 1.06 while none of them
+///    crosses the noise bar: that spread IS the measurement's noise, and a
+///    two-point ratio riding on it is not reading the relationship.
+/// 3. **Peoples the registry authors at the SAME horizon spread as widely as
+///    the endpoints do.** Horizon is constant within such a pair, so their
+///    spread is this instrument's own noise floor measured on the roster
+///    itself. On our tree drow/hill-dwarf (both 0.85) differ by **1.80×** and
+///    goblin/hobgoblin (both 0.50) by **1.56×**; on `main`, goblin/hobgoblin
+///    differ by **2.33×**. Every one of those brackets or exceeds the 1.421
+///    the endpoint pair read across the full 0.20 → 0.95 span.
+///
+/// So the ordering has **not** returned. The Tense's null stands, and it is
+/// recorded here as a *two-point artifact*, not a revived finding. What the
+/// test asserts now is the whole-roster statistic — `|rho|` under the roster's
+/// own noise bar — which the roster can falsify in either direction: a world
+/// that genuinely orders lifetime by horizon drives rho toward +1 and fires
+/// this, and one that genuinely inverts it drives rho toward −1 and fires it
+/// too. The endpoint ratio is still computed and printed against
+/// [`RETIRED_ENDPOINT_RATIO_BAR`], because the record of what it used to say is
+/// worth keeping visible; nothing depends on it.
+///
+/// **The new assertion is not decorative, and that was measured rather than
+/// argued.** Replacing each people's median with `horizon * 1000.0` — a
+/// perfectly ordered roster and nothing else changed — drives rho to
+/// **1.0000** and reddens this test, printing the POSITIVE branch of its
+/// message. (`scripts/mutate.py`, reverted from a copy afterwards.) So the
+/// tripwire fires on the state it exists to catch; it is not passing because
+/// nothing could ever make it fail.
+///
 /// claim: readout(off-gate, heavy:) — standing-relation-age readout by
-/// patron people over SHAPE_SAMPLE
+/// patron people over SHAPE_SAMPLE, asserting only the whole-roster rank
+/// correlation against the roster's own noise bar
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_strategy_family_is_various() {
@@ -813,9 +926,12 @@ fn the_strategy_family_is_various() {
         }
     }
     // Median age and authored horizon per patron people, in horizon order.
-    let mut rows: Vec<(KindId, f64, usize, f64)> = ages
+    // EVERY patron people is built and printed; the threshold filters what
+    // enters the statistic, never what is reported. Which peoples sit either
+    // side of that threshold is itself a moving quantity, and the retired
+    // endpoint criterion turned on it — see this test's doc.
+    let mut all_rows: Vec<(KindId, f64, usize, f64)> = ages
         .into_iter()
-        .filter(|(_, v)| v.len() >= MIN_RELATIONS_PER_PEOPLE)
         .map(|(p, mut v)| {
             v.sort_by(f64::total_cmp);
             let horizon = wc
@@ -827,14 +943,24 @@ fn the_strategy_family_is_various() {
         })
         .collect();
     // Deterministic order: by horizon, ties broken by the people's stable id.
-    rows.sort_by(|a, b| a.1.total_cmp(&b.1).then_with(|| a.0.0.cmp(b.0.0)));
-    for (p, horizon, n, median) in &rows {
+    all_rows.sort_by(|a, b| a.1.total_cmp(&b.1).then_with(|| a.0.0.cmp(b.0.0)));
+    for (p, horizon, n, median) in &all_rows {
         eprintln!(
             "TITHE §8.0 patron {} (time_horizon {horizon}): {n} standing relations, \
-             median age {median} d",
-            p.0
+             median age {median} d{}",
+            p.0,
+            if *n >= MIN_RELATIONS_PER_PEOPLE {
+                ""
+            } else {
+                "   [under MIN_RELATIONS_PER_PEOPLE — reported, not counted]"
+            }
         );
     }
+    let rows: Vec<(KindId, f64, usize, f64)> = all_rows
+        .iter()
+        .copied()
+        .filter(|(_, _, n, _)| *n >= MIN_RELATIONS_PER_PEOPLE)
+        .collect();
     assert!(
         rows.len() >= 2,
         "fewer than two patron peoples hold {MIN_RELATIONS_PER_PEOPLE}+ standing relations \
@@ -849,42 +975,159 @@ fn the_strategy_family_is_various() {
     // ---- FALSIFIED by The Tense (2026-08-06). Recorded, not rescued. ----
     //
     // §4.3a claims a generational patron's relation persists where an immediate
-    // one's does not. Under era-varying capacity it does not hold, and the full
-    // table says something stronger than the extremes do:
+    // one's does not. Under era-varying capacity it does not hold: the roster
+    // printed above is scattered, not ordered, and not converged onto a single
+    // attractor either.
     //
-    //   gnoll      horizon 0.20   345 relations   median age 325 d
-    //   bugbear    horizon 0.30   368 relations   median age 250 d
-    //   hobgoblin  horizon 0.50   603 relations   median age 225 d
-    //   human      horizon 0.75   126 relations   median age 450 d
-    //   kobold     horizon 0.80   551 relations   median age 200 d
+    // The Tense left an INVERTED TWO-POINT assertion here as a tripwire —
+    // rows[last]'s median against rows[0]'s, red if the ratio cleared 1.30 —
+    // and warned in its own message that a return should be re-derived over
+    // the whole roster before being trusted. The Underworld did that, and the
+    // warning was right: the two-point reading flips verdict on which people
+    // crosses MIN_RELATIONS_PER_PEOPLE at the top of the roster, while the
+    // whole-roster rank correlation stays inside noise on both trees. The full
+    // derivation, with both rosters side by side, is in this test's doc.
     //
-    // There is no monotone relationship between authored horizon and relation
-    // lifetime at all — not a weakened one, an absent one. The extremes the old
-    // assertion read (kobold 200 d against gnoll 325 d, ratio 0.615) invert the
-    // claim, while HUMAN at horizon 0.75 holds the longest median of the five.
-    // So "collapsed toward a single attractor" is not the right description
-    // either: the five are scattered, not converged.
-    //
-    // Note also the instrument. Reading rows[0] against rows[last] takes two
-    // points off five scattered ones, which is weak whichever way it comes out;
-    // human's 126 relations against hobgoblin's 603 says the medians are not
-    // even comparably sampled. A rank correlation over all five would be the
-    // honest measure and is a follow-up, not something to invent while
-    // unblinded.
-    //
-    // The assertion is inverted to record the falsification and keep a
-    // tripwire: if the ordering ever returns, this fires and says to re-read
-    // rather than quietly restoring a claim nobody re-derived.
-    assert!(
-        l_med < s_med * MIN_LIFETIME_RATIO,
-        "the horizon/lifetime ordering has RETURNED (spec §8.0/§4.3a): the \
-         longest-horizon patron people {} (horizon {l_h}) holds relations of median age {l_med} \
-         d against {} (horizon {s_h}) at {s_med} d — a ratio of {:.3}, at or above the \
-         {MIN_LIFETIME_RATIO} the original criterion required. The Tense measured this claim \
-         FALSIFIED with no monotone relationship at all; if it is back, re-derive it over the \
-         whole roster rather than the two extremes before trusting it.",
+    // What is asserted now is the whole-roster statistic. The endpoint ratio is
+    // still computed and printed, so the retired reading stays visible, but it
+    // decides nothing.
+    let horizons: Vec<f64> = rows.iter().map(|r| r.1).collect();
+    let medians: Vec<f64> = rows.iter().map(|r| r.3).collect();
+    let rho = spearman(&horizons, &medians);
+    let n = rows.len();
+    let bar = NOISE_Z / ((n - 1) as f64).sqrt();
+
+    // The same-horizon control. Two peoples the psyche registry authors at the
+    // SAME horizon cannot differ BECAUSE of horizon, so the spread between
+    // their medians is this instrument's own noise floor, measured on the
+    // roster rather than argued for. Printed, not asserted: a re-authoring
+    // that left no two peoples sharing a horizon would make it undefined, and
+    // an assertion that silently stops applying is worse than none.
+    let mut within_spread = 0.0f64;
+    let mut within_where = String::from("none — no two peoples share a horizon");
+    let mut i = 0;
+    while i < rows.len() {
+        let mut j = i;
+        while j + 1 < rows.len() && rows[j + 1].1.total_cmp(&rows[i].1) == std::cmp::Ordering::Equal
+        {
+            j += 1;
+        }
+        if j > i {
+            let group = &rows[i..=j];
+            let lo = group.iter().map(|r| r.3).fold(f64::INFINITY, f64::min);
+            let hi = group.iter().map(|r| r.3).fold(0.0f64, f64::max);
+            if lo > 0.0 && hi / lo > within_spread {
+                within_spread = hi / lo;
+                within_where = format!(
+                    "horizon {} ({})",
+                    rows[i].1,
+                    group
+                        .iter()
+                        .map(|r| format!("{} {} d", r.0.0, r.3))
+                        .collect::<Vec<_>>()
+                        .join(" vs ")
+                );
+            }
+        }
+        i = j + 1;
+    }
+
+    eprintln!(
+        "TITHE §8.0 WHOLE-ROSTER: spearman(authored horizon, median standing-relation age) = \
+         {rho:.4} over {n} patron peoples, against this roster's own two-tailed 5% noise bar \
+         {NOISE_Z}/sqrt(n-1) = {bar:.4}. RETIRED two-point reading: {} (horizon {l_h}) {l_med} d \
+         / {} (horizon {s_h}) {s_med} d = {:.3} against the retired \
+         {RETIRED_ENDPOINT_RATIO_BAR} bar — printed, asserted on nothing. SAME-HORIZON control: \
+         largest spread {within_spread:.3}x at {within_where}.",
         longest.0,
         shortest.0,
         l_med / s_med,
+    );
+
+    assert!(
+        rho.abs() < bar,
+        "the horizon/lifetime relationship is no longer indistinguishable from noise (spec \
+         §8.0/§4.3a): spearman rho over (authored horizon, median standing-relation age) reads \
+         {rho:.4} across {n} patron peoples, at or beyond this roster's two-tailed 5% bar of \
+         {bar:.4}. A {} rho of that size is a finding either way — {}. The Tense measured this \
+         claim FALSIFIED (2026-08-06) and The Underworld re-derived the null over the whole \
+         roster (2026-08-18, rho 0.384 on main and 0.546 on its own tree); re-derive it again \
+         over the roster printed above, and do NOT restore the retired two-point ratio, which \
+         flips verdict on roster composition alone. See this test's doc comment.",
+        if rho > 0.0 { "POSITIVE" } else { "NEGATIVE" },
+        if rho > 0.0 {
+            "§4.3a's ordering may genuinely have returned"
+        } else {
+            "lifetime may genuinely fall with horizon, which §4.3a does not predict either"
+        },
+    );
+}
+
+/// Spearman rank correlation between two equal-length series, ties taking
+/// average ranks. Deterministic: `total_cmp` throughout, no float equality.
+///
+/// A local copy of the helper `windows/lab/tests/disposition_calibration.rs`
+/// carries, because a test in `windows/worldgen` cannot depend on one in
+/// `windows/lab` and neither belongs in a shipped crate.
+fn spearman(xs: &[f64], ys: &[f64]) -> f64 {
+    fn ranks(v: &[f64]) -> Vec<f64> {
+        let mut idx: Vec<usize> = (0..v.len()).collect();
+        idx.sort_by(|a, b| v[*a].total_cmp(&v[*b]));
+        let mut out = vec![0.0; v.len()];
+        let mut i = 0;
+        while i < idx.len() {
+            let mut j = i;
+            while j + 1 < idx.len()
+                && v[idx[j + 1]].total_cmp(&v[idx[i]]) == std::cmp::Ordering::Equal
+            {
+                j += 1;
+            }
+            let avg = (i + j) as f64 / 2.0;
+            for k in idx.iter().take(j + 1).skip(i) {
+                out[*k] = avg;
+            }
+            i = j + 1;
+        }
+        out
+    }
+    assert_eq!(xs.len(), ys.len(), "spearman needs paired series");
+    let (rx, ry) = (ranks(xs), ranks(ys));
+    let n = rx.len() as f64;
+    let (mx, my) = (rx.iter().sum::<f64>() / n, ry.iter().sum::<f64>() / n);
+    let num: f64 = rx.iter().zip(&ry).map(|(a, b)| (a - mx) * (b - my)).sum();
+    let den = (rx.iter().map(|a| (a - mx).powi(2)).sum::<f64>()
+        * ry.iter().map(|b| (b - my).powi(2)).sum::<f64>())
+    .sqrt();
+    if den == 0.0 { 0.0 } else { num / den }
+}
+
+/// The rank correlation above, against orderings whose answer is known by
+/// hand — including the tied case, which is the one the roster actually hits
+/// (two peoples at horizon 0.50, two more at 0.85).
+#[test]
+fn spearman_reads_known_orderings() {
+    assert!(
+        (spearman(&[1.0, 2.0, 3.0], &[10.0, 20.0, 30.0]) - 1.0).abs() < 1e-12,
+        "perfect ascent is +1"
+    );
+    assert!(
+        (spearman(&[1.0, 2.0, 3.0], &[30.0, 20.0, 10.0]) + 1.0).abs() < 1e-12,
+        "perfect descent is -1"
+    );
+    assert_eq!(
+        spearman(&[1.0, 2.0, 3.0], &[5.0, 5.0, 5.0]),
+        0.0,
+        "no variance in y is 0, not NaN"
+    );
+    // The roster's own shape at 2026-08-18: nine peoples, two tied pairs of
+    // horizons, medians as measured on this campaign's tree. Recomputed by
+    // hand as 32.5 / sqrt(59 * 60).
+    let horizons = [0.20, 0.30, 0.50, 0.50, 0.75, 0.80, 0.85, 0.85, 0.95];
+    let medians = [
+        475.0, 250.0, 350.0, 225.0, 600.0, 175.0, 900.0, 500.0, 675.0,
+    ];
+    assert!(
+        (spearman(&horizons, &medians) - 0.546_23).abs() < 1e-4,
+        "the measured roster reads 0.5462, under the n=9 noise bar of 0.6930"
     );
 }
