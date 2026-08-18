@@ -988,11 +988,17 @@ mod tests {
         // this icosahedron's base orientation (`base_icosahedron`,
         // geosphere.rs), where `containing`'s room resolution for a point and
         // its negation is related by a z-axis rotation rather than a true
-        // point inversion, so the two rooms' centroids converge to exact
-        // antipodes only as O(2^-depth) — far too slowly to clear a 1e-9
-        // tolerance within `MAX_DEPTH`. A generic (non-axis-aligned) point
-        // avoids that pathology and resolves to exact antipodal rooms
-        // already at a shallow depth.
+        // point inversion (a.centroid()[2] == b.centroid()[2] exactly, while
+        // x and y negate exactly), so the two rooms' centroids converge to
+        // exact antipodes only asymptotically as depth increases — that pair
+        // DOES clear a 1e-9 tolerance, but not until depth 27 (measured:
+        // err=1.49e-8 at depth 26, err=0.0 exactly at depth 27 — the raw dot
+        // product rounds to exactly -1.0 there, collapsing the remaining gap
+        // rather than continuing to halve it), two levels of headroom under
+        // `MAX_DEPTH = 29`, not past it. A generic (non-axis-aligned) point
+        // avoids the rotation-not-inversion pathology entirely and resolves
+        // to exact antipodal rooms already at a shallow depth (4), which is
+        // why it was chosen over bumping the axis-aligned pair's depth.
         let a = RoomAddr::containing([0.3, 0.4, 0.866], 4);
         let b = RoomAddr::containing([-0.3, -0.4, -0.866], 4);
         assert_eq!(a.distance_rad_to(&a), 0.0);
