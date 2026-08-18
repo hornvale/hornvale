@@ -159,6 +159,14 @@ pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64> {
 
 /// How many distinct `(precision, object)` variants of one event are held, or
 /// `None` when fewer than three holders qualify (§6's population rule).
+///
+/// **Routes through [`derive::variants_about`], and therefore IGNORES
+/// `walk.policy.contact`** — it takes the arm and throws it away, walking
+/// descent only. Varying `Contact` through this function measures nothing and
+/// returns the same count on every arm, which reads as "contact does nothing":
+/// a wrong attribution wearing a null's clothes. The seam-aware walk is
+/// [`derive::variants_about_accumulating`], which this does not call.
+///
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(count: return)
 pub fn variant_count(
     walk: &transmission::Walk,
@@ -179,6 +187,14 @@ pub fn variant_count(
 }
 
 /// The hop counts of holders still at the FINEST precision — H1's population.
+///
+/// **Routes through [`derive::variants_about`], and therefore IGNORES
+/// `walk.policy.contact`** — it takes the arm and throws it away, walking
+/// descent only. Varying `Contact` through this function measures nothing and
+/// returns the same hop counts on every arm, which reads as "contact does
+/// nothing": a wrong attribution wearing a null's clothes. The seam-aware walk
+/// is [`derive::variants_about_accumulating`], which this does not call.
+///
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(count: return)
 pub fn finest_precision_hops(
     walk: &transmission::Walk,

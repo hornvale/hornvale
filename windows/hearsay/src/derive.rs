@@ -190,6 +190,17 @@ pub fn claims_about(
 /// third exists only to make the order total so two equally-good paths
 /// cannot race, and carries no meaning of its own.
 ///
+/// **This walk IGNORES `walk.policy.contact` — it takes the arm and throws it
+/// away.** It steps parent->child down the founding tree, honouring the clock
+/// and [`stance::Perpetration`] and nothing else; it never consults the raid
+/// seam, so it reports descent-only reach under [`Contact::Descent`] and
+/// [`Contact::WithRaidSeam`] alike. **A readout that varies `Contact` through
+/// this function measures nothing**: it will print identical columns per arm,
+/// which reads as "contact does nothing" — a wrong attribution wearing a
+/// null's clothes. [`variants_about_accumulating`] is the seam-aware walk and
+/// is the one to reach for. Leaving this one descent-only is deliberate, not
+/// an omission: campaign 2's pinned baseline is measured against it.
+///
 /// type-audit: bare-ok(identifier-text: predicate)
 pub fn variants_about(
     walk: &Walk,

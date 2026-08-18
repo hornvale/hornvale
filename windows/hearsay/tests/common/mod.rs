@@ -279,6 +279,22 @@ pub fn two_peoples_joined_by_an_earlier_raid() -> Ledger {
     two_peoples_joined_by_a_raid(900.0, 500.0)
 }
 
+/// The same two peoples again, joined by a raid stamped EXACTLY the event's
+/// own day — the seam's day condition **at its boundary**.
+///
+/// Spec §5.3 writes the condition as `e <= c`, so a meeting on the day the
+/// event happened is admitted. `derive.rs`'s `tellable` implements that as
+/// `*day >= event`, and the boundary is the one place `>=` and `>` disagree:
+/// the pair
+/// [`two_peoples_joined_by_a_later_raid`] / [`two_peoples_joined_by_an_earlier_raid`]
+/// straddles the comparison but never lands on it, so the crate was green
+/// under either operator (measured). The clock's identical boundary already
+/// had `tests/clock.rs::ending_on_the_event_day_is_admitted`; this is the
+/// seam's missing counterpart.
+pub fn two_peoples_joined_by_a_raid_on_the_event_day() -> Ledger {
+    two_peoples_joined_by_a_raid(500.0, 500.0)
+}
+
 /// The shared body of the two contact fixtures: `1`'s ending falls on
 /// `event_day` and the raid on its descendant `3` falls on `raid_day`, so the
 /// only thing that varies between them is the order of those two days.

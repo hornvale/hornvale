@@ -154,6 +154,39 @@ afterwards (one call site, inside the stance block, under descent), and the
 battery's module doc states the split at the top so the next reader cannot
 repeat it.
 
+## An empty drift on two audits is evidence in neither direction
+
+Task 7 moved six idea-registry rows (all `KNOW-*`) and checked the generated
+audits that cite the registry. `docs/audits/system-matrix.md` and
+`docs/audits/system-coverage-wolverson-2021.md` came back byte-identical — and
+that fact says **nothing about whether the row edits were correct**, for two
+independent reasons, neither of which is "the drift check is broken".
+
+1. **Neither artifact reads the registry when it renders.** `systems report`
+   calls `systems::render(&corpus, path)`, whose signature does not even take
+   `RepoFacts` — the corpus alone decides every byte. `systems matrix` calls
+   `render_matrix(corpora, facts)` and touches only `facts.subsystems`, the
+   source tree. The registry *is* read, by `RepoFacts::gather`, and consumed by
+   `systems::audit` — whose findings surface through `hornvale systems check`
+   and `cli/tests/system_coverage.rs`, and reach no committed artifact.
+2. **No corpus item anchors a `KNOW-` row anyway.** The report's twelve
+   `registry:` anchors are `CLIENT-*`, `MAP-*`, `MAT-*`, `MEM-8` and `PLAY-*`.
+   Every row this campaign touched was invisible to the corpus before the render
+   question arose.
+
+The final reviewer corroborated the shape from a third path:
+`docs/digest/intent-vs-reality.md` contains **zero** `KNOW-` tokens, so its
+byte-identity cannot report on a `KNOW-` row edit either.
+
+The reusable part: **an empty diff on a generated path is a positive result only
+if that path's render reads what you changed.** Check the renderer's signature
+before reading its silence as agreement — here two of three artifacts could not
+have moved under any registry edit at all, and the third could not have moved
+under this one. What actually verifies a registry flip is
+`cargo test -p hornvale --test docs_consistency` (form, cap, uniqueness, links)
+and `cli/tests/system_coverage.rs` (anchors), and a future campaign reading an
+empty drift on those audits as reassurance would be reading noise.
+
 ## Process notes
 
 - **The panel size was measured, not guessed**, as in the two predecessors: a

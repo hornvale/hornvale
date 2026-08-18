@@ -1047,8 +1047,11 @@ fn the_parley_readout_over_a_seed_panel() {
             .map(|r| r.div[0][ri].mutually_exclusive)
             .sum();
         println!(
-            "    seeds 0-11, descent, mutually exclusive: {prefix_mutex} \
-             (spec §3.4 published {BASELINE_MUTUALLY_EXCLUSIVE_12} under multiplicative)"
+            "    seeds 0-11, descent, mutually exclusive: {prefix_mutex} under {}. \
+             Spec §3.4's published figure is {BASELINE_MUTUALLY_EXCLUSIVE_12}, measured \
+             under MULTIPLICATIVE only -- so it is the comparison figure on the \
+             multiplicative line of this table and on no other.",
+            rule.label()
         );
         let ratio = mutex[1] as f64 / mutex[0].max(1) as f64;
         println!(

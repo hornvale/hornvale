@@ -5,7 +5,8 @@ mod common;
 
 use common::{
     a_holder_that_died_before_the_event, a_round_trip_through_another_people, eid,
-    two_peoples_joined_by_a_later_raid, two_peoples_joined_by_an_earlier_raid,
+    two_peoples_joined_by_a_later_raid, two_peoples_joined_by_a_raid_on_the_event_day,
+    two_peoples_joined_by_an_earlier_raid,
 };
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::accumulate::Accumulation;
@@ -271,6 +272,43 @@ fn the_seam_refuses_a_raid_that_predates_the_event() {
     assert!(
         !contact.contains(&eid(5)) && !contact.contains(&eid(6)),
         "the kobolds met 3 four hundred days before 1 ended: {contact:?}"
+    );
+}
+
+/// Spec §5.3, condition 1, **at its boundary**: the condition is `e <= c`, so
+/// a meeting on the event's OWN day carries the news.
+///
+/// The pair above straddles the comparison — 500 against 900, and 1000
+/// against 500 — but never lands on it, so `derive.rs`'s `*day >= event` and
+/// a wrong `*day > event` agreed on every fixture in the crate and the whole
+/// suite stayed green under either (measured). This fixture puts the raid on
+/// day 500 and the event on day 500, where they disagree: `>=` admits the
+/// kobolds and `>` orphans them back to the descent set below.
+///
+/// The clock's identical boundary was pinned from the start
+/// (`tests/clock.rs::ending_on_the_event_day_is_admitted`); the seam's was
+/// not, and the asymmetry was the gap.
+#[test]
+fn the_seam_admits_a_raid_on_the_event_day() {
+    let led = two_peoples_joined_by_a_raid_on_the_event_day();
+    let descent = holders(&led, Transmission::AS_SHIPPED, eid(1));
+    let contact = holders(
+        &led,
+        with(Transmission::AS_SHIPPED, |p| {
+            p.contact = Contact::WithRaidSeam
+        }),
+        eid(1),
+    );
+
+    assert_eq!(
+        descent,
+        BTreeSet::from([eid(1), eid(2), eid(3)]),
+        "control: the human line holds it by descent, exactly as in the pair above"
+    );
+    assert_eq!(
+        contact,
+        BTreeSet::from([eid(1), eid(2), eid(3), eid(5), eid(6)]),
+        "a raid ON the event day is a meeting that can carry the news: {contact:?}"
     );
 }
 

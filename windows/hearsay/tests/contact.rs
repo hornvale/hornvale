@@ -58,16 +58,64 @@ fn an_occupation_in_several_raids_carries_several_peers_ascending() {
     assert_eq!(g.edges(), 2);
 }
 
-/// A peers list that is not deduplicated would let one raid be walked twice
-/// and inflate every reach number the readout reports.
+/// One attacker, two DISTINCT victims, one day: two peers, because the two
+/// entries differ in their peer id.
+///
+/// **This test does not exercise `dedup`, and its earlier name
+/// (`a_repeated_raid_pair_is_recorded_once_per_ending`) claimed that it did.**
+/// Measured: delete `peers.dedup()` from `contact_of` and this test — and the
+/// rest of the crate — stays green, because `(1, 400.0)` and `(2, 400.0)` are
+/// never equal and nothing is there to collapse. What it does pin is that
+/// same-day raids on different victims are NOT collapsed, which is the
+/// over-eager half of the same concern.
+/// [`a_mutual_same_day_raid_is_one_peer_entry_each_way`] is the test that
+/// reddens when `dedup` is removed.
 #[test]
-fn a_repeated_raid_pair_is_recorded_once_per_ending() {
+fn two_same_day_raids_by_one_attacker_stay_two_peers() {
     let mut led = ledger_with(&[(1, None), (2, None), (5, None)]);
     raid(&mut led, 1, 5, 400.0);
     raid(&mut led, 2, 5, 400.0);
     let g = contact_of(&led);
     let peers = g.peers_of(eid(5));
     assert_eq!(peers.len(), 2, "two distinct victims, two edges: {peers:?}");
+}
+
+/// The case `peers.dedup()` actually guards, and the only test in this crate
+/// that reddens when it is deleted (measured, both directions).
+///
+/// A MUTUAL same-day raid: `1` names `5` as its attacker and `5` names `1` as
+/// its own, both stamped day 400. `contact_of` writes both directions for
+/// every ending, so `1`'s peers list receives `(5, 400.0)` twice and `5`'s
+/// receives `(1, 400.0)` twice — an identical pair, which is exactly what
+/// `dedup` exists to collapse. Undeduplicated, the augmented walk would
+/// traverse one meeting twice and inflate every reach number the readout
+/// reports.
+///
+/// Unreachable from today's bake and reachable through the generic `&Ledger`
+/// `contact_of` takes — the same argument that justifies the self-raid and
+/// unreadable-day guards below.
+#[test]
+fn a_mutual_same_day_raid_is_one_peer_entry_each_way() {
+    let mut led = ledger_with(&[(1, None), (5, None)]);
+    raid(&mut led, 1, 5, 400.0);
+    raid(&mut led, 5, 1, 400.0);
+    let g = contact_of(&led);
+
+    assert_eq!(
+        g.peers_of(eid(1)),
+        &[(eid(5), 400.0)],
+        "one meeting, one entry -- undeduplicated this list carries (5, 400.0) twice"
+    );
+    assert_eq!(
+        g.peers_of(eid(5)),
+        &[(eid(1), 400.0)],
+        "and the same the other way round"
+    );
+    assert_eq!(
+        g.edges(),
+        1,
+        "the two endings describe ONE meeting, and `edges()` documents that collapse"
+    );
 }
 
 /// A community cannot meet itself: `occ-ended-by` naming the ending

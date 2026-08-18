@@ -3008,11 +3008,16 @@ term it actually depends on.
 
 ### A precondition was supplied, and it pushed the other way (2026-08-18)
 
-*The Parley* supplied the last thing the corroboration half of the Myth bet was
-named as waiting on: an edge that lets an account leave the people that
-witnessed it. Every model before it walked parent to child down the founding
-tree and nothing else, so "do independent accounts of one event corroborate each
-other" had no way to become a question about two peoples at all.
+*The Parley* supplied a precondition the corroboration half of the Myth bet had
+been named as waiting on — **not by this chapter**, whose last re-score named
+distortion, which campaign 2 supplied, but by the row the
+[idea registry](./frontier/idea-registry.md) carries on the matter: accounts
+diverge only where two filters are mismatched, mismatch needs a boundary
+crossing, and a boundary crossing needs contact. That is the edge this campaign
+built: one that lets an account leave the people that witnessed it. Every model
+before it walked parent to child down the founding tree and nothing else, so "do
+independent accounts of one event corroborate each other" had no way to become a
+question about two peoples at all.
 
 **The diagnostic was right about the variance.** Asking what would have to vary
 identified the missing degree of freedom correctly, and adding it made the axis
@@ -3056,8 +3061,9 @@ controls unchanged and had not been applied to one: before freezing a control,
 ask whether the world can reach the outcome the prediction requires.
 
 **The re-score.** The corroboration half stays **not-yet-scorable**, and its
-blocker is now narrower and dated. It is no longer waiting on contact; contact
-exists, and on the frozen measure it points away from divergence. It waits on a
+blocker is now narrower and dated. The registry's contact precondition is
+discharged — contact exists, and on the frozen measure it points away from
+divergence. It waits on a
 *directed* edge — victim→raider and raider→victim are different stories with
 different reach, both restrictions of the undirected ceiling measured here — and
 on a claim that carries the witness it came from, without which the pooling
