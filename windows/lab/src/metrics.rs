@@ -11077,7 +11077,15 @@ mod tests {
         // for every under-supplied species and so moves the phonotactics
         // draw downstream — the same class of mover as Task 4's, not a
         // placement reshuffle. Still strictly between 0 and 1.
-        assert_eq!(share, 0.8091286307053942, "seed 42 transparency drifted");
+        //
+        // The Burr re-pin (Task 10): 0.8091286307053942 -> 0.8174273858921162
+        // (another small increase). Per-bundle phonotactic law is now
+        // applied for the first time (onset AND coda), which reseeds every
+        // family's drawn templates — the templatic/isolating-tonal codas and
+        // the sonorant-open onsets all move, not only elf's. Same class of
+        // mover as Task 4/5's, not a placement reshuffle. Still strictly
+        // between 0 and 1.
+        assert_eq!(share, 0.8174273858921162, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

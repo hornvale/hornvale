@@ -2,20 +2,20 @@
 
 The land holds 163 settlement(s).
 The chief bugbear settlement, Gaodao, holds 66 souls amid tropical-seasonal-forest.
-The chief desert-dwarf settlement, Qaddnoqdngagda, holds 57 souls amid savanna.
-The chief desert-elf settlement, Seopngopsheap, holds 27 souls amid savanna.
-The chief drow settlement, Dogdoo, holds 14 souls amid desert.
+The chief desert-dwarf settlement, Qaddnoqngagdad, holds 57 souls amid savanna.
+The chief desert-elf settlement, Zzoanggengngongshzang, holds 27 souls amid savanna.
+The chief drow settlement, Roggo, holds 14 souls amid desert.
 The chief gnoll settlement, Psosngashma, holds 30 souls amid savanna.
 The chief goblin settlement, Deota, holds 32 souls amid taiga.
-The chief gully-dwarf settlement, Ngogtngobngotobqob, holds 35 souls amid savanna.
-The chief high-elf settlement, Zegzeo, holds 24 souls amid tropical-seasonal-forest.
-The chief hill-dwarf settlement, Babotngogsngob, holds 35 souls amid savanna.
+The chief gully-dwarf settlement, Ngogtngobngoqtngabqob, holds 35 souls amid savanna.
+The chief high-elf settlement, Zromgo, holds 24 souls amid tropical-seasonal-forest.
+The chief hill-dwarf settlement, Batsngaqngogsngob, holds 35 souls amid savanna.
 The chief hobgoblin settlement, Noabano, holds 85 souls amid tropical-seasonal-forest.
 The chief human settlement, Vaerope, holds 34 souls amid savanna.
 The chief kobold settlement, Rooxaro, holds 45 souls amid savanna.
-The chief sea-elf settlement, Shuebzhubsabdubzhaed, holds 33 souls amid coral-reef.
-The chief snow-elf settlement, Bobsob, holds 17 souls amid temperate-forest.
-The chief wood-elf settlement, Saateugtau, holds 24 souls amid tropical-seasonal-forest.
+The chief sea-elf settlement, Shreannaensraundunzhreun, holds 33 souls amid coral-reef.
+The chief snow-elf settlement, Bongsrong, holds 17 souls amid temperate-forest.
+The chief wood-elf settlement, Zduungduteungtau, holds 24 souls amid tropical-seasonal-forest.
 
 ```text
                                                                         

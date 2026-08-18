@@ -11,7 +11,7 @@ use crate::phoneme::{
     Manner, Place, Segment, Tone, canonical_segments, sonority, sonority_of_manner,
 };
 use crate::streams;
-use crate::typology::{CodaLaw, Typology};
+use crate::typology::{CodaLaw, OnsetLaw, Typology};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -673,25 +673,151 @@ fn draw_phonotactics(
     let manners = consonant_manners(inventory);
 
     let onset_count = stream.range_u32(2, 3) as usize;
-    let onsets = (0..onset_count)
-        .map(|_| draw_manner_slots(stream, &manners, 1, 2, true))
+    // Every arm draws the same template first (`draw_manner_slots`), so no
+    // arm can shift the stream relative to another; only the post-processing
+    // differs. `sonorant-open` guarantees the property on template 0 only —
+    // every other template is left free to be single-consonant, and is only
+    // corrected if the *draw itself* produced a non-sonorant-second cluster.
+    let onsets: Vec<Vec<Manner>> = (0..onset_count)
+        .map(|i| {
+            let drawn = draw_manner_slots(stream, &manners, 1, 2, true);
+            match typ.onset_law {
+                // Today's behaviour, byte-for-byte.
+                OnsetLaw::Drawn => drawn,
+                // Template 0 is forced into a sonorant-second cluster
+                // unconditionally, which is what guarantees the property
+                // *by construction* rather than by draw (spec §3.7). Every
+                // other template keeps its drawn length, single-consonant
+                // onsets included, and is only rewritten if the draw itself
+                // produced a cluster whose second slot is not a sonorant —
+                // never widened into a cluster it wasn't already.
+                OnsetLaw::SonorantSecond if i == 0 => force_sonorant_second(drawn, &manners),
+                OnsetLaw::SonorantSecond => sonorize_onset_cluster(drawn, &manners),
+                // One slot only.
+                OnsetLaw::Single => drawn.into_iter().take(1).collect(),
+            }
+        })
         .collect();
 
     let nuclei = draw_nuclei(stream);
 
-    // Task 10 gives this match effect; every arm delegates to today's draw
-    // for now, so threading `typ` here moves no bytes.
-    let coda_count = match typ.coda_law {
-        CodaLaw::Drawn => stream.range_u32(1, 2) as usize,
-        CodaLaw::ObstruentObligatory => stream.range_u32(1, 2) as usize,
-        CodaLaw::SonorantClosed => stream.range_u32(1, 2) as usize,
-        CodaLaw::OpenOrNasal => stream.range_u32(1, 2) as usize,
-    };
-    let codas = (0..coda_count)
-        .map(|_| draw_manner_slots(stream, &manners, 0, 1, false))
+    let coda_count = stream.range_u32(1, 2) as usize;
+    let codas: Vec<Vec<Manner>> = (0..coda_count)
+        .map(|_| {
+            let drawn = draw_manner_slots(stream, &manners, 0, 1, false);
+            match typ.coda_law {
+                // Today's behaviour, byte-for-byte.
+                CodaLaw::Drawn => drawn,
+                // A coda is required and obstruent: an empty or non-
+                // obstruent draw is back-filled from the inventory's
+                // obstruents in canonical order, consuming no extra draw.
+                CodaLaw::ObstruentObligatory => force_obstruent_coda(drawn, &manners),
+                // Optional, and restricted to the closed sonorant set.
+                CodaLaw::SonorantClosed => restrict_to_sonorant(drawn, &manners),
+                // Open, or a single nasal.
+                CodaLaw::OpenOrNasal => restrict_to_nasal(drawn, &manners),
+            }
+        })
         .collect();
 
     (onsets, nuclei, codas)
+}
+
+/// Whether `m` is one of the three sonorant manners a coda law treats as a
+/// liquid/nasal for phonotactic purposes. Used by the coda helpers below,
+/// which are a separate design question from the onset guarantee.
+fn is_sonorant_manner(m: &Manner) -> bool {
+    matches!(m, Manner::Trill | Manner::Approximant | Manner::Nasal)
+}
+
+/// Whether `m` is a **liquid** specifically — `Trill` or `Approximant`, the
+/// exact set [`ensure_minimum_sonorants`] floors and spec §3.7 means by "a
+/// liquid". Deliberately narrower than [`is_sonorant_manner`]: `Manner`'s
+/// canonical order places `Nasal` before `Trill`, and every shipped envelope
+/// already carries a nasal (it is never gated), so a "first sonorant in
+/// canonical order" search over the wider set finds the nasal every time and
+/// never reaches the liquid the floor exists to guarantee. Using the
+/// narrower set here is what makes the onset law actually seat the liquid
+/// the floor put in the inventory, rather than seating a nasal that was
+/// already reachable regardless.
+fn is_liquid_manner(m: &Manner) -> bool {
+    matches!(m, Manner::Trill | Manner::Approximant)
+}
+
+/// A two-slot onset whose second slot is a liquid, unconditionally. Used
+/// only for the one onset template `sonorant-open` designates to carry the
+/// guarantee (see [`draw_phonotactics`]) — draw-free: the liquid comes from
+/// `manners` in canonical order, so no stream is consumed and the control
+/// bundle's draw count is unchanged. Falls back to the drawn cluster when
+/// the language has no liquid at all (a bundle other than `sonorant-open`,
+/// whose floor does not run), rather than handing it a segment it cannot
+/// produce.
+///
+/// The direction this enforces: it guarantees a liquid is *reachable in an
+/// onset*. It does not guarantee every onset is a cluster, does not choose
+/// which liquid, and says nothing about codas.
+fn force_sonorant_second(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    let Some(&son) = manners.iter().find(|m| is_liquid_manner(m)) else {
+        return drawn;
+    };
+    let head = drawn
+        .iter()
+        .copied()
+        .find(|m| !is_liquid_manner(m))
+        .unwrap_or(Manner::Stop);
+    vec![head, son]
+}
+
+/// Correct an onset template *only if the draw already made it a cluster*
+/// and that cluster's second slot is not a liquid. A single-consonant (or
+/// open) template is returned unchanged — this is what keeps `sonorant-open`
+/// from forcing every onset into a two-consonant cluster (the caricature the
+/// campaign controller flagged in the naive sketch), while still holding the
+/// law over every cluster the draw does produce. Draw-free, like
+/// [`force_sonorant_second`].
+fn sonorize_onset_cluster(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    if drawn.len() <= 1 || is_liquid_manner(&drawn[1]) {
+        return drawn;
+    }
+    force_sonorant_second(drawn, manners)
+}
+
+/// A coda that must not be empty and must be an obstruent. Draw-free: an
+/// empty or non-obstruent draw is replaced from `manners` in canonical
+/// order.
+fn force_obstruent_coda(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    let obstruent = |m: &Manner| matches!(m, Manner::Stop | Manner::Fricative | Manner::Sibilant);
+    if !drawn.is_empty() && drawn.iter().all(obstruent) {
+        return drawn;
+    }
+    match manners.iter().find(|m| obstruent(m)) {
+        Some(m) => vec![*m],
+        // A language with no obstruent at all keeps its drawn coda rather
+        // than being handed a segment it cannot produce.
+        None => drawn,
+    }
+}
+
+/// A coda restricted to the closed sonorant set, or empty. Draw-free.
+fn restrict_to_sonorant(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    if drawn.iter().all(is_sonorant_manner) {
+        return drawn;
+    }
+    match manners.iter().find(|m| is_sonorant_manner(m)) {
+        Some(m) => vec![*m],
+        None => Vec::new(),
+    }
+}
+
+/// A coda that is open or a single nasal. Draw-free.
+fn restrict_to_nasal(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    if drawn.is_empty() {
+        return drawn;
+    }
+    match manners.iter().find(|m| matches!(m, Manner::Nasal)) {
+        Some(m) => vec![*m],
+        None => Vec::new(),
+    }
 }
 
 /// Draw a per-species phonology: a phoneme inventory (a subset of
@@ -1279,5 +1405,114 @@ mod tests {
             consonants(&tonal),
             "the tone dimension must not change the drawn consonants"
         );
+    }
+
+    /// Pinned from the pre-Stage-3 tree at Task 8's byte-inert commit —
+    /// `the_control_bundle_draws_what_it_always_drew` measures these are
+    /// still what `concatenative` draws for `("goblin", Seed(42))` once the
+    /// per-bundle law is applied.
+    const CONTROL_CODA_COUNT: usize = 2;
+    /// See [`CONTROL_CODA_COUNT`].
+    const CONTROL_NUCLEI: [usize; 1] = [1];
+
+    /// Each bundle's coda law is visible in the drawn templates. These are
+    /// the four rules the campaign exists to introduce, so each gets its own
+    /// assertion rather than one loop — a loop would let three pass on the
+    /// strength of the fourth.
+    /// claim: invariant(forall-seed) — templatic never draws an open coda,
+    /// for every seed in 0..32.
+    #[test]
+    fn the_obstruent_obligatory_law_never_draws_an_open_coda() {
+        let env = manikin_env();
+        let typ = crate::typology::templatic();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            assert!(
+                !ph.codas.iter().any(|c| c.is_empty()),
+                "seed {seed}: templatic drew an open coda: {:?}",
+                ph.codas
+            );
+        }
+    }
+
+    /// claim: invariant(forall-seed) — isolating-tonal never draws a coda
+    /// cluster, for every seed in 0..32; whether it also admits an open
+    /// syllable somewhere in the sweep is the separate `saw_open` readout
+    /// below.
+    #[test]
+    fn the_open_or_nasal_law_admits_an_open_coda() {
+        let env = manikin_env();
+        let typ = crate::typology::isolating_tonal();
+        let mut saw_open = false;
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            for c in &ph.codas {
+                assert!(
+                    c.len() <= 1,
+                    "seed {seed}: isolating drew a coda cluster: {c:?}"
+                );
+                if c.is_empty() {
+                    saw_open = true;
+                }
+            }
+        }
+        assert!(saw_open, "isolating-tonal never drew an open syllable");
+    }
+
+    /// The onset law is what actually puts a liquid into a WORD, and Stage 2
+    /// proved the floor alone does not: proto-elf held `/r/` in its inventory
+    /// while no drawn onset slot could host it, so zero roots carried one
+    /// (spec §3.7). `sonorant-open` must therefore produce a sonorant-second
+    /// onset by construction, not by draw.
+    /// claim: invariant(forall-seed) — every onset cluster sonorant-open
+    /// draws has a sonorant second slot, for every seed in 0..32.
+    #[test]
+    fn the_sonorant_second_law_puts_a_sonorant_in_every_onset_cluster() {
+        let env = manikin_env();
+        let typ = crate::typology::sonorant_open();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            let clusters: Vec<&Vec<Manner>> = ph.onsets.iter().filter(|o| o.len() > 1).collect();
+            assert!(
+                !clusters.is_empty(),
+                "seed {seed}: sonorant-open drew no onset cluster at all"
+            );
+            for c in clusters {
+                assert!(
+                    matches!(c[1], Manner::Trill | Manner::Approximant | Manner::Nasal),
+                    "seed {seed}: cluster {c:?} second slot is not a sonorant"
+                );
+            }
+        }
+    }
+
+    /// The single-slot law admits no clusters at all.
+    /// claim: invariant(forall-seed) — isolating-tonal never draws an onset
+    /// cluster, for every seed in 0..32.
+    #[test]
+    fn the_single_onset_law_draws_no_clusters() {
+        let env = manikin_env();
+        let typ = crate::typology::isolating_tonal();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            for o in &ph.onsets {
+                assert!(
+                    o.len() <= 1,
+                    "seed {seed}: isolating-tonal drew an onset cluster {o:?}"
+                );
+            }
+        }
+    }
+
+    /// The control's templates must be reachable exactly as before, or P4's
+    /// control is compromised.
+    #[test]
+    fn the_control_bundle_draws_what_it_always_drew() {
+        let env = manikin_env();
+        let typ = crate::typology::concatenative();
+        let ph = draw_phonology(&Seed(42), "goblin", &env, &typ);
+        // Pinned from the pre-Stage-3 tree at Task 8's byte-inert commit.
+        assert_eq!(ph.codas.len(), CONTROL_CODA_COUNT);
+        assert_eq!(ph.nuclei, CONTROL_NUCLEI);
     }
 }

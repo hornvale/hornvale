@@ -99,16 +99,16 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 - **Onsets:** sibilant, nasal
 - **Nuclei:** v, v+v
-- **Codas:** nasal
+- **Codas:** stop
 
 ### Sample names
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Shenshangnon | /ʃenʃaŋnon/ | `[[S'enSaNnon]]` | <audio controls preload="none" src="../audio/ce1d98a4.mp3"></audio> |
-| Settlement | Noonzhan | /noonʒan/ | `[[n'oonZan]]` | <audio controls preload="none" src="../audio/ab69f6e3.mp3"></audio> |
-| Settlement | Shansang | /ʃansaŋ/ | `[[S'ansaN]]` | <audio controls preload="none" src="../audio/8b9c0d57.mp3"></audio> |
-| Deity | Momzhommam | /momʒommam/ | `[[m'omZommam]]` | <audio controls preload="none" src="../audio/76db75e6.mp3"></audio> |
+| Settlement | Shegshaqnog | /ʃegʃaqnog/ | `[[S'egSaqnog]]` | <audio controls preload="none" src="../audio/9843a008.mp3"></audio> |
+| Settlement | Noogzhaq | /noogʒaq/ | `[[n'oogZaq]]` | <audio controls preload="none" src="../audio/9b1c4366.mp3"></audio> |
+| Settlement | Shadsad | /ʃadsad/ | `[[S'adsad]]` | <audio controls preload="none" src="../audio/1fdded07.mp3"></audio> |
+| Deity | Modzhogmap | /modʒogmap/ | `[[m'odZogmap]]` | <audio controls preload="none" src="../audio/6f1dd0f8.mp3"></audio> |
 
 ## Desert-elf
 
@@ -135,7 +135,7 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Phonotactics
 
-- **Onsets:** fricative, nasal, nasal+approximant
+- **Onsets:** fricative+approximant, nasal, nasal+approximant
 - **Nuclei:** v
 - **Codas:** nasal
 
@@ -143,8 +143,8 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Vomvem | /vomvem/ | `[[v'omvem]]` | <audio controls preload="none" src="../audio/e8d823d6.mp3"></audio> |
-| Settlement | Ngemvumngjeng | /ŋemvumŋjeŋ/ | `[[N'emvumNjeN]]` | <audio controls preload="none" src="../audio/c65e0e58.mp3"></audio> |
+| Settlement | Vjongmjem | /vjoŋmjem/ | `[[vj'oNmjem]]` | <audio controls preload="none" src="../audio/b6334d78.mp3"></audio> |
+| Settlement | Ngemvjamngeng | /ŋemvjamŋeŋ/ | `[[N'emvjamNeN]]` | <audio controls preload="none" src="../audio/111cb9f7.mp3"></audio> |
 | Settlement | Ngemmongngjeng | /ŋemmoŋŋjeŋ/ | `[[N'emmoNNjeN]]` | <audio controls preload="none" src="../audio/fbe5dc16.mp3"></audio> |
 | Deity | Mjangngjang | /mjaŋŋjaŋ/ | `[[mj'aNNjaN]]` | <audio controls preload="none" src="../audio/1a3f04b3.mp3"></audio> |
 
@@ -171,18 +171,18 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Phonotactics
 
-- **Onsets:** sibilant, ejective+trill, stop+fricative
+- **Onsets:** sibilant+trill, ejective+trill, stop+trill
 - **Nuclei:** v, v+v
-- **Codas:** sibilant, ∅
+- **Codas:** trill, ∅
 
 ### Sample names
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Kxraakxrosh | /kʼraakʼroʃ/ | `[[kr'aakroS]]` | <audio controls preload="none" src="../audio/0cd6494f.mp3"></audio> |
-| Settlement | Bvaabvashbva | /bvaabvaʃbva/ | `[[bv'aabvaSbva]]` | <audio controls preload="none" src="../audio/db2d6e4b.mp3"></audio> |
-| Settlement | Kxrazho | /kʼraʒo/ | `[[kr'aZo]]` | <audio controls preload="none" src="../audio/e700b175.mp3"></audio> |
-| Deity | Dvoaspvosh | /dvoaspvoʃ/ | `[[dv'oaspvoS]]` | <audio controls preload="none" src="../audio/ef5293af.mp3"></audio> |
+| Settlement | Kxraakxror | /kʼraakʼror/ | `[[kr'aakror]]` | <audio controls preload="none" src="../audio/35596598.mp3"></audio> |
+| Settlement | Braabrarbra | /braabrarbra/ | `[[br'aabrarbra]]` | <audio controls preload="none" src="../audio/dc4c4be3.mp3"></audio> |
+| Settlement | Kxrazhra | /kʼraʒra/ | `[[kr'aZra]]` | <audio controls preload="none" src="../audio/6852d470.mp3"></audio> |
+| Deity | Droarpror | /droarpror/ | `[[dr'oarpror]]` | <audio controls preload="none" src="../audio/35f3618e.mp3"></audio> |
 
 ## Gnoll
 
@@ -292,16 +292,16 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 - **Onsets:** sibilant+nasal, stop+fricative
 - **Nuclei:** v
-- **Codas:** approximant, ∅
+- **Codas:** stop, stop
 
 ### Sample names
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Qxabxajgxoj | /qxabxajgxoj/ | `[[qx'abxajgxoj]]` | <audio controls preload="none" src="../audio/09475904.mp3"></audio> |
-| Settlement | Kfojzhnej | /kfojʒnej/ | `[[kf'ojZnej]]` | <audio controls preload="none" src="../audio/1b2fbee5.mp3"></audio> |
-| Settlement | Kxebxaj | /kxebxaj/ | `[[kx'ebxaj]]` | <audio controls preload="none" src="../audio/756921d5.mp3"></audio> |
-| Deity | Bfojshmoj | /bfojʃmoj/ | `[[bf'ojSmoj]]` | <audio controls preload="none" src="../audio/6f704b1c.mp3"></audio> |
+| Settlement | Qxakbfebzhneb | /qxakbfebʒneb/ | `[[qx'akbfebZneb]]` | <audio controls preload="none" src="../audio/64540194.mp3"></audio> |
+| Settlement | Kfokzhnek | /kfokʒnek/ | `[[kf'okZnek]]` | <audio controls preload="none" src="../audio/bc9adf66.mp3"></audio> |
+| Settlement | Kxeqkfak | /kxeqkfak/ | `[[kx'eqkfak]]` | <audio controls preload="none" src="../audio/a7a7b9eb.mp3"></audio> |
+| Deity | Bfobshmog | /bfobʃmog/ | `[[bf'obSmog]]` | <audio controls preload="none" src="../audio/54479628.mp3"></audio> |
 
 ## High-elf
 
@@ -333,7 +333,7 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Phonotactics
 
-- **Onsets:** stop+sibilant, approximant
+- **Onsets:** stop+trill, approximant
 - **Nuclei:** v, v+v
 - **Codas:** approximant
 
@@ -341,10 +341,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Gsejqzhel | /gsejqʒel/ | `[[gs'ejqZel]]` | <audio controls preload="none" src="../audio/7c35ed47.mp3"></audio> |
-| Settlement | Qsoajjal | /qsoajjal/ | `[[qs'oajjal]]` | <audio controls preload="none" src="../audio/eee37674.mp3"></audio> |
-| Settlement | Lejjoltsaj | /lejjoltsaj/ | `[[l'ejjoltsaj]]` | <audio controls preload="none" src="../audio/8e6fd4fe.mp3"></audio> |
-| Deity | Tzollol | /tzollol/ | `[[tz'ollol]]` | <audio controls preload="none" src="../audio/6272d7cb.mp3"></audio> |
+| Settlement | Grejqrel | /grejqrel/ | `[[gr'ejqrel]]` | <audio controls preload="none" src="../audio/6246e2bc.mp3"></audio> |
+| Settlement | Qroajjal | /qroajjal/ | `[[qr'oajjal]]` | <audio controls preload="none" src="../audio/01211d4a.mp3"></audio> |
+| Settlement | Lejjoltraj | /lejjoltraj/ | `[[l'ejjoltraj]]` | <audio controls preload="none" src="../audio/b30ffd4e.mp3"></audio> |
+| Deity | Trollol | /trollol/ | `[[tr'ollol]]` | <audio controls preload="none" src="../audio/d9aa75d3.mp3"></audio> |
 
 ## Hill-dwarf
 
@@ -373,16 +373,16 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 - **Onsets:** approximant, nasal
 - **Nuclei:** v, v+v
-- **Codas:** ∅
+- **Codas:** stop
 
 ### Sample names
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Joja | /joja/ | `[[j'oja]]` | <audio controls preload="none" src="../audio/370e5a0c.mp3"></audio> |
-| Settlement | Maoja | /maoja/ | `[[m'aoja]]` | <audio controls preload="none" src="../audio/cc06fc59.mp3"></audio> |
-| Settlement | Mojo | /mojo/ | `[[m'ojo]]` | <audio controls preload="none" src="../audio/f8374988.mp3"></audio> |
-| Deity | Ngongo | /ŋoŋo/ | `[[N'oNo]]` | <audio controls preload="none" src="../audio/293252e0.mp3"></audio> |
+| Settlement | Joqngat | /joqŋat/ | `[[j'oqNat]]` | <audio controls preload="none" src="../audio/dbfcacbc.mp3"></audio> |
+| Settlement | Maobngag | /maobŋag/ | `[[m'aobNag]]` | <audio controls preload="none" src="../audio/b8a79564.mp3"></audio> |
+| Settlement | Motngab | /motŋab/ | `[[m'otNab]]` | <audio controls preload="none" src="../audio/f7fb8f04.mp3"></audio> |
+| Deity | Ngoqngat | /ŋoqŋat/ | `[[N'oqNat]]` | <audio controls preload="none" src="../audio/04e17f13.mp3"></audio> |
 
 ## Hobgoblin
 
@@ -514,7 +514,7 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Phonotactics
 
-- **Onsets:** stop+sibilant, stop+sibilant, sibilant
+- **Onsets:** stop, stop, sibilant
 - **Nuclei:** v, v+v
 - **Codas:** ∅
 
@@ -522,10 +522,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Zhakzhakzo | /ʒakʒakzo/ | `[[Z'akZakzo]]` | <audio controls preload="none" src="../audio/aafe6abe.mp3"></audio> |
-| Settlement | Zhadso | /ʒadso/ | `[[Z'adso]]` | <audio controls preload="none" src="../audio/1351a233.mp3"></audio> |
-| Settlement | Dsooksa | /dsooksa/ | `[[ds'ooksa]]` | <audio controls preload="none" src="../audio/cfdc35b2.mp3"></audio> |
-| Deity | Qshaashasa | /qʃaaʃasa/ | `[[qS'aaSasa]]` | <audio controls preload="none" src="../audio/12590ca5.mp3"></audio> |
+| Settlement | Zhakaka | /ʒakaka/ | `[[Z'akaka]]` | <audio controls preload="none" src="../audio/317e0fe4.mp3"></audio> |
+| Settlement | Zhado | /ʒado/ | `[[Z'ado]]` | <audio controls preload="none" src="../audio/ca1c1b06.mp3"></audio> |
+| Settlement | Doda | /doda/ | `[[d'oda]]` | <audio controls preload="none" src="../audio/87ee5662.mp3"></audio> |
+| Deity | Qokazha | /qokaʒa/ | `[[q'okaZa]]` | <audio controls preload="none" src="../audio/2972f703.mp3"></audio> |
 
 ## Sea-elf
 
@@ -554,7 +554,7 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Phonotactics
 
-- **Onsets:** nasal, stop
+- **Onsets:** nasal+trill, stop
 - **Nuclei:** v
 - **Codas:** ∅
 
@@ -562,10 +562,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Qono | /qono/ | `[[q'ono]]` | <audio controls preload="none" src="../audio/d72b2865.mp3"></audio> |
-| Settlement | Bene | /bene/ | `[[b'ene]]` | <audio controls preload="none" src="../audio/c63a3341.mp3"></audio> |
-| Settlement | Nobaqa | /nobaqa/ | `[[n'obaqa]]` | <audio controls preload="none" src="../audio/0a370354.mp3"></audio> |
-| Deity | Ponu | /ponu/ | `[[p'onu]]` | <audio controls preload="none" src="../audio/60ed0577.mp3"></audio> |
+| Settlement | Qonro | /qonro/ | `[[q'onro]]` | <audio controls preload="none" src="../audio/7f4bc287.mp3"></audio> |
+| Settlement | Benro | /benro/ | `[[b'enro]]` | <audio controls preload="none" src="../audio/2ce4d729.mp3"></audio> |
+| Settlement | Nrudede | /nrudede/ | `[[nr'udede]]` | <audio controls preload="none" src="../audio/131bfbe0.mp3"></audio> |
+| Deity | Ponra | /ponra/ | `[[p'onra]]` | <audio controls preload="none" src="../audio/b97fef13.mp3"></audio> |
 
 ## Snow-elf
 
@@ -590,16 +590,16 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 - **Onsets:** fricative+trill, nasal
 - **Nuclei:** v, v+v
-- **Codas:** stop, ∅
+- **Codas:** nasal, ∅
 
 ### Sample names
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
 | Settlement | Fraangofro | /fraaŋofro/ | `[[fr'aaNofro]]` | <audio controls preload="none" src="../audio/afa4d5c8.mp3"></audio> |
-| Settlement | Fraotngofraq | /fraotŋofraq/ | `[[fr'aotNofraq]]` | <audio controls preload="none" src="../audio/20837ed1.mp3"></audio> |
-| Settlement | Frootngobfrot | /frootŋobfrot/ | `[[fr'ootNobfrot]]` | <audio controls preload="none" src="../audio/130fa4e9.mp3"></audio> |
-| Deity | Fraatfrapfrob | /fraatfrapfrob/ | `[[fr'aatfrapfrob]]` | <audio controls preload="none" src="../audio/2e56618a.mp3"></audio> |
+| Settlement | Fraongngofrang | /fraoŋŋofraŋ/ | `[[fr'aoNNofraN]]` | <audio controls preload="none" src="../audio/b4ab9630.mp3"></audio> |
+| Settlement | Froongngongfrong | /frooŋŋoŋfroŋ/ | `[[fr'ooNNoNfroN]]` | <audio controls preload="none" src="../audio/4d3f85b6.mp3"></audio> |
+| Deity | Fraangfrangfrong | /fraaŋfraŋfroŋ/ | `[[fr'aaNfraNfroN]]` | <audio controls preload="none" src="../audio/2d981399.mp3"></audio> |
 
 ## White-dragon
 
@@ -621,18 +621,18 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Phonotactics
 
-- **Onsets:** stop+fricative, sibilant
+- **Onsets:** stop, sibilant
 - **Nuclei:** v
-- **Codas:** stop, ∅
+- **Codas:** nasal, ∅
 
 ### Sample names
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Shoddxa | /ʃoddxa/ | `[[S'oddxa]]` | <audio controls preload="none" src="../audio/b6f80736.mp3"></audio> |
-| Settlement | Dxasodshak | /dxasodʃak/ | `[[dx'asodSak]]` | <audio controls preload="none" src="../audio/b0c78035.mp3"></audio> |
-| Settlement | Kxaksoshok | /kxaksoʃok/ | `[[kx'aksoSok]]` | <audio controls preload="none" src="../audio/476b4490.mp3"></audio> |
-| Deity | Shoddxod | /ʃoddxod/ | `[[S'oddxod]]` | <audio controls preload="none" src="../audio/c3b10676.mp3"></audio> |
+| Settlement | Shondong | /ʃondoŋ/ | `[[S'ondoN]]` | <audio controls preload="none" src="../audio/e9bc4aab.mp3"></audio> |
+| Settlement | Dongsonshang | /doŋsonʃaŋ/ | `[[d'oNsonSaN]]` | <audio controls preload="none" src="../audio/14b9049c.mp3"></audio> |
+| Settlement | Kanzhazho | /kanʒaʒo/ | `[[k'anZaZo]]` | <audio controls preload="none" src="../audio/914ffd9a.mp3"></audio> |
+| Deity | Shondan | /ʃondan/ | `[[S'ondan]]` | <audio controls preload="none" src="../audio/312e7b78.mp3"></audio> |
 
 ## Wood-elf
 
@@ -658,16 +658,16 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Phonotactics
 
-- **Onsets:** stop+approximant, stop+nasal, sibilant+nasal
+- **Onsets:** stop+approximant, stop+approximant, sibilant+approximant
 - **Nuclei:** v, v+v
-- **Codas:** approximant, fricative
+- **Codas:** approximant, nasal
 
 ### Sample names
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Tngaxtngoj | /tŋaxtŋoj/ | `[[tN'axtNoj]]` | <audio controls preload="none" src="../audio/0cbaf93f.mp3"></audio> |
-| Settlement | Sngexqjax | /sŋexqjax/ | `[[sN'exqjax]]` | <audio controls preload="none" src="../audio/3a3afa1c.mp3"></audio> |
-| Settlement | Sngooxsngox | /sŋooxsŋox/ | `[[sN'ooxsNox]]` | <audio controls preload="none" src="../audio/312b53a5.mp3"></audio> |
-| Deity | Tjuojzngux | /tjuojzŋux/ | `[[tj'uojzNux]]` | <audio controls preload="none" src="../audio/a2f2e544.mp3"></audio> |
+| Settlement | Tjantjoj | /tjantjoj/ | `[[tj'antjoj]]` | <audio controls preload="none" src="../audio/7a437aa5.mp3"></audio> |
+| Settlement | Sjenqjang | /sjenqjaŋ/ | `[[sj'enqjaN]]` | <audio controls preload="none" src="../audio/58646960.mp3"></audio> |
+| Settlement | Sjoonsjong | /sjoonsjoŋ/ | `[[sj'oonsjoN]]` | <audio controls preload="none" src="../audio/17c716e2.mp3"></audio> |
+| Deity | Tjuojzjung | /tjuojzjuŋ/ | `[[tj'uojzjuN]]` | <audio controls preload="none" src="../audio/b655f5a2.mp3"></audio> |
 

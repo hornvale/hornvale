@@ -556,7 +556,7 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
             ("goblin", "Tebae".to_string()),
             ("hill-dwarf", "Ngabgob".to_string()),
             ("hobgoblin", "Qebae".to_string()),
-            ("snow-elf", "Saat".to_string()),
+            ("snow-elf", "Zroongtong".to_string()),
         ],
         "the set of peoples rooting 'spring' at seed 42 moved"
     );
@@ -706,7 +706,7 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Zhodpoo".to_string()),
+            ("drow", "Raggo".to_string()),
             ("hobgoblin", "Noono".to_string()),
         ],
         "the set of peoples rooting 'hill' at seed 42 moved"
@@ -827,11 +827,11 @@ fn valley_is_a_root_at_seed_42_for_five_peoples() {
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Poopdo".to_string()),
-            ("high-elf", "Doobdod".to_string()),
+            ("drow", "Poogdo".to_string()),
+            ("high-elf", "Doomdom".to_string()),
             ("hobgoblin", "Ganee".to_string()),
             ("human", "Xeke".to_string()),
-            ("sea-elf", "Tuupdut".to_string()),
+            ("sea-elf", "Tuundun".to_string()),
         ],
         "the set of peoples rooting 'valley' at seed 42 moved"
     );
@@ -998,11 +998,11 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
         rooted,
         vec![
             ("bugbear", "Godoa".to_string()),
-            ("desert-elf", "Ngop".to_string()),
-            ("drow", "Go".to_string()),
+            ("desert-elf", "Gongszoang".to_string()),
+            ("drow", "Gogsroa".to_string()),
             ("gnoll", "Dshoopdshop".to_string()),
             ("hobgoblin", "Kotoa".to_string()),
-            ("snow-elf", "Ngob".to_string()),
+            ("snow-elf", "Bongsroang".to_string()),
         ],
         "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \
          is among them"

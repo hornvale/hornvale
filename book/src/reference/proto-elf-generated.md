@@ -28,209 +28,209 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 
 ## Phonotactics
 
-- **Onsets:** sibilant, stop, nasal
+- **Onsets:** sibilant+trill, stop, nasal
 - **Nuclei:** v, v+v
-- **Codas:** stop
+- **Codas:** nasal
 
 ## Proto-root table
 
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
-| `abyssal` | a biome class | *Dat | /dat/ |
-| `abyssal-plain` | The flat floor of the deep ocean. | *Dob | /dob/ |
-| `alpine` | a biome class | *Geb | /geb/ |
-| `bait-ball` | A dense turning mass of fish. | *Tuaptaag | /tuaptaag/ |
-| `barley` | a staple crop | *Ngup | /ŋup/ |
-| `bathypelagic` | a biome class | *Shoot | /ʃoot/ |
-| `black-dragon-kind` | a black dragon | *Sod | /sod/ |
-| `blood` | the circulating fluid of a body | *Beettub | /beettub/ |
-| `blue` | the color term for blue | *Shag | /ʃag/ |
-| `bone` | the rigid frame of a body | *Ngegtaab | /ŋegtaab/ |
-| `boreal-stand` | A stand of northern conifers. | *Doad | /doad/ |
-| `brown` | the color term for brown | *Zaappoeb | /zaappoeb/ |
-| `bugbear-kind` | a bugbear | *Sot | /sot/ |
-| `burn` | Ground recovering from fire. | *Saut | /saut/ |
-| `carrion-crawler-kind` | a carrion crawler | *Ngaetpuod | /ŋaetpuod/ |
-| `child` | one's son or daughter | *Zhep | /ʒep/ |
-| `closed-canopy` | Tall closed-canopy tropical forest. | *Bop | /bop/ |
-| `coast` | where the land meets the sea | *Shuat | /ʃuat/ |
-| `cold` | felt, biting chill | *Shoet | /ʃoet/ |
-| `cold-upwelling` | Cold nutrient-rich water rising from below. | *Dagzhag | /dagʒag/ |
-| `coral-head` | A massive coral colony standing proud of the reef. | *Ngubngag | /ŋubŋag/ |
-| `coral-reef` | a biome class | *Nguub | /ŋuub/ |
-| `crevasse-field` | Ice split by crevasses. | *Zuatguep | /zuatguep/ |
-| `damp-hollow` | A shaded, wet fold in the forest floor. | *Tuod | /tuod/ |
-| `dark` | the color term for black/dark hues | *Zubngot | /zubŋot/ |
-| `day` | the light half of the day-night cycle | *Suobtaud | /suobtaud/ |
-| `desert` | a biome class | *Suatnguog | /suatŋuog/ |
-| `desert-dwarf-kind` | a desert dwarf | *Nguut | /ŋuut/ |
-| `desert-elf-kind` | a desert elf | *Saeg | /saeg/ |
-| `die` | to cease living | *Gaobgaog | /gaobgaog/ |
-| `dire-wolf-kind` | a dire wolf | *Shad | /ʃad/ |
-| `drink` | to swallow liquid | *Shebted | /ʃebted/ |
-| `drow-kind` | a drow | *Gog | /gog/ |
-| `earth` | the ground underfoot | *Shuegzhup | /ʃuegʒup/ |
-| `east` | the direction of increasing longitude | *Ngedsap | /ŋedsap/ |
-| `eat` | to consume food | *Patped | /patped/ |
-| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Deab | /deab/ |
-| `epipelagic` | a biome class | *Tebngud | /tebŋud/ |
-| `erg` | A sand sea of dunes. | *Ngeep | /ŋeep/ |
-| `eye` | the organ of sight | *Soub | /soub/ |
-| `felsenmeer` | A field of frost-shattered boulders. | *Zod | /zod/ |
-| `fire` | flame and heat | *Bub | /bub/ |
-| `fire-scrub` | Scrub regrowing after fire. | *Bepshueg | /bepʃueg/ |
-| `fish-shoal` | A shoal moving as one body. | *Sugtop | /sugtop/ |
-| `foot` | the walking limb-end | *Ngoetsag | /ŋoetsag/ |
-| `ford` | where a river runs shallow enough to cross | *Ngopsheat | /ŋopʃeat/ |
-| `forest-gap` | A break in the canopy where light reaches the ground. | *Tud | /tud/ |
-| `frost-heave` | Ground churned and patterned by freezing. | *Shaubbud | /ʃaubbud/ |
-| `gallery-forest` | Forest following a watercourse. | *Gag | /gag/ |
-| `giant-constrictor-snake-kind` | a giant constrictor snake | *Gup | /gup/ |
-| `giant-crocodile-kind` | a giant crocodile | *Taodngaud | /taodŋaud/ |
-| `giant-elk-kind` | a giant elk | *Zeabpuut | /zeabpuut/ |
-| `giant-goat-kind` | a giant goat | *Boed | /boed/ |
-| `giant-hyena-kind` | a giant hyena | *Ngoabshud | /ŋoabʃud/ |
-| `giant-octopus-kind` | a giant octopus | *Tobngeup | /tobŋeup/ |
-| `giant-scorpion-kind` | a giant scorpion | *Ngetzud | /ŋetzud/ |
-| `giant-squid-kind` | a giant squid | *Daupngaeg | /daupŋaeg/ |
-| `gloom` | the deepest, starless dark | *Teoggop | /teoggop/ |
-| `gnoll-kind` | a gnoll | *Ngot | /ŋot/ |
-| `goblin-kind` | a goblin | *Ngapzhet | /ŋapʒet/ |
-| `god` | a deity | *Dootpop | /dootpop/ |
-| `grass-sward` | Open grassland, unbroken by trees. | *Saot | /saot/ |
-| `great` | large in size or extent | *Dotsab | /dotsab/ |
-| `green` | the color term for green | *Dobpood | /dobpood/ |
-| `gully-dwarf-kind` | a gully dwarf | *Zopngot | /zopŋot/ |
-| `hadal-trench` | a biome class | *Ngop | /ŋop/ |
-| `hamada` | A stony desert pavement of bare rock. | *Ngaeg | /ŋaeg/ |
-| `hand` | the manipulating limb-end | *Ngueb | /ŋueb/ |
-| `hearth` | the fire at the center of a home | *Deog | /deog/ |
-| `heat` | felt, oppressive warmth | *Zaub | /zaub/ |
-| `high` | far above the ground | *Shogsab | /ʃogsab/ |
-| `high-elf-kind` | a high elf | *Zhoodsug | /ʒoodsug/ |
-| `hill` | ground that rises above what surrounds it | *Zhedtoud | /ʒedtoud/ |
-| `hill-dwarf-kind` | a hill dwarf | *Ngug | /ŋug/ |
-| `hobgoblin-kind` | a hobgoblin | *Zeodshuob | /zeodʃuob/ |
-| `holdfast-tangle` | The anchored base of a kelp forest. | *Nguagguep | /ŋuagguep/ |
-| `home` | one's dwelling | *Zuddaob | /zuddaob/ |
-| `human-kind` | a human | *Ngopsog | /ŋopsog/ |
-| `hydrothermal-vent` | a biome class | *Peegzeob | /peegzeob/ |
-| `ice` | frozen water | *Bud | /bud/ |
-| `ice-lead` | A channel of open water through sea ice. | *Nguobgoeg | /ŋuobgoeg/ |
-| `island` | land the water surrounds | *Ngeepsot | /ŋeepsot/ |
-| `kelp-canopy` | The floating canopy of a kelp forest. | *Ngegngoed | /ŋegŋoed/ |
-| `kelp-forest` | a biome class | *Zuebteup | /zuebteup/ |
-| `killer-whale-kind` | a killer whale | *Nguagtab | /ŋuagtab/ |
-| `kobold-kind` | a kobold | *Zhaeg | /ʒaeg/ |
-| `lake` | still water held in a hollow that has no outlet to the sea | *Zeep | /zeep/ |
-| `liana-forest` | Tropical forest tangled with climbing vines. | *Shebngout | /ʃebŋout/ |
-| `light` | the color term for white/light hues | *Ngaob | /ŋaob/ |
-| `lightless-water` | Water below all light. | *Ngapngub | /ŋapŋub/ |
-| `little` | small in size or extent | *Zhuptop | /ʒuptop/ |
-| `low` | near the ground | *Puapnget | /puapŋet/ |
-| `many` | an indefinitely large count | *Shug | /ʃug/ |
-| `marine-snow` | Organic debris drifting endlessly down. | *Tap | /tap/ |
-| `marsh` | soft wet ground | *Ngob | /ŋob/ |
-| `melt-pond` | A pool of meltwater on sea ice. | *Baudngoug | /baudŋoug/ |
-| `mesopelagic` | a biome class | *Puopzuap | /puopzuap/ |
-| `millet` | a staple crop | *Zegzeob | /zegzeob/ |
-| `moon` | a moon | *Taabzaop | /taabzaop/ |
-| `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Bog | /bog/ |
-| `mountain` | high ground | *Soetngead | /soetŋead/ |
-| `mouth` | the organ of eating and speech | *Guatgud | /guatgud/ |
-| `move` | to go from one place to another | *Shogngat | /ʃogŋat/ |
-| `muskeg` | Waterlogged peat ground in the boreal forest. | *Deubdot | /deubdot/ |
-| `name` | a word that identifies one who bears it | *Ngap | /ŋap/ |
-| `new` | recently come to be | *Gaogngaap | /gaogŋaap/ |
-| `night` | the dark half of the day-night cycle | *Zhag | /ʒag/ |
-| `nodule-field` | Seafloor strewn with mineral nodules. | *Guopzhuag | /guopʒuag/ |
-| `north` | toward the pole of increasing latitude | *Dadpeg | /dadpeg/ |
-| `north-east` | between north and east | *Zhot | /ʒot/ |
-| `north-west` | between north and west | *Sopngoob | /sopŋoob/ |
-| `old` | long in existence | *Ngaagpad | /ŋaagpad/ |
-| `old-growth` | Mature forest, closed above and open beneath. | *Pobsep | /pobsep/ |
-| `one` | the cardinal number 1 | *Ngaug | /ŋaug/ |
-| `open-blue` | Open sunlit water, far from any shore. | *Ngatdeg | /ŋatdeg/ |
-| `otyugh-kind` | an otyugh | *Shoab | /ʃoab/ |
-| `over` | above; atop | *Peet | /peet/ |
-| `owlbear-kind` | an owlbear | *Suup | /suup/ |
-| `parent` | one's father or mother | *Dotzhop | /dotʒop/ |
-| `person` | a person; a member of a people (the autonym root) | *Subbag | /subbag/ |
-| `plankton-bloom` | Water thick with plankton. | *Shog | /ʃog/ |
-| `playa` | A dry lake bed of salt and cracked clay. | *Ngepgud | /ŋepgud/ |
-| `pressure-ridge` | Sea ice buckled into a ridge. | *Sood | /sood/ |
-| `rafted-floe` | Ice floes driven over one another. | *Duod | /duod/ |
-| `rain` | liquid precipitation | *Zhut | /ʒut/ |
-| `red` | the color term for red | *Gutngob | /gutŋob/ |
-| `red-dragon-kind` | a red dragon | *Pagdog | /pagdog/ |
-| `reef-rubble` | Broken coral debris behind a reef. | *Ngaod | /ŋaod/ |
-| `reef-shark-kind` | a reef shark | *Ngagzot | /ŋagzot/ |
-| `reg` | A desert floor of wind-swept gravel. | *Budngeut | /budŋeut/ |
-| `rest` | to stop and recover strength | *Ngepngop | /ŋepŋop/ |
-| `rhinoceros-kind` | a rhinoceros | *Zoubdud | /zoubdud/ |
-| `rice` | a staple crop | *Gaedngeod | /gaedŋeod/ |
-| `river` | fresh water running across land | *Peugpaud | /peugpaud/ |
-| `rust-monster-kind` | a rust monster | *Zheot | /ʒeot/ |
-| `sargassum-drift` | A drifting raft of floating weed. | *Pudguag | /pudguag/ |
-| `savanna` | a biome class | *Nget | /ŋet/ |
-| `scattering-layer` | The daily-rising layer of small sea life. | *Sedzuad | /sedzuad/ |
-| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Daagngoug | /daagŋoug/ |
-| `scoured-ice` | Ice swept bare and carved by wind. | *Potshaap | /potʃaap/ |
-| `sea` | a body of salt water | *Zab | /zab/ |
-| `sea-elf-kind` | a sea elf | *Ngoepdub | /ŋoepdub/ |
-| `sea-ice` | a biome class | *Sugpot | /sugpot/ |
-| `shadow` | cast dark, distinct from open gloom | *Bubtep | /bubtep/ |
-| `shrieker-kind` | a shrieker | *Zuupgeap | /zuupgeap/ |
-| `shrubland` | a biome class | *Pod | /pod/ |
-| `sibling` | one's brother or sister | *Suedngob | /suedŋob/ |
-| `sleep` | to rest unconscious | *Geotnguep | /geotŋuep/ |
-| `smoker-field` | A field of hydrothermal chimneys. | *Gug | /gug/ |
-| `snow` | frozen precipitation | *Beod | /beod/ |
-| `snow-elf-kind` | a snow elf | *Zotsheb | /zotʃeb/ |
-| `snowfield` | An unbroken field of snow. | *Poagngot | /poagŋot/ |
-| `south` | toward the pole of decreasing latitude | *Ngeat | /ŋeat/ |
-| `south-east` | between south and east | *Zhadngaog | /ʒadŋaog/ |
-| `south-west` | between south and west | *Dotdeab | /dotdeab/ |
-| `spirit` | a lesser or unseen supernatural presence | *Sob | /sob/ |
-| `spring` | where water rises from the ground | *Saat | /saat/ |
-| `spur-and-groove` | The ribbed seaward face of a reef. | *Soutzhub | /soutʒub/ |
-| `staghorn-stand` | A thicket of branching coral. | *Tedngop | /tedŋop/ |
-| `star` | a fixed point of light in the night sky | *Zhatsueb | /ʒatsueb/ |
-| `starlit` | dark faintly lit by stars | *Deegsud | /deegsud/ |
-| `stone` | rock | *Peedngug | /peedŋug/ |
-| `sun` | the sun | *Tupzhaed | /tupʒaed/ |
-| `taiga` | a biome class | *Zhoegngob | /ʒoegŋob/ |
-| `temperate-forest` | a biome class | *Shobshuep | /ʃobʃuep/ |
-| `temperate-grassland` | a biome class | *Subdut | /subdut/ |
-| `temperate-rainforest` | a biome class | *Zheub | /ʒeub/ |
-| `thorn-scrub` | Dry scrub of thorned shrubs. | *Tuoddeb | /tuoddeb/ |
-| `tide` | the rise and fall of the waters under the moons | *Pegngeod | /pegŋeod/ |
-| `treant-kind` | a treant | *Geob | /geob/ |
-| `tree` | a woody plant | *Debsheep | /debʃeep/ |
-| `trench-floor` | The deepest floor of an ocean trench. | *Zhoebsob | /ʒoebsob/ |
-| `trench-wall` | The steep side of an ocean trench. | *Ngeot | /ŋeot/ |
-| `tropical-rainforest` | a biome class | *Ngoadngot | /ŋoadŋot/ |
-| `tropical-seasonal-forest` | a biome class | *Dubzhuad | /dubʒuad/ |
-| `tuber` | a staple crop | *Zhoopbep | /ʒoopbep/ |
-| `tubeworm-thicket` | Vent fauna crowded around hot water. | *Tot | /tot/ |
-| `tundra` | a biome class | *Nguutsaat | /ŋuutsaat/ |
-| `twig-blight-kind` | a twig blight | *Zhob | /ʒob/ |
-| `twilight-water` | Water at the edge of the light. | *Tob | /tob/ |
-| `two` | the cardinal number 2 | *Saod | /saod/ |
-| `under` | beneath; below | *Ngeudgeub | /ŋeudgeub/ |
-| `upwelling` | a biome class | *Paodngoud | /paodŋoud/ |
-| `urchin-barren` | Seabed grazed bare of kelp. | *Ngadngug | /ŋadŋug/ |
-| `valley` | low ground between heights | *Toopdut | /toopdut/ |
-| `vent-plume` | Shimmering hot water rising from a vent. | *Zhoed | /ʒoed/ |
-| `vine` | a staple crop | *Guopshab | /guopʃab/ |
-| `water` | the drinkable liquid | *Sab | /sab/ |
-| `west` | the direction of decreasing longitude | *Ngeutboug | /ŋeutboug/ |
-| `wheat` | a staple crop | *Shop | /ʃop/ |
-| `white-dragon-kind` | a white dragon | *Toot | /toot/ |
-| `wind` | moving air | *Daggap | /daggap/ |
-| `wind-scour` | Ground swept bare by wind. | *Tug | /tug/ |
-| `wood-elf-kind` | a wood elf | *Tut | /tut/ |
-| `wooded-grassland` | Grassland with scattered trees. | *Seob | /seob/ |
-| `woolly-mammoth-kind` | a woolly mammoth | *Sheb | /ʃeb/ |
-| `xorn-kind` | a xorn | *Sagzup | /sagzup/ |
-| `yellow` | the color term for yellow | *Bat | /bat/ |
+| `abyssal` | a biome class | *Dang | /daŋ/ |
+| `abyssal-plain` | The flat floor of the deep ocean. | *Dong | /doŋ/ |
+| `alpine` | a biome class | *Geng | /geŋ/ |
+| `bait-ball` | A dense turning mass of fish. | *Tuangtaang | /tuaŋtaaŋ/ |
+| `barley` | a staple crop | *Sruengzhreng | /srueŋʒreŋ/ |
+| `bathypelagic` | a biome class | *Shrong | /ʃroŋ/ |
+| `black-dragon-kind` | a black dragon | *Doang | /doaŋ/ |
+| `blood` | the circulating fluid of a body | *Beengtung | /beeŋtuŋ/ |
+| `blue` | the color term for blue | *Shraeng | /ʃraeŋ/ |
+| `bone` | the rigid frame of a body | *Ngengtaang | /ŋeŋtaaŋ/ |
+| `boreal-stand` | A stand of northern conifers. | *Geangngaong | /geaŋŋaoŋ/ |
+| `brown` | the color term for brown | *Zraangteng | /zraaŋteŋ/ |
+| `bugbear-kind` | a bugbear | *Sreng | /sreŋ/ |
+| `burn` | Ground recovering from fire. | *Sruung | /sruuŋ/ |
+| `carrion-crawler-kind` | a carrion crawler | *Ngaengpuong | /ŋaeŋpuoŋ/ |
+| `child` | one's son or daughter | *Zhreng | /ʒreŋ/ |
+| `closed-canopy` | Tall closed-canopy tropical forest. | *Bong | /boŋ/ |
+| `coast` | where the land meets the sea | *Shraong | /ʃraoŋ/ |
+| `cold` | felt, biting chill | *Shreng | /ʃreŋ/ |
+| `cold-upwelling` | Cold nutrient-rich water rising from below. | *Dangzhreang | /daŋʒreaŋ/ |
+| `coral-head` | A massive coral colony standing proud of the reef. | *Ngungngang | /ŋuŋŋaŋ/ |
+| `coral-reef` | a biome class | *Nguung | /ŋuuŋ/ |
+| `crevasse-field` | Ice split by crevasses. | *Zraangngeang | /zraaŋŋeaŋ/ |
+| `damp-hollow` | A shaded, wet fold in the forest floor. | *Tuong | /tuoŋ/ |
+| `dark` | the color term for black/dark hues | *Zreengshroong | /zreeŋʃrooŋ/ |
+| `day` | the light half of the day-night cycle | *Sroungtuung | /srouŋtuuŋ/ |
+| `desert` | a biome class | *Sraangngoeng | /sraaŋŋoeŋ/ |
+| `desert-dwarf-kind` | a desert dwarf | *Sreongpeang | /sreoŋpeaŋ/ |
+| `desert-elf-kind` | a desert elf | *Sreang | /sreaŋ/ |
+| `die` | to cease living | *Gaonggaong | /gaoŋgaoŋ/ |
+| `dire-wolf-kind` | a dire wolf | *Shruung | /ʃruuŋ/ |
+| `drink` | to swallow liquid | *Shrongngeng | /ʃroŋŋeŋ/ |
+| `drow-kind` | a drow | *Gong | /goŋ/ |
+| `earth` | the ground underfoot | *Shreangngaeng | /ʃreaŋŋaeŋ/ |
+| `east` | the direction of increasing longitude | *Peung | /peuŋ/ |
+| `eat` | to consume food | *Pangpeng | /paŋpeŋ/ |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Deang | /deaŋ/ |
+| `epipelagic` | a biome class | *Tengngung | /teŋŋuŋ/ |
+| `erg` | A sand sea of dunes. | *Ngeeng | /ŋeeŋ/ |
+| `eye` | the organ of sight | *Pangduang | /paŋduaŋ/ |
+| `felsenmeer` | A field of frost-shattered boulders. | *Zreng | /zreŋ/ |
+| `fire` | flame and heat | *Bung | /buŋ/ |
+| `fire-scrub` | Scrub regrowing after fire. | *Bengshreung | /beŋʃreuŋ/ |
+| `fish-shoal` | A shoal moving as one body. | *Sroungpang | /srouŋpaŋ/ |
+| `foot` | the walking limb-end | *Ngoengsruung | /ŋoeŋsruuŋ/ |
+| `ford` | where a river runs shallow enough to cross | *Ngongshrang | /ŋoŋʃraŋ/ |
+| `forest-gap` | A break in the canopy where light reaches the ground. | *Tung | /tuŋ/ |
+| `frost-heave` | Ground churned and patterned by freezing. | *Shruongtuong | /ʃruoŋtuoŋ/ |
+| `gallery-forest` | Forest following a watercourse. | *Gang | /gaŋ/ |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | *Gung | /guŋ/ |
+| `giant-crocodile-kind` | a giant crocodile | *Taongngaung | /taoŋŋauŋ/ |
+| `giant-elk-kind` | a giant elk | *Zrangpuung | /zraŋpuuŋ/ |
+| `giant-goat-kind` | a giant goat | *Boeng | /boeŋ/ |
+| `giant-hyena-kind` | a giant hyena | *Ngoangshruang | /ŋoaŋʃruaŋ/ |
+| `giant-octopus-kind` | a giant octopus | *Srang | /sraŋ/ |
+| `giant-scorpion-kind` | a giant scorpion | *Ngengzruong | /ŋeŋzruoŋ/ |
+| `giant-squid-kind` | a giant squid | *Daungngaeng | /dauŋŋaeŋ/ |
+| `gloom` | the deepest, starless dark | *Teonggong | /teoŋgoŋ/ |
+| `gnoll-kind` | a gnoll | *Peng | /peŋ/ |
+| `goblin-kind` | a goblin | *Ngangzhrung | /ŋaŋʒruŋ/ |
+| `god` | a deity | *Doongpong | /dooŋpoŋ/ |
+| `grass-sward` | Open grassland, unbroken by trees. | *Sroang | /sroaŋ/ |
+| `great` | large in size or extent | *Dongsraeng | /doŋsraeŋ/ |
+| `green` | the color term for green | *Dongpoong | /doŋpooŋ/ |
+| `gully-dwarf-kind` | a gully dwarf | *Zrongngang | /zroŋŋaŋ/ |
+| `hadal-trench` | a biome class | *Ngong | /ŋoŋ/ |
+| `hamada` | A stony desert pavement of bare rock. | *Ngaeng | /ŋaeŋ/ |
+| `hand` | the manipulating limb-end | *Ngueng | /ŋueŋ/ |
+| `hearth` | the fire at the center of a home | *Deong | /deoŋ/ |
+| `heat` | felt, oppressive warmth | *Zruong | /zruoŋ/ |
+| `high` | far above the ground | *Shrongshraong | /ʃroŋʃraoŋ/ |
+| `high-elf-kind` | a high elf | *Zhrongsreung | /ʒroŋsreuŋ/ |
+| `hill` | ground that rises above what surrounds it | *Zhrangngung | /ʒraŋŋuŋ/ |
+| `hill-dwarf-kind` | a hill dwarf | *Zruang | /zruaŋ/ |
+| `hobgoblin-kind` | a hobgoblin | *Zrongshroung | /zroŋʃrouŋ/ |
+| `holdfast-tangle` | The anchored base of a kelp forest. | *Nguanggueng | /ŋuaŋgueŋ/ |
+| `home` | one's dwelling | *Zraunggeng | /zrauŋgeŋ/ |
+| `human-kind` | a human | *Ngongsrung | /ŋoŋsruŋ/ |
+| `hydrothermal-vent` | a biome class | *Peengzrong | /peeŋzroŋ/ |
+| `ice` | frozen water | *Deeng | /deeŋ/ |
+| `ice-lead` | A channel of open water through sea ice. | *Nguonggoeng | /ŋuoŋgoeŋ/ |
+| `island` | land the water surrounds | *Ngeengsreng | /ŋeeŋsreŋ/ |
+| `kelp-canopy` | The floating canopy of a kelp forest. | *Ngengngoeng | /ŋeŋŋoeŋ/ |
+| `kelp-forest` | a biome class | *Zreangbung | /zreaŋbuŋ/ |
+| `killer-whale-kind` | a killer whale | *Nguangtang | /ŋuaŋtaŋ/ |
+| `kobold-kind` | a kobold | *Zhreeng | /ʒreeŋ/ |
+| `lake` | still water held in a hollow that has no outlet to the sea | *Boongngong | /booŋŋoŋ/ |
+| `liana-forest` | Tropical forest tangled with climbing vines. | *Shrunggung | /ʃruŋguŋ/ |
+| `light` | the color term for white/light hues | *Ngaong | /ŋaoŋ/ |
+| `lightless-water` | Water below all light. | *Ngangngung | /ŋaŋŋuŋ/ |
+| `little` | small in size or extent | *Ngoang | /ŋoaŋ/ |
+| `low` | near the ground | *Puangngeng | /puaŋŋeŋ/ |
+| `many` | an indefinitely large count | *Shroung | /ʃrouŋ/ |
+| `marine-snow` | Organic debris drifting endlessly down. | *Tang | /taŋ/ |
+| `marsh` | soft wet ground | *Gongsroang | /goŋsroaŋ/ |
+| `melt-pond` | A pool of meltwater on sea ice. | *Baungngoung | /bauŋŋouŋ/ |
+| `mesopelagic` | a biome class | *Puongzraong | /puoŋzraoŋ/ |
+| `millet` | a staple crop | *Zronggong | /zroŋgoŋ/ |
+| `moon` | a moon | *Taangzroeng | /taaŋzroeŋ/ |
+| `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Peeng | /peeŋ/ |
+| `mountain` | high ground | *Srengngeang | /sreŋŋeaŋ/ |
+| `mouth` | the organ of eating and speech | *Guanggung | /guaŋguŋ/ |
+| `move` | to go from one place to another | *Shrungteeng | /ʃruŋteeŋ/ |
+| `muskeg` | Waterlogged peat ground in the boreal forest. | *Deungdong | /deuŋdoŋ/ |
+| `name` | a word that identifies one who bears it | *Ngang | /ŋaŋ/ |
+| `new` | recently come to be | *Gaongngaang | /gaoŋŋaaŋ/ |
+| `night` | the dark half of the day-night cycle | *Paengngang | /paeŋŋaŋ/ |
+| `nodule-field` | Seafloor strewn with mineral nodules. | *Guongzhraeng | /guoŋʒraeŋ/ |
+| `north` | toward the pole of increasing latitude | *Shrungpung | /ʃruŋpuŋ/ |
+| `north-east` | between north and east | *Zreungbueng | /zreuŋbueŋ/ |
+| `north-west` | between north and west | *Srungzhrung | /sruŋʒruŋ/ |
+| `old` | long in existence | *Ngaangpang | /ŋaaŋpaŋ/ |
+| `old-growth` | Mature forest, closed above and open beneath. | *Pongsrung | /poŋsruŋ/ |
+| `one` | the cardinal number 1 | *Ngaung | /ŋauŋ/ |
+| `open-blue` | Open sunlit water, far from any shore. | *Ngangdeng | /ŋaŋdeŋ/ |
+| `otyugh-kind` | an otyugh | *Shrang | /ʃraŋ/ |
+| `over` | above; atop | *Zhrengsrung | /ʒreŋsruŋ/ |
+| `owlbear-kind` | an owlbear | *Srueng | /srueŋ/ |
+| `parent` | one's father or mother | *Dongzhrung | /doŋʒruŋ/ |
+| `person` | a person; a member of a people (the autonym root) | *Sreanggeang | /sreaŋgeaŋ/ |
+| `plankton-bloom` | Water thick with plankton. | *Sraung | /srauŋ/ |
+| `playa` | A dry lake bed of salt and cracked clay. | *Ngenggung | /ŋeŋguŋ/ |
+| `pressure-ridge` | Sea ice buckled into a ridge. | *Srong | /sroŋ/ |
+| `rafted-floe` | Ice floes driven over one another. | *Duong | /duoŋ/ |
+| `rain` | liquid precipitation | *Zhroung | /ʒrouŋ/ |
+| `red` | the color term for red | *Gungngong | /guŋŋoŋ/ |
+| `red-dragon-kind` | a red dragon | *Pangdong | /paŋdoŋ/ |
+| `reef-rubble` | Broken coral debris behind a reef. | *Beng | /beŋ/ |
+| `reef-shark-kind` | a reef shark | *Ngangzrong | /ŋaŋzroŋ/ |
+| `reg` | A desert floor of wind-swept gravel. | *Bungngeung | /buŋŋeuŋ/ |
+| `rest` | to stop and recover strength | *Ngengngong | /ŋeŋŋoŋ/ |
+| `rhinoceros-kind` | a rhinoceros | *Zrungdung | /zruŋduŋ/ |
+| `rice` | a staple crop | *Gaengngeong | /gaeŋŋeoŋ/ |
+| `river` | fresh water running across land | *Peungpaung | /peuŋpauŋ/ |
+| `rust-monster-kind` | a rust monster | *Zhrong | /ʒroŋ/ |
+| `sargassum-drift` | A drifting raft of floating weed. | *Pungguang | /puŋguaŋ/ |
+| `savanna` | a biome class | *Ngeng | /ŋeŋ/ |
+| `scattering-layer` | The daily-rising layer of small sea life. | *Srengzhraang | /sreŋʒraaŋ/ |
+| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Daangngoung | /daaŋŋouŋ/ |
+| `scoured-ice` | Ice swept bare and carved by wind. | *Pongshraung | /poŋʃrauŋ/ |
+| `sea` | a body of salt water | *Zreung | /zreuŋ/ |
+| `sea-elf-kind` | a sea elf | *Ngoengdung | /ŋoeŋduŋ/ |
+| `sea-ice` | a biome class | *Sraungngong | /srauŋŋoŋ/ |
+| `shadow` | cast dark, distinct from open gloom | *Bungteng | /buŋteŋ/ |
+| `shrieker-kind` | a shrieker | *Zruungzraang | /zruuŋzraaŋ/ |
+| `shrubland` | a biome class | *Pong | /poŋ/ |
+| `sibling` | one's brother or sister | *Sreengbong | /sreeŋboŋ/ |
+| `sleep` | to rest unconscious | *Geongngueng | /geoŋŋueŋ/ |
+| `smoker-field` | A field of hydrothermal chimneys. | *Nguong | /ŋuoŋ/ |
+| `snow` | frozen precipitation | *Beong | /beoŋ/ |
+| `snow-elf-kind` | a snow elf | *Zrengngung | /zreŋŋuŋ/ |
+| `snowfield` | An unbroken field of snow. | *Poangngong | /poaŋŋoŋ/ |
+| `south` | toward the pole of decreasing latitude | *Ngengnguong | /ŋeŋŋuoŋ/ |
+| `south-east` | between south and east | *Ngeang | /ŋeaŋ/ |
+| `south-west` | between south and west | *Dongdeang | /doŋdeaŋ/ |
+| `spirit` | a lesser or unseen supernatural presence | *Srung | /sruŋ/ |
+| `spring` | where water rises from the ground | *Zhruungtung | /ʒruuŋtuŋ/ |
+| `spur-and-groove` | The ribbed seaward face of a reef. | *Srungzhroung | /sruŋʒrouŋ/ |
+| `staghorn-stand` | A thicket of branching coral. | *Tengngong | /teŋŋoŋ/ |
+| `star` | a fixed point of light in the night sky | *Zhreengzhraong | /ʒreeŋʒraoŋ/ |
+| `starlit` | dark faintly lit by stars | *Deengsroeng | /deeŋsroeŋ/ |
+| `stone` | rock | *Peengngung | /peeŋŋuŋ/ |
+| `sun` | the sun | *Tungzhreong | /tuŋʒreoŋ/ |
+| `taiga` | a biome class | *Zhrengngong | /ʒreŋŋoŋ/ |
+| `temperate-forest` | a biome class | *Shrongdeeng | /ʃroŋdeeŋ/ |
+| `temperate-grassland` | a biome class | *Sruunggang | /sruuŋgaŋ/ |
+| `temperate-rainforest` | a biome class | *Zhrung | /ʒruŋ/ |
+| `thorn-scrub` | Dry scrub of thorned shrubs. | *Tuongdeng | /tuoŋdeŋ/ |
+| `tide` | the rise and fall of the waters under the moons | *Pengngeong | /peŋŋeoŋ/ |
+| `treant-kind` | a treant | *Geong | /geoŋ/ |
+| `tree` | a woody plant | *Dengshreng | /deŋʃreŋ/ |
+| `trench-floor` | The deepest floor of an ocean trench. | *Zhrengsreng | /ʒreŋsreŋ/ |
+| `trench-wall` | The steep side of an ocean trench. | *Ngeong | /ŋeoŋ/ |
+| `tropical-rainforest` | a biome class | *Ngoangngong | /ŋoaŋŋoŋ/ |
+| `tropical-seasonal-forest` | a biome class | *Dungzhraung | /duŋʒrauŋ/ |
+| `tuber` | a staple crop | *Zhrongbeng | /ʒroŋbeŋ/ |
+| `tubeworm-thicket` | Vent fauna crowded around hot water. | *Tong | /toŋ/ |
+| `tundra` | a biome class | *Nguungsraong | /ŋuuŋsraoŋ/ |
+| `twig-blight-kind` | a twig blight | *Zhrang | /ʒraŋ/ |
+| `twilight-water` | Water at the edge of the light. | *Zhroang | /ʒroaŋ/ |
+| `two` | the cardinal number 2 | *Ngeengzhrung | /ŋeeŋʒruŋ/ |
+| `under` | beneath; below | *Ngengngaeng | /ŋeŋŋaeŋ/ |
+| `upwelling` | a biome class | *Paongngoung | /paoŋŋouŋ/ |
+| `urchin-barren` | Seabed grazed bare of kelp. | *Zhrengngaeng | /ʒreŋŋaeŋ/ |
+| `valley` | low ground between heights | *Toongdung | /tooŋduŋ/ |
+| `vent-plume` | Shimmering hot water rising from a vent. | *Ngungshruong | /ŋuŋʃruoŋ/ |
+| `vine` | a staple crop | *Guongshrueng | /guoŋʃrueŋ/ |
+| `water` | the drinkable liquid | *Sraong | /sraoŋ/ |
+| `west` | the direction of decreasing longitude | *Ngeungboung | /ŋeuŋbouŋ/ |
+| `wheat` | a staple crop | *Ngoung | /ŋouŋ/ |
+| `white-dragon-kind` | a white dragon | *Toong | /tooŋ/ |
+| `wind` | moving air | *Danggang | /daŋgaŋ/ |
+| `wind-scour` | Ground swept bare by wind. | *Ngung | /ŋuŋ/ |
+| `wood-elf-kind` | a wood elf | *Shreongngung | /ʃreoŋŋuŋ/ |
+| `wooded-grassland` | Grassland with scattered trees. | *Zruanggeng | /zruaŋgeŋ/ |
+| `woolly-mammoth-kind` | a woolly mammoth | *Zruongngoung | /zruoŋŋouŋ/ |
+| `xorn-kind` | a xorn | *Sreengzhroang | /sreeŋʒroaŋ/ |
+| `yellow` | the color term for yellow | *Bang | /baŋ/ |
