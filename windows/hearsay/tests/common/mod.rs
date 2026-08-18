@@ -413,3 +413,164 @@ pub fn a_holder_that_died_before_the_event() -> Ledger {
     );
     led
 }
+
+/// A ROUND TRIP: an account that leaves its lineage, crosses a people
+/// boundary, and comes back to a descendant of its own witness by a route no
+/// tree admits (spec §5.5, and the §8 Definition of Done).
+///
+/// **The blocked tree route is the load-bearing half, and without it the
+/// fixture proves nothing.** A returning contact route is always longer and
+/// wider than the tree route to the same descendant, so under any policy that
+/// leaves the tree route open the tree route WINS the ordering and the
+/// returning claim is discarded — a test that only checked "4 holds it" would
+/// pass while measuring the tree. So `3` — 4's only parent — is dead before
+/// the event, and the round trip is asserted under `Clock::Alive`, where the
+/// clock refuses `3` and orphans `4` from the tree entirely.
+///
+/// - 1 (human) root, founded day 0, **ended day 500 with NO `occ-ended-by`** —
+///   the event under test; witness set is `{1}` alone.
+/// - 2 (human) child of 1, founded day 200, **ended day 1000, raided by 5** —
+///   the outbound seam.
+/// - 3 (human) child of 1, founded day 100, **ended day 300** — dead 200 days
+///   BEFORE the event, so `Clock::Alive` refuses it.
+/// - 7, 8, 10 (human) a close-founded line under 3 (days 150, 200, 250).
+/// - 4 (human) child of 10, founded day 400, never ends — alive at the event on
+///   its own account, reachable on the tree only through the dead 3.
+/// - 5 (kobold) root, founded day 100.
+/// - 6 (kobold) child of 5, founded day 1200, **ended day 2000, raided by 4** —
+///   the inbound seam, back into the human line.
+///
+/// **The tree line under 3 is deliberately LONG AND NARROW, and that is a
+/// second load-bearing choice.** Its four foundings are 50 days apart — one
+/// human generation each — so the tree route to 4 is FIVE hops but only 9.0
+/// days of accumulated width, against the seam's FOUR hops and 45.0. The two
+/// routes therefore disagree about which is better depending on whether you
+/// order by width or by hop count, which is exactly the distinction campaign 3
+/// introduced ("hop count alone no longer orders two tellings"). A walk that
+/// ordered by hops would keep the seam's telling at 4 and
+/// `tests/augmented_walk.rs::the_tree_route_wins_wherever_it_is_open` would go
+/// red — measured, not assumed.
+///
+/// Four policies, four distinct holder sets — which is what makes each arm's
+/// contribution separable:
+///
+/// | clock | contact | holders | why |
+/// |---|---|---|---|
+/// | `Off` | `Descent` | `{1, 2, 3, 4, 7, 8, 10}` | today's model: the whole human line |
+/// | `Off` | `WithRaidSeam` | + `{5, 6}` | both peoples, but 4 keeps its TREE telling |
+/// | `Alive` | `Descent` | `{1, 2}` | 3 is refused and the line below it is orphaned |
+/// | `Alive` | `WithRaidSeam` | `{1, 2, 4, 5, 6}` | 4 is back, and only the seam could have told it |
+///
+/// The round trip is `1 -> 2 -> 5 -> 6 -> 4`: out of the human line at the
+/// raid on 2, down the kobold line, and back at the raid on 6 — four hops,
+/// against the tree's five, and it arrives at a coarser rung remembering a
+/// different day.
+pub fn a_round_trip_through_another_people() -> Ledger {
+    let mut led = ledger_with(&[
+        (1, None),
+        (2, Some(1)),
+        (3, Some(1)),
+        (7, Some(3)),
+        (8, Some(7)),
+        (10, Some(8)),
+        (4, Some(10)),
+        (5, None),
+        (6, Some(5)),
+    ]);
+    for (occ, day) in [
+        (1, 0.0),
+        (2, 200.0),
+        (3, 100.0),
+        (7, 150.0),
+        (8, 200.0),
+        (10, 250.0),
+        (4, 400.0),
+        (5, 100.0),
+        (6, 1200.0),
+    ] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_FOUNDED,
+            Value::Number(day),
+        );
+    }
+    for (occ, people) in [
+        (1, "human"),
+        (2, "human"),
+        (3, "human"),
+        (7, "human"),
+        (8, "human"),
+        (10, "human"),
+        (4, "human"),
+        (5, "kobold"),
+        (6, "kobold"),
+    ] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_PEOPLE,
+            Value::Text(people.to_string()),
+        );
+    }
+    // The event under test.
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(500.0),
+    );
+    // The outbound seam: the kobolds raid 2 long after the event.
+    put(
+        &mut led,
+        2,
+        hornvale_history::OCC_ENDED,
+        Value::Number(1000.0),
+    );
+    put(
+        &mut led,
+        2,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(5)),
+    );
+    // The blocked tree route: 3 is already gone when 1 ends.
+    put(
+        &mut led,
+        3,
+        hornvale_history::OCC_ENDED,
+        Value::Number(300.0),
+    );
+    // The inbound seam: 4 raids the kobolds' 6, and hears about its own
+    // ancestor's ending from them.
+    put(
+        &mut led,
+        6,
+        hornvale_history::OCC_ENDED,
+        Value::Number(2000.0),
+    );
+    put(
+        &mut led,
+        6,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(4)),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::DAY_LENGTH_STD,
+        Value::Number(1.0),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::MOON_PERIOD_STD,
+        Value::Number(41.7),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::YEAR_LENGTH_STD,
+        Value::Number(372.4),
+    );
+    led
+}

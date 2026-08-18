@@ -337,12 +337,19 @@ struct Telling<'a> {
 /// instead: each node keeps its best-known telling, and is re-expanded only
 /// when a STRICTLY smaller key reaches it.
 ///
-/// **Termination** rests on [`crate::accumulate::Accumulation::step`] being
-/// non-decreasing for non-negative spans (pinned by
-/// `tests/accumulate.rs::every_rule_is_non_decreasing`): going around a cycle
-/// can never lower a width, and at equal width it strictly raises the hop
-/// count, so a cyclic re-traversal never produces a strictly smaller key and
-/// the frontier drains. `tests/augmented_walk.rs` pins that on a real cycle.
+/// **Termination** rests on the key rising along every edge, and `hops` alone
+/// is enough for that: it is in the key and goes up by exactly one per step,
+/// so a cyclic re-traversal always yields a strictly LARGER key whatever the
+/// width does. Width is non-decreasing too
+/// ([`crate::accumulate::Accumulation::step`], pinned by
+/// `tests/accumulate.rs::every_rule_is_non_decreasing`), which is what makes
+/// the ordering meaningful, but the frontier would drain on a cycle without
+/// it. **What the comparison's DIRECTION buys is everything**: accept a
+/// strictly larger key instead and a two-cycle widens forever, which is a
+/// genuine hang and was measured as one. Strictness itself — `<=` rather than
+/// `<` — buys a stable first-arrival tie-break and cheap insurance, NOT
+/// termination; an earlier draft of this comment said otherwise and was
+/// wrong. `tests/augmented_walk.rs` pins draining on a real cycle.
 ///
 /// **The clock** ([`crate::clock::Clock`]) is applied to every holder as it is
 /// admitted, WITNESSES INCLUDED, and refusing a hearer refuses the step: a
@@ -357,7 +364,13 @@ struct Telling<'a> {
 /// because width is now the thing that varies. A witness is never demoted to
 /// an inheritor and is never re-expanded from a passing telling: its own seed
 /// is the finest telling any route can hand it, so a route through it can only
-/// ever be worse for everyone below it too.
+/// ever be worse for everyone below it too. **That last argument assumes every
+/// people's ladder shares a rung-0 span**, which is true wherever rung 0 is the
+/// world's day length — but [`crate::ladder::PrecisionLadder::with_social`]
+/// sorts rungs by length, so a people whose generation ran shorter than a day
+/// would seed a narrower base and a route through a witness could genuinely
+/// win. Unreachable from today's bake; noted because the argument, not the
+/// code, is what would be wrong.
 ///
 /// type-audit: bare-ok(identifier-text: predicate)
 pub fn variants_about_accumulating(
@@ -456,8 +469,12 @@ pub fn variants_about_accumulating(
             // non-negative finite width is monotone, so it orders correctly.
             let next_key = (next_width.to_bits(), next_claim.hops, witness);
             match reached.get(&hearer) {
-                // STRICTLY smaller, never equal: an equal key re-expanded is
-                // exactly the walk that does not drain on a cycle.
+                // Strictly smaller, never equal. This is a tie-break, not the
+                // termination argument (see the doc comment): an equal key
+                // re-expanded would still not loop, because a lap of a cycle
+                // raises `hops`. What it does buy is that the FIRST telling to
+                // arrive at a given key is the one kept, so two exactly-equal
+                // routes cannot race.
                 Some(held) if held.key <= next_key => continue,
                 Some(held) => {
                     frontier.remove(&(held.key, hearer));
