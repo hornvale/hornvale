@@ -155,6 +155,21 @@ confirmed rather than inferred: the count of victim children that **are** the
 named attacker is **124**, exactly the 124 lossy victim steps. Those are
 foundings where a community's own offshoot is what destroyed it.
 
+**What was already known, and what is new.** `KNOW-descent-closed-colouring`
+(The Palimpsest) already records that `Perpetrator` is a singleton and that
+this is what lets a stance colouring fire at all. What no campaign has
+reported is the **asymmetry that follows from it**: that the singleton sits on
+one side of every raid, so one line pays a rung and the other does not. The
+prior row measured a *flip ceiling* (how many times a path can cross); this
+measures *who pays*.
+
+**Campaign 2's ceiling bounds the size of the effect, and that is a gift to
+H2.** `probe_teller_relations.rs`'s control asserts that a HELD claim retains
+at most **one** stance crossing (the all-paths maximum of 2 occurs on 209
+paths, none of which is ever the least-corrupted route). So the predicted gap
+is not unbounded — it is **at most one rung**, which makes §6.3 a sharp
+prediction rather than a directional hope.
+
 **Under decision 0021 this matters beyond tidiness.** An asymmetry that makes
 perpetrator lines forget their own violence faster than victim lines remember
 it is precisely the kind of moral valence 0021 requires be *derived* rather
@@ -321,9 +336,15 @@ about the shape of the founding tree.
 about the *observable consequence*, which has never been measured.
 
 **Prediction: under `Singleton`, for the same event, the median retained
-precision rung of raider-people holders is strictly coarser than that of
-victim-people holders; under `Inherited` the gap narrows.** Reported as the
-median rung gap per arm.
+precision rung of raider-people holders is coarser than that of victim-people
+holders by exactly one rung; under `Inherited` the gap goes to zero.**
+Reported as the median rung gap per arm.
+
+The "exactly one" is not hedged: §3.6 shows the raider's first step is lossy
+3,694 of 3,694 times, and campaign 2's held-claim ceiling caps a retained
+claim at one stance crossing. If the observed gap is larger than one rung,
+something other than stance is contributing and the campaign must find it
+before reporting H2 at all.
 
 Falsified if the gap is absent or reversed under `Singleton` — which would mean
 the 100% lossy first step is absorbed downstream and the geometry is cosmetic.
