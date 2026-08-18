@@ -422,7 +422,7 @@ The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifes
 
 In the lair of **Daadoo**, an organized priesthood tends its own pantheon:
 
-> Bagodoqa the Shrodoqa is: Bagodoqa the Shrodoqa is always watching. That's how it's always been. That's how it's always been. Bagodoqa is a great one among the gods.
+> Bagodoqa the Kvodoqa is: Bagodoqa the Kvodoqa is always watching. That's how it's always been. That's how it's always been. Bagodoqa is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

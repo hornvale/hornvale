@@ -101,6 +101,16 @@ pub struct Typology {
 
 impl Component for Typology {}
 
+impl Typology {
+    /// Whether this bundle requires at least one sonorant consonant. True
+    /// only for `sonorant-open`, whose whole identity is liquids in the
+    /// onset; every other bundle leaves the draw alone.
+    /// type-audit: bare-ok(flag)
+    pub fn requires_sonorant(&self) -> bool {
+        matches!(self.coda_law, CodaLaw::SonorantClosed)
+    }
+}
+
 /// Every shipped bundle name. `every_bundle_is_used_by_some_family` asserts
 /// each is reached by a family, so this list cannot grow without a home.
 /// type-audit: bare-ok(identifier-text)

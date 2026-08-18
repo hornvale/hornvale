@@ -738,7 +738,9 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope, typ: &Typology
         }
     }
     ensure_minimum_consonants(&candidates, &mut inventory);
-    ensure_minimum_sonorants(&candidates, &mut inventory);
+    if typ.requires_sonorant() {
+        ensure_minimum_sonorants(&candidates, &mut inventory);
+    }
 
     let mut phonotactics_stream = phonology_seed.derive(streams::PHONOTACTICS).stream();
     let (onsets, nuclei, codas) = draw_phonotactics(&mut phonotactics_stream, &inventory, typ);
@@ -1032,7 +1034,7 @@ mod tests {
             &Seed(1),
             "quiet-probe",
             &env,
-            &crate::typology::concatenative(),
+            &crate::typology::sonorant_open(),
         );
         assert!(
             ph.inventory.iter().any(is_sonorant_seg),
@@ -1056,13 +1058,48 @@ mod tests {
                 &Seed(seed),
                 "quiet-probe",
                 &env,
-                &crate::typology::concatenative(),
+                &crate::typology::sonorant_open(),
             );
             assert!(
                 ph.inventory.iter().any(is_sonorant_seg),
                 "seed {seed} drew no sonorant"
             );
         }
+    }
+
+    /// The floor is a property of the BUNDLE, not of every language. Only
+    /// `sonorant-open` requires a liquid; the control bundle must be free to
+    /// draw a liquid-free inventory, or the control stops being a control.
+    ///
+    /// claim: invariant(forall-seed) — sonorant-open holds a liquid on all 64
+    /// probe seeds; the same sweep also needs an existential witness that the
+    /// control bundle does NOT, which is the half that actually falsifies an
+    /// unconditional floor.
+    #[test]
+    fn only_the_sonorant_open_bundle_requires_a_liquid() {
+        let env = Envelope {
+            voice_loudness: 0.35,
+            ..manikin_env()
+        };
+        let sonorant_bundle = crate::typology::sonorant_open();
+        let control = crate::typology::concatenative();
+        let mut control_had_a_liquid_free_draw = false;
+        for seed in 0..64u64 {
+            let open = draw_phonology(&Seed(seed), "probe", &env, &sonorant_bundle);
+            assert!(
+                open.inventory.iter().any(is_sonorant_seg),
+                "sonorant-open drew no liquid at seed {seed}"
+            );
+            let ctl = draw_phonology(&Seed(seed), "probe", &env, &control);
+            if !ctl.inventory.iter().any(is_sonorant_seg) {
+                control_had_a_liquid_free_draw = true;
+            }
+        }
+        assert!(
+            control_had_a_liquid_free_draw,
+            "the control bundle got a liquid on all 64 seeds — the floor is \
+             being applied unconditionally, so the control is not a control"
+        );
     }
 
     /// A trill is not an exotic manner. An alveolar trill is present in a

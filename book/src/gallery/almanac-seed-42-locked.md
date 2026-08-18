@@ -378,23 +378,23 @@ The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifes
 
 In the lair of **Gaodao**, an organized priesthood tends its own pantheon:
 
-> Dooga the Shraodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Bvaodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Dooga the Shradoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Gvadoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
-> Dooga the Shraodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Kvaodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bago the Shraadoqabago is: Bago the Shraadoqabago is always watching. That's how it's always been. That's how it's always been. Bago is a great one among the gods.
+> Bago the Vngaadoqabago is: Bago the Vngaadoqabago is always watching. That's how it's always been. That's how it's always been. Bago is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dado the Shraodado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dado the Vngaodado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 

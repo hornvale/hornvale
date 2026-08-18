@@ -53,11 +53,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Velar/Nasal/voiced | `ng` | `ŋ` | voiced velar nasal |
 | Low/Central/unrounded | `a` | `a` | low central vowel |
 | Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
-| Alveolar/Trill/voiced | `r` | `r` | voiced alveolar trill |
 
 ### Phonotactics
 
-- **Onsets:** sibilant+trill, nasal+trill, sibilant+trill
+- **Onsets:** stop+fricative, sibilant+nasal, fricative+nasal
 - **Nuclei:** v, v+v
 - **Codas:** ∅
 
@@ -65,10 +64,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Shroashra | /ʃroaʃra/ | `[[Sr'oaSra]]` | <audio controls preload="none" src="../audio/416f4de2.mp3"></audio> |
-| Settlement | Shraoshra | /ʃraoʃra/ | `[[Sr'aoSra]]` | <audio controls preload="none" src="../audio/2b5a57cf.mp3"></audio> |
-| Settlement | Shrongrashro | /ʃroŋraʃro/ | `[[Sr'oNraSro]]` | <audio controls preload="none" src="../audio/f7b2a614.mp3"></audio> |
-| Deity | Shrongro | /ʃroŋro/ | `[[Sr'oNro]]` | <audio controls preload="none" src="../audio/584fcb82.mp3"></audio> |
+| Settlement | Vngoavnga | /vŋoavŋa/ | `[[vN'oavNa]]` | <audio controls preload="none" src="../audio/93c251dd.mp3"></audio> |
+| Settlement | Vngaovnga | /vŋaovŋa/ | `[[vN'aovNa]]` | <audio controls preload="none" src="../audio/f9f74bf0.mp3"></audio> |
+| Settlement | Vngoshngavngo | /vŋoʃŋavŋo/ | `[[vN'oSNavNo]]` | <audio controls preload="none" src="../audio/6ef1df96.mp3"></audio> |
+| Deity | Vngoshngo | /vŋoʃŋo/ | `[[vN'oSNo]]` | <audio controls preload="none" src="../audio/60c65e76.mp3"></audio> |
 
 ## Desert-dwarf
 

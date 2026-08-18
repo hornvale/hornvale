@@ -476,39 +476,39 @@ The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifes
 
 In the lair of **Doaba**, an organized priesthood tends its own pantheon:
 
-> Dado the Shroodado comes back every 112.53 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dado the Vngoodado comes back every 112.53 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Dado the Shroodado comes back every 3111.86 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dado the Vngoodado comes back every 3111.86 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Dado the Shroodado comes back every 386.98 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dado the Gvoodado comes back every 386.98 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *wandering-star*
 
-> Goo the Shraadadogo comes back every 15.99 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
+> Goo the Vngaadadogo comes back every 15.99 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dooga the Shrodooga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Vngodooga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Goo the Ngraodado comes back every 32.55 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
+> Goo the Shngaodado comes back every 32.55 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dooga the Shrodooga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Tvodooga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Dado the Ngradadobago comes back every 0.88 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dado the Shngadadobago comes back every 0.88 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dado the Shradado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dado the Bvadado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
