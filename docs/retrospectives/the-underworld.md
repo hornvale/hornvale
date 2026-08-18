@@ -8,11 +8,18 @@ ladders, a cave depth budget in metres, a water table, chamber conditions that
 vary, twenty-two underworld communities in The Axes' basis, and a preregistered
 gate that closed against the campaign's own headline.
 
-## 1. Twelve instruments that looked like they were measuring and were not
+## 1. Fifteen instruments that looked like they were measuring and were not
 
 This is the campaign's subject, and it is a process finding before it is a
-product one. Twelve, in twelve different locations, none of them the same
-mechanism twice:
+product one. **Fifteen findings across fourteen distinct places**, and the
+arithmetic is stated rather than rounded because the campaign is about counts
+that outrun their evidence: rows 1–12 are twelve different mechanisms, no two
+alike, and rows 13 and 15 are the *same assertion in the same file* counted
+twice, because they are two different failures of it — the first is what let a
+committed table go stale unremarked, the second is that the fix wave closing
+the whole-branch review's fourteen findings re-pinned that table and left the
+guard standing. An earlier draft of this section headlined twelve, having
+stopped counting at the point the campaign's own ledger did not:
 
 | # | where | what it was |
 |---|---|---|
@@ -27,6 +34,9 @@ mechanism twice:
 | 10 | a distinguishability claim | a genus filter can match rows and still not be the one in use — no control |
 | 11 | five prose figures | estimates presented as measurements, two of them uncaught until a later round. All five were an implementer's; a **sixth** instance of the same shape, counted separately below, was in the campaign's own plan text |
 | 12 | a genus join | `"karst"` compared against `"karst-cave"`; one of three agreed by coincidence |
+| 13 | an eleven-seed comparison table | every cell of `id_shift_invariance`'s committed table went stale across the genus repair and nothing reddened — the test asserted only `!colliding.is_empty()` |
+| 14 | a calibration probe's own output | `Undercroft 100/100/100 %` printed as the first row of a before/after table beside four real measurements, and cited as evidence for a shipped rule. It is an **identity** — rank 0's top is 0 m, the table is floored at 0 and `is_phreatic` is strict — so it cannot come back any other way, in any world |
+| 15 | row 13's assertion, still | the wave that fixed the other fourteen re-pinned the stale table, added a loud note asking a human to watch it, and left the guard at `!colliding.is_empty()`. Now `colliding.len() >= 2`, which is the file's own standing selection rule, so the rule and the check are one statement |
 
 The best statement of the pattern came from the implementer that had authored
 five of the eleventh kind, and the closing sentence is **theirs, not mine**:
@@ -58,7 +68,32 @@ Number twelve is the one that matters most: repairing it flipped the campaign's
 verdict from pass to fail. It was found because eleven others had been, not
 because anything in the gate objected.
 
+Number fifteen is the one that says most about the method. A campaign that had
+catalogued fourteen instruments which could not see what they were pointed at
+wrote a fifteenth finding into the *fix* for the other fourteen, and only caught
+it because a re-review asked for a strengthening the wave had declined. Vigilance
+scaled to the subject still missed it; the mechanical remedy — making the check
+say the same thing the prose rule says — is what closed it.
+
 ## 2. Every defect in the design came from the plan text, and every implementer correction was right
+
+The strongest evidence for that title arrived *before a line of code was
+written*. The pre-flight conflict scan read every task's `Consumes`/`Produces`
+block against the signatures it named, and every defect it found was in the plan
+text, because nothing else existed yet: Task 3's `Consumes` claimed a
+`DelveRung` its own produced signatures never take; Task 9's omitted
+`environment_fit`, which it needs; and **four tasks — 5, 6, 7 and 8 — specified
+fourteen `#[test]` blocks with comment-only bodies**, which would have compiled
+and passed vacuously. Nine of the eleven task-pair checks came back clean, so
+the scan was discriminating rather than uniformly pessimistic.
+
+That last finding is the whole reason Ruling 1 exists — *every such test must be
+implemented with real assertions expressing what its comment describes; a test
+that compiles with no assertion is a task failure, not a completed step* — and it
+was carried verbatim into every dispatch for those four tasks. A campaign whose
+subject turned out to be instruments that do not measure began by writing four
+of them into its own plan, and caught them only because something read the plan
+adversarially before dispatching it.
 
 Three times an implementer disagreed with a controller ruling. Three times the
 implementer was right.
@@ -226,6 +261,14 @@ its four-site re-read was performed as its pin demands, and the arithmetic
 epochs) says the verdict remains *cannot tell*. It was not escalated because
 nothing changed status — and a witness that has now fired twice and corroborated
 its own prior re-read is worth more than one that never moves.
+
+The transferable half is the escalation rule, and it is not "a fired witness is
+the controller's to settle". **The trigger for escalation is a changed status,
+not a moved number.** This reading left the registry row neither `refuted` nor
+`shipped`, so the controller read it, re-stated it across the four sites the pin
+demands, and closed it. Had the reading crossed the bar meaningfully it would
+have been Nathan's call, as it was at The Gnomon's close. A witness firing is a
+controller's to *read*; a witness changing a status is his to *rule on*.
 
 ## Follow-ups
 

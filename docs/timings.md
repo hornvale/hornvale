@@ -102,6 +102,20 @@ mistaken for gate timings. **Adding an `rc` column to the table would fix this
 properly**; it is recorded here rather than done, because the schema is
 consumed by more than this file.
 
+**One `gate-commit` row is contamination, not a cost datum: the 2026-08-17
+`3857.559` s row at `37796ef1`** (The Underworld), against that gate's normal
+~85 s on this host. It was measured during a runaway-`rg` storm — an extension
+had 826 concurrent ripgrep processes against a load average of 417/701/648 on
+ten cores — and the row's own `cpu_ratio` of **0.12** is the signature, which is
+exactly what that column is for. The number is left as measured, per this
+file's rule that no measured value is ever edited; only read it as a
+contention sample. **Nothing downstream moved**: the per-test baseline
+`docs/timings/test-baseline-<host>.tsv` was not written, because the Mac's
+`gate-commit` does not rewrite it (the stage gate does), so neither the
+sub-floor roster nor the duration alarm saw the storm. The neighbouring rows at
+`cpu_ratio` 2.49 → 0.92 → 0.77 → 0.12 are the same storm ramping, and the
+post-restart run at `37796ef1` on `Greyjoy` still read 0.25.
+
 **Every note belongs above this line, never between two rows.** The note above
 first landed *inside* the table, between the last RED row and the census row
 after it. Markdown needs a header plus a delimiter row to start a table, so

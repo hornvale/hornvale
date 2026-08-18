@@ -288,7 +288,7 @@ that each genus *extends its own cave kind's name*, plus pairwise distinctness,
 and breaks under all five non-identity permutations.
 
 That was the twelfth instrument this campaign found that looked like it was
-measuring and was not, in twelve different places. A criterion satisfiable by
+measuring and was not, and it was not the last. A criterion satisfiable by
 its own three-armed match. A `compile_fail` doctest pinning an error code
 rustdoc never checks on stable — so the annotation reads as an assertion and is
 documentation. A differential pair that could not catch a mutation on the one
@@ -306,6 +306,19 @@ summarising: *"numbers written while explaining, when the arithmetic felt too
 small to run. The three that were caught were caught by running something; the
 two that weren't were the two where I ran nothing. The countermeasure that works
 is mechanical, not attentional."*
+
+Three more arrived after that, all during the close, and they take the
+campaign's tally to **fifteen findings across fourteen places**. An eleven-seed
+comparison table whose every cell had gone stale across the genus repair without
+reddening, because its test asserted only that a collection was non-empty. A
+calibration probe printing `Undercroft 100/100/100 %` as the first row beside
+four real measurements, which is not a measurement at all but an identity — rank
+zero's ceiling is zero metres, the water table is floored at zero, and the
+comparison is strict, so that row cannot come back any other way in any world —
+and it had been cited as evidence for a shipped rule. And then the same
+non-empty assertion again, left standing by the very fix wave that closed the
+other fourteen findings: the fifteenth is the thirteenth, unrepaired inside its
+own repair.
 
 Which is why the durable output of that thread is not vigilance. It is a
 mutation script that refuses to write unless its target text is found **and
