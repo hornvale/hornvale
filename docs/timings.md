@@ -1332,3 +1332,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T04:24:23Z | gate-commit | 22.764 | 50.516 | 12.735 | 2.78 | 0 | f8757936 | campaign/the-parley | MacBookPro | 10 |
 | 2026-08-18T04:39:42Z | gate-commit | 64.153 | 74.878 | 46.619 | 1.89 | 0 | 8d760577 | campaign/the-parley | MacBookPro | 10 |
 | 2026-08-18T04:40:33Z | gate-commit | 22.001 | 49.909 | 12.396 | 2.83 | 0 | 8d760577 | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:04:12Z | gate-commit | 59.725 | 70.854 | 42.110 | 1.89 | 0 | b0678cdd | campaign/the-parley | MacBookPro | 10 |
+| 2026-08-18T06:04:56Z | gate-commit | 21.702 | 49.766 | 12.389 | 2.86 | 0 | b0678cdd | campaign/the-parley | MacBookPro | 10 |
