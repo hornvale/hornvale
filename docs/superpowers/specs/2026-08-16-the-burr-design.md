@@ -204,10 +204,39 @@ sound and possess no word containing it.
 
 Two corrections this forced, both recorded rather than absorbed:
 
-1. **Stage 2 delivers no audible liquid, and never could have.** Liquid
-   coverage after Task 5 is 3 of 18, byte-identical to Task 4, with no elf or
-   dwarf among them. Advice given mid-campaign to "land Stage 2 and stop" was
-   withdrawn on this measurement.
+1. **Stage 2 delivers no audible liquid *in the dictionary*, and never could
+   have.** Liquid coverage after Task 5 is 3 of 18, byte-identical to Task 4,
+   with no elf or dwarf among them.
+
+   **CORRECTION (2026-08-17, after Task 9): the unqualified form of that
+   sentence was wrong, and so was the conclusion drawn from it.** The dictionary
+   is not the only artifact, and it is not the one a reader meets most.
+   Dictionary words descend from proto roots through the sound-change pipeline —
+   gated exactly as this section describes. But **deity epithets, autonyms and
+   agent names are drawn fresh through each daughter's own phonotactic
+   templates**, a different path the repair does reach. Measured against the
+   branch base `1e92c152`:
+
+   ```
+   autonyms carrying a liquid:  0 of 45  ->  11 of 45
+   ```
+
+   including the campaign's entire motivating case — *The Bnoropmo are snow
+   elfs*, *The Pra are snow elfs*, *The Bra are drows*, *The Mwawonla are gully
+   dwarfs*. Snow-elf's autonym went `Bzhonopsho` → `Bnoropmo`; `Bra` and `Pra`
+   are `Cr-` onset clusters, the texture §4.2 was restored to produce. Before
+   Task 4 only kobold could produce `/r/` at all, so every one is new.
+
+   So the honest statement is two-sided: **the inherited lexicon is still capped
+   by the proto's templates, while freshly-drawn proper names already carry
+   liquids across both target families.** Advice given mid-campaign to "land
+   Stage 2 and stop" was withdrawn on the first half alone, before the second
+   half was measured.
+
+   The process error is the transferable part: one artifact was chosen as the
+   proxy for a whole quality and the others were never enumerated. The
+   measurement that corrected it was a single `git show` against the branch
+   base, available from the moment Task 4 landed.
 2. **`ensure_minimum_sonorants`' own doc comment said so** — "says nothing
    about whether the phonotactic templates will ever *use* the sonorant it
    adds" — and Task 5's dispatch prose asserted the opposite one screen later.
