@@ -3005,3 +3005,61 @@ retains is negative under all three rules in *both* readouts. A unit mismatch
 that rescales every people by the same factor cannot disturb a comparison taken
 between peoples. A bet that survives a broken instrument is telling you which
 term it actually depends on.
+
+### A precondition was supplied, and it pushed the other way (2026-08-18)
+
+*The Parley* supplied the last thing the corroboration half of the Myth bet was
+named as waiting on: an edge that lets an account leave the people that
+witnessed it. Every model before it walked parent to child down the founding
+tree and nothing else, so "do independent accounts of one event corroborate each
+other" had no way to become a question about two peoples at all.
+
+**The diagnostic was right about the variance.** Asking what would have to vary
+identified the missing degree of freedom correctly, and adding it made the axis
+move immediately: cross-people reach goes from 548 to 4,112 of 23,594 endings,
+and accounts held by as many as six peoples exist where three was structurally
+impossible before. Nothing about the instrument changed.
+
+**It was silent about the sign, and the sign is the finding.** The frozen
+prediction was that two-sided disagreement would rise by more than 3×. It
+*falls*, on every one of three co-equal accumulation rules — 0.59×, 0.52×,
+0.77× — and identical day sets rise on all three. The mechanism is the edge's own
+symmetry: a seam is a channel in both directions, so each side receives the
+other's telling and each keeps whichever it can reach least corrupted. Contact
+between two peoples is **homogenising**. The precondition for corroboration, once
+supplied, consumed the divergence corroboration needs.
+
+So the axis gains a caution rather than a category. *What would have to vary* is
+a question about whether a bet can be scored at all; it says nothing about
+whether the mechanism that supplies the variance also destroys it. **A
+precondition can be its own confound**, and there is no way to find that out
+except by building it and looking at the sign.
+
+A second half of the same campaign is worth recording beside it, because it is a
+cost of preregistration and not a defect in it. The frozen measure compares the
+victim's people against the raider's people **and no other pair** — and the edge's
+whole effect is to create *new* pairs of peoples that share an account. Over the
+endings that reach two or more peoples, the share carrying some
+mutually-exclusive pair rises 2.1× to 4.5×, and the frozen measure is blind to
+every one of those pairs by construction. That reading is not licensed as
+evidence, because it was not frozen; the falsification stands as measured. But it
+names a failure mode this chapter has not carried: **a measure frozen against the
+pre-change topology can be structurally unable to see the change.** Freezing
+protects against retuning a number after seeing it, and charges for that
+protection in the currency of what the number can be about.
+
+The same campaign froze a seed-level control that no world could satisfy — it
+asked for a world where the mechanism is absent at hop zero but present as a
+graph, and the graph's edges *are* the hop-zero seam. Falsified, correctly, for a
+reason that says nothing about the mechanism. The diagnostic transfers to
+controls unchanged and had not been applied to one: before freezing a control,
+ask whether the world can reach the outcome the prediction requires.
+
+**The re-score.** The corroboration half stays **not-yet-scorable**, and its
+blocker is now narrower and dated. It is no longer waiting on contact; contact
+exists, and on the frozen measure it points away from divergence. It waits on a
+*directed* edge — victim→raider and raider→victim are different stories with
+different reach, both restrictions of the undirected ceiling measured here — and
+on a claim that carries the witness it came from, without which the pooling
+mechanism above is an inference from counts rather than something the world can
+show. Both are cheap. Neither existed to be asked for before this campaign.
