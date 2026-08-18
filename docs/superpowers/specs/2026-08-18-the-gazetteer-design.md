@@ -274,13 +274,34 @@ against a prediction:
 | any census CSV | **STOP** — epoch event | escalate |
 | `book/src/reference/*-generated.md` | expected **only if** the campaign registers a concept or predicate | if it did not, STOP |
 
-**F4 — does The Grain collide?** The Grain holds a `hold-off` on
-`windows/scene/` and `windows/locale/` and is changing `LocaleFields.water`
-value semantics. This campaign touches neither directory. But its salt-lake
-class reads `WaterKind::SaltBasin`, and The Grain's re-banding moves how a room
-inherits water. **Settled by:** post a `notice` naming `domains/terrain/` and
-coordinate before Task 3 (the salt-lake class) lands; if the classification is
-in motion, salt lakes drop to §9 and the campaign ships three classes.
+**F4 — does The Grain collide? NO — settled by measurement, not by
+coordination.** An earlier draft of this section gated the salt-lake class on
+coordinating with The Grain, on the strength of a `hold-off` board notice
+naming `windows/scene/` and `windows/locale/` and a change to
+`LocaleFields.water` value semantics. **That notice is stale and the campaign
+is merged** — tip `8c61cbc5`, 2026-08-11, with a chronicle and a retrospective
+on main. Two facts settle it:
+
+```
+$ git merge-base --is-ancestor origin/campaign/the-grain origin/main && echo MERGED
+MERGED
+$ git log --oneline origin/main --since=2026-08-09 -- domains/terrain/src/water.rs
+(no output)
+```
+
+`WaterKind` has not moved since 2026-08-09; The Grain's water change was in
+`windows/locale`, and in `domains/terrain` it touched one unrelated file. The
+salt-lake class reads a classification nothing is contending for. **All four
+classes ship, ungated.**
+
+**Why this is recorded rather than quietly fixed.** A board post from a *peer
+host* is judged by TTL alone and is never verified against this host's state,
+so it cannot decay when its authoring branch merges — a merged campaign's
+hold-off stays on the board looking live indefinitely. The generalisation for
+any campaign reading this section: **a board notice is a claim with a date,
+and merged-ness is the check.** `git merge-base --is-ancestor` costs
+milliseconds and is the only thing that distinguishes a live hold-off from a
+fossil.
 
 **F5 — cost.** A BFS over a level-5 geosphere (~10k cells) per class, once per
 terrain build. Expected trivial against the ~1.2 s a `LocaleContext` build
@@ -334,6 +355,10 @@ Each wants an idea-registry row.
   culture; concealed sites (the 103 exotic sites, caves) revealed on
   discovery. This is where `RENDER-fogged-world-map-rung` is actually
   satisfied.
+- **A liveness check for board notices** (`TOOL-*`). F4's fossil hold-off cost
+  this spec a wrong gate and a wrong board post. A peer notice whose authoring
+  branch is an ancestor of main is a fossil and could be rendered as such;
+  the discriminator is one `git merge-base --is-ancestor` per notice.
 - **Ranges, bays, capes, straits, peninsulas, biome regions.** Everything
   needing a clustering pass rather than a graph traversal (§5).
 - **Borrowing** — The Watershed's §7 flag 2, decided but deferred (§5).
@@ -369,7 +394,7 @@ Each wants an idea-registry row.
    §3.2 is chosen against this output.
 2. Landmass and sea classes; `land_component_sizes` refactored to a thin
    caller with its output asserted byte-identical (F2's positive control).
-3. Salt-lake class — **gated on F4's coordination with The Grain.**
+3. Salt-lake class (ungated — see F4).
 4. River class off the flow forest; catchment as magnitude.
 
 **Stage 2 — name and expose**
