@@ -61,6 +61,10 @@ run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
 # the real claim the enclosing run is already holding. It SKIPs cleanly on a
 # host without flock, which is why it costs nothing on a Mac.
 run "sluice queue"     bash scripts/test-sluice.sh
+# The block allocator's own suite, here for the reason the queue's is: it is
+# the only thing that runs it, it is fast, and an allocator nobody tests is an
+# allocator that hands two campaigns the same range without anyone noticing.
+run "decision blocks"  bash scripts/test-decision-blocks.sh
 # THE SHELL LINT, for the same reason and with the proof attached. The
 # `make shellcheck` target was in the Makefile's .PHONY list and NOWHERE
 # else — no gate, no set, no hook ran it — and it was RED on `main` when this
