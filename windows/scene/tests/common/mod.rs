@@ -88,6 +88,9 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
             projection: String::new(),
             preserves: String::new(),
             sun_altitude_deg: 0.0,
+            // Overwritten by the builder — see `Sight`'s own doc.
+            channel_roles: Vec::new(),
+            projection_slots: None,
         },
     )
     .expect("colored surrounds scene builds over the flagship band")
@@ -125,6 +128,9 @@ pub fn real_band(world: &World, lat: f64, lon: f64) -> SurroundsScene {
             projection: String::new(),
             preserves: String::new(),
             sun_altitude_deg: 0.0,
+            // Overwritten by the builder — see `Sight`'s own doc.
+            channel_roles: Vec::new(),
+            projection_slots: None,
         },
     )
     .expect("colored surrounds scene builds")

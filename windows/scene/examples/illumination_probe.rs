@@ -97,6 +97,8 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
             projection: String::new(),
             preserves: String::new(),
             sun_altitude_deg: 0.0,
+            channel_roles: Vec::new(),
+            projection_slots: None,
         },
     )
     .expect("colored surrounds scene builds over the flagship band")
@@ -354,6 +356,8 @@ fn h3_real_band_sweep(world: &World) -> (usize, usize, Option<(f64, f64)>) {
                     projection: String::new(),
                     preserves: String::new(),
                     sun_altitude_deg: 0.0,
+                    channel_roles: Vec::new(),
+                    projection_slots: None,
                 },
             ) else {
                 continue;
@@ -417,6 +421,8 @@ fn flagship_band_colour_counts(world: &World) -> Option<(usize, usize, usize)> {
             projection: String::new(),
             preserves: String::new(),
             sun_altitude_deg: 0.0,
+            channel_roles: Vec::new(),
+            projection_slots: None,
         },
     )
     .ok()?;

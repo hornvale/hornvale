@@ -322,6 +322,7 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
 mod tests {
     use super::*;
     use crate::{Mark, Resolution, SurroundsCell, SurroundsObserver, SurroundsScene};
+    use hornvale_locale::CoverClass;
 
     fn cell(u: i64, v: i64, w: i64, up: bool, state: &str, relief: u32) -> SurroundsCell {
         SurroundsCell {
@@ -348,6 +349,10 @@ mod tests {
                 openness: 0.0,
             },
             marks: vec![],
+            signal: None,
+            cover: None,
+            bearing_deg: 0.0,
+            distance_rad: 0.0,
         }
     }
 
@@ -381,6 +386,7 @@ mod tests {
                 depth_below_grid: 6,
                 grid_resolution_fields: ["biome", "water"].iter().map(|s| s.to_string()).collect(),
             },
+            cover_legend: CoverClass::LEGEND.iter().map(|s| s.to_string()).collect(),
         }
     }
 

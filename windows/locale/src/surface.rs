@@ -53,9 +53,12 @@ pub(crate) mod endmembers {
 
 /// The named cover classes [`cover_weights`] composes from — the categorical
 /// read a consumer that wants "what covers this room" (Task 9) can take
-/// instead of re-deriving it from the blended colour.
+/// instead of re-deriving it from the blended colour. `pub` (not
+/// `pub(crate)`): `windows/scene`'s `cover_legend` is built from
+/// [`CoverClass::LEGEND`], and a `SurroundsCell.cover` index is meaningless
+/// without it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum CoverClass {
+pub enum CoverClass {
     /// No cover at all — bare mineral ground, i.e. the terrain layer alone.
     Bare,
     /// Living foliage.
@@ -68,6 +71,40 @@ pub(crate) enum CoverClass {
     Sand,
     /// Wet silt and mud.
     Silt,
+}
+
+impl CoverClass {
+    /// The six cover-class names in stable index order — the self-describing
+    /// legend for scene emission (mirrors `WaterKind::LEGEND`).
+    pub const LEGEND: [&'static str; 6] = ["bare", "chlorophyll", "litter", "snow", "sand", "silt"];
+
+    /// Stable numeric index into `LEGEND`, independent of enum discriminant
+    /// layout (explicit `match`, not `self as u32`, so reordering variants
+    /// can never silently change a committed index).
+    /// type-audit: bare-ok(index: return)
+    pub fn index(self) -> u32 {
+        match self {
+            CoverClass::Bare => 0,
+            CoverClass::Chlorophyll => 1,
+            CoverClass::Litter => 2,
+            CoverClass::Snow => 3,
+            CoverClass::Sand => 4,
+            CoverClass::Silt => 5,
+        }
+    }
+
+    /// Stable name, consistent with `LEGEND`.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn name(self) -> &'static str {
+        match self {
+            CoverClass::Bare => "bare",
+            CoverClass::Chlorophyll => "chlorophyll",
+            CoverClass::Litter => "litter",
+            CoverClass::Snow => "snow",
+            CoverClass::Sand => "sand",
+            CoverClass::Silt => "silt",
+        }
+    }
 }
 
 /// One weighted cover component, tagged with the class it came from so
@@ -342,13 +379,9 @@ pub(crate) fn cover_weights(
 /// then sand/silt) — the same "stable, deterministic tie-break" spirit
 /// [`crate::dominant_corner`] uses for a room's categorical corner, chosen
 /// here rather than left to `Iterator::max_by`'s "last on a tie" default.
-// Not yet called from production code — Task 9 (spec §3, the interfaces
-// list on this campaign's Task 2b brief) is the consumer, and this task's
-// job is to land the categorical projection Task 9 will read, not to wire
-// a caller for it early. Exercised by this module's own tests in the
-// meantime, which is why `cargo test` never warns, only the plain
-// `cargo build`/`clippy` lib target does.
-#[allow(dead_code)]
+/// Called from production code via [`crate::LocaleContext::cover_class_at`]
+/// (Task 9), which resolves `cell` from a `RoomAddr` the same way
+/// [`crate::LocaleContext::reflectance_mixture_at`] does.
 pub(crate) fn cover_class_at(
     climate: &GeneratedClimate,
     cell: CellId,

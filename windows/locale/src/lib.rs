@@ -13,6 +13,7 @@ mod substrate;
 mod micro;
 
 mod surface;
+pub use surface::CoverClass;
 
 mod grammar;
 
@@ -677,6 +678,26 @@ impl LocaleContext {
         }
         hornvale_kernel::color::Mixture::new(components, mix_weights)
             .map_err(|e| LocaleError::Build(e.to_string()))
+    }
+
+    /// The dominant surface cover class at `addr` on `at`, modulated by this
+    /// room's own sub-cell `micro` field — the categorical read
+    /// [`surface::cover_class_at`] computes, resolved from the same
+    /// dominant corner [`Self::reflectance_mixture_at`] uses, so a cell's
+    /// `cover` always names the ground its `color` was actually drawn from
+    /// (Task 9).
+    pub fn cover_class_at(
+        &self,
+        addr: &RoomAddr,
+        micro: &MicroField,
+        at: WorldTime,
+    ) -> Result<CoverClass, LocaleError> {
+        let geo = self.climate.geosphere();
+        let weights = addr
+            .corner_weights(geo, &self.index)
+            .ok_or(LocaleError::AboveGrid)?;
+        let cell = dominant_corner(&weights).0;
+        Ok(surface::cover_class_at(&self.climate, cell, micro, at))
     }
 
     /// The water column at a marine cell: every stratum from the sunlit water

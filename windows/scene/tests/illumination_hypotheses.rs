@@ -356,6 +356,10 @@ fn fixture_cell(
             openness,
         },
         marks: vec![],
+        signal: None,
+        cover: None,
+        bearing_deg: 0.0,
+        distance_rad: 0.0,
     }
 }
 
@@ -458,6 +462,10 @@ fn fixture_scene(colored: bool) -> SurroundsScene {
             depth_below_grid: 6,
             grid_resolution_fields: ["biome", "water"].iter().map(|s| s.to_string()).collect(),
         },
+        cover_legend: hornvale_locale::CoverClass::LEGEND
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
     }
 }
 

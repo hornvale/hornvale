@@ -1303,3 +1303,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T01:39:37Z | gate-commit | 291.818 | 127.059 | 129.564 | 0.88 | 0 | 257a540c | campaign/the-illumination | MacBookPro | 10 |
 | 2026-08-18T01:41:11Z | gate-commit | 57.614 | 55.827 | 13.673 | 1.21 | 0 | 257a540c | campaign/the-illumination | MacBookPro | 10 |
 | 2026-08-18T01:57:11Z | gate-commit | 336.654 | 172.137 | 266.487 | 1.30 | 0 | 9f28df80 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T02:35:12Z | rebaseline | 62.859 | 212.274 | 11.169 | 3.55 | 0 | c7fc1207 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T02:43:31Z | vessel-check | 38.853 | 51.002 | 2.330 | 1.37 | 0 | c7fc1207 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T02:44:13Z | world-check | 37.569 | 51.082 | 2.059 | 1.41 | 0 | c7fc1207 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T02:45:24Z | game-check | 64.540 | 140.323 | 8.336 | 2.30 | 0 | c7fc1207 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T02:46:22Z | gate-commit | 41.371 | 55.908 | 15.328 | 1.72 | 0 | c7fc1207 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-18T02:46:48Z | gate-commit | 19.253 | 17.183 | 2.657 | 1.03 | 0 | c7fc1207 | campaign/the-illumination | MacBookPro | 10 |

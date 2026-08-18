@@ -1949,6 +1949,8 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                         projection: String::new(),
                         preserves: String::new(),
                         sun_altitude_deg,
+                        channel_roles: Vec::new(),
+                        projection_slots: None,
                     },
                 )
             } else {

@@ -69,6 +69,17 @@ pub mod quantize_serde {
             .collect::<Vec<_>>()
             .serialize(s)
     }
+
+    /// Quantize an `Option<Vec<f64>>` field. Pair with
+    /// `#[serde(skip_serializing_if = "Option::is_none")]` so a `None`
+    /// never reaches this at all — serde skips the field entirely before
+    /// calling a `serialize_with`, so this is only ever invoked on `Some`.
+    /// type-audit: bare-ok(artifact)
+    pub fn opt_vec_f64_field<S: Serializer>(x: &Option<Vec<f64>>, s: S) -> Result<S::Ok, S::Error> {
+        x.as_ref()
+            .map(|v| v.iter().copied().map(quantize).collect::<Vec<_>>())
+            .serialize(s)
+    }
 }
 
 #[cfg(test)]

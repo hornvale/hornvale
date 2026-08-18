@@ -121,6 +121,8 @@ pub fn purview_scene(
                     projection: String::new(),
                     preserves: String::new(),
                     sun_altitude_deg,
+                    channel_roles: Vec::new(),
+                    projection_slots: None,
                 },
             )
             .map_err(|e| VesselError::Build(e.to_string()))?
