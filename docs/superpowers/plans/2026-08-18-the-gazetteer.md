@@ -784,7 +784,11 @@ by a component walk. The index builder gathers them separately:
 - extent is the edifice's cells, anchor and `id.cell` are `source`, magnitude
   is the edifice cell count.
 
-Add the test that pins the grouping:
+Add the test that pins the grouping. **It lives in `windows/worldgen`, not
+`domains/terrain`** — it calls `volcano_at`, and a `domains/` -> `windows/`
+dependency is backwards and forbidden by `cli/tests/architecture.rs`. Put it
+beside the code that builds the class, wherever Step 4's structural choice
+lands that:
 
 ```rust
     /// A volcano's two halves are ONE feature. `volcano_at` answers per cell,
@@ -1000,10 +1004,16 @@ already hold that) **and** that the named-feature count at seed 42 falls inside
 a band set from Task 1's measurement. Assert the second half here, in the same
 file, with the band's provenance in the doc comment:
 
+`test_terrain()` and `H1_BANDS` do not exist — build both. `H1_BANDS` is a
+`[(FeatureClass, usize, usize)]` const whose values come from **Task 1's
+reported counts**, with the probe output quoted in its doc comment so the
+provenance is auditable. Do not take bands from the Watershed spec's figures;
+they contradict its own chronicle, which is why Task 1 exists.
+
 ```rust
 /// H1: the landscape is individuated at a useful granularity. The bands come
-/// from Task 1's probe (recorded in the campaign report), NOT from the
-/// Watershed spec's figures, which contradict its own chronicle.
+/// from Task 1's probe (quoted below), NOT from the Watershed spec's figures,
+/// which contradict its own chronicle.
 #[test]
 fn seed_42_names_a_useful_number_of_features() {
     let terrain = test_terrain();
