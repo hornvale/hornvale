@@ -1,5 +1,14 @@
 # The Underworld Implementation Plan
 
+> **COMPLETE (2026-08-18).** All ten tasks executed, plus Task 1b (a
+> metre depth budget) added mid-campaign after Task 1's measurement
+> falsified the spec's central design, and Task 3b (spec §4.2.1) added
+> after Task 3 surfaced that the deep was habitable only via drainage.
+> Task 4 was absorbed into Task 2 and gated against its own brief.
+> **Task 9's gate closed: Mountain-dwarf and Duergar were not authored.**
+> See [the chronicle](../../../book/src/chronicle/the-underworld.md) and
+> [the retrospective](../../retrospectives/the-underworld.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the underworld a habitation depth coordinate that varies with

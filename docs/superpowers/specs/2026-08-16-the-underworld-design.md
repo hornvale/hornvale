@@ -3,6 +3,14 @@
 *Chorography campaign 2. Consumer of campaign 0 (The Fathom) and campaign 1
 (The Axes). Restores Mountain-dwarf and Duergar.*
 
+> **COMPLETE (2026-08-18), and the subtitle above is wrong.** It did not
+> restore them: §5's preregistered gate closed against the campaign, and the
+> two kinds were not authored. The subtitle is left as written because it is
+> what this document predicted, and §4.0, §4.2.1, §4.3 and §5 are amendments
+> rather than rewrites for the same reason — the falsified reasoning is more
+> instructive beside its replacement than deleted. Decisions 0142, 0143 and
+> 0144 carry what settled.
+
 **Program:** [The Chorography](2026-08-12-the-chorography-metaplan.md) ·
 **Predecessors:** [The Fathom](2026-08-12-the-fathom-design.md),
 [The Axes](2026-08-13-the-axes-design.md)
