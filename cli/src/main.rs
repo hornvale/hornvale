@@ -1951,6 +1951,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                         sun_altitude_deg,
                         channel_roles: Vec::new(),
                         projection_slots: None,
+                        projection_norms: None,
                     },
                 )
             } else {

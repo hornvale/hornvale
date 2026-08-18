@@ -80,6 +80,26 @@ pub mod quantize_serde {
             .map(|v| v.iter().copied().map(quantize).collect::<Vec<_>>())
             .serialize(s)
     }
+
+    /// Quantize an `Option<[f64; 3]>` field — a fixed-size sibling of
+    /// [`opt_vec_f64_field`] for calibration triples (e.g.
+    /// `Sight::projection_norms`) that are computed live for a derived
+    /// observer rather than carried as a clean authored literal, and so can
+    /// need the full quantize-at-emit treatment (fix round 1, FINDING 1's
+    /// own regression: an unquantized derived norm serialized at full f64
+    /// precision, wide enough to trip the vessel snapshot's JavaScript
+    /// safe-integer scanner). Unlike [`opt_vec_f64_field`], not necessarily
+    /// paired with `skip_serializing_if` — `Sight::projection_norms`
+    /// serializes `null` on `None`, matching its sibling
+    /// `Sight::projection_slots`, because `Sight` itself (not its individual
+    /// fields) is the thing `SurroundsScene` gates.
+    /// type-audit: bare-ok(artifact)
+    pub fn opt_array3_f64_field<S: Serializer>(
+        x: &Option<[f64; 3]>,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        x.map(|v| v.map(quantize)).serialize(s)
+    }
 }
 
 #[cfg(test)]

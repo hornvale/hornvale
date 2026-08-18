@@ -91,6 +91,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
             // Overwritten by the builder — see `Sight`'s own doc.
             channel_roles: Vec::new(),
             projection_slots: None,
+            projection_norms: None,
         },
     )
     .expect("colored surrounds scene builds over the flagship band")
@@ -131,6 +132,7 @@ pub fn real_band(world: &World, lat: f64, lon: f64) -> SurroundsScene {
             // Overwritten by the builder — see `Sight`'s own doc.
             channel_roles: Vec::new(),
             projection_slots: None,
+            projection_norms: None,
         },
     )
     .expect("colored surrounds scene builds")

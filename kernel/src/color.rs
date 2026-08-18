@@ -483,9 +483,12 @@ impl Projection {
     }
 
     /// Which channel drives R, G, B, exactly as carried — the wire's own
-    /// calibration slot indices (`Sight::projection_slots`), so a client can
-    /// tell which index of a carried [`Signal`] to read for each output
-    /// pixel without re-deriving the projection.
+    /// calibration slot indices (`Sight::projection_slots`). Paired with
+    /// [`Projection::norms`] (`Sight::projection_norms`), a client can
+    /// reproject a carried [`Signal`] itself — `(signal[rgb[i]] /
+    /// norms[i]).clamp(0, 1)` per output slot — without re-deriving the
+    /// projection. `rgb` alone says which index to read; `norms` says what
+    /// to divide it by, and the two must ship together (spec §4.1).
     /// type-audit: bare-ok(index: return)
     pub fn rgb(&self) -> &[usize; 3] {
         &self.rgb

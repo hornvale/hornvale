@@ -440,6 +440,37 @@ mod tests {
         (0..geo.cell_count() as u32).map(CellId).find(|&c| pred(c))
     }
 
+    /// FINDING 4 (fix round 1): `LEGEND`, `index()`, and `name()` are three
+    /// hand-maintained parallel lists with nothing else tying them
+    /// together — the same discipline `WaterKind`'s own test uses
+    /// (`domains/terrain/src/water.rs`), reused here so a variant added to
+    /// one and not the other two reddens immediately rather than silently
+    /// mismatching the wire's `cover_legend` against `CoverClass::name()`'s
+    /// prose.
+    #[test]
+    fn legend_index_and_name_agree_for_every_variant() {
+        assert_eq!(CoverClass::Bare.name(), "bare");
+        assert_eq!(CoverClass::Chlorophyll.name(), "chlorophyll");
+        assert_eq!(CoverClass::Litter.name(), "litter");
+        assert_eq!(CoverClass::Snow.name(), "snow");
+        assert_eq!(CoverClass::Sand.name(), "sand");
+        assert_eq!(CoverClass::Silt.name(), "silt");
+        assert_eq!(
+            CoverClass::LEGEND,
+            ["bare", "chlorophyll", "litter", "snow", "sand", "silt"]
+        );
+        for c in [
+            CoverClass::Bare,
+            CoverClass::Chlorophyll,
+            CoverClass::Litter,
+            CoverClass::Snow,
+            CoverClass::Sand,
+            CoverClass::Silt,
+        ] {
+            assert_eq!(CoverClass::LEGEND[c.index() as usize], c.name());
+        }
+    }
+
     #[test]
     fn covered_fraction_never_exceeds_the_bare_ground_budget() {
         let climate = climate_seed_42();
