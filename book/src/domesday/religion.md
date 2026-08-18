@@ -10,12 +10,12 @@ What peoples believe: pantheons, cults, and the vestiges belief leaves in the wo
 
 Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one
 
-n = 996 present, 4 absent (of 1000 worlds)
+n = 997 present, 3 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 909 | 91.3% |
-| `ambient` | 77 | 7.7% |
+| `cyclic` | 911 | 91.4% |
+| `ambient` | 76 | 7.6% |
 | `eternal` | 10 | 1.0% |
 
 ### `belief-kind-goblin`
@@ -48,8 +48,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `cyclic` | 925 | 94.2% |
-| `eternal` | 57 | 5.8% |
+| `cyclic` | 926 | 94.3% |
+| `eternal` | 56 | 5.7% |
 
 ### `blind-attribution-correct`
 
@@ -59,8 +59,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 890 | 90.6% |
-| `false` | 92 | 9.4% |
+| `true` | 888 | 90.4% |
+| `false` | 94 | 9.6% |
 
 ### `crisis-fires`
 
@@ -81,8 +81,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 943 | 94.3% |
-| `folk` | 57 | 5.7% |
+| `organized` | 954 | 95.4% |
+| `folk` | 46 | 4.6% |
 
 ### `cult-form-goblin`
 
@@ -92,8 +92,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 943 | 94.3% |
-| `folk` | 57 | 5.7% |
+| `organized` | 954 | 95.4% |
+| `folk` | 46 | 4.6% |
 
 ### `cult-form-goblin-twin`
 
@@ -112,8 +112,8 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `organized` | 697 | 71.0% |
-| `folk` | 285 | 29.0% |
+| `organized` | 684 | 69.7% |
+| `folk` | 298 | 30.3% |
 
 ### `head-deity-domain-goblin`
 
@@ -164,7 +164,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.9 | 1 | 1 | 1 | 0.93132479 |
+| 0 | 0.9 | 1 | 1 | 1 | 0.9314138 |
 
 ### `pantheon-cyclic-share-goblin-twin`
 
@@ -180,7 +180,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 8 | 11 | 19 | 8.063 |
+| 1 | 5 | 8 | 11 | 19 | 8.068 |
 
 ### `pantheon-size-goblin`
 
@@ -190,7 +190,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 8 | 11 | 19 | 8.063 |
+| 1 | 5 | 8 | 11 | 19 | 8.068 |
 
 ### `pantheon-size-goblin-twin`
 
@@ -206,7 +206,7 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 5 | 7 | 10 | 17 | 7.6496945 |
+| 1 | 5 | 7 | 10 | 17 | 7.6527495 |
 
 ### `pantheon-verticality`
 
@@ -222,7 +222,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `belief-kind-bugbear`
 
-- **D1**: "cyclic" holds 909/996 worlds (91.3%), at or above the 80% threshold
+- **D1**: "cyclic" holds 911/997 worlds (91.4%), at or above the 80% threshold
 
 ### `belief-kind-goblin`
 
@@ -234,19 +234,19 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `belief-kind-kobold`
 
-- **D1**: "cyclic" holds 925/982 worlds (94.2%), at or above the 80% threshold
+- **D1**: "cyclic" holds 926/982 worlds (94.3%), at or above the 80% threshold
 
 ### `blind-attribution-correct`
 
-- **D1**: "true" holds 890/982 worlds (90.6%), at or above the 80% threshold
+- **D1**: "true" holds 888/982 worlds (90.4%), at or above the 80% threshold
 
 ### `cult-form`
 
-- **D1**: "organized" holds 943/1000 worlds (94.3%), at or above the 80% threshold
+- **D1**: "organized" holds 954/1000 worlds (95.4%), at or above the 80% threshold
 
 ### `cult-form-goblin`
 
-- **D1**: "organized" holds 943/1000 worlds (94.3%), at or above the 80% threshold
+- **D1**: "organized" holds 954/1000 worlds (95.4%), at or above the 80% threshold
 
 ### `head-deity-domain-goblin`
 

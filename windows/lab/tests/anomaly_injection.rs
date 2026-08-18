@@ -313,7 +313,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs; the 0.60 bar sits 0.19 SE below it and 0.75 SE above the prior 0.5667, so the battery separates neither)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar at 0.00 SE from it; three census epochs of one unchanged report read 0.5667, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -404,7 +404,47 @@ fn h1_recall_at_10() {
 /// direction of the error is now known to be smaller than the noise either
 /// way.
 ///
-/// claim: invariant(the committed battery scores exactly 73 hits over 120
+/// **RE-READ AGAIN AT THE UNDERWORLD'S CLOSE (2026-08-17), AND THE VERDICT IS
+/// UNCHANGED — WHICH IS ITSELF THE RESULT.** The chamber epoch refreshed the
+/// canonical census (223e7d57, goldens 8df714ed on lefford, 0063/0079) and
+/// the injection fixtures were re-scored against it. Again nothing about the
+/// *report* changed — not `REPORT_SIZE`, not `TAIL_DEPTH_BAR`, not the
+/// scorer, not the evaluable surface. Only the worlds moved. Re-measured:
+/// **72/120 = 0.6000**, which is *exactly* the preregistered bar.
+///
+/// Three readings now exist, across three census epochs, of one unchanged
+/// report:
+///
+/// ```text
+///     SE at the bar = sqrt(0.6 * 0.4 / 120) = 0.04472
+///
+///     68/120 = 0.5667   -0.745 SE   The Gnomon      (published as refuted)
+///     73/120 = 0.6083   +0.186 SE   The Glasshouse  (verdict withdrawn)
+///     72/120 = 0.6000    0.000 SE   The Underworld  (this re-read)
+/// ```
+///
+/// All three sit inside one standard error of the bar, and the third sits
+/// *on* it — the single most uninformative position a reading can occupy,
+/// since a measurement equal to its own threshold decides nothing in either
+/// direction. **The verdict therefore remains "cannot tell"; the instrument
+/// remains underpowered; the fix remains more pairs, not a moved bar.**
+///
+/// This re-read STRENGTHENS that conclusion rather than disturbing it. The
+/// Glasshouse's argument was that a 120-pair battery cannot separate "works"
+/// from "does not work" at a 0.60 line, inferred from two readings straddling
+/// it. A third world-change has now produced a third reading inside the same
+/// one-SE band, landing on the line itself. A witness that has fired twice
+/// and corroborated its own prior re-read is worth more than one that never
+/// moved: the underpowered diagnosis is no longer an inference from two
+/// points but an observation repeated across three independent census epochs.
+///
+/// The registry row stays neither `refuted` nor `shipped`, and its status is
+/// deliberately NOT changed by this re-read. Nothing here licenses widening
+/// the bar, and nothing licenses re-reading the battery until it lands
+/// somewhere comfortable — landing on the bar is uncomfortable and is the
+/// honest reading.
+///
+/// claim: invariant(the committed battery scores exactly 72 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -417,9 +457,9 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (73, 120, 0, 0),
+        (72, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's headline reading (recall@10 = 73/120 = 0.6083 against a \
+         Gnomon's reading (recall@10 = 72/120 = 0.6000, sitting EXACTLY ON the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
          adjudicate, see the doc comment), and it is pinned so that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
@@ -428,10 +468,14 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          re-read the finding, re-state it in book/src/chronicle/the-gnomon.md, \
          in the TOOL-anomaly-ranking-concentrates-injection registry row and in \
          the `#[ignore]` reason rostered in cli/tests/heavy_tier.rs, and re-pin \
-         all four in the same commit. THIS HAS NOW HAPPENED ONCE (The \
-         Glasshouse, 2026-08-15) and the re-read overturned the verdict without \
-         any change to the report, which is the strongest argument for keeping \
-         this pin: the number moved because the WORLD moved."
+         all four in the same commit. THIS HAS NOW HAPPENED TWICE (The \
+         Glasshouse, 2026-08-15, which overturned the verdict; The Underworld, \
+         2026-08-17, which did not overturn it and instead corroborated the \
+         withdrawal at a third census epoch). Both times the report was \
+         untouched and the number moved because the WORLD moved, which is the \
+         strongest argument for keeping this pin. FIRST ASK WHETHER YOUR CHANGE \
+         TOUCHED THE REPORT: if it did, the three readings below are no longer \
+         comparable and you have a different, larger question than a re-pin."
     );
 }
 

@@ -102,6 +102,20 @@ mistaken for gate timings. **Adding an `rc` column to the table would fix this
 properly**; it is recorded here rather than done, because the schema is
 consumed by more than this file.
 
+**One `gate-commit` row is contamination, not a cost datum: the 2026-08-17
+`3857.559` s row at `37796ef1`** (The Underworld), against that gate's normal
+~85 s on this host. It was measured during a runaway-`rg` storm — an extension
+had 826 concurrent ripgrep processes against a load average of 417/701/648 on
+ten cores — and the row's own `cpu_ratio` of **0.12** is the signature, which is
+exactly what that column is for. The number is left as measured, per this
+file's rule that no measured value is ever edited; only read it as a
+contention sample. **Nothing downstream moved**: the per-test baseline
+`docs/timings/test-baseline-<host>.tsv` was not written, because the Mac's
+`gate-commit` does not rewrite it (the stage gate does), so neither the
+sub-floor roster nor the duration alarm saw the storm. The neighbouring rows at
+`cpu_ratio` 2.49 → 0.92 → 0.77 → 0.12 are the same storm ramping, and the
+post-restart run at `37796ef1` on `Greyjoy` still read 0.25.
+
 **Every note belongs above this line, never between two rows.** The note above
 first landed *inside* the table, between the last RED row and the census row
 after it. Markdown needs a header plus a delimiter row to start a table, so
@@ -1217,6 +1231,59 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-16T21:05:01Z | sluice:seam-guard | 964.414 | 19474.820 | 1074.693 | 21.31 | 0 | f905923a |  | lefford | 40 |
 | 2026-08-16T21:10:39Z | sluice:clients | 337.573 | 715.881 | 75.619 | 2.34 | 0 | 3d9e0acf |  | lefford | 40 |
 | 2026-08-16T21:42:21Z | sluice:heavy | 1901.292 | 29944.400 | 740.613 | 16.14 | 0 | 5f59a1aa |  | lefford | 40 |
+| 2026-08-17T00:20:23Z | prewarm | 82.092 | 384.996 | 41.104 | 5.19 | 0 | 1e92c152 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T00:54:29Z | gate-commit | 205.456 | 123.933 | 106.649 | 1.12 | 0 | 1e92c152 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T01:42:39Z | gate-commit | 48.006 | 56.513 | 16.418 | 1.52 | 0 | dcb1acc0 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T02:43:17Z | gate-commit | 226.736 | 103.714 | 106.944 | 0.93 | 0 | 3ee3aeb5 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T03:03:46Z | gate-commit | 26.257 | 52.069 | 13.358 | 2.49 | 0 | 8dbeff4f | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T03:45:33Z | gate-commit | 78.904 | 51.838 | 20.791 | 0.92 | 0 | 34368559 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T03:57:11Z | gate-commit | 356.923 | 108.235 | 164.853 | 0.77 | 0 | 26fb1fed | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T06:42:35Z | gate-commit | 3857.559 | 202.440 | 264.206 | 0.12 | 0 | 37796ef1 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T11:39:46Z | gate-commit | 308.026 | 56.019 | 20.056 | 0.25 | 0 | 37796ef1 | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T12:08:46Z | gate-commit | 630.172 | 210.931 | 175.901 | 0.61 | 0 | 7bc88170 | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T12:41:28Z | gate-commit | 441.057 | 220.603 | 342.501 | 1.28 | 0 | 060bf5d9 | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T13:29:22Z | rebaseline | 54.213 | 216.266 | 11.116 | 4.19 | 0 | eb9921af | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T13:32:12Z | gate-commit | 37.419 | 57.705 | 38.270 | 2.56 | 0 | eb9921af | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T14:06:46Z | rebaseline | 158.900 | 220.331 | 18.222 | 1.50 | 0 | 6f758949 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T14:16:16Z | gate-commit | 409.923 | 157.357 | 323.140 | 1.17 | 0 | 6f758949 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T14:17:31Z | gate-commit | 32.895 | 53.824 | 12.823 | 2.03 | 0 | f21f8ec6 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T14:49:40Z | gate-commit | 257.754 | 155.758 | 144.839 | 1.17 | 0 | 20044a44 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T14:51:19Z | gate-commit | 22.373 | 49.862 | 12.253 | 2.78 | 0 | 20044a44 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T14:58:02Z | gate-commit | 301.574 | 154.935 | 262.614 | 1.38 | 0 | 6414337f | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T16:03:21Z | gate-commit | 611.583 | 172.784 | 435.521 | 0.99 | 0 | 9fd5edb8 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T16:23:58Z | gate-commit | 165.997 | 120.422 | 195.459 | 1.90 | 0 | c9dfee34 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T16:51:01Z | gate-commit | 120.356 | 76.760 | 68.746 | 1.21 | 0 | 767ceb5a | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T17:40:33Z | gate-commit | 305.786 | 288.843 | 284.668 | 1.88 | 0 | 07b61300 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T17:41:28Z | gate-commit | 22.657 | 50.289 | 12.256 | 2.76 | 0 | 07b61300 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T18:08:30Z | gate-commit | 188.322 | 160.884 | 251.898 | 2.19 | 0 | 46316ca8 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T18:36:53Z | gate-commit | 306.760 | 254.092 | 313.512 | 1.85 | 0 | d765fc59 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T18:38:04Z | quick | 11.272 | 10.283 | 0.471 | 0.95 | 0 | d765fc59 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T18:38:58Z | gate-commit | 22.202 | 50.264 | 12.401 | 2.82 | 0 | d765fc59 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T19:02:13Z | gate-commit | 419.054 | 628.633 | 314.709 | 2.25 | 0 | 41509877 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T19:03:02Z | gate-commit | 22.513 | 50.382 | 12.460 | 2.79 | 0 | 41509877 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T19:28:07Z | gate-commit | 427.606 | 326.015 | 312.371 | 1.49 | 0 | dd131e66 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T19:38:07Z | gate-commit | 485.848 | 181.723 | 370.184 | 1.14 | 0 | dd131e66 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T19:40:08Z | gate-commit | 68.265 | 51.039 | 13.267 | 0.94 | 0 | dd131e66 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T20:00:45Z | gate-commit | 356.708 | 131.043 | 209.335 | 0.95 | 0 | 700390c4 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T20:01:48Z | gate-commit | 33.836 | 55.358 | 15.237 | 2.09 | 0 | 700390c4 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T21:01:07Z | rebaseline | 72.064 | 238.237 | 12.289 | 3.48 | 0 | 4f9d288d | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T22:08:10Z | rebaseline | 46.837 | 231.318 | 12.205 | 5.20 | 0 | 4f9d288d | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T22:17:42Z | quick | 76.885 | 63.255 | 165.312 | 2.97 | 0 | 4f9d288d | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T22:18:51Z | gate-commit | 21.833 | 50.010 | 12.239 | 2.85 | 0 | 4f9d288d | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T22:19:20Z | gate-commit | 21.869 | 50.020 | 11.879 | 2.83 | 0 | 46817a8c | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T22:27:22Z | gate-commit | 422.179 | 202.885 | 373.969 | 1.37 | 0 | 7d8401fb | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T22:45:58Z | quick | 78.297 | 63.429 | 166.891 | 2.94 | 0 | f297eb39 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T22:59:17Z | gate-commit | 22.318 | 49.995 | 12.519 | 2.80 | 0 | f297eb39 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T23:45:17Z | rebaseline | 52.519 | 230.795 | 11.833 | 4.62 | 0 | d95b92e9 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T00:44:51Z | quick | 86.317 | 69.567 | 192.408 | 3.04 | 0 | d95b92e9 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T00:45:55Z | rebaseline | 55.804 | 231.977 | 12.481 | 4.38 | 0 | d95b92e9 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T00:59:19Z | gate-commit | 22.035 | 49.884 | 12.495 | 2.83 | 0 | d95b92e9 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T01:00:12Z | gate-commit | 22.270 | 50.163 | 12.333 | 2.81 | 0 | 8cf1bdca | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T01:17:00Z | quick | 107.140 | 81.696 | 231.888 | 2.93 | 0 | 930812eb | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T01:47:35Z | gate-commit | 104.981 | 53.289 | 14.729 | 0.65 | 0 | 930812eb | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T01:54:34Z | rebaseline | 118.382 | 241.597 | 16.523 | 2.18 | 0 | b7109190 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T02:13:08Z | census | 884.611 | 29094.529 | 304.849 | 33.23 | 0 | 223e7d57 |  | lefford | 40 |
+| 2026-08-18T03:18:47Z | gate-commit | 44.670 | 50.259 | 12.295 | 1.40 | 0 | 8df714ed | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-16T23:35:30Z | census | 855.533 | 27774.646 | 307.433 | 32.82 | 0 | 1e92c152 |  | lefford | 40 |
 | 2026-08-16T23:46:39Z | rebaseline | 123.305 | 1072.961 | 54.283 | 9.14 | 0 | 1e92c152 | follow-up/census-ratchet | lefford | 40 |
 | 2026-08-17T00:06:54Z | sluice:artifacts | 88.558 | 664.675 | 31.468 | 7.86 | 0 | c25e08e6 |  | lefford | 40 |
@@ -1387,6 +1454,14 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T20:32:36Z | sluice:seam-guard | 951.976 | 19331.583 | 1052.161 | 21.41 | 0 | 9bfef696 |  | lefford | 40 |
 | 2026-08-17T20:36:31Z | sluice:clients | 234.165 | 421.496 | 33.061 | 1.94 | 0 | 0d89a6f3 |  | lefford | 40 |
 | 2026-08-17T21:08:14Z | sluice:heavy | 1903.133 | 30358.416 | 690.625 | 16.31 | 0 | 8e723b81 |  | lefford | 40 |
+| 2026-08-18T03:27:04Z | rebaseline | 62.594 | 229.283 | 11.571 | 3.85 | 0 | 85a5333e | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T03:36:34Z | gate-commit | 377.733 | 256.319 | 224.469 | 1.27 | 0 | 85a5333e | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T04:22:58Z | gate-commit | 701.127 | 246.026 | 642.609 | 1.27 | 0 | b43127f9 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T05:26:17Z | gate-commit | 488.213 | 216.464 | 390.210 | 1.24 | 0 | 1a76ae32 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T05:51:58Z | gate-commit | 22.536 | 50.270 | 12.630 | 2.79 | 0 | 982b5b0e | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T11:51:07Z | gate-commit | 92.758 | 54.361 | 13.737 | 0.73 | 0 | 4a88e60f | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T15:24:35Z | gate-commit | 527.686 | 173.648 | 454.658 | 1.19 | 0 | ea95434f | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T15:25:37Z | gate-commit | 31.899 | 54.527 | 14.466 | 2.16 | 0 | cb3ed009 | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-18T01:57:41Z | gate-commit | 156.953 | 109.637 | 44.518 | 0.98 | 0 | 0c37a4c3 | campaign/the-parley | MacBookPro | 10 |
 | 2026-08-18T01:58:32Z | gate-commit | 26.207 | 51.915 | 13.189 | 2.48 | 0 | 0c37a4c3 | campaign/the-parley | MacBookPro | 10 |
 | 2026-08-18T02:04:04Z | gate-commit | 24.330 | 52.540 | 12.803 | 2.69 | 0 | cd8221be | campaign/the-parley | MacBookPro | 10 |
@@ -1426,6 +1501,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T12:36:54Z | sluice:seam-guard | 950.717 | 19359.641 | 1053.342 | 21.47 | 0 | 8bf927b4 |  | lefford | 40 |
 | 2026-08-18T12:41:17Z | sluice:clients | 263.036 | 500.552 | 45.967 | 2.08 | 0 | 786e5386 |  | lefford | 40 |
 | 2026-08-18T13:13:08Z | sluice:heavy | 1911.136 | 31223.021 | 700.108 | 16.70 | 0 | 3f99f2ff |  | lefford | 40 |
+| 2026-08-18T15:46:18Z | gate-commit | 48.547 | 41.141 | 100.262 | 2.91 | 0 | 631504e8 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T15:47:28Z | rebaseline | 61.208 | 236.199 | 11.375 | 4.04 | 0 | 631504e8 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T15:51:39Z | gate-commit | 231.095 | 151.897 | 121.376 | 1.18 | 0 | 631504e8 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T15:52:11Z | gate-commit | 24.115 | 54.069 | 14.278 | 2.83 | 0 | a70aebef | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-18T13:08:17Z | rebaseline | 36.110 | 214.176 | 12.170 | 6.27 | 0 | 61b77372 | campaign/the-illumination | MacBookPro | 10 |
 | 2026-08-18T13:15:34Z | gate-commit | 303.031 | 122.693 | 164.929 | 0.95 | 0 | 61b77372 | campaign/the-illumination | MacBookPro | 10 |
 | 2026-08-18T13:19:50Z | gate-commit | 21.453 | 36.600 | 8.942 | 2.12 | 0 | 61b77372 | campaign/the-illumination | MacBookPro | 10 |
@@ -1444,3 +1523,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T19:06:41Z | sluice:seam-guard | 966.351 | 19410.698 | 1063.825 | 21.19 | 0 | c0675afbf |  | lefford | 40 |
 | 2026-08-18T19:10:51Z | sluice:clients | 250.369 | 445.395 | 34.166 | 1.92 | 0 | 96a551a60 |  | lefford | 40 |
 | 2026-08-18T19:42:39Z | sluice:heavy | 1907.762 | 31163.657 | 715.546 | 16.71 | 0 | 852829240 |  | lefford | 40 |
+| 2026-08-18T17:55:46Z | gate-commit | 128.242 | 126.356 | 323.309 | 3.51 | 0 | 10fa2aca | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T18:06:48Z | gate-commit | 638.691 | 440.824 | 266.075 | 1.11 | 0 | 10fa2aca | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T18:09:26Z | rebaseline | 89.641 | 234.914 | 10.950 | 2.74 | 0 | 10fa2aca | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T18:10:24Z | gate-commit | 22.859 | 37.340 | 8.778 | 2.02 | 0 | 10fa2aca | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T18:15:39Z | gate-commit | 36.477 | 56.466 | 17.625 | 2.03 | 0 | 10fa2aca | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T18:30:35Z | rebaseline | 53.825 | 225.905 | 9.200 | 4.37 | 0 | b77d2a32 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-18T18:41:33Z | gate-commit | 26.690 | 54.805 | 13.892 | 2.57 | 0 | 925b0db8 | campaign/the-underworld | MacBookPro | 10 |

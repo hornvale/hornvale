@@ -62,7 +62,10 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Geosphere, Seed, Value};
 use hornvale_settlement::CELL_ID;
-use hornvale_terrain::{BandKind, Cave, CaveKind, GeneratedTerrain, TerrainPins};
+use hornvale_terrain::{
+    BandKind, Cave, CaveKind, DelveRung, GeneratedTerrain, GeothermalGradient, TerrainPins,
+    rung_at_depth,
+};
 use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
@@ -85,6 +88,28 @@ fn band_index(band: BandKind) -> usize {
         BandKind::Basement => 2,
         BandKind::Roots => 3,
         BandKind::Underneath => 4,
+    }
+}
+
+/// The five habitation rungs of the delve ladder in order, shallowest first —
+/// **the ladder `ChamberAddr.band` indexes since `chamber/v2`**, and therefore
+/// the axis the chamber-count breakdown below must bucket on. [`BAND_NAMES`]
+/// is still used, unchanged, for the cave-substrate histogram: that one is
+/// asking the archive question ("which rock does this void reach"), which is
+/// still `BandKind`'s job and was never the gate's.
+const RUNG_NAMES: [&str; 5] = ["Undercroft", "Shallows", "Deeps", "Underdeep", "Sunless"];
+
+/// Position of `rung` in [`RUNG_NAMES`]. `Surface` is not a habitation rung
+/// and [`rung_at_depth`] never returns it, so it has no bucket; the arm
+/// panics rather than folding the overworld into `Undercroft`.
+fn rung_index(rung: DelveRung) -> usize {
+    match rung {
+        DelveRung::Surface => panic!("Surface is not a habitation rung and has no lattice bucket"),
+        DelveRung::Undercroft => 0,
+        DelveRung::Shallows => 1,
+        DelveRung::Deeps => 2,
+        DelveRung::Underdeep => 3,
+        DelveRung::Sunless => 4,
     }
 }
 
@@ -424,13 +449,20 @@ const N_RADII: usize = 5;
 /// type-audit: bare-ok(ratio)
 const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 
-/// How many lattice addresses are in budget for a cave whose `deepest_band`
-/// sits at ladder position `band_idx` ([`band_index`]'s own numbering,
-/// `0..=4`): `chamber_exists`'s gate is `addr.band <= band_rank(cave.
-/// deepest_band)`, and `addr.band` ranges over `0..=band_idx` at
+/// How many lattice addresses are in budget for a cave whose depth budget
+/// reaches delve rung `rung_idx` ([`rung_index`]'s own numbering, `0..=4`):
+/// `chamber_exists`'s gate is `addr.band <= rung_rank(rung_at_depth(cave.
+/// depth_reach_m, gradient))`, and `addr.band` ranges over `0..=rung_idx` at
 /// [`SLOTS_PER_BAND`] slots each.
-fn addresses_in_budget(band_idx: usize) -> usize {
-    (band_idx + 1) * usize::from(SLOTS_PER_BAND)
+///
+/// **This used to be indexed by `band_index(cave.deepest_band)`**, because the
+/// gate used to be `addr.band <= band_rank(cave.deepest_band)`. The arithmetic
+/// is unchanged and the input is not: `chamber/v2` re-pointed the lattice's
+/// depth axis at the delve ladder, so bucketing on the stratigraphic band
+/// would now compare a measured count against a prediction for a different
+/// cave's reach.
+fn addresses_in_budget(rung_idx: usize) -> usize {
+    (rung_idx + 1) * usize::from(SLOTS_PER_BAND)
 }
 
 /// Every chamber address that exists over the FULL five-band lattice at
@@ -440,9 +472,9 @@ fn addresses_in_budget(band_idx: usize) -> usize {
 /// surface, and that file already restates the band ladder for the same
 /// reason. Always probes `entrance: 0`: today's terrain model reports one
 /// aperture per cave cell (see `ChamberAddr::entrance`'s own doc).
-fn chamber_count_at(seed: Seed, cave: &Cave, cell: CellId) -> usize {
+fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
-    for band in 0..BAND_NAMES.len() as u8 {
+    for band in 0..RUNG_NAMES.len() as u8 {
         for slot in 0..SLOTS_PER_BAND {
             let addr = ChamberAddr {
                 cell,
@@ -450,7 +482,7 @@ fn chamber_count_at(seed: Seed, cave: &Cave, cell: CellId) -> usize {
                 band,
                 slot,
             };
-            if chamber_exists(seed, cave, addr) {
+            if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
             }
         }
@@ -463,10 +495,11 @@ fn chamber_count_at(seed: Seed, cave: &Cave, cell: CellId) -> usize {
 /// chamber` measures) holds no chamber: spec §3.4 rung 0, `Sealed` — "the
 /// void exists and is unreachable." Task 5's `delve` refuses such a cave by
 /// naming it sealed rather than claiming there is nothing there.
-fn is_sealed(seed: Seed, cave: &Cave, cell: CellId) -> bool {
+fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> bool {
     !chamber_exists(
         seed,
         cave,
+        gradient,
         ChamberAddr {
             cell,
             entrance: 0,
@@ -617,9 +650,12 @@ struct T8SeedReport {
     seed: u64,
     /// Land cells this seed's terrain sculpted (`!terrain.is_ocean`).
     land_cells: usize,
-    /// `(chamber_count, deepest_band, sealed)` — one entry per land cell
-    /// that carries a cave.
-    cave_cells: Vec<(usize, BandKind, bool)>,
+    /// `(chamber_count, delve_rung, sealed)` — one entry per land cell that
+    /// carries a cave. The middle element is the **gate's own axis**: it was
+    /// `deepest_band` while the gate was `band_rank`, and became the cave's
+    /// delve rung when `chamber/v2` re-pointed the lattice, so the
+    /// count-versus-prediction breakdown keeps comparing like with like.
+    cave_cells: Vec<(usize, DelveRung, bool)>,
     /// Chamber count for EVERY land cell, cave or not (0 where there is no
     /// cave) — H2's own literal wording, reported so its zero-weighting can
     /// be attributed correctly rather than assumed.
@@ -674,7 +710,7 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
 
     let mut land_cells = 0usize;
     let mut land_cell_ids: Vec<CellId> = Vec::new();
-    let mut cave_cells: Vec<(usize, BandKind, bool)> = Vec::new();
+    let mut cave_cells: Vec<(usize, DelveRung, bool)> = Vec::new();
     let mut per_cell_counts: Vec<usize> = Vec::new();
     let mut non_sealed: BTreeSet<CellId> = BTreeSet::new();
 
@@ -686,12 +722,13 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
         land_cell_ids.push(cell);
         match terrain.cave_at(cell) {
             Some(cave) => {
-                let count = chamber_count_at(seed, &cave, cell);
-                let sealed = is_sealed(seed, &cave, cell);
+                let gradient = terrain.geothermal_gradient_at(cell);
+                let count = chamber_count_at(seed, &cave, gradient, cell);
+                let sealed = is_sealed(seed, &cave, gradient, cell);
                 if !sealed {
                     non_sealed.insert(cell);
                 }
-                cave_cells.push((count, cave.deepest_band, sealed));
+                cave_cells.push((count, rung_at_depth(cave.depth_reach_m, gradient), sealed));
                 per_cell_counts.push(count);
             }
             None => per_cell_counts.push(0),
@@ -802,14 +839,14 @@ fn report_h2_depth_weld_and_reachability() {
     println!();
     println!(
         "== EXISTENCE_DENSITY = {PREDICTED_EXISTENCE_DENSITY} prediction (narrow relative \
-         spread, a coin flip per address) vs. the measured depth-weld breakdown, by band =="
+         spread, a coin flip per address) vs. the measured depth-weld breakdown, by delve rung =="
     );
     let mut band_bucket_total = 0usize;
-    for (idx, name) in BAND_NAMES.iter().enumerate() {
+    for (idx, name) in RUNG_NAMES.iter().enumerate() {
         let counts: Vec<usize> = per_seed
             .iter()
             .flat_map(|r| r.cave_cells.iter().copied())
-            .filter(|&(_, band, _)| band_index(band) == idx)
+            .filter(|&(_, rung, _)| rung_index(rung) == idx)
             .map(|(c, _, _)| c)
             .collect();
         band_bucket_total += counts.len();
@@ -823,13 +860,11 @@ fn report_h2_depth_weld_and_reachability() {
             0.0
         };
         if counts.is_empty() {
-            println!(
-                "  band={name}: 0 caves reach this band (Task 0: only Cover/Basement/Roots occur)"
-            );
+            println!("  rung={name}: 0 caves reach this rung");
             continue;
         }
         println!(
-            "  band={name} (in-budget addresses={n_addr:.0}, {} caves): measured {} | \
+            "  rung={name} (in-budget addresses={n_addr:.0}, {} caves): measured {} | \
              predicted Binomial({n_addr:.0}, {PREDICTED_EXISTENCE_DENSITY}) mean={theoretical_mean:.4} \
              sd={theoretical_sd:.4} cv={theoretical_cv:.4}",
             counts.len(),

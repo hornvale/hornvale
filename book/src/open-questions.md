@@ -1845,6 +1845,63 @@ become askable before anything could be declared in it. What is now settled is
 only that asking is possible. Whether a realm's hard gate generalises past caves
 remains the thing a campaign placing a people underground will find out.
 
+*Re-scored again by [The Underworld](./chronicle/the-underworld.md)
+(2026-08-18), which built everything the sentence above was waiting for and
+still could not do the thing the withdrawal was about.*
+
+**The precondition is discharged and the bet is not.** The underworld now has
+what the paragraph two above said it was waiting on: a depth coordinate that is
+not metres above sea level, communities declared as places (twenty-two of them,
+in the same five-axis basis the surface uses), chamber conditions that vary from
+each other and from the surface, a water table that is non-degenerate on every
+seed, and a people settled at a rung rather than at a mouth. Two dwarf kinds
+were **drafted as candidates** — in a test-local fixture, deliberately not in
+the species registry, so the roster could not become the thing under test — and
+scored against a criterion frozen before any of it was measured. The
+criterion **failed**: their modal delve rungs are equal on one of three seeds,
+and their top-quartile habitats overlap at 7.3 / 16.4 / 16.5% against a floor of
+20%. They were not admitted. That is the same conclusion The Delvers reached and
+the first time it has been reached from a measurement.
+
+**What lowers confidence is narrower and more surprising than the failure.** A
+decomposition run alongside the criterion asked which half of the capacity field
+did the separating, and the answer is not the half this campaign built. The
+depth-routed *conditions* — chamber temperature and moisture — separate the two
+candidates almost completely, at 0.5% top-quartile overlap on seed 42 and 0.0%
+on seed 7; **on seed 1234 that statistic is undefined**, its quartile boundary
+falling inside a tie of 12, so the reading is two seeds of three and not a flat
+three-seed range. The delve
+seating multiplier has no quartile at all: four or five distinct values with
+284–879 cells tied at the boundary, so its own overlap is undefined on every
+seed, and composing it onto the conditions *raises* the overlap toward 16% —
+pulling the two kinds slightly back together. **The axis this chapter expected to
+separate two underground peoples contributed too little resolution to be
+measured**, and the separation that does exist came from a mechanism the chapter
+already knew about.
+
+That is not the null the withdrawal predicted. Zero overlap was named in advance
+as "the axis separated them into different peoples rather than different
+dwarves, which is a failure that would otherwise read as a spectacular success",
+and the measurement landed on that branch — for the conditions, not for depth.
+So the bet moves from *cannot be asked* to *asked, answered, and answered about
+the wrong factor*. Whether two kinds can be separated **by depth** is now a
+question about resolution — how many distinct values a depth-derived multiplier
+can take before a quartile boundary means anything — rather than a question
+about whether the world has a depth at all.
+
+**And one measurement in the chain was wrong in a way that would have inverted
+the verdict.** The fit function matched a cave's genus by comparing the cave
+kind's name against the corpus's spellings; one of three agreed by coincidence,
+so two of three formations silently scored against a genus-blind fallback and
+returned identical tables. Broken, the overlap reads 34 / 93 / 84% and clears
+the floor on every seed. Repaired, it reads 7.3 / 16.4 / 16.5% and fails on
+every seed. Nothing in the gate distinguished the two, and the campaign's other
+eleven instrument findings are the reason it was looked for. The chapter's
+standing lesson from The Compendium — that a column's *value* is evidence about
+the world only if something independent establishes the column can move —
+generalises here to a stricter form: **a join is evidence only if something
+establishes that it discriminates**, and a fit that always exists is not that.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,

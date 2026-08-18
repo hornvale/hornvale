@@ -1552,7 +1552,25 @@ impl<'w> Session<'w> {
             slot: 0,
         };
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
-        match hornvale_worldgen::chamber::chamber_at(self.world.seed, &cave, addr, &overrides) {
+        // The chamber lattice is placed by HEAT since `chamber/v2` (spec
+        // §4.1), so the same cave reaches a different distance down it
+        // depending on the cell's gradient, and a chamber's stratum is read
+        // off that cell's own column. Both come from the same terrain handle
+        // `chamber_column_here` already resolved the cave through, so no
+        // second, independently-chosen lookup is introduced here.
+        let Some(terrain) = self.wctx.terrain.as_ref() else {
+            return Turn::Out("There is no cave here to delve into.".to_string());
+        };
+        let gradient = terrain.geothermal_gradient_at(cell);
+        let column = terrain.column_at(cell);
+        match hornvale_worldgen::chamber::chamber_at(
+            self.world.seed,
+            &cave,
+            gradient,
+            &column,
+            addr,
+            &overrides,
+        ) {
             None => Turn::Out(
                 "The cave mouth is here, but the rock beyond is sealed; there is no way down."
                     .to_string(),
@@ -4943,8 +4961,15 @@ mod tests {
                 band: 0,
                 slot: 0,
             };
-            let is_open =
-                hornvale_worldgen::chamber::chamber_at(seed, &cave, addr, &overrides).is_some();
+            let is_open = hornvale_worldgen::chamber::chamber_at(
+                seed,
+                &cave,
+                terrain.geothermal_gradient_at(cell),
+                &terrain.column_at(cell),
+                addr,
+                &overrides,
+            )
+            .is_some();
             if is_open == want_open {
                 return (cell, cave);
             }

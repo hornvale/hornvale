@@ -9,12 +9,17 @@
 //! Its own doc states the consequence: a floored axis can never bind, so the
 //! bare one becomes the sole determinant wherever it dips below the others'
 //! floor. Elevation is that axis, and `subterranean_substrate` passes
-//! `height_asl_m` through unchanged.
+//! `height_asl_m` through unchanged — still true after The Underworld gave a
+//! chamber a real depth coordinate, because that depth reaches temperature and
+//! moisture and deliberately not the altitude axis.
 //!
 //! This prints all four terms for rust-monster on cave-bearing cells, surface
-//! against subterranean, and shows the two things that matter together:
-//! moisture and insolation improve substantially, and the minimum does not
-//! move at all.
+//! against subterranean, and shows the two things that matter together: the
+//! three floored axes move — since The Underworld, in BOTH directions, with
+//! insolation the only one a chamber wins outright, temperature degrading
+//! where the gradient warms past a cool optimum, and moisture rising or
+//! falling with the chamber's height above its water table — and the minimum
+//! does not move at all.
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry points
 //! directly to build its own world state, the same way `warren_gate.rs` and
@@ -26,7 +31,7 @@ use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, sky_of, substrate_field,
-    subterranean_substrate, terrain_of,
+    subterranean_substrate_field, terrain_of,
 };
 
 /// claim: structural(seed: 42) — off-gate (heavy:); false-positive
@@ -64,13 +69,18 @@ fn which_axis_binds_for_a_subterranean_kind() {
     let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
     println!("rust-monster sovereignty floor = {floor_buf:.6}");
 
+    // The Underworld: the chamber reading now depends on the cell's own
+    // depth, gradient, water table and porosity, so it comes from the one
+    // shared derivation rather than from the surface reading alone.
+    let subterranean = subterranean_substrate_field(geo, &terrain, &substrate);
+
     let mut shown = 0;
     for cell in geo.cells() {
         if terrain.is_ocean(cell) || terrain.cave_at(cell).is_none() {
             continue;
         }
         let surf = *substrate.get(cell);
-        let sub = subterranean_substrate(surf);
+        let sub = *subterranean.get(cell);
         for (label, s) in [("surface", surf), ("subterranean", sub)] {
             let t = cn.temperature.eval(s.temperature_c, floor_buf);
             let m = cn.moisture.eval(s.moisture, floor_buf);
