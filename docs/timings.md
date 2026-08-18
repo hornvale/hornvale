@@ -1355,3 +1355,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T14:39:23Z | gate-commit | 20.131 | 36.571 | 8.953 | 2.26 | 0 | 7ceea22a | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-18T14:48:03Z | gate-commit | 366.994 | 129.386 | 216.473 | 0.94 | 0 | 7ceea22a | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-18T14:52:40Z | gate-commit | 24.961 | 50.963 | 13.468 | 2.58 | 0 | 7c21df8b | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T16:03:53Z | rebaseline | 63.376 | 231.690 | 11.726 | 3.84 | 0 | b58e53f8 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T16:10:57Z | gate-commit | 403.402 | 149.871 | 233.767 | 0.95 | 0 | b58e53f8 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T21:40:06Z | rebaseline | 65.302 | 224.751 | 11.637 | 3.62 | 0 | 04ae6654 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T22:02:21Z | gate-commit | 317.996 | 102.043 | 147.933 | 0.79 | 0 | 04ae6654 | campaign/the-burr | MacBookPro | 10 |
