@@ -69,3 +69,39 @@ fn a_repeated_raid_pair_is_recorded_once_per_ending() {
     let peers = g.peers_of(eid(5));
     assert_eq!(peers.len(), 2, "two distinct victims, two edges: {peers:?}");
 }
+
+/// A community cannot meet itself: `occ-ended-by` naming the ending
+/// occupation as its own attacker must produce no edge and leave its peers
+/// list empty, not merely fail to panic.
+#[test]
+fn a_self_named_attacker_makes_no_edge() {
+    let mut led = ledger_with(&[(1, None)]);
+    raid(&mut led, 1, 1, 400.0);
+    let g = contact_of(&led);
+    assert_eq!(g.edges(), 0, "self-raid must not become an edge");
+    assert!(g.peers_of(eid(1)).is_empty(), "no self-peer either");
+}
+
+/// A raid with no readable day cannot be time-gated, so it must contribute
+/// no edge — asserted on the graph's shape, not merely that `contact_of`
+/// returned without panicking.
+#[test]
+fn an_ending_with_a_non_number_day_makes_no_edge() {
+    let mut led = ledger_with(&[(1, None), (5, None)]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Text("unknown".to_string()),
+    );
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(5)),
+    );
+    let g = contact_of(&led);
+    assert_eq!(g.edges(), 0, "an unreadable day must not become an edge");
+    assert!(g.peers_of(eid(1)).is_empty());
+    assert!(g.peers_of(eid(5)).is_empty());
+}

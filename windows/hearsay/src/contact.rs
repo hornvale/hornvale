@@ -57,7 +57,9 @@ impl ContactGraph {
     }
 
     /// How many undirected edges this graph holds — one per raid that named
-    /// an `Entity`-valued attacker.
+    /// an `Entity`-valued attacker, assuming no two raids share both an
+    /// unordered victim/attacker pair and a day (unreachable from today's
+    /// bake; `dedup` would silently collapse such a pair into one edge).
     /// type-audit: bare-ok(count: return)
     pub fn edges(&self) -> usize {
         self.peers.values().map(Vec::len).sum::<usize>() / 2
