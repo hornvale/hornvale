@@ -98,8 +98,36 @@ others="$(
         | awk '/^worktree /{print $2}' \
         | grep -vxF "$root" \
         | while IFS= read -r w; do
+            # STRING PREFIX, NOT PATH ANCESTRY. The comment above diagnoses
+            # this correctly — "the main checkout's own path is a literal
+            # PREFIX" — and then the test implemented was `"$w"/*`, which is
+            # narrower than the diagnosis: it requires a SLASH after $w, so it
+            # catches the nested case (<main>/.claude/worktrees/<name>) and
+            # misses the sibling-name case entirely.
+            #
+            # On this box every heavy/census/sluice/lane scratch worktree is
+            # `<main>-<something>` — /…/hornvale-heavy-wt beside /…/hornvale —
+            # and `grep -lF /…/hornvale` matches every artifact that bakes its
+            # OWN path, because the shorter name is a substring of the longer.
+            # Measured before the fix: 653 hits in hornvale-heavy-wt's own
+            # deps/, every single one its own CARGO_MANIFEST_DIR, verified by
+            # extracting the matched strings — not one referenced a foreign
+            # tree. The check was red by default in every sibling worktree.
+            #
+            # That is the exact failure the comment above says it exists to
+            # avoid: "a check that is always red trains people to ignore it".
+            # It was avoided for the nested shape and reintroduced by the
+            # sibling shape.
+            #
+            # THE COST, stated because it is a real narrowing: a genuinely
+            # foreign path that happens to be a string prefix of this root can
+            # no longer be detected — substring matching cannot tell the two
+            # apart, which is why this is an exclusion rather than a smarter
+            # match. That is the same trade the ancestor exclusion already
+            # made, and the header already says a green means "no
+            # contamination from what this run was told to check for".
             case "$root" in
-                "$w"/*) ;;              # $w is an ancestor of $root — not foreign
+                "$w"|"$w"*) ;;          # $w is a string prefix of $root — indistinguishable
                 *) printf '%s\n' "$w" ;;
             esac
           done
@@ -132,7 +160,26 @@ for deps in $existing_dep_dirs; do
         if [ -n "$hits" ]; then
             found=1
             echo "worktree-freshness: artifacts in $deps bake the FOREIGN path $other:" >&2
-            echo "$hits" | sed 's/^/  /' | head -10 >&2
+            # ONE awk, NOT `sed | head -10`, and the reason is that the old
+            # form could KILL THIS SCRIPT. Under the `set -euo pipefail` at
+            # the top: `head` exits once it has ten lines, `sed` keeps
+            # writing, takes SIGPIPE, returns 141; pipefail propagates it and
+            # `set -e` exits on the spot — so past ~64 KiB of hits (the pipe
+            # buffer) the run died HERE, printing the header and ten paths and
+            # never reaching the explanation below or the `exit 1`. Measured
+            # on the identical construct: 359 paths exit 0, 700 and 1500 exit
+            # 141 with the following line never running. The remediation was
+            # unreachable exactly when contamination was worst.
+            #
+            # awk reads its whole input and never exits early, so there is no
+            # SIGPIPE to propagate. It also fixes the quieter half of the same
+            # defect: the old cap printed ten of N with no indication N was
+            # larger, so a reader rebuilding "the affected crates" worked from
+            # a silently partial list. Now the remainder is stated.
+            printf '%s\n' "$hits" | awk '
+                NR <= 10 { printf "  %s\n", $0 }
+                END { if (NR > 10) printf "  … and %d more (%d total)\n", NR - 10, NR }
+            ' >&2
         fi
     done
 done
@@ -146,8 +193,20 @@ point somewhere that no longer exists. Tests reading them fail with a panic
 naming the old path (the first two) or a "file not found" spawn error (the
 third), both of which read exactly like a red main and are not one.
 
-Fix: re-run `make worktree-take`, which now invalidates them, or force a
-rebuild of the affected crates.
+Fix: force a rebuild of the crates whose sources read one of those macros —
+from inside this worktree,
+
+  grep -rl 'env!("CARGO_MANIFEST_DIR")\|CARGO_TARGET_TMPDIR\|CARGO_BIN_EXE_' \
+      --include='*.rs' . | xargs -r touch
+
+which is exactly what worktree-take.sh does on its own recycle path.
+
+NOT `make worktree-take`: an earlier version of this message sent readers
+there, and it cannot work. worktree-take.sh exits at its `[ -d "$DEST" ]`
+guard — "already exists; nothing to do" — before ever reaching that touch,
+so re-running it on a worktree you already have does nothing at all. The
+advice was self-defeating, and it is the worse kind: it does nothing while
+leaving the reader believing they have acted.
 EOF
     exit 1
 fi

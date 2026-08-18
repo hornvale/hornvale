@@ -179,6 +179,69 @@ add)
         env -u GIT_DIR -u GIT_INDEX_FILE \
             git fetch --quiet origin "$branch" >/dev/null 2>&1 || true
     fi
+    # THE HEADLINE CHECK LIVES HERE TOO, AND THIS IS THE ONE THAT ENFORCES.
+    # `sluice-request.sh` checks the same thing, but it runs on the
+    # SUBMITTER's machine from the SUBMITTER's checkout — so a campaign whose
+    # scripts/ predates the trailer rule silently gets the old subject-based
+    # check and never sees this one. That is not hypothetical: it happened on
+    # the rule's first outside submission, from a checkout two commits stale
+    # on that one file, and the submitter reported to Nathan that the new
+    # mechanism had caught something when it had not. A client-side check that
+    # falls through SILENTLY is worse than none, because it manufactures false
+    # confidence in its own coverage.
+    #
+    # `add` runs on the canonical box, over ssh, from the box's own checkout —
+    # the one place every submission passes through regardless of what the
+    # caller is running. So the refusal belongs here and the caller-side one
+    # is demoted to what it actually is: a fast local pre-check.
+    #
+    # THREE-VALUED, for the same reason coalescing is. Absent-and-answerable
+    # refuses; UNANSWERABLE (the box cannot resolve the objects) must NOT,
+    # because the queue's first duty is durability and refusing a real request
+    # over a missing object would lose it. That case accepts and stamps the
+    # row so an operator sees it, exactly as an indeterminate coalesce does.
+    #
+    # HV_SLUICE_SKIP_HEADLINE is for `scripts/test-sluice.sh`, which adds many
+    # merge rows in scratch repos that carry no trailers. It is safe because
+    # nothing in the production path sets it — `sluice-request.sh`'s remote
+    # command is a fixed string that does not mention it, and a test in that
+    # suite asserts so, which is what keeps this knob from quietly becoming
+    # the way the check gets turned off.
+    headline_note=""
+    if [ "$kind" = "merge" ] && [ "${HV_SLUICE_SKIP_HEADLINE:-}" != "1" ]; then
+        # shellcheck source=scripts/sluice-headline.sh
+        . "$(dirname "$0")/sluice-headline.sh"
+        hl_base="${HV_SLUICE_BASE:-origin/main}"
+        if ! env -u GIT_DIR -u GIT_INDEX_FILE \
+                git rev-parse --verify --quiet "$hl_base" >/dev/null 2>&1 \
+           || ! env -u GIT_DIR -u GIT_INDEX_FILE \
+                git cat-file -e "$sha^{commit}" >/dev/null 2>&1; then
+            headline_note="headline indeterminate: $hl_base or ${sha:0:12} unresolvable here"
+            echo "sluice-queue: add: headline UNCHECKED — $headline_note" >&2
+        else
+            hl="$(sluice_headline_of "$PWD" "$hl_base" "$sha")"
+            if sluice_headline_is_junk "$hl"; then
+                echo "sluice-queue: add: REFUSED — no usable Sluice-Headline: trailer in $hl_base..${sha:0:12}." >&2
+                echo "  The merge commit's subject is permanent and human-read, and" >&2
+                echo "  tools/census/history.sh reads it as the census epoch label when" >&2
+                echo "  the merge moves the census. It must be authored, not inferred." >&2
+                echo "" >&2
+                echo "  Add to the body of any commit in the range — not necessarily the" >&2
+                echo "  last, and a later commit will not displace it:" >&2
+                echo "" >&2
+                echo "      Sluice-Headline: <what landed, in one line>" >&2
+                echo "" >&2
+                echo "  Keep it ADJACENT to your other trailers with no blank line" >&2
+                echo "  between: git's parser reads only the message's LAST block, so a" >&2
+                echo "  blank line above a Claude-Session: line strands it." >&2
+                echo "" >&2
+                echo "  Write only the text; the chamber composes merge($(sluice_short_name "$branch")): <text>." >&2
+                exit 2
+            fi
+            echo "sluice-queue: add: headline OK (trailer rule) — merge($(sluice_short_name "$branch")): $hl" >&2
+        fi
+    fi
+
     with_lock
     id="req-$(printf '%.12s' "$sha")-$(date -u +%Y%m%dT%H%M%SZ)"
     # Supersede supersedable ancestors of THIS sha on THIS branch. `running`
@@ -257,8 +320,12 @@ add)
         fi
         printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rkind" "$rnote"
     done < "$QUEUE" > "$tmp"
+    # The note carries the headline verdict ONLY when it was indeterminate —
+    # a normal row's note stays empty, so `sluice-status` reads clean and the
+    # unchecked ones stand out rather than being buried in uniform text.
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$id" "$branch" "$sha" "queued" "$kind" "" >> "$tmp"
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$id" "$branch" "$sha" "queued" "$kind" \
+        "$(sanitize_note "$headline_note")" >> "$tmp"
     mv "$tmp" "$QUEUE"
     printf '%s\n' "$id"
     ;;
