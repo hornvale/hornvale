@@ -44,6 +44,21 @@
 # landed and nothing more. A leading `merge(...): ` is stripped defensively
 # anyway — an author who writes the whole subject is doing something
 # reasonable, and refusing them over a prefix would be pedantry.
+#
+# CONVENTION, NOT MECHANISM: NAME AN EPOCH BUMP IN THE HEADLINE. Proposed by
+# The Burr, and it is the right use of an authored subject. A range that bumps
+# a `ROOT_EPOCH`/`settlement/name/vN`-style suffix has changed a consumption
+# contract, and the merge subject is the one permanent, human-read line a
+# reader meets first — so say so there rather than leaving it to the diff.
+#
+# Nothing enforces this and nothing should try. The check that would matter is
+# not "is the label monotonic" — a monotonic check passes on exactly the case
+# worth catching, the EMPTY EPOCH, where a campaign mints a bump and then cuts
+# the stage that justified it. The label is present, the artifact regenerates,
+# the tests are green, and the discontinuity it documents never happened. The
+# real question is "which task changed a consumption contract, and did that
+# task land?", which no gate can ask. So: a convention, stated where the
+# author is already choosing their words.
 
 # The short name that goes inside `merge(...)`. The LAST path segment, always:
 # `campaign/the-rhumb` -> `the-rhumb`, `fix/sluice-coalescing` ->

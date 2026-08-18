@@ -21,3 +21,13 @@ hornvale-astronomy = { path = "../../domains/astronomy" }
 [dev-dependencies]
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-terrain = { path = "../../domains/terrain" }
+# DEV-only — a read-only window must not depend on the composition root or on
+# species data at runtime. Needed by three test targets, none of them the
+# library: `probe_teller_relations.rs` (promoted, The Palimpsest Task 9 —
+# reads allometric generation length to test whether a people-varying
+# duration is commensurate with the ladder), and the readout batteries
+# `palimpsest_readout.rs` / `palimpsest_readout_units.rs`, which read the
+# same allometric data to compute the shipped rule. If the design ships, the
+# runtime path goes through worldgen's `descent::generation_length_of`
+# rather than this.
+hornvale-species = { path = "../../domains/species" }

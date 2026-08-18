@@ -2915,7 +2915,7 @@ tested rather than believed. It holds, in both directions.
 when a story crosses between communities standing differently toward the event
 it describes — the precondition became measurable on the first attempt that was
 tried. Spearman's rho between an ending's maximum-antichain width and its count
-of surviving variants is **0.666** over 408 qualifying endings. The axis that
+of surviving variants is **0.662** over 408 qualifying endings. The axis that
 had been constant now varies, and the instrument that had failed three times
 worked immediately. Nothing about the instrument changed; the world did.
 
@@ -2947,3 +2947,61 @@ a large intervention, The Retelling from a ladder that used two of its four
 rungs. Neither knew of the other's entry until they collided in a merge. That
 is weak evidence the recursion is a property of the axis rather than of either
 campaign's subject matter.
+
+### The recursion was scored, and the instrument disagreed with itself (2026-08-17)
+
+*The Palimpsest* supplied what the entry above said was missing — a design in
+which the number of boundary crossings can vary, because damage accumulates as
+a continuous width rather than spending one rung per firing. So "does
+distortion compound" moves off **not-yet-scorable**, and the score is a
+qualified yes: over forty worlds, the retained rung distribution spans a median
+of five and a maximum of seven rungs under one of three co-equal accumulation
+rules, and two under the other two.
+
+**One sentence in the entry above needs striking, and the strike is load-
+bearing.** It says victim-line and bystander are both closed under descent.
+Bystander is not: a bystander whose subtree contains the attacker has a
+perpetrator descendant, and a bystander that is the subject's own parent has a
+victim-line child. Only the first of those can produce a path that crosses
+stance twice — the 209 that were measured all take it. The second breaks
+closure just as really, but `VictimLine` *is* descent-closed, so a path that
+steps into it crosses once and can never cross back. The law that actually
+holds is narrower — any predicate over the
+teller/hearer *lineage relation* is constant along a single-parent walk by
+construction — and stance is not such a predicate. It merely behaves like one
+because the label that breaks closure holds exactly one community, the named
+attacker, so a path entering it must leave at the next step and the crossing
+count stops at two rather than growing. The bet's blocker was real; the reason
+given for it was not the reason.
+
+The qualification is the part worth keeping, and it is a fourth position rather
+than a fourth level of the third. **The instrument was internally incoherent in
+a way no amount of asking "what would have to vary" would have found.** The
+accumulated width was seeded in days and incremented in a dimensionless count
+of generations, then compared against rungs measured in days — a defect in the
+design text, which defines the amplitude in one unit and the ladder in another
+and never states a conversion. For that reason alone, two of the three rules
+never reached a people's coarsest rungs at all: additive's occupied labels stop
+at `year` on every one of the forty worlds, touching neither `generation` nor
+`lifespan`, and it clears even the second rung on only eleven of them — 4.4% of
+pooled claims. So their apparently clean falsification of a predicted
+saturation was not a measurement of the world at all. A post-hoc
+re-measurement with the units reconciled turns their saturated fraction from
+exactly 0.0000 into 0.72–0.75.
+
+The diagnostic that would have caught it is not this chapter's usual one. Asking
+what must vary is a question about the *world*; this was a question about
+whether two quantities being compared are **commensurable**, which is a question
+about the instrument and is answerable before any world is built. The campaign
+had in fact killed two earlier designs by exactly that check — an amplitude
+measured in days that overshot the ladder 25-fold on a single step, and a ladder
+of natural durations against paths that span 8–13 generations — and then shipped
+a third instance of it. A check applied twice and forgotten the third time is
+the failure mode, not an unfamiliar check.
+
+The one result immune to all of it is worth naming, because immunity has a
+cause: the correlation between a people's generation length and the precision it
+retains is negative under all three rules in *both* readouts. A unit mismatch
+that rescales every people by the same factor cannot disturb a comparison taken
+between peoples. A bet that survives a broken instrument is telling you which
+term it actually depends on.
