@@ -164,7 +164,41 @@ join the same injective scheme or keep their present salt is an implementation
 call with one binding constraint: **a moved volcano name is a STOP** (§7 F3's
 decision table).
 
-### 3.4 Ordering is total, deterministic, and is the placement channel
+### 3.4 A feature surfaces every name it has — none is canonical
+
+`NameKind::Landform`'s own doc already says it: "a landform has ONE identity
+and MANY names ... none of them is *the* name." This campaign takes that
+literally at the presentation boundary. A feature's info line reads
+
+```
+Mount McKinley, Denali
+```
+
+— every name the surface is entitled to show, joined, rather than one name
+elected and the rest discarded. There is no primary-name field anywhere in
+this campaign, and adding one later would be the same forbidden move decision
+0142 names in the rendering channels: collapsing two real values into one slot
+and losing the axis that distinguished them.
+
+**Ordering must be deterministic and there are two cases.**
+
+- **With an observer** (the possession, and the whole of the follow-on fog
+  campaign): the observer's own people's name leads, remaining names follow in
+  species-label order. The lead is a fact about who is looking, not a claim
+  that theirs is the true name.
+- **Without an observer** (the almanac, `explain`, the gazetteer artifact —
+  everything this campaign actually ships): species-label ascending, with no
+  lead. Deterministic, and it declines to elect a canonical name in a surface
+  that has no standing to elect one.
+
+**Consequence the fog campaign inherits, recorded here so it is not
+rediscovered:** the name list *grows* as a character learns. A feature you
+know by one name and later learn a second name for is the same feature — so
+the fog's unit of knowledge is `(FeatureId, species)`, not `FeatureId`. That
+is a strictly finer key than "do you know this place", and choosing the coarse
+one would make the second name unlearnable.
+
+### 3.5 Ordering is total, deterministic, and is the placement channel
 
 Within a class, features order by magnitude descending, ties broken by
 identity ascending — integer-only, so cross-platform byte-identical, and total
@@ -324,19 +358,25 @@ is too low to discriminate) or hundreds of near-identical ones (too high to
 name).
 
 **H2 — one landform, many names.** For a feature named by two peoples with
-different phonologies, the two names differ. *Falsified if* they coincide at a
-rate indistinguishable from one people naming it twice — which would mean the
-species salt is not reaching the draw.
+different phonologies, the two names differ. **Predicted direction: they
+diverge** — recorded as a prediction, with its author, because a preregistered
+hypothesis with no stated direction cannot be falsified by a result, only
+interpreted by one. *Falsified if* they coincide at a rate indistinguishable
+from one people naming it twice, which would mean the species salt is not
+reaching the draw.
 
 **H3 — naming is additive.** No committed artifact moves except this
 campaign's own new one and the two generated reports (§7 F3's table).
 *Falsified by* any STOP row.
 
-**H2 is the one at real risk**, and it is the one worth stating a null for in
-advance: if per-culture divergence turns out to be weak, the finding is that
-landform names are effectively universal, which is a fact about the phonology
-draw and a legitimate campaign result. Do not retune a constant to rescue it
-after unblinding.
+**H2 is the one at real risk**, and its null is accepted in advance: if
+per-culture divergence turns out to be weak, the finding is that landform
+names are effectively universal — a fact about the phonology draw and a
+legitimate campaign result, to be shipped as the headline rather than
+repaired. Do not retune a constant to rescue it after unblinding. Note that
+the null would also *simplify* §3.4, and that is precisely why it must not be
+allowed to feel like a convenience: a weak result that makes downstream work
+easier is the one most likely to be under-scrutinised.
 
 ---
 
