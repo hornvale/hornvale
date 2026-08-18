@@ -307,8 +307,8 @@ small to run. The three that were caught were caught by running something; the
 two that weren't were the two where I ran nothing. The countermeasure that works
 is mechanical, not attentional."*
 
-Three more arrived after that, all during the close, and they take the
-campaign's tally to **fifteen findings across fourteen places**. An eleven-seed
+Three more arrived after that, all during the close, and they took the
+campaign's tally to fifteen findings across fourteen places. An eleven-seed
 comparison table whose every cell had gone stale across the genus repair without
 reddening, because its test asserted only that a collection was non-empty. A
 calibration probe printing `Undercroft 100/100/100 %` as the first row beside
@@ -324,6 +324,38 @@ Which is why the durable output of that thread is not vigilance. It is a
 mutation script that refuses to write unless its target text is found **and
 unique**, and a standing preference for making a measurement re-runnable from
 the tree over stating it correctly in a report.
+
+**A sixteenth arrived later than any of them, at the merge gate, and it is the
+purest instance of the whole set.** The Tense had measured an ordering —
+longer-horizon peoples holding older standing relations — and found it
+**falsified**, leaving behind a two-point tripwire: the top row of the roster's
+median relation age over the bottom row's, red if the ratio ever cleared 1.30.
+On the merge product it fired at **1.421**, high-elf at horizon 0.95 holding
+675 d against gnoll at 0.20 holding 475 d, and read as a falsified effect
+returning.
+
+It had not returned. The tripwire's own message said to re-derive over the whole
+roster rather than the two extremes, and doing so showed the fire was the
+instrument's: **the top row had changed identity**. On `main` it is desert-dwarf
+at 400 d; here it is high-elf at 675 d, because desert-dwarf fell under the
+minimum-sample threshold and high-elf rose over it. The verdict turned on roster
+composition at an inclusion threshold, not on the world. Across the whole roster
+the rank correlation between authored horizon and median relation age reads
+**0.384** on `main` and **0.546** here against the roster's own noise bar of
+**0.693** — inside noise on both — and peoples the registry authors at an
+*identical* horizon differ by as much as **2.33×**, which is more than the 1.421
+the endpoint pair read across the entire 0.20 → 0.95 span. The assertion is now
+that whole-roster statistic, and it was mutation-proved: replace each people's
+median with its horizon and rho goes to 1.0000 and the test reddens.
+
+Two things make it the cleanest example of the campaign's subject. It is the
+first of the sixteen to fail **loudly** rather than pass silently — an
+instrument mis-measuring in the direction that raises an alarm, which is how a
+campaign gets talked into reinstating a null it had correctly retired. And
+nothing that ran on the branch tip could see it: it is a live-worldgen battery
+in the heavy tier, and it fired only when the merge product itself was built and
+gated. The Tense's falsification stands, on better evidence than it originally
+had.
 
 ## Two seams closed, one opened cleanly and priced
 

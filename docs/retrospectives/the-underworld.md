@@ -8,18 +8,21 @@ ladders, a cave depth budget in metres, a water table, chamber conditions that
 vary, twenty-two underworld communities in The Axes' basis, and a preregistered
 gate that closed against the campaign's own headline.
 
-## 1. Fifteen instruments that looked like they were measuring and were not
+## 1. Sixteen instruments that looked like they were measuring and were not
 
 This is the campaign's subject, and it is a process finding before it is a
-product one. **Fifteen findings across fourteen distinct places**, and the
+product one. **Sixteen findings across fifteen distinct places**, and the
 arithmetic is stated rather than rounded because the campaign is about counts
 that outrun their evidence: rows 1–12 are twelve different mechanisms, no two
 alike, and rows 13 and 15 are the *same assertion in the same file* counted
 twice, because they are two different failures of it — the first is what let a
 committed table go stale unremarked, the second is that the fix wave closing
 the whole-branch review's fourteen findings re-pinned that table and left the
-guard standing. An earlier draft of this section headlined twelve, having
-stopped counting at the point the campaign's own ledger did not:
+guard standing. Row 16 arrived after this document was first written, at the
+merge gate, in a file none of the other fifteen touch. An earlier draft of this
+section headlined twelve, having stopped counting at the point the campaign's
+own ledger did not — which is why every row below names the place it was found
+in rather than the count being carried as a round number:
 
 | # | where | what it was |
 |---|---|---|
@@ -37,6 +40,7 @@ stopped counting at the point the campaign's own ledger did not:
 | 13 | an eleven-seed comparison table | every cell of `id_shift_invariance`'s committed table went stale across the genus repair and nothing reddened — the test asserted only `!colliding.is_empty()` |
 | 14 | a calibration probe's own output | `Undercroft 100/100/100 %` printed as the first row of a before/after table beside four real measurements, and cited as evidence for a shipped rule. It is an **identity** — rank 0's top is 0 m, the table is floored at 0 and `is_phreatic` is strict — so it cannot come back any other way, in any world |
 | 15 | row 13's assertion, still | the wave that fixed the other fourteen re-pinned the stale table, added a loud note asking a human to watch it, and left the guard at `!colliding.is_empty()`. Now `colliding.len() >= 2`, which is the file's own standing selection rule, so the rule and the check are one statement |
+| 16 | a two-point tripwire from a previous campaign | `history_tithe`'s retired endpoint criterion compares the roster's top median against its bottom. It fired at 1.421 against a 1.30 bar and read as a falsified ordering returning — but the **top row had changed identity** (desert-dwarf 400 d on `main`, high-elf 675 d here) across a minimum-sample threshold. Whole-roster Spearman rho is 0.384 → 0.546 against a 0.693 noise bar, and same-horizon peoples differ by up to 2.33×. **The only one of the sixteen that failed loudly rather than passing silently, and the only one nothing on the branch tip could see** |
 
 The best statement of the pattern came from the implementer that had authored
 five of the eleventh kind, and the closing sentence is **theirs, not mine**:
@@ -74,6 +78,24 @@ wrote a fifteenth finding into the *fix* for the other fourteen, and only caught
 it because a re-review asked for a strengthening the wave had declined. Vigilance
 scaled to the subject still missed it; the mechanical remedy — making the check
 say the same thing the prose rule says — is what closed it.
+
+**Number sixteen is the one that says most about where a check must run**, and
+it arrived after everything above was written. It is the only entry that failed
+*loudly*: fifteen instruments passed while blind, and this one raised an alarm
+while blind, which is the more expensive polarity — a red tripwire is an
+argument to reinstate a null a previous campaign had correctly retired, and the
+only thing standing between the two was that the tripwire's own message
+instructed a re-derivation over the whole roster instead of its two endpoints.
+Following that instruction is what turned a "the effect is back" reading into a
+finding about the instrument.
+
+It is also the one nothing on this branch could have caught. It is a
+live-worldgen battery in the heavy tier, `#[ignore]`d out of the commit gate,
+and its two-point statistic turns on which peoples clear a minimum-sample
+threshold — a quantity that moves when *either* side of a merge moves. It could
+only fire on the merge product, and it did. Whatever else this campaign argues
+about instruments, the merge queue gating the object that actually lands, rather
+than a branch tip, is what produced the last finding in the table.
 
 ## 2. Every defect in the design came from the plan text, and every implementer correction was right
 
