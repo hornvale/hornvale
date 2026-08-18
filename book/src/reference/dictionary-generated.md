@@ -15,10 +15,10 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | Dodgaad | /dodgaad/ | Nomngaan | Nomngaan → no change → Dodgaad |
-| `blood` | the circulating fluid of a body | Dadgod | /dadgod/ | Nanken | Nanken → no change → Dadgod |
+| `blood` | the circulating fluid of a body | Dadgod | /dadgod/ | Nánken | Nánken → no change → Dadgod |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Doggood | /doggood/ | Pengkeem | Pengkeem → no change → Doggood |
+| `bone` | the rigid frame of a body | Doggood | /doggood/ | Pengkéém | Pengkéém → no change → Doggood |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): black-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): black-dragon has no exposure to 'bugbear-kind' |
@@ -33,27 +33,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): black-dragon has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): black-dragon has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Gadgoad | /gadgoad/ | Ngamgoam | Ngamgoam → no change → Gadgoad |
-| `day` | the light half of the day-night cycle | Goodgod | /goodgod/ | Keomgen | Keomgen → no change → Goodgod |
+| `dark` | the color term for black/dark hues | Gadgoad | /gadgoad/ | Ngámgóám | Ngámgóám → no change → Gadgoad |
+| `day` | the light half of the day-night cycle | Goodgod | /goodgod/ | Kéomgen | Kéomgen → no change → Goodgod |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | — | — | — | gap (experiential): black-dragon has no exposure to 'desert-dwarf-kind' |
 | `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): black-dragon has no exposure to 'desert-elf-kind' |
-| `die` | to cease living | Dagdag | /dagdag/ | Mangdang | Mangdang → no change → Dagdag |
+| `die` | to cease living | Dagdag | /dagdag/ | Mangdáng | Mangdáng → no change → Dagdag |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): black-dragon has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Daagdad | /daagdad/ | Paangpam | Paangpam → no change → Daagdad |
+| `drink` | to swallow liquid | Daagdad | /daagdad/ | Páángpám | Páángpám → no change → Daagdad |
 | `drow-kind` | a drow | — | — | — | gap (experiential): black-dragon has no exposure to 'drow-kind' |
-| `earth` | the ground underfoot | Daoggoad | /daoggoad/ | Maonggoam | Maonggoam → no change → Daoggoad |
-| `east` | the direction of increasing longitude | Goddad | /goddad/ | Ngenban | Ngenban → no change → Goddad |
-| `eat` | to consume food | Daod | /daod/ | Daom | Daom → no change → Daod |
+| `earth` | the ground underfoot | Daoggoad | /daoggoad/ | Maónggóam | Maónggóam → no change → Daoggoad |
+| `east` | the direction of increasing longitude | Goddad | /goddad/ | Ngénbán | Ngénbán → no change → Goddad |
+| `eat` | to consume food | Daod | /daod/ | Dáom | Dáom → no change → Daod |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): black-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): black-dragon has no exposure to 'erg' |
-| `eye` | the organ of sight | Gag | /gag/ | Gang | Gang → no change → Gag |
+| `eye` | the organ of sight | Gag | /gag/ | Gáng | Gáng → no change → Gag |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): black-dragon has no exposure to 'felsenmeer' |
 | `fire` | flame and heat | Dog | /dog/ | Deng | Deng → no change → Dog |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): black-dragon has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): black-dragon has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Dodgoag | /dodgoag/ | Nomgeang | Nomgeang → no change → Dodgoag |
+| `foot` | the walking limb-end | Dodgoag | /dodgoag/ | Nomgéáng | Nomgéáng → no change → Dodgoag |
 | `ford` | where a river runs shallow enough to cross | — | — | — | gap (experiential): black-dragon has no exposure to 'ford' |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): black-dragon has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): black-dragon has no exposure to 'frost-heave' |
@@ -66,20 +66,20 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Dood | /dood/ | Peom | Peom → no change → Dood |
+| `gloom` | the deepest, starless dark | Dood | /dood/ | Peóm | Peóm → no change → Dood |
 | `gnoll-kind` | a gnoll | — | — | — | gap (experiential): black-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): black-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): black-dragon has no exposure to 'god' |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): black-dragon has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Doaggaad | /doaggaad/ | Doangkaam | Doangkaam → no change → Doaggaad |
+| `great` | large in size or extent | Doaggaad | /doaggaad/ | Dóángkaam | Dóángkaam → no change → Doaggaad |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `gully-dwarf-kind` | a gully dwarf | — | — | — | gap (experiential): black-dragon has no exposure to 'gully-dwarf-kind' |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): black-dragon has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Gaaddog | /gaaddog/ | Ngaambong | Ngaambong → no change → Gaaddog |
+| `hand` | the manipulating limb-end | Gaaddog | /gaaddog/ | Ngáámbong | Ngáámbong → no change → Gaaddog |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): black-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): black-dragon has no exposure to 'heat' |
-| `high` | far above the ground | Dooddog | /dooddog/ | Deomdong | Deomdong → no change → Dooddog |
+| `high` | far above the ground | Dooddog | /dooddog/ | Déomdóng | Déomdóng → no change → Dooddog |
 | `high-elf-kind` | a high elf | — | — | — | gap (experiential): black-dragon has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): black-dragon has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | — | — | — | gap (experiential): black-dragon has no exposure to 'hill-dwarf-kind' |
@@ -99,51 +99,51 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): black-dragon has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Dod | /dod/ | Dem | Dem → no change → Dod |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): black-dragon has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Gaagdaod | /gaagdaod/ | Kaangmaon | Kaangmaon → no change → Gaagdaod |
-| `low` | near the ground | Dooddaag | /dooddaag/ | Neemnaang | Neemnaang → no change → Dooddaag |
-| `many` | an indefinitely large count | Goaddod | /goaddod/ | Goamnom | Goamnom → no change → Goaddod |
+| `little` | small in size or extent | Gaagdaod | /gaagdaod/ | Kaángmáón | Kaángmáón → no change → Gaagdaod |
+| `low` | near the ground | Dooddaag | /dooddaag/ | Neémnaáng | Neémnaáng → no change → Dooddaag |
+| `many` | an indefinitely large count | Goaddod | /goaddod/ | Góámnom | Góámnom → no change → Goaddod |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): black-dragon has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): black-dragon has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): black-dragon has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'millet' |
-| `moon` | a moon | Goodgoag | /goodgoag/ | Geemgeang | Geemgeang → no change → Goodgoag |
+| `moon` | a moon | Goodgoag | /goodgoag/ | Géémgeáng | Géémgeáng → no change → Goodgoag |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): black-dragon has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): black-dragon has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Doag | /doag/ | Noang | Noang → no change → Doag |
-| `move` | to go from one place to another | Doddoad | /doddoad/ | Benpoan | Benpoan → no change → Doddoad |
+| `mouth` | the organ of eating and speech | Doag | /doag/ | Nóáng | Nóáng → no change → Doag |
+| `move` | to go from one place to another | Doddoad | /doddoad/ | Bénpoan | Bénpoan → no change → Doddoad |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): black-dragon has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Good | /good/ | Koom | Koom → no change → Good |
-| `new` | recently come to be | Daddag | /daddag/ | Dampang | Dampang → no change → Daddag |
-| `night` | the dark half of the day-night cycle | Doaddood | /doaddood/ | Neampeom | Neampeom → no change → Doaddood |
+| `name` | a word that identifies one who bears it | Good | /good/ | Kóóm | Kóóm → no change → Good |
+| `new` | recently come to be | Daddag | /daddag/ | Dámpang | Dámpang → no change → Daddag |
+| `night` | the dark half of the day-night cycle | Doaddood | /doaddood/ | Néámpéóm | Néámpéóm → no change → Doaddood |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): black-dragon has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Doggad | /doggad/ | Pengngan | Pengngan → no change → Doggad |
+| `north` | toward the pole of increasing latitude | Doggad | /doggad/ | Pengngán | Pengngán → no change → Doggad |
 | `north-east` | between north and east | Goddaddoggad | /goddaddoggad/ | — | compound: `north` + `east` |
 | `north-west` | between north and west | Goggoggaoddoggad | /goggoggaoddoggad/ | — | compound: `north` + `west` |
-| `old` | long in existence | Godgaad | /godgaad/ | Ngenngaan | Ngenngaan → no change → Godgaad |
+| `old` | long in existence | Godgaad | /godgaad/ | Ngénngaán | Ngénngaán → no change → Godgaad |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): black-dragon has no exposure to 'old-growth' |
-| `one` | the cardinal number 1 | Goaddoad | /goaddoad/ | Koammeam | Koammeam → no change → Goaddoad |
+| `one` | the cardinal number 1 | Goaddoad | /goaddoad/ | Kóamméám | Kóamméám → no change → Goaddoad |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): black-dragon has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): black-dragon has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Doggaod | /doggaod/ | Penggaem | Penggaem → no change → Doggaod |
+| `over` | above; atop | Doggaod | /doggaod/ | Pénggáém | Pénggáém → no change → Doggaod |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): black-dragon has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Gagdoag | /gagdoag/ | Gangmoang | Gangmoang → no change → Gagdoag |
-| `person` | a person; a member of a people (the autonym root) | Daadgod | /daadgod/ | Daamkom | Daamkom → no change → Daadgod |
+| `parent` | one's father or mother | Gagdoag | /gagdoag/ | Gángmóang | Gángmóang → no change → Gagdoag |
+| `person` | a person; a member of a people (the autonym root) | Daadgod | /daadgod/ | Dáámkóm | Dáámkóm → no change → Daadgod |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): black-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): black-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): black-dragon has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): black-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'rain' |
-| `red` | the color term for red | Gog | /gog/ | Gong | Gong → no change → Gog |
+| `red` | the color term for red | Gog | /gog/ | Góng | Góng → no change → Gog |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): black-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): black-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): black-dragon has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Doaddaod | /doaddaod/ | Boamdaem | Boamdaem → no change → Doaddaod |
+| `rest` | to stop and recover strength | Doaddaod | /doaddaod/ | Bóamdáém | Bóamdáém → no change → Doaddaod |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): black-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): black-dragon has no exposure to 'river' |
@@ -156,26 +156,26 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): black-dragon has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Gaogdood | /gaogdood/ | Kaengdoom | Kaengdoom → no change → Gaogdood |
+| `shadow` | cast dark, distinct from open gloom | Gaogdood | /gaogdood/ | Káéngdóóm | Káéngdóóm → no change → Gaogdood |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): black-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Daodgog | /daodgog/ | Naonkong | Naonkong → no change → Daodgog |
-| `sleep` | to rest unconscious | Godgod | /godgod/ | Komgem | Komgem → no change → Godgod |
+| `sibling` | one's brother or sister | Daodgog | /daodgog/ | Náonkong | Náonkong → no change → Daodgog |
+| `sleep` | to rest unconscious | Godgod | /godgod/ | Kómgem | Kómgem → no change → Godgod |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): black-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): black-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): black-dragon has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Goaddood | /goaddood/ | Geanbeem | Geanbeem → no change → Goaddood |
+| `south` | toward the pole of decreasing latitude | Goaddood | /goaddood/ | Géánbeém | Géánbeém → no change → Goaddood |
 | `south-east` | between south and east | Goddadgoaddood | /goddadgoaddood/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Goggoggaodgoaddood | /goggoggaodgoaddood/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): black-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): black-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): black-dragon has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): black-dragon has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Dodgod | /dodgod/ | Bomkem | Bomkem → no change → Dodgod |
+| `star` | a fixed point of light in the night sky | Dodgod | /dodgod/ | Bómkem | Bómkem → no change → Dodgod |
 | `starlit` | dark faintly lit by stars | Doog | /doog/ | Deeng | Deeng → no change → Doog |
-| `stone` | rock | Gaoddod | /gaoddod/ | Gaommen | Gaommen → no change → Gaoddod |
-| `sun` | the sun | Gaaddoag | /gaaddoag/ | Kaammoang | Kaammoang → no change → Gaaddoag |
+| `stone` | rock | Gaoddod | /gaoddod/ | Gaommén | Gaommén → no change → Gaoddod |
+| `sun` | the sun | Gaaddoag | /gaaddoag/ | Káammóang | Káammóang → no change → Gaaddoag |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
@@ -194,19 +194,19 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): black-dragon has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): black-dragon has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Daddaag | /daddaag/ | Pamnaang | Pamnaang → no change → Daddaag |
-| `under` | beneath; below | Gogdod | /gogdod/ | Kongpen | Kongpen → no change → Gogdod |
+| `two` | the cardinal number 2 | Dag | /dag/ | Pang | Pang → no change → Dag |
+| `under` | beneath; below | Gogdod | /gogdod/ | Kongpén | Kongpén → no change → Gogdod |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): black-dragon has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): black-dragon has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): black-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'vine' |
-| `water` | the drinkable liquid | Doodgod | /doodgod/ | Meonken | Meonken → no change → Doodgod |
-| `west` | the direction of decreasing longitude | Goggoggaod | /goggoggaod/ | Gonggongngaem | Gonggongngaem → no change → Goggoggaod |
+| `water` | the drinkable liquid | Doodgod | /doodgod/ | Méonken | Méonken → no change → Doodgod |
+| `west` | the direction of decreasing longitude | Goggoggaod | /goggoggaod/ | Gónggóngngaém | Gónggóngngaém → no change → Goggoggaod |
 | `wheat` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Dooggood | /dooggood/ | Beonggeen | Beonggeen → no change → Dooggood |
+| `wind` | moving air | Dooggood | /dooggood/ | Beonggéen | Beonggéen → no change → Dooggood |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): black-dragon has no exposure to 'wind-scour' |
 | `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): black-dragon has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): black-dragon has no exposure to 'wooded-grassland' |
@@ -2771,10 +2771,10 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Dadkod | /dadkod/ | Nanken | Nanken → no change → Dadkod |
+| `blood` | the circulating fluid of a body | Dadkod | /dadkod/ | Nánken | Nánken → no change → Dadkod |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Kodkood | /kodkood/ | Pengkeem | Pengkeem → no change → Kodkood |
+| `bone` | the rigid frame of a body | Kodkood | /kodkood/ | Pengkéém | Pengkéém → no change → Kodkood |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): red-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): red-dragon has no exposure to 'bugbear-kind' |
@@ -2789,27 +2789,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): red-dragon has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): red-dragon has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Daddoad | /daddoad/ | Ngamgoam | Ngamgoam → no change → Daddoad |
-| `day` | the light half of the day-night cycle | Kooddod | /kooddod/ | Keomgen | Keomgen → no change → Kooddod |
+| `dark` | the color term for black/dark hues | Daddoad | /daddoad/ | Ngámgóám | Ngámgóám → no change → Daddoad |
+| `day` | the light half of the day-night cycle | Kooddod | /kooddod/ | Kéomgen | Kéomgen → no change → Kooddod |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | — | — | — | gap (experiential): red-dragon has no exposure to 'desert-dwarf-kind' |
 | `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): red-dragon has no exposure to 'desert-elf-kind' |
-| `die` | to cease living | Daddad | /daddad/ | Mangdang | Mangdang → no change → Daddad |
+| `die` | to cease living | Daddad | /daddad/ | Mangdáng | Mangdáng → no change → Daddad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): red-dragon has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Kaadkad | /kaadkad/ | Paangpam | Paangpam → no change → Kaadkad |
+| `drink` | to swallow liquid | Kaadkad | /kaadkad/ | Páángpám | Páángpám → no change → Kaadkad |
 | `drow-kind` | a drow | — | — | — | gap (experiential): red-dragon has no exposure to 'drow-kind' |
-| `earth` | the ground underfoot | Daoddoad | /daoddoad/ | Maonggoam | Maonggoam → no change → Daoddoad |
-| `east` | the direction of increasing longitude | Doddad | /doddad/ | Ngenban | Ngenban → no change → Doddad |
-| `eat` | to consume food | Daod | /daod/ | Daom | Daom → no change → Daod |
+| `earth` | the ground underfoot | Daoddoad | /daoddoad/ | Maónggóam | Maónggóam → no change → Daoddoad |
+| `east` | the direction of increasing longitude | Doddad | /doddad/ | Ngénbán | Ngénbán → no change → Doddad |
+| `eat` | to consume food | Daod | /daod/ | Dáom | Dáom → no change → Daod |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): red-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): red-dragon has no exposure to 'erg' |
-| `eye` | the organ of sight | Dad | /dad/ | Gang | Gang → no change → Dad |
+| `eye` | the organ of sight | Dad | /dad/ | Gáng | Gáng → no change → Dad |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): red-dragon has no exposure to 'felsenmeer' |
 | `fire` | flame and heat | Dod | /dod/ | Deng | Deng → no change → Dod |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): red-dragon has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): red-dragon has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Doddoad | /doddoad/ | Nomgeang | Nomgeang → no change → Doddoad |
+| `foot` | the walking limb-end | Doddoad | /doddoad/ | Nomgéáng | Nomgéáng → no change → Doddoad |
 | `ford` | where a river runs shallow enough to cross | — | — | — | gap (experiential): red-dragon has no exposure to 'ford' |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): red-dragon has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): red-dragon has no exposure to 'frost-heave' |
@@ -2822,20 +2822,20 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Kood | /kood/ | Peom | Peom → no change → Kood |
+| `gloom` | the deepest, starless dark | Kood | /kood/ | Peóm | Peóm → no change → Kood |
 | `gnoll-kind` | a gnoll | — | — | — | gap (experiential): red-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): red-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): red-dragon has no exposure to 'god' |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): red-dragon has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Doadkaad | /doadkaad/ | Doangkaam | Doangkaam → no change → Doadkaad |
+| `great` | large in size or extent | Doadkaad | /doadkaad/ | Dóángkaam | Dóángkaam → no change → Doadkaad |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `gully-dwarf-kind` | a gully dwarf | — | — | — | gap (experiential): red-dragon has no exposure to 'gully-dwarf-kind' |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): red-dragon has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Daaddod | /daaddod/ | Ngaambong | Ngaambong → no change → Daaddod |
+| `hand` | the manipulating limb-end | Daaddod | /daaddod/ | Ngáámbong | Ngáámbong → no change → Daaddod |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): red-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): red-dragon has no exposure to 'heat' |
-| `high` | far above the ground | Dooddod | /dooddod/ | Deomdong | Deomdong → no change → Dooddod |
+| `high` | far above the ground | Dooddod | /dooddod/ | Déomdóng | Déomdóng → no change → Dooddod |
 | `high-elf-kind` | a high elf | — | — | — | gap (experiential): red-dragon has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): red-dragon has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | — | — | — | gap (experiential): red-dragon has no exposure to 'hill-dwarf-kind' |
@@ -2855,51 +2855,51 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): red-dragon has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Dod | /dod/ | Dem | Dem → no change → Dod |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): red-dragon has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Kaaddaod | /kaaddaod/ | Kaangmaon | Kaangmaon → no change → Kaaddaod |
-| `low` | near the ground | Dooddaad | /dooddaad/ | Neemnaang | Neemnaang → no change → Dooddaad |
-| `many` | an indefinitely large count | Doaddod | /doaddod/ | Goamnom | Goamnom → no change → Doaddod |
+| `little` | small in size or extent | Kaaddaod | /kaaddaod/ | Kaángmáón | Kaángmáón → no change → Kaaddaod |
+| `low` | near the ground | Dooddaad | /dooddaad/ | Neémnaáng | Neémnaáng → no change → Dooddaad |
+| `many` | an indefinitely large count | Doaddod | /doaddod/ | Góámnom | Góámnom → no change → Doaddod |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): red-dragon has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): red-dragon has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): red-dragon has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'millet' |
-| `moon` | a moon | Dooddoad | /dooddoad/ | Geemgeang | Geemgeang → no change → Dooddoad |
+| `moon` | a moon | Dooddoad | /dooddoad/ | Géémgeáng | Géémgeáng → no change → Dooddoad |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): red-dragon has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): red-dragon has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Doad | /doad/ | Noang | Noang → no change → Doad |
-| `move` | to go from one place to another | Dodkoad | /dodkoad/ | Benpoan | Benpoan → no change → Dodkoad |
+| `mouth` | the organ of eating and speech | Doad | /doad/ | Nóáng | Nóáng → no change → Doad |
+| `move` | to go from one place to another | Dodkoad | /dodkoad/ | Bénpoan | Bénpoan → no change → Dodkoad |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): red-dragon has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Kood | /kood/ | Koom | Koom → no change → Kood |
-| `new` | recently come to be | Dadkad | /dadkad/ | Dampang | Dampang → no change → Dadkad |
-| `night` | the dark half of the day-night cycle | Doadkood | /doadkood/ | Neampeom | Neampeom → no change → Doadkood |
+| `name` | a word that identifies one who bears it | Kood | /kood/ | Kóóm | Kóóm → no change → Kood |
+| `new` | recently come to be | Dadkad | /dadkad/ | Dámpang | Dámpang → no change → Dadkad |
+| `night` | the dark half of the day-night cycle | Doadkood | /doadkood/ | Néámpéóm | Néámpéóm → no change → Doadkood |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): red-dragon has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Koddad | /koddad/ | Pengngan | Pengngan → no change → Koddad |
+| `north` | toward the pole of increasing latitude | Koddad | /koddad/ | Pengngán | Pengngán → no change → Koddad |
 | `north-east` | between north and east | Doddadkoddad | /doddadkoddad/ | — | compound: `north` + `east` |
 | `north-west` | between north and west | Doddoddaodkoddad | /doddoddaodkoddad/ | — | compound: `north` + `west` |
-| `old` | long in existence | Doddaad | /doddaad/ | Ngenngaan | Ngenngaan → no change → Doddaad |
+| `old` | long in existence | Doddaad | /doddaad/ | Ngénngaán | Ngénngaán → no change → Doddaad |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): red-dragon has no exposure to 'old-growth' |
-| `one` | the cardinal number 1 | Koaddoad | /koaddoad/ | Koammeam | Koammeam → no change → Koaddoad |
+| `one` | the cardinal number 1 | Koaddoad | /koaddoad/ | Kóamméám | Kóamméám → no change → Koaddoad |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): red-dragon has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): red-dragon has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Koddaod | /koddaod/ | Penggaem | Penggaem → no change → Koddaod |
+| `over` | above; atop | Koddaod | /koddaod/ | Pénggáém | Pénggáém → no change → Koddaod |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): red-dragon has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Daddoad | /daddoad/ | Gangmoang | Gangmoang → no change → Daddoad |
-| `person` | a person; a member of a people (the autonym root) | Daadkod | /daadkod/ | Daamkom | Daamkom → no change → Daadkod |
+| `parent` | one's father or mother | Daddoad | /daddoad/ | Gángmóang | Gángmóang → no change → Daddoad |
+| `person` | a person; a member of a people (the autonym root) | Daadkod | /daadkod/ | Dáámkóm | Dáámkóm → no change → Daadkod |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): red-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): red-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): red-dragon has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): red-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'rain' |
-| `red` | the color term for red | Dod | /dod/ | Gong | Gong → no change → Dod |
-| `red-dragon-kind` | a red dragon | Dodkood | /dodkood/ | Dengpeom | Dengpeom → no change → Dodkood |
+| `red` | the color term for red | Dod | /dod/ | Góng | Góng → no change → Dod |
+| `red-dragon-kind` | a red dragon | Dodkood | /dodkood/ | Déngpéom | Déngpéom → no change → Dodkood |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): red-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): red-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): red-dragon has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Doaddaod | /doaddaod/ | Boamdaem | Boamdaem → no change → Doaddaod |
+| `rest` | to stop and recover strength | Doaddaod | /doaddaod/ | Bóamdáém | Bóamdáém → no change → Doaddaod |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): red-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): red-dragon has no exposure to 'river' |
@@ -2912,26 +2912,26 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): red-dragon has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Kaoddood | /kaoddood/ | Kaengdoom | Kaengdoom → no change → Kaoddood |
+| `shadow` | cast dark, distinct from open gloom | Kaoddood | /kaoddood/ | Káéngdóóm | Káéngdóóm → no change → Kaoddood |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): red-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Daodkod | /daodkod/ | Naonkong | Naonkong → no change → Daodkod |
-| `sleep` | to rest unconscious | Koddod | /koddod/ | Komgem | Komgem → no change → Koddod |
+| `sibling` | one's brother or sister | Daodkod | /daodkod/ | Náonkong | Náonkong → no change → Daodkod |
+| `sleep` | to rest unconscious | Koddod | /koddod/ | Kómgem | Kómgem → no change → Koddod |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): red-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): red-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): red-dragon has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Doaddood | /doaddood/ | Geanbeem | Geanbeem → no change → Doaddood |
+| `south` | toward the pole of decreasing latitude | Doaddood | /doaddood/ | Géánbeém | Géánbeém → no change → Doaddood |
 | `south-east` | between south and east | Doddaddoaddood | /doddaddoaddood/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Doddoddaoddoaddood | /doddoddaoddoaddood/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): red-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): red-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): red-dragon has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): red-dragon has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Dodkod | /dodkod/ | Bomkem | Bomkem → no change → Dodkod |
+| `star` | a fixed point of light in the night sky | Dodkod | /dodkod/ | Bómkem | Bómkem → no change → Dodkod |
 | `starlit` | dark faintly lit by stars | Dood | /dood/ | Deeng | Deeng → no change → Dood |
-| `stone` | rock | Daoddod | /daoddod/ | Gaommen | Gaommen → no change → Daoddod |
-| `sun` | the sun | Kaaddoad | /kaaddoad/ | Kaammoang | Kaammoang → no change → Kaaddoad |
+| `stone` | rock | Daoddod | /daoddod/ | Gaommén | Gaommén → no change → Daoddod |
+| `sun` | the sun | Kaaddoad | /kaaddoad/ | Káammóang | Káammóang → no change → Kaaddoad |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
@@ -2950,19 +2950,19 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): red-dragon has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): red-dragon has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Kaddaad | /kaddaad/ | Pamnaang | Pamnaang → no change → Kaddaad |
-| `under` | beneath; below | Kodkod | /kodkod/ | Kongpen | Kongpen → no change → Kodkod |
+| `two` | the cardinal number 2 | Kad | /kad/ | Pang | Pang → no change → Kad |
+| `under` | beneath; below | Kodkod | /kodkod/ | Kongpén | Kongpén → no change → Kodkod |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): red-dragon has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): red-dragon has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): red-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'vine' |
-| `water` | the drinkable liquid | Doodkod | /doodkod/ | Meonken | Meonken → no change → Doodkod |
-| `west` | the direction of decreasing longitude | Doddoddaod | /doddoddaod/ | Gonggongngaem | Gonggongngaem → no change → Doddoddaod |
+| `water` | the drinkable liquid | Doodkod | /doodkod/ | Méonken | Méonken → no change → Doodkod |
+| `west` | the direction of decreasing longitude | Doddoddaod | /doddoddaod/ | Gónggóngngaém | Gónggóngngaém → no change → Doddoddaod |
 | `wheat` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Dooddood | /dooddood/ | Beonggeen | Beonggeen → no change → Dooddood |
+| `wind` | moving air | Dooddood | /dooddood/ | Beonggéen | Beonggéen → no change → Dooddood |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): red-dragon has no exposure to 'wind-scour' |
 | `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): red-dragon has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): red-dragon has no exposure to 'wooded-grassland' |
@@ -3407,10 +3407,10 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Nankon | /nankon/ | Nanken | Nanken → no change → Nankon |
+| `blood` | the circulating fluid of a body | Nankon | /nankon/ | Nánken | Nánken → no change → Nankon |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Kongkoon | /koŋkoon/ | Pengkeem | Pengkeem → no change → Kongkoon |
+| `bone` | the rigid frame of a body | Kongkoon | /koŋkoon/ | Pengkéém | Pengkéém → no change → Kongkoon |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): white-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): white-dragon has no exposure to 'bugbear-kind' |
@@ -3425,27 +3425,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): white-dragon has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): white-dragon has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Ngandoan | /ŋandoan/ | Ngamgoam | Ngamgoam → no change → Ngandoan |
-| `day` | the light half of the day-night cycle | Koondon | /koondon/ | Keomgen | Keomgen → no change → Koondon |
+| `dark` | the color term for black/dark hues | Ngandoan | /ŋandoan/ | Ngámgóám | Ngámgóám → no change → Ngandoan |
+| `day` | the light half of the day-night cycle | Koondon | /koondon/ | Kéomgen | Kéomgen → no change → Koondon |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | — | — | — | gap (experiential): white-dragon has no exposure to 'desert-dwarf-kind' |
 | `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): white-dragon has no exposure to 'desert-elf-kind' |
-| `die` | to cease living | Nangdang | /naŋdaŋ/ | Mangdang | Mangdang → no change → Nangdang |
+| `die` | to cease living | Nangdang | /naŋdaŋ/ | Mangdáng | Mangdáng → no change → Nangdang |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): white-dragon has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Kaangkan | /kaaŋkan/ | Paangpam | Paangpam → no change → Kaangkan |
+| `drink` | to swallow liquid | Kaangkan | /kaaŋkan/ | Páángpám | Páángpám → no change → Kaangkan |
 | `drow-kind` | a drow | — | — | — | gap (experiential): white-dragon has no exposure to 'drow-kind' |
-| `earth` | the ground underfoot | Naongdoan | /naoŋdoan/ | Maonggoam | Maonggoam → no change → Naongdoan |
-| `east` | the direction of increasing longitude | Ngondan | /ŋondan/ | Ngenban | Ngenban → no change → Ngondan |
-| `eat` | to consume food | Daon | /daon/ | Daom | Daom → no change → Daon |
+| `earth` | the ground underfoot | Naongdoan | /naoŋdoan/ | Maónggóam | Maónggóam → no change → Naongdoan |
+| `east` | the direction of increasing longitude | Ngondan | /ŋondan/ | Ngénbán | Ngénbán → no change → Ngondan |
+| `eat` | to consume food | Daon | /daon/ | Dáom | Dáom → no change → Daon |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): white-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): white-dragon has no exposure to 'erg' |
-| `eye` | the organ of sight | Dang | /daŋ/ | Gang | Gang → no change → Dang |
+| `eye` | the organ of sight | Dang | /daŋ/ | Gáng | Gáng → no change → Dang |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): white-dragon has no exposure to 'felsenmeer' |
 | `fire` | flame and heat | Dong | /doŋ/ | Deng | Deng → no change → Dong |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): white-dragon has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): white-dragon has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Nondoang | /nondoaŋ/ | Nomgeang | Nomgeang → no change → Nondoang |
+| `foot` | the walking limb-end | Nondoang | /nondoaŋ/ | Nomgéáng | Nomgéáng → no change → Nondoang |
 | `ford` | where a river runs shallow enough to cross | — | — | — | gap (experiential): white-dragon has no exposure to 'ford' |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): white-dragon has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): white-dragon has no exposure to 'frost-heave' |
@@ -3458,20 +3458,20 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Koon | /koon/ | Peom | Peom → no change → Koon |
+| `gloom` | the deepest, starless dark | Koon | /koon/ | Peóm | Peóm → no change → Koon |
 | `gnoll-kind` | a gnoll | — | — | — | gap (experiential): white-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): white-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): white-dragon has no exposure to 'god' |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): white-dragon has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Doangkaan | /doaŋkaan/ | Doangkaam | Doangkaam → no change → Doangkaan |
+| `great` | large in size or extent | Doangkaan | /doaŋkaan/ | Dóángkaam | Dóángkaam → no change → Doangkaan |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `gully-dwarf-kind` | a gully dwarf | — | — | — | gap (experiential): white-dragon has no exposure to 'gully-dwarf-kind' |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): white-dragon has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Ngaandong | /ŋaandoŋ/ | Ngaambong | Ngaambong → no change → Ngaandong |
+| `hand` | the manipulating limb-end | Ngaandong | /ŋaandoŋ/ | Ngáámbong | Ngáámbong → no change → Ngaandong |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): white-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): white-dragon has no exposure to 'heat' |
-| `high` | far above the ground | Doondong | /doondoŋ/ | Deomdong | Deomdong → no change → Doondong |
+| `high` | far above the ground | Doondong | /doondoŋ/ | Déomdóng | Déomdóng → no change → Doondong |
 | `high-elf-kind` | a high elf | — | — | — | gap (experiential): white-dragon has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): white-dragon has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | — | — | — | gap (experiential): white-dragon has no exposure to 'hill-dwarf-kind' |
@@ -3491,51 +3491,51 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): white-dragon has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Don | /don/ | Dem | Dem → no change → Don |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): white-dragon has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Kaangnaon | /kaaŋnaon/ | Kaangmaon | Kaangmaon → no change → Kaangnaon |
-| `low` | near the ground | Noonnaang | /noonnaaŋ/ | Neemnaang | Neemnaang → no change → Noonnaang |
-| `many` | an indefinitely large count | Doannon | /doannon/ | Goamnom | Goamnom → no change → Doannon |
+| `little` | small in size or extent | Kaangnaon | /kaaŋnaon/ | Kaángmáón | Kaángmáón → no change → Kaangnaon |
+| `low` | near the ground | Noonnaang | /noonnaaŋ/ | Neémnaáng | Neémnaáng → no change → Noonnaang |
+| `many` | an indefinitely large count | Doannon | /doannon/ | Góámnom | Góámnom → no change → Doannon |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): white-dragon has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): white-dragon has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): white-dragon has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'millet' |
-| `moon` | a moon | Doondoang | /doondoaŋ/ | Geemgeang | Geemgeang → no change → Doondoang |
+| `moon` | a moon | Doondoang | /doondoaŋ/ | Géémgeáng | Géémgeáng → no change → Doondoang |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): white-dragon has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): white-dragon has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Noang | /noaŋ/ | Noang | Noang → no change → Noang |
-| `move` | to go from one place to another | Donkoan | /donkoan/ | Benpoan | Benpoan → no change → Donkoan |
+| `mouth` | the organ of eating and speech | Noang | /noaŋ/ | Nóáng | Nóáng → no change → Noang |
+| `move` | to go from one place to another | Donkoan | /donkoan/ | Bénpoan | Bénpoan → no change → Donkoan |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): white-dragon has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Koon | /koon/ | Koom | Koom → no change → Koon |
-| `new` | recently come to be | Dankang | /dankaŋ/ | Dampang | Dampang → no change → Dankang |
-| `night` | the dark half of the day-night cycle | Noankoon | /noankoon/ | Neampeom | Neampeom → no change → Noankoon |
+| `name` | a word that identifies one who bears it | Koon | /koon/ | Kóóm | Kóóm → no change → Koon |
+| `new` | recently come to be | Dankang | /dankaŋ/ | Dámpang | Dámpang → no change → Dankang |
+| `night` | the dark half of the day-night cycle | Noankoon | /noankoon/ | Néámpéóm | Néámpéóm → no change → Noankoon |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): white-dragon has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Kongngan | /koŋŋan/ | Pengngan | Pengngan → no change → Kongngan |
+| `north` | toward the pole of increasing latitude | Kongngan | /koŋŋan/ | Pengngán | Pengngán → no change → Kongngan |
 | `north-east` | between north and east | Kongnganngondan | /koŋŋanŋondan/ | — | compound: `north` + `east` |
 | `north-west` | between north and west | Kongngandongdongngaon | /koŋŋandoŋdoŋŋaon/ | — | compound: `north` + `west` |
-| `old` | long in existence | Ngonngaan | /ŋonŋaan/ | Ngenngaan | Ngenngaan → no change → Ngonngaan |
+| `old` | long in existence | Ngonngaan | /ŋonŋaan/ | Ngénngaán | Ngénngaán → no change → Ngonngaan |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): white-dragon has no exposure to 'old-growth' |
-| `one` | the cardinal number 1 | Koannoan | /koannoan/ | Koammeam | Koammeam → no change → Koannoan |
+| `one` | the cardinal number 1 | Koannoan | /koannoan/ | Kóamméám | Kóamméám → no change → Koannoan |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): white-dragon has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): white-dragon has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Kongdaon | /koŋdaon/ | Penggaem | Penggaem → no change → Kongdaon |
+| `over` | above; atop | Kongdaon | /koŋdaon/ | Pénggáém | Pénggáém → no change → Kongdaon |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): white-dragon has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Dangnoang | /daŋnoaŋ/ | Gangmoang | Gangmoang → no change → Dangnoang |
-| `person` | a person; a member of a people (the autonym root) | Daankon | /daankon/ | Daamkom | Daamkom → no change → Daankon |
+| `parent` | one's father or mother | Dangnoang | /daŋnoaŋ/ | Gángmóang | Gángmóang → no change → Dangnoang |
+| `person` | a person; a member of a people (the autonym root) | Daankon | /daankon/ | Dáámkóm | Dáámkóm → no change → Daankon |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): white-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): white-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): white-dragon has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): white-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'rain' |
-| `red` | the color term for red | Dong | /doŋ/ | Gong | Gong → no change → Dong |
+| `red` | the color term for red | Dong | /doŋ/ | Góng | Góng → no change → Dong |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): white-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): white-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): white-dragon has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Doandaon | /doandaon/ | Boamdaem | Boamdaem → no change → Doandaon |
+| `rest` | to stop and recover strength | Doandaon | /doandaon/ | Bóamdáém | Bóamdáém → no change → Doandaon |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): white-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): white-dragon has no exposure to 'river' |
@@ -3548,26 +3548,26 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): white-dragon has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Kaongdoon | /kaoŋdoon/ | Kaengdoom | Kaengdoom → no change → Kaongdoon |
+| `shadow` | cast dark, distinct from open gloom | Kaongdoon | /kaoŋdoon/ | Káéngdóóm | Káéngdóóm → no change → Kaongdoon |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): white-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Naonkong | /naonkoŋ/ | Naonkong | Naonkong → no change → Naonkong |
-| `sleep` | to rest unconscious | Kondon | /kondon/ | Komgem | Komgem → no change → Kondon |
+| `sibling` | one's brother or sister | Naonkong | /naonkoŋ/ | Náonkong | Náonkong → no change → Naonkong |
+| `sleep` | to rest unconscious | Kondon | /kondon/ | Kómgem | Kómgem → no change → Kondon |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): white-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): white-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): white-dragon has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Doandoon | /doandoon/ | Geanbeem | Geanbeem → no change → Doandoon |
+| `south` | toward the pole of decreasing latitude | Doandoon | /doandoon/ | Géánbeém | Géánbeém → no change → Doandoon |
 | `south-east` | between south and east | Doandoonngondan | /doandoonŋondan/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Doandoondongdongngaon | /doandoondoŋdoŋŋaon/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): white-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): white-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): white-dragon has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): white-dragon has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Donkon | /donkon/ | Bomkem | Bomkem → no change → Donkon |
+| `star` | a fixed point of light in the night sky | Donkon | /donkon/ | Bómkem | Bómkem → no change → Donkon |
 | `starlit` | dark faintly lit by stars | Doong | /dooŋ/ | Deeng | Deeng → no change → Doong |
-| `stone` | rock | Daonnon | /daonnon/ | Gaommen | Gaommen → no change → Daonnon |
-| `sun` | the sun | Kaannoang | /kaannoaŋ/ | Kaammoang | Kaammoang → no change → Kaannoang |
+| `stone` | rock | Daonnon | /daonnon/ | Gaommén | Gaommén → no change → Daonnon |
+| `sun` | the sun | Kaannoang | /kaannoaŋ/ | Káammóang | Káammóang → no change → Kaannoang |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
@@ -3586,19 +3586,19 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): white-dragon has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): white-dragon has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Kannaang | /kannaaŋ/ | Pamnaang | Pamnaang → no change → Kannaang |
-| `under` | beneath; below | Kongkon | /koŋkon/ | Kongpen | Kongpen → no change → Kongkon |
+| `two` | the cardinal number 2 | Kang | /kaŋ/ | Pang | Pang → no change → Kang |
+| `under` | beneath; below | Kongkon | /koŋkon/ | Kongpén | Kongpén → no change → Kongkon |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): white-dragon has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): white-dragon has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): white-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'vine' |
-| `water` | the drinkable liquid | Noonkon | /noonkon/ | Meonken | Meonken → no change → Noonkon |
-| `west` | the direction of decreasing longitude | Dongdongngaon | /doŋdoŋŋaon/ | Gonggongngaem | Gonggongngaem → no change → Dongdongngaon |
+| `water` | the drinkable liquid | Noonkon | /noonkon/ | Méonken | Méonken → no change → Noonkon |
+| `west` | the direction of decreasing longitude | Dongdongngaon | /doŋdoŋŋaon/ | Gónggóngngaém | Gónggóngngaém → no change → Dongdongngaon |
 | `wheat` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'wheat' |
-| `white-dragon-kind` | a white dragon | Ngon | /ŋon/ | Ngen | Ngen → no change → Ngon |
+| `white-dragon-kind` | a white dragon | Ngon | /ŋon/ | Ngén | Ngén → no change → Ngon |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Doongdoon | /dooŋdoon/ | Beonggeen | Beonggeen → no change → Doongdoon |
+| `wind` | moving air | Doongdoon | /dooŋdoon/ | Beonggéen | Beonggéen → no change → Doongdoon |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): white-dragon has no exposure to 'wind-scour' |
 | `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): white-dragon has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): white-dragon has no exposure to 'wooded-grassland' |
@@ -3828,55 +3828,55 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 
 | Concept | Gloss | Proto | Black-dragon | Red-dragon | White-dragon | Descent |
 |---|---|---|---|---|---|---|
-| `blood` | the circulating fluid of a body | *Nanken /nanken/ | Dadgod /dadgod/ | Dadkod /dadkod/ | Nankon /nankon/ | *Nanken → Dadgod / Dadkod / Nankon |
-| `bone` | the rigid frame of a body | *Pengkeem /peŋkeem/ | Doggood /doggood/ | Kodkood /kodkood/ | Kongkoon /koŋkoon/ | *Pengkeem → Doggood / Kodkood / Kongkoon |
+| `blood` | the circulating fluid of a body | *Nánken /na˥nken/ | Dadgod /dadgod/ | Dadkod /dadkod/ | Nankon /nankon/ | *Nánken → Dadgod / Dadkod / Nankon |
+| `bone` | the rigid frame of a body | *Pengkéém /peŋke˥e˥m/ | Doggood /doggood/ | Kodkood /kodkood/ | Kongkoon /koŋkoon/ | *Pengkéém → Doggood / Kodkood / Kongkoon |
 | `child` | one's son or daughter | *Ken /ken/ | God /god/ | Kod /kod/ | Kon /kon/ | *Ken → God / Kod / Kon |
-| `dark` | the color term for black/dark hues | *Ngamgoam /ŋamgoam/ | Gadgoad /gadgoad/ | Daddoad /daddoad/ | Ngandoan /ŋandoan/ | *Ngamgoam → Gadgoad / Daddoad / Ngandoan |
-| `day` | the light half of the day-night cycle | *Keomgen /keomgen/ | Goodgod /goodgod/ | Kooddod /kooddod/ | Koondon /koondon/ | *Keomgen → Goodgod / Kooddod / Koondon |
-| `die` | to cease living | *Mangdang /maŋdaŋ/ | Dagdag /dagdag/ | Daddad /daddad/ | Nangdang /naŋdaŋ/ | *Mangdang → Dagdag / Daddad / Nangdang |
-| `drink` | to swallow liquid | *Paangpam /paaŋpam/ | Daagdad /daagdad/ | Kaadkad /kaadkad/ | Kaangkan /kaaŋkan/ | *Paangpam → Daagdad / Kaadkad / Kaangkan |
-| `earth` | the ground underfoot | *Maonggoam /maoŋgoam/ | Daoggoad /daoggoad/ | Daoddoad /daoddoad/ | Naongdoan /naoŋdoan/ | *Maonggoam → Daoggoad / Daoddoad / Naongdoan |
-| `east` | the direction of increasing longitude | *Ngenban /ŋenban/ | Goddad /goddad/ | Doddad /doddad/ | Ngondan /ŋondan/ | *Ngenban → Goddad / Doddad / Ngondan |
-| `eat` | to consume food | *Daom /daom/ | Daod /daod/ | Daod /daod/ | Daon /daon/ | *Daom → Daod / Daod / Daon |
-| `eye` | the organ of sight | *Gang /gaŋ/ | Gag /gag/ | Dad /dad/ | Dang /daŋ/ | *Gang → Gag / Dad / Dang |
+| `dark` | the color term for black/dark hues | *Ngámgóám /ŋa˥mgo˥a˥m/ | Gadgoad /gadgoad/ | Daddoad /daddoad/ | Ngandoan /ŋandoan/ | *Ngámgóám → Gadgoad / Daddoad / Ngandoan |
+| `day` | the light half of the day-night cycle | *Kéomgen /ke˥omgen/ | Goodgod /goodgod/ | Kooddod /kooddod/ | Koondon /koondon/ | *Kéomgen → Goodgod / Kooddod / Koondon |
+| `die` | to cease living | *Mangdáng /maŋda˥ŋ/ | Dagdag /dagdag/ | Daddad /daddad/ | Nangdang /naŋdaŋ/ | *Mangdáng → Dagdag / Daddad / Nangdang |
+| `drink` | to swallow liquid | *Páángpám /pa˥a˥ŋpa˥m/ | Daagdad /daagdad/ | Kaadkad /kaadkad/ | Kaangkan /kaaŋkan/ | *Páángpám → Daagdad / Kaadkad / Kaangkan |
+| `earth` | the ground underfoot | *Maónggóam /mao˥ŋgo˥am/ | Daoggoad /daoggoad/ | Daoddoad /daoddoad/ | Naongdoan /naoŋdoan/ | *Maónggóam → Daoggoad / Daoddoad / Naongdoan |
+| `east` | the direction of increasing longitude | *Ngénbán /ŋe˥nba˥n/ | Goddad /goddad/ | Doddad /doddad/ | Ngondan /ŋondan/ | *Ngénbán → Goddad / Doddad / Ngondan |
+| `eat` | to consume food | *Dáom /da˥om/ | Daod /daod/ | Daod /daod/ | Daon /daon/ | *Dáom → Daod / Daod / Daon |
+| `eye` | the organ of sight | *Gáng /ga˥ŋ/ | Gag /gag/ | Dad /dad/ | Dang /daŋ/ | *Gáng → Gag / Dad / Dang |
 | `fire` | flame and heat | *Deng /deŋ/ | Dog /dog/ | Dod /dod/ | Dong /doŋ/ | *Deng → Dog / Dod / Dong |
-| `foot` | the walking limb-end | *Nomgeang /nomgeaŋ/ | Dodgoag /dodgoag/ | Doddoad /doddoad/ | Nondoang /nondoaŋ/ | *Nomgeang → Dodgoag / Doddoad / Nondoang |
-| `gloom` | the deepest, starless dark | *Peom /peom/ | Dood /dood/ | Kood /kood/ | Koon /koon/ | *Peom → Dood / Kood / Koon |
-| `great` | large in size or extent | *Doangkaam /doaŋkaam/ | Doaggaad /doaggaad/ | Doadkaad /doadkaad/ | Doangkaan /doaŋkaan/ | *Doangkaam → Doaggaad / Doadkaad / Doangkaan |
-| `hand` | the manipulating limb-end | *Ngaambong /ŋaamboŋ/ | Gaaddog /gaaddog/ | Daaddod /daaddod/ | Ngaandong /ŋaandoŋ/ | *Ngaambong → Gaaddog / Daaddod / Ngaandong |
-| `high` | far above the ground | *Deomdong /deomdoŋ/ | Dooddog /dooddog/ | Dooddod /dooddod/ | Doondong /doondoŋ/ | *Deomdong → Dooddog / Dooddod / Doondong |
+| `foot` | the walking limb-end | *Nomgéáng /nomge˥a˥ŋ/ | Dodgoag /dodgoag/ | Doddoad /doddoad/ | Nondoang /nondoaŋ/ | *Nomgéáng → Dodgoag / Doddoad / Nondoang |
+| `gloom` | the deepest, starless dark | *Peóm /peo˥m/ | Dood /dood/ | Kood /kood/ | Koon /koon/ | *Peóm → Dood / Kood / Koon |
+| `great` | large in size or extent | *Dóángkaam /do˥a˥ŋkaam/ | Doaggaad /doaggaad/ | Doadkaad /doadkaad/ | Doangkaan /doaŋkaan/ | *Dóángkaam → Doaggaad / Doadkaad / Doangkaan |
+| `hand` | the manipulating limb-end | *Ngáámbong /ŋa˥a˥mboŋ/ | Gaaddog /gaaddog/ | Daaddod /daaddod/ | Ngaandong /ŋaandoŋ/ | *Ngáámbong → Gaaddog / Daaddod / Ngaandong |
+| `high` | far above the ground | *Déomdóng /de˥omdo˥ŋ/ | Dooddog /dooddog/ | Dooddod /dooddod/ | Doondong /doondoŋ/ | *Déomdóng → Dooddog / Dooddod / Doondong |
 | `light` | the color term for white/light hues | *Dem /dem/ | Dod /dod/ | Dod /dod/ | Don /don/ | *Dem → Dod / Dod / Don |
-| `little` | small in size or extent | *Kaangmaon /kaaŋmaon/ | Gaagdaod /gaagdaod/ | Kaaddaod /kaaddaod/ | Kaangnaon /kaaŋnaon/ | *Kaangmaon → Gaagdaod / Kaaddaod / Kaangnaon |
-| `low` | near the ground | *Neemnaang /neemnaaŋ/ | Dooddaag /dooddaag/ | Dooddaad /dooddaad/ | Noonnaang /noonnaaŋ/ | *Neemnaang → Dooddaag / Dooddaad / Noonnaang |
-| `many` | an indefinitely large count | *Goamnom /goamnom/ | Goaddod /goaddod/ | Doaddod /doaddod/ | Doannon /doannon/ | *Goamnom → Goaddod / Doaddod / Doannon |
-| `moon` | a moon | *Geemgeang /geemgeaŋ/ | Goodgoag /goodgoag/ | Dooddoad /dooddoad/ | Doondoang /doondoaŋ/ | *Geemgeang → Goodgoag / Dooddoad / Doondoang |
-| `mouth` | the organ of eating and speech | *Noang /noaŋ/ | Doag /doag/ | Doad /doad/ | Noang /noaŋ/ | *Noang → Doag / Doad / Noang |
-| `move` | to go from one place to another | *Benpoan /benpoan/ | Doddoad /doddoad/ | Dodkoad /dodkoad/ | Donkoan /donkoan/ | *Benpoan → Doddoad / Dodkoad / Donkoan |
-| `name` | a word that identifies one who bears it | *Koom /koom/ | Good /good/ | Kood /kood/ | Koon /koon/ | *Koom → Good / Kood / Koon |
-| `new` | recently come to be | *Dampang /dampaŋ/ | Daddag /daddag/ | Dadkad /dadkad/ | Dankang /dankaŋ/ | *Dampang → Daddag / Dadkad / Dankang |
-| `night` | the dark half of the day-night cycle | *Neampeom /neampeom/ | Doaddood /doaddood/ | Doadkood /doadkood/ | Noankoon /noankoon/ | *Neampeom → Doaddood / Doadkood / Noankoon |
-| `north` | toward the pole of increasing latitude | *Pengngan /peŋŋan/ | Doggad /doggad/ | Koddad /koddad/ | Kongngan /koŋŋan/ | *Pengngan → Doggad / Koddad / Kongngan |
-| `old` | long in existence | *Ngenngaan /ŋenŋaan/ | Godgaad /godgaad/ | Doddaad /doddaad/ | Ngonngaan /ŋonŋaan/ | *Ngenngaan → Godgaad / Doddaad / Ngonngaan |
-| `one` | the cardinal number 1 | *Koammeam /koammeam/ | Goaddoad /goaddoad/ | Koaddoad /koaddoad/ | Koannoan /koannoan/ | *Koammeam → Goaddoad / Koaddoad / Koannoan |
-| `over` | above; atop | *Penggaem /peŋgaem/ | Doggaod /doggaod/ | Koddaod /koddaod/ | Kongdaon /koŋdaon/ | *Penggaem → Doggaod / Koddaod / Kongdaon |
-| `parent` | one's father or mother | *Gangmoang /gaŋmoaŋ/ | Gagdoag /gagdoag/ | Daddoad /daddoad/ | Dangnoang /daŋnoaŋ/ | *Gangmoang → Gagdoag / Daddoad / Dangnoang |
-| `person` | a person; a member of a people (the autonym root) | *Daamkom /daamkom/ | Daadgod /daadgod/ | Daadkod /daadkod/ | Daankon /daankon/ | *Daamkom → Daadgod / Daadkod / Daankon |
-| `red` | the color term for red | *Gong /goŋ/ | Gog /gog/ | Dod /dod/ | Dong /doŋ/ | *Gong → Gog / Dod / Dong |
-| `rest` | to stop and recover strength | *Boamdaem /boamdaem/ | Doaddaod /doaddaod/ | Doaddaod /doaddaod/ | Doandaon /doandaon/ | *Boamdaem → Doaddaod / Doaddaod / Doandaon |
-| `shadow` | cast dark, distinct from open gloom | *Kaengdoom /kaeŋdoom/ | Gaogdood /gaogdood/ | Kaoddood /kaoddood/ | Kaongdoon /kaoŋdoon/ | *Kaengdoom → Gaogdood / Kaoddood / Kaongdoon |
-| `sibling` | one's brother or sister | *Naonkong /naonkoŋ/ | Daodgog /daodgog/ | Daodkod /daodkod/ | Naonkong /naonkoŋ/ | *Naonkong → Daodgog / Daodkod / Naonkong |
-| `sleep` | to rest unconscious | *Komgem /komgem/ | Godgod /godgod/ | Koddod /koddod/ | Kondon /kondon/ | *Komgem → Godgod / Koddod / Kondon |
-| `south` | toward the pole of decreasing latitude | *Geanbeem /geanbeem/ | Goaddood /goaddood/ | Doaddood /doaddood/ | Doandoon /doandoon/ | *Geanbeem → Goaddood / Doaddood / Doandoon |
-| `star` | a fixed point of light in the night sky | *Bomkem /bomkem/ | Dodgod /dodgod/ | Dodkod /dodkod/ | Donkon /donkon/ | *Bomkem → Dodgod / Dodkod / Donkon |
+| `little` | small in size or extent | *Kaángmáón /kaa˥ŋma˥o˥n/ | Gaagdaod /gaagdaod/ | Kaaddaod /kaaddaod/ | Kaangnaon /kaaŋnaon/ | *Kaángmáón → Gaagdaod / Kaaddaod / Kaangnaon |
+| `low` | near the ground | *Neémnaáng /nee˥mnaa˥ŋ/ | Dooddaag /dooddaag/ | Dooddaad /dooddaad/ | Noonnaang /noonnaaŋ/ | *Neémnaáng → Dooddaag / Dooddaad / Noonnaang |
+| `many` | an indefinitely large count | *Góámnom /go˥a˥mnom/ | Goaddod /goaddod/ | Doaddod /doaddod/ | Doannon /doannon/ | *Góámnom → Goaddod / Doaddod / Doannon |
+| `moon` | a moon | *Géémgeáng /ge˥e˥mgea˥ŋ/ | Goodgoag /goodgoag/ | Dooddoad /dooddoad/ | Doondoang /doondoaŋ/ | *Géémgeáng → Goodgoag / Dooddoad / Doondoang |
+| `mouth` | the organ of eating and speech | *Nóáng /no˥a˥ŋ/ | Doag /doag/ | Doad /doad/ | Noang /noaŋ/ | *Nóáng → Doag / Doad / Noang |
+| `move` | to go from one place to another | *Bénpoan /be˥npoan/ | Doddoad /doddoad/ | Dodkoad /dodkoad/ | Donkoan /donkoan/ | *Bénpoan → Doddoad / Dodkoad / Donkoan |
+| `name` | a word that identifies one who bears it | *Kóóm /ko˥o˥m/ | Good /good/ | Kood /kood/ | Koon /koon/ | *Kóóm → Good / Kood / Koon |
+| `new` | recently come to be | *Dámpang /da˥mpaŋ/ | Daddag /daddag/ | Dadkad /dadkad/ | Dankang /dankaŋ/ | *Dámpang → Daddag / Dadkad / Dankang |
+| `night` | the dark half of the day-night cycle | *Néámpéóm /ne˥a˥mpe˥o˥m/ | Doaddood /doaddood/ | Doadkood /doadkood/ | Noankoon /noankoon/ | *Néámpéóm → Doaddood / Doadkood / Noankoon |
+| `north` | toward the pole of increasing latitude | *Pengngán /peŋŋa˥n/ | Doggad /doggad/ | Koddad /koddad/ | Kongngan /koŋŋan/ | *Pengngán → Doggad / Koddad / Kongngan |
+| `old` | long in existence | *Ngénngaán /ŋe˥nŋaa˥n/ | Godgaad /godgaad/ | Doddaad /doddaad/ | Ngonngaan /ŋonŋaan/ | *Ngénngaán → Godgaad / Doddaad / Ngonngaan |
+| `one` | the cardinal number 1 | *Kóamméám /ko˥amme˥a˥m/ | Goaddoad /goaddoad/ | Koaddoad /koaddoad/ | Koannoan /koannoan/ | *Kóamméám → Goaddoad / Koaddoad / Koannoan |
+| `over` | above; atop | *Pénggáém /pe˥ŋga˥e˥m/ | Doggaod /doggaod/ | Koddaod /koddaod/ | Kongdaon /koŋdaon/ | *Pénggáém → Doggaod / Koddaod / Kongdaon |
+| `parent` | one's father or mother | *Gángmóang /ga˥ŋmo˥aŋ/ | Gagdoag /gagdoag/ | Daddoad /daddoad/ | Dangnoang /daŋnoaŋ/ | *Gángmóang → Gagdoag / Daddoad / Dangnoang |
+| `person` | a person; a member of a people (the autonym root) | *Dáámkóm /da˥a˥mko˥m/ | Daadgod /daadgod/ | Daadkod /daadkod/ | Daankon /daankon/ | *Dáámkóm → Daadgod / Daadkod / Daankon |
+| `red` | the color term for red | *Góng /go˥ŋ/ | Gog /gog/ | Dod /dod/ | Dong /doŋ/ | *Góng → Gog / Dod / Dong |
+| `rest` | to stop and recover strength | *Bóamdáém /bo˥amda˥e˥m/ | Doaddaod /doaddaod/ | Doaddaod /doaddaod/ | Doandaon /doandaon/ | *Bóamdáém → Doaddaod / Doaddaod / Doandaon |
+| `shadow` | cast dark, distinct from open gloom | *Káéngdóóm /ka˥e˥ŋdo˥o˥m/ | Gaogdood /gaogdood/ | Kaoddood /kaoddood/ | Kaongdoon /kaoŋdoon/ | *Káéngdóóm → Gaogdood / Kaoddood / Kaongdoon |
+| `sibling` | one's brother or sister | *Náonkong /na˥onkoŋ/ | Daodgog /daodgog/ | Daodkod /daodkod/ | Naonkong /naonkoŋ/ | *Náonkong → Daodgog / Daodkod / Naonkong |
+| `sleep` | to rest unconscious | *Kómgem /ko˥mgem/ | Godgod /godgod/ | Koddod /koddod/ | Kondon /kondon/ | *Kómgem → Godgod / Koddod / Kondon |
+| `south` | toward the pole of decreasing latitude | *Géánbeém /ge˥a˥nbee˥m/ | Goaddood /goaddood/ | Doaddood /doaddood/ | Doandoon /doandoon/ | *Géánbeém → Goaddood / Doaddood / Doandoon |
+| `star` | a fixed point of light in the night sky | *Bómkem /bo˥mkem/ | Dodgod /dodgod/ | Dodkod /dodkod/ | Donkon /donkon/ | *Bómkem → Dodgod / Dodkod / Donkon |
 | `starlit` | dark faintly lit by stars | *Deeng /deeŋ/ | Doog /doog/ | Dood /dood/ | Doong /dooŋ/ | *Deeng → Doog / Dood / Doong |
-| `stone` | rock | *Gaommen /gaommen/ | Gaoddod /gaoddod/ | Daoddod /daoddod/ | Daonnon /daonnon/ | *Gaommen → Gaoddod / Daoddod / Daonnon |
-| `sun` | the sun | *Kaammoang /kaammoaŋ/ | Gaaddoag /gaaddoag/ | Kaaddoad /kaaddoad/ | Kaannoang /kaannoaŋ/ | *Kaammoang → Gaaddoag / Kaaddoad / Kaannoang |
+| `stone` | rock | *Gaommén /gaomme˥n/ | Gaoddod /gaoddod/ | Daoddod /daoddod/ | Daonnon /daonnon/ | *Gaommén → Gaoddod / Daoddod / Daonnon |
+| `sun` | the sun | *Káammóang /ka˥ammo˥aŋ/ | Gaaddoag /gaaddoag/ | Kaaddoad /kaaddoad/ | Kaannoang /kaannoaŋ/ | *Káammóang → Gaaddoag / Kaaddoad / Kaannoang |
 | `tree` | a woody plant | *Maan /maan/ | Daad /daad/ | Daad /daad/ | Naan /naan/ | *Maan → Daad / Daad / Naan |
-| `two` | the cardinal number 2 | *Pamnaang /pamnaaŋ/ | Daddaag /daddaag/ | Kaddaad /kaddaad/ | Kannaang /kannaaŋ/ | *Pamnaang → Daddaag / Kaddaad / Kannaang |
-| `under` | beneath; below | *Kongpen /koŋpen/ | Gogdod /gogdod/ | Kodkod /kodkod/ | Kongkon /koŋkon/ | *Kongpen → Gogdod / Kodkod / Kongkon |
-| `water` | the drinkable liquid | *Meonken /meonken/ | Doodgod /doodgod/ | Doodkod /doodkod/ | Noonkon /noonkon/ | *Meonken → Doodgod / Doodkod / Noonkon |
-| `west` | the direction of decreasing longitude | *Gonggongngaem /goŋgoŋŋaem/ | Goggoggaod /goggoggaod/ | Doddoddaod /doddoddaod/ | Dongdongngaon /doŋdoŋŋaon/ | *Gonggongngaem → Goggoggaod / Doddoddaod / Dongdongngaon |
-| `wind` | moving air | *Beonggeen /beoŋgeen/ | Dooggood /dooggood/ | Dooddood /dooddood/ | Doongdoon /dooŋdoon/ | *Beonggeen → Dooggood / Dooddood / Doongdoon |
+| `two` | the cardinal number 2 | *Pang /paŋ/ | Dag /dag/ | Kad /kad/ | Kang /kaŋ/ | *Pang → Dag / Kad / Kang |
+| `under` | beneath; below | *Kongpén /koŋpe˥n/ | Gogdod /gogdod/ | Kodkod /kodkod/ | Kongkon /koŋkon/ | *Kongpén → Gogdod / Kodkod / Kongkon |
+| `water` | the drinkable liquid | *Méonken /me˥onken/ | Doodgod /doodgod/ | Doodkod /doodkod/ | Noonkon /noonkon/ | *Méonken → Doodgod / Doodkod / Noonkon |
+| `west` | the direction of decreasing longitude | *Gónggóngngaém /go˥ŋgo˥ŋŋae˥m/ | Goggoggaod /goggoggaod/ | Doddoddaod /doddoddaod/ | Dongdongngaon /doŋdoŋŋaon/ | *Gónggóngngaém → Goggoggaod / Doddoddaod / Dongdongngaon |
+| `wind` | moving air | *Beonggéen /beoŋge˥en/ | Dooggood /dooggood/ | Dooddood /dooddood/ | Doongdoon /dooŋdoon/ | *Beonggéen → Dooggood / Dooddood / Doongdoon |
 
 ### Dwarf
 

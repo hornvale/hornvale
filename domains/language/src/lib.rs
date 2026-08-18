@@ -881,7 +881,26 @@ pub mod speech {
                     voicing: 0.7,
                     sibilance: 0.6,
                     voice_loudness: 0.8,
-                    tonality: 0.0,
+                    // THE TONE TIER'S FIRST SHIPPED SPECIES (Task 14, The
+                    // Burr). `draw_tone_inventory`, the capacity floor's
+                    // tone-widening and `RuleKind::Tonogenesis` were built,
+                    // unit-tested with synthetic envelopes, and unreached by
+                    // any real species — `tonality` sat at 0.0 on all 23
+                    // authored rows. Draconic is already the one family
+                    // mapped to `typology::isolating_tonal()`
+                    // (`family_typology`), so it is the natural first mover:
+                    // a large, non-humanoid dragon vocal tract — long
+                    // resonant chambers, no lips shaping the airstream the
+                    // way a humanoid mouth does — is read here as carrying
+                    // pitch contrast rather than the labial/dental place
+                    // contrasts a humanoid tongue leans on. 0.7 clears
+                    // `tone_count`'s 0.25 threshold for a second, contrastive
+                    // tone (`1 + round(0.7 * 2) = 2`, clamped to
+                    // `MAX_TONE_COUNT`), giving draconic a two-tone inventory
+                    // (Neutral + one contrastive) — reaching the tier without
+                    // maxing it: a deliberately modest first step, not the
+                    // full three-tone ceiling.
+                    tonality: 0.7,
                     exotic: ExoticManner::None,
                 },
             ),
@@ -1202,6 +1221,53 @@ mod tests {
             row,
             ArticulationVector::MANIKIN,
             "goblin's articulation is authored at the manikin (characterization)"
+        );
+    }
+
+    /// The isolating-tonal bundle must actually reach the tone tier — the
+    /// whole reason it earned a slot is that `tonality` is 0.0 on all 23
+    /// authored rows today, so `draw_tone_inventory`, the capacity floor's
+    /// tone-widening and `RuleKind::Tonogenesis` are built, tested and
+    /// unreached (spec §3.4). Draconic is already mapped to
+    /// `typology::isolating_tonal()` in `family_typology`; this test proves
+    /// the *phonology* side (the proto's `tonality` scalar) actually reaches
+    /// a contrastive tone, not just the typology label.
+    ///
+    /// The envelope is built INLINE at the neutral midpoint (the same values
+    /// `phonology::tests::manikin_env()` uses) rather than via a helper: the
+    /// real species→envelope conversion (`envelope_of`) lives in
+    /// `windows/worldgen`, a window, and this domain crate may depend on the
+    /// kernel only — never a window (layering, `cli/tests/architecture.rs`).
+    /// `tone_count` depends on `tonality` alone, so a hand-built envelope
+    /// with the proto's `tonality` copied in is sufficient to prove the
+    /// value reaches the tier.
+    #[test]
+    fn the_draconic_family_draws_a_contrastive_tone() {
+        let proto = family_proto();
+        let draconic = proto.get(&KindId("draconic")).expect("draconic proto");
+        assert!(
+            draconic.tonality > 0.0,
+            "draconic tonality is still 0.0 — the tone tier stays unreached"
+        );
+        let env = Envelope {
+            labiality: 0.5,
+            vowel_space: 0.5,
+            voicing: 0.5,
+            sibilance: 0.5,
+            voice_loudness: 0.5,
+            tonality: draconic.tonality,
+            exotic: ExoticSeg::None,
+        };
+        let ph = draw_phonology(
+            &hornvale_kernel::Seed(42),
+            "draconic",
+            &env,
+            &crate::typology::isolating_tonal(),
+        );
+        assert!(
+            tone_inventory(&ph).len() > 1,
+            "draconic drew only the neutral tone: {:?}",
+            tone_inventory(&ph)
         );
     }
 }
