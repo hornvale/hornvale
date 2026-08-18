@@ -11,6 +11,25 @@
 # it matches per-BRANCH, and it must NEVER supersede a RUNNING request — an
 # authoring job already inside the chamber would be orphaned mid-write.
 #
+# ANCESTRY IS A QUESTION THIS BOX CAN FAIL TO ANSWER, and for two days it
+# failed silently. `--is-ancestor` is THREE-valued — 0 yes, 1 no, 128 "I
+# cannot resolve that object" — and the original `if git merge-base ...
+# 2>/dev/null; then` collapsed 128 into 1 while discarding the `fatal:` that
+# distinguished them. Nothing in the request path fetched, so the box
+# routinely did not have a just-pushed commit and answered "not an ancestor"
+# to a question it could not read. Observed live on 2026-08-16:
+# campaign/the-rhumb queued three stage requests in one ancestry chain and
+# none coalesced, while the author's own machine confirmed exit 0 for each
+# pair. Both halves are fixed below — a best-effort fetch before the lock,
+# and an explicit three-way read of the exit code that stamps the row when
+# the answer is unavailable rather than pretending it was "no".
+#
+# SUPERSEDABLE STATES ARE NOW LISTED, NOT IMPLIED. The state test used to be
+# `= "queued"`, which silently excluded `held` — so a request the chamber
+# reddened could never be superseded by the fix that replaced it, and every
+# red left a permanent row. `queued` and `held` supersede; `running` never
+# does; terminal states are history.
+#
 # HERMETICITY: git exports GIT_DIR and GIT_INDEX_FILE to hooks, and they
 # OUTRANK `git -C`/cwd. This script may be invoked from a hook or another
 # wrapper that has them set for a different repository, so its own
@@ -134,10 +153,99 @@ add)
         echo "sluice-queue: add: '$sha' is not a valid object id (expected lowercase hex, 4-64 characters)" >&2
         exit 1
     fi
+    # FETCH BEFORE THE LOCK, NOT INSIDE IT. Coalescing asks a question about
+    # two commits, and it can only answer if this box HAS them. Nothing else
+    # in the request path fetches: `sluice-request.sh` ssh's straight here,
+    # so the objects arrive only if something happened to fetch them for an
+    # unrelated reason. That made coalescing silently conditional on luck —
+    # observed live 2026-08-16, when campaign/the-rhumb queued three stage
+    # requests in one chain and NONE of them coalesced, though the author
+    # confirmed the ancestry held on their own machine.
+    #
+    # CONDITIONAL on the object actually being missing, so the common path
+    # costs nothing and no test needs an opt-out: if this box can already
+    # resolve the sha, there is nothing to go and get. `cat-file -e` on the
+    # peeled commit is the cheap form of exactly the question
+    # `--is-ancestor` is about to ask.
+    #
+    # Best-effort, and deliberately so: a request must be enqueued even with
+    # no network. A failed fetch degrades coalescing to what it already did,
+    # which is the pre-existing behaviour rather than a new failure. It sits
+    # outside `with_lock` because the queue's own header is explicit that
+    # enqueueing must never block behind slow work — a network round trip
+    # inside the lock would make every add wait on it.
+    if ! env -u GIT_DIR -u GIT_INDEX_FILE \
+            git cat-file -e "$sha^{commit}" >/dev/null 2>&1; then
+        env -u GIT_DIR -u GIT_INDEX_FILE \
+            git fetch --quiet origin "$branch" >/dev/null 2>&1 || true
+    fi
+    # THE HEADLINE CHECK LIVES HERE TOO, AND THIS IS THE ONE THAT ENFORCES.
+    # `sluice-request.sh` checks the same thing, but it runs on the
+    # SUBMITTER's machine from the SUBMITTER's checkout — so a campaign whose
+    # scripts/ predates the trailer rule silently gets the old subject-based
+    # check and never sees this one. That is not hypothetical: it happened on
+    # the rule's first outside submission, from a checkout two commits stale
+    # on that one file, and the submitter reported to Nathan that the new
+    # mechanism had caught something when it had not. A client-side check that
+    # falls through SILENTLY is worse than none, because it manufactures false
+    # confidence in its own coverage.
+    #
+    # `add` runs on the canonical box, over ssh, from the box's own checkout —
+    # the one place every submission passes through regardless of what the
+    # caller is running. So the refusal belongs here and the caller-side one
+    # is demoted to what it actually is: a fast local pre-check.
+    #
+    # THREE-VALUED, for the same reason coalescing is. Absent-and-answerable
+    # refuses; UNANSWERABLE (the box cannot resolve the objects) must NOT,
+    # because the queue's first duty is durability and refusing a real request
+    # over a missing object would lose it. That case accepts and stamps the
+    # row so an operator sees it, exactly as an indeterminate coalesce does.
+    #
+    # HV_SLUICE_SKIP_HEADLINE is for `scripts/test-sluice.sh`, which adds many
+    # merge rows in scratch repos that carry no trailers. It is safe because
+    # nothing in the production path sets it — `sluice-request.sh`'s remote
+    # command is a fixed string that does not mention it, and a test in that
+    # suite asserts so, which is what keeps this knob from quietly becoming
+    # the way the check gets turned off.
+    headline_note=""
+    if [ "$kind" = "merge" ] && [ "${HV_SLUICE_SKIP_HEADLINE:-}" != "1" ]; then
+        # shellcheck source=scripts/sluice-headline.sh
+        . "$(dirname "$0")/sluice-headline.sh"
+        hl_base="${HV_SLUICE_BASE:-origin/main}"
+        if ! env -u GIT_DIR -u GIT_INDEX_FILE \
+                git rev-parse --verify --quiet "$hl_base" >/dev/null 2>&1 \
+           || ! env -u GIT_DIR -u GIT_INDEX_FILE \
+                git cat-file -e "$sha^{commit}" >/dev/null 2>&1; then
+            headline_note="headline indeterminate: $hl_base or ${sha:0:12} unresolvable here"
+            echo "sluice-queue: add: headline UNCHECKED — $headline_note" >&2
+        else
+            hl="$(sluice_headline_of "$PWD" "$hl_base" "$sha")"
+            if sluice_headline_is_junk "$hl"; then
+                echo "sluice-queue: add: REFUSED — no usable Sluice-Headline: trailer in $hl_base..${sha:0:12}." >&2
+                echo "  The merge commit's subject is permanent and human-read, and" >&2
+                echo "  tools/census/history.sh reads it as the census epoch label when" >&2
+                echo "  the merge moves the census. It must be authored, not inferred." >&2
+                echo "" >&2
+                echo "  Add to the body of any commit in the range — not necessarily the" >&2
+                echo "  last, and a later commit will not displace it:" >&2
+                echo "" >&2
+                echo "      Sluice-Headline: <what landed, in one line>" >&2
+                echo "" >&2
+                echo "  Keep it ADJACENT to your other trailers with no blank line" >&2
+                echo "  between: git's parser reads only the message's LAST block, so a" >&2
+                echo "  blank line above a Claude-Session: line strands it." >&2
+                echo "" >&2
+                echo "  Write only the text; the chamber composes merge($(sluice_short_name "$branch")): <text>." >&2
+                exit 2
+            fi
+            echo "sluice-queue: add: headline OK (trailer rule) — merge($(sluice_short_name "$branch")): $hl" >&2
+        fi
+    fi
+
     with_lock
     id="req-$(printf '%.12s' "$sha")-$(date -u +%Y%m%dT%H%M%SZ)"
-    # Supersede queued ancestors of THIS sha on THIS branch. `running` is
-    # excluded by the state test, not by ordering — see the header.
+    # Supersede supersedable ancestors of THIS sha on THIS branch. `running`
+    # is excluded by the state test, not by ordering — see the header.
     #
     # The replacement file is created IN $HV_SLUICE_DIR, not the default
     # $TMPDIR/tmp: `mv` is only atomic within one filesystem, and a bare
@@ -162,15 +270,62 @@ add)
         # dropped because a later stage gate happens to be its descendant,
         # and vice versa. Only the ancestor test is shared.
         [ -n "$rkind" ] || rkind="merge"
-        if [ "$rstate" = "queued" ] && [ "$rbranch" = "$branch" ] && [ "$rkind" = "$kind" ] \
-           && env -u GIT_DIR -u GIT_INDEX_FILE git merge-base --is-ancestor "$rsha" "$sha" 2>/dev/null; then
-            rstate="superseded"
-            rnote="superseded by $id"
+        # WHICH STATES ARE SUPERSEDABLE, decided explicitly rather than by
+        # omission. `queued` is obvious. `held` is the case this used to miss
+        # BY CONSTRUCTION: a held request is one the chamber reddened, so the
+        # author fixes it and resubmits — the descendant IS the replacement,
+        # and leaving the held row queued-forever means every red accretes a
+        # permanent row nobody will ever act on. `running` must never be
+        # superseded (an authoring job mid-write would be orphaned), and the
+        # terminal states — landed, reported, superseded, dropped — are
+        # history and must not be rewritten.
+        case "$rstate" in
+            queued|held) supersedable=1 ;;
+            *)           supersedable=0 ;;
+        esac
+        if [ "$supersedable" = "1" ] && [ "$rbranch" = "$branch" ] && [ "$rkind" = "$kind" ]; then
+            # THE EXIT CODE IS THREE-VALUED AND THE OLD CODE READ IT AS TWO.
+            # `git merge-base --is-ancestor` exits 0 for yes, 1 for no, and
+            # 128 when it cannot resolve an argument at all. Under `if ...;
+            # then` every non-zero is one bucket, so "I do not have that
+            # object" was indistinguishable from "not an ancestor" — and the
+            # `2>/dev/null` discarded the `fatal:` line that says which.
+            # A silent no-op was the result. Capture the code and split it.
+            # `|| anc_rc=$?`, never a bare call followed by `anc_rc=$?`:
+            # this script runs under `set -e`, so a bare `--is-ancestor`
+            # returning 1 — the ordinary "no" answer — would kill the script
+            # before the assignment ran. Caught by the existing post-rebase
+            # test, which is the one case that exercises a genuine 1.
+            anc_rc=0
+            env -u GIT_DIR -u GIT_INDEX_FILE \
+                git merge-base --is-ancestor "$rsha" "$sha" >/dev/null 2>&1 || anc_rc=$?
+            case "$anc_rc" in
+                0)
+                    rstate="superseded"
+                    rnote="superseded by $id"
+                    ;;
+                1)
+                    : # genuinely not an ancestor — a real answer, leave it
+                    ;;
+                *)
+                    # UNANSWERABLE. Do not fail the add — the queue's job is
+                    # durability, and refusing here would lose a request over
+                    # a missing object. But do not stay silent either, which
+                    # is the whole defect: stamp the row so `sluice-status`
+                    # shows an operator that coalescing could not decide, and
+                    # they can check ancestry by hand.
+                    rnote="coalescing indeterminate vs $id (git merge-base rc=$anc_rc; object not resolvable here)"
+                    ;;
+            esac
         fi
         printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rkind" "$rnote"
     done < "$QUEUE" > "$tmp"
+    # The note carries the headline verdict ONLY when it was indeterminate —
+    # a normal row's note stays empty, so `sluice-status` reads clean and the
+    # unchecked ones stand out rather than being buried in uniform text.
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$id" "$branch" "$sha" "queued" "$kind" "" >> "$tmp"
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$id" "$branch" "$sha" "queued" "$kind" \
+        "$(sanitize_note "$headline_note")" >> "$tmp"
     mv "$tmp" "$QUEUE"
     printf '%s\n' "$id"
     ;;

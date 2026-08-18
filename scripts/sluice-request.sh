@@ -22,6 +22,12 @@ case "$kind" in
 esac
 host="$(cat "$repo_root/scripts/census-canonical-host.txt")"
 remote_dir="${HV_SLUICE_REMOTE_DIR:-~/Projects/hornvale}"
+# The base a merge is against, and the base the headline trailer is searched
+# over. Same variable and same default `sluice-run.sh` uses, so the refusal
+# below asks its question over exactly the range the chamber will.
+HV_SLUICE_BASE="${HV_SLUICE_BASE:-origin/main}"
+# shellcheck source=scripts/sluice-headline.sh
+. "$repo_root/scripts/sluice-headline.sh"
 
 # THE QUOTING HAZARD lane-dispatch.sh's own HV_LANE_REMOTE_DIR guard exists
 # to catch: `HV_SLUICE_REMOTE_DIR=~/foo` typed unquoted at a shell prompt is
@@ -77,17 +83,29 @@ if [ -z "$(git -C "$repo_root" branch -r --contains "$ref" 2>/dev/null)" ]; then
 fi
 
 # THE HEADLINE IS REFUSED, NOT DEFAULTED — enforced here, by the script, not
-# left as advice in a skill. Under sluice-run.sh's `--no-ff` merge, this
-# commit's own subject becomes the merge commit's subject
-# (`headline="${HV_SLUICE_HEADLINE:-$(git log -1 --format=%s "$sha")}"`),
-# which tools/census/history.sh reads as the census epoch label
-# (`git log --follow --first-parent main`). Only the campaign that authored
-# $ref knows whether that subject is fit to become a permanent artifact
-# label — an operator triaging the queue later must never be the one
-# inventing or silently accepting a placeholder one. So this derives the
-# SAME subject sluice-run.sh will actually use (not a separately
-# caller-supplied string, which could say anything and still not match what
-# actually lands) and refuses to enqueue if it looks like a placeholder.
+# left as advice in a skill. It becomes the merge commit's subject, which is
+# permanent and human-read, and which tools/census/history.sh reads as the
+# census epoch label (`git log --follow --first-parent main -- <census CSV>`,
+# path-scoped, so only a merge that MOVES the census mints one). Only the
+# campaign that authored $ref knows whether a subject is fit to be that. An
+# operator triaging the queue later must never be the one inventing or
+# silently accepting a placeholder — which is why this refuses rather than
+# defaulting, and why nothing in this path threads a caller-supplied override.
+#
+# IT ASKS FOR A TRAILER NOW, NOT THE TIP COMMIT'S SUBJECT, and the reason is
+# measured rather than aesthetic: inferring the subject from whichever commit
+# happened to be last failed on FOUR of the first four real merges — doubled
+# once, branch-path-leaked twice, redundantly prefixed once — plus a fifth
+# failure that leaves no trace in what landed, a headline commit DISPLACED by
+# an ordinary commit added after it. `scripts/sluice-headline.sh` carries the
+# full account and the shared implementation.
+#
+# The junk check below is unchanged in spirit and much narrower in load. It
+# used to be the only thing standing between a tidy-up commit and a permanent
+# label, which it could not do — it knows placeholder WORDS, and an ordinary
+# subject on an ordinary commit is not a placeholder word. Now it is a
+# backstop on a string someone deliberately wrote, which is the job it can
+# actually perform.
 #
 # A `stage` REQUEST IS EXEMPT, and the exemption is the same reasoning read
 # forwards. The refusal exists because the subject becomes a PERMANENT
@@ -98,16 +116,59 @@ fi
 # thing a stage gate is for. The check returns in full the moment the same
 # branch asks to merge.
 if [ "$kind" = "merge" ]; then
-    headline="$(git -C "$repo_root" log -1 --format=%s "$ref" 2>/dev/null || true)"
-    case "$headline" in
-        ""|wip|WIP|fixup!*|squash!*|.|tmp|temp|TODO)
-            echo "sluice-request: refusing — the commit at ${ref:0:12}'s subject ('$headline') is not a real headline." >&2
-            echo "  Under --no-ff this becomes the merge commit's subject, which" >&2
-            echo "  tools/census/history.sh reads as the census epoch label. Amend" >&2
-            echo "  the commit (or add a proper final commit) and push again." >&2
-            exit 2
-            ;;
-    esac
+    # Refresh the base before asking: the trailer search excludes commits
+    # already on it, so a base that has fallen behind admits main's commits
+    # into the range — and once this convention is in use those carry trailers
+    # of their own, from other campaigns. "Newest wins" mitigates it but does
+    # not close it.
+    #
+    # GIT_TERMINAL_PROMPT=0 IS LOAD-BEARING, NOT TIDINESS. Against an https
+    # remote with no cached credential, `git fetch` prompts — and a prompt in
+    # a non-interactive path does not fail, it HANGS, forever. Adding this
+    # fetch without it took scripts/test-sluice.sh from 17.9 s to past 20
+    # minutes with no output, which is how it was found. Fail fast instead.
+    #
+    # HV_SLUICE_SKIP_FETCH exists for the same reason HV_SLUICE_SKIP_BOARD
+    # does, one line of precedent below: this suite drives the real script
+    # dozens of times, and a test run must not depend on — or wait for — the
+    # network. Skipping only degrades the check to the pre-fetch behaviour.
+    if [ "${HV_SLUICE_SKIP_FETCH:-}" != "1" ]; then
+        GIT_TERMINAL_PROMPT=0 git -C "$repo_root" fetch --quiet origin main \
+            >/dev/null 2>&1 || true
+    fi
+    headline="$(sluice_headline_of "$repo_root" "$HV_SLUICE_BASE" "$ref")"
+    if sluice_headline_is_junk "$headline"; then
+        short="$(sluice_short_name "$branch")"
+        echo "sluice-request: refusing — no usable Sluice-Headline: trailer in $HV_SLUICE_BASE..${ref:0:12}." >&2
+        echo "" >&2
+        echo "  A merge commit's subject is permanent and human-read, and" >&2
+        echo "  tools/census/history.sh reads it as the census epoch label when" >&2
+        echo "  the merge moves the census. It must be AUTHORED, not inferred:" >&2
+        echo "  inferring it from whichever commit happened to be last failed on" >&2
+        echo "  four of the first four real merges." >&2
+        echo "" >&2
+        echo "  Add this trailer to the body of any commit in the range — it" >&2
+        echo "  does not have to be the last one, and a later commit will not" >&2
+        echo "  displace it:" >&2
+        echo "" >&2
+        echo "      Sluice-Headline: <what landed, in one line>" >&2
+        echo "" >&2
+        echo "  The chamber composes the whole subject itself, so write only the" >&2
+        echo "  text — no merge(...) prefix of your own:" >&2
+        echo "" >&2
+        echo "      merge($short): <what landed, in one line>" >&2
+        echo "" >&2
+        echo "  IF YOU ALREADY ADDED ONE, CHECK ITS PLACEMENT. This reads git's" >&2
+        echo "  trailers, which are only ever the message's LAST block, so a" >&2
+        echo "  blank line above another trailer strands it:" >&2
+        echo "" >&2
+        echo "      Sluice-Headline: what landed      <- ignored, wrong block" >&2
+        echo "                                        <- this blank line" >&2
+        echo "      Claude-Session: https://…" >&2
+        echo "" >&2
+        echo "  Keep it adjacent to the other trailers, no blank line between." >&2
+        exit 2
+    fi
 fi
 
 # THE CAIRN'S HOLD-OFF READ, INHERITED FROM `scripts/preflight-merge.sh`.

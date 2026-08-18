@@ -6,8 +6,11 @@
 //! nothing, and owns no seed labels — it is a window, not a domain.
 #![warn(missing_docs)]
 
+pub mod accumulate;
+pub mod amplitude;
 pub mod derive;
 pub mod divergence;
+pub mod durations;
 pub mod ladder;
 pub mod lineage;
 pub mod stance;

@@ -42,6 +42,42 @@ run() {
 run "tools/board"      env -u GIT_DIR -u GIT_INDEX_FILE cargo test --manifest-path tools/board/Cargo.toml
 run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml
 run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
+# THE QUEUE'S OWN SUITE, which until now was run by NOBODY. `test-sluice.sh`
+# was referenced only from prose — no make target, no set, no phase — so the
+# 151 property tests guarding the merge queue ran only when someone
+# remembered. That is not a theoretical gap: the coalescing defect this line
+# ships alongside (exit 128 read as exit 1) survived because the suite that
+# would have hosted its test was never executed after Task 12 wrote it.
+#
+# It belongs HERE rather than in a heavier set because it is genuinely fast —
+# measured 17.86 s wall on the canonical box, against `outboard`'s own 5.5-20 s
+# — and because the queue is the CAS/append path, where a bug means silent
+# write loss rather than a loud failure. Same reasoning that put `tools/board`
+# on this line.
+#
+# It is safe to run INSIDE a chamber phase despite driving a chamber of its
+# own: every path it touches is overridden to scratch (HV_SLUICE_REPO_ROOT,
+# HV_SLUICE_WORKTREE, HV_CENSUS_CLAIM_PATH, HV_CENSUS_LOCK), so it never takes
+# the real claim the enclosing run is already holding. It SKIPs cleanly on a
+# host without flock, which is why it costs nothing on a Mac.
+run "sluice queue"     bash scripts/test-sluice.sh
+# THE SHELL LINT, for the same reason and with the proof attached. The
+# `make shellcheck` target was in the Makefile's .PHONY list and NOWHERE
+# else — no gate, no set, no hook ran it — and it was RED on `main` when this
+# line was written (SC2119 at two call sites, unnoticed for as long as it took
+# to write them).
+#
+# (A comment line here must not START with the linter's own name followed by a
+# space: that is the syntax for an inline directive, and shellcheck fails the
+# whole file with SC1073 when it cannot parse one. Learned immediately.)
+# A lint nothing runs is a lint that reports on whatever the last person to
+# type it happened to see. 8.16 s, against this set's ~24 s.
+#
+# `scripts/**` is the connective tissue of every gate, the census, and this
+# queue, and none of it is covered by `cargo clippy` — the workspace lint
+# stops at the Rust boundary, so shell is the one language here with no
+# automatic checker at all.
+run "shellcheck"       make --no-print-directory shellcheck
 
 if [ "$fails" -ne 0 ]; then
     echo "outboard: $fails suite(s) failed" >&2

@@ -392,6 +392,12 @@ pub struct Session<'w> {
     agent: Agent,
     knowledge: Knowledge,
     trail: Vec<RoomAddr>,
+    /// The walk-band course, if the possession is mid-traverse.
+    ///
+    /// `None` before the first `go` and after any verb that invalidates a
+    /// heading. Never serialized: a world is a seed plus a ledger, and a
+    /// course is a fact about this session's walk, not about the world.
+    course: Option<crate::course::Course>,
     day: WorldTime,
     focalizer: TemplateFocalizer,
     projection: IdentityProjection,
@@ -738,6 +744,7 @@ impl<'w> Session<'w> {
             agent,
             knowledge: Knowledge::default(),
             trail: Vec::new(),
+            course: None,
             day: opts.day,
             focalizer: TemplateFocalizer,
             projection: IdentityProjection,
@@ -773,6 +780,16 @@ impl<'w> Session<'w> {
     /// The accumulated knowledge (read-only).
     pub fn knowledge(&self) -> &Knowledge {
         &self.knowledge
+    }
+
+    /// This session's walk-band course, if it is mid-traverse.
+    ///
+    /// An accessor rather than a `pub` field: the course is session-private
+    /// state whose invariant is that `reckoned` advances only through
+    /// `rhumb_advance`. A `pub` field invites a consumer that assigns to it,
+    /// which is exactly the memoryless walk this campaign exists to avoid.
+    pub fn course(&self) -> Option<&crate::course::Course> {
+        self.course.as_ref()
     }
 
     /// The locale context this session walks (for the battery's checks).
@@ -1348,10 +1365,13 @@ impl<'w> Session<'w> {
             ),
             "help" => Turn::Out(HELP.to_string()),
             "release" | "quit" => Turn::Released("You let go.".to_string()),
-            // A bare compass token IS a movement command. The room prints
-            // "Ways on: SE, N, SW." and every one of those tokens must be
-            // typeable; `parse_compass` already accepted them, and only this
-            // dispatch arm was missing.
+            // A bare compass token IS a movement command. The room names the
+            // three nearest bearings — "the nearest ground lies SE, N, SW" —
+            // and every one of those tokens must be typeable; `parse_compass`
+            // already accepted them, and only this dispatch arm was missing.
+            // (The Rhumb: those three no longer bound what `go` accepts, but
+            // they are still real destinations the prose promises, so the
+            // invariant they were written to satisfy is unchanged.)
             //
             // It carries `go`'s own band guards, and must: this arm dispatches
             // to `self.go` directly, so without them repeated here a bare `n`
@@ -1659,22 +1679,39 @@ impl<'w> Session<'w> {
             vantage,
         )?;
         let f = self.focalizer.render(&v);
-        let ways: Vec<String> = v
-            .locale
-            .exits
-            .iter()
-            .filter(|e| e.kind == ExitKind::Edge)
-            .filter_map(|e| match e.direction {
-                Direction::Compass(c) => Some(format!("{c:?}").to_uppercase()),
-                _ => None,
-            })
-            .collect();
+        // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
+        // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
+        // under, `go` and a bare compass token both refuse EVERY lateral
+        // direction (`SUBMERGED_LATERAL_REFUSAL`) — the walk-band mesh's own
+        // laterals do not reach a submerged cell at all. Claiming "no
+        // direction here is closed" there would be false the instant the
+        // player tried one, which is exactly the class of defect decision
+        // 0141 exists to remove. `Ways on: surface.` mirrors
+        // `describe_underground_here`'s `Ways on: out.` — the one way on this
+        // band actually leads anywhere.
+        let closing = if self.submerged.is_some() {
+            "Ways on: surface.".to_string()
+        } else {
+            let ways: Vec<String> = v
+                .locale
+                .exits
+                .iter()
+                .filter(|e| e.kind == ExitKind::Edge)
+                .filter_map(|e| match e.direction {
+                    Direction::Compass(c) => Some(format!("{c:?}").to_uppercase()),
+                    _ => None,
+                })
+                .collect();
+            format!(
+                "No direction here is closed; the nearest ground lies {}.",
+                ways.join(", ")
+            )
+        };
         Ok(format!(
-            "[room {}, day {}]\n{}\nWays on: {}.",
+            "[room {}, day {}]\n{}\n{closing}",
             v.locale.id,
             self.day.day(),
             f.prose,
-            ways.join(", ")
         ))
     }
 
@@ -1690,29 +1727,28 @@ impl<'w> Session<'w> {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
         };
-        let v = match observable(self.world, &self.wctx.ctx, &self.agent, self.day) {
-            Ok(v) => v,
-            Err(e) => return Turn::Out(format!("error: {e}")),
+        // The locale itself is no longer consulted for exit matching — a rhumb
+        // course resolves against pure geometry (`self.agent.position` and its
+        // neighbours), not `v.locale.exits` — but the current position must
+        // still be observable before a step is taken from it, so the call
+        // stays for its error-detection side effect alone.
+        if let Err(e) = observable(self.world, &self.wctx.ctx, &self.agent, self.day) {
+            return Turn::Out(format!("error: {e}"));
+        }
+        let bearing = crate::course::bearing_of(wanted);
+        // Continue an existing course only when the bearing is unchanged;
+        // any other direction starts a fresh one from where we stand.
+        let mut course = match self.course.take() {
+            Some(c) if c.bearing_deg == bearing => c,
+            _ => crate::course::Course {
+                bearing_deg: bearing,
+                reckoned: self.agent.position.coord(),
+            },
         };
-        let exit = v
-            .locale
-            .exits
-            .iter()
-            .find(|e| e.kind == ExitKind::Edge && e.direction == Direction::Compass(wanted));
-        let Some(exit) = exit else {
-            return Turn::Out(format!("No way {} from here.", dir.to_lowercase()));
-        };
-        // Lateral exits stay at walk depth: the destination is the
-        // neighbor whose packed id the exit names.
-        let dest = self
-            .agent
-            .position
-            .neighbors()
-            .into_iter()
-            .find(|n| n.pack().map(|r| r.0) == Ok(exit.to));
-        let Some(dest) = dest else {
-            return Turn::Out("error: exit names no neighbor".to_string());
-        };
+        let delta = crate::course::step_length_rad(&self.agent.position);
+        course.reckoned = crate::course::rhumb_advance(course.reckoned, bearing, delta);
+        let dest = crate::course::nearest_neighbour(&self.agent.position, course.reckoned);
+        self.course = Some(course);
         let from = std::mem::replace(&mut self.agent.position, dest);
         self.trail.push(from);
         if let Err(e) = self.absorb_here() {
@@ -1729,6 +1765,8 @@ impl<'w> Session<'w> {
             return Turn::Out("You have not walked anywhere yet.".to_string());
         };
         self.agent.position = prev;
+        // A retrace is not a continuation of any heading.
+        self.course = None;
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
@@ -3754,9 +3792,10 @@ fn bearing_word(c: Compass) -> &'static str {
     }
 }
 
-/// A bearing abbreviated, for a list: `N`. The SAME spelling the locale's own
-/// `Ways on:` footer uses (`describe_here` uppercases the debug name), so one
-/// player habit reads both bands.
+/// A bearing abbreviated, for a list: `N`. The SAME spelling the outdoor
+/// nearest-ground sentence uses (`describe_here` uppercases the debug name)
+/// and the indoor `Ways on:` footer below uses too, so one player habit
+/// reads both bands.
 fn bearing_letter(c: Compass) -> String {
     format!("{c:?}").to_uppercase()
 }
@@ -3802,6 +3841,44 @@ mod tests {
             &SettlementPins::default(),
         )
         .ok()
+    }
+
+    /// H2. Every one of the eight compass points moves the possession from a
+    /// walk-band cell. This is the campaign's central claim and the whole of
+    /// the availability half of the defect.
+    ///
+    /// FIRES WHEN: `go` reverts to exact-matching one of the three exits.
+    #[test]
+    fn every_compass_point_moves_the_possession() {
+        // ONE world, eight sessions. Each direction must resolve from the same
+        // starting cell, so the session is fresh per direction — but genesis is
+        // far too expensive to repeat eight times, so the world is not.
+        let world = world_at(42).expect("seed 42 builds");
+        for dir in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
+            let (mut s, _) =
+                Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+            let before = s.agent.position.clone();
+            let turn = s.handle(&format!("go {dir}"));
+            let text = match turn {
+                Turn::Out(t) => t,
+                Turn::Released(t) => panic!("go {dir} released the possession: {t}"),
+            };
+            assert!(!text.contains("No way"), "go {dir} refused with: {text}");
+            assert_ne!(s.agent.position, before, "go {dir} did not move");
+        }
+    }
+
+    /// `back` clears the course, so a subsequent `go e` starts fresh rather
+    /// than continuing a reckoning from before the retrace.
+    #[test]
+    fn back_clears_the_course() {
+        let world = world_at(42).expect("seed 42 builds");
+        let (mut s, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        s.handle("go e");
+        assert!(s.course().is_some());
+        s.handle("back");
+        assert!(s.course().is_none(), "back left a stale course");
     }
 
     /// The XOR applied to `Inside::seed` by
