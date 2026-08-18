@@ -257,10 +257,15 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// superseded row, so nothing here scans for an instance.
 #[test]
 fn the_dropped_founders_are_pinned_per_seed() {
-    // (seed, founders dropped). 2208 and 2465 are the whole of the current
-    // positive set over seeds 0-2999; 42 and 2793 are the long-standing
-    // controls; the rest are prior positives, kept to record that they
-    // cleared. Values measured on this tree.
+    // (seed, founders dropped). 42 and 2793 are the long-standing controls;
+    // the rest are prior positives, kept to record that they cleared. Every
+    // value here is measured on this tree and green post-repair.
+    //
+    // 2208 and 2465 were the whole of the positive set over seeds 0-2999 AS
+    // OF THE PRE-REPAIR SWEEP, and that completeness claim has NOT been
+    // re-established since Task 9's genus repair re-placed every world — see
+    // this test's own docs. The rows below are exact; "no other seed in
+    // 0-2999 drops a founder" is not currently checked by anything.
     let expected: [(u64, usize); 19] = [
         (20, 0),
         (42, 0),

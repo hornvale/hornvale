@@ -186,9 +186,9 @@ const WITNESS_SEED: u64 = 1;
 
 /// Two occupations with identical material cores but different entity ids
 /// must produce identical derived output. The witness seed measurably contains
-/// such pairs (at seed 1: 6 occupations sit in 3 colliding material-core
-/// groups, largest group size 2) — no synthetic id shift is needed to exercise
-/// the property.
+/// such pairs (at seed 1, re-measured 2026-08-18: 4 occupations sit in 2
+/// colliding material-core groups, largest group size 2) — no synthetic id
+/// shift is needed to exercise the property.
 #[test]
 fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
     let world = witness_world();
@@ -204,12 +204,35 @@ fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
         groups.entry(material_key(&o.core)).or_default().push(o);
     }
     let colliding: Vec<_> = groups.values().filter(|g| g.len() > 1).collect();
+    // THE FLOOR IS TWO, NOT ONE, AND THE DIFFERENCE IS THE WHOLE POINT.
+    // `!is_empty()` cannot notice its own witness decaying: The Underworld's
+    // genus repair moved every count in this file's committed table — seed 1
+    // from 3 colliding groups to 2, seed 42 from 521 occupations to 625, every
+    // other cell too — and nothing reddened, because one group was still one
+    // group. A table that goes stale in silence is the exact instrument defect
+    // that campaign spent itself finding, and this assertion was an instance
+    // of it sitting inside the fix for the others.
+    //
+    // Two is not an arbitrary hardening: it is `witness_world`'s OWN STANDING
+    // SELECTION RULE — "the EARLIEST seed in this list carrying at least TWO
+    // material-core groups" — so the floor and the choice of witness are now
+    // one statement rather than a rule in prose and a weaker check in code.
+    // It fires exactly when seed 1 stops qualifying, which is the event the
+    // loud note above asks a human to watch for; 13 and 23 carry four groups
+    // each and are the named successors.
     assert!(
-        !colliding.is_empty(),
-        "the witness seed must contain at least one material-core collision \
-         (measured at seed 1, 2026-08-18: 4 occupations spread across 2 \
-         colliding groups, largest group size 2) -- zero colliding groups \
-         means this test is vacuous and proves nothing about id-invariance"
+        colliding.len() >= 2,
+        "the witness seed must carry at least TWO material-core collision \
+         groups -- `witness_world`'s own selection rule, and the floor that \
+         makes this test notice its witness decaying rather than merely \
+         notice it dying. Measured at seed 1, 2026-08-18: 4 occupations \
+         spread across 2 colliding groups, largest group size 2; found {} \
+         group(s) now. At one group the test still passes but is one \
+         placement away from vacuous; at zero it proves nothing about \
+         id-invariance at all. Re-scan the seed list in `witness_world`'s \
+         docs and move the witness -- 13 and 23 carried four groups each on \
+         2026-08-18 -- rather than lowering this floor",
+        colliding.len()
     );
 
     for group in &colliding {

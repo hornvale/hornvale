@@ -83,9 +83,10 @@ other two cannot.** `Cave::from_parts_unchecked` takes the band and the budget
 separately and checks nothing; its own doc says so, names itself `_unchecked`
 so the violation is visible at the call site, and points at
 `Cave::band_agrees_with_reach` as the invariant in checkable form. Exactly one
-test uses it — `underworld_chamber_reach`, whose entire content is fabricating
-a budget the generator cannot author and showing the chamber lattice can tell
-the difference — so the hatch is load-bearing rather than a concession.
+test uses it — `windows/worldgen/tests/deep_realm_mutation.rs`'s pipeline half,
+whose entire content is fabricating a budget the generator cannot author and
+showing the chamber lattice can tell the difference — so the hatch is
+load-bearing rather than a concession.
 
 This record originally read *"Both `Cave` constructors derive the band from the
 budget through one definition, so a disagreeing pair cannot be constructed"*,

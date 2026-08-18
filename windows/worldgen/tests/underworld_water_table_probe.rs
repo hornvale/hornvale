@@ -47,12 +47,32 @@
 //!
 //! ```text
 //! rung         before §4.2.1        after §4.2.1
-//! Undercroft   100 /100 /100 %      100  /100  /100  %
+//! Undercroft   100 /100 /100 %      100  /100  /100  %   <- an IDENTITY, see below
 //! Shallows      39.5/20.9/23.1      41.8 / 24.9/ 26.1
 //! Deeps         13.5/ 0.0/ 4.7      29.9 /  1.7/ 14.4
 //! Underdeep      0.0/ 0.0/ 0.0       0.0 /  0.0/  0.0
 //! Sunless        0.0/ 0.0/ 0.0       0.0 /  0.0/  0.0
 //! ```
+//!
+//! **THE `Undercroft` ROW IS AN IDENTITY, NOT A MEASUREMENT, AND IT CANNOT
+//! COME BACK ANY OTHER VALUE.** A rung is judged at its own top;
+//! `Undercroft`'s ΔT range begins at 0 K, so its top is `0.0` m in every
+//! column under every gradient; `earth_table_depth_m` ends `.max(0.0)` and so
+//! the table is never negative; and [`is_phreatic`] is a **strict**
+//! `depth > table`, which makes even a drowned column's `0.0` read vadose. So
+//! `is_phreatic(0.0, table)` is `false` for every table this crate can
+//! produce, in every possible world — the 100% is arithmetic, and it is
+//! invariant to the calibration whose before/after these two columns exist to
+//! show. Reading it as evidence that the shallowest rung *happens* to be dry
+//! is the mistake: it is the first row of both columns because it is the same
+//! tautology on both sides.
+//!
+//! This row was cited as evidence for a shipped design rule for the length of
+//! this campaign (`delve_seating::seat_at`, now corrected), and the reason it
+//! survived is that it is printed beside four rows that ARE measurements and
+//! looks like a fifth. `delve_seating::RungSeat::works` carries the
+//! consequence for consumers: a works count over a seating is a count over
+//! ranks 1–4 only.
 //!
 //! `Deeps` opened; **`Underdeep` and `Sunless` did not, and no scale constant
 //! can open them** — see `UNDERWORLD_DRYNESS_GAIN`'s doc for the 1×–16× sweep
