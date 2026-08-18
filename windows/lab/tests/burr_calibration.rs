@@ -22,8 +22,19 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// floor is a *global* rule, so it pushes every quiet tongue toward holding
 /// the same segment, which makes inventories more alike, not less; §3.7
 /// documents why no word actually gained a liquid despite the inventory
-/// change. Pinned from the measured run per decision 0016; never tuned.
-const BASELINE: f64 = 0.6795392953929539;
+/// change.
+///
+/// Stage 3 (per-bundle phonotactic law, the elf bundle): 0.7899728997289973.
+/// Accuracy **rose** +0.110 above Stage 2 and +0.070 above the Stage 1
+/// baseline — P2 CONFIRMED. The contrast is the campaign's thesis: a *global*
+/// change (Stage 2) homogenises a diverse population, while a *per-family*
+/// rule (Stage 3) differentiates it. Half of each elf lexicon now carries a
+/// liquid where all four had none. This is the value the pin should have
+/// carried since Task 10, which landed the readout but omitted the pin move
+/// the plan's own step prescribed; Task 11's readout surfaced the stale pin
+/// and this repairs it. Pinned from the measured run per decision 0016;
+/// never tuned.
+const BASELINE: f64 = 0.7899728997289973;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.
@@ -34,7 +45,8 @@ fn load() -> Vec<(String, Vec<String>)> {
     wordlists_from_dictionary(&md).expect("parse wordlists")
 }
 
-/// P1 (descriptive): the pre-campaign baseline, pinned exactly.
+/// P1 (descriptive): the campaign's current assignment-accuracy readout,
+/// pinned exactly (Stage 3 — see [`BASELINE`] for the per-stage history).
 ///
 /// Exact equality, not a tolerance, is safe here: `assignment_accuracy`
 /// computes a single IEEE-754 division of two small integers (correct
