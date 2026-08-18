@@ -986,20 +986,48 @@ decrease, so the frontier drains.
 Append to `windows/hearsay/tests/common/mod.rs`:
 
 ```rust
-/// Two peoples joined only by a raid, built so a claim can make a ROUND TRIP:
-/// out of the victim's lineage, across the seam, and into a line no tree route
-/// connects.
+/// Two peoples joined only by a raid, built so a claim can travel to a people
+/// that DID NOT WITNESS the event it is about.
 ///
-/// - 1 (human) founded day 0, ended day 1000, raided by 5.
-/// - 2 (human) founded day 500, a child of 1 -- the victim's own line.
-/// - 5 (kobold) founded day 100, the raider.
-/// - 6 (kobold) founded day 1500, a child of 5.
-pub fn two_peoples_joined_by_a_raid() -> Ledger {
-    let mut led = ledger_with(&[(1, None), (2, Some(1)), (5, None), (6, Some(5))]);
-    for (occ, day) in [(1, 0.0), (2, 500.0), (5, 100.0), (6, 1500.0)] {
+/// **The shape is load-bearing and a naive version of it does not work.**
+/// `witnesses_of` already seeds an ending's named attacker as a hop-0 witness,
+/// so for the raid's OWN ending the raider's line holds the account under
+/// plain descent and a contact edge adds nothing. That is not a bug — it is
+/// spec §3.3's measured fact that every foreign-attacker ending already
+/// reaches two peoples. What no tree can do is carry an account of an event
+/// the other people were absent for. So the claim under test is the ending of
+/// `1`, which only the human line witnessed, and the seam is a LATER raid on
+/// its descendant.
+///
+/// - 1 (human) root, founded day 0, **ended day 500 with NO `occ-ended-by`** —
+///   the event under test; witness set is `{1}` alone.
+/// - 2 (human) child of 1, founded day 200.
+/// - 3 (human) child of 2, founded day 400, **ended day 1000, raided by 5** —
+///   this is the contact, and it is not the event under test.
+/// - 5 (kobold) root, founded day 100 — the raider, never ends.
+/// - 6 (kobold) child of 5, founded day 1200.
+///
+/// Under `Contact::Descent` the account of 1's ending reaches `{1, 2, 3}` and
+/// stops at the people boundary. Under `Contact::WithRaidSeam` the edge
+/// `3 <-> 5` (stamped day 1000, which is `>=` the event's day 500) carries it
+/// to `{1, 2, 3, 5, 6}`. Neither 5 nor 6 has any founding route to 1.
+///
+/// Note 2 is founded on day 200 and 3 on day 400, NEITHER equal to 1's ending
+/// day of 500, so `witnesses_of`'s survivor rule does not fire and they are
+/// inheritors rather than co-witnesses. That is deliberate: a survivor would
+/// hold at hop 0 and mask the walk under test.
+pub fn two_peoples_joined_by_a_later_raid() -> Ledger {
+    let mut led = ledger_with(&[(1, None), (2, Some(1)), (3, Some(2)), (5, None), (6, Some(5))]);
+    for (occ, day) in [(1, 0.0), (2, 200.0), (3, 400.0), (5, 100.0), (6, 1200.0)] {
         put(&mut led, occ, hornvale_history::OCC_FOUNDED, Value::Number(day));
     }
-    for (occ, people) in [(1, "human"), (2, "human"), (5, "kobold"), (6, "kobold")] {
+    for (occ, people) in [
+        (1, "human"),
+        (2, "human"),
+        (3, "human"),
+        (5, "kobold"),
+        (6, "kobold"),
+    ] {
         put(
             &mut led,
             occ,
@@ -1007,16 +1035,23 @@ pub fn two_peoples_joined_by_a_raid() -> Ledger {
             Value::Text(people.to_string()),
         );
     }
-    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(1000.0));
+    // The event under test: 1 ends with no named attacker, so its witness set
+    // is itself alone and no raider is seeded at hop 0.
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(500.0));
+    // The contact: a LATER raid on 1's descendant, by another people.
+    put(&mut led, 3, hornvale_history::OCC_ENDED, Value::Number(1000.0));
     put(
         &mut led,
-        1,
+        3,
         hornvale_history::OCC_ENDED_BY,
         Value::Entity(eid(5)),
     );
     put_on(&mut led, 9, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(1.0));
     put_on(&mut led, 9, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(41.7));
     put_on(&mut led, 9, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(372.4));
+    led
+}
+
     led
 }
 
@@ -1056,7 +1091,7 @@ Create `windows/hearsay/tests/augmented_walk.rs`:
 
 mod common;
 
-use common::{a_holder_that_died_before_the_event, eid, two_peoples_joined_by_a_raid};
+use common::{a_holder_that_died_before_the_event, eid, two_peoples_joined_by_a_later_raid};
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::accumulate::Accumulation;
 use hornvale_hearsay::clock::Clock;
@@ -1135,7 +1170,7 @@ fn the_clock_removes_a_holder_that_died_before_the_event() {
 
 #[test]
 fn the_contact_edge_carries_a_claim_across_a_people_boundary() {
-    let led = two_peoples_joined_by_a_raid();
+    let led = two_peoples_joined_by_a_later_raid();
     let descent = holders(&led, Transmission::AS_SHIPPED, eid(1));
     let contact = holders(
         &led,
@@ -1157,11 +1192,12 @@ fn the_contact_edge_carries_a_claim_across_a_people_boundary() {
     );
 }
 
-/// Spec §5.5. 6 descends from 5, and 5 descends from nobody, so no founding
-/// route connects 6 to 1. Only the seam can carry the account there.
+/// Spec §5.5. 5 and 6 are a separate root and its child; no founding route
+/// connects either to 1, and neither witnessed 1's ending. Only the seam can
+/// carry the account there.
 #[test]
 fn a_claim_reaches_a_people_that_no_tree_route_connects() {
-    let led = two_peoples_joined_by_a_raid();
+    let led = two_peoples_joined_by_a_later_raid();
     let contact = holders(
         &led,
         with(Transmission::AS_SHIPPED, |p| {
@@ -1173,17 +1209,17 @@ fn a_claim_reaches_a_people_that_no_tree_route_connects() {
         contact.contains(&eid(6)),
         "the raider's child holds the victim's account: {contact:?}"
     );
-    assert!(contact.contains(&eid(2)), "the victim's line still holds it");
+    assert!(contact.contains(&eid(2)), "the human line still holds it");
 }
 
-/// The walk must TERMINATE on a cyclic graph. `1 <-> 5` plus descent gives a
+/// The walk must TERMINATE on a cyclic graph. `3 <-> 5` plus descent gives a
 /// cycle the moment contact is on; a walk that re-expands a node at an equal
 /// width would not drain. Spec §5.5's termination argument rests on
 /// `Accumulation::step` being non-decreasing, pinned by
 /// `tests/accumulate.rs::every_rule_is_non_decreasing`.
 #[test]
 fn the_augmented_walk_terminates_on_a_cycle() {
-    let led = two_peoples_joined_by_a_raid();
+    let led = two_peoples_joined_by_a_later_raid();
     for rule in Accumulation::ALL {
         let lin = lineage_of(&led);
         let graph = contact_of(&led);
