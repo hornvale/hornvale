@@ -111,3 +111,47 @@ Process lessons only; the product story is the chronicle.
   word lists, a `--theirs` mishap). The cadence the campaign process names
   — absorb at every plan-stage boundary — would have kept each absorption
   small instead of stacking three of them into the campaign's final stretch.
+
+## The landing took six attempts, and the sequence is the lesson
+
+The Burr reached `main` on its sixth submission (`a4bb53066`). No two holds
+were the same defect, and only one was avoidable at the time:
+
+1. `census_sentinel` + world-identity — the phonology epoch arriving, A/B'd green.
+2. Mouth bounce, 25 conflicts — a rebaseline taken against a main that had moved.
+3. `census_duration` 918.457 s > 900 — see below; it became policy.
+4. `evaluable_columns` 114 vs 115 — a census-refresh re-pin, masked behind #3 by
+   nextest's fail-fast. The one that was mine to have caught.
+5. A four-file conflict — three merges landed underneath the branch.
+6. `draw_phonology` arity — a semantic collision (below).
+
+**The ledger discipline is load-bearing, not bookkeeping — #3 is the proof.**
+The census budget breach was invisible while its timing row sat uncommitted in
+a worktree the next census would have wiped. Committing the row turned a real
+breach into a red, the red into an argument, and the argument into decision
+0148's two-tier budget with a per-run profiling ledger. An unledgered expensive
+run cannot become policy; a ledgered one did.
+
+**"No gate catches a semantic collision" is repeated more often than it is
+qualified, and the qualification is where the risk lives.** Hold #6 — The
+Gazetteer's new `draw_phonology` call site against the fourth argument the Burr
+epoch had grown — was semantically incompatible *and loudly broken*, so the
+chamber's gate phase would have caught it regardless. That is the version with
+a floor under it. The genuinely invisible collision is when both sides compile,
+agree textually, and mean different things; nothing here exercised that case.
+Verifying the fix by running The Gazetteer's own naming tests (8/8), not by "it
+compiles", is what made the resolution behaviourally sound rather than
+type-correct.
+
+**`census_sentinel` did not run on the merge, and this close says so rather than
+letting the absence read as a pass.** Decision 0148 took the heavy tier off
+merges, so the four-phase merge that landed The Burr never ran the live census
+probe. What *was* established, against the SHA that actually landed
+(`a4bb53066`): the census was authored live on lefford at `635d116d`;
+`lens_purity` — the world-identity guard, which runs in the gate phase, not
+heavy — passed on the merge, so the seed-42 world is byte-identical to a fresh
+build; The Gazetteer, whose terrain work is the only intervening world-gen
+change, landed six-phase with `census_sentinel` green on the full population;
+and `world-seed-42.json` is byte-identical across the whole span of landings.
+The census stands on convergent evidence, minus only the one instrument that
+would have re-confirmed it directly.
