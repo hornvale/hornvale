@@ -1720,3 +1720,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T18:54:33Z | sluice:artifacts | 89.508 | 733.037 | 29.133 | 8.52 | 0 | 01f4718b1 |  | lefford | 40 |
 | 2026-08-19T18:55:08Z | sluice:outboard | 34.929 | 21.859 | 35.420 | 1.64 | 0 | 4f73047a7 |  | lefford | 40 |
 | 2026-08-19T19:01:25Z | sluice:gate | 376.713 | 10234.320 | 431.323 | 28.31 | 0 | f939f0c20 |  | lefford | 40 |
+| 2026-08-19T19:20:35Z | sluice:seam-guard | 1150.144 | 21624.849 | 1150.957 | 19.80 | 0 | d03b4812b |  | lefford | 40 |
