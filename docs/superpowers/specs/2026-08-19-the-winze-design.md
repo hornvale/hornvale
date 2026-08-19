@@ -5,9 +5,11 @@ mine that goes looking.*
 
 **Status:** spec, awaiting G3.
 **Autopilot:** engaged. Ledger at `.superpowers/sdd/decision-ledger.md`.
-**Sibling:** supersedes the mechanism of
-[The Planes](2026-08-18-the-planes-design.md), whose transit-realm scope
-returns to the Chorography's campaign-3 slot unbuilt.
+**Sibling:** supersedes the mechanism of **The Planes**, whose transit-realm
+scope returns to the Chorography's campaign-3 slot unbuilt. That spec lives on
+`campaign/the-planes` and is deliberately not linked here — it may never merge,
+and §1 below states its falsification chain inline so this document stands
+alone.
 
 ---
 
