@@ -442,6 +442,45 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Adit, Task 3: the cellular-automata cave content
+                // generator (Karst-biased leaves). Versioned from birth
+                // like the other entries in this golden. See
+                // `windows/vessel/src/underworld_level/carve.rs`.
+                "underworld/level/cellular v1",
+                // The Adit, Task 6: deriving each rung's own seed within
+                // one descent, drawn once per rung so two rungs never
+                // restart their own generation from the same stream state.
+                // Additive at v1 — a NEW label, so it perturbs no existing
+                // stream. See
+                // `windows/vessel/src/underworld_level/mod.rs`'s
+                // `generate_descent`.
+                "underworld/level/descent v1",
+                // The Adit, Task 2: the underworld level generator's
+                // partition-tree split-or-leaf decisions. Versioned from
+                // birth like the other entries in this golden. Task 1's
+                // `underworld/level/placeholder v1` label is retired
+                // outright and never reused for a different meaning; this
+                // is the label that replaces its one call site. See
+                // `windows/vessel/src/underworld_level/region.rs`.
+                "underworld/level/partition v1",
+                // The Adit, Task 3: the partitioned-rooms content
+                // generator, shared by the angular (Fracture-biased) and
+                // rooms-and-corridors (worked) leaf styles — one label
+                // because the underlying technique is one technique tuned
+                // two ways, not two independent algorithms. See
+                // `windows/vessel/src/underworld_level/carve.rs`.
+                "underworld/level/rooms v1",
+                // The Adit, Task 4: a leaf's worked-vs-natural and
+                // algorithm-family draw, keyed to `CaveKind`/
+                // `ChamberOrigin`. Additive at v1 — a NEW label, so it
+                // perturbs no existing stream. See
+                // `windows/vessel/src/underworld_level/mod.rs`'s
+                // `choose_leaf_style`.
+                "underworld/level/style v1",
+                // The Adit, Task 3: the drunkard's-walk tunnel content
+                // generator (LavaTube-biased leaves). See
+                // `windows/vessel/src/underworld_level/carve.rs`.
+                "underworld/level/tunneler v1",
                 // The Repose: the volcano-identity derivation. Additive at
                 // v1 — a NEW label, so it perturbs no existing stream, and
                 // C0 commits nothing at all (spec §3.2 puts the whole object

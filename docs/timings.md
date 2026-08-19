@@ -1599,6 +1599,40 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T22:29:43Z | sluice:seam-guard | 1067.188 | 21078.038 | 1100.658 | 20.78 | 0 | ed657a441 |  | lefford | 40 |
 | 2026-08-18T22:33:59Z | sluice:clients | 255.138 | 444.848 | 33.452 | 1.87 | 0 | 890e2fe9e |  | lefford | 40 |
 | 2026-08-18T23:07:19Z | sluice:heavy | 2000.206 | 32770.650 | 682.442 | 16.72 | 0 | 1ef460bb1 |  | lefford | 40 |
+| 2026-08-19T00:10:07Z | prewarm | 202.255 | 1276.984 | 67.032 | 6.65 | 0 | 88379dfa | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T01:48:37Z | gate-commit | 1297.066 | 88.782 | 34.120 | 0.09 | 0 | f5942d9f | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T01:50:32Z | rebaseline | 57.290 | 232.078 | 11.587 | 4.25 | 0 | f5942d9f | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T01:51:20Z | gate-commit | 34.536 | 62.592 | 22.513 | 2.46 | 0 | f5942d9f | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T01:52:13Z | gate-commit | 24.117 | 54.725 | 14.528 | 2.87 | 0 | f5942d9f | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:25:03Z | gate-commit | 42.460 | 54.350 | 23.527 | 1.83 | 0 | 9cd716fe | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:26:16Z | gate-commit | 49.580 | 81.960 | 36.165 | 2.38 | 0 | 9cd716fe | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:27:11Z | gate-commit | 23.881 | 54.412 | 14.413 | 2.88 | 0 | 9cd716fe | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:38:29Z | gate-commit | 44.930 | 59.360 | 24.935 | 1.88 | 0 | b2a500a9 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:40:33Z | gate-commit | 37.437 | 68.785 | 24.932 | 2.50 | 0 | b2a500a9 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:41:16Z | gate-commit | 24.246 | 54.693 | 14.427 | 2.85 | 0 | b2a500a9 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:52:58Z | rebaseline | 48.625 | 228.990 | 11.619 | 4.95 | 0 | 94fcfa8e | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:54:12Z | gate-commit | 55.216 | 97.628 | 33.918 | 2.38 | 0 | 94fcfa8e | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T03:58:33Z | gate-commit | 35.390 | 56.085 | 15.270 | 2.02 | 0 | 94fcfa8e | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:08:22Z | gate-commit | 51.781 | 73.089 | 32.429 | 2.04 | 0 | 7ead99be | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:09:57Z | gate-commit | 24.270 | 55.292 | 14.773 | 2.89 | 0 | 7ead99be | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:15:01Z | gate-commit | 9.273 | 11.442 | 6.431 | 1.93 | 0 | 213620b8 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:16:41Z | gate-commit | 60.107 | 101.688 | 42.397 | 2.40 | 0 | 213620b8 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:23:17Z | rebaseline | 54.947 | 231.505 | 11.454 | 4.42 | 0 | 9646b4cb | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:26:15Z | gate-commit | 76.344 | 92.552 | 32.670 | 1.64 | 0 | 9646b4cb | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:31:55Z | gate-commit | 52.434 | 72.944 | 33.545 | 2.03 | 0 | 5e249334 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:32:35Z | gate-commit | 23.384 | 54.338 | 14.378 | 2.94 | 0 | 5e249334 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:42:18Z | gate-commit | 53.911 | 73.157 | 34.002 | 1.99 | 0 | 1ca43081 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:43:42Z | gate-commit | 23.356 | 54.162 | 14.388 | 2.94 | 0 | 1ca43081 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:50:55Z | gate-commit | 53.135 | 77.365 | 41.182 | 2.23 | 0 | ba44ff23 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:51:33Z | gate-commit | 23.456 | 54.387 | 14.435 | 2.93 | 0 | ba44ff23 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:09:51Z | gate-commit | 53.902 | 74.112 | 40.700 | 2.13 | 0 | 286519b1 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:28:48Z | gate-commit | 67.115 | 117.821 | 39.832 | 2.35 | 0 | 21152158 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:29:27Z | gate-commit | 20.316 | 37.150 | 8.590 | 2.25 | 0 | 21152158 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:31:29Z | gate-commit | 63.747 | 81.608 | 49.840 | 2.06 | 0 | 21152158 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:35:48Z | gate-commit | 23.366 | 54.165 | 14.045 | 2.92 | 0 | 9c90c386 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:38:47Z | gate-commit | 23.765 | 54.241 | 14.674 | 2.90 | 0 | 9c90c386 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:53:32Z | gate-commit | 61.985 | 74.422 | 38.920 | 1.83 | 0 | 5f8353bb | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:55:45Z | gate-commit | 23.461 | 54.316 | 14.409 | 2.93 | 0 | 5f8353bb | campaign/the-adit | MacBookPro | 10 |
 | 2026-08-19T00:18:20Z | sluice:artifacts | 82.452 | 706.910 | 25.204 | 8.88 | 0 | 1d5a97eef |  | lefford | 40 |
 | 2026-08-19T00:18:55Z | sluice:outboard | 34.557 | 22.255 | 35.056 | 1.66 | 0 | a4a5e903d |  | lefford | 40 |
 | 2026-08-19T00:24:52Z | sluice:gate | 357.153 | 9849.391 | 355.338 | 28.57 | 0 | d3c360028 |  | lefford | 40 |
@@ -1613,3 +1647,12 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T02:49:15Z | sluice:heavy | 2064.411 | 32768.758 | 671.520 | 16.20 | 0 | 8051c9a94 |  | lefford | 40 |
 | 2026-08-19T11:03:40Z | rebaseline | 108.791 | 230.359 | 10.332 | 2.21 | 0 | b5c6278c | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-19T11:38:50Z | gate-commit | 435.099 | 513.353 | 319.980 | 1.92 | 0 | b5c6278c | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T11:03:55Z | rebaseline | 75.349 | 234.598 | 11.758 | 3.27 | 0 | 711dbe31 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T11:04:54Z | gate-commit | 43.978 | 55.445 | 15.510 | 1.61 | 0 | f90711ae | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T11:09:51Z | sluice:artifacts | 106.298 | 791.154 | 36.551 | 7.79 | 0 | 02cc59d17 |  | lefford | 40 |
+| 2026-08-19T11:10:26Z | sluice:outboard | 34.779 | 22.091 | 35.565 | 1.66 | 0 | 054498b4d |  | lefford | 40 |
+| 2026-08-19T11:17:03Z | sluice:gate | 396.201 | 10190.968 | 436.099 | 26.82 | 0 | 50aac259a |  | lefford | 40 |
+| 2026-08-19T11:34:50Z | sluice:seam-guard | 1067.306 | 21095.971 | 1111.683 | 20.81 | 0 | bcd4b187c |  | lefford | 40 |
+| 2026-08-19T11:39:16Z | sluice:clients | 265.377 | 465.489 | 34.678 | 1.88 | 0 | 666d7f5f2 |  | lefford | 40 |
+| 2026-08-19T12:13:02Z | sluice:heavy | 2026.461 | 33016.541 | 687.275 | 16.63 | 0 | d06ce9065 |  | lefford | 40 |
+| 2026-08-19T14:14:53Z | rebaseline | 64.280 | 232.464 | 11.953 | 3.80 | 0 | fa2222ca | campaign/the-burr | MacBookPro | 10 |

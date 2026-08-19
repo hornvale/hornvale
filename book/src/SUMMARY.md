@@ -376,6 +376,7 @@
 - [The Underworld](./chronicle/the-underworld.md)
 - [The Parley](./chronicle/the-parley.md)
 - [The Illumination](./chronicle/the-illumination.md)
+- [The Adit](./chronicle/the-adit.md)
 
 # Appendix: The Frontier
 
