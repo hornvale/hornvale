@@ -245,6 +245,36 @@ payoff §4 claims for the consolidated suite.
 already a merged campaign in this repo. **Daybook** is the same term of
 art, unused anywhere in the tree, and puns usefully on `WorldTime { day }`.
 
+**Undo, redo and retry fall out — and they are what the checkpoint is
+FOR.** With a replayable daybook over a deterministic world, undo is
+*truncate at turn N and replay*, redo is *re-append the tail*, and retry is
+*truncate, then append something else*. Nothing new is needed.
+
+This corrects the justification given above for materialising the ledger.
+It is not merely a load-time saving: replay cost is O(distance to the
+nearest checkpoint), so **checkpoints should be periodic rather than
+terminal**, and undo latency is the property that sets their spacing. This
+is the standard shape — write-ahead log plus checkpoints, event sourcing
+plus snapshots, rollback netcode — arrived at from the game side.
+
+**It does not reopen save-scumming, and the registry already says why.**
+`PLAY-determinism-is-anti-scum`: in a world that is a pure function of
+`(seed, pins)` there is no random table to roll against, so scumming
+"reduces to *playing differently*, which is simply playing".
+`PLAY-no-reroll` puts the failure mode strictly upstream of the first
+decision — *"a start that varies breeds save-scumming"* — and undo of one's
+own commands is downstream by construction. Both rows endorse this rather
+than constrain it.
+
+**One future tension, recorded now while it is visible.**
+`PLAY-eviction-costs-depth` closes the death-farming exploit "against the
+conserved quantity rather than with a new rule": a voluntary step *spends*
+depth, an eviction *loses* it. Free undo would let a player rewind an
+eviction and recover the lost depth, reopening exactly that exploit.
+Neither depth nor undo exists yet, so nothing is decided here — but the
+campaign that builds either must read this paragraph, because by then the
+connection will not be obvious.
+
 ## 4. The arcs
 
 ```
