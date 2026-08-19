@@ -652,11 +652,18 @@ hornvale-hearsay::clock$a_community_that_never_ended_is_always_admitted
 hornvale-hearsay::clock$ending_on_the_event_day_is_admitted
 hornvale-hearsay::contact$a_mutual_same_day_raid_is_one_peer_entry_each_way
 hornvale-hearsay::contact$a_raid_makes_one_undirected_edge_stamped_with_its_day
+hornvale-hearsay::contact$a_same_people_raid_does_not_count_toward_a_cross_people_pair
 hornvale-hearsay::contact$a_self_named_attacker_makes_no_edge
 hornvale-hearsay::contact$an_ending_with_a_non_number_day_makes_no_edge
 hornvale-hearsay::contact$an_ending_with_no_named_attacker_makes_no_edge
 hornvale-hearsay::contact$an_occupation_in_several_raids_carries_several_peers_ascending
+hornvale-hearsay::contact$the_graph_counts_edges_between_two_peoples
 hornvale-hearsay::contact$two_same_day_raids_by_one_attacker_stay_two_peers
+hornvale-hearsay::crossing$a_boundary_no_raid_has_ever_crossed_pays_the_full_rung
+hornvale-hearsay::crossing$a_crossing_costs_the_hearer_a_rung
+hornvale-hearsay::crossing$a_step_within_one_people_pays_nothing
+hornvale-hearsay::crossing$free_is_blind_to_how_much_contact_the_peoples_have
+hornvale-hearsay::crossing$the_crossing_costs_less_the_better_the_peoples_know_each_other
 hornvale-hearsay::derive$a_chain_of_one_stance_carries_the_day_unchanged
 hornvale-hearsay::derive$a_child_founded_before_the_ending_was_elsewhere
 hornvale-hearsay::derive$a_holder_reachable_by_two_paths_keeps_the_least_corrupted_telling
@@ -716,6 +723,9 @@ hornvale-hearsay::palimpsest_readout_units$the_conversion_actually_moves_the_wal
 hornvale-hearsay::palimpsest_readout_units$the_local_walk_matches_the_frozen_one_when_a_generation_is_one_day
 hornvale-hearsay::parley_readout$the_clock_moves_the_holder_counter_in_the_control
 hornvale-hearsay::parley_readout$the_contact_arm_moves_the_reach_counter_in_the_control
+hornvale-hearsay::probe_seam_direction$the_directed_seam_reproduces_the_shipped_contact_graph
+hornvale-hearsay::probe_seam_direction$the_direction_filter_moves_the_holder_set_in_the_control
+hornvale-hearsay::probe_seam_direction$the_probe_walk_reproduces_the_shipped_walk_on_the_control
 hornvale-hearsay::stance$a_retelling_is_lossy_exactly_when_the_two_stances_differ
 hornvale-hearsay::stance$an_unrelated_community_is_a_bystander
 hornvale-hearsay::stance$inherited_perpetration_closes_the_attacker_under_descent
@@ -723,8 +733,11 @@ hornvale-hearsay::stance$stance_fires_on_an_event_with_no_attacker
 hornvale-hearsay::stance$the_attacker_is_the_perpetrator
 hornvale-hearsay::stance$the_attacker_label_still_beats_the_victim_line_label
 hornvale-hearsay::stance$the_subject_and_its_descendants_are_the_victim_line
-hornvale-hearsay::transmission$as_shipped_is_exactly_todays_three_arms
+hornvale-hearsay::transmission$as_shipped_is_exactly_todays_four_arms
 hornvale-hearsay::transmission$as_shipped_reproduces_the_committed_accumulating_derivation
+hornvale-hearsay::undertow_readout$h2s_population_is_reached_in_the_control
+hornvale-hearsay::undertow_readout$the_crossing_arm_moves_the_change_counter_in_the_control
+hornvale-hearsay::undertow_readout$the_zero_edge_bucket_is_reachable_by_the_accounting
 hornvale-historiography::hornvale_historiography$tests::recount_is_deterministic
 hornvale-historiography::hornvale_historiography$tests::recount_is_none_for_an_unknown_entity
 hornvale-historiography::hornvale_historiography$tests::recount_names_the_day_a_dated_fact_was_asserted
@@ -855,6 +868,7 @@ hornvale-kernel::hornvale_kernel$field::tests::noise_field_is_deterministic_and_
 hornvale-kernel::hornvale_kernel$field::tests::noise_field_scale_stretches_space
 hornvale-kernel::hornvale_kernel$field::tests::position_and_time_serialize_roundtrip
 hornvale-kernel::hornvale_kernel$field::tests::world_time_serializes_as_a_bare_scalar_not_an_object
+hornvale-kernel::hornvale_kernel$geosphere::tests::a1_grid_matches_the_full_band_scan_over_a_dense_sweep
 hornvale-kernel::hornvale_kernel$geosphere::tests::adjacency_is_mutual_and_has_the_right_valence
 hornvale-kernel::hornvale_kernel$geosphere::tests::base_icosahedron_has_twelve_unit_cells
 hornvale-kernel::hornvale_kernel$geosphere::tests::cellmap_covers_every_cell_and_indexes_by_id
@@ -1196,7 +1210,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_226_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
@@ -1256,9 +1269,9 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
+hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
@@ -2787,6 +2800,7 @@ hornvale-worldgen::hornvale_worldgen$tests::deity_name_seed_is_pure_and_entity_i
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_crate_names_are_unique_and_nonempty
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_registers_language_after_its_lenders
 hornvale-worldgen::hornvale_worldgen$tests::exactly_one_axis_is_unfloored_and_it_is_the_undercutter
+hornvale-worldgen::hornvale_worldgen$tests::globe_level_pin_selects_the_canonical_grid
 hornvale-worldgen::hornvale_worldgen$tests::goblin_lens_is_exactly_identity
 hornvale-worldgen::hornvale_worldgen$tests::goblin_voice_params_sit_at_the_manikin_identity
 hornvale-worldgen::hornvale_worldgen$tests::high_cirrus_over_a_clear_sky_dims_only_slightly
