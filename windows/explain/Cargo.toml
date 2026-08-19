@@ -10,3 +10,4 @@ hornvale-kernel = { path = "../../kernel" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-language = { path = "../../domains/language" }
 hornvale-terrain = { path = "../../domains/terrain" }
+hornvale-almanac = { path = "../../windows/almanac" }

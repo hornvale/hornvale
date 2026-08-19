@@ -106,6 +106,7 @@ dependencies = [
 name = "hornvale-explain"
 version = "0.1.0"
 dependencies = [
+ "hornvale-almanac",
  "hornvale-astronomy",
  "hornvale-kernel",
  "hornvale-language",

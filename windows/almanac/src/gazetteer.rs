@@ -20,6 +20,17 @@
 //! the same constraint `crate::connections`'s module doc records for
 //! `ConnectionGraph`. The composition root sorts, caps and names each
 //! feature into an [`Entry`]; this module only formats what it is handed.
+//!
+//! **`windows/explain` calls into this module directly** (`hornvale-explain`
+//! depends on `hornvale-almanac`) rather than carrying its own copy of
+//! [`render_names`]/[`class_words`]: windows may depend on other windows
+//! (`windows/CLAUDE.md` — the rank check only forbids depending upward on
+//! `cli`; `hornvale-almanac` itself carries zero window-layer dependencies,
+//! so the edge is acyclic), and the only edge actually forbidden here is a
+//! window reaching `windows/worldgen`'s naming join (the cycle above). An
+//! earlier version of this doc comment claimed the two windows could not
+//! depend on each other at all — that was checked and found false; see the
+//! Gazetteer campaign's Task 8 fix round 1.
 
 use hornvale_kernel::CellId;
 use hornvale_terrain::landscape::FeatureClass;
@@ -43,20 +54,19 @@ pub struct Entry {
 /// A feature's info line: every name it carries, joined —
 /// `"Mount McKinley, Denali"` (spec §3.4). `names` iterates in key
 /// (species-label) order, so this is deterministic and elects no lead.
-/// `hornvale_explain::render_multi_name` is this window's sibling surface
-/// and applies the identical rule (duplicated rather than shared — see this
-/// module's doc comment on why explain and almanac cannot depend on each
-/// other for it).
+/// `hornvale_explain::explain_gazetteer` calls this directly (see this
+/// module's doc comment) rather than carrying its own copy.
 /// type-audit: bare-ok(identifier-text: names), bare-ok(identifier-text: return)
 pub fn render_names(names: &BTreeMap<String, String>) -> String {
     names.values().cloned().collect::<Vec<_>>().join(", ")
 }
 
 /// One class's singular and plural label, for the section header and the
-/// printed-cap line. Local to this render step: the five-arm match is
-/// cheaper to duplicate than to wire across the crate boundary
-/// `windows/explain`'s own copy would need to cross.
-fn class_words(class: FeatureClass) -> (&'static str, &'static str) {
+/// printed-cap line, and for `windows/explain`'s narration
+/// ([`crate::gazetteer`]'s module doc on why that window calls this
+/// directly instead of carrying its own copy).
+/// type-audit: bare-ok(identifier-text: return)
+pub fn class_words(class: FeatureClass) -> (&'static str, &'static str) {
     match class {
         FeatureClass::Volcano => ("volcano", "volcanoes"),
         FeatureClass::Landmass => ("landmass", "landmasses"),

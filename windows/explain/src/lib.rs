@@ -129,40 +129,18 @@ pub fn explain_sky(world: &World, vocab: &CommonVocabulary) -> Option<String> {
     Some(out)
 }
 
-/// A feature's info line: every name it carries, joined —
-/// `"Mount McKinley, Denali"` (spec §3.4). `names` iterates in key
-/// (species-label) order, so this is deterministic and elects no lead.
-/// `hornvale_almanac::gazetteer::render_names` is this window's sibling
-/// surface and applies the identical rule, duplicated rather than shared:
-/// this window and the almanac window do not depend on each other
-/// (`windows/CLAUDE.md` — only the composition root may join terrain's
-/// feature identities to language's naming draw), so a three-line join is
-/// the cheaper edge to duplicate than to wire across.
-/// type-audit: bare-ok(identifier-text: names), bare-ok(identifier-text: return)
-pub fn render_multi_name(names: &BTreeMap<String, String>) -> String {
-    names.values().cloned().collect::<Vec<_>>().join(", ")
-}
-
-/// One class's plural word, for [`explain_gazetteer`]'s narration.
-/// Duplicated from `hornvale_almanac::gazetteer`'s own `class_words` for the
-/// same reason [`render_multi_name`] duplicates its join: no cross-window
-/// dependency exists to share it over.
-fn class_word(class: FeatureClass) -> &'static str {
-    match class {
-        FeatureClass::Volcano => "volcanoes",
-        FeatureClass::Landmass => "landmasses",
-        FeatureClass::Sea => "seas",
-        FeatureClass::SaltLake => "salt lakes",
-        FeatureClass::River => "rivers",
-    }
-}
-
 /// One feature class's gazetteer summary, for [`explain_gazetteer`]: how
 /// many features of the class exist, and the single largest one's full
 /// multi-name line (spec §3.4). This window cannot assemble its own
 /// summaries — a feature's name comes from `hornvale-worldgen`'s naming
-/// join, which this crate does not depend on (see [`render_multi_name`]'s
-/// doc comment) — so the composition root builds these and hands them in.
+/// join, which would cycle back through this crate (worldgen already
+/// depends on `hornvale-almanac`; see `hornvale_almanac::gazetteer`'s module
+/// doc) — so the composition root builds these and hands them in. Rendering
+/// the summary, unlike assembling it, is not similarly blocked: this window
+/// calls `hornvale_almanac::gazetteer::render_names`/`class_words` directly
+/// rather than carrying its own copies, since windows may depend on other
+/// windows (`windows/CLAUDE.md`) and `hornvale-almanac` carries no
+/// window-layer dependency of its own to cycle through.
 /// type-audit: bare-ok(count: total), bare-ok(count: largest_magnitude), bare-ok(identifier-text: largest_names)
 pub struct GazetteerClassSummary {
     /// Which class this summary covers.
@@ -179,7 +157,8 @@ pub struct GazetteerClassSummary {
 /// each class exist, and — worked through the single largest of each — what
 /// its full multi-name line reads like. There is no observer at this
 /// surface, so a summary's `largest_names` line elects no lead (the same
-/// "without an observer" rule [`render_multi_name`] documents).
+/// "without an observer" rule [`hornvale_almanac::gazetteer::render_names`]
+/// documents).
 ///
 /// `None` if `summaries` is empty — a terrain with no individuated features
 /// at all. Never seed 42's, but a degenerate pin combination could in
@@ -197,14 +176,15 @@ pub fn explain_gazetteer(summaries: &[GazetteerClassSummary]) -> Option<String> 
         summaries.len()
     );
     for s in summaries {
+        let (_, plural) = hornvale_almanac::gazetteer::class_words(s.class);
         out.push_str(&format!(
             "  {}: {} feature(s); the largest carries magnitude {} and is named {} \
              by {} of the world's peoples (derived — no primary name, species-label \
              ascending, no lead).\n",
-            class_word(s.class),
+            plural,
             s.total,
             s.largest_magnitude,
-            render_multi_name(&s.largest_names),
+            hornvale_almanac::gazetteer::render_names(&s.largest_names),
             s.largest_names.len()
         ));
     }
@@ -295,19 +275,17 @@ mod tests {
             .collect()
     }
 
-    /// Spec §3.4: every name joined, species-label ascending (the
-    /// `BTreeMap` key order), no lead.
-    #[test]
-    fn render_multi_name_joins_species_ascending_with_no_lead() {
-        let n = names(&[("khorrun", "Denali"), ("aeldrin", "Mount McKinley")]);
-        assert_eq!(render_multi_name(&n), "Mount McKinley, Denali");
-    }
-
     #[test]
     fn explain_gazetteer_is_none_on_an_empty_summary_list() {
         assert!(explain_gazetteer(&[]).is_none());
     }
 
+    /// Spec §3.4: `explain_gazetteer` delegates the join to
+    /// `hornvale_almanac::gazetteer::render_names` rather than carrying its
+    /// own copy (Task 8 fix round 1) — this exercises the delegate through
+    /// the narration ("Roa, Xoa": species-label ascending, no lead). The
+    /// join rule's own unit coverage lives in `hornvale_almanac::gazetteer`'s
+    /// test module.
     #[test]
     fn explain_gazetteer_narrates_every_classs_largest_feature() {
         let summaries = vec![GazetteerClassSummary {
