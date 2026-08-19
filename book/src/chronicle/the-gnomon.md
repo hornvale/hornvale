@@ -402,3 +402,42 @@ rather than only in the test: the bar is not to be widened, and the battery is
 not to be re-read until it lands somewhere comfortable. Three epochs have now
 established that the direction of the error is smaller than the noise in either
 direction. The next thing to change should be `n`.
+
+## Third postscript: a fourth world, and the reading repeats exactly (2026-08-18/19)
+
+The Burr refreshed the canonical census again, this time with a language
+epoch (`ROOT_EPOCH v4`, census committed as `635d116d`) that redraws every
+generated name and reseeds the phonology cascades feeding it. As with the two
+prior re-reads, the report itself did not move — `REPORT_SIZE`,
+`TAIL_DEPTH_BAR`, the scorer and the evaluable surface are all unchanged.
+Only the worlds are different, and this time in a way that has nothing to do
+with either temperature or the subterranean layer.
+
+Re-measured: **recall@10 = 0.6083, 73 hits over the same 120 pairs.** The bar
+is 0.60.
+
+That is not a new number. It is The Glasshouse's number, exactly — 73/120,
++0.19 SE from the bar — reproduced by an unrelated mechanism at an unrelated
+epoch. Laid out against the same standard error at the bar,
+`sqrt(0.6 × 0.4 / 120) = 0.0447`, the four measurements of one unchanged
+report now read:
+
+| campaign | hits | recall@10 | distance from the bar |
+|---|---|---|---|
+| The Gnomon (2026-08-13) | 68/120 | 0.5667 | −0.75 SE |
+| The Glasshouse (2026-08-15) | 73/120 | 0.6083 | +0.19 SE |
+| The Underworld (2026-08-17) | 72/120 | 0.6000 | 0.00 SE |
+| The Burr (2026-08-18/19) | 73/120 | 0.6083 | +0.19 SE |
+
+Four readings, three of them distinct census epochs plus one that ties an
+earlier one, all inside a single standard error of the bar — with no two
+consecutive readings landing on the same side of it (below, above, on, above).
+That pattern is exactly what an instrument with no real signal at this `n`
+should produce: noise scattered tightly around the threshold rather than
+converging toward either side of it. It is further corroboration of the
+underpower diagnosis, not a fourth independent data point toward resolving
+it — the conclusion the second postscript already drew from three readings
+holds unchanged from a fourth: the question is open, the instrument is
+underpowered, and the fix is more pairs rather than a moved bar. The registry
+row's status is unchanged by this re-read, exactly as it was unchanged by the
+second.

@@ -313,7 +313,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar at 0.00 SE from it; three census epochs of one unchanged report read 0.5667, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; four census epochs of one unchanged report read 0.5667, 0.6083, 0.6000 and 0.6083, all inside one SE of the bar, so the battery separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -444,7 +444,33 @@ fn h1_recall_at_10() {
 /// somewhere comfortable — landing on the bar is uncomfortable and is the
 /// honest reading.
 ///
-/// claim: invariant(the committed battery scores exactly 72 hits over 120
+/// **RE-READ A THIRD TIME AT THE BURR'S CLOSE (2026-08-18/19), AND THE
+/// READING REPEATS EXACTLY.** The Burr refreshed the canonical census with a
+/// language epoch (`ROOT_EPOCH v4`, census committed as `635d116d`) that
+/// redraws every generated name and reseeds the phonology cascades feeding
+/// it — nothing about the *report* changed. Re-measured: **73/120 = 0.6083**,
+/// which is not merely close to The Glasshouse's reading, it IS The
+/// Glasshouse's reading: the same 73 hits over the same 120 pairs, +0.19 SE
+/// from the bar, reproduced by an unrelated mechanism at an unrelated epoch.
+/// Four readings of one unchanged report now exist:
+///
+/// ```text
+///     SE at the bar = sqrt(0.6 * 0.4 / 120) = 0.04472
+///
+///     68/120 = 0.5667   -0.75 SE   The Gnomon      (published as refuted)
+///     73/120 = 0.6083   +0.19 SE   The Glasshouse  (verdict withdrawn)
+///     72/120 = 0.6000    0.00 SE   The Underworld  (corroborated the withdrawal)
+///     73/120 = 0.6083   +0.19 SE   The Burr        (repeats The Glasshouse's reading)
+/// ```
+///
+/// No two consecutive readings land on the same side of the bar — below, on
+/// the high side, on the line, on the high side again — which is exactly what
+/// an instrument with no real signal at this `n` should produce: noise
+/// scattered tightly around the threshold rather than converging toward
+/// either side. The registry row's status is unchanged by this re-read, as it
+/// was unchanged by the second.
+///
+/// claim: invariant(the committed battery scores exactly 73 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -457,9 +483,9 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (72, 120, 0, 0),
+        (73, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's reading (recall@10 = 72/120 = 0.6000, sitting EXACTLY ON the \
+         Gnomon's reading (recall@10 = 73/120 = 0.6083, +0.19 SE from the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
          adjudicate, see the doc comment), and it is pinned so that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
@@ -468,14 +494,16 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          re-read the finding, re-state it in book/src/chronicle/the-gnomon.md, \
          in the TOOL-anomaly-ranking-concentrates-injection registry row and in \
          the `#[ignore]` reason rostered in cli/tests/heavy_tier.rs, and re-pin \
-         all four in the same commit. THIS HAS NOW HAPPENED TWICE (The \
+         all four in the same commit. THIS HAS NOW HAPPENED THREE TIMES (The \
          Glasshouse, 2026-08-15, which overturned the verdict; The Underworld, \
-         2026-08-17, which did not overturn it and instead corroborated the \
-         withdrawal at a third census epoch). Both times the report was \
-         untouched and the number moved because the WORLD moved, which is the \
-         strongest argument for keeping this pin. FIRST ASK WHETHER YOUR CHANGE \
-         TOUCHED THE REPORT: if it did, the three readings below are no longer \
-         comparable and you have a different, larger question than a re-pin."
+         2026-08-17, which corroborated the withdrawal at a third census \
+         epoch; The Burr, 2026-08-18/19, which corroborated it again at a \
+         fourth, reproducing The Glasshouse's exact reading). Every time the \
+         report was untouched and the number moved because the WORLD moved, \
+         which is the strongest argument for keeping this pin. FIRST ASK \
+         WHETHER YOUR CHANGE TOUCHED THE REPORT: if it did, the four readings \
+         above are no longer comparable and you have a different, larger \
+         question than a re-pin."
     );
 }
 

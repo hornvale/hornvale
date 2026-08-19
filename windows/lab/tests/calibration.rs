@@ -1985,7 +1985,15 @@ fn name_collision_rate_is_measured_and_pinned() {
         // carries no directional claim (H4 already failed and is recorded as
         // such above), and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.507_408_222_281_000).abs() < 1e-6,
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name, reshuffling per-culture lexicon
+        // reuse; zero/nonzero/absent are unmoved at 0/1000/0. Mean:
+        // 0.507_408_222_281_000 -> 0.508_151_833_319_999. This row still
+        // carries no directional claim (H4 already failed and is recorded as
+        // such above), and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        (mean - 0.508_151_833_319_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2208,7 +2216,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // mean 8.506_600_585_100 -> 8.515_439_092_299_996. Still comfortably
         // below the campaign's own <10-character claim (spec §7) — 1.48
         // characters of margin — re-checked rather than assumed.
-        ("goblin", 1000u32, 8.515_439_092_299_996),
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name; goblin's present count does NOT move
+        // (1000 -> 1000): mean 8.515_439_092_299_996 -> 8.546_439_147_599_997.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7) — re-checked rather than assumed.
+        ("goblin", 1000u32, 8.546_439_147_599_997),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2314,7 +2328,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 6.854_391_970_773_933. Still comfortably below the campaign's own
         // <10-character claim (spec §7) — 3.15 characters of margin —
         // re-checked rather than assumed.
-        ("kobold", 982u32, 6.854_391_970_773_933),
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name; kobold's present count does NOT move
+        // (982 -> 982); mean 6.854_391_970_773_933 -> 6.819_402_706_211_809.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7) — re-checked rather than assumed.
+        ("kobold", 982u32, 6.819_402_706_211_809),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2493,8 +2513,14 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // they have at several prior regens — the chamber epoch re-places
         // settlements independently per species, and this row carries no
         // relation between the two means.
-        ("goblin", 1000u32, 2.709_543_428_800_003),
-        ("kobold", 982u32, 2.179_334_351_323_829),
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name; present counts unmoved (goblin 1000,
+        // kobold 982); goblin 2.709_543_428_800_003 -> 2.724_187_402_399_996,
+        // kobold 2.179_334_351_323_829 -> 2.186_661_987_881_874. The claim
+        // (spec §8 criterion 2, mean in 2-3) still HOLDS at both species.
+        ("goblin", 1000u32, 2.724_187_402_399_996),
+        ("kobold", 982u32, 2.186_661_987_881_874),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2707,7 +2733,13 @@ fn name_transparency_is_measured_and_pinned() {
         // which settlements survive to be named, not any change to the wear
         // cascade. The per-species limit recorded above is unchanged — there
         // is still no per-species transparency column.
-        (mean - 0.706_817_471_809_999).abs() < 1e-9,
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name; present/absent unmoved at 1000/0;
+        // mean 0.706_817_471_809_999 -> 0.714_474_321_670_000. Still
+        // emphatically NOT 1.0 — the claim this row exists to guard —
+        // re-checked rather than assumed.
+        (mean - 0.714_474_321_670_000).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2777,7 +2809,12 @@ fn name_transparency_is_measured_and_pinned() {
         // not toward it. The previous regen's standing warning (a floor that
         // kept climbing toward the mean is how the defect returns) did NOT
         // fire: the floor fell.
-        (min - 0.297_142_86).abs() < 1e-8,
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name; the floor RISES 0.297_142_86 ->
+        // 0.300_000_0. Re-checked against the ceiling assertion below rather
+        // than assumed to be the uniformity defect returning.
+        (min - 0.300_000_0).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -2799,7 +2836,15 @@ fn name_transparency_is_measured_and_pinned() {
         // widening distribution; the failure mode the note was watching for
         // is a ceiling pinned at 1.0 with a floor climbing to meet it, and
         // neither half of that is happening.
-        (max - 0.983_606_56).abs() < 1e-8,
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name; the ceiling falls FURTHER off 1.0,
+        // 0.983_606_56 -> 0.971_204_19. Read against the same failure mode
+        // the notes above name: a ceiling moving away from 1.0 (here, both
+        // the floor rising and the ceiling falling, narrowing the span from
+        // both sides while staying well clear of 1.0) is not the uniformity
+        // defect returning.
+        (max - 0.971_204_19).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }
@@ -3211,7 +3256,16 @@ fn null_control_name_length_smd_is_pinned() {
         // `null_control_distributions_are_within_the_sampling_bound`
         // asserts, which is the assertion that would catch a broken control
         // and which that test reaches without firing.
-        (namelen - -0.004779612149911378).abs() < 1e-9,
+        // The Burr's close regen (2026-08-18/19, canonical census on lefford,
+        // ROOT_EPOCH v4, census committed as 635d116d): the language epoch
+        // redraws every generated name in both solo builds alike in
+        // structure; the residual name-length gap shifts:
+        // -0.004_779_612_149_911_378 -> -0.016_164_814_210_766_886. Still
+        // ~12x inside the ±0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound` asserts
+        // — the null hypothesis this row exists to witness
+        // (INDISTINGUISHABLE FROM ZERO) reads as true as it ever has.
+        (namelen - -0.016164814210766886).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
