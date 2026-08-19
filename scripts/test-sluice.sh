@@ -417,6 +417,35 @@ case "$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients
     *) bad "unexpected phase list after dropping: '$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients heavy')'" ;;
 esac
 
+echo "== ack: adjudicating an out-of-band landing"
+# The mouth returns 4 and says a human must decide; until scripts/sluice-ack.sh
+# existed there was no way to RECORD that decision, so the operator hand-wrote
+# last-pushed on 2026-08-19 and the act survived only in a queue note.
+ack_dir="$tmp/ackdir"; mkdir -p "$ack_dir"
+ack() { HV_SLUICE_DIR="$ack_dir" bash "$repo_root/scripts/sluice-ack.sh" "$@"; }
+if ack >/dev/null 2>&1; then
+    bad "sluice-ack accepted an empty reason — an unexplained adjudication is the broken guarantee wearing a hat"
+else
+    ok "sluice-ack refuses without a reason"
+fi
+if ack "no baseline yet" >/dev/null 2>&1; then
+    bad "sluice-ack adjudicated with no baseline recorded — it would invent one"
+else
+    ok "sluice-ack refuses when no baseline exists"
+fi
+g -C "$repo_root" rev-parse origin/main > "$ack_dir/last-pushed" 2>/dev/null || echo dummy > "$ack_dir/last-pushed"
+before_ack="$(md5sum "$ack_dir/last-pushed" | cut -d' ' -f1)"
+if ack "nothing moved" >/dev/null 2>&1; then
+    bad "sluice-ack 'adjudicated' when the baseline already matched — a no-op reported as success is how state drifts"
+else
+    ok "sluice-ack refuses when there is nothing to adjudicate"
+fi
+if [ "$before_ack" = "$(md5sum "$ack_dir/last-pushed" | cut -d' ' -f1)" ]; then
+    ok "the refused adjudication left the baseline byte-identical"
+else
+    bad "the refused adjudication rewrote the baseline"
+fi
+
 echo "== phases: what the chamber ACTUALLY runs (decision 0148)"
 # THE CASE ABOVE TESTS THE FUNCTION AGAINST A LITERAL, WHICH IS NOT THE SAME AS
 # TESTING THE CHAMBER. Nothing asserted what sluice-run.sh actually sets, so the
