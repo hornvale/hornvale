@@ -12,7 +12,7 @@ use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel, Turn};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
-mod common;
+use crate::common;
 
 fn world() -> World {
     build_world(

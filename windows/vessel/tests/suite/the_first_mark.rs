@@ -96,7 +96,7 @@ const GRIEVANCE_NPC: &str = "bugbear of Dooga";
 #[test]
 fn the_two_grievance_npc_copies_agree() {
     let sibling = std::fs::read_to_string(
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/possession_moves.rs"),
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/suite/possession_moves.rs"),
     )
     .expect("possession_moves.rs is readable");
     let expected = format!("const GRIEVANCE_NPC: &str = {GRIEVANCE_NPC:?};");

@@ -22,7 +22,7 @@ use hornvale_locale::Compass;
 use hornvale_vessel::course::{bearing_of, nearest_neighbour, rhumb_advance, step_length_rad};
 use hornvale_vessel::{PossessOpts, Session, Turn, WorldContext};
 
-mod common;
+use crate::common;
 
 /// A mid-latitude, walk-depth `RoomAddr`. Depth 12 (walk depth on the
 /// canonical grid — globe level 6 + 6) and a fixed face match Task 2's own

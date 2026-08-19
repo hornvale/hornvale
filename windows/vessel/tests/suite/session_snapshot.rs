@@ -8,7 +8,7 @@
 use hornvale_kernel::{Seed, World};
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel, snapshot_json};
 
-mod common;
+use crate::common;
 
 /// The seed the **client fixture** is taken at.
 ///

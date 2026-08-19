@@ -87,7 +87,7 @@ struct Row {
 #[test]
 #[ignore = "one-shot before-arm capture (The Fathom, Task 4 Step 1); run by hand, not a standing regression test - see module doc"]
 fn capture_before_arm() {
-    let src = include_str!("../src/vantage.rs");
+    let src = include_str!("../../src/vantage.rs");
     assert!(
         src.contains(CURRENT_FORMULA_SNIPPET),
         "vantage.rs's inline `submerged` predicate has moved — update \
