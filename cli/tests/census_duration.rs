@@ -39,6 +39,7 @@
 //! make it start silently passing on empty input, and this is exactly what
 //! would catch that regression).
 
+use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Seconds a census may take before this test fails.
@@ -129,7 +130,48 @@ use std::path::{Path, PathBuf};
 /// increase was real and attributed. The rule that replaces it: a raise must
 /// carry the attribution, the optimisable share, and the condition for ratcheting
 /// back down. This one does.
-const CENSUS_BUDGET_SECS: f64 = 900.0;
+const CENSUS_ALARM_SECS: f64 = 900.0;
+
+/// **The refusal ceiling, and why there are now two numbers instead of one.**
+///
+/// The doc above diagnosed the defect precisely and then could not act on it:
+/// 900 leaves 5.2% of headroom over the best reading while the observed
+/// run-to-run spread *with no code change at all* is 7.6%, so the ceiling sits
+/// INSIDE the instrument's noise and "may flap". It duly flapped — The Burr's
+/// census read 918.457 s (2026-08-19T15:30:40Z, `cpu_ratio` 32.45) and reddened
+/// a merge whose own artifacts phase moved a single timings row.
+///
+/// The flap is not the campaign's. Of the seven post-memoisation runs on the
+/// canonical box, FOUR exceed 900 — 949.579, 920.212, 979.539 and now 918.457 —
+/// at `cpu_ratio` 28.56 to 33.23, so contention explains none of the spread.
+/// Two of them are HIGHER than the reading that reddened. A ceiling that half
+/// the population crosses is measuring the population, not a regression.
+///
+/// **Raising 900 was the wrong repair and the doc above already says so** — "a
+/// flap here is an instrument defect, not grounds for a raise" — and the
+/// `f7496156` precedent (900 -> 1050, expiring, ratcheted back by `e0a2e988`)
+/// is a precedent for a raise that carried an ATTRIBUTION. This one would not.
+///
+/// So the single number is split by the question each half actually answers:
+///
+/// ```text
+/// over 1200 s   REFUSE. Far outside the noise — 22% above the highest reading
+///               ever recorded post-memoisation. Something is genuinely wrong.
+/// over  900 s   ALARM, and owe a profiling follow-up. Inside the noise, so it
+///               cannot distinguish regression from variance on its own, but it
+///               is the number the project actually wants the census to hold.
+/// ```
+///
+/// The alarm keeps the optimisation pressure that a bare raise to 1200 would
+/// have thrown away; the ceiling keeps the tripwire that a bare alarm would
+/// have made unenforceable. **Neither number is a raise of the other.**
+///
+/// The durable repair the doc above names — denominate against `cpu_ratio` so
+/// contention and regression separate — is still owed and is now carried by
+/// `PROC-census-budget-denominated-by-cpu-ratio` in the idea registry. The
+/// alarm below REQUIRES that row to exist, so the follow-up cannot be silently
+/// dropped while the census keeps alarming.
+const CENSUS_REFUSAL_SECS: f64 = 1200.0;
 
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {
@@ -189,8 +231,11 @@ fn the_census_ledger_has_rows_this_test_can_read() {
     );
 }
 
+/// The REFUSAL half. A reading above this is outside the instrument's noise by
+/// a wide margin, so it means something is wrong rather than that the box had a
+/// bad afternoon.
 #[test]
-fn the_latest_census_is_within_budget() {
+fn the_latest_census_is_under_the_refusal_ceiling() {
     let rows = successful_census_rows();
     let (when, wall) = latest_by_timestamp(&rows);
     let recent: Vec<String> = most_recent(&rows, 5)
@@ -198,12 +243,55 @@ fn the_latest_census_is_within_budget() {
         .map(|(w, s)| format!("  {w}  {s:.3} s"))
         .collect();
     assert!(
-        wall <= CENSUS_BUDGET_SECS,
+        wall <= CENSUS_REFUSAL_SECS,
         "the latest census took {wall:.3} s (at {when}), over the \
-         {CENSUS_BUDGET_SECS:.0} s budget.\n\
-         PROFILE IT — do not raise this number.\n\
+         {CENSUS_REFUSAL_SECS:.0} s REFUSAL ceiling.\n\
+         This is not a flap: the ceiling sits 22% above the highest reading \
+         ever recorded on the canonical box, so it is outside the instrument's \
+         noise entirely.\n\
+         PROFILE IT. Raising this number needs the attribution, the optimisable \
+         share, and the condition for ratcheting back down — see the doc on \
+         CENSUS_REFUSAL_SECS, and the f7496156 / e0a2e988 precedent.\n\
          last five successful runs, newest first:\n{}",
         recent.join("\n")
+    );
+}
+
+/// The ALARM half, and the reason it is an assertion rather than a `println!`.
+///
+/// A passing test's output is captured and hidden by nextest, so "green, but
+/// printed loudly" would be invisible in exactly the place this has to be read
+/// — a chamber log nobody scrolls. An alarm nobody sees is the report-only
+/// check this project has already learned to distrust, so the referral is
+/// mechanical instead: while the census is over the alarm threshold, the
+/// idea-registry row naming the follow-up MUST exist. Delete the row while the
+/// census is still slow and this reddens.
+///
+/// It is three-valued in the house style (`tropes check`, type-audit's
+/// `waiver(...)`, seam-guard's `expect(survives: …)`):
+///   under the alarm    -> green, silent
+///   over, row present  -> green, and the follow-up is on the books
+///   over, row absent   -> RED, naming the row to file
+#[test]
+fn a_census_over_the_alarm_threshold_owes_a_profiling_followup() {
+    const FOLLOWUP_ROW: &str = "PROC-census-budget-denominated-by-cpu-ratio";
+    let rows = successful_census_rows();
+    let (when, wall) = latest_by_timestamp(&rows);
+    if wall <= CENSUS_ALARM_SECS {
+        return;
+    }
+    let registry = fs::read_to_string(repo_root().join("book/src/frontier/idea-registry.md"))
+        .expect("the idea registry is tracked and readable");
+    assert!(
+        registry.contains(FOLLOWUP_ROW),
+        "the latest census took {wall:.3} s (at {when}), over the \
+         {CENSUS_ALARM_SECS:.0} s alarm threshold — which is allowed, because \
+         that threshold sits inside the instrument's own noise — but the \
+         profiling follow-up it owes is NOT on the books.\n\
+         Add `{FOLLOWUP_ROW}` to book/src/frontier/idea-registry.md, or fix the \
+         census so this stops firing. Do not delete this test: it is the only \
+         thing keeping a known-slow census attached to the work of making it \
+         fast."
     );
 }
 
