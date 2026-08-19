@@ -13,8 +13,10 @@ use hornvale_kernel::Seed;
 
 use crate::lattice::{Cell, Rect};
 
-pub mod carve;
+mod carve;
 mod region;
+
+pub use carve::Algorithm;
 
 /// A cell's role within a generated underworld level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
