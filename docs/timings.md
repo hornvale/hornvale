@@ -1670,3 +1670,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T18:12:55Z | sluice:seam-guard | 1146.604 | 21376.137 | 1162.352 | 19.66 | 0 | 647f84696 |  | lefford | 40 |
 | 2026-08-19T18:17:24Z | sluice:clients | 268.727 | 494.661 | 39.490 | 1.99 | 0 | c892983ac |  | lefford | 40 |
 | 2026-08-19T18:51:28Z | sluice:heavy | 2043.859 | 32904.942 | 715.913 | 16.45 | 0 | dec46ffde |  | lefford | 40 |
+| 2026-08-19T19:06:14Z | gate-commit | 3.928 | 3.771 | 0.156 | 1.00 | 0 | 17725d9da | fix/probe-tier-and-lean-merge | lefford | 40 |
+| 2026-08-19T19:09:39Z | gate-commit | 189.025 | 2648.607 | 291.864 | 15.56 | 0 | 17725d9da | fix/probe-tier-and-lean-merge | lefford | 40 |

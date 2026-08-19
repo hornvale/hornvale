@@ -189,11 +189,15 @@ the exact SHA it tested.
   0081/0086/0133), so the queue pays for one job, not the six separate
   dispatches a campaign gate used to cost (67% of the lane's first 27.4 h of
   wall time was queue wait for exactly that reason). Merges the candidate,
-  then runs the former campaign-gate phases (`artifacts outboard gate
-  seam-guard clients heavy` — `census` refuses as a chamber phase, since it
-  unconditionally clobbers the shared claim on exit) against the real merge
-  commit before pushing it, so a broken interaction with main is caught
-  before it ever reaches main. A `kind=stage` run is the same code with one
+  then runs `artifacts outboard gate clients` against the real merge commit
+  before pushing it, so a broken interaction with main is caught before it
+  ever reaches main. **That list lost `seam-guard` and `heavy` on 2026-08-19
+  (decision 0148)**: both keep their `campaign`-rung rows and their own entry
+  points (`make seam-guard`, `make heavy-remote REF=<full-sha>`), and those
+  are now the ONLY things that run them — nothing does so automatically. The
+  merge product is still gated as itself, by four phases rather than six.
+  (`census` refuses as a chamber phase for an unrelated reason: it
+  unconditionally clobbers the shared claim on exit.) A `kind=stage` run is the same code with one
   branch turned the other way at the push step: it merges, runs the
   `stage`-rung phases, reports, and exits 0 without pushing — placed AFTER
   the single failure gate, so `kind=stage` can never launder a red run into

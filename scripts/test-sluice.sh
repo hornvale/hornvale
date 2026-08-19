@@ -417,6 +417,30 @@ case "$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients
     *) bad "unexpected phase list after dropping: '$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients heavy')'" ;;
 esac
 
+echo "== phases: what the chamber ACTUALLY runs (decision 0148)"
+# THE CASE ABOVE TESTS THE FUNCTION AGAINST A LITERAL, WHICH IS NOT THE SAME AS
+# TESTING THE CHAMBER. Nothing asserted what sluice-run.sh actually sets, so the
+# phase list could change without a single test noticing — the exact
+# reports-on-a-set-it-does-not-own shape this suite keeps finding elsewhere.
+# Read from the script rather than restated here, so this cannot drift from it.
+merge_list="$(sed -n 's/^merge_phases="\(.*\)"$/\1/p' "$repo_root/scripts/sluice-run.sh")"
+stage_list="$(sed -n 's/^stage_phases="\(.*\)"$/\1/p' "$repo_root/scripts/sluice-run.sh")"
+if [ "$merge_list" = "artifacts outboard gate clients" ]; then
+    ok "a merge runs exactly: $merge_list"
+else
+    bad "merge_phases is '$merge_list' — decision 0148 fixed it at 'artifacts outboard gate clients'"
+fi
+case "$merge_list" in
+    *seam-guard*) bad "seam-guard is back in the merge list; 0148 took it off and nothing has superseded that" ;;
+    *heavy*)      bad "heavy is back in the merge list; 0148 took it off and nothing has superseded that" ;;
+    *)            ok "neither seam-guard nor heavy runs on a merge" ;;
+esac
+if [ "$merge_list" = "$stage_list" ]; then
+    ok "a merge and a stage gate run the same phases, differing only in the push"
+else
+    bad "merge ('$merge_list') and stage ('$stage_list') diverged — 0148 made them identical; if that is deliberate, update this test and say why"
+fi
+
 echo "== phases: MUTATION — an allowlist without its exclusions would skip heavy for a generated artifact"
 # Non-vacuity: widen the allowlist to bare `book/*` — the obvious, wrong
 # version of this rule — and confirm a heavy-authored artifact then passes as
