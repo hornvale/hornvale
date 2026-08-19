@@ -120,7 +120,7 @@ fn median(mut v: Vec<f64>) -> f64 {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: contact-substrate instrument over a live-worldgen battery; run by hand (decision 0148 took it off the heavy set)"]
 fn the_raid_seam_and_the_far_sides_line() {
     println!("\n============ S1/S2: THE RAID SEAM ============");
     println!(
@@ -231,7 +231,7 @@ fn the_raid_seam_and_the_far_sides_line() {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: contact-substrate instrument over a live-worldgen battery; run by hand (decision 0148 took it off the heavy set)"]
 fn how_far_an_account_reaches_and_whether_the_sides_disagree() {
     println!("\n======== S3/S4: REACH, AND DISAGREEMENT AT THE SEAM ========");
 
@@ -347,7 +347,7 @@ fn how_far_an_account_reaches_and_whether_the_sides_disagree() {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: contact-substrate instrument over a live-worldgen battery; run by hand (decision 0148 took it off the heavy set)"]
 fn whether_transmission_already_runs_backwards() {
     println!("\n============ S5: THE CLOCK ============");
 
@@ -481,7 +481,7 @@ fn read_world(
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: contact-substrate instrument over a live-worldgen battery; run by hand (decision 0148 took it off the heavy set)"]
 fn is_the_seams_disagreement_real() {
     println!("\n======== S3b: IS THE DISAGREEMENT REAL? ========");
 
@@ -647,7 +647,7 @@ fn is_the_seams_disagreement_real() {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: contact-substrate instrument over a live-worldgen battery; run by hand (decision 0148 took it off the heavy set)"]
 fn reach_under_descent_contact_and_a_clock() {
     println!("\n======== S6: REACH UNDER THREE WALKS ========");
 
@@ -780,7 +780,7 @@ fn reach_under_descent_contact_and_a_clock() {
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: contact-substrate instrument over a live-worldgen battery; run by hand (decision 0148 took it off the heavy set)"]
 fn whether_the_raiders_line_forgets_faster() {
     println!("\n======== S7: THE PERPETRATOR/VICTIM ASYMMETRY ========");
 

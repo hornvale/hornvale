@@ -1178,7 +1178,7 @@ mod weathering {
     use super::*;
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    #[ignore = "probe: the-fare exploratory/pilot readouts over a live-worldgen battery; run by hand (decision 0148 took them off the heavy set)"]
     fn weathering_raises_cost_somewhere_and_never_makes_a_cell_impassable() {
         // THE KEYSTONE for this task. Two failure modes it must catch: a
         // weathered field that is byte-identical to the dry one (the
@@ -1218,9 +1218,10 @@ mod weathering {
         );
     }
 
-    /// claim: readout(pilot) — off-gate (heavy:); own name states the shape
+    /// claim: readout(pilot) — off-gate (probe:, so no gate runs it at all);
+    /// own name states the shape
     #[test]
-    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    #[ignore = "probe: the-fare exploratory/pilot readouts over a live-worldgen battery; run by hand (decision 0148 took them off the heavy set)"]
     fn the_fares_pilot() {
         // TWO independent readouts per seed, each on its own labelled PILOT
         // line, per spec §4a's re-basing (project owner's ruling
@@ -1681,10 +1682,11 @@ mod weathering {
         }
     }
 
-    /// claim: readout(preregistered) — off-gate (heavy:); own name states the
+    /// claim: readout(preregistered) — off-gate (probe:, so no gate runs it at
+    /// all); own name states the
     /// shape
     #[test]
-    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    #[ignore = "probe: the-fare exploratory/pilot readouts over a live-worldgen battery; run by hand (decision 0148 took them off the heavy set)"]
     fn the_fares_preregistered_readout() {
         // THE FREEZE (spec §6b, commit a6e28e5e — frozen before this run,
         // the sole authority for every floor and boundary below). Four
@@ -2086,9 +2088,9 @@ mod weathering {
     }
 
     /// claim: readout(exploratory, post-hoc, NOT preregistered) — off-gate
-    /// (heavy:); own comment states the shape
+    /// (probe:, so no gate runs it at all); own comment states the shape
     #[test]
-    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+    #[ignore = "probe: the-fare exploratory/pilot readouts over a live-worldgen battery; run by hand (decision 0148 took them off the heavy set)"]
     fn the_fares_exploratory_readout() {
         // EXPLORATORY, POST-HOC, NOT PREREGISTERED. Dispatched after F1's
         // preregistered falsification (pooled median swing 0.0037 against

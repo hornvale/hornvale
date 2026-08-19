@@ -1005,7 +1005,8 @@ fn exposure_rows_masked(
         // here): that hand-written composition used to live at this exact
         // line and reported `tools/seam-guard`'s `ledger_day_of_bake_year`
         // seam UNGUARDED — the call was reachable only from this file's
-        // `heavy:`-ignored batteries, so no non-ignored test could ever see a
+        // ignored batteries (`heavy:` then, `probe:` since 2026-08-19 — so
+        // now NOTHING runs them), meaning no non-ignored test could ever see a
         // year substituted for a day here. See `present_frame`'s doc for the
         // fix and `history_emit.rs`'s
         // `present_frame_crosses_the_bake_year_by_days_per_year` for the
@@ -1244,7 +1245,7 @@ fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn repose_exposure_readout_matches_the_committed_fixture() {
     let committed = include_str!("fixtures/repose-exposure.csv");
     let rendered = render_repose_exposure(1..=30);
@@ -1297,9 +1298,11 @@ fn repose_exposure_readout_matches_the_committed_fixture() {
 /// threshold is roughly a quarter of the observed `0.00915` spread between
 /// deciles 0 and 9: enough headroom that ordinary sweep-to-sweep noise won't
 /// trip it, while still failing if the field ever went genuinely flat. Test
-/// name and the verbatim `heavy:` ignore string are unchanged.
+/// name is unchanged. The ignore string is NOT: this battery moved from
+/// `heavy:` to `probe:` on 2026-08-19, so no gate runs it any more and the
+/// threshold above is checked only when someone invokes it by hand.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn unrest_deciles_differ_in_andosol_share() {
     let rows = exposure_rows(1..=30);
     let pooled: Vec<&ExposureRow> = rows.iter().filter(|r| r.people == "pooled").collect();
@@ -1346,10 +1349,11 @@ fn unrest_deciles_differ_in_andosol_share() {
 /// unchanged by this fix — they remain the §6.3 deliverable — they are simply
 /// no longer asserted on here. **This guard now covers `pooled` rows only**;
 /// a later reader must not mistake it for coverage of the whole fixture. Test
-/// name and the verbatim `heavy:` ignore string are unchanged; the `20.0`/
+/// name is unchanged; the ignore string moved `heavy:` -> `probe:` on
+/// 2026-08-19, so no gate runs this. The `20.0`/
 /// `is_finite()` thresholds are unchanged, only the population they run over.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn exposure_ratios_are_within_absurdity_bounds() {
     for r in exposure_rows(1..=30)
         .iter()
@@ -1410,7 +1414,7 @@ fn exposure_ratios_are_within_absurdity_bounds() {
 /// (`cargo test -p hornvale-worldgen`) cannot see this lint, because the
 /// enforcement tests live in `cli/`.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut settleable_only_total: u64 = 0;
@@ -1505,7 +1509,7 @@ fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
 /// a fourth would be a different defect (a seed-dependent code path) than
 /// anything this seam can express.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
     let wc = WorldComponents::assemble().expect("components assemble");
     for seed in [1u64, 42, 30] {
@@ -1632,13 +1636,13 @@ fn attractor_cells_of(
 /// instrument's sensitivity, which a later reader needs before judging any
 /// future null it reports.
 ///
-/// claim: readout(seed: 1..=30, off-gate heavy:) — reports how many
+/// claim: readout(seed: 1..=30, off-gate probe:, run by nothing) — reports how many
 /// settlements each ablation moves over one fixed sweep, and asserts only
 /// that the counts are non-zero (the positive controls). Not a rate: no
 /// threshold on the counts is claimed, precisely because none was
 /// preregistered and inventing one after unblinding would be a rescue.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     // ARM C, FIRST because it is free and because a stale null makes the
     // expensive half unreadable. The clauses themselves now live in
@@ -1964,7 +1968,8 @@ fn assert_no_soil_reaches_siting() {
 /// **A tripwire nothing runs is not a tripwire.** These two clauses used to
 /// live inside
 /// [`the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap`], which
-/// is `heavy:`-tagged and cost 322 s, so `make gate` skipped them entirely;
+/// was `heavy:`-tagged and cost 322 s, so the commit gate skipped them
+/// entirely (and since 2026-08-19 they are `probe:`, so NOTHING runs them);
 /// and since decision 0125 there is no CI, so the heavy tier only runs when a
 /// human dispatches `make heavy-remote`. The failure that shape permits is
 /// specific and silent: someone wires The Ground into siting, the null goes
@@ -2137,7 +2142,7 @@ fn body_of(src: &str, signature: &str) -> String {
 /// distinction between those two is exactly what preregistration exists to
 /// keep visible, so it is stated rather than left to be inferred.
 ///
-/// claim: readout(seed: 1..=30, off-gate heavy:) — reports the pooled
+/// claim: readout(seed: 1..=30, off-gate probe:, run by nothing) — reports the pooled
 /// exposure-ratio rise factor per band under four masks over one fixed sweep,
 /// and asserts only that each arm perturbs the settlement distribution.
 /// `claim_shape` does NOT flag this test — it detects a literal seed-binding
@@ -2145,7 +2150,7 @@ fn body_of(src: &str, signature: &str) -> String {
 /// here by choice. It is the readout carrying the most interpretive load in
 /// the file, which is exactly the kind that should declare its quantifier.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn which_channel_carries_the_exposure_gradient() {
     let arm_a_mask = ChannelMask {
         hostility: true,
@@ -2267,12 +2272,12 @@ fn which_channel_carries_the_exposure_gradient() {
 /// run once and deleted; since fix round 1 it rests on the committed
 /// `edifice_settlements` column, and this test prints and asserts on it.
 ///
-/// claim: readout(seed: 1..=30, off-gate heavy:) — reports the knownness
+/// claim: readout(seed: 1..=30, off-gate probe:, run by nothing) — reports the knownness
 /// column's spread over one fixed sweep and asserts only that it varies. Not
 /// a rate: no threshold on any value is claimed, because none was
 /// preregistered and inventing one after unblinding would be a rescue.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+#[ignore = "probe: repose-exposure readouts over a live-worldgen battery (one readout measured at 862.1 s in the 2026-08-19 heavy tier); run by hand (decision 0148 took them off the heavy set)"]
 fn the_readout_can_see_a_people_remember_and_a_people_forget() {
     let rows = exposure_rows(1..=30);
 
