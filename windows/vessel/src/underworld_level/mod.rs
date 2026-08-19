@@ -13,6 +13,8 @@ use hornvale_kernel::Seed;
 
 use crate::lattice::{Cell, Rect};
 
+mod region;
+
 /// A cell's role within a generated underworld level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LevelCellKind {
@@ -68,34 +70,26 @@ pub fn generate_level_extent(rung: hornvale_terrain::DelveRung) -> Rect {
     }
 }
 
-/// Generate a level over `extent`. **Task 1 only**: fills everything as a
-/// single bordered floor. Task 2 replaces this body with the real
-/// partition-tree scaffold; the signature and name are the ones every
-/// later task builds on.
+/// Generate a level over `extent`: build the partition tree, then fill each
+/// leaf's interior as floor over a rock background. Each leaf's own content
+/// generator (Task 3) later overwrites its interior with real content.
 pub fn generate_level(extent: Rect, seed: Seed) -> Level {
-    let mut stream = seed
-        .derive(crate::streams::UNDERWORLD_LEVEL_PLACEHOLDER)
-        .stream();
-    let mut dof: u32 = 0;
-    // One draw, discarded, so the label is genuinely exercised rather than
-    // dead — Task 2 replaces this with real consumption.
-    let _ = stream.next_u64();
-    dof += 1;
-
+    let (tree, mut dof) = region::build_region(extent, seed);
     let mut cells = BTreeMap::new();
+    // Background: everything starts as rock. Each leaf's own content
+    // generator (Task 3) later overwrites its interior with Floor.
     for x in extent.x..(extent.x + extent.w) {
         for y in extent.y..(extent.y + extent.h) {
-            let border = x == extent.x
-                || y == extent.y
-                || x == extent.x + extent.w - 1
-                || y == extent.y + extent.h - 1;
-            let kind = if border {
-                LevelCellKind::Wall
-            } else {
-                LevelCellKind::Floor
-            };
-            cells.insert(Cell(x, y), kind);
+            cells.insert(Cell(x, y), LevelCellKind::Wall);
         }
+    }
+    for rect in region::leaves(&tree) {
+        for x in rect.x..(rect.x + rect.w) {
+            for y in rect.y..(rect.y + rect.h) {
+                cells.insert(Cell(x, y), LevelCellKind::Floor);
+            }
+        }
+        dof += 0; // leaf content draws land here starting Task 3
     }
     Level { extent, cells, dof }
 }
