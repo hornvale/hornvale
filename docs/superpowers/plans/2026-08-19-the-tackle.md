@@ -50,110 +50,86 @@ I.a; see §4's arc table and §6 risks 2, 3, 4).
 
 ---
 
-### Task 1: Prove the drift check can fail
+### Task 1: Prove the drift check can fail — COMPLETE (probe replaced)
 
-The whole campaign rests on "`git diff` is empty after `make rebaseline`".
-An empty diff is worthless as evidence until we have watched it go red — a
-vacuous check reads exactly like a passing one. This task builds no product
-code; its deliverable is the confidence that Tasks 2–4's acceptance test is
-real.
+The whole campaign rests on "`git diff` is empty after `make rebaseline`". An
+empty diff is worthless as evidence until we have watched it go red — a vacuous
+check reads exactly like a passing one. This task builds no product code; its
+deliverable is the confidence that Tasks 2-4's acceptance test is real.
 
-**Files:**
-- Modify (temporarily, reverted within this task):
-  `windows/vessel/src/liveness.rs`
+**Outcome: the check is live, but its sensitivity is narrower than this plan
+assumed, and the probe this plan originally specified was dead.** Both halves
+are recorded below because the second is a plan defect worth not repeating.
 
-**Interfaces:**
-- Consumes: nothing.
-- Produces: nothing in code. Produces for later tasks the verified command
-  pair below, which Tasks 2, 3 and 4 each re-run.
+#### The original probe was aimed at documented-inert code
 
-- [ ] **Step 1: Record the clean baseline**
+This plan specified perturbing `REMEMBERED_PENALTY` (`liveness.rs:5721`) from
+`5` to `6`. A full `make rebaseline` moved **nothing** — `dirty-exit=0`.
 
-```bash
-cd "$(git rev-parse --show-toplevel)"
-make rebaseline
-git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
-echo "clean-exit=$?"
+The cause was three lines above the constant, in `move_cost`'s own doc comment:
+
+> *"For an EMPTY `avoid` set every edge stays `1` — the byte-identity property
+> both planners share."*
+
+The plan had selected the one constant in the file that the code explicitly
+documents as unable to move an artifact. This is the "imperative mood hides
+assertions" failure in its purest form: *"Change `REMEMBERED_PENALTY` from 5 to
+6"* reads as an instruction, but it asserts that the constant reaches an
+artifact, and the source said otherwise in plain English.
+
+**Do not re-run that probe.** It is inert by design, not by accident.
+
+#### The probe that discriminates
+
+| | |
+|---|---|
+| **File** | `windows/vessel/src/clock.rs` |
+| **Old** | `pub const REFERENCE_MASS_KG: f64 = 70.0;` |
+| **New** | `pub const REFERENCE_MASS_KG: f64 = 71.0;` |
+
+It reddens the drift check: `dirty-exit=1`. It is a plausible refactor accident
+(a reference constant retyped while being moved) and it sits inside Task 4's
+own blast radius, which is the task most able to change a real value.
+
+Found using a fast oracle rather than the 2.5-minute `make rebaseline`: the
+possession transcripts are plain `possess --script` runs that complete in
+seconds, so candidates were diffed against those and only the winner cost a
+full regeneration.
+
+#### What moved, exactly — and what did NOT
+
+**One file** under `docs/generated-paths.txt`:
+
+```
+book/src/gallery/possession-over-time-seed-42.md | 4 ++--
+1 file changed, 2 insertions(+), 2 deletions(-)
 ```
 
-Expected: `clean-exit=0`. If it is not 0, the tree was already drifted
-before this campaign began — **stop and report**, do not proceed, and do not
-commit the drift.
+The moved bytes are fact timestamps in the `why hobgoblin` block, at the
+**fifth decimal place**:
 
-- [ ] **Step 2: Perturb one value that must reach an artifact**
-
-Change `REMEMBERED_PENALTY` in `windows/vessel/src/liveness.rs` from `5` to
-`6`. Use `scripts/mutate.py` rather than `sed` — it asserts the target
-occurs, and occurs exactly once, so a silent no-op mutation is impossible.
-(A `cargo fmt` rewrap once made a one-line replacement match nothing; the
-suite reported `ok`, and that `ok` was indistinguishable from a robust
-implementation.)
-
-**Take the restore copy first.** `mutate.py` deliberately does not restore,
-and its own doc names the wrong way to do it:
-
-```bash
-cp windows/vessel/src/liveness.rs /tmp/hv-liveness.orig
-python3 scripts/mutate.py windows/vessel/src/liveness.rs \
-  'const REMEMBERED_PENALTY: u64 = 5;' \
-  'const REMEMBERED_PENALTY: u64 = 6;'
+```
+- ... drank from the river (thirst sated), day 5.00153
+- ... slept at home (fatigue eased),      day 5.00306
++ ... drank from the river (thirst sated), day 5.00152
++ ... slept at home (fatigue eased),      day 5.00304
 ```
 
-- [ ] **Step 3: Confirm the drift check goes RED**
+**The day-0 possession transcript did not move at all**, because that walk never
+crosses a fractional-day boundary the ~1.4% tempo shift is visible at.
 
-```bash
-make rebaseline
-git diff --stat -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
-git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
-echo "dirty-exit=$?"
-```
+**Read this honestly.** What was demonstrated is that a live path exists from
+`windows/vessel` source to a committed artifact, through
+`tempo` -> `cost_ticks` -> emitted day timestamps. What was **not**
+demonstrated is that the check is sensitive to an arbitrary accident anywhere in
+the code Tasks 2-4 touch. The observed margin is two lines of one file at the
+fifth decimal — a real signal, and a thin one.
 
-Expected: `dirty-exit=1`, with at least one file listed by `--stat`.
-
-**Decision rule — do not treat "which files moved" as predicted:**
-- **One or more artifacts moved** → the check is live. Record which ones in
-  the board post at Step 5; those are the files Tasks 2–4 must leave
-  untouched.
-- **Nothing moved** → the check is VACUOUS for this campaign. **Stop and
-  report.** Do not proceed to Task 2 on the strength of an acceptance test
-  that cannot fail. A plausible cause is that no committed artifact exercises
-  a remembered-danger path; the response is to find a value that *does* reach
-  one and repeat, not to lower the bar.
-
-- [ ] **Step 4: Revert the perturbation completely**
-
-```bash
-cp /tmp/hv-liveness.orig windows/vessel/src/liveness.rs
-git diff --exit-code -- windows/vessel/src/liveness.rs
-echo "source-restored-exit=$?"
-make rebaseline
-git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
-echo "restored-exit=$?"
-```
-
-Expected: both `0`.
-
-**Restore from the copy, never with `git checkout -- <file>`.** This is not
-style. `git checkout --` reverts *uncommitted work in the same file* along
-with the mutation — so if the file also held a test you had just written,
-that test vanishes, and its absence reads exactly like the test having
-passed. The Axes lost a round to this (retrospective §4), and
-`scripts/mutate.py`'s own module doc warns against it by name. `git checkout
--- .` is the same trap with a wider blast radius.
-
-- [ ] **Step 5: Record the finding**
-
-There is no code to commit, so record the evidence where the campaign can
-read it later:
-
-```bash
-cd "$(git rev-parse --show-toplevel)"
-make board-post KIND=technique BY=campaign/the-bridle \
-  PATHS='windows/vessel/' \
-  NOTE='The Tackle positive control: perturbing REMEMBERED_PENALTY 5->6 and running `make rebaseline` DOES redden the generated-paths drift check (name the files it moved). The byte-identity acceptance test for this campaign is therefore not vacuous. Reverted; tree clean.'
-```
-
----
+**Consequence for Tasks 2-4:** treat `drift-exit=0` as necessary evidence, not
+sufficient. It is a tripwire, not a proof of equivalence. The per-task suites
+(`cargo nextest run -p hornvale-vessel`) carry the behavioural weight; byte
+identity catches the class of accident that changes an emitted number. Neither
+alone would be enough, and the plan should not have implied otherwise.
 
 ### Task 2: Extract the action layer into its own module
 
