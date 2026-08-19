@@ -110,10 +110,22 @@ culture-level one, so knowledge *between* cultures is not modelled.
 
 ### 4.1 A function is derived, not drawn
 
-A settlement founded on rich ore is a `Mine`. `prospectivity(site)` is shipped
-and exported; `history_bake.rs:2260` already has `site`, `people`, `year` and
-`population` in scope. This is one line becoming a derivation, and it unblocks
-`AbandonedDelving` on its own.
+A settlement founded on rich ore is a `Mine`. `prospectivity_at(cell)` is
+shipped and exported, and `Bake::open` already has `site`, `people`, `year`
+and `population` in scope.
+
+**CORRECTED 2026-08-19, at plan time.** An earlier draft of this paragraph
+said "this is one line becoming a derivation". It is not. **`Bake` has no
+terrain** — it imports the `DelveRung` *type* and nothing else from
+`hornvale-terrain`, so prospectivity is not reachable from `open` at all. The
+change is a precomputed field threaded in, following the shape `caps_by_era`
+already sets (`&'a [Vec<CapacityMap>]`, built at the composition root and
+borrowed by `Bake`): build a `CellMap<f64>` of `prospectivity_at` once and
+hand it to `bake_history`. Precedented and not architecturally hard, but a
+signature change rather than a literal swap — and the cost belongs in the
+plan, not hidden in a sentence.
+
+It unblocks `AbandonedDelving` on its own.
 
 **The other functions are NOT in scope.** `Trade`, `Cult` and `Fort` each want
 their own derivation (a route, a shrine-worthy feature, a defensible seat) and
