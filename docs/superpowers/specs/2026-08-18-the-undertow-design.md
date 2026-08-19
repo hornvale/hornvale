@@ -156,12 +156,28 @@ any rule's mutually-exclusive count and the baseline's is **4 events of 100**.
 
 Four people-blind selection rules — least-damage (shipped), primacy, frequency,
 frequency-weighted, recency — over the same worlds. So the honest statement is
-now: *the tie-break is implicated at one cell, on the one rule that is not
-shippable as written.* `recency` maximises hops, which is unbounded around a
-seam cycle; it is defined in that probe only because the enumeration was
-restricted to simple paths. Of the rules that could ship, `primacy` and
-`frequency-w` pool exactly as the baseline does and `frequency` pools with a
-4-event gap.
+now: *the tie-break is implicated at one cell, and that cell is on an
+unshippable rule.*
+
+**Three of the four alternatives are unshippable, not one, and the probe says
+so** (`probe_tiebreak_rules.rs`, `Selection`'s doc and its closing verdict
+line). `recency` maximises hops, which is unbounded around a seam cycle; it is
+definable in that probe only because the enumeration was restricted to simple
+paths. `frequency` and `frequency-w` need the whole arriving multiset at a
+holder, which a best-first relaxation discards by construction. **`primacy` is
+the only alternative that is an argmin of a monotone key and could ship
+unchanged — and `primacy` pools exactly as the baseline does.** An earlier draft
+of this paragraph called `recency` "the one rule that is not shippable" and then
+counted the frequency family among "the rules that could ship"; that was false
+against the instrument it cites, and it happened to flatter the exoneration,
+which is the reason it is corrected here rather than quietly.
+
+So the exoneration's true shape is narrower in scope and stronger in kind than
+the count suggests: **the single shippable alternative does not break pooling,
+and the one cell that breaks is on a rule that could not be adopted anyway.**
+For completeness on the unshippable three, `frequency-w` pools exactly as the
+baseline does, `frequency` pools with a 4-event gap, and `recency` is the
+breaker.
 
 **A structural fact stands behind that table and is stronger than it — and it
 is untouched by the re-derivation.** Under `Contact::Descent` — the ratio's own
@@ -207,15 +223,34 @@ in the readout carried a CONFOUNDED annotation. On the merge product the two
 arms are **identical at 49**: additive 49 → 49, quadrature 0 → 0, multiplicative
 0 → 0. `Crossing::ContactWeighted` does not move this defect at all here.
 
-That is the outcome the *structural* explanation predicted and the executed
-numbers muddied. The mechanism is `gen_span`'s telescoping within a same-people
-segment along a locally monotone founding-day run, which makes additive width
-endpoint-determined and hop-blind **by construction** — a property of
-`amplitude.rs` and `accumulate.rs` with nothing to do with `Crossing`. A defect
-that is structurally additive-only should not respond to an arm that only
-changes cross-people step costs, and on this substrate it does not. The defect
-is still real, still unfixed, and still entirely on `additive` (1.54% of its
-cells against 0% for the other two rules).
+**And it is the same 49, not merely as many.** Equal counts are consistent with
+two disjoint sets, so the probe now emits the two arms' defective
+`(holder, rule)` identities and diffs them: intersection 49, symmetric
+difference **0**. The set-level claim is measured rather than inferred.
+
+**Two halves of the structural account fared differently here, and only one of
+them is vindicated.** The mechanism is `gen_span`'s telescoping within a
+same-people segment along a locally monotone founding-day run, which makes
+additive width endpoint-determined and hop-blind **by construction** — a
+property of `amplitude.rs` and `accumulate.rs` with nothing to do with
+`Crossing`.
+
+- **Additive-only** is what that account predicts, and it now holds exactly. As
+  executed it was *violated*: quadrature ran 4 → 2, which a structurally
+  additive-only defect does not permit. At 0 → 0 it holds. That half is a real
+  strengthening.
+- **Arm-invariance is not something the account predicts.** Telescoping makes
+  additive width hop-blind *within* a same-people segment; `Crossing` reprices
+  *cross*-people steps, changing which route wins and therefore which holders
+  are scored at all. A count that moved would have been entirely compatible
+  with telescoping. So the executed 36 → 90 was **unexplained by** the account
+  rather than **evidence against** it, and the present 49 → 49 is an
+  observation the account is silent about. An earlier draft of this paragraph
+  called the re-derivation a prediction confirmed; that overstated the
+  epistemic gain and is corrected here.
+
+The defect is still real, still unfixed, and still entirely on `additive`
+(1.54% of its cells against 0% for the other two rules).
 
 Both counts remain **floors**: the enumeration's size cap drops 2 of 102 foreign
 endings from every cell on both arms, and a capped ending is by construction the

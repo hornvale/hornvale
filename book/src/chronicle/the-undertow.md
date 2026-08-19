@@ -6,8 +6,10 @@ both directions on its face, and might carry something asymmetric underneath.
 
 It found the asymmetry, gave it a magnitude derived from the world's own
 history, and then measured that the aggregate the whole thread has been
-reporting cannot see it. That is the campaign's result, and it is three
-statements rather than one.
+reporting can barely see it — zero movement on two of the three accumulation
+rules, and two endings of 421 on the third, against a mechanism that changes
+which account is held for thousands of communities. That is the campaign's
+result, and it is three statements rather than one.
 
 Two other things happened first. **The subject of this campaign was falsified
 twice, by probes, before a line of its specification existed** — both times the
@@ -106,12 +108,20 @@ did. The largest gap anywhere was **4 events of 100**.
 **That cell is the re-derivation's doing and it is left standing rather than
 argued away.** As executed the table read 0 of 8; on the merged tree the
 eligible matrix is smaller and `recency` breaks — its identical-day count falls
-where the baseline's rises. So the honest statement is that the tie-break is
-implicated at exactly one cell, on the one alternative that could not ship as
-written: `recency` maximises hop count, which is unbounded around a seam cycle,
-and it is definable at all only because the probe restricted routes to simple
-paths. Of the rules that could ship, two pool exactly as the baseline does and
-the third pools with a four-event gap.
+where the baseline's rises.
+
+The thing worth knowing about that cell is which rules could ever have been
+adopted, and the answer is **one of the four**. `recency` maximises hop count,
+which is unbounded around a seam cycle, and is definable at all only because the
+probe restricted routes to simple paths; `frequency` and `frequency-weighted`
+need the whole multiset of tellings arriving at a holder, which a best-first
+relaxation throws away by construction. **`primacy` is the only alternative that
+is an argmin of a monotone key and could ship unchanged — and `primacy` pools
+exactly as the baseline does.** So the honest statement is narrower in scope and
+firmer in kind than the count: the single adoptable alternative does not break
+pooling, and the one cell that breaks sits on a rule that could not be adopted.
+(Among the other two unshippable rules, `frequency-weighted` pools exactly as
+the baseline does and `frequency` pools with a four-event gap.)
 
 **A structural fact stands behind that table and is stronger than it — and the
 re-derivation does not touch it.** The ratio's own denominator is the descent
@@ -472,9 +482,23 @@ interesting one.** As executed, the defect roughly *doubled* under the penalty �
 4 → 2 — and that differential was disclosed as a confound on every additive
 column of the readout, because part of an additive arm-to-arm difference was an
 increased defect rate rather than the mechanism. On the merged tree the two arms
-are identical and there is no differential to confound anything. The structural
-explanation below predicted exactly that, and the executed numbers had been
-evidence against it.
+are identical and there is no differential to confound anything. They are also
+identical *as sets* and not merely as counts: the defective `(holder, rule)`
+identities are emitted under both arms and diffed, and the symmetric difference
+is zero. Equal counts alone would have been consistent with two disjoint sets.
+
+**What that does and does not vindicate is worth separating, because the
+convenient reading is the wrong one.** The structural explanation below predicts
+that the defect is *additive-only* — and that half is genuinely strengthened,
+because the executed run **violated** it (quadrature ran 4 → 2, which a
+structurally additive-only defect does not permit) and the merged tree holds it
+exactly at 0 → 0. It does **not** predict *arm-invariance*: telescoping makes
+additive width hop-blind within a run of steps inside one people, while the
+crossing penalty reprices steps *between* peoples, changing which route wins and
+therefore which holders are scored at all. A count that moved would have been
+compatible with telescoping too. So the executed doubling was **unexplained by**
+the account rather than evidence against it, and the present equality is an
+observation the account is silent about.
 
 **The mechanism explains the whole distribution at once, and it is
 structural.** The

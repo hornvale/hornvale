@@ -185,9 +185,12 @@ question a re-expansion-policy one rather than a typo.
 measured under the contact arm this campaign shipped, where a seam crossing is
 free. Under the successor's contact-weighted crossing penalty the same
 enumeration finds **49 of 9,531 again** — additive 49 → 49, quadrature and
-multiplicative at exactly zero under both arms — so the penalty does not move
-this defect at all, which is what a hop-blindness that lives in the *additive*
-width formula predicts. Both figures are floors: a size cap drops 2 of 102
+multiplicative at exactly zero under both arms, and the same 49 cells by
+identity rather than merely the same count. So the penalty does not move this
+defect at all. (That is an observation, not a prediction confirmed: hop-blindness
+in the *additive* width formula explains why the defect is additive-only, and
+says nothing about whether repricing cross-people steps would move it.) Both
+figures are floors: a size cap drops 2 of 102
 foreign endings before any comparison, and they are the densest ones. (The
 successor first measured a doubling to 90 of 13,164; that was on a substrate a
 third campaign has since changed, and the re-derivation against the merged tree

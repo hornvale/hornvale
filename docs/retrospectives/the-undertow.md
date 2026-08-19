@@ -21,9 +21,9 @@ twice, and neither was a bug in anyone's code.
 **First, directed contact.** I recommended it to Nathan as "the falsification
 test of the predecessor's pooling result", reasoning that pooling followed from
 the undirected freeze. A substrate probe, run before any spec, said otherwise:
-divergence falls under *every* arm on *every* rule, and under the multiplicative
-rule the one-way arm collapses it further than the undirected edge. Pooling
-tracks seam volume, not symmetry. **The deeper half of the same probe was the
+divergence never *rises* under either arm on any rule, and under the
+multiplicative rule the one-way arm collapses it further than the undirected
+edge. Pooling tracks seam volume, not symmetry. **The deeper half of the same probe was the
 useful one**: ~55% of cross-people holders cross the seam more than once, so
 victim-versus-raider is a story about a single crossing and single crossings are
 the minority case. Freezing a hypothesis on that axis would have preregistered
@@ -293,6 +293,7 @@ and one keyed on the entity did not.
   and nobody reads cheapness as a defect. Deliberately **not** hand-repaired
   here — the chamber's `gate` phase rewrites the roster from a green full run, so
   `make sluice` fixes it at merge and a hand edit would only race that.
+
 ## The substrate moved under the campaign at its close, and a clean merge is what hid it
 
 The campaign was complete and merge-ready when the close found this. **The branch
