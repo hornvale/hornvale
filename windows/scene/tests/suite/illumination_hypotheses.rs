@@ -19,7 +19,7 @@
 //! "H3 CONFIRMED" in this campaign's reports with that qualifier attached;
 //! it is not restated at every occurrence.
 
-mod common;
+use crate::common;
 
 use hornvale_scene::{
     Micro, RELIEF_LEGEND, Resolution, SURROUNDS_SCHEMA, SurroundsCell, SurroundsObserver,
