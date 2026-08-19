@@ -163,6 +163,57 @@ pub fn rivers(
         .collect()
 }
 
+/// The genesis-time collection of every individuated feature, one ordered
+/// bucket per [`FeatureClass`].
+///
+/// **This ordering is the placement channel** — the same question
+/// `surrounds_ascii::box_rank` (`clients/game/core/src/chart.rs`) answers one
+/// rung down, for ASCII chart cells rather than world features. It is not
+/// one of decision 0142's three measurement axes: ordering a feature set is
+/// a claim about what fits on the page, not about the world. This campaign
+/// ships the ordering and deliberately ships no salience banding — the map
+/// campaign sets bands against a rendered picture rather than inventing a
+/// number here.
+///
+/// Within a class, features order by magnitude descending, ties broken by
+/// identity (`FeatureId::cell`) ascending — total, deterministic, and
+/// integer-only, so no `total_cmp` appears anywhere in this module.
+#[derive(Clone, Debug, Default)]
+pub struct FeatureIndex {
+    by_class: BTreeMap<FeatureClass, Vec<Feature>>,
+}
+
+impl FeatureIndex {
+    /// Assemble an index from per-class feature lists, sorting each into the
+    /// magnitude-descending, identity-ascending total order. Shared by the
+    /// genesis-time builder ([`crate::provider::GeneratedTerrain::new`]) and
+    /// this module's own tests.
+    pub(crate) fn from_parts(parts: Vec<(FeatureClass, Vec<Feature>)>) -> FeatureIndex {
+        let mut by_class = BTreeMap::new();
+        for (class, mut feats) in parts {
+            feats.sort_unstable_by_key(|f| (std::cmp::Reverse(f.magnitude), f.id.cell));
+            by_class.insert(class, feats);
+        }
+        FeatureIndex { by_class }
+    }
+
+    /// Every feature of one class, ordered magnitude descending, ties
+    /// broken by identity ascending. A class with no features (including
+    /// one this index never builds at all, such as `Volcano` here — see
+    /// this crate's `CLAUDE.md` on the layering that keeps it out) returns
+    /// an empty slice rather than panicking.
+    pub fn of(&self, class: FeatureClass) -> &[Feature] {
+        self.by_class.get(&class).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Every feature across every populated class, class by class in
+    /// ascending [`FeatureClass`] order, each class's own run already
+    /// ordered by [`Self::of`].
+    pub fn all(&self) -> impl Iterator<Item = &Feature> {
+        self.by_class.values().flat_map(|feats| feats.iter())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -457,5 +508,99 @@ mod tests {
             "a floor of 4 must exclude something, or this test cannot distinguish \
              exclusion from equality"
         );
+    }
+
+    /// Within a class, features order by magnitude descending, ties broken by
+    /// identity ascending. Total, deterministic, integer-only.
+    ///
+    /// The brief's own predicate (`c.0 % 7 < 4`) measures thin here (5
+    /// components, one a 360-cell blob, already flagged unusable for
+    /// exactly this reason earlier in this module — see
+    /// `a_features_identity_is_the_lowest_cell_of_its_extent`'s comment).
+    /// Reused instead: `c.0 % 11 < 3`, already measured non-degenerate above
+    /// (`components_are_ordered_by_their_lowest_cell_id`, 49 components,
+    /// sizes `[1, 1, 3, 1, 8, 13, 1, 9, 3, 2, 4, 7, ...]`, repeatedly rising
+    /// and falling). With floor 1 every component becomes a feature, so the
+    /// same 49-count, non-monotonic guarantee carries over unchanged —
+    /// confirmed below rather than assumed twice.
+    #[test]
+    fn features_order_by_magnitude_then_identity() {
+        let geo = Geosphere::new(3);
+        let feats = classify(&geo, FeatureClass::Landmass, |c| c.0 % 11 < 3, 1);
+        assert!(
+            feats.len() >= 30,
+            "predicate must yield many features, got {} (expected 49 on Geosphere::new(3))",
+            feats.len()
+        );
+        let sizes: Vec<u32> = feats.iter().map(|f| f.magnitude).collect();
+        let mut ascending = sizes.clone();
+        ascending.sort_unstable();
+        let mut descending = sizes.clone();
+        descending.sort_unstable_by(|a, b| b.cmp(a));
+        assert_ne!(
+            sizes, ascending,
+            "fixture sizes must not already be ascending in identity order, or this \
+             test cannot distinguish magnitude order from identity order"
+        );
+        assert_ne!(
+            sizes, descending,
+            "fixture sizes must not already be descending in identity order either, or \
+             the input order alone would already satisfy the assertion below"
+        );
+        let index = FeatureIndex::from_parts(vec![(FeatureClass::Landmass, feats)]);
+        for pair in index.of(FeatureClass::Landmass).windows(2) {
+            let (a, b) = (&pair[0], &pair[1]);
+            assert!(
+                a.magnitude > b.magnitude || (a.magnitude == b.magnitude && a.id.cell < b.id.cell),
+                "ordering is not total: {:?} before {:?}",
+                a.id,
+                b.id
+            );
+        }
+    }
+
+    /// The ordering does not depend on input order.
+    #[test]
+    fn ordering_is_independent_of_input_order() {
+        let geo = Geosphere::new(3);
+        let feats = classify(&geo, FeatureClass::Landmass, |c| c.0 % 11 < 3, 1);
+        assert!(
+            feats.len() >= 30,
+            "predicate must yield many features, got {} (expected 49 on Geosphere::new(3))",
+            feats.len()
+        );
+        let mut reversed = feats.clone();
+        reversed.reverse();
+        let a = FeatureIndex::from_parts(vec![(FeatureClass::Landmass, feats)]);
+        let b = FeatureIndex::from_parts(vec![(FeatureClass::Landmass, reversed)]);
+        let ids = |i: &FeatureIndex| -> Vec<FeatureId> {
+            i.of(FeatureClass::Landmass).iter().map(|f| f.id).collect()
+        };
+        assert_eq!(ids(&a), ids(&b));
+    }
+
+    /// A class with no features returns an empty slice, not a panic — the
+    /// shape `Volcano` will be in at the worldgen layer (Task 6) before this
+    /// crate ever populates it.
+    #[test]
+    fn of_an_absent_class_is_an_empty_slice() {
+        let index = FeatureIndex::from_parts(vec![(FeatureClass::Landmass, Vec::new())]);
+        assert!(index.of(FeatureClass::Volcano).is_empty());
+        assert!(index.of(FeatureClass::Landmass).is_empty());
+    }
+
+    /// `all()` yields every feature across every populated class.
+    #[test]
+    fn all_yields_every_feature_across_classes() {
+        let geo = Geosphere::new(3);
+        let land = classify(&geo, FeatureClass::Landmass, |c| c.0 % 6 < 2, 1);
+        let sea = classify(&geo, FeatureClass::Sea, |c| c.0 % 4 == 0, 1);
+        let land_count = land.len();
+        let sea_count = sea.len();
+        let index = FeatureIndex::from_parts(vec![
+            (FeatureClass::Landmass, land),
+            (FeatureClass::Sea, sea),
+        ]);
+        assert_eq!(index.all().count(), land_count + sea_count);
     }
 }

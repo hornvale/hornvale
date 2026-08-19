@@ -4,7 +4,9 @@ use crate::boundaries::CellBoundary;
 use crate::carve::Provenance;
 use crate::channel::{ChannelNetwork, Transverse};
 use crate::globe::{GenesisOutcome, TectonicGlobe};
+use crate::landscape::{self, Feature, FeatureClass, FeatureIndex};
 use crate::plates::dot;
+use crate::water::WaterKind;
 use hornvale_kernel::{CellId, Geosphere, ReferenceElevation, math};
 
 /// A queryable tectonic terrain provider. Owns its Geosphere so queries and
@@ -16,6 +18,7 @@ pub struct GeneratedTerrain {
     globe: TectonicGlobe,
     notes: Vec<String>,
     channels: ChannelNetwork,
+    features: FeatureIndex,
 }
 
 /// Winning-craton age above which crust counts as ancient enough to have
@@ -89,11 +92,78 @@ impl GeneratedTerrain {
             &geosphere,
             outcome.globe.channel_noise_seed(),
         );
+
+        // The Gazetteer, Task 5: the landscape feature index, also built
+        // once here rather than lazily (Task 1 measured the traversal at
+        // ~4.8 ms against a ~200 ms terrain build, 2.4%, under the 5%
+        // rule). NO Volcano class: `volcano_at` lives in `windows/worldgen`,
+        // which this crate may not depend on (`cli/tests/architecture.rs`),
+        // so a volcano can never enter an index built here — Task 6
+        // assembles the full set including volcanoes at the composition
+        // root.
+        //
+        // Membership predicates read `outcome.globe` directly rather than
+        // through `Self::water_kind_at`/`Self::elevation_at`: those accessors
+        // need `self`, which does not exist until the struct literal below,
+        // and `outcome.globe`'s `elevation`/`sea_level`/`water_kind` fields
+        // are already fully computed at genesis (see their doc comments in
+        // `globe.rs`) — nothing here forces a restructure. Landmass and Sea
+        // use `elevation`/`sea_level` and `water_kind == WaterKind::Ocean`
+        // respectively rather than `WaterKind` for land, for parity with
+        // `crate::landscape::rivers`'s own land test (`elevation >=
+        // sea_level`) and because it's exactly what `water::classify`'s
+        // `Ocean` arm computes (`elevation < sea_level`, top precedence) —
+        // so the two are equivalent, and this avoids a `classify()` call per
+        // cell.
+        let land = |c: CellId| *outcome.globe.elevation.get(c) >= outcome.globe.sea_level;
+        let total_land = geosphere.cells().filter(|&c| land(c)).count();
+        let total_ocean = geosphere
+            .cells()
+            .filter(|&c| *outcome.globe.water_kind.get(c) == WaterKind::Ocean)
+            .count();
+        // Floors: MEASURED (Task 1, controller-ruled) — see the doc comment
+        // on each class arm below. Landmass/Sea scale with this world's own
+        // land/ocean extent; SaltLake/River are fixed constants.
+        let landmass_floor = (0.005 * total_land as f64) as usize;
+        let sea_floor = (0.005 * total_ocean as f64) as usize;
+        let landmass: Vec<Feature> =
+            landscape::classify(&geosphere, FeatureClass::Landmass, land, landmass_floor);
+        let sea: Vec<Feature> = landscape::classify(
+            &geosphere,
+            FeatureClass::Sea,
+            |c| *outcome.globe.water_kind.get(c) == WaterKind::Ocean,
+            sea_floor,
+        );
+        // SaltLake floor is 1, not the spec's 20 (which yields zero here):
+        // `WaterKind::SaltBasin` is a classification (a terminal endorheic
+        // sink), not a threshold on a continuous field, so a 1-cell salt
+        // basin is a real feature rather than a quantization artifact.
+        let salt_lake: Vec<Feature> = landscape::classify(
+            &geosphere,
+            FeatureClass::SaltLake,
+            |c| *outcome.globe.water_kind.get(c) == WaterKind::SaltBasin,
+            1,
+        );
+        // River floor is the spec's own catchment tier, retained.
+        let river: Vec<Feature> = landscape::rivers(
+            &geosphere,
+            &outcome.globe.elevation,
+            outcome.globe.sea_level,
+            24,
+        );
+        let features = FeatureIndex::from_parts(vec![
+            (FeatureClass::Landmass, landmass),
+            (FeatureClass::Sea, sea),
+            (FeatureClass::SaltLake, salt_lake),
+            (FeatureClass::River, river),
+        ]);
+
         GeneratedTerrain {
             geosphere,
             globe: outcome.globe,
             notes: outcome.notes,
             channels,
+            features,
         }
     }
 
@@ -564,6 +634,16 @@ impl GeneratedTerrain {
     /// vertex implies. Built once at construction — see [`Self::new`].
     pub fn channels(&self) -> &ChannelNetwork {
         &self.channels
+    }
+
+    /// The genesis-time landscape feature index (The Gazetteer, spec §3):
+    /// individuated landmasses, seas, salt lakes, and rivers, ordered within
+    /// each class by magnitude descending then identity ascending. Built
+    /// once at construction — see [`Self::new`]. Carries no `Volcano`
+    /// features; `windows/worldgen` assembles those alongside this index's
+    /// four classes.
+    pub fn features(&self) -> &FeatureIndex {
+        &self.features
     }
 
     /// The transverse band at `position`, and the signed great-circle
