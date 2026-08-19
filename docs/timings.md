@@ -1609,3 +1609,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T01:49:24Z | gate-commit | 24.647 | 54.838 | 14.727 | 2.82 | 0 | adb29c61 | campaign/the-planes | MacBookPro | 10 |
 | 2026-08-19T13:50:34Z | gate-commit | 581.139 | 167.313 | 302.899 | 0.81 | 0 | 4910ced5 | campaign/the-planes | MacBookPro | 10 |
 | 2026-08-19T13:51:55Z | gate-commit | 23.260 | 50.883 | 12.453 | 2.72 | 0 | 4910ced5 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T14:02:41Z | prewarm | 241.724 | 1117.414 | 59.981 | 4.87 | 0 | ca6f3431 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:03:31Z | gate-commit | 253.379 | 166.401 | 25.406 | 0.76 | 0 | ca6f3431 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:04:58Z | gate-commit | 24.683 | 52.013 | 12.646 | 2.62 | 0 | 241fba55 | campaign/the-crucible | MacBookPro | 10 |
