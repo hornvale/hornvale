@@ -43,12 +43,39 @@ nonlocal_url='https://example.invalid/hornvale.git'
 # arguments and stdin shape git itself gives a pre-push hook.
 run_hook_status=0
 run_hook_stderr=''
+# HV_CENSUS_LOCK_HELD IS SCRUBBED, AND THIS IS LOAD-BEARING, NOT TIDINESS.
+# The hook treats a LIVE value in that variable as proof that we ARE the claim
+# holder (reason 1) and allows the push outright. This suite builds its own
+# claim state in $tmp and asserts on refusals, so an INHERITED live value turns
+# every one of those refusals into an allow — silently, and in the direction
+# that reports a guard as working when it is not being exercised at all.
+#
+# It was inherited in exactly one place, and that place is the one that
+# matters: `scripts/sluice-run.sh:477` does `export HV_CENSUS_LOCK_HELD=$$`,
+# so every phase the chamber runs sees the chamber's own live pid. Measured
+# 2026-08-19 by A/B against unmodified main: 0 failures in a bare shell, and
+# the same 3 failures under `HV_CENSUS_LOCK_HELD=<live pid>` — a defect that
+# predates this line and stayed invisible only because NOTHING ran this file
+# until it joined the `outboard` set.
+#
+# The cases that genuinely exercise reason 1 set the variable themselves, on
+# the call, where it is visible in the test rather than ambient.
 run_hook() {
     remote_name="$1"; remote_url="$2"
     local_ref="$3"; local_sha="$4"; remote_ref="$5"; remote_sha="$6"
     set +e
-    run_hook_stderr="$(printf '%s %s %s %s\n' "$local_ref" "$local_sha" "$remote_ref" "$remote_sha" \
-        | env -u GIT_DIR -u GIT_INDEX_FILE bash "$hook" "$remote_name" "$remote_url" 2>&1)"
+    # Scrub the ambient value, then re-add it ONLY from $hook_lock_held — an
+    # explicit opt-in a reader can see at the call site, rather than whatever
+    # the surrounding process happened to export.
+    if [ -n "${hook_lock_held:-}" ]; then
+        run_hook_stderr="$(printf '%s %s %s %s\n' "$local_ref" "$local_sha" "$remote_ref" "$remote_sha" \
+            | env -u GIT_DIR -u GIT_INDEX_FILE "HV_CENSUS_LOCK_HELD=$hook_lock_held" \
+              bash "$hook" "$remote_name" "$remote_url" 2>&1)"
+    else
+        run_hook_stderr="$(printf '%s %s %s %s\n' "$local_ref" "$local_sha" "$remote_ref" "$remote_sha" \
+            | env -u GIT_DIR -u GIT_INDEX_FILE -u HV_CENSUS_LOCK_HELD \
+              bash "$hook" "$remote_name" "$remote_url" 2>&1)"
+    fi
     run_hook_status=$?
     set -e
 }
@@ -244,12 +271,36 @@ echo "== chamber: THE CHAMBER'S OWN PUSH IS NOT BLOCKED (the wedge case)"
 # test refuses the queue itself and wedges every merge — strictly worse than
 # the problem being solved. Reason 1: the holder exports HV_CENSUS_LOCK_HELD
 # and children inherit it.
-HV_CENSUS_CLAIM_PATH="$claim" HV_CENSUS_LOCK_HELD="$foreign_pid" \
+HV_CENSUS_CLAIM_PATH="$claim" hook_lock_held="$foreign_pid" \
     run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
 if [ "$run_hook_status" -eq 0 ]; then
     ok "the holder's own push to main is allowed via HV_CENSUS_LOCK_HELD"
 else
     bad "the CHAMBER'S OWN push was refused — this would wedge every merge: $run_hook_stderr"
+fi
+
+echo "== chamber: HERMETICITY — an AMBIENT HV_CENSUS_LOCK_HELD must not decide the outcome"
+# THE DEFECT THIS PINS SHIPPED IN main AND HID FOR AS LONG AS THE FILE EXISTED.
+# The hook reads a live HV_CENSUS_LOCK_HELD as proof that we are the claim
+# holder and allows the push. This suite inherited that variable, so any
+# environment exporting a live one turned every refusal assertion into an
+# allow — reporting the guard as working while not exercising it at all.
+#
+# The environment that exports one is the chamber (`sluice-run.sh:477`,
+# `export HV_CENSUS_LOCK_HELD=$$`), which is where this file now runs. It was
+# invisible until then because NOTHING ran this file. A/B against unmodified
+# main, 2026-08-19: 0 failures bare, the same 3 failures with a live value.
+sleep 600 & ambient_pid=$!
+printf 'pid=%s\nhost=t\nuser=t\nstarted=t\ngoldens=t\nlabel=sluice-merge:campaign/amb\nref=deadbeef\ncmdline=t\n' \
+    "$ambient_pid" > "$claim"
+export HV_CENSUS_LOCK_HELD="$ambient_pid"
+HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
+unset HV_CENSUS_LOCK_HELD
+kill "$ambient_pid" 2>/dev/null || true; wait "$ambient_pid" 2>/dev/null || true
+if [ "$run_hook_status" -ne 0 ]; then
+    ok "an ambient live HV_CENSUS_LOCK_HELD does not leak into the hook — the refusal still fires"
+else
+    bad "the ambient value leaked: this suite reports PASS on assertions it is not exercising, and does so inside the chamber"
 fi
 
 echo "== chamber: REASON 2 — the ancestry walk allows the chamber with NO env var"
