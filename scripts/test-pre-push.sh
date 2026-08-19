@@ -111,8 +111,13 @@ else
 fi
 
 echo "== pre-push: an ordinary fast-forward is allowed"
-
-run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
+# ON A BRANCH, not main. This case pins the DESTRUCTIVE-class gate: an
+# additive push must not be swept up with deletes and force-pushes. It used
+# refs/heads/main until 2026-08-19, which was incidental — main is now gated
+# for an entirely different reason (decision 0139, the chamber cases below),
+# and leaving the ref as main would have made this assertion fail for a cause
+# it was never about, reading as a regression in the force-push guard.
+run_hook origin "$nonlocal_url" refs/heads/feat/ff "$A" refs/heads/feat/ff "$R"
 if [ "$run_hook_status" -eq 0 ]; then
     ok "a fast-forward (R is an ancestor of A) to a non-local remote is allowed"
 else
@@ -193,8 +198,12 @@ else
     bad "a real force push to a file:// bare repo was refused: $(cat "$tmp/push2.err")"
 fi
 
-printf '\n%d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+# NO SUMMARY HERE. It used to sit at this line, with 79 lines of chamber
+# tests after it — so their pass/fail counts were never printed and never
+# gated the exit status. Measured by injecting one `bad` into the branch-push
+# case: it printed "FAIL:" and the script still exited 0, under a summary
+# reading "12 passed, 0 failed". The summary now lives at the end of the file,
+# where it covers every assertion in it.
 
 echo "== chamber: a push to main while the box is CLAIMED by someone else is refused"
 # The failure this closes, measured 2026-08-18: a one-line prose commit pushed
@@ -243,13 +252,19 @@ else
     bad "the CHAMBER'S OWN push was refused — this would wedge every merge: $run_hook_stderr"
 fi
 
-echo "== chamber: a DEAD claim does not block anything"
+echo "== chamber: a DEAD claim is NOT a claim — and a push with no live claim is refused"
+# THIS EXPECTATION INVERTED (decision 0139, 2026-08-19). It used to assert
+# that a stale claim "does not block anything", which was right about staleness
+# and wrong about the push: a dead pid means no chamber is running, and a push
+# to main that is not the chamber's is exactly what 0139 forbids. Staleness
+# still must not WEDGE anything — that is what HV_PUSH_OK covers, asserted
+# below — but it can no longer excuse an out-of-band landing either.
 kill "$foreign_pid" 2>/dev/null || true; wait "$foreign_pid" 2>/dev/null || true
 HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
-if [ "$run_hook_status" -eq 0 ]; then
-    ok "a stale claim whose pid is gone does not refuse the push"
+if [ "$run_hook_status" -ne 0 ]; then
+    ok "a stale claim does not count as the chamber — the push is refused"
 else
-    bad "a dead claim still refuses — an abandoned run would block main forever"
+    bad "a push to main with NO live claim was ALLOWED — this is the ca6f34310 hole, still open"
 fi
 
 echo "== chamber: MUTATION — without the ancestry/inheritance escape the chamber blocks itself"
@@ -257,7 +272,7 @@ mut="$tmp/pre-push-mutant"
 # shellcheck disable=SC2016  # matching the hook's SOURCE TEXT, not evaluating it
 python3 "$repo_root/scripts/mutate.py" --to "$mut" "$hook" \
     'if [ -n "$mine" ] && kill -0 "$mine" 2>/dev/null; then inside=1; fi' \
-    'inside=0' 2>/dev/null || sed 's/if \[ -n "\$mine" \] && kill -0 "\$mine" 2>\/dev\/null; then inside=1; fi/inside=0/' "$hook" > "$mut"
+    'inside=0' >/dev/null
 sleep 600 & foreign2=$!
 printf 'pid=%s\nhost=t\nuser=t\nstarted=t\ngoldens=t\nlabel=t\nref=t\ncmdline=t\n' "$foreign2" > "$claim"
 set +e
@@ -273,3 +288,85 @@ else
     bad "the mutant also allowed the push — the wedge-case test above is not pinning the escape: $mut_out"
 fi
 
+
+echo "== chamber: NO CLAIM AT ALL — the out-of-band hole (decision 0139)"
+# ca6f34310 ("book: close The Adit") landed on origin/main with no queue row,
+# on an idle box. The old guard gated only "someone ELSE holds the claim", so
+# an idle box was a free pass. 0139 calls an out-of-band landing a DETECTED
+# fault; nothing detected it.
+rm -f "$claim"
+HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
+if [ "$run_hook_status" -ne 0 ]; then
+    ok "a push to main with no claim file is refused"
+else
+    bad "a push to main on an idle box was allowed — main can still move outside the queue"
+fi
+case "$run_hook_stderr" in
+    *"NOT THE MERGE QUEUE"*) ok "the refusal says which rule it enforces" ;;
+    *) bad "the refusal does not name the rule: $run_hook_stderr" ;;
+esac
+case "$run_hook_stderr" in
+    *0139*) ok "the refusal cites the decision, so it is checkable rather than merely asserted" ;;
+    *) bad "the refusal cites no decision" ;;
+esac
+case "$run_hook_stderr" in
+    *HV_PUSH_OK*) ok "the refusal names the hotfix escape, so it is satisfiable" ;;
+    *) bad "the refusal offers no escape — a guard nobody can satisfy is worked around" ;;
+esac
+
+echo "== chamber: a BRANCH push with no claim is still allowed"
+# The rule is about main. If this ever reddens, candidates cannot reach the
+# queue at all and the guard has eaten the workflow it protects.
+HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/feat/y "$A" refs/heads/feat/y "$R"
+if [ "$run_hook_status" -eq 0 ]; then
+    ok "a branch push on an idle box is allowed"
+else
+    bad "a branch push was refused with no claim held — the queue is unreachable: $run_hook_stderr"
+fi
+
+echo "== chamber: HV_PUSH_OK=1 still escapes the no-claim refusal (the hotfix route)"
+HV_PUSH_OK=1 HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
+if [ "$run_hook_status" -eq 0 ]; then
+    ok "HV_PUSH_OK=1 allows a hotfix push to main"
+else
+    bad "HV_PUSH_OK=1 did not escape — there is no hotfix route left: $run_hook_stderr"
+fi
+
+echo "== chamber: a LOCAL remote is still exempt (scratch repos need no opt-in)"
+# Every shell harness in scripts/ pushes main to a scratch bare repo. The hook
+# exits 0 for a local remote before any of this runs; if that ever changes,
+# test-sluice.sh and this file both break in a way that looks like a real red.
+HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$tmp/scratch-origin.git" refs/heads/main "$A" refs/heads/main "$R"
+if [ "$run_hook_status" -eq 0 ]; then
+    ok "a push to main on a local remote is allowed with no claim"
+else
+    bad "a local-remote push was refused — every scratch-repo harness in scripts/ now fails: $run_hook_stderr"
+fi
+
+echo "== chamber: MUTATION — without the no-claim branch, the out-of-band push returns"
+# Restore from a COPY, never `git checkout --`.
+mut2="$tmp/pre-push-mutant-noclaim"
+# shellcheck disable=SC2016  # matching the hook's SOURCE TEXT, not evaluating it
+python3 "$repo_root/scripts/mutate.py" --to "$mut2" "$hook" \
+    '            refused=1
+        fi
+    fi
+fi' \
+    '            refused=0
+        fi
+    fi
+fi' >/dev/null
+set +e
+mut2_out="$(printf 'refs/heads/main %s refs/heads/main %s\n' "$A" "$R" \
+    | HV_CENSUS_CLAIM_PATH="$claim" env -u GIT_DIR -u GIT_INDEX_FILE \
+      bash "$mut2" origin "$nonlocal_url" 2>&1)"
+mut2_rc=$?
+set -e
+if [ "$mut2_rc" -eq 0 ]; then
+    ok "MUTATION CONFIRMED: neutralising the no-claim branch's own refusal allows the push (the real hook refuses it)"
+else
+    bad "the mutant also refused — the no-claim test above may be passing for another reason: $mut2_out"
+fi
+
+printf '\n%d passed, %d failed\n' "$pass" "$fail"
+[ "$fail" -eq 0 ]
