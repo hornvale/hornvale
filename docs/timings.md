@@ -1646,3 +1646,14 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T13:53:11Z | sluice:clients | 255.835 | 456.697 | 35.321 | 1.92 | 0 | 4337b206d |  | lefford | 40 |
 | 2026-08-19T14:26:36Z | sluice:heavy | 2004.911 | 32921.038 | 705.474 | 16.77 | 0 | e03935864 |  | lefford | 40 |
 | 2026-08-19T16:05:57Z | rebaseline | 92.854 | 238.191 | 12.258 | 2.70 | 0 | c8e95860 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:11:06Z | gate-commit | 296.308 | 572.632 | 189.243 | 2.57 | 0 | c8e95860 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:31:33Z | remeasure:undertow_readout | 122.817 | 115.879 | 5.909 | 0.99 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:32:13Z | remeasure:probe_crossing_scale | 39.460 | 37.526 | 1.156 | 0.98 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:36:14Z | remeasure:probe_seam_direction | 240.812 | 253.854 | 14.907 | 1.12 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:37:11Z | remeasure:probe_tiebreak_rules | 56.746 | 53.860 | 2.312 | 0.99 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:38:45Z | remeasure:probe_argmin_defect_crossing_arms | 94.537 | 91.129 | 2.527 | 0.99 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:40:26Z | remeasure:parley_readout | 100.871 | 95.406 | 5.115 | 1.00 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:42:43Z | gate-commit | 41.818 | 63.044 | 17.841 | 1.93 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:01:31Z | gate-commit | 35.799 | 56.143 | 16.266 | 2.02 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:01:31Z | gate-commit | 35.873 | 56.176 | 16.294 | 2.02 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:02:23Z | rebaseline | 39.277 | 233.724 | 12.650 | 6.27 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
