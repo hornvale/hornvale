@@ -27,7 +27,7 @@
 //! independent process start-ups, normal wall-clock variance between the two
 //! runs, and (in the second run only) every `println!` call.
 
-use hornvale_kernel::{CellId, Geosphere, Seed};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed};
 use hornvale_terrain::water::WaterKind;
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -191,4 +191,99 @@ fn main() {
         .filter(|&&s| s as f64 >= 0.005 * shipped_total_land as f64)
         .count();
     println!("continent-count rule over the shipped fn's sizes: {continent_count_from_shipped}");
+
+    // Coordinator follow-up (Task 4 measurement-only probe): the ocean dual
+    // of rivers(). On land, cells flow downhill to a terminal (sea mouth or
+    // inland sink), partitioning land into catchments. Here the same
+    // traversal runs on OCEAN cells, flowing downhill to an abyssal minimum,
+    // to see whether that partitions the single connected World Ocean into
+    // basins that look like real seas or into one basin plus debris.
+    //
+    // Membership: `elevation < sea_level`, the same test rivers()/
+    // downhill_targets() use for "not land" — and exactly what
+    // `water::classify` uses for `WaterKind::Ocean` (Ocean has top
+    // precedence and its whole rule IS `elevation < sea_level`, see
+    // `domains/terrain/src/water.rs::classify`), so this is equivalent to
+    // `terrain.water_kind_at(c) == WaterKind::Ocean` without paying for a
+    // classify() call per cell. `downhill_targets` itself skips ocean cells
+    // outright (it is written for land drainage), so the ocean-side walk is
+    // reimplemented locally below rather than reused.
+    println!();
+    println!("=== Task 4 follow-up: ocean basins, the dual of rivers() ===");
+
+    fn ocean_downhill_targets(
+        geo: &Geosphere,
+        elevation: &CellMap<ReferenceElevation>,
+        sea_level: ReferenceElevation,
+    ) -> Vec<Option<CellId>> {
+        let n = geo.cell_count();
+        let is_ocean = |c: CellId| *elevation.get(c) < sea_level;
+        let mut downhill: Vec<Option<CellId>> = vec![None; n];
+        for c in geo.cells() {
+            if !is_ocean(c) {
+                continue;
+            }
+            let here = *elevation.get(c);
+            let mut best: Option<CellId> = None;
+            let mut best_e = here;
+            for &nb in geo.neighbors(c) {
+                let e = *elevation.get(nb);
+                if e < best_e {
+                    best_e = e;
+                    best = Some(nb);
+                }
+            }
+            downhill[c.0 as usize] = best;
+        }
+        downhill
+    }
+
+    let is_ocean = |c: CellId| *globe.elevation.get(c) < globe.sea_level;
+    let ocean_downhill = ocean_downhill_targets(&geo, &globe.elevation, globe.sea_level);
+    let mut ocean_basin: BTreeMap<CellId, usize> = BTreeMap::new();
+    for c in geo.cells() {
+        if !is_ocean(c) {
+            continue;
+        }
+        let mut at = c;
+        // Bounded by cell_count, same belt-and-braces as the land walk: the
+        // flow forest is acyclic by construction (every hop strictly
+        // decreases elevation).
+        for _ in 0..geo.cell_count() {
+            match ocean_downhill[at.0 as usize] {
+                Some(next) => at = next,
+                None => break,
+            }
+        }
+        *ocean_basin.entry(at).or_default() += 1;
+    }
+    let ocean_cell_count: usize = ocean_basin.values().sum();
+    let mut ocean_sizes: Vec<usize> = ocean_basin.values().copied().collect();
+    println!("ocean cells: {ocean_cell_count}");
+    report(
+        "ocean basin (by downhill terminal)",
+        &mut ocean_sizes,
+        &[1, 20, 100, 500],
+    );
+    let half_percent = 0.005 * ocean_cell_count as f64;
+    let count_half_percent = ocean_sizes
+        .iter()
+        .filter(|&&s| s as f64 >= half_percent)
+        .count();
+    println!("  floor 0.5%-of-ocean ({half_percent:.2} cells): {count_half_percent}");
+
+    // Sanity read: does the top of the distribution look like a few real
+    // basins, or like one dominant basin plus single-cell/near-single-cell
+    // debris? Report single-cell share directly rather than making the
+    // reader infer it from the sorted list.
+    let single_cell_basins = ocean_sizes.iter().filter(|&&s| s == 1).count();
+    let single_cell_share = single_cell_basins as f64 / ocean_sizes.len().max(1) as f64;
+    println!(
+        "  single-cell basins: {single_cell_basins} / {} ({:.1}% of all basins)",
+        ocean_sizes.len(),
+        single_cell_share * 100.0
+    );
+    let largest = ocean_sizes.first().copied().unwrap_or(0);
+    let largest_share = largest as f64 / ocean_cell_count.max(1) as f64 * 100.0;
+    println!("  largest basin: {largest} cells ({largest_share:.2}% of all ocean cells)");
 }
