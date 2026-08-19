@@ -22,6 +22,7 @@ hornvale-religion = { path = "../../domains/religion" }
 hornvale-paleoclimate = { path = "../../domains/paleoclimate" }
 hornvale-topology = { path = "../../domains/topology" }
 hornvale-almanac = { path = "../../windows/almanac" }
+hornvale-explain = { path = "../../windows/explain" }
 
 [dev-dependencies]
 serde_json = { workspace = true }

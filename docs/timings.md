@@ -1542,6 +1542,45 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T21:18:09Z | sluice:seam-guard | 1072.291 | 21142.952 | 1104.774 | 20.75 | 0 | 1ddef5087 |  | lefford | 40 |
 | 2026-08-18T21:22:18Z | sluice:clients | 249.609 | 445.282 | 33.529 | 1.92 | 0 | 2289bf021 |  | lefford | 40 |
 | 2026-08-18T21:55:49Z | sluice:heavy | 2010.228 | 32681.298 | 682.128 | 16.60 | 0 | 4ed029135 |  | lefford | 40 |
+| 2026-08-18T22:55:25Z | prewarm | 75.116 | 354.051 | 73.199 | 5.69 | 0 | 7e786b18 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:11:07Z | gate-commit | 541.450 | 134.433 | 219.381 | 0.65 | 0 | 7e786b18 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:12:31Z | gate-commit | 24.029 | 54.167 | 14.684 | 2.87 | 0 | 7e786b18 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:18:32Z | gate-commit | 24.789 | 55.429 | 15.074 | 2.84 | 0 | 0ff93088 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:19:39Z | gate-commit | 23.539 | 54.317 | 14.792 | 2.94 | 0 | 0ff93088 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:24:43Z | gate-commit | 7.292 | 6.240 | 9.038 | 2.10 | 0 | 7493115f | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:37:23Z | gate-commit | 744.793 | 879.928 | 468.806 | 1.81 | 0 | 7493115f | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-18T23:38:15Z | gate-commit | 25.877 | 55.232 | 15.162 | 2.72 | 0 | 7493115f | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:02:32Z | gate-commit | 714.167 | 244.119 | 641.723 | 1.24 | 0 | 5ee8cfe5 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:03:46Z | gate-commit | 64.027 | 58.412 | 15.707 | 1.16 | 0 | 5ee8cfe5 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:16:57Z | gate-commit | 210.871 | 117.445 | 396.849 | 2.44 | 0 | add28593 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:20:26Z | gate-commit | 140.263 | 92.445 | 317.034 | 2.92 | 0 | add28593 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:32:19Z | gate-commit | 692.191 | 194.368 | 327.103 | 0.75 | 0 | add28593 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:34:09Z | gate-commit | 74.204 | 55.923 | 15.202 | 0.96 | 0 | add28593 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:52:43Z | gate-commit | 279.699 | 84.092 | 328.995 | 1.48 | 0 | dc794631 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T00:57:15Z | gate-commit | 249.019 | 87.674 | 323.923 | 1.65 | 0 | dc794631 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T01:12:04Z | gate-commit | 876.166 | 172.745 | 329.389 | 0.57 | 0 | dc794631 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T01:13:17Z | gate-commit | 54.488 | 56.033 | 15.175 | 1.31 | 0 | dc794631 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T01:48:12Z | gate-commit | 525.908 | 56.154 | 15.402 | 0.14 | 0 | e95ff43a | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T01:48:12Z | gate-commit | 192.650 | 56.251 | 15.427 | 0.37 | 0 | e95ff43a | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T11:53:06Z | gate-commit | 765.962 | 828.982 | 477.658 | 1.71 | 0 | 564e07fa | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T11:53:55Z | gate-commit | 23.925 | 54.689 | 14.711 | 2.90 | 0 | 564e07fa | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:08:23Z | gate-commit | 69.710 | 54.922 | 159.217 | 3.07 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:10:57Z | gate-commit | 112.791 | 86.836 | 253.404 | 3.02 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:20:16Z | gate-commit | 542.798 | 395.293 | 296.787 | 1.28 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:21:14Z | gate-commit | 23.990 | 53.877 | 14.471 | 2.85 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:53:26Z | gate-commit | 293.245 | 54.803 | 15.432 | 0.24 | 0 | faa64ddc | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:54:11Z | gate-commit | 24.978 | 54.853 | 15.121 | 2.80 | 0 | faa64ddc | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:59:07Z | gate-commit | 24.921 | 54.570 | 15.113 | 2.80 | 0 | ed8aaa7c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T13:00:05Z | gate-commit | 26.023 | 54.719 | 15.240 | 2.69 | 0 | ed8aaa7c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T13:38:16Z | rebaseline | 30.586 | 78.142 | 5.491 | 2.73 | 0 | 1331e0c3 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T13:40:14Z | rebaseline | 112.685 | 256.881 | 27.675 | 2.53 | 0 | 1331e0c3 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T14:02:32Z | gate-commit | 410.072 | 517.491 | 361.161 | 2.14 | 0 | 1331e0c3 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T14:04:10Z | gate-commit | 25.222 | 55.398 | 15.400 | 2.81 | 0 | 1331e0c3 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T14:45:53Z | gate-commit | 475.894 | 503.917 | 144.496 | 1.36 | 0 | 64ff6cbb | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T14:48:11Z | gate-commit | 37.931 | 61.175 | 15.866 | 2.03 | 0 | 64ff6cbb | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T15:08:07Z | gate-commit | 37.732 | 55.139 | 15.053 | 1.86 | 0 | 8f5e3031 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T16:04:18Z | gate-commit | 771.902 | 201.548 | 453.289 | 0.85 | 0 | b881b94f | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T16:06:56Z | gate-commit | 33.527 | 57.803 | 16.954 | 2.23 | 0 | b881b94f | campaign/the-gazetteer | MacBookPro | 10 |
 | 2026-08-18T22:05:24Z | sluice:artifacts | 83.439 | 719.609 | 26.737 | 8.94 | 0 | 9e106c731 |  | lefford | 40 |
 | 2026-08-18T22:05:58Z | sluice:outboard | 33.994 | 21.608 | 33.821 | 1.63 | 0 | 9a7eaa372 |  | lefford | 40 |
 | 2026-08-18T22:11:56Z | sluice:gate | 357.555 | 9842.959 | 353.289 | 28.52 | 0 | 15628c4dd |  | lefford | 40 |
@@ -1622,3 +1661,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T16:52:24Z | sluice:seam-guard | 1064.683 | 21126.571 | 1100.189 | 20.88 | 0 | 10c9d6736 |  | lefford | 40 |
 | 2026-08-19T16:56:56Z | sluice:clients | 271.736 | 479.999 | 33.366 | 1.89 | 0 | bb692f678 |  | lefford | 40 |
 | 2026-08-19T17:31:07Z | sluice:heavy | 2051.130 | 32959.710 | 697.260 | 16.41 | 0 | d2d20ad13 |  | lefford | 40 |
+| 2026-08-19T16:51:41Z | gate-commit | 60.777 | 52.547 | 118.257 | 2.81 | 0 | d26f5681 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T16:52:01Z | gate-commit | 11.383 | 10.660 | 0.293 | 0.96 | 0 | d26f5681 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T16:53:08Z | rebaseline | 52.425 | 230.604 | 11.578 | 4.62 | 0 | d26f5681 | campaign/the-gazetteer | MacBookPro | 10 |

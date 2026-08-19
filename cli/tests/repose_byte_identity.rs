@@ -187,15 +187,24 @@ fn seed_42_world_json_is_unmoved_by_the_repose() {
 }
 
 /// The vocabulary a geohazard would arrive under, if one ever reached a
-/// rendered artifact. All three are absent from every rendered surface today,
-/// which is what "C0 commits nothing and renders nothing" means in bytes.
+/// rendered artifact — hazard-*consequence* words: an eruption event, the
+/// knownness stock a character's exposure to one would build. This is what
+/// "C0 commits nothing and renders nothing" means in bytes, for the halves of
+/// The Repose no later campaign has surfaced.
 ///
-/// Chosen because each is *absent at zero occurrences* right now, so the check
-/// has no baseline to drift against. Deliberately NOT `recurrence`, `landform`
-/// or `seismic`: the first two already occur in shipped prose
-/// (`book/src/domesday/terrain.md`, the census schema), so a guard on them
-/// would be satisfied by text this campaign did not write.
-const GEOHAZARD_VOCABULARY: [&str; 3] = ["eruption", "knownness", "volcano"];
+/// **`"volcano"` moved out here (The Gazetteer, 2026-08-18), exactly the
+/// remedy this test's own failure message names**: the Gazetteer campaign
+/// ships volcanoes as a fifth individuated feature *class* with names
+/// (`book/src/gallery/gazetteer-seed-42.md`), a toponymy surface, not a
+/// hazard-consequence one — no eruption event, no knownness stock, no
+/// walk-scale perception reaches any rendered artifact through it, only a
+/// class label and a people's word for a place. `"eruption"` and
+/// `"knownness"` remain absent at zero occurrences, so the check still has no
+/// baseline to drift against for the half that IS still unshipped. Chosen
+/// over `recurrence`, `landform` or `seismic`: the first two already occur in
+/// shipped prose (`book/src/domesday/terrain.md`, the census schema), so a
+/// guard on them would be satisfied by text neither campaign wrote.
+const GEOHAZARD_VOCABULARY: [&str; 2] = ["eruption", "knownness"];
 
 /// The rendered-world artifact trees, from `docs/generated-paths.txt`, minus
 /// the two entries that are reports about the *source* rather than renderings

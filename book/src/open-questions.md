@@ -2281,6 +2281,23 @@ its honest size.
    a single-world reading would have recorded the opposite. Neither movement
    touches the taste half, which is unchanged.
 
+   **[The Gazetteer](./chronicle/the-gazetteer.md) (2026-08-19) adds a second
+   self-scorable reading, from a different naming surface and a different
+   mechanism.** Landscape features are named per culture on the same
+   species-salted draw as settlements, and the aggregate cross-people
+   measurement — 42,525 of 42,525 pairs diverge — is a tautology rather than
+   evidence: `species` is a leg in `Namer::name`'s own derive path, so it
+   cannot read otherwise. The informative number was one nobody
+   preregistered: within-people collision, over 405 features × 15 peoples.
+   Pooled it is 9.15%, but individual peoples split from 0.0000 (gnoll,
+   high-elf, wood-elf — every feature distinct) to 0.6247 (kobold — one name,
+   `Rara`, covers fifteen places, seven of them volcanoes). Decision 0024
+   already rules this outside "defect", so nothing was tuned to close it; the
+   reading it adds to this bet is that "inherited vs. issued" is not a single
+   property of a world's naming layer, but one that varies *by people* on the
+   same mechanism — three peoples here already read as inherited, one reads
+   as issued.
+
 2. **Emergent economics that don't degenerate.** The mermaid-bone-farm
    problem: static value tables meeting exploitable production collapse into
    absurdity, and most game economies are faked precisely because real ones

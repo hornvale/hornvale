@@ -29,7 +29,10 @@ usage:
   hornvale scout [sky flags] [--from-seed N] [--limit K] [--max-scan M]
                                             scan seeds for ones satisfying the pins
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
-  hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
+  hornvale gazetteer [--world <PATH>] [--cap N]
+                                            render the named landscape (default cap: 10 per class)
+  hornvale explain --world <PATH> sky|gazetteer
+                                            narrate the sky's derivation, or the landscape's naming
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
                                             [--lens off|lantern]
@@ -160,6 +163,7 @@ fn main() -> ExitCode {
         Some("new") => cmd_new(&args),
         Some("scout") => cmd_scout(&args),
         Some("almanac") => cmd_almanac(&args),
+        Some("gazetteer") => cmd_gazetteer(&args),
         Some("explain") => cmd_explain(&args),
         Some("repl") => cmd_repl(&args),
         Some("possess") => cmd_possess(&args),
@@ -369,6 +373,31 @@ fn cmd_almanac(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// The Gazetteer campaign's own artifact: every named landscape feature,
+/// capped and ordered per class, every one of the world's peoples' names
+/// shown for each shown feature (spec §3.4). Deliberately never folded into
+/// `cmd_almanac`'s output — see `hornvale_almanac::gazetteer`'s module docs
+/// for why the three committed `almanac-seed-42*.md` pages must stay
+/// byte-unmoved by this campaign.
+///
+/// `--cap N` (default 10): the per-class ceiling. Printed on the page
+/// itself rather than left to a silent truncation — every name of every one
+/// of seed 42's 405 features across its 15 peoples is 6,075 names, not a
+/// document a person would read.
+fn cmd_gazetteer(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let cap: usize = match flag_value(args, "--cap") {
+        Some(s) => s.parse().map_err(|_| format!("bad --cap: {s}"))?,
+        None => 10,
+    };
+    let entries = world_builder::gazetteer_class_entries(&world, cap).map_err(|e| e.to_string())?;
+    print!(
+        "{}",
+        hornvale_almanac::gazetteer::render(world.seed.0, cap, &entries)
+    );
+    Ok(())
+}
+
 /// Read one site's deep history off the world's ledger: its stratigraphy of
 /// occupation layers plus the derived flesh in the present-day grass.
 fn cmd_history(args: &[String]) -> Result<(), String> {
@@ -435,14 +464,22 @@ fn positional_target(args: &[String]) -> Option<&str> {
 }
 
 fn cmd_explain(args: &[String]) -> Result<(), String> {
-    // Only "sky" is supported this campaign; default to it when omitted.
+    // "sky" (the default) and "gazetteer" are supported this campaign.
     let target = positional_target(args).unwrap_or("sky");
-    if target != "sky" {
+    if target != "sky" && target != "gazetteer" {
         return Err(format!(
-            "explain: unknown target '{target}' (only 'sky' is supported)"
+            "explain: unknown target '{target}' (only 'sky' and 'gazetteer' are supported)"
         ));
     }
     let world = load_world(args)?;
+    if target == "gazetteer" {
+        let summaries =
+            world_builder::gazetteer_class_summaries(&world).map_err(|e| e.to_string())?;
+        let out = hornvale_explain::explain_gazetteer(&summaries)
+            .ok_or("this world has no individuated landscape features to explain")?;
+        print!("{out}");
+        return Ok(());
+    }
     let vocab = hornvale_worldgen::common_vocabulary(&world.registry);
     let out = hornvale_explain::explain_sky(&world, &vocab)
         .ok_or("this world has no generated sky to explain")?;
