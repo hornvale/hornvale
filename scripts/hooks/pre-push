@@ -24,12 +24,23 @@
 # path). Pushes to scratch bare repos stay unrestricted by design, so tests
 # need no opt-in — see scripts/test-pre-push.sh.
 #
-# WHAT IS DELIBERATELY NOT GATED, AND WHY. An ordinary fast-forward push,
-# including to `main`. Nathan's normal workflow is to commit and push
-# directly to `main` with no PR, and gating that would add friction to the
-# common case to prevent a failure that has never occurred. The incident was
-# a FORCE push; deletes and non-fast-forwards are the destructive,
-# hard-to-recover class, and fast-forwards are additive.
+# WHAT IS DELIBERATELY NOT GATED, AND WHY. An ordinary fast-forward push to a
+# BRANCH. That is how a candidate reaches the queue, and gating it would make
+# this guard prevent the very thing it protects.
+#
+# THIS PARAGRAPH USED TO EXEMPT `main` TOO, and that exemption is now gone —
+# recorded rather than quietly deleted, because the reasoning was sound when
+# written and it is the change most likely to surprise a reader who knows the
+# old shape. It read: "Nathan's normal workflow is to commit and push directly
+# to `main` with no PR, and gating that would add friction to the common case
+# to prevent a failure that has never occurred." Two things falsified it.
+# Decision 0139 (2026-08-16) made the merge queue the only route by which main
+# advances, so a direct push is no longer the common case but the exceptional
+# one. And the failure has now occurred twice: once as a push that killed a
+# green candidate mid-merge (2026-08-18), and once as ca6f34310 landing on
+# main with no queue row at all (2026-08-19). A comment that survives the
+# policy it justified is worse than no comment: it tells the next reader the
+# guard below should not exist.
 #
 # FAILING CLOSED ON UNVERIFIABLE ANCESTRY IS DELIBERATE, not an accident of
 # an unhandled `git merge-base` error. If the objects needed to decide
@@ -160,6 +171,34 @@ done
 # No HV_PUSH_OK or local-remote test here: the hook already exited outright for
 # both, above, before the loop. Repeating them would read as though those cases
 # could reach this point.
+#
+# THE NO-CLAIM CASE IS ALSO A REFUSAL (decision 0139, added 2026-08-19). The
+# block below originally gated only "someone ELSE holds the claim", which
+# protects a running candidate from being killed but says nothing about a
+# push when the box is idle. That is the larger hole, and it was used:
+# ca6f34310 ("book: close The Adit") landed on origin/main with no queue row
+# at all, while the box was free.
+#
+# 0139 is not a preference, it is ratified: "every commit on origin/main is
+# the tip of a tree that was gated as itself, by a serial merge queue,
+# immediately before it was pushed", and "a commit landing on main outside
+# the queue is a DETECTED fault, not a silent weakening of the guarantee."
+# Nothing detected it. This is that detector.
+#
+# WHY NOT A HOSTNAME TEST. The obvious form — "refuse unless we are on
+# lefford" — does not discriminate: the chamber runs on lefford and so does a
+# human pushing by hand from lefford, so it would have allowed the very push
+# that prompted it, while blocking a legitimate hotfix from the Mac.
+# "Which box" is a proxy; "is this the chamber" is the question. Holding a
+# live claim answers it directly, and answers the host question for free,
+# because the claim only ever exists on the canonical box.
+#
+# WHY NOT pre-commit, WHICH IS WHERE THIS WAS FIRST PROPOSED. Verified: a
+# fast-forward merge (how main actually advances locally) creates no commit
+# and fires NO hook at all; a true merge commit fires `pre-merge-commit`,
+# never `pre-commit`. A pre-commit guard would look like protection and never
+# run once on the path it meant to close. The push is the only choke point
+# that every route to origin/main passes through.
 if [ "$refused" -eq 0 ]; then
     claim_path="${HV_CENSUS_CLAIM_PATH:-/tmp/hv-census.claim}"
     pushing_main=0
@@ -167,43 +206,70 @@ if [ "$refused" -eq 0 ]; then
         [ "$r" = "refs/heads/main" ] && pushing_main=1
     done
 
-    if [ "$pushing_main" = "1" ] && [ -f "$claim_path" ]; then
-        claim_pid="$(sed -n 's/^pid=\([0-9][0-9]*\)$/\1/p' "$claim_path" | head -1)"
-        if [ -n "$claim_pid" ] && kill -0 "$claim_pid" 2>/dev/null; then
-            # Reason 1: we are a descendant of the holder by inheritance.
-            mine="${HV_CENSUS_LOCK_HELD:-}"
-            inside=0
-            if [ -n "$mine" ] && kill -0 "$mine" 2>/dev/null; then inside=1; fi
-            # Reason 2: the holder is genuinely one of our ancestors. Walk the
-            # ppid chain rather than trusting the environment alone.
-            if [ "$inside" = "0" ]; then
-                p=$$
-                while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null; do
-                    if [ "$p" = "$claim_pid" ]; then inside=1; break; fi
-                    p="$(awk '/^PPid:/{print $2}' "/proc/$p/status" 2>/dev/null)"
-                    [ -n "$p" ] || break
-                done
+    if [ "$pushing_main" = "1" ]; then
+        # A claim whose pid is dead is NOT a claim. Collapsing "stale file"
+        # into "no claim" here keeps one notion of held-ness for both branches
+        # below, so a stale file can neither wedge a push nor excuse one.
+        claim_pid=""
+        inside=0
+        if [ -f "$claim_path" ]; then
+            claim_pid="$(sed -n 's/^pid=\([0-9][0-9]*\)$/\1/p' "$claim_path" | head -1)"
+            if [ -n "$claim_pid" ] && kill -0 "$claim_pid" 2>/dev/null; then
+                # Reason 1: we are a descendant of the holder by inheritance.
+                mine="${HV_CENSUS_LOCK_HELD:-}"
+                if [ -n "$mine" ] && kill -0 "$mine" 2>/dev/null; then inside=1; fi
+                # Reason 2: the holder is genuinely one of our ancestors. Walk
+                # the ppid chain rather than trusting the environment alone.
+                if [ "$inside" = "0" ]; then
+                    p=$$
+                    while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null; do
+                        if [ "$p" = "$claim_pid" ]; then inside=1; break; fi
+                        p="$(awk '/^PPid:/{print $2}' "/proc/$p/status" 2>/dev/null)"
+                        [ -n "$p" ] || break
+                    done
+                fi
+            else
+                claim_pid=""
             fi
-            if [ "$inside" = "0" ]; then
-                echo "pre-push: refusing to push main — THE CHAMBER IS HOLDING THE BOX (pid $claim_pid)." >&2
-                sed -n 's/^label=/pre-push:   running: /p; s/^ref=/pre-push:   ref: /p' "$claim_path" >&2
-                echo "pre-push:" >&2
-                echo "pre-push: a direct push now moves main under that run. It has already spent" >&2
-                echo "pre-push: minutes-to-an-hour of the one serial box, and its push will be" >&2
-                echo "pre-push: refused as a non-fast-forward when it finishes — all of it wasted." >&2
-                echo "pre-push:" >&2
-                echo "pre-push: wait for it (make sluice-status), or route this through the queue:" >&2
-                echo "pre-push:   make gate-commit && git push origin HEAD:refs/heads/<branch>" >&2
-                echo "pre-push:   make sluice BRANCH=<branch> REF=\$(git rev-parse HEAD)" >&2
-                echo "pre-push: a prose-only candidate costs about 7 minutes there, not 60." >&2
-                echo "pre-push:" >&2
-                echo "pre-push: if this is a HOTFIX that cannot wait, set HV_PUSH_OK=1 and retry." >&2
-                refused=1
-            fi
+        fi
+
+        if [ "$inside" = "1" ]; then
+            : # The chamber's own push. This is the ONLY allowed route.
+        elif [ -n "$claim_pid" ]; then
+            echo "pre-push: refusing to push main — THE CHAMBER IS HOLDING THE BOX (pid $claim_pid)." >&2
+            sed -n 's/^label=/pre-push:   running: /p; s/^ref=/pre-push:   ref: /p' "$claim_path" >&2
+            echo "pre-push:" >&2
+            echo "pre-push: a direct push now moves main under that run. It has already spent" >&2
+            echo "pre-push: minutes-to-an-hour of the one serial box, and its push will be" >&2
+            echo "pre-push: refused as a non-fast-forward when it finishes — all of it wasted." >&2
+            echo "pre-push:" >&2
+            echo "pre-push: wait for it (make sluice-status), or route this through the queue:" >&2
+            echo "pre-push:   make gate-commit && git push origin HEAD:refs/heads/<branch>" >&2
+            echo "pre-push:   make sluice BRANCH=<branch> REF=\$(git rev-parse HEAD)" >&2
+            echo "pre-push: a prose-only candidate costs about 7 minutes there, not 60." >&2
+            echo "pre-push:" >&2
+            echo "pre-push: if this is a HOTFIX that cannot wait, set HV_PUSH_OK=1 and retry." >&2
+            refused=1
+        else
+            echo "pre-push: refusing to push main — THIS PUSH IS NOT THE MERGE QUEUE (decision 0139)." >&2
+            echo "pre-push:" >&2
+            echo "pre-push: main advances only through the lock: the chamber builds the merge" >&2
+            echo "pre-push: commit, gates THAT object, and pushes it unchanged while holding the" >&2
+            echo "pre-push: box's claim. No live claim is held here, so this push is not the" >&2
+            echo "pre-push: chamber's, and a commit landing on main outside the queue is a" >&2
+            echo "pre-push: detected fault under 0139 — not a silent weakening of the guarantee." >&2
+            echo "pre-push:" >&2
+            echo "pre-push: route it through the queue instead:" >&2
+            echo "pre-push:   make gate-commit && git push origin HEAD:refs/heads/<branch>" >&2
+            echo "pre-push:   make sluice BRANCH=<branch> REF=\$(git rev-parse HEAD)" >&2
+            echo "pre-push: a prose-only candidate costs about 7 minutes there, not 60, which is" >&2
+            echo "pre-push: what makes this rule reasonable rather than ceremonial." >&2
+            echo "pre-push:" >&2
+            echo "pre-push: if this is a HOTFIX that cannot wait, set HV_PUSH_OK=1 and retry." >&2
+            refused=1
         fi
     fi
 fi
-
 if [ "$refused" -eq 1 ]; then
     exit 1
 fi
