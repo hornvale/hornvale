@@ -165,20 +165,32 @@ Each leaf independently selects a content generator:
 
 ### 4.4 Water table as a carving input, not just a description
 
-A leaf's cells below the chamber's water-table depth (already computed by
-The Underworld, §3.5) are carved as flooded — a distinct cell state
-(walkable-but-wet or blocked-without-swimming, an implementation-time call)
-rather than pruned to a dead end. This reuses committed per-chamber data
-directly as a geometry input.
+A chamber's depth is a single scalar (§3.2 — a cave has one vertical budget,
+not a per-cell elevation map), so `is_sump(chamber.origin, depth_m,
+water_table_m)` (§1's `windows/worldgen/src/chamber.rs:519-529`) answers a
+per-*chamber* question, not a per-*cell* one — reused directly, unchanged.
+When it answers true, the level designates one region (the first leaf in
+generation order) as the flooded basin and marks its floor cells with a
+distinct cell state — a chamber-level fact expressed as a *partial* feature
+of its level, not an all-or-nothing flood of the whole level. This reuses
+committed per-chamber data directly as a geometry input rather than
+inventing sub-chamber elevation data the model does not have.
 
-### 4.5 Depth coherence across rungs
+### 4.5 Depth coherence across rungs: the worked/natural mix, not the algorithm family
 
-Consecutive rungs under one entrance are not independently re-rolled: each
-rung's algorithm-family draw has seeded inertia to continue the previous
-rung's family rather than switching. A whole descent can therefore read as
-one coherent cave system top to bottom, or genuinely transition (karst →
-fracture → a mined hold) — both are legal outcomes of the same seeded
-process, not a special case of either.
+**Correction from this campaign's own grounding research**, made before
+implementation rather than during it: `CaveKind` is a property of the whole
+cave system (`chamber_at` takes one shared `&Cave` regardless of which
+rung's address is queried, §1), so there is no per-rung variation for an
+algorithm-family draw to drift across — a single descent's `CaveKind` is
+fixed by construction. What *can* vary per rung is `ChamberOrigin`
+(resolved per-address, §1's `resolve_origin`), which drives §4.3's
+worked/natural leaf mix. Depth coherence is therefore expressed there: a
+rung's worked-fraction draw has seeded inertia toward the previous rung's
+*realized* worked-fraction, rather than each rung's mix being drawn
+independently. A whole descent can still read as uniformly natural,
+uniformly worked, or genuinely transitioning between the two — same legal
+outcomes, correct mechanism.
 
 ### 4.6 Connectivity: stairs, emitted but not yet consumed
 
