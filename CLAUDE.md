@@ -361,8 +361,20 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # Push the branch first, then dispatch with a FULL SHA (never a branch name —
 # HV_CENSUS_REF feeds `reset --hard`, which can land on a stale local branch
 # of that name over there):
-ssh lefford 'cd ~/Projects/hornvale && HV_CENSUS_WORKTREE=canonical \
-  HV_CENSUS_REF=<full-sha> scripts/census-run.sh'   # decisions 0063/0079/0081
+ssh lefford 'cd ~/Projects/hornvale && \
+  HV_CENSUS_REF=<full-sha> scripts/census-run.sh'   # decisions 0063/0079/0081/0146
+# THERE IS NO LONGER AN HV_CENSUS_WORKTREE TO PASS (decision 0146), and this
+# is the one line of this block most likely to be copied from an older
+# transcript. The documented value used to be `HV_CENSUS_WORKTREE=canonical`
+# — a bare RELATIVE name, resolved against the cwd this very command `cd`s to
+# — so it created the census worktree at `~/Projects/hornvale/canonical`:
+# inside the repo, untracked, un-ignored, and deletable by a `git clean -fdx`
+# in the main checkout, defeating the invariant census-run.sh states about
+# its own default. The script now anchors that default to the MAIN worktree
+# itself, so a run from a linked worktree resolves the same place a run from
+# the main checkout does. A relative override is REFUSED at the gate, before
+# the lock is taken; an absolute one is still honoured as a test seam.
+bash scripts/census-run.sh worktree     # where would a census write? (no lock, any box)
 # Commit the regenerated goldens ON lefford — the canonical box authors them —
 # then push and fast-forward locally.
 bash scripts/census-run.sh status       # is a heavy run already holding the box?
@@ -693,6 +705,22 @@ work, invoke the `campaign-autopilot` skill — it auto-resolves the
 routine gates against Nathan's standing policy and ledgers every decision
 for his review at the spec and merge stops. Nathan saying "manual mode"
 disengages it for the session.
+
+**A push to `main` that is not the chamber's is now REFUSED, not merely
+discouraged** (`scripts/hooks/pre-push`, enforcing decision 0139). The hook
+allows exactly one route: a pusher holding the canonical box's live claim —
+which is the chamber, and only the chamber, since the claim exists nowhere
+else. No live claim means the push is refused, whether the box is busy or
+idle. `HV_PUSH_OK=1` is the hotfix escape and the refusal names it.
+**A hostname test was considered and rejected**: the chamber runs on lefford
+and so does a human pushing by hand there, so "am I on lefford" would have
+allowed the very landing that prompted this (`ca6f34310`, 2026-08-19) while
+blocking a legitimate hotfix from the Mac. Holding the claim answers the host
+question for free. **`pre-commit` cannot do this job at all** — verified: a
+fast-forward merge, which is how main advances locally, creates no commit and
+fires no hook; a true merge commit fires `pre-merge-commit`, never
+`pre-commit`. The push is the only choke point every route to `origin/main`
+passes through.
 
 **Campaign branches absorb main at every plan-stage boundary**, not only at
 close: submit `make sluice-stage BRANCH=<branch> REF=<full-sha>`, which

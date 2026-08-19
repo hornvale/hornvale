@@ -1632,3 +1632,23 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T15:42:53Z | gate-commit | 23.120 | 41.646 | 8.496 | 2.17 | 0 | f3b736be | campaign/the-crucible | MacBookPro | 10 |
 | 2026-08-19T16:29:09Z | gate-commit | 23.412 | 41.457 | 8.523 | 2.13 | 0 | eacb73fb | campaign/the-crucible | MacBookPro | 10 |
 | 2026-08-19T16:33:34Z | gate-commit | 22.089 | 40.922 | 8.504 | 2.24 | 0 | eacb73fb | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T13:06:06Z | gate-commit | 155.608 | 3128.939 | 358.767 | 22.41 | 0 | ca6f34310 | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:11:15Z | gate-commit | 42.428 | 128.596 | 49.369 | 4.19 | 0 | ca6f34310 | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:12:32Z | gate-commit | 42.258 | 123.617 | 47.813 | 4.06 | 0 | 9fb0d5122 | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:22:47Z | gate-commit | 44.397 | 128.369 | 49.104 | 4.00 | 0 | 06b74a94b | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:24:31Z | sluice:artifacts | 76.393 | 607.656 | 26.489 | 8.30 | 0 | 50a9e6a6a |  | lefford | 40 |
+| 2026-08-19T13:25:09Z | sluice:outboard | 37.279 | 24.007 | 36.127 | 1.61 | 0 | 3256252cb |  | lefford | 40 |
+| 2026-08-19T13:31:15Z | sluice:gate | 366.172 | 9912.337 | 405.463 | 28.18 | 0 | b2ca6c0a0 |  | lefford | 40 |
+| 2026-08-19T13:48:55Z | sluice:seam-guard | 1059.738 | 21081.740 | 1101.145 | 20.93 | 0 | 2b28d51d3 |  | lefford | 40 |
+| 2026-08-19T13:53:11Z | sluice:clients | 255.835 | 456.697 | 35.321 | 1.92 | 0 | 4337b206d |  | lefford | 40 |
+| 2026-08-19T14:26:36Z | sluice:heavy | 2004.911 | 32921.038 | 705.474 | 16.77 | 0 | e03935864 |  | lefford | 40 |
+| 2026-08-19T16:17:13Z | gate-commit | 4.932 | 4.430 | 0.493 | 1.00 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
+| 2026-08-19T16:18:47Z | gate-commit | 58.158 | 200.159 | 53.550 | 4.36 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
+| 2026-08-19T16:20:22Z | gate-commit | 44.106 | 125.686 | 47.812 | 3.93 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
+| 2026-08-19T16:21:20Z | gate-commit | 41.682 | 125.676 | 47.236 | 4.15 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
+| 2026-08-19T16:27:16Z | sluice:artifacts | 59.887 | 531.345 | 21.366 | 9.23 | 0 | e2532446b |  | lefford | 40 |
+| 2026-08-19T16:27:51Z | sluice:outboard | 35.054 | 21.891 | 35.839 | 1.65 | 0 | 247073f1a |  | lefford | 40 |
+| 2026-08-19T16:34:39Z | sluice:gate | 407.606 | 10862.979 | 556.179 | 28.02 | 0 | af1ee1bea |  | lefford | 40 |
+| 2026-08-19T16:52:24Z | sluice:seam-guard | 1064.683 | 21126.571 | 1100.189 | 20.88 | 0 | 10c9d6736 |  | lefford | 40 |
+| 2026-08-19T16:56:56Z | sluice:clients | 271.736 | 479.999 | 33.366 | 1.89 | 0 | bb692f678 |  | lefford | 40 |
+| 2026-08-19T17:31:07Z | sluice:heavy | 2051.130 | 32959.710 | 697.260 | 16.41 | 0 | d2d20ad13 |  | lefford | 40 |

@@ -2,6 +2,20 @@
 """Apply one text substitution to a source file, refusing to no-op silently.
 
     python3 scripts/mutate.py <file> <old> <new>
+    python3 scripts/mutate.py --to <dest> <file> <old> <new>
+
+`--to <dest>` writes the mutated text to <dest> and leaves <file> untouched.
+That is the right shape for mutating something that is EXECUTED FROM A PATH
+rather than imported — a git hook, a shell script under test — because the
+caller then runs <dest> and has nothing to restore, removing the restore step
+that is itself a documented failure mode below.
+
+It was added because callers were already asking for it and silently not
+getting it: `scripts/test-pre-push.sh` passed `--to` to a version that took
+exactly three arguments, so every run failed the argument check and fell
+through to a `|| sed ...` fallback. The mutation still happened, via the tool
+this file exists to replace — and `sed` is precisely the tool that CANNOT
+report a no-op, which is the whole reason for the assertions here.
 
 This exists for MUTATION TESTING — neutralise a line, run the suite, and read
 the red as proof that some assertion is actually holding the behaviour. The
@@ -38,6 +52,16 @@ import sys
 
 
 def main(argv: list[str]) -> int:
+    argv = list(argv)
+    dest = None
+    if len(argv) > 1 and argv[1] == "--to":
+        if len(argv) < 3:
+            print(__doc__, file=sys.stderr)
+            print("error: --to requires a destination path", file=sys.stderr)
+            return 2
+        dest = pathlib.Path(argv[2])
+        del argv[1:3]
+
     if len(argv) != 4:
         print(__doc__, file=sys.stderr)
         print("error: expected exactly three arguments", file=sys.stderr)
@@ -76,8 +100,11 @@ def main(argv: list[str]) -> int:
         )
         return 1
 
-    path.write_text(source.replace(old, new))
-    print(f"MUTATION APPLIED to {path}: {old!r} -> {new!r}")
+    target = dest if dest is not None else path
+    target.write_text(source.replace(old, new))
+    if dest is not None:
+        target.chmod(path.stat().st_mode)
+    print(f"MUTATION APPLIED to {target}: {old!r} -> {new!r}")
     return 0
 
 

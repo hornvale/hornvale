@@ -129,7 +129,6 @@ green forever.
 Trigger the run on the canonical box instead — push your branch first, then:
 
   ssh $CANONICAL_CENSUS_HOST 'cd ~/Projects/hornvale && \\
-    HV_CENSUS_WORKTREE=canonical \\
     HV_CENSUS_REF=<full-sha> \\
     scripts/census-run.sh'
 
