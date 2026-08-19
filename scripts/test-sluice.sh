@@ -534,13 +534,24 @@ expect_reject "add: tab-branch AND newline-sha together (the re-reviewer's repro
     add "$(printf 'br\tanch')" "$(printf 'sha\nwithnewline')"
 assert_shape_intact "add: both branch and sha malicious" "$rows_now"
 
-# set-state: id alone — a garbage id just matches nothing, so this is a
-# no-op SUCCESS, not a rejection; there is no dedicated id validator, and
-# this is the evidence that none is needed (id is only ever compared
-# against, never freshly written into a new row).
-expect_accept "set-state: tab-bearing id (no match, no-op)"     set-state "$(printf 'id\twith\ttabs')" queued
+# set-state: id alone. THE INJECTION ARGUMENT HERE IS UNCHANGED AND STILL
+# RIGHT: there is no dedicated id validator and none is needed, because an id
+# is only ever COMPARED against, never freshly written into a new row — which
+# is why a tab- or newline-bearing id cannot deform the queue, and why
+# assert_shape_intact is the assertion that matters on these two lines.
+#
+# WHAT CHANGED IS THE EXIT STATUS, AND ONLY BECAUSE THE OLD ONE COST SOMETHING
+# (2026-08-19). These previously expected ACCEPTANCE — "a garbage id just
+# matches nothing, so this is a no-op SUCCESS". True of an ATTACKER's id, whose
+# author does not care whether it worked. False of an OPERATOR's id: a mistyped
+# id reported success for work it had not done, the finished run's row stayed
+# `running`, and coalescing then refused to supersede it (running rows never
+# are), so a resubmission queued behind a ghost. The injection reasoning did not
+# consider operator error, and did not need to; both conclusions hold at once —
+# no validator, AND a no-match refuses.
+expect_reject "set-state: tab-bearing id (no match, refused)"     set-state "$(printf 'id\twith\ttabs')" queued
 assert_shape_intact "set-state: tab-bearing id"     "$rows_now"
-expect_accept "set-state: newline-bearing id (no match, no-op)" set-state "$(printf 'id\nwith\nnewlines')" queued
+expect_reject "set-state: newline-bearing id (no match, refused)" set-state "$(printf 'id\nwith\nnewlines')" queued
 assert_shape_intact "set-state: newline-bearing id" "$rows_now"
 
 # set-state: state alone — closed vocabulary, reject anything outside it
@@ -639,6 +650,26 @@ if bash "$repo_root/scripts/sluice-queue.sh" set-state "$idk_stage2" finished >/
     bad "set-state accepted 'finished' — the state vocabulary is no longer closed"
 else
     ok "set-state still refuses a state outside the vocabulary"
+fi
+
+# 5. AN UNKNOWN ID IS A REFUSAL, NOT A SILENT SUCCESS. This is the defect that
+#    manufactures a GHOST: set-state rewrote every row unchanged and exited 0
+#    when the id matched nothing, so a mistyped id reported success for work it
+#    had not done. The row stayed `running` after its chamber exited, and
+#    coalescing then refused to supersede it — running rows never are — so the
+#    campaign's resubmission queued BEHIND a job that had already finished.
+#    Observed live 2026-08-19: `…T173353Z` typed for `…T163353Z`, one digit.
+before_ghost="$(md5sum "$HV_SLUICE_DIR/queue.tsv" | cut -d' ' -f1)"
+if bash "$repo_root/scripts/sluice-queue.sh" set-state "req-no-such-id" held "x" >/dev/null 2>&1; then
+    bad "set-state ACCEPTED an unknown id — a typo silently leaves a ghost row running"
+else
+    ok "set-state refuses an id that matches no row"
+fi
+after_ghost="$(md5sum "$HV_SLUICE_DIR/queue.tsv" | cut -d' ' -f1)"
+if [ "$before_ghost" = "$after_ghost" ]; then
+    ok "the refused set-state left the queue byte-identical — nothing half-applied"
+else
+    bad "the refused set-state MUTATED the queue"
 fi
 g checkout -q campaign/x
 

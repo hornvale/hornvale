@@ -344,9 +344,11 @@ set-state)
     with_lock
     tmp="$(mktemp "$HV_SLUICE_DIR/.queue.tmp.XXXXXX")"
     trap 'rm -f "$tmp"' EXIT
+    matched=0
     while IFS=$'\t' read -r when rid rbranch rsha rstate rkind rnote; do
         [ -n "$rkind" ] || rkind="merge"
         if [ "$rid" = "$id" ]; then
+            matched=1
             rstate="$state"
             if [ -n "$note" ]; then
                 rnote="$note"
@@ -354,6 +356,25 @@ set-state)
         fi
         printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rkind" "$rnote"
     done < "$QUEUE" > "$tmp"
+    # AN ID THAT MATCHES NO ROW IS A REFUSAL, NOT A SILENT SUCCESS. Until
+    # 2026-08-19 this loop simply rewrote every row unchanged and exited 0, so a
+    # mistyped id reported success for an operation it had not performed. That
+    # is how a GHOST is made: the operator believed a finished run's row had
+    # been set terminal, the row stayed `running`, and coalescing then refused
+    # to supersede it (running rows never are, deliberately) — so the campaign's
+    # resubmission queued BEHIND a job that had already exited. Observed live:
+    # `req-1fa24f761611-20260819T173353Z` typed for `…163353Z`, one digit, and
+    # the queue said nothing.
+    #
+    # The rewrite is discarded rather than committed on the failing path: with
+    # no match the temp file is byte-identical to the queue anyway, so refusing
+    # before `mv` costs nothing and cannot half-apply.
+    if [ "$matched" = "0" ]; then
+        rm -f "$tmp"
+        echo "sluice-queue: set-state: no row with id '$id' — NOTHING WAS CHANGED." >&2
+        echo "sluice-queue: ids are exact; list them with 'sluice-queue.sh list'." >&2
+        exit 1
+    fi
     mv "$tmp" "$QUEUE"
     ;;
 list)
