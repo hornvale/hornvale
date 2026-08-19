@@ -2737,7 +2737,6 @@ hornvale-worldgen::hornvale_worldgen$tests::deity_name_seed_is_pure_and_entity_i
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_crate_names_are_unique_and_nonempty
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_registers_language_after_its_lenders
 hornvale-worldgen::hornvale_worldgen$tests::exactly_one_axis_is_unfloored_and_it_is_the_undercutter
-hornvale-worldgen::hornvale_worldgen$tests::globe_level_pin_selects_the_canonical_grid
 hornvale-worldgen::hornvale_worldgen$tests::goblin_lens_is_exactly_identity
 hornvale-worldgen::hornvale_worldgen$tests::goblin_voice_params_sit_at_the_manikin_identity
 hornvale-worldgen::hornvale_worldgen$tests::high_cirrus_over_a_clear_sky_dims_only_slightly
