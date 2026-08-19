@@ -194,6 +194,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `room/layout/v1/rectilinear` | where the rectilinear method places chambers |
 | `room/layout/v1/grown` | where the growing method places chambers |
 | `room/layout/v1/anchors` | where a chamber's anchors land in its cells |
+| `underworld/level/v1/placeholder` | Task 1's temporary single-region fill, superseded by Task 2 |
 
 ### hornvale-worldgen
 

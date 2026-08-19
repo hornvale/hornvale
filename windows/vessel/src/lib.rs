@@ -24,6 +24,7 @@ mod session;
 pub mod snapshot;
 pub mod streams;
 pub mod structure;
+pub mod underworld_level;
 mod vantage;
 pub use agent::{Agent, AgentId, mint_at, mint_flagship, most_populous_settlement, walk_depth};
 pub use band::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
@@ -43,6 +44,7 @@ pub use snapshot::{
 };
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
+pub use underworld_level::{Level, LevelCellKind, generate_level, generate_level_extent};
 pub use vantage::*;
 
 use std::io::{BufRead, Write};

@@ -101,4 +101,10 @@ hornvale_kernel::stream_labels! {
     /// rename.
     ROOM_LAYOUT_ANCHORS = "room/layout/v1/anchors"
         => "where a chamber's anchors land in its cells";
+    /// Stream label for the underworld level generator's placeholder fill
+    /// (The Adit, Task 1 only — Task 2 retires this label's one call site
+    /// and reuses it for nothing else, since a retired label is never
+    /// reused for a different meaning).
+    UNDERWORLD_LEVEL_PLACEHOLDER = "underworld/level/v1/placeholder"
+        => "Task 1's temporary single-region fill, superseded by Task 2";
 }

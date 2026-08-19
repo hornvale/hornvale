@@ -429,6 +429,13 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Adit, Task 1: the underworld level generator's
+                // placeholder fill. Versioned from birth like the other
+                // entries in this golden — Task 1 is the only call site and
+                // Task 2 retires it outright rather than reusing the label
+                // for a different meaning. See
+                // `windows/vessel/src/underworld_level/mod.rs`.
+                "underworld/level/placeholder v1",
                 // The Repose: the volcano-identity derivation. Additive at
                 // v1 — a NEW label, so it perturbs no existing stream, and
                 // C0 commits nothing at all (spec §3.2 puts the whole object
