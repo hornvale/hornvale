@@ -28,7 +28,7 @@
 //! clothes. The division above is deliberate and is not a style choice.
 //!
 //! **What varies, and what is held still.** Every arm is one step from
-//! [`Transmission::AS_SHIPPED`] (`no-clock/singleton/descent`), never two:
+//! [`Transmission::AS_SHIPPED`] (`no-clock/singleton/descent/free`), never two:
 //!
 //! | § | quantity | arm varied | instrument |
 //! |---|---|---|---|

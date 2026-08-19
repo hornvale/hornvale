@@ -153,3 +153,83 @@ fn an_ending_with_a_non_number_day_makes_no_edge() {
     assert!(g.peers_of(eid(1)).is_empty());
     assert!(g.peers_of(eid(5)).is_empty());
 }
+
+/// Spec §5.1: the crossing penalty is discounted by how many raid edges lie
+/// between the two peoples, so the graph must answer that directly rather
+/// than making every caller re-scan it.
+#[test]
+fn the_graph_counts_edges_between_two_peoples() {
+    // 1,2 are human; 5,6 are kobold. Three human<->kobold raids, so the
+    // cross-people tally must be 3.
+    //
+    // The third raid deliberately reverses victim/attacker roles from the
+    // first two (kobold victim, human attacker rather than human victim,
+    // kobold attacker) -- with human as victim in every raid, `people_of
+    // (victim) <= people_of(attacker)` already holds without any sorting
+    // (since "human" < "kobold"), so a fixture that never flips the roles
+    // cannot tell a canonically-ordered storage key apart from an
+    // unsorted-as-given one: both would happen to store under
+    // ("human","kobold") regardless. Flipping the third raid's roles is
+    // what makes the storage-side ordering load-bearing rather than the
+    // accessor's own sort alone (measured -- see Step 5 of the task brief).
+    let mut led = ledger_with(&[(1, None), (2, None), (5, None), (6, None)]);
+    for (occ, people) in [(1, "human"), (2, "human"), (5, "kobold"), (6, "kobold")] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_PEOPLE,
+            Value::Text(people.to_string()),
+        );
+    }
+    raid(&mut led, 1, 5, 100.0); // human victim <-> kobold attacker
+    raid(&mut led, 2, 6, 200.0); // human victim <-> kobold attacker
+    raid(&mut led, 6, 2, 250.0); // kobold victim <-> human attacker (roles reversed)
+    let g = contact_of(&led);
+
+    assert_eq!(
+        g.edges_between("human", "kobold"),
+        3,
+        "all three crossings count"
+    );
+    assert_eq!(
+        g.edges_between("kobold", "human"),
+        3,
+        "the pair is unordered -- (a,b) and (b,a) are one key"
+    );
+    assert_eq!(
+        g.edges_between("human", "elf"),
+        0,
+        "peoples that never met count zero, and that is the EXPENSIVE case: \
+         spec §5.1 divides by (1 + this), so zero means the full penalty"
+    );
+}
+
+/// A same-people raid must not inflate a cross-people tally. This is the
+/// discriminating case: 47.4% of endings name an attacker but only 2.33% name
+/// a foreign one, so same-people raids are the overwhelming majority and a
+/// tally that counted them would be dominated by noise.
+#[test]
+fn a_same_people_raid_does_not_count_toward_a_cross_people_pair() {
+    let mut led = ledger_with(&[(1, None), (2, None), (5, None)]);
+    for (occ, people) in [(1, "human"), (2, "human"), (5, "kobold")] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_PEOPLE,
+            Value::Text(people.to_string()),
+        );
+    }
+    raid(&mut led, 1, 2, 100.0); // human <-> human
+    let g = contact_of(&led);
+
+    assert_eq!(
+        g.edges_between("human", "kobold"),
+        0,
+        "no crossing happened"
+    );
+    assert_eq!(
+        g.edges_between("human", "human"),
+        1,
+        "the same-people raid is still an edge"
+    );
+}

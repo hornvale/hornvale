@@ -1516,6 +1516,39 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-18T16:03:17Z | sluice:seam-guard | 959.978 | 19356.973 | 1056.794 | 21.26 | 0 | 83826873 |  | lefford | 40 |
 | 2026-08-18T16:07:56Z | sluice:clients | 278.751 | 548.766 | 51.277 | 2.15 | 0 | 534f1495 |  | lefford | 40 |
 | 2026-08-18T16:40:02Z | sluice:heavy | 1925.752 | 31287.277 | 732.384 | 16.63 | 0 | 4a940057 |  | lefford | 40 |
+| 2026-08-18T20:08:27Z | gate-commit | 335.254 | 1037.731 | 139.052 | 3.51 | 0 | 82f6d153 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T20:13:30Z | gate-commit | 26.226 | 53.747 | 14.122 | 2.59 | 0 | 82f6d153 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T22:27:42Z | gate-commit | 102.738 | 60.301 | 16.289 | 0.75 | 0 | c78e6cc1 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T22:28:40Z | gate-commit | 34.499 | 57.874 | 15.586 | 2.13 | 0 | c78e6cc1 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T22:29:40Z | gate-commit | 24.128 | 53.458 | 14.673 | 2.82 | 0 | c78e6cc1 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T22:43:52Z | gate-commit | 35.359 | 56.821 | 16.883 | 2.08 | 0 | b156cbd5 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T22:57:36Z | gate-commit | 39.770 | 54.029 | 15.712 | 1.75 | 0 | ee763751 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T23:34:30Z | gate-commit | 328.642 | 86.903 | 79.400 | 0.51 | 0 | 09b52ef0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-18T23:36:36Z | gate-commit | 83.574 | 54.134 | 15.132 | 0.83 | 0 | 09b52ef0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T00:06:28Z | gate-commit | 112.771 | 99.501 | 74.754 | 1.55 | 0 | d21294fb | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T00:07:42Z | gate-commit | 50.476 | 58.765 | 15.942 | 1.48 | 0 | d21294fb | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T00:44:00Z | gate-commit | 183.799 | 118.689 | 150.221 | 1.46 | 0 | 1734c44b | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T00:44:59Z | gate-commit | 23.848 | 53.254 | 14.432 | 2.84 | 0 | 1734c44b | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T00:50:09Z | gate-commit | 135.538 | 57.901 | 16.497 | 0.55 | 0 | d49865f0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T01:35:14Z | gate-commit | 390.850 | 41.475 | 12.629 | 0.14 | 0 | 23771120 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T01:39:24Z | gate-commit | 227.179 | 56.578 | 15.219 | 0.32 | 0 | 23771120 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T01:43:19Z | gate-commit | 168.128 | 54.559 | 14.994 | 0.41 | 0 | 23771120 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T02:21:03Z | gate-commit | 49.205 | 53.072 | 14.856 | 1.38 | 0 | 89a151e3 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T02:23:23Z | gate-commit | 23.111 | 52.826 | 14.203 | 2.90 | 0 | 89a151e3 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T02:35:02Z | gate-commit | 24.687 | 56.733 | 14.078 | 2.87 | 0 | fb175876 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T02:35:59Z | gate-commit | 23.068 | 52.740 | 14.205 | 2.90 | 0 | fb175876 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T02:56:47Z | gate-commit | 23.734 | 53.030 | 14.296 | 2.84 | 0 | f88b6e9b | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T02:57:58Z | gate-commit | 23.203 | 52.839 | 14.165 | 2.89 | 0 | f88b6e9b | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:16:23Z | gate-commit | 52.432 | 82.393 | 81.007 | 3.12 | 0 | 7bd2dd96 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:17:08Z | gate-commit | 23.484 | 53.097 | 14.259 | 2.87 | 0 | 7bd2dd96 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:32:20Z | rebaseline | 54.449 | 212.123 | 10.532 | 4.09 | 0 | 678f35a2 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:33:29Z | gate-commit | 25.692 | 53.079 | 14.432 | 2.63 | 0 | 678f35a2 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:37:15Z | gate-commit | 24.827 | 53.894 | 14.128 | 2.74 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:42:13Z | rebaseline | 36.656 | 210.148 | 10.103 | 6.01 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:58:37Z | gate-commit | 81.108 | 80.950 | 66.620 | 1.82 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:59:41Z | rebaseline | 44.032 | 214.084 | 10.468 | 5.10 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T04:01:17Z | gate-commit | 23.433 | 52.894 | 13.850 | 2.85 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T04:02:28Z | gate-commit | 23.228 | 53.069 | 14.168 | 2.89 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
 | 2026-08-18T18:24:13Z | gate-commit | 267.590 | 154.833 | 120.480 | 1.03 | 0 | 82f6d153 | campaign/the-illumination | MacBookPro | 10 |
 | 2026-08-18T18:44:37Z | sluice:artifacts | 79.851 | 664.331 | 26.569 | 8.65 | 0 | 8279799f2 |  | lefford | 40 |
 | 2026-08-18T18:45:11Z | sluice:outboard | 33.092 | 21.278 | 34.284 | 1.68 | 0 | 1f25ca9e1 |  | lefford | 40 |
@@ -1670,3 +1703,17 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T18:12:55Z | sluice:seam-guard | 1146.604 | 21376.137 | 1162.352 | 19.66 | 0 | 647f84696 |  | lefford | 40 |
 | 2026-08-19T18:17:24Z | sluice:clients | 268.727 | 494.661 | 39.490 | 1.99 | 0 | c892983ac |  | lefford | 40 |
 | 2026-08-19T18:51:28Z | sluice:heavy | 2043.859 | 32904.942 | 715.913 | 16.45 | 0 | dec46ffde |  | lefford | 40 |
+| 2026-08-19T16:05:57Z | rebaseline | 92.854 | 238.191 | 12.258 | 2.70 | 0 | c8e95860 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:11:06Z | gate-commit | 296.308 | 572.632 | 189.243 | 2.57 | 0 | c8e95860 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:31:33Z | remeasure:undertow_readout | 122.817 | 115.879 | 5.909 | 0.99 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:32:13Z | remeasure:probe_crossing_scale | 39.460 | 37.526 | 1.156 | 0.98 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:36:14Z | remeasure:probe_seam_direction | 240.812 | 253.854 | 14.907 | 1.12 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:37:11Z | remeasure:probe_tiebreak_rules | 56.746 | 53.860 | 2.312 | 0.99 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:38:45Z | remeasure:probe_argmin_defect_crossing_arms | 94.537 | 91.129 | 2.527 | 0.99 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:40:26Z | remeasure:parley_readout | 100.871 | 95.406 | 5.115 | 1.00 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T16:42:43Z | gate-commit | 41.818 | 63.044 | 17.841 | 1.93 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:01:31Z | gate-commit | 35.799 | 56.143 | 16.266 | 2.02 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:02:23Z | rebaseline | 39.277 | 233.724 | 12.650 | 6.27 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:27:06Z | remeasure:probe_argmin_setdiff | 91.779 | 92.850 | 2.324 | 1.04 | 0 | 34ac452b | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:31:31Z | gate-commit | 27.043 | 64.221 | 15.950 | 2.96 | 0 | 34ac452b | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:32:26Z | gate-commit | 23.711 | 55.405 | 14.606 | 2.95 | 0 | e9186f49 | campaign/the-undertow | MacBookPro | 10 |
