@@ -270,6 +270,6 @@ kill "$foreign2" 2>/dev/null || true; wait "$foreign2" 2>/dev/null || true
 if [ "$mut_rc" -ne 0 ]; then
     ok "MUTATION CONFIRMED: without the escape the holder's own push is refused (the real hook allows it)"
 else
-    bad "the mutant also allowed the push — the wedge-case test above is not pinning the escape"
+    bad "the mutant also allowed the push — the wedge-case test above is not pinning the escape: $mut_out"
 fi
 
