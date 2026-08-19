@@ -40,6 +40,77 @@ pub fn components(geo: &Geosphere, member: impl Fn(CellId) -> bool) -> Vec<BTree
     out
 }
 
+/// What kind of thing a feature is.
+///
+/// **The discriminants are load-bearing and must not be reordered.** They form
+/// the high half of the naming salt (`windows/worldgen`), so changing one
+/// renames every feature of that class in every world. `Volcano = 0`
+/// deliberately: it makes a volcano's salt equal its bare cell id, which is
+/// exactly what `volcano_name` already draws with, so adopting the scheme
+/// moves no volcano name.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FeatureClass {
+    /// A volcanic edifice, individuated by `volcano_at` rather than here.
+    Volcano = 0,
+    /// A connected component of land.
+    Landmass = 1,
+    /// A connected component of ocean.
+    Sea = 2,
+    /// A connected component of endorheic salt-sink cells.
+    SaltLake = 3,
+    /// A maximal subtree of the flow forest.
+    River = 4,
+}
+
+/// A feature's stable identity: its class and its canonical cell.
+/// type-audit: bare-ok(index: cell)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FeatureId {
+    /// Which kind of feature.
+    pub class: FeatureClass,
+    /// The canonical cell — a component's lowest, or a river's terminal.
+    pub cell: CellId,
+}
+
+/// An individuated region of the world.
+/// type-audit: bare-ok(count: magnitude)
+#[derive(Clone, Debug)]
+pub struct Feature {
+    /// The stable identity.
+    pub id: FeatureId,
+    /// Every cell the feature occupies.
+    pub extent: BTreeSet<CellId>,
+    /// The cell a label is drawn at.
+    pub anchor: CellId,
+    /// The integer scalar ranking this feature within its class.
+    pub magnitude: u32,
+}
+
+/// Every component of `member` at or above `floor` cells, as features of
+/// `class`. Below the floor a component is not a small feature — it is not a
+/// feature, and stays anonymous.
+/// type-audit: bare-ok(count: floor)
+pub fn classify(
+    geo: &Geosphere,
+    class: FeatureClass,
+    member: impl Fn(CellId) -> bool,
+    floor: usize,
+) -> Vec<Feature> {
+    components(geo, member)
+        .into_iter()
+        .filter(|extent| extent.len() >= floor)
+        .map(|extent| {
+            let cell = *extent.first().expect("components are nonempty");
+            Feature {
+                id: FeatureId { class, cell },
+                anchor: cell,
+                magnitude: extent.len() as u32,
+                extent,
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,5 +210,85 @@ mod tests {
         let mut sorted = firsts.clone();
         sorted.sort_unstable();
         assert_eq!(firsts, sorted, "components must arrive in identity order");
+    }
+
+    /// A feature's identity is the lowest cell in its extent — canonical,
+    /// integer, needing no tie-break.
+    ///
+    /// The brief's original predicate (`c.0 % 7 < 4`) measures thin on
+    /// `Geosphere::new(3)`: only 5 components, one a 360-cell blob swallowing
+    /// almost the whole sphere and the rest debris of size <= 4. `c.0 % 6 < 2`
+    /// measures far richer (46 components, confirmed below) with no single
+    /// component dominating, so a bug that only manifests away from the
+    /// giant component has somewhere to show up.
+    #[test]
+    fn a_features_identity_is_the_lowest_cell_of_its_extent() {
+        let geo = Geosphere::new(3);
+        let feats = classify(&geo, FeatureClass::Landmass, |c| c.0 % 6 < 2, 1);
+        assert!(
+            feats.len() >= 30,
+            "predicate must yield many features, got {} (expected 46 on Geosphere::new(3))",
+            feats.len()
+        );
+        for f in &feats {
+            assert_eq!(f.id.cell, *f.extent.first().expect("nonempty extent"));
+        }
+    }
+
+    /// The floor EXCLUDES small components rather than shrinking them: a rock
+    /// is not a small continent, it is not a continent.
+    ///
+    /// The brief's original predicate (`c.0 % 7 < 4`) measures thin here too
+    /// (5 components total). `c.0 % 9 < 3` measures 38 components on
+    /// `Geosphere::new(3)` (confirmed below), split 28 at-or-above a floor of
+    /// 3 and 10 below it — components on BOTH sides of the floor, which is
+    /// what this test needs: without both sides, `floored.len() < all.len()`
+    /// would pass vacuously (nothing to exclude) or trivially (everything
+    /// excluded).
+    #[test]
+    fn the_floor_excludes_components_below_it() {
+        let geo = Geosphere::new(3);
+        let member = |c: CellId| c.0 % 9 < 3;
+        let all = classify(&geo, FeatureClass::Landmass, member, 1);
+        let floored = classify(&geo, FeatureClass::Landmass, member, 3);
+        assert!(
+            all.len() >= 20,
+            "predicate must yield many features, got {} (expected 38 on Geosphere::new(3))",
+            all.len()
+        );
+        assert!(
+            !floored.is_empty(),
+            "some component must be at or above the floor, or this test cannot \
+             distinguish exclusion from wiping everything out"
+        );
+        assert!(
+            floored.len() < all.len(),
+            "a floor of 3 must exclude something"
+        );
+        assert!(floored.iter().all(|f| f.magnitude >= 3));
+        for f in &floored {
+            assert!(
+                all.iter().any(|a| a.id == f.id),
+                "a floor must not invent a feature"
+            );
+        }
+    }
+
+    /// Magnitude is extent size, so the Task 5 ordering is over an integer.
+    ///
+    /// `c.0 % 4 == 0` measures rich on `Geosphere::new(3)` (72 components,
+    /// confirmed below), so it is kept from the brief unchanged.
+    #[test]
+    fn magnitude_is_the_extent_size() {
+        let geo = Geosphere::new(3);
+        let feats = classify(&geo, FeatureClass::Sea, |c| c.0 % 4 == 0, 1);
+        assert!(
+            feats.len() >= 50,
+            "predicate must yield many features, got {} (expected 72 on Geosphere::new(3))",
+            feats.len()
+        );
+        for f in &feats {
+            assert_eq!(f.magnitude as usize, f.extent.len());
+        }
     }
 }
