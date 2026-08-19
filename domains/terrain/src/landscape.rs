@@ -1,8 +1,8 @@
 //! Landscape features: individuated regions of the world with draw-free
 //! identities. See `docs/superpowers/specs/2026-08-18-the-gazetteer-design.md`.
 
-use hornvale_kernel::{CellId, Geosphere};
-use std::collections::{BTreeSet, VecDeque};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// Connected components of the cells satisfying `member`, under
 /// [`Geosphere::neighbors`].
@@ -107,6 +107,58 @@ pub fn classify(
                 magnitude: extent.len() as u32,
                 extent,
             }
+        })
+        .collect()
+}
+
+/// Every river catchment at or above `floor` cells.
+///
+/// A river is a maximal subtree of the flow forest [`crate::drainage::downhill_targets`]
+/// gives, and its identity is that subtree's **terminal** — the ocean cell it
+/// empties into, or the interior minimum it dies in. Magnitude is catchment
+/// size, so the naming tier is how much land a river drains rather than how
+/// much water crosses its mouth.
+///
+/// The extent holds the **land** that drains to the terminal; when the
+/// terminal is an ocean cell it is not itself a member. The partition property
+/// in this module's tests pins that.
+///
+/// The walk is bounded by `cell_count` because the flow forest is acyclic by
+/// construction — every hop strictly decreases elevation. The bound is
+/// belt-and-braces, not a real termination condition.
+/// type-audit: bare-ok(count: floor)
+pub fn rivers(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    floor: usize,
+) -> Vec<Feature> {
+    let downhill = crate::drainage::downhill_targets(geo, elevation, sea_level);
+    let mut catchments: BTreeMap<CellId, BTreeSet<CellId>> = BTreeMap::new();
+    for c in geo.cells() {
+        if *elevation.get(c) < sea_level {
+            continue;
+        }
+        let mut at = c;
+        for _ in 0..geo.cell_count() {
+            match downhill[at.0 as usize] {
+                Some(next) => at = next,
+                None => break,
+            }
+        }
+        catchments.entry(at).or_default().insert(c);
+    }
+    catchments
+        .into_iter()
+        .filter(|(_, extent)| extent.len() >= floor)
+        .map(|(terminal, extent)| Feature {
+            id: FeatureId {
+                class: FeatureClass::River,
+                cell: terminal,
+            },
+            anchor: terminal,
+            magnitude: extent.len() as u32,
+            extent,
         })
         .collect()
 }
@@ -290,5 +342,120 @@ mod tests {
         for f in &feats {
             assert_eq!(f.magnitude as usize, f.extent.len());
         }
+    }
+
+    /// A sloped test globe: a base field where every cell's elevation is its
+    /// distance to the nearer pole, so downhill flow converges on whichever
+    /// pole is closer (two large polar catchments), plus five one-cell
+    /// islands dropped onto otherwise-land cells with every one of their
+    /// neighbours forced below sea level. Each island is surrounded entirely
+    /// by the ocean pocket it carves, and the coastal cells that used to
+    /// flow past that pocket toward a pole now terminate at it instead —
+    /// fragmenting what would otherwise be two dominant catchments into many
+    /// small ones scattered around each island.
+    ///
+    /// Measured on `Geosphere::new(3)` (642 cells, 613 land): `rivers(..., 1)`
+    /// yields **30 terminals** with extent sizes
+    /// `[1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,3,4,4,8,8,8,8,9,14,19,19,20,29,186,248]`
+    /// — 16 below a floor of 4 (island debris) and 14 at or above it
+    /// (including the two polar basins, 186 and 248 cells). Both facts are
+    /// asserted below, generously under the measured counts, so a future
+    /// edit that collapses this back into one dominant catchment (making the
+    /// partition test vacuous) or loses the small fragments (making the
+    /// floor test's `big.len() <= all.len()` hold only by equality) fails
+    /// loudly here instead of silently downgrading what those tests can
+    /// catch.
+    fn sloped_test_globe() -> (Geosphere, CellMap<ReferenceElevation>, ReferenceElevation) {
+        let geo = Geosphere::new(3);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let north = [0.0, 0.0, 1.0];
+        let south = [0.0, 0.0, -1.0];
+        let dist2 = |p: [f64; 3], a: [f64; 3]| {
+            let dx = p[0] - a[0];
+            let dy = p[1] - a[1];
+            let dz = p[2] - a[2];
+            dx * dx + dy * dy + dz * dz
+        };
+        let island_cells: Vec<CellId> = [40, 140, 240, 340, 440].into_iter().map(CellId).collect();
+        let mut island_neighbors: BTreeSet<CellId> = BTreeSet::new();
+        for &island in &island_cells {
+            for &nb in geo.neighbors(island) {
+                island_neighbors.insert(nb);
+            }
+        }
+        let elevation = CellMap::from_fn(&geo, |c| {
+            if island_cells.contains(&c) {
+                return ReferenceElevation::new(50.0).unwrap();
+            }
+            if island_neighbors.contains(&c) {
+                return ReferenceElevation::new(-50.0).unwrap();
+            }
+            let p = geo.position(c);
+            let d = dist2(p, north).min(dist2(p, south));
+            ReferenceElevation::new(100.0 * d).unwrap()
+        });
+
+        let terminals = rivers(&geo, &elevation, sea, 1);
+        assert!(
+            terminals.len() >= 2,
+            "fixture is vacuous: it must produce more than one catchment, got {}",
+            terminals.len()
+        );
+        let below_floor = terminals.iter().filter(|r| r.extent.len() < 4).count();
+        let at_or_above_floor = terminals.len() - below_floor;
+        assert!(
+            below_floor > 0 && at_or_above_floor > 0,
+            "fixture must have catchments on both sides of a floor of 4 (below={below_floor}, \
+             at_or_above={at_or_above_floor}, expected 16/14 on Geosphere::new(3)), or \
+             the_floor_cuts_on_catchment_size cannot distinguish exclusion from equality"
+        );
+
+        (geo, elevation, sea)
+    }
+
+    /// Every land cell belongs to exactly one catchment — the river analogue
+    /// of `components_partition_their_members`, and what makes the terminal a
+    /// valid identity.
+    #[test]
+    fn every_land_cell_belongs_to_exactly_one_catchment() {
+        let (geo, elev, sea) = sloped_test_globe();
+        let mut seen = BTreeSet::new();
+        for r in rivers(&geo, &elev, sea, 1) {
+            for cell in &r.extent {
+                assert!(seen.insert(*cell), "cell {cell:?} is in two catchments");
+            }
+        }
+        let land: BTreeSet<CellId> = geo.cells().filter(|c| *elev.get(*c) >= sea).collect();
+        assert_eq!(seen, land, "every land cell drains somewhere");
+    }
+
+    /// A river's identity is a fixed point of the downhill map.
+    #[test]
+    fn a_rivers_identity_is_a_terminal_of_the_flow_forest() {
+        let (geo, elev, sea) = sloped_test_globe();
+        let downhill = crate::drainage::downhill_targets(&geo, &elev, sea);
+        for r in rivers(&geo, &elev, sea, 1) {
+            assert!(
+                downhill[r.id.cell.0 as usize].is_none(),
+                "terminal {:?} still points downhill",
+                r.id.cell
+            );
+        }
+    }
+
+    /// The floor cuts on CATCHMENT, not mouth drainage (spec 3.1).
+    #[test]
+    fn the_floor_cuts_on_catchment_size() {
+        let (geo, elev, sea) = sloped_test_globe();
+        let all = rivers(&geo, &elev, sea, 1);
+        let big = rivers(&geo, &elev, sea, 4);
+        assert!(big.iter().all(|r| r.magnitude >= 4));
+        assert!(big.iter().all(|r| r.extent.len() == r.magnitude as usize));
+        assert!(big.len() <= all.len());
+        assert!(
+            big.len() < all.len(),
+            "a floor of 4 must exclude something, or this test cannot distinguish \
+             exclusion from equality"
+        );
     }
 }
