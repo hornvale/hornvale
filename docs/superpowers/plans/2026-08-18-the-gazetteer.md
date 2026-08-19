@@ -741,9 +741,27 @@ git commit -m "feat(terrain): rivers as maximal subtrees of the flow forest"
   - `pub struct FeatureIndex`, `pub fn of(&self, class: FeatureClass) -> &[Feature]`,
     `pub fn all(&self) -> impl Iterator<Item = &Feature>`
   - `GeneratedTerrain::features(&self) -> &FeatureIndex`
-- **Floors:** use the values Task 1 selected. Declare them as documented
-  `pub const`s — they are shapes of the world, not tuning knobs, and the doc
-  comment cites Task 1's measured counts.
+- **Floors — MEASURED, use these exact values.** Task 1 settled them and the
+  controller ruled on each; the doc comment on every one cites its measured
+  count at seed 42, level 6:
+
+  | class | floor | yields | why this floor |
+  |---|---|---|---|
+  | Landmass | `0.005 * total_land` cells (56 here) | **10** | `continent-count`'s own Earth-calibrated rule, already shipped and reviewed — Greenland (~1.4%) qualifies, Iceland (~0.07%) does not. Scale-invariant, and ONE definition of "continent" in the repo rather than two |
+  | Sea | `0.005 * total_ocean` cells (148 here) | **1** | Same rule over ocean. This world has one connected ocean; the other 8 components are 1-3 cells, the same threshold artifact as land "rocks" |
+  | SaltLake | **1** | **80** | NOT the spec's 20, which yields ZERO — the largest salt component is 2 cells. Principled: landmass/sea floors exist because "land" is a threshold on a CONTINUOUS field, so 1-cell components are quantization artifacts. `WaterKind::SaltBasin` is a CLASSIFICATION (a terminal endorheic sink), so a 1-cell salt basin is a real ~112 km salt pan |
+  | River | catchment >= **24** | **106** | The spec's own tier, retained; the distribution (592/228/106/41/8 at 4/12/24/50/100) shows no elbow arguing for a move |
+
+  Landmass and Sea floors are **computed from the terrain**, not constants:
+  `(0.005 * total_land as f64) as usize`. `classify` already takes `floor:
+  usize`, so no signature changes. SaltLake and River floors ARE constants.
+
+- **NO VOLCANO CLASS IN THIS TASK.** It moves to Task 6. `volcano_at` lives in
+  `windows/worldgen`, and `domains/terrain` may not depend on it — so a
+  volcano can never enter an index built in `GeneratedTerrain::new`. The
+  terrain index holds the four traversal classes; `windows/worldgen`'s
+  gazetteer assembles the full set including volcanoes. This removes the
+  layering question the earlier draft left open rather than answering it.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -809,67 +827,14 @@ about what fits on the page, not about the world. **This campaign ships the
 ordering and deliberately ships no salience banding**; the map campaign sets
 bands against a rendered picture rather than inventing a number here.
 
-- [ ] **Step 4: Populate the volcano class**
-
-`classify` cannot build volcanoes — they are individuated by `volcano_at`, not
-by a component walk. The index builder gathers them separately:
-
-- walk the cells `volcano_at` reports an edifice for;
-- group by the returned `Volcano`'s `source` cell, which **is** the identity
-  (its two halves must not become two features — that is the reason
-  `volcano_name` takes the volcano and not the query cell);
-- extent is the edifice's cells, anchor and `id.cell` are `source`, magnitude
-  is the edifice cell count.
-
-Add the test that pins the grouping. **It lives in `windows/worldgen`, not
-`domains/terrain`** — it calls `volcano_at`, and a `domains/` -> `windows/`
-dependency is backwards and forbidden by `cli/tests/architecture.rs`. Put it
-beside the code that builds the class, wherever Step 4's structural choice
-lands that:
-
-```rust
-    /// A volcano's two halves are ONE feature. `volcano_at` answers per cell,
-    /// so grouping by cell rather than by `source` would split every cone —
-    /// the exact mistake `volcano_name`'s signature exists to prevent.
-    #[test]
-    fn a_volcanos_cells_group_into_one_feature_per_source() {
-        let terrain = test_terrain();
-        let index = terrain.features();
-        for f in index.of(FeatureClass::Volcano) {
-            for cell in &f.extent {
-                let v = hornvale_worldgen::volcano_at(Seed(42), &terrain, *cell)
-                    .expect("an edifice cell has a volcano");
-                assert_eq!(v.source, f.id.cell, "cell {cell:?} grouped under the wrong source");
-            }
-        }
-    }
-```
-
-**Layering note:** `volcano_at` lives in `windows/worldgen`, which
-`domains/terrain` may not depend on — that edge is backwards and
-`cli/tests/architecture.rs` forbids it. So the volcano class is populated
-**where the other four are consumed**, not inside `domains/terrain`. Two
-options; pick one and say which:
-
-- `FeatureIndex` gains a `with_volcanoes(...)` builder called from
-  `windows/worldgen`, leaving `domains/terrain` volcano-free; or
-- the volcano class lives only in `windows/worldgen`'s gazetteer view over the
-  terrain index.
-
-**Decision rule:** if the map campaign will need volcanoes from the terrain
-index alone, take the first; if only naming needs them, take the second. State
-your reasoning in the report — this is the one structural choice the plan
-deliberately leaves open, because it depends on code you will have read and
-the plan author has not.
-
-- [ ] **Step 5: Wire it onto the provider**
+- [ ] **Step 4: Wire it onto the provider**
 
 Add `features: FeatureIndex` to `GeneratedTerrain` (`provider.rs:14-19`), built
 where `channels` is built, with an accessor mirroring `channels()` at
 `provider.rs:565`. Follow that field exactly — it is the established discipline
 for a derived structure held on the provider.
 
-- [ ] **Step 6: Run the terrain suite**
+- [ ] **Step 5: Run the terrain suite**
 
 ```bash
 cargo test -p hornvale-terrain > /tmp/hv-terrain.log 2>&1; echo "exit=$?"
@@ -882,7 +847,7 @@ grep -E "FAILED|panicked" /tmp/hv-terrain.log
 - Red on a timing or build-cost assertion -> Task 1 Step 4's second branch
   arriving late. Report the measurement and move the index behind a lazy seam.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cargo fmt
@@ -906,6 +871,45 @@ git commit -m "feat(terrain): FeatureIndex on GeneratedTerrain, ordered by magni
 - Produces:
   - `pub fn feature_salt(id: FeatureId) -> u64`
   - `pub fn feature_name(seed: Seed, id: FeatureId, species: &str, ph: &Phonology, morph: &MorphOptions) -> GeneratedName`
+
+- [ ] **Step 0: Populate the volcano class**
+
+Moved here from Task 5, because `volcano_at` lives in THIS crate and
+`domains/terrain` may not depend on it — so a volcano can never enter an index
+built in `GeneratedTerrain::new`.
+
+Assemble the full feature set at this layer: the four traversal classes from
+`terrain.features()`, plus volcanoes gathered here. Group the cells
+`volcano_at` reports an edifice for **by the returned `Volcano`'s `source`
+cell**, which IS the identity — its two halves must not become two features,
+and that is exactly why `volcano_name` takes the volcano rather than the query
+cell. Extent is the edifice's cells; `anchor` and `id.cell` are `source`;
+magnitude is the edifice cell count.
+
+```rust
+    /// A volcano's two halves are ONE feature. `volcano_at` answers per cell,
+    /// so grouping by cell rather than by `source` would split every cone —
+    /// the exact mistake `volcano_name`'s signature exists to prevent.
+    #[test]
+    fn a_volcanos_cells_group_into_one_feature_per_source() {
+        let (geo, terrain) = test_terrain();
+        for f in gazetteer_features(Seed(42), &geo, &terrain) {
+            if f.id.class != FeatureClass::Volcano {
+                continue;
+            }
+            for cell in &f.extent {
+                let v = crate::volcano_at(Seed(42), &terrain, *cell)
+                    .expect("an edifice cell has a volcano");
+                assert_eq!(v.source, f.id.cell, "cell {cell:?} grouped under the wrong source");
+            }
+        }
+    }
+```
+
+Report how many volcano features seed 42 yields. If it is zero, say so
+plainly and do NOT manufacture one — `volcano_at` is island-arc-only and a
+world may legitimately have none, in which case the class ships empty and
+that is a finding for the chronicle, not a bug to fix.
 
 - [ ] **Step 1: Write the failing tests**
 
