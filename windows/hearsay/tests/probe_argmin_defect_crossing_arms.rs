@@ -73,21 +73,38 @@
 //! nothing to do with `Crossing` at all.
 //!
 //! `gen_span(teller, hearer) = |founded(hearer) - founded(teller)| / g`
-//! (`amplitude.rs:31-51`), where `g` is the originating witness's people's
-//! generation length — fixed for the whole route, since a route never
-//! changes which witness it descends from. Along any LOCALLY MONOTONE run of
-//! founding days (each step's founding day moving the same direction as the
-//! last), the sequence of `gen_span` terms is a sequence of consecutive
-//! differences divided by the same constant, so it **telescopes**: the sum
-//! collapses to `(founded(end) - founded(start)) / g`, a quantity that
-//! depends only on the route's ENDPOINTS, never on how many hops it took to
-//! get there.
+//! (`amplitude.rs:31-51`), where `g` is read from `teller` — the CURRENT
+//! node of each step, not a value fixed once from the originating witness
+//! (`amplitude.rs:37`, `led.value_of(teller, OCC_PEOPLE)`, called fresh on
+//! every hop). **The witness identity never changes along a route — it is
+//! the ordering key's `witness` tie-break field — but that is a different
+//! invariant from "which people determines `g`", and only the first one is
+//! guaranteed.** `tellable` offers `children_of(node)` at every node
+//! regardless of people, plus raid-seam peers, so a route CAN cross a people
+//! boundary and keep descending inside the new people, at which point `g`
+//! changes mid-route.
+//!
+//! So the telescoping argument is PIECEWISE, not whole-route: within any
+//! SAME-PEOPLE SEGMENT of a route — a run of steps whose teller stays in one
+//! people, hence one fixed `g` — the segment's `gen_span` terms are
+//! consecutive founding-day differences over that fixed constant, and along
+//! any LOCALLY MONOTONE run of founding days within the segment (each step's
+//! founding day moving the same direction as the last) they **telescope**:
+//! the segment's contribution collapses to
+//! `(founded(segment end) - founded(segment start)) / g`, depending only on
+//! the segment's endpoints, never on how many hops it took inside the
+//! segment. A route that never crosses a people boundary (the entire descent
+//! population, and the great majority of a contact route's length — the
+//! scale probe found 0 of 67,765 winning-path crossings by descent) is a
+//! single segment end to end, which is where this file's own not-argmin
+//! samples sit.
 //!
 //! `Accumulation::Additive::step` is literally `width + span`
 //! (`accumulate.rs:49-56`) — a running sum — so additive width inherits the
-//! telescoping identity directly: two routes between the same two nodes,
-//! differing only in hop count, can accumulate to the exact same real width.
-//! `Quadrature` (`sqrt(w^2 + s^2)`, summing SQUARES) and `Multiplicative`
+//! segment's telescoping identity directly: two routes between the same two
+//! same-people-segment endpoints, differing only in hop count WITHIN that
+//! segment, can accumulate to the exact same real width. `Quadrature`
+//! (`sqrt(w^2 + s^2)`, summing SQUARES) and `Multiplicative`
 //! (`w * (1 + s)`, a running PRODUCT) do neither — breaking one span into
 //! several pieces changes the accumulated total under both, generically.
 //!
