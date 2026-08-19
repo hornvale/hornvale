@@ -1,0 +1,263 @@
+# The Touchstone — design
+
+**Program:** Myth, campaign 6 · **Drafted:** 2026-08-19 · **Status:** spec, at G3
+
+A touchstone is the assayer's stone: rub a metal against it and the streak
+tells true gold from fool's gold. This campaign builds the myth thread's
+touchstone — an instrument that can tell a **working** transmission mechanism
+from an **inert** one, which the divergence aggregate provably cannot.
+
+## 1. The problem: the aggregate is nearly blind, for three compounding reasons
+
+The myth thread (`windows/hearsay/`) derives, from committed facts alone, what
+every holder believes about each event: a `Claim { holder, subject, predicate,
+object, grade, hops, precision }`. `object` is the remembered day, `precision`
+the rung it is remembered at, and the account is *selected* per holder by a
+best-first relaxation whose ordering key is `(width, hops, witness)`
+(`derive.rs:472`).
+
+The thread reports its results through one panel-level number — the
+**divergence aggregate**, `DivRow::mutually_exclusive`
+(`undertow_readout.rs:624`): a count of cross-people endings on which the
+victim's people and the raider's people each hold a remembered day the other
+holds *nowhere*, out of `compared` such endings (421 on the 40-seed panel,
+~100 on the 12-seed prefix).
+
+Three campaigns have now watched a mechanism rewrite what a large fraction of
+individuals believe while this aggregate barely twitches
+(`KNOW-selection-aggregate-dissociation`, idea-registry:1213):
+
+- Swapping the **selection rule** moves the held telling at **up to 41.9% of
+  holders** and the aggregate by **≤4 of 100** (`probe_tiebreak_rules.rs`;
+  figures at `undertow_readout.rs:1653`).
+- The **crossing penalty** changes the held telling at 0.10–0.25% of 1,198,577
+  held tellings and moves the aggregate by **0, 0, +2 of 421** across the three
+  accumulation rules (`undertow_readout.rs:1681`).
+
+Seen once, that is a result about a mechanism; seen three times, it is a
+property of the **instrument**. The aggregate is blind for three reasons that
+compound, and the instrument this campaign builds inverts each:
+
+| why the aggregate is blind | what the instrument does instead |
+|---|---|
+| **homogeneity** — one scalar per panel; a count over a population cancels the movers, who are a *tail* (the Undertow scale-probe lesson: a ratio of medians cannot see a tail) | reports a **distribution** over holders with explicit tail mass, never a single count |
+| **decomposability** — it fuses everything into one cross-people day-set question | reports a **per-component belief-delta**: which of {route, remembered-day, rung, hops, width} moved |
+| **materiality** — it reads only the *emitted* disagreement between two peoples' day-sets | reads **process/route-level churn** — *which witness a holder now believes through* — which changes with no change to the emitted day-set at all |
+
+The third is the sharpest and the least visible. A holder's remembered day is
+`object = ladder.apply(precision, day)`, and `ladder` is the *originating
+witness's people's* ladder (`derive.rs:512`). So a change that flips which
+route wins can re-floor a holder's remembered day **at an unchanged rung
+index**, because two peoples' ladders assign different spans to the same rung.
+Route identity is load-bearing even for the day channel — and route identity
+is exactly what the shipped walk throws away.
+
+## 2. The enabling fact: the measure is half-built, in a test file
+
+The route is not lost information — it is *discarded* information.
+`variants_about_accumulating` carries the winning witness as the third element
+of its ordering key through the whole relaxation, then drops it:
+`reached.into_values().map(|t| t.claim)` (`derive.rs:597`). The remembered
+day, rung, hops and grade survive in the returned `Claim`; the **witness/route**
+and the continuous **width** do not.
+
+Because of that, `undertow_readout.rs` ships a **private copy of the entire
+walk** (`undertow_readout.rs:16-35` says so in its own words), whose richer
+record `Held { claim, width, crossings: Vec<Crossed>, seam_steps }`
+(`undertow_readout.rs:263`) carries the route the library dropped. It already
+computes route-churn between two arms — `ChangeRow.cross_route_changed`
+(`undertow_readout.rs:1012`) — and pays a standing tax for it: a heavy-battery
+control that asserts the copied walk matches the shipped walk holder-for-holder,
+forever.
+
+So the myth thread's needed measure is **half-built, buried in a test battery,
+and duplicating determinism-critical code**. This campaign promotes it into the
+library as first-class, unit-tested code, and preregisters the demonstration
+that it does what the aggregate cannot.
+
+## 3. The instrument: a per-holder belief-delta between two arms
+
+The touchstone takes a world, an event population, and two transmission
+configurations — a **baseline** arm A and a **changed** arm B — and reports,
+for every (holder, event) reached under both, which components of the held
+telling changed:
+
+```
+BeliefDelta per (holder, event):
+  route_changed   : bool   -- winning witness / crossing sequence differs
+  day_changed     : bool   -- remembered day (object) differs, bit-exact
+  rung_changed    : bool   -- precision index differs
+  hops_changed    : bool   -- depth differs
+  width_changed   : bool   -- accumulated damage width differs, bit-exact
+```
+
+These roll up into a **distribution over holders**, reported with:
+
+- **tail mass** — the count and fraction of holders for whom *each* component
+  changed (the movers are the population of interest; there is no mean to hide
+  them behind);
+- a **people-pair cut** — the same counts keyed on the pair of peoples the
+  holder's account spans, because a myth effect concentrates on a handful of
+  people-pairs and cutting on the *event* population would report their
+  behaviour as the world's (the Undertow ruling; `the-undertow.md`).
+
+The registry row's candidate observable — *day-moved exceeds rung-moved (227
+vs 214)* — is one cell of this: `day_changed` fires more often than
+`rung_changed` because a re-floored day at an unchanged rung is exactly the
+route-driven ladder effect of §1. The instrument reports the whole vector, not
+that one cell.
+
+### 3.1 What lands in the library
+
+- A **traced walk** in `windows/hearsay/src/` returning `Vec<HeldTelling>`,
+  where `HeldTelling { claim: Claim, witness: EntityId, width: f64,
+  crossings: Vec<Crossed> }` carries the route and width the shipped walk
+  drops. It shares the relaxation logic; the shipped `variants_about_accumulating`
+  is left **byte-identical** (§6).
+- A **belief-delta** module computing `BeliefDelta` and its roll-ups
+  (tail counts, people-pair cut) from two arms' `Vec<HeldTelling>`.
+- Unit tests for each, proven by **mutation** (§5), not by assertion alone.
+
+## 4. Preregistration: the discrimination the touchstone must pass
+
+Frozen here, before the measurement code exists (decision 0016; the study JSON
+has no hypothesis field, so the freeze lives in this spec). The touchstone is
+**valid iff it separates a change that rewrites beliefs from one that does
+not**, on the same panel where the aggregate reads ~0 for both.
+
+Define, for a pair of arms, **`changed_tail`** = the fraction of (holder,
+event) pairs reached under both arms for which **any** tracked component
+{route, day, rung, hops, width} differs.
+
+**Positive control — a working mechanism the aggregate misses.** The
+selection-rule (ordering-key) swap of `probe_tiebreak_rules.rs`, whose signature
+is already measured: it rewrites the held telling at **~41.9% of holders** while
+moving the aggregate by **≤4 of 100**. Prediction: **`positive_tail ≥ 20%`** — a
+floor set well below the 41.9% held-telling-change signature and an order of
+magnitude above the aggregate's ≤4/100 ≈ 4%. Note the touchstone may
+legitimately report **more** change than the 41.9% Claim-diff rate, because
+`route` and `width` live *outside* the `Claim` — a holder's winning witness can
+flip with no change to the emitted day, rung, or hops. That is the instrument
+seeing what a Claim-diff cannot, not over-counting.
+
+**Negative control — a genuinely inert change.** A non-trivial configuration
+change that provably rewrites nothing an honest holder believes on this panel.
+Prediction: **`negative_tail ≤ 1%`**.
+
+The negative control is what supplies the ceiling the positive floor needs: an
+instrument wired to fire on everything would redden the negative, so a passing
+negative is the evidence that a high positive is signal rather than a constant.
+
+> **Pre-freeze task (blocks the freeze, not the campaign):** identify the
+> non-trivial negative control and **verify it is reachable and non-vacuous
+> before freezing it** — the Parley campaign preregistered a control that was
+> unreachable by construction, and the Undertow one that was vacuous because
+> its fixture could not discriminate its own mutation. The identity change
+> (arm A = arm B) gives zero by *construction* and is retained only as a
+> mutation-floor sanity check, **not** as the scientific negative. Candidate
+> non-trivial negatives, to be checked: an arm whose effect is provably empty
+> on the measured event population (e.g. a clock variation over a dateless
+> subpopulation), or a contact edge no winning route traverses. The chosen
+> control and its reachability evidence are the first ledger entry after G3.
+
+**Success criterion (the headline result).** The touchstone passes iff
+`positive_tail ≥ 20%` **and** `negative_tail ≤ 1%`, giving a separation margin
+of at least 20× where the divergence aggregate separates the two by ≤4/100 in
+absolute count — i.e. does not separate them at all. A falsified prediction is
+a finding, not a failure: if the positive control does **not** move the
+touchstone, the thread's dissociation is deeper than a missing decomposition
+and that is the headline instead. Nothing is retuned to rescue the prediction
+(verified by commit ordering at close).
+
+## 5. Validation discipline (the retros' standing lessons, made concrete)
+
+Every one of these has cost a prior Myth campaign turns; each is a task-level
+requirement here.
+
+- **Every measure is proven by a mutation, not an assertion.** A test that
+  neutralises the component-change flag must redden; a counter wired to a
+  constant still prints as a finding (the Parley deferral). Assert the target
+  text exists before mutating it.
+- **The positive control must be reachable; the negative must be non-vacuous.**
+  See the pre-freeze task in §4.
+- **The traced walk must agree with the shipped walk holder-for-holder**, as a
+  library test — the guard the readout pays today, moved into the library
+  where it belongs (§6).
+- **Re-derive, never transcribe; re-measure on the merge product.** Every
+  published figure is produced by an assertion failing on this tree, not copied
+  from `main`. Absorb `main` at every plan-stage boundary — the Undertow ran
+  137 commits without absorbing and a textually-clean merge hid a moved
+  substrate that invalidated every number it published.
+- **Imperatives hide assertions.** Plan steps state the *property* a mutation
+  must demonstrate and let the implementer find one; they do not prescribe a
+  specific mutation from outside the code, and they write decision-rule branch
+  tables, not predicted outcomes.
+
+## 6. Layering, cost, and what this campaign does *not* touch
+
+- **Window-only.** Everything new lives under `windows/hearsay/`. Gate cost is
+  the windows tier, not the 470.8 s kernel tier.
+- **No epoch, no save-format contract.** `Claim` is `#[derive(Clone, Debug,
+  PartialEq)]` and explicitly never `Serialize` (decision 0100 rule 5;
+  `kernel/src/claim.rs:12`). `HeldTelling` is a new *window* record, not a
+  kernel change, and this crate draws nothing and commits nothing. No stream
+  label, no stream-order slot, no epoch suffix.
+- **The pinned walk stays byte-identical.** The traced walk is a sibling; the
+  shipped `variants_about_accumulating` keeps its exact behaviour, guarded by
+  the agreement test and by every existing campaign baseline. **Full
+  unification** (making the shipped walk a projection of the traced one) is a
+  cleaner end state but refactors determinism-critical pinned code, and
+  bundling that into a measurement campaign is the substrate-moved scope-creep
+  the retros warn against — it is **deferred** to a `TOOL-` row.
+- **Not a census metric.** Registering a lab metric runs it on ~2,000 census
+  worlds forever (nine studies declare `"metrics": "all"`), which four prior
+  campaigns' authors learned the hard way. The touchstone ships as a **heavy
+  battery** with re-derivable asserted numbers, like its predecessors — a
+  40-seed panel (~2.3 s/seed ≈ 90–115 s, matching the Undertow/Parley
+  batteries), `#[ignore]`d into the heavy tier, off the commit gate.
+- **No generated artifact should drift.** Believed, and to be *verified* at
+  implementation time by Parley's call-site method: one grep for this crate's
+  per-holder output under `windows/lab/` and the census extractors, reading
+  down the call chain, before claiming an empty drift.
+
+## 7. Non-goals (what this campaign is *not*)
+
+- **Not a mechanism campaign.** It builds the measure; it does not add a new
+  transmission arm. The thread keeps building mechanisms its own measure cannot
+  see — this campaign fixes the measure so the *next* mechanism campaign can be
+  believed.
+- **Not `KNOW-derived-vs-constant-penalty`.** That question (does a derived
+  crossing magnitude do anything a constant would not) presupposes an
+  instrument that can see the penalty at all — which is what §1 says the
+  aggregate cannot. It is the natural *next* campaign, and the touchstone is
+  its precondition.
+- **Not `KNOW-misattribution-drift`.** The thread's eventual destination
+  (0021's richest use), and another mechanism — downstream of a working measure.
+- **Not the unit erratum.** Left frozen for a session that has not read the
+  Palimpsest exploratory column; this session has not opened those files.
+
+## 8. Decisions taken in this spec (promote to the durable record at merge)
+
+1. The measure is **promoted into the library**, not added as more test-file
+   scaffolding — "studies are data, metrics are code" (decision 0011).
+2. A **traced sibling walk**, not walk unification; unification deferred.
+3. Controls **preregistered** here with a numeric success criterion; the
+   non-trivial negative control's identity and reachability are a **pre-freeze
+   task**.
+4. Delivery as a **heavy battery**, explicitly not a census metric; no epoch,
+   no kernel edit, window-only.
+
+## 9. Open questions for review
+
+- **Delivery form.** Heavy battery only (recommended), or additionally a
+  committed, drift-checked readout artifact? The latter is the standing wish of
+  the last three campaigns (numbers in prose rather than re-derived), but its
+  authoring path is unverified (the Parley deferral). Recommendation: heavy
+  battery for this campaign; bank the artifact as a followup.
+- **Instrument population.** All holders (recommended, matching the 41.9%
+  dissociation which is over all holders), with the people-pair cut as a
+  secondary view — versus restricting to the cross-people population the
+  aggregate itself measures. Recommendation: all holders + people-pair cut.
+- **Negative control identity** — deferred to the pre-freeze task by design,
+  but flagged here because a wrong choice is the single most expensive mistake
+  available (Parley/Undertow both made it).
