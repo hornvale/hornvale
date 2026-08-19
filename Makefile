@@ -452,6 +452,10 @@ decision-block: ## Reserve a disjoint range of decision numbers (NAME=<campaign>
 decision-blocks: ## Show every reserved decision-number block (reads the canonical box)
 	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && scripts/decision-block.sh list'
 
+sluice-ack: ## Adjudicate an out-of-band landing on main (REASON='what you checked'); canonical box only
+	@test -n "$(REASON)" || { echo "usage: make sluice-ack REASON='what you checked'" >&2; exit 2; }
+	@bash scripts/sluice-ack.sh "$(REASON)"
+
 sluice-status: ## The queue: what is queued, running, held, landed, reported (reads the canonical box over ssh)
 	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
 	    cat "$$d/queue.tsv" 2>/dev/null || true' \

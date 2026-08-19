@@ -306,10 +306,12 @@ impl LanguageWorld {
             .expect("some daughter of the family classifies its exposures");
         let universe = hornvale_language::proto_root_universe(&exposures);
         let family_daughters = family_daughters(&self.world, &self.wc, family);
+        let typ = hornvale_language::typology_for(Some(family));
         hornvale_language::assign_proto_roots(
             &self.world.seed,
             family,
             &proto_ph,
+            &typ,
             &universe,
             &family_daughters,
         )

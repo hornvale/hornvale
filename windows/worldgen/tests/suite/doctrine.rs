@@ -458,7 +458,11 @@ fn doctrine_keeps_what_folk_lose() {
             // could move at all is the campaign's own thesis arriving late.
             // The description was load-bearing on `observe`'s ORDER, which no
             // reword-invariance test ever looked at.
-            agent: Some("Tleavese".to_string()),
+            //
+            // The Burr (Task 4): the trill epoch reseeds every belief-agent
+            // draw, Tleavese -> Shmeakjeta. Belief, period and rank
+            // unchanged — only the drawn name moved.
+            agent: Some("Shmeakjeta".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Slow,
         }
@@ -538,7 +542,13 @@ fn the_high_god_takes_the_day_where_compatible() {
             // COINCIDENCE of a short generated string, not evidence that
             // anything reverted: the world between the two readings is not
             // the same world (seed 1's placement moved twice in between).
-            agent: Some("Vooboo".to_string()),
+            //
+            // The Burr (Task 4): the trill epoch reseeds every belief-agent
+            // draw, Vooboo -> Veewe (coincidentally an old, unrelated
+            // pre-Wearing goblin exonym). Belief, period and day-match
+            // unchanged; the same coincidence-of-a-short-string caveat
+            // above applies.
+            agent: Some("Veewe".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Brisk,
         }
@@ -554,7 +564,7 @@ fn the_high_god_takes_the_day_where_compatible() {
         .find(|(_, p)| (*p - day_value).abs() < 0.01 * day_value)
         .expect("a day-matched cyclic belief must exist at seed 1 goblin");
     assert_eq!(
-        folk_bound.0.deity, "Vooboo",
+        folk_bound.0.deity, "Veewe",
         "doctrine's binding must be the SAME belief folk's own period-match rule finds"
     );
 }

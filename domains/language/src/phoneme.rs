@@ -11,6 +11,8 @@
 //! matches over exactly this set; a feature combination outside it has no
 //! glyph and is not represented here.
 
+use crate::typology::Orthography;
+
 /// Place of articulation: where in the vocal tract a consonant is formed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Place {
@@ -330,16 +332,81 @@ pub(crate) fn canonical_segments() -> Vec<Segment> {
     segments
 }
 
-/// Render a segment as an ASCII-ish romanization, for the almanac.
+/// Render a segment as an ASCII-ish romanization, for the almanac, under a
+/// per-bundle [`Orthography`] convention — a VIEW over `Segment`: no stream
+/// draw moves, but the spelled string does (spec §3.6).
 ///
-/// Exhaustive over the curated inventory (see module docs). Segments with
-/// no single ASCII letter romanize to a digraph: `sh`/`zh` for the
-/// postalveolar sibilants, `ng` for the velar nasal, `kx` for the ejective
-/// (its glottalic release has no Latin letter), and `ts` for the glottal
-/// click (there is no ASCII click glyph; `ts` approximates its sharp
-/// release).
+/// `Digraph` and `Apostrophe` share the identical per-segment spelling
+/// ([`romanize_digraph`]) — `Apostrophe`'s difference is a sequence-level
+/// `'` insertion between a digraph and a following consonant, which only a
+/// caller holding the whole segment sequence can see, so it lives in
+/// [`crate::naming::render_views_with`], not here. `Diacritic` overrides the
+/// five digraph segments with a single diacritic letter
+/// ([`diacritic_override`]) and otherwise falls through to the same table.
+/// type-audit: bare-ok(identifier-text)
+pub fn romanize_with(seg: &Segment, orth: Orthography) -> &'static str {
+    match orth {
+        Orthography::Diacritic => diacritic_override(seg).unwrap_or_else(|| romanize_digraph(seg)),
+        Orthography::Digraph | Orthography::Apostrophe => romanize_digraph(seg),
+    }
+}
+
+/// Render a segment as an ASCII-ish romanization, for the almanac —
+/// [`romanize_with`] under [`Orthography::Digraph`], today's global
+/// convention. Every caller with no [`crate::phonology::Phonology`] in scope
+/// (a test, or a path with no bundle) uses this directly.
 /// type-audit: bare-ok(identifier-text)
 pub fn romanize(seg: &Segment) -> &'static str {
+    romanize_with(seg, Orthography::Digraph)
+}
+
+/// The five digraph segments' single-letter `Orthography::Diacritic`
+/// spelling, or `None` for every segment [`romanize_digraph`] already
+/// spells with one ASCII letter (or with no authored glyph at all): `ŋ` →
+/// `ṅ`, `ʃ` → `š`, `ʒ` → `ž`, the ejective `kʼ` → `ḳ`, the click `ǃ` → `ṭ` —
+/// diacritics in place of the digraphs, so a consonant cluster stays legible
+/// (spec §3.6).
+/// type-audit: bare-ok(identifier-text)
+fn diacritic_override(seg: &Segment) -> Option<&'static str> {
+    match seg {
+        Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Nasal,
+            voiced: true,
+        } => Some("ṅ"),
+        Segment::Consonant {
+            place: Place::Postalveolar,
+            manner: Manner::Sibilant,
+            voiced: false,
+        } => Some("š"),
+        Segment::Consonant {
+            place: Place::Postalveolar,
+            manner: Manner::Sibilant,
+            voiced: true,
+        } => Some("ž"),
+        Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Ejective,
+            voiced: false,
+        } => Some("ḳ"),
+        Segment::Consonant {
+            place: Place::Glottal,
+            manner: Manner::Click,
+            voiced: false,
+        } => Some("ṭ"),
+        _ => None,
+    }
+}
+
+/// `romanize_with`'s shared table: exhaustive over the curated inventory
+/// (see module docs). Segments with no single ASCII letter romanize to a
+/// digraph: `sh`/`zh` for the postalveolar sibilants, `ng` for the velar
+/// nasal, `kx` for the ejective (its glottalic release has no Latin
+/// letter), and `ts` for the glottal click (there is no ASCII click glyph;
+/// `ts` approximates its sharp release). `Orthography::Digraph` and
+/// `Orthography::Apostrophe` both spell a lone segment this way.
+/// type-audit: bare-ok(identifier-text)
+fn romanize_digraph(seg: &Segment) -> &'static str {
     match seg {
         Segment::Consonant {
             place: Place::Labial,
@@ -827,6 +894,48 @@ mod tests {
         };
         assert_eq!(romanize(&sh), "sh");
         assert_eq!(ipa(&sh), "ʃ");
+    }
+
+    /// The velar nasal, for [`Orthography::Digraph`]'s `"ng"` and every
+    /// other convention's own spelling of it.
+    fn velar_nasal() -> Segment {
+        Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Nasal,
+            voiced: true,
+        }
+    }
+
+    /// The low central vowel `/a/` — every orthography spells it identically,
+    /// so it is the neutral second segment in
+    /// [`a_bundle_changes_the_spelling_not_the_phonology`].
+    fn low_central_vowel() -> Segment {
+        Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+            tone: Tone::Neutral,
+        }
+    }
+
+    /// Orthography is a view: the same segment sequence spells differently
+    /// per bundle, and the underlying `Segment`s (so the `Phonology` that
+    /// drew them) are untouched — no stream draw moves.
+    #[test]
+    fn a_bundle_changes_the_spelling_not_the_phonology() {
+        let segs = [velar_nasal(), low_central_vowel()];
+        let digraph: String = segs
+            .iter()
+            .map(|seg| romanize_with(seg, Orthography::Digraph))
+            .collect();
+        let diacritic: String = segs
+            .iter()
+            .map(|seg| romanize_with(seg, Orthography::Diacritic))
+            .collect();
+        assert_eq!(digraph, "nga");
+        assert_ne!(digraph, diacritic, "the two conventions spell identically");
+        // The segments themselves never change — only the rendering does.
+        assert_eq!(segs, [velar_nasal(), low_central_vowel()]);
     }
 
     #[test]

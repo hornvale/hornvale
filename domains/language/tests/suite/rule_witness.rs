@@ -190,7 +190,12 @@ fn every_rule_kind_is_witnessed_changing_a_word() {
     let mut fired: BTreeSet<RuleKind> = BTreeSet::new();
     'seeds: for seed in 0u64..32 {
         for (species, env) in species_envelopes() {
-            let ph = draw_phonology(&Seed(seed), species, &env);
+            let ph = draw_phonology(
+                &Seed(seed),
+                species,
+                &env,
+                &hornvale_language::typology::concatenative(),
+            );
             let cascade = draw_cascade(&Seed(seed), species, &ph);
             for concept in universal_stratum() {
                 let proto = proto_root(&Seed(seed), species, concept.concept, &ph);
@@ -288,7 +293,12 @@ fn tonogenesis_and_vowel_shift_are_never_drawn_for_the_shipped_roster() {
     let mut drawn: BTreeSet<RuleKind> = BTreeSet::new();
     for seed in 0u64..64 {
         for (species, env) in &roster {
-            let ph = draw_phonology(&Seed(seed), species, env);
+            let ph = draw_phonology(
+                &Seed(seed),
+                species,
+                env,
+                &hornvale_language::typology::concatenative(),
+            );
             for cascade in [
                 draw_cascade(&Seed(seed), species, &ph),
                 draw_wear_cascade(&Seed(seed), species, &ph),

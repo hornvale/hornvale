@@ -15,6 +15,7 @@ use crate::packs::compound_recipe;
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
 use crate::streams;
+use crate::typology::Orthography;
 use hornvale_kernel::Seed;
 use hornvale_kernel::seed::StreamLabel;
 use std::collections::BTreeMap;
@@ -200,11 +201,13 @@ fn root_modern<'a>(
     }
 }
 
-/// Render a bare segment sequence's [`WordViews`], via
-/// [`crate::naming::render_views`] — the shared segment→views reduction
-/// naming.rs exposes.
-fn word_views(segments: &[Segment]) -> WordViews {
-    let rendered = crate::naming::render_views(segments);
+/// Render a bare segment sequence's [`WordViews`] under `orth`, via
+/// [`crate::naming::render_views_with`] — the shared segment→views reduction
+/// naming.rs exposes. `orth` is the family/species [`Phonology`]'s own
+/// [`Orthography`] (spec §3.6): a VIEW, so no stream draw moves when it
+/// changes, but the returned strings do.
+fn word_views(segments: &[Segment], orth: Orthography) -> WordViews {
+    let rendered = crate::naming::render_views_with(segments, orth);
     WordViews {
         roman: rendered.roman,
         ipa: rendered.ipa,
@@ -220,6 +223,7 @@ fn compound_entry(
     concept: &str,
     entries: &BTreeMap<String, LexEntry>,
     headedness: Headedness,
+    orth: Orthography,
 ) -> LexEntry {
     let Some((modifier, head)) = compound_recipe(concept) else {
         return LexEntry::Gap {
@@ -242,7 +246,7 @@ fn compound_entry(
     LexEntry::Compound {
         modifier: modifier.to_string(),
         head: head.to_string(),
-        views: word_views(&joined),
+        views: word_views(&joined, orth),
     }
 }
 
@@ -329,11 +333,12 @@ pub fn build_lexicon(
     // family level, once (the homophony fix, draw side — replaces per-concept
     // `proto_root` drawing). `daughters` (the family's members, supplied by
     // the composition root) make the assignment merger-aware (epoch
-    // root/v3): a core proto is chosen to survive every daughter's cascade
+    // root/v4): a core proto is chosen to survive every daughter's cascade
     // distinct, so core homophony is zero. See [`proto_root_universe`] for
     // which concepts the universe includes.
     let universe = proto_root_universe(exposures);
-    let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe, daughters);
+    let typ = crate::typology::typology_for(Some(family));
+    let proto_roots = assign_proto_roots(seed, family, proto_ph, &typ, &universe, daughters);
 
     // Pass 1: roots for every Steeped concept — pass 2's compounds need these
     // already present in `entries`. Each concept's assigned family-level
@@ -343,7 +348,7 @@ pub fn build_lexicon(
         if matches!(class, ExposureClass::Steeped) {
             let proto = proto_roots[concept].clone();
             let derivation = evolve(&proto, &cascade, ph);
-            let views = word_views(&derivation.modern);
+            let views = word_views(&derivation.modern, ph.orthography);
             entries.insert(concept.clone(), LexEntry::Root { derivation, views });
         }
     }
@@ -353,7 +358,7 @@ pub fn build_lexicon(
         match class {
             ExposureClass::Steeped => {}
             ExposureClass::KnowsOf => {
-                let entry = compound_entry(concept, &entries, headedness);
+                let entry = compound_entry(concept, &entries, headedness, ph.orthography);
                 entries.insert(concept.clone(), entry);
             }
             ExposureClass::Unknown { reason } => {
@@ -396,6 +401,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
+            &crate::typology::concatenative(),
         )
     }
 
@@ -433,6 +439,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
+            &crate::typology::concatenative(),
         )
     }
 
@@ -463,7 +470,14 @@ mod tests {
             CascadeRegime::SETTLED,
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(1),
+            "test",
+            &ph,
+            &crate::typology::concatenative(),
+            &universe,
+            &[],
+        );
         let expected = evolve(
             &assigned["water"],
             &draw_cascade(&Seed(1), "test", &ph),
@@ -497,7 +511,14 @@ mod tests {
             CascadeRegime::SETTLED,
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(1),
+            "test",
+            &ph,
+            &crate::typology::concatenative(),
+            &universe,
+            &[],
+        );
         let expected = evolve(
             &assigned["water"],
             &draw_cascade(&Seed(1), "test", &ph),
@@ -537,7 +558,14 @@ mod tests {
             CascadeRegime::SETTLED,
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(5), "kobold", &ph, &universe, &[]);
+        let assigned = assign_proto_roots(
+            &Seed(5),
+            "kobold",
+            &ph,
+            &crate::typology::concatenative(),
+            &universe,
+            &[],
+        );
         assert_eq!(
             root_proto(&lex, "water"),
             assigned["water"],

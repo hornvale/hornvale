@@ -62,7 +62,7 @@ And later — an iron-working hobgoblin steading, an ordinary place, neither fam
   They fled — put to flight by hobgoblins — and did not return.
 
 The last of them — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 84 souls.
-  Its founders fled the ice of the clearing at cell 22169, hobgoblins looking for kinder ground. It was founded by Venggomnjen.
+  Its founders fled the ice of the clearing at cell 22169, hobgoblins looking for kinder ground. It was founded by Venggomnwen.
   Founded in the year 800, it stands yet — 1200 years and counting.
   It has never ended; the people are there still.
 

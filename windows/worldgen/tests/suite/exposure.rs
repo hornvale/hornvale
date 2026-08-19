@@ -554,11 +554,11 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
     assert_eq!(
         rooted,
         vec![
-            ("gnoll", "Dzhaap".to_string()),
-            ("hill-dwarf", "Maqtog".to_string()),
-            ("hobgoblin", "Negao".to_string()),
-            ("kobold", "Roraaxaa".to_string()),
-            ("snow-elf", "Booz".to_string()),
+            ("gnoll", "Qshoox".to_string()),
+            ("hill-dwarf", "Qangab".to_string()),
+            ("hobgoblin", "Qebae".to_string()),
+            ("kobold", "Rooraro".to_string()),
+            ("snow-elf", "Zrooṅtoṅ".to_string()),
         ],
         "the set of peoples rooting 'spring' at seed 42 moved"
     );
@@ -793,8 +793,8 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_kobold() {
     assert_eq!(
         rooted,
         vec![
-            ("hobgoblin", "Nootea".to_string()),
-            ("kobold", "Roxoro".to_string()),
+            ("hobgoblin", "Noono".to_string()),
+            ("kobold", "Raraaroa".to_string()),
         ],
         "the set of peoples rooting 'hill' at seed 42 moved"
     );
@@ -917,9 +917,9 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
     assert_eq!(
         rooted,
         vec![
-            ("high-elf", "Mazbveos".to_string()),
-            ("hobgoblin", "Konoa".to_string()),
-            ("sea-elf", "Nadbbeus".to_string()),
+            ("high-elf", "Doomdom".to_string()),
+            ("hobgoblin", "Ganee".to_string()),
+            ("sea-elf", "Tuundun".to_string()),
         ],
         "the set of peoples rooting 'valley' at seed 42 moved"
     );
@@ -1093,13 +1093,13 @@ fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Goo".to_string()),
-            ("gnoll", "Gshoovzngaov".to_string()),
-            ("high-elf", "Geesh".to_string()),
-            ("hill-dwarf", "Tag".to_string()),
-            ("hobgoblin", "Qaneo".to_string()),
-            ("kobold", "Rorora".to_string()),
-            ("snow-elf", "Boosh".to_string()),
+            ("drow", "Gogsroa".to_string()),
+            ("gnoll", "Dshoopdshop".to_string()),
+            ("high-elf", "Gomsroam".to_string()),
+            ("hill-dwarf", "Mabas".to_string()),
+            ("hobgoblin", "Kotoa".to_string()),
+            ("kobold", "Xooxaa".to_string()),
+            ("snow-elf", "Boṅsroaṅ".to_string()),
         ],
         "the set of peoples rooting 'marsh' at seed 42 moved"
     );

@@ -254,6 +254,20 @@ fn moons_explained_only_where_kept() {
     // Re-pinned a further time absorbing The Watershed's sonority merge
     // (independently reseeding the same lexicon roster): "Nggoo" -> "Gngoo".
     // Same story again — only `agent` moved.
+    //
+    // Re-pinned again at The Burr (Task 4): the trill epoch reseeds every
+    // belief-agent draw, "Gngoo" -> "Dsaasgngo". Same story once more.
+    //
+    // Re-pinned again at The Burr (Task 5): the sonorant floor reseeds
+    // phonotactics' manner list once more, "Dsaasgngo" -> "Ngorngo". Same
+    // story once more — `underlying`, `schema`, `lexeme` and `manner`
+    // compare byte-identical; only `agent` moved.
+    //
+    // Re-pinned once more at The Burr (Task 9): the sonorant floor becomes
+    // bundle-conditioned (only `sonorant-open` requires a liquid), and
+    // kobold's family carries `concatenative`, so the floor no longer
+    // applies to it: "Ngorngo" -> "Dsaasgngo" — the same string Task 4 left
+    // behind, not a new one. Same story again — only `agent` moved.
     let w = generated(2);
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -278,7 +292,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Gngoo".to_string()),
+            agent: Some("Dsaasgngo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

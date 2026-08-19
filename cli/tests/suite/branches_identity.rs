@@ -185,7 +185,12 @@ fn kobold_phonology_is_a_pure_function_of_seed_and_envelope() {
         .get(&KindId("kobold"))
         .expect("kobold has an articulation row");
     let envelope = hornvale_worldgen::envelope_of(kobold_articulation);
-    let direct = hornvale_language::draw_phonology(&world.seed, "kobold", &envelope);
+    let direct = hornvale_language::draw_phonology(
+        &world.seed,
+        "kobold",
+        &envelope,
+        &hornvale_language::typology::concatenative(),
+    );
     assert_eq!(
         hornvale_worldgen::language_of(&world, "kobold"),
         direct,

@@ -1231,6 +1231,15 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-16T21:05:01Z | sluice:seam-guard | 964.414 | 19474.820 | 1074.693 | 21.31 | 0 | f905923a |  | lefford | 40 |
 | 2026-08-16T21:10:39Z | sluice:clients | 337.573 | 715.881 | 75.619 | 2.34 | 0 | 3d9e0acf |  | lefford | 40 |
 | 2026-08-16T21:42:21Z | sluice:heavy | 1901.292 | 29944.400 | 740.613 | 16.14 | 0 | 5f59a1aa |  | lefford | 40 |
+| 2026-08-17T00:52:32Z | gate-commit | 84.786 | 62.029 | 110.496 | 2.03 | 0 | fba8e8e4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T00:56:36Z | gate-commit | 39.857 | 17.638 | 26.282 | 1.10 | 0 | fba8e8e4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T01:01:05Z | gate-commit | 246.226 | 273.931 | 58.113 | 1.35 | 0 | fba8e8e4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T01:19:44Z | gate-commit | 141.606 | 93.507 | 90.609 | 1.30 | 0 | b8ce5f5d | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T01:29:50Z | gate-commit | 30.951 | 16.948 | 26.211 | 1.39 | 0 | db54cdf4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T01:32:16Z | gate-commit | 110.359 | 98.895 | 59.208 | 1.43 | 0 | db54cdf4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T01:47:50Z | gate-commit | 168.165 | 78.920 | 95.364 | 1.04 | 0 | 7c5fe8b4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T01:56:40Z | gate-commit | 52.871 | 52.345 | 13.343 | 1.24 | 0 | 0e7d5757 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T02:14:15Z | gate-commit | 28.764 | 53.138 | 13.933 | 2.33 | 0 | 9c46cc5a | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-17T00:20:23Z | prewarm | 82.092 | 384.996 | 41.104 | 5.19 | 0 | 1e92c152 | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-17T00:54:29Z | gate-commit | 205.456 | 123.933 | 106.649 | 1.12 | 0 | 1e92c152 | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-17T01:42:39Z | gate-commit | 48.006 | 56.513 | 16.418 | 1.52 | 0 | dcb1acc0 | campaign/the-underworld | MacBookPro | 10 |
@@ -1292,6 +1301,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T00:28:40Z | sluice:seam-guard | 950.887 | 19361.401 | 1043.845 | 21.46 | 0 | b52c5a5c |  | lefford | 40 |
 | 2026-08-17T00:32:38Z | sluice:clients | 237.286 | 423.881 | 33.943 | 1.93 | 0 | 5dd69a0c |  | lefford | 40 |
 | 2026-08-17T01:04:29Z | sluice:heavy | 1911.399 | 29772.539 | 662.669 | 15.92 | 0 | 87d74f2f |  | lefford | 40 |
+| 2026-08-17T02:20:29Z | rebaseline | 72.965 | 228.652 | 15.727 | 3.35 | 0 | 60dbacde | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-17T01:24:17Z | sluice:artifacts | 89.746 | 653.202 | 31.745 | 7.63 | 0 | 7c6d3741 |  | lefford | 40 |
 | 2026-08-17T01:24:41Z | sluice:outboard | 23.764 | 12.561 | 33.541 | 1.94 | 0 | af55d4d4 |  | lefford | 40 |
 | 2026-08-17T01:30:23Z | sluice:gate | 341.435 | 9114.894 | 405.374 | 27.88 | 0 | f725cfc3 |  | lefford | 40 |
@@ -1322,6 +1332,15 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T02:46:09Z | sluice:seam-guard | 955.121 | 19366.643 | 1045.522 | 21.37 | 0 | 068d1b8c |  | lefford | 40 |
 | 2026-08-17T02:50:09Z | sluice:clients | 239.248 | 436.256 | 34.684 | 1.97 | 0 | e9eaa7c6 |  | lefford | 40 |
 | 2026-08-17T03:20:49Z | sluice:heavy | 1839.783 | 29809.414 | 678.699 | 16.57 | 0 | 06a61774 |  | lefford | 40 |
+| 2026-08-17T03:38:59Z | rebaseline | 156.094 | 227.098 | 17.251 | 1.57 | 0 | 0aad391c | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T03:47:23Z | gate-commit | 459.180 | 258.909 | 201.353 | 1.00 | 0 | 0aad391c | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T07:14:18Z | rebaseline | 5733.147 | 222.826 | 43.165 | 0.05 | 0 | c986d15e | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T08:07:47Z | rebaseline | 4973.375 | 225.486 | 53.192 | 0.06 | 0 | c986d15e | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T13:27:40Z | gate-commit | 33.324 | 53.317 | 13.043 | 1.99 | 0 | c986d15e | campaign/the-burr | Greyjoy | 10 |
+| 2026-08-17T15:47:32Z | rebaseline | 48.691 | 213.739 | 10.909 | 4.61 | 0 | dfe1f7b1 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T16:40:44Z | rebaseline | 109.339 | 229.869 | 18.427 | 2.27 | 0 | dfe1f7b1 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T16:42:20Z | gate-commit | 34.815 | 52.923 | 13.632 | 1.91 | 0 | dfe1f7b1 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T19:42:09Z | gate-commit | 410.117 | 118.667 | 234.349 | 0.86 | 0 | 698189c6 | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-17T12:30:34Z | sluice:artifacts | 94.110 | 662.951 | 33.104 | 7.40 | 0 | 58feb338 |  | lefford | 40 |
 | 2026-08-17T12:31:07Z | sluice:outboard | 32.895 | 20.707 | 34.389 | 1.67 | 0 | faeb5fb8 |  | lefford | 40 |
 | 2026-08-17T12:36:39Z | sluice:gate | 331.929 | 9134.515 | 383.786 | 28.68 | 0 | 91002cdc |  | lefford | 40 |
@@ -1448,12 +1467,44 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T16:21:29Z | sluice:seam-guard | 955.218 | 19363.140 | 1049.785 | 21.37 | 0 | 2ccb5ab0 |  | lefford | 40 |
 | 2026-08-17T16:25:28Z | sluice:clients | 238.684 | 426.406 | 32.751 | 1.92 | 0 | 81c7dac7 |  | lefford | 40 |
 | 2026-08-17T16:56:50Z | sluice:heavy | 1881.494 | 30431.045 | 689.016 | 16.54 | 0 | 66b8f193 |  | lefford | 40 |
+| 2026-08-17T19:46:42Z | rebaseline | 54.960 | 211.327 | 10.893 | 4.04 | 0 | d5886f17 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T19:49:23Z | gate-commit | 153.628 | 131.445 | 119.317 | 1.63 | 0 | d5886f17 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T19:59:39Z | rebaseline | 233.843 | 214.753 | 12.289 | 0.97 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:03:36Z | gate-commit | 32.656 | 89.607 | 17.448 | 3.28 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:09:29Z | gate-commit | 244.754 | 37.610 | 10.082 | 0.19 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:10:07Z | gate-commit | 20.953 | 36.423 | 8.654 | 2.15 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:14:38Z | rebaseline | 64.228 | 226.765 | 12.697 | 3.73 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:21:33Z | gate-commit | 379.597 | 633.736 | 220.864 | 2.25 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:43:12Z | gate-commit | 809.367 | 200.782 | 490.596 | 0.85 | 0 | edea963e | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T01:44:27Z | rebaseline | 120.444 | 216.370 | 10.313 | 1.88 | 0 | dc2838aa | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T01:49:55Z | gate-commit | 244.871 | 132.768 | 266.344 | 1.63 | 0 | dc2838aa | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T02:24:51Z | rebaseline | 214.670 | 220.200 | 10.728 | 1.08 | 0 | bdf84fda | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T03:10:25Z | gate-commit | 35.272 | 54.358 | 13.622 | 1.93 | 0 | bdf84fda | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T11:24:44Z | rebaseline | 59.602 | 209.282 | 9.862 | 3.68 | 0 | 15c897c4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T11:29:33Z | rebaseline | 55.210 | 213.610 | 11.687 | 4.08 | 0 | 15c897c4 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T12:40:05Z | gate-commit | 22.978 | 50.018 | 13.262 | 2.75 | 0 | 15c897c4 | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-17T20:10:49Z | sluice:artifacts | 82.112 | 661.454 | 26.701 | 8.38 | 0 | 35b0eadc |  | lefford | 40 |
 | 2026-08-17T20:11:22Z | sluice:outboard | 33.395 | 21.350 | 34.612 | 1.68 | 0 | 35e8288f |  | lefford | 40 |
 | 2026-08-17T20:16:44Z | sluice:gate | 321.562 | 8983.654 | 335.588 | 28.98 | 0 | 9aab91cc |  | lefford | 40 |
 | 2026-08-17T20:32:36Z | sluice:seam-guard | 951.976 | 19331.583 | 1052.161 | 21.41 | 0 | 9bfef696 |  | lefford | 40 |
 | 2026-08-17T20:36:31Z | sluice:clients | 234.165 | 421.496 | 33.061 | 1.94 | 0 | 0d89a6f3 |  | lefford | 40 |
 | 2026-08-17T21:08:14Z | sluice:heavy | 1903.133 | 30358.416 | 690.625 | 16.31 | 0 | 8e723b81 |  | lefford | 40 |
+| 2026-08-18T12:44:56Z | rebaseline | 58.879 | 215.196 | 11.065 | 3.84 | 0 | e38ad3d1 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T13:29:56Z | gate-commit | 431.023 | 183.685 | 381.399 | 1.31 | 0 | 02bb1046 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T13:30:39Z | gate-commit | 23.645 | 50.204 | 13.220 | 2.68 | 0 | 02bb1046 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T14:37:54Z | gate-commit | 387.992 | 120.583 | 222.655 | 0.88 | 0 | 7ceea22a | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T14:39:23Z | gate-commit | 20.131 | 36.571 | 8.953 | 2.26 | 0 | 7ceea22a | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T14:48:03Z | gate-commit | 366.994 | 129.386 | 216.473 | 0.94 | 0 | 7ceea22a | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T14:52:40Z | gate-commit | 24.961 | 50.963 | 13.468 | 2.58 | 0 | 7c21df8b | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T16:03:53Z | rebaseline | 63.376 | 231.690 | 11.726 | 3.84 | 0 | b58e53f8 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T16:10:57Z | gate-commit | 403.402 | 149.871 | 233.767 | 0.95 | 0 | b58e53f8 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T21:40:06Z | rebaseline | 65.302 | 224.751 | 11.637 | 3.62 | 0 | 04ae6654 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T22:02:21Z | gate-commit | 317.996 | 102.043 | 147.933 | 0.79 | 0 | 04ae6654 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T22:40:11Z | rebaseline | 59.016 | 215.551 | 12.019 | 3.86 | 0 | 9a25a1b9 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-18T22:52:22Z | gate-commit | 180.105 | 50.627 | 13.530 | 0.36 | 0 | 9a25a1b9 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T00:06:32Z | rebaseline | 86.278 | 220.120 | 13.256 | 2.70 | 0 | ca270b0a | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T00:57:18Z | gate-commit | 99.724 | 52.974 | 14.204 | 0.67 | 0 | ca270b0a | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T01:37:18Z | gate-commit | 1055.687 | 127.921 | 319.718 | 0.42 | 0 | c234d518 | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-18T03:27:04Z | rebaseline | 62.594 | 229.283 | 11.571 | 3.85 | 0 | 85a5333e | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-18T03:36:34Z | gate-commit | 377.733 | 256.319 | 224.469 | 1.27 | 0 | 85a5333e | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-18T04:22:58Z | gate-commit | 701.127 | 246.026 | 642.609 | 1.27 | 0 | b43127f9 | campaign/the-underworld | MacBookPro | 10 |
@@ -1666,6 +1717,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T02:10:42Z | sluice:seam-guard | 1065.440 | 21104.708 | 1097.015 | 20.84 | 0 | 6b2a81b40 |  | lefford | 40 |
 | 2026-08-19T02:14:50Z | sluice:clients | 247.754 | 449.755 | 32.737 | 1.95 | 0 | b772ad190 |  | lefford | 40 |
 | 2026-08-19T02:49:15Z | sluice:heavy | 2064.411 | 32768.758 | 671.520 | 16.20 | 0 | 8051c9a94 |  | lefford | 40 |
+| 2026-08-19T11:03:40Z | rebaseline | 108.791 | 230.359 | 10.332 | 2.21 | 0 | b5c6278c | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T11:38:50Z | gate-commit | 435.099 | 513.353 | 319.980 | 1.92 | 0 | b5c6278c | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-19T11:03:55Z | rebaseline | 75.349 | 234.598 | 11.758 | 3.27 | 0 | 711dbe31 | campaign/the-adit | MacBookPro | 10 |
 | 2026-08-19T11:04:54Z | gate-commit | 43.978 | 55.445 | 15.510 | 1.61 | 0 | f90711ae | campaign/the-adit | MacBookPro | 10 |
 | 2026-08-19T11:09:51Z | sluice:artifacts | 106.298 | 791.154 | 36.551 | 7.79 | 0 | 02cc59d17 |  | lefford | 40 |
@@ -1674,6 +1727,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T11:34:50Z | sluice:seam-guard | 1067.306 | 21095.971 | 1111.683 | 20.81 | 0 | bcd4b187c |  | lefford | 40 |
 | 2026-08-19T11:39:16Z | sluice:clients | 265.377 | 465.489 | 34.678 | 1.88 | 0 | 666d7f5f2 |  | lefford | 40 |
 | 2026-08-19T12:13:02Z | sluice:heavy | 2026.461 | 33016.541 | 687.275 | 16.63 | 0 | d06ce9065 |  | lefford | 40 |
+| 2026-08-19T14:14:53Z | rebaseline | 64.280 | 232.464 | 11.953 | 3.80 | 0 | fa2222ca | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T14:43:16Z | gate-commit | 321.126 | 98.152 | 127.691 | 0.70 | 0 | fa2222ca | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-18T22:24:13Z | prewarm | 227.374 | 1303.906 | 165.840 | 6.46 | 0 | 2fc70c9a | campaign/the-planes | MacBookPro | 10 |
 | 2026-08-19T01:15:34Z | gate-commit | 833.061 | 225.798 | 446.114 | 0.81 | 0 | 752af3bf | campaign/the-planes | MacBookPro | 10 |
 | 2026-08-19T01:16:26Z | gate-commit | 34.993 | 59.957 | 15.527 | 2.16 | 0 | 752af3bf | campaign/the-planes | MacBookPro | 10 |
@@ -1714,6 +1769,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T13:48:55Z | sluice:seam-guard | 1059.738 | 21081.740 | 1101.145 | 20.93 | 0 | 2b28d51d3 |  | lefford | 40 |
 | 2026-08-19T13:53:11Z | sluice:clients | 255.835 | 456.697 | 35.321 | 1.92 | 0 | 4337b206d |  | lefford | 40 |
 | 2026-08-19T14:26:36Z | sluice:heavy | 2004.911 | 32921.038 | 705.474 | 16.77 | 0 | e03935864 |  | lefford | 40 |
+| 2026-08-19T14:52:36Z | rebaseline | 56.502 | 229.248 | 11.657 | 4.26 | 0 | 1dae62b0 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T14:57:03Z | gate-commit | 216.864 | 111.827 | 167.037 | 1.29 | 0 | 1dae62b0 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T15:13:29Z | rebaseline | 45.212 | 231.296 | 11.324 | 5.37 | 0 | 713b2f73 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T15:30:40Z | census | 918.457 | 29509.410 | 292.817 | 32.45 | 0 | a0e6eb1aa |  | lefford | 40 |
 | 2026-08-19T16:17:13Z | gate-commit | 4.932 | 4.430 | 0.493 | 1.00 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
 | 2026-08-19T16:18:47Z | gate-commit | 58.158 | 200.159 | 53.550 | 4.36 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
 | 2026-08-19T16:20:22Z | gate-commit | 44.106 | 125.686 | 47.812 | 3.93 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
@@ -1776,3 +1835,19 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T20:50:35Z | sluice:outboard | 34.987 | 22.329 | 35.673 | 1.66 | 0 | 0b636033b |  | lefford | 40 |
 | 2026-08-19T20:56:37Z | sluice:gate | 362.360 | 9908.997 | 360.100 | 28.34 | 0 | e10ed1b87 |  | lefford | 40 |
 | 2026-08-19T20:59:32Z | sluice:clients | 174.492 | 358.880 | 17.518 | 2.16 | 0 | 5fa3ba224 |  | lefford | 40 |
+| 2026-08-19T21:27:01Z | sluice:artifacts | 59.755 | 536.770 | 25.050 | 9.40 | 0 | 019e744c5 |  | lefford | 40 |
+| 2026-08-19T21:27:36Z | sluice:outboard | 34.556 | 21.633 | 35.336 | 1.65 | 0 | abbd38eae |  | lefford | 40 |
+| 2026-08-19T21:33:47Z | sluice:gate | 371.488 | 9985.746 | 342.271 | 27.80 | 0 | 62af7b91c |  | lefford | 40 |
+| 2026-08-19T21:33:06Z | gate-commit | 116.270 | 800.687 | 76.272 | 7.54 | 0 | 627354795 | fix/sluice-record-and-mouth | lefford | 40 |
+| 2026-08-19T21:35:39Z | sluice:artifacts | 61.962 | 543.552 | 21.264 | 9.12 | 0 | 057a97521 |  | lefford | 40 |
+| 2026-08-19T21:36:15Z | sluice:outboard | 35.825 | 22.694 | 36.126 | 1.64 | 0 | bcccaa642 |  | lefford | 40 |
+| 2026-08-19T21:42:11Z | sluice:gate | 355.835 | 9830.380 | 334.579 | 28.57 | 0 | 57a2fb40a |  | lefford | 40 |
+| 2026-08-19T21:45:04Z | sluice:clients | 173.428 | 352.869 | 10.911 | 2.10 | 0 | 897c80f0d |  | lefford | 40 |
+| 2026-08-19T21:51:53Z | sluice:artifacts | 119.502 | 989.406 | 43.897 | 8.65 | 0 | 3727727ca |  | lefford | 40 |
+| 2026-08-19T21:52:28Z | sluice:outboard | 34.769 | 22.012 | 35.342 | 1.65 | 0 | efe861f89 |  | lefford | 40 |
+| 2026-08-19T21:59:08Z | sluice:gate | 399.905 | 10909.994 | 421.366 | 28.34 | 0 | 0a286a712 |  | lefford | 40 |
+| 2026-08-19T22:03:47Z | sluice:clients | 278.946 | 508.607 | 33.318 | 1.94 | 0 | b925ea3d8 |  | lefford | 40 |
+| 2026-08-19T22:14:45Z | sluice:artifacts | 84.859 | 654.492 | 29.279 | 8.06 | 0 | 260a9028f |  | lefford | 40 |
+| 2026-08-19T22:15:20Z | sluice:outboard | 34.937 | 22.001 | 35.653 | 1.65 | 0 | fedac74fb |  | lefford | 40 |
+| 2026-08-19T22:21:25Z | sluice:gate | 364.388 | 9885.760 | 364.022 | 28.13 | 0 | 9010086fb |  | lefford | 40 |
+| 2026-08-19T22:25:02Z | sluice:clients | 216.650 | 403.301 | 22.550 | 1.97 | 0 | 196401c37 |  | lefford | 40 |
