@@ -449,6 +449,13 @@ mod tests {
                 // two ways, not two independent algorithms. See
                 // `windows/vessel/src/underworld_level/carve.rs`.
                 "underworld/level/rooms v1",
+                // The Adit, Task 4: a leaf's worked-vs-natural and
+                // algorithm-family draw, keyed to `CaveKind`/
+                // `ChamberOrigin`. Additive at v1 — a NEW label, so it
+                // perturbs no existing stream. See
+                // `windows/vessel/src/underworld_level/mod.rs`'s
+                // `choose_leaf_style`.
+                "underworld/level/style v1",
                 // The Adit, Task 3: the drunkard's-walk tunnel content
                 // generator (LavaTube-biased leaves). See
                 // `windows/vessel/src/underworld_level/carve.rs`.

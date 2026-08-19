@@ -15,16 +15,11 @@ use crate::underworld_level::region::cut;
 
 /// Which content generator fills a leaf.
 ///
-/// `generate_level` (this task) only ever constructs `CellularCave`, since
-/// real per-leaf selection is Task 4's job (`CaveKind`/`ChamberOrigin`
-/// driven) — until that lands, the other three variants are exercised only
-/// by this module's own tests, hence the dead-code allow below.
+/// All four variants are constructed by real production code:
+/// `choose_leaf_style` (Task 4) selects among them from `CaveKind` and
+/// `ChamberOrigin`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[allow(
-    dead_code,
-    reason = "Tunneler/AngularRooms/RoomsAndCorridors are wired to real selection in Task 4"
-)]
-pub(super) enum Algorithm {
+pub enum Algorithm {
     /// Karst-biased: an organic cavern via cellular automata.
     CellularCave,
     /// LavaTube-biased: a carved tube via a drunkard's walk.

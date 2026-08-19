@@ -198,6 +198,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `underworld/level/v1/cellular` | cellular-automata cave carving within a leaf |
 | `underworld/level/v1/tunneler` | drunkard's-walk tunnel carving within a leaf |
 | `underworld/level/v1/rooms` | partitioned-rooms carving within a leaf |
+| `underworld/level/v1/style` | which content generator and worked/natural mix a leaf gets |
 
 ### hornvale-worldgen
 

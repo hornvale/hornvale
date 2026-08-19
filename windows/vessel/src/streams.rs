@@ -119,4 +119,8 @@ hornvale_kernel::stream_labels! {
     /// technique tuned two ways, not two independent algorithms.
     UNDERWORLD_LEVEL_ROOMS = "underworld/level/v1/rooms"
         => "partitioned-rooms carving within a leaf";
+    /// Stream label for a leaf's worked-vs-natural and algorithm-family
+    /// draw (The Adit).
+    UNDERWORLD_LEVEL_STYLE = "underworld/level/v1/style"
+        => "which content generator and worked/natural mix a leaf gets";
 }
