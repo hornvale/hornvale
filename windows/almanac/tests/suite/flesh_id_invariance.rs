@@ -271,7 +271,7 @@ fn the_flesh_seed_still_separates_materially_different_occupations() {
 /// because no real world produces one. What CAN be pinned is the rule.
 #[test]
 fn the_conquest_tie_break_reads_no_entity_id() {
-    let src = include_str!("../src/history.rs");
+    let src = include_str!("../../src/history.rs");
     let after = src
         .split("fn conquest_victim")
         .nth(1)
