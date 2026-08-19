@@ -322,3 +322,13 @@ further from the event. A signed version — damaging a claim more as it flows
 *toward* the more removed party — is the derived form of ingroup and outgroup,
 costs nothing to compute, and was held back only because varying it and the
 accumulation rule at once would measure neither.
+
+**Corrected by [The Undertow](the-undertow.md), on the second clause only.** The
+amplitude is still symmetric and the signed version is still unbuilt — but it is
+no longer *the* derived form of ingroup and outgroup, only one of them. A
+crossing between two peoples now costs a penalty read from how much contact the
+two actually have (`span(FINEST) / (1 + contact_edges)`), which produces a
+preference for one's own line as an output of the walk rather than as a rule,
+and does it through the accumulated width rather than through the amplitude. The
+mechanism reaches its target — 94% of the near-stranger tercile demonstrably pay
+it — and the aggregate this thread reports does not move at all.

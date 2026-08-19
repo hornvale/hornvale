@@ -117,6 +117,14 @@ parties attended; asserting news flows only one way across it would be
 authoring. Undirected is also the *ceiling*, so any directed variant is a
 restriction measurable against these numbers later.
 
+**Corrected by [The Undertow](the-undertow.md), which ran that restriction.**
+Both directed arms were simulated on this graph and neither restores
+disagreement: divergence falls under *every* arm on *every* rule, and under the
+multiplicative rule the victim→raider arm collapses it further than the
+undirected edge does. Pooling tracks the seam's volume, not its symmetry. The
+freeze was the right call and it was not the cause; the follow-up this paragraph
+holds open is closed rather than pending.
+
 The edge makes the transmission graph **cyclic**, and every previous model
 assumed it was not — each recovered *the* path by slicing an ancestry walk,
 unique because the founding tree has a single parent per node. The rule survives
@@ -152,6 +160,20 @@ the frontier order, run through the same harness, produces 102 mismatches.
 Both oracles were reporting instruments rather than committed tests, and the
 second one — which pins a property no shipped test covers — should probably
 have been kept.
+
+**Corrected by [The Undertow](the-undertow.md): the relaxation minimises the
+first component of that key and not the whole of it.** An exhaustive route
+enumeration over the real substrate — 13,569,981 routes across 4,388 holders —
+finds **36 of 13,164 contact holders (0.27%)** holding a telling with the same
+accumulated width bits and the same remembered day as an available route, but
+one hop more. The width minimum above is genuine; "the genuine minimum for every
+holder" is not, because the key is lexicographic and the hop component is where
+it fails. Neither oracle could have seen it: the first compared against the old
+tree walk, which has no choices to make, and the second's synthetic worlds never
+presented the degeneracy. The descent arm is clean at 0 of 310,215. The defect
+is reproduced and deliberately not repaired — its cause is that the additive
+rule's width telescopes and is therefore blind to hop count, which makes the
+question a re-expansion-policy one rather than a typo.
 
 The campaign's one real correctness risk gets its own test, and it is the one
 the campaign is named for: an account that leaves its lineage, crosses to
@@ -300,6 +322,17 @@ event rather than drifting apart. Whether that survives a directed edge is now
 the sharpest open question the model has, and it is cheap to ask, because
 victim→raider and raider→victim are both restrictions of the undirected ceiling
 measured here and need nothing re-derived.
+
+**Corrected by [The Undertow](the-undertow.md): it was cheap, it was asked, and
+it was the wrong question.** Pooling survives both directed restrictions, so the
+undirected freeze is exonerated rather than implicated. More usefully, the axis
+itself turns out to be the minority case — **about 70% of cross-people holders
+cross the seam more than once**, out to depths of 13, 19 and 9 hops, and only
+about 4% are the hop-zero co-witness line. Victim-versus-raider is a story about
+a single crossing. The successor's own subject moved twice for this reason: it
+also exonerated the *selection rule*, and found that under descent all 103,405
+holders receive exactly one telling — so half of the ratio above was never at
+stake for any ordering rule to move.
 
 Two freezes held while the edge varied and are now load-bearing in a way they
 were not before: the amplitude reads the *teller's* generation length, and the

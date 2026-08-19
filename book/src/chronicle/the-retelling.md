@@ -172,3 +172,15 @@ rule, and two-sided divergence falls to 0.52–0.77× of the descent baseline �
 so contact is *homogenising* on the frozen measure. Corroboration still wants
 accounts that could have differed. Contact supplies the channel and, in the
 undirected form measured there, makes the difference smaller.
+
+**Extended by [The Undertow](the-undertow.md), which priced the cheapest
+candidate for that missing notion of belief and found it already refuted.** The
+obvious people-blind form of "changes on confirmation" is a count of concordant
+tellings — your own line supplies more of them, so ingroup preference would fall
+out as an output rather than being authored. That count is exactly what a
+frequency rule measures, and frequency and frequency-weighted selection were run
+against the shipped least-damage rule over the same worlds: of the 8 cells where
+they could have disagreed, **0** did. There is a structural reason as well as an
+empirical one — under descent every holder receives exactly one telling, so a
+confirmation count is 1 everywhere the seam is absent, and a belief model would
+be exercised only at the seam.

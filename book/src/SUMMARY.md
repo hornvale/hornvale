@@ -375,6 +375,7 @@
 - [The Palimpsest](./chronicle/the-palimpsest.md)
 - [The Parley](./chronicle/the-parley.md)
 - [The Illumination](./chronicle/the-illumination.md)
+- [The Undertow](./chronicle/the-undertow.md)
 
 # Appendix: The Frontier
 
