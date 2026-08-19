@@ -5297,15 +5297,12 @@ pub fn derive_npcs(
                 .map(|t| t.niche.clone())
                 .unwrap_or_else(default_diet_niche);
             // Body mass (The Action Clock): the allometric driver of every
-            // action's cost. A species missing from the biosphere registry
-            // falls back EXPLICITLY to the clock's reference mass — `tempo`
-            // clamps a nonsense value anyway, but the fallback is stated here
-            // rather than left implicit, so a defaulted creature reads at
-            // exactly tempo 1.0.
-            let mass_kg = biosphere
-                .get_by_label(&species)
-                .map(|t| t.mass.kilograms())
-                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
+            // action's cost. Derived through `clock::mass_for_species` — the
+            // ONE derivation every body shares, creature and possessed alike,
+            // which is what makes the player's tariff the same tariff rather
+            // than a parallel one. The fallback for a species missing from the
+            // biosphere registry lives there.
+            let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -5430,11 +5427,10 @@ pub fn derive_wild_npcs(
                 .unwrap_or_else(default_diet_niche);
             // Body mass (The Action Clock), as in `derive_npcs`: the fauna are
             // most of the health battery's population, so the wild path must
-            // carry the trait too or the tempo spread collapses.
-            let mass_kg = biosphere
-                .get_by_label(&species)
-                .map(|t| t.mass.kilograms())
-                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
+            // carry the trait too or the tempo spread collapses. Same shared
+            // derivation, deliberately — a second copy here is exactly what
+            // this call replaced.
+            let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)

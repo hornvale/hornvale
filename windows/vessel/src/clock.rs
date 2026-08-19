@@ -6,6 +6,9 @@
 //! `kernel/src/astar.rs` uses `u64` costs.
 
 use crate::action::Action;
+use hornvale_kernel::KindId;
+use hornvale_kernel::component::ComponentStore;
+use hornvale_species::BiosphereTraits;
 
 /// An exact count of scheduler ticks. Internal; never serialized.
 /// type-audit: bare-ok(count)
@@ -42,6 +45,33 @@ pub fn ticks_per_local_day(day_length_std: Option<f64>) -> u64 {
 /// Authored.
 /// type-audit: bare-ok(ratio)
 pub const REFERENCE_MASS_KG: f64 = 70.0;
+
+/// The authored biosphere roster's shape, as `liveness.rs` already holds it:
+/// `hornvale_species::biosphere_registry()` returns exactly this. Named here so
+/// [`mass_for_species`] can borrow one without this module learning how to
+/// build one — the registry is a free function over authored data, so nothing
+/// about it requires a world and `clock` stays unit-testable.
+pub type Biosphere = ComponentStore<KindId, BiosphereTraits>;
+
+/// A body's mass in kilograms — THE ONE DERIVATION, shared by every body.
+///
+/// [`cost_ticks`] already charges time as a function of the body with no driver
+/// parameter, so a possessed body and a creature pay the same tariff exactly
+/// when they read their mass the same way. That was previously two byte-
+/// identical inline lookups in `liveness.rs` and nothing at all for the
+/// player; it is this function now.
+///
+/// Falls back to [`REFERENCE_MASS_KG`] when the biosphere is absent **or** the
+/// species is not in it. [`tempo`] clamps a nonsense value anyway, but the
+/// fallback is stated rather than left implicit, so a defaulted body reads at
+/// exactly tempo `1.0`.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(ratio: return)
+pub fn mass_for_species(species: &str, biosphere: Option<&Biosphere>) -> f64 {
+    biosphere
+        .and_then(|b| b.get_by_label(species))
+        .map(|t| t.mass.kilograms())
+        .unwrap_or(REFERENCE_MASS_KG)
+}
 
 /// The allometric exponent for biological TIMES (stride period, heart interval,
 /// lifespan): roughly the quarter power of mass. Authored, and the same
