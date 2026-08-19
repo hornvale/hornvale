@@ -1,7 +1,9 @@
 # The Delving — the program for walking the underworld
 
-*Metaplan. Three campaigns. Status: campaign 0 (The Adit) starting; campaigns
-1 and 2 unstarted and unnamed.*
+*Metaplan. Three campaigns. Status: campaign 0 (The Adit) **complete**
+(2026-08-19) — the underworld has real, walkable, connected geometry for
+the first time; campaigns 1 (underground movement) and 2 (the chart
+itself) unstarted and unnamed.*
 
 ## 1. What occasioned it
 

@@ -1,5 +1,14 @@
 # The Adit — a shape for the underworld to stand in
 
+> **COMPLETE (2026-08-19).** All ten tasks (nine planned, one added
+> mid-execution — see §4.5's own correction and the chronicle for what
+> changed) shipped, task-reviewed, and passed a final whole-branch review
+> clean after one fix wave. Merged to `main` at `f1dd88b7`. See
+> [the chronicle](../../../book/src/chronicle/the-adit.md) and
+> [the retrospective](../../retrospectives/the-adit.md) for what actually
+> happened, including two determinism defects caught before implementation
+> and two connectivity defects caught during it.
+
 *The Delving campaign 0. Predecessor:
 [The Underworld](2026-08-16-the-underworld-design.md) (Chorography
 campaign 2), which gave chambers real conditions and nothing to stand them
