@@ -725,8 +725,13 @@ mod tests {
     /// `carve::tests::every_algorithm_produces_at_least_one_floor_cell`'s
     /// own contract (every leaf gets >= 1 `Floor` cell, and the first leaf
     /// always exists), so this must never be zero; (2) every level but the
-    /// first has *at most one* `StairsUp` cell; (3) when both are present,
-    /// they differ. (1) is the one that actually catches a collision that
+    /// first has *exactly one* `StairsUp` cell (the shallowest level, which
+    /// has none, is checked separately against zero-or-one so the loop stays
+    /// correct there too) — a `<=` bound here would silently accept a level
+    /// missing its up-stairs entirely, the reversed-write-order twin of the
+    /// down-stairs-overwritten defect assertion (1) exists to catch; (3)
+    /// when both are present, they differ. (1) is the one that actually
+    /// catches a collision that
     /// silently overwrites the down-stairs — a bare non-collision check
     /// (`assert_ne!` only, guarded by non-empty loops) passes vacuously
     /// when a collision empties one side's `Vec` via `BTreeMap` overwrite,
@@ -780,10 +785,18 @@ mod tests {
                     1,
                     "seed {s} level {i}: expected exactly one StairsDown cell, found {down_cells:?}"
                 );
-                assert!(
-                    up_cells.len() <= 1,
-                    "seed {s} level {i}: expected at most one StairsUp cell, found {up_cells:?}"
-                );
+                if i > 0 {
+                    assert_eq!(
+                        up_cells.len(),
+                        1,
+                        "seed {s} level {i}: expected exactly one StairsUp cell, found {up_cells:?}"
+                    );
+                } else {
+                    assert!(
+                        up_cells.len() <= 1,
+                        "seed {s} level {i}: expected at most one StairsUp cell, found {up_cells:?}"
+                    );
+                }
                 for down in &down_cells {
                     for up in &up_cells {
                         assert_ne!(
@@ -842,55 +855,85 @@ mod tests {
     #[test]
     /// claim: invariant(seed: 0..20) — every generated level's walkable
     /// cells form exactly one connected component, for every seed in the
-    /// range. This is the property Task 2's original design silently failed
-    /// to guarantee for any level with more than one leaf.
+    /// range, swept across every `CaveKind` x `ChamberOrigin` combination.
+    /// This is the property Task 2's original design silently failed to
+    /// guarantee for any level with more than one leaf.
+    ///
+    /// **Swept over all 6 `(CaveKind, ChamberOrigin)` combinations**, not
+    /// just `(Fracture, Found)` — a prior version of this sweep hardcoded
+    /// that one pair, and `choose_leaf_style`'s `Found`-origin base chance
+    /// (0.10) blended against the neutral 0.5 bias put every leaf on
+    /// `AngularRooms`/`RoomsAndCorridors`, so `CellularCave` and `Tunneler`
+    /// were never exercised here at all — exactly the blind spot that let
+    /// Task 10's `CellularCave`-disconnected-caverns defect go uncaught
+    /// until an unrelated integration test happened to hit it. Also asserts
+    /// a positive control (`composite_levels_probed > 0`): the
+    /// cross-leaf-connectivity property this sweep guards (Task 9) is only
+    /// meaningfully tested if at least some generated levels actually have
+    /// more than one leaf, mirroring the `single_leaf_levels_probed`
+    /// positive control in `stairs_down_and_stairs_up_never_share_a_cell`
+    /// above.
     fn every_walkable_cell_is_reachable_from_every_other() {
         use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
         use std::collections::{BTreeSet, VecDeque};
 
-        for seed_value in 0..20u64 {
-            let extent = Rect {
-                x: 0,
-                y: 0,
-                w: 40,
-                h: 24,
-            };
-            let level = generate_level_with_origin(
-                extent,
-                CaveKind::Fracture,
-                ChamberOrigin::Found,
-                NEUTRAL_WORKED_BIAS,
-                Seed(seed_value),
-            );
-            let walkable: BTreeSet<Cell> = level
-                .cells
-                .iter()
-                .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
-                .map(|(&c, _)| c)
-                .collect();
-            let Some(&start) = walkable.iter().next() else {
-                continue; // a degenerate all-wall level has nothing to check
-            };
-            let mut seen = BTreeSet::new();
-            let mut queue = VecDeque::new();
-            seen.insert(start);
-            queue.push_back(start);
-            while let Some(Cell(x, y)) = queue.pop_front() {
-                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                    let next = Cell(x + dx, y + dy);
-                    if walkable.contains(&next) && seen.insert(next) {
-                        queue.push_back(next);
+        let mut composite_levels_probed = 0;
+        for cave_kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+            for origin in [ChamberOrigin::Found, ChamberOrigin::Made] {
+                for seed_value in 0..20u64 {
+                    let extent = Rect {
+                        x: 0,
+                        y: 0,
+                        w: 40,
+                        h: 24,
+                    };
+                    let level = generate_level_with_origin(
+                        extent,
+                        cave_kind,
+                        origin,
+                        NEUTRAL_WORKED_BIAS,
+                        Seed(seed_value),
+                    );
+                    if level.leaf_styles.len() > 1 {
+                        composite_levels_probed += 1;
                     }
+                    let walkable: BTreeSet<Cell> = level
+                        .cells
+                        .iter()
+                        .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
+                        .map(|(&c, _)| c)
+                        .collect();
+                    let Some(&start) = walkable.iter().next() else {
+                        continue; // a degenerate all-wall level has nothing to check
+                    };
+                    let mut seen = BTreeSet::new();
+                    let mut queue = VecDeque::new();
+                    seen.insert(start);
+                    queue.push_back(start);
+                    while let Some(Cell(x, y)) = queue.pop_front() {
+                        for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                            let next = Cell(x + dx, y + dy);
+                            if walkable.contains(&next) && seen.insert(next) {
+                                queue.push_back(next);
+                            }
+                        }
+                    }
+                    assert_eq!(
+                        seen.len(),
+                        walkable.len(),
+                        "{cave_kind:?}/{origin:?} seed {seed_value}: {} of {} walkable cells unreachable from {start:?}",
+                        walkable.len() - seen.len(),
+                        walkable.len()
+                    );
                 }
             }
-            assert_eq!(
-                seen.len(),
-                walkable.len(),
-                "seed {seed_value}: {} of {} walkable cells unreachable from {start:?}",
-                walkable.len() - seen.len(),
-                walkable.len()
-            );
         }
+        assert!(
+            composite_levels_probed > 0,
+            "this sweep never generated a level with more than one leaf — the \
+             cross-leaf connectivity property (Task 9) this test guards would \
+             pass vacuously"
+        );
     }
 }

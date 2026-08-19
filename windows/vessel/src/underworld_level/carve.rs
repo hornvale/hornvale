@@ -137,7 +137,10 @@ fn find_components(rect: Rect, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Vec
                 component.push(Cell(cx, cy));
                 for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                     let next = Cell(cx + dx, cy + dy);
-                    if cells.get(&next) == Some(&LevelCellKind::Floor) && visited.insert(next) {
+                    if rect.contains(next)
+                        && cells.get(&next) == Some(&LevelCellKind::Floor)
+                        && visited.insert(next)
+                    {
                         queue.push_back(next);
                     }
                 }
@@ -172,6 +175,13 @@ fn carve_tunneler(
     cells: &mut BTreeMap<Cell, LevelCellKind>,
 ) -> u32 {
     let interior = rect.inset(1);
+    if interior.w < 1 || interior.h < 1 {
+        // Degenerate rect (too small to have an interior once inset) — draw
+        // nothing, same graceful degradation `carve_cellular_cave` and
+        // `carve_partitioned_rooms`'s own subdivision bound already give
+        // small/degenerate rects, rather than panicking in `.clamp()` below.
+        return 0;
+    }
     let mut dof = 0u32;
     let mut x = interior.x + (stream.next_u64() % interior.w.max(1) as u64) as i32;
     let mut y = interior.y + interior.h / 2;
@@ -259,14 +269,9 @@ fn subdivide_for_rooms(
 }
 
 fn connect_centers(a: Rect, b: Rect, cells: &mut BTreeMap<Cell, LevelCellKind>) {
-    let (ax, ay) = (a.x + a.w / 2, a.y + a.h / 2);
-    let (bx, by) = (b.x + b.w / 2, b.y + b.h / 2);
-    for x in ax.min(bx)..=ax.max(bx) {
-        cells.insert(Cell(x, ay), LevelCellKind::Floor);
-    }
-    for y in ay.min(by)..=by.max(by) {
-        cells.insert(Cell(bx, y), LevelCellKind::Floor);
-    }
+    let a_center = Cell(a.x + a.w / 2, a.y + a.h / 2);
+    let b_center = Cell(b.x + b.w / 2, b.y + b.h / 2);
+    super::connect_cells(a_center, b_center, cells);
 }
 
 #[cfg(test)]
@@ -344,17 +349,24 @@ mod tests {
 
     #[test]
     fn carving_never_touches_outside_the_rect() {
-        let mut stream = stream_for(Algorithm::Tunneler, Seed(5));
-        let mut cells = BTreeMap::new();
-        carve(Algorithm::Tunneler, RECT, &mut stream, &mut cells);
-        for cell in cells.keys() {
-            assert!(
-                cell.0 >= RECT.x
-                    && cell.0 < RECT.x + RECT.w
-                    && cell.1 >= RECT.y
-                    && cell.1 < RECT.y + RECT.h,
-                "cell {cell:?} escaped its own leaf rect"
-            );
+        for algorithm in [
+            Algorithm::CellularCave,
+            Algorithm::Tunneler,
+            Algorithm::AngularRooms,
+            Algorithm::RoomsAndCorridors,
+        ] {
+            let mut stream = stream_for(algorithm, Seed(5));
+            let mut cells = BTreeMap::new();
+            carve(algorithm, RECT, &mut stream, &mut cells);
+            for cell in cells.keys() {
+                assert!(
+                    cell.0 >= RECT.x
+                        && cell.0 < RECT.x + RECT.w
+                        && cell.1 >= RECT.y
+                        && cell.1 < RECT.y + RECT.h,
+                    "{algorithm:?}: cell {cell:?} escaped its own leaf rect"
+                );
+            }
         }
     }
 

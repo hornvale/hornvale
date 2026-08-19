@@ -1571,3 +1571,13 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T04:31:55Z | gate-commit | 52.434 | 72.944 | 33.545 | 2.03 | 0 | 5e249334 | campaign/the-adit | MacBookPro | 10 |
 | 2026-08-19T04:32:35Z | gate-commit | 23.384 | 54.338 | 14.378 | 2.94 | 0 | 5e249334 | campaign/the-adit | MacBookPro | 10 |
 | 2026-08-19T04:42:18Z | gate-commit | 53.911 | 73.157 | 34.002 | 1.99 | 0 | 1ca43081 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:43:42Z | gate-commit | 23.356 | 54.162 | 14.388 | 2.94 | 0 | 1ca43081 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:50:55Z | gate-commit | 53.135 | 77.365 | 41.182 | 2.23 | 0 | ba44ff23 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:51:33Z | gate-commit | 23.456 | 54.387 | 14.435 | 2.93 | 0 | ba44ff23 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:09:51Z | gate-commit | 53.902 | 74.112 | 40.700 | 2.13 | 0 | 286519b1 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:28:48Z | gate-commit | 67.115 | 117.821 | 39.832 | 2.35 | 0 | 21152158 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:29:27Z | gate-commit | 20.316 | 37.150 | 8.590 | 2.25 | 0 | 21152158 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:31:29Z | gate-commit | 63.747 | 81.608 | 49.840 | 2.06 | 0 | 21152158 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:35:48Z | gate-commit | 23.366 | 54.165 | 14.045 | 2.92 | 0 | 9c90c386 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:38:47Z | gate-commit | 23.765 | 54.241 | 14.674 | 2.90 | 0 | 9c90c386 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T05:53:32Z | gate-commit | 61.985 | 74.422 | 38.920 | 1.83 | 0 | 5f8353bb | campaign/the-adit | MacBookPro | 10 |
