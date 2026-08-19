@@ -3193,47 +3193,66 @@ probes, and each one falsified a premise the campaign's own controller had
 written down and recommended.** Asking what would have to vary is a question you
 can get wrong twice in a row about the same result.
 
+**Every figure in this entry is re-derived against the tree the campaign merged
+into.** It ran to completion without absorbing `main`, a predecessor moved
+settlement placement underneath it, and the merge was textually clean — so the
+numbers it wrote down described a substrate the merge product does not have. The
+re-derivation moved two of its conclusions and is disclosed where each occurs.
+
 **The directed edge is closed, not deferred.** This chapter's last re-score named
 it as one of two cheap blockers. It was run: both restrictions were simulated on
-the shipped graph, and divergence falls under *every* arm on *every* rule — under
-the multiplicative rule the one-way arm collapses it *further* than the
+the shipped graph, and divergence never *rises* under either arm on any rule —
+under the multiplicative rule the one-way arm collapses it *further* than the
 undirected edge does. Restricting the channel does not restore disagreement, so
 the freeze the predecessor made is exonerated rather than implicated. The axis is
-also the minority case: about 70% of cross-people holders cross the seam more
-than once, and only about 4% are the hop-zero co-witness line.
+also the minority case: about 55% of cross-people holders cross the seam more
+than once, and only about 6% are the hop-zero co-witness line.
 
 **The selection rule is exonerated too, and by a stronger argument than its own
-table.** Four people-blind alternatives disagreed with the shipped rule on 0 of
-the 8 cells where they could have. Behind that sits a structural fact: under
-descent — the ratio's own *denominator* — all 103,405 holders receive exactly one
-telling, because the founding tree is a forest and witnesses are never re-entered.
+table.** Four people-blind alternatives disagreed with the shipped rule on 1 of
+the 4 cells where they could have, and the one that broke — `recency` — maximises
+an unbounded hop count and is not shippable as written. Behind that sits a
+structural fact, and it is the half that carries the score: under descent — the
+ratio's own *denominator* — all 82,209 holders receive exactly one telling,
+because the founding tree is a forest and witnesses are never re-entered.
 **Half of the ratio was never at stake.** No ordering rule could have moved it,
 and the table was measuring a question that was half-vacuous by construction.
+That argument is about the shape of a tree and does not move when a substrate
+does; the table did, from 0 of 8 to 1 of 4, which is exactly why the score rests
+on the argument and not on the table.
 
-**Then the campaign built a mechanism that works and watched the measure fail to
-see it.** A seam crossing now costs a penalty derived from how much contact the
-two peoples actually have. It reaches: 477 holder-rungs move, 94% of the
-near-stranger tercile demonstrably pay, and the reach identity closes to the unit
-on all three accumulation rules. It changes what is held: thousands of
+**Then the campaign built a mechanism that works and watched the measure nearly
+fail to see it.** A seam crossing now costs a penalty derived from how much
+contact the two peoples actually have. It reaches: 282 holder-rungs move, 81% of
+the near-stranger tercile demonstrably pay, and the reach identity closes to the
+unit on all three accumulation rules. It changes what is held: thousands of
 communities keep a different account of a war than they did. And the aggregate
-this chapter has been quoting moves by **exactly zero** — 22→22, 17→17, 53→53.
+this chapter has been quoting moves by **zero on two rules and by two endings of
+421 on the third** — 11→11, 11→11, 43→45.
 
 That is the same dissociation, for the third time in this thread, and the repeat
-is the finding rather than the incident. A selection change that rewrote 45.7% of
-holders moved it by ≤2 events of 124; this one changed 0.15–0.33% of 1.4 million
-held tellings and moved it by 0. **The blocker is no longer a missing mechanism.
-It is a missing measure.** Both of the cheap blockers this chapter named have now
-been spent, one discharged and one made irrelevant, and the corroboration half is
-still **not-yet-scorable** — but for the first time its obstacle is an instrument
-rather than a world.
+is the finding rather than the incident. A selection change that rewrote 41.9% of
+holders moved it by ≤4 events of 100; this one changed 0.10–0.25% of 1.2 million
+held tellings and moved it by two. **The blocker is no longer a missing
+mechanism. It is a missing measure.** Both of the cheap blockers this chapter
+named have now been spent, one discharged and one made irrelevant, and the
+corroboration half is still **not-yet-scorable** — but for the first time its
+obstacle is an instrument rather than a world.
+
+(As executed, that aggregate moved by exactly zero on all three rules and this
+entry said so. The two-event move appeared only on re-derivation. It does not
+change the conclusion — a measure that registers a change in 0.25% of 1.2 million
+holders as two events is still the wrong instrument — but the absolute form of
+the claim did not survive and is not made.)
 
 **The re-score, and one thing that must not be read into it.** The campaign's own
 licence is that the penalty's magnitude is *derived* from the ledger rather than
 authored, which is what makes a people-aware rule admissible at all. Nothing in
 this campaign tested that. The tercile ordering came out inverted rather than
 uniform, and an inverted ordering is equally consistent with a **constant**
-penalty, since 48% of crossings sit at a single people-pair; the only sweep run
-varied a *global* scalar, which cannot reorder pairs relative to each other. **A
+penalty, since crossings concentrate on a handful of people-pairs; the only sweep
+run varied a *global* scalar, which cannot reorder pairs relative to each other.
+**A
 derivation is not confirmed by a mechanism that works.** The bet that a derived
 magnitude does something a well-chosen constant would not is a *new* entry on
 this axis, self-scorable, and unscored — which is a better position than the

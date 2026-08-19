@@ -5,6 +5,13 @@
 Process lessons only. The results are in
 [the chronicle](../../book/src/chronicle/the-undertow.md).
 
+**Every figure below is re-derived against the merge product.** This branch ran
+137 commits without absorbing `main`; a predecessor moved settlement placement,
+so the substrate every measurement rests on moved under it. See *The substrate
+moved under the campaign at its close* at the foot of this document — it is the
+most transferable lesson here and it is deliberately not first, because the
+lessons above it are the ones the campaign was for.
+
 ## The subject was falsified twice before a spec existed, and both premises were mine
 
 This is the campaign's defining process fact and it is worth stating in its full
@@ -17,18 +24,26 @@ the undirected freeze. A substrate probe, run before any spec, said otherwise:
 divergence falls under *every* arm on *every* rule, and under the multiplicative
 rule the one-way arm collapses it further than the undirected edge. Pooling
 tracks seam volume, not symmetry. **The deeper half of the same probe was the
-useful one**: ~70% of cross-people holders cross the seam more than once, so
+useful one**: ~55% of cross-people holders cross the seam more than once, so
 victim-versus-raider is a story about a single crossing and single crossings are
 the minority case. Freezing a hypothesis on that axis would have preregistered
 against an axis the substrate does not sit on.
 
 **Second, the tie-break.** The replacement subject was sharper — the shipped walk
 orders by damage and never consults who is speaking, so perhaps pooling is the
-ordering rule's doing. Measured: of the 8 cells where the baseline pools and an
-alternative could disagree, **0** did. And the structural fact behind the table
-is stronger than the table: under descent — the ratio's own *denominator* — all
-103,405 holders receive exactly one telling, so **half the ratio was never at
-stake for any ordering rule.**
+ordering rule's doing. Measured: of the 4 cells where the baseline pools and an
+alternative could disagree, **1** did — `recency`, which is not shippable as
+written because it maximises an unbounded hop count. And the structural fact
+behind the table is stronger than the table: under descent — the ratio's own
+*denominator* — all 82,209 holders receive exactly one telling, so **half the
+ratio was never at stake for any ordering rule.**
+
+(As executed the table read 0 of 8, and the elimination looked total. The
+re-derivation at the close turned it into 1 of 4. The *process* lesson is
+unaffected — a controller premise died in a probe either way — but it is worth
+noticing that the cleanness of the kill was partly substrate luck, and that a
+one-cell break would have been just as decisive because the structural argument
+below it does not depend on the table at all.)
 
 Both premises were controller-authored, both were plausible, and both were dead
 in a probe that cost a fraction of a campaign. The rule that produced this
@@ -56,9 +71,12 @@ implementer did not do that. It re-walked the whole panel at multipliers 1× to
 a headroom ratio is only an estimate.
 
 **The analytic answer I asked for would have said "inert", and it would have been
-wrong.** Median headroom by calculation is 71× to 32,129×. The 477 holder-rungs
+wrong.** Median headroom by calculation is 38× to 1,201×. The 282 holder-rungs
 that actually move are the **tail**, not the median, and a ratio of medians
-cannot see a tail effect. Had the probe obeyed its brief, I would have rescaled a
+cannot see a tail effect. (Both figures are the re-derived ones; as executed they
+were 71×–32,129× and 477 rungs. The medians fell an order of magnitude between
+substrates and predicted the tail no better on either, which is the lesson
+twice.) Had the probe obeyed its brief, I would have rescaled a
 formula that needed no rescaling, mid-campaign, on an artifact of my own
 arithmetic.
 
@@ -93,8 +111,9 @@ assumption rather than an observation.
 3. **Task 3 — the caveat arithmetic was wrong on its first draft, and running it
    is what showed that.** The printed floor caveat summed `capped_endings` across
    all three accumulation rules (42) where the reviewer's figure was one rule's
-   cell (14 of 138). Caught by actually reading the test's stdout, not by
-   checking the arithmetic.
+   cell (14 of 138) — those are the pre-absorption counts, kept because they are
+   the incident's own numbers. Caught by actually reading the test's stdout, not
+   by checking the arithmetic.
 4. **Task 4 — a control that would have asserted the mechanism away.** The first
    non-vacuity control asserted that no kobold holder keeps an ingroup telling on
    a two-people fixture. It failed 6 of 12: that fixture's second ending dies at
@@ -158,8 +177,10 @@ preregistration, before any result — said that falsifying the tercile clause
 means the contact term is inert and the derivation decorative. It said that
 because it was written for a **uniform** rise. What happened was an **inverted**
 one, and an inverted ordering is equally consistent with a *constant* penalty,
-because 48% of crossings sit at a single people-pair. There is no arm anywhere in
-this campaign separating a derived magnitude from a constant one.
+because crossings concentrate on a handful of people-pairs (41.6% at a single
+edge count, over six pairs; as executed it was 48% at one 25-edge pair). There is
+no arm anywhere in this campaign separating a derived magnitude from a constant
+one.
 
 The gloss was withdrawn before it shipped. Had it not been, the campaign would
 have published that its own derivation — its entire licence under the project's
@@ -182,7 +203,11 @@ cells where **they** could have disagreed, **0** did."
 
 The 8 is real and the source paragraphs are both correct. It is **4
 alternatives × 2 pooling rules** — primacy, frequency, frequency-weighted and
-recency — and the frequency family carries **4** of those 8. The amendment fused
+recency — and the frequency family carries **4** of those 8. (Re-derived against
+the merge product the same matrix is 4 cells, of which the frequency family
+carries 2, and one non-frequency cell breaks; the amendment now carries those
+numbers. The 8/4 here is kept because it is the arithmetic of the incident this
+section is about.) The amendment fused
 two paragraphs that had deliberately kept the four-rule attribution and the
 frequency-specific claim apart, and carried the larger denominator onto the
 smaller claim: the evidence was overstated **2×**. The conclusion survives (0 of
@@ -236,12 +261,16 @@ description that enumerates fields is definitionally supposed to move when a
 field arrives. Every behavioural assertion stayed untouched, which is where the
 constraint actually bites.
 
-**Cut a tercile on the entity the effect is levied on, not on the events.** 48%
-of all crossings on the panel sit at one people-pair, so a per-crossing tercile
-would have reported one pair's behaviour as the world's — the wrong-attribution
-shape this thread keeps hitting. Cutting on people-pairs costs badly unequal
-holder counts (7,621 / 7,842 / 41,741), which is disclosed beside the result
-rather than hidden by a rate.
+**Cut a tercile on the entity the effect is levied on, not on the events.**
+Crossings concentrate on a handful of people-pairs, so a per-crossing tercile
+would have reported their behaviour as the world's — the wrong-attribution shape
+this thread keeps hitting. Cutting on people-pairs costs badly unequal holder
+counts (3,681 / 4,997 / 34,559), which is disclosed beside the result rather than
+hidden by a rate. **And the concentration figure itself moved when the substrate
+did** — 48% at one 25-edge pair as executed, 41.6% at a three-edge cluster
+re-derived — which is a second argument for the ruling rather than against it: a
+cut keyed on the event population would have had to be re-justified from scratch,
+and one keyed on the entity did not.
 
 ## What did not survive, that should have
 
@@ -264,3 +293,63 @@ rather than hidden by a rate.
   and nobody reads cheapness as a defect. Deliberately **not** hand-repaired
   here — the chamber's `gate` phase rewrites the roster from a green full run, so
   `make sluice` fixes it at merge and a hand edit would only race that.
+## The substrate moved under the campaign at its close, and a clean merge is what hid it
+
+The campaign was complete and merge-ready when the close found this. **The branch
+had not absorbed `main` once in 137 commits.** A predecessor — *The Underworld* —
+changed settlement placement; `parley_readout.rs`'s controls were re-pinned to
+match on `main`; and the merge of the two was **textually clean**. Nothing
+conflicted. Every test compiled. What broke were three `assert_eq!`s in a heavy
+battery that no gate on the ladder runs.
+
+The damage was much wider than those three assertions. All forty panel worlds
+differed from the ones the campaign measured, so **every figure in the readout,
+the five probes, the spec's §3 and §5.5, the chronicle, the retrospective and
+four registry rows described a pre-Underworld world.** Endings on the twelve-seed
+prefix fell 15.9%; the mutually-exclusive count fell 19 → 15.
+
+Four things are worth carrying out of it.
+
+1. **A textually clean merge is the dangerous kind, not the safe kind.** A
+   conflict announces itself at the mouth in milliseconds. A semantic collision
+   between a measurement and the world it measured produces no conflict at all,
+   and the only thing that catches it is a heavy battery someone remembers to run.
+   The project's own guidance already says no gate has an opinion about two
+   campaigns changing the same meaning; this is that, with one of the two
+   campaigns being a *substrate* rather than a peer.
+2. **The absorb-at-every-stage-boundary rule is not about conflicts.** Its stated
+   cost of skipping is "stale premises, not conflicts", and this is exactly what
+   a stale premise costs: not a rework of the mechanism, which was untouched, but
+   a re-derivation of every number that describes it. The mechanism survived; the
+   evidence for it did not.
+3. **Re-derive, never transcribe.** The re-measurement deliberately ran each
+   battery with its *old* constants first, so every corrected value came out of
+   an assertion failure on this tree rather than out of `main`'s source. Five
+   instruments then agreed with `main`'s re-pinned constants independently. Had
+   any disagreed, that would have been a far larger finding than the campaign's
+   — two batteries not measuring the same thing — and transcription would have
+   hidden it.
+4. **Two conclusions inverted, and the structural arguments are what survived.**
+   The tie-break table went from 0 of 8 broken cells to 1 of 4; the non-argmin
+   defect went from *doubling* under the campaign's own penalty to being
+   completely unmoved by it. In both cases the *structural* argument beside the
+   table — a tree offers no choices; additive width telescopes and is hop-blind
+   by construction — was unchanged and had, in the second case, been the thing
+   the executed numbers argued against. **A conclusion that rests on the shape of
+   a data structure survives a substrate change; a conclusion that rests on a
+   count does not.** Prefer the former when both are available, and say which one
+   a finding is standing on.
+
+**What would have caught it earlier, honestly.** Nothing automatic. `gate-commit`
+is an allow-list and runs none of these batteries; the stage gate would have
+merged `main` in and run the full suite, but these tests are `#[ignore]`d into
+the heavy tier, which only the merge queue pays for. So the mechanism that would
+have caught it is the *cadence* — absorbing at each plan-stage boundary means the
+substrate never moves more than a stage's worth at a time, and a re-measurement
+costs the batteries you were going to re-run anyway rather than every artifact
+the campaign wrote.
+
+**Cost of the repair, for the next campaign that skips an absorption:** two
+passes of five heavy batteries (~23 min each, the second serial and ledgered),
+one confirming run, and a full rewrite of the numeric content of six documents.
+The measurement was the cheap half.

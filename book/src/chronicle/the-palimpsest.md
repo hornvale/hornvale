@@ -330,8 +330,9 @@ crossing between two peoples now costs a penalty read from how much contact the
 two actually have (`span(FINEST) / (1 + contact_edges)`), which produces a
 preference for one's own line as an output of the walk rather than as a rule,
 and does it through the accumulated width rather than through the amplitude. The
-mechanism reaches its target — 94% of the near-stranger tercile demonstrably pay
-it — and the aggregate this thread reports does not move at all. One fence
+mechanism reaches its target — 81% of the near-stranger tercile demonstrably pay
+it — and the aggregate this thread reports barely moves: zero on two accumulation
+rules and two endings of 421 on the third. One fence
 travels with that, because the claim is narrower than it sounds: **nothing yet
 separates a magnitude read from the world's contact history from a well-chosen
 constant**, so "derived" describes what the penalty is made of and not a

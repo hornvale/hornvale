@@ -15,13 +15,42 @@ falsified thing was a premise its own controller had written down and
 recommended. Those eliminations are the campaign's inheritance and they are why
 the design is what it is.
 
+**And a third thing happened last, which every number below is downstream of.**
+This branch ran 137 commits without once absorbing `main`. A predecessor —
+*The Underworld* — changed where settlements are placed, so the substrate every
+one of this campaign's forty worlds is measured on moved underneath it. The
+merge was textually clean, which is exactly what made it dangerous: nothing
+conflicted, and every figure the campaign had written down silently described a
+world the merged tree does not contain. On twelve seeds, endings fell 5,913 →
+4,975, foreign-attacker endings 138 → 102, mutually-exclusive day sets 19 → 15.
+
+Every battery and probe was re-run against the merged tree and **every figure in
+this chapter is re-derived from that run**, on the principle that a campaign
+measures against the object it actually lands. The preregistration was not
+touched. Two conclusions changed and are marked where they occur — the tie-break
+exoneration is now one broken cell rather than none, and the campaign's own
+penalty turns out not to move the defect it was measured against at all — and
+one reported outcome moved: the named null fires on two accumulation rules
+instead of three.
+
 ## Symmetry is not what pooled the accounts
 
 The predecessor added a horizontal edge along every raid and found the opposite
 of what it predicted: two peoples joined by a seam **agree more**, not less.
-Two-sided divergence fell to 0.59× / 0.52× / 0.77× of the descent baseline on
-the three accumulation rules, and identical remembered-day sets rose on all
-three. That chapter closed by naming the obvious suspect. The edge had been
+Two-sided divergence fell to 0.52× / 0.55× / 0.90× of the descent baseline on
+the three accumulation rules — the figures that chapter published, re-derived on
+the merged tree.
+
+**One half of that result did not survive re-derivation and the chapter it
+belongs to is not rewritten here.** As published, identical remembered-day sets
+rose on *all three* rules, which is what made "the accounts pool" the natural
+reading. On the merged tree they rise only under quadrature; under additive and
+multiplicative the fall in mutual exclusion goes into *one-sided containment*
+instead — one people's set of remembered days contains the other's. Divergence
+still falls everywhere. What is no longer uniform is whether the two sides come
+to *agree* or whether one simply comes to know a superset of what the other
+does. Both are the opposite of diverging, which is the finding this campaign
+inherited; only the mechanism behind it is less settled than it looked. That chapter closed by naming the obvious suspect. The edge had been
 frozen **undirected**, because asserting a direction is authoring; a seam that
 carries in both directions is by construction a homogenising device, so perhaps
 the pooling was the freeze's doing rather than the world's.
@@ -32,24 +61,32 @@ on the shipped graph over twelve worlds:
 
 | arm | additive | quadrature | multiplicative |
 |---|---|---|---|
-| both (undirected) | 0.60× | 0.58× | 0.84× |
-| victim→raider only | 0.70× | 0.67× | **0.68×** |
-| raider→victim only | 0.80× | 0.75× | 0.84× |
+| both (undirected) | 0.80× | 0.86× | 0.67× |
+| victim→raider only | 0.80× | 0.71× | **0.60×** |
+| raider→victim only | 1.00× | 1.00× | 0.93× |
 
-**Divergence falls under every arm on every rule**, and under the multiplicative
-rule the one-way arm collapses it *further* than the undirected edge does.
-Restricting the channel does not restore disagreement. Pooling tracks the seam's
-**volume**, not its symmetry.
+**Divergence never rises under either restriction on any rule**, and under the
+multiplicative rule the victim→raider arm collapses it *further* than the
+undirected edge does. Restricting the channel does not restore disagreement.
+Pooling tracks the seam's **volume**, not its symmetry.
+
+That sentence used to be stronger and the weaker form is the true one. As
+measured on the pre-absorption substrate the table read *falls under every arm
+on every rule*; re-derived, the raider→victim arm sits at exactly level under
+two of the three rules. The claim the closure rests on — that no restriction
+*restores* disagreement — survives; "falls everywhere" does not, and is not
+claimed. These are also small integers on a hundred-odd endings, so a single
+event moves a ratio by a tenth: the table is a direction and never a magnitude.
 
 **And the axis was the wrong axis anyway**, which is the more useful half. The
 victim-versus-raider story is a story about a *single* crossing, and single
-crossings are the minority case: **~70% of cross-people holders cross the seam
-more than once**, with crossing depths running out to 13, 19 and 9 *crossings*
+crossings are the minority case: **~55% of cross-people holders cross the seam
+more than once**, with crossing depths running out to 10, 13 and 8 *crossings*
 — the instrument counts boundary crossings on the winning path, not hops; only
-about 4% are the hop-zero co-witness line; and among the holders that do cross
-exactly once, the split between the two directions is near-balanced
-(41.6/58.4, 37.5/62.5, 42.4/57.6). A campaign frozen on direction would have
-measured a real number against an axis the substrate does not sit on.
+about 6% are the hop-zero co-witness line; and among the holders that do cross
+exactly once, the split leans about 35/65 toward raider→victim on all three
+rules. A campaign frozen on direction would have measured a real number against
+an axis the substrate does not sit on.
 
 ## Nor is the tie-break — and half the ratio was never at stake
 
@@ -63,15 +100,26 @@ village last spring and it adopts it over its own grandmother's.
 If pooling is an artifact of that rule, swapping the rule should move it. Four
 people-blind alternatives — primacy, frequency, frequency-weighted, recency —
 were run against the shipped least-damage rule over the same worlds. Of the
-**8** cells where the baseline pools and an alternative could disagree, **0**
-did. The largest gap anywhere was **2 events of 124**.
+**4** cells where the baseline pools and an alternative could disagree, **1**
+did. The largest gap anywhere was **4 events of 100**.
 
-**A structural fact stands behind that table and is stronger than it.** The
-ratio's own denominator is the descent arm, and under descent all **103,405**
-holders receive exactly **one** telling. The founding tree is a forest, witnesses
-are never re-entered, and there is therefore no choice to make anywhere in it.
-**Half of the ratio a selection rule was supposed to move was never at stake.**
-No ordering rule could have touched it.
+**That cell is the re-derivation's doing and it is left standing rather than
+argued away.** As executed the table read 0 of 8; on the merged tree the
+eligible matrix is smaller and `recency` breaks — its identical-day count falls
+where the baseline's rises. So the honest statement is that the tie-break is
+implicated at exactly one cell, on the one alternative that could not ship as
+written: `recency` maximises hop count, which is unbounded around a seam cycle,
+and it is definable at all only because the probe restricted routes to simple
+paths. Of the rules that could ship, two pool exactly as the baseline does and
+the third pools with a four-event gap.
+
+**A structural fact stands behind that table and is stronger than it — and the
+re-derivation does not touch it.** The ratio's own denominator is the descent
+arm, and under descent all **82,209** holders receive exactly **one** telling.
+The founding tree is a forest, witnesses are never re-entered, and there is
+therefore no choice to make anywhere in it. **Half of the ratio a selection rule
+was supposed to move was never at stake.** No ordering rule could have touched
+it, on any substrate, because that is a fact about the shape of a tree.
 
 That also closes the elegant repair before it was proposed. The one people-blind
 rule that would produce ingroup preference as an *output* — count how many
@@ -80,10 +128,10 @@ what `frequency` and `frequency-weighted` already measure. They pooled.
 
 ## What the probes did find, and it is this campaign's chief hazard
 
-Under contact, **51.3%** of holders carry two or more distinct remembered days,
-and the five selection rules disagree about which one is held at up to **45.7%**
+Under contact, **50.5%** of holders carry two or more distinct remembered days,
+and the five selection rules disagree about which one is held at up to **41.9%**
 of holders. Swapping the rule rewrites nearly half the world's held beliefs and
-moves the divergence aggregate by **≤2 events of 124**.
+moves the divergence aggregate by **≤4 events of 100**.
 
 That is not a null. It is a **dissociation**: the frozen measure is nearly blind
 to a change that touches half the population. It was written into the
@@ -154,12 +202,15 @@ rung". **They cannot.** The graph builds its peer list and its people-pair tally
 in the same pass over the same record, so any edge that makes two occupations
 peers has already incremented its own pair's count. The denominator is therefore
 at least 2 at every reachable crossing, and **the ceiling is half a finest rung,
-not a whole one**. Measured over **67,765** winning-path crossings: a zero
-denominator occurred **0 times**, realized penalties ran from one twenty-sixth of
-a finest rung to exactly one half, and every crossing was carried by a seam edge
+not a whole one**. Measured over **26,798** winning-path crossings: a zero
+denominator occurred **0 times**, realized penalties ran from one twelfth of a
+finest rung to exactly one half, and every crossing was carried by a seam edge
 — **zero by descent**. The full rung remains reachable only by a descent step
 across a people boundary, which is open in the code and never walked by the bake:
-a measurement, not an invariant.
+a measurement, not an invariant. (The ceiling is an argument about how the
+contact graph is built and does not depend on the measurement; only the floor
+moved when the substrate did, because the densest people-pair on the panel now
+carries eleven raid edges rather than twenty-five.)
 
 The probe was commissioned expecting to find the mechanism **inert**, and
 intending to correct the numerator. Two of the commissioning inputs were wrong.
@@ -171,22 +222,24 @@ intending to correct the numerator. Two of the commissioning inputs were wrong.
   steps 1.5507 d → 3.4606 d, where a half-rung penalty is **40.6% of the gap**.
   Another is moonless and steps 1.0010 d → 531.39 d, where the same penalty is
   0.094%. Same twelve worlds; four orders of magnitude between them; one seed's
-  number had been quoted as the world's.
+  number had been quoted as the world's. (This bullet is the only passage in the
+  chapter the re-derivation left untouched to the last digit: precision ladders
+  are built out of moons and years, and the predecessor that moved the substrate
+  moved settlements, not the sky.)
 - **Width is cumulative**, so "one crossing against one gap" is the wrong
   comparison entirely. What matters is how many holders sit within one penalty of
   a rung boundary after a whole path — a density, small and non-zero.
 
-**477 holder-rungs move** between the two arms (additive 50, quadrature 10,
-multiplicative 417) against 58,618 holder-widths. A re-walk at multipliers 1× to
+**282 holder-rungs move** between the two arms (additive 39, quadrature 29,
+multiplicative 214) against 22,681 holder-widths. A re-walk at multipliers 1× to
 256× finds the mechanism already reaching the ladder at **k = 1** on every rule,
 so no correction is warranted; it also shows the width-moved column is *constant*
 in k — **a bigger penalty buys resolution, never reach** — and that the response
-saturates, 256× buying only about 20× the rungs under the rule most sensitive to
-it.
+saturates, 256× buying only about 18× the rungs under the multiplicative rule.
 
 That constancy has a countable cause, and it is worth stating because it is the
-kind of ceiling a magnitude argument cannot argue past: **7,066** of the
-multiplicative rule's 13,410 width-moved holders already sit at their ladder's
+kind of ceiling a magnitude argument cannot argue past: **1,714** of the
+multiplicative rule's 6,918 width-moved holders already sit at their ladder's
 **coarsest** rung, where no penalty of any size can push them further, there
 being no coarser rung to reach. (Under additive and quadrature that count is
 zero — their accumulated widths never run that far up the ladder.) A penalty is
@@ -194,39 +247,50 @@ a width, and a width past the top of a ladder is a width the ladder cannot
 report.
 
 **The analytic estimate would have said the opposite.** Median headroom by
-calculation is 71× to 32,129×, which reads as *inert*. The 477 are the **tail**,
+calculation is 38× to 1,201×, which reads as *inert*. The 282 are the **tail**,
 not the median, and a ratio of medians cannot see a tail. The probe re-walked the
 panel instead of dividing two numbers, which is the only reason the formula was
-kept rather than rescaled.
+kept rather than rescaled — and the re-derivation sharpens that lesson rather
+than softening it: the headroom medians fell by roughly an order of magnitude
+between the two substrates and predicted the tail no better on either.
 
 ## The readout
 
 Preregistered before the mechanism existed; every hypothesis reported, only
-substrate controls asserted. Forty worlds, 2.84 s each.
+substrate controls asserted. Forty worlds, ~3 s each. Re-run against the merged
+tree at the close, which is where all of the following comes from.
 
 ### The penalty does not break pooling
 
 The prediction was that the mutually-exclusive count under contact would rise
-above its descent count on at least one rule — that the 0.59×/0.52×/0.77× ratio
-would clear 1.0. Over the 548 cross-people endings held on both sides:
+above its descent count on at least one rule — that the predecessor's ratio would
+clear 1.0. Over the 421 cross-people endings held on both sides:
 
 | rule | descent | contact | ratio | ratio before the penalty |
 |---|---|---|---|---|
-| additive | 37/548 | 22/548 | **0.59×** | 0.59× |
-| quadrature | 33/548 | 17/548 | **0.52×** | 0.52× |
-| multiplicative | 69/548 | 53/548 | **0.77×** | 0.77× |
+| additive | 21/421 | 11/421 | **0.52×** | 0.52× |
+| quadrature | 20/421 | 11/421 | **0.55×** | 0.55× |
+| multiplicative | 48/421 | 45/421 | **0.94×** | 0.90× |
 
-**Falsified, and unmoved to two decimal places.** The penalty moves the
-mutually-exclusive count by *exactly zero* on every rule — 22→22, 17→17, 53→53 —
-so the ratio is bit-for-bit the pre-campaign one.
+**Falsified on every rule.** No ratio comes within 6% of the threshold, and the
+prediction needed one to exceed it.
 
-It is not a dead counter. The composition *inside* the unchanged total does move:
-one-sided containment goes 245→247 under the additive rule and 371→374 under the
-multiplicative, with identical day sets moving the other way by the same amounts.
-Accounts are being reshuffled between "one side's set contains the other's" and
-"the two agree" without ever reaching mutual exclusion.
+**And the penalty is not quite the dead counter it was as executed, which is the
+one result the re-derivation genuinely changed.** On the pre-absorption substrate
+it moved the mutually-exclusive count by *exactly zero* on all three rules and
+the ratio was bit-for-bit the pre-campaign one. On the merged tree it still moves
+it by zero under additive (11→11) and quadrature (11→11), but by **+2** under
+multiplicative (43→45) — two of 421 endings, which is the whole of the campaign's
+headline number moving at all. The verdict is unchanged and was never close; what
+changed is that the preregistered aggregate is no longer *completely* blind to
+the mechanism, only nearly so.
 
-The eligible population is 548 on both arms and all six cells, and it equals the
+The composition *inside* those totals moves too, and differently per rule. Under
+additive, one-sided containment goes 200→201 against identical day sets 210→209;
+under quadrature nothing moves at all; under multiplicative one-sided falls
+283→279 while identical rises 95→97 and mutual exclusion takes the difference.
+
+The eligible population is 421 on both arms and all six cells, and it equals the
 foreign-ending count exactly: the attacker an ending names is always a witness,
 so both sides hold the account by construction and the population is saturated at
 100%. That makes this ratio a pure numerator comparison — the opposite of the
@@ -242,25 +306,29 @@ one that matters, because a uniform rise shows only that a penalty penalises,
 while the tercile ordering is what would demonstrate the *magnitude* is reading
 the world's history.
 
-Terciles were cut on **people-pairs**, not on crossings: 48% of all crossings on
-the panel sit at a single pair, so a per-crossing tercile would report one pair's
-behaviour as the world's. That gives 172 seamed pairs, cut at ≤1 edge (73 pairs),
-2–3 (53), and >3 (46).
+Terciles were cut on **people-pairs**, not on crossings: crossings concentrate
+heavily on a handful of pairs, so a per-crossing tercile would report their
+behaviour as the world's. That gives 148 seamed pairs, cut at ≤1 edge (66 pairs),
+exactly 2 (33), and >2 (49). (The cut *rule* was frozen before any measurement.
+The figure that argued for it moved with the substrate: it read "48% of crossings
+at a single 25-edge pair" as executed, and reads "41.6% at edges = 3, over six
+pairs, plus 16.8% across two single-pair buckets" re-derived. The argument is the
+same shape and rests on the same fact.)
 
 | rule | bottom | middle | top |
 |---|---|---|---|
-| additive | 486→486 (**+0.00 pp**) | 1618→1623 (+0.06) | 5137→5169 (+0.08) |
-| quadrature | 471→471 (**+0.00 pp**) | 1620→1625 (+0.06) | 5566→5617 (+0.12) |
-| multiplicative | 486→486 (**+0.00 pp**) | 1631→1639 (+0.10) | 5260→5298 (+0.09) |
+| additive | 682→682 (**+0.00 pp**) | 253→257 (+0.08) | 3432→3447 (+0.04) |
+| quadrature | 682→682 (**+0.00 pp**) | 253→257 (+0.08) | 3518→3531 (+0.04) |
+| multiplicative | 682→682 (**+0.00 pp**) | 266→268 (+0.04) | 3815→3860 (+0.13) |
 
-Clause 1 holds, barely: a rise of +0.06 to +0.10 percentage points, 37 to 56
-holders out of 57,204. **Clause 2 is falsified outright on all three rules.** The
-bottom tercile's rise is exactly zero, on 7,621 holders, on every rule, while the
-top is positive — so *bottom greater than top* fails however anyone argues about
-exposure.
+Clause 1 holds, barely: a rise of +0.04 to +0.11 percentage points panel-wide, 17
+to 47 holders out of 43,237. **Clause 2 is falsified outright on all three
+rules.** The bottom tercile's rise is exactly zero, on 3,681 holders, on every
+rule, while the top is positive — so *bottom greater than top* fails however
+anyone argues about exposure.
 
 The direction that observation seems to point in is deliberately **not** promoted
-here. The counts behind it are 0/5/32, 0/5/51 and 0/8/38 flips, and whether that
+here. The counts behind it are 0/4/15, 0/4/13 and 0/2/45 flips, and whether that
 is a signal depends entirely on which denominator one considers eligible: uniform
 over all holders it is improbable, uniform over *ingroup-holding* holders it is
 not. The falsification is robust; the story about why is not, and is left as an
@@ -269,8 +337,8 @@ observation.
 Two facts qualify the tercile axis itself, and both are now printed beside the
 result rather than buried in a report. The buckets are keyed on the contact
 between the holder's people and the ending's subject's people — but penalties are
-levied at whatever boundaries the route actually crosses, and **1,882 of the
-bottom tercile's 7,621 holders (24.7%) have no direct edge at all between those
+levied at whatever boundaries the route actually crosses, and **594 of the
+bottom tercile's 3,681 holders (16.1%) have no direct edge at all between those
 two peoples.** They were reached through a chain, and every penalty they paid was
 priced by some *other* pair.
 
@@ -286,60 +354,77 @@ have had its width move under the penalised one. Counted in a separate pass:
 
 | rule | crossed under the free arm | widths moved |
 |---|---|---|
-| additive | 49,963 | 49,963 |
-| quadrature | 49,547 | 49,547 |
-| multiplicative | 49,827 | 49,827 |
+| additive | 38,870 | 38,870 |
+| quadrature | 38,784 | 38,784 |
+| multiplicative | 38,474 | 38,474 |
 
 **To the unit, on all three rules.** That also proves no ladder on the panel
 returned a zero finest span, since a zero unit would have left some crossing
 holder untouched. Broken out by tercile, it says the thing the verdict needs:
-**7,135 of the bottom tercile's 7,621 holders — 94% — demonstrably paid a
+**2,999 of the bottom tercile's 3,681 holders — 81% — demonstrably paid a
 penalty, and that tercile's flip rise is +0.00.**
 
 So the bottom tercile's zero is a **clean null**, not an absent one. The
 mechanism arrived, was charged, and changed nothing about which account those
 communities kept.
 
-### The named null fires, and it is the headline
+### The named null fires on two rules of three, and it is still the headline
 
-Both levels, side by side, over 1,413,515 contact holders:
+Both levels, side by side, over 1,198,577 contact holders:
 
 | rule | widths moved | held telling changed | mutually-exclusive change |
 |---|---|---|---|
-| additive | 63,730 (4.51%) | 4,636 (0.328%) | 22 → 22 (**+0**) |
-| quadrature | 66,186 (4.68%) | 2,162 (0.153%) | 17 → 17 (**+0**) |
-| multiplicative | 63,983 (4.53%) | 3,104 (0.220%) | 53 → 53 (**+0**) |
+| additive | 54,311 (4.53%) | 2,526 (0.211%) | 11 → 11 (**+0**) |
+| quadrature | 55,270 (4.61%) | 1,224 (0.102%) | 11 → 11 (**+0**) |
+| multiplicative | 51,059 (4.26%) | 3,010 (0.251%) | 43 → 45 (**+2**) |
 
 The mechanism fires on about 4.5% of all holders, survives to change what is
-actually held at 0.15–0.33%, and moves the aggregate the campaign is about by
-**zero**. Thousands of communities changed their minds about which account of a
-war they carry, and the number this thread has been reporting for two campaigns
-is bit-for-bit unmoved.
+actually held at 0.10–0.25%, and moves the aggregate the campaign is about by
+zero on two rules and by two endings of 421 on the third. Thousands of
+communities changed their minds about which account of a war they carry, and the
+number this thread has been reporting for two campaigns barely notices.
+
+**That +2 is where the re-derivation touched the campaign's headline, and it is
+recorded rather than smoothed over.** As executed, the null fired on all three
+rules and the aggregate was bit-for-bit unmoved; on the merged tree the
+multiplicative rule moves it, by an amount two orders of magnitude smaller than
+the change in what is held. §6.3 preregistered *both levels reported side by
+side*, never a binary, so nothing about the preregistration needed touching — but
+"the aggregate does not register it at all" was true of the executed run and is
+not true of this one. The weaker statement — that the aggregate registers a
+0.25%-of-a-population change as two events — is what the data supports.
 
 The battery distinguishes three outcomes explicitly, because two of them print
 the same headline: *inert at both levels* (no widths move), *invisible at emit*
 (widths move, nothing held changes), and *the named null* (holdings change, the
-aggregate does not). Only the third occurred.
+aggregate does not). The third occurred on additive and quadrature; on
+multiplicative both levels move.
 
-About a fifth to a quarter of the mechanism's reach — 13,767 / 16,639 / 14,156 of
-the ~64,000 width changes — lands on holders of the ending subject's **own**
+About a quarter of the mechanism's reach — 15,441 / 16,486 / 12,585 of the
+~50–55,000 width changes — lands on holders of the ending subject's **own**
 people: communities that never look foreign at all, paying a crossing because
 the least-damaged route out of their own history went through someone else's and
 came back. That zigzag is the predecessor's open question priced.
 
 ## The three statements, and the third is a limit on what may be claimed
 
-**One. The mechanism works.** 477 holder-rungs move; 94% of the near-stranger
+**One. The mechanism works.** 282 holder-rungs move; 81% of the near-stranger
 tercile demonstrably paid; the reach identity closes to the unit on all three
 rules; the direction the arithmetic forbids — a holder gaining a crossed telling
-it did not have — occurs 0 times out of 57,204, reported rather than asserted so
+it did not have — occurs 0 times out of 43,237, reported rather than asserted so
 that a separate known defect could not be mistaken for it.
 
-**Two. The preregistered measure cannot see it.** The aggregate moves by +0
-everywhere. This is the third time this thread has found the same dissociation:
-a change that rewrites which account a large fraction of the world holds, and an
-aggregate that does not register it. At some point that stops being a surprising
-result about a mechanism and becomes a statement about the instrument.
+**Two. The preregistered measure can barely see it.** The aggregate moves by +0
+on two rules and by +2 of 421 on the third, against a change in what is held at
+0.10–0.25% of 1.2 million holders. This is the third time this thread has found
+the same dissociation: a change that rewrites which account a large fraction of
+the world holds, and an aggregate that barely registers it. At some point that
+stops being a surprising result about a mechanism and becomes a statement about
+the instrument. (This statement read "cannot see it" when the campaign was
+executed, and the two-event move that softened it appeared only when the campaign
+re-measured against the tree it lands on. The softening is small and the
+conclusion is not changed by it — but the sentence is weaker than it was and is
+written weaker.)
 
 **Three. Whether the derived magnitude beats a constant one is untested, and
 this campaign must not claim otherwise.** An early draft of the readout's own
@@ -347,13 +432,17 @@ decision table said that falsifying the tercile clause would mean the contact
 term is inert and the derivation decorative. It does not, and that gloss was
 withdrawn before it shipped. The table had been written for a *uniform* rise;
 what happened was an *inverted* one, and an inverted ordering is equally
-consistent with a **constant** penalty — 48% of crossings sit at one pair, so
-flips concentrate wherever crossings are, whatever the magnitude rule is. There
+consistent with a **constant** penalty — crossings concentrate on a handful of
+people-pairs, so flips concentrate wherever crossings are, whatever the magnitude
+rule is. There
 is no arm anywhere in this campaign separating a derived magnitude from a
 constant one; the k-multiplier sweep varied a *global* scalar, which cannot
 reorder pairs relative to each other. Unit tests prove the formula responds to
 edge count. Nothing on this panel proves that responsiveness matters on real
-data more than a constant would.
+data more than a constant would — and the re-derivation makes the point sharper
+rather than weaker, because the concentration figure the argument leans on
+changed shape (from one 25-edge pair to a cluster at three edges) while the
+inverted ordering did not.
 
 **So the derivation — the campaign's entire licence — is neither confirmed nor
 refuted here.** That is a limitation of the instrument, not a finding against the
@@ -363,23 +452,32 @@ constant-denominator control at matched mean penalty.
 ## A defect in merged code, and the mechanism behind it
 
 The shipped walk is **not always its own argmin**. Enumerated exhaustively —
-13,569,981 routes over 4,388 holders, which is the only instrument that could see
-it, since any reimplemented relaxation inherits the behaviour rather than
-detecting it — **36 of 13,164 holder-rule cells (0.27%)** hold a telling with the
-same width bits and the same remembered day as an available route, but one hop
-more. Descent is clean: 0 of 310,215. The denominator is a **(holder, rule)
-cell** and not a holder — 4,388 holders scored under each of three accumulation
+10,589,340 simple routes over 3,177 holders, which is the only instrument that
+could see it, since any reimplemented relaxation inherits the behaviour rather
+than detecting it — **49 of 9,531 holder-rule cells (0.51%)** hold a telling with
+the same width bits and the same remembered day as an available route, but one
+hop more. Descent is clean: 0 of 246,627. The denominator is a **(holder, rule)
+cell** and not a holder — 3,177 holders scored under each of three accumulation
 rules — which is why it exceeds the holder count it is built from.
 
-Under the crossing penalty it roughly **doubles, to 90 of 13,164 (0.68%)**, and
-the increase is almost entirely on one rule: the additive rule goes 32 → 88,
-quadrature *shrinks* 4 → 2, and the multiplicative rule sits at exactly **0**
-under both arms. Both figures are floors rather than point estimates — about 10%
-of foreign endings are excluded by a size cap before any comparison, and they are
-by construction the densest ones, where the defect is likeliest. Both arms drop
-the same ones, so the ratio between them is like-for-like.
+**Under the crossing penalty it does not move at all**: 49 of 9,531 again,
+additive 49 → 49, quadrature 0 → 0, multiplicative 0 → 0. Both figures are floors
+rather than point estimates — a size cap excludes 2 of 102 foreign endings before
+any comparison, and they are by construction the densest ones, where the defect
+is likeliest. Both arms drop the same ones, so the comparison is like-for-like.
 
-**The mechanism explains all three columns at once, and it is structural.** The
+**That is the second thing the re-derivation inverted, and it is the more
+interesting one.** As executed, the defect roughly *doubled* under the penalty —
+90 of 13,164, the rise almost entirely additive (32 → 88), quadrature shrinking
+4 → 2 — and that differential was disclosed as a confound on every additive
+column of the readout, because part of an additive arm-to-arm difference was an
+increased defect rate rather than the mechanism. On the merged tree the two arms
+are identical and there is no differential to confound anything. The structural
+explanation below predicted exactly that, and the executed numbers had been
+evidence against it.
+
+**The mechanism explains the whole distribution at once, and it is
+structural.** The
 generational span between two communities is `|founded_h − founded_t| / g`. Along
 a run of steps within one people, with a locally monotone founding order, those
 spans **telescope**: the sum collapses to the endpoints. So under the *additive*
@@ -409,12 +507,12 @@ have been at stake, because a tree offers no choices.
 
 What stands open is sharper for both eliminations. Ingroup preference now exists
 as a derived output and is demonstrably paid by the communities it was designed
-for, and the aggregate this thread reports is blind to it — so the next instrument
-is not another mechanism but a **measure that can see one**.
+for, and the aggregate this thread reports is nearly blind to it — so the next
+instrument is not another mechanism but a **measure that can see one**.
 
 One candidate is already measured rather than merely proposed. The scale probe's
 **day-moved** column runs *above* its rung-moved one under the multiplicative
-rule — **468 against 417** — because a changed winning route re-floors the
+rule — **227 against 214** — because a changed winning route re-floors the
 remembered day even where the rung that day is reported at does not move. A
 measure keyed on the remembered day is therefore strictly more sensitive than
 one keyed on the rung, on the same walk, at no extra cost. It is not the whole
@@ -427,9 +525,9 @@ buried in a probe, because a reader of the census-versus-panel argument would
 never think to open a hearsay probe to find it. The merge queue left an
 unexplained **1.89×** residual on `endings`, the 12-seed control reading high
 against the census. It is **not a seed-count artifact**: the 12-seed prefix reads
-**low** against a 100-seed panel (0.792× on `endings`, 0.744/0.744/0.726 on
+**low** against a 100-seed panel (0.700× on `endings`, 0.623/0.623/0.616 on
 foreign, compared and mutually-exclusive), so correcting for seed count makes the
-residual *larger*, around 2.4×. All four z-scores sit within ~1.2 standard errors
+residual *larger*, around 2.7×. All four z-scores sit within ~1.7 standard errors
 of the wide mean, so this bounds the sampling question rather than settling it in
 the other direction — but it moves the residual's explanation into what the
 census does *differently*: its build depth, its pin sets, or the denominator it

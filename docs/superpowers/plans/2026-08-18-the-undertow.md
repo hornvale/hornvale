@@ -1,5 +1,13 @@
 # The Undertow Implementation Plan
 
+> **EVERY SUBSTRATE FIGURE QUOTED BELOW IS PRE-ABSORPTION.** This branch ran to
+> completion without absorbing `main`; The Underworld had moved settlement
+> placement, so the substrate this plan was written against is not the one the
+> campaign lands on. The plan is kept as the record of what was planned and is
+> deliberately not re-derived. The re-derived figures, and the disclosure of what
+> moved, are in the spec's **Erratum 0** (`docs/superpowers/specs/2026-08-18-the-undertow-design.md`).
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make a seam crossing cost damage in proportion to how much the two

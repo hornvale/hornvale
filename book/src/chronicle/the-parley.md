@@ -119,11 +119,15 @@ restriction measurable against these numbers later.
 
 **Corrected by [The Undertow](the-undertow.md), which ran that restriction.**
 Both directed arms were simulated on this graph and neither restores
-disagreement: divergence falls under *every* arm on *every* rule, and under the
-multiplicative rule the victim→raider arm collapses it further than the
+disagreement: divergence never *rises* under either arm on any rule, and under
+the multiplicative rule the victim→raider arm collapses it further than the
 undirected edge does. Pooling tracks the seam's volume, not its symmetry. The
 freeze was the right call and it was not the cause; the follow-up this paragraph
-holds open is closed rather than pending.
+holds open is closed rather than pending. (That successor re-measured everything
+against the tree it merged into, and the stronger form of this sentence —
+"divergence *falls* under every arm on every rule" — did not survive: the
+raider→victim arm sits at exactly level under two of the three rules. Never
+rising is the claim the closure needs, and it holds.)
 
 The edge makes the transmission graph **cyclic**, and every previous model
 assumed it was not — each recovered *the* path by slicing an ancestry walk,
@@ -163,27 +167,31 @@ have been kept.
 
 **Corrected by [The Undertow](the-undertow.md): the relaxation minimises the
 first component of that key and not the whole of it.** An exhaustive route
-enumeration over the real substrate — 13,569,981 routes across 4,388 holders —
-finds **36 of 13,164 holder-rule cells (0.27%)** holding a telling with the same
-accumulated width bits and the same remembered day as an available route, but
-one hop more. The denominator counts each of those 4,388 holders once per
-accumulation rule, so it is a (holder, rule) cell rather than a holder. The
+enumeration over the real substrate — 10,589,340 simple routes across 3,177
+holders — finds **49 of 9,531 holder-rule cells (0.51%)** holding a telling with
+the same accumulated width bits and the same remembered day as an available
+route, but one hop more. The denominator counts each of those 3,177 holders once
+per accumulation rule, so it is a (holder, rule) cell rather than a holder. The
 width minimum above is genuine; "the genuine minimum for every
 holder" is not, because the key is lexicographic and the hop component is where
 it fails. Neither oracle could have seen it: the first compared against the old
 tree walk, which has no choices to make, and the second's synthetic worlds never
-presented the degeneracy. The descent arm is clean at 0 of 310,215. The defect
+presented the degeneracy. The descent arm is clean at 0 of 246,627. The defect
 is reproduced and deliberately not repaired — its cause is that the additive
 rule's width telescopes and is therefore blind to hop count, which makes the
 question a re-expansion-policy one rather than a typo.
 
-**That 0.27% is this arm's figure, not the current one.** It is measured under
-the contact arm this campaign shipped, where a seam crossing is free. Under the
-successor's contact-weighted crossing penalty the same enumeration finds **90 of
-13,164 (0.6837%)** — roughly double, almost all of it on the additive rule
-(32 → 88), with multiplicative at exactly zero under both. Both figures are
-floors: about 10% of foreign endings are dropped by a size cap before any
-comparison, and they are the densest ones.
+**That 0.51% is this arm's figure, and the successor's is the same.** It is
+measured under the contact arm this campaign shipped, where a seam crossing is
+free. Under the successor's contact-weighted crossing penalty the same
+enumeration finds **49 of 9,531 again** — additive 49 → 49, quadrature and
+multiplicative at exactly zero under both arms — so the penalty does not move
+this defect at all, which is what a hop-blindness that lives in the *additive*
+width formula predicts. Both figures are floors: a size cap drops 2 of 102
+foreign endings before any comparison, and they are the densest ones. (The
+successor first measured a doubling to 90 of 13,164; that was on a substrate a
+third campaign has since changed, and the re-derivation against the merged tree
+is what these numbers are.)
 
 The campaign's one real correctness risk gets its own test, and it is the one
 the campaign is named for: an account that leaves its lineage, crosses to
@@ -336,13 +344,14 @@ measured here and need nothing re-derived.
 **Corrected by [The Undertow](the-undertow.md): it was cheap, it was asked, and
 it was the wrong question.** Pooling survives both directed restrictions, so the
 undirected freeze is exonerated rather than implicated. More usefully, the axis
-itself turns out to be the minority case — **about 70% of cross-people holders
-cross the seam more than once**, out to depths of 13, 19 and 9 *crossings* (the
+itself turns out to be the minority case — **about 55% of cross-people holders
+cross the seam more than once**, out to depths of 10, 13 and 8 *crossings* (the
 instrument counts boundary crossings on the winning path, not hops), and only
-about 4% are the hop-zero co-witness line. Victim-versus-raider is a story about
+about 6% are the hop-zero co-witness line. Victim-versus-raider is a story about
 a single crossing. The successor's own subject moved twice for this reason: it
-also exonerated the *selection rule*, and found that under descent all 103,405
-holders receive exactly one telling — so half of the ratio above was never at
+also exonerated the *selection rule* — at one broken cell out of four, on the one
+alternative that could not ship — and found that under descent all 82,209
+holders receive exactly one telling, so half of the ratio above was never at
 stake for any ordering rule to move.
 
 Two freezes held while the edge varied and are now load-bearing in a way they
