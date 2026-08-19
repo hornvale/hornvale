@@ -92,11 +92,13 @@ this. Two things make it bite:
 - **The fixtures are per-study, and more than one study is involved.** A
   refresh that covers only `the-census` can leave a binary red on
   `census-of-the-meeting`. Re-derive which binary reads which study with a
-  grep over `windows/lab/tests/*calibration*.rs` — **do not trust a mapping
-  written in a doc, including this one.** The mapping recorded when this was
-  first hit had `gathering_calibration` on `census-of-the-meeting`; today that
-  binary reads `the-census` and the other two read both. It moved without
-  anyone noticing, because nothing checks prose.
+  grep over `windows/lab/tests/suite/*calibration*.rs` (test-binary
+  consolidation moved every top-level `tests/*.rs` file one directory
+  deeper) — **do not trust a mapping written in a doc, including this one.**
+  The mapping recorded when this was first hit had `gathering_calibration` on
+  `census-of-the-meeting`; today that binary reads `the-census` and the other
+  two read both. It moved without anyone noticing, because nothing checks
+  prose.
 - **Establish the exact count at the campaign's FIRST task** and carry it into
   every review brief. Reviewers otherwise read a wall of reds as their own
   breakage. Do not carry the *number* forward between campaigns either: it was

@@ -31,7 +31,7 @@ use std::path::Path;
 /// `tropes check` and seam-guard use, because a waiver nobody has to justify
 /// becomes a place to hide a real divergence.
 fn waivers() -> Vec<(String, String)> {
-    include_str!("fixtures/sentinel-waivers.txt")
+    include_str!("../fixtures/sentinel-waivers.txt")
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))

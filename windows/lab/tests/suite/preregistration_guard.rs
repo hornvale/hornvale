@@ -102,10 +102,12 @@ fn ignore_reason(line: &str) -> Option<String> {
     Some(rest[..end].to_string())
 }
 
-/// The lab's calibration test files (any `tests/*calibration*.rs`). CWD at test
-/// time is the crate root (`windows/lab`), so `tests/` is the relative anchor.
+/// The lab's calibration test files (any `tests/suite/*calibration*.rs`). CWD
+/// at test time is the crate root (`windows/lab`), so `tests/suite/` is the
+/// relative anchor (the consolidated test binary moved every top-level
+/// `tests/*.rs` file one directory deeper; see `tests/suite.rs`).
 fn calibration_files() -> Vec<PathBuf> {
-    let dir = Path::new("tests");
+    let dir = Path::new("tests/suite");
     let mut files: Vec<PathBuf> = fs::read_dir(dir)
         .expect("read tests/ dir")
         .filter_map(|entry| entry.ok().map(|e| e.path()))
@@ -123,7 +125,7 @@ fn calibration_files_carry_no_unsanctioned_ignores() {
     let files = calibration_files();
     assert!(
         !files.is_empty(),
-        "found no tests/*calibration*.rs to guard — the glob or CWD is wrong"
+        "found no tests/suite/*calibration*.rs to guard — the glob or CWD is wrong"
     );
     let mut violations = Vec::new();
     for path in files {
