@@ -1246,7 +1246,7 @@ fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn repose_exposure_readout_matches_the_committed_fixture() {
-    let committed = include_str!("fixtures/repose-exposure.csv");
+    let committed = include_str!("../fixtures/repose-exposure.csv");
     let rendered = render_repose_exposure(1..=30);
     assert_eq!(
         rendered, committed,
@@ -1938,7 +1938,7 @@ fn assert_no_soil_reaches_siting() {
         }
     }
 
-    let worldgen = include_str!("../src/lib.rs");
+    let worldgen = include_str!("../../src/lib.rs");
     for signature in SITING_CHAIN {
         let body = body_of(worldgen, signature);
         for spelling in SOIL_SPELLINGS {

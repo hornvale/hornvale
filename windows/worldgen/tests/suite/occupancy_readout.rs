@@ -214,7 +214,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn occupancy_readout_is_current() {
     let rendered = render_occupancy_readout(1..=30);
-    let committed = include_str!("fixtures/occupancy.csv");
+    let committed = include_str!("../fixtures/occupancy.csv");
     assert_eq!(
         rendered, committed,
         "occupancy readout drifted - if this is intended, rewrite the fixture \

@@ -1602,3 +1602,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T11:34:50Z | sluice:seam-guard | 1067.306 | 21095.971 | 1111.683 | 20.81 | 0 | bcd4b187c |  | lefford | 40 |
 | 2026-08-19T11:39:16Z | sluice:clients | 265.377 | 465.489 | 34.678 | 1.88 | 0 | 666d7f5f2 |  | lefford | 40 |
 | 2026-08-19T12:13:02Z | sluice:heavy | 2026.461 | 33016.541 | 687.275 | 16.63 | 0 | d06ce9065 |  | lefford | 40 |
+| 2026-08-18T22:24:13Z | prewarm | 227.374 | 1303.906 | 165.840 | 6.46 | 0 | 2fc70c9a | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:15:34Z | gate-commit | 833.061 | 225.798 | 446.114 | 0.81 | 0 | 752af3bf | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:16:26Z | gate-commit | 34.993 | 59.957 | 15.527 | 2.16 | 0 | 752af3bf | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:48:41Z | gate-commit | 1204.794 | 180.757 | 439.427 | 0.51 | 0 | adb29c61 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:49:24Z | gate-commit | 24.647 | 54.838 | 14.727 | 2.82 | 0 | adb29c61 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T13:50:34Z | gate-commit | 581.139 | 167.313 | 302.899 | 0.81 | 0 | 4910ced5 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T13:51:55Z | gate-commit | 23.260 | 50.883 | 12.453 | 2.72 | 0 | 4910ced5 | campaign/the-planes | MacBookPro | 10 |
