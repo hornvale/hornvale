@@ -1464,3 +1464,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T03:17:08Z | gate-commit | 23.484 | 53.097 | 14.259 | 2.87 | 0 | 7bd2dd96 | campaign/the-undertow | MacBookPro | 10 |
 | 2026-08-19T03:32:20Z | rebaseline | 54.449 | 212.123 | 10.532 | 4.09 | 0 | 678f35a2 | campaign/the-undertow | MacBookPro | 10 |
 | 2026-08-19T03:33:29Z | gate-commit | 25.692 | 53.079 | 14.432 | 2.63 | 0 | 678f35a2 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:37:15Z | gate-commit | 24.827 | 53.894 | 14.128 | 2.74 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:42:13Z | rebaseline | 36.656 | 210.148 | 10.103 | 6.01 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:58:37Z | gate-commit | 81.108 | 80.950 | 66.620 | 1.82 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T03:59:41Z | rebaseline | 44.032 | 214.084 | 10.468 | 5.10 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T04:01:17Z | gate-commit | 23.433 | 52.894 | 13.850 | 2.85 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T04:02:28Z | gate-commit | 23.228 | 53.069 | 14.168 | 2.89 | 0 | edb54eb0 | campaign/the-undertow | MacBookPro | 10 |
