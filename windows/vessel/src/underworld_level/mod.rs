@@ -201,6 +201,48 @@ pub fn generate_level(extent: Rect, seed: Seed) -> Level {
     )
 }
 
+/// As `generate_level_with_origin`, additionally carving a flooded basin
+/// when `is_sump` says this chamber is phreatic. Reuses
+/// `hornvale_worldgen::chamber::is_sump` directly — a chamber's depth is a
+/// single scalar (spec §4.4), so this answers a per-chamber question, not
+/// a per-cell one, and the basin is the first leaf in generation order
+/// rather than a further seeded choice.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: inherited_worked_bias)
+pub fn generate_level_with_water(
+    extent: Rect,
+    cave_kind: hornvale_terrain::CaveKind,
+    origin: hornvale_worldgen::chamber::ChamberOrigin,
+    depth_m: f64,
+    water_table_m: f64,
+    inherited_worked_bias: f64,
+    seed: Seed,
+) -> Level {
+    let mut level =
+        generate_level_with_origin(extent, cave_kind, origin, inherited_worked_bias, seed);
+    if hornvale_worldgen::chamber::is_sump(origin, depth_m, water_table_m)
+        && let Some(basin) = region_first_leaf_rect(extent, seed)
+    {
+        for x in basin.x..(basin.x + basin.w) {
+            for y in basin.y..(basin.y + basin.h) {
+                let cell = Cell(x, y);
+                if level.cells.get(&cell) == Some(&LevelCellKind::Floor) {
+                    level.cells.insert(cell, LevelCellKind::Flooded);
+                }
+            }
+        }
+    }
+    level
+}
+
+/// The same partition tree `generate_level_with_origin` already built,
+/// re-derived (not stored) so the flooding pass can find "the first leaf"
+/// without threading the tree itself through every function above it —
+/// `FRAME`-tier re-derivation is exactly what decision 0069 calls for.
+fn region_first_leaf_rect(extent: Rect, seed: Seed) -> Option<Rect> {
+    let (tree, _dof) = region::build_region(extent, seed);
+    region::leaves(&tree).into_iter().next()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -318,5 +360,60 @@ mod tests {
         // rule, spec §4.3) cannot be perturbed by this module. Compiling is
         // the proof.
         assert_eq!(origin, ChamberOrigin::Found);
+    }
+
+    #[test]
+    fn a_sump_gets_a_flooded_region_a_made_chamber_never_does() {
+        use hornvale_terrain::CaveKind;
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let extent = Rect {
+            x: 0,
+            y: 0,
+            w: 40,
+            h: 24,
+        };
+        // depth_m > water_table_m => phreatic (is_phreatic's own contract).
+        let sump = generate_level_with_water(
+            extent,
+            CaveKind::Karst,
+            ChamberOrigin::Found,
+            100.0,
+            10.0,
+            NEUTRAL_WORKED_BIAS,
+            Seed(2),
+        );
+        assert!(
+            sump.cells.values().any(|k| *k == LevelCellKind::Flooded),
+            "a phreatic Found chamber must carve a flooded region"
+        );
+
+        let made = generate_level_with_water(
+            extent,
+            CaveKind::Karst,
+            ChamberOrigin::Made,
+            100.0,
+            10.0,
+            NEUTRAL_WORKED_BIAS,
+            Seed(2),
+        );
+        assert!(
+            made.cells.values().all(|k| *k != LevelCellKind::Flooded),
+            "a Made chamber is drained regardless of the water table (is_sump's own rule)"
+        );
+
+        let dry = generate_level_with_water(
+            extent,
+            CaveKind::Karst,
+            ChamberOrigin::Found,
+            5.0,
+            10.0,
+            NEUTRAL_WORKED_BIAS,
+            Seed(2),
+        );
+        assert!(
+            dry.cells.values().all(|k| *k != LevelCellKind::Flooded),
+            "a vadose Found chamber (above the water table) stays dry"
+        );
     }
 }
