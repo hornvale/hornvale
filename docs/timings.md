@@ -1851,3 +1851,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T22:15:20Z | sluice:outboard | 34.937 | 22.001 | 35.653 | 1.65 | 0 | fedac74fb |  | lefford | 40 |
 | 2026-08-19T22:21:25Z | sluice:gate | 364.388 | 9885.760 | 364.022 | 28.13 | 0 | 9010086fb |  | lefford | 40 |
 | 2026-08-19T22:25:02Z | sluice:clients | 216.650 | 403.301 | 22.550 | 1.97 | 0 | 196401c37 |  | lefford | 40 |
+| 2026-08-19T21:10:11Z | rebaseline | 58.417 | 229.504 | 11.890 | 4.13 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T21:11:54Z | gate-commit | 85.511 | 84.519 | 43.602 | 1.50 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T21:12:17Z | gate-commit | 22.682 | 49.363 | 11.004 | 2.66 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T21:42:31Z | gate-commit | 35.827 | 49.548 | 11.006 | 1.69 | 0 | 93ebbbac | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T22:00:00Z | gate-commit | 49.664 | 49.574 | 11.034 | 1.22 | 0 | 56e49e71 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T22:52:19Z | gate-commit | 59.584 | 53.555 | 12.278 | 1.10 | 0 | e2698c03 | campaign/the-planes | MacBookPro | 10 |
