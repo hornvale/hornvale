@@ -85,8 +85,8 @@
 //! Regenerate the whole block with:
 //!
 //! ```text
-//! cargo test -p hornvale-worldgen --test underworld_separation --release \
-//!     -- --ignored --nocapture the_separation_readout
+//! cargo test -p hornvale-worldgen --test suite --release \
+//!     -- underworld_separation::the_separation_readout --ignored --nocapture
 //! ```
 //!
 //! ## H1 — the ladder varies (needs ≥ 4 of 5 rungs, and ≤ 70% in one)

@@ -17,8 +17,8 @@
 //! landed, by running the `#[ignore]`d `measure_settlements_near_river_sweep`
 //! test (same helper, same seeds) against the then-current
 //! `drainage_norm.max(moisture)` formula: `cargo test --release -p
-//! hornvale-worldgen --test confluence -- --ignored --nocapture
-//! measure_settlements_near_river_sweep`, on seeds `{1, 7, 13, 42, 99}`:
+//! hornvale-worldgen --test suite -- confluence::measure_settlements_near_river_sweep
+//! --ignored --nocapture`, on seeds `{1, 7, 13, 42, 99}`:
 //!
 //! ```text
 //! seed   1: 0.6272
@@ -424,8 +424,8 @@ fn settlements_condense_near_rivers_emergently() {
 /// across the small seed sweep this campaign preregistered against
 /// (`{1, 7, 13, 42, 99}`). Run by hand (not part of the commit gate) whenever
 /// the fraction needs re-measuring, e.g. before or after a tuning pass:
-/// `cargo test --release -p hornvale-worldgen --test confluence --
-/// --ignored --nocapture measure_settlements_near_river_sweep`.
+/// `cargo test --release -p hornvale-worldgen --test suite --
+/// confluence::measure_settlements_near_river_sweep --ignored --nocapture`.
 /// claim: readout(bare #[ignore], prints only, no assertion) — settlements-
 /// near-river fraction per seed
 #[test]

@@ -129,7 +129,7 @@
 //! Run with `--nocapture` so the funnel is copy-pasteable into a report:
 //!
 //! ```text
-//! cargo nextest run -p hornvale-lab --test wear_funnel -- --nocapture
+//! cargo nextest run -p hornvale-lab --test suite -- wear_funnel --nocapture
 //! ```
 //!
 //! The assertion is deliberately a **loose floor** — non-empty and

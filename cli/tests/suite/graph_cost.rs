@@ -29,7 +29,7 @@
 //!
 //! ## Measured (seed 42, `BuildDepth::Settlements`, default `GraphConfig`)
 //!
-//! Recorded on this machine (`cargo test --test graph_cost -- --ignored
+//! Recorded on this machine (`cargo test --test suite -- graph_cost --ignored
 //! --nocapture`), before the budgets below were chosen. The first line is the
 //! original Connection Graph measurement; the second is The Tithe's
 //! re-measurement, on a world its tribute mechanism made materially larger:
@@ -184,8 +184,8 @@ fn connection_graph_cost_is_bounded_on_seed_42() {
 /// rather than crowding-only migration, alongside everything the existing
 /// `connection_graph_cost_is_bounded_on_seed_42` measures separately.
 ///
-/// **Measured** (this machine, `cargo test --test graph_cost -- --ignored
-/// tumult --nocapture`, before this budget was chosen): **6.11s**. Budgeted
+/// **Measured** (this machine, `cargo test --test suite -- graph_cost::tumult
+/// --ignored --nocapture`, before this budget was chosen): **6.11s**. Budgeted
 /// at roughly 4.9x that -- a falsification ceiling for a real regression
 /// (predation making the bake itself much costlier, or a much slower/loaded
 /// machine), not a target to approach.

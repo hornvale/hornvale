@@ -243,4 +243,4 @@ EOF
 
 echo "gnomon-injection: wrote $FIXTURES/manifest.json (${#requested[@]} arms, sha $sha, host $here)" >&2
 echo "gnomon-injection: read the result with" >&2
-echo "  cargo test -p hornvale-lab --test anomaly_injection -- --nocapture" >&2
+echo "  cargo test -p hornvale-lab --test suite -- anomaly_injection --nocapture" >&2

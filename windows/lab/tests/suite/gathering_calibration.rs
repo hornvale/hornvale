@@ -44,8 +44,8 @@ static GATHERING: LazyLock<RunResult> = LazyLock::new(|| {
 /// release, longer under the test profile): the committed fixture
 /// reconstructs *exactly* what a live `run` produces, so every other test in
 /// this file may trust the fixture. Run it after regenerating the fixture,
-/// or explicitly: `cargo test -p hornvale-lab --test gathering_calibration
-/// -- --ignored`.
+/// or explicitly: `cargo test -p hornvale-lab --test suite --
+/// gathering_calibration --ignored`.
 #[test]
 #[ignore = "runs the full gathering census; the fixture is drift-checked in CI"]
 fn gathering_fixture_matches_live_run() {

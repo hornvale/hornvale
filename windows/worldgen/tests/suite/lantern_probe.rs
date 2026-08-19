@@ -6,7 +6,7 @@
 //!      SEE anything a human does not? The Beholding built the achromatic
 //!      channel and never cashed it.
 //!
-//! Run: cargo test -p hornvale-worldgen --test lantern_probe -- --nocapture
+//! Run: cargo test -p hornvale-worldgen --test suite -- lantern_probe --nocapture
 
 use hornvale_kernel::color::{BANDS, Illuminant, Observer, Reflectance, blackbody};
 use hornvale_species::perception_registry;

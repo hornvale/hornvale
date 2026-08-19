@@ -107,7 +107,7 @@ fn depth_scoped_metrics_match_full_build() {
 /// applied) — capping the seed count doesn't fix this the way it does for
 /// the two studies above, because the bottleneck is metric-evaluation
 /// count, not build depth. Run explicitly after touching the runner, or in
-/// CI: `cargo test -p hornvale-lab --test depth_ladder -- --ignored`.
+/// CI: `cargo test -p hornvale-lab --test suite -- depth_ladder --ignored`.
 #[test]
 #[ignore = "pays the full ~110-metric registry evaluation at Full depth, twice, per seed; see \
             this test's doc comment"]

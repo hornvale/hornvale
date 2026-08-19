@@ -1,6 +1,6 @@
 //! The scene/tiles/v1 byte pin: this fixture changing is the epoch
 //! decision point (scene-protocol spec §2). Regenerate deliberately, never
-//! casually: `REBASELINE=1 cargo test -p hornvale-scene --test golden`
+//! casually: `REBASELINE=1 cargo test -p hornvale-scene --test suite -- golden`
 //! (or `make rebaseline-goldens`) rewrites it, then review the diff as a
 //! contract change.
 

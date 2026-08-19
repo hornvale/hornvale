@@ -7,7 +7,7 @@
 //!
 //! Run by hand (release; a debug build easily exceeds the ~10 min budget
 //! at the canonical L6 mesh over 20 seeds):
-//!   cargo test -p hornvale-terrain --release --test rift_probe -- --ignored --nocapture
+//!   cargo test -p hornvale-terrain --release --test suite -- rift_probe --ignored --nocapture
 
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed};
 use hornvale_terrain::shape::shoreline_development;

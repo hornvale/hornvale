@@ -5,8 +5,8 @@
 //! inference the zone licenses. Read-only against the generator: nothing
 //! here wires into `generate`, no world bytes move, and the OLD (buggy)
 //! `hornvale_worldgen::annual_mean_insolation` is never edited. Run by hand:
-//! `cargo test -p hornvale-worldgen --release --test insolation_probe --
-//! --ignored --nocapture`.
+//! `cargo test -p hornvale-worldgen --release --test suite --
+//! insolation_probe --ignored --nocapture`.
 //!
 //! ## The corrected formula (spec §3)
 //!
@@ -366,8 +366,8 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
 /// (release profile still takes several seconds per locked seed once
 /// terrain genesis runs), not part of the commit gate or `make gate-full`'s
 /// heavy tier; run explicitly:
-/// `cargo test -p hornvale-worldgen --release --test insolation_probe --
-/// --ignored --nocapture`.
+/// `cargo test -p hornvale-worldgen --release --test suite --
+/// insolation_probe --ignored --nocapture`.
 #[test]
 #[ignore = "live-worldgen Stage-0 probe (SKY-24 the-terminator Task 2): scans up to 1000 seeds \
             for the Locked rotation regime and rebuilds terrain/climate per locked seed; \

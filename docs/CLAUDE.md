@@ -64,7 +64,7 @@ page — a defect the reference checks above cannot see):
 Run it directly while editing docs:
 
 ```bash
-cargo test -p hornvale --test docs_consistency
+cargo test -p hornvale --test suite -- docs_consistency
 ```
 
 If it fails, the message names the broken link, the missing ToC bullet, or

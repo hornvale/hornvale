@@ -27,7 +27,7 @@
 //! only. `#[ignore]`d — a live-worldgen sweep across 13 seeds × 10 β values
 //! (multiple minutes even parallelized) — not part of the commit gate or
 //! `make gate-full`'s heavy tier; run explicitly with `cargo test --release
-//! -p hornvale-worldgen --test beta_calibration_sweep -- --ignored
+//! -p hornvale-worldgen --test suite -- beta_calibration_sweep --ignored
 //! --nocapture`.
 //!
 //! **A second, PRE-TROPHIC table is also printed** (`measure_pretrophic`):

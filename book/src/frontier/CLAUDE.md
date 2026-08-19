@@ -115,7 +115,7 @@ Links between these two files stay relative. Links to anything under
 `docs/` (decisions, specs, the docs map) are GitHub blob URLs —
 `https://github.com/hornvale/hornvale/blob/main/docs/…` — because those
 files are not published in the book. The drift-check
-(`cargo test -p hornvale --test docs_consistency`) validates both kinds and
+(`cargo test -p hornvale --test suite -- docs_consistency`) validates both kinds and
 enforces ToC completeness and ID uniqueness, alongside the row-form rules
 above. Fix the doc, not the test.
 

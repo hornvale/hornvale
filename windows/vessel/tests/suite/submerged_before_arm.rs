@@ -49,7 +49,7 @@
 //! the capture stays reproducible — `git stash` back to the pre-fix tree and
 //!
 //! ```text
-//! cargo test -p hornvale-vessel --test submerged_before_arm -- --ignored
+//! cargo test -p hornvale-vessel --test suite -- submerged_before_arm --ignored
 //! ```
 //!
 //! reproduces `tests/fixtures/submerged-before-arm.json` byte-for-byte.

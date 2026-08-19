@@ -1251,8 +1251,8 @@ fn repose_exposure_readout_matches_the_committed_fixture() {
     assert_eq!(
         rendered, committed,
         "repose exposure readout drifted — if this is intended, rewrite the \
-         fixture with `cargo test -p hornvale-worldgen --test repose_exposure \
-         -- --ignored rewrite_repose_exposure_fixture` and commit the diff \
+         fixture with `cargo test -p hornvale-worldgen --test suite \
+         -- repose_exposure::rewrite_repose_exposure_fixture --ignored` and commit the diff \
          WITH the change that moved it"
     );
 }

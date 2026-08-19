@@ -10,7 +10,7 @@
 //! many distinct polylines the cap would have handed the scan.
 //!
 //! ```text
-//! cargo test --release -p hornvale-lab --test millrace_probe -- --ignored --nocapture
+//! cargo test --release -p hornvale-lab --test suite -- millrace_probe --ignored --nocapture
 //! ```
 //!
 //! # The oracle is the reference scan, deliberately

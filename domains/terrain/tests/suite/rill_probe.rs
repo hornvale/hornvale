@@ -10,7 +10,7 @@
 //! had run them. Run them by hand:
 //!
 //! ```text
-//! cargo test --release -p hornvale-terrain --test rill_probe -- --ignored --nocapture
+//! cargo test --release -p hornvale-terrain --test suite -- rill_probe --ignored --nocapture
 //! ```
 //!
 //! Nothing here asserts a preregistered range. R-5's `[3.0, 5.0]` and

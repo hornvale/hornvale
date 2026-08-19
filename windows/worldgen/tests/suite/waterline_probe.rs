@@ -30,7 +30,7 @@
 //! - Gated (`--out /tmp/wl-after.json`): `world of seed 42 written to
 //!   /tmp/wl-after.json (3553 facts; village: Vngoashshngaoshshngoogootao)` — same fact
 //!   count, same village name.
-//! - `cargo test -p hornvale --test lens_purity`:
+//! - `cargo test -p hornvale --test suite -- lens_purity`:
 //!   `seed_42_world_json_matches_the_committed_fixture ... ok` — the
 //!   committed fixture still matches with the gate applied.
 //! - Fact-level diff (`/tmp/wl-before.json` vs `/tmp/wl-after.json`):
@@ -57,7 +57,7 @@
 //!    the axis their authored niches actually differ on?
 //!
 //! Run with:
-//!   cargo test -p hornvale-worldgen --test waterline_probe -- --nocapture --ignored
+//!   cargo test -p hornvale-worldgen --test suite -- waterline_probe --nocapture --ignored
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test — the

@@ -249,7 +249,7 @@ static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
 /// fixtures reconstruct *exactly* what a live `run`
 /// produces, so every other test in this file may trust the fixture. Run it
 /// explicitly after regenerating the fixtures, or in CI:
-/// `cargo test -p hornvale-lab --test calibration -- --ignored`.
+/// `cargo test -p hornvale-lab --test suite -- calibration --ignored`.
 #[test]
 #[ignore = "runs the full ~450s (debug) census; fixtures are drift-checked in CI"]
 fn census_fixture_matches_live_run() {

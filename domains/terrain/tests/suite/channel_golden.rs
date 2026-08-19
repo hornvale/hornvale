@@ -81,8 +81,8 @@
 //! mutation proves only what it perturbs.
 //!
 //! Regenerate deliberately: `REBASELINE=1 cargo test -p hornvale-terrain
-//! --test channel_golden` (or `make rebaseline-goldens`), then read the diff
-//! as a change to every river in every world.
+//! --test suite -- channel_golden` (or `make rebaseline-goldens`), then read
+//! the diff as a change to every river in every world.
 
 use hornvale_kernel::{Geosphere, Seed, quantize::quantize};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};

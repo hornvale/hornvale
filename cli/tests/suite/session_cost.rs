@@ -69,7 +69,7 @@ const RUNS: usize = 5;
 /// Ceiling for `Session::start`, ms.
 ///
 /// **Dev profile is the ceiling basis** (this box, `MacBookPro`, `cargo test
-/// -p hornvale --test session_cost -- --ignored --nocapture`, 2026-08-06),
+/// -p hornvale --test suite -- session_cost --ignored --nocapture`, 2026-08-06),
 /// the same convention `scene_cost.rs` follows, since `make gate-full`
 /// (`scripts/gate-full-heavy.sh`) runs the heavy tier via plain `cargo
 /// nextest run`, without `--release`. Three runs gave 3442.192, 3177.372,

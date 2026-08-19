@@ -1,7 +1,7 @@
 //! The `vessel/session/v2` byte pin and its tie to the published
 //! transcript. This fixture changing is the epoch decision point (The
 //! Snapshot spec §9): regenerate deliberately, never casually, with
-//! `REBASELINE=1 cargo test -p hornvale-vessel --test session_snapshot`
+//! `REBASELINE=1 cargo test -p hornvale-vessel --test suite -- session_snapshot`
 //! (or `make rebaseline-goldens`), then review the diff as a contract
 //! change.
 

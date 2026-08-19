@@ -120,8 +120,8 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
 /// astronomy-only scan; ~5.5 min in a debug build), so it is deferred to
 /// the heavy tier rather than the ~4-minute commit gate — see
 /// `cli/tests/heavy_tier.rs`. Run by hand:
-/// `cargo test -p hornvale-lab --release --test terminator_acceptance --
-/// --ignored --nocapture`.
+/// `cargo test -p hornvale-lab --release --test suite --
+/// terminator_acceptance --ignored --nocapture`.
 ///
 /// Cyclic stays a hard, unconditional invariant (a locked world offers no
 /// rising-and-setting body to read cyclic); Ambient/Eternal are pinned to

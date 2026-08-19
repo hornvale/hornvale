@@ -46,8 +46,8 @@
 //!    the probe is wired to the same inputs the shipped path uses.
 //!
 //! Run by hand (release; live worldgen):
-//! `cargo test -p hornvale-worldgen --release --test soil_attribution_probe
-//! -- --ignored --nocapture`
+//! `cargo test -p hornvale-worldgen --release --test suite --
+//! soil_attribution_probe --ignored --nocapture`
 //!
 //! Test fixture (decision 0092): calls the derivation entry points directly to
 //! build its own world state, once per seed — the sanctioned test-fixture

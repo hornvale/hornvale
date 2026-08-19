@@ -33,8 +33,8 @@
 //! not minutes. (That quote is the string AS IT STOOD THEN and is left
 //! verbatim as record; the canonical reason has since dropped the duration
 //! and names the `heavy` SET rather than any command — see `cli/CLAUDE.md`.) All four tests in this file, run serially on `ambrose`, cost
-//! **0.86 s** together (`cargo test -p hornvale-worldgen --test repose_laws
-//! -- --ignored --nocapture --test-threads=1`, 2026-08-14) — the samples are
+//! **0.86 s** together (`cargo test -p hornvale-worldgen --test suite --
+//! repose_laws --ignored --nocapture --test-threads=1`, 2026-08-14) — the samples are
 //! large but an event is two draws off a splitmix stream, and the level-5
 //! globe each test builds dominates. Tagging them `heavy:` would have put a
 //! false cost claim into a string a guard checks verbatim, and would have

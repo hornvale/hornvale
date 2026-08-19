@@ -12,7 +12,7 @@
 //! gate. Run it explicitly:
 //!
 //! ```text
-//! cargo test -p hornvale-worldgen --test watershed_measure -- --ignored --nocapture
+//! cargo test -p hornvale-worldgen --test suite -- watershed_measure --ignored --nocapture
 //! ```
 //!
 //! Nothing here asserts; it prints. The numbers it prints are the input to
