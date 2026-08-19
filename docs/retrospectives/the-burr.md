@@ -61,6 +61,21 @@ Process lessons only; the product story is the chronicle.
   name/epoch-moving campaign should run `make rebaseline-goldens` and the
   full book suite proactively at the first name change, not discover the gap
   at a stage boundary.
+- **A census refresh reddens every census-*reading* calibration test, and the
+  merge queue's fail-fast reports one, not the set.** The Burr's refresh
+  (`ROOT_EPOCH v4`) moved ten pinned measurements — `evaluable_columns` plus
+  nine name/homophony/transparency/syllable calibration tests and their
+  `golden-pins.sql` mirror — and none were re-pinned in the refresh commit
+  itself. The chamber held on the first (`evaluable_columns`) only because
+  `census_duration` failed even earlier and nextest cancelled the rest; a local
+  `--no-fail-fast` run surfaced the other nine at once. Re-pin census-reading
+  tests in the refresh commit, and run the full lab suite `--no-fail-fast`
+  after any refresh — the first red is never the whole set.
+- **Parallel campaigns collide on decision numbers; reserve a block, don't bump
+  a single number.** The Gazetteer minted `0147` while The Burr already held
+  it. `make decision-block NAME=<campaign>` reserves a disjoint range from the
+  canonical authority (The Burr took `0156-0165`); renumber into that block
+  rather than to `main-max + 1`, which every concurrent campaign also computes.
 - **An inherited diagnosis is a hypothesis, not a fact.** A subagent called
   four `hornvale-book` failures "pre-existing, out-of-scope"; the claim was
   never checked against main, only against a campaign commit, and it was
