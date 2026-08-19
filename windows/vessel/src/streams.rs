@@ -123,4 +123,11 @@ hornvale_kernel::stream_labels! {
     /// draw (The Adit).
     UNDERWORLD_LEVEL_STYLE = "underworld/level/v1/style"
         => "which content generator and worked/natural mix a leaf gets";
+    /// Stream label for deriving each rung's own seed within one descent
+    /// (The Adit) — drawn once per descent, not reused across rungs, so
+    /// two rungs never restart their own generation from the same stream
+    /// state (see `generate_descent`'s own doc for why that would
+    /// otherwise correlate consecutive rungs' shapes).
+    UNDERWORLD_LEVEL_DESCENT = "underworld/level/v1/descent"
+        => "per-rung seed draw within one descent";
 }

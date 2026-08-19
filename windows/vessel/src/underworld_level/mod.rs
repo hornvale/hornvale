@@ -243,6 +243,71 @@ fn region_first_leaf_rect(extent: Rect, seed: Seed) -> Option<Rect> {
     region::leaves(&tree).into_iter().next()
 }
 
+/// The realized worked-fraction of a level's leaves — Task 6's own
+/// continuation signal.
+fn realized_worked_fraction(level: &Level) -> f64 {
+    if level.leaf_styles.is_empty() {
+        return NEUTRAL_WORKED_BIAS;
+    }
+    let worked = level.leaf_styles.iter().filter(|s| s.worked).count();
+    worked as f64 / level.leaf_styles.len() as f64
+}
+
+/// Generate every rung of one descent under one entrance (spec §4.5).
+/// `CaveKind` is fixed for the whole descent (a cave system has one kind —
+/// see the spec's §4.5 correction); `origins`/`depths_m` vary per rung,
+/// parallel to `rungs`. Each rung's realized worked-fraction becomes the
+/// next rung's inherited bias, so a whole descent can read as uniformly
+/// natural, uniformly worked, or genuinely transitioning — not
+/// independently re-rolled at every rung.
+///
+/// **Draws a fresh per-rung `Seed` from `UNDERWORLD_LEVEL_DESCENT`, once
+/// per rung, rather than passing the same top-level `seed` to every rung's
+/// `generate_level_with_water` call.** Every stream a level's own
+/// generation derives (`UNDERWORLD_LEVEL_PARTITION`, `_STYLE`, `_CELLULAR`,
+/// `_TUNNELER`, `_ROOMS`) is derived fresh from whatever `Seed` it's given
+/// — so two rungs handed the identical `seed` would restart their own
+/// generation from identical stream state and produce correlated,
+/// near-duplicate shapes, the same defect class `carve`'s per-leaf fix
+/// (this file, Task 3/4) exists to prevent, one level up. A drawn `u64`
+/// re-wrapped as `Seed(..)` is fully reproducible (still a pure function
+/// of the original `seed`) without needing `generate_level_with_origin`'s
+/// whole call chain restructured to thread a persistent stream across
+/// rungs the way it already does across leaves within one level.
+/// type-audit: bare-ok(diagnostic-value: depths_m), bare-ok(diagnostic-value: water_table_m)
+pub fn generate_descent(
+    rungs: &[hornvale_terrain::DelveRung],
+    cave_kind: hornvale_terrain::CaveKind,
+    origins: &[hornvale_worldgen::chamber::ChamberOrigin],
+    depths_m: &[f64],
+    water_table_m: f64,
+    seed: Seed,
+) -> Vec<Level> {
+    assert_eq!(rungs.len(), origins.len(), "one origin per rung");
+    assert_eq!(rungs.len(), depths_m.len(), "one depth per rung");
+    let mut descent_stream = seed
+        .derive(crate::streams::UNDERWORLD_LEVEL_DESCENT)
+        .stream();
+    let mut bias = NEUTRAL_WORKED_BIAS;
+    let mut levels = Vec::with_capacity(rungs.len());
+    for (i, &rung) in rungs.iter().enumerate() {
+        let extent = generate_level_extent(rung);
+        let rung_seed = Seed(descent_stream.next_u64());
+        let level = generate_level_with_water(
+            extent,
+            cave_kind,
+            origins[i],
+            depths_m[i],
+            water_table_m,
+            bias,
+            rung_seed,
+        );
+        bias = realized_worked_fraction(&level);
+        levels.push(level);
+    }
+    levels
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,6 +479,98 @@ mod tests {
         assert!(
             dry.cells.values().all(|k| *k != LevelCellKind::Flooded),
             "a vadose Found chamber (above the water table) stays dry"
+        );
+    }
+
+    /// claim: rate(seed: 0..100) — the deepest rung's mean worked-fraction
+    /// across a 100-seed sweep is compared against the neutral baseline, a
+    /// statistical mean-property claim (compounding inertia), not a
+    /// per-seed-without-exception invariant.
+    #[test]
+    fn worked_fraction_has_inertia_across_rungs() {
+        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [DelveRung::Undercroft, DelveRung::Shallows, DelveRung::Deeps];
+        // All three rungs Made: with inertia, later rungs' worked fraction
+        // should not regress toward NEUTRAL_WORKED_BIAS as hard as an
+        // independent re-roll would — measured as "the deepest rung's worked
+        // fraction, averaged over many seeds, exceeds the neutral baseline".
+        const TRIALS: u64 = 100;
+        let mut deepest_worked_total = 0.0;
+        for s in 0..TRIALS {
+            let origins = [
+                ChamberOrigin::Made,
+                ChamberOrigin::Made,
+                ChamberOrigin::Made,
+            ];
+            let depths_m = [20.0, 60.0, 120.0];
+            let levels =
+                generate_descent(&rungs, CaveKind::Karst, &origins, &depths_m, 500.0, Seed(s));
+            let deepest = levels.last().expect("three rungs requested");
+            let worked = deepest.leaf_styles.iter().filter(|s| s.worked).count() as f64;
+            let total = deepest.leaf_styles.len().max(1) as f64;
+            deepest_worked_total += worked / total;
+        }
+        let mean_worked_fraction = deepest_worked_total / TRIALS as f64;
+        assert!(
+            mean_worked_fraction > NEUTRAL_WORKED_BIAS,
+            "three Made rungs should compound toward worked, not float at neutral: got {mean_worked_fraction}"
+        );
+    }
+
+    /// claim: rate(seed: single) — asserts a level-count invariant at one
+    /// representative seed, not a statistical claim over a range.
+    #[test]
+    fn generate_descent_produces_one_level_per_rung() {
+        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [DelveRung::Undercroft, DelveRung::Shallows];
+        let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
+        let depths_m = [20.0, 60.0];
+        let levels = generate_descent(
+            &rungs,
+            CaveKind::LavaTube,
+            &origins,
+            &depths_m,
+            500.0,
+            Seed(1),
+        );
+        assert_eq!(levels.len(), 2);
+    }
+
+    /// claim: rate(seed: single) — asserts a determinism-vs-correlation
+    /// invariant at one representative seed, not a statistical claim over a
+    /// range.
+    #[test]
+    fn two_rungs_with_the_same_origin_and_kind_still_differ() {
+        // The rung-level twin of carve.rs's "two leaves sharing a stream must
+        // differ" regression. Repeats the SAME rung twice — an artificial but
+        // precise probe: identical extent, origin, kind and depth for both
+        // entries, so the only thing that could make the two produced levels
+        // differ is which seed each one draws. Using two DIFFERENT rungs here
+        // would be a weaker test: different rungs get different extents
+        // (`generate_level_extent`), so their `cells` maps would have
+        // different key sets and always compare unequal regardless of whether
+        // the seed-reuse defect this test guards against is present.
+        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [DelveRung::Undercroft, DelveRung::Undercroft];
+        let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
+        let depths_m = [20.0, 20.0];
+        let levels = generate_descent(
+            &rungs,
+            CaveKind::Karst,
+            &origins,
+            &depths_m,
+            500.0,
+            Seed(13),
+        );
+        assert_ne!(
+            levels[0].cells, levels[1].cells,
+            "two rungs must not produce the same cells even with matching origin/kind/depth"
         );
     }
 }

@@ -434,6 +434,14 @@ mod tests {
                 // like the other entries in this golden. See
                 // `windows/vessel/src/underworld_level/carve.rs`.
                 "underworld/level/cellular v1",
+                // The Adit, Task 6: deriving each rung's own seed within
+                // one descent, drawn once per rung so two rungs never
+                // restart their own generation from the same stream state.
+                // Additive at v1 — a NEW label, so it perturbs no existing
+                // stream. See
+                // `windows/vessel/src/underworld_level/mod.rs`'s
+                // `generate_descent`.
+                "underworld/level/descent v1",
                 // The Adit, Task 2: the underworld level generator's
                 // partition-tree split-or-leaf decisions. Versioned from
                 // birth like the other entries in this golden. Task 1's

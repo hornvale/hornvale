@@ -1563,3 +1563,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T03:54:12Z | gate-commit | 55.216 | 97.628 | 33.918 | 2.38 | 0 | 94fcfa8e | campaign/the-adit | MacBookPro | 10 |
 | 2026-08-19T03:58:33Z | gate-commit | 35.390 | 56.085 | 15.270 | 2.02 | 0 | 94fcfa8e | campaign/the-adit | MacBookPro | 10 |
 | 2026-08-19T04:08:22Z | gate-commit | 51.781 | 73.089 | 32.429 | 2.04 | 0 | 7ead99be | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:09:57Z | gate-commit | 24.270 | 55.292 | 14.773 | 2.89 | 0 | 7ead99be | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:15:01Z | gate-commit | 9.273 | 11.442 | 6.431 | 1.93 | 0 | 213620b8 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:16:41Z | gate-commit | 60.107 | 101.688 | 42.397 | 2.40 | 0 | 213620b8 | campaign/the-adit | MacBookPro | 10 |
+| 2026-08-19T04:23:17Z | rebaseline | 54.947 | 231.505 | 11.454 | 4.42 | 0 | 9646b4cb | campaign/the-adit | MacBookPro | 10 |
