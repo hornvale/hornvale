@@ -1655,5 +1655,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T16:40:26Z | remeasure:parley_readout | 100.871 | 95.406 | 5.115 | 1.00 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
 | 2026-08-19T16:42:43Z | gate-commit | 41.818 | 63.044 | 17.841 | 1.93 | 0 | 7b65e30d | campaign/the-undertow | MacBookPro | 10 |
 | 2026-08-19T17:01:31Z | gate-commit | 35.799 | 56.143 | 16.266 | 2.02 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
-| 2026-08-19T17:01:31Z | gate-commit | 35.873 | 56.176 | 16.294 | 2.02 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
 | 2026-08-19T17:02:23Z | rebaseline | 39.277 | 233.724 | 12.650 | 6.27 | 0 | f4625217 | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:27:06Z | remeasure:probe_argmin_setdiff | 91.779 | 92.850 | 2.324 | 1.04 | 0 | 34ac452b | campaign/the-undertow | MacBookPro | 10 |
+| 2026-08-19T17:31:31Z | gate-commit | 27.043 | 64.221 | 15.950 | 2.96 | 0 | 34ac452b | campaign/the-undertow | MacBookPro | 10 |
