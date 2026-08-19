@@ -100,6 +100,7 @@ under review. This file is.
 - [The Tithe](the-tithe.md) — (living-community C3 slice 2, SHIPPED @346fd2ee): tribute as accumulation…
 - [The Tumult](the-tumult.md) — SOC power law FALSIFIED, shipped as headline
 - [The Watershed](the-watershed.md) — FALSIFIED before it was built
+- [The Gazetteer](the-gazetteer.md) — the Watershed's null did not bind; the salt-lake floor it inherited yielded ZERO and was re-derived from a classification, not a threshold; H2's exact 1.0000 was a TAUTOLOGY (`species` is a leg in the derive path) — the real finding was unspecified within-people collision, kobold 62% on one name (`Rara`, 15 places) against three peoples at 0%; ocean-basin partition is noise, not structure (1,081 basins, no scale break); 10 findings, ALL in controller text, none in implementer code; two git mistakes in one hour — HEAD MOVES UNDER YOU in subagent-driven work
 - [The Sounding](the-sounding.md) — (feasibility benchmark for the living-community engine) SHIPPED @5bf3a452. The census-with-floor tool; the overclaim-caught-by-review lesson…
 - [The Witness](the-witness.md) — Discharged The Wearing's F5/F7/F13 — a check whose input is authored cannot witness reachability; F5 was four defects stacked
 - [The Waterline](the-waterline.md) — 0079, headline feature DELETED
