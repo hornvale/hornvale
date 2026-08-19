@@ -5,7 +5,7 @@
 //! ordering is a total order with exact arithmetic, the same reason
 //! `kernel/src/astar.rs` uses `u64` costs.
 
-use crate::liveness::Action;
+use crate::action::Action;
 
 /// An exact count of scheduler ticks. Internal; never serialized.
 /// type-audit: bare-ok(count)
@@ -101,7 +101,7 @@ pub fn tempo(mass_kg: f64) -> f64 {
 /// elsewhere — this is only the cost of the act of lying down.
 ///
 /// The match is exhaustive by variant deliberately, the same discipline
-/// `liveness::precondition_reads_committed_state` keeps: a new `Action` must
+/// `action::precondition_reads_committed_state` keeps: a new `Action` must
 /// fail to compile here rather than silently become free.
 pub fn base_ticks(action: &Action) -> Ticks {
     match action {
@@ -163,7 +163,7 @@ pub fn cost_ticks(action: &Action, mass_kg: f64, terrain_factor: f64) -> Ticks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::liveness::Action;
+    use crate::action::Action;
     use hornvale_kernel::room::RoomAddr;
 
     #[test]

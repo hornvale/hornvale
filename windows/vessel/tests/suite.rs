@@ -17,6 +17,8 @@
 
 mod common;
 
+#[path = "suite/action_module.rs"]
+mod action_module;
 #[path = "suite/course_properties.rs"]
 mod course_properties;
 #[path = "suite/display_handle.rs"]
