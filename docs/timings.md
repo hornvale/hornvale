@@ -1616,3 +1616,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T16:18:47Z | gate-commit | 58.158 | 200.159 | 53.550 | 4.36 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
 | 2026-08-19T16:20:22Z | gate-commit | 44.106 | 125.686 | 47.812 | 3.93 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
 | 2026-08-19T16:21:20Z | gate-commit | 41.682 | 125.676 | 47.236 | 4.15 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
+| 2026-08-19T16:54:47Z | gate-commit | 42.036 | 79.176 | 27.499 | 2.54 | 0 | b0277ee07 | fix/census-yellow-teeth | lefford | 40 |
+| 2026-08-19T16:55:38Z | gate-commit | 41.767 | 113.382 | 38.968 | 3.65 | 0 | b0277ee07 | fix/census-yellow-teeth | lefford | 40 |

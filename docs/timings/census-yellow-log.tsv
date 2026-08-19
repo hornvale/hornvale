@@ -1,0 +1,19 @@
+# Census YELLOW acknowledgements. One row per census run that crossed
+# CENSUS_ALARM_SECS, recording what profiling FOUND — not merely that someone
+# noticed.
+#
+# WHY THIS FILE EXISTS RATHER THAN A REGISTRY ROW. The first version of the
+# alarm asserted that an idea-registry row EXISTED. That can only ever be
+# satisfied: once the row is written, every future yellow run passes silently
+# forever, and the alarm degrades into a formality on exactly the runs it was
+# built to catch. It is the same one-directional-acknowledgement rot that
+# seam-guard's STALE-DECL verdict exists to prevent. Keying on the RUN instead
+# means a new slow run cannot inherit the previous run's acknowledgement.
+#
+# WHAT THE CHECK CAN AND CANNOT ENFORCE, stated plainly so nobody mistakes it
+# for more than it is: it enforces that the latest over-alarm run has a row
+# here and that the row's `finding` is non-empty. It CANNOT verify a flamegraph
+# was taken or that anything was made faster. It buys a forced look, not a fix.
+#
+# when	wall_s	cpu_ratio	finding
+2026-08-19T15:30:40Z	918.457	32.45	NOT PROFILED — policy predates the profile requirement. Recorded as the seed row so the ledger starts populated rather than empty (an empty ledger and a satisfied one look identical to a reader). Attribution done instead by A/B against the ledger: four of seven post-memoisation runs exceed 900 (949.579, 920.212, 979.539, 918.457) at cpu_ratio 28.56-33.23, so this is mid-band variance, not The Burr's epoch. The FIRST yellow run after this one owes a real flamegraph.
