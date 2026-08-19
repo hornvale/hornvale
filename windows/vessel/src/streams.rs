@@ -101,4 +101,33 @@ hornvale_kernel::stream_labels! {
     /// rename.
     ROOM_LAYOUT_ANCHORS = "room/layout/v1/anchors"
         => "where a chamber's anchors land in its cells";
+    /// Stream label for the underworld level generator's partition-tree
+    /// split-or-leaf decisions (The Adit).
+    UNDERWORLD_LEVEL_PARTITION = "underworld/level/v1/partition"
+        => "split-or-leaf decisions in a generated underworld level";
+    /// Stream label for the cellular-automata cave content generator
+    /// (Karst-biased leaves).
+    UNDERWORLD_LEVEL_CELLULAR = "underworld/level/v1/cellular"
+        => "cellular-automata cave carving within a leaf";
+    /// Stream label for the drunkard's-walk tunnel content generator
+    /// (LavaTube-biased leaves).
+    UNDERWORLD_LEVEL_TUNNELER = "underworld/level/v1/tunneler"
+        => "drunkard's-walk tunnel carving within a leaf";
+    /// Stream label for the partitioned-rooms content generator, shared by
+    /// the angular (Fracture-biased) and rooms-and-corridors (worked)
+    /// leaf styles — one label because the underlying technique is one
+    /// technique tuned two ways, not two independent algorithms.
+    UNDERWORLD_LEVEL_ROOMS = "underworld/level/v1/rooms"
+        => "partitioned-rooms carving within a leaf";
+    /// Stream label for a leaf's worked-vs-natural and algorithm-family
+    /// draw (The Adit).
+    UNDERWORLD_LEVEL_STYLE = "underworld/level/v1/style"
+        => "which content generator and worked/natural mix a leaf gets";
+    /// Stream label for deriving each rung's own seed within one descent
+    /// (The Adit) — drawn once per descent, not reused across rungs, so
+    /// two rungs never restart their own generation from the same stream
+    /// state (see `generate_descent`'s own doc for why that would
+    /// otherwise correlate consecutive rungs' shapes).
+    UNDERWORLD_LEVEL_DESCENT = "underworld/level/v1/descent"
+        => "per-rung seed draw within one descent";
 }

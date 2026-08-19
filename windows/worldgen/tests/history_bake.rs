@@ -39,6 +39,25 @@ fn full_land_graph(geo: &Geosphere) -> ConnectionGraph {
 }
 
 /// The four goblinoid peoples the campaign seeds history with.
+/// One `Surface` seating map per people — the pre-campaign world restated in
+/// spec §4.6's wider node-index key.
+///
+/// Every fixture in this file is a surface fixture: no people here carries an
+/// `EnvironmentNiche`, so none of them could be seated underground even in a
+/// live world. Handing the bake an all-`Surface` seating is therefore not a
+/// simplification, it is what the composition root would hand it — and it is
+/// what makes each of these tests, unchanged, evidence that the re-key moved
+/// nothing above ground.
+fn surface_seating(
+    geo: &Geosphere,
+    peoples: &[KindId],
+) -> Vec<CellMap<hornvale_terrain::DelveRung>> {
+    peoples
+        .iter()
+        .map(|_| CellMap::from_fn(geo, |_| hornvale_terrain::DelveRung::Surface))
+        .collect()
+}
+
 fn peoples() -> Vec<KindId> {
     vec![
         KindId("goblin"),
@@ -201,6 +220,7 @@ fn same_seed_bakes_byte_identical_history() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -212,6 +232,7 @@ fn same_seed_bakes_byte_identical_history() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -232,6 +253,7 @@ fn different_seeds_diverge() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -243,6 +265,7 @@ fn different_seeds_diverge() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -269,6 +292,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -345,6 +369,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -472,6 +497,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -578,6 +604,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -606,6 +633,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     );
@@ -762,6 +790,7 @@ fn value_flat_history_seeded_with(
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs,
     )
@@ -1101,6 +1130,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs_no,
     );
@@ -1119,6 +1149,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
         &eras,
         &refugia,
         &people,
+        &surface_seating(&geo, &people),
         &cfg,
         &graphs_lane,
     );

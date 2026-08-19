@@ -61,6 +61,10 @@ run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
 # the real claim the enclosing run is already holding. It SKIPs cleanly on a
 # host without flock, which is why it costs nothing on a Mac.
 run "sluice queue"     bash scripts/test-sluice.sh
+# The block allocator's own suite, here for the reason the queue's is: it is
+# the only thing that runs it, it is fast, and an allocator nobody tests is an
+# allocator that hands two campaigns the same range without anyone noticing.
+run "decision blocks"  bash scripts/test-decision-blocks.sh
 # THE SHELL LINT, for the same reason and with the proof attached. The
 # `make shellcheck` target was in the Makefile's .PHONY list and NOWHERE
 # else — no gate, no set, no hook ran it — and it was RED on `main` when this
@@ -77,6 +81,20 @@ run "sluice queue"     bash scripts/test-sluice.sh
 # queue, and none of it is covered by `cargo clippy` — the workspace lint
 # stops at the Rust boundary, so shell is the one language here with no
 # automatic checker at all.
+# THE pre-push HOOK'S OWN SUITE, which until now was run by NOBODY — the same
+# gap The Staff closed for test-sluice.sh, in the same file, for the same
+# reason. `git grep test-pre-push` outside the script itself returned only
+# PROSE: a plan, two comments, and scripts/CLAUDE.md asserting the hook is
+# "mutation-tested". It was, once, by whoever last typed the command. That
+# hook is the only thing standing between a stray `git push` and an
+# out-of-band landing on main (decision 0139), and ca6f34310 is what one
+# looks like.
+run "pre-push hook"    bash scripts/test-pre-push.sh
+# The census worktree's path resolution (decision 0146). Runs no census by
+# construction: every case drives `census-run.sh worktree`, which resolves and
+# prints under no lock, or the refusal path, which exits before the lock is
+# taken. Safe inside a chamber phase for that reason.
+run "census path"      bash scripts/test-census-path.sh
 run "shellcheck"       make --no-print-directory shellcheck
 
 if [ "$fails" -ne 0 ]; then

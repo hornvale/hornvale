@@ -723,10 +723,28 @@ fn homophony_count_is_measured_and_pinned() {
     // Each mean is again an exact integer count over the 1000-seed census
     // divided by 1000 (6071, 5739, 19843, 5941). Post-unblinding re-measure,
     // declared per decision 0016.
-    assert!((mg - 6.071).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 5.739).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 19.843).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 5.941).abs() < 1e-9, "kobold mean drifted: {mk}");
+    //
+    // THE UNDERWORLD (2026-08-17, canonical census on lefford at 223e7d57,
+    // goldens 8df714ed): 6.055 / 5.700 / 19.799 / 5.816, and the ratios the
+    // 3x threshold is about WIDENED for a second consecutive regen:
+    //
+    //     bugbear/goblin     3.245 -> 3.2685 -> 3.2699
+    //     bugbear/hobgoblin  3.400 -> 3.4576 -> 3.4735
+    //
+    // No new reading. The Glasshouse's paragraph above already retired the
+    // "one to two campaigns away" extrapolation as falsified, and a second
+    // widening is what a witness with no trend in it looks like — not a
+    // counter-trend to fit a line to. The falsification threshold is
+    // UNCHANGED and still not to be widened: below 3x falsifies the claim
+    // outright and is a finding to report.
+    //
+    // Each mean is again an exact integer count over the 1000-seed census
+    // divided by 1000 (6055, 5700, 19799, 5816). Post-unblinding re-measure,
+    // declared per decision 0016.
+    assert!((mg - 6.055).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 5.700).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 19.799).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 5.816).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

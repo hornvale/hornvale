@@ -43,9 +43,71 @@ if [ "${1:-}" = "status" ]; then
     exit $?
 fi
 
+# HV_CENSUS_WORKTREE, WHEN SET, MUST BE ABSOLUTE (decision 0146). Checked HERE
+# — before the lock — because of the canal-lock rule this project already
+# applies at the merge queue's mouth: turn a vessel away at the gate, never
+# inside the chamber. A malformed override is a caller error knowable without
+# touching the serial box, and the census lock's wait is measured in tens of
+# minutes.
+#
+# WHY THE BOUND EXISTS. The value is used as a RAW path, so a relative one
+# resolves against the caller's cwd — and the documented invocation runs
+# `cd ~/Projects/hornvale` first. This project's own documented value for two
+# months was `canonical`, which therefore created the worktree INSIDE the
+# repo, defeating the invariant this script states about its own default
+# ("outside the repo to keep `git status` clean here") and leaving an
+# untracked, un-ignored directory holding a registered worktree — which a
+# `git clean -fdx` in the main checkout would delete out from under git.
+#
+# THE REFUSAL NAMES ONLY THE BOUND ACTUALLY ENFORCED: absoluteness. It does
+# NOT claim to enforce "outside the repo", because it does not test that — an
+# absolute path inside the repo is still accepted, deliberately, so the
+# override survives as a test seam. A refusal that named a bound it did not
+# enforce would be a false claim in an error message.
+if [ -n "${HV_CENSUS_WORKTREE:-}" ]; then
+    case "$HV_CENSUS_WORKTREE" in
+        /*) ;;
+        *)
+            echo "census-run: HV_CENSUS_WORKTREE must be an ABSOLUTE path; got '$HV_CENSUS_WORKTREE'." >&2
+            echo "census-run: a relative value resolves against the caller's cwd, which the documented" >&2
+            echo "census-run: invocation sets to the repo root — landing the worktree inside the repo." >&2
+            echo "census-run: leave it UNSET to use the default (a sibling of the main checkout)." >&2
+            exit 2
+            ;;
+    esac
+fi
+
+# WHERE A CENSUS WOULD RUN. One definition, used by the run path below and by
+# the `worktree` subcommand, so a test can assert the resolution WITHOUT
+# paying for a census — the alternative was asserting on a copy of this
+# expression, which is the shape that lets the copy and the original drift.
+#
+# THE DEFAULT IS ANCHORED TO THE MAIN WORKTREE, NOT $repo_root. Invoked from a
+# linked worktree, $repo_root IS that worktree, so `$repo_root/..` would
+# resolve inside `.claude/worktrees/` — a different directory per campaign,
+# silently, and each one a fresh cold build. `git worktree list --porcelain`
+# lists the main worktree FIRST (git's own ordering);
+# scripts/scheduled/nightly-census.sh and scripts/worktree-take.sh already
+# rely on exactly this resolution.
+census_worktree_path() {
+    local main_root
+    main_root="$(git -C "$repo_root" worktree list --porcelain \
+        | awk '/^worktree /{print $2; exit}')"
+    [ -n "$main_root" ] || main_root="$repo_root"
+    printf '%s\n' "${HV_CENSUS_WORKTREE:-$main_root/../hornvale-census-wt}"
+}
+
+# Asking where is not authoring, so — like `status` — this takes no lock and
+# is legal from any box. Placed BEFORE the host guard for that reason.
+if [ "${1:-}" = "worktree" ]; then
+    census_worktree_path
+    exit 0
+fi
+
 # shellcheck source=scripts/census-canonical-host.sh
 . "$(dirname "$0")/census-canonical-host.sh"
 require_canonical_census_host census || exit 1
+
 
 # An ANCESTOR already holds this lock (HV_CENSUS_LOCK_HELD names a live pid):
 # flock is per open-file-description, so re-flocking the same path on a fresh
@@ -98,7 +160,7 @@ if [ -n "${HV_CENSUS_REF:-}" ]; then
     # symlink in the path, which `git worktree list` will have resolved away.
     # The `if` keeps the unresolved form for the not-yet-created case — the
     # `cd` fails, the assignment never happens, and `$wt` is left alone.
-    wt="${HV_CENSUS_WORKTREE:-$repo_root/../hornvale-census-wt}"
+    wt="$(census_worktree_path)"
     if wt_resolved="$(cd "$wt" 2>/dev/null && pwd -P)"; then
         wt="$wt_resolved"
     fi

@@ -419,9 +419,17 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // re-checked rather than assumed — the `other` arm panics loudly on a
     // cyclic head in a locked world, and the run reached this assertion, so it
     // never fired on any of the 1000 seeds.
+    //
+    // The Underworld's close regen (2026-08-17, canonical census on lefford
+    // at 223e7d57, goldens committed as 8df714ed, 0063/0079): the chamber
+    // epoch re-places settlements once more, (151, 41) -> (152, 40). The
+    // invariant this test exists to guard is re-checked rather than assumed —
+    // the `other` arm panics loudly on a cyclic head in a locked world, and
+    // the run reached this assertion, so it never fired on any of the 1000
+    // seeds.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (151, 41),
+        (152, 40),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -453,8 +461,18 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // records how many per-people heads land in the spinning-yet-eternal cell
     // of that table. The movement is downstream of placement, which is the
     // campaign's predicted mechanism and the only one the census diff found.
+    //
+    // The Underworld's close regen (2026-08-17, canonical census on lefford
+    // at 223e7d57, goldens 8df714ed): 12 -> 10. WITNESS, not claim, as the
+    // paragraph above already says: the guarded property is the *conjunction*
+    // asserted above (a frozen sky never heads a cyclic pantheon), which is
+    // unmoved; this literal only records how many per-people heads land in
+    // the spinning-yet-eternal cell of that table. The movement is downstream
+    // of placement — the underworld epoch re-decides which settlements
+    // survive to seat a flagship pantheon — which is the campaign's predicted
+    // mechanism and the only one the census diff found.
     assert_eq!(
-        spinning_eternal, 12,
+        spinning_eternal, 10,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -726,8 +744,20 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // moving 27 -> 29 in `windows/lab/src/domesday/detect.rs`. The bar is
     // 0.4 percentage points below the observed share; treat the D1 hit as a
     // measurement sitting on an edge, not as a settled property.
-    assert_eq!(coastal, 189, "coastal flagship count drifted");
-    assert_eq!(inland, 811, "inland flagship count drifted");
+    //
+    // The Underworld's close regen (2026-08-17, canonical census on lefford
+    // at 223e7d57, goldens 8df714ed): 189 -> 181 coastal, 811 -> 819 inland,
+    // and the two still sum to 1000 (no absent pair). The underworld epoch
+    // moves the water table and the chamber conditions a site is judged on,
+    // so goblin's flagship re-seats inland on eight net worlds. WITNESS, not
+    // claim — nothing here asserts a direction. The D1 note below still
+    // applies and its edge has WIDENED, not closed: inland is now 81.9%
+    // against the detector's frozen 80.0% bar (was 80.4%), so the D1 hit on
+    // `flagship-coastal`/`goblin-flagship-coastal` is no longer sitting on
+    // the bar. That is a measurement moving away from an edge, not a
+    // property being established.
+    assert_eq!(coastal, 181, "coastal flagship count drifted");
+    assert_eq!(inland, 819, "inland flagship count drifted");
 }
 
 #[test]
@@ -1146,7 +1176,18 @@ fn blind_attribution_beats_chance_decisively() {
     // invariant below (perfect attribution among spinning, mooned pairs)
     // never fired either; the run reaches it, and it is an `assert_eq!` that
     // would have.
-    assert_eq!(correct, 890, "blind-attribution count drifted");
+    //
+    // The Underworld's close regen (2026-08-17, canonical census on lefford
+    // at 223e7d57, goldens 8df714ed): the attributable-pair denominator does
+    // NOT move (982 -> 982) and correct goes 890 -> 888; accuracy
+    // 0.9063136456211812 -> 0.9042769857433809. The directional claim this
+    // test guards (blind attribution beats chance decisively) HOLDS,
+    // re-checked rather than assumed: 0.904 against the 0.75 floor asserted
+    // above is 0.154 of margin, and against the ~0.5 binary chance the claim
+    // is really about, nearly double. The mooned-pair invariant below
+    // (perfect attribution among spinning, mooned pairs) never fired either;
+    // the run reaches it, and it is an `assert_eq!` that would have.
+    assert_eq!(correct, 888, "blind-attribution count drifted");
     assert_eq!(total, 982, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
@@ -1937,7 +1978,14 @@ fn name_collision_rate_is_measured_and_pinned() {
         // cause as the zero/nonzero re-pin above; this row still carries no
         // directional claim, and the rate stays inside the range decision
         // 0024 sanctions (see the note above).
-        (mean - 0.508_693_147_820).abs() < 1e-6,
+        // The Underworld's close regen (2026-08-17, canonical census on
+        // lefford at 223e7d57, goldens 8df714ed): the chamber epoch re-places
+        // settlements, so a different set survives to be named on every
+        // world: 0.508_693_147_820 -> 0.507_408_222_281_000. This row still
+        // carries no directional claim (H4 already failed and is recorded as
+        // such above), and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        (mean - 0.507_408_222_281_000).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2154,7 +2202,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.478_397_802_000. Still comfortably below the campaign's own
         // <10-character claim (spec §7) — 1.52 characters of margin —
         // re-checked rather than assumed.
-        ("goblin", 1000u32, 8.506_600_585_100),
+        // The Underworld's close regen (2026-08-17, canonical census on
+        // lefford at 223e7d57, goldens 8df714ed): goblin's present count does
+        // NOT move (1000 -> 1000) but the sites its names compound over do:
+        // mean 8.506_600_585_100 -> 8.515_439_092_299_996. Still comfortably
+        // below the campaign's own <10-character claim (spec §7) — 1.48
+        // characters of margin — re-checked rather than assumed.
+        ("goblin", 1000u32, 8.515_439_092_299_996),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2254,7 +2308,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // mean 6.848_307_837_667_7 -> 6.879_645_463_157_894. Still
         // comfortably below the campaign's own <10-character claim (spec §7)
         // — 3.12 characters of margin — re-checked rather than assumed.
-        ("kobold", 982u32, 6.858_963_629_124_241),
+        // The Underworld's close regen (2026-08-17, canonical census on
+        // lefford at 223e7d57, goldens 8df714ed): kobold's present count does
+        // NOT move (982 -> 982); mean 6.858_963_629_124_241 ->
+        // 6.854_391_970_773_933. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — 3.15 characters of margin —
+        // re-checked rather than assumed.
+        ("kobold", 982u32, 6.854_391_970_773_933),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2425,8 +2485,16 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // inside 2-3 — re-checked, not assumed; goblin sits 0.296 below the
         // ceiling and kobold 0.188 above the floor, the narrower of the two
         // margins (kobold's, which widens slightly from The Range's 0.177).
-        ("goblin", 1000u32, 2.704_333_361_300),
-        ("kobold", 982u32, 2.186_726_386_252_548),
+        // The Underworld's close regen (2026-08-17, canonical census on
+        // lefford at 223e7d57, goldens 8df714ed): present counts unmoved
+        // (goblin 1000, kobold 982); goblin 2.704_333_361_300 ->
+        // 2.709_543_428_800_003 and kobold 2.186_726_386_252_548 ->
+        // 2.179_334_351_323_829. The two move in OPPOSITE directions, as
+        // they have at several prior regens — the chamber epoch re-places
+        // settlements independently per species, and this row carries no
+        // relation between the two means.
+        ("goblin", 1000u32, 2.709_543_428_800_003),
+        ("kobold", 982u32, 2.179_334_351_323_829),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2631,7 +2699,15 @@ fn name_transparency_is_measured_and_pinned() {
         // transparency column, so the elves' own transparency cannot be
         // isolated from these fixtures. Recorded as a limit of the
         // instrument, not resolved.
-        (mean - 0.703_908_230_500).abs() < 1e-9,
+        // The Underworld's close regen (2026-08-17, canonical census on
+        // lefford at 223e7d57, goldens 8df714ed): present/absent unmoved at
+        // 1000/0; mean 0.703_908_230_500 -> 0.706_817_471_809_999. A 0.4%
+        // rise, an order of magnitude smaller than the 6.3% fall the
+        // paragraph above diagnoses, and downstream of the same mechanism:
+        // which settlements survive to be named, not any change to the wear
+        // cascade. The per-species limit recorded above is unchanged — there
+        // is still no per-species transparency column.
+        (mean - 0.706_817_471_809_999).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2693,7 +2769,15 @@ fn name_transparency_is_measured_and_pinned() {
         // as the uniformity defect returning. A 0.301-to-0.979 span around a
         // 0.704 mean, with 190 of 1000 worlds below 0.60, is a distribution
         // over worlds. Re-checked rather than assumed.
-        (min - 0.300_000_0).abs() < 1e-8,
+        // The Underworld's close regen (2026-08-17, canonical census on
+        // lefford at 223e7d57, goldens 8df714ed): the floor edges DOWN
+        // 0.300_000_0 -> 0.297_142_86 while the ceiling edges up (asserted
+        // below). Both tails moved outward — the spread widened on both
+        // sides — which is away from the uniformity defect this row guards,
+        // not toward it. The previous regen's standing warning (a floor that
+        // kept climbing toward the mean is how the defect returns) did NOT
+        // fire: the floor fell.
+        (min - 0.297_142_86).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -2704,7 +2788,18 @@ fn name_transparency_is_measured_and_pinned() {
         // re-pinned rather than investigated as a regression; but it is the
         // first time the ceiling has moved at all, and a future regen that
         // walks it back UP toward 1.0 should be read against that.
-        (max - 0.977_900_55).abs() < 1e-8,
+        // The Underworld's close regen (2026-08-17, canonical census on
+        // lefford at 223e7d57, goldens 8df714ed): the ceiling walks back UP,
+        // 0.977_900_55 -> 0.983_606_56, and the paragraph above asked for
+        // exactly that to be read against rather than re-pinned silently.
+        // Read: it is 0.0057 of a share, it does not reach 1.0, and the floor
+        // moved DOWN in the same refresh (asserted above), so the span
+        // 0.297-to-0.984 around a 0.707 mean is WIDER than the one The
+        // Radiation recorded. A ceiling rising alongside a falling floor is a
+        // widening distribution; the failure mode the note was watching for
+        // is a ceiling pinned at 1.0 with a floor climbing to meet it, and
+        // neither half of that is happening.
+        (max - 0.983_606_56).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }

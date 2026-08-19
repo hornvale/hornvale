@@ -294,6 +294,11 @@ impl GeneratedTerrain {
     /// existence is gated on that kind's own proneness against a uniformized
     /// noise sample, and depth reads the cell's stratigraphic column — the
     /// three repairs of The Hollow (spec §3).
+    ///
+    /// Since The Underworld (spec §4.0) depth is a budget in **metres**
+    /// ([`crate::cave_depth::cave_depth_reach_m`]) rather than a band index,
+    /// and it does not read `proneness` — the band is derived from the budget.
+    /// `proneness` reaches the presence gate below and nothing else.
     pub fn cave_at(&self, id: CellId) -> Option<crate::features::Cave> {
         if self.is_ocean(id) {
             return None;
@@ -316,10 +321,11 @@ impl GeneratedTerrain {
         if noise >= prob {
             return None;
         }
-        Some(crate::features::Cave {
+        Some(crate::features::Cave::new(
             kind,
-            deepest_band: crate::features::cave_depth(kind, &self.column_at(id), proneness),
-        })
+            &self.material_at(id),
+            &self.column_at(id),
+        ))
     }
 
     /// The dominant ore deposit at a cell, if the point process places one.
@@ -842,6 +848,57 @@ mod tests {
         }
     }
 
+    /// The `Cave` derived-field invariant, on live worlds: `deepest_band` is
+    /// always the band the cave's own metre budget reaches (spec §4.0). Both
+    /// constructors preserve it by construction, so this asserts that the
+    /// generator really does go through one — a hand-built literal anywhere in
+    /// the production path would show up here.
+    ///
+    /// Non-vacuous by assertion: the sweep must actually see caves, and it must
+    /// see the band vary, or a generator that returned one constant band for
+    /// everything would satisfy the invariant trivially.
+    /// claim: invariant(forall-seed, forall-cave) — `deepest_band` equals
+    /// `band_at_depth(column, depth_reach_m)` for every cave the generator
+    /// authors, over a small fixed seed set at a level-4 globe
+    #[test]
+    fn every_generated_cave_agrees_with_its_own_depth_budget() {
+        let geo = Geosphere::new(4);
+        let mut seen = 0usize;
+        let mut bands: std::collections::BTreeSet<&'static str> = std::collections::BTreeSet::new();
+        for raw in [1u64, 7, 42] {
+            let outcome = generate(Seed(raw), &geo, &TerrainPins::default()).unwrap();
+            let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+            for cell in geo.cells() {
+                let Some(cave) = terrain.cave_at(cell) else {
+                    continue;
+                };
+                let column = terrain.column_at(cell);
+                assert!(
+                    cave.band_agrees_with_reach(&column),
+                    "seed {raw} cell {cell:?}: band {:?} against a {} m budget, \
+                     whose column puts it in {:?}",
+                    cave.deepest_band,
+                    cave.depth_reach_m,
+                    crate::features::band_at_depth(&column, cave.depth_reach_m)
+                );
+                seen += 1;
+                bands.insert(match cave.deepest_band {
+                    crate::strata::BandKind::Regolith => "Regolith",
+                    crate::strata::BandKind::Cover => "Cover",
+                    crate::strata::BandKind::Basement => "Basement",
+                    crate::strata::BandKind::Roots => "Roots",
+                    crate::strata::BandKind::Underneath => "Underneath",
+                });
+            }
+        }
+        assert!(seen > 0, "the sweep found no caves — it asserts nothing");
+        assert!(
+            bands.len() > 1,
+            "every cave landed in the same band ({bands:?}) — the invariant \
+             holds trivially and this test would not notice a constant"
+        );
+    }
+
     #[test]
     fn cave_at_agrees_with_the_kind_first_gate() {
         let geo = Geosphere::new(3);
@@ -866,13 +923,12 @@ mod tests {
                         crate::features::CAVE_GATE_FREQ,
                         crate::features::CAVE_GATE_OCTAVES,
                     ));
-                    (noise < prob).then(|| crate::features::Cave {
-                        kind,
-                        deepest_band: crate::features::cave_depth(
+                    (noise < prob).then(|| {
+                        crate::features::Cave::new(
                             kind,
+                            &terrain.material_at(cell),
                             &terrain.column_at(cell),
-                            proneness,
-                        ),
+                        )
                     })
                 })
             };

@@ -234,6 +234,22 @@ confirmation-gated in the Makefile.
 
 ## Utility scripts
 
+- **`mutate.py`** — applies ONE text substitution to a source file and
+  **refuses to no-op silently**: it dies unless the search text occurs, and
+  occurs exactly once, leaving the file byte-unchanged on either refusal.
+  `python3 scripts/mutate.py <file> <old> <new>`. Use it for **every mutation
+  demonstration** — neutralise a line, run the scoped suite, read the red as
+  proof an assertion is really holding the behaviour. That procedure's entire
+  value rests on the substitution having happened, and this project has got
+  that step wrong three times in two campaigns (The Axes, then The Underworld
+  twice): `cargo fmt` had rewrapped the line a `sed` was searching for, the
+  file was left untouched, the suite reported `ok`, and that `ok` was
+  indistinguishable from a robust implementation. It deliberately does **not**
+  restore — `cp` from a copy taken before the first mutation, never
+  `git checkout -- <file>`, which reverts your uncommitted work along with the
+  mutation and makes the resulting absence read as a pass. Not part of any
+  gate and not mandatory; whether an ad-hoc `sed` is ever acceptable for a
+  mutation demo is an open call recorded in The Underworld's retrospective.
 - **`shapecheck.py`** — compares the key-path SHAPE of two JSON documents
   (dicts/lists/scalars, values ignored), so a drifted byte-golden's diff can
   be answered structurally rather than by eyeballing a large single-line
@@ -333,16 +349,27 @@ confirmation-gated in the Makefile.
   non-fast-forward (force push: the remote sha is non-zero and not an
   ancestor of the local sha) — and only when the remote is not a local path
   (`file://` or a filesystem path, so scratch bare repos and tests stay
-  unrestricted). An ordinary fast-forward, including to `main`, is
-  deliberately NOT gated — that is Nathan's normal no-PR workflow, and the
-  incident was a *force* push, not an ordinary one. Refuse unless
-  `HV_PUSH_OK=1` is set; the refusal message says so, because a guard nobody
-  can satisfy is a guard people work around. **Ancestry that cannot be
+  unrestricted). An ordinary fast-forward to a **branch** is deliberately NOT
+  gated — that is how a candidate reaches the queue. **`main` IS gated now
+  (2026-08-19), and this sentence used to say it was not.** The old text read
+  "an ordinary fast-forward, including to `main` … that is Nathan's normal
+  no-PR workflow"; decision 0139 made the merge queue the only route by which
+  `main` advances, and the failure then happened twice — a push that killed a
+  green candidate mid-merge, and `ca6f34310` landing with no queue row at all.
+  A push to `refs/heads/main` is allowed only from inside a **live claim on
+  the canonical box**, which is the chamber and nothing else. Not a hostname
+  test: the chamber runs on lefford and so does a human pushing by hand there,
+  so "am I on lefford" would have allowed the exact landing that prompted it.
+  Refuse unless `HV_PUSH_OK=1` is set; the refusal message says so, because a
+  guard nobody can satisfy is a guard people work around. **Ancestry that cannot be
   verified locally (a shallow clone, or a remote sha this side has never
   fetched) fails CLOSED, deliberately** — checked with an explicit
   `git cat-file -e <sha>^{commit}` before ever calling `merge-base
   --is-ancestor`, not left to fall out of that command's own error handling.
-  Mutation-tested (`scripts/test-pre-push.sh`): with that explicit check
+  Mutation-tested (`scripts/test-pre-push.sh` — which **nothing ran** until it
+  was added to the `outboard` set on 2026-08-19; before that this very
+  sentence asserted a property whose evidence was produced only when someone
+  remembered to type the command): with that explicit check
   removed, the same scenario still refuses in practice, because `git
   merge-base --is-ancestor` exits 128 — still nonzero — on an object it does
   not have; the explicit check exists for a deliberate, distinguishing

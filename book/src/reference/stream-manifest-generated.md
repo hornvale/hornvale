@@ -194,6 +194,12 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `room/layout/v1/rectilinear` | where the rectilinear method places chambers |
 | `room/layout/v1/grown` | where the growing method places chambers |
 | `room/layout/v1/anchors` | where a chamber's anchors land in its cells |
+| `underworld/level/v1/partition` | split-or-leaf decisions in a generated underworld level |
+| `underworld/level/v1/cellular` | cellular-automata cave carving within a leaf |
+| `underworld/level/v1/tunneler` | drunkard's-walk tunnel carving within a leaf |
+| `underworld/level/v1/rooms` | partitioned-rooms carving within a leaf |
+| `underworld/level/v1/style` | which content generator and worked/natural mix a leaf gets |
+| `underworld/level/v1/descent` | per-rung seed draw within one descent |
 
 ### hornvale-worldgen
 
@@ -206,7 +212,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
-| `chamber/v1` | the underworld chamber derivation |
+| `chamber/v2` | the underworld chamber derivation, keyed on a delve-ladder address |
 | `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact cell |
 | `hazard/event/v1` | the per-cell hazard-event draw, keyed on (cell, process, world-time block) |
 

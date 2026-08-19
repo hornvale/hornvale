@@ -368,9 +368,29 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // rather than quietly deleted. If the next regen narrows the margin again,
     // the honest response is to ask what the floor of this trend is, not to
     // re-pin a fifth time.
+    //
+    // THE UNDERWORLD (2026-08-17, canonical census on lefford at 223e7d57,
+    // goldens 8df714ed): 17.3766 -> 17.3397, AND THE CONDITION THE PARAGRAPH
+    // ABOVE SET DID NOT FIRE. It asked for a fifth consecutive NARROWING to be
+    // treated as a question about the floor of the trend rather than a re-pin.
+    // The margin WIDENED instead: 32.7 - 17.3397 = 15.36 degrees against the
+    // 15.32 The Glasshouse recorded, and the ratio rises 1.882x -> 1.886x. So
+    // the four-regen narrowing (17.67 -> 17.17 -> 16.44 -> 15.32) breaks here,
+    // by 0.04 degrees.
+    //
+    // That reversal is recorded, NOT read as a counter-trend. 0.04 degrees is
+    // a fortieth of the smallest step in the narrowing sequence, and the
+    // sibling row in this file already paid once for fitting a rate to three
+    // regens of a 1000-seed statistic. The honest statement is that the
+    // trend's continuation is unsupported by this refresh, not that it has
+    // turned around. The standing instruction stands unchanged for the next
+    // regen: a further narrowing is a question about the floor, not a re-pin.
+    //
+    // THE ASSERTED CLAIM IS UNCHANGED AND STILL HOLDS: 17.3397 is below the
+    // uniform-sphere baseline of 32.7.
     assert!(
-        (mean - 17.3766).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.3766)"
+        (mean - 17.3397).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.3397)"
     );
 }
 

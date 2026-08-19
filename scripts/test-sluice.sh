@@ -376,6 +376,69 @@ else
     ok "sluice-request.sh never sets HV_SLUICE_SKIP_HEADLINE, so the test knob cannot leak into production"
 fi
 
+echo "== phases: a prose-only candidate skips seam-guard, clients and heavy"
+# campaign/the-illumination's docs-recovery merge paid the full ladder for three
+# files: 3561 s, of which 3124 s (88%) went to phases that cannot observe a
+# prose change. The rule that fixes that must be right in BOTH directions, and
+# the dangerous direction is the false positive — skipping heavy for something
+# that is not prose. Every negative case below is one of those.
+# shellcheck source=scripts/sluice-phases.sh
+. "$repo_root/scripts/sluice-phases.sh"
+
+if sluice_is_prose_only "book/src/frontier/idea-registry.md
+docs/retrospectives/the-illumination.md
+docs/timings.md"; then
+    ok "the real docs-recovery path set classifies as prose-only"
+else
+    bad "the docs-recovery path set was NOT classified prose-only, so the saving never applies"
+fi
+
+for bad_case in "kernel/src/lib.rs" "Cargo.toml" "clients/game/core/tests/fixtures/x.json" \
+                "book/src/gallery/atlas.js" "book/src/laboratory/generated/the-sounding/rows.csv" \
+                "book/src/reference/concept-registry-generated.md"; do
+    if sluice_is_prose_only "docs/a-real-doc.md
+$bad_case"; then
+        bad "'$bad_case' alongside prose classified as PROSE-ONLY — heavy would be skipped for a change it must see"
+    else
+        ok "'$bad_case' forces the full ladder even when the rest of the range is prose"
+    fi
+done
+
+# FAILS TOWARD RUNNING MORE. An empty list means the diff could not be read;
+# a classifier that cannot see the change must not be why a phase is skipped.
+if sluice_is_prose_only ""; then
+    bad "an EMPTY path list classified as prose-only — a failed diff would skip heavy"
+else
+    ok "an empty path list is not prose-only, so a failed diff keeps every phase"
+fi
+
+case "$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients heavy')" in
+    "artifacts outboard gate") ok "dropping leaves exactly artifacts, outboard and gate, in order" ;;
+    *) bad "unexpected phase list after dropping: '$(sluice_drop_expensive_phases 'artifacts outboard gate seam-guard clients heavy')'" ;;
+esac
+
+echo "== phases: MUTATION — an allowlist without its exclusions would skip heavy for a generated artifact"
+# Non-vacuity: widen the allowlist to bare `book/*` — the obvious, wrong
+# version of this rule — and confirm a heavy-authored artifact then passes as
+# prose. If it does not, the negative cases above are not pinning the
+# exclusions.
+mut_prose_only() {
+    local changed="$1" pth
+    [ -n "$changed" ] || return 1
+    while IFS= read -r pth; do
+        [ -n "$pth" ] || continue
+        case "$pth" in docs/*|book/*) ;; *) return 1 ;; esac
+    done <<MEOF
+$changed
+MEOF
+    return 0
+}
+if mut_prose_only "book/src/laboratory/generated/the-sounding/rows.csv"; then
+    ok "MUTATION CONFIRMED: a bare book/* allowlist accepts a heavy-authored artifact (the real one refuses it)"
+else
+    bad "the mutant also refused — the exclusion cases above are not pinning anything"
+fi
+
 echo "== queue: a note cannot corrupt the queue file"
 # The reviewer's finding: set-state's note was written into the TSV
 # unsanitized. A physical newline in the note splits the row in two on the
@@ -926,6 +989,7 @@ cp "$repo_root/scripts/timed.sh" "$chamber_repo/scripts/timed.sh"
 # unrelated failures (out-of-order phases, an empty last-pushed). If you add a
 # `. "$repo_root/scripts/…"` to sluice-run.sh, add its copy here.
 cp "$repo_root/scripts/sluice-headline.sh" "$chamber_repo/scripts/sluice-headline.sh"
+cp "$repo_root/scripts/sluice-phases.sh" "$chamber_repo/scripts/sluice-phases.sh"
 
 chamber_host_file="$tmp/chamber-host.txt"
 printf '%s\n' "$(hostname -s)" > "$chamber_host_file"
@@ -1071,6 +1135,47 @@ if [ "$origin1_main_sha" = "$wt1_final_sha" ]; then
     ok "the shared origin's main genuinely advanced to that same SHA"
 else
     bad "origin main is '$origin1_main_sha', expected '$wt1_final_sha' — last-pushed does not reflect what actually landed"
+fi
+
+echo "== chamber: the phase-selection block RUNS when HV_SLUICE_PHASES is unset"
+# THE TEST THAT WOULD HAVE CAUGHT THE REGRESSION, and its absence is the whole
+# lesson. The prose-only skip is guarded by `[ -z "${HV_SLUICE_PHASES:-}" ]`,
+# and EVERY chamber case in this file exports HV_SLUICE_PHASES to keep phases
+# cheap — so not one of them ever entered the block. The helper's own unit
+# tests were green, `bash -n` parsed, shellcheck was clean, and the chamber
+# still died on its first real merge with
+#
+#   scripts/sluice-run.sh: line 358: base_sha: unbound variable
+#
+# because the block read a variable assigned ~90 lines below it, and `set -u`
+# is fatal. A unit-tested helper wired in wrong is indistinguishable from an
+# untested one at the point where it matters.
+#
+# So: drive the real script with HV_SLUICE_PHASES UNSET and assert it gets
+# PAST the decision. It will fail later — a scratch repo has no `make
+# gate-suite-run` — and that is fine; the assertion is about the block, and
+# specifically that no unbound variable kills the run before any phase starts.
+# sluice-run.sh writes its own run log to $HV_SLUICE_DIR/<job>.log rather than
+# stdout — verified: a real chamber invocation left its caller's redirect file
+# at 0 bytes while the run log had the whole run. So point HV_SLUICE_DIR at a
+# scratch dir and read the log the script actually writes.
+unset_dir="$tmp/unsetphases-state"; mkdir -p "$unset_dir"
+( unset HV_SLUICE_PHASES
+  HV_SLUICE_DIR="$unset_dir" timeout 90 bash "$repo_root/scripts/sluice-run.sh" \
+    campaign/x "$(g -C "$chamber_repo" rev-parse HEAD)" stage >/dev/null 2>&1 ) || true
+cat "$unset_dir"/*.log > "$tmp/unsetphases.out" 2>/dev/null || true
+# NON-VACUITY FIRST. This assertion's own first draft sat ABOVE the chamber
+# setup, so $chamber_repo was unbound, the subshell died, `|| true` swallowed
+# it, and grep found nothing in an EMPTY file — which the check below reads as
+# success. The test for an unbound-variable bug was itself vacuous because of
+# an unbound variable. Assert the run produced output before believing what is
+# not in it.
+if [ ! -s "$tmp/unsetphases.out" ]; then
+    bad "the chamber produced NO output with HV_SLUICE_PHASES unset — this assertion would pass vacuously"
+elif grep -q 'unbound variable' "$tmp/unsetphases.out"; then
+    bad "the chamber died on an unbound variable with HV_SLUICE_PHASES unset: $(grep 'unbound variable' "$tmp/unsetphases.out" | head -1)"
+else
+    ok "the phase-selection block runs to completion with HV_SLUICE_PHASES unset (no unbound variable)"
 fi
 
 echo "== chamber: the merge subject is a valid census epoch label (merge(<campaign>): <headline>, not git's own auto-generated default) =="

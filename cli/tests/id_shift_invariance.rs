@@ -104,13 +104,67 @@ use std::collections::{BTreeMap, BTreeSet};
 ///   1000     607          0                18
 /// ```
 ///
-/// **Seed 5** is the witness now: 1118 occupations, 2 colliding material-core
-/// groups of 2, and 30 colliding founding-key groups. Chosen because it is the
-/// EARLIEST seed in this list carrying TWO material-core groups rather than
-/// one — the same shape the seed-1 witness had, so the test bites exactly as
-/// hard as it did before rather than being reduced to a single group. Seed 13
-/// would also qualify and is held in reserve. Again: a witness re-pinned,
-/// never the claim.
+/// **Moved a fifth time by The Underworld (Task 8, 2026-08-17), back to seed
+/// 1.** Spec §4.6 re-keys the deep-history node index on `(cell, rung)`, so a
+/// subterranean people stops competing for the surface cell it used to
+/// displace someone from — and the genesis pool every later people draws from
+/// therefore re-rolls. Seed 5 dropped to **zero** colliding material-core
+/// groups (866 occupations), so the guard reddened rather than letting the
+/// test pass on nothing, for the fourth campaign running. Re-scanned across
+/// the same seed list on this tree, by the identical method (the scan prints
+/// occupations, colliding material-core groups, and colliding founding-key
+/// groups):
+///
+/// ```text
+///   seed    occs   material groups   founding groups
+///   42       521          0                23
+///   1       1141          3                34
+///   2        879          3                26
+///   3        625          0                34
+///   5        866          0                44   <- outgoing witness
+///   6        824          2                35
+///   7       1014          2                25
+///   11      1424          1                37
+///   13      1038          2                41
+///   23       980          2                35
+///   1000     842          0                28
+/// ```
+///
+/// **Seed 1** is the witness, chosen by the standing rule this file has applied
+/// at every previous move — the EARLIEST seed in this list carrying at least
+/// TWO material-core groups — which makes the choice a procedure rather than a
+/// preference. Again: a witness re-pinned, never the claim.
+///
+/// **THE TABLE ABOVE IS PRE-REPAIR, AND EVERY NUMBER IN IT HAS MOVED.** It was
+/// scanned during The Underworld's Task 8, before Task 9 repaired
+/// `chamber_fit`'s genus join — a defect that changed where every underworld
+/// community seats and therefore re-placed every world in the list. **Nothing
+/// reddened**, and that is the whole reason this note exists: the assertions
+/// below check only that the witness carries *at least one* colliding group, so
+/// a moved count passes green and a table can go stale in silence. Re-scanned
+/// 2026-08-18 on this tree, by the identical method:
+///
+/// ```text
+///   seed    occs   material groups   founding groups
+///   42       625          0                26
+///   1       1086          2                31   <- witness, still valid
+///   2       1027          2                36
+///   3        412          0                18
+///   5        712          0                37
+///   6        453          0                16
+///   7        801          3                14
+///   11       962          0                32
+///   13      1464          4                51
+///   23      1000          4                38
+///   1000     974          2                37
+/// ```
+///
+/// Seed 1 now carries **2** colliding material-core groups (4 records, largest
+/// group size 2) rather than 3, so it still satisfies the standing rule — 42 is
+/// still at zero, so seed 1 is still the earliest qualifying seed — and the
+/// witness does not move. Margin is thinner than it was, which is worth knowing
+/// before the next epoch: seeds 13 and 23 carry four groups each and are the
+/// obvious successors if seed 1 ever drops below two.
 fn witness_world() -> World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
@@ -126,14 +180,15 @@ fn witness_world() -> World {
 }
 
 /// The seed [`witness_world`] builds. A witness, not a claim — see that
-/// function's doc for why it moved off 42, then off 7, then off 1, then off 6.
-const WITNESS_SEED: u64 = 5;
+/// function's doc for why it moved off 42, then off 7, then off 1, then off 6,
+/// then off 5 — and back onto 1.
+const WITNESS_SEED: u64 = 1;
 
 /// Two occupations with identical material cores but different entity ids
 /// must produce identical derived output. The witness seed measurably contains
-/// such pairs (at seed 5: 4 occupations sit in 2 colliding material-core
-/// groups, largest group size 2) — no synthetic id shift is needed to exercise
-/// the property.
+/// such pairs (at seed 1, re-measured 2026-08-18: 4 occupations sit in 2
+/// colliding material-core groups, largest group size 2) — no synthetic id
+/// shift is needed to exercise the property.
 #[test]
 fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
     let world = witness_world();
@@ -149,12 +204,35 @@ fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
         groups.entry(material_key(&o.core)).or_default().push(o);
     }
     let colliding: Vec<_> = groups.values().filter(|g| g.len() > 1).collect();
+    // THE FLOOR IS TWO, NOT ONE, AND THE DIFFERENCE IS THE WHOLE POINT.
+    // `!is_empty()` cannot notice its own witness decaying: The Underworld's
+    // genus repair moved every count in this file's committed table — seed 1
+    // from 3 colliding groups to 2, seed 42 from 521 occupations to 625, every
+    // other cell too — and nothing reddened, because one group was still one
+    // group. A table that goes stale in silence is the exact instrument defect
+    // that campaign spent itself finding, and this assertion was an instance
+    // of it sitting inside the fix for the others.
+    //
+    // Two is not an arbitrary hardening: it is `witness_world`'s OWN STANDING
+    // SELECTION RULE — "the EARLIEST seed in this list carrying at least TWO
+    // material-core groups" — so the floor and the choice of witness are now
+    // one statement rather than a rule in prose and a weaker check in code.
+    // It fires exactly when seed 1 stops qualifying, which is the event the
+    // loud note above asks a human to watch for; 13 and 23 carry four groups
+    // each and are the named successors.
     assert!(
-        !colliding.is_empty(),
-        "the witness seed must contain at least one material-core collision \
-         (measured at seed 5: 4 occupations spread across 2 colliding groups, \
-         largest group size 2) -- zero colliding groups means this test is \
-         vacuous and proves nothing about id-invariance"
+        colliding.len() >= 2,
+        "the witness seed must carry at least TWO material-core collision \
+         groups -- `witness_world`'s own selection rule, and the floor that \
+         makes this test notice its witness decaying rather than merely \
+         notice it dying. Measured at seed 1, 2026-08-18: 4 occupations \
+         spread across 2 colliding groups, largest group size 2; found {} \
+         group(s) now. At one group the test still passes but is one \
+         placement away from vacuous; at zero it proves nothing about \
+         id-invariance at all. Re-scan the seed list in `witness_world`'s \
+         docs and move the witness -- 13 and 23 carried four groups each on \
+         2026-08-18 -- rather than lowering this floor",
+        colliding.len()
     );
 
     for group in &colliding {

@@ -7,19 +7,36 @@
 //! construction step — see [`ChamberAddr`]'s own docs for why that matters
 //! and what has gone wrong elsewhere in this codebase when it wasn't true.
 //!
-//! [`chamber_exists`] and [`chamber_at`] take a [`hornvale_terrain::Cave`] as
-//! their only cave-specific input, and read exactly one field off it —
-//! `deepest_band`, the depth **budget** a real cave system measured (spec
-//! §3, "a system whose deepest band is `Roots` grows a graph down to
-//! `Roots`"). `Cave::kind` is not read here: Task 6 is where a cave's
-//! formation process might shape subterranean conditions, and inventing that
-//! coupling now would be scope this task does not own.
+//! [`chamber_exists`] and [`chamber_at`] read exactly one field off the
+//! [`hornvale_terrain::Cave`] they are given — `depth_reach_m`, the depth
+//! **budget in metres** a real cave system measured (spec §4.0). `Cave::kind`
+//! is not read here: Task 6 is where a cave's formation process might shape
+//! subterranean conditions, and inventing that coupling now would be scope
+//! this task does not own.
+//!
+//! **The lattice's depth axis is the DELVE ladder, not the stratigraphic one**
+//! (spec §4.1, The Underworld). `ChamberAddr.band` indexes
+//! [`hornvale_terrain::DelveRung`]'s habitation rungs — ΔT classes above the
+//! cell's surface datum — so the same rung sits at different metre depths in
+//! different cells, and how far down the lattice a cave reaches is a fact
+//! about its budget *and* its cell's geothermal gradient. That is why both
+//! entry points now take a [`GeothermalGradient`]: the lattice cannot place an
+//! address in a cell it knows nothing about.
+//!
+//! The stratigraphic ladder is still reported — [`Chamber`] carries both a
+//! `rung` and a `stratum` — but the two are computed from different inputs and
+//! **neither derives the other** (spec §4.1). The rung comes from the address;
+//! the stratum comes from the cell's own column, read at the depth the rung
+//! begins at.
 
 use std::collections::BTreeMap;
 
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, Seed, Stream};
-use hornvale_terrain::{BandKind, Cave};
+use hornvale_terrain::{
+    BandKind, Cave, DelveRung, GeothermalGradient, StratigraphicColumn, delta_t_range_of,
+    rung_at_depth,
+};
 
 /// Slots in the fixed lattice per depth band. Constant regardless of what
 /// any particular cave realizes — rule 1a: this is the lattice's own size,
@@ -55,12 +72,25 @@ const EXISTENCE_DENSITY: f64 = 0.5;
 /// step (spec §3.1). Four small integers name: which cell, which entrance
 /// of that cell, which depth band, and which slot within that band.
 ///
-/// **`band` indexes `hornvale_climate::Realm::UNDERDARK.strata()`, never a
-/// count of the bands a particular cave realizes** (rule 1a, added after
-/// Task 0 measured that the live generator only ever produces 3 of the
-/// ladder's 5 values). The permanent ladder has 5 rungs regardless of what
-/// any world's caves reach, so `band` stays meaningful even if the open
-/// `MAP-cave-depth-weld` fix changes which bands occur.
+/// **`band` indexes the delve ladder's habitation rungs
+/// ([`hornvale_terrain::rungs`] minus `Surface`), never a count of the rungs a
+/// particular cave realizes** (rule 1a). The permanent ladder has 5 habitation
+/// rungs regardless of what any world's caves reach, so `band` stays
+/// meaningful whatever the depth model does.
+///
+/// **It used to index `hornvale_climate::Realm::UNDERDARK.strata()`**, and
+/// that is what `chamber/v1` was keyed on; rule 1a was written when Task 0
+/// measured that the live generator only ever produced 3 of that ladder's 5
+/// values. `MAP-cave-depth-weld` — the fix rule 1a named as the reason to keep
+/// the address space wider than the realized one — landed in this campaign
+/// (spec §4.0) and made the situation worse, not better: with a metre budget
+/// capped at 3 km, `deepest_band` reached exactly `Basement` on 97.3–99.0% of
+/// cave-bearing cells across seeds 42 / 7 / 1234, so the lattice's depth axis
+/// carried almost no information at all. Re-pointing it at the delve ladder is
+/// what restores it: the same three seeds spread across all five rungs
+/// (`[77, 131, 399, 53, 214]`, `[84, 599, 121, 150, 727]`,
+/// `[91, 144, 366, 129, 536]`). Keeping the address space at 5 rungs is why
+/// no address had to move for a reason other than the epoch itself.
 ///
 /// This is the third time the project has met the "generation order is
 /// never an identity" wall (The Salt, decision 0102, The Tolerance) — see
@@ -84,9 +114,11 @@ pub struct ChamberAddr {
     /// future terrain change (multiple apertures into one system, spec
     /// §3.4's `ShaftNet` rung) does not require relayering this type.
     pub entrance: u8,
-    /// Which rung of `hornvale_climate::Realm::UNDERDARK.strata()` this
-    /// chamber sits at. Indexes the permanent 5-rung ladder — see this
-    /// type's own docs and rule 1a.
+    /// Which rung of the delve ladder this chamber sits at. Indexes the
+    /// permanent 5-rung habitation ladder — see this type's own docs and
+    /// rule 1a. The field keeps the name `band` because it names a position
+    /// on *the* depth axis of the lattice, whichever ladder that axis is; the
+    /// ladder it indexes is stated here and nowhere else.
     pub band: u8,
     /// Which position in the fixed per-band lattice (`0..SLOTS_PER_BAND`)
     /// this chamber occupies. A lattice coordinate, not a count of
@@ -115,10 +147,22 @@ pub enum ChamberOrigin {
     /// chamber `chamber_at` produces without a matching override resolves to
     /// this.
     Found,
-    /// Recorded by an override: a maker cut this chamber for a purpose. This
-    /// campaign ships no writer, so nothing in the shipped generation path
-    /// produces `Made` — it exists for a future dig fact to set, and for
-    /// [`resolve_origin`]'s absorbing rule to be stated over.
+    /// Recorded by an override: a maker cut this chamber for a purpose.
+    ///
+    /// **It now carries a consequence, not just a label** (spec §4.2.1, clause
+    /// 2): a made chamber is dry regardless of the water table — see
+    /// [`is_sump`]. Keeping a working depth dry is what mining is, and this is
+    /// what lets a people inhabit a depth the hydrology would otherwise flood.
+    ///
+    /// **The writer landed with spec §4.6's capacity task**, which bound it as
+    /// an acceptance criterion rather than deferring it again:
+    /// [`crate::delve_seating::made_chambers`] resolves a settled subterranean
+    /// community's own chambers to `Made`. What it does **not** have is a call
+    /// site — nothing in the shipped generation path builds the
+    /// [`ChamberOverrides`] it writes into, so no world a player can reach
+    /// carries this variant. See [`is_sump`] and `made_chambers` for the full
+    /// disclosure; this sentence used to read "until that lands" and the
+    /// landing did not change what a player sees.
     Made,
 }
 
@@ -131,17 +175,27 @@ pub enum ChamberOrigin {
 /// conditions); a holding's dug-out dressing (spec §4) is explicitly out of
 /// this campaign's scope, so this task does not invent fields for it.
 ///
-/// Content is a pure function of `(addr, overrides)` alone — never of the
-/// `Cave` that gated its existence. `an_addresss_meaning_does_not_depend_on_
-/// which_other_chambers_exist` in `deep_realm_chamber.rs` is the regression
-/// guard: with the same override source, a `Chamber` for one address must
-/// come out identical no matter which cave (shallow or deep) was asked, for
-/// every address both caves admit.
+/// Content is a pure function of `(addr, gradient, column, overrides)` alone —
+/// never of the `Cave` that gated its existence. `an_addresss_meaning_does_not
+/// _depend_on_which_other_chambers_exist` in `deep_realm_chamber.rs` is the
+/// regression guard: with the same override source, a `Chamber` for one
+/// address must come out identical no matter which cave (shallow or deep) was
+/// asked, for every address both caves admit. The gradient and column are
+/// properties of the *place*, not of the cave, so admitting them does not
+/// weaken that: they are constant for a given `addr.cell`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Chamber {
     /// The address this content was derived for.
     pub addr: ChamberAddr,
-    /// The rock stratum at `addr.band` — `Realm::UNDERDARK.strata()[addr.band]`.
+    /// Which rung of the delve ladder this chamber sits on — a habitation
+    /// depth class, `rung_of_rank(addr.band)`. A pure function of the address.
+    pub rung: DelveRung,
+    /// The rock stratum this chamber sits in — the *archive* answer, read off
+    /// the cell's own stratigraphic column at the depth [`Chamber::rung`]
+    /// begins at. **Not derived from `rung`, and `rung` is not derived from
+    /// it** (spec §4.1): the same rung is a different band in a cell with a
+    /// different gradient or a different column.
+    ///
     /// **Never overridable** — see [`ChamberOrigin`]'s own docs for why: this
     /// is the substrate, not an event's effect, and no seam in this campaign
     /// (or any later one, per that doc) should add a way to override it.
@@ -151,85 +205,159 @@ pub struct Chamber {
     pub origin: ChamberOrigin,
 }
 
-/// The one explicit mapping between a NAMED [`BandKind`] (what
-/// [`Cave::deepest_band`] carries) and `Realm::UNDERDARK.strata()`'s index
+/// The one explicit mapping between a NAMED [`DelveRung`] (what
+/// [`rung_at_depth`] returns for a cave's budget) and the lattice's index
 /// space (what [`ChamberAddr::band`] indexes) — rule 1a's "compare them
 /// through one explicit mapping, in one place." [`chamber_exists`] is the
 /// only caller, so a lattice reader and the depth-budget gate can never
-/// diverge on what a `band` number means. Exhaustive: a sixth `BandKind`
+/// diverge on what a `band` number means. Exhaustive: a sixth `DelveRung`
 /// variant fails this to compile rather than silently misplacing it.
-fn band_rank(band: BandKind) -> u8 {
-    match band {
-        BandKind::Regolith => 0,
-        BandKind::Cover => 1,
-        BandKind::Basement => 2,
-        BandKind::Roots => 3,
-        BandKind::Underneath => 4,
+///
+/// `Surface` is `None`: it is a rung of the delve ladder but not a *habitation*
+/// rung, so it has no position in a lattice of underground places. Returning
+/// `None` rather than a numeral is what stops the overworld from silently
+/// becoming address 0. [`rung_at_depth`] never returns it, so the `None` arm is
+/// reachable only through a caller that hands this function `Surface` directly.
+///
+/// **Made `pub` by The Underworld's Task 8**, which needs it for the same
+/// reason [`chamber_exists`] does and must not grow a second copy: the
+/// `ChamberOrigin::Made` writer turns a settled community's `(cell, rung)`
+/// seat into the [`ChamberAddr`]es beneath it, and that translation is exactly
+/// this mapping. Rule 1a's "one explicit mapping, in one place" is what makes
+/// widening it the right move rather than duplicating it in
+/// [`crate::delve_seating`].
+/// type-audit: bare-ok(index: return)
+pub fn rung_rank(rung: DelveRung) -> Option<u8> {
+    match rung {
+        DelveRung::Surface => None,
+        DelveRung::Undercroft => Some(0),
+        DelveRung::Shallows => Some(1),
+        DelveRung::Deeps => Some(2),
+        DelveRung::Underdeep => Some(3),
+        DelveRung::Sunless => Some(4),
     }
 }
 
-/// The inverse of [`band_rank`]: the band a [`ChamberAddr::band`] index names.
+/// The inverse of [`rung_rank`]: the rung a [`ChamberAddr::band`] index names.
 /// `None` for a rank past the ladder's end, so no caller can index out of it.
 ///
-/// Kept beside `band_rank` on purpose — the two are one bijection, and a sixth
-/// `BandKind` variant fails *both* to compile rather than leaving the pair
-/// half-updated.
-fn band_of_rank(rank: u8) -> Option<BandKind> {
+/// Kept beside `rung_rank` on purpose — the two are one bijection over the
+/// habitation rungs, and a sixth `DelveRung` variant fails *both* to compile
+/// rather than leaving the pair half-updated.
+fn rung_of_rank(rank: u8) -> Option<DelveRung> {
     match rank {
-        0 => Some(BandKind::Regolith),
-        1 => Some(BandKind::Cover),
-        2 => Some(BandKind::Basement),
-        3 => Some(BandKind::Roots),
-        4 => Some(BandKind::Underneath),
+        0 => Some(DelveRung::Undercroft),
+        1 => Some(DelveRung::Shallows),
+        2 => Some(DelveRung::Deeps),
+        3 => Some(DelveRung::Underdeep),
+        4 => Some(DelveRung::Sunless),
         _ => None,
     }
 }
 
-/// A band's spelling inside the chamber key — **a save-format contract**, and
-/// the reason this is an explicit match rather than `format!("{band:?}")`.
+/// A rung's spelling inside the chamber key — **a save-format contract**, and
+/// the reason this is an explicit match rather than `format!("{rung:?}")`.
 ///
 /// A derived `Debug` impl renders the variant's identifier, which *looks* like
 /// exactly this table and is not the same promise. `Debug` is a diagnostic
 /// facility: nothing stops a later reader from writing a hand-rolled `Debug`
-/// for [`BandKind`] to make some log prettier, and doing so would silently
+/// for [`DelveRung`] to make some log prettier, and doing so would silently
 /// re-key every chamber in every world with no test able to see it. Stating
 /// the strings here makes the contract reviewable, makes a rename an obvious
 /// epoch decision, and forces a sixth variant to choose its own spelling
 /// instead of inheriting one.
-fn band_name(band: BandKind) -> &'static str {
-    match band {
-        BandKind::Regolith => "regolith",
-        BandKind::Cover => "cover",
-        BandKind::Basement => "basement",
-        BandKind::Roots => "roots",
-        BandKind::Underneath => "underneath",
+///
+/// **This campaign is exactly the change that discipline was written to
+/// survive**, and it did: re-pointing the axis at a different ladder changed
+/// *which table* is consulted, in one place, visibly — instead of silently
+/// changing what a `Debug` impl happened to print.
+fn rung_name(rung: DelveRung) -> &'static str {
+    match rung {
+        DelveRung::Surface => "surface",
+        DelveRung::Undercroft => "undercroft",
+        DelveRung::Shallows => "shallows",
+        DelveRung::Deeps => "deeps",
+        DelveRung::Underdeep => "underdeep",
+        DelveRung::Sunless => "sunless",
     }
 }
 
-/// The one place the `chamber/v1` stream key is spelled — mirrors
+/// The stratigraphic band a chamber at `rung` sits in, for a cell with this
+/// column and gradient — the *archive* answer, kept strictly separate from the
+/// rung itself (spec §4.1: "neither derives the other").
+///
+/// The rung fixes a ΔT; the gradient turns that into a depth in metres for
+/// **this** cell; the column says what rock is at that depth. Two chambers on
+/// the same rung under different cells can therefore sit in different bands,
+/// and two chambers in the same band can sit on different rungs — which is the
+/// whole reason both are reported.
+///
+/// The depth used is the rung's own **top** (`delta_t_range_of(rung).0`
+/// divided by the gradient), not a point inside it: a rung spans a range of
+/// depths and a chamber is placed *at* a rung rather than at a metre, so the
+/// shallowest rock the rung touches is the one non-arbitrary choice.
+///
+/// **That choice makes the top rung degenerate, and Task 5 should know it
+/// before picking differently.** `Undercroft` begins at ΔT = 0, so this reads
+/// the column at 0 m — and `band_at_depth` answers 0 m with the topmost band
+/// in *every* column under *every* gradient. So a rank-0 chamber's `stratum`
+/// is a constant, and the "neither ladder derives the other" independence
+/// [`Chamber::stratum`] claims is **vacuous for that one rung**: it holds for
+/// ranks 1–4, where the same rung genuinely straddles different rock in
+/// different cells, and says nothing at rank 0. That is a property of taking
+/// the top rather than a defect in the ladder — the midpoint of a rung, or its
+/// bottom, would give rank 0 a cell-varying stratum at the cost of naming a
+/// depth no chamber is actually at. Whichever a later task picks, it should
+/// pick knowing this is the trade, not discover it from a constant column.
+fn stratum_at(
+    rung: DelveRung,
+    gradient: GeothermalGradient,
+    column: &StratigraphicColumn,
+) -> BandKind {
+    let (delta_t_k, _) = delta_t_range_of(rung);
+    let depth_m = delta_t_k / gradient.get() * 1000.0;
+    hornvale_terrain::features::band_at_depth(column, depth_m)
+}
+
+/// The one explicit mapping from terrain's [`BandKind`] to climate's
+/// [`hornvale_climate::Stratum`] — the two enums name the same five rock units
+/// from two domains that may not depend on each other, so the composition root
+/// is the only place allowed to state the correspondence. Exhaustive on both
+/// sides: a sixth variant on either fails this to compile.
+fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
+    match band {
+        BandKind::Regolith => hornvale_climate::Stratum::Regolith,
+        BandKind::Cover => hornvale_climate::Stratum::Cover,
+        BandKind::Basement => hornvale_climate::Stratum::Basement,
+        BandKind::Roots => hornvale_climate::Stratum::Roots,
+        BandKind::Underneath => hornvale_climate::Stratum::Underneath,
+    }
+}
+
+/// The one place the `chamber/v2` stream key is spelled — mirrors
 /// `deity_base_seed`'s discipline (`windows/worldgen/src/lib.rs`): "the one
 /// place the stream label is spelled, so [every caller] can never diverge."
 /// [`chamber_stream`] is the only caller.
 ///
 /// **`cell`, `entrance` and `slot` are genuine integers naming a place and
-/// are spelled decimal. `band` is spelled by its `BandKind` NAME, never its
-/// numeric index.** An index is a declaration position: if `Stratum`/
-/// `BandKind` ever gains a variant in the middle of the ladder — the open
-/// `MAP-cave-depth-weld` work is the named candidate — every index below it
-/// shifts, and a numeral-keyed chamber would silently move to a different
-/// derived stream. Spelling the name instead means the key only changes if
-/// the *name itself* changes, which is the same discipline a `stream_labels!`
-/// rename already carries (an epoch suffix, never silent). This is rule 1a
-/// one level down, applied to the derivation instead of the address type.
+/// are spelled decimal. `band` is spelled by its [`DelveRung`] NAME, never its
+/// numeric index.** An index is a declaration position: if the delve ladder
+/// ever gains a rung in the middle (spec §4.1 permits 4 to 6, so there is
+/// room), every index below it shifts, and a numeral-keyed chamber would
+/// silently move to a different derived stream. Spelling the name instead
+/// means the key only changes if the *name itself* changes, which is the same
+/// discipline a `stream_labels!` rename already carries (an epoch suffix,
+/// never silent). This is rule 1a one level down, applied to the derivation
+/// instead of the address type.
 ///
-/// The name comes from [`band_name`]'s explicit table, **not** from a `Debug`
+/// The name comes from [`rung_name`]'s explicit table, **not** from a `Debug`
 /// impl — see that function for why the distinction is load-bearing rather
 /// than stylistic. A `band` past the ladder's end spells as `"out-of-ladder"`;
 /// it is unreachable through either public entry point (both gate on
-/// [`band_rank`] first), and naming it beats both a panic and a silent
+/// [`rung_rank`] first), and naming it beats both a panic and a silent
 /// collision with band 0.
 fn chamber_key(addr: ChamberAddr) -> String {
-    let band = band_of_rank(addr.band).map_or("out-of-ladder", band_name);
+    let band = rung_of_rank(addr.band).map_or("out-of-ladder", rung_name);
     format!("{}/{}/{band}/{}", addr.cell.0, addr.entrance, addr.slot)
 }
 
@@ -237,11 +365,11 @@ fn chamber_key(addr: ChamberAddr) -> String {
 /// composed under [`crate::streams::CHAMBER`], following the composed-label
 /// pattern at `windows/worldgen/src/lib.rs`'s `deity_name_seed`.
 ///
-/// **Precondition:** `addr.band` must be `< 5` (a valid index into
-/// `Realm::UNDERDARK.strata()`). Both callers ([`chamber_exists`] and
-/// [`chamber_at`]) only reach this after `addr.band` has already been
-/// checked against a cave's budget via [`band_rank`], whose maximum return
-/// value is `4`, so an out-of-range `band` can never survive to here.
+/// **Precondition:** `addr.band` must be `< 5` (a valid habitation-rung
+/// index). Both callers ([`chamber_exists`] and [`chamber_at`]) only reach
+/// this after `addr.band` has already been checked against a cave's budget via
+/// [`rung_rank`], whose maximum return value is `4`, so an out-of-range `band`
+/// can never survive to here.
 fn chamber_stream(seed: Seed, addr: ChamberAddr) -> Stream {
     seed.derive(crate::streams::CHAMBER)
         .derive(StreamLabel::dynamic(&chamber_key(addr)))
@@ -249,19 +377,39 @@ fn chamber_stream(seed: Seed, addr: ChamberAddr) -> Stream {
 }
 
 /// Whether a chamber exists at `addr`, under `cave`'s measured depth
-/// budget. Sparse and derived: no chamber is ever stored, so "exists" is a
-/// per-address predicate — a fixed-density draw, gated so `addr.band`
-/// reaches no deeper than `cave.deepest_band` (spec §3: the budget a real
-/// cave system measured).
+/// budget in this cell. Sparse and derived: no chamber is ever stored, so
+/// "exists" is a per-address predicate — a fixed-density draw, gated so
+/// `addr.band` reaches no deeper on the delve ladder than the cave's budget
+/// does (spec §4.0's metre budget, classified by spec §4.1's ladder).
+///
+/// **`gradient` is the cell's own geothermal gradient**, and it is what makes
+/// this a question about a *place* rather than about a length. A 480 m budget
+/// is the Deeps under a 24 K/km cell and the Shallows under a 15 K/km one, so
+/// the same cave reaches a different distance down the lattice depending on
+/// where it is. Callers get it from
+/// `hornvale_terrain::GeneratedTerrain::geothermal_gradient_at`.
 ///
 /// An out-of-lattice `slot` (`>= SLOTS_PER_BAND`) never exists — the
-/// lattice is fixed-size, and an address outside it names nowhere.
+/// lattice is fixed-size, and an address outside it names nowhere. Likewise a
+/// `band` past the ladder's end: [`rung_rank`] tops out at `4`.
 /// type-audit: bare-ok(flag: return)
-pub fn chamber_exists(seed: Seed, cave: &Cave, addr: ChamberAddr) -> bool {
+pub fn chamber_exists(
+    seed: Seed,
+    cave: &Cave,
+    gradient: GeothermalGradient,
+    addr: ChamberAddr,
+) -> bool {
     if addr.slot >= SLOTS_PER_BAND {
         return false;
     }
-    if addr.band > band_rank(cave.deepest_band) {
+    // `rung_at_depth` never returns `Surface`, so this is always `Some`; the
+    // `else` arm refuses rather than unwrapping, because a future ladder that
+    // could return `Surface` here must mean "no underground address at all",
+    // not a panic.
+    let Some(deepest) = rung_rank(rung_at_depth(cave.depth_reach_m, gradient)) else {
+        return false;
+    };
+    if addr.band > deepest {
         return false;
     }
     chamber_stream(seed, addr).next_f64() < EXISTENCE_DENSITY
@@ -317,6 +465,69 @@ pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> Ch
     over.unwrap_or(ChamberOrigin::Found)
 }
 
+/// Whether a chamber at `depth_m` below the surface is a **sump** — flooded,
+/// and therefore something the passage graph renders as a missing edge rather
+/// than as a different kind of place (spec §4.2).
+///
+/// **A made chamber is never a sump, and that is the whole rule** (spec §4.2.1,
+/// clause 2). A chamber cut for a purpose is kept dry regardless of where the
+/// water table sits, because keeping a working depth dry is what mining *is* —
+/// adits, sumps in the mining sense, wheels, pumps, and the drainage levels
+/// that are among the oldest large engineering works there are. This makes a
+/// dwarven hall something a people **does** rather than a place it happens to
+/// find, which is the difference between a species with a habitat and a species
+/// with a craft.
+///
+/// A found chamber gets the plain hydrology, [`hornvale_terrain::is_phreatic`].
+///
+/// **Why the rule lives here and not in `domains/terrain`.** The layering is
+/// constitutional: terrain owns the water table and knows nothing of chambers,
+/// and [`ChamberOrigin`] is a worldgen concept. So terrain answers "is this
+/// depth below the table" and this function answers "does that flood *this*
+/// chamber" — the hydrology is a fact about the rock, the exemption is a fact
+/// about the maker.
+///
+/// **This ships the rule; spec §4.6's capacity task shipped its producer**,
+/// as an acceptance criterion rather than a note.
+///
+/// **The disclosure, UPDATED, because half of it has closed and half has
+/// not.** Two things were absent when this function landed. (a) Nothing in the
+/// shipped path emitted `Made`, so the `Made` arm was unreachable. (b) Nothing
+/// in the shipped path called this function at all.
+///
+/// **(b) is CLOSED.** [`crate::delve_seating::seat_at`] calls it on every
+/// candidate rung of every cave-bearing column, with `ChamberOrigin::Found`,
+/// to decide whether a seat is priced at [`crate::delve_seating::UNDERWORLD_WORKS_COST`]
+/// — the first and only production caller. The tests and
+/// `underworld_water_table_probe` are no longer the whole of the roster, and
+/// this doc claimed they were for one campaign after they stopped being.
+///
+/// **(a) is HALF closed, and the half that remains is worse than it was.**
+/// [`crate::delve_seating::made_chambers`] *writes* `Made`, so the value is
+/// produced; but nothing in the shipped path constructs the
+/// [`ChamberOverrides`] it writes into — `windows/vessel`'s `delve_at` hands
+/// [`chamber_at`] a freshly-built empty map — so in every world a player can
+/// reach, every chamber still resolves `Found` and the `Made` arm here is
+/// still never taken. That is a **writer with no call site**, which
+/// `made_chambers`' own docs state at length and which is the shape this
+/// campaign's §3.9 finding exists to name.
+///
+/// The remaining consumer is the passage graph, which turns a sump into a
+/// missing edge ([`passages_from`] has no production caller either). Until
+/// then this is a stated deferral, not an oversight.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(flag: return)
+pub fn is_sump(origin: ChamberOrigin, depth_m: f64, water_table_m: f64) -> bool {
+    match origin {
+        // Drained by whoever cut it. Deliberately not "drained if shallow
+        // enough to drain": a threshold here would be a second, unmeasured
+        // calibration, and the interesting version of that question — what a
+        // people can afford to keep dry — belongs to capacity, which is the
+        // task that gains the writer.
+        ChamberOrigin::Made => false,
+        ChamberOrigin::Found => hornvale_terrain::is_phreatic(depth_m, water_table_m),
+    }
+}
+
 /// A chamber's resolved content at `addr`, under `cave`'s measured depth
 /// budget — `None` when [`chamber_exists`] is `false`, else the
 /// address-derived [`Chamber`], with `origin` resolved through `overrides`
@@ -330,22 +541,38 @@ pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> Ch
 /// would be digging, which this campaign does not ship (no writer exists to
 /// produce such an override in the first place).
 ///
-/// With an empty `overrides` map this is byte-identical to the pre-Task-4
-/// derivation: `stratum` is the same pure function of `addr.band` it always
-/// was, and `origin` resolves to the address-derived default, `Found`.
+/// With an empty `overrides` map, `origin` resolves to the address-derived
+/// default, `Found` — this campaign ships no writer, so that is the only
+/// value the shipped path produces.
+///
+/// **It is NOT byte-identical to the pre-`chamber/v2` derivation, and this
+/// sentence used to claim it was.** `stratum` was
+/// `Realm::UNDERDARK.strata()[addr.band]` — a pure function of the address,
+/// i.e. the address restated in another vocabulary — and that identity was
+/// the defect spec §4.1 removed, not a property to preserve. It is now read
+/// off the cell's own column at the depth the rung begins ([`stratum_at`]),
+/// so it depends on `gradient` and `column` and varies between cells that
+/// share an address. Two chambers on the same rung can sit in different rock,
+/// which is the entire point of carrying both.
 pub fn chamber_at(
     seed: Seed,
     cave: &Cave,
+    gradient: GeothermalGradient,
+    column: &StratigraphicColumn,
     addr: ChamberAddr,
     overrides: &ChamberOverrides,
 ) -> Option<Chamber> {
-    if !chamber_exists(seed, cave, addr) {
+    if !chamber_exists(seed, cave, gradient, addr) {
         return None;
     }
-    let stratum = hornvale_climate::Realm::UNDERDARK.strata()[addr.band as usize];
+    // `chamber_exists` has already refused any `band` past the ladder's end,
+    // so the rank is in range here.
+    let rung = rung_of_rank(addr.band)?;
+    let stratum = stratum_of_band(stratum_at(rung, gradient, column));
     let origin = resolve_origin(ChamberOrigin::Found, overrides.get(&addr).copied());
     Some(Chamber {
         addr,
+        rung,
         stratum,
         origin,
     })
@@ -395,8 +622,13 @@ pub fn chamber_at(
 /// A non-existent `addr` has no passages — there is nothing to traverse
 /// from nowhere — so this returns an empty `Vec` without deriving any
 /// candidate neighbours.
-pub fn passages_from(seed: Seed, cave: &Cave, addr: ChamberAddr) -> Vec<ChamberAddr> {
-    if !chamber_exists(seed, cave, addr) {
+pub fn passages_from(
+    seed: Seed,
+    cave: &Cave,
+    gradient: GeothermalGradient,
+    addr: ChamberAddr,
+) -> Vec<ChamberAddr> {
+    if !chamber_exists(seed, cave, gradient, addr) {
         return Vec::new();
     }
 
@@ -418,8 +650,8 @@ pub fn passages_from(seed: Seed, cave: &Cave, addr: ChamberAddr) -> Vec<ChamberA
     }
 
     // Same slot, adjacent band. Guaranteed not to underflow/overflow: addr
-    // passed the chamber_exists check above, so addr.band <= band_rank(cave.
-    // deepest_band) <= 4 (band_rank's maximum return value).
+    // passed the chamber_exists check above, so addr.band <= the cave's own
+    // rung rank <= 4 (rung_rank's maximum return value).
     if addr.band > 0 {
         candidates.push(ChamberAddr {
             band: addr.band - 1,
@@ -431,7 +663,7 @@ pub fn passages_from(seed: Seed, cave: &Cave, addr: ChamberAddr) -> Vec<ChamberA
         ..addr
     });
 
-    candidates.retain(|&candidate| chamber_exists(seed, cave, candidate));
+    candidates.retain(|&candidate| chamber_exists(seed, cave, gradient, candidate));
     candidates
 }
 
@@ -445,7 +677,16 @@ mod tests {
     /// no failing test defends is a claim rather than a guarantee (The Vigil).
     ///
     /// If this test fails, you have re-keyed every chamber in every world.
-    /// That is an **epoch** (`chamber/v2`), not a fix to this assertion.
+    /// That is an **epoch** (`chamber/v3`), not a fix to this assertion.
+    ///
+    /// **These strings moved once, in The Underworld**, and that is what
+    /// `chamber/v2` records: `addr.band` stopped indexing the stratigraphic
+    /// ladder and started indexing the delve ladder, so rank 2 spells `deeps`
+    /// where it used to spell `basement`. The old values are kept in this
+    /// comment rather than deleted, because a reader arriving at a failing
+    /// assertion needs to be able to tell "the epoch happened" from "someone
+    /// broke the key": before v2 these two keys read `"9/0/basement/3"` and
+    /// `"0/1/regolith/0"`.
     #[test]
     fn the_chamber_key_spelling_is_pinned() {
         assert_eq!(
@@ -455,7 +696,7 @@ mod tests {
                 band: 2,
                 slot: 3,
             }),
-            "9/0/basement/3"
+            "9/0/deeps/3"
         );
         assert_eq!(
             chamber_key(ChamberAddr {
@@ -464,15 +705,15 @@ mod tests {
                 band: 0,
                 slot: 0,
             }),
-            "0/1/regolith/0"
+            "0/1/undercroft/0"
         );
     }
 
     /// The band is spelled by NAME, never by index — rule 1a one level down.
-    /// A numeral here would mean that inserting a `BandKind` variant mid-ladder
-    /// silently moved every chamber below it to a different stream.
+    /// A numeral here would mean that inserting a [`DelveRung`] variant
+    /// mid-ladder silently moved every chamber below it to a different stream.
     #[test]
-    fn the_key_names_its_band_rather_than_numbering_it() {
+    fn the_key_names_its_rung_rather_than_numbering_it() {
         let key = chamber_key(ChamberAddr {
             cell: CellId(7),
             entrance: 0,
@@ -480,7 +721,7 @@ mod tests {
             slot: 1,
         });
         assert!(
-            key.contains("roots"),
+            key.contains("underdeep"),
             "band must be spelled by name; got {key:?}"
         );
         assert!(
@@ -490,20 +731,92 @@ mod tests {
         );
     }
 
-    /// `band_rank` and `band_of_rank` are one bijection. Kept honest here so
-    /// the pair cannot drift half-updated when a sixth `BandKind` lands.
+    /// The key names a DELVE rung, not a stratigraphic band. Stated as its own
+    /// assertion because the two ladders have five rungs each and the same
+    /// arity would let a half-finished re-point look right: `basement` must not
+    /// appear anywhere in a key now, at any rank.
     #[test]
-    fn band_rank_and_band_of_rank_round_trip() {
-        for band in [
-            BandKind::Regolith,
-            BandKind::Cover,
-            BandKind::Basement,
-            BandKind::Roots,
-            BandKind::Underneath,
-        ] {
-            assert_eq!(band_of_rank(band_rank(band)), Some(band));
+    fn the_key_names_the_delve_ladder_not_the_stratigraphic_one() {
+        let stratigraphic = ["regolith", "cover", "basement", "roots", "underneath"];
+        for band in 0..=4u8 {
+            let key = chamber_key(ChamberAddr {
+                cell: CellId(1),
+                entrance: 0,
+                band,
+                slot: 0,
+            });
+            for name in stratigraphic {
+                assert!(
+                    !key.contains(name),
+                    "rank {band} spells the stratigraphic band {name:?} in {key:?} — \
+                     `addr.band` indexes the delve ladder since chamber/v2"
+                );
+            }
         }
-        assert_eq!(band_of_rank(5), None, "the ladder ends at rank 4");
+    }
+
+    /// `rung_rank` and `rung_of_rank` are one bijection over the habitation
+    /// rungs. Kept honest here so the pair cannot drift half-updated when a
+    /// sixth [`DelveRung`] lands.
+    #[test]
+    fn rung_rank_and_rung_of_rank_round_trip() {
+        for rung in hornvale_terrain::rungs()
+            .iter()
+            .copied()
+            .filter(|r| *r != DelveRung::Surface)
+        {
+            let rank = rung_rank(rung).expect("a habitation rung has a rank");
+            assert_eq!(rung_of_rank(rank), Some(rung));
+        }
+        assert_eq!(rung_of_rank(5), None, "the ladder ends at rank 4");
+        assert_eq!(
+            rung_rank(DelveRung::Surface),
+            None,
+            "the overworld is not an underground address"
+        );
+    }
+
+    /// The drainage rule (spec §4.2.1, clause 2), stated over the whole
+    /// two-by-two: a `Found` chamber tracks the hydrology in both directions,
+    /// and a `Made` chamber is dry in both — including the case that carries
+    /// the meaning, a made chamber a kilometre below a surface water table.
+    #[test]
+    fn a_made_chamber_is_dry_however_deep_the_water_table_is_above_it() {
+        // Above the table: nobody is flooded.
+        assert!(!is_sump(ChamberOrigin::Found, 10.0, 50.0));
+        assert!(!is_sump(ChamberOrigin::Made, 10.0, 50.0));
+        // Below the table: only what nobody cut.
+        assert!(is_sump(ChamberOrigin::Found, 100.0, 50.0));
+        assert!(!is_sump(ChamberOrigin::Made, 100.0, 50.0));
+        // The case the rule exists for: a drowned column (table at the
+        // surface) and a chamber a kilometre down.
+        assert!(is_sump(ChamberOrigin::Found, 1000.0, 0.0));
+        assert!(
+            !is_sump(ChamberOrigin::Made, 1000.0, 0.0),
+            "a hall is kept dry by the people who cut it, not by the rock"
+        );
+    }
+
+    /// The rule must not have quietly become "made chambers are shallow" or
+    /// any other predicate on depth: a made chamber is dry at every depth the
+    /// ladder reaches, and a found one is flooded at every depth below the
+    /// table. Swept rather than sampled, because the two-by-two above cannot
+    /// tell a constant from a threshold that happens to sit outside it.
+    #[test]
+    fn the_drainage_exemption_is_unconditional_in_depth() {
+        for depth in [0.0, 1.0, 130.0, 1042.0, 2083.0, 3000.0] {
+            for table in [0.0, 50.0, 500.0, 5000.0] {
+                assert!(
+                    !is_sump(ChamberOrigin::Made, depth, table),
+                    "made chamber flooded at depth {depth} under table {table}"
+                );
+                assert_eq!(
+                    is_sump(ChamberOrigin::Found, depth, table),
+                    depth > table,
+                    "found chamber disagreed with the hydrology at {depth}/{table}"
+                );
+            }
+        }
     }
 
     /// `resolve_origin`'s full truth table (spec §3.3). The two rows that
@@ -544,12 +857,12 @@ mod tests {
         );
     }
 
-    /// Every band spells differently. A collision would silently merge two
+    /// Every rung spells differently. A collision would silently merge two
     /// depths' chambers into one derived stream.
     #[test]
-    fn every_band_has_a_distinct_spelling() {
-        let names: Vec<&str> = (0..=4).filter_map(band_of_rank).map(band_name).collect();
-        assert_eq!(names.len(), 5, "every rank 0..=4 must name a band");
+    fn every_rung_has_a_distinct_spelling() {
+        let names: Vec<&str> = (0..=4).filter_map(rung_of_rank).map(rung_name).collect();
+        assert_eq!(names.len(), 5, "every rank 0..=4 must name a rung");
         for (i, a) in names.iter().enumerate() {
             for b in &names[i + 1..] {
                 assert_ne!(a, b, "two bands share the spelling {a:?}");

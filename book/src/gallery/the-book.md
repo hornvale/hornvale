@@ -425,7 +425,7 @@ The Tetas are wood elfs — neighbors.
 Xoaboa is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Qaxvavvox walks the sky, slowly.
-The day returns because Goovbata strides the sky, briskly.
+The day returns because Goovbat strides the sky, briskly.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -616,7 +616,7 @@ The Petash are sea elfs — neighbors.
 The Bzhonopsho are snow elfs — ourselves.
 The Tetas are wood elfs — neighbors.
 Xoaboa is the earth with two moons.
-The moons cross because Togo strides the sky, slowly.
+The moons cross because Togo stalks the sky, slowly.
 The day returns, as all things return.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
@@ -735,9 +735,9 @@ The Tetas's own priesthood taught wrongly, and could be shown wrong by any who k
 *In truth, the Tetas's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
-## Volume 2: Boaboo
+## Volume 2: Woaweo
 
-Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
+Woaweo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
 The Bobboo are bugbears.
 The Wazwo are desert dwarfs.
 The Feqboq are desert elfs.
@@ -757,35 +757,35 @@ The Keqnguq are wood elfs.
 ### Tongues
 
 Bobboo Boa Bo Zhabo. (in the bugbear tongue: "The Bobboo are bugbears.")
-Boaboo Boaboo Boo Zhabo. (in the bugbear tongue: "Boaboo is the earth.")
+Woaweo Boaboo Boo Zhabo. (in the bugbear tongue: "Woaweo is the earth.")
 Wazwo Wowwowwa Wo. (in the desert-dwarf tongue: "The Wazwo are desert dwarfs.")
-Boaboo Wozwo Wo. (in the desert-dwarf tongue: "Boaboo is the earth.")
+Woaweo Wozwo Wo. (in the desert-dwarf tongue: "Woaweo is the earth.")
 Feqboq Fepbeqba. (in the desert-elf tongue: "The Feqboq are desert elfs.")
-Boaboo Fopbofep. (in the desert-elf tongue: "Boaboo is the earth.")
+Woaweo Fopbofep. (in the desert-elf tongue: "Woaweo is the earth.")
 Kxoqboq Za Ba Kxopkxap. (in the drow tongue: "The Kxoqboq are drows.")
-Boaboo Za Pop Kxopbo. (in the drow tongue: "Boaboo is the earth.")
+Woaweo Za Pop Kxopbo. (in the drow tongue: "Woaweo is the earth.")
 Loshjo Shjo Jakla La. (in the gnoll tongue: "The Loshjo are gnolls.")
-Boaboo Shjo Lapja La. (in the gnoll tongue: "Boaboo is the earth.")
+Woaweo Shjo Lapja La. (in the gnoll tongue: "Woaweo is the earth.")
 Mepmee Maa. (in the goblin tongue: "The Mepmee are goblins.")
-Boaboo Moameo. (in the goblin tongue: "Boaboo is the earth.")
+Woaweo Moameo. (in the goblin tongue: "Woaweo is the earth.")
 Njanjo Njojajo Jo So. (in the gully-dwarf tongue: "The Njanjo are gully dwarfs.")
-Boaboo Mjonjo Ja So. (in the gully-dwarf tongue: "Boaboo is the earth.")
+Woaweo Mjonjo Ja So. (in the gully-dwarf tongue: "Woaweo is the earth.")
 Xeqmoq Zazhxok Mokmob. (in the high-elf tongue: "The Xeqmoq are high elfs.")
-Boaboo Zazhxok Xokmo. (in the high-elf tongue: "Boaboo is the earth.")
+Woaweo Zazhxok Xokmo. (in the high-elf tongue: "Woaweo is the earth.")
 Wanwo Nwoan Wo Wo Wonwawa. (in the hill-dwarf tongue: "The Wanwo are hill dwarfs.")
-Boaboo Nwoan Wo Wa Wonwo. (in the hill-dwarf tongue: "Boaboo is the earth.")
+Woaweo Nwoan Wo Wa Wonwo. (in the hill-dwarf tongue: "Woaweo is the earth.")
 Webwee Gwobwee Wo. (in the hobgoblin tongue: "The Webwee are hobgoblins.")
-Boaboo Woowoaweo Wo. (in the hobgoblin tongue: "Boaboo is the earth.")
+Woaweo Woowoaweo Wo. (in the hobgoblin tongue: "Woaweo is the earth.")
 Foetjee Veabjoo. (in the human tongue: "The Foetjee are humans.")
-Boaboo Vevee. (in the human tongue: "Boaboo is the earth.")
+Woaweo Vevee. (in the human tongue: "Woaweo is the earth.")
 Dngooqdngo Dngaa. (in the kobold tongue: "The Dngooqdngo are kobolds.")
-Boaboo Dngashgsho. (in the kobold tongue: "Boaboo is the earth.")
+Woaweo Dngashgsho. (in the kobold tongue: "Woaweo is the earth.")
 Xeqmu Xla Xoqxema. (in the sea-elf tongue: "The Xeqmu are sea elfs.")
-Boaboo Xla Xopmope. (in the sea-elf tongue: "Boaboo is the earth.")
+Woaweo Xla Xopmope. (in the sea-elf tongue: "Woaweo is the earth.")
 Kopnop Poknok Daa. (in the snow-elf tongue: "The Kopnop are snow elfs.")
-Boaboo Kokno Daa. (in the snow-elf tongue: "Boaboo is the earth.")
+Woaweo Kokno Daa. (in the snow-elf tongue: "Woaweo is the earth.")
 Keqnguq Ngegngognga Sue. (in the wood-elf tongue: "The Keqnguq are wood elfs.")
-Boaboo Kogngoxet Sue. (in the wood-elf tongue: "Boaboo is the earth.")
+Woaweo Kogngoxet Sue. (in the wood-elf tongue: "Woaweo is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 desert-dwarf: gap — planet (no entry in this lexicon)
@@ -822,15 +822,15 @@ The Dngooqdngo are kobolds — rivals.
 The Xeqmu are sea elfs — rivals.
 The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because Bao walks the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Bobboo teach it
 
-Boaboo Boaboo Boo Zhaba. ("Boaboo is the earth — as it is taught.")
+Woaweo Boaboo Boo Zhaba. ("Woaweo is the earth — as it is taught.")
 
 The Bobboo are bugbears — ourselves.
 The Wazwo are desert dwarfs — rivals.
@@ -847,15 +847,15 @@ The Dngooqdngo are kobolds — rivals.
 The Xeqmu are sea elfs — rivals.
 The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because Bao walks the sky, slowly.
 The day returns because Baobodbo walks the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Wazwo tell it
 
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because it answers Wowazwo.
 The day returns because the sky must be crossed.
 The Bobboo are bugbears — neighbors.
@@ -874,11 +874,11 @@ The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Feqboq tell it
 
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because it is Fofo's kin.
 The day returns to keep the balance.
 The Bobboo are bugbears — neighbors.
@@ -897,7 +897,7 @@ The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Kxoqboq tell it
 
@@ -916,10 +916,10 @@ The Dngooqdngo are kobolds — rivals.
 The Xeqmu are sea elfs — rivals.
 The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because it is Kxokxop's kin.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Loshjo tell it
 
@@ -938,11 +938,11 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because it is Jokjo's kin.
 The day returns because Laklajokjo rides the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Mepmee tell it
 
@@ -961,14 +961,14 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+Woaweo is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Mepmee teach it
 
-Boaboo Moameo. ("Boaboo is the earth — as it is taught.")
+Woaweo Moameo. ("Woaweo is the earth — as it is taught.")
 
 The Bobboo are bugbears — neighbors.
 The Wazwo are desert dwarfs — neighbors.
@@ -985,12 +985,12 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+Woaweo is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Mlalsolshal strides the sky, slowly.
 The day returns because Metme walks the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Njanjo tell it
 
@@ -1009,14 +1009,14 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+Woaweo is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Njanjo teach it
 
-Boaboo Mjonjo Ja So. ("Boaboo is the earth — as it is taught.")
+Woaweo Mjonjo Ja So. ("Woaweo is the earth — as it is taught.")
 
 The Bobboo are bugbears — neighbors.
 The Wazwo are desert dwarfs — neighbors.
@@ -1033,16 +1033,16 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+Woaweo is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Njojanjo strides the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Xeqmoq tell it
 
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because it answers Kokob.
 The day returns because the sky must be crossed.
 The Bobboo are bugbears — neighbors.
@@ -1061,13 +1061,13 @@ The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Xeqmoq teach it
 
-Boaboo Zazhxo Xokmo. ("Boaboo is the earth — as it is taught.")
+Woaweo Zazhxo Xokmo. ("Woaweo is the earth — as it is taught.")
 
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because Kokob walks the sky, slowly.
 The day returns because Kokob strides the sky, briskly.
 The Bobboo are bugbears — neighbors.
@@ -1088,7 +1088,7 @@ The Keqnguq are wood elfs — neighbors.
 
 — though the folk say The moon crosses because it answers Kokob.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Wanwo tell it
 
@@ -1107,14 +1107,14 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+Woaweo is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Wanwo teach it
 
-Boaboo Nwoan Wa Wa Wonwo. ("Boaboo is the earth — as it is taught.")
+Woaweo Nwoan Wa Wa Wonwo. ("Woaweo is the earth — as it is taught.")
 
 The Bobboo are bugbears — neighbors.
 The Wazwo are desert dwarfs — neighbors.
@@ -1131,12 +1131,12 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+Woaweo is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Bandonnwon strides the sky, slowly.
 The day returns because Wanwowa strides the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Webwee tell it
 
@@ -1155,14 +1155,14 @@ The Dngooqdngo are kobolds — rivals.
 The Xeqmu are sea elfs — rivals.
 The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
-Boaboo is the earth.
+Woaweo is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Webwee teach it
 
-Boaboo Woowoaweo Gwa. ("Boaboo is the earth — as it is taught.")
+Woaweo Woowoaweo Gwa. ("Woaweo is the earth — as it is taught.")
 
 The Bobboo are bugbears — rivals.
 The Wazwo are desert dwarfs — rivals.
@@ -1179,16 +1179,16 @@ The Dngooqdngo are kobolds — rivals.
 The Xeqmu are sea elfs — rivals.
 The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
-Boaboo is the earth.
+Woaweo is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Woadngeq's kin.
 The day returns to keep the balance.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Foetjee tell it
 
-Boaboo is the earth.
+Woaweo is the earth.
 The day returns to keep the balance.
 The Bobboo are bugbears — neighbors.
 The Wazwo are desert dwarfs — neighbors.
@@ -1206,13 +1206,13 @@ The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Foetjee teach it
 
-Boaboo Vevee. ("Boaboo is the earth — as it is taught.")
+Woaweo Vevee. ("Woaweo is the earth — as it is taught.")
 
-Boaboo is the earth.
+Woaweo is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Pjoefofa walks the sky, slowly.
 The day returns to keep the balance.
@@ -1232,11 +1232,11 @@ The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Dngooqdngo tell it
 
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because Gngoo strides the sky, slowly.
 The day returns, as all things return.
 The Bobboo are bugbears — rivals.
@@ -1255,13 +1255,13 @@ The Xeqmu are sea elfs — rivals.
 The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Dngooqdngo teach it
 
-Boaboo Dngashgsho. ("Boaboo is the earth — as it is taught.")
+Woaweo Dngashgsho. ("Woaweo is the earth — as it is taught.")
 
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because Gngoo walks the sky, slowly.
 The day returns because Gngoo walks the sky, briskly.
 The Bobboo are bugbears — rivals.
@@ -1280,11 +1280,11 @@ The Xeqmu are sea elfs — rivals.
 The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Xeqmu tell it
 
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because it answers Xoxu.
 The day returns because the sky must be crossed.
 The Bobboo are bugbears — neighbors.
@@ -1303,7 +1303,7 @@ The Xeqmu are sea elfs — ourselves.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Kopnop tell it
 
@@ -1322,15 +1322,15 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — ourselves.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because it answers Kokop.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Kopnop teach it
 
-Boaboo Kokno Daa. ("Boaboo is the earth — as it is taught.")
+Woaweo Kokno Daa. ("Woaweo is the earth — as it is taught.")
 
 The Bobboo are bugbears — neighbors.
 The Wazwo are desert dwarfs — neighbors.
@@ -1347,13 +1347,13 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — ourselves.
 The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth with one moon.
+Woaweo is the earth with one moon.
 The moon crosses because Kokop walks the sky, slowly.
 The day returns to keep the balance.
 
 — though the folk say The moon crosses because it answers Kokop.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Keqnguq tell it
 
@@ -1372,14 +1372,14 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — ourselves.
-Boaboo is the earth.
+Woaweo is the earth.
 The day returns to keep the balance.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Keqnguq teach it
 
-Boaboo Kogngoxet Sue. ("Boaboo is the earth — as it is taught.")
+Woaweo Kogngoxet Sue. ("Woaweo is the earth — as it is taught.")
 
 The Bobboo are bugbears — neighbors.
 The Wazwo are desert dwarfs — neighbors.
@@ -1396,12 +1396,12 @@ The Dngooqdngo are kobolds — neighbors.
 The Xeqmu are sea elfs — neighbors.
 The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — ourselves.
-Boaboo is the earth.
+Woaweo is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Kokut's kin.
 The day returns to keep the balance.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Woaweo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ### The Reckoning of Years
 
