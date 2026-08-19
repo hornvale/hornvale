@@ -252,6 +252,34 @@ else
     bad "the CHAMBER'S OWN push was refused — this would wedge every merge: $run_hook_stderr"
 fi
 
+echo "== chamber: REASON 2 — the ancestry walk allows the chamber with NO env var"
+# THE BACKSTOP HAD NO POSITIVE TEST. Reason 1 (HV_CENSUS_LOCK_HELD, inherited)
+# is asserted above; reason 2 (the claim pid is a genuine ANCESTOR, walked via
+# /proc) was only ever exercised NEGATIVELY, by the mutation that removes
+# reason 1 and watches a FOREIGN pid get refused. That says nothing about
+# whether the walk allows a real descendant — and reason 2 is the whole point
+# of the pair: it catches a chamber descendant whose environment was scrubbed,
+# which is exactly what `env -u` and `sh -c` do all over this repo.
+#
+# Built by having a parent shell write ITS OWN pid into the claim and then run
+# the hook as a child, with HV_CENSUS_LOCK_HELD deliberately unset.
+if [ -r /proc/$$/status ]; then
+    anc_claim="$tmp/hv-ancestor.claim"
+    anc_out="$(bash -c '
+        printf "pid=%s\nhost=t\nuser=t\nstarted=t\ngoldens=t\nlabel=sluice-merge:campaign/z\nref=deadbeef\ncmdline=t\n" "$$" > "$1"
+        printf "refs/heads/main %s refs/heads/main %s\n" "$2" "$3" \
+            | HV_CENSUS_CLAIM_PATH="$1" env -u HV_CENSUS_LOCK_HELD -u GIT_DIR -u GIT_INDEX_FILE \
+              bash "$4" origin "$5" 2>&1
+        echo "rc=$?"
+    ' _ "$anc_claim" "$A" "$R" "$hook" "$nonlocal_url")"
+    case "$anc_out" in
+        *"rc=0"*) ok "a descendant of the claim holder is allowed by the ancestry walk alone" ;;
+        *) bad "the ancestry backstop REFUSED a real descendant — if HV_CENSUS_LOCK_HELD is ever scrubbed, every merge wedges: $anc_out" ;;
+    esac
+else
+    echo "  SKIP: no /proc on this host — the ancestry walk cannot be exercised"
+fi
+
 echo "== chamber: a DEAD claim is NOT a claim — and a push with no live claim is refused"
 # THIS EXPECTATION INVERTED (decision 0139, 2026-08-19). It used to assert
 # that a stale claim "does not block anything", which was right about staleness
