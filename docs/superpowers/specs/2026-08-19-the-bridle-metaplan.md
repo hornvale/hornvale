@@ -253,10 +253,10 @@ consolidated suite is worth the discipline §3.4 imposes on it.
   instant's clothes. No act can currently be interrupted. Mind control will
   eventually force this (what happens to an act in flight when a body is
   seized?), but it is named as a risk, not a deliverable.
-- **Persisting a session.** Nothing written during a possession is written
-  back; the session ledger is a clone, and creatures are re-derived every
-  session. "The player becomes an inhabitant" is bounded to the session.
-  That is the lazy-derivation model working as designed, not a gap.
+- **Redesigning the played-world save path.** `possess --out` already
+  saves a played world (§6.6); this program adds facts that travel through
+  it but does not change how it works. If those facts turn out to need
+  their own epoch or schema treatment, that is its own campaign.
 - **Aboleths and mind flayers as content.** Arc III ships the *mechanism*
   of an imposed controller. Which creatures possess which, and the biology
   behind it, is a species-domain question for a later campaign.
@@ -289,7 +289,33 @@ consolidated suite is worth the discipline §3.4 imposes on it.
    explicitly rather than inherit one by accident; a wrong uniform charge
    is the kind of thing that reads as correct and silently distorts every
    downstream fold (hunger, fatigue, thirst all integrate over days).
-5. **GOAP's planner is in Dijkstra mode** (`heuristic() == 0`) with a
+6. **The played world outlives the session — a correction.** An earlier
+   draft of this metaplan stated that nothing written during a possession
+   is written back, on the strength of `Session::ledger`'s own doc comment
+   (*"a clone of the frozen world's ledger ... Never written back"*). That
+   comment describes the INPUT `--world` file, which is indeed read-only,
+   and it is misleading about everything else. `Session::into_played_world`
+   moves `self.ledger` wholesale into a fresh `World`, and `possess --out`
+   saves it, printing `played world written to {out} ({n} facts)` (The
+   First Mark, Task 4 — *"the played world outlives the session"*).
+
+   So when player in-character acts commit facts, **those facts reach saved
+   world files.** Consequences the arcs must carry:
+
+   - Arc I must decide whether a player's `agent-at` / `drank` / `rested`
+     trail is *wanted* in a saved played world, or must be filtered at the
+     `into_played_world` boundary. Both are defensible; neither is free.
+   - `AGENT_AT` is registered per-session with a fixed doc string
+     (`session.rs:655`). `Registry::register_predicate` is idempotent for
+     an IDENTICAL definition and errors `ConflictingDefinition` otherwise
+     (verified in `kernel/src/registry.rs`), so re-possessing a saved
+     played world works today — but **the doc string of every
+     per-session-registered predicate is a de-facto save-format contract
+     the moment a played world is saved.** Changing one breaks reload of
+     every world saved before the change. This is true now, undocumented
+     now, and this program adds predicates to that set.
+
+7. **GOAP's planner is in Dijkstra mode** (`heuristic() == 0`) with a
    1,000-node budget. Routing more actors through it raises the chance of
    budget exhaustion, whose failure mode is a *frozen creature*, not an
    error — this already bit once, when a remembered-danger penalty of 20
@@ -308,10 +334,10 @@ consolidated suite is worth the discipline §3.4 imposes on it.
 
 ## 8. Flagged for G3 — owner decisions, not autopilot's
 
-1. **Player acts now write to the ledger and charge time** (ledger #1,
-   Nathan's call at the first gate). Not a save-format change — the
-   session ledger is never written back — but it is the largest behavioural
-   commitment here, and it moves committed artifacts.
+1. **Player acts now write to the ledger and charge time, and those facts
+   REACH SAVED WORLD FILES** (ledger #1, Nathan's call at the first gate;
+   corrected at §6.6 below). This is save-format-adjacent after all — see
+   the correction — and it is the largest commitment in the program.
 2. **`AGENT_AT` is registered per-session, not at genesis**
    (`session.rs:655`), so giving the player a trail costs no genesis or
    save-format change. Confirmed by reading, and worth Nathan confirming
