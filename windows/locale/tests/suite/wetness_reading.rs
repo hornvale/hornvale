@@ -91,13 +91,13 @@ use hornvale_terrain::branch::{CatchmentCut, rill_reading};
 use serde_json::Value;
 
 /// The before-arm: one record per sampled room.
-const FIXTURE: &str = include_str!("fixtures/pre-rill-wetness.jsonl");
+const FIXTURE: &str = include_str!("../fixtures/pre-rill-wetness.jsonl");
 
 /// The Ford's before-arm, reused here for one thing only: it carries
 /// `relief`, `aspect` and `openness` for 200 rooms, captured by a different
 /// campaign long before this one, which is what makes it a credible witness
 /// that the `LOCALE_MICRO` draw order did not move.
-const FORD_FIXTURE: &str = include_str!("fixtures/pre-stage-2-rooms.jsonl");
+const FORD_FIXTURE: &str = include_str!("../fixtures/pre-stage-2-rooms.jsonl");
 
 /// R-7's floor: the share of descending steps that must not get drier.
 const R7_FLOOR: f64 = 0.80;

@@ -47,7 +47,7 @@ const ALL_STRATA: [Stratum; 11] = [
 /// The before-arm, captured on unmodified `water_column_at`/`expr_at_stratum`
 /// before this task's delegation landed (commit `aadf5920`, "capture
 /// pre-delegation column fixture").
-const BEFORE_ARM: &str = include_str!("fixtures/column_before.txt");
+const BEFORE_ARM: &str = include_str!("../fixtures/column_before.txt");
 
 fn world() -> World {
     World::new(Seed(42))

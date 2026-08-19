@@ -63,7 +63,7 @@ use hornvale_terrain::channel::Transverse;
 use serde_json::Value;
 
 /// The committed pre-stage-2 documents, one per line.
-const FIXTURE: &str = include_str!("fixtures/pre-stage-2-rooms.jsonl");
+const FIXTURE: &str = include_str!("../fixtures/pre-stage-2-rooms.jsonl");
 
 /// The world every claim here is made on.
 fn world() -> World {
