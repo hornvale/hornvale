@@ -93,7 +93,59 @@ fn carve_cellular_cave(
             cells.insert(cell, LevelCellKind::Floor);
         }
     }
+    connect_components_within(rect, cells);
     dof
+}
+
+/// Cellular-automata fill-and-smooth commonly settles into more than one
+/// disconnected cavern; join every component into one before returning,
+/// reusing the exact nearest-pair-corridor primitives `mod.rs` already
+/// uses for sibling-leaf connections (Task 9) — the same operation
+/// (join two disconnected walkable regions) at a different scope.
+fn connect_components_within(rect: Rect, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+    loop {
+        let components = find_components(rect, cells);
+        if components.len() <= 1 {
+            break;
+        }
+        match super::nearest_pair(&components[0], &components[1]) {
+            Some((pa, pb)) => super::connect_cells(pa, pb, cells),
+            None => break,
+        }
+    }
+}
+
+/// Every connected component (4-directional adjacency) of `Floor` cells
+/// within `rect`, via breadth-first flood-fill. `BTreeSet`/`VecDeque`
+/// only, no `HashSet` (workspace-wide determinism rule).
+fn find_components(rect: Rect, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Vec<Cell>> {
+    use std::collections::{BTreeSet, VecDeque};
+
+    let mut visited: BTreeSet<Cell> = BTreeSet::new();
+    let mut components = Vec::new();
+    for x in rect.x..(rect.x + rect.w) {
+        for y in rect.y..(rect.y + rect.h) {
+            let cell = Cell(x, y);
+            if visited.contains(&cell) || cells.get(&cell) != Some(&LevelCellKind::Floor) {
+                continue;
+            }
+            let mut component = Vec::new();
+            let mut queue = VecDeque::new();
+            visited.insert(cell);
+            queue.push_back(cell);
+            while let Some(Cell(cx, cy)) = queue.pop_front() {
+                component.push(Cell(cx, cy));
+                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                    let next = Cell(cx + dx, cy + dy);
+                    if cells.get(&next) == Some(&LevelCellKind::Floor) && visited.insert(next) {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            components.push(component);
+        }
+    }
+    components
 }
 
 fn neighbor_alive_count(alive: &BTreeMap<Cell, bool>, x: i32, y: i32) -> u32 {
@@ -320,5 +372,102 @@ mod tests {
             first, second,
             "two carves sharing one advancing stream must differ, or generate_level_with_origin's per-family stream reuse would silently duplicate leaves"
         );
+    }
+
+    /// BFS-reachability check shared by the three internal-connectivity
+    /// tests below: from an arbitrary floor cell, every other floor cell
+    /// produced by `carve_fn` must be reachable via 4-directional adjacency.
+    fn assert_internally_connected(
+        carve_fn: impl Fn(Rect, &mut Stream, &mut BTreeMap<Cell, LevelCellKind>) -> u32,
+        label: hornvale_kernel::seed::StreamLabel<'_>,
+        seed_value: u64,
+    ) {
+        use std::collections::{BTreeSet, VecDeque};
+
+        let mut stream = Seed(seed_value).derive(label).stream();
+        let mut cells = BTreeMap::new();
+        carve_fn(RECT, &mut stream, &mut cells);
+
+        let floor: BTreeSet<Cell> = cells
+            .iter()
+            .filter(|(_, k)| **k == LevelCellKind::Floor)
+            .map(|(&c, _)| c)
+            .collect();
+        let Some(&start) = floor.iter().next() else {
+            return;
+        };
+        let mut seen = BTreeSet::new();
+        let mut queue = VecDeque::new();
+        seen.insert(start);
+        queue.push_back(start);
+        while let Some(Cell(x, y)) = queue.pop_front() {
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let next = Cell(x + dx, y + dy);
+                if floor.contains(&next) && seen.insert(next) {
+                    queue.push_back(next);
+                }
+            }
+        }
+        assert_eq!(
+            seen.len(),
+            floor.len(),
+            "seed {seed_value}: {} of {} floor cells unreachable from {start:?}",
+            floor.len() - seen.len(),
+            floor.len()
+        );
+    }
+
+    #[test]
+    /// claim: invariant(seed: 0..20) — every floor cell `carve_cellular_cave`
+    /// produces is reachable from every other, for every seed in the range.
+    /// This is the property Task 3's original cellular-automata design
+    /// never guaranteed, and `connect_components_within` now enforces.
+    fn cellular_cave_output_is_internally_connected() {
+        for seed_value in 0..20u64 {
+            assert_internally_connected(
+                carve_cellular_cave,
+                crate::streams::UNDERWORLD_LEVEL_CELLULAR,
+                seed_value,
+            );
+        }
+    }
+
+    #[test]
+    /// claim: invariant(seed: 0..20) — every floor cell `carve_tunneler`
+    /// produces is reachable from every other, for every seed in the range.
+    /// Empirically verify (not merely reason about) that `Tunneler` is
+    /// already internally connected by construction — a single random
+    /// walk never leaves a gap for its own path to fall into.
+    fn tunneler_output_is_internally_connected() {
+        for seed_value in 0..20u64 {
+            assert_internally_connected(
+                carve_tunneler,
+                crate::streams::UNDERWORLD_LEVEL_TUNNELER,
+                seed_value,
+            );
+        }
+    }
+
+    #[test]
+    /// claim: invariant(seed: 0..20) — every floor cell
+    /// `carve_partitioned_rooms` produces (both `AngularRooms` and
+    /// `RoomsAndCorridors` tunings) is reachable from every other, for
+    /// every seed in the range. Empirically verify that `PartitionedRooms`
+    /// is already internally connected by construction —
+    /// `connect_centers` over every consecutive pair in `rooms.windows(2)`
+    /// joins the whole chain.
+    fn partitioned_rooms_output_is_internally_connected() {
+        for seed_value in 0..20u64 {
+            assert_internally_connected(
+                |rect, stream, cells| carve_partitioned_rooms(rect, stream, cells, 3, 3),
+                crate::streams::UNDERWORLD_LEVEL_ROOMS,
+                seed_value,
+            );
+            assert_internally_connected(
+                |rect, stream, cells| carve_partitioned_rooms(rect, stream, cells, 5, 2),
+                crate::streams::UNDERWORLD_LEVEL_ROOMS,
+                seed_value,
+            );
+        }
     }
 }
