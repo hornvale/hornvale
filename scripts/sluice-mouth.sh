@@ -103,9 +103,44 @@ fi
 
 if ! out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-only "$base" "$sha" 2>&1)"; then
     echo "sluice-mouth: MERGE CONFLICT between $base and $sha." >&2
-    # Line 1 is the tree SHA; the conflicting paths follow, then a blank line
-    # and git's own informational messages.
-    printf '%s\n' "$out" | tail -n +2 | sed '/^$/q' | sed 's/^/  conflict: /' >&2
+    # THE CONFLICT LIST IS FOUND BY SHAPE, NOT BY POSITION, AND THAT MATTERS
+    # HERE MORE THAN IT USUALLY WOULD.
+    #
+    # `git merge-tree` prints the new tree's OID, then the conflicting paths,
+    # then a blank line, then git's own informational messages. The obvious
+    # reader is `tail -n +2` — drop line 1, take lines up to the blank — and
+    # that is what this was. It assumes the OID is on line 1.
+    #
+    # IT IS NOT, IN THIS REPOSITORY. `.gitattributes` routes six generated
+    # documents through `merge=hv-regenerate` (scripts/merge-regenerate.sh),
+    # which runs cargo and type-audit and writes to stdout/stderr — and this
+    # capture takes `2>&1`. So a real merge-tree run here begins with lines
+    # like "Running `tools/type-audit/target/debug/type-audit report`", and
+    # `tail -n +2` then reports the DRIVER'S OUTPUT and the tree OID itself as
+    # conflicting paths. Observed live on campaign/the-burr, 2026-08-19: the
+    # bounce listed a cargo banner and a bare 40-hex OID among four real
+    # paths, and a reader hunting `62e4699797fb...` as a file would have found
+    # nothing.
+    #
+    # So: locate the OID line by its shape, print what follows until the blank.
+    # If no OID line appears at all — a failure that produced no tree — fall
+    # back to the raw output rather than printing nothing, because an empty
+    # conflict list under a "MERGE CONFLICT" header is worse than noise.
+    #
+    # `length($0) == 40 && /^[0-9a-f]+$/`, NOT `/^[0-9a-f]{40}$/`. On this box
+    # `awk` is mawk, which does not implement POSIX interval expressions, so
+    # the `{40}` form matches NOTHING and silently reports an empty conflict
+    # list — the same shape as the `git grep -E \b` trap already recorded on
+    # the board. Caught here only because the fallback below printed raw
+    # output instead of nothing.
+    conflicts="$(printf '%s\n' "$out" \
+        | awk 'length($0) == 40 && /^[0-9a-f]+$/ { seen = 1; next } seen && /^$/ { exit } seen { print }')"
+    if [ -n "$conflicts" ]; then
+        printf '%s\n' "$conflicts" | sed 's/^/  conflict: /' >&2
+    else
+        echo "  (no tree OID in merge-tree output; raw follows)" >&2
+        printf '%s\n' "$out" | sed 's/^/  | /' >&2
+    fi
     exit 1
 fi
 

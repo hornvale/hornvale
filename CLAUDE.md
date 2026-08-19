@@ -255,6 +255,7 @@ make doctor        # the repo self-map — run this first in a fresh session
 # runs that set's own command from `scripts/lane-sets.tsv` directly, which is
 # what "one session managing one machine" means in practice.
 #
+#   make sluice-ack REASON='...'         # adjudicate an out-of-band landing (see below)
 #   make sluice-status                   # what is queued, running, held, landed, reported
 #   make sluice-log [JOB=<id>]           # read a finished chamber job back
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
@@ -708,6 +709,17 @@ work, invoke the `campaign-autopilot` skill — it auto-resolves the
 routine gates against Nathan's standing policy and ledgers every decision
 for his review at the spec and merge stops. Nathan saying "manual mode"
 disengages it for the session.
+
+**An out-of-band landing is adjudicated with `make sluice-ack REASON='...'`,
+not by hand.** `sluice-mouth.sh` exits 4 when `origin/main` has moved off the
+SHA the queue last pushed, and says a human must decide what happened — but
+until 2026-08-19 nothing let a human RECORD that decision, so the only route
+was writing `$HV_SLUICE_DIR/last-pushed` directly (which is what happened for
+`ca6f34310`). The helper shows the commit range you are accepting BEFORE
+writing anything, requires a reason and stores it in `out-of-band.log`, refuses
+a baseline that is not `origin/main`'s current tip, and refuses when there is
+nothing to adjudicate rather than rewriting the file and reporting success. It
+asserts that a human LOOKED; it does not assert main is green, and says so.
 
 **A push to `main` that is not the chamber's is now REFUSED, not merely
 discouraged** (`scripts/hooks/pre-push`, enforcing decision 0139). The hook

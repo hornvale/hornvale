@@ -78,3 +78,44 @@ dropped two of its three batteries — the pin would still have named them, and
 nothing would have said so. It now spans `heavy:` and `probe:` alike, because
 the property it selects belongs to the test, not to the set that invokes it: a
 probe run by hand saturates forty cores exactly as a heavy one did.
+
+## How this decision itself reached `main`, recorded because it departs twice
+
+Both departures were Nathan's explicit calls, made in the moment, and both are
+recorded here so that a reader reconstructing the queue log finds the reasoning
+rather than inferring a precedent from the shape.
+
+**It jumped the queue.** It arrived at 19:20:49 and ran ahead of three rows that
+arrived first — `campaign/the-crucible` 17:49:39, `campaign/the-burr` 18:49:29,
+`fix/census-yellow-teeth` 18:52:28. Decision 0133 is first-come-first-served
+with no priority tiers and no force override, and **that still stands**: one
+authorized exception by the decider is not a tier. The operator declined to
+reorder twice the same day on cost arguments of its own, including for a fix
+that was unblocking a campaign it had held. The difference was that Nathan
+asked, not that the arithmetic improved.
+
+**It was gated under the four phases it proposes, not the six then in force.**
+The six-phase run was killed at ~8 minutes and relaunched with
+`HV_SLUICE_PHASES="artifacts outboard gate clients"`. A candidate gating itself
+under its own proposed rules is not a habit worth forming, so what the dropped
+phases would have contributed was established another way first:
+
+- `seam-guard` had nothing to say — the change touches no production code at
+  all, only tests, scripts, docs and this record.
+- `heavy` would have confirmed that retagging 18 tests did not break heavy
+  discovery or the nextest serialization pins. That was verified locally
+  instead: `heavy_tier` 5/5 green, the derived scatter roster matching
+  `.config/nextest.toml` after widening it to span both tiers, and
+  `gate-full-heavy.sh` discovery dropping 108 → 90 as intended.
+
+So the residue is exactly one commit on `main` gated by four phases while six
+were nominally required, with the specific gap named and covered. **Neither
+departure is licence for the next one.** An operator who wants either should
+ask, and should expect to be told no by default — the queue's value is that
+its order and its phase list are not negotiable by whoever happens to be
+driving it.
+
+**The measurement, after the fact.** The four-phase merges that followed cost
+630.7 s, 640.2 s and 634.5 s end to end, against the 3704 s six-phase mean the
+ruling was argued from. A prose-only candidate, which additionally drops
+`clients`, runs `artifacts outboard gate` alone.
