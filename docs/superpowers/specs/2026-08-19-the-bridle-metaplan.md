@@ -103,8 +103,7 @@ An act's facts and time cost are determined by the body performing it and
 by nothing else. A driver selects *which* act; it never alters *what the
 act does*. This is the keystone restated as an implementation rule.
 
-### 3.2 In-Character and Out-of-Character are first-class, and the
-distinction is the gate
+### 3.2 In-Character and Out-of-Character are first-class, and the gate is the distinction
 
 Every action is invoked either **in character** — subject to the body's
 state — or **out of character**, which bypasses the body. Instruments
@@ -179,12 +178,83 @@ which is the precondition for `PLAY-death-is-traversal` (*"death is
 transport, not terminus — the guard that killed you is a body you may
 take"*, elaborated / high).
 
+### 3.8 The daybook is the book of original entry
+
+**Every accepted command is recorded — IC or OOC, performed or refused.**
+A typo is not a command and is not recorded; the filter is *acceptance*,
+not *effect*.
+
+That cannot all be facts. Decision
+[0100](../../decisions/0100-fact-phenomenon-myth.md)'s test is *"could I
+recompute this from the seed alone?"*, stated for use as **commit
+consequence, derive presence** — and an OOC `!examine` has no consequence.
+Committing one would put operator activity into the contradiction-checked
+register. So the record is **two books**, and the structure is
+double-entry bookkeeping's, unchanged since the 1300s:
+
+```
+  the DAYBOOK  chronological; every accepted command in order; the
+               "book of original entry" -- if the two disagree, it wins
+  the LEDGER   the resulting world-state, posted from it; facts only
+```
+
+Hornvale has had the ledger since genesis and never had the daybook. Its
+required slots:
+
+```
+  turn  day        mood  command               verdict          cost     by
+  ----  ---------  ----  --------------------  ---------------  -------  ---------
+  0017  412.34000  IC    go north              performed        10,000t  self
+  0019  412.44150  OOC   !examine poltergeist  performed             0t  operator
+  0020  412.44150  IC    examine poltergeist   refused: unseen       0t  self
+  0021  412.44150  IC    go south              refused: held         0t  self
+  0022  412.44150  IC    go west               performed        10,000t  aboleth#4
+```
+
+**The last column is the keystone made mechanical.** The daybook records
+*who commanded*; the ledger does not. Line 0022 posts `agent-at <you>`
+with no trace of the aboleth, which is §2's invariant arriving as a
+required field rather than an aspiration. Line 0021 is what makes
+domination legible at all: the record of what you tried and were denied.
+Refused lines cost zero ticks and post no fact, yet appear — which is
+exactly what "accepted, not typos" means.
+
+**A world is a seed. A playthrough is a seed plus a daybook.** This
+extends decision [0007](../../decisions/0007-seed-is-identity.md) rather
+than contradicting it: the daybook is the *only* non-derivable object in
+the system. The world, the creatures and the outcomes all follow from
+the seed; the human's choices follow from nothing else.
+
+**Consequence — the play-ledger is a cache, and the spec must say so.**
+If the daybook is stored, the fact trail is recomputable from
+`(seed, daybook)`, and 0100 rule 5 forbids committing a balance.
+Materialising it is still right, because replaying a long session is
+expensive — but it is a *checkpoint*, not the authority, exactly as a PGN
+move list is authoritative and an embedded FEN is a seek optimisation.
+Say it out loud in the code, or someone will eventually hand-edit the
+ledger and expect it to stick.
+
+**Stored beside the world, never inside it.** Both source domains keep two
+books rather than one composite; it avoids a `World` schema change; and
+`possess --script` already exists as an input format whose replays are
+byte-golden. **The daybook is a script you can replay** — which makes it a
+debugging and fixture instrument at no extra cost, and is the independent
+payoff §4 claims for the consolidated suite.
+
+*Naming:* "journal" is the accounting term of art, but The Journal is
+already a merged campaign in this repo. **Daybook** is the same term of
+art, unused anywhere in the tree, and puns usefully on `WorldTime { day }`.
+
 ## 4. The arcs
 
 ```
-  ARC I - THE DEED          one suite, one execution path, IC/OOC
-                            first-class, IC acts charge time and
-                            write facts
+  ARC I.a - THE TACKLE      extract the action layer, rename
+                            affordance, give the body a mass
+                            (BYTE-IDENTICAL: nothing moves)
+                                    |
+  ARC I.b - THE DEED        one suite, one execution path, IC/OOC
+                            first-class, the daybook, IC acts charge
+                            time and post facts
                                     |
         +---------------------------+---------------------+
         |                                                 |
@@ -199,7 +269,8 @@ take"*, elaborated / high).
 
 | Arc | Ships | Acceptance test |
 |---|---|---|
-| **I — The Deed** | one action type; IC/OOC on the request; the gate table with `asleep`; the player's in-character verbs routed through it; `Drive::affordance` renamed (6 impls, 22 sites) | the player's walk leaves an `agent-at` trail indistinguishable from a creature's; the player sleeps and IC refuses while OOC works |
+| **I.a — The Tackle** | extract the action layer out of `liveness.rs`; rename `Drive::affordance` → `proposal` (6 impls, 22 sites); give the possessed body a `mass_kg` | **byte-identical.** Not one committed artifact moves. Any drift is a bug, caught immediately |
+| **I.b — The Deed** | one action type; IC/OOC on the request; the gate table with `asleep`; the daybook; player verbs routed through, charging time and posting facts | the player's walk leaves an `agent-at` trail indistinguishable from a creature's; the player sleeps and IC refuses while OOC works |
 | **II — The Hand** | the controller stack; GOAP demoted to "the default controller" | swap controllers — a creature on player-input and a player body on GOAP both produce well-formed traces |
 | **III — The Coercion** | an imposed controller; `dominated` joins the gate table | **an aboleth dominates the player**: IC refuses, OOC still works, and the ledger cannot tell |
 | **IV — The Offer** | objects advertise verbs (MAP-19 + MAP-27) | a key says "unlock me with this"; no verb×object table exists anywhere |
@@ -254,7 +325,7 @@ consolidated suite is worth the discipline §3.4 imposes on it.
   eventually force this (what happens to an act in flight when a body is
   seized?), but it is named as a risk, not a deliverable.
 - **Redesigning the played-world save path.** `possess --out` already
-  saves a played world (§6.6); this program adds facts that travel through
+  saves a played world (§6.5); this program adds facts that travel through
   it but does not change how it works. If those facts turn out to need
   their own epoch or schema treatment, that is its own campaign.
 - **Aboleths and mind flayers as content.** Arc III ships the *mechanism*
@@ -283,13 +354,28 @@ consolidated suite is worth the discipline §3.4 imposes on it.
    three drives are written `impl<'a> Drive for Thermal<'a>` and the
    pattern requires a space after `impl`. Count `fn affordance` instead
    (7 = 1 trait declaration + 6 impls).
-4. **The time-charging model is undefined.** How much does an act cost?
-   Creature acts charge uniformly in *plan* space (every edge costs 1) but
-   the world-time charge is separate. Arc I must state the rule
-   explicitly rather than inherit one by accident; a wrong uniform charge
-   is the kind of thing that reads as correct and silently distorts every
-   downstream fold (hunger, fatigue, thirst all integrate over days).
-6. **The played world outlives the session — a correction.** An earlier
+4. **The time-charging model already exists — do not rebuild it.** An
+   earlier draft of this metaplan called it undefined. False.
+   `windows/vessel/src/clock.rs` carries a complete cost model:
+   `base_ticks` per action (`MoveTo` 10,000 ticks = 0.1 day, `MoveWithin`
+   1,000, `Eat` 3,000, `Drink`/`Rest` 150), scaled by `tempo(mass_kg)` and
+   by `climb_factor` (uphill only), converted by `days_of` against a
+   rotation-derived tick rate that makes a local day an exact integer
+   number of ticks. Its match on `Action` is exhaustive by variant on
+   purpose, so *a new action fails to compile rather than silently
+   becoming free*.
+
+   Decisively, its signature is `cost_ticks(action, mass_kg,
+   terrain_factor)` — **there is no driver parameter.** The cost of an act
+   is already a function of the act, the body, and the ground. It was
+   built keyed on the body exactly as §3.1 requires and simply never had a
+   player routed through it.
+
+   The real gap is small and mechanical: `mass_kg` lives on the NPC struct
+   (`liveness.rs:94`, sourced from the biosphere by species) and the
+   possessed agent has no such field. It has a species, so it derives the
+   same way. This is Arc I.a work, not a fidelity question.
+5. **The played world outlives the session — a correction.** An earlier
    draft of this metaplan stated that nothing written during a possession
    is written back, on the strength of `Session::ledger`'s own doc comment
    (*"a clone of the frozen world's ledger ... Never written back"*). That
@@ -315,7 +401,7 @@ consolidated suite is worth the discipline §3.4 imposes on it.
      every world saved before the change. This is true now, undocumented
      now, and this program adds predicates to that set.
 
-7. **GOAP's planner is in Dijkstra mode** (`heuristic() == 0`) with a
+6. **GOAP's planner is in Dijkstra mode** (`heuristic() == 0`) with a
    1,000-node budget. Routing more actors through it raises the chance of
    budget exhaustion, whose failure mode is a *frozen creature*, not an
    error — this already bit once, when a remembered-danger penalty of 20
@@ -331,12 +417,19 @@ consolidated suite is worth the discipline §3.4 imposes on it.
   this is new constitutional ground.)
 - **`commanded` is symmetric; `focalized` is singular.** (Arc III; amends
   the reading of 0116 and clarifies the scope of 0098.)
+- **A world is a seed; a playthrough is a seed plus a daybook.** (Arc I.b;
+  extends 0007. Carries the two-book split, the "book of original entry"
+  precedence rule, and the statement that the play-ledger is a cache.)
+- **Every accepted command is recorded; the daybook names the commander
+  and the ledger does not.** (Arc I.b, enforced in Arc III — this is what
+  makes domination invisible in the world's record and visible in the
+  operator's.)
 
 ## 8. Flagged for G3 — owner decisions, not autopilot's
 
 1. **Player acts now write to the ledger and charge time, and those facts
    REACH SAVED WORLD FILES** (ledger #1, Nathan's call at the first gate;
-   corrected at §6.6 below). This is save-format-adjacent after all — see
+   corrected at §6.5 below). This is save-format-adjacent after all — see
    the correction — and it is the largest commitment in the program.
 2. **`AGENT_AT` is registered per-session, not at genesis**
    (`session.rs:655`), so giving the player a trail costs no genesis or
@@ -345,8 +438,20 @@ consolidated suite is worth the discipline §3.4 imposes on it.
 3. **The `Drive::affordance` rename** is a public-API change inside
    `windows/vessel`. Low risk, wide diff, and it makes the type-audit
    report drift.
-4. **Risk 4 (the time-charging rule)** is a fidelity question, and
-   fidelity questions are Nathan's by standing policy.
+4. **WITHDRAWN — the time-charging rule.** An earlier draft flagged this
+   as a fidelity question for Nathan. It is not a question at all: the
+   cost model exists, is body-keyed, and is driver-agnostic (risk 4). The
+   only work is giving the possessed body a mass.
+5. **Every accepted command is recorded** (Nathan's ruling, this
+   brainstorm) — IC or OOC, performed or refused; typos are not commands.
+   This introduces the **daybook** (§3.8), a second book beside the
+   ledger, and with it the claim that **a playthrough is a seed plus a
+   daybook** — an extension of decision 0007 that deserves its own
+   record.
+6. **The play-ledger becomes a cache** (§3.8). Once the daybook is
+   authoritative, the materialised fact trail is a checkpoint rather than
+   the source of truth, which is a meaningful change in what the ledger
+   *means* even though no byte of its format moves.
 
 ## 9. Definition of done (per campaign; decisions 0013 and 0020)
 
@@ -359,13 +464,16 @@ commit as the change that drifted them.
 
 ## 10. Provenance
 
-Brainstormed 2026-08-19 with Nathan, under `campaign-autopilot`. Two
+Brainstormed 2026-08-19 with Nathan, under `campaign-autopilot`. Three
 `ideonomy-plain` passes: substitution + organon-construction (tree) on
 intentionality / rate / symmetry, which produced the origin-of-intent
-taxonomy and the symmetry test in §2; and abstraction-lift + combination
-(map) on longevity / modularity / size, which produced §3.3, §3.4, §3.5,
-§3.7, and the `affordance` resolution. Neither pass overturned the
-framing; both enriched it. Full ledger:
+taxonomy and the symmetry test in §2; abstraction-lift + combination (map)
+on longevity / modularity / size, which produced §3.3, §3.4, §3.5, §3.7
+and the `affordance` resolution; and cross-domain re-instantiation
+(notation) on predictability / age, which produced §3.8 entire — the
+double-entry and PGN re-instantiations, the `by` column that makes the
+keystone mechanical, and the play-ledger-is-a-cache consequence. No pass
+overturned the framing; all three enriched it. Full ledger:
 `.superpowers/sdd/decision-ledger.md` on `campaign/the-bridle`.
 
 Reads: decisions 0007, 0098, 0116; idea-registry rows `MAP-19`, `MAP-27`,
