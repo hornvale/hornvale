@@ -1,0 +1,329 @@
+//! Leaf content: the four styles a region can be filled with (spec §4.3).
+//! Three underlying techniques — a fourth (`RoomsAndCorridors`) reuses
+//! `AngularRooms`'s partitioned-rooms carver with different tuning, since
+//! sharing the technique and varying its parameters is the same move
+//! `lattice::allocate`/`lattice::grow` make with `extent_for` (DRY over a
+//! false four-way split).
+
+use std::collections::BTreeMap;
+
+use hornvale_kernel::Stream;
+
+use crate::lattice::{Cell, Rect};
+use crate::underworld_level::LevelCellKind;
+use crate::underworld_level::region::cut;
+
+/// Which content generator fills a leaf.
+///
+/// `generate_level` (this task) only ever constructs `CellularCave`, since
+/// real per-leaf selection is Task 4's job (`CaveKind`/`ChamberOrigin`
+/// driven) — until that lands, the other three variants are exercised only
+/// by this module's own tests, hence the dead-code allow below.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    dead_code,
+    reason = "Tunneler/AngularRooms/RoomsAndCorridors are wired to real selection in Task 4"
+)]
+pub(super) enum Algorithm {
+    /// Karst-biased: an organic cavern via cellular automata.
+    CellularCave,
+    /// LavaTube-biased: a carved tube via a drunkard's walk.
+    Tunneler,
+    /// Fracture-biased: small angular rooms via tight partitioning.
+    AngularRooms,
+    /// Worked-biased: larger, straighter rooms via loose partitioning.
+    RoomsAndCorridors,
+}
+
+/// Carve `algorithm`'s content into `rect`'s interior of `cells`, drawing
+/// from `stream`. Returns the number of draws made.
+///
+/// **Takes an already-derived `&mut Stream`, not a `Seed`.** Two leaves in
+/// one level can share an algorithm (composite levels are the point of
+/// this campaign), and if each carve call re-derived its own fresh stream
+/// from the same top-level seed, two same-algorithm leaves would draw
+/// byte-identical content — the same defect class `lattice::allocate`'s
+/// `split` and `lattice::grow` avoid by deriving their stream ONCE per
+/// pass and threading `&mut Stream` through every draw. The caller
+/// (`generate_level_with_origin`, Task 4) derives one stream per algorithm
+/// family, once per level, and reuses it across every leaf that draws that
+/// family — consecutive leaves differ because the stream's state advances,
+/// not because a new stream was created per leaf.
+pub(super) fn carve(
+    algorithm: Algorithm,
+    rect: Rect,
+    stream: &mut Stream,
+    cells: &mut BTreeMap<Cell, LevelCellKind>,
+) -> u32 {
+    match algorithm {
+        Algorithm::CellularCave => carve_cellular_cave(rect, stream, cells),
+        Algorithm::Tunneler => carve_tunneler(rect, stream, cells),
+        Algorithm::AngularRooms => carve_partitioned_rooms(rect, stream, cells, 3, 3),
+        Algorithm::RoomsAndCorridors => carve_partitioned_rooms(rect, stream, cells, 5, 2),
+    }
+}
+
+const CA_FILL_PROB: f64 = 0.45;
+const CA_ITERATIONS: u32 = 4;
+
+fn carve_cellular_cave(
+    rect: Rect,
+    stream: &mut Stream,
+    cells: &mut BTreeMap<Cell, LevelCellKind>,
+) -> u32 {
+    let mut dof = 0u32;
+    let mut alive: BTreeMap<Cell, bool> = BTreeMap::new();
+    for x in rect.x..(rect.x + rect.w) {
+        for y in rect.y..(rect.y + rect.h) {
+            let border =
+                x == rect.x || y == rect.y || x == rect.x + rect.w - 1 || y == rect.y + rect.h - 1;
+            let draw = stream.next_f64();
+            dof += 1;
+            alive.insert(Cell(x, y), !border && draw < CA_FILL_PROB);
+        }
+    }
+    for _ in 0..CA_ITERATIONS {
+        let snapshot = alive.clone();
+        for x in (rect.x + 1)..(rect.x + rect.w - 1) {
+            for y in (rect.y + 1)..(rect.y + rect.h - 1) {
+                let count = neighbor_alive_count(&snapshot, x, y);
+                let cur = *snapshot.get(&Cell(x, y)).unwrap_or(&false);
+                let next = if cur { count >= 4 } else { count >= 5 };
+                alive.insert(Cell(x, y), next);
+            }
+        }
+    }
+    for (cell, is_floor) in alive {
+        if is_floor {
+            cells.insert(cell, LevelCellKind::Floor);
+        }
+    }
+    dof
+}
+
+fn neighbor_alive_count(alive: &BTreeMap<Cell, bool>, x: i32, y: i32) -> u32 {
+    let mut n = 0;
+    for dx in -1..=1 {
+        for dy in -1..=1 {
+            if dx == 0 && dy == 0 {
+                continue;
+            }
+            if *alive.get(&Cell(x + dx, y + dy)).unwrap_or(&false) {
+                n += 1;
+            }
+        }
+    }
+    n
+}
+
+const TUNNEL_STEPS: u32 = 30;
+const TUNNEL_MAX_RUN: u64 = 3;
+
+fn carve_tunneler(
+    rect: Rect,
+    stream: &mut Stream,
+    cells: &mut BTreeMap<Cell, LevelCellKind>,
+) -> u32 {
+    let interior = rect.inset(1);
+    let mut dof = 0u32;
+    let mut x = interior.x + (stream.next_u64() % interior.w.max(1) as u64) as i32;
+    let mut y = interior.y + interior.h / 2;
+    dof += 1;
+    cells.insert(Cell(x, y), LevelCellKind::Floor);
+    for _ in 0..TUNNEL_STEPS {
+        let heading = stream.next_u64();
+        let run = 1 + (stream.next_u64() % TUNNEL_MAX_RUN) as i32;
+        dof += 2;
+        let (dx, dy) = match heading % 4 {
+            0 => (1, 0),
+            1 => (-1, 0),
+            2 => (0, 1),
+            _ => (0, -1),
+        };
+        for _ in 0..run {
+            x = (x + dx).clamp(interior.x, interior.x + interior.w - 1);
+            y = (y + dy).clamp(interior.y, interior.y + interior.h - 1);
+            cells.insert(Cell(x, y), LevelCellKind::Floor);
+            let widened = if dx != 0 {
+                Cell(x, (y + 1).min(interior.y + interior.h - 1))
+            } else {
+                Cell((x + 1).min(interior.x + interior.w - 1), y)
+            };
+            cells.insert(widened, LevelCellKind::Floor);
+        }
+    }
+    dof
+}
+
+fn carve_partitioned_rooms(
+    rect: Rect,
+    stream: &mut Stream,
+    cells: &mut BTreeMap<Cell, LevelCellKind>,
+    min_room_span: i32,
+    max_room_depth: u32,
+) -> u32 {
+    let mut dof = 0u32;
+    let mut rooms = Vec::new();
+    subdivide_for_rooms(
+        rect.inset(1),
+        0,
+        max_room_depth,
+        min_room_span,
+        stream,
+        &mut dof,
+        &mut rooms,
+    );
+    for room in &rooms {
+        for x in room.x..(room.x + room.w) {
+            for y in room.y..(room.y + room.h) {
+                cells.insert(Cell(x, y), LevelCellKind::Floor);
+            }
+        }
+    }
+    for pair in rooms.windows(2) {
+        connect_centers(pair[0], pair[1], cells);
+    }
+    dof
+}
+
+fn subdivide_for_rooms(
+    r: Rect,
+    depth: u32,
+    max_depth: u32,
+    min_span: i32,
+    stream: &mut Stream,
+    dof: &mut u32,
+    out: &mut Vec<Rect>,
+) {
+    let shorter = r.w.min(r.h);
+    if depth >= max_depth || shorter < 2 * min_span + 1 {
+        out.push(r);
+        return;
+    }
+    let roll = stream.next_f64();
+    *dof += 1;
+    if roll < 0.6 {
+        let (a, b) = cut(r, min_span, stream, dof);
+        subdivide_for_rooms(a, depth + 1, max_depth, min_span, stream, dof, out);
+        subdivide_for_rooms(b, depth + 1, max_depth, min_span, stream, dof, out);
+    } else {
+        out.push(r);
+    }
+}
+
+fn connect_centers(a: Rect, b: Rect, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+    let (ax, ay) = (a.x + a.w / 2, a.y + a.h / 2);
+    let (bx, by) = (b.x + b.w / 2, b.y + b.h / 2);
+    for x in ax.min(bx)..=ax.max(bx) {
+        cells.insert(Cell(x, ay), LevelCellKind::Floor);
+    }
+    for y in ay.min(by)..=by.max(by) {
+        cells.insert(Cell(bx, y), LevelCellKind::Floor);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_kernel::Seed;
+    use std::collections::BTreeMap;
+
+    const RECT: Rect = Rect {
+        x: 0,
+        y: 0,
+        w: 20,
+        h: 14,
+    };
+
+    fn floor_count(cells: &BTreeMap<Cell, LevelCellKind>) -> usize {
+        cells
+            .values()
+            .filter(|k| **k == LevelCellKind::Floor)
+            .count()
+    }
+
+    /// Each algorithm's own label, exactly as `generate_level_with_origin`
+    /// (Task 4) will derive it — one fresh stream per call here, since a
+    /// bare test has no other leaf to collide with, but `carve` itself
+    /// takes `&mut Stream` rather than `Seed` precisely so the real caller
+    /// can thread ONE stream across several same-algorithm leaves instead
+    /// of every leaf re-deriving an identical one.
+    fn stream_for(algorithm: Algorithm, seed: Seed) -> Stream {
+        let label = match algorithm {
+            Algorithm::CellularCave => crate::streams::UNDERWORLD_LEVEL_CELLULAR,
+            Algorithm::Tunneler => crate::streams::UNDERWORLD_LEVEL_TUNNELER,
+            Algorithm::AngularRooms | Algorithm::RoomsAndCorridors => {
+                crate::streams::UNDERWORLD_LEVEL_ROOMS
+            }
+        };
+        seed.derive(label).stream()
+    }
+
+    #[test]
+    fn every_algorithm_produces_at_least_one_floor_cell() {
+        for algorithm in [
+            Algorithm::CellularCave,
+            Algorithm::Tunneler,
+            Algorithm::AngularRooms,
+            Algorithm::RoomsAndCorridors,
+        ] {
+            let mut stream = stream_for(algorithm, Seed(3));
+            let mut cells = BTreeMap::new();
+            carve(algorithm, RECT, &mut stream, &mut cells);
+            assert!(
+                floor_count(&cells) > 0,
+                "{algorithm:?} produced no floor at all"
+            );
+        }
+    }
+
+    #[test]
+    fn carving_is_deterministic() {
+        for algorithm in [
+            Algorithm::CellularCave,
+            Algorithm::Tunneler,
+            Algorithm::AngularRooms,
+            Algorithm::RoomsAndCorridors,
+        ] {
+            let mut stream_a = stream_for(algorithm, Seed(11));
+            let mut stream_b = stream_for(algorithm, Seed(11));
+            let mut a = BTreeMap::new();
+            let mut b = BTreeMap::new();
+            carve(algorithm, RECT, &mut stream_a, &mut a);
+            carve(algorithm, RECT, &mut stream_b, &mut b);
+            assert_eq!(a, b, "{algorithm:?} was not deterministic");
+        }
+    }
+
+    #[test]
+    fn carving_never_touches_outside_the_rect() {
+        let mut stream = stream_for(Algorithm::Tunneler, Seed(5));
+        let mut cells = BTreeMap::new();
+        carve(Algorithm::Tunneler, RECT, &mut stream, &mut cells);
+        for cell in cells.keys() {
+            assert!(
+                cell.0 >= RECT.x
+                    && cell.0 < RECT.x + RECT.w
+                    && cell.1 >= RECT.y
+                    && cell.1 < RECT.y + RECT.h,
+                "cell {cell:?} escaped its own leaf rect"
+            );
+        }
+    }
+
+    #[test]
+    fn two_leaves_sharing_an_algorithm_and_a_stream_differ() {
+        // The regression this whole restructuring exists to prevent: one
+        // stream threaded across two carve calls (as the real caller does)
+        // must NOT produce identical content twice.
+        let mut stream = stream_for(Algorithm::CellularCave, Seed(9));
+        let mut first = BTreeMap::new();
+        let mut second = BTreeMap::new();
+        carve(Algorithm::CellularCave, RECT, &mut stream, &mut first);
+        carve(Algorithm::CellularCave, RECT, &mut stream, &mut second);
+        assert_ne!(
+            first, second,
+            "two carves sharing one advancing stream must differ, or generate_level_with_origin's per-family stream reuse would silently duplicate leaves"
+        );
+    }
+}

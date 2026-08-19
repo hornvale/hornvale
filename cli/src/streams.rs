@@ -429,6 +429,11 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Adit, Task 3: the cellular-automata cave content
+                // generator (Karst-biased leaves). Versioned from birth
+                // like the other entries in this golden. See
+                // `windows/vessel/src/underworld_level/carve.rs`.
+                "underworld/level/cellular v1",
                 // The Adit, Task 2: the underworld level generator's
                 // partition-tree split-or-leaf decisions. Versioned from
                 // birth like the other entries in this golden. Task 1's
@@ -437,6 +442,17 @@ mod tests {
                 // is the label that replaces its one call site. See
                 // `windows/vessel/src/underworld_level/region.rs`.
                 "underworld/level/partition v1",
+                // The Adit, Task 3: the partitioned-rooms content
+                // generator, shared by the angular (Fracture-biased) and
+                // rooms-and-corridors (worked) leaf styles — one label
+                // because the underlying technique is one technique tuned
+                // two ways, not two independent algorithms. See
+                // `windows/vessel/src/underworld_level/carve.rs`.
+                "underworld/level/rooms v1",
+                // The Adit, Task 3: the drunkard's-walk tunnel content
+                // generator (LavaTube-biased leaves). See
+                // `windows/vessel/src/underworld_level/carve.rs`.
+                "underworld/level/tunneler v1",
                 // The Repose: the volcano-identity derivation. Additive at
                 // v1 — a NEW label, so it perturbs no existing stream, and
                 // C0 commits nothing at all (spec §3.2 puts the whole object

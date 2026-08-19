@@ -13,6 +13,7 @@ use hornvale_kernel::Seed;
 
 use crate::lattice::{Cell, Rect};
 
+mod carve;
 mod region;
 
 /// A cell's role within a generated underworld level.
@@ -70,26 +71,34 @@ pub fn generate_level_extent(rung: hornvale_terrain::DelveRung) -> Rect {
     }
 }
 
-/// Generate a level over `extent`: build the partition tree, then fill each
-/// leaf's interior as floor over a rock background. Each leaf's own content
-/// generator (Task 3) later overwrites its interior with real content.
+/// Generate a level over `extent`: build the partition tree, then carve each
+/// leaf's interior with one content generator over a rock background.
 pub fn generate_level(extent: Rect, seed: Seed) -> Level {
     let (tree, mut dof) = region::build_region(extent, seed);
     let mut cells = BTreeMap::new();
     // Background: everything starts as rock. Each leaf's own content
-    // generator (Task 3) later overwrites its interior with Floor.
+    // generator overwrites its interior with real content.
     for x in extent.x..(extent.x + extent.w) {
         for y in extent.y..(extent.y + extent.h) {
             cells.insert(Cell(x, y), LevelCellKind::Wall);
         }
     }
+    // One stream, threaded across every leaf — not a fresh derive per
+    // leaf (see carve::carve's own doc for why that would make same-
+    // algorithm leaves duplicate each other). Task 4 replaces this whole
+    // fixed-algorithm loop with the real CaveKind/ChamberOrigin-driven
+    // selection and its own per-family streams; this is scaffolding for
+    // Task 3 alone.
+    let mut stream = seed
+        .derive(crate::streams::UNDERWORLD_LEVEL_CELLULAR)
+        .stream();
     for rect in region::leaves(&tree) {
-        for x in rect.x..(rect.x + rect.w) {
-            for y in rect.y..(rect.y + rect.h) {
-                cells.insert(Cell(x, y), LevelCellKind::Floor);
-            }
-        }
-        dof += 0; // leaf content draws land here starting Task 3
+        dof += carve::carve(
+            carve::Algorithm::CellularCave,
+            rect,
+            &mut stream,
+            &mut cells,
+        );
     }
     Level { extent, cells, dof }
 }

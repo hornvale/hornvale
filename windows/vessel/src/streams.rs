@@ -105,4 +105,18 @@ hornvale_kernel::stream_labels! {
     /// split-or-leaf decisions (The Adit).
     UNDERWORLD_LEVEL_PARTITION = "underworld/level/v1/partition"
         => "split-or-leaf decisions in a generated underworld level";
+    /// Stream label for the cellular-automata cave content generator
+    /// (Karst-biased leaves).
+    UNDERWORLD_LEVEL_CELLULAR = "underworld/level/v1/cellular"
+        => "cellular-automata cave carving within a leaf";
+    /// Stream label for the drunkard's-walk tunnel content generator
+    /// (LavaTube-biased leaves).
+    UNDERWORLD_LEVEL_TUNNELER = "underworld/level/v1/tunneler"
+        => "drunkard's-walk tunnel carving within a leaf";
+    /// Stream label for the partitioned-rooms content generator, shared by
+    /// the angular (Fracture-biased) and rooms-and-corridors (worked)
+    /// leaf styles — one label because the underlying technique is one
+    /// technique tuned two ways, not two independent algorithms.
+    UNDERWORLD_LEVEL_ROOMS = "underworld/level/v1/rooms"
+        => "partitioned-rooms carving within a leaf";
 }
