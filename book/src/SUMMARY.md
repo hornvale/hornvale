@@ -377,6 +377,7 @@
 - [The Parley](./chronicle/the-parley.md)
 - [The Illumination](./chronicle/the-illumination.md)
 - [The Adit](./chronicle/the-adit.md)
+- [The Burr](./chronicle/the-burr.md)
 
 # Appendix: The Frontier
 
