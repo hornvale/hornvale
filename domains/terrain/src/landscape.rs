@@ -86,6 +86,30 @@ pub struct Feature {
     pub magnitude: u32,
 }
 
+/// Fraction of a world's land (or ocean) cell count below which a connected
+/// component is a quantization artifact rather than a feature, not "how
+/// much land/ocean must exist for a floor to apply". Shared by the
+/// `GeneratedTerrain` provider's Landmass/Sea floors (`provider.rs`) and the
+/// lab's `continent-count` metric (`windows/lab/src/metrics.rs`) so the two
+/// definitions of "is this a continent" cannot drift apart — a single
+/// constant, not two copies of the same literal. Earth-calibrated:
+/// Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does
+/// not.
+/// type-audit: bare-ok(ratio)
+pub const PROPORTIONAL_SIZE_FLOOR_FRACTION: f64 = 0.005;
+
+/// Minimum a proportional size floor (`PROPORTIONAL_SIZE_FLOOR_FRACTION` ×
+/// a world's land/ocean extent) may fall to, regardless of how small that
+/// extent is. The fraction alone is unbounded below: on a world with under
+/// ~200 land cells it floors to less than 1, which admits every single-cell
+/// component — exactly the quantization-artifact case a floor exists to
+/// exclude in the first place (land is a threshold on a continuous field,
+/// so a lone cell is noise, not a landmass). 2 is the smallest value that
+/// rules that case out: a component must span at least two cells to be
+/// more than a single point.
+/// type-audit: bare-ok(count)
+pub const PROPORTIONAL_SIZE_FLOOR_MIN: usize = 2;
+
 /// Every component of `member` at or above `floor` cells, as features of
 /// `class`. Below the floor a component is not a small feature — it is not a
 /// feature, and stays anonymous.

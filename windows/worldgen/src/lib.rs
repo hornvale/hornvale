@@ -5184,8 +5184,8 @@ pub fn gazetteer_class_summaries(
 ) -> Result<Vec<hornvale_explain::GazetteerClassSummary>, BuildError> {
     Ok(gazetteer_class_entries(world, 1)?
         .into_iter()
-        .filter_map(|(class, total, mut entries)| {
-            let largest = entries.pop()?;
+        .filter_map(|(class, total, entries)| {
+            let largest = entries.into_iter().next()?;
             Some(hornvale_explain::GazetteerClassSummary {
                 class,
                 total,

@@ -4,7 +4,10 @@ use crate::boundaries::CellBoundary;
 use crate::carve::Provenance;
 use crate::channel::{ChannelNetwork, Transverse};
 use crate::globe::{GenesisOutcome, TectonicGlobe};
-use crate::landscape::{self, Feature, FeatureClass, FeatureIndex};
+use crate::landscape::{
+    self, Feature, FeatureClass, FeatureIndex, PROPORTIONAL_SIZE_FLOOR_FRACTION,
+    PROPORTIONAL_SIZE_FLOOR_MIN,
+};
 use crate::plates::dot;
 use crate::water::WaterKind;
 use hornvale_kernel::{CellId, Geosphere, ReferenceElevation, math};
@@ -123,9 +126,20 @@ impl GeneratedTerrain {
             .count();
         // Floors: MEASURED (Task 1, controller-ruled) — see the doc comment
         // on each class arm below. Landmass/Sea scale with this world's own
-        // land/ocean extent; SaltLake/River are fixed constants.
-        let landmass_floor = (0.005 * total_land as f64) as usize;
-        let sea_floor = (0.005 * total_ocean as f64) as usize;
+        // land/ocean extent; SaltLake/River are fixed constants. `.ceil()`,
+        // not truncation, so this is exactly the `continent-count` metric's
+        // own rule (`sizes.iter().filter(|&&s| s as f64 >= floor)`,
+        // `windows/lab/src/metrics.rs`) rather than a strictly looser one —
+        // truncating would admit a component whose size lands in
+        // `[trunc(floor), floor)` that the census does not count. `.max()`
+        // against `PROPORTIONAL_SIZE_FLOOR_MIN` keeps the floor from
+        // reaching zero (or 1, which is equally toothless: every nonempty
+        // component already has size >= 1) on a small world.
+        let landmass_floor = ((PROPORTIONAL_SIZE_FLOOR_FRACTION * total_land as f64).ceil()
+            as usize)
+            .max(PROPORTIONAL_SIZE_FLOOR_MIN);
+        let sea_floor = ((PROPORTIONAL_SIZE_FLOOR_FRACTION * total_ocean as f64).ceil() as usize)
+            .max(PROPORTIONAL_SIZE_FLOOR_MIN);
         let landmass: Vec<Feature> =
             landscape::classify(&geosphere, FeatureClass::Landmass, land, landmass_floor);
         let sea: Vec<Feature> = landscape::classify(
