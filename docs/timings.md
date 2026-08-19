@@ -1618,3 +1618,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T16:21:20Z | gate-commit | 41.682 | 125.676 | 47.236 | 4.15 | 0 | 67cad5491 | fix/census-two-tier-budget | lefford | 40 |
 | 2026-08-19T16:27:16Z | sluice:artifacts | 59.887 | 531.345 | 21.366 | 9.23 | 0 | e2532446b |  | lefford | 40 |
 | 2026-08-19T16:27:51Z | sluice:outboard | 35.054 | 21.891 | 35.839 | 1.65 | 0 | 247073f1a |  | lefford | 40 |
+| 2026-08-19T16:34:39Z | sluice:gate | 407.606 | 10862.979 | 556.179 | 28.02 | 0 | af1ee1bea |  | lefford | 40 |

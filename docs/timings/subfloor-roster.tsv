@@ -1192,7 +1192,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1200,7 +1200,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1260,7 +1259,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2427,7 +2425,6 @@ hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_
 hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_rests_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
-hornvale-vessel::hornvale_vessel$liveness::tests::the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe
 hornvale-vessel::hornvale_vessel$liveness::tests::the_predator_weight_derives_from_carnivory
 hornvale-vessel::hornvale_vessel$liveness::tests::the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip
 hornvale-vessel::hornvale_vessel$liveness::tests::the_shudder_is_felt_on_the_phantom_then_discharged_then_disproven
@@ -2493,10 +2490,8 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
-hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
 hornvale-vessel::lantern_lens$the_lens_can_be_declined
 hornvale-vessel::lantern_lens$the_lens_gives_a_dichromat_no_hue_it_did_not_have
 hornvale-vessel::lantern_lens$the_lens_is_a_deliberate_change_not_rounding_noise
@@ -2863,9 +2858,10 @@ hornvale::build_path_embedding$production_code_embeds_no_new_build_paths
 hornvale::build_path_embedding$the_frozen_list_only_shrinks
 hornvale::build_path_embedding$the_scan_actually_resolves_production_trees
 hornvale::cave_kind_correspondence$every_cave_kind_has_exactly_one_cave_formation
+hornvale::census_duration$a_census_over_the_alarm_threshold_owes_a_profiling_followup
 hornvale::census_duration$the_census_ledger_has_rows_this_test_can_read
 hornvale::census_duration$the_chronologically_latest_row_wins_even_when_it_is_not_last_in_the_file
-hornvale::census_duration$the_latest_census_is_within_budget
+hornvale::census_duration$the_latest_census_is_under_the_refusal_ceiling
 hornvale::claim_shape$every_seed_looping_test_in_the_repo_declares_its_claim_shape
 hornvale::claim_shape$the_detected_seed_looping_count_has_not_silently_collapsed
 hornvale::claim_shape$the_scan_flags_an_untagged_seed_loop_and_passes_a_tagged_one
