@@ -257,6 +257,24 @@ fn realized_worked_fraction(level: &Level) -> f64 {
 /// stairs-up cell in the last leaf — deterministic picks off the same
 /// partition tree `generate_level_with_water` already built, matching
 /// `region_first_leaf_rect`'s re-derivation pattern.
+///
+/// **Inlines `build_region`/`leaves()` rather than calling
+/// `region_first_leaf_rect`**, deliberately: that helper only returns the
+/// *first* leaf, and this function also needs the *last* one for
+/// `StairsUp`, so reusing it would mean a second `build_region` call over
+/// the same extent/seed for no benefit — this way the tree is built once.
+///
+/// **Order matters for the single-leaf case.** When the partition tree has
+/// exactly one leaf, `first == last`, and both stairs are searched for in
+/// the same rect. The down-stairs write below happens first and mutates
+/// `level.cells` in place, so the up-stairs search below it reads that
+/// mutation live — `first_walkable_cell` no longer matches the just-placed
+/// `StairsDown` cell against `Floor`/`Flooded`, so it lands on a *different*
+/// walkable cell (or, correctly, none, if the leaf had only one). Do not
+/// refactor `first_walkable_cell` to read a cached/snapshotted cell state:
+/// that would let the up-stairs silently overwrite the down-stairs (or vice
+/// versa) on any single-leaf rung whose leaf has exactly one walkable cell.
+/// Pinned by `stairs_down_and_stairs_up_never_share_a_cell` below.
 fn place_connections(level: &mut Level, extent: Rect, has_up: bool, seed: Seed) {
     let (tree, _dof) = region::build_region(extent, seed);
     let leaf_rects = region::leaves(&tree);
@@ -273,9 +291,9 @@ fn place_connections(level: &mut Level, extent: Rect, has_up: bool, seed: Seed) 
     }
 }
 
-/// The first `Floor`/`Flooded` cell found in `rect`, in row-major order
-/// within the rectangle — `place_connections`' own search for somewhere
-/// standable to put a stairs cell.
+/// The first `Floor`/`Flooded` cell found in `rect`, in column-major order
+/// within the rectangle (x outer, y inner) — `place_connections`' own
+/// search for somewhere standable to put a stairs cell.
 fn first_walkable_cell(level: &Level, rect: Rect) -> Option<Cell> {
     for x in rect.x..(rect.x + rect.w) {
         for y in rect.y..(rect.y + rect.h) {
@@ -615,6 +633,106 @@ mod tests {
                 assert!(has_up, "level {i} is missing its stairs up");
             }
         }
+    }
+
+    /// claim: invariant(seed: 0..200) — down-stairs and up-stairs never
+    /// share a cell, on any level of any seed in the sweep, including the
+    /// common case (`region::split_probability(0) == 0.35`, so a
+    /// no-split single-leaf partition is the majority outcome at depth 0)
+    /// where the partition tree has exactly one leaf and both stairs are
+    /// searched for in the very same rect. A prior review traced
+    /// `place_connections` and confirmed this holds today because
+    /// `first_walkable_cell` reads `level.cells`' LIVE state — the
+    /// down-stairs write happens first and mutates the map, so the
+    /// up-stairs search no longer matches that cell against
+    /// `Floor`/`Flooded` — but nothing pinned it: reordering the two writes,
+    /// or refactoring the walkable-cell search to read a cached/snapshotted
+    /// state instead of live `level.cells`, could silently make one
+    /// placement overwrite the other with no test catching it.
+    ///
+    /// Asserts THREE things, deliberately, not just non-collision: (1)
+    /// every level has *exactly one* `StairsDown` cell — guaranteed by
+    /// `carve::tests::every_algorithm_produces_at_least_one_floor_cell`'s
+    /// own contract (every leaf gets >= 1 `Floor` cell, and the first leaf
+    /// always exists), so this must never be zero; (2) every level but the
+    /// first has *at most one* `StairsUp` cell; (3) when both are present,
+    /// they differ. (1) is the one that actually catches a collision that
+    /// silently overwrites the down-stairs — a bare non-collision check
+    /// (`assert_ne!` only, guarded by non-empty loops) passes vacuously
+    /// when a collision empties one side's `Vec` via `BTreeMap` overwrite,
+    /// which is exactly what happened when this was verified against a
+    /// deliberately reintroduced cached-snapshot mutation of
+    /// `place_connections` (both writes read a pre-mutation clone instead of
+    /// live `level.cells`): the mutation compiled, every level still got a
+    /// `StairsUp` cell, but `level 2`'s `StairsDown` cell vanished (silently
+    /// overwritten by the `StairsUp` write to the same cell) — caught by
+    /// assertion (1) here, and separately by the pre-existing
+    /// `every_level_but_the_first_has_stairs_up_every_level_has_stairs_down`
+    /// test at `Seed(6)`, which is not guaranteed to hit the single-leaf
+    /// path on every future edit the way this sweep is. Also asserts the
+    /// sweep actually exercises the single-leaf case (a positive control),
+    /// so it cannot pass vacuously if the extent or seed range ever changes
+    /// to avoid that path.
+    #[test]
+    fn stairs_down_and_stairs_up_never_share_a_cell() {
+        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [DelveRung::Undercroft, DelveRung::Shallows];
+        let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
+        let depths_m = [20.0, 60.0];
+        const TRIALS: u64 = 200;
+        let mut single_leaf_levels_probed = 0;
+        for s in 0..TRIALS {
+            let levels = generate_descent(
+                &rungs,
+                CaveKind::Fracture,
+                &origins,
+                &depths_m,
+                500.0,
+                Seed(s),
+            );
+            for (i, level) in levels.iter().enumerate() {
+                let down_cells: Vec<Cell> = level
+                    .cells
+                    .iter()
+                    .filter(|(_, k)| **k == LevelCellKind::StairsDown)
+                    .map(|(c, _)| *c)
+                    .collect();
+                let up_cells: Vec<Cell> = level
+                    .cells
+                    .iter()
+                    .filter(|(_, k)| **k == LevelCellKind::StairsUp)
+                    .map(|(c, _)| *c)
+                    .collect();
+                assert_eq!(
+                    down_cells.len(),
+                    1,
+                    "seed {s} level {i}: expected exactly one StairsDown cell, found {down_cells:?}"
+                );
+                assert!(
+                    up_cells.len() <= 1,
+                    "seed {s} level {i}: expected at most one StairsUp cell, found {up_cells:?}"
+                );
+                for down in &down_cells {
+                    for up in &up_cells {
+                        assert_ne!(
+                            down, up,
+                            "seed {s} level {i}: down-stairs and up-stairs share cell {down:?}"
+                        );
+                    }
+                }
+                if level.leaf_styles.len() == 1 && i > 0 {
+                    single_leaf_levels_probed += 1;
+                }
+            }
+        }
+        assert!(
+            single_leaf_levels_probed > 0,
+            "this sweep never exercised the single-leaf (first-leaf-equals-last-leaf) \
+             case both stairs must share a rect in — widen the seed range or rung \
+             count so the test is not vacuous"
+        );
     }
 
     /// claim: rate(seed: single) — asserts a determinism-vs-correlation
