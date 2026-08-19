@@ -72,16 +72,29 @@
 //! cause is structural, in [`gen_span`] and [`Accumulation::step`], and has
 //! nothing to do with `Crossing` at all.
 //!
-//! **Re-derived against the merge product, that structural reading is
-//! STRONGER than it was when it was written.** On the pre-absorption
-//! substrate the two arms differed — 36 under `Free` against 90 under
-//! `ContactWeighted`, almost all of the rise on `additive` — so the arm
-//! looked like it moved the defect and every `additive` figure downstream
-//! carried a CONFOUNDED annotation. On the tree this campaign lands on the
+//! **Re-derived against the merge product, and the two halves of that
+//! reading fared differently. Only one of them is a vindication.** On the
+//! pre-absorption substrate the two arms differed — 36 under `Free` against
+//! 90 under `ContactWeighted`, almost all of the rise on `additive` — so the
+//! arm looked like it moved the defect and every `additive` figure downstream
+//! carried a CONFOUNDED annotation. On the tree this campaign lands on, the
 //! two arms are IDENTICAL at 49, all of it `additive`, with `quadrature` and
-//! `multiplicative` at exactly 0 under both. `Crossing` does not move this
-//! defect at all here, which is what the structural argument predicts and
-//! what the pre-absorption numbers muddied.
+//! `multiplicative` at exactly 0 under both, and the two arms' defective
+//! `(holder, rule)` SETS are identical too (symmetric difference 0, measured
+//! below rather than inferred from equal counts).
+//!
+//! - **ADDITIVE-ONLY is what telescoping predicts, and it now holds
+//!   exactly.** As executed it was VIOLATED: `quadrature` ran 4 -> 2, which a
+//!   structurally additive-only account does not allow. At 0/0 it holds. That
+//!   half is a genuine strengthening.
+//! - **ARM-INVARIANCE IS NOT PREDICTED BY TELESCOPING AND MUST NOT BE CLAIMED
+//!   AS SUCH.** Telescoping says additive width is hop-blind WITHIN a
+//!   same-people segment. `Crossing` reprices CROSS-people steps, which
+//!   changes which route wins and therefore which holders get scored at all —
+//!   so a count that moved would have been perfectly compatible with
+//!   telescoping. The pre-absorption 36 -> 90 was UNEXPLAINED BY the account,
+//!   not evidence AGAINST it, and the present 49 -> 49 is an observation the
+//!   account is silent about rather than a confirmation of it.
 //!
 //! `gen_span(teller, hearer) = |founded(hearer) - founded(teller)| / g`
 //! (`amplitude.rs:31-51`), where `g` is read from `teller` — the CURRENT
@@ -698,6 +711,14 @@ struct Cell {
     capped_endings: usize,
 }
 
+/// One defective `(holder, rule)` cell's IDENTITY: `(seed, rule index,
+/// subject, holder)`.
+///
+/// The seed is part of the key because [`EntityId`]s are minted per world and
+/// repeat across seeds — two different worlds' holders can carry the same id,
+/// and a set keyed without the seed would silently merge them.
+type DefectId = (u64, usize, EntityId, EntityId);
+
 /// One seed's whole contribution: [`Cell`], indexed by [`Crossing::ALL`] then
 /// [`Accumulation::ALL`].
 #[derive(Clone, Default)]
@@ -710,6 +731,13 @@ struct SeedRow {
     cells: [[Cell; 3]; 2],
     /// Up to a few not-argmin samples, for the readout.
     samples: Vec<String>,
+    /// **WHICH** cells were defective, per [`Crossing`] arm — not how many.
+    ///
+    /// [`Cell::not_argmin`] is a COUNT, and a count cannot distinguish "the
+    /// same cells are defective under both arms" from "two disjoint sets of
+    /// the same size are". The readout draws a set-level conclusion, so it
+    /// needs a set-level measurement; this is it.
+    defects: [BTreeSet<DefectId>; 2],
 }
 
 /// Every quantity this file asks for, over one world.
@@ -792,6 +820,7 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
                         });
                     if !tied_has_shipped {
                         cell.not_argmin += 1;
+                        row.defects[ci].insert((seed, ri, e.subject, *holder));
                         if row.samples.len() < 6 {
                             row.samples.push(format!(
                                 "seed {seed} {}/{} subj {:?} holder {:?}: shipped hops={} rung={} \
@@ -919,6 +948,46 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
     for line in samples.iter().take(6) {
         println!("    {line}");
     }
+
+    // =====================================================================
+    // THE SET-LEVEL COMPARISON. A COUNT CANNOT ANSWER A SET-LEVEL QUESTION.
+    //
+    // Every column above is an aggregate, and `n == n` between the two arms
+    // is consistent with two DISJOINT sets of size n. Reporting "the penalty
+    // does not move this defect" off equal counts would be exactly the
+    // right-measurement/wrong-attribution shape this thread keeps hitting.
+    // So the identities are carried out of `measure_seed` and diffed here:
+    // the symmetric difference is the number a set-level claim needs, and it
+    // costs one BTreeSet per arm on a population of tens.
+    //
+    // REPORTED, NOT ASSERTED. Whether the penalty moves this defect is a
+    // finding, not a control, and the file's rule is that only controls are
+    // asserted.
+    // =====================================================================
+    let free_set: BTreeSet<DefectId> = rows
+        .iter()
+        .flat_map(|r| r.defects[0].iter().copied())
+        .collect();
+    let cw_set: BTreeSet<DefectId> = rows
+        .iter()
+        .flat_map(|r| r.defects[1].iter().copied())
+        .collect();
+    let both = free_set.intersection(&cw_set).count();
+    let only_free = free_set.difference(&cw_set).count();
+    let only_cw = cw_set.difference(&free_set).count();
+    println!(
+        "\n  WHICH CELLS, NOT HOW MANY (the set-level comparison the counts above cannot make): \
+         free {} defective (holder, rule) cells, contact-weighted {}, in BOTH {}, free-only {}, \
+         contact-weighted-only {} — symmetric difference {}. Two equal counts are consistent \
+         with two disjoint sets, so this is the measurement a claim about the penalty NOT \
+         MOVING the defect actually rests on.",
+        free_set.len(),
+        cw_set.len(),
+        both,
+        only_free,
+        only_cw,
+        only_free + only_cw,
+    );
 
     println!(
         "\n  READING: Crossing::Free's aggregate is this task's own reproduction of \

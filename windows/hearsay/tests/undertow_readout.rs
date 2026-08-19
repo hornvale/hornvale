@@ -1652,7 +1652,9 @@ fn the_undertow_readout_over_a_seed_panel() {
     println!("\n=== §6.3 THE NAMED NULL — BOTH LEVELS, SIDE BY SIDE ===");
     println!(
         "  §3.4 measured a SELECTION change that rewrote 45.7% of holders and moved the \
-         aggregate by <= 2 events of 124. The live null is that §5.1 does the same. A readout \
+         aggregate by <= 2 events of 124 — PRE-ABSORPTION FIGURES, quoted verbatim from \
+         frozen §6.3; re-derived §3.4 reads 41.9% and <= 4 of 100, and the shape §6.3 names \
+         is unchanged by the difference. The live null is that §5.1 does the same. A readout \
          printing only the aggregate cannot tell a working mechanism from an inert one, and \
          this substrate has produced that shape once already."
     );
