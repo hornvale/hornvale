@@ -65,11 +65,23 @@ mod tests {
     /// Every member appears in exactly one component. THIS is what makes
     /// "lowest cell id" a valid identity — if a cell could appear twice, two
     /// features would claim it.
+    ///
+    /// The predicate (`c.0 % 13 < 2`) is chosen to fragment the sphere into
+    /// many small components (56 on `Geosphere::new(3)`, confirmed below) —
+    /// a predicate yielding only one or two components could never exercise
+    /// cross-component contamination, which is the failure mode this test
+    /// exists to catch.
     #[test]
     fn components_partition_their_members() {
         let geo = Geosphere::new(3);
-        let member = |c: CellId| !c.0.is_multiple_of(3);
+        let member = |c: CellId| c.0 % 13 < 2;
         let comps = components(&geo, member);
+        assert!(
+            comps.len() >= 30,
+            "predicate must yield many components to exercise cross-component \
+             contamination, got {} (expected 56 on Geosphere::new(3))",
+            comps.len()
+        );
         let mut seen = BTreeSet::new();
         for comp in &comps {
             for cell in comp {
@@ -84,10 +96,42 @@ mod tests {
     }
 
     /// Components arrive in identity order, so no call site has to sort.
+    ///
+    /// The predicate (`c.0 % 11 < 3`) is chosen to yield many components (49
+    /// on `Geosphere::new(3)`, confirmed below) whose sizes are **not**
+    /// monotonically related to their identity order — sizes run
+    /// `[1, 1, 3, 1, 8, 13, 1, 9, 3, 2, 4, 7, ...]`, repeatedly rising and
+    /// falling. The failure mode this test guards against is "components
+    /// come back in size order, or insertion order, rather than identity
+    /// order"; a fixture whose sizes happen to already be monotonic (or a
+    /// two-component fixture, where insertion order and size order and
+    /// identity order all trivially agree half the time) cannot distinguish
+    /// identity order from those other orders.
     #[test]
     fn components_are_ordered_by_their_lowest_cell_id() {
         let geo = Geosphere::new(3);
-        let comps = components(&geo, |c| c.0 % 5 < 3);
+        let comps = components(&geo, |c| c.0 % 11 < 3);
+        assert!(
+            comps.len() >= 30,
+            "predicate must yield many components, got {} (expected 49 on Geosphere::new(3))",
+            comps.len()
+        );
+        let sizes: Vec<usize> = comps.iter().map(BTreeSet::len).collect();
+        let mut ascending = sizes.clone();
+        ascending.sort_unstable();
+        let mut descending = sizes.clone();
+        descending.sort_unstable_by(|a, b| b.cmp(a));
+        assert_ne!(
+            sizes, ascending,
+            "fixture sizes must not already be ascending, or this test cannot \
+             distinguish identity order from size order"
+        );
+        assert_ne!(
+            sizes, descending,
+            "fixture sizes must not already be descending, or this test cannot \
+             distinguish identity order from size order"
+        );
+
         let firsts: Vec<u32> = comps
             .iter()
             .map(|c| c.first().expect("nonempty").0)
