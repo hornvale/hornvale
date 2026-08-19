@@ -1860,3 +1860,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T22:58:56Z | gate-commit | 74.370 | 51.272 | 12.385 | 0.86 | 0 | e61a11fc | campaign/the-planes | MacBookPro | 10 |
 | 2026-08-19T23:10:47Z | prewarm | 202.181 | 1078.527 | 41.013 | 5.54 | 0 | b5a0e047 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-19T23:11:09Z | gate-commit | 58.390 | 90.815 | 15.727 | 1.82 | 0 | b5a0e047 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-19T23:22:10Z | gate-commit | 40.220 | 97.943 | 25.542 | 3.07 | 0 | ccd9076e | campaign/the-winze | MacBookPro | 10 |
