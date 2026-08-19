@@ -1657,3 +1657,14 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T12:13:02Z | sluice:heavy | 2026.461 | 33016.541 | 687.275 | 16.63 | 0 | d06ce9065 |  | lefford | 40 |
 | 2026-08-19T14:14:53Z | rebaseline | 64.280 | 232.464 | 11.953 | 3.80 | 0 | fa2222ca | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-19T14:43:16Z | gate-commit | 321.126 | 98.152 | 127.691 | 0.70 | 0 | fa2222ca | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-19T13:06:06Z | gate-commit | 155.608 | 3128.939 | 358.767 | 22.41 | 0 | ca6f34310 | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:11:15Z | gate-commit | 42.428 | 128.596 | 49.369 | 4.19 | 0 | ca6f34310 | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:12:32Z | gate-commit | 42.258 | 123.617 | 47.813 | 4.06 | 0 | 9fb0d5122 | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:22:47Z | gate-commit | 44.397 | 128.369 | 49.104 | 4.00 | 0 | 06b74a94b | fix/census-path-and-main-guard | lefford | 40 |
+| 2026-08-19T13:24:31Z | sluice:artifacts | 76.393 | 607.656 | 26.489 | 8.30 | 0 | 50a9e6a6a |  | lefford | 40 |
+| 2026-08-19T13:25:09Z | sluice:outboard | 37.279 | 24.007 | 36.127 | 1.61 | 0 | 3256252cb |  | lefford | 40 |
+| 2026-08-19T13:31:15Z | sluice:gate | 366.172 | 9912.337 | 405.463 | 28.18 | 0 | b2ca6c0a0 |  | lefford | 40 |
+| 2026-08-19T13:48:55Z | sluice:seam-guard | 1059.738 | 21081.740 | 1101.145 | 20.93 | 0 | 2b28d51d3 |  | lefford | 40 |
+| 2026-08-19T13:53:11Z | sluice:clients | 255.835 | 456.697 | 35.321 | 1.92 | 0 | 4337b206d |  | lefford | 40 |
+| 2026-08-19T14:26:36Z | sluice:heavy | 2004.911 | 32921.038 | 705.474 | 16.77 | 0 | e03935864 |  | lefford | 40 |
+| 2026-08-19T14:52:36Z | rebaseline | 56.502 | 229.248 | 11.657 | 4.26 | 0 | 1dae62b0 | campaign/the-burr | MacBookPro | 10 |
