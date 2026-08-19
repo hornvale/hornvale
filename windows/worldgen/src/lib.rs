@@ -88,6 +88,7 @@ pub mod components;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
+pub mod gazetteer;
 pub mod graph_derive;
 pub mod hazard;
 pub mod history_bake;
@@ -112,6 +113,7 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
+pub use gazetteer::{feature_name, feature_salt, gazetteer_features};
 pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,
