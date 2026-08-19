@@ -253,6 +253,44 @@ fn realized_worked_fraction(level: &Level) -> f64 {
     worked as f64 / level.leaf_styles.len() as f64
 }
 
+/// Place a stairs-down cell in the first leaf and, if `has_up`, a
+/// stairs-up cell in the last leaf — deterministic picks off the same
+/// partition tree `generate_level_with_water` already built, matching
+/// `region_first_leaf_rect`'s re-derivation pattern.
+fn place_connections(level: &mut Level, extent: Rect, has_up: bool, seed: Seed) {
+    let (tree, _dof) = region::build_region(extent, seed);
+    let leaf_rects = region::leaves(&tree);
+    if let Some(&first) = leaf_rects.first()
+        && let Some(cell) = first_walkable_cell(level, first)
+    {
+        level.cells.insert(cell, LevelCellKind::StairsDown);
+    }
+    if has_up
+        && let Some(&last) = leaf_rects.last()
+        && let Some(cell) = first_walkable_cell(level, last)
+    {
+        level.cells.insert(cell, LevelCellKind::StairsUp);
+    }
+}
+
+/// The first `Floor`/`Flooded` cell found in `rect`, in row-major order
+/// within the rectangle — `place_connections`' own search for somewhere
+/// standable to put a stairs cell.
+fn first_walkable_cell(level: &Level, rect: Rect) -> Option<Cell> {
+    for x in rect.x..(rect.x + rect.w) {
+        for y in rect.y..(rect.y + rect.h) {
+            let cell = Cell(x, y);
+            if matches!(
+                level.cells.get(&cell),
+                Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
+            ) {
+                return Some(cell);
+            }
+        }
+    }
+    None
+}
+
 /// Generate every rung of one descent under one entrance (spec §4.5).
 /// `CaveKind` is fixed for the whole descent (a cave system has one kind —
 /// see the spec's §4.5 correction); `origins`/`depths_m` vary per rung,
@@ -293,7 +331,7 @@ pub fn generate_descent(
     for (i, &rung) in rungs.iter().enumerate() {
         let extent = generate_level_extent(rung);
         let rung_seed = Seed(descent_stream.next_u64());
-        let level = generate_level_with_water(
+        let mut level = generate_level_with_water(
             extent,
             cave_kind,
             origins[i],
@@ -302,6 +340,7 @@ pub fn generate_descent(
             bias,
             rung_seed,
         );
+        place_connections(&mut level, extent, i > 0, rung_seed);
         bias = realized_worked_fraction(&level);
         levels.push(level);
     }
@@ -538,6 +577,44 @@ mod tests {
             Seed(1),
         );
         assert_eq!(levels.len(), 2);
+    }
+
+    /// claim: invariant(seed: single) — asserts a connectivity invariant
+    /// (every level down-connected, every level but the shallowest also
+    /// up-connected) at one representative seed.
+    #[test]
+    fn every_level_but_the_first_has_stairs_up_every_level_has_stairs_down() {
+        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [DelveRung::Undercroft, DelveRung::Shallows, DelveRung::Deeps];
+        let origins = [ChamberOrigin::Found; 3];
+        let depths_m = [20.0, 60.0, 120.0];
+        let levels = generate_descent(
+            &rungs,
+            CaveKind::Fracture,
+            &origins,
+            &depths_m,
+            500.0,
+            Seed(6),
+        );
+
+        for (i, level) in levels.iter().enumerate() {
+            let has_down = level
+                .cells
+                .values()
+                .any(|k| *k == LevelCellKind::StairsDown);
+            let has_up = level.cells.values().any(|k| *k == LevelCellKind::StairsUp);
+            assert!(has_down, "level {i} is missing its stairs down");
+            if i == 0 {
+                assert!(
+                    !has_up,
+                    "the shallowest level must not have stairs up (it leads to Surface, not a generated level)"
+                );
+            } else {
+                assert!(has_up, "level {i} is missing its stairs up");
+            }
+        }
     }
 
     /// claim: rate(seed: single) — asserts a determinism-vs-correlation
