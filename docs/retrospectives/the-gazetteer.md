@@ -4,7 +4,7 @@
 
 ## Every defect this campaign found originated in the controller's own text, and none in implementer code
 
-Ten instances, all traceable to the spec or the plan rather than to what an
+Twelve instances, all traceable to the spec or the plan rather than to what an
 implementer wrote against them, and all caught by someone *measuring*
 something rather than re-reading it:
 
@@ -111,6 +111,73 @@ spec, and it is the more useful of the two by a wide margin. Both instances
 share a shape: the informative measurement was adjacent to the frozen one,
 not identical to it, and the freeze did not prevent finding it — it just did
 not ask for it.
+
+## Two the retrospective itself missed, because it was written too early
+
+This document was authored at Task 10, before the final whole-branch review
+and before the absorption. Both found defects, and the count above was
+originally "ten" for that reason alone — a retrospective written before the
+last checks run is a retrospective that under-reports.
+
+- **A floor that truncated where the rule it claimed to reuse rounds up.**
+  The campaign chose `continent-count`'s proportional 0.5%-of-land floor
+  *because* reusing it would give one definition of "is this a continent"
+  rather than two that drift apart. The census compares in float
+  (`s as f64 >= 0.005 * land as f64`); the plan specified
+  `(0.005 * total_land as f64) as usize`, which truncates and therefore
+  admits any component in `[trunc(floor), floor)`. It was the second
+  definition. Measured over seeds 1-400 the two disagree on **four worlds**
+  (111, 112, 221, 287); seed 111 has a 56-cell component against a floor of
+  56.205. The stated rationale was the precise property the code lacked, and
+  eight per-task reviews passed over it — it took a whole-branch reviewer
+  holding both call sites at once. Fixed with `.ceil()`, a shared exported
+  constant, and a `.max(2)` closing a related hole where a heavy-ocean world
+  could reach a floor of zero and name every single-cell rock.
+- **A generated artifact never regenerated.** The close commit added
+  `docs/decisions/0147` and did not regenerate
+  `docs/digest/decisions-in-force.md`, so the committed index omitted its own
+  newest record.
+
+## Absorb main at every stage boundary — the cost of skipping is stale premises, not conflicts
+
+This campaign ran **ten tasks with zero absorptions, seventy-one commits
+behind main**. Nothing caught it: not the local gate, not eight task reviews,
+not the whole-branch review. It surfaced because Nathan asked whether the
+branch had merged from main recently.
+
+**A green stage gate is not a substitute, and the distinction is easy to
+miss.** The stage gate merges main and the branch *in the chamber* and gates
+that product, so it answers "would this survive contact with main today?"
+mechanically. It does not tell you your **premises** held. Every number this
+campaign measured — 183 land components, the floors yielding 10/1/80/106/208,
+and the five committed H1 regression bands — was taken against the branch's
+terrain, never against merged main's.
+
+What the absorption found, in ascending order of what it would have cost:
+
+1. **The premises survived by luck.** `git log HEAD..origin/main` over
+   `domains/terrain/`, `domains/language/`, `windows/worldgen/` and `kernel/`
+   returned **zero commits**: main's seventy-one commits never touched
+   anything this campaign measures. Had they, five committed regression bands
+   would have been wrong and nothing in the process would have said so.
+2. **One conflict, in a generated file** — the decision digest, where main
+   held 0146 while this branch held 0147. Resolved by *regenerating*, never
+   hand-editing.
+3. **The one that matters: `docs/audits/type-audit-report.md` auto-merged
+   cleanly and was wrong.** `make gate-commit` refused the merge commit
+   outright (`rc=2`, "type-audit-report is stale") and `make rebaseline` moved
+   five lines in it. No-conflict and correctly-merged are unrelated properties
+   for a generated file.
+
+**The irony is worth keeping.** A *conflicted* merge runs `pre-commit`; a
+clean one runs **no hook at all**. The digest conflict is the only reason the
+bad type-audit report surfaced before merge time rather than after.
+
+The practical form: at each stage boundary, `git merge origin/main`, then
+`make rebaseline` **unconditionally**, then the drift check — and never infer
+freshness from a clean merge. Ten minutes at each of ten boundaries is the
+same ten minutes this cost at the end, minus the risk that an entire
+campaign's measurements rest on a premise that has moved.
 
 ## Process notes
 
