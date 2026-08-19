@@ -8,12 +8,15 @@
 
 pub mod accumulate;
 pub mod amplitude;
+pub mod clock;
+pub mod contact;
 pub mod derive;
 pub mod divergence;
 pub mod durations;
 pub mod ladder;
 pub mod lineage;
 pub mod stance;
+pub mod transmission;
 
 /// The hop count of every holder of a claim about `(subject, predicate)`.
 /// Empty when the subject holds no such committed fact.
@@ -156,15 +159,22 @@ pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64> {
 
 /// How many distinct `(precision, object)` variants of one event are held, or
 /// `None` when fewer than three holders qualify (§6's population rule).
+///
+/// **Routes through [`derive::variants_about`], and therefore IGNORES
+/// `walk.policy.contact`** — it takes the arm and throws it away, walking
+/// descent only. Varying `Contact` through this function measures nothing and
+/// returns the same count on every arm, which reads as "contact does nothing":
+/// a wrong attribution wearing a null's clothes. The seam-aware walk is
+/// [`derive::variants_about_accumulating`], which this does not call.
+///
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(count: return)
 pub fn variant_count(
-    ledger: &hornvale_kernel::ledger::Ledger,
-    lineage: &lineage::Lineage,
+    walk: &transmission::Walk,
     ladder: &ladder::PrecisionLadder,
     subject: hornvale_kernel::ledger::EntityId,
     predicate: &str,
 ) -> Option<usize> {
-    let vs = derive::variants_about(ledger, lineage, ladder, subject, predicate);
+    let vs = derive::variants_about(walk, ladder, subject, predicate);
     if vs.len() < 3 {
         return None;
     }
@@ -177,15 +187,22 @@ pub fn variant_count(
 }
 
 /// The hop counts of holders still at the FINEST precision — H1's population.
+///
+/// **Routes through [`derive::variants_about`], and therefore IGNORES
+/// `walk.policy.contact`** — it takes the arm and throws it away, walking
+/// descent only. Varying `Contact` through this function measures nothing and
+/// returns the same hop counts on every arm, which reads as "contact does
+/// nothing": a wrong attribution wearing a null's clothes. The seam-aware walk
+/// is [`derive::variants_about_accumulating`], which this does not call.
+///
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(count: return)
 pub fn finest_precision_hops(
-    ledger: &hornvale_kernel::ledger::Ledger,
-    lineage: &lineage::Lineage,
+    walk: &transmission::Walk,
     ladder: &ladder::PrecisionLadder,
     subject: hornvale_kernel::ledger::EntityId,
     predicate: &str,
 ) -> Vec<u32> {
-    derive::variants_about(ledger, lineage, ladder, subject, predicate)
+    derive::variants_about(walk, ladder, subject, predicate)
         .into_iter()
         .filter(|c| c.precision == hornvale_kernel::Precision::FINEST)
         .map(|c| c.hops)

@@ -18,6 +18,7 @@ pub mod streams;
 pub mod substellar;
 pub mod substrate;
 pub mod temperature;
+pub mod underworld;
 pub mod variants;
 pub mod weather;
 pub mod wetness;

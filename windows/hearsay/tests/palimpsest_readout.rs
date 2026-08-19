@@ -63,12 +63,14 @@ mod common;
 use common::{eid, ledger_with, put, put_on};
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::accumulate::Accumulation;
+use hornvale_hearsay::contact::{ContactGraph, contact_of};
 use hornvale_hearsay::derive::{variants_about_accumulating, witnesses_of};
 use hornvale_hearsay::divergence::maximum_antichain;
 use hornvale_hearsay::durations::PeopleDurations;
 use hornvale_hearsay::ladder::{PeopleLadders, PrecisionLadder};
 use hornvale_hearsay::lineage::{Lineage, lineage_of};
 use hornvale_hearsay::spearman;
+use hornvale_hearsay::transmission::{Transmission, Walk};
 use hornvale_kernel::Precision;
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -138,6 +140,10 @@ impl Readout {
 struct WorldRead {
     /// The founding tree.
     lineage: Lineage,
+    /// The raid seam. Built alongside the lineage so `measure` can hand both
+    /// to a [`Walk`] under `Transmission::AS_SHIPPED`, which never consults
+    /// it, without building it once per rule.
+    contact: ContactGraph,
     /// Per-people generation and lifespan, in std days.
     durations: PeopleDurations,
     /// One ladder per people.
@@ -167,10 +173,15 @@ fn measure(ledger: &Ledger, read: &WorldRead, rule: Accumulation) -> Readout {
     let mut held = 0usize;
     let mut saturated = 0usize;
 
+    let walk = Walk {
+        ledger,
+        lineage: &read.lineage,
+        contact: &read.contact,
+        policy: Transmission::AS_SHIPPED,
+    };
     for subject in &read.events {
         let variants = variants_about_accumulating(
-            ledger,
-            &read.lineage,
+            &walk,
             &read.ladders,
             &read.durations,
             rule,
@@ -241,6 +252,7 @@ fn read_world(
     components: &hornvale_worldgen::WorldComponents,
 ) -> Option<WorldRead> {
     let lineage = lineage_of(ledger);
+    let contact = contact_of(ledger);
     let astronomical = PrecisionLadder::of(ledger);
     let year_days = astronomical
         .labels()
@@ -280,6 +292,7 @@ fn read_world(
 
     Some(WorldRead {
         lineage,
+        contact,
         durations,
         ladders,
         generation_years,
@@ -632,6 +645,7 @@ fn control_world() -> (Ledger, WorldRead) {
     );
 
     let lineage = lineage_of(&led);
+    let contact = contact_of(&led);
     let ladders = PeopleLadders::of(&led, &durations);
     let mut events: Vec<EntityId> = led.find(PREDICATE).map(|fact| fact.subject).collect();
     events.sort();
@@ -639,6 +653,7 @@ fn control_world() -> (Ledger, WorldRead) {
 
     let read = WorldRead {
         lineage,
+        contact,
         durations,
         ladders,
         generation_years,

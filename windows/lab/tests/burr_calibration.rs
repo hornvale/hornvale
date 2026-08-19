@@ -54,9 +54,18 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// move is orthogonal to Stage 4's structural one: the digraph-heavy elf
 /// words the Stage 3 finding turned on (`sh`/`zh`/`ng`) become
 /// single-diacritic trigrams, which is more informative per character than
-/// the two-letter digraph every OTHER bundle still shares. Pinned from the
-/// measured run per decision 0016; never tuned.
-const BASELINE: f64 = 0.7913279132791328;
+/// the two-letter digraph every OTHER bundle still shares.
+///
+/// Absorb of main (Task 16, The Underworld and peers merged in): 0.7994579945799458.
+/// Accuracy **rose** +0.0081. The Burr never changed a word after Stage 5; this
+/// move is The Underworld's placement re-key (decision 0102, keying the bake to a
+/// PLACE not a cell), which shifts which concepts each tongue is exposed to and so
+/// which words populate the dictionary the classifier reads — a different corpus of
+/// the SAME per-family character, measured once more on the merged product. The
+/// campaign's thesis is unaffected: every typological stage still raised
+/// distinguishability, and the merged readout is the highest of the run. Pinned from
+/// the merged run per decision 0016; never tuned.
+const BASELINE: f64 = 0.7994579945799458;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

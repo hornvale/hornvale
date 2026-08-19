@@ -6,8 +6,10 @@
 pub mod boundaries;
 pub mod branch;
 pub mod carve;
+pub mod cave_depth;
 pub mod channel;
 pub mod crust;
+pub mod delve;
 pub mod drainage;
 pub mod elevation;
 pub mod facts;
@@ -29,6 +31,7 @@ pub mod shape;
 pub mod strata;
 pub mod streams;
 pub mod water;
+pub mod water_table;
 
 pub use streams::stream_labels;
 
@@ -41,10 +44,14 @@ pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
 };
+pub use cave_depth::{CAVE_REACH_CEILING_M, cave_depth_reach_m};
 pub use channel::{
     BANK_WIDTH_RATIO, CHANNEL_WIDTH_COEFF, CHANNEL_WIDTH_EXPONENT, ChannelNetwork,
     FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, MEANDER_AMPLITUDE_RATIO, Transverse, band_edges,
     channel_half_width, confinement,
+};
+pub use delve::{
+    DelveRung, HABITABLE_CEILING_K, delta_t_range_of, rung_at_delta_t, rung_at_depth, rungs,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
@@ -63,6 +70,7 @@ pub use strata::{
     geothermal_gradient, temperature_at_depth, unconformity,
 };
 pub use water::{RIVER_MIN_DRAINAGE, RIVER_REACH, WaterKind, river_proximity};
+pub use water_table::{ARABIKA_POROSITY, earth_table_depth_m, is_phreatic, water_table_depth_m};
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Lexicalization, Manifest,

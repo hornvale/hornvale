@@ -13,11 +13,13 @@
 //! family proto) is language-owned and lives in `hornvale-language`.
 #![warn(missing_docs)]
 
+use std::collections::BTreeMap;
+
 use hornvale_kernel::{
-    ANIMAL_PREY, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
-    ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, Ledger, LedgerError, MARINE_FORAGE,
-    MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
-    Void, World, WorldTime,
+    ANIMAL_PREY, AxisValence, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
+    ConditionResponse, Correspondent, DETRITUS, EntityId, EnvironmentAxis, EnvironmentVector, Fact,
+    Ledger, LedgerError, MARINE_FORAGE, MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE,
+    RegistryError, ResourceVector, UnitError, Value, Void, World, WorldTime,
 };
 // `perception_registry()` is keyed by `KindId`, so a caller resolving a
 // species by name (worldgen's `observer_named`, campaign "The Beholding")
@@ -777,11 +779,26 @@ fn xorn_condition_niche() -> ConditionNiche {
 /// creature against directly:
 ///
 /// - **moisture** moves from a mild `0.45` "somewhat wet" lean to `0.90` —
-///   exactly [`hornvale_worldgen::subterranean_substrate`]'s fixed
-///   `SUBTERRANEAN_MOISTURE`, so a real chamber is now a genuine match
-///   rather than an approximation of one — with devotion raised to `0.60`:
-///   this is meant as a real preference now that a real reading exists to
-///   have one about.
+///   which was, when authored, exactly
+///   [`hornvale_worldgen::subterranean_substrate`]'s fixed
+///   `SUBTERRANEAN_MOISTURE`, so a real chamber was a genuine match rather
+///   than an approximation of one — with devotion raised to `0.60`: this is
+///   meant as a real preference now that a real reading exists to have one
+///   about.
+///
+///   **That constant is gone (The Underworld, spec §4.3).** A chamber's
+///   moisture is now derived from its distance above the water table and the
+///   rock's porosity: saturated where the chamber is flooded (68–84% of cave
+///   columns at their reach depth, on the campaign's three seeds) and spread
+///   over roughly `[0.3, 0.8]` where it is not. So `0.90` is no longer the
+///   value every chamber reports; it is an authored preference that a wet
+///   chamber meets and a dry one does not, which is what a preference is
+///   supposed to be. **It is deliberately not re-authored here**: moving a
+///   species' curve at the same moment the reading beneath it moves would
+///   make the two changes unattributable, and nothing measures this curve
+///   today anyway — `warren_readout`'s P1 tripwire shows the Liebig minimum
+///   is bound by the unfloored elevation axis on every cave-bearing cell, so
+///   moisture does not reach the result at all.
 /// - **insolation** moves from `0.03` (the darkest available *surface*
 ///   cells, a proxy for "inside a cave") to `0.0` exactly — the true
 ///   subterranean reading — with devotion raised to `0.70`, the strongest
@@ -802,7 +819,9 @@ fn rust_monster_condition_niche() -> ConditionNiche {
             width: 20.0,
             devotion: 0.50,
         },
-        // Mirrors SUBTERRANEAN_MOISTURE exactly — see the frame note above.
+        // Mirrored `SUBTERRANEAN_MOISTURE` when authored; that constant was
+        // retired by The Underworld and this is now an ordinary authored
+        // preference — see the frame note above.
         moisture: ConditionResponse {
             optimum: 0.90,
             width: 0.22,
@@ -5084,6 +5103,457 @@ pub fn instance_biosphere(
     Some(traits)
 }
 
+/// A kind's preference on **one** environment axis: the species-side atom of
+/// an [`EnvironmentNiche`].
+///
+/// Two variants rather than one struct, and the reason is constitutional to
+/// the basis rather than stylistic. `hornvale_kernel::AxisValence` declares
+/// the axes "deliberately **not** homogeneous, and a consumer must not assume
+/// otherwise": `PHYSIOGNOMY` is `Ordinal`, `ENERGY`/`WATER`/`LIGHT` are
+/// `Scalar`, `SUBSTRATE` is `Nominal`, `DISTURBANCE` is a `Rate`. A magnitude
+/// reading of a nominal axis is meaningless — soil at `0.0` is not "closer to"
+/// sand at `0.2` than to organic at `1.0`, they are simply different classes —
+/// and [`EnvironmentNiche::new`] refuses the combinations that would assume
+/// otherwise, so the variant a preference carries always matches its axis's
+/// valence. That is why [`environment_fit`] can dispatch on the variant alone
+/// and never needs to look an axis's valence up again.
+///
+/// Deliberately **not** `hornvale_kernel::ConditionResponse`, which
+/// [`ConditionNiche`] uses for the four climate axes. That type is a Gaussian
+/// over an unbounded field with a sovereignty floor — the right shape for
+/// °C and metres, and the wrong shape here twice over: it would read
+/// `SUBSTRATE`'s class index as a magnitude, and its floor belongs to the
+/// Liebig fast path (`tolerance_liebig`'s single unfloored undercutter) whose
+/// invariant The Axes pinned and this campaign must not disturb.
+/// type-audit: bare-ok(ratio: Graded.preferred), bare-ok(ratio: Graded.tolerance), bare-ok(index: Class.accepted)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum AxisPreference {
+    /// A preferred magnitude on an ordered axis (`Ordinal`, `Scalar`, `Rate`),
+    /// with the breadth of tolerance around it. Fit falls linearly from `1.0`
+    /// at `preferred` to `0.0` a full `tolerance` away, and stays at `0.0`
+    /// beyond — a tent, not a Gaussian, because the axis is bounded and a
+    /// bounded axis does not need an asymptote.
+    Graded {
+        /// The axis value the kind prefers, in the axis's own `[0, 1]` range.
+        preferred: f64,
+        /// How far from `preferred` the kind tolerates before this axis scores
+        /// zero, as a fraction of the axis's `[0, 1]` range. Must lie in
+        /// `(0, 1]`. A kind wanting more breadth than the whole range should
+        /// **decline the axis** instead (see [`EnvironmentNiche`]'s genus
+        /// rule) — that, not a wider number, is how indifference is said.
+        tolerance: f64,
+    },
+    /// The one class a kind accepts on a `Nominal` axis. The value indexes an
+    /// unordered set and is never a magnitude, so the fit is `1.0` on the
+    /// class and `0.0` off it, with no gradient in between.
+    Class {
+        /// The accepted class index, in the axis's own `[0, 1]` range.
+        accepted: f64,
+    },
+}
+
+impl AxisPreference {
+    /// A graded preference tolerant across the **whole** axis range.
+    ///
+    /// The `1.0` is AUTHORED as the neutral default, and it is neutral in an
+    /// exact sense rather than a vague one: at this tolerance the per-axis
+    /// dissimilarity is exactly `|value − preferred|`, so [`environment_fit`]
+    /// reduces bit-for-bit to `1 − d` for Gower's `d` — the instrument Task 6
+    /// measured the underworld corpus with. A narrower tolerance makes a kind
+    /// fussier than that reference; there is no wider one.
+    /// type-audit: bare-ok(ratio: preferred)
+    pub fn graded(preferred: f64) -> AxisPreference {
+        AxisPreference::Graded {
+            preferred,
+            tolerance: 1.0,
+        }
+    }
+
+    /// A nominal-class preference. See [`AxisPreference::Class`].
+    /// type-audit: bare-ok(index: accepted)
+    pub fn class(accepted: f64) -> AxisPreference {
+        AxisPreference::Class { accepted }
+    }
+
+    /// This preference's **dissimilarity** against one place reading, in
+    /// `[0, 1]`: `0.0` is a perfect match. Dissimilarity rather than fit
+    /// because that is what makes [`environment_fit`] the exact complement of
+    /// Gower's distance rather than an approximation of it — the mean is taken
+    /// over dissimilarities and subtracted from one **once**, which is the same
+    /// expression Gower's is, not merely the same value to within rounding.
+    fn dissimilarity(&self, value: f64) -> f64 {
+        match self {
+            AxisPreference::Graded {
+                preferred,
+                tolerance,
+            } => ((value - preferred).abs() / tolerance).min(1.0),
+            // `==` rather than `to_bits()`: two class indices are the same
+            // class or they are not, and `-0.0` is the same class as `0.0`
+            // while its bits are not. Both operands are validated finite, so
+            // there is no NaN case for the comparison to mishandle. This is a
+            // stated, deliberate difference from `distance` in
+            // `domains/climate/tests/underworld.rs`, which compares bits; on
+            // the shipped corpora the two agree, because no authored class
+            // value is a negative zero.
+            AxisPreference::Class { accepted } => {
+                if *accepted == value {
+                    0.0
+                } else {
+                    1.0
+                }
+            }
+        }
+    }
+}
+
+/// A kind's preference stated in the **same basis a place's character is
+/// stated in** — the species-side counterpart to
+/// `hornvale_kernel::EnvironmentVector`, which The Axes specified and deferred
+/// for want of a consumer (its retrospective A-1; this campaign's spec §4.5).
+///
+/// Six axes are declared and five are occupied: `DISTURBANCE` is a `Rate` no
+/// whole-community name can carry a value on (The Axes' A-4), so a niche in
+/// practice speaks to at most the other five. Nothing here special-cases it —
+/// it is simply an axis every corpus declines today.
+///
+/// Sparse, keyed by `EnvironmentAxis::id`, and **the silence is meaningful**:
+///
+/// > **The genus rule.** A niche silent on an axis is INDIFFERENT to it, never
+/// > zero on it.
+///
+/// That is The Axes' own rule, carried across from the place side, where a
+/// formation is a genus and declines any axis its variants disagree on. It is
+/// not a nicety: score a declined axis as a zero and every partially-specified
+/// niche reads as a poor fit everywhere, which fails quietly rather than
+/// loudly. [`environment_fit`] enforces it by construction — it iterates the
+/// niche's own recorded axes and drops any the place does not carry, so a
+/// declined axis is never a term in the mean.
+///
+/// **What this type deliberately does not touch.** [`ConditionNiche`] stays
+/// exactly as it is. This is an additive second vocabulary alongside it, not a
+/// replacement: the Liebig fast path's single unfloored undercutter is
+/// elevation and remains so, which is the invariant The Axes pinned and proved
+/// before deferring this type.
+///
+/// **Why the axis is stored, not just its id.** The axis is kept alongside its
+/// preference rather than reconstructed from the key, so that [`environment_fit`] can look a place's reading up without
+/// consulting `environment_v1_basis()` — the property that makes the basis's
+/// append-only rule sufficient here. The resulting duplication of
+/// `EnvironmentAxis::id` in the key is the same shape decision 0015 ratified
+/// for `PredicateDef.name`, and is kept honest the same way: only
+/// [`EnvironmentNiche::new`] ever inserts, and it always keys by the axis it
+/// stores.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EnvironmentNiche(BTreeMap<u16, (EnvironmentAxis, AxisPreference)>);
+
+impl EnvironmentNiche {
+    /// Validating constructor. Rejects, with the physical reason:
+    ///
+    /// - a `Graded` preference on a `Nominal` axis, or a `Class` preference on
+    ///   any other — the valence mismatch that would read a class index as a
+    ///   magnitude, or throw a magnitude away;
+    /// - a `preferred` or `accepted` outside the axis's `[0, 1]` range, or
+    ///   non-finite;
+    /// - a `tolerance` outside `(0, 1]`, or non-finite — zero would divide by
+    ///   zero and a wider-than-the-range value is spelled by declining the
+    ///   axis instead.
+    ///
+    /// An empty slice is legal and produces the wholly indifferent niche, the
+    /// mirror of `EnvironmentVector`'s legal zero vector. Repeated axis ids
+    /// overwrite rather than combine (last write wins), matching the map-like
+    /// semantics of the sparse representation and `EnvironmentVector::new`.
+    ///
+    /// No `type-audit:` tag: `preferences` carries no bare primitive (it is a
+    /// slice of `(EnvironmentAxis, AxisPreference)`) and neither does the
+    /// return. The kernel's `EnvironmentVector::new` is tagged
+    /// `constructor-edge` because its slice's second element **is** an `f64`;
+    /// here the primitives are tagged one level down, on
+    /// [`AxisPreference`]'s own variants.
+    pub fn new(preferences: &[(EnvironmentAxis, AxisPreference)]) -> Result<Self, UnitError> {
+        let mut map = BTreeMap::new();
+        for (axis, preference) in preferences {
+            let nominal = axis.valence == AxisValence::Nominal;
+            match preference {
+                AxisPreference::Graded {
+                    preferred,
+                    tolerance,
+                } => {
+                    if nominal {
+                        return Err(UnitError {
+                            unit: "environment axis preference",
+                            value: *preferred,
+                            reason: "a nominal axis carries a class, not a magnitude",
+                        });
+                    }
+                    check_unit_range(*preferred, "environment axis preference")?;
+                    if !tolerance.is_finite() || *tolerance <= 0.0 || *tolerance > 1.0 {
+                        return Err(UnitError {
+                            unit: "environment axis tolerance",
+                            value: *tolerance,
+                            reason: "must be finite and within (0, 1]",
+                        });
+                    }
+                }
+                AxisPreference::Class { accepted } => {
+                    if !nominal {
+                        return Err(UnitError {
+                            unit: "environment axis preference",
+                            value: *accepted,
+                            reason: "only a nominal axis carries a class",
+                        });
+                    }
+                    check_unit_range(*accepted, "environment axis preference")?;
+                }
+            }
+            map.insert(axis.id, (*axis, *preference));
+        }
+        Ok(Self(map))
+    }
+
+    /// This niche's preference on `axis`, or `None` if it declines the axis —
+    /// which, by the genus rule, means indifference rather than exclusion.
+    pub fn get(&self, axis: EnvironmentAxis) -> Option<AxisPreference> {
+        self.0.get(&axis.id).map(|(_, p)| *p)
+    }
+
+    /// The axis ids this niche states a preference on, ascending.
+    /// type-audit: bare-ok(index: return)
+    pub fn axis_ids(&self) -> Vec<u16> {
+        self.0.keys().copied().collect()
+    }
+
+    /// Whether this niche states no preference at all. Such a niche scores a
+    /// constant `0.0` everywhere (see [`environment_fit`]), which is uniform
+    /// across places and therefore never mis-ranks one against another.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_indifferent(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+/// Shared range check for the two preference payloads.
+fn check_unit_range(value: f64, unit: &'static str) -> Result<(), UnitError> {
+    if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+        return Err(UnitError {
+            unit,
+            value,
+            reason: "must be finite and within [0, 1]",
+        });
+    }
+    Ok(())
+}
+
+/// How well a place's character suits a kind's niche, in `[0, 1]`: `1.0` is an
+/// exact match on every axis the two have in common.
+///
+/// **The measure is Gower's similarity over the shared axes**, valence-aware
+/// by construction: an ordered axis contributes `|value − preferred| /
+/// tolerance` capped at one, a nominal axis contributes zero or one, and the
+/// mean of those dissimilarities is subtracted from one. With every tolerance
+/// at its `1.0` default this is bit-for-bit `1 − d` for the `d` that Task 6
+/// measured the underworld corpus with (`domains/climate/tests/underworld.rs`,
+/// five values hand-reproduced by a reviewer). Euclidean distance was not
+/// available: `SUBSTRATE` is `AxisValence::Nominal`, so squaring a difference
+/// of class indices computes a number that means nothing.
+///
+/// **The genus rule.** An axis either side declines is dropped from the mean
+/// rather than scored as a zero — see [`EnvironmentNiche`]. The mean is
+/// therefore over the INTERSECTION, and this function never reads
+/// `environment_v1_basis()` at all: it walks the niche's own recorded axes,
+/// the way `ResourceVector::overlap` walks its two vectors' own keys. That is
+/// what makes the basis's append-only rule (`AxisPreference`'s sibling pin,
+/// `the_environment_basis_ids_are_append_only`) sufficient here — appending an
+/// axis cannot perturb any existing fit, because no existing fit ever looked
+/// at the basis.
+///
+/// **That pin is load-bearing a SECOND time, for the bitwise Gower tie above,
+/// and this is the only place it is written down.** The sum here runs in
+/// ascending **axis-id** order, because the niche is a `BTreeMap<u16, _>`;
+/// Task 6's `distance` runs in **basis** order, because it iterates
+/// `environment_v1_basis()`. Float addition is not associative, so two orders
+/// give bit-identical sums only when they are the *same* order — and they are
+/// the same order only because the basis is dense and ascending from zero,
+/// which is precisely what
+/// `the_environment_basis_ids_are_append_only` asserts. A basis that ever
+/// stopped being dense-ascending would leave both instruments individually
+/// correct and no longer bit-comparable.
+///
+/// **An unassigned place scores `0.0`, and so does any place sharing no axis
+/// with the niche.** The zero vector is legal and means *unassigned* — how a
+/// name the axes cannot place is represented, a finding to be counted rather
+/// than an error — so this must be a defined number rather than a panic (the
+/// Task 6 reference `distance` asserts instead, which is right for an
+/// instrument and wrong for a consumer). `0.0` follows
+/// `ResourceVector::overlap`'s precedent on the sibling basis: an empty
+/// intersection is **no evidence of fit**, not perfect indifference. `1.0`
+/// would be actively wrong — it would make a place the axes could not describe
+/// outrank every place they could.
+///
+/// # The score is only comparable across places of equal arity
+///
+/// A mean over the **intersection** carries a sparsity bias, and it runs the
+/// same direction every time: a place that states two of the niche's axes is
+/// scored on two terms and can reach `1.0` on both, while a place that states
+/// five is scored on all five and is penalised by every one it misses. **The
+/// sparser vector is systematically advantaged.** Nothing here corrects for
+/// that, and nothing should — the correction would have to invent a value for
+/// an axis the place declined, which is exactly the fabrication the genus rule
+/// exists to refuse.
+///
+/// So: **ranking places against one niche is sound only where the candidates
+/// share an arity**, and a caller comparing across arities is comparing
+/// different denominators. This is measured rather than feared, in
+/// `domains/climate/tests/underworld.rs`'s
+/// `the_underworld_corpus_has_constant_arity_and_the_surface_corpus_does_not`
+/// — the species crate cannot import a sibling domain to assert it here, so
+/// the ratchet lives with the corpus and this paragraph points at it. The
+/// state of that measurement, as a fact about the corpora rather than about
+/// this function: the **underworld** corpus is constant-arity, so a
+/// single-realm chamber ranking is unaffected, while the **surface** corpus is
+/// not, so any cross-corpus comparison carries the bias. Read the current
+/// numbers off that test, never off this comment.
+///
+/// # This function cannot separate realms, and must not be asked to
+///
+/// The basis carries **no realm coordinate**, and Task 6 measured the
+/// consequence and committed it as a ratchet: three underworld communities are
+/// vector-identical to surface ones — `mud-sump` ≡ `lightless-water`,
+/// `deep-karst-void` ≡ `smoker-field`, `tube-ice-trap` ≡ `ice`. A high
+/// `environment_fit` therefore says "these conditions suit this kind", never
+/// "this kind belongs in this realm". The realm gate is a separate mechanism
+/// and stays so: [`HabitatRealm::Subterranean`] gives a kind `availability =
+/// 0.0` on any cell whose terrain holds no cave, in worldgen's
+/// `per_species_suitability_masked`. A reader who assumes this function
+/// discriminates realm will be wrong.
+/// type-audit: bare-ok(ratio: return)
+pub fn environment_fit(niche: &EnvironmentNiche, place: &EnvironmentVector) -> f64 {
+    let mut total = 0.0;
+    let mut shared = 0usize;
+    for (axis, preference) in niche.0.values() {
+        // The place's reading on this axis, or nothing — and nothing means the
+        // axis leaves the mean entirely. No valence lookup is needed: the
+        // preference's own variant already encodes the valence treatment, and
+        // `EnvironmentNiche::new` guarantees the two agree.
+        let Some(value) = place.get(*axis) else {
+            continue;
+        };
+        shared += 1;
+        total += preference.dissimilarity(value);
+    }
+    if shared == 0 {
+        return 0.0;
+    }
+    // Each term is in [0, 1], so the mean is too and the difference lands in
+    // [0, 1]. The clamp is a guard against float rounding at the ends, not a
+    // correction for an out-of-range term — there is no such term.
+    (1.0 - total / shared as f64).clamp(0.0, 1.0)
+}
+
+impl Component for EnvironmentNiche {}
+
+/// The sparse environment-niche component: **only** kinds whose habitat is
+/// stated in the environment basis appear (The Underworld, Task 8).
+///
+/// Sparse for the same reason [`habitat_realm_registry`] is — one consumer,
+/// which holds a slice rather than a row — and it is the same consumer one
+/// step further on: worldgen's realm-aware capacity, which scores a
+/// subterranean people's chambers with [`environment_fit`] before deciding
+/// which delve rung it seats at.
+///
+/// **Absence is load-bearing, and it is the campaign's positive control.** A
+/// kind with no row here cannot score a chamber, so it cannot choose a rung,
+/// so it stays at the surface exactly as it did before this campaign. Emptying
+/// this registry therefore reverts the seating without touching capacity,
+/// which is what lets the re-key's surface invariance be measured rather than
+/// argued.
+///
+/// One row today. `rust-monster` and `xorn` are `HabitatRealm::Subterranean`
+/// and are deliberately **absent**: they are fauna, they settle nothing, and
+/// authoring a niche for a kind that places no community would be a value no
+/// consumer reads.
+pub fn environment_niche_registry() -> ComponentStore<KindId, EnvironmentNiche> {
+    [(KindId("drow"), drow_niche())].into_iter().collect()
+}
+
+/// Drow's niche in the environment basis — **every value authored**, on the
+/// same five axes and the same value grid `hornvale_climate`'s underworld
+/// corpus uses, so a fit against one of its 22 communities is a comparison of
+/// two points on one ruler rather than of two vocabularies.
+///
+/// Drow is the store's first and only occupant for the reason
+/// [`habitat_realm_registry`] gives for its own drow row: it is the peopled
+/// subterranean kind that is already shipped, so it is the producer that does
+/// not wait on §4.7's two dwarves being authored.
+///
+/// Per axis, and each is a claim about a people rather than about a cave:
+///
+/// - `PHYSIOGNOMY` **0.6** — standing structure. A city needs something to
+///   build in and on: speleothem stands, gypsum curtains, fungal thickets. A
+///   smooth lava pipe (0.0) offers nothing to hold a settlement, and a fully
+///   decorated gallery (0.8) is a place to walk through rather than to live
+///   in. AUTHORED.
+/// - `ENERGY` **0.5** — a working base. Drow farm; a system with a stream's
+///   organic load or a modest chemical one is what a farmed underworld looks
+///   like. Neither inert rock (0.0) nor a whole channel's load at one point
+///   (1.0), which is a hot spring rather than a country. AUTHORED.
+/// - `WATER` **0.4** — fracture-borne seepage: enough to drink, not enough to
+///   drown in. This is the axis that says drow live in the dry part of a wet
+///   world; `1.0` is below the water table. AUTHORED.
+/// - `SUBSTRATE` **0.6** (rock) — a `Class`, never a magnitude, because the
+///   axis is `AxisValence::Nominal`. A people builds on rock; mud, sand, ice
+///   and buried carbon are floors you cross. AUTHORED.
+/// - `LIGHT` **0.0** — aphotic, which is the one axis drow's existing
+///   authoring already stated in another vocabulary (its cave-dark insolation
+///   response). AUTHORED.
+///
+/// **Every tolerance is the neutral default** ([`AxisPreference::graded`]'s
+/// `1.0`), and that is a refusal rather than an omission: a narrower tolerance
+/// on any axis would be a second, unmeasured calibration authored at the same
+/// moment as the preference it modifies, and nothing in this campaign measures
+/// how fussy a drow is. At the default the fit reduces bit-for-bit to `1 − d`
+/// for the Gower distance Task 6 measured the corpus with, so the number this
+/// niche produces is comparable with that instrument's own.
+///
+/// Stated in the same arity as every row of the underworld corpus — five axes,
+/// all five occupied — so `environment_fit`'s sparsity bias cannot reach a
+/// chamber ranking. `DISTURBANCE` is declined for the reason no corpus can
+/// occupy it: it is the basis's only `Rate`, and a people is a state.
+fn drow_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (
+            hornvale_kernel::PHYSIOGNOMY,
+            AxisPreference::graded(DROW_PHYSIOGNOMY),
+        ),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(DROW_ENERGY)),
+        (hornvale_kernel::WATER, AxisPreference::graded(DROW_WATER)),
+        (
+            hornvale_kernel::SUBSTRATE,
+            AxisPreference::class(DROW_SUBSTRATE),
+        ),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(DROW_LIGHT)),
+    ])
+    .expect("drow's authored niche is valid: five in-range values, class on the nominal axis")
+}
+
+/// Drow's preferred void form: standing structure. AUTHORED — see
+/// [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_PHYSIOGNOMY: f64 = 0.6;
+/// Drow's preferred energy base: a working one. AUTHORED — see [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_ENERGY: f64 = 0.5;
+/// Drow's preferred moisture: fracture-borne seepage. AUTHORED — see
+/// [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_WATER: f64 = 0.4;
+/// Drow's accepted substrate class: bare rock. A class index, never a
+/// magnitude. AUTHORED — see [`drow_niche`].
+/// type-audit: bare-ok(index)
+const DROW_SUBSTRATE: f64 = 0.6;
+/// Drow's preferred light level: aphotic. AUTHORED — see [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_LIGHT: f64 = 0.0;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -5669,5 +6139,472 @@ mod tests {
         // dragons are minded (psyche) but not Settled — no society vector
         assert!(society_registry().get(&KindId("red-dragon")).is_none());
         assert!(psyche_registry().get(&KindId("red-dragon")).is_some());
+    }
+
+    /// The Underworld, Task 7: `EnvironmentNiche` and `environment_fit`.
+    ///
+    /// A nested module so that every test below carries `environment` in its
+    /// path and `cargo test -p hornvale-species environment` selects them. The
+    /// plan's own step-2 command was that filter, and against flat names none
+    /// of these carries the word — it reported `0 passed` and would have read
+    /// as a green run.
+    mod environment_niche {
+        use super::*;
+        use hornvale_kernel::{
+            DISTURBANCE, ENERGY, LIGHT, PHYSIOGNOMY, SUBSTRATE, WATER, environment_v1_basis,
+        };
+
+        /// A place vector, panicking on a value the kernel would reject — a test
+        /// that authors an invalid vector has a bug in the test, not a finding.
+        fn place(values: &[(EnvironmentAxis, f64)]) -> EnvironmentVector {
+            EnvironmentVector::new(values).expect("the test's place vector must be valid")
+        }
+
+        /// A niche, panicking on a preference the constructor would reject.
+        fn a_niche(prefs: &[(EnvironmentAxis, AxisPreference)]) -> EnvironmentNiche {
+            EnvironmentNiche::new(prefs).expect("the test's niche must be valid")
+        }
+
+        #[test]
+        fn a_niche_matching_a_place_exactly_scores_one() {
+            let p = place(&[
+                (PHYSIOGNOMY, 0.2),
+                (ENERGY, 0.8),
+                (WATER, 0.4),
+                (SUBSTRATE, 0.6),
+            ]);
+            let n = a_niche(&[
+                (PHYSIOGNOMY, AxisPreference::graded(0.2)),
+                (ENERGY, AxisPreference::graded(0.8)),
+                (WATER, AxisPreference::graded(0.4)),
+                // SUBSTRATE is Nominal: a class, never a magnitude.
+                (SUBSTRATE, AxisPreference::class(0.6)),
+            ]);
+            assert_eq!(
+                environment_fit(&n, &p),
+                1.0,
+                "a niche sitting exactly on a place's reading is a perfect fit"
+            );
+
+            // The positive control the `1.0` needs: the score is not simply
+            // constant. One axis moved off the preference must score strictly
+            // below one, on the graded axis and on the nominal one alike.
+            let off_graded = place(&[
+                (PHYSIOGNOMY, 0.2),
+                (ENERGY, 0.3),
+                (WATER, 0.4),
+                (SUBSTRATE, 0.6),
+            ]);
+            let off_nominal = place(&[
+                (PHYSIOGNOMY, 0.2),
+                (ENERGY, 0.8),
+                (WATER, 0.4),
+                (SUBSTRATE, 0.0),
+            ]);
+            assert!(environment_fit(&n, &off_graded) < 1.0);
+            assert!(environment_fit(&n, &off_nominal) < 1.0);
+        }
+
+        #[test]
+        fn an_unassigned_place_vector_scores_a_defined_value_not_a_panic() {
+            // The zero vector is LEGAL and means unassigned (kernel docs). A niche
+            // scored against it must return a defined number.
+            let unassigned = EnvironmentVector::new(&[]).expect("the zero vector is legal");
+            assert!(unassigned.is_unassigned());
+            let n = a_niche(&[(ENERGY, AxisPreference::graded(0.9))]);
+
+            let fit = environment_fit(&n, &unassigned);
+            assert!(fit.is_finite(), "an unassigned place must score a number");
+            assert_eq!(
+                fit, 0.0,
+                "no shared axis is no evidence of fit — `ResourceVector::overlap`'s \
+             precedent on the sibling basis, and the value that keeps an \
+             unplaceable place from outranking a described one"
+            );
+
+            // The mechanism is the EMPTY INTERSECTION, not the empty vector: a
+            // place that carries axes, none of which the niche speaks to, takes
+            // the same value.
+            let disjoint = place(&[(WATER, 0.9)]);
+            assert_eq!(environment_fit(&n, &disjoint), 0.0);
+
+            // And the value is the right way round: a described place the niche
+            // matches outranks the unassigned one.
+            let described = place(&[(ENERGY, 0.9)]);
+            assert!(environment_fit(&n, &described) > environment_fit(&n, &unassigned));
+        }
+
+        #[test]
+        fn fit_is_bounded_in_zero_one_over_the_whole_basis() {
+            let levels = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0];
+            let tolerances = [0.05, 0.2, 0.5, 1.0];
+            let mut saw_zero = false;
+            let mut saw_one = false;
+
+            for axis in environment_v1_basis() {
+                for preferred in levels {
+                    for value in levels {
+                        for tolerance in tolerances {
+                            let pref = if axis.valence == AxisValence::Nominal {
+                                AxisPreference::Class {
+                                    accepted: preferred,
+                                }
+                            } else {
+                                AxisPreference::Graded {
+                                    preferred,
+                                    tolerance,
+                                }
+                            };
+                            let fit = environment_fit(
+                                &a_niche(&[(*axis, pref)]),
+                                &place(&[(*axis, value)]),
+                            );
+                            assert!(
+                                (0.0..=1.0).contains(&fit),
+                                "fit out of [0, 1] on {}: preferred {preferred}, value {value}, \
+                             tolerance {tolerance} -> {fit}",
+                                axis.label
+                            );
+                            saw_zero |= fit == 0.0;
+                            saw_one |= fit == 1.0;
+                        }
+                    }
+                }
+            }
+            assert!(
+                saw_zero && saw_one,
+                "the sweep must reach both ends of the interval, or the bound is \
+             being asserted against a constant"
+            );
+
+            // The whole basis at once, since a per-axis sweep cannot see an
+            // averaging bug across axes.
+            let prefs: Vec<(EnvironmentAxis, AxisPreference)> = environment_v1_basis()
+                .iter()
+                .map(|a| {
+                    let p = if a.valence == AxisValence::Nominal {
+                        AxisPreference::class(0.4)
+                    } else {
+                        AxisPreference::graded(0.4)
+                    };
+                    (*a, p)
+                })
+                .collect();
+            let full = a_niche(&prefs);
+            let same: Vec<(EnvironmentAxis, f64)> =
+                environment_v1_basis().iter().map(|a| (*a, 0.4)).collect();
+            assert_eq!(environment_fit(&full, &place(&same)), 1.0);
+            let far: Vec<(EnvironmentAxis, f64)> =
+                environment_v1_basis().iter().map(|a| (*a, 1.0)).collect();
+            let f = environment_fit(&full, &place(&far));
+            assert!((0.0..=1.0).contains(&f), "six-axis fit out of range: {f}");
+            assert!(
+                f > 0.0 && f < 1.0,
+                "the six-axis case must be interior: {f}"
+            );
+        }
+
+        #[test]
+        fn an_axis_the_niche_declines_does_not_constrain_the_fit() {
+            // Mirrors the genus rule The Axes established: a niche silent on an
+            // axis is indifferent to it, never zero on it.
+            let n = a_niche(&[
+                (ENERGY, AxisPreference::graded(0.9)),
+                (WATER, AxisPreference::graded(0.5)),
+            ]);
+            let quiet = place(&[(ENERGY, 0.9), (WATER, 0.5)]);
+            let agreeing = place(&[
+                (ENERGY, 0.9),
+                (WATER, 0.5),
+                (LIGHT, 0.0),
+                (PHYSIOGNOMY, 1.0),
+            ]);
+            let disagreeing = place(&[
+                (ENERGY, 0.9),
+                (WATER, 0.5),
+                (LIGHT, 1.0),
+                (PHYSIOGNOMY, 0.0),
+            ]);
+
+            assert_eq!(
+                environment_fit(&n, &quiet).to_bits(),
+                environment_fit(&n, &agreeing).to_bits(),
+                "a declined axis is dropped from the mean, so its value cannot move the fit"
+            );
+            assert_eq!(
+                environment_fit(&n, &quiet).to_bits(),
+                environment_fit(&n, &disagreeing).to_bits(),
+                "and that holds whichever way the declined axis reads"
+            );
+            assert_eq!(environment_fit(&n, &quiet), 1.0);
+
+            // THE FAILURE MODE THIS RULES OUT, stated as a number. Were a declined
+            // axis scored as a zero rather than dropped, both `agreeing` and
+            // `disagreeing` would score 2/4 = 0.5 and every partially-specified
+            // niche would read as a poor fit everywhere — failing quietly rather
+            // than loudly.
+            assert!(
+                environment_fit(&n, &disagreeing) > 0.5,
+                "a silent axis is being scored as a zero, not as indifference"
+            );
+        }
+
+        #[test]
+        fn an_appended_basis_axis_cannot_perturb_an_existing_fit() {
+            // The Axes' A-1 invariant, honoured structurally: the basis is
+            // append-only (`the_environment_basis_ids_are_append_only`), and
+            // `environment_fit` never reads the basis at all — it iterates the
+            // niche's own recorded axes and looks each one up in the place, the
+            // way `ResourceVector::overlap` iterates its two vectors' own keys.
+            // `DISTURBANCE` is the stand-in for any axis a later campaign appends:
+            // nothing occupies it today.
+            let n = a_niche(&[(ENERGY, AxisPreference::graded(0.3))]);
+            let p = place(&[(ENERGY, 0.5)]);
+            let base = environment_fit(&n, &p);
+
+            let place_plus = place(&[(ENERGY, 0.5), (DISTURBANCE, 1.0)]);
+            assert_eq!(
+                base.to_bits(),
+                environment_fit(&n, &place_plus).to_bits(),
+                "a place carrying the appended axis must score bit-identically"
+            );
+
+            let niche_plus = a_niche(&[
+                (ENERGY, AxisPreference::graded(0.3)),
+                (DISTURBANCE, AxisPreference::graded(0.0)),
+            ]);
+            assert_eq!(
+                base.to_bits(),
+                environment_fit(&niche_plus, &p).to_bits(),
+                "a niche carrying the appended axis must score bit-identically \
+             against a place that declines it"
+            );
+
+            // The positive control: `base` is not a constant this test would
+            // match no matter what.
+            assert_ne!(
+                base.to_bits(),
+                environment_fit(&n, &place(&[(ENERGY, 0.9)])).to_bits()
+            );
+        }
+
+        #[test]
+        fn a_nominal_axis_is_scored_as_a_class_never_as_a_magnitude() {
+            // `SUBSTRATE` is `AxisValence::Nominal` — its six classes are soil /
+            // sand / evaporite / rock / ice / organic, and the numeric value
+            // indexes them. |0.0 - 0.2| is NOT a smaller difference than
+            // |0.0 - 1.0|: they are both "a different class".
+            let n = a_niche(&[(SUBSTRATE, AxisPreference::class(0.0))]);
+            assert_eq!(environment_fit(&n, &place(&[(SUBSTRATE, 0.2)])), 0.0);
+            assert_eq!(environment_fit(&n, &place(&[(SUBSTRATE, 1.0)])), 0.0);
+            assert_eq!(environment_fit(&n, &place(&[(SUBSTRATE, 0.0)])), 1.0);
+            // Negative zero is the same class as zero — the one place a bitwise
+            // comparison would silently disagree with the meaning.
+            assert_eq!(environment_fit(&n, &place(&[(SUBSTRATE, -0.0)])), 1.0);
+
+            // The constructor refuses both ways of assuming the axes are
+            // homogeneous, which is what keeps the scoring above true by
+            // construction rather than by care.
+            assert!(
+                EnvironmentNiche::new(&[(SUBSTRATE, AxisPreference::graded(0.0))]).is_err(),
+                "a graded preference on a nominal axis reads an index as a magnitude"
+            );
+            assert!(
+                EnvironmentNiche::new(&[(ENERGY, AxisPreference::class(0.0))]).is_err(),
+                "a class preference on a scalar axis throws away the magnitude"
+            );
+        }
+
+        #[test]
+        fn a_repeated_axis_id_overwrites_rather_than_combining() {
+            // `EnvironmentNiche::new`'s doc claims last-write-wins, matching
+            // `EnvironmentVector::new`. A doc claim no test holds is this
+            // campaign's most-repeated defect, so this holds it.
+            let n = a_niche(&[
+                (ENERGY, AxisPreference::graded(0.0)),
+                (ENERGY, AxisPreference::graded(1.0)),
+            ]);
+            assert_eq!(n.axis_ids(), vec![ENERGY.id], "one entry, not two");
+            assert_eq!(
+                n.get(ENERGY),
+                Some(AxisPreference::graded(1.0)),
+                "the LAST write wins"
+            );
+
+            // Observable through the fit, not only through the accessor —
+            // otherwise this would pin the storage and not the behaviour.
+            assert_eq!(environment_fit(&n, &place(&[(ENERGY, 1.0)])), 1.0);
+            assert_eq!(environment_fit(&n, &place(&[(ENERGY, 0.0)])), 0.0);
+
+            // And the overwriting write is validated like any other: it cannot
+            // smuggle a valence mismatch in behind a legal first write.
+            assert!(
+                EnvironmentNiche::new(&[
+                    (SUBSTRATE, AxisPreference::class(0.0)),
+                    (SUBSTRATE, AxisPreference::graded(0.5)),
+                ])
+                .is_err()
+            );
+        }
+
+        #[test]
+        fn a_full_range_tolerance_reproduces_gowers_similarity() {
+            // The justification for the whole shape: at `tolerance == 1.0` — the
+            // whole of an axis's [0, 1] range — `environment_fit` is exactly
+            // `1 - d`, where `d` is Gower's distance over the shared axes as
+            // Task 6 measured it (`domains/climate/tests/underworld.rs::distance`,
+            // whose five hand-reproduced values a reviewer verified). BITWISE, not
+            // approximately: the implementation accumulates dissimilarity and
+            // subtracts once, so the two arithmetics are the same expression.
+            //
+            // READ THIS BEFORE TREATING A GREEN HERE AS AGREEMENT WITH TASK 6.
+            // The reference below is a RE-IMPLEMENTATION, not the instrument.
+            // `domains/species` may not depend on a sibling domain, so the real
+            // `distance` cannot be imported and this is a copy — one that
+            // already differs from the original on purpose (`==` against its
+            // `to_bits()`, which disagree only on `-0.0`). A green here says
+            // "the fit agrees with a faithful transcription", never "the fit
+            // agrees with the shipped instrument".
+            //
+            // SUMMATION ORDER IS PART OF THE TRANSCRIPTION, and getting it
+            // wrong is invisible when it happens to cancel. The original
+            // iterates `environment_v1_basis()`; an earlier draft of this
+            // helper iterated the AUTHORED slice order instead, and one of the
+            // three cases below lists LIGHT (id 4) before SUBSTRATE (id 3). It
+            // passed anyway, because those particular terms summed identically
+            // — but float addition is not associative, so a case with two
+            // non-zero out-of-order terms could have reddened without either
+            // instrument being wrong. Fixed by iterating the basis exactly as
+            // the original does. See `environment_fit`'s doc for why the
+            // implementation's own ascending-id order agrees with basis order
+            // at all: that is a second, separate dependency on The Axes'
+            // append-only pin.
+            fn gower(niche: &[(EnvironmentAxis, f64)], p: &EnvironmentVector) -> f64 {
+                let mut total = 0.0;
+                let mut shared = 0usize;
+                for axis in environment_v1_basis() {
+                    let Some((_, x)) = niche.iter().find(|(a, _)| a.id == axis.id) else {
+                        continue;
+                    };
+                    let Some(y) = p.get(*axis) else { continue };
+                    shared += 1;
+                    total += match axis.valence {
+                        AxisValence::Nominal => {
+                            if *x == y {
+                                0.0
+                            } else {
+                                1.0
+                            }
+                        }
+                        _ => (x - y).abs(),
+                    };
+                }
+                assert!(shared > 0, "the reference needs a shared axis");
+                total / shared as f64
+            }
+
+            let cases: [&[(EnvironmentAxis, f64)]; 3] = [
+                &[(PHYSIOGNOMY, 0.2), (ENERGY, 0.8), (SUBSTRATE, 0.6)],
+                &[(ENERGY, 0.0), (WATER, 1.0), (LIGHT, 0.0), (SUBSTRATE, 0.0)],
+                &[(PHYSIOGNOMY, 1.0), (WATER, 0.35)],
+            ];
+            let places = [
+                place(&[
+                    (PHYSIOGNOMY, 0.6),
+                    (ENERGY, 0.1),
+                    (WATER, 0.5),
+                    (SUBSTRATE, 0.0),
+                    (LIGHT, 1.0),
+                ]),
+                place(&[(ENERGY, 0.4), (WATER, 0.2), (SUBSTRATE, 0.0)]),
+                place(&[(PHYSIOGNOMY, 0.0), (WATER, 0.35), (LIGHT, 0.5)]),
+            ];
+
+            let mut saw_a_difference = false;
+            for spec in cases {
+                let prefs: Vec<(EnvironmentAxis, AxisPreference)> = spec
+                    .iter()
+                    .map(|(a, v)| {
+                        let p = if a.valence == AxisValence::Nominal {
+                            AxisPreference::class(*v)
+                        } else {
+                            AxisPreference::graded(*v)
+                        };
+                        (*a, p)
+                    })
+                    .collect();
+                let n = a_niche(&prefs);
+                for p in &places {
+                    let d = gower(spec, p);
+                    let fit = environment_fit(&n, p);
+                    assert_eq!(
+                        fit.to_bits(),
+                        (1.0 - d).to_bits(),
+                        "fit {fit} is not 1 - Gower {d} for {spec:?}"
+                    );
+                    saw_a_difference |= d > 0.0;
+                }
+            }
+            assert!(
+                saw_a_difference,
+                "every case scored a zero distance, so the comparison was vacuous"
+            );
+        }
+
+        #[test]
+        fn a_niche_rejects_a_preference_the_axis_cannot_carry() {
+            // Every rejection below is a value that would produce a fit outside
+            // [0, 1] or a division by zero if it were let through.
+            for bad in [
+                AxisPreference::Graded {
+                    preferred: 1.5,
+                    tolerance: 1.0,
+                },
+                AxisPreference::Graded {
+                    preferred: -0.5,
+                    tolerance: 1.0,
+                },
+                AxisPreference::Graded {
+                    preferred: f64::NAN,
+                    tolerance: 1.0,
+                },
+                AxisPreference::Graded {
+                    preferred: 0.5,
+                    tolerance: 0.0,
+                },
+                AxisPreference::Graded {
+                    preferred: 0.5,
+                    tolerance: 1.5,
+                },
+                AxisPreference::Graded {
+                    preferred: 0.5,
+                    tolerance: f64::INFINITY,
+                },
+            ] {
+                assert!(
+                    EnvironmentNiche::new(&[(ENERGY, bad)]).is_err(),
+                    "ENERGY must reject {bad:?}"
+                );
+            }
+            for bad in [
+                AxisPreference::Class { accepted: -0.5 },
+                AxisPreference::Class { accepted: 1.5 },
+                AxisPreference::Class { accepted: f64::NAN },
+            ] {
+                assert!(
+                    EnvironmentNiche::new(&[(SUBSTRATE, bad)]).is_err(),
+                    "SUBSTRATE must reject {bad:?}"
+                );
+            }
+            // The positive control: the valid forms are accepted.
+            assert!(EnvironmentNiche::new(&[(ENERGY, AxisPreference::graded(0.5))]).is_ok());
+            assert!(EnvironmentNiche::new(&[(SUBSTRATE, AxisPreference::class(0.5))]).is_ok());
+            // An empty niche is legal — a kind that states nothing — and scores a
+            // constant 0.0, so it never mis-ranks one place against another.
+            let empty = EnvironmentNiche::new(&[]).expect("an empty niche is legal");
+            assert!(empty.is_indifferent());
+            assert_eq!(environment_fit(&empty, &place(&[(ENERGY, 0.5)])), 0.0);
+            assert_eq!(environment_fit(&empty, &place(&[(ENERGY, 1.0)])), 0.0);
+        }
     }
 }

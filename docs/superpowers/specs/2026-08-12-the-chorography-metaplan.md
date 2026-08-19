@@ -1,8 +1,21 @@
 # The Chorography — the program for saying what a place is
 
-*Metaplan. Five campaigns. Status: **campaign 0 (The Fathom) complete**; the
-remaining four are unstarted. Campaign 1 may not open until its spec carries
-§ 7's reconstruction test.*
+*Metaplan. Five campaigns. Status: **campaigns 0 (The Fathom), 1 (The Axes)
+and 2 (The Underworld) complete**; campaigns 3 (The Planes) and 4 (The
+Disturbance) unstarted. Campaign 1's gate — its spec carrying § 7's
+reconstruction test — was met and the test's own floor-without-a-ceiling
+defect was found and fixed inside it.*
+
+*Campaign 2 did not restore Mountain-dwarf and Duergar.* Its preregistered
+gate closed: the depth-routed condition niches separated the two candidates
+so nearly completely that they read as different **peoples** rather than
+different **dwarves**, while the seating multiplier had no resolution at all.
+The ladder, the metre depth budget, the water table, the underworld
+communities, `EnvironmentNiche` and the (cell, rung) re-key all shipped. §4's
+line "Restores Mountain and Duergar" is therefore **not** what happened, and
+is left standing above rather than edited, because a metaplan that quietly
+rewrites its own predictions is worth less than one that records them
+failing.
 
 Ptolemy separated **geography**, which maps the whole, from **chorography**,
 which describes the particular place. Hornvale has excellent geography and a

@@ -61,28 +61,24 @@ fn the_weight_map_discriminates_the_epistemic_states() {
 /// `hornvale-scene` (the containment rule: no hornvale crate in this
 /// client's graph), so this is a golden, not a shared function call.
 ///
-/// Regenerate with:
-/// ```text
-/// printf 'map\n' > /tmp/hv_map_script.txt
-/// cargo run -p hornvale -- possess --seed 42 --script /tmp/hv_map_script.txt
-/// ```
-/// then copy the five lines between the `sight:` caption line and the
-/// `ways on:` footer verbatim (leading spaces matter; trailing spaces do
-/// not survive the sim's own trim and should not be added back here).
+/// A **generated** fixture (spec §5.3), not a hand-pasted copy: this used
+/// to be a raw-string literal here, maintained by whoever remembered the
+/// rule that re-capturing it must always start from the sim's own render,
+/// never from this crate's output (which would make the comparison below
+/// vacuous — see the module doc's account of a plausible-looking wrong
+/// projection formula that once passed every other test in this file).
+/// `scripts/regenerate-artifacts.sh`'s `gen_chart_reference` now IS that
+/// rule: it types `map` at the flagship possession's opening room and
+/// keeps the five grid lines between the `sight:` caption and the
+/// `ways on:` footer, so a stale reference reddens the artifact drift
+/// check (`docs/generated-paths.txt`) instead of waiting for a human to
+/// notice. `make rebaseline` regenerates it.
 ///
 /// If this ever needs to change, the first question is whether
 /// `chart::project`'s formula still matches `surrounds_ascii.rs`'s own
 /// `row`/`col` comment — see `src/chart.rs`'s module doc before touching
 /// either side.
-// A raw string, deliberately: a `"\` line-continuation here would eat the
-// first line's own leading spaces (Rust trims leading whitespace after a
-// backslash-newline), silently corrupting the one thing this golden exists
-// to pin.
-const REFERENCE_SHAPE: &str = r"  +++++
- +++++++
-++++@++++
- +++++++
-  + + +";
+const REFERENCE_SHAPE: &str = include_str!("fixtures/chart-reference-seed-42.txt");
 
 /// Reduce a small ASCII picture to its SHAPE only: which positions are
 /// filled, not what glyph fills them. This is what makes comparing this

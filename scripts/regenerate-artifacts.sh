@@ -248,6 +248,36 @@ gen_possession_overtime() {
     rm -f "$possess_ot_tmp"
 }
 
+# The chart reference fixture (Task 11, the-illumination; spec §5.3): the
+# sim's own ASCII renderer's SHAPE for the seed-42 walk band, generated so
+# `clients/game/core/tests/chart.rs`'s `the_shape_matches_the_sims_own_ascii_render`
+# golden reads a committed artifact instead of the hand-pasted raw-string
+# literal it replaces — a replica of the sim's answer that only a doc comment
+# kept anyone re-deriving correctly. This reproduces exactly what that doc
+# comment already told a human to do by hand: type `map` at the flagship
+# possession's opening room and keep the five grid lines between the `sight:`
+# caption and the `ways on:` footer — the same "terrain"/"colour" render this
+# module's own comment already established as identical for this fixture.
+#
+# Captured through a command substitution, which strips the trailing newline
+# `sed` leaves after its last printed line, so the fixture is byte-identical
+# to the raw-string literal it replaces: `include_str!` would otherwise hand
+# the test a string one byte longer than every `assert_eq!` in that file has
+# ever compared against, silently changing what the golden means while
+# looking like a pure relocation.
+#
+# `--seed 42` here is self-contained, same note as the turn-0 fixture below:
+# it builds its own internal genesis and never reads $w42/$wsky/$wlocked.
+gen_chart_reference() {
+    local script_tmp shape
+    script_tmp="$(mktemp)"
+    printf 'map\n' >"$script_tmp"
+    shape="$(run -p hornvale -- possess --seed 42 --script "$script_tmp" |
+        sed -n '/^  sight:/,/^  ways on:/p' | sed '1d;$d')"
+    printf '%s' "$shape"
+    rm -f "$script_tmp"
+}
+
 # The legibility surface (living-community, T7): a real seed-42 site read back
 # off the ledger as prose — its stratigraphy of occupation layers plus the
 # derived flesh in the present-day grass. The framing paragraph below is
@@ -458,7 +488,37 @@ gen_possession_overtime() {
 # neolithic base. The standing fifteenth was founded in 1925 and holds 55
 # souls. Depth across eight changes:
 # 16 -> 11 -> 10 -> 12 -> 10 -> 18 -> 15 -> 15.
-history_site=757
+#
+# THE UNDERWORLD, Task 8 (spec §4.6): 757 -> 5585, the FIFTH repoint, and the
+# pattern above is unchanged and unaddressed. Re-keying the deep-history node
+# index on (cell, rung) takes drow — the roster's one settled subterranean
+# people — out of the competition for surface cells, so every people seeded
+# after it draws from a different pool and the whole surface world re-rolls.
+# 757 emptied; the guard caught it on the empty-column arm again.
+#
+# Deepest columns on the re-keyed seed 42 (sky world): 5585 and 22173 at NINE
+# layers each, then 22170 / 22167 / 543 / 10626 / 32833 / 22193 / 5584 at
+# eight. 5585 is taken: it and 22173 are neighbours that spent two thousand
+# years taking the ground off one another, and 5585 is the one whose standing
+# layer has a NAMED founder to read.
+#
+# RE-READ 2026-08-17 (The Underworld, Task 9), and the column moved. The
+# genus join between `CaveKind` and the underworld corpus was repaired
+# (`windows/worldgen/src/delve_seating.rs`), which moved drow's seating, which
+# moved the bake — so this cell's stratigraphy is a different one and the
+# framing prose below was re-derived from the new block rather than patched.
+#
+# Read off the live block for 5585: SIX layers from the year 100, five
+# completed, and the split is no longer even — THREE were put to flight, TWO
+# left because they had taken a neighbour's ground and carried the settlement
+# onto it (22170, 22193). No layer is a same-year founding-and-ending any
+# more; the shortest holds 25 years. All six arrived fleeing ice, from TWO
+# distinct clearings (22170 x4, 22169 x2), and none ends in ice — the one
+# shape every cell this page has ever pointed at has shared. Tech runs a
+# shorter arc than before: bronze at the base, then iron, then classical, with
+# no neolithic layer left. The standing sixth was founded in 800 by
+# Venggomnjen and holds 84 souls.
+history_site=5585
 gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -469,25 +529,26 @@ gen_history() {
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — cell %s — and\n' "$history_site"
-    printf 'fifteen hobgoblin steadings have risen on it, one settling atop the ruins of\n'
-    printf 'the last, from the year 375 down to the present. Every one of the\n'
-    printf 'fourteen completed layers ended at the hands of other hobgoblins — but\n'
-    printf 'mostly not as defeats. Eight of the fourteen were not evictions at all:\n'
-    printf 'the occupants had taken better ground from a neighbour and carried the\n'
-    printf 'settlement onto it, so the layer closes on a departure. Only six fell to\n'
-    printf 'a rival band. This is a people with only itself to fight, and on this\n'
-    printf 'rise it is more often the one doing the taking.\n\n'
+    printf 'six hobgoblin steadings have risen on it, one settling atop the ruins of\n'
+    printf 'the last, from the year 100 down to the present. Every one of the five\n'
+    printf 'completed layers ended at the hands of other hobgoblins, but the split\n'
+    printf 'is uneven. Two were not evictions at all: the occupants had taken\n'
+    printf 'better ground from a neighbour and carried the settlement onto it, so\n'
+    printf 'the layer closes on a departure. The other three fell to a rival band.\n'
+    printf 'This is a people with only itself to fight, and on this rise it has\n'
+    printf 'been the taken rather more often than the taker.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
     printf 'here fell to ice. Every layer instead *arrived* fleeing it — all\n'
-    printf 'fifteen, the deepest included, driven off one of five distinct\n'
-    printf 'neighbouring clearings. No one ever broke this soil by choice: the\n'
-    printf 'ground has been a refuge from its first layer to its last, and a\n'
-    printf 'staging ground for the next advance as often as a last resort. Only\n'
-    printf 'one of the fifteen failed to last a single year. Read bottom to top,\n'
-    printf 'the column carries its own technological arc: bronze-working at the\n'
-    printf 'base, iron above it, classical at the top. The fifteenth was founded\n'
-    printf 'in the year 1925 and stands yet, 75 years on: some 55 souls, two huts\n'
-    printf 'and a granary, and no ruin yet to read.\n\n'
+    printf 'six, the deepest included, driven off one of two neighbouring\n'
+    printf 'clearings, and one of those two is the clearing this ground took\n'
+    printf 'from in return. No one ever broke this soil by choice: it has been\n'
+    printf 'a refuge from its first layer to its last, and a staging ground for\n'
+    printf 'the next advance rather less often than a last resort. Read bottom\n'
+    printf 'to top, the column carries a technological arc that starts already\n'
+    printf 'underway: bronze at the base, then iron, then classical, with no\n'
+    printf 'neolithic layer left to read. The sixth was founded in the year 800\n'
+    printf 'by Venggomnjen and stands yet, 1200 years on: some 84 souls, two\n'
+    printf 'huts and a granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
@@ -708,6 +769,8 @@ spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt
 # (Same note as above: `--seed 42` is self-contained, no Group A dependency.)
 spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
     --snapshot clients/game/core/tests/fixtures/session-seed-42-chamber.json > /dev/null
+
+spawn gen_chart_reference > clients/game/core/tests/fixtures/chart-reference-seed-42.txt
 
 spawn gen_possession_overtime > book/src/gallery/possession-over-time-seed-42.md
 spawn gen_history > book/src/gallery/history-seed-42.md

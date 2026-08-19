@@ -85,6 +85,7 @@ pub mod chamber;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
+pub mod delve_seating;
 mod descent;
 pub mod disposition;
 pub mod graph_derive;
@@ -1477,10 +1478,11 @@ pub fn per_species_suitability_masked(
     );
     // The Warren: the subterranean reading of every cell, hoisted exactly as
     // the surface `substrate` is. Built unconditionally and read only by a
-    // `Subterranean` kind; `subterranean_substrate` is pure, so this costs one
-    // map and no draws.
-    let subterranean =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| subterranean_substrate(*substrate.get(cell)));
+    // `Subterranean` kind; the derivation is pure, so this costs one map and
+    // no draws. The Underworld moved the per-cell inputs (depth, gradient,
+    // water table, porosity) into `subterranean_substrate_field` so this call
+    // site and `per_species_capacity_at`'s cannot derive them differently.
+    let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
@@ -1774,9 +1776,10 @@ pub fn per_species_capacity_at(
     );
     let substrate = substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust);
     // The Warren, carried to the capacity path: the subterranean reading of
-    // every cell, hoisted exactly as `per_species_suitability` hoists it.
-    let subterranean =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| subterranean_substrate(*substrate.get(cell)));
+    // every cell, hoisted exactly as `per_species_suitability` hoists it —
+    // and since The Underworld, through the same shared derivation, so the
+    // two paths cannot disagree about a chamber's depth or hydrology.
+    let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
     let forage = forage_supply_field(geo, base_carrying.as_cell_map());
     let prey = prey_supply_field(geo, &forage);
     // The Range, carried to the capacity path: the biome at every cell,
@@ -2585,15 +2588,78 @@ pub fn substrate_field_at(
     })
 }
 
-/// Fixed subterranean moisture (The Deep Realm, Task 6): rock voids run
-/// near-saturated from seepage and condensation, largely independent of the
-/// surface climate above — a genuinely different regime from the surface
-/// axis this same `Substrate` field models elsewhere, not a scaled-up
-/// version of it. `0.90` sits above every peopled and fauna species'
-/// authored moisture optimum (the wettest surface strongholds are bugbear's
-/// `0.82` and otyugh's `0.83` — see `domains/species`), so a chamber reads as
-/// wetter than any surface stronghold, not merely damp.
-const SUBTERRANEAN_MOISTURE: f64 = 0.90;
+/// The moisture a **flooded** chamber reads.
+///
+/// **Not authored, and deliberately not calibrated**: a chamber below the
+/// water table is water, and `1.0` is the top of [`Substrate::moisture`]'s own
+/// declared `[0, 1]` range. It is named rather than written inline so the
+/// vadose interpolation below can state that it runs *to saturation*, and so
+/// that the one end of the moisture axis that is a definition cannot be
+/// mistaken for the two below it, which are choices.
+const PHREATIC_MOISTURE: f64 = 1.0;
+
+/// **AUTHORED.** The moisture a vadose chamber falls to when seepage does not
+/// reach it at all — far above the water table, in rock too tight to deliver
+/// percolating water.
+///
+/// `0.10` is a fidelity choice in exactly the sense spec §4.2.1 clause 3
+/// names, and it is stated here rather than derived because there is nothing
+/// in this model to derive it from: the surface `moisture` axis is a
+/// climate-normalised `[0, 1]` reading with no humidity physics behind it, so
+/// "how damp is a dry cave" has no measurable in-model answer.
+///
+/// What the value is chosen *against* is stated, so a later reader can move it
+/// deliberately: it must sit far enough below every subterranean kind's
+/// authored moisture optimum that a genuinely dry chamber scores as one — drow
+/// is `optimum 0.85, width 0.25` and rust-monster `optimum 0.90, width 0.22`
+/// (`domains/species`), so `0.10` is 3.0 and 3.6 widths out respectively and
+/// reads as unambiguously wrong for both. And it is not `0.0`: a rock void is
+/// not a desert, and pinning the floor at zero would make the driest chamber
+/// in the world indistinguishable from vacuum on an axis that elsewhere means
+/// "how much water is in the air and the ground".
+const VADOSE_DRY_MOISTURE: f64 = 0.10;
+
+/// **AUTHORED.** The height above the water table, in metres, at which seepage
+/// into a chamber cut in fully porous rock (`porosity = 1.0`) has half decayed
+/// toward [`VADOSE_DRY_MOISTURE`].
+///
+/// The physical claim is the ordinary karst one: a passage near the top of the
+/// saturated zone is wet — capillary fringe, active streamways, air at or near
+/// saturation — while an abandoned upper-level passage far above it is dry.
+/// Porosity scales the reach because it is what the rock has to deliver
+/// percolating water with: `SEEPAGE_REACH_M * porosity` is the actual half
+/// height, so tight rock (the measured p10 porosity on all three campaign
+/// seeds is ~0.055) dries out within tens of metres of the table while porous
+/// rock (p50 0.374–0.781) stays damp for hundreds.
+///
+/// Calibrated against the population it applies to rather than invented — see
+/// `windows/worldgen/tests/underworld_conditions_probe.rs`, whose module doc
+/// carries the measured rise-above-table distribution, the nine-candidate
+/// sweep, and the criterion frozen before any of it was read.
+///
+/// **Half of that criterion turned out to be non-discriminating, and the
+/// shipped value comes from the other half.** The frozen rule was "minimise
+/// the larger of the two end-piles, tie-broken by the larger `p90 − p10`
+/// spread". The dry-side pile measures **0.0% at every candidate on the
+/// ladder** — no chamber in three worlds comes within 0.02 of
+/// [`VADOSE_DRY_MOISTURE`] — so clause 1 reduces to "minimise the wet pile",
+/// which is monotone in the constant and therefore just returns the smallest
+/// candidate offered. Picking the endpoint of a ladder I chose is not a
+/// measurement, so the frozen tie-break decided it instead; the probe asserts
+/// that clause 1 is still non-discriminating, so a later change that gives it
+/// information turns this into a deliberate re-authoring rather than a silent
+/// inheritance.
+///
+/// `225.0` is the interior maximum of the spread clause (0.458, against 0.446
+/// at 150 m and 0.450 at 300 m). **The peak is a plateau**, not a point: those
+/// three candidates differ by under 3%, so read this as "a couple of hundred
+/// metres" rather than as a value fitted to three significant figures. It sits
+/// just under the measured median rise above the table (219 m at a median
+/// porosity of 0.781, so an effective half-height of ~176 m), which is the
+/// physical sentence it amounts to: a chamber a couple of hundred metres above
+/// the water table in ordinary karst reads about half way between saturated
+/// and dry.
+const SEEPAGE_REACH_M: f64 = 225.0;
 
 /// A chamber's environmental substrate (The Deep Realm, Task 6) — what
 /// [`hornvale_species::ConditionNiche`] axes a subterranean species is scored
@@ -2608,52 +2674,283 @@ const SUBTERRANEAN_MOISTURE: f64 = 0.90;
 /// around it entirely by building a `Substrate` directly from another
 /// `Substrate`; it never asks what a cave's legacy `Biome` is.
 ///
-/// Each axis, and why the address's `band` does not appear as a parameter
-/// here even though the plan frames conditions as coming "from the cell
-/// above it and its band":
+/// **The depth coordinate is metres, not a [`hornvale_terrain::DelveRung`],
+/// and that is a deliberate departure from spec §4.3's wording.** §4.3 says
+/// this function "gains the chamber's delve rung and routes temperature
+/// through `temperature_at_depth`"; those two clauses are not jointly
+/// satisfiable, and the arithmetic says so in one line. A rung is a ΔT class
+/// (`hornvale_terrain::delve`), `temperature_at_depth` adds exactly
+/// `gradient × depth` = ΔT to the datum, so **a temperature sampled at any
+/// rung landmark is the datum plus a number that depends only on the rung** —
+/// gradient-free, five distinct offsets world-wide, and the crust cannot move
+/// it at all. That is the same "conditions are a constant" defect this task
+/// exists to remove, re-instated one level coarser. Taking the metre depth
+/// keeps the rung recoverable (`rung_at_depth(depth_m, gradient)`) while
+/// letting depth *and* crust move the reading independently, which is what
+/// §4.3's intent requires and its letter would have forbidden.
 ///
-/// - **temperature** is `surface.temperature_c` UNCHANGED. That field is
-///   already [`GeneratedClimate::mean_temperature_at`]'s annual mean, not a
-///   day-sampled instantaneous reading, so "buffered toward the annual mean"
-///   is already true of the one value this model has to offer — there is no
-///   modelled seasonal/diurnal swing for depth to damp further, and this
-///   task adds no geothermal warming (the plan asks for buffering toward a
-///   mean, not a heat source, and a warming term would be exactly the kind
-///   of new physical mechanism §6's scope list does not license). A model
-///   with a genuine unbuffered reading to damp would show real band
-///   dependence here; this substrate does not have one, so band is unused
-///   by design rather than by oversight.
-/// - **insolation** is `0.0`, always, at every band. No aperture this
-///   campaign models (`CaveMouth`, `WorkedWay`, …) is a light source scored
-///   here — an `Access` rung is about reachability, not illumination — so
-///   this axis cannot vary by band either.
-/// - **moisture** is the fixed [`SUBTERRANEAN_MOISTURE`], replacing the
-///   surface cell's own (climate-driven, arid-to-wet) reading entirely: cave
-///   dampness comes from seepage and condensation, not the weather above.
+/// Two consequences worth stating, since a later task may want the letter
+/// back. **The top/midpoint question does not arise here.** `chamber`'s
+/// `stratum_at` samples a rung's *top*, which makes rank 0 degenerate
+/// (`Undercroft` begins at ΔT = 0 → 0 m → the topmost band in every column);
+/// nothing here samples a rung landmark at all, so there is no analogous
+/// degeneracy to trade against. Were a caller to need a per-rung reading, it
+/// should choose a depth *inside* the rung (its ΔT midpoint) and pass that,
+/// rather than this function growing a second, redundant depth coordinate that
+/// could disagree with the first.
+///
+/// **That advice was written naming spec §4.6's `(CellId, Rung)` re-key as the
+/// obvious caller, and the re-key shipped without taking it.** Task 8
+/// ([`delve_seating`]) needs a depth per rung and uses the rung's **top**
+/// (`delta_t_range_of(rung).0`), matching `chamber`'s `stratum_at` so the
+/// seating and the lattice cannot disagree about where a rung is — and
+/// inheriting rank 0's degeneracy in exchange, which
+/// [`delve_seating::RungSeat::works`] now discloses. Nothing calls this
+/// function per rung today; the midpoint recommendation stands for whoever
+/// first does, and is no longer addressed to a named task.
+///
+/// Each axis:
+///
+/// - **temperature** is [`hornvale_terrain::temperature_at_depth`] of the
+///   surface datum at `depth_m` under this cell's `gradient`. The datum is
+///   still [`GeneratedClimate::mean_temperature_at`]'s annual mean; what is
+///   new is that the rock's own heat is added to it, so a chamber is warmer
+///   than the cell above it by `gradient × depth` and **two chambers at equal
+///   depth under different crust differ** — 700 m down is +10.5 K under a
+///   15 K/km craton and +21 K under 30 K/km young crust. This is the axis the
+///   pre-Underworld model passed through unchanged, and passing it through was
+///   the single largest reason nothing underground could be told apart.
+/// - **moisture** is [`chamber_moisture`]: saturated below the water table,
+///   decaying with height above it at a rate the rock's `porosity` sets. It
+///   replaces the fixed world constant this function used to return, which was
+///   the *other* reason a chamber read the same everywhere.
+/// - **insolation** is `0.0`, always, at every depth — and this one is
+///   **correct rather than unfinished** (spec §4.4). No aperture this campaign
+///   models is a light source scored here, and §4.4 preregisters "light is
+///   expected to read nearly empty" as a *finding*: the underworld is a place
+///   where one of five environmental axes has collapsed. Do not invent light
+///   underground to make this axis look busier.
 /// - **height_asl_m** is `surface.height_asl_m` UNCHANGED — height above sea
 ///   level of the cell the chamber sits beneath. (The Benchmark renamed this
-///   field from `elevation` and typed it `SeaLevelHeight`; this doc already
-///   described it as "height above sea level", so the rename only made the
-///   name agree with the comment.) A literal metres-below-surface offset per
-///   band would need a real depth coordinate, which is exactly the change to
-///   `Position` spec §6 rules out; the surface cell's own height is the only
-///   depth-adjacent reading available without inventing one, and it is also
-///   the physically right one: a chamber really is beneath that geographic
-///   point, at that point's altitude.
+///   field from `elevation` and typed it `SeaLevelHeight`.) The chamber's
+///   depth is now a real parameter, but it is *not* subtracted from this
+///   field: `height_asl_m` is scored against species elevation niches
+///   authored on surface altitude, and a chamber really is beneath that
+///   geographic point, at that point's altitude. Depth reaches temperature and
+///   moisture, which is where it physically belongs, and not the altitude
+///   axis, where it would silently re-scale every subterranean kind's
+///   elevation response.
 ///
-/// Because temperature and height pass through unchanged, they cannot by
-/// themselves distinguish a chamber from the cell above it — only moisture
-/// and insolation do. That is a real, stated limitation of this v1 model
-/// rather than a hidden one; Task 8's H2 readout is where whether it is too
-/// coarse gets scientific scrutiny, mirroring how the depth budget's own
-/// coarseness is deferred to the same readout.
-pub fn subterranean_substrate(surface: Substrate) -> Substrate {
+/// **What this richer reading does NOT yet do: move a world.** Every one of
+/// the 614 tests in this crate stayed green across this change, and that is
+/// not because nothing moved. `underworld_conditions_probe` measures the move
+/// against a control: the ΔT between the shallowest and deepest reach deciles
+/// spreads **0.7 → 56.0 K** on seed 42 (5.5 → 57.1 and 0.8 → 58.4 on the other
+/// two), out of a pre-change ΔT that was identically 0.0 K at every cave
+/// column in every world; and 17.5–19.9% of surface-temperature buckets now
+/// carry more than one chamber reading, which pre-change was impossible by
+/// construction. (The distinct-pair count rises too — 691 → 807, 1323 → 1483,
+/// 1030 → 1172 — but only modestly, because the surface temperature already
+/// varied per cell and so the pre-change reading was never one value. An
+/// earlier draft of this doc said it was; that claim had no control behind
+/// it.) The reason nothing moved is that the live consumer cannot see any of
+/// it. [`tolerance_liebig`] (The Tilth, stage 5) floors temperature, moisture
+/// and insolation by the sovereignty floor and calls elevation with floor
+/// `0.0`, so on a cave-bearing cell the unfloored elevation term sits below the
+/// others and **is** the minimum; improving the three floored axes changes
+/// nothing. `warren_readout`'s P1 tripwire pins exactly this as a falsified
+/// prediction and reads `ratio = 1.000` for rust-monster, xorn and drow both
+/// before and after this task (pooled means 0.039860 / 0.015078 / 0.029498,
+/// unchanged to six figures over 40,362 cave-bearing cells across 25 seeds).
+///
+/// So this task ships a **derivation whose consumer has not arrived**, which
+/// in a campaign whose headline finding is dangling seams has to be said out
+/// loud rather than left for someone to discover from a green suite. The
+/// consumers are named and in this spec: §4.5's `EnvironmentNiche` states a
+/// kind's preference in the same basis, and §4.6's realm-aware capacity scores
+/// an underworld community against the chamber's conditions rather than the
+/// surface cell's. Neither can be built on a constant, which is why this comes
+/// first; but until one of them lands, the difference measured here is real
+/// and unread.
+///
+/// **This function does not consult [`chamber::is_sump`], and the omission is
+/// deliberate.** That is the rule that a `ChamberOrigin::Made` chamber is dry
+/// regardless of the water table (spec §4.2.1 clause 2). It does not gain a
+/// caller here: no origin is available at this call site — the live callers
+/// derive one substrate *per cell*, before any chamber address exists — so
+/// consuming `is_sump` would mean passing a literal `ChamberOrigin::Found`, at
+/// which point the call is exactly `is_phreatic` with a constant discriminant.
+/// That would read as closing the disclosed gap while closing nothing.
+///
+/// **`is_sump` DOES have a production caller now, and this paragraph used to
+/// say it did not.** Spec §4.6's capacity task shipped one:
+/// [`delve_seating::seat_at`] asks it per candidate rung, with `Found`, to
+/// decide whether a seat is priced at
+/// [`delve_seating::UNDERWORLD_WORKS_COST`]. What is still missing is a caller
+/// for the `Made` arm, which needs a shipped path that constructs a non-empty
+/// [`chamber::ChamberOverrides`] — see [`delve_seating::made_chambers`] for
+/// that disclosure in full.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: porosity)
+pub fn subterranean_substrate(
+    surface: Substrate,
+    depth_m: f64,
+    gradient: hornvale_terrain::GeothermalGradient,
+    water_table_m: f64,
+    porosity: f64,
+) -> Substrate {
+    let datum = hornvale_kernel::Temperature::new(surface.temperature_c)
+        .expect("a surface substrate's temperature is finite");
     Substrate {
-        temperature_c: surface.temperature_c,
-        moisture: SUBTERRANEAN_MOISTURE,
+        temperature_c: hornvale_terrain::temperature_at_depth(datum, gradient, depth_m / 1000.0)
+            .get(),
+        moisture: chamber_moisture(depth_m, water_table_m, porosity),
         insolation: 0.0,
         height_asl_m: surface.height_asl_m,
     }
+}
+
+/// A chamber's moisture: saturated below the water table, drying upward from
+/// it at a rate the rock's `porosity` sets (spec §4.3 — "moisture derives from
+/// the water table's distance and `porosity` rather than a world constant").
+///
+/// Below the table the answer is a definition, not a calibration
+/// ([`PHREATIC_MOISTURE`]); above it, seepage decays as
+/// `reach / (reach + rise)` where `rise` is the height above the table and
+/// `reach = SEEPAGE_REACH_M × porosity`. That form is chosen for three
+/// properties rather than for its shape: it is **continuous at the table**
+/// (`rise = 0` gives exactly [`PHREATIC_MOISTURE`], matching the phreatic
+/// branch, so a chamber a millimetre either side of the table does not jump),
+/// it is **monotone** in both arguments, and it needs **no transcendental** —
+/// an exponential decay would read the same and would have to route through
+/// `hornvale_kernel::math` for determinism (decision 0041), buying nothing.
+///
+/// Total over the whole input domain — see [`chamber_moisture_at_reach`], which
+/// this delegates to at the shipped [`SEEPAGE_REACH_M`].
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: porosity), bare-ok(ratio: return)
+pub fn chamber_moisture(depth_m: f64, water_table_m: f64, porosity: f64) -> f64 {
+    chamber_moisture_at_reach(depth_m, water_table_m, porosity, SEEPAGE_REACH_M)
+}
+
+/// [`chamber_moisture`] with the seepage half-height as a parameter — the
+/// **calibration-free form**, so the sweep that chose [`SEEPAGE_REACH_M`] is
+/// reproducible from the tree rather than from six hand-edits of a private
+/// constant.
+///
+/// **`pub` for reproducibility, not for a production caller, and there is no
+/// production caller.** Both this and [`chamber_moisture`] are reached only by
+/// [`subterranean_substrate`] (which is in this module and needs no export)
+/// and by `underworld_conditions_probe`. Stated rather than left to be
+/// discovered: a `pub` surface with only test consumers is exactly the shape
+/// this campaign keeps finding, and the justification here is that the
+/// alternative — a private constant swept by six hand-edits — produced one
+/// drafted-from-estimate sweep and one formatter-defeated probe edit inside
+/// this same campaign.
+///
+/// This is the same posture `hornvale_terrain::earth_table_depth_m` takes for
+/// `UNDERWORLD_DRYNESS_GAIN`, adopted for the same stated reason: this
+/// campaign has already produced one sweep drafted from estimate and one probe
+/// edit silently defeated by a formatter, and a record that cannot tell a real
+/// row from a typo is not evidence. `underworld_conditions_probe`'s
+/// `how_far_does_the_seepage_reach` regenerates the constant's whole table in
+/// one run by calling this.
+///
+/// Total over the whole input domain: `rise` is floored at zero (the phreatic
+/// branch has already taken every negative case, and the floor makes the
+/// remaining boundary exact rather than sign-dependent), `porosity` is clamped
+/// to `[0, 1]`, and the one degenerate ratio — a chamber exactly at the table
+/// in zero-porosity rock, where both numerator and denominator vanish —
+/// resolves to saturation, which is the limit the continuous branch approaches
+/// from every direction that is not itself degenerate.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: porosity), bare-ok(diagnostic-value: seepage_reach_m), bare-ok(ratio: return)
+pub fn chamber_moisture_at_reach(
+    depth_m: f64,
+    water_table_m: f64,
+    porosity: f64,
+    seepage_reach_m: f64,
+) -> f64 {
+    if hornvale_terrain::is_phreatic(depth_m, water_table_m) {
+        return PHREATIC_MOISTURE;
+    }
+    let rise = (water_table_m - depth_m).max(0.0);
+    let reach = seepage_reach_m * porosity.clamp(0.0, 1.0);
+    let seepage = if reach + rise > 0.0 {
+        reach / (reach + rise)
+    } else {
+        1.0
+    };
+    VADOSE_DRY_MOISTURE + (PHREATIC_MOISTURE - VADOSE_DRY_MOISTURE) * seepage
+}
+
+/// [`subterranean_substrate`] over every cell of the globe — the field a
+/// `Subterranean` kind is scored against, hoisted exactly as the surface
+/// `substrate` field is.
+///
+/// Extracted rather than inlined at each caller because the four per-cell
+/// inputs a chamber reading needs (gradient, porosity, water table, depth) are
+/// four opportunities for two call sites to disagree, and this crate has two:
+/// [`per_species_suitability_masked`] (the siting/readout path) and
+/// [`per_species_capacity_at`] (the dimensional path the deep-history bake
+/// actually calls). The Range's retrospective is explicit that a gate applied
+/// to one and not the other moved a readout while leaving placement untouched;
+/// one derivation with two callers cannot reproduce that.
+///
+/// **The cell's depth is its cave's `depth_reach_m` — the deepest point the
+/// void actually reaches (spec §4.0's budget in metres).** A column offers a
+/// range of depths and one `Substrate` per cell has to pick one; the reach is
+/// the choice that is already load-bearing elsewhere (`chamber::chamber_exists`
+/// gates the lattice's floor on exactly this number through `rung_at_depth`),
+/// so the substrate and the lattice agree about how deep a column goes rather
+/// than each having its own opinion. It is also the pessimistic choice on
+/// temperature, deliberately: a deep-reaching column reads hot, which is what
+/// spec §4.1's habitable ceiling *means*.
+///
+/// **A per-rung substrate is still deferred, and this doc used to defer it to
+/// a task that has since shipped without doing it.** Spec §4.6's
+/// `(CellId, Rung)` re-key landed (Task 8, [`delve_seating`]); it re-keyed the
+/// node index and added **no** per-rung substrate at all. This field is still
+/// evaluated once per cell at `depth_reach_m`, and
+/// [`delve_seating::chamber_fit`] scores a rung against the corpus rather than
+/// against a substrate read at that rung's depth. So the deferral is real and
+/// now points nowhere: **it is unowned work, not scheduled work**, and it is
+/// carried as `MAP-per-rung-substrate` in the idea registry rather than as a
+/// pointer to somebody else's task. What it needs is stated below.
+///
+/// **Beware the atom.** `cave_depth_reach_m` clamps at both ends, so reach is
+/// a row of spikes rather than a spread — seed 42's fattest single value holds
+/// 23.1% of its caves (`underworld_ladder_probe`) — and a term derived from
+/// reach alone inherits that. Temperature does not, because the gradient and
+/// the surface datum both vary across those cells; a future term that reads
+/// reach *without* a per-cell co-factor should expect the atom and check for
+/// it, the way Task 2 learned to.
+///
+/// A cell with no cave gets `0.0` — there is no chamber, so any depth would be
+/// a claim about a place that does not exist, and zero is the only one that
+/// asserts nothing. Every live consumer multiplies such a cell by an
+/// `availability` of `0.0`; the readout batteries that score all land cells
+/// read it as "the surface cell's own temperature with cave hydrology", which
+/// is the honest counterfactual for a column that never opened.
+pub fn subterranean_substrate_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    surface: &hornvale_kernel::CellMap<Substrate>,
+) -> hornvale_kernel::CellMap<Substrate> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        let s = *surface.get(cell);
+        let porosity = terrain.material_at(cell).porosity;
+        let water_table_m = hornvale_terrain::water_table_depth_m(
+            terrain.drainage_at(cell),
+            porosity,
+            s.height_asl_m.get(),
+        );
+        let depth_m = terrain.cave_at(cell).map_or(0.0, |cave| cave.depth_reach_m);
+        subterranean_substrate(
+            s,
+            depth_m,
+            terrain.geothermal_gradient_at(cell),
+            water_table_m,
+            porosity,
+        )
+    })
 }
 
 /// The deep-time window (1 Myr) and sampling, standard days. These, the era
@@ -6599,6 +6896,33 @@ fn bake_history_from(
         insolation_scalar,
         &regime,
     );
+    // THE DELVE SEATING (The Underworld, spec §4.6). Which rung of the ladder
+    // each settling people occupies at each cell, and the factor its capacity
+    // there is scaled by. Built here because it is the one derivation that
+    // needs terrain, the species registries and the underworld corpus at once,
+    // which is the composition root's whole job.
+    //
+    // `environment_niche_registry` is read directly rather than through
+    // `WorldComponents`, following `dispersion_registry`'s precedent one
+    // function up: it is not one of the integrity-checked components, and
+    // widening `from_stores`' arity for every caller would buy nothing.
+    //
+    // A people absent from that registry — which is every surface people, and
+    // both subterranean FAUNA kinds — seats at `Surface` on every cell at
+    // multiplier 1.0, so this is an exact no-op for it.
+    let niches = hornvale_species::environment_niche_registry();
+    let seatings: Vec<crate::delve_seating::Seating> = peoples
+        .iter()
+        .enumerate()
+        .map(|(i, k)| match species_realm[i] {
+            hornvale_species::HabitatRealm::Surface => {
+                crate::delve_seating::Seating::all_surface(geo)
+            }
+            hornvale_species::HabitatRealm::Subterranean => {
+                crate::delve_seating::seating_for(geo, terrain, niches.get(k))
+            }
+        })
+        .collect();
     let caps_by_era: Vec<Vec<hornvale_kernel::ecology::CapacityMap>> = era_adjusts
         .iter()
         .map(|adjust| {
@@ -6613,7 +6937,37 @@ fn bake_history_from(
                 &species_affinity,
             )
             .into_iter()
-            .map(|(_tag, map)| map)
+            // REALM-AWARE CAPACITY (spec §4.6): "capacity for an underworld
+            // community is computed against the chamber's conditions and its
+            // energy base, not the surface cell's". `per_species_capacity_at`
+            // already scores a subterranean kind against the subterranean
+            // substrate and gates it on a cave existing; what the seating adds
+            // is the two things only a rung can say — how well the chamber's
+            // own community suits this kind (`environment_fit`, Task 7's first
+            // production consumer) and whether it has to be kept dry
+            // (`is_sump`, spec §4.2.1 clause 2).
+            //
+            // A surface people's multiplier is exactly 1.0, an IEEE-754 no-op,
+            // which is what makes this inert above ground.
+            //
+            // THE TAG IS CHECKED RATHER THAN DISCARDED. `per_species_capacity_at`
+            // tags each result by its `.enumerate()` position over the slice it
+            // was handed, and `seatings` was built by a separate `.enumerate()`
+            // over `peoples`; indexing one by the other's position is only
+            // correct because both derive from `peoples` in one order-preserving
+            // pass. `bake`'s own assert checks LENGTHS, which cannot see a
+            // permutation — so the identity is asserted here, at the one place
+            // the two orderings meet, rather than left to the two derivations
+            // staying in step by inspection.
+            .enumerate()
+            .map(|(i, (tag, map))| {
+                debug_assert_eq!(
+                    tag as usize, i,
+                    "per_species_capacity_at's tag must be its position in `peoples`, \
+                     which is the position `seatings` is indexed by"
+                );
+                scale_capacity(geo, &map, &seatings[i].multiplier)
+            })
             .collect()
         })
         .collect();
@@ -6655,6 +7009,8 @@ fn bake_history_from(
             )
         })
         .collect();
+    let seating_rungs: Vec<hornvale_kernel::CellMap<hornvale_terrain::DelveRung>> =
+        seatings.into_iter().map(|s| s.rung).collect();
     Ok(history_bake::bake(
         seed,
         geo,
@@ -6663,9 +7019,35 @@ fn bake_history_from(
         &eras,
         &paleo.refugia,
         &peoples,
+        &seating_rungs,
         &cfg,
         &graphs,
     ))
+}
+
+/// One people's capacity field scaled by its delve seating — the arithmetic
+/// half of realm-aware capacity (spec §4.6).
+///
+/// Separate from the loop that calls it so the multiplication is stated once
+/// and so the surface no-op is visible: a `Seating::all_surface` multiplier is
+/// exactly `1.0`, and `x * 1.0` is `x` bit for bit for every finite `x`, which
+/// is what lets this sit unconditionally in the path of every people rather
+/// than behind a realm branch that could drift from the one that built the
+/// seating.
+///
+/// `expect` rather than a `Result`: the inputs are a validated `CapacityMap`
+/// (finite, non-negative) and a multiplier in `[0, 1]`, so the product is
+/// finite and non-negative by construction. A failure here would mean the
+/// seating produced a NaN, which is a defect rather than a world.
+fn scale_capacity(
+    geo: &Geosphere,
+    capacity: &hornvale_kernel::ecology::CapacityMap,
+    multiplier: &hornvale_kernel::CellMap<f64>,
+) -> hornvale_kernel::ecology::CapacityMap {
+    hornvale_kernel::ecology::CapacityMap::new(hornvale_kernel::CellMap::from_fn(geo, |c| {
+        capacity.at(c) * multiplier.get(c)
+    }))
+    .expect("a validated capacity scaled by a [0, 1] seating multiplier stays valid")
 }
 
 /// Build a world just deep enough for the deep-history bake ([`BuildDepth::Terrain`])
@@ -9073,6 +9455,211 @@ mod tests {
         );
     }
 
+    /// A surface reading to derive chambers from — deliberately temperate,
+    /// mid-moisture, well-lit and well above sea level, so that every
+    /// difference an assertion below sees comes from the depth/crust/hydrology
+    /// arguments rather than from an extreme datum.
+    fn chamber_test_surface() -> Substrate {
+        Substrate {
+            temperature_c: 12.0,
+            moisture: 0.42,
+            insolation: 0.71,
+            height_asl_m: hornvale_kernel::SeaLevelHeight::from_metres(600.0),
+        }
+    }
+
+    /// claim: behaviour — a chamber deeper on the delve ladder is warmer than
+    /// a shallower one beneath the SAME surface cell.
+    ///
+    /// The defect this campaign exists to fix (metaplan §3.5): temperature
+    /// passed through unchanged at every depth, so every chamber in a column
+    /// read exactly as the cell above it and the ladder said nothing.
+    ///
+    /// The depths are chosen one inside each habitation rung under a 25 K/km
+    /// gradient, and the test **asserts that they really do land on five
+    /// distinct rungs** — without that, a monotone-in-depth check would be
+    /// asserting arithmetic rather than anything about the ladder.
+    #[test]
+    fn a_deeper_rung_is_warmer_under_the_same_surface() {
+        let surface = chamber_test_surface();
+        let gradient = hornvale_terrain::GeothermalGradient::new(25.0);
+        // Rung floors at 25 K/km sit at 0 / 80 / 320 / 1000 / 2000 m
+        // (ΔT = 0 / 2 / 8 / 25 / 50 K); one depth inside each.
+        let depths = [20.0, 200.0, 600.0, 1400.0, 2600.0];
+
+        let rungs: Vec<hornvale_terrain::DelveRung> = depths
+            .iter()
+            .map(|&d| hornvale_terrain::rung_at_depth(d, gradient))
+            .collect();
+        let mut distinct = rungs.clone();
+        distinct.dedup();
+        assert_eq!(
+            distinct.len(),
+            depths.len(),
+            "the probe depths must span five distinct rungs, else this test \
+             asserts arithmetic and not the ladder: {rungs:?}"
+        );
+
+        let mut previous = f64::NEG_INFINITY;
+        for (&depth_m, rung) in depths.iter().zip(&rungs) {
+            let sub = subterranean_substrate(surface, depth_m, gradient, 400.0, 0.40);
+            assert!(
+                sub.temperature_c > previous,
+                "{rung:?} at {depth_m} m read {} °C, not warmer than the rung \
+                 above it ({previous} °C)",
+                sub.temperature_c
+            );
+            previous = sub.temperature_c;
+        }
+        // And the shallowest chamber is already warmer than the cell above it:
+        // "unchanged at every depth" must fail at the very first rung, not
+        // only once the depths get large.
+        let shallowest = subterranean_substrate(surface, depths[0], gradient, 400.0, 0.40);
+        assert!(
+            shallowest.temperature_c > surface.temperature_c,
+            "an Undercroft chamber read {} °C against a {} °C surface datum — \
+             temperature is still passing through unchanged",
+            shallowest.temperature_c,
+            surface.temperature_c
+        );
+    }
+
+    /// claim: behaviour — two cells at the SAME rung and the SAME depth read
+    /// different chamber temperatures when their crust differs.
+    ///
+    /// This is what makes chambers tellable apart, and it is the property a
+    /// rung-sampled temperature could not have: 700 m lands in `Deeps` under
+    /// both a 15 K/km craton and a 30 K/km young crust, so a reading taken at
+    /// any landmark of that rung would be identical for the two cells. Taken
+    /// at the depth itself, they differ by the full 10.5 K the crust is worth.
+    #[test]
+    fn two_cells_at_one_rung_differ_when_their_crust_differs() {
+        let surface = chamber_test_surface();
+        let craton = hornvale_terrain::GeothermalGradient::new(15.0);
+        let young = hornvale_terrain::GeothermalGradient::new(30.0);
+        let depth_m = 700.0;
+
+        // The premise: same depth, same rung. Without this the test would be
+        // satisfied by the two cells merely sitting on different rungs, which
+        // is a weaker and different claim.
+        assert_eq!(
+            hornvale_terrain::rung_at_depth(depth_m, craton),
+            hornvale_terrain::rung_at_depth(depth_m, young),
+            "the two gradients must put {depth_m} m on the same rung"
+        );
+
+        let cool = subterranean_substrate(surface, depth_m, craton, 400.0, 0.40);
+        let hot = subterranean_substrate(surface, depth_m, young, 400.0, 0.40);
+        assert!(
+            hot.temperature_c > cool.temperature_c,
+            "young crust {} °C must be warmer than craton {} °C at one depth",
+            hot.temperature_c,
+            cool.temperature_c
+        );
+        // The gap is the crust's whole contribution (0.7 km × 15 K/km), not a
+        // rounding artefact — assert its size, not merely its sign.
+        assert!(
+            (hot.temperature_c - cool.temperature_c - 10.5).abs() < 1e-9,
+            "expected a 10.5 K crust gap, got {}",
+            hot.temperature_c - cool.temperature_c
+        );
+        // Both chambers are also warmer than the shared surface datum, so
+        // neither reading is the pass-through this replaces.
+        assert!(cool.temperature_c > surface.temperature_c);
+    }
+
+    /// claim: behaviour — moisture is no longer a world constant: it moves
+    /// with the chamber's distance from the water table and with the rock's
+    /// porosity, and a flooded chamber reads saturated.
+    #[test]
+    fn moisture_is_no_longer_a_world_constant() {
+        let surface = chamber_test_surface();
+        let gradient = hornvale_terrain::GeothermalGradient::new(20.0);
+        let at = |depth_m: f64, table_m: f64, porosity: f64| {
+            subterranean_substrate(surface, depth_m, gradient, table_m, porosity).moisture
+        };
+
+        // Distance from the table moves it: 20 m above versus 800 m above,
+        // everything else held.
+        let near = at(100.0, 120.0, 0.50);
+        let far = at(100.0, 900.0, 0.50);
+        assert!(
+            near > far,
+            "a chamber 20 m above the table ({near}) must be damper than one \
+             800 m above it ({far})"
+        );
+
+        // Porosity moves it: the same chamber in tight rock versus porous
+        // rock. This is the second half of spec §4.3's derivation, and a model
+        // that read only the distance would pass the check above and fail
+        // this one.
+        let tight = at(100.0, 900.0, 0.05);
+        let porous = at(100.0, 900.0, 0.85);
+        assert!(
+            porous > tight,
+            "porous rock ({porous}) must deliver more seepage than tight rock \
+             ({tight}) at one height above the table"
+        );
+
+        // A drowned chamber is saturated, and a high dry one is not: the axis
+        // spans its range rather than hovering near one value.
+        let flooded = at(900.0, 100.0, 0.50);
+        assert_eq!(flooded, 1.0, "a phreatic chamber must read saturated");
+        assert!(
+            flooded - tight > 0.5,
+            "the wettest and driest chambers must differ by more than half the \
+             axis: {flooded} vs {tight}"
+        );
+
+        // The retired world constant was 0.90 for every chamber in every
+        // world. Nothing here reproduces it as a new constant: four readings,
+        // four values.
+        let readings = [near, far, tight, porous];
+        for (i, a) in readings.iter().enumerate() {
+            for b in &readings[i + 1..] {
+                assert_ne!(a, b, "two distinct chambers reported the same moisture");
+            }
+        }
+    }
+
+    /// claim: invariant — insolation is `0.0` at every depth, and moisture
+    /// stays inside `Substrate`'s declared `[0, 1]` range everywhere.
+    ///
+    /// The insolation half is a **finding, not an oversight** (spec §4.4:
+    /// light is expected to read nearly empty, the way The Axes' `DISTURBANCE`
+    /// does). It is pinned so that a later campaign inventing light
+    /// underground has to do so deliberately rather than by drift.
+    #[test]
+    fn insolation_is_dark_at_every_depth_and_moisture_stays_in_range() {
+        let surface = chamber_test_surface();
+        let mut checked = 0u32;
+        for g in [15.0, 22.5, 30.0] {
+            let gradient = hornvale_terrain::GeothermalGradient::new(g);
+            for depth_m in [0.0, 1.0, 200.0, 1_000.0, 3_000.0] {
+                for table_m in [0.0, 1.0, 200.0, 1_000.0, 5_000.0] {
+                    for porosity in [0.0, 0.055, 0.5, 0.819, 1.0] {
+                        let sub =
+                            subterranean_substrate(surface, depth_m, gradient, table_m, porosity);
+                        assert_eq!(
+                            sub.insolation, 0.0,
+                            "light at {depth_m} m under {g} K/km — spec §4.4 says dark"
+                        );
+                        assert!(
+                            (0.0..=1.0).contains(&sub.moisture),
+                            "moisture {} out of range at depth={depth_m} table={table_m} \
+                             porosity={porosity}",
+                            sub.moisture
+                        );
+                        assert!(sub.temperature_c.is_finite());
+                        assert_eq!(sub.height_asl_m, surface.height_asl_m);
+                        checked += 1;
+                    }
+                }
+            }
+        }
+        assert_eq!(checked, 375, "sweep shrank");
+    }
+
     /// claim: invariant — **exactly one axis is unfloored, and it is the one
     /// that may undercut the others.**
     ///
@@ -9648,7 +10235,35 @@ mod tests {
         // generated name. +61 glosses against +85 occupations is the right
         // order of magnitude for that cause and no other. Post-unblinding
         // re-measure, declared per decision 0016.
-        assert_eq!(count("name-gloss"), 366);
+        //
+        // THE UNDERWORLD (Task 8, spec §4.6): 366 -> 317, and the three counts
+        // above are again UNCHANGED at 145 — the same split, one campaign on.
+        // The node index is re-keyed on `(cell, rung)`, so drow (the roster's
+        // one settled subterranean people) stops competing for the surface
+        // cell it used to displace someone from. The peopled ROSTER does not
+        // move, which is why the pantheon and the three counts do not; what
+        // moves is settlement VOLUME, because every people seeded after drow
+        // in genesis order now draws from a different pool of vacant cells
+        // (521 occupations across 217 sites, against 826 across 302). -49
+        // glosses against -305 occupations and -85 sites: a gloss is emitted
+        // per generated NAME, so it tracks distinct sites rather than
+        // occupations, and -16% of glosses against -28% of sites is the right
+        // order of magnitude for that cause. Post-unblinding re-measure,
+        // declared per decision 0016.
+        //
+        // THE UNDERWORLD (Task 9, the genus join): 317 -> 346, and the three
+        // counts above are UNCHANGED at 145 for the third campaign running.
+        // Same lever as Task 8's entry, moved a second time: `chamber_fit`
+        // filtered the underworld corpus on `CaveKind::name()` (`"karst"`,
+        // `"fracture"`) against genera spelled `"karst-cave"` and
+        // `"fracture-cave"`, so two of the three formations never matched
+        // their own rows and read the genus-blind fallback. Repairing the join
+        // changes which rung drow seats at in karst and fracture columns,
+        // which changes which surface cells it leaves free, which changes
+        // settlement VOLUME again — this time upward. The peopled ROSTER is
+        // untouched, which is again why the pantheon and the three counts do
+        // not move. Post-unblinding re-measure, declared per decision 0016.
+        assert_eq!(count("name-gloss"), 346);
     }
 
     #[test]

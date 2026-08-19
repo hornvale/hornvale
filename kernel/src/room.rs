@@ -483,6 +483,18 @@ impl RoomAddr {
         (deg + 360.0) % 360.0
     }
 
+    /// Great-circle angular distance to `other`'s centroid, in radians.
+    /// Pairs with [`RoomAddr::bearing_to`]: together they are a polar
+    /// coordinate for `other` about `self`, which is what a client needs
+    /// to place a cell without doing spherical trigonometry itself.
+    /// type-audit: pending(wave-1)
+    pub fn distance_rad_to(&self, other: &RoomAddr) -> f64 {
+        let a = self.centroid();
+        let b = other.centroid();
+        let dot = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0);
+        math::acos(dot)
+    }
+
     /// The three edge-neighbour rooms, at the same depth (the geometric base
     /// graph). `neighbor[i]` is across the edge opposite corner `i` (between
     /// corners `(i+1)%3` and `(i+2)%3`). Integer-only; passability and overlay
@@ -967,6 +979,69 @@ mod tests {
         };
         for bear in [a.bearing_to(&b), b.bearing_to(&a)] {
             assert!((0.0..360.0).contains(&bear), "bearing {bear} out of range");
+        }
+    }
+
+    #[test]
+    fn distance_to_self_is_zero_and_the_antipode_is_pi() {
+        // NOT [1,0,0]/[-1,0,0]: those sit on a rotational symmetry axis of
+        // this icosahedron's base orientation (`base_icosahedron`,
+        // geosphere.rs), where `containing`'s room resolution for a point and
+        // its negation is related by a z-axis rotation rather than a true
+        // point inversion (a.centroid()[2] == b.centroid()[2] exactly, while
+        // x and y negate exactly), so the two rooms' centroids converge to
+        // exact antipodes only asymptotically as depth increases — that pair
+        // DOES clear a 1e-9 tolerance, but not until depth 27 (measured:
+        // err=1.49e-8 at depth 26, err=0.0 exactly at depth 27 — the raw dot
+        // product rounds to exactly -1.0 there, collapsing the remaining gap
+        // rather than continuing to halve it), two levels of headroom under
+        // `MAX_DEPTH = 29`, not past it. A generic (non-axis-aligned) point
+        // avoids the rotation-not-inversion pathology entirely and resolves
+        // to exact antipodal rooms already at a shallow depth (4), which is
+        // why it was chosen over bumping the axis-aligned pair's depth.
+        let a = RoomAddr::containing([0.3, 0.4, 0.866], 4);
+        let b = RoomAddr::containing([-0.3, -0.4, -0.866], 4);
+        assert_eq!(a.distance_rad_to(&a), 0.0);
+        assert!((a.distance_rad_to(&b) - std::f64::consts::PI).abs() < 1e-9);
+    }
+
+    #[test]
+    fn self_distance_never_nans_from_an_unclamped_dot_product() {
+        // A unit vector dotted with itself can land fractionally above 1.0
+        // through floating-point accumulation in `centroid`'s normalize step
+        // (sum-of-squares then divide), and `acos` of anything above 1.0 is
+        // NaN. Sweep a broad set of real rooms (not just one) so this would
+        // actually catch a dropped `.clamp(-1.0, 1.0)` rather than passing
+        // vacuously.
+        for a in all_addrs(4) {
+            let d = a.distance_rad_to(&a);
+            assert!(!d.is_nan(), "self-distance NaN for {a:?}");
+            // Not exact equality to 0.0: the raw dot product of a vector
+            // with itself can land a hair *under* 1.0 too (normalize's own
+            // rounding), which the clamp does not (and should not) correct
+            // — only overshoot past +/-1.0 is a clamping concern. What
+            // matters here is "small", not "exactly zero".
+            assert!(d.abs() < 1e-6, "self-distance too large for {a:?}: {d}");
+        }
+    }
+
+    #[test]
+    fn distance_is_symmetric() {
+        let level = 3u32;
+        let addrs = all_addrs(level);
+        // Every 37th pair (to keep the test fast) across the full address set.
+        let pairs: Vec<(&RoomAddr, &RoomAddr)> = addrs
+            .iter()
+            .enumerate()
+            .flat_map(|(i, a)| addrs.iter().skip(i + 1).step_by(37).map(move |b| (a, b)))
+            .collect();
+        assert!(!pairs.is_empty());
+        for (a, b) in pairs {
+            assert_eq!(
+                a.distance_rad_to(b),
+                b.distance_rad_to(a),
+                "asymmetric distance for {a:?} <-> {b:?}"
+            );
         }
     }
 

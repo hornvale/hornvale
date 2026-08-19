@@ -322,15 +322,25 @@ mod tests {
         assert_eq!(
             rows,
             vec![
-                // The Deep Realm: the underworld chamber derivation. A NEW
-                // label, additive at v1 — it perturbs no existing stream —
-                // but versioned from birth like `settlement/disposition v1`
+                // The Deep Realm: the underworld chamber derivation. Born at
+                // v1, versioned from birth like `settlement/disposition v1`
                 // below, because its key (a ChamberAddr's cell, entrance,
                 // band NAME and slot — see `windows/worldgen/src/
                 // chamber.rs`'s `chamber_key`) is a save-format contract
-                // the moment anything commits a chamber fact, which this
-                // campaign deliberately does not do (spec §3.1/§3.3).
-                "chamber v1",
+                // the moment anything commits a chamber fact, which that
+                // campaign deliberately did not do (spec §3.1/§3.3).
+                //
+                // **The Underworld bumps it to v2**, and this line is that
+                // review decision being taken rather than deferred. The key
+                // spells its band by NAME, and `ChamberAddr.band` stopped
+                // naming a stratigraphic band (`regolith`/`cover`/…) and
+                // started naming a delve rung (`undercroft`/`shallows`/…)
+                // when spec §4.1 re-pointed the lattice's depth axis at the
+                // heat-spaced ladder. Every chamber in every world therefore
+                // re-derives — the exact case `chamber_key`'s own doc named
+                // as "an epoch, not a fix to that assertion". `chamber/v1` is
+                // retired and never reused.
+                "chamber v2",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.

@@ -2,52 +2,126 @@
 //!
 //! Pure logic over `hornvale_worldgen::chamber` — no world-building fixture
 //! is needed, because `chamber_exists`/`chamber_at` are pure functions of
-//! `(seed, cave, addr)` and `Cave` is a small `Copy` struct callers can
-//! construct directly. Not `#[ignore]`d: this battery is cheap and belongs
-//! in the ordinary commit gate.
+//! their arguments and every one of those arguments (a `Cave`, a
+//! `GeothermalGradient`, a `StratigraphicColumn`) is something a caller can
+//! construct directly through terrain's own entry points. Not `#[ignore]`d:
+//! this battery is cheap and belongs in the ordinary commit gate.
+//!
+//! **The lattice's depth axis moved in The Underworld** (`chamber/v2`, spec
+//! §4.1): `ChamberAddr.band` indexes the delve ladder rather than the
+//! stratigraphic one, so every fixture here now carries a gradient as well as
+//! a reach, and the rung a fixture reaches is asserted rather than assumed.
 //!
 //! Both tests below exist to catch the campaign's named highest-risk defect
 //! (rule 1, `docs/superpowers/plans/2026-08-05-the-deep-realm.md`): an
 //! address must name a PLACE, never a construction step. See each test's own
 //! doc comment for which half of that rule it guards.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{BandKind, Cave, CaveKind};
+use hornvale_terrain::{BandKind, Cave, CaveKind, DelveRung, GeothermalGradient, rung_at_depth};
 use hornvale_worldgen::chamber::{
     ChamberAddr, ChamberOrigin, SLOTS_PER_BAND, chamber_at, chamber_exists, passages_from,
 };
+
+/// The column every fixture below is built against: 401 m of cover on 35 km
+/// of continental crust, which is an ordinary land column the generator
+/// produces in quantity. Band tops are `[0, 1, 401, 17700.5, 35000]` m.
+///
+/// **Fixtures are built through `Cave::from_reach` against this column**, so
+/// each one's `deepest_band` is derived from its own metre budget and the pair
+/// is a state the generator could actually author (The Underworld, spec §4.0).
+/// Before that they were struct literals pairing a 1 km budget with
+/// `BandKind::Roots`, whose top on any real column is ~14–20 km — an
+/// impossible world, and exactly the shape that lets a suite go green over a
+/// broken model once something downstream starts reading the budget.
+fn fixture_column() -> hornvale_terrain::StratigraphicColumn {
+    hornvale_terrain::column(
+        35.0,
+        0.3,
+        true,
+        400.0,
+        1.0,
+        hornvale_terrain::RockClass::Sandstone,
+        hornvale_terrain::Basement::Continental,
+    )
+}
+
+/// The geothermal gradient every fixture below is placed under, K/km.
+///
+/// **24.0 is the measured median band**, not a round number: the three
+/// preregistered seeds report gradient p50 at 24.419 / 25.004 / 23.082 K/km
+/// (`underworld_ladder_probe.rs`). It matters because `chamber_exists` gates
+/// on the DELVE ladder since `chamber/v2`, so a fixture's reach in metres is
+/// only half of what decides how far down the lattice it gets; the other half
+/// is the cell it is in.
+fn fixture_gradient() -> GeothermalGradient {
+    GeothermalGradient::new(24.0)
+}
+
+/// A budget that stops inside the cover — `deepest_band` comes out `Cover`
+/// (rank 1). Near the middle of the measured lava-tube/shallow-karst range.
+///
+/// On the delve ladder at [`fixture_gradient`] this is ΔT = 4.8 K, the
+/// `Shallows` (rank 1) — which is what `chamber_exists` gates on now.
+const SHALLOW_REACH_M: f64 = 200.0;
+
+/// A budget that cuts past the 401 m basement contact — `deepest_band` comes
+/// out `Basement` (rank 2). This is the median fault-void reach the 30-world
+/// readout measures, not an invented number.
+///
+/// **`Basement` is the deepest band any cave can reach**, because a budget
+/// capped at 3 km cannot get to `Roots` (~17.7 km on this column). Fixtures
+/// that used to say `Roots` say this instead.
+///
+/// On the delve ladder at [`fixture_gradient`] this is ΔT = 48 K, the
+/// `Underdeep` (rank 3) — two rungs below `SHALLOW_REACH_M`, where the
+/// stratigraphic ladder separates the same pair by only one band. That
+/// widening is the re-point's whole purpose and the tests below rely on it.
+const DEEP_REACH_M: f64 = 2000.0;
 
 /// The rule The Salt, 0102 and The Tolerance each learned separately:
 /// generation order is never an identity. A `ChamberAddr` names a PLACE in a
 /// lattice that exists before anything is generated into it, so nothing
 /// about which chambers happen to exist can move another chamber's address.
 ///
-/// Two caves differing ONLY in `deepest_band` (their measured depth budget)
-/// both admit every address with `band <= 2` (`Basement`'s own rank). A
-/// chamber at one of those addresses must come out byte-identical under
-/// either cave — its content cannot have been renumbered by the deeper cave
-/// having more chambers available to it.
+/// Two caves differing ONLY in their depth budget both admit every address
+/// with `band <= 1` (`Cover`'s own rank). A chamber at one of those addresses
+/// must come out byte-identical under either cave — its content cannot have
+/// been renumbered by the deeper cave having more chambers available to it.
 #[test]
 fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     let seed = Seed(90210);
     let cell = CellId(9);
-    let shallow = Cave {
-        kind: CaveKind::Karst,
-        deepest_band: BandKind::Basement,
-    };
-    let deep = Cave {
-        kind: CaveKind::Karst,
-        deepest_band: BandKind::Roots,
-    };
+    let col = fixture_column();
+    let shallow = Cave::from_reach(CaveKind::Karst, SHALLOW_REACH_M, &col);
+    let deep = Cave::from_reach(CaveKind::Karst, DEEP_REACH_M, &col);
+    assert_eq!(shallow.deepest_band, BandKind::Cover);
+    assert_eq!(deep.deepest_band, BandKind::Basement);
+    // The gate is the DELVE ladder since chamber/v2, so the shared region is
+    // decided by the rungs, not the bands. Pinned rather than assumed: if
+    // either fixture's rung moves, the loop bound below stops being the shared
+    // region and this test would silently start comparing addresses only one
+    // cave admits — which it would pass, vacuously.
+    assert_eq!(
+        rung_at_depth(shallow.depth_reach_m, fixture_gradient()),
+        DelveRung::Shallows
+    );
+    assert_eq!(
+        rung_at_depth(deep.depth_reach_m, fixture_gradient()),
+        DelveRung::Underdeep
+    );
 
-    // Basement's rank is 2, so bands 0..=2 (Regolith, Cover, Basement) are
-    // in BOTH caves' budget; Roots's rank 3 gives `deep` a fourth band
-    // `shallow` cannot reach at all. Every address checked here therefore
-    // sits in the region shared by both caves' budgets.
+    // `Shallows` is rank 1, so bands 0..=1 (Undercroft, Shallows) are in BOTH
+    // caves' budget; `Underdeep`'s rank 3 gives `deep` two further rungs
+    // `shallow` cannot reach at all. Every address checked here therefore sits
+    // in the region shared by both caves' budgets. (The pair was originally
+    // Basement/Roots over bands 0..=2 on the stratigraphic ladder, then
+    // Cover/Basement when `Roots` became unreachable under a metre budget; the
+    // property is identical in all three framings.)
     let no_overrides = BTreeMap::new();
-    for band in 0..=2u8 {
+    for band in 0..=1u8 {
         for slot in 0..SLOTS_PER_BAND {
             let addr = ChamberAddr {
                 cell,
@@ -56,14 +130,21 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
                 slot,
             };
             assert_eq!(
-                chamber_exists(seed, &shallow, addr),
-                chamber_exists(seed, &deep, addr),
+                chamber_exists(seed, &shallow, fixture_gradient(), addr),
+                chamber_exists(seed, &deep, fixture_gradient(), addr),
                 "existence at {addr:?} differs between a shallow and a deep cave \
                  sharing the same seed and cell"
             );
             assert_eq!(
-                chamber_at(seed, &shallow, addr, &no_overrides),
-                chamber_at(seed, &deep, addr, &no_overrides),
+                chamber_at(
+                    seed,
+                    &shallow,
+                    fixture_gradient(),
+                    &col,
+                    addr,
+                    &no_overrides
+                ),
+                chamber_at(seed, &deep, fixture_gradient(), &col, addr, &no_overrides),
                 "content at {addr:?} differs between a shallow and a deep cave — \
                  an address must name a PLACE, never a construction step"
             );
@@ -73,27 +154,32 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 
 /// The lattice is a fixed size regardless of what any particular cave
 /// realizes; occupancy within it is sparse and varies by seed. Over a cave
-/// reaching `BandKind::Roots`, the address space checked here is
-/// `SLOTS_PER_BAND * 4` (bands `0..=3`, `Regolith..=Roots`) — constant
-/// across every seed — while the number of addresses that EXIST is
-/// strictly less than that, and differs seed to seed.
+/// reaching the `Underdeep` rung, the address space checked here is
+/// `SLOTS_PER_BAND * 3` (bands `0..=2`, `Undercroft..=Deeps`) — constant
+/// across every seed — while the number of addresses that EXIST is strictly
+/// less than that, and differs seed to seed. The loop stops one rung short of
+/// the fixture's own budget on purpose: every address it probes is in budget,
+/// so a `false` from `chamber_exists` can only mean the draw refused it, never
+/// that the gate did.
 /// claim: invariant(forall-seed) — lattice size is fixed, existence is
 /// sparse and seed-varying (seedless sweep, audit §5: builds no world;
 /// named explicitly in the task brief)
 #[test]
 fn the_lattice_is_fixed_and_existence_is_sparse() {
     let cell = CellId(42);
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-    };
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
+    assert!(
+        rung_at_depth(cave.depth_reach_m, fixture_gradient()) >= DelveRung::Deeps,
+        "the fixture must reach at least the Deeps for bands 0..=2 to all be \
+         in budget; otherwise the sparseness below is measuring the gate"
+    );
 
     let mut existing_counts = Vec::new();
     for raw_seed in [1u64, 2, 3, 4, 5] {
         let seed = Seed(raw_seed);
         let mut total = 0u32;
         let mut existing = 0u32;
-        for band in 0..=3u8 {
+        for band in 0..=2u8 {
             for slot in 0..SLOTS_PER_BAND {
                 total += 1;
                 let addr = ChamberAddr {
@@ -102,16 +188,16 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
                     band,
                     slot,
                 };
-                if chamber_exists(seed, &cave, addr) {
+                if chamber_exists(seed, &cave, fixture_gradient(), addr) {
                     existing += 1;
                 }
             }
         }
         assert_eq!(
             total,
-            u32::from(SLOTS_PER_BAND) * 4,
-            "the address space over a Roots-reaching cave must be a constant \
-             SLOTS_PER_BAND * 4"
+            u32::from(SLOTS_PER_BAND) * 3,
+            "the address space over an Underdeep-reaching cave must be a constant \
+             SLOTS_PER_BAND * 3 over the bands probed"
         );
         assert!(
             existing < total,
@@ -140,16 +226,13 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
 /// hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
 fn every_passage_is_traversable_in_both_directions() {
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-    };
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
 
     for raw_seed in [1u64, 2, 3, 4, 5] {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 1, 9, 42] {
             let cell = CellId(raw_cell);
-            for band in 0..=3u8 {
+            for band in 0..=2u8 {
                 for slot in 0..SLOTS_PER_BAND {
                     let addr = ChamberAddr {
                         cell,
@@ -157,8 +240,8 @@ fn every_passage_is_traversable_in_both_directions() {
                         band,
                         slot,
                     };
-                    for &neighbour in &passages_from(seed, &cave, addr) {
-                        let back = passages_from(seed, &cave, neighbour);
+                    for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
+                        let back = passages_from(seed, &cave, fixture_gradient(), neighbour);
                         assert!(
                             back.contains(&addr),
                             "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
@@ -200,10 +283,7 @@ fn every_passage_is_traversable_in_both_directions() {
 /// over a hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
 fn a_cave_mouth_reaches_at_least_one_chamber() {
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-    };
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
 
     let mut reached = 0u32;
     let mut probed = 0u32;
@@ -219,10 +299,10 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
                 slot: 0,
             };
             probed += 1;
-            if chamber_exists(seed, &cave, entrance) {
+            if chamber_exists(seed, &cave, fixture_gradient(), entrance) {
                 entrance_exists += 1;
             }
-            if !passages_from(seed, &cave, entrance).is_empty() {
+            if !passages_from(seed, &cave, fixture_gradient(), entrance).is_empty() {
                 reached += 1;
             }
         }
@@ -286,16 +366,14 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
 #[test]
 fn an_override_wins_over_the_derived_default() {
     let seed = Seed(2026);
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-    };
+    let col = fixture_column();
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &col);
     let cell = CellId(4);
 
     // Find two addresses that both exist under this (seed, cave, cell) —
     // one to override, one to leave alone as the "unaffected" witness.
     let mut existing = Vec::new();
-    for band in 0..=3u8 {
+    for band in 0..=2u8 {
         for slot in 0..SLOTS_PER_BAND {
             let addr = ChamberAddr {
                 cell,
@@ -303,7 +381,7 @@ fn an_override_wins_over_the_derived_default() {
                 band,
                 slot,
             };
-            if chamber_exists(seed, &cave, addr) {
+            if chamber_exists(seed, &cave, fixture_gradient(), addr) {
                 existing.push(addr);
             }
         }
@@ -320,21 +398,19 @@ fn an_override_wins_over_the_derived_default() {
     let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
 
     // Invariant: no-override resolution is UNCHANGED from the pre-Task-4
-    // derivation. `chamber_at` with an empty override map must still resolve
-    // `stratum` from `addr.band` alone (the only thing the old, one-fewer-
-    // parameter `chamber_at` ever did), and the resolved `origin` must be the
-    // address-derived default, `Found` — this campaign digs nothing.
+    // derivation in the half this test owns — the resolved `origin` must be
+    // the address-derived default, `Found`, because this campaign digs
+    // nothing. (`stratum` is NOT that pure function of `addr.band` any more:
+    // since `chamber/v2` the band indexes the delve ladder, and the stratum is
+    // read off the cell's own column. That is
+    // `a_chamber_reports_both_its_rung_and_its_stratum`'s subject, not this
+    // test's; here it is only asserted to be populated consistently.)
     for &addr in &existing {
-        let chamber = chamber_at(seed, &cave, addr, &no_overrides).unwrap_or_else(|| {
-            panic!("{addr:?} was measured to exist but chamber_at(None) returned None")
-        });
+        let chamber = chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)
+            .unwrap_or_else(|| {
+                panic!("{addr:?} was measured to exist but chamber_at(None) returned None")
+            });
         assert_eq!(chamber.addr, addr);
-        assert_eq!(
-            chamber.stratum,
-            hornvale_climate::Realm::UNDERDARK.strata()[addr.band as usize],
-            "stratum at {addr:?} must still be the pre-Task-4 pure function of \
-             addr.band alone"
-        );
         assert_eq!(
             chamber.origin,
             ChamberOrigin::Found,
@@ -346,8 +422,15 @@ fn an_override_wins_over_the_derived_default() {
     // The override wins.
     let mut overrides = BTreeMap::new();
     overrides.insert(overridden_addr, ChamberOrigin::Made);
-    let overridden = chamber_at(seed, &cave, overridden_addr, &overrides)
-        .expect("the overridden address was measured to exist");
+    let overridden = chamber_at(
+        seed,
+        &cave,
+        fixture_gradient(),
+        &col,
+        overridden_addr,
+        &overrides,
+    )
+    .expect("the overridden address was measured to exist");
     assert_eq!(
         overridden.origin,
         ChamberOrigin::Made,
@@ -356,8 +439,15 @@ fn an_override_wins_over_the_derived_default() {
 
     // A DIFFERENT address is unaffected by an override recorded for another
     // address entirely.
-    let other = chamber_at(seed, &cave, other_addr, &overrides)
-        .expect("the other address was measured to exist");
+    let other = chamber_at(
+        seed,
+        &cave,
+        fixture_gradient(),
+        &col,
+        other_addr,
+        &overrides,
+    )
+    .expect("the other address was measured to exist");
     assert_eq!(
         other.origin,
         ChamberOrigin::Found,
@@ -380,4 +470,153 @@ fn an_override_wins_over_the_derived_default() {
         ChamberOrigin::Made,
         "the absence of an override must not pull a Made chamber back to Found"
     );
+}
+
+/// The two ladders are independent: a chamber says both what depth CLASS it
+/// is and what ROCK it is in, and **neither answer is computable from the
+/// other** (spec §4.1). Before The Underworld it was one answer wearing two
+/// coats — `stratum` was `Realm::UNDERDARK.strata()[addr.band]`, i.e. the
+/// address restated.
+///
+/// Asserted in both directions, because either alone is satisfiable by a
+/// degenerate mapping:
+///
+/// - two chambers that **share a stratum and differ in rung** (a constant
+///   `stratum` would also satisfy this, which is why the second half exists);
+/// - two chambers that **share a rung and differ in stratum**, reached by
+///   putting the same rung under two different gradients — the one thing a
+///   function of `addr.band` alone cannot do.
+#[test]
+fn a_chamber_reports_both_its_rung_and_its_stratum() {
+    let seed = Seed(11);
+    let col = fixture_column();
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &col);
+    let cell = CellId(3);
+    let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
+
+    // Direction 1: same stratum, different rung. On this column the basement
+    // contact is at 401 m, and at 24 K/km the Shallows (2 K) begin at 83 m and
+    // the Deeps (8 K) at 333 m — both still in the cover; the Underdeep (25 K)
+    // at 1042 m and the Sunless (50 K) at 2083 m are both in the basement. So
+    // the sweep sees two distinct rung pairs that share a stratum.
+    let mut seen: Vec<(DelveRung, hornvale_climate::Stratum)> = Vec::new();
+    for band in 0..=3u8 {
+        for slot in 0..SLOTS_PER_BAND {
+            let addr = ChamberAddr {
+                cell,
+                entrance: 0,
+                band,
+                slot,
+            };
+            if let Some(chamber) =
+                chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)
+            {
+                seen.push((chamber.rung, chamber.stratum));
+            }
+        }
+    }
+    assert!(
+        !seen.is_empty(),
+        "no chamber existed anywhere in the fixture's budget — the assertions \
+         below would be vacuous"
+    );
+    let shared_stratum_differing_rung = seen.iter().any(|&(rung_a, stratum_a)| {
+        seen.iter()
+            .any(|&(rung_b, stratum_b)| stratum_a == stratum_b && rung_a != rung_b)
+    });
+    assert!(
+        shared_stratum_differing_rung,
+        "no two chambers shared a stratum while differing in rung, so `rung` \
+         could still be a relabelling of `stratum`: {seen:?}"
+    );
+
+    // Direction 2: same rung, different stratum — the half that a pure
+    // function of `addr.band` cannot produce. The Deeps begin at 8 K, which is
+    // 533 m under a cool craton (basement, contact at 401 m) and 267 m under
+    // hot young crust (still cover).
+    let deeps = ChamberAddr {
+        cell,
+        entrance: 0,
+        band: 2,
+        slot: 0,
+    };
+    let cool = GeothermalGradient::new(15.0);
+    let hot = GeothermalGradient::new(30.0);
+    // Both cells must admit the address at all for the comparison to mean
+    // anything; `chamber_exists` is gated per-gradient, so this is not free.
+    let under_cool = chamber_at(seed, &cave, cool, &col, deeps, &no_overrides);
+    let under_hot = chamber_at(seed, &cave, hot, &col, deeps, &no_overrides);
+    let (under_cool, under_hot) = match (under_cool, under_hot) {
+        (Some(a), Some(b)) => (a, b),
+        other => panic!(
+            "the Deeps address must exist under both gradients for this \
+             comparison to be non-vacuous; got {other:?}"
+        ),
+    };
+    assert_eq!(
+        under_cool.rung, under_hot.rung,
+        "the same address must name the same rung whatever the cell"
+    );
+    assert_ne!(
+        under_cool.stratum, under_hot.stratum,
+        "the same rung under a 15 K/km and a 30 K/km cell sits at 533 m and \
+         267 m, which straddle this column's 401 m basement contact — so the \
+         strata must differ. They do not, which means `stratum` is not being \
+         read from the cell at all."
+    );
+}
+
+/// The chamber key names a DELVE rung, from an explicit table — the
+/// save-format discipline `chamber_key`'s own doc states, restated at the
+/// public boundary where a reader who never opens `chamber.rs` will meet it.
+///
+/// Asserted through the observable this test can actually reach: two addresses
+/// differing ONLY in `band` must produce different chambers, and the rung each
+/// reports must round-trip through the band index. A key that numbered its
+/// band instead of naming it would still pass that — which is why the string
+/// itself is pinned in `chamber.rs`'s own module tests, where `chamber_key` is
+/// visible. This test guards the half that IS observable from outside: that
+/// `addr.band` and `Chamber::rung` are the same ladder, in the same order.
+#[test]
+fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
+    let seed = Seed(7);
+    let col = fixture_column();
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &col);
+    let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
+
+    let mut by_band: Vec<(u8, DelveRung)> = Vec::new();
+    for raw_cell in 0u32..40 {
+        for band in 0..=3u8 {
+            for slot in 0..SLOTS_PER_BAND {
+                let addr = ChamberAddr {
+                    cell: CellId(raw_cell),
+                    entrance: 0,
+                    band,
+                    slot,
+                };
+                if let Some(chamber) =
+                    chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)
+                {
+                    by_band.push((band, chamber.rung));
+                }
+            }
+        }
+    }
+    let bands_seen: BTreeSet<u8> = by_band.iter().map(|&(b, _)| b).collect();
+    assert_eq!(
+        bands_seen.len(),
+        4,
+        "the sweep must reach every band 0..=3 or the ordering check below is \
+         only partly exercised; saw {bands_seen:?}"
+    );
+    for &(band_a, rung_a) in &by_band {
+        for &(band_b, rung_b) in &by_band {
+            assert_eq!(
+                band_a.cmp(&band_b),
+                rung_a.cmp(&rung_b),
+                "band {band_a} reports {rung_a:?} and band {band_b} reports \
+                 {rung_b:?} — the index and the ladder disagree on order"
+            );
+        }
+    }
 }

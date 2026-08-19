@@ -37,12 +37,173 @@ impl CaveKind {
 }
 
 /// A located cave at a cell.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// **Carries a derived-field invariant:** `deepest_band ==
+/// band_at_depth(column, depth_reach_m)`. The depth coordinate is the metre
+/// budget; the band is a lookup of it against the column (spec §4.0). Build
+/// one through [`Cave::new`] or [`Cave::from_reach`] and the invariant holds
+/// by construction — neither can produce a pair that disagrees.
+///
+/// **`#[non_exhaustive]` is what makes that a guarantee rather than a
+/// convention.** Outside `hornvale-terrain` the compiler refuses any struct
+/// expression for `Cave` — both a plain literal and functional-update syntax
+/// (`Cave { deepest_band: …, ..other }`) — with `E0639`. Field *reads* are
+/// untouched, which is why 26 read sites across the workspace needed no change
+/// and the fields stay `pub`. Inside this crate literals still compile; this is
+/// the crate that owns the invariant and routes through [`Cave::from_reach`].
+///
+/// A mismatched pair is therefore impossible to build by accident, and
+/// possible to build only through [`Cave::from_parts_unchecked`], whose name
+/// says so at the call site. Exactly one caller uses it.
+///
+/// **How that is proved: a differential pair.** The two blocks below are
+/// identical in every line — same imports, same fixture, same trailing
+/// assertions — except one. The *control* binds `subject` through the
+/// sanctioned [`Cave::from_reach`] and must compile and run; the *subject*
+/// binds it through the forbidden struct expression and must not compile.
+/// Because every other line is shared, any incidental breakage — a typo, a
+/// moved import, a renamed type, a changed signature — breaks the control and
+/// is caught there, which leaves the construction path as the only difference
+/// that can explain the subject's refusal.
+///
+/// `domains/terrain/tests/cave_construction_proof.rs` is what makes that
+/// argument load-bearing instead of aspirational. It re-reads this file and
+/// fails unless the two blocks still differ on exactly one line, that line is
+/// still a `Cave` struct expression in the subject and still a sanctioned
+/// constructor call in the control, and the control's fence still carries no
+/// info string while the subject's carries exactly `compile_fail`. Without it
+/// the pair would be a convention, and an unrelated compile error dropped into
+/// the subject would go unnoticed.
+///
+/// **The residual, stated rather than left to be discovered.** This is
+/// genuinely weaker than a compile-error-matching harness. `trybuild` is the
+/// tool for that job and the dependency allowlist forbids it (decision 0004),
+/// so what is here does not close the gap — it narrows it. On stable rustdoc,
+/// `compile_fail` passes when compilation fails for *any* reason, and it does
+/// **not** verify an error code written after the comma. That was measured,
+/// not assumed: a block annotated `compile_fail,E0639` whose violating
+/// expression had been swapped for an undefined identifier — an `E0425` —
+/// still reported `ok`. So the pair does not prove the subject fails
+/// *because of* `E0639`. It proves that the subject fails for a reason the
+/// control does not share, and that the one unshared line is a `Cave` struct
+/// expression. Observed by hand the error is `E0639`; nothing automated
+/// confirms that, and the fence deliberately carries no error code so it
+/// cannot be misread as an assertion.
+///
+/// The control — the sanctioned constructor, which must compile:
+///
+/// ```
+/// # // differential-pair: control
+/// # use hornvale_terrain::{Cave, CaveKind, BandKind, column, RockClass, Basement};
+/// let col = column(35.0, 0.3, true, 400.0, 1.0, RockClass::Sandstone, Basement::Continental);
+/// let honest = Cave::from_reach(CaveKind::Fracture, 2000.0, &col);
+/// let subject = Cave::from_reach(CaveKind::Fracture, honest.depth_reach_m, &col);
+/// assert_eq!(subject.deepest_band, BandKind::Basement);
+/// assert!(subject.band_agrees_with_reach(&col));
+/// ```
+///
+/// The subject — the same text but for the one line, naming a band that
+/// disagrees with the budget, which must **not** compile. Its assertions never
+/// execute; they are present only so the two blocks stay line-for-line
+/// comparable:
+///
+/// ```compile_fail
+/// # // differential-pair: subject
+/// # use hornvale_terrain::{Cave, CaveKind, BandKind, column, RockClass, Basement};
+/// let col = column(35.0, 0.3, true, 400.0, 1.0, RockClass::Sandstone, Basement::Continental);
+/// let honest = Cave::from_reach(CaveKind::Fracture, 2000.0, &col);
+/// let subject = Cave { deepest_band: BandKind::Regolith, ..honest };
+/// assert_eq!(subject.deepest_band, BandKind::Basement);
+/// assert!(subject.band_agrees_with_reach(&col));
+/// ```
+///
+/// `Eq` is gone since The Underworld added `depth_reach_m`: the depth
+/// coordinate is a metre budget now, and `f64` has no total equality.
+/// type-audit: bare-ok(diagnostic-value: depth_reach_m)
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub struct Cave {
     /// Which process opened it.
     pub kind: CaveKind,
-    /// The deepest band of the cell's column the void penetrates.
+    /// The deepest band of the cell's column the void penetrates — *derived
+    /// from* `depth_reach_m`, not the depth coordinate itself (spec §4.0).
     pub deepest_band: BandKind,
+    /// How far below the surface the void actually reaches, in metres
+    /// ([`crate::cave_depth::cave_depth_reach_m`]).
+    pub depth_reach_m: f64,
+}
+
+impl Cave {
+    /// The sanctioned constructor: derives the metre budget from the rock and
+    /// the column, then derives the band from that same budget. Both fields
+    /// come from one number, so they cannot disagree.
+    pub fn new(
+        kind: CaveKind,
+        buf: &MaterialBuffer,
+        column: &crate::strata::StratigraphicColumn,
+    ) -> Cave {
+        Cave::from_reach(
+            kind,
+            crate::cave_depth::cave_depth_reach_m(kind, buf, column),
+            column,
+        )
+    }
+
+    /// Build from a stated budget, deriving the band from it. For callers that
+    /// want to name a depth directly — chiefly test fixtures exercising the
+    /// chamber lattice, which care about the budget and not the rock that
+    /// produced it. Still invariant-preserving by construction.
+    /// type-audit: bare-ok(diagnostic-value: depth_reach_m)
+    pub fn from_reach(
+        kind: CaveKind,
+        depth_reach_m: f64,
+        column: &crate::strata::StratigraphicColumn,
+    ) -> Cave {
+        Cave {
+            kind,
+            deepest_band: band_at_depth(column, depth_reach_m),
+            depth_reach_m,
+        }
+    }
+
+    /// Build a `Cave` from parts **without deriving the band from the budget**
+    /// — the named escape hatch from the derived-field invariant, and the only
+    /// way to construct a disagreeing pair outside this crate.
+    ///
+    /// **It exists for exactly one caller**, and should stay that way:
+    /// `windows/worldgen/tests/deep_realm_mutation.rs`'s pipeline half, whose
+    /// entire content is fabricating a budget the generator did not author and
+    /// showing that the chamber lattice can tell the difference. That test is
+    /// only meaningful against a state the generator *cannot* produce, so the
+    /// hatch is load-bearing rather than a concession.
+    ///
+    /// `_unchecked` is in the name so the violation is visible at the call site
+    /// instead of incidental. This is a modelling escape hatch, not an unsafe
+    /// one: nothing here can cause undefined behaviour, only an incoherent
+    /// cave. Use [`Cave::new`] or [`Cave::from_reach`] for every other purpose,
+    /// and [`Cave::band_agrees_with_reach`] to check what you were handed.
+    /// type-audit: bare-ok(diagnostic-value: depth_reach_m)
+    pub fn from_parts_unchecked(
+        kind: CaveKind,
+        deepest_band: BandKind,
+        depth_reach_m: f64,
+    ) -> Cave {
+        Cave {
+            kind,
+            deepest_band,
+            depth_reach_m,
+        }
+    }
+
+    /// Whether this cave's band is the one its budget actually reaches in
+    /// `column` — the invariant, in checkable form. A cave built through
+    /// [`Cave::new`] or [`Cave::from_reach`] satisfies it; one built through
+    /// [`Cave::from_parts_unchecked`] may not, and exactly one test relies on
+    /// that.
+    /// type-audit: bare-ok(flag: return)
+    pub fn band_agrees_with_reach(&self, column: &crate::strata::StratigraphicColumn) -> bool {
+        self.deepest_band == band_at_depth(column, self.depth_reach_m)
+    }
 }
 
 /// Felsic index at or below which rock reads as mafic enough to have flowed
@@ -185,10 +346,14 @@ pub fn fracture_stress(nearest_boundary: Option<(u32, BoundaryKind)>) -> f64 {
 ///   stress term reads as increasing. The product was zero at `hops = 0` — on
 ///   a plate contact, the most faulted place in the model, no fault cave could
 ///   exist — and peaked at `hops = 4`, where the overprint has just run out.
-///   Its maximum over all land was ~0.39, below
-///   `DEEP_PROCESS_PRONENESS` (0.5), so [`BandKind::Roots`] was not rare but
-///   *unreachable*: a ceiling below the threshold that reads it, which is the
-///   spec's own §2.2 failure reproduced in new code.
+///   Its maximum over all land was ~0.39, below the 0.5 the then-current
+///   `cave_depth` needed to place a cave in [`BandKind::Roots`], so `Roots` was
+///   not rare but *unreachable*: a ceiling below the threshold that reads it,
+///   which is the spec's own §2.2 failure reproduced in new code. (That
+///   threshold was `DEEP_PROCESS_PRONENESS`, deleted by The Underworld with the
+///   rest of the depth/proneness weld. Its only surviving home is the verbatim
+///   fixture in `hollow_readout::the_retired_h2_estimator_is_satisfied_by_its_own_generator`,
+///   which needs it to enumerate the retired function's range.)
 ///
 /// Competence is what keeps a void open: cemented, indurated rock holds a
 /// fracture; soft, poorly consolidated rock closes it by creep. `induration`
@@ -244,51 +409,51 @@ pub fn cave_process(
     if best.1 <= 0.0 { None } else { Some(best) }
 }
 
-/// Proneness at or above which a process is strong enough to reach one band
-/// deeper than its host.
-const DEEP_PROCESS_PRONENESS: f64 = 0.5;
-
 /// The deepest band a cave of this kind penetrates, given the cell's column.
 ///
-/// Mirrors [`deposit_depth`], which types an ore body's depth as a named
-/// [`BandKind`] rather than a count. The retired `depth_reach_bands` was
-/// `1 + (cave_proneness * 3.0) as u32`, which could not reach band 3 (it
-/// needed proneness >= 2/3 against a theoretical ceiling of 0.573) nor band 4
-/// (it needed exactly 1.0), so every cave in every world sat at band 2
-/// (spec §2.2). A band derived from bands cannot reproduce that failure.
+/// **This is now a LOOKUP, not a derivation** (The Underworld, spec §4.0). The
+/// depth coordinate is [`crate::cave_depth::cave_depth_reach_m`]'s budget in
+/// metres; this answers the separate, archival question of which of the
+/// column's five stratigraphic bands that budget penetrates, by finding the
+/// deepest band whose top lies at or above the reach. The two can therefore
+/// never disagree.
 ///
-/// This restores The Lode's own §5 intent — "depth-reach from `cave_proneness`
-/// x the cover/carbonate band depth" — whose band-depth half was never
-/// implemented.
-/// type-audit: bare-ok(ratio: proneness)
+/// What it replaces, and why: the previous body branched on the presence
+/// gate's own `proneness` scalar — the weld `MAP-cave-depth-weld` names. That
+/// made depth two-valued (a band index is not a quantity) and made `Fracture`
+/// impossible to calibrate, because raising its proneness to win a fair share
+/// of caves also drove every one of them into `Roots`, tens of kilometres down.
+/// The absent `proneness` parameter is what keeps the weld from re-forming.
+///
+/// `bands[0].top_depth_m` is 0.0 and the reach is non-negative, so the reverse
+/// scan always finds a band.
 pub fn cave_depth(
     kind: CaveKind,
     column: &crate::strata::StratigraphicColumn,
-    proneness: f64,
+    buf: &MaterialBuffer,
 ) -> BandKind {
-    let strong = proneness >= DEEP_PROCESS_PRONENESS;
-    match kind {
-        // Dissolution works the sedimentary cover, and reaches the basement
-        // contact where the cover is thin on ancient rock (an unconformity)
-        // or where the process is strong.
-        CaveKind::Karst => {
-            if strong || column.unconformity {
-                BandKind::Basement
-            } else {
-                BandKind::Cover
-            }
-        }
-        // A tube is the flow it drained out of, so it never leaves the cover.
-        CaveKind::LavaTube => BandKind::Cover,
-        // Faults cut crystalline rock, and deep ones reach the roots.
-        CaveKind::Fracture => {
-            if strong {
-                BandKind::Roots
-            } else {
-                BandKind::Basement
-            }
-        }
-    }
+    band_at_depth(
+        column,
+        crate::cave_depth::cave_depth_reach_m(kind, buf, column),
+    )
+}
+
+/// The deepest band of `column` that a void reaching `depth_m` below the
+/// surface penetrates: the last band whose top lies at or above that depth.
+///
+/// The single definition of the `Cave` derived-field invariant — [`cave_depth`]
+/// and [`Cave::from_reach`] both go through it, so nothing can compute the band
+/// two ways. `bands[0].top_depth_m` is 0.0 and every reach is non-negative, so
+/// the reverse scan always finds one.
+/// type-audit: bare-ok(diagnostic-value: depth_m)
+pub fn band_at_depth(column: &crate::strata::StratigraphicColumn, depth_m: f64) -> BandKind {
+    column
+        .bands
+        .iter()
+        .rev()
+        .find(|b| b.top_depth_m <= depth_m)
+        .map(|b| b.kind)
+        .unwrap_or(BandKind::Regolith)
 }
 
 /// Lineament proximity weight: features cluster into belts near plate contacts.
@@ -615,10 +780,20 @@ mod tests {
     /// is `1 - hops/OROGEN_REACH` near a boundary, so the retired
     /// `induration * (1 - metamorphic_grade)` brittleness term was exactly zero
     /// at `hops = 0` — the most faulted place in the model could host no
-    /// fracture cave, and the term's land maximum (~0.39) sat below
-    /// `DEEP_PROCESS_PRONENESS`, making `Roots` unreachable.
+    /// fracture cave.
+    ///
+    /// **Re-derived by The Underworld (spec §4.0), and the deletion is the
+    /// finding.** This used to assert `p >= DEEP_PROCESS_PRONENESS` (0.5, the
+    /// retired threshold, deleted with the weld) and then
+    /// that `cave_depth` returned [`BandKind::Roots`], because depth was a band
+    /// chosen by the *presence* proneness — the weld `MAP-cave-depth-weld`
+    /// names. Both halves went with it: `Roots` on this column starts at
+    /// 17.7 km, which no metre budget can reach, and depth no longer reads
+    /// `proneness` at all. What survives is the claim that actually mattered —
+    /// a competent rock at a contact gets a **deep** void, one that cuts past
+    /// the cover into the basement.
     #[test]
-    fn a_plate_contact_can_host_a_fault_void_and_reach_the_roots() {
+    fn a_plate_contact_can_host_a_fault_void_and_a_deep_one() {
         // Hard rock fully overprinted by the orogen it sits in — the exact cell
         // the old formula scored at zero.
         let mut contact = buf(0.0, 0.7);
@@ -629,10 +804,6 @@ mod tests {
             p > 0.0,
             "a plate contact scored {p}, so no fault cave can open"
         );
-        assert!(
-            p >= DEEP_PROCESS_PRONENESS,
-            "fracture peaks at {p}, under the {DEEP_PROCESS_PRONENESS} a Roots-deep cave needs"
-        );
         let col = crate::strata::column(
             35.0,
             0.3,
@@ -642,7 +813,16 @@ mod tests {
             RockClass::Sandstone,
             Basement::Continental,
         );
-        assert_eq!(cave_depth(CaveKind::Fracture, &col, p), BandKind::Roots);
+        let reach = crate::cave_depth::cave_depth_reach_m(CaveKind::Fracture, &contact, &col);
+        assert!(
+            reach > col.depth_to_basement_m,
+            "a fault void in competent rock reached {reach} m, not past the {} m basement contact",
+            col.depth_to_basement_m
+        );
+        assert_eq!(
+            cave_depth(CaveKind::Fracture, &col, &contact),
+            BandKind::Basement
+        );
     }
 
     /// Fault-void stress must be able to say "far from any fault".
@@ -701,11 +881,10 @@ mod tests {
         assert_eq!(kind, CaveKind::Karst);
     }
 
-    #[test]
-    fn cave_depth_differs_by_kind() {
-        use crate::strata::column;
-        // Thick cover (401 m) on young crust: no unconformity.
-        let thick = column(
+    /// A column with 401 m of cover on young crust — deliberately NOT an
+    /// unconformity, so the paleokarst inheritance stays out of the way.
+    fn thick_cover() -> crate::strata::StratigraphicColumn {
+        let col = crate::strata::column(
             35.0,
             0.3,
             true,
@@ -714,36 +893,61 @@ mod tests {
             RockClass::Sandstone,
             Basement::Continental,
         );
-        assert!(!thick.unconformity, "fixture must NOT be an unconformity");
-        assert_eq!(cave_depth(CaveKind::Karst, &thick, 0.2), BandKind::Cover);
-        assert_eq!(cave_depth(CaveKind::LavaTube, &thick, 0.9), BandKind::Cover);
-        assert_eq!(
-            cave_depth(CaveKind::Fracture, &thick, 0.2),
-            BandKind::Basement
+        assert!(!col.unconformity, "fixture must NOT be an unconformity");
+        col
+    }
+
+    /// A moderately indurated carbonate rock — one buffer, so the three
+    /// processes below are compared on the same rock rather than on three.
+    fn limestone() -> MaterialBuffer {
+        let mut b = buf(0.7, 0.5);
+        b.induration = 0.6;
+        b
+    }
+
+    /// The three processes must reach three DIFFERENT depths in one rock.
+    /// Re-derived by The Underworld (spec §4.0): the retired band-returning
+    /// `cave_depth` gave Cover / Cover / Basement here — three processes,
+    /// two answers — because a band index is not a quantity.
+    #[test]
+    fn cave_depth_differs_by_kind() {
+        use crate::cave_depth::cave_depth_reach_m;
+        let thick = thick_cover();
+        let rock = limestone();
+        let tube = cave_depth_reach_m(CaveKind::LavaTube, &rock, &thick);
+        let karst = cave_depth_reach_m(CaveKind::Karst, &rock, &thick);
+        let frac = cave_depth_reach_m(CaveKind::Fracture, &rock, &thick);
+        assert!(
+            tube < karst && karst < frac,
+            "tube={tube} karst={karst} fracture={frac}"
         );
     }
 
+    /// Replaces `a_strong_process_reaches_one_band_deeper`. "Strong" used to
+    /// mean the *presence* proneness crossing 0.5 — the weld spec §4.0 cuts.
+    /// Competence, whether the rock can hold a void open against lithostatic
+    /// load, is what sets depth now, and it must do so for every kind.
     #[test]
-    fn a_strong_process_reaches_one_band_deeper() {
-        use crate::strata::column;
-        let thick = column(
-            35.0,
-            0.3,
-            true,
-            400.0,
-            1.0,
-            RockClass::Sandstone,
-            Basement::Continental,
-        );
-        assert_eq!(cave_depth(CaveKind::Karst, &thick, 0.9), BandKind::Basement);
-        assert_eq!(cave_depth(CaveKind::Fracture, &thick, 0.9), BandKind::Roots);
+    fn a_more_competent_rock_holds_a_deeper_void() {
+        use crate::cave_depth::cave_depth_reach_m;
+        let thick = thick_cover();
+        let mut weak = limestone();
+        weak.induration = 0.3;
+        let mut hard = limestone();
+        hard.induration = 0.9;
+        for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+            let a = cave_depth_reach_m(kind, &weak, &thick);
+            let b = cave_depth_reach_m(kind, &hard, &thick);
+            assert!(b > a, "{kind:?}: induration 0.9 gave {b} m, 0.3 gave {a} m");
+        }
     }
 
     #[test]
     fn karst_on_thin_cover_reaches_the_basement_contact() {
+        use crate::cave_depth::cave_depth_reach_m;
         use crate::strata::column;
         // Thin cover (11 m) on ancient basement (age 0.9): an unconformity, so
-        // dissolution reaches the contact however weak the process is.
+        // dissolution reaches the contact and then some.
         let thin = column(
             35.0,
             0.9,
@@ -757,22 +961,42 @@ mod tests {
             thin.unconformity,
             "fixture must actually be an unconformity"
         );
-        assert_eq!(cave_depth(CaveKind::Karst, &thin, 0.1), BandKind::Basement);
+        let rock = limestone();
+        assert_eq!(
+            cave_depth(CaveKind::Karst, &thin, &rock),
+            BandKind::Basement
+        );
+        // And the inheritance is what the unconformity buys: the same rock on a
+        // column that is not one reaches less far. Without this the assertion
+        // above would hold for any reach over 11 m and say nothing about
+        // paleokarst.
+        assert!(
+            cave_depth_reach_m(CaveKind::Karst, &rock, &thin)
+                > cave_depth_reach_m(CaveKind::Karst, &rock, &thick_cover()),
+            "an unconformity must deepen a karst system"
+        );
     }
 
+    /// Re-derived by The Underworld (spec §4.0). The old assertion hard-coded
+    /// `BandKind::Cover` for *every* lava tube, which on a column carrying 11 m
+    /// of cover claimed an 11 m depth for a void the physics puts at 200 m —
+    /// the band-as-quantity fake this campaign removes. What survives is the
+    /// claim on a column that actually HAS cover: a tube is a near-surface
+    /// primary void and stays inside a 400 m pile even in rock competent enough
+    /// to hold a kilometres-deep fault void, which cuts straight through it.
     #[test]
-    fn a_lava_tube_never_leaves_the_cover() {
-        use crate::strata::column;
-        let thin = column(
-            35.0,
-            0.9,
-            true,
-            10.0,
-            1.0,
-            RockClass::Basalt,
-            Basement::Continental,
+    fn a_lava_tube_never_leaves_the_cover_where_there_is_cover() {
+        let thick = thick_cover();
+        let mut basalt = buf(0.05, 0.15);
+        basalt.induration = 0.9;
+        assert_eq!(
+            cave_depth(CaveKind::LavaTube, &thick, &basalt),
+            BandKind::Cover
         );
-        assert_eq!(cave_depth(CaveKind::LavaTube, &thin, 1.0), BandKind::Cover);
+        assert_eq!(
+            cave_depth(CaveKind::Fracture, &thick, &basalt),
+            BandKind::Basement
+        );
     }
 
     #[test]

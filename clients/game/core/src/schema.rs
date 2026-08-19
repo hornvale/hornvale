@@ -110,11 +110,14 @@ pub enum Spatial {
 /// One cell of the walk-band chart, mirroring `scene/surrounds/v2`'s
 /// `SurroundsCell`.
 ///
-/// Not every field here has a reader: [`ChartCell::u`] never enters the
-/// projection (see `chart.rs`'s module doc, which records it as residue of the
-/// wrong formula), and `seam` is carried for record fidelity. That is the
-/// deliberate line the module doc draws — a whole unread *channel* comes out, a
-/// leaf field of a record this crate does read stays.
+/// Not every field here has a reader, and since the chart went north-up the
+/// unread set is larger: the four lattice offsets ([`ChartCell::u`],
+/// [`ChartCell::v`], [`ChartCell::w`], [`ChartCell::up`]) and `seam` are all
+/// carried for record fidelity alone. `chart.rs` places a cell from
+/// `bearing_deg` and `distance_rad` now, which is what let it stop skipping
+/// seam cells. That is the deliberate line the module doc draws — a whole
+/// unread *channel* comes out, a leaf field of a record this crate does read
+/// stays.
 ///
 /// The brief's field list put `marks` on [`Chart`] rather than here; the
 /// producer (`windows/scene/src/surrounds.rs`) has no such top-level field —
@@ -143,6 +146,15 @@ pub struct ChartCell {
     pub relief: u32,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
+    /// Great-circle initial azimuth from the observer to this cell, degrees
+    /// clockwise from north. Present on every cell including a seam one,
+    /// unlike the lattice offsets above — this and `distance_rad` are the
+    /// cell's polar coordinate about the observer, and the whole of what
+    /// `chart.rs` needs to place it.
+    pub bearing_deg: f64,
+    /// Great-circle angular distance from the observer to this cell,
+    /// radians. See `bearing_deg`.
+    pub distance_rad: f64,
 }
 
 /// The walk-band chart, mirroring `scene/surrounds/v2`'s `SurroundsScene`.

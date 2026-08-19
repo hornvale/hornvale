@@ -234,6 +234,22 @@ confirmation-gated in the Makefile.
 
 ## Utility scripts
 
+- **`mutate.py`** — applies ONE text substitution to a source file and
+  **refuses to no-op silently**: it dies unless the search text occurs, and
+  occurs exactly once, leaving the file byte-unchanged on either refusal.
+  `python3 scripts/mutate.py <file> <old> <new>`. Use it for **every mutation
+  demonstration** — neutralise a line, run the scoped suite, read the red as
+  proof an assertion is really holding the behaviour. That procedure's entire
+  value rests on the substitution having happened, and this project has got
+  that step wrong three times in two campaigns (The Axes, then The Underworld
+  twice): `cargo fmt` had rewrapped the line a `sed` was searching for, the
+  file was left untouched, the suite reported `ok`, and that `ok` was
+  indistinguishable from a robust implementation. It deliberately does **not**
+  restore — `cp` from a copy taken before the first mutation, never
+  `git checkout -- <file>`, which reverts your uncommitted work along with the
+  mutation and makes the resulting absence read as a pass. Not part of any
+  gate and not mandatory; whether an ad-hoc `sed` is ever acceptable for a
+  mutation demo is an open call recorded in The Underworld's retrospective.
 - **`shapecheck.py`** — compares the key-path SHAPE of two JSON documents
   (dicts/lists/scalars, values ignored), so a drifted byte-golden's diff can
   be answered structurally rather than by eyeballing a large single-line

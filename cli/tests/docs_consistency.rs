@@ -1207,32 +1207,56 @@ fn decision_numbers() -> Vec<u32> {
     decision_records().into_iter().map(|(n, _)| n).collect()
 }
 
-/// The decision log's numbers form a **contiguous run starting at 0001** — no
-/// holes.
+/// The decision log **starts at 0001**. Contiguity above that is no longer
+/// asserted, and the reason is a change in what "legitimate" means rather
+/// than a relaxation of standards.
 ///
-/// A gap is not merely untidy, it is evidence of a mistake. The log is
-/// append-only and a retired decision is *superseded* rather than deleted
-/// (`docs/decisions/README.md`), so no legitimate operation removes a number.
-/// A hole therefore means one of two things: a renumbering went wrong, or a
-/// record was lost. Both want catching in the gate rather than at the next
-/// person to read the log.
+/// **What this test used to assert, and why that stopped working.** It
+/// required a contiguous run with no holes, on the stated premise that "no
+/// legitimate operation removes a number". That premise held while decisions
+/// were minted rarely and usually on `main` — the premise decision 0043
+/// itself relied on when it returned the log to numbers. It no longer holds:
+/// the log went from 43 records at 0043's ratification (2026-07-13) to 141
+/// in 36 days, about 2.7 a day, minted by parallel campaigns off `main`.
 ///
-/// **Why this test exists.** The log held this property by convention for 124
-/// records and nothing checked it. Absorbing The Radiation into The Grain
-/// collided on `0120`, the unmerged records were renumbered to resolve it, and
-/// a mechanical shift moved them four places instead of one — opening
-/// `0121`-`0123`, the first discontinuity in the log's history. Every other
-/// check in the repo stayed green, because none of them was looking. That is
-/// the third unguarded invariant this campaign broke the same way (see
-/// `docs/retrospectives/the-grain.md`), and the argument that closed it is that
-/// a documented invariant with no test is a comment.
+/// Under that load a hole is a NORMAL outcome — a campaign renumbers away
+/// from a collision, or withdraws a record it drafted — so the check could no
+/// longer tell a lost record from a legitimate gap. It did not become wrong;
+/// it lost its discriminating power, which is the same thing as being unable
+/// to answer the question it was asked.
 ///
-/// The **start** is asserted too, not just the density. Checking only for
-/// internal holes would accept a log beginning at `0002`, which is the same
-/// class of error — a lost first record — presenting as a smaller number of
-/// symptoms. Pinning both ends makes the run fully determined by its length.
+/// **And it actively caused the collisions the uniqueness guard exists to
+/// catch.** `docs/retrospectives/the-sluice.md` filed this before either
+/// guard shipped: "The no-gaps and no-collision invariants on
+/// `docs/decisions/` are mutually exclusive under parallel campaigns, and the
+/// gap check pushes an author into the collision the uniqueness check exists
+/// to catch." Contiguity made the next-free number the ONLY committable one,
+/// which is exactly the number another campaign is most likely to hold. Both
+/// guards shipped anyway, a month apart, each creating what the other caught.
+///
+/// It also SERIALIZED the queue, which nothing had priced. A campaign
+/// numbering above a held campaign could not commit at all — observed
+/// 2026-08-18, when a campaign with its close written was blocked behind a
+/// campaign that was itself blocked on unrelated heavy failures. Decision
+/// 0043 knowingly accepted a COORDINATION cost ("sessions minting a decision
+/// off main must again confirm the next free number at merge"); the gap check
+/// converted that into a hard block, a change in kind that was never
+/// re-derived against 0043.
+///
+/// **What is kept, and why the start is different.** A log beginning at
+/// `0002` still means record 0001 was lost or misnamed, and no parallel-
+/// campaign workflow produces that legitimately — so this half retains the
+/// discriminating power the contiguity half lost, at no coordination cost.
+/// Duplicates remain guarded by `decision_numbers_are_unique`, which catches
+/// the failure that actually corrupts a citation handle.
+///
+/// The original incident stays worth knowing: absorbing The Radiation into
+/// The Grain collided on `0120`, a mechanical shift moved the unmerged
+/// records four places instead of one, and `0121`-`0123` opened. Under the
+/// rule here that botched renumber would leave a legible hole rather than a
+/// red gate — the cost accepted for unblocking parallel campaigns.
 #[test]
-fn no_gaps_in_the_decision_log() {
+fn the_decision_log_starts_at_0001() {
     let numbers = decision_numbers();
     assert!(
         !numbers.is_empty(),
@@ -1242,30 +1266,11 @@ fn no_gaps_in_the_decision_log() {
     );
 
     let first = *numbers.first().expect("non-empty");
-    let last = *numbers.last().expect("non-empty");
-    let present: BTreeSet<u32> = numbers.iter().copied().collect();
-    let missing: Vec<String> = (1..=last)
-        .filter(|n| !present.contains(n))
-        .map(|n| format!("{n:04}"))
-        .collect();
-
     assert_eq!(
         first, 1,
         "the decision log starts at {first:04}, not 0001 — record 0001 is \
          missing. The log is append-only and records are superseded rather \
          than deleted, so a missing first record means it was lost or \
          misnamed, never retired."
-    );
-    assert!(
-        missing.is_empty(),
-        "gaps in the decision log: {} record(s) span 0001..{last:04} but {} \
-         number(s) are missing. Decisions are append-only and superseded \
-         rather than deleted, so there is no legitimate way for a hole to \
-         appear — either a renumbering went wrong (the usual cause: a \
-         collision with a number that arrived on main, resolved by shifting \
-         too far) or a record was lost. Missing:\n  {}",
-        numbers.len(),
-        missing.len(),
-        missing.join("\n  ")
     );
 }

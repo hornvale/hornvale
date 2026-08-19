@@ -345,6 +345,38 @@ else
     phases="${HV_SLUICE_PHASES:-$merge_phases}"
 fi
 
+# PROSE-ONLY CANDIDATES SKIP THE THREE EXPENSIVE PHASES. The rule, the
+# allowlist and the reasoning live in scripts/sluice-phases.sh so they can be
+# tested without standing up a chamber; this is only the wiring.
+#
+# Guarded by `-z HV_SLUICE_PHASES` so an explicit override always wins, and
+# `git diff` failure leaves `changed` empty, which sluice_is_prose_only treats
+# as NOT prose-only — the classifier failing is never a reason to skip a phase.
+# shellcheck source=scripts/sluice-phases.sh
+. "$repo_root/scripts/sluice-phases.sh"
+if [ -z "${HV_SLUICE_PHASES:-}" ]; then
+    # THE BASE IS RESOLVED HERE, NOT BORROWED. An earlier cut of this block
+    # read `$base_sha`, which is assigned ~90 lines BELOW — under `set -u`
+    # that is an unbound variable and the chamber died before its first
+    # phase, on every merge, with `line 358: base_sha: unbound variable`.
+    # Resolving locally removes the ordering dependency entirely, so a future
+    # reorder of this file cannot reintroduce it. `|| true` plus `2>/dev/null`
+    # means an unresolvable base yields an empty `changed`, which
+    # sluice_is_prose_only treats as NOT prose-only — the full ladder.
+    prose_base="$(git -C "$repo_root" rev-parse "${HV_SLUICE_BASE:-origin/main}" 2>/dev/null || true)"
+    changed=""
+    if [ -n "$prose_base" ]; then
+        changed="$(git -C "$repo_root" diff --name-only "$prose_base".."$sha" 2>/dev/null || true)"
+    fi
+    if sluice_is_prose_only "$changed"; then
+        phases="$(sluice_drop_expensive_phases "$phases")"
+        echo "sluice-run: PROSE-ONLY candidate — every changed path is hand-written prose."
+        echo "sluice-run:   skipping seam-guard, clients and heavy; none can observe a prose change."
+        echo "sluice-run:   phases now: $phases"
+        printf '%s\n' "$changed" | sed 's/^/sluice-run:     /'
+    fi
+fi
+
 # `census` MUST NEVER run as a chamber phase. `census-run.sh:132-145`
 # unconditionally overwrites and `rm -f`s the SAME shared claim path this
 # script just wrote — even under HV_CENSUS_LOCK_HELD, which only skips its

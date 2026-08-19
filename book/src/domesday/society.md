@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -0.43473673 | -0.17605815 | -0.11975926 | -0.057543262 | 0.44739851 | -0.11283473 |
+| -0.43572544 | -0.17592153 | -0.11928184 | -0.057362523 | 0.44620851 | -0.11275554 |
 
 ### `raid-attribution-unresolved`
 
@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0017636684 | 0.19845361 | 0.28248533 | 0.32449495 | 0.41694079 | 0.25251328 |
+| 0.0017857143 | 0.19631902 | 0.27755523 | 0.32240437 | 0.41297468 | 0.24815537 |
 
 ### `raid-victim-rate`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0017636684 | 0.20222635 | 0.29012611 | 0.33930705 | 0.44819079 | 0.2615998 |
+| 0.0017857143 | 0.19926199 | 0.28628915 | 0.33529412 | 0.44224684 | 0.25712335 |
 
 ### `tribute-relations-standing`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 55 | 83 | 113 | 208 | 84.207 |
+| 0 | 51 | 81 | 111 | 225 | 81.479 |
 
 ## Weaknesses found here
 
@@ -65,5 +65,5 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `tribute-relations-standing`
 
-- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.920 (1000 pairs) is dominant (positive)
+- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.928 (1000 pairs) is dominant (positive)
 

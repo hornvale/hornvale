@@ -10,17 +10,17 @@ The measurements below are trustworthy only because the phenomena fired at volum
 
 ## The coupling, shown — naive scan vs node index
 
-- **bake vs communities, SCAN delivery**: exponent ≈ 2.02 (quadratic ⇒ the architectural dead end the benchmark exists to catch)
-- **bake vs communities, INDEX delivery**: exponent ≈ 1.17 (near-linear ⇒ the fix, and what the shipping path uses)
-- at 2000 communities the scan is 20× the index and diverging.
+- **bake vs communities, SCAN delivery**: exponent ≈ 2.18 (quadratic ⇒ the architectural dead end the benchmark exists to catch)
+- **bake vs communities, INDEX delivery**: exponent ≈ 1.68 (near-linear ⇒ the fix, and what the shipping path uses)
+- at 2000 communities the scan is 13× the index and diverging.
 
 ## Bake scaling by axis (index delivery)
 
-- **bake vs communities**: scaling exponent ≈ 1.28
+- **bake vs communities**: scaling exponent ≈ 0.87
 - **bake vs species**: scaling exponent ≈ 0.01
-- **bake vs epochs**: scaling exponent ≈ 1.31
-- **bake vs avg_degree**: scaling exponent ≈ 0.08
-- **bake vs long_range**: scaling exponent ≈ 0.02
+- **bake vs epochs**: scaling exponent ≈ 1.15
+- **bake vs avg_degree**: scaling exponent ≈ 0.06
+- **bake vs long_range**: scaling exponent ≈ 0.00
 
 ## Sample biographies (deterministic)
 

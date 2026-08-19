@@ -120,6 +120,31 @@
 -- 126 -> 190 worlds while the high tail collapsed 139 -> 29. The full
 -- diagnosis lives at calibration.rs::name_transparency_is_measured_and_pinned;
 -- do not re-read the risen floor here without it.)
+-- (Resync 2026-08-17, The Underworld (chamber epoch): the census refresh at
+-- 223e7d57 (goldens committed on lefford as 8df714ed, 0063/0079) moved 76 of
+-- 224 metric x pin-set distributions with the SCHEMA UNCHANGED — a pure value
+-- refresh, so every moved column is directly comparable to its predecessor.
+-- FOURTEEN literals below drifted, all re-synced to calibration.rs's own
+-- re-pin in the same commit; calibration.rs stays primary. Every movement is
+-- downstream of RE-PLACEMENT — the same settlement mechanisms running over a
+-- world whose water table and chamber conditions moved under them — which is
+-- why naming and religion literals with no causal link to the underworld move
+-- alongside the flagship counts: the path runs through *which settlements
+-- survive to be named*. No guarded claim moved. Two watched conditionals were
+-- re-read and NEITHER fired: `transparency_min` fell rather than climbing
+-- toward the mean (0.3 -> 0.29714286) while `transparency_max` rose
+-- (0.97790055 -> 0.98360656), so both tails moved OUTWARD and The Radiation's
+-- inward-narrowing note does not extend; and the pop-weighted-abs-latitude
+-- margin widened rather than narrowing a fifth time (see
+-- gathering_calibration.rs).
+--
+-- ONE THING THIS FILE CANNOT SEE, worth stating where a reader meets these
+-- pins: `census-check` covers only SQL-expressible pins over `the-census`. At
+-- this refresh it caught 6 of the 10 reddened batteries; the other four
+-- (homophony over `branches-family`, pop-weighted-abs-latitude, the
+-- spinning-eternal half of the frozen-sky row, and the anomaly-injection
+-- recall witness) are invisible to it. A green `census-check` is NECESSARY
+-- AND NOT SUFFICIENT after a refresh — run the workspace suite too.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -408,7 +433,8 @@ checks AS (
   -- The Delvers resync (C2c), 0063/0079: 151 -> 152.
   -- The Range resync, 0063/0079: 152 -> 151.
   SELECT 'locked-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
-         CAST(locked_eternal AS DOUBLE) AS computed, 151.0 AS pinned, locked_eternal = 151 AS ok FROM agg
+  -- The Underworld resync, 0063/0079: 151 -> 152.
+         CAST(locked_eternal AS DOUBLE) AS computed, 152.0 AS pinned, locked_eternal = 152 AS ok FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 41 -> 40.
   -- The Contour epoch v2 resync, 0063: 39 -> 40.
@@ -416,13 +442,15 @@ checks AS (
   -- The Delvers resync (C2c), 0063/0079: 41 -> 40.
   -- The Range resync, 0063/0079: 40 -> 41.
   SELECT 'locked-ambient per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(locked_ambient AS DOUBLE), 41.0, locked_ambient = 41 FROM agg
+  -- The Underworld resync, 0063/0079: 41 -> 40.
+         CAST(locked_ambient AS DOUBLE), 40.0, locked_ambient = 40 FROM agg
   UNION ALL
   -- The Generalist resync, 0063/0079: 11 -> 9.
   -- The Tolerance's and the Delvers' resyncs together, 0063/0079: 9 -> 10.
   -- The Range resync, 0063/0079: 10 -> 9.
   SELECT 'spinning-yet-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(spinning_eternal_exceptions AS DOUBLE), 12.0, spinning_eternal_exceptions = 12 FROM agg
+  -- The Underworld resync, 0063/0079: 12 -> 10.
+         CAST(spinning_eternal_exceptions AS DOUBLE), 10.0, spinning_eternal_exceptions = 10 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 536 -> 535.
   -- The Tumult (predation) re-pin, 0063: 535 -> 531.
@@ -437,7 +465,8 @@ checks AS (
   -- declared biome range now blocks a goblin flagship from placing on two
   -- worlds — see calibration.rs's own re-pin comment for the derivation).
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_coastal AS DOUBLE), 189.0, flagship_coastal = 189 FROM agg
+  -- The Underworld resync, 0063/0079: 189 -> 181.
+         CAST(flagship_coastal AS DOUBLE), 181.0, flagship_coastal = 181 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 235 -> 234.
   -- The Tumult (predation) re-pin, 0063: 234 -> 238.
@@ -448,7 +477,8 @@ checks AS (
   -- The Delvers resync (C2c), 0063/0079: 782 -> 792.
   -- The Range resync, 0063/0079: 792 -> 781.
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_inland AS DOUBLE), 811.0, flagship_inland = 811 FROM agg
+  -- The Underworld resync, 0063/0079: 811 -> 819.
+         CAST(flagship_inland AS DOUBLE), 819.0, flagship_inland = 819 FROM agg
   UNION ALL
   -- The Tithe (tribute) re-pin, 0063: 33 -> 34.
   -- The Contour epoch v2 resync, 0063: 34 -> 33.
@@ -485,7 +515,8 @@ checks AS (
   -- The Range resync, 0063/0079: 883 -> 879 (accuracy 0.9121900826446281 ->
   -- 0.9071207430340558, still decisively above the 0.75 floor).
   SELECT 'blind-attribution correct count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_correct AS DOUBLE), 890.0, blind_correct = 890 FROM agg
+  -- The Underworld resync, 0063/0079: 890 -> 888 (total unmoved at 982).
+         CAST(blind_correct AS DOUBLE), 888.0, blind_correct = 888 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 768.
   -- The Tithe (tribute) re-pin, 0063: 759 -> 758.
@@ -575,7 +606,8 @@ checks AS (
   -- 0.560_572_844_615_584_4.
   -- The Generalist resync, 0063/0079: 0.560_572_844_615_584_4 ->
   -- 0.528_593_255_324_676.
-         collision_mean, 0.50869314782, abs(collision_mean - 0.50869314782) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: 0.50869314782 -> 0.507408222281.
+         collision_mean, 0.507408222281, abs(collision_mean - 0.507408222281) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -616,7 +648,8 @@ checks AS (
   -- 8.687_525_197_786_464.
   -- The Generalist resync, 0063/0079: 8.687_525_197_786_464 ->
   -- 8.657_123_104_960_824. Present count 768 -> 766.
-         goblin_len_mean, 8.506600585, abs(goblin_len_mean - 8.506600585) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: 8.506600585 -> 8.515439092299996.
+         goblin_len_mean, 8.515439092299996, abs(goblin_len_mean - 8.515439092299996) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -658,7 +691,8 @@ checks AS (
   -- 7.188_604_358_823_526.
   -- The Generalist resync, 0063/0079: 7.188_604_358_823_526 ->
   -- 7.189_805_441_863_518 (essentially unmoved). Present count 765 -> 762.
-         kobold_len_mean, 6.858963629124241, abs(kobold_len_mean - 6.858963629124241) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: 6.858963629124241 -> 6.854391970773933.
+         kobold_len_mean, 6.854391970773933, abs(kobold_len_mean - 6.854391970773933) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -784,7 +818,8 @@ checks AS (
   -- 2.787_048_218_749_998_5.
   -- The Generalist resync, 0063/0079: 2.787_048_218_749_998_5 ->
   -- 2.763_782_961_879_896. Still inside 2-3. Present count 768 -> 766.
-         goblin_syl_mean, 2.7043333613, abs(goblin_syl_mean - 2.7043333613) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: 2.7043333613 -> 2.7095434288.
+         goblin_syl_mean, 2.7095434288, abs(goblin_syl_mean - 2.7095434288) < 1e-6 FROM agg
   UNION ALL
   -- The Contour epoch v2 resync, 0063: 763 -> 765.
   -- The Generalist resync, 0063/0079: 765 -> 762.
@@ -812,7 +847,8 @@ checks AS (
   -- above the floor — the narrowest margin either species has recorded at
   -- this row).
   SELECT 'mean kobold name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         kobold_syl_mean, 2.1867263862525483, abs(kobold_syl_mean - 2.1867263862525483) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: 2.1867263862525483 -> 2.179334351323829.
+         kobold_syl_mean, 2.179334351323829, abs(kobold_syl_mean - 2.179334351323829) < 1e-6 FROM agg
   UNION ALL
   SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
          CAST(transparency_present AS DOUBLE), 1000.0, transparency_present = 1000 FROM agg
@@ -839,7 +875,8 @@ checks AS (
   -- 0.804_225_380_346_752_7.
   -- The Generalist resync, 0063/0079: 0.804_225_380_346_752_7 ->
   -- 0.785_500_964_077_923. Still emphatically not 1.0.
-         transparency_mean, 0.7039082305, abs(transparency_mean - 0.7039082305) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: 0.7039082305 -> 0.70681747181.
+         transparency_mean, 0.70681747181, abs(transparency_mean - 0.70681747181) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -858,10 +895,15 @@ checks AS (
   -- DROPS sharply even as the mean rises — the span widens from below, the
   -- opposite-signed pair the previous regen's warning was watching for.
   SELECT 'min name-transparency — the spread floor (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_min, 0.3, abs(transparency_min - 0.3) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: the floor edges DOWN 0.3 -> 0.29714286
+  -- while the ceiling edges UP (below) — both tails outward, a widening
+  -- spread, away from the uniformity defect these two rows guard.
+         transparency_min, 0.29714286, abs(transparency_min - 0.29714286) < 1e-6 FROM agg
   UNION ALL
   SELECT 'max name-transparency — the spread ceiling (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_max, 0.97790055, abs(transparency_max - 0.97790055) < 1e-6 FROM agg
+  -- The Underworld resync, 0063/0079: 0.97790055 -> 0.98360656. Walks back
+  -- up but does not reach 1.0; see the min row above and calibration.rs.
+         transparency_max, 0.98360656, abs(transparency_max - 0.98360656) < 1e-6 FROM agg
   UNION ALL
   -- The Wearing Task 11d re-pin, 0063: 252 -> 1000 true, 748 -> 0 false on
   -- both species, the stale second opinion repaired.

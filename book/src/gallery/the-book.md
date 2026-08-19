@@ -616,7 +616,7 @@ The Šzuašzez are sea elfs — neighbors.
 The Šroašror are snow elfs — ourselves.
 The Sruasrer are wood elfs — neighbors.
 Booko is the earth with two moons.
-The moons cross because Troor strides the sky, slowly.
+The moons cross because Troor stalks the sky, slowly.
 The day returns, as all things return.
 
 *In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
@@ -735,9 +735,9 @@ The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Sruasrer's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
-## Volume 2: Boodoa
+## Volume 2: Beodoa
 
-Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
+Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
 The Koodzhoo are bugbears.
 The Takaz are desert dwarfs.
 The Boba are desert elfs.
@@ -757,35 +757,35 @@ The Ṅuṅa are wood elfs.
 ### Tongues
 
 Koodzhoo Zhoa Zho Zhako. (in the bugbear tongue: "The Koodzhoo are bugbears.")
-Boodoa Boodoa Koo Zhako. (in the bugbear tongue: "Boodoa is the earth.")
+Beodoa Boodoa Koo Zhako. (in the bugbear tongue: "Beodoa is the earth.")
 Takaz Shakax Zot. (in the desert-dwarf tongue: "The Takaz are desert dwarfs.")
-Boodoa Zazaz Zot. (in the desert-dwarf tongue: "Boodoa is the earth.")
+Beodoa Zazaz Zot. (in the desert-dwarf tongue: "Beodoa is the earth.")
 Boba Bobbobra. (in the desert-elf tongue: "The Boba are desert elfs.")
-Boodoa Besrob. (in the desert-elf tongue: "Boodoa is the earth.")
+Beodoa Besrob. (in the desert-elf tongue: "Beodoa is the earth.")
 Saoza Za Ra Robbabsrob. (in the drow tongue: "The Saoza are drows.")
-Boodoa Za Srob Bo. (in the drow tongue: "Boodoa is the earth.")
+Beodoa Za Srob Bo. (in the drow tongue: "Beodoa is the earth.")
 Ratra Bro Rokro Ra. (in the gnoll tongue: "The Ratra are gnolls.")
-Boodoa Bro Roshra Ra. (in the gnoll tongue: "Boodoa is the earth.")
+Beodoa Bro Roshra Ra. (in the gnoll tongue: "Beodoa is the earth.")
 Peerzhoe Zhagee. (in the goblin tongue: "The Peerzhoe are goblins.")
-Boodoa Peotoa. (in the goblin tongue: "Boodoa is the earth.")
+Beodoa Peotoa. (in the goblin tongue: "Beodoa is the earth.")
 Bapa Paba Wo Rob. (in the gully-dwarf tongue: "The Bapa are gully dwarfs.")
-Boodoa Bala La Rob. (in the gully-dwarf tongue: "Boodoa is the earth.")
+Beodoa Bala La Rob. (in the gully-dwarf tongue: "Beodoa is the earth.")
 Moma Frerro Memtrom. (in the high-elf tongue: "The Moma are high elfs.")
-Boodoa Frerro Me. (in the high-elf tongue: "Boodoa is the earth.")
+Beodoa Frerro Me. (in the high-elf tongue: "Beodoa is the earth.")
 Papan Znoad Wob Wop Zapap. (in the hill-dwarf tongue: "The Papan are hill dwarfs.")
-Boodoa Znoad Wob Wab Bawab. (in the hill-dwarf tongue: "Boodoa is the earth.")
+Beodoa Znoad Wob Wab Bawab. (in the hill-dwarf tongue: "Beodoa is the earth.")
 Geerjoe Rjorbe Go. (in the hobgoblin tongue: "The Geerjoe are hobgoblins.")
-Boodoa Goobeodoa Go. (in the hobgoblin tongue: "Boodoa is the earth.")
+Beodoa Goobeodoa Go. (in the hobgoblin tongue: "Beodoa is the earth.")
 Leoglo Faeblae. (in the human tongue: "The Leoglo are humans.")
-Boodoa La. (in the human tongue: "Boodoa is the earth.")
+Beodoa La. (in the human tongue: "Beodoa is the earth.")
 Gnga Dsao. (in the kobold tongue: "The Gnga are kobolds.")
-Boodoa Dshooshgsoo. (in the kobold tongue: "Boodoa is the earth.")
+Beodoa Dshooshgsoo. (in the kobold tongue: "Beodoa is the earth.")
 Muma Dra Romsrera. (in the sea-elf tongue: "The Muma are sea elfs.")
-Boodoa Dra Mesru. (in the sea-elf tongue: "Boodoa is the earth.")
+Beodoa Dra Mesru. (in the sea-elf tongue: "Beodoa is the earth.")
 Nona Ronsron Daa. (in the snow-elf tongue: "The Nona are snow elfs.")
-Boodoa No Daa. (in the snow-elf tongue: "Boodoa is the earth.")
+Beodoa No Daa. (in the snow-elf tongue: "Beodoa is the earth.")
 Ṅuṅa Ṅeṅsleṅleṅla Sue. (in the wood-elf tongue: "The Ṅuṅa are wood elfs.")
-Boodoa Ṅesluṅ Sue. (in the wood-elf tongue: "Boodoa is the earth.")
+Beodoa Ṅesluṅ Sue. (in the wood-elf tongue: "Beodoa is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 desert-dwarf: gap — planet (no entry in this lexicon)
@@ -822,15 +822,15 @@ The Gnga are kobolds — rivals.
 The Muma are sea elfs — rivals.
 The Nona are snow elfs — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because Pao walks the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Koodzhoo teach it
 
-Boodoa Boodoa Koo Zhazha. ("Boodoa is the earth — as it is taught.")
+Beodoa Boodoa Koo Zhazha. ("Beodoa is the earth — as it is taught.")
 
 The Koodzhoo are bugbears — ourselves.
 The Takaz are desert dwarfs — rivals.
@@ -847,15 +847,15 @@ The Gnga are kobolds — rivals.
 The Muma are sea elfs — rivals.
 The Nona are snow elfs — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because Pao walks the sky, slowly.
 The day returns because Paokadbo walks the sky, briskly.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Takaz tell it
 
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because it answers Zata.
 The day returns because the sky must be crossed.
 The Koodzhoo are bugbears — neighbors.
@@ -874,11 +874,11 @@ The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Boba tell it
 
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because it is Sro's kin.
 The day returns to keep the balance.
 The Koodzhoo are bugbears — neighbors.
@@ -897,7 +897,7 @@ The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Saoza tell it
 
@@ -916,10 +916,10 @@ The Gnga are kobolds — rivals.
 The Muma are sea elfs — rivals.
 The Nona are snow elfs — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because it is Rob's kin.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Ratra tell it
 
@@ -938,11 +938,11 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because it is Roshra's kin.
 The day returns because Rabroroshra rides the sky, briskly.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Peerzhoe tell it
 
@@ -961,14 +961,14 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth.
+Beodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Peerzhoe teach it
 
-Boodoa Peotoa. ("Boodoa is the earth — as it is taught.")
+Beodoa Peotoa. ("Beodoa is the earth — as it is taught.")
 
 The Koodzhoo are bugbears — neighbors.
 The Takaz are desert dwarfs — neighbors.
@@ -985,12 +985,12 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth.
+Beodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Mrarsorshar strides the sky, slowly.
 The day returns because Parme walks the sky, briskly.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Bapa tell it
 
@@ -1009,14 +1009,14 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth.
+Beodoa is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Bapa teach it
 
-Boodoa Bala La Rob. ("Boodoa is the earth — as it is taught.")
+Beodoa Bala La Rob. ("Beodoa is the earth — as it is taught.")
 
 The Koodzhoo are bugbears — neighbors.
 The Takaz are desert dwarfs — neighbors.
@@ -1033,16 +1033,16 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth.
+Beodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Zaba strides the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Moma tell it
 
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because it answers Rom.
 The day returns because the sky must be crossed.
 The Koodzhoo are bugbears — neighbors.
@@ -1061,13 +1061,13 @@ The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Moma teach it
 
-Boodoa Frermo Me. ("Boodoa is the earth — as it is taught.")
+Beodoa Frermo Me. ("Beodoa is the earth — as it is taught.")
 
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because Rom walks the sky, slowly.
 The day returns because Rom strides the sky, briskly.
 The Koodzhoo are bugbears — neighbors.
@@ -1088,7 +1088,7 @@ The Ṅuṅa are wood elfs — neighbors.
 
 — though the folk say The moon crosses because it answers Rom.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Papan tell it
 
@@ -1107,14 +1107,14 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth.
+Beodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Papan teach it
 
-Boodoa Znoad Wap Wab Bawab. ("Boodoa is the earth — as it is taught.")
+Beodoa Znoad Wap Wab Bawab. ("Beodoa is the earth — as it is taught.")
 
 The Koodzhoo are bugbears — neighbors.
 The Takaz are desert dwarfs — neighbors.
@@ -1131,12 +1131,12 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth.
+Beodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Nadnogznod strides the sky, slowly.
 The day returns because Zabab strides the sky, briskly.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Geerjoe tell it
 
@@ -1155,14 +1155,14 @@ The Gnga are kobolds — rivals.
 The Muma are sea elfs — rivals.
 The Nona are snow elfs — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Boodoa is the earth.
+Beodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Geerjoe teach it
 
-Boodoa Goobeodoa Rja. ("Boodoa is the earth — as it is taught.")
+Beodoa Goobeodoa Rja. ("Beodoa is the earth — as it is taught.")
 
 The Koodzhoo are bugbears — rivals.
 The Takaz are desert dwarfs — rivals.
@@ -1179,16 +1179,16 @@ The Gnga are kobolds — rivals.
 The Muma are sea elfs — rivals.
 The Nona are snow elfs — rivals.
 The Ṅuṅa are wood elfs — rivals.
-Boodoa is the earth.
+Beodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Fraezrazh's kin.
 The day returns to keep the balance.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Leoglo tell it
 
-Boodoa is the earth.
+Beodoa is the earth.
 The day returns to keep the balance.
 The Koodzhoo are bugbears — neighbors.
 The Takaz are desert dwarfs — neighbors.
@@ -1206,13 +1206,13 @@ The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Leoglo teach it
 
-Boodoa La. ("Boodoa is the earth — as it is taught.")
+Beodoa La. ("Beodoa is the earth — as it is taught.")
 
-Boodoa is the earth.
+Beodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Ploefofa walks the sky, slowly.
 The day returns to keep the balance.
@@ -1232,11 +1232,11 @@ The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Gnga tell it
 
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because Dsaasgngo strides the sky, slowly.
 The day returns, as all things return.
 The Koodzhoo are bugbears — rivals.
@@ -1255,13 +1255,13 @@ The Muma are sea elfs — rivals.
 The Nona are snow elfs — rivals.
 The Ṅuṅa are wood elfs — rivals.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Gnga teach it
 
-Boodoa Dshooshgsoo. ("Boodoa is the earth — as it is taught.")
+Beodoa Dshooshgsoo. ("Beodoa is the earth — as it is taught.")
 
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because Dsaasgngo walks the sky, slowly.
 The day returns because Dsaasgngo walks the sky, briskly.
 The Koodzhoo are bugbears — rivals.
@@ -1280,11 +1280,11 @@ The Muma are sea elfs — rivals.
 The Nona are snow elfs — rivals.
 The Ṅuṅa are wood elfs — rivals.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Muma tell it
 
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because it answers Sro.
 The day returns because the sky must be crossed.
 The Koodzhoo are bugbears — neighbors.
@@ -1303,7 +1303,7 @@ The Muma are sea elfs — ourselves.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — neighbors.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Nona tell it
 
@@ -1322,15 +1322,15 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — ourselves.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because it answers Ron.
 The day returns because the sky must be crossed.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Nona teach it
 
-Boodoa No Daa. ("Boodoa is the earth — as it is taught.")
+Beodoa No Daa. ("Beodoa is the earth — as it is taught.")
 
 The Koodzhoo are bugbears — neighbors.
 The Takaz are desert dwarfs — neighbors.
@@ -1347,13 +1347,13 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — ourselves.
 The Ṅuṅa are wood elfs — neighbors.
-Boodoa is the earth with one moon.
+Beodoa is the earth with one moon.
 The moon crosses because Ron walks the sky, slowly.
 The day returns to keep the balance.
 
 — though the folk say The moon crosses because it answers Ron.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Ṅuṅa tell it
 
@@ -1372,14 +1372,14 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — ourselves.
-Boodoa is the earth.
+Beodoa is the earth.
 The day returns to keep the balance.
 
-*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Ṅuṅa teach it
 
-Boodoa Ṅesluṅ Sue. ("Boodoa is the earth — as it is taught.")
+Beodoa Ṅesluṅ Sue. ("Beodoa is the earth — as it is taught.")
 
 The Koodzhoo are bugbears — neighbors.
 The Takaz are desert dwarfs — neighbors.
@@ -1396,12 +1396,12 @@ The Gnga are kobolds — neighbors.
 The Muma are sea elfs — neighbors.
 The Nona are snow elfs — neighbors.
 The Ṅuṅa are wood elfs — ourselves.
-Boodoa is the earth.
+Beodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Sloṅ's kin.
 The day returns to keep the balance.
 
-*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Beodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ### The Reckoning of Years
 

@@ -38,7 +38,7 @@ use hornvale_species::{ConditionNiche, HabitatRealm};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents, build_world_to, climate_of,
-    per_species_suitability, substrate_field, subterranean_substrate, terrain_of,
+    per_species_suitability, substrate_field, subterranean_substrate_field, terrain_of,
 };
 
 /// The probe window — matches Task 0's `deep_realm_substrate.rs` convention
@@ -109,6 +109,13 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
         &climate.regime(),
     );
 
+    // The Underworld: a chamber's conditions now need the cell's own depth,
+    // gradient, water table and porosity, so the reading is taken from the one
+    // shared derivation rather than rebuilt here — see
+    // `subterranean_substrate_field`'s docs for what a cave-less land cell
+    // reads and why.
+    let subterranean = subterranean_substrate_field(geo, &terrain, &surface);
+
     let mut surface_total = 0.0;
     let mut subterranean_total = 0.0;
     let mut n = 0usize;
@@ -117,7 +124,7 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
             continue;
         }
         let s = *surface.get(cell);
-        let sub = subterranean_substrate(s);
+        let sub = *subterranean.get(cell);
         surface_total += niche_fit(cn, &s, floor);
         subterranean_total += niche_fit(cn, &sub, floor);
         n += 1;

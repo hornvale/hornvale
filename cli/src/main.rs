@@ -72,9 +72,9 @@ usage:
                                                       emit scene/surrounds/v1 JSON to stdout, or
                                                       (--render ascii) the chart through a lens
                                                       (--lens colour tints each glyph with the
-                                                      bedrock's colour, and withholds the tint from
-                                                      water, marks and you — the caption says how
-                                                      many it withheld)
+                                                      cell's surface colour, and withholds the tint
+                                                      from water, marks and you — the caption says
+                                                      how many it withheld)
                                                       (--room and --depth are mutually exclusive —
                                                       a room id already carries its own depth)
   hornvale history --world <PATH> --site <CELL>
@@ -1949,6 +1949,9 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                         projection: String::new(),
                         preserves: String::new(),
                         sun_altitude_deg,
+                        channel_roles: Vec::new(),
+                        projection_slots: None,
+                        projection_norms: None,
                     },
                 )
             } else {

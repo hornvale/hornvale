@@ -62,13 +62,47 @@
 //! is the expected shadow of a rising settlement count, not evidence about
 //! the key. The key is unchanged; the ground under it is not.
 //!
+//! **The Underworld's node-index re-key (Task 8, spec §4.6)** re-placed every
+//! settlement a FIFTH time; a fifth fresh full sweep (744.21 s, ten threads,
+//! `--release`) found `[2208, 2465]`, one drop each. 1892's four-epoch run
+//! ends here, so no seed has ever survived five. **THE RATE MOVED AGAIN, AND
+//! DOWN: 6 in 3000 → 2 in 3000** — back to where The Ell and the thermostat
+//! left it, and inside the observed range of 2 → 6 → 2 → 3 → 6 → 2.
+//!
+//! It is legible for exactly the reason the paragraph above is, running the
+//! other way: re-keying the node index on `(cell, rung)` takes drow out of the
+//! competition for surface cells, and seed 42 falls from 826 occupations across
+//! 302 sites to **625 across 264**. Fewer occupations are fewer chances that
+//! two of them agree on every material fact `founder_handle` reads. The
+//! independent quantity and the collision rate have now moved together, in the
+//! same direction, on two consecutive epochs and in OPPOSITE directions — which
+//! is a better test of the reading than two rises would have been.
+//!
+//! **That "625 across 264" is a CORRECTION, and the correction is the point.**
+//! The figure first published here was 521 across 217, measured mid-campaign
+//! and before Task 9 repaired `chamber_fit`'s genus join. The repair moved
+//! every underworld seating and therefore re-placed every world again, and
+//! nothing re-ran this paragraph's arithmetic — the sweep it argues from is a
+//! 744 s job and the paragraph is prose. Re-measured 2026-08-18 on this tree.
+//! The direction of the argument is unchanged (826 → 625 is still a fall) and
+//! the magnitude is about half what was claimed.
+//!
+//! **What was NOT re-run, stated so nobody reads more into the table below
+//! than it holds.** `the_dropped_founders_are_pinned_per_seed` is green on this
+//! tree, so every pinned per-seed value is still exact. What has not been
+//! re-established post-repair is the *completeness* claim — that `[2208, 2465]`
+//! is the whole 0–2999 positive set — because that needs a fresh full sweep and
+//! this wave did not pay for one. Read the table as "these nineteen seeds drop
+//! exactly these counts", which is what it asserts, and not as "no other seed
+//! in 0–2999 drops a founder", which it does not.
+//!
 //! What this battery pins:
 //!
 //! 1. **liveness** — the seeds that used to die build to `Full` depth, which is
 //!    the depth the panic used to fire at;
 //! 2. **the size of the cut** — how many founders each seed loses, so a later
-//!    change that silently alters promotion coverage reddens here. Twelve of
-//!    the eighteen rows now read **zero**, and they are the campaign's
+//!    change that silently alters promotion coverage reddens here. Seventeen
+//!    of the nineteen rows now read **zero**, and they are the campaign's
 //!    headline: they
 //!    are seeds that used to lose a founder and no longer do, so a regression
 //!    that reintroduces the collisions is visible rather than silent;
@@ -80,7 +114,7 @@
 //! before the widening. It is here so that a future absorption that re-exposes
 //! it is visible rather than surprising.
 //!
-//! Cost: eighteen `BuildDepth::Settlements` builds and three `Full` builds, ~2 s
+//! Cost: nineteen `BuildDepth::Settlements` builds and two `Full` builds, ~2 s
 //! each on an optimized dev profile — cheap enough for the commit gate, which
 //! is where a liveness guard belongs.
 //!
@@ -130,12 +164,24 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// The rate DOUBLED to six in three thousand — see the module header for why
 /// that tracks settlement volume rather than the key.
 ///
-/// claim: structural(seed: [238, 1439, 1892]) — three named worlds, built
-/// once each. No search: the seeds come from a completed 0–2999 sweep, not
-/// from this test.
+/// **The set turns over a fifth time, and the rate HALVES (The Underworld,
+/// Task 8, spec §4.6's node-index re-key).** A fifth fresh 0–2999 sweep
+/// (744.21 s, ten threads, `--release`, run outside this test) found
+/// `[2208, 2465]`, one drop each. Five of the previous six clear — 238,
+/// 1439, 1892, 2031 and 2871 — and 1892's four-epoch run finally ends. Only
+/// 2465 survives, joined by one newcomer. That tracks the module header's
+/// reading rather than contradicting it: re-keying the node index takes drow
+/// out of the competition for surface cells and seed 42's settlement volume
+/// falls by a third (521 occupations across 217 sites, against 826 across
+/// 302), and fewer occupations are fewer chances for two of them to collide.
+/// **BOTH positives are built here, not three of six** — there is no third.
+///
+/// claim: structural(seed: [2208, 2465]) — two named worlds, built once each.
+/// No search: the seeds come from a completed 0–2999 sweep, not from this
+/// test.
 #[test]
 fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
-    for seed in [238u64, 1439, 1892] {
+    for seed in [2208u64, 2465] {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -183,35 +229,62 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// survive a re-placement — and they redden if a future change resurrects one,
 /// which is a thing worth knowing.
 ///
+/// **The fifth turnover, and the rate halves (The Underworld, Task 8).** A
+/// fifth fresh 0–2999 sweep (744.21 s, ten threads, `--release`, run outside
+/// this test) found `[2208, 2465]`, one drop each. 238, 1439, 1892, 2031 and
+/// 2871 all clear — including 1892, whose four-epoch survival this file has
+/// been narrating since The Glasshouse — and 2208 is the only newcomer. Every
+/// cleared seed is kept as a zero row by the standing convention, so the table
+/// is nineteen rows now, of which two are the live positive set and seventeen
+/// are the record of what five epochs cleared.
+///
+/// **The sweep predates Task 9's genus repair; the ROWS were re-verified and
+/// the SWEEP was not.** Every value below is green on this tree, re-run
+/// 2026-08-18, so each named seed's drop count is exact post-repair. The
+/// sentence "2208 and 2465 are the whole of the current positive set over seeds
+/// 0–2999" rests on the pre-repair sweep and has **not** been re-established:
+/// the repair re-placed every world, and a fresh sweep is a 744 s job nobody
+/// has paid for since. A seed outside these nineteen may now drop a founder
+/// without anything here noticing. That is a gap in coverage, not a suspected
+/// defect, and it is written down rather than left implicit — a completeness
+/// claim inherited across an epoch it was not re-run under is exactly the
+/// shape this campaign spent itself finding.
+///
 /// claim: structural(seed: [20, 42, 238, 514, 1412, 1439, 1505, 1738, 1741,
-/// 1866, 1892, 2031, 2078, 2465, 2634, 2793, 2871, 2898]) — eighteen named
-/// worlds with pinned per-seed values. Not a sweep and not a search: the enumeration is the whole of a
+/// 1866, 1892, 2031, 2078, 2208, 2465, 2634, 2793, 2871, 2898]) — nineteen
+/// named worlds with pinned per-seed values. Not a sweep and not a search: the enumeration is the whole of a
 /// completed 0–2999 sweep's positive set plus two controls and every
 /// superseded row, so nothing here scans for an instance.
 #[test]
 fn the_dropped_founders_are_pinned_per_seed() {
-    // (seed, founders dropped). 1741, 1866 and 1892 are the whole of the
-    // current positive set over seeds 0-2999; 42 and 2793 are the
-    // long-standing controls; the rest are prior positives, kept to record
-    // that they cleared. Values measured on this tree.
-    let expected: [(u64, usize); 18] = [
+    // (seed, founders dropped). 42 and 2793 are the long-standing controls;
+    // the rest are prior positives, kept to record that they cleared. Every
+    // value here is measured on this tree and green post-repair.
+    //
+    // 2208 and 2465 were the whole of the positive set over seeds 0-2999 AS
+    // OF THE PRE-REPAIR SWEEP, and that completeness claim has NOT been
+    // re-established since Task 9's genus repair re-placed every world — see
+    // this test's own docs. The rows below are exact; "no other seed in
+    // 0-2999 drops a founder" is not currently checked by anything.
+    let expected: [(u64, usize); 19] = [
         (20, 0),
         (42, 0),
-        (238, 1),
+        (238, 0),
         (514, 0),
         (1412, 0),
-        (1439, 1),
+        (1439, 0),
         (1505, 0),
         (1738, 0),
         (1741, 0),
         (1866, 0),
-        (1892, 1),
-        (2031, 1),
+        (1892, 0),
+        (2031, 0),
         (2078, 0),
+        (2208, 1),
         (2465, 1),
         (2634, 0),
         (2793, 0),
-        (2871, 1),
+        (2871, 0),
         (2898, 0),
     ];
     for (seed, drops) in expected {
@@ -300,15 +373,24 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// The `available > 1` premise below is what makes the substitution question
 /// answerable at all, and it is asserted rather than assumed for exactly this
 /// reason.
+///
+/// **Seed 2465, not 1892 (The Underworld, Task 8).** The node-index re-key
+/// cleared 1892 — the end of its four-epoch run — and the fifth 0–2999 sweep
+/// left `[2208, 2465]`. **Both** qualify on the `available > 1` premise, and
+/// they were measured rather than assumed before either was picked: 2208's
+/// losing people (human) holds 13 occupations against a `MEMORY_DEPTH` of 20,
+/// and 2465's holds 18. 2465 is taken because it is the SURVIVOR of the two —
+/// the one seed carried over from the previous positive set — so this pin
+/// changes as little as the measurement permits. 2208 is held in reserve.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
-    let w = build(1892, BuildDepth::Settlements);
+    let w = build(2465, BuildDepth::Settlements);
     let occs = occupation_records(&w);
     let cast = select_founders(&occs);
     let dropped = cast
         .unremembered
         .first()
-        .expect("seed 1892 drops exactly one founder");
+        .expect("seed 2465 drops exactly one founder");
     let people = dropped.people;
     let promoted = cast
         .remembered
@@ -318,7 +400,7 @@ fn a_dropped_founder_is_not_backfilled() {
     let available = occs.iter().filter(|o| o.core.people == people).count();
     assert!(
         available > 1,
-        "seed 1892's {people:?} must hold more than one occupation \
+        "seed 2465's {people:?} must hold more than one occupation \
          ({available}), or there is nothing a backfill could have reached for"
     );
     assert_eq!(

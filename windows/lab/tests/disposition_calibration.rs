@@ -690,6 +690,15 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// result is inconvenient. What is wrong here is the scale the estimator is
 /// denominated in, and re-fitting that is a measurement, not an edit.
 ///
+/// **RE-READ AT THE UNDERWORLD'S CLOSE (2026-08-18): drow fell again, to
+/// 12/60 = 0.200, and the deferral is UNCHANGED.** The denominator held at 60,
+/// so this is the same fact one notch deeper — drow re-seats less often, not
+/// drow losing flagships on more worlds — and 12 live re-seats refute the
+/// floor's stated mechanism exactly as 14 did. Nothing here licenses lowering
+/// the bar; the estimator's scale is still what is wrong, and re-fitting it is
+/// still a measurement. See the witness below for the attribution, which is
+/// **not** the one the campaign expected.
+///
 /// Tracked as `BIO-raid-partition-order-statistic`. The witness below keeps
 /// the reading measured while this is deferred.
 ///
@@ -697,7 +706,7 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// `RAID_DISPOSITION_MIN` re-seats its genesis flagship on at least
 /// `RAIDER_MIN` of the seed panel's worlds.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 14 re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate and to 12/60 = 0.200 at The Underworld's close, denominator held at 60 both times, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 12 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
 fn every_raider_clears_the_floor_preregistered_not_met() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, _) = raiders_and_abstainers(&wc);
@@ -715,8 +724,9 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
         under.is_empty(),
         "PREREGISTERED, NOT MET (decision 0138): {} raiding people(s) below the \
          {RAIDER_MIN} floor: {under:?}. Measured 14/60 = 0.233 for drow at The Glasshouse's \
-         close; a DIFFERENT reading here means the deferral has moved and owes a re-read, \
-         not a lowered floor. See this test's doc comment.",
+         close and 12/60 = 0.200 at The Underworld's; a DIFFERENT reading here means the \
+         deferral has moved and owes a re-read, not a lowered floor. See this test's doc \
+         comment.",
         under.len()
     );
 }
@@ -731,6 +741,37 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// Pinned as `(changed, worlds)` rather than the rate, because a ratio hides
 /// which term moved: "drow re-seated less often" and "drow was flagship-less
 /// on more worlds" are different facts, and only the first is the finding.
+///
+/// # RE-READ AT THE UNDERWORLD'S CLOSE (2026-08-18): 14/60 → 12/60
+///
+/// **The denominator held at 60**, so the pin's own distinction resolves the
+/// easy way: drow re-seats less often (0.233 → 0.200), and drow is not
+/// flagship-less on more worlds. The deferral does not move — 12 live re-seats
+/// refute the floor's stated mechanism exactly as 14 did, and sea-elf at 0/60
+/// still shows what a dead branch actually looks like.
+///
+/// **THE ATTRIBUTION IS NOT DECISION 0145, AND THIS WAS WORTH MEASURING
+/// RATHER THAN ASSUMING.** The campaign re-keyed the history bake's node index
+/// from `CellId` to `(CellId, DelveRung)` (one community per *place*, not per
+/// cell), which is the change that most obviously touches settlement placement,
+/// and the expectation carried into this re-read was that it caused the fall.
+/// It does not. Neutralising the re-key alone — `Bake::rung_for` forced to
+/// `DelveRung::Surface`, which makes every node-index key `(cell, Surface)` and
+/// so restores the old one-per-cell semantics exactly, with the rest of the
+/// campaign intact — reads **10/60**, which is *further* from main's 14/60,
+/// not nearer it:
+///
+/// ```text
+///   main 95cbaa70                        14/60   0.233
+///   merge product, re-key neutralised    10/60   0.167
+///   merge product as merged              12/60   0.200
+/// ```
+///
+/// So the rest of the campaign moves drow **−4** and the re-key gives back
+/// **+2**, for a net −2. 0145 explains none of the fall; it opposes it. **The
+/// mechanism behind either half is NOT established here** — this is a
+/// difference of three measured readings, and naming a cause for it would be
+/// exactly the invention this pin exists to prevent.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
@@ -740,12 +781,15 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
     println!("witness: drow re-seated {changed}/{worlds}");
     assert_eq!(
         (changed, worlds),
-        (14, 60),
-        "drow's flagship re-seating moved from the pinned 14/60. This is NOT a number to \
+        (12, 60),
+        "drow's flagship re-seating moved from the pinned 12/60. This is NOT a number to \
          update — re-read it, then re-state this witness, the #[ignore] reason on \
          every_raider_clears_the_floor_preregistered_not_met, its roster entry in \
          cli/tests/heavy_tier.rs and the BIO-raid-partition-order-statistic registry row in \
-         the SAME commit."
+         the SAME commit. THIS HAS NOW HAPPENED ONCE (The Underworld, 2026-08-18, 14/60 → \
+         12/60). BEFORE ASSUMING A CAUSE, MEASURE ONE: that re-read expected decision 0145's \
+         node-index re-key and found it moving the reading the OTHER way — see the doc \
+         comment's mutation arm."
     );
 }
 

@@ -5530,6 +5530,49 @@ mod tests {
         // autonyms (both `concatenative`) revert to their pre-Task-5 draw;
         // every other tongue in this block happened to land unchanged.
         // Group counts and every day-number are again BYTE-IDENTICAL.
+        //
+        // The Burr re-pin (Tasks 13/15, at the absorb of main): the dwarf
+        // family becomes templatic and every family gains a per-bundle
+        // orthography, so any dwarf/elf autonym in this block moves once more
+        // (the spelling of `ŋ`/`ʃ` for the elves, the root shape for the
+        // dwarves). Group counts and day-numbers remain BYTE-IDENTICAL —
+        // re-pinned from the merged run, values below are its output.
+        //
+        // THE UNDERWORLD (Task 8, spec §4.6's node-index re-key): still
+        // FIFTEEN placed, and ELEVEN organized — the Kxoqboq gain a priesthood
+        // run, and nothing else at this seed moves. Both witnessed counts (81
+        // and 49) and the taught day (36337) are unchanged for the fifth
+        // consecutive re-pin, so the reckoning arithmetic is untouched again
+        // and only the caste threshold moved.
+        //
+        // **The Kxoqboq are the drow**, and this line is one of exactly two
+        // surfaces that moved in that whole task. `worldgen::diachronic`'s
+        // 75-row `LADDER_TABLE` moved exactly ONE row in the same run — seed 2
+        // drow, `Counted` -> `Predictive`, 81 witnessed and unchanged — and a
+        // culture crossing to `Predictive` is a culture gaining a priesthood.
+        // Two surfaces, one fact, each re-pinned from its own scaffold and
+        // neither from the other. Re-keying the deep-history node index on
+        // `(cell, rung)` takes drow out of the competition for surface cells;
+        // its congregation at this seed is what crossed the caste threshold.
+        //
+        // THE UNDERWORLD (Task 9, the genus join): back to TEN organized —
+        // **the Kxoqboq lose the priesthood run they gained one task ago**,
+        // and nothing else at this seed moves. Both witnessed counts (81 and
+        // 49) and the taught day (36337) are unchanged for the sixth
+        // consecutive re-pin. Same people, same lever, opposite direction:
+        // Task 8 moved drow's competition for surface cells by re-keying the
+        // node index, and Task 9 moves it again by repairing `chamber_fit`'s
+        // genus join, so drow seats at a different rung in karst and fracture
+        // columns and its seed-2 congregation falls back under the caste
+        // threshold. The margin line goes with it — a people with no
+        // priesthood teaches nothing to be wrong about.
+        //
+        // **The paired `diachronic` row moves back too**, and the pairing is
+        // the point: `LADDER_TABLE`'s seed-2 drow row returns `Predictive` ->
+        // `Counted`, 81 witnessed and unchanged, re-pinned from its own
+        // scaffold rather than from this one. A single fact reaching two
+        // instruments that agree without consulting each other is the check
+        // this comment has been building across two campaigns.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,

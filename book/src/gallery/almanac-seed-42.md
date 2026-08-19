@@ -11,8 +11,8 @@ This sky holds: the sun.
 Salient phenomena, most attention-demanding first:
 
 - [0.30] Bago
-- [0.26] heat
 - [0.20] Dogoo
+- [0.20] heat
 - [0.14] rain
 
 ## The Land
@@ -24,33 +24,34 @@ Notable: the Great Delta, salt flats.
 The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 8 marine biomes cover the globe.
 Some 16% of the surface is habitable — land with water and a tolerable season.
 
+- **Qada** — tropical-rainforest
 - **Daadoo** — tropical-rainforest
-- **Doabo** — tropical-seasonal-forest
 - **Sadad** — shrubland
 - **Dapavshaxas** — shrubland
 - **Zzoaṅgeṅšzeaṅṅaeṅszaoṅ** — temperate-grassland
 - **Gooṅšzoeṅṅoṅšzaṅ** — temperate-grassland
 - **Szoaṅ** — temperate-grassland
-- **Bogaoggoo** — tropical-seasonal-forest
-- **Dogžrao** — tropical-seasonal-forest
+- **Po** — temperate-forest
+- **Dagga** — temperate-forest
+- **Roaggaorao** — tropical-seasonal-forest
+- **Poogpao** — tropical-seasonal-forest
 - **Dzhap** — shrubland
 - **Na (21.6°S, 44.4°W)** — temperate-forest
-- **Naadee** — temperate-forest
-- **Babo (14.0°S, 48.6°W)** — temperate-forest
-- **Tabash** — tropical-seasonal-forest
-- **Shakattabash** — shrubland
+- **Babo** — temperate-forest
+- **Qashak of the gully-dwarfs** — tropical-seasonal-forest
+- **Shakat** — shrubland
 - **Šromdeemomšra** — temperate-forest
-- **Sraošreammaedomžreo** — temperate-forest
-- **Mabash'sabag** — temperate-forest
-- **Tabash'gamabsabag** — temperate-forest
-- **Naabee** — temperate-forest
+- **Mabash'sajat** — temperate-forest
+- **Mabash'sabak** — temperate-forest
+- **Tabash'kamabsabag** — temperate-forest
 - **To** — temperate-forest
-- **Gaebae** — tropical-seasonal-forest
-- **Perevae** — temperate-forest
-- **Roerepera** — temperate-forest
-- **Pero (29.0°N, 143.7°W)** — temperate-forest
+- **Noe** — tropical-seasonal-forest
+- **Pera** — temperate-forest
+- **Rorepera** — temperate-forest
+- **Xoarorore** — temperate-forest
+- **Rorora (21.7°N, 145.0°W)** — temperate-forest
 - **Xaxaro** — taiga
-- **Xoora (21.1°N, 144.0°W)** — temperate-forest
+- **Rorora** — tundra
 - **Nuun** — coral-reef
 - **Nunnanšreannaensraun** — coral-reef
 - **Dunžreun** — kelp-forest
@@ -58,214 +59,179 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Toṅzrooṅzroṅṅoṅbooṅboṅ** — taiga
 - **Ṅooṅsraoṅ (54.5°S, 9.9°E)** — tundra
 - **Ṅooṅsraoṅ (59.6°N, 101.2°E)** — tundra
-- **Sduṅdeeṅuu** — temperate-forest
-- **Teuṅtau** — temperate-forest
-- **Teuṅtauṅuṅsda** — temperate-forest
+- **Duuṅuṅsda** — temperate-forest
+- **Rogdoogoogšroo** — temperate-forest
+- **Dusduṅdee** — temperate-forest
 - **Shngaax (9.3°N, 171.3°W)** — shrubland
-- **Gaebaenoe** — tropical-seasonal-forest
-- **Qata** — temperate-forest
-- **Rora** — temperate-forest
-- **Qata** — tropical-seasonal-forest
+- **Bobeqanabe** — tropical-rainforest
+- **Tataneno** — temperate-forest
+- **Bagona** — temperate-forest
+- **Qatato** — temperate-forest
+- **Toqata** — temperate-forest
+- **Teatxaofoorekovae** — temperate-forest
+- **Teatxaofooroere** — temperate-forest
+- **Toṅzrooṅ** — tundra
+- **Bago (23.8°N, 123.4°W)** — temperate-forest
 - **Tabash'kakaj** — temperate-forest
-- **Perareko** — temperate-forest
-- **Poogpao** — temperate-forest
-- **Gamabbamag** — temperate-forest
+- **Na (20.1°S, 43.0°W)** — temperate-forest
 - **Do** — temperate-forest
-- **Reko** — temperate-forest
-- **Dagga (17.5°S, 32.6°E)** — temperate-forest
-- **Po** — temperate-forest
-- **Dagga** — temperate-rainforest
-- **Neno (19.1°S, 42.8°W)** — temperate-forest
-- **Bobababo** — temperate-forest
-- **Qado (20.6°N, 145.1°E)** — tropical-rainforest
-- **Poogdo** — temperate-forest
-- **Raaxora (18.3°N, 124.0°E)** — temperate-forest
-- **Roaggaorao** — temperate-forest
-- **Daggapogsro** — temperate-forest
-- **Rogdoo (17.9°S, 35.6°E)** — temperate-forest
-- **Naeno** — temperate-forest
-- **Bodo (25.8°N, 150.2°E)** — temperate-forest
-- **Goarao** — temperate-forest
-- **Bote (25.0°N, 13.6°E)** — temperate-forest
-- **Bago (26.0°N, 13.7°E)** — temperate-forest
-- **Bodoqadago** — tropical-rainforest
-- **Dagga (14.6°S, 31.7°E)** — temperate-forest
-- **Googšroo** — temperate-forest
-- **Bago (27.3°N, 15.6°E)** — temperate-forest
-- **Na (28.0°N, 16.4°E)** — temperate-forest
-- **Dadash** — shrubland
-- **Shaxas** — shrubland
-- **Roere** — temperate-forest
-- **Pogsrorogdoo (16.4°S, 30.7°E)** — temperate-forest
-- **Daadoo** — temperate-forest
-- **Xanapdanagqashaxqadad** — shrubland
-- **Da (21.3°N, 138.7°E)** — temperate-forest
-- **Poo** — temperate-forest
-- **Rogdoo (15.2°S, 32.6°E)** — temperate-forest
-- **Gaoda (20.0°N, 144.0°E)** — tropical-rainforest
-- **Bote (22.5°N, 140.7°E)** — temperate-forest
-- **Bobabago** — temperate-forest
-- **Perakare** — temperate-forest
-- **Perafato** — temperate-forest
-- **Doo (20.3°N, 139.0°E)** — tropical-seasonal-forest
-- **Pogsrorogdoo (16.4°S, 32.6°E)** — temperate-forest
-- **Gogšra** — temperate-forest
-- **Bago (26.9°N, 16.6°E)** — tropical-rainforest
-- **Noe** — tropical-seasonal-forest
-- **Takeno** — tropical-seasonal-forest
-- **Goo** — temperate-forest
-- **Qada** — tropical-rainforest
-- **Bodoqadoaba** — tropical-rainforest
-- **Doaba** — tropical-rainforest
-- **Vaereko** — temperate-forest
-- **Kaore** — temperate-forest
-- **Ga (18.0°S, 31.7°E)** — tropical-rainforest
-- **Nenobabo** — temperate-forest
-- **Kaenenona** — temperate-forest
-- **Naneno** — temperate-forest
-- **Dagga (17.6°N, 131.5°E)** — temperate-forest
-- **Ga (18.5°S, 30.8°E)** — tropical-rainforest
-- **Smo** — shrubland
-- **Pero (25.2°N, 15.6°W)** — temperate-forest
-- **Smozhmo** — shrubland
-- **Shngaax (10.3°N, 171.3°W)** — shrubland
-- **Naadeebabo** — temperate-forest
-- **Babo (18.1°S, 42.6°W)** — temperate-forest
+- **Pero** — temperate-forest
+- **Sduṅdeeduṅzdeu (27.4°N, 115.4°W)** — temperate-forest
+- **Naabee (24.3°N, 127.5°W)** — temperate-forest
+- **Qashak of the hill-dwarfs** — tropical-seasonal-forest
+- **Bago** — tropical-rainforest
+- **Moo** — temperate-forest
+- **Qada (10.9°S, 57.8°W)** — tropical-seasonal-forest
+- **Bodoqa (11.6°S, 60.1°W)** — tropical-rainforest
+- **Sdausdeaṅṅae (26.7°N, 114.6°W)** — temperate-forest
+- **Sduṅdeeduṅzdeu (27.0°N, 113.3°W)** — temperate-forest
+- **Domžreo** — temperate-forest
+- **Duṅzdeuṅuu** — temperate-forest
+- **Nenoonaabee** — temperate-forest
+- **Bagoneoboeqa** — temperate-forest
+- **Bomsro** — temperate-forest
+- **Ṅuu** — temperate-forest
+- **Sraošreammae** — tropical-seasonal-forest
+- **Sduṅdeetuṅsdu** — temperate-forest
+- **Ṅuusdausdeaṅṅaedu** — temperate-forest
+- **Psax** — shrubland
+- **Dsopgsovdshopdshop** — savanna
+- **Sduṅdeeduu** — temperate-forest
+- **Sdausdeaṅṅae (28.6°N, 113.8°W)** — temperate-forest
+- **Psaxqzha** — shrubland
+- **Doo** — temperate-forest
+- **Psaxqzhazhmo** — shrubland
+- **Shngaaxzhmo (7.9°N, 170.4°W)** — shrubland
+- **Qzhaa (12.5°N, 174.1°W)** — shrubland
+- **Duṅzdeu** — temperate-forest
+- **Sngaxpso (8.7°N, 172.3°W)** — savanna
 - **Zhmo** — savanna
 - **Zhmosngax** — savanna
-- **Psaxqzha** — shrubland
-- **Googšroogogšra** — temperate-forest
-- **Pero (26.0°N, 13.7°W)** — temperate-forest
-- **Boababo** — temperate-forest
-- **Da (26.9°N, 150.2°E)** — temperate-forest
-- **Peropera** — temperate-forest
-- **Xaoxororororo** — temperate-forest
-- **Xooxa (18.6°N, 122.8°E)** — temperate-forest
-- **Bodoqa** — tropical-rainforest
-- **Bodo (21.6°N, 142.9°E)** — temperate-forest
-- **Sngax** — savanna
-- **Neno (18.0°S, 44.5°W)** — temperate-forest
-- **Nabote** — temperate-forest
-- **Xao (19.0°N, 121.7°E)** — temperate-forest
-- **Dabago (21.1°N, 144.0°E)** — temperate-forest
-- **Pogsro** — temperate-forest
+- **Bodo** — temperate-forest
+- **Sduṅdeeṅuu** — temperate-forest
+- **Psooqsoxpshapzhazno** — savanna
+- **Sduṅdee** — temperate-forest
+- **Ṅuutee** — temperate-forest
+- **Smozhmo (5.7°N, 172.3°W)** — shrubland
+- **Shngaax (10.3°N, 171.3°W)** — shrubland
+- **Smo (11.3°N, 171.2°W)** — shrubland
+- **Raaxora (18.3°N, 124.0°E)** — temperate-forest
+- **Daadoo** — temperate-forest
+- **Gaebae (23.7°N, 126.6°W)** — tropical-seasonal-forest
+- **Gaebae (23.1°N, 122.5°W)** — tropical-seasonal-forest
+- **Duṅzdeusduṅdee (27.8°N, 117.6°W)** — temperate-forest
+- **Raaxorarora** — temperate-forest
+- **Neno** — temperate-forest
+- **Duṅzdeusduṅdee (29.1°N, 116.0°W)** — temperate-forest
+- **Roaroro (16.9°N, 125.5°E)** — temperate-forest
+- **Bote** — temperate-forest
+- **Bobeqa** — tropical-seasonal-forest
+- **Psoo (11.7°N, 172.2°W)** — savanna
+- **Bobeqa** — temperate-forest
+- **Kotobote** — temperate-forest
+- **Sraošreammaedomžreo** — temperate-forest
+- **Moošromdee** — temperate-forest
+- **Zhmosmo (6.3°N, 171.3°W)** — shrubland
+- **Qzhasmo (4.9°N, 175.2°W)** — shrubland
 - **Raaxora (20.2°N, 126.6°E)** — temperate-forest
-- **Dzoxgzhoppso** — savanna
-- **Bobeqa** — tropical-rainforest
-- **Babonenona** — temperate-forest
-- **Gaoda (17.7°N, 138.5°E)** — tropical-rainforest
-- **Bodo (22.9°N, 145.0°E)** — temperate-forest
-- **Boba (23.0°N, 139.5°E)** — temperate-forest
-- **Kae** — temperate-forest
-- **Bobabodo (25.7°N, 152.0°E)** — temperate-forest
-- **Bagogaodao** — tropical-rainforest
-- **Take** — tropical-seasonal-forest
-- **Bago (23.4°N, 12.4°E)** — temperate-forest
-- **Noebobeqa** — tropical-seasonal-forest
-- **Xaora (15.4°N, 121.8°E)** — temperate-forest
-- **Raaxora (19.8°N, 127.8°E)** — temperate-forest
-- **Psax** — shrubland
-- **Shngaaxzhmo** — shrubland
-- **Rorora (17.3°N, 124.3°E)** — temperate-forest
-- **Bago** — tropical-seasonal-forest
-- **Bagoqado** — tropical-rainforest
-- **Bagodo (23.0°N, 149.2°E)** — tropical-seasonal-forest
-- **Bodoqa** — tropical-seasonal-forest
-- **Tona** — temperate-forest
-- **Sngaxpso** — savanna
-- **Neene** — tropical-rainforest
-- **Bago (26.1°N, 15.8°E)** — tropical-rainforest
-- **Bago (23.6°N, 14.5°E)** — tropical-rainforest
-- **Bobeqagaba** — tropical-rainforest
-- **Qada** — tropical-seasonal-forest
-- **Bagodo (23.5°N, 150.1°E)** — tropical-seasonal-forest
-- **Xoxarora** — temperate-forest
+- **Zhmo (10.6°N, 167.4°W)** — shrubland
+- **Shngaax (5.5°N, 174.2°W)** — shrubland
 - **Qzhazhmo** — shrubland
-- **Doodobodo** — temperate-forest
-- **Xoxa (16.3°N, 124.6°E)** — temperate-forest
-- **Doo (24.6°N, 152.0°E)** — tropical-seasonal-forest
-- **Xororororo (14.7°N, 124.1°E)** — temperate-forest
-- **Dzoxgzhopqzhashngax** — shrubland
-- **Boba (23.8°N, 11.4°E)** — temperate-forest
-- **Bodoqa** — temperate-forest
-- **Na (25.4°N, 12.6°E)** — temperate-forest
-- **Xao (19.2°N, 126.9°E)** — temperate-forest
-- **Xoroxora (18.2°N, 127.2°E)** — temperate-forest
-- **Xooxa (18.8°N, 128.1°E)** — temperate-forest
-- **Dago** — tropical-seasonal-forest
-- **Xaoraxoraxoxa** — temperate-forest
-- **Xao (20.8°N, 127.5°E)** — temperate-forest
-- **Xaora (18.4°N, 129.2°E)** — temperate-forest
-- **Bagogaodao** — tropical-seasonal-forest
-- **Bagodo (18.1°N, 137.4°E)** — tropical-seasonal-forest
+- **Qzhasmo (6.1°N, 173.3°W)** — shrubland
+- **Psooshmaop** — savanna
+- **Naabeeto** — temperate-forest
+- **Doo** — tropical-seasonal-forest
+- **Bodoqa (23.4°N, 152.0°E)** — tropical-rainforest
+- **Qata** — temperate-forest
 - **Smoqzhazhmo** — shrubland
-- **Xooxa (17.6°N, 123.1°E)** — temperate-forest
-- **Raaxora (16.0°N, 122.6°E)** — temperate-forest
-- **Gaodaodoaba** — tropical-rainforest
-- **Raaxoraxoxa (21.1°N, 126.3°E)** — temperate-forest
+- **Qzhaa (5.1°N, 173.3°W)** — shrubland
+- **Zhmo (9.9°N, 170.3°W)** — shrubland
+- **Qshooxzhmodsop** — temperate-forest
+- **Qzhadshopdshopzhmo** — shrubland
+- **Boba** — temperate-forest
+- **Smo (9.1°N, 168.4°W)** — shrubland
+- **Zhmosmo (10.1°N, 168.4°W)** — shrubland
+- **Rorora (17.3°N, 124.3°E)** — temperate-forest
+- **Qzhazhmosmo** — shrubland
+- **Zhmoqzha (3.4°N, 176.2°W)** — shrubland
+- **Xooxa (18.6°N, 122.8°E)** — temperate-forest
+- **Xoroxora** — temperate-forest
+- **Xao (19.2°N, 126.9°E)** — temperate-forest
 - **Raaxora (17.2°N, 127.5°E)** — temperate-forest
-- **Xoxa (17.0°N, 122.3°E)** — temperate-forest
-- **Xoxa (16.7°N, 120.3°E)** — temperate-forest
-- **Psoosngax** — savanna
-- **Goabodo** — temperate-forest
-- **Dodo (24.8°N, 148.3°E)** — temperate-forest
-- **Gaodabodoqa** — tropical-seasonal-forest
-- **Roora (17.9°N, 125.2°E)** — temperate-forest
 - **Raaxora (17.5°N, 126.3°E)** — temperate-forest
+- **Xoxa (16.3°N, 124.6°E)** — temperate-forest
+- **Shngaax (8.2°N, 164.5°W)** — shrubland
+- **Dsopgsovzhmo** — savanna
+- **Roora (17.9°N, 125.2°E)** — temperate-forest
 - **Xoxa (18.5°N, 126.0°E)** — temperate-forest
-- **Na (21.7°N, 137.6°E)** — temperate-forest
-- **Bote (26.4°N, 12.7°E)** — temperate-forest
-- **Roaroro** — temperate-forest
+- **Zhmoqshox (7.5°N, 169.4°W)** — shrubland
+- **Zhmoqsagzo** — temperate-forest
+- **Xao (15.3°N, 124.9°E)** — temperate-forest
+- **Qzhasmozhmo (10.5°N, 169.3°W)** — shrubland
+- **Qshooxzhmo** — shrubland
+- **Rorora (16.6°N, 123.5°E)** — temperate-forest
+- **Bobabodo** — temperate-forest
+- **Da** — temperate-forest
+- **Qada (24.1°N, 151.1°E)** — tropical-seasonal-forest
+- **Xaoxoxa** — temperate-forest
+- **Shngaax (6.4°N, 165.5°W)** — shrubland
+- **Bagodo (23.5°N, 150.1°E)** — tropical-seasonal-forest
+- **Bagodo (23.0°N, 149.2°E)** — tropical-seasonal-forest
+- **Bago (24.7°N, 123.1°W)** — temperate-forest
+- **Bobabobeqa** — temperate-forest
+- **Qzhaqshox** — shrubland
+- **Qzhaa (7.0°N, 164.5°W)** — shrubland
+- **Naabee (19.1°S, 42.8°W)** — temperate-forest
+- **Xooxa (18.8°N, 128.1°E)** — temperate-forest
+- **Xoxa (19.4°N, 128.9°E)** — temperate-forest
+- **Xaora (18.4°N, 129.2°E)** — temperate-forest
+- **Rooraxa** — temperate-forest
+- **Zhmoqzha (4.4°N, 176.2°W)** — shrubland
+- **Psoo (2.2°N, 178.1°W)** — savanna
+- **Dabodoqa** — temperate-forest
+- **Qzhasmodzoxgzhop** — shrubland
+- **Raaxora (19.8°N, 127.8°E)** — temperate-forest
+- **Dshoopdshop** — savanna
+- **Xooxa (17.6°N, 123.1°E)** — temperate-forest
+- **Nanabe** — temperate-forest
+- **Pzhaopdzaaxqshoox** — temperate-forest
+- **Zhmoqshox (7.0°N, 166.5°W)** — shrubland
+- **Smoqzha** — shrubland
+- **Shngaaxzhmo (4.5°N, 174.2°W)** — shrubland
+- **Xao (19.3°N, 123.7°E)** — temperate-forest
+- **Qzhasmo (5.3°N, 163.5°W)** — shrubland
+- **Zhmosmoqzha** — shrubland
+- **Sngaxpso (3.2°N, 178.1°W)** — savanna
+- **Psooshmaopzhmo** — savanna
 - **Shngaaxqzha** — shrubland
 - **Qzhasmozhmo (6.9°N, 170.4°W)** — shrubland
-- **Gaebaebagobobeqa** — tropical-seasonal-forest
-- **Bodobodoqa** — temperate-forest
-- **Bagobodoqa** — temperate-forest
-- **Xao (18.0°N, 122.0°E)** — temperate-forest
-- **Xoora (17.3°N, 121.1°E)** — temperate-forest
-- **Roora (15.9°N, 125.8°E)** — temperate-forest
-- **Take** — tropical-rainforest
-- **Gaodadagobago** — tropical-seasonal-forest
-- **Rorora (16.6°N, 123.5°E)** — temperate-forest
-- **Xaoxoxa** — temperate-forest
-- **Bodoqada** — temperate-forest
-- **Qzhasmozhmo (10.5°N, 169.3°W)** — shrubland
-- **Da (26.3°N, 151.1°E)** — temperate-forest
-- **Dabodoqa** — temperate-forest
-- **Da (24.1°N, 149.2°E)** — temperate-forest
-- **Xoxa (16.5°N, 126.6°E)** — temperate-forest
-- **Xoxa (19.4°N, 128.9°E)** — temperate-forest
-- **Rooraxa** — temperate-forest
-- **Qadabodoqa** — tropical-seasonal-forest
-- **Dado** — temperate-forest
-- **Bodo (25.3°N, 149.2°E)** — temperate-forest
-- **Gododo** — temperate-forest
-- **Dodo (27.0°N, 148.3°E)** — temperate-forest
-- **Da (27.5°N, 149.2°E)** — temperate-forest
-- **Xoroxora (16.8°N, 128.6°E)** — temperate-forest
+- **Nabobeqa** — temperate-forest
 - **Xoxa (18.9°N, 124.9°E)** — temperate-forest
-- **Xao (19.3°N, 123.7°E)** — temperate-forest
-- **Koto** — temperate-forest
-- **Xooxa (18.0°N, 130.4°E)** — temperate-forest
-- **Xororororo (18.6°N, 131.3°E)** — temperate-forest
-- **Zhmosmo** — shrubland
-- **Bagoda** — temperate-forest
-- **Dabago (27.3°N, 153.0°E)** — temperate-forest
-- **Bobabodo (23.2°N, 141.7°E)** — temperate-forest
-- **Godo** — tropical-seasonal-forest
-- **Doabagaodao** — tropical-rainforest
-- **Qado (11.5°N, 174.2°E)** — tropical-rainforest
-- **Bodo (25.3°N, 147.2°E)** — temperate-forest
-- **Qeba** — temperate-forest
-- **Na (24.2°N, 10.4°E)** — temperate-forest
-- **Qzhadshopdshopzhmo** — shrubland
-- **Raaxoraxoxa (14.4°N, 122.1°E)** — temperate-forest
-- **Xoxa (14.7°N, 121.0°E)** — temperate-forest
-- **Roora (17.4°N, 129.5°E)** — temperate-forest
-- **Xao (18.3°N, 120.8°E)** — temperate-forest
-- **Roora (19.3°N, 120.5°E)** — temperate-forest
-- **Zhmo** — shrubland
-- **Qshooxzhmo** — shrubland
+- **Zhmo (8.1°N, 168.4°W)** — shrubland
+- **Zhmoshngax** — shrubland
+- **Na (18.4°S, 45.6°W)** — temperate-forest
+- **Dzoxgzhopqzhashngax** — shrubland
+- **Smozhmo (8.5°N, 169.4°W)** — shrubland
+- **Qsagzo** — temperate-forest
+- **Roora (15.9°N, 125.8°E)** — temperate-forest
+- **Xoxa (17.0°N, 122.3°E)** — temperate-forest
+- **Raaxora (16.0°N, 122.6°E)** — temperate-forest
+- **Xoxa (16.5°N, 126.6°E)** — temperate-forest
+- **Roaroro (16.2°N, 127.8°E)** — temperate-forest
+- **Xoora** — temperate-forest
+- **Dsopgsov** — savanna
+- **Xaora (19.5°N, 125.7°E)** — temperate-forest
+- **Smozhmo (9.6°N, 167.4°W)** — shrubland
+- **Xao (14.9°N, 126.0°E)** — temperate-forest
+- **Dzhap** — tropical-seasonal-forest
+- **Qzhapzhma** — tropical-seasonal-forest
+- **Raaxora (19.9°N, 124.6°E)** — temperate-forest
+- **Xao (20.8°N, 127.5°E)** — temperate-forest
+- **Xoxarora** — temperate-forest
+- **Xaoxororororo** — temperate-forest
+- **Xoxora** — temperate-forest
+- **Rooraro** — temperate-forest
+- **Xooxaxoxaxa** — temperate-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -305,32 +271,32 @@ Notable ore: copper, gold, lead-zinc, coal, gems, bauxite.
 ## The Vestige
 
 The underworld's residue marks 2% of the land — the buried palimpsest of ages before.
-0 abandoned delvings and 735 buried undercities lie beneath the land.
-239 layers of that residue are still venerated against 496 forgotten — forgetting outpaces memory.
-The residue's dominant hazard is structural collapse — 735 layers so afflicted.
+0 abandoned delvings and 600 buried undercities lie beneath the land.
+205 layers of that residue are still venerated against 395 forgotten — forgetting outpaces memory.
+The residue's dominant hazard is structural collapse — 600 layers so afflicted.
 
 ## The People
 
-The land holds 242 settlement(s).
-The chief bugbear settlement, Daadoo, holds 70 souls amid tropical-rainforest.
+The land holds 208 settlement(s).
+The chief bugbear settlement, Qada, holds 70 souls amid tropical-rainforest.
 The chief desert-dwarf settlement, Sadad, holds 63 souls amid shrubland.
 The chief desert-elf settlement, Zzoaṅgeṅšzeaṅṅaeṅszaoṅ, holds 24 souls amid temperate-grassland.
-The chief drow settlement, Bogaoggoo, holds 24 souls amid tropical-seasonal-forest.
+The chief drow settlement, Po, holds 33 souls amid temperate-forest.
 The chief gnoll settlement, Dzhap, holds 30 souls amid shrubland.
-The chief goblin settlement, Na, holds 40 souls amid temperate-forest.
-The chief gully-dwarf settlement, Tabash, holds 37 souls amid tropical-seasonal-forest.
-The chief high-elf settlement, Šromdeemomšra, holds 35 souls amid temperate-forest.
-The chief hill-dwarf settlement, Mabash'sabag, holds 37 souls amid temperate-forest.
-The chief hobgoblin settlement, Naabee, holds 83 souls amid temperate-forest.
-The chief human settlement, Perevae, holds 36 souls amid temperate-forest.
-The chief kobold settlement, Xaxaro, holds 43 souls amid taiga.
+The chief goblin settlement, Na, holds 41 souls amid temperate-forest.
+The chief gully-dwarf settlement, Qashak, holds 37 souls amid tropical-seasonal-forest.
+The chief high-elf settlement, Šromdeemomšra, holds 31 souls amid temperate-forest.
+The chief hill-dwarf settlement, Mabash'sajat, holds 37 souls amid temperate-forest.
+The chief hobgoblin settlement, To, holds 87 souls amid temperate-forest.
+The chief human settlement, Pera, holds 36 souls amid temperate-forest.
+The chief kobold settlement, Rorora, holds 43 souls amid temperate-forest.
 The chief sea-elf settlement, Nuun, holds 33 souls amid coral-reef.
 The chief snow-elf settlement, Šrooṅtooṅṅooṅsraoṅ, holds 25 souls amid tundra.
-The chief wood-elf settlement, Sduṅdeeṅuu, holds 30 souls amid temperate-forest.
+The chief wood-elf settlement, Duuṅuṅsda, holds 35 souls amid temperate-forest.
 
-The bugbear lair of **Daadoo**, population 70.
+The bugbear lair of **Qada**, population 70.
 
-Daadoo lives by farming.
+Qada lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
@@ -346,9 +312,9 @@ Zzoaṅgeṅšzeaṅṅaeṅszaoṅ lives by farming.
 Its roles, lowest to highest: waterfinder, pathkeeper.
 The desert-elf run a basal metabolism of 64 W; slow, long-lived, and sparse, lifespan ~317 yr, matures ~63 yr.
 
-The drow hold of **Bogaoggoo**, population 24.
+The drow hold of **Po**, population 33.
 
-Bogaoggoo lives by farming.
+Po lives by farming.
 Its roles, lowest to highest: delver, dark-speaker, matron.
 The drow run a basal metabolism of 66 W; slow, long-lived, and sparse, lifespan ~320 yr, matures ~64 yr.
 
@@ -358,45 +324,45 @@ Dzhap lives by fishing.
 Its roles, lowest to highest: gleaner, packlord.
 The gnoll run a basal metabolism of 135 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The goblin village of **Na**, population 40.
+The goblin village of **Na**, population 41.
 
 Na lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The gully-dwarf midden of **Tabash**, population 37.
+The gully-dwarf midden of **Qashak**, population 37.
 
-Tabash lives by farming.
+Qashak lives by farming.
 Its roles, lowest to highest: scrounger, mutterer, eldest.
 The gully-dwarf run a basal metabolism of 75 W; slow, long-lived, and sparse, lifespan ~268 yr, matures ~54 yr.
 
-The high-elf citadel of **Šromdeemomšra**, population 35.
+The high-elf citadel of **Šromdeemomšra**, population 31.
 
 Šromdeemomšra lives by farming.
 Its roles, lowest to highest: steward, loresinger, archivist.
 The high-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
-The hill-dwarf steading of **Mabash'sabag**, population 37.
+The hill-dwarf steading of **Mabash'sajat**, population 37.
 
-Mabash'sabag lives by farming.
+Mabash'sajat lives by farming.
 Its roles, lowest to highest: crofter, stonespeaker, thane.
 The hill-dwarf run a basal metabolism of 82 W; slow, long-lived, and sparse, lifespan ~276 yr, matures ~55 yr.
 
-The hobgoblin legion of **Naabee**, population 83.
+The hobgoblin legion of **To**, population 87.
 
-Naabee lives by farming.
-Its roles, lowest to highest: laborer, warlord.
+To lives by farming.
+Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
-The human town of **Perevae**, population 36.
+The human town of **Pera**, population 36.
 
-Perevae lives by farming.
+Pera lives by farming.
 Its roles, lowest to highest: farmer, priest, steward.
 The human run a basal metabolism of 82 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
-The kobold warren of **Xaxaro**, population 43.
+The kobold warren of **Rorora**, population 43.
 
-Xaxaro lives by farming.
+Rorora lives by farming.
 Its roles, lowest to highest: digger, elders.
 The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
@@ -412,15 +378,15 @@ The snow-elf wintering of **Šrooṅtooṅṅooṅsraoṅ**, population 25.
 Its roles, lowest to highest: herder, hearthkeeper.
 The snow-elf run a basal metabolism of 73 W; slow, long-lived, and sparse, lifespan ~332 yr, matures ~66 yr.
 
-The wood-elf grove of **Sduṅdeeṅuu**, population 30.
+The wood-elf grove of **Duuṅuṅsda**, population 35.
 
-Sduṅdeeṅuu lives by farming.
-Its roles, lowest to highest: gatherer, greenspeaker, boughgiver.
+Duuṅuṅsda lives by farming.
+Its roles, lowest to highest: gatherer, boughgiver.
 The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
 ## The Gods
 
-In the lair of **Daadoo**, an organized priesthood tends its own pantheon:
+In the lair of **Qada**, an organized priesthood tends its own pantheon:
 
 > Bagodoqa the Kvodoqa is: Bagodoqa the Kvodoqa is always watching. That's how it's always been. That's how it's always been. Bagodoqa is a great one among the gods.
 >
@@ -438,11 +404,11 @@ The wellcamp of **Zzoaṅgeṅšzeaṅṅaeṅszaoṅ** keeps its own folk panth
 >
 > — derived from the phenomenon *celestial-body*
 
-In the hold of **Bogaoggoo**, an organized priesthood tends its own pantheon:
+In the hold of **Po**, an organized priesthood tends its own pantheon:
 
-> Pooggo the Ḳraopooggo is felt, not counted. So it was, so it is.
+> Daggapooggo the Ḳraordaggapooggo is felt, not counted. So it was, so it is.
 >
-> — derived from the phenomenon *heat*
+> — derived from the phenomenon *ambient*
 
 The camp of **Dzhap** keeps its own folk pantheon:
 
@@ -456,15 +422,11 @@ In the village of **Na**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-In the midden of **Tabash**, an organized priesthood tends its own pantheon:
+In the midden of **Qashak**, an organized priesthood tends its own pantheon:
 
 > Bangat Bangatqashak is: Bangat Bangatqashak is always watching. That's how it's always been. That's how it's always been. Bangat is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
-
-> Tatat Tatat is felt more than seen. That's how it's always been. That's how it's always been. Tatat is a great one among the gods.
->
-> — derived from the phenomenon *heat*
 
 In the citadel of **Šromdeemomšra**, an organized priesthood tends its own pantheon:
 
@@ -472,25 +434,25 @@ In the citadel of **Šromdeemomšra**, an organized priesthood tends its own pan
 >
 > — derived from the phenomenon *celestial-body*
 
-In the steading of **Mabash'sabag**, an organized priesthood tends its own pantheon:
+In the steading of **Mabash'sajat**, an organized priesthood tends its own pantheon:
 
 > Qashak Qashak is: Qashak Qashak is always watching. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
-The legion of **Naabee** keeps its own folk pantheon:
+In the legion of **To**, an organized priesthood tends its own pantheon:
 
 > Noaqabago the Nglanoqabago is ever: Noaqabago the Nglanoqabago watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the town of **Perevae**, an organized priesthood tends its own pantheon:
+In the town of **Pera**, an organized priesthood tends its own pantheon:
 
 > Raapvepero Raapvepero is: Raapvepero Raapvepero is always watching. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
-The warren of **Xaxaro** keeps its own folk pantheon:
+The warren of **Rorora** keeps its own folk pantheon:
 
 > Rooxa Rooxa is: Rooxa Rooxa is always watching. That's how it's always been. That's how it's always been. Rooxa is a great one among the gods.
 >
@@ -508,7 +470,7 @@ The wintering of **Šrooṅtooṅṅooṅsraoṅ** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-In the grove of **Sduṅdeeṅuu**, an organized priesthood tends its own pantheon:
+The grove of **Duuṅuṅsda** keeps its own folk pantheon:
 
 > Ṅauduṅzdeu Duṅzdeu is: Ṅauduṅzdeu Duṅzdeu is always watching. That's how it's always been. That's how it's always been. Ṅauduṅzdeu is a great one among the gods.
 >

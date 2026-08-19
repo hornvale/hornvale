@@ -534,6 +534,62 @@ disturb. That is [The Ell](./chronicle/the-ell.md)'s question — *which test
 goes red if this crossing is deleted?* — answered once more in the negative,
 and closed with a cross-check rather than a threshold.
 
+A fourteenth campaign returns the family to the place the first one found it —
+a check written from a plan's own text — and contributes the largest tally yet
+alongside a corner about *where a check is pointed*.
+[The Illumination](./chronicle/the-illumination.md) (2026-08-18) rewrote what
+a chart's colour, glyph and weight each mean, and produced **twenty-two**
+defects, essentially all of them originating in planning and dispatch text
+rather than in implementation. **Twelve share one shape**: a check that reads
+as protection while not being pointed at what it claims.
+
+Three of the twelve are worth stating individually, because each fails
+differently. A **ceiling guard** was written to catch a rejected continuous
+colouring that would produce a unique colour per cell; asked to *demonstrate*
+rather than assert that it would fire, the rejected design measured eighteen
+distinct colours against a bound of twenty and **passed silently on the exact
+regression the guard existed for**. A **test whose comment claimed it pinned a
+field** so that "a future change cannot add either by accident" never asserted
+anything about that field at all — the predicted red, on removing the field,
+never came, and the implementer reported the absence instead of implying
+otherwise. And a **guard on an escape-free rendering surface** rendered a
+scene containing none of the cells whose behaviour it guarded, so it stayed
+green while precisely that path changed underneath it.
+
+**Score: the bet holds; the practice gains a third clause, aimed at
+positive controls rather than at checks.** This chapter already asks that a
+check be made to fail on command, and that it be answerable to an enumeration.
+This campaign adds: **a positive control must be shown to discriminate, not
+merely to exist.** One control took the absolute value of a signed quantity to
+prove the sign was irrelevant — and removing the absolute value left the test
+green, because at the fixture's magnitudes both signs rounded into the same
+band. It was found only because a review brief instructed the reviewer to
+assume another instance existed. A control that cannot separate the two
+hypotheses it names is the cannot-fire family with better manners.
+
+**One bet moves, and it moves on a null rather than a result.** The chapter's
+standing caution about drift-checked artifacts with no external anchor gains a
+sampling twin. A seasonal signal was measured at eight points across a year,
+declined monotonically at every one, and read as a clean null — while the same
+cell's reported annual mean was arithmetically inconsistent with all eight
+readings. A denser resample found the minimum sitting in the unsampled tail,
+and the mechanism was a roughly twenty-three-day oscillation **aliasing**
+against a forty-six-day sampling grid. The smooth decline was the beat
+frequency of the instrument. So the floor gains a question asked of any
+periodic measurement: *does this sampling interval share a period with
+anything in the system, and would a null look identical if it did?*
+
+**And one finding is about the world rather than about instruments, recorded
+here because it scores a bet the map below carries.** The campaign's entire
+colour rewrite is invisible at the view a player opens first: the settlement
+walk band is 100% river on all five seeds sampled, so the default outdoor
+chart withholds every tint and reports so in its own caption. That is
+settlement siting behaving correctly, not a renderer defect — and no committed
+page in this book reaches the colour rendering either, since the scripted path
+runs with the eye off. It is the self-scorability floor in an unfamiliar
+costume: a capability can be built, measured, correct, and **unobservable
+through every artifact the project checks itself with**.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -1789,6 +1845,63 @@ become askable before anything could be declared in it. What is now settled is
 only that asking is possible. Whether a realm's hard gate generalises past caves
 remains the thing a campaign placing a people underground will find out.
 
+*Re-scored again by [The Underworld](./chronicle/the-underworld.md)
+(2026-08-18), which built everything the sentence above was waiting for and
+still could not do the thing the withdrawal was about.*
+
+**The precondition is discharged and the bet is not.** The underworld now has
+what the paragraph two above said it was waiting on: a depth coordinate that is
+not metres above sea level, communities declared as places (twenty-two of them,
+in the same five-axis basis the surface uses), chamber conditions that vary from
+each other and from the surface, a water table that is non-degenerate on every
+seed, and a people settled at a rung rather than at a mouth. Two dwarf kinds
+were **drafted as candidates** — in a test-local fixture, deliberately not in
+the species registry, so the roster could not become the thing under test — and
+scored against a criterion frozen before any of it was measured. The
+criterion **failed**: their modal delve rungs are equal on one of three seeds,
+and their top-quartile habitats overlap at 7.3 / 16.4 / 16.5% against a floor of
+20%. They were not admitted. That is the same conclusion The Delvers reached and
+the first time it has been reached from a measurement.
+
+**What lowers confidence is narrower and more surprising than the failure.** A
+decomposition run alongside the criterion asked which half of the capacity field
+did the separating, and the answer is not the half this campaign built. The
+depth-routed *conditions* — chamber temperature and moisture — separate the two
+candidates almost completely, at 0.5% top-quartile overlap on seed 42 and 0.0%
+on seed 7; **on seed 1234 that statistic is undefined**, its quartile boundary
+falling inside a tie of 12, so the reading is two seeds of three and not a flat
+three-seed range. The delve
+seating multiplier has no quartile at all: four or five distinct values with
+284–879 cells tied at the boundary, so its own overlap is undefined on every
+seed, and composing it onto the conditions *raises* the overlap toward 16% —
+pulling the two kinds slightly back together. **The axis this chapter expected to
+separate two underground peoples contributed too little resolution to be
+measured**, and the separation that does exist came from a mechanism the chapter
+already knew about.
+
+That is not the null the withdrawal predicted. Zero overlap was named in advance
+as "the axis separated them into different peoples rather than different
+dwarves, which is a failure that would otherwise read as a spectacular success",
+and the measurement landed on that branch — for the conditions, not for depth.
+So the bet moves from *cannot be asked* to *asked, answered, and answered about
+the wrong factor*. Whether two kinds can be separated **by depth** is now a
+question about resolution — how many distinct values a depth-derived multiplier
+can take before a quartile boundary means anything — rather than a question
+about whether the world has a depth at all.
+
+**And one measurement in the chain was wrong in a way that would have inverted
+the verdict.** The fit function matched a cave's genus by comparing the cave
+kind's name against the corpus's spellings; one of three agreed by coincidence,
+so two of three formations silently scored against a genus-blind fallback and
+returned identical tables. Broken, the overlap reads 34 / 93 / 84% and clears
+the floor on every seed. Repaired, it reads 7.3 / 16.4 / 16.5% and fails on
+every seed. Nothing in the gate distinguished the two, and the campaign's other
+eleven instrument findings are the reason it was looked for. The chapter's
+standing lesson from The Compendium — that a column's *value* is evidence about
+the world only if something independent establishes the column can move —
+generalises here to a stricter form: **a join is evidence only if something
+establishes that it discriminates**, and a fit that always exists is not that.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,
@@ -3005,3 +3118,67 @@ retains is negative under all three rules in *both* readouts. A unit mismatch
 that rescales every people by the same factor cannot disturb a comparison taken
 between peoples. A bet that survives a broken instrument is telling you which
 term it actually depends on.
+
+### A precondition was supplied, and it pushed the other way (2026-08-18)
+
+*The Parley* supplied a precondition the corroboration half of the Myth bet had
+been named as waiting on — **not by this chapter**, whose last re-score named
+distortion, which campaign 2 supplied, but by the row the
+[idea registry](./frontier/idea-registry.md) carries on the matter: accounts
+diverge only where two filters are mismatched, mismatch needs a boundary
+crossing, and a boundary crossing needs contact. That is the edge this campaign
+built: one that lets an account leave the people that witnessed it. Every model
+before it walked parent to child down the founding tree and nothing else, so "do
+independent accounts of one event corroborate each other" had no way to become a
+question about two peoples at all.
+
+**The diagnostic was right about the variance.** Asking what would have to vary
+identified the missing degree of freedom correctly, and adding it made the axis
+move immediately: cross-people reach goes from 548 to 4,112 of 23,594 endings,
+and accounts held by as many as six peoples exist where three was structurally
+impossible before. Nothing about the instrument changed.
+
+**It was silent about the sign, and the sign is the finding.** The frozen
+prediction was that two-sided disagreement would rise by more than 3×. It
+*falls*, on every one of three co-equal accumulation rules — 0.59×, 0.52×,
+0.77× — and identical day sets rise on all three. The mechanism is the edge's own
+symmetry: a seam is a channel in both directions, so each side receives the
+other's telling and each keeps whichever it can reach least corrupted. Contact
+between two peoples is **homogenising**. The precondition for corroboration, once
+supplied, consumed the divergence corroboration needs.
+
+So the axis gains a caution rather than a category. *What would have to vary* is
+a question about whether a bet can be scored at all; it says nothing about
+whether the mechanism that supplies the variance also destroys it. **A
+precondition can be its own confound**, and there is no way to find that out
+except by building it and looking at the sign.
+
+A second half of the same campaign is worth recording beside it, because it is a
+cost of preregistration and not a defect in it. The frozen measure compares the
+victim's people against the raider's people **and no other pair** — and the edge's
+whole effect is to create *new* pairs of peoples that share an account. Over the
+endings that reach two or more peoples, the share carrying some
+mutually-exclusive pair rises 2.1× to 4.5×, and the frozen measure is blind to
+every one of those pairs by construction. That reading is not licensed as
+evidence, because it was not frozen; the falsification stands as measured. But it
+names a failure mode this chapter has not carried: **a measure frozen against the
+pre-change topology can be structurally unable to see the change.** Freezing
+protects against retuning a number after seeing it, and charges for that
+protection in the currency of what the number can be about.
+
+The same campaign froze a seed-level control that no world could satisfy — it
+asked for a world where the mechanism is absent at hop zero but present as a
+graph, and the graph's edges *are* the hop-zero seam. Falsified, correctly, for a
+reason that says nothing about the mechanism. The diagnostic transfers to
+controls unchanged and had not been applied to one: before freezing a control,
+ask whether the world can reach the outcome the prediction requires.
+
+**The re-score.** The corroboration half stays **not-yet-scorable**, and its
+blocker is now narrower and dated. The registry's contact precondition is
+discharged — contact exists, and on the frozen measure it points away from
+divergence. It waits on a
+*directed* edge — victim→raider and raider→victim are different stories with
+different reach, both restrictions of the undirected ceiling measured here — and
+on a claim that carries the witness it came from, without which the pooling
+mechanism above is an inference from counts rather than something the world can
+show. Both are cheap. Neither existed to be asked for before this campaign.
