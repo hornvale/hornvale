@@ -1,7 +1,7 @@
 //! Spec §5.1, §5.3, §5.5: the clock removes holders, the contact edge adds
 //! them, and a claim reaches a people no tree route connects.
 
-mod common;
+use crate::common;
 
 use common::{
     a_holder_that_died_before_the_event, a_round_trip_through_another_people, eid,

@@ -2,7 +2,7 @@
 //! later event. Spec §3.5 measured 1,959 of 164,822 holders (1.19%) that do,
 //! confirmed on named instances up to ~500 years dead.
 
-mod common;
+use crate::common;
 
 use common::{eid, ledger_with, put};
 use hornvale_hearsay::clock::{Clock, admits};

@@ -1,4 +1,4 @@
-mod common;
+use crate::common;
 
 use common::{eid, ledger_with};
 use hornvale_hearsay::lineage::{Lineage, lineage_of};

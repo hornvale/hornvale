@@ -1,6 +1,6 @@
 //! The per-world ladder, over hand-built ledgers.
 
-mod common;
+use crate::common;
 
 use common::put_on;
 use hornvale_astronomy::units::StdDays;

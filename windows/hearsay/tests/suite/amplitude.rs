@@ -1,6 +1,6 @@
 //! The amplitude is the generational span of ONE retelling.
 
-mod common;
+use crate::common;
 
 use common::eid;
 use hornvale_astronomy::units::StdDays;

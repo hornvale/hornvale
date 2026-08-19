@@ -1,6 +1,6 @@
 //! Maximum antichain over a witness set.
 
-mod common;
+use crate::common;
 
 use common::{eid, ledger_with};
 use hornvale_hearsay::divergence::maximum_antichain;

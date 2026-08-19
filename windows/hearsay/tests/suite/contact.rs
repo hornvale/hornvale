@@ -1,7 +1,7 @@
 //! Spec §5.3: the raid seam, read out of `occ-ended-by` as an undirected
 //! edge set stamped with each raid's day.
 
-mod common;
+use crate::common;
 
 use common::{eid, ledger_with, put};
 use hornvale_hearsay::contact::contact_of;

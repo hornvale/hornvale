@@ -2,7 +2,7 @@
 //! exactly. Every arm this campaign adds is measured as a difference from it,
 //! so if this baseline is not exact, nothing downstream means anything.
 
-mod common;
+use crate::common;
 
 use common::{chain_with_foundings, eid};
 use hornvale_astronomy::units::StdDays;

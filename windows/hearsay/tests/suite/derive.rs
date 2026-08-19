@@ -1,4 +1,4 @@
-mod common;
+use crate::common;
 
 use common::{chain_with_a_survivor_shortcut, chain_with_foundings, eid, ledger_with, put, put_on};
 use hornvale_astronomy::units::StdDays;

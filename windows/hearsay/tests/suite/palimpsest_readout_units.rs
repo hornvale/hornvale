@@ -90,7 +90,7 @@
 //! pins the transcription, and [`the_conversion_actually_moves_the_walk_when_a_generation_is_not_one_day`]
 //! pins the conversion being applied at all. Neither builds a world.
 
-mod common;
+use crate::common;
 
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::accumulate::{Accumulation, precision_at};

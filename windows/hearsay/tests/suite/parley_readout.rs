@@ -58,7 +58,7 @@
 //! is REPORTED**, printed against its own §6 decision table. A falsified
 //! prediction is a finding. This file must never be edited to rescue one.
 
-mod common;
+use crate::common;
 
 use common::{a_holder_that_died_before_the_event, two_peoples_joined_by_a_later_raid};
 use hornvale_astronomy::units::StdDays;

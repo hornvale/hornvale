@@ -1,6 +1,6 @@
 //! Stance: where a community stands relative to one event.
 
-mod common;
+use crate::common;
 
 use common::{eid, ledger_with, put};
 use hornvale_hearsay::lineage::lineage_of;

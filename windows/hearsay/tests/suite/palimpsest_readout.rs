@@ -58,7 +58,7 @@
 //! does not have. The hypotheses are REPORTED. This file must never be edited
 //! to rescue a prediction.
 
-mod common;
+use crate::common;
 
 use common::{eid, ledger_with, put, put_on};
 use hornvale_astronomy::units::StdDays;
