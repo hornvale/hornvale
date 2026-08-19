@@ -1733,3 +1733,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T16:55:38Z | gate-commit | 41.767 | 113.382 | 38.968 | 3.65 | 0 | b0277ee07 | fix/census-yellow-teeth | lefford | 40 |
 | 2026-08-19T17:59:39Z | gate-commit | 140.786 | 609.573 | 204.536 | 5.78 | 0 | 9da5ef385 | fix/census-yellow-teeth | lefford | 40 |
 | 2026-08-19T20:29:35Z | sluice:artifacts | 61.041 | 529.741 | 21.119 | 9.02 | 0 | fa0eaec1f |  | lefford | 40 |
+| 2026-08-19T20:30:11Z | sluice:outboard | 35.861 | 22.860 | 36.156 | 1.65 | 0 | 4bf3d92ff |  | lefford | 40 |
