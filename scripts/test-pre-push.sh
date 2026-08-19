@@ -195,3 +195,81 @@ fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
+
+echo "== chamber: a push to main while the box is CLAIMED by someone else is refused"
+# The failure this closes, measured 2026-08-18: a one-line prose commit pushed
+# directly while feat/decision-blocks was mid-merge. That candidate had all six
+# phases GREEN, main moved underneath it, and its own push was then refused as
+# a non-fast-forward. An hour of the one serial box, discarded.
+claim="$tmp/hv-census.claim"
+sleep 600 & foreign_pid=$!          # a live process that is NOT our ancestor
+printf 'pid=%s\nhost=t\nuser=t\nstarted=t\ngoldens=t\nlabel=sluice-merge:campaign/x\nref=deadbeef\ncmdline=t\n' \
+    "$foreign_pid" > "$claim"
+HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
+if [ "$run_hook_status" -ne 0 ]; then
+    ok "a push to main is refused while a foreign live process holds the claim"
+else
+    bad "the push was ALLOWED while the chamber held the box — the run it would kill is unprotected"
+fi
+case "$run_hook_stderr" in
+    *"THE CHAMBER IS HOLDING THE BOX"*) ok "the refusal says why, and names the running job" ;;
+    *) bad "the refusal does not explain the chamber hold: $run_hook_stderr" ;;
+esac
+case "$run_hook_stderr" in
+    *HV_PUSH_OK*) ok "the refusal names the hotfix escape, so it is satisfiable" ;;
+    *) bad "the refusal offers no escape — a guard nobody can satisfy is worked around" ;;
+esac
+
+echo "== chamber: a BRANCH push is never gated by the claim"
+# Candidates reach the queue by pushing a branch. Gating that would make the
+# guard prevent the very thing it is protecting.
+HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/feat/x "$A" refs/heads/feat/x "$R"
+if [ "$run_hook_status" -eq 0 ]; then
+    ok "a branch push is allowed while the box is claimed"
+else
+    bad "a branch push was refused — candidates could not reach the queue at all"
+fi
+
+echo "== chamber: THE CHAMBER'S OWN PUSH IS NOT BLOCKED (the wedge case)"
+# sluice-run.sh pushes to main WHILE holding the claim. A naive is-it-claimed
+# test refuses the queue itself and wedges every merge — strictly worse than
+# the problem being solved. Reason 1: the holder exports HV_CENSUS_LOCK_HELD
+# and children inherit it.
+HV_CENSUS_CLAIM_PATH="$claim" HV_CENSUS_LOCK_HELD="$foreign_pid" \
+    run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
+if [ "$run_hook_status" -eq 0 ]; then
+    ok "the holder's own push to main is allowed via HV_CENSUS_LOCK_HELD"
+else
+    bad "the CHAMBER'S OWN push was refused — this would wedge every merge: $run_hook_stderr"
+fi
+
+echo "== chamber: a DEAD claim does not block anything"
+kill "$foreign_pid" 2>/dev/null || true; wait "$foreign_pid" 2>/dev/null || true
+HV_CENSUS_CLAIM_PATH="$claim" run_hook origin "$nonlocal_url" refs/heads/main "$A" refs/heads/main "$R"
+if [ "$run_hook_status" -eq 0 ]; then
+    ok "a stale claim whose pid is gone does not refuse the push"
+else
+    bad "a dead claim still refuses — an abandoned run would block main forever"
+fi
+
+echo "== chamber: MUTATION — without the ancestry/inheritance escape the chamber blocks itself"
+mut="$tmp/pre-push-mutant"
+# shellcheck disable=SC2016  # matching the hook's SOURCE TEXT, not evaluating it
+python3 "$repo_root/scripts/mutate.py" --to "$mut" "$hook" \
+    'if [ -n "$mine" ] && kill -0 "$mine" 2>/dev/null; then inside=1; fi' \
+    'inside=0' 2>/dev/null || sed 's/if \[ -n "\$mine" \] && kill -0 "\$mine" 2>\/dev\/null; then inside=1; fi/inside=0/' "$hook" > "$mut"
+sleep 600 & foreign2=$!
+printf 'pid=%s\nhost=t\nuser=t\nstarted=t\ngoldens=t\nlabel=t\nref=t\ncmdline=t\n' "$foreign2" > "$claim"
+set +e
+mut_out="$(printf 'refs/heads/main %s refs/heads/main %s\n' "$A" "$R" \
+    | HV_CENSUS_CLAIM_PATH="$claim" HV_CENSUS_LOCK_HELD="$foreign2" \
+      env -u GIT_DIR -u GIT_INDEX_FILE bash "$mut" origin "$nonlocal_url" 2>&1)"
+mut_rc=$?
+set -e
+kill "$foreign2" 2>/dev/null || true; wait "$foreign2" 2>/dev/null || true
+if [ "$mut_rc" -ne 0 ]; then
+    ok "MUTATION CONFIRMED: without the escape the holder's own push is refused (the real hook allows it)"
+else
+    bad "the mutant also allowed the push — the wedge-case test above is not pinning the escape: $mut_out"
+fi
+

@@ -79,10 +79,14 @@ if [ "${HV_PUSH_OK:-}" = "1" ]; then
 fi
 
 refused=0
+# Collected during the loop because git feeds the ref list on STDIN and the
+# loop consumes it — the chamber check below cannot re-read it afterwards.
+pushed_refs=""
 while read -r local_ref local_sha remote_ref remote_sha; do
     if [ -z "${local_ref:-}" ]; then
         continue
     fi
+    pushed_refs="$pushed_refs $remote_ref"
 
     if [ "$local_sha" = "$zero" ]; then
         echo "pre-push: refusing to DELETE $remote_ref on '$remote_name' ($remote_url)." >&2
@@ -121,6 +125,84 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     echo "pre-push: if this is deliberate, set HV_PUSH_OK=1 and retry." >&2
     refused=1
 done
+
+# A PUSH TO `main` WHILE THE CHAMBER HOLDS THE BOX KILLS THE RUN, and this is
+# the one failure the queue cannot see coming. Measured 2026-08-18: a one-line
+# book/src/frontier/idea-registry.md commit was pushed directly while
+# feat/decision-blocks was mid-merge. That candidate had all SIX phases green;
+# `main` moved underneath it; this hook's own fast-forward check then refused
+# the chamber's push and the run held. An hour of the one serial box, thrown
+# away, for a candidate with nothing wrong with it.
+#
+# The asymmetry is the argument: the pusher pays nothing and the running
+# candidate pays the hour. Nathan's policy is now that main advances through
+# the queue and a direct push is for a HOTFIX — this makes the timing half of
+# that mechanical rather than remembered, since `make sluice-status` before
+# pushing is exactly the kind of step that is skipped precisely when it
+# matters.
+#
+# THE CHAMBER'S OWN PUSH MUST NOT BE BLOCKED, which is the whole difficulty.
+# sluice-run.sh pushes to `main` WHILE holding the claim, so a naive
+# "is the box claimed?" test would refuse the queue itself and wedge every
+# merge. Two independent reasons to allow are checked, in cost order:
+#
+#   1. HV_CENSUS_LOCK_HELD names a LIVE pid. The claim holder exports it
+#      (census-run.sh:85, and sluice-run.sh likewise), so every child of the
+#      chamber inherits it. If it is set and live, we ARE inside the holder.
+#   2. The claim's own pid is an ANCESTOR of this process. This is the same
+#      question `census_claim.rs`'s `contending_holder()` asks — "am I
+#      contending with whoever claimed it?" rather than "is it claimed?" — and
+#      it is the check that catches a descendant whose environment was
+#      scrubbed. A claim held by our own ancestor is the job we are part of.
+#
+# Only a push to `refs/heads/main` is gated. Branch pushes are how candidates
+# reach the queue in the first place and must never be blocked.
+# No HV_PUSH_OK or local-remote test here: the hook already exited outright for
+# both, above, before the loop. Repeating them would read as though those cases
+# could reach this point.
+if [ "$refused" -eq 0 ]; then
+    claim_path="${HV_CENSUS_CLAIM_PATH:-/tmp/hv-census.claim}"
+    pushing_main=0
+    for r in $pushed_refs; do
+        [ "$r" = "refs/heads/main" ] && pushing_main=1
+    done
+
+    if [ "$pushing_main" = "1" ] && [ -f "$claim_path" ]; then
+        claim_pid="$(sed -n 's/^pid=\([0-9][0-9]*\)$/\1/p' "$claim_path" | head -1)"
+        if [ -n "$claim_pid" ] && kill -0 "$claim_pid" 2>/dev/null; then
+            # Reason 1: we are a descendant of the holder by inheritance.
+            mine="${HV_CENSUS_LOCK_HELD:-}"
+            inside=0
+            if [ -n "$mine" ] && kill -0 "$mine" 2>/dev/null; then inside=1; fi
+            # Reason 2: the holder is genuinely one of our ancestors. Walk the
+            # ppid chain rather than trusting the environment alone.
+            if [ "$inside" = "0" ]; then
+                p=$$
+                while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null; do
+                    if [ "$p" = "$claim_pid" ]; then inside=1; break; fi
+                    p="$(awk '/^PPid:/{print $2}' "/proc/$p/status" 2>/dev/null)"
+                    [ -n "$p" ] || break
+                done
+            fi
+            if [ "$inside" = "0" ]; then
+                echo "pre-push: refusing to push main — THE CHAMBER IS HOLDING THE BOX (pid $claim_pid)." >&2
+                sed -n 's/^label=/pre-push:   running: /p; s/^ref=/pre-push:   ref: /p' "$claim_path" >&2
+                echo "pre-push:" >&2
+                echo "pre-push: a direct push now moves main under that run. It has already spent" >&2
+                echo "pre-push: minutes-to-an-hour of the one serial box, and its push will be" >&2
+                echo "pre-push: refused as a non-fast-forward when it finishes — all of it wasted." >&2
+                echo "pre-push:" >&2
+                echo "pre-push: wait for it (make sluice-status), or route this through the queue:" >&2
+                echo "pre-push:   make gate-commit && git push origin HEAD:refs/heads/<branch>" >&2
+                echo "pre-push:   make sluice BRANCH=<branch> REF=\$(git rev-parse HEAD)" >&2
+                echo "pre-push: a prose-only candidate costs about 7 minutes there, not 60." >&2
+                echo "pre-push:" >&2
+                echo "pre-push: if this is a HOTFIX that cannot wait, set HV_PUSH_OK=1 and retry." >&2
+                refused=1
+            fi
+        fi
+    fi
+fi
 
 if [ "$refused" -eq 1 ]; then
     exit 1

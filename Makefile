@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -445,6 +445,13 @@ sluice-stage: ## Request a STAGE GATE through the queue — phases run, nothing 
 # EMPTY queue or "no such job", never an error, which is the worst kind of
 # wrong answer. lane-status/lane-log (above) already get this right by
 # ssh-ing first; these follow that exact shape.
+decision-block: ## Reserve a disjoint range of decision numbers (NAME=<campaign>)
+	@test -n "$(NAME)" || { echo "usage: make decision-block NAME=<campaign>"; exit 1; }
+	@bash scripts/decision-block-request.sh "$(NAME)"
+
+decision-blocks: ## Show every reserved decision-number block (reads the canonical box)
+	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && scripts/decision-block.sh list'
+
 sluice-status: ## The queue: what is queued, running, held, landed, reported (reads the canonical box over ssh)
 	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
 	    cat "$$d/queue.tsv" 2>/dev/null || true' \

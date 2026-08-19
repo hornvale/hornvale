@@ -1192,6 +1192,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1249,7 +1250,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -2737,7 +2737,6 @@ hornvale-worldgen::hornvale_worldgen$tests::deity_name_seed_is_pure_and_entity_i
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_crate_names_are_unique_and_nonempty
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_registers_language_after_its_lenders
 hornvale-worldgen::hornvale_worldgen$tests::exactly_one_axis_is_unfloored_and_it_is_the_undercutter
-hornvale-worldgen::hornvale_worldgen$tests::globe_level_pin_selects_the_canonical_grid
 hornvale-worldgen::hornvale_worldgen$tests::goblin_lens_is_exactly_identity
 hornvale-worldgen::hornvale_worldgen$tests::goblin_voice_params_sit_at_the_manikin_identity
 hornvale-worldgen::hornvale_worldgen$tests::high_cirrus_over_a_clear_sky_dims_only_slightly
