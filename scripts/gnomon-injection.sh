@@ -13,7 +13,7 @@
 #
 # So the seam is the one `scripts/census-run.sh` already uses: an expensive,
 # host-pinned AUTHORING script produces evidence; the evidence is COMMITTED;
-# a cheap TEST (`windows/lab/tests/anomaly_injection.rs`) reads it. Nothing
+# a cheap TEST (`windows/lab/tests/suite/anomaly_injection.rs`) reads it. Nothing
 # regenerates these fixtures automatically, and nothing should — see the
 # fixture directory's README for why they are deliberately absent from
 # `docs/generated-paths.txt`.
@@ -56,7 +56,7 @@ PUBLISHED="book/src/laboratory/generated/gnomon-injection"
 # landed in field 4 and each baseline's prose was recorded as the manifest's
 # `new` value. It was found by reading the manifest the first full run
 # produced, not by any test, and nothing would ever have caught it:
-# `windows/lab/tests/anomaly_injection.rs` reads `arms[].kind`, `[].name` and
+# `windows/lab/tests/suite/anomaly_injection.rs` reads `arms[].kind`, `[].name` and
 # `[].host` and NEVER reads `file`, `old`, `new` or `why`. The general form is
 # worth carrying past this script — **a manifest field no assertion reads is
 # unguarded data**, and it will be wrong silently and stay wrong, because the
@@ -243,4 +243,4 @@ EOF
 
 echo "gnomon-injection: wrote $FIXTURES/manifest.json (${#requested[@]} arms, sha $sha, host $here)" >&2
 echo "gnomon-injection: read the result with" >&2
-echo "  cargo test -p hornvale-lab --test anomaly_injection -- --nocapture" >&2
+echo "  cargo test -p hornvale-lab --test suite -- anomaly_injection --nocapture" >&2

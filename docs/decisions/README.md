@@ -185,7 +185,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0143](0143-the-underworld-carries-two-ladders.md) | The underworld carries two ladders, and neither derives the other | Accepted |
 | [0144](0144-a-caves-depth-is-a-budget-in-metres.md) | A cave's depth is a budget in metres, not a stratigraphic band | Accepted |
 | [0145](0145-one-community-per-place-not-per-cell.md) | One community per place, where a place is a cell and a rung | Accepted |
-| [0146](0146-the-census-worktree-path-is-resolved-not-passed.md) | The census worktree path is resolved, not passed | Accepted |
+| [0147](0147-a-feature-is-individuated-by-traversal-its-name-derived.md) | A landscape feature is individuated by traversal, and its name is derived, never committed | Accepted |
 | [0156](0156-a-typology-bundle-is-authored-not-derived.md) | A typology bundle is authored, not derived | Accepted |
 | [0157](0157-never-ship-a-typology-bundle-no-family-uses.md) | Never ship a typology bundle no family uses | Accepted |
 | [0158](0158-a-trill-is-not-an-exotic-manner.md) | A trill is not an exotic manner | Accepted |

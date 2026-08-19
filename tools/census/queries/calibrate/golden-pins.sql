@@ -1,6 +1,6 @@
 -- The pin-provenance report (spec §3): every SQL-expressible pinned
 -- calibration constant, recomputed from the committed fixture and compared
--- to the value pinned in windows/lab/tests/calibration.rs. Duplication is
+-- to the value pinned in windows/lab/tests/suite/calibration.rs. Duplication is
 -- deliberate — an independent second path from fixture to pin, written
 -- against the raw CSV-backed views rather than the Rust MetricValue model.
 -- When a pin re-pins in Rust (a re-baseline), update the literal here IN THE
@@ -49,7 +49,7 @@
 -- RETIRED, not flipped — the shipped model predicts a ZERO difference on
 -- that axis, since the bake is niche-blind end to end; the replacement
 -- preregisters the re-selection rate itself against `threat_response` in
--- windows/lab/tests/disposition_calibration.rs, which is a live-worldgen
+-- windows/lab/tests/suite/disposition_calibration.rs, which is a live-worldgen
 -- battery with no census column and so has no second path here either.)
 -- (Resync 2026-07-27, The Tithe (tribute epoch) regen on lefford at the
 -- merged SHA (0063): a raid whose prize is MOBILE now resolves as
@@ -960,7 +960,7 @@ checks AS (
   --
   -- The Rust counterpart is calibration.rs::lexicon_is_exposure_sound_for_
   -- both_species, which is #[ignore]d under a `stale-second-opinion:` token
-  -- (cli/tests/heavy_tier.rs). When the duplicate is repaired and the census
+  -- (cli/tests/suite/heavy_tier.rs). When the duplicate is repaired and the census
   -- regenerated, these four go back to 1000/0 and that row comes back with
   -- them.
   SELECT 'goblin exposure-sound true count (calibration.rs::lexicon_is_exposure_sound_for_both_species)',

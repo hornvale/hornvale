@@ -135,7 +135,7 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make quick                                        # cheap half only: fmt-check + clippy + type-audit
 #   make gate-commit                                  # THE COMMIT GATE: local, seconds, every commit
 #   make sluice-stage BRANCH=<branch> REF=<full-sha>  # THE STAGE GATE: the queue, minutes, each plan-stage boundary — never pushes
-#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, all six phases, pushes the SHA it tested
+#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, same FOUR phases as the stage gate, pushes the SHA it tested
 #
 # THE STAGE GATE IS THE SAME OBJECT AS A MERGE, MINUS THE PUSH. It is not a
 # separate system: one column in the queue TSV (`kind`), one branch at the
@@ -387,10 +387,13 @@ make census-check                       # analysis-harness gate (needs duckdb + 
 # AWS differs on ~0.1% of discrete-count metrics, so it cannot be a parallel
 # reference. Goldens are authored on one enforced host (decision 0079).
 
-# Single test / single crate / the property batteries:
+# Single test / single crate / the property batteries. Every crate's
+# integration tests live behind one `tests/suite.rs` binary named `suite`
+# (test-binary consolidation), so a former per-file `--test <name>` target is
+# now a libtest name FILTER after `--test suite --`:
 cargo test -p hornvale-kernel text_of
-cargo test -p hornvale-astronomy --test genesis_properties
-cargo test -p hornvale-terrain --test tectonic_properties
+cargo test -p hornvale-astronomy --test suite -- genesis_properties
+cargo test -p hornvale-terrain --test suite -- tectonic_properties
 
 # The CLI (crate `hornvale` in cli/; `hornvale help` lists every flag):
 cargo run -p hornvale -- new --seed 42 --out world.json   # plus sky pins (--sky,

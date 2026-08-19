@@ -45,6 +45,14 @@ pub struct ContactGraph {
     /// occupation -> (peer, day of the raid that put them in contact),
     /// ascending. Undirected: every raid writes both directions.
     peers: BTreeMap<EntityId, Vec<(EntityId, f64)>>,
+    /// How many raid edges lie between each unordered pair of peoples, tallied
+    /// once here rather than re-derived per crossing. Spec §5.1: the crossing
+    /// penalty divides by `1 + this`, so a pair that never met pays full price.
+    ///
+    /// Keyed on an ORDERED tuple with the lexicographically smaller people
+    /// first, so `(a,b)` and `(b,a)` are one entry — the edge is undirected and
+    /// two entries would double-count it.
+    between: BTreeMap<(String, String), usize>,
 }
 
 impl ContactGraph {
@@ -63,6 +71,19 @@ impl ContactGraph {
     /// type-audit: bare-ok(count: return)
     pub fn edges(&self) -> usize {
         self.peers.values().map(Vec::len).sum::<usize>() / 2
+    }
+
+    /// How many raid edges lie between peoples `a` and `b`, unordered. Zero for
+    /// a pair that never met — which spec §5.1 reads as the most expensive
+    /// crossing, not as missing data.
+    /// type-audit: bare-ok(identifier-text: a), bare-ok(identifier-text: b), bare-ok(count: return)
+    pub fn edges_between(&self, a: &str, b: &str) -> usize {
+        let pair = if a <= b {
+            (a.to_string(), b.to_string())
+        } else {
+            (b.to_string(), a.to_string())
+        };
+        self.between.get(&pair).copied().unwrap_or(0)
     }
 }
 
@@ -87,6 +108,13 @@ pub fn contact_of(ledger: &Ledger) -> ContactGraph {
         if attacker == victim {
             continue; // a community cannot meet itself
         }
+        let people_of = |occ| match ledger.value_of(occ, hornvale_history::OCC_PEOPLE) {
+            Some(Value::Text(p)) => p.clone(),
+            _ => String::new(),
+        };
+        let (pa, pb) = (people_of(victim), people_of(attacker));
+        let pair = if pa <= pb { (pa, pb) } else { (pb, pa) };
+        *out.between.entry(pair).or_default() += 1;
         out.peers.entry(victim).or_default().push((attacker, day));
         out.peers.entry(attacker).or_default().push((victim, day));
     }

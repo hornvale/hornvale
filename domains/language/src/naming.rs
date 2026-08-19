@@ -2483,8 +2483,14 @@ mod tests {
 
         // Property 1 (sanity check, not the load-bearing assertion — see
         // doc comment above): an intervening Landform draw moves nothing
-        // else, for every salt tried.
-        for salt in [0u64, 7, 12345] {
+        // else, for every salt tried. The last two salts are drawn from
+        // `windows/worldgen::gazetteer::feature_salt`'s range (class in the
+        // high 32 bits, cell id in the low 32) rather than duplicating a
+        // property already held here for arbitrary u64s — the gazetteer's
+        // salts are ordinary Landform salts, not a new kind, so the existing
+        // property already covers them; these values just confirm the wide
+        // end of that range specifically.
+        for salt in [0u64, 7, 12345, 1u64 << 32, (4u64 << 32) | 99_999] {
             let before: Vec<GeneratedName> = other_kinds
                 .iter()
                 .map(|k| namer.name(*k, salt, &morph))
@@ -2504,7 +2510,7 @@ mod tests {
         // at the same salt, must not equal any other kind's — the failure
         // mode a shared/aliased label produces, and the one Property 1
         // cannot see.
-        for salt in [0u64, 7, 12345] {
+        for salt in [0u64, 7, 12345, 1u64 << 32, (4u64 << 32) | 99_999] {
             let landform = namer.name(NameKind::Landform, salt, &morph);
             for k in other_kinds {
                 let other = namer.name(k, salt, &morph);

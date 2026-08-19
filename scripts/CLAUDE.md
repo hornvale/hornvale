@@ -49,7 +49,7 @@ Key knobs:
   burden is on whoever clones — never regenerate from a shallow clone.
 - After regen, the drift check is `git diff` over the paths declared in
   **`docs/generated-paths.txt`** — the single source of truth, which no guide
-  restates (`cli/tests/generated_paths.rs` fails on a second copy, because an
+  restates (`cli/tests/suite/generated_paths.rs` fails on a second copy, because an
   inline list drifts the moment a generated directory is added). Read it:
   `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`.
   The notes that follow explain WHY particular entries are in that file; they
@@ -131,7 +131,7 @@ exactly that reason: it names the claim, not the deleted machinery.
   it moved to its own `campaign`-rung set instead.
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
   `gate-commit` and the stage gate's own suite both defer (see
-  `cli/tests/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
+  `cli/tests/suite/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
   `make heavy-remote REF=<sha>`, or as the LAST of the merge queue's chamber
   phases (`sluice-run.sh`, below), which is what `gate-campaign` used to
   dispatch it. It is deliberately not a stage-gate phase: at a measured mean
@@ -146,9 +146,9 @@ exactly that reason: it names the claim, not the deleted machinery.
   legal from any machine — but it reads the claim in the **local** `/tmp`, so
   from the Mac it always says "no". Use **`make heavy-status`** to ask the
   canonical box instead; that is almost always the question you mean. Carries the canonical-host guard, because the tier
-  **authors committed artifacts**: `the-history` (`cli/tests/history_battery.rs`),
-  `the-sounding` (`windows/chronicle/tests/sounding_sweep.rs`), and
-  `occupancy.csv` (`windows/worldgen/tests/occupancy_readout.rs`) — plus
+  **authors committed artifacts**: `the-history` (`cli/tests/suite/history_battery.rs`),
+  `the-sounding` (`windows/chronicle/tests/suite/sounding_sweep.rs`), and
+  `occupancy.csv` (`windows/worldgen/tests/suite/occupancy_readout.rs`) — plus
   `census_fixtures_match_a_probe_of_live_seeds`, which compares a live probe
   against lefford-authored fixtures. Review and commit those artifacts **on
   the canonical box**. Dispatch from the Mac with `make heavy-remote REF=<sha>`.
@@ -189,11 +189,15 @@ the exact SHA it tested.
   0081/0086/0133), so the queue pays for one job, not the six separate
   dispatches a campaign gate used to cost (67% of the lane's first 27.4 h of
   wall time was queue wait for exactly that reason). Merges the candidate,
-  then runs the former campaign-gate phases (`artifacts outboard gate
-  seam-guard clients heavy` — `census` refuses as a chamber phase, since it
-  unconditionally clobbers the shared claim on exit) against the real merge
-  commit before pushing it, so a broken interaction with main is caught
-  before it ever reaches main. A `kind=stage` run is the same code with one
+  then runs `artifacts outboard gate clients` against the real merge commit
+  before pushing it, so a broken interaction with main is caught before it
+  ever reaches main. **That list lost `seam-guard` and `heavy` on 2026-08-19
+  (decision 0148)**: both keep their `campaign`-rung rows and their own entry
+  points (`make seam-guard`, `make heavy-remote REF=<full-sha>`), and those
+  are now the ONLY things that run them — nothing does so automatically. The
+  merge product is still gated as itself, by four phases rather than six.
+  (`census` refuses as a chamber phase for an unrelated reason: it
+  unconditionally clobbers the shared claim on exit.) A `kind=stage` run is the same code with one
   branch turned the other way at the push step: it merges, runs the
   `stage`-rung phases, reports, and exits 0 without pushing — placed AFTER
   the single failure gate, so `kind=stage` can never launder a red run into

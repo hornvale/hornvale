@@ -283,7 +283,7 @@ gen_chart_reference() {
 # derived flesh in the present-day grass. The framing paragraph below is
 # hand-authored; the fenced block is the `history` verb's exact, drift-checked
 # output. THE TWO MUST AGREE. `HISTORY_SITE` is the single source of the cell
-# id for both, and `cli/tests/docs_consistency.rs` asserts that the id named in
+# id for both, and `cli/tests/suite/docs_consistency.rs` asserts that the id named in
 # the prose is the one the block reports and that the block is not empty —
 # because they silently disagreed once. The moving-sea epoch (The Sundering)
 # emptied the previously-pinned cell 36918 while its hand-authored paragraph
@@ -727,6 +727,7 @@ spawn run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-
 spawn run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42-sky.md
 spawn run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42-locked.md
 spawn run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
+spawn run -p hornvale -- gazetteer --world "$wsky" > book/src/gallery/gazetteer-seed-42.md
 spawn run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
 spawn run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
 spawn gen_possession_day0 > book/src/gallery/possession-seed-42.md

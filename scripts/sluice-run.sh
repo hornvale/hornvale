@@ -70,13 +70,13 @@
 # execution for that one commit; `-c core.hooksPath=…` repoints WHERE git
 # looks for hooks, and the directory this points at (`/dev/null`, not a
 # directory at all) simply has none to find — the commit is still fully
-# verified, by the six phases already running around it. Re-running
+# verified, by the four phases already running around it. Re-running
 # `gate-commit`'s own fmt/clippy/type-audit/sub-floor-nextest subset INSIDE
 # every artifact-authoring commit is pure redundant, recursive cost on the
 # canonical box's one serial lane: the chamber's own `gate` phase already
 # runs a strict superset (the full `--workspace` suite plus doctests) later
 # in the same invocation. The one real cost of this choice: `gate` runs
-# fourth of six (`artifacts outboard gate seam-guard clients heavy`), so a
+# third of four (`artifacts outboard gate clients`), so a
 # fmt/clippy regression introduced by `artifacts` itself is caught by `gate`
 # rather than fail-fast at `artifacts`'s own commit — later, and only after
 # `outboard` has also run — not never.
@@ -318,7 +318,7 @@ echo "sluice-run: $job_id started $(date -Is) on $(hostname -s) as pid $$ kind=$
 
 # The roster of phases and what each one runs — the SAME single source of
 # truth scripts/lane-run.sh reads (scripts/lane-sets.tsv), never a second
-# copy (cli/tests/lane_sets.rs fails on one). Both the roster file and the
+# copy (cli/tests/suite/lane_sets.rs fails on one). Both the roster file and the
 # phase LIST are overridable so tests can drive the chamber with trivial
 # stand-in phases instead of the real six-suite roster.
 lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
@@ -332,11 +332,32 @@ lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
 # below places it LAST deliberately (at a measured mean 1678 s it is 47% of
 # the set's ~3602 s, so running it before a cheap phase that would have gone
 # red wastes half an hour of the one serial box). A derived list would have
-# silently reordered that. `cli/tests/lane_sets.rs` reads these two lines
+# silently reordered that. `cli/tests/suite/lane_sets.rs` reads these two lines
 # instead and fails if either names a set with no roster row — the same
 # direction it used to enforce over the Makefile's `lane-dispatch.sh` lines,
 # pointed at the caller that replaced them.
-merge_phases="artifacts outboard gate seam-guard clients heavy"
+# THE MERGE RUNS FOUR PHASES, NOT SIX (Nathan, 2026-08-19; decision 0148).
+# `seam-guard` and `heavy` came off this list, so a merge and a stage gate now
+# run the SAME phases and differ only in the push — which was always the design
+# ("the stage gate is this script with the push turned off"), and is now true of
+# the phase list too.
+#
+# WHAT THIS COSTS, STATED PLAINLY BECAUSE IT IS A REAL REDUCTION IN COVER.
+# Decision 0139's guarantee — "every commit on origin/main is the tip of a tree
+# that was gated as itself" — is unchanged in KIND and weaker in DEGREE: the
+# merge product is still built and still gated as itself, by four phases rather
+# than six. Nothing runs `seam-guard` or `heavy` automatically any more. They
+# keep their `campaign`-rung rows in scripts/lane-sets.tsv and their own entry
+# points (`make seam-guard`, `make heavy-remote REF=<full-sha>`), and those are
+# now the ONLY things that run them.
+#
+# WHY IT IS WORTH IT: measured on this box, `heavy` was 2026 s of a 65-minute
+# merge and `seam-guard` costs a full scoped test run per call site — together
+# the large majority of a merge's wall time, on two sets whose guarantees move
+# at campaign cadence rather than per-merge. Paying them on every merge priced
+# a campaign-cadence check at merge frequency, which is the same mispricing
+# decision 0132 split the gates to remove.
+merge_phases="artifacts outboard gate clients"
 stage_phases="artifacts outboard gate clients"
 
 if [ "$kind" = "stage" ]; then
@@ -396,7 +417,7 @@ roster_col() {
 }
 cmd_for() { roster_col "$1" 5; }
 # Read from the roster's own `authors` column (yes/no), not a hardcoded name
-# list — a hardcoded copy is exactly the drift cli/tests/lane_sets.rs exists
+# list — a hardcoded copy is exactly the drift cli/tests/suite/lane_sets.rs exists
 # to fail on, and scripts/lane-run.sh's own `authors_col` already sets this
 # precedent. Used only for the claim's `goldens` field now — see the CRITICAL
 # 1 header note on why it no longer gates whether a phase's drift is
@@ -596,7 +617,7 @@ if [ -z "$phase_failed" ]; then
                 # campaign is not authorised to except it — see the
                 # CLEAN-TREE INVARIANT header note above for the
                 # two-mechanisms distinction and the full reasoning). This
-                # commit is still fully verified: by the six phases already
+                # commit is still fully verified: by the four phases already
                 # running around it, one of which (`gate`) is a strict
                 # superset of what the hook itself would re-run here.
                 git -c core.hooksPath=/dev/null commit -q -m "chore(artifacts): regenerate after $phase

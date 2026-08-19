@@ -3530,7 +3530,8 @@ pub fn registry() -> Vec<Metric> {
                     globe.sea_level,
                 );
                 let land: usize = sizes.iter().sum();
-                let floor = 0.005 * land as f64;
+                let floor =
+                    hornvale_terrain::landscape::PROPORTIONAL_SIZE_FLOOR_FRACTION * land as f64;
                 MetricValue::Number(sizes.iter().filter(|&&s| s as f64 >= floor).count() as f64)
             }),
         },

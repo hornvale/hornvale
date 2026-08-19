@@ -10,6 +10,7 @@
 #![warn(missing_docs)]
 
 pub mod connections;
+pub mod gazetteer;
 pub mod history;
 pub mod phenomenon_line;
 pub mod qualify;

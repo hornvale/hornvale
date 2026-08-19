@@ -157,6 +157,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-explain"
+version = "0.1.0"
+dependencies = [
+ "hornvale-almanac",
+ "hornvale-astronomy",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-terrain",
+]
+
+[[package]]
 name = "hornvale-game"
 version = "0.1.0"
 dependencies = [
@@ -315,6 +326,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-explain",
  "hornvale-history",
  "hornvale-kernel",
  "hornvale-language",

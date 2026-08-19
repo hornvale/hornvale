@@ -5,7 +5,7 @@ use crate::contact::Contact;
 use crate::ladder::PrecisionLadder;
 use crate::lineage::Lineage;
 use crate::stance;
-use crate::transmission::Walk;
+use crate::transmission::{Crossing, Walk};
 use hornvale_kernel::Claim;
 use hornvale_kernel::Precision;
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
@@ -60,6 +60,75 @@ fn tellable(walk: &Walk, node: EntityId, event_day: Option<f64>) -> Vec<EntityId
     out.sort();
     out.dedup();
     out
+}
+
+/// The people `occ` belongs to, or `""` when the ledger does not say.
+///
+/// The empty string is not a sentinel to branch on: [`crate::contact::contact_of`]
+/// keys its people-pair tally through the same read, so both sides agree about
+/// what it means. What it means is that EVERY occupation with no `occ-people`
+/// collapses into ONE nameless people — **not** a people of its own name — so a
+/// step between two of them compares equal and pays no crossing penalty. Two
+/// unlabelled occupations are the same people here, never different ones.
+fn people_of(ledger: &Ledger, occ: EntityId) -> &str {
+    match ledger.value_of(occ, hornvale_history::OCC_PEOPLE) {
+        Some(Value::Text(p)) => p.as_str(),
+        _ => "",
+    }
+}
+
+/// What the step `teller -> hearer` pays for crossing a people boundary, in
+/// the same units as [`crate::amplitude::gen_span`] (spec §5.1).
+///
+/// Zero under [`Crossing::Free`] and zero for a step within one people —
+/// which is what makes ingroup preference an OUTPUT of the model rather than
+/// an input to it. Otherwise one finest rung, divided by one plus the number
+/// of raid edges the two peoples have between them:
+///
+/// ```text
+/// span(FINEST) / (1 + edges_between(a, b))
+/// ```
+///
+/// `ladder` is the ORIGINATING witness's people's ladder, the same one the
+/// walk seeds its width from, so the penalty is commensurate with the width it
+/// joins and introduces no new scale (spec §5.2).
+///
+/// **THE MAGNITUDE IS DERIVED AND MUST STAY DERIVED.** Decision 0021, as spec
+/// §5.4 records it being sharpened: no constant may encode a preference
+/// between two peoples. `edges_between` is read from the same committed
+/// endings the seam itself is built from, so the strength of the preference is
+/// a fact about the world's history and nothing here ranks either people.
+/// `tests/crossing.rs::the_crossing_costs_less_the_better_the_peoples_know_each_other`
+/// is the assertion a constant cannot satisfy, and it is the campaign's
+/// evidence.
+///
+/// **The `1 +` is load-bearing in a way that is not obvious.** Its stated job
+/// is to make a pair with no shared history pay the full rung. Its unstated
+/// one is to keep the result FINITE: without it a stranger pair divides by
+/// zero, and `Accumulation::step` discards a non-finite span by passing the
+/// width through unchanged — so the most expensive crossing in the model would
+/// silently become the only free one.
+fn crossing_penalty(
+    walk: &Walk,
+    ladder: &PrecisionLadder,
+    teller: EntityId,
+    hearer: EntityId,
+) -> f64 {
+    if walk.policy.crossing == Crossing::Free {
+        return 0.0;
+    }
+    let (from, to) = (
+        people_of(walk.ledger, teller),
+        people_of(walk.ledger, hearer),
+    );
+    if from == to {
+        return 0.0;
+    }
+    let unit = ladder
+        .span(Precision::FINEST)
+        .map(|days| days.get())
+        .unwrap_or(0.0);
+    unit / (1.0 + walk.contact.edges_between(from, to) as f64)
 }
 
 /// Everyone present when `(subject, predicate)` happened.
@@ -482,10 +551,14 @@ pub fn variants_about_accumulating(
             if !admits(walk, event_day, hearer) {
                 continue; // the clock refuses the STEP, which orphans the line below it
             }
-            let next_width = rule.step(
-                width,
-                crate::amplitude::gen_span(ledger, durations, node, hearer),
-            );
+            // Spec §5.1: the crossing penalty joins the step's ordinary
+            // generational span BEFORE the accumulation rule sees it, so it
+            // combines the same way the span does under every rule. It enters
+            // through the width and nowhere else -- deliberately not through
+            // the ordering key, which spec §5.3 leaves as it is.
+            let span = crate::amplitude::gen_span(ledger, durations, node, hearer)
+                + crossing_penalty(walk, ladder, node, hearer);
+            let next_width = rule.step(width, span);
             let precision = crate::accumulate::precision_at(ladder, next_width);
             let next_object = match &claim.object {
                 Value::Number(day) => Value::Number(ladder.apply(precision, *day)),
