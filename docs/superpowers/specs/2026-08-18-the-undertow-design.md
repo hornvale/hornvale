@@ -245,6 +245,52 @@ derived crossing penalty gives communities a reason to keep their own account;
 whatever they come to believe about the people across the seam is then theirs,
 not ours.
 
+### 5.5 ERRATUM — §5.1's worked reading is wrong, corrected before any readout
+
+**Measured, not argued** (`windows/hearsay/tests/probe_crossing_scale.rs`,
+committed `05b1565f`, before Task 4 existed and before any hypothesis was read
+out).
+
+§5.1 says "peoples with a single recorded contact pay the full rung". **They
+cannot.** `contact_of` builds the peers list and the people-pair tally in the
+same loop from the same ending record, so any edge that makes two occupations
+peers has already incremented its own pair's count. Therefore
+`edges_between ≥ 1` at every reachable seam crossing, the denominator is ≥ 2,
+and **the ceiling is half a finest rung, not a whole one.** Observed over
+**67,765 winning-path crossings**: `edges_between == 0` occurred **0 times**,
+the realized penalty ran from `span(FINEST)/26` to exactly `span(FINEST)/2`,
+and **all 67,765 crossings were carried by a seam edge — zero by descent.**
+
+The full rung is reachable only by a descent step across a people boundary,
+which is **open in code and never walked by the bake** — a measurement (zero of
+780 typed edges), not an invariant. Task 2's reviewer is owed that distinction.
+
+**THE FORMULA IS NOT CORRECTED, and the reason is measurement rather than
+reluctance.** The controller commissioned the probe expecting the mechanism to
+be inert — a half-rung penalty against what it believed was a 41.7× rung gap —
+and intended a numerator correction. Two of its inputs were wrong:
+
+- **The gap is not 41.7×.** Rung 1 is *this world's first moon*, and
+  next-over-finest ranges **2.23× … 530.85×, median 12.56×** across the panel's
+  180 ladders. Seed 1 steps 1.5507 d → 3.4606 d, where a half-rung penalty is
+  **40.6% of the gap**. Seed 11 is moonless and steps 1.0010 d → 531.39 d, where
+  it is 0.094%. Same twelve seeds.
+- **Width is cumulative**, so "one crossing against one gap" is the wrong
+  comparison. What matters is how many holders sit within one penalty of a
+  boundary after a whole path — a density, small but non-zero.
+
+**477 holder-rungs move** between `Free` and `ContactWeighted` (additive 50,
+quadrature 10, multiplicative 417) against 58,618 holder-widths. The mechanism
+reaches the ladder at **k = 1** for every rule; a re-walk at multipliers 1×–256×
+finds no threshold above it, and shows the width-moved column is **constant in
+k** — a bigger penalty buys resolution, never reach.
+
+**And the analytic estimate would have been wrong.** Median headroom by
+calculation was 71×–32,129×, which reads as "inert". The 477 are the **tail**,
+not the median. The probe re-walked the panel instead of dividing two numbers,
+which is the only reason this erratum says *keep the formula* rather than
+*change it*.
+
 ## 6. Preregistration
 
 Frozen before the code in §5 exists. A falsified prediction is a finding.
