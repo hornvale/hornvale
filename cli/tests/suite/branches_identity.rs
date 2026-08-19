@@ -224,7 +224,7 @@ fn hobgoblin_and_bugbear_are_present() {
 #[test]
 fn goblin_names_are_rebaselined_not_frozen() {
     let fixture: World =
-        serde_json::from_str(include_str!("fixtures/pre-branches-seed-42-world.json"))
+        serde_json::from_str(include_str!("../fixtures/pre-branches-seed-42-world.json"))
             .expect("fixture parses");
     let world = default_generated_seed_42();
 

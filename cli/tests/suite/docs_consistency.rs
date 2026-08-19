@@ -459,7 +459,7 @@ const REGISTRY_IDEA_CAP: usize = 600;
 /// mechanism (the pattern is the type audit's `pending(wave-N)`, decision
 /// 0028).
 fn registry_length_waivers() -> BTreeSet<&'static str> {
-    include_str!("fixtures/registry-length-waivers.txt")
+    include_str!("../fixtures/registry-length-waivers.txt")
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty())
@@ -525,7 +525,7 @@ fn the_waiver_list_only_shrinks() {
 /// Append-never: an ID may leave this list only by leaving the registry, which
 /// never happens (rows are permanent). A *new* numbered ID fails.
 fn frozen_numbered_ids() -> BTreeSet<&'static str> {
-    include_str!("fixtures/registry-numbered-ids.txt")
+    include_str!("../fixtures/registry-numbered-ids.txt")
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty())

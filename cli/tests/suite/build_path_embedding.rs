@@ -43,7 +43,7 @@ fn workspace_root() -> PathBuf {
 
 /// The frozen list, as `path -> count`.
 fn frozen() -> BTreeMap<String, usize> {
-    include_str!("fixtures/manifest-dir-uses.txt")
+    include_str!("../fixtures/manifest-dir-uses.txt")
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
