@@ -1147,8 +1147,18 @@ fn the_undertow_readout_over_a_seed_panel() {
     );
     println!(
         "  COUNTS WITH BOTH POPULATIONS NAMED, never a bare ratio: `compared` is the eligible \
-         population (cross-people endings where BOTH the victim's people and the raider's hold \
-         the account), and it differs between the Contact arms by construction."
+         population — cross-people endings where BOTH the victim's people and the raider's \
+         hold the account."
+    );
+    println!(
+        "  AND HERE THAT POPULATION IS SATURATED, which is worth a sentence rather than the \
+         caveat an earlier draft printed. `compared` measures the same in all nine rows below \
+         and equals the foreign-ending count EXACTLY, so it is 100% of the eligible endings on \
+         every arm and every rule. It is not that the arms happen to agree: the \
+         `occ-ended-by` attacker is always a witness, so both sides hold the account by \
+         construction and there is no room for an arm to move this denominator. A ratio built \
+         on it is therefore a pure numerator comparison, which is the cleanest case and the \
+         opposite of the denominator-inflation The Parley shipped."
     );
     let mut h1_ratio = [[0.0f64; 3]; 2];
     for (ri, rule) in Accumulation::ALL.iter().enumerate() {
@@ -1317,7 +1327,10 @@ fn the_undertow_readout_over_a_seed_panel() {
             show_hist(&bucket_pop)
         );
         println!(
-            "    crossings taken by winning paths      : {}",
+            "    crossings taken by winning paths      : {} [NOTE: a DIFFERENT population \
+             from the line above — tallied over ALL contact holders, cross-people or not, \
+             because §3.6's zigzag has same-people holders taking crossings too. Do not read \
+             the two lines as numerator and denominator of each other.]",
             show_hist(&crossing_edges)
         );
         println!(
@@ -1329,6 +1342,7 @@ fn the_undertow_readout_over_a_seed_panel() {
             "    {:<8} {:>10} {:>14} {:>9} {:>14} {:>9} {:>7} {:>9}",
             "tercile", "holders", "free:ingroup", "free%", "cw:ingroup", "cw%", "d(n)", "rise(pp)"
         );
+        let mut tercile_pop: [[(usize, usize); 2]; 3] = Default::default();
         for (ti, name) in names.iter().enumerate() {
             let in_bucket = |edges: usize| -> bool {
                 match cuts {
@@ -1346,6 +1360,7 @@ fn the_undertow_readout_over_a_seed_panel() {
                     .filter(|(k, _)| in_bucket(**k))
                     .fold((0, 0), |acc, (_, v)| (acc.0 + v.0, acc.1 + v.1))
             });
+            tercile_pop[ti] = pop;
             let free_pct = pct(pop[0].1, pop[0].0);
             let cw_pct = pct(pop[1].1, pop[1].0);
             h2_rise[ri][ti] = cw_pct - free_pct;
@@ -1409,6 +1424,27 @@ fn the_undertow_readout_over_a_seed_panel() {
                 .map(|(_, v)| v.0)
                 .sum::<usize>(),
         );
+        // IMPORTANT 3: THE BUCKET AXIS IS NOT THE AXIS THE PENALTY IS LEVIED
+        // ON, and the discrepancy is concentrated exactly where the verdict
+        // lives. A holder is bucketed by edges_between(its people, the
+        // subject's people); the penalties it actually paid were priced at
+        // whatever boundaries its ROUTE crossed, which need not include that
+        // pair at all. The edges=0 bucket is the extreme case and it is not
+        // small.
+        let zero_bucket = merged[0].get(&0).map_or(0, |v| v.0);
+        println!(
+            "    THE TERCILE AXIS IS NOT THE AXIS THE PENALTY IS LEVIED ON: a holder is \
+             bucketed by edges_between(holder's people, subject's people), but the penalties \
+             it paid were priced at whatever boundaries its ROUTE crossed. {} of the bottom \
+             tercile's {} holders ({:.1}%) sit in the edges=0 bucket — NO direct edge exists \
+             between those two peoples at all, so every one of them was reached through a \
+             CHAIN and every penalty it paid was priced by some OTHER pair. The bottom \
+             tercile is where the verdict lives, so this is a caveat on the verdict and not \
+             a footnote.",
+            zero_bucket,
+            tercile_pop[0][0].0,
+            pct(zero_bucket, tercile_pop[0][0].0),
+        );
         println!(
             "    stricter reading (held telling used NO seam edge at all, boundary or not): \
              free {} -> contact-weighted {} of {} cross-people holders",
@@ -1416,13 +1452,61 @@ fn the_undertow_readout_over_a_seed_panel() {
             sum(&rows, |r| r.h2[1][ri].no_seam_edge),
             overall[0].0,
         );
+        // THE REACH CONTROL THAT LEADS, BECAUSE IT IS EXACT AND PER-TERCILE.
+        // `width_cross_people` (§6.3's split, counted over a different loop
+        // entirely) equals `cross-people holders MINUS free:ingroup` to the
+        // unit on all three rules: every cross-people holder whose Free route
+        // crossed had its width moved by the penalty. Two things follow. The
+        // mechanism reached the whole crossing population, not a sample of
+        // it; and no ladder on this panel returned a zero span(FINEST),
+        // because a zero unit would have left some crossing holder's width
+        // untouched.
+        let crossed_panel = overall[0].0 - overall[0].1;
+        let width_cross = sum(&rows, |r| r.changed[ri].width_cross_people);
+        println!(
+            "    REACH, EXACTLY (the strongest control on this page): {crossed_panel} \
+             cross-people holders had their Free route cross at least one boundary \
+             ({} holders minus {} that already held an ingroup telling). §6.3 counted \
+             {width_cross} cross-people holders whose WIDTH the penalty moved, over a \
+             separate loop — and {}, so EVERY crossing holder paid. That also proves no \
+             ladder here returned a zero span(FINEST): a zero unit would have left some \
+             crossing holder untouched.",
+            overall[0].0,
+            overall[0].1,
+            if crossed_panel == width_cross {
+                "the two agree to the unit".to_string()
+            } else {
+                format!("they DISAGREE by {}", crossed_panel.abs_diff(width_cross))
+            },
+        );
+        // IMPORTANT 4: the same identity, per tercile — because the exact
+        // zero this control exists to defend is the BOTTOM TERCILE's, and a
+        // panel-wide aggregate is one granularity too coarse to defend it.
+        // Valid as an inference: the panel-level identity says every crossing
+        // holder paid, so within any subset the count that paid is that
+        // subset's own crossing count.
+        println!(
+            "    ... AND PER TERCILE, which is the granularity the verdict actually needs: \
+             bottom {} of {} holders crossed and therefore demonstrably paid a penalty, \
+             middle {} of {}, top {} of {}. So the bottom tercile's +0.00 pp is NOT the \
+             mechanism failing to reach it — {} of its holders paid and none of them changed \
+             which telling they hold.",
+            tercile_pop[0][0].0 - tercile_pop[0][0].1,
+            tercile_pop[0][0].0,
+            tercile_pop[1][0].0 - tercile_pop[1][0].1,
+            tercile_pop[1][0].0,
+            tercile_pop[2][0].0 - tercile_pop[2][0].1,
+            tercile_pop[2][0].0,
+            tercile_pop[0][0].0 - tercile_pop[0][0].1,
+        );
         // H2'S POSITIVE CONTROL. A share that does not move is two different
         // findings wearing one number: the penalty reached this population and
         // changed nothing, or it never reached it at all. These separate them,
         // holder by holder, and the last column is the direction the mechanism
         // CANNOT cause.
         println!(
-            "    positive control on the population: of {} cross-people holders, {} had their \
+            "    SECONDARY, AND PANEL-AGGREGATE — the exact per-tercile reach control above \
+             is the one to read: of {} cross-people holders, {} had their \
              held telling changed by the penalty, {} had their route's crossing count change, \
              {} went crossed -> ingroup, {} went ingroup -> crossed. THE LAST COLUMN IS \
              REPORTED, NOT ASSERTED, AND HERE IS WHY BOTH HALVES MATTER: `step` is monotone \
@@ -1443,10 +1527,31 @@ fn the_undertow_readout_over_a_seed_panel() {
         }
     }
     println!(
-        "\n  DECISION TABLE (§6.2): the ingroup share RISES under the penalty, AND the rise is \
-         strictly larger in the BOTTOM tercile than the TOP -> CONFIRMED. A uniform rise \
-         (bottom <= top) -> FALSIFIED: contact_edges is inert and §5.2's derivation is \
-         decorative. No rise at all -> FALSIFIED on clause 1 before clause 2 is reached."
+        "\n  DECISION TABLE (§6.2, UNCHANGED): the ingroup share RISES under the penalty, AND \
+         the rise is strictly larger in the BOTTOM tercile than the TOP -> CONFIRMED. \
+         Otherwise (bottom <= top) -> FALSIFIED. No rise at all -> FALSIFIED on clause 1 \
+         before clause 2 is reached."
+    );
+    println!(
+        "  WHAT THE FALSIFICATION DOES **NOT** LICENCE, AND THIS IS THE SINGLE MOST IMPORTANT \
+         SENTENCE ON THIS PAGE. §6.2 glossed its own falsification as 'contact_edges is inert \
+         and §5.2's derivation is decorative'. THAT GLOSS DOES NOT APPLY TO THIS RESULT, for a \
+         reason §6.2 did not anticipate: the measured ordering is INVERTED, not UNIFORM, and \
+         an inverted ordering is equally consistent with a CONSTANT penalty. 48% of the \
+         crossings on the 12-seed probe sat at a single edges=25 pair, so flips concentrate \
+         wherever the crossings are — which is where contact is highest — WHATEVER the \
+         magnitude rule is. A constant penalty would produce the same shape."
+    );
+    println!(
+        "  SO: THIS READOUT CARRIES NO ARM THAT SEPARATES A DERIVED MAGNITUDE FROM A CONSTANT \
+         ONE, and §5.5's k-multiplier sweep is not that arm either — it varied GLOBAL SCALE, \
+         which cannot reorder pairs relative to one another. §5.2's derivation — the \
+         campaign's licence under decision 0021 — is therefore NEITHER CONFIRMED NOR REFUTED \
+         by this campaign. `tests/crossing.rs` proves the FORMULA responds to edge count; \
+         nothing here proves that responsiveness matters on real data more than a constant \
+         would. That is a LIMITATION OF THE INSTRUMENT, not a finding against the model, and \
+         the arm that would settle it — ContactWeighted against a constant-denominator \
+         control at matched mean penalty — is a campaign of its own."
     );
     for (ri, rule) in Accumulation::ALL.iter().enumerate() {
         let (b, t) = (h2_rise[ri][0], h2_rise[ri][2]);
@@ -1462,16 +1567,23 @@ fn the_undertow_readout_over_a_seed_panel() {
         let m = h2_rise[ri][1];
         println!(
             "  VERDICT ({:<14}): {verdict} — bottom {b:+.2} pp, middle {m:+.2} pp, top \
-             {t:+.2} pp{}",
+             {t:+.2} pp",
             rule.label(),
-            if b.is_finite() && m.is_finite() && t.is_finite() && b < m && m <= t {
-                " — and the rise is MONOTONE IN THE OPPOSITE DIRECTION to the prediction: it \
-                 grows with contact rather than with strangeness"
-            } else {
-                ""
-            }
         );
     }
+    println!(
+        "  THE VERDICT ABOVE IS ROBUST; ANY CAUSAL GLOSS ON ITS DIRECTION IS NOT, AND AN \
+         EARLIER DRAFT OF THIS LINE OVERREACHED. Clause 2 fails however anyone argues about \
+         exposure: the bottom tercile's rise is +0.00 pp and the top's is positive on all \
+         three rules, so `bottom > top` is false outright. What must NOT be read off that is \
+         a DIRECTION — 'the rise grows with contact rather than with strangeness'. It rests on \
+         d(n) counts of +0/+5/+32, +0/+5/+51 and +0/+8/+38, with no eligibility denominator \
+         stated, and the reading is not robust to which denominator is chosen: against ALL \
+         holders a zero in the bottom tercile is surprising, but against the holders that \
+         could actually flip — those whose Free route crossed, and that hold a rival ingroup \
+         telling at all — it is unremarkable. The ordering is REPORTED as an observation. It \
+         is not established as a finding, and the chronicle must not promote it to one."
+    );
 
     // =====================================================================
     // §6.3 — THE NAMED NULL, BOTH LEVELS SIDE BY SIDE.
@@ -1496,7 +1608,6 @@ fn the_undertow_readout_over_a_seed_panel() {
         "mutex1",
         "delta"
     );
-    let mut null_fires = [false; 3];
     for (ri, rule) in Accumulation::ALL.iter().enumerate() {
         let holders = sum(&rows, |r| r.changed[ri].holders);
         let width = sum(&rows, |r| r.changed[ri].width);
@@ -1529,7 +1640,6 @@ fn the_undertow_readout_over_a_seed_panel() {
             sum(&rows, |r| r.changed[ri].width_same_people),
             sum(&rows, |r| r.changed[ri].width_cross_people),
         );
-        null_fires[ri] = any > 0 && m0 == m1;
         println!(
             "    -> {}",
             if any == 0 && width == 0 {
