@@ -37,6 +37,19 @@
 //! the note beside [`PANEL`] — and `probe_tiebreak_rules.rs` already holds it
 //! to zero at 0/310,215.
 //!
+//! **One more thing this copy omits, harmless today, worth a line for
+//! whoever varies `clock` next (fix round 1, Minor 5):** the shipped
+//! relaxation (`variants_about_accumulating`) gates every witness and hearer
+//! through `admits(walk, event_day, occ)` as well, which reads
+//! `walk.policy.clock`; this `Enumerator` never calls `admits` at all. That
+//! is exact under `Transmission::AS_SHIPPED` and every policy this file
+//! constructs, all of which fix `clock: Clock::Off` (an always-true gate),
+//! so nothing here is under-enumerating today. A future
+//! campaign that reuses this `Enumerator` under a live clock would silently
+//! enumerate routes the shipped walk could never take — `admits` is not
+//! optional plumbing, it just happens to be a no-op at every policy this file
+//! ever builds.
+//!
 //! ## Why descent needs no re-measurement under `Crossing::ContactWeighted`
 //!
 //! `crossing_penalty` is added identically regardless of which `Contact` arm
@@ -49,6 +62,68 @@
 //! matter what the edges along it cost. So `Crossing` cannot move the descent
 //! row, and re-running 310,215 holders' worth of free enumeration to confirm
 //! a structural argument would spend real cost to learn nothing.
+//!
+//! ## Why `multiplicative` sits at zero under both arms, `additive` carries the effect
+//!
+//! **The scale-probe explanation this file's task report first gave
+//! ("the penalty's realized magnitude is small relative to real rung gaps")
+//! cannot be the mechanism: `multiplicative` reads exactly 0 under
+//! `Crossing::Free` too, where the penalty is identically zero.** The real
+//! cause is structural, in [`gen_span`] and [`Accumulation::step`], and has
+//! nothing to do with `Crossing` at all.
+//!
+//! `gen_span(teller, hearer) = |founded(hearer) - founded(teller)| / g`
+//! (`amplitude.rs:31-51`), where `g` is the originating witness's people's
+//! generation length — fixed for the whole route, since a route never
+//! changes which witness it descends from. Along any LOCALLY MONOTONE run of
+//! founding days (each step's founding day moving the same direction as the
+//! last), the sequence of `gen_span` terms is a sequence of consecutive
+//! differences divided by the same constant, so it **telescopes**: the sum
+//! collapses to `(founded(end) - founded(start)) / g`, a quantity that
+//! depends only on the route's ENDPOINTS, never on how many hops it took to
+//! get there.
+//!
+//! `Accumulation::Additive::step` is literally `width + span`
+//! (`accumulate.rs:49-56`) — a running sum — so additive width inherits the
+//! telescoping identity directly: two routes between the same two nodes,
+//! differing only in hop count, can accumulate to the exact same real width.
+//! `Quadrature` (`sqrt(w^2 + s^2)`, summing SQUARES) and `Multiplicative`
+//! (`w * (1 + s)`, a running PRODUCT) do neither — breaking one span into
+//! several pieces changes the accumulated total under both, generically.
+//!
+//! **That telescoping identity is exactly the defect's own signature.**
+//! Every not-argmin sample this file and `probe_tiebreak_rules.rs` print
+//! shows the shipped holder at the SAME width bits and the SAME remembered
+//! day as the enumerated argmin, differing only in hop count — precisely the
+//! shape additive's degeneracy produces and the other two rules structurally
+//! cannot. So the defect is not merely MORE common under `additive` — it is,
+//! to first order, an `additive`-only phenomenon that `quadrature` and
+//! `multiplicative` are close to immune to by construction.
+//!
+//! **Verified independently** (not merely asserted from the code): a
+//! synthetic check outside this crate, replicating `gen_span`'s and each
+//! `Accumulation::step` rule's exact formulas over 100,000 random
+//! four-node monotone founding-day chains (fixed generation length, no seam
+//! crossing — isolating the width formula from the graph search itself),
+//! comparing a 3-hop route against a 1-hop route between the SAME two
+//! endpoints:
+//!
+//! ```text
+//! additive          64819   64.82%   bit-identical width (3-hop vs 1-hop)
+//! quadrature            0    0.00%
+//! multiplicative        0    0.00%
+//! ```
+//!
+//! Telescoping is an identity over the REAL numbers, true on every route
+//! regardless of length; it is not a guarantee of BIT-identical `f64` totals,
+//! because IEEE 754 addition is not perfectly associative across a different
+//! number and order of terms — which is why the additive figure above is a
+//! large majority (real ties are common) rather than all 100,000 (some real
+//! ties are lost to summation-order rounding). The exact percentage is
+//! RNG-dependent and not a claim this file pins; the STRUCTURAL asymmetry
+//! between additive and the other two rules is the load-bearing fact, and it
+//! is a property of `amplitude.rs` and `accumulate.rs`, unrelated to
+//! `Crossing` or to anything this campaign changed.
 //!
 //! ## Reports only, with one exception
 //!
@@ -769,6 +844,23 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
         );
     }
 
+    // CAVEAT (fix round 1, Important 3): capped_endings drops the SAME 14 of
+    // 138 foreign endings from every cell above, on BOTH arms — and a capped
+    // ending is by construction the densest one, the one with the MOST
+    // routes reaching it, which is exactly where a route-count-dependent
+    // defect like this one is most likely to bite. So every rate printed
+    // above is a rate over the reachable, non-capped 124-of-138 subpopulation,
+    // not over the full foreign population — the absolute shares (0.2735%,
+    // 0.6837%) should be read as FLOORS, not point estimates. The 2.5x
+    // COMPARISON between the two arms is unaffected: both arms drop the
+    // identical 14 endings, so the ratio stays like-for-like even though
+    // neither side's absolute number is complete.
+    let capped_per_rule = fold_cell(&rows, 0, 0).capped_endings;
+    println!(
+        "\n  CAVEAT: {capped_per_rule} of {foreign} foreign endings ({:.1}%) are capped on EVERY cell above and excluded before any comparison runs. Capped endings are the densest ones by construction (most routes reaching them), which is where this defect is most likely -- so the absolute shares above are FLOORS over the reachable subpopulation, not point estimates over the full population. The free-vs-contact-weighted RATIO is unaffected: both arms drop the identical {capped_per_rule} endings, so the comparison stays like-for-like even though neither side's absolute count is complete.",
+        pct(capped_per_rule, foreign)
+    );
+
     let samples: Vec<&String> = rows.iter().flat_map(|r| r.samples.iter()).collect();
     for line in samples.iter().take(6) {
         println!("    {line}");
@@ -831,7 +923,9 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
     assert_eq!(
         totals[0].capped_endings, totals[1].capped_endings,
         "control: Crossing changes edge weights, not the graph's shape, so both arms must cap \
-         the same number of endings: free {}, contact-weighted {}",
+         the same endings under every accumulation rule (capped_endings summed over all three \
+         rules must match arm to arm; {capped_per_rule} endings per rule, times three rules): \
+         free {}, contact-weighted {}",
         totals[0].capped_endings, totals[1].capped_endings
     );
 
