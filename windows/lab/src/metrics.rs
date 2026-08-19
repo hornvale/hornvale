@@ -8389,7 +8389,15 @@ fn family_proto_assignment(
     };
     let universe = hornvale_language::proto_root_universe(&exposures);
     let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), family);
-    hornvale_language::assign_proto_roots(&v.world().seed, family, &proto_ph, &universe, &daughters)
+    let typ = hornvale_language::typology_for(Some(family));
+    hornvale_language::assign_proto_roots(
+        &v.world().seed,
+        family,
+        &proto_ph,
+        &typ,
+        &universe,
+        &daughters,
+    )
 }
 
 /// Whether every daughter of `family` has a Root `derivation.proto` matching
@@ -10706,9 +10714,15 @@ mod tests {
         // a canonical census**: this campaign's refresh has not been run yet,
         // so this is a single live computation on one machine, and the
         // corroboration paragraph above describes a value two re-pins back.
+        //
+        // THE BURR absorb (Task 16): 2.3043478260869565 -> 2.391304347826087. The
+        // Burr's per-family phonology (trill, sonorant floor, per-bundle laws) reseeds
+        // goblin's syllable templates on the SAME site pool The Underworld's placement
+        // left; still inside the 2-3 target, the row's actual claim. Re-pinned from the
+        // merged run.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.3043478260869565)
+            MetricValue::Number(2.391304347826087)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -10920,9 +10934,14 @@ mod tests {
         // Nothing in this campaign touches phonology, wear or the namer.
         // **Not corroborated against a canonical census** — this campaign's
         // refresh has not been run.
+        //
+        // THE BURR absorb (Task 16): 2.7358490566037736 -> 2.6792452830188678.
+        // The Burr DOES touch phonology and the namer for every family, so kobold's
+        // syllable count moves on the merged product's site pool. Re-pinned from the
+        // merged run.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.7358490566037736)
+            MetricValue::Number(2.6792452830188678)
         );
     }
 
@@ -11147,7 +11166,12 @@ mod tests {
         // seed 42 alone. **Not corroborated against a canonical census**: this
         // campaign's refresh has not been run, so the corroboration paragraph
         // above describes a value two re-pins back.
-        assert_eq!(share, 0.5429864253393665, "seed 42 transparency drifted");
+        //
+        // THE BURR absorb (Task 16): 0.5429864253393665 -> 0.669683257918552. The
+        // Burr's per-bundle orthography and root-and-pattern change WHICH names read as
+        // transparent (a name is transparent when its glosses recur in its own site
+        // vector), on the merged site pool. Re-pinned from the merged run.
+        assert_eq!(share, 0.669683257918552, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

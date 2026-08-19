@@ -5026,7 +5026,8 @@ fn language_of_wc(
     let art = wc.articulation.get(&KindId(name)).unwrap_or_else(|| {
         panic!("language_of_wc: '{name}' is not a speaking kind in the component set")
     });
-    hornvale_language::draw_phonology(&world.seed, name, &envelope_of(art))
+    let typ = hornvale_language::typology_for(wc.family_of.get_by_label(name).copied());
+    hornvale_language::draw_phonology(&world.seed, name, &envelope_of(art), &typ)
 }
 
 /// Draw a species' phonology, resolving `species` within the shipped
@@ -5297,7 +5298,8 @@ fn proto_phonology_of_in(
         .family_proto
         .get(&KindId(family))
         .unwrap_or_else(|| panic!("proto_phonology_of: family '{family}' has no proto vector"));
-    hornvale_language::draw_phonology(&world.seed, family, &envelope_of(art))
+    let typ = hornvale_language::typology_for(Some(family));
+    hornvale_language::draw_phonology(&world.seed, family, &envelope_of(art), &typ)
 }
 
 /// Map a species' perception vector onto the color pack's two acquisition
@@ -6109,7 +6111,7 @@ pub fn family_daughter_kinds(wc: &WorldComponents, family: &str) -> Vec<KindId> 
 
 /// The family's members (all kinds in `wc` sharing `family`), each as a
 /// [`hornvale_language::Daughter`] — its drawn cascade and its own phonology —
-/// so the merger-aware proto assignment (epoch `root/v3`) can choose core roots
+/// so the merger-aware proto assignment (epoch `root/v4`) can choose core roots
 /// that survive every daughter's descent distinct. The rejection is
 /// order-independent (a candidate is rejected iff it merges in ANY daughter),
 /// so the iteration order does not affect the result; a singleton family yields
@@ -9468,11 +9470,13 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         let morph = tongue_morphology_of(world, &species).ok()?;
         let sky_animate = day_schema_from(world, &species, &terrain, &climate)
             == Some(hornvale_language::SchemaId::Agentive);
+        let orthography = language_of(world, &species).orthography;
         Some(hornvale_almanac::Speaker {
             species,
             lexicon,
             morph,
             sky_animate,
+            orthography,
         })
     });
     Ok(AlmanacContext {

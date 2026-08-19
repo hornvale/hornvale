@@ -3285,3 +3285,18 @@ and are wrong. So the thing being built toward is not neutrality but *situated
 error* — creatures with strong, mistaken opinions about each other, arrived at
 because of how their accounts of a shared history actually travelled. That is a
 harder bet to score than neutrality would be, and it is the right one.
+
+A fourteenth campaign moves no bet in the map and yet lands squarely on the
+floor beneath it. [The Burr](./chronicle/the-burr.md) (2026-08-19) set out to
+give the tongues *character* — audible liquids, per-family word-building — and
+carried a preregistered instrument that measures whether a word can be traced
+back to its tongue. That number rose across every typological stage, from
+0.7202 to a merged 0.7995, and a global parametric change moved it the other
+way, exactly as the thesis predicted. But distinguishability is not the claim.
+The goal was aesthetic — whether the tongues are *lovely*, not merely
+separable — and no metric the Laboratory can run scores that half. A classifier
+at 13× the chance floor and a reader who still cannot tell one tongue from
+another are both true at once (the campaign's own §6 caution, measured). So the
+floor gains a clean exemplar rather than a new question: a bet whose
+Laboratory-scorable half can rise handsomely while its *sufficient* half stays
+taste-gated, and the honest report names which half the number was about.

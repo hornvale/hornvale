@@ -197,7 +197,12 @@ pub fn realize_paradigm_cell(
 ) -> ParadigmCell {
     let regular_root = evolve(root_proto, cascade, ph);
     let regular_affix = evolve(affix_proto, cascade, ph);
-    let regular_form = affix(&regular_root.modern, &regular_affix.modern, position);
+    let regular_form = affix(
+        &regular_root.modern,
+        &regular_affix.modern,
+        position,
+        ph.orthography,
+    );
 
     let mut joined_proto = Vec::with_capacity(root_proto.len() + affix_proto.len());
     match position {
@@ -304,6 +309,8 @@ mod tests {
             onsets: vec![vec![]],
             nuclei: vec![1],
             codas: vec![vec![]],
+            harmony: crate::typology::Harmony::None,
+            orthography: crate::typology::Orthography::Digraph,
         }
     }
 
@@ -391,6 +398,8 @@ mod tests {
             onsets: vec![vec![]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Stop], vec![]],
+            harmony: crate::typology::Harmony::None,
+            orthography: crate::typology::Orthography::Digraph,
         }
     }
 

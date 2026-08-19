@@ -11,6 +11,7 @@ use crate::phoneme::{
     Manner, Place, Segment, Tone, canonical_segments, sonority, sonority_of_manner,
 };
 use crate::streams;
+use crate::typology::{CodaLaw, Harmony, OnsetLaw, Orthography, Typology};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -104,6 +105,19 @@ pub struct Phonology {
     /// Coda templates: each is a sequence of manner slots a syllable-final
     /// cluster may fill, in order (an empty template is an open syllable).
     pub codas: Vec<Vec<Manner>>,
+    /// Whether vowels within a word must agree, and on what — copied from
+    /// the [`Typology`] this phonology was drawn under, so a later name-time
+    /// call (`naming::build_name`) has something to read `Harmony` from
+    /// without threading `Typology` itself down that call path. Not a save-
+    /// format field: `Phonology` carries no `serde` derive and is re-derived
+    /// from the seed on every load, never persisted.
+    pub harmony: Harmony,
+    /// How this family's segments are spelled in the romanization — copied
+    /// from the [`Typology`] this phonology was drawn under, exactly like
+    /// [`Phonology::harmony`]. A VIEW over `Segment`: no stream draw moves
+    /// when this field changes, but every committed name string does (spec
+    /// §3.6). Not a save-format field, for the same reason `harmony` isn't.
+    pub orthography: Orthography,
 }
 
 /// Below this labiality, every labial segment is forbidden outright.
@@ -402,11 +416,21 @@ fn vowel_permitted(vowel_space: f64, seg: &Segment) -> bool {
     idx >= lo && idx <= hi
 }
 
-/// Whether `manner` is one of the three exotic (non-pulmonic or trilled)
-/// manners `Envelope::exotic` gates.
+/// Which exotic capability a manner requires, or `None` if any vocal tract
+/// can produce it.
+///
+/// **A trill is deliberately not here** (a decision recorded at this
+/// campaign's close, The Burr — `docs/decisions/` has no record yet as of
+/// this commit). Clicks and ejectives
+/// are non-pulmonic and genuinely marked — a species either has the mechanism
+/// or does not. An alveolar trill is an ordinary pulmonic consonant present in
+/// a large majority of the world's languages, and gating it behind the same
+/// capability is what left 17 of 18 shipped tongues with zero liquid-bearing
+/// words. `ExoticSeg::Trill` survives as a capability a species may still
+/// declare; it simply no longer *gates* the segment.
+/// type-audit: bare-ok(flag)
 fn exotic_manner(manner: Manner) -> Option<ExoticSeg> {
     match manner {
-        Manner::Trill => Some(ExoticSeg::Trill),
         Manner::Click => Some(ExoticSeg::Click),
         Manner::Ejective => Some(ExoticSeg::Ejective),
         _ => None,
@@ -493,6 +517,43 @@ fn ensure_minimum_consonants(candidates: &[Segment], inventory: &mut Vec<Segment
             && is_padding_manner(*manner)
             && !inventory.contains(seg)
         {
+            inventory.push(*seg);
+        }
+    }
+}
+
+/// The minimum number of sonorant consonants (trill or approximant) an
+/// inventory retains when the language's typology asks for one.
+const MIN_SONORANTS: usize = 1;
+
+/// Top up `inventory` to [`MIN_SONORANTS`] sonorants, drawing only from
+/// `candidates` (already envelope-permitted), in canonical order.
+///
+/// Deterministic and **draw-free**, exactly like [`ensure_minimum_consonants`]
+/// beside it: it consumes no stream, so adding it perturbs no sibling stream
+/// and the phonotactics draw downstream is untouched.
+///
+/// The direction this enforces, stated so it cannot be mistaken for a
+/// guarantee it does not make: it puts a **floor** under sonorant count. It
+/// does not cap it, does not order the inventory, and says nothing about
+/// whether the phonotactic templates will ever *use* the sonorant it adds —
+/// that is Task 10's job.
+fn ensure_minimum_sonorants(candidates: &[Segment], inventory: &mut Vec<Segment>) {
+    let is_sonorant = |s: &Segment| {
+        matches!(
+            s,
+            Segment::Consonant {
+                manner: Manner::Trill | Manner::Approximant,
+                ..
+            }
+        )
+    };
+    let count = |inv: &[Segment]| inv.iter().filter(|s| is_sonorant(s)).count();
+    for seg in candidates {
+        if count(inventory) >= MIN_SONORANTS {
+            return;
+        }
+        if is_sonorant(seg) && !inventory.contains(seg) {
             inventory.push(*seg);
         }
     }
@@ -620,22 +681,156 @@ fn draw_nuclei(stream: &mut Stream) -> Vec<usize> {
 fn draw_phonotactics(
     stream: &mut Stream,
     inventory: &[Segment],
+    typ: &Typology,
 ) -> (Vec<Vec<Manner>>, Vec<usize>, Vec<Vec<Manner>>) {
     let manners = consonant_manners(inventory);
 
     let onset_count = stream.range_u32(2, 3) as usize;
-    let onsets = (0..onset_count)
-        .map(|_| draw_manner_slots(stream, &manners, 1, 2, true))
+    // Every arm draws the same template first (`draw_manner_slots`), so no
+    // arm can shift the stream relative to another; only the post-processing
+    // differs. `sonorant-open` guarantees the property on template 0 only —
+    // every other template is left free to be single-consonant, and is only
+    // corrected if the *draw itself* produced a non-sonorant-second cluster.
+    let onsets: Vec<Vec<Manner>> = (0..onset_count)
+        .map(|i| {
+            let drawn = draw_manner_slots(stream, &manners, 1, 2, true);
+            match typ.onset_law {
+                // Today's behaviour, byte-for-byte.
+                OnsetLaw::Drawn => drawn,
+                // Template 0 is forced into a sonorant-second cluster
+                // unconditionally, which is what guarantees the property
+                // *by construction* rather than by draw (spec §3.7). Every
+                // other template keeps its drawn length, single-consonant
+                // onsets included, and is only rewritten if the draw itself
+                // produced a cluster whose second slot is not a sonorant —
+                // never widened into a cluster it wasn't already.
+                OnsetLaw::SonorantSecond if i == 0 => force_sonorant_second(drawn, &manners),
+                OnsetLaw::SonorantSecond => sonorize_onset_cluster(drawn, &manners),
+                // One slot only.
+                OnsetLaw::Single => drawn.into_iter().take(1).collect(),
+            }
+        })
         .collect();
 
     let nuclei = draw_nuclei(stream);
 
     let coda_count = stream.range_u32(1, 2) as usize;
-    let codas = (0..coda_count)
-        .map(|_| draw_manner_slots(stream, &manners, 0, 1, false))
+    let codas: Vec<Vec<Manner>> = (0..coda_count)
+        .map(|_| {
+            let drawn = draw_manner_slots(stream, &manners, 0, 1, false);
+            match typ.coda_law {
+                // Today's behaviour, byte-for-byte.
+                CodaLaw::Drawn => drawn,
+                // A coda is required and obstruent: an empty or non-
+                // obstruent draw is back-filled from the inventory's
+                // obstruents in canonical order, consuming no extra draw.
+                CodaLaw::ObstruentObligatory => force_obstruent_coda(drawn, &manners),
+                // Optional, and restricted to the closed sonorant set.
+                CodaLaw::SonorantClosed => restrict_to_sonorant(drawn, &manners),
+                // Open, or a single nasal.
+                CodaLaw::OpenOrNasal => restrict_to_nasal(drawn, &manners),
+            }
+        })
         .collect();
 
     (onsets, nuclei, codas)
+}
+
+/// Whether `m` is one of the three sonorant manners a coda law treats as a
+/// liquid/nasal for phonotactic purposes. Used by the coda helpers below,
+/// which are a separate design question from the onset guarantee.
+fn is_sonorant_manner(m: &Manner) -> bool {
+    matches!(m, Manner::Trill | Manner::Approximant | Manner::Nasal)
+}
+
+/// Whether `m` is a **liquid** specifically — `Trill` or `Approximant`, the
+/// exact set [`ensure_minimum_sonorants`] floors and spec §3.7 means by "a
+/// liquid". Deliberately narrower than [`is_sonorant_manner`]: `Manner`'s
+/// canonical order places `Nasal` before `Trill`, and every shipped envelope
+/// already carries a nasal (it is never gated), so a "first sonorant in
+/// canonical order" search over the wider set finds the nasal every time and
+/// never reaches the liquid the floor exists to guarantee. Using the
+/// narrower set here is what makes the onset law actually seat the liquid
+/// the floor put in the inventory, rather than seating a nasal that was
+/// already reachable regardless.
+fn is_liquid_manner(m: &Manner) -> bool {
+    matches!(m, Manner::Trill | Manner::Approximant)
+}
+
+/// A two-slot onset whose second slot is a liquid, unconditionally. Used
+/// only for the one onset template `sonorant-open` designates to carry the
+/// guarantee (see [`draw_phonotactics`]) — draw-free: the liquid comes from
+/// `manners` in canonical order, so no stream is consumed and the control
+/// bundle's draw count is unchanged. Falls back to the drawn cluster when
+/// the language has no liquid at all (a bundle other than `sonorant-open`,
+/// whose floor does not run), rather than handing it a segment it cannot
+/// produce.
+///
+/// The direction this enforces: it guarantees a liquid is *reachable in an
+/// onset*. It does not guarantee every onset is a cluster, does not choose
+/// which liquid, and says nothing about codas.
+fn force_sonorant_second(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    let Some(&son) = manners.iter().find(|m| is_liquid_manner(m)) else {
+        return drawn;
+    };
+    let head = drawn
+        .iter()
+        .copied()
+        .find(|m| !is_liquid_manner(m))
+        .unwrap_or(Manner::Stop);
+    vec![head, son]
+}
+
+/// Correct an onset template *only if the draw already made it a cluster*
+/// and that cluster's second slot is not a liquid. A single-consonant (or
+/// open) template is returned unchanged — this is what keeps `sonorant-open`
+/// from forcing every onset into a two-consonant cluster (the caricature the
+/// campaign controller flagged in the naive sketch), while still holding the
+/// law over every cluster the draw does produce. Draw-free, like
+/// [`force_sonorant_second`].
+fn sonorize_onset_cluster(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    if drawn.len() <= 1 || is_liquid_manner(&drawn[1]) {
+        return drawn;
+    }
+    force_sonorant_second(drawn, manners)
+}
+
+/// A coda that must not be empty and must be an obstruent. Draw-free: an
+/// empty or non-obstruent draw is replaced from `manners` in canonical
+/// order.
+fn force_obstruent_coda(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    let obstruent = |m: &Manner| matches!(m, Manner::Stop | Manner::Fricative | Manner::Sibilant);
+    if !drawn.is_empty() && drawn.iter().all(obstruent) {
+        return drawn;
+    }
+    match manners.iter().find(|m| obstruent(m)) {
+        Some(m) => vec![*m],
+        // A language with no obstruent at all keeps its drawn coda rather
+        // than being handed a segment it cannot produce.
+        None => drawn,
+    }
+}
+
+/// A coda restricted to the closed sonorant set, or empty. Draw-free.
+fn restrict_to_sonorant(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    if drawn.iter().all(is_sonorant_manner) {
+        return drawn;
+    }
+    match manners.iter().find(|m| is_sonorant_manner(m)) {
+        Some(m) => vec![*m],
+        None => Vec::new(),
+    }
+}
+
+/// A coda that is open or a single nasal. Draw-free.
+fn restrict_to_nasal(drawn: Vec<Manner>, manners: &[Manner]) -> Vec<Manner> {
+    if drawn.is_empty() {
+        return drawn;
+    }
+    match manners.iter().find(|m| matches!(m, Manner::Nasal)) {
+        Some(m) => vec![*m],
+        None => Vec::new(),
+    }
 }
 
 /// Draw a per-species phonology: a phoneme inventory (a subset of
@@ -645,9 +840,11 @@ fn draw_phonotactics(
 /// `seed.derive(streams::ROOT)
 /// .derive(StreamLabel::dynamic(species)).derive(streams::PHONOLOGY)`,
 /// split into an `"inventory"` sub-stream and a `"phonotactics"` sub-stream
-/// so adding a new draw to one never perturbs the other.
+/// so adding a new draw to one never perturbs the other. `typ` names the
+/// family's [`Typology`] bundle; every path it reaches today still
+/// delegates to the pre-typology draw, unchanged in effect.
 /// type-audit: bare-ok(identifier-text: species)
-pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
+pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope, typ: &Typology) -> Phonology {
     let phonology_seed = seed
         .derive(streams::ROOT)
         .derive(StreamLabel::dynamic(species))
@@ -680,15 +877,20 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
         }
     }
     ensure_minimum_consonants(&candidates, &mut inventory);
+    if typ.requires_sonorant() {
+        ensure_minimum_sonorants(&candidates, &mut inventory);
+    }
 
     let mut phonotactics_stream = phonology_seed.derive(streams::PHONOTACTICS).stream();
-    let (onsets, nuclei, codas) = draw_phonotactics(&mut phonotactics_stream, &inventory);
+    let (onsets, nuclei, codas) = draw_phonotactics(&mut phonotactics_stream, &inventory, typ);
 
     let mut ph = Phonology {
         inventory,
         onsets,
         nuclei,
         codas,
+        harmony: typ.harmony,
+        orthography: typ.orthography,
     };
     // Capacity floor (spec §5): widen a tone-capable species' tone inventory
     // until it clears the floor. A no-op for atonal species (byte-identical
@@ -749,7 +951,12 @@ mod tests {
     fn a_quiet_species_admits_its_trill_rarely_or_not_at_all() {
         // Kobold is Trill-capable but low-loudness: the drawn inventory should
         // contain few/no trills relative to a loud species with the same manner.
-        let quiet = draw_phonology(&Seed(42), "kobold", &kobold_env());
+        let quiet = draw_phonology(
+            &Seed(42),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
         let trills = quiet
             .inventory
             .iter()
@@ -765,7 +972,12 @@ mod tests {
             .count();
         let mut loud = kobold_env();
         loud.voice_loudness = 0.9;
-        let loud_ph = draw_phonology(&Seed(42), "kobold", &loud);
+        let loud_ph = draw_phonology(
+            &Seed(42),
+            "kobold",
+            &loud,
+            &crate::typology::concatenative(),
+        );
         let loud_trills = loud_ph
             .inventory
             .iter()
@@ -787,8 +999,18 @@ mod tests {
 
     #[test]
     fn draw_is_deterministic() {
-        let a = draw_phonology(&Seed(7), "kobold", &kobold_env());
-        let b = draw_phonology(&Seed(7), "kobold", &kobold_env());
+        let a = draw_phonology(
+            &Seed(7),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
+        let b = draw_phonology(
+            &Seed(7),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
         assert_eq!(a.inventory, b.inventory);
         assert_eq!(a.onsets, b.onsets);
     }
@@ -797,7 +1019,12 @@ mod tests {
     /// Segment, single fixed seed
     #[test]
     fn inventory_respects_the_envelope() {
-        let ph = draw_phonology(&Seed(3), "kobold", &kobold_env());
+        let ph = draw_phonology(
+            &Seed(3),
+            "kobold",
+            &kobold_env(),
+            &crate::typology::concatenative(),
+        );
         assert!(ph.inventory.iter().all(|s| permits(&kobold_env(), s)));
         assert!(!ph.inventory.is_empty());
     }
@@ -817,7 +1044,7 @@ mod tests {
             (Seed(42), "kobold", kobold_env()),
             (Seed(99), "kobold", kobold_env()),
         ] {
-            let ph = draw_phonology(&seed, species, &env);
+            let ph = draw_phonology(&seed, species, &env, &crate::typology::concatenative());
             for seg in &ph.inventory {
                 assert!(
                     canonical.contains(seg),
@@ -849,7 +1076,12 @@ mod tests {
         // tonality 0.0 ⇒ tone inventory {Neutral} ⇒ no toned vowel is admitted,
         // so the vowel set is exactly the pre-tone (Neutral-only) set.
         for seed in 0..12u64 {
-            let ph = draw_phonology(&Seed(seed), "goblin", &manikin_env());
+            let ph = draw_phonology(
+                &Seed(seed),
+                "goblin",
+                &manikin_env(),
+                &crate::typology::concatenative(),
+            );
             assert!(
                 !ph.inventory.iter().any(is_toned_vowel),
                 "seed {seed}: an atonal species must carry no toned vowel"
@@ -863,7 +1095,12 @@ mod tests {
         // tonality 1.0 ⇒ tone inventory {Neutral, High, Low} ⇒ the inventory
         // carries toned vowels, and every vowel quality present appears in each
         // drawn tone.
-        let ph = draw_phonology(&Seed(1), "serpent", &tonal_env());
+        let ph = draw_phonology(
+            &Seed(1),
+            "serpent",
+            &tonal_env(),
+            &crate::typology::concatenative(),
+        );
         assert!(
             ph.inventory.iter().any(is_toned_vowel),
             "a fully tonal species must admit toned vowels"
@@ -905,6 +1142,139 @@ mod tests {
         }
     }
 
+    /// Whether a segment is a sonorant consonant (trill or approximant).
+    fn is_sonorant_seg(s: &Segment) -> bool {
+        matches!(
+            s,
+            Segment::Consonant {
+                manner: Manner::Trill | Manner::Approximant,
+                ..
+            }
+        )
+    }
+
+    /// The quietest envelope the roster carries (elf proto, voice_loudness
+    /// 0.35) must still be able to hold a liquid. Before the floor, the
+    /// approximant keep-probability there is 0.128, and the region
+    /// "quiet AND sonorant-rich" — most of what a Quenya-like tongue is —
+    /// was unreachable by construction (spec §3.2).
+    ///
+    /// **Seed 1, not 42.** Seed 42 draws a sonorant here even before the
+    /// floor exists — Task 4's ungating alone happens to suffice at that
+    /// seed, which would make this test prove nothing. Seed 1 was found by
+    /// scanning `0..64` for a seed that genuinely fails pre-floor (34 of the
+    /// 64 do); it is the lowest of them.
+    #[test]
+    fn a_quiet_envelope_still_draws_a_sonorant() {
+        let env = Envelope {
+            voice_loudness: 0.35,
+            vowel_space: 0.70,
+            ..manikin_env()
+        };
+        let ph = draw_phonology(
+            &Seed(1),
+            "quiet-probe",
+            &env,
+            &crate::typology::sonorant_open(),
+        );
+        assert!(
+            ph.inventory.iter().any(is_sonorant_seg),
+            "a quiet envelope drew no sonorant at all; inventory: {:?}",
+            ph.inventory
+        );
+    }
+
+    /// The floor is a claim about every seed, not the one in the test above.
+    /// claim: invariant(forall-seed) — the sonorant floor holds for every
+    /// seed in 0..64 under the quietest envelope the roster carries.
+    #[test]
+    fn the_sonorant_floor_holds_across_seeds() {
+        let env = Envelope {
+            voice_loudness: 0.35,
+            vowel_space: 0.70,
+            ..manikin_env()
+        };
+        for seed in 0..64u64 {
+            let ph = draw_phonology(
+                &Seed(seed),
+                "quiet-probe",
+                &env,
+                &crate::typology::sonorant_open(),
+            );
+            assert!(
+                ph.inventory.iter().any(is_sonorant_seg),
+                "seed {seed} drew no sonorant"
+            );
+        }
+    }
+
+    /// The floor is a property of the BUNDLE, not of every language. Only
+    /// `sonorant-open` requires a liquid; the control bundle must be free to
+    /// draw a liquid-free inventory, or the control stops being a control.
+    ///
+    /// claim: invariant(forall-seed) — sonorant-open holds a liquid on all 64
+    /// probe seeds; the same sweep also needs an existential witness that the
+    /// control bundle does NOT, which is the half that actually falsifies an
+    /// unconditional floor.
+    #[test]
+    fn only_the_sonorant_open_bundle_requires_a_liquid() {
+        let env = Envelope {
+            voice_loudness: 0.35,
+            ..manikin_env()
+        };
+        let sonorant_bundle = crate::typology::sonorant_open();
+        let control = crate::typology::concatenative();
+        let mut control_had_a_liquid_free_draw = false;
+        for seed in 0..64u64 {
+            let open = draw_phonology(&Seed(seed), "probe", &env, &sonorant_bundle);
+            assert!(
+                open.inventory.iter().any(is_sonorant_seg),
+                "sonorant-open drew no liquid at seed {seed}"
+            );
+            let ctl = draw_phonology(&Seed(seed), "probe", &env, &control);
+            if !ctl.inventory.iter().any(is_sonorant_seg) {
+                control_had_a_liquid_free_draw = true;
+            }
+        }
+        assert!(
+            control_had_a_liquid_free_draw,
+            "the control bundle got a liquid on all 64 seeds — the floor is \
+             being applied unconditionally, so the control is not a control"
+        );
+    }
+
+    /// A trill is not an exotic manner. An alveolar trill is present in a
+    /// large majority of the world's languages; a click and an ejective are
+    /// genuinely marked. Grouping the three is what left 17 of the 18 shipped
+    /// tongues with zero liquid-bearing words (spec §3.1, §3.3).
+    #[test]
+    fn a_trill_is_permitted_without_an_exotic_capability() {
+        let env = Envelope {
+            exotic: ExoticSeg::None,
+            ..manikin_env()
+        };
+        assert!(
+            permits(&env, &cons(Place::Alveolar, Manner::Trill, true)),
+            "an alveolar trill must be drawable without an exotic capability"
+        );
+    }
+
+    /// The other half, and what keeps this from being a blanket ungating:
+    /// clicks and ejectives stay behind the capability gate.
+    #[test]
+    fn clicks_and_ejectives_are_still_gated() {
+        let env = Envelope {
+            exotic: ExoticSeg::None,
+            ..manikin_env()
+        };
+        for manner in [Manner::Click, Manner::Ejective] {
+            assert!(
+                !permits(&env, &cons(Place::Alveolar, manner, false)),
+                "{manner:?} must remain gated behind an exotic capability"
+            );
+        }
+    }
+
     /// A cramped-but-plausible phonology: three stops, one nasal, three vowel
     /// qualities; onsets a single stop, codas a nasal or nothing. Base capacity
     /// is `3 (onset) × 3 (vowels) × 2 (coda) = 18`, below the floor.
@@ -922,6 +1292,8 @@ mod tests {
             onsets: vec![vec![Manner::Stop]],
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
+            harmony: Harmony::None,
+            orthography: Orthography::Digraph,
         }
     }
 
@@ -945,7 +1317,8 @@ mod tests {
         let mut complex_seen = 0usize;
         for (label, env) in [("goblin", manikin_env()), ("kobold", kobold_env())] {
             for seed in 0..200u64 {
-                let ph = draw_phonology(&Seed(seed), label, &env);
+                let ph =
+                    draw_phonology(&Seed(seed), label, &env, &crate::typology::concatenative());
                 assert!(
                     ph.nuclei.contains(&1),
                     "{label} seed {seed}: every syllable is obligatorily complex ({:?})",
@@ -1025,8 +1398,18 @@ mod tests {
         // The tone draw lives on its own `phonology/tones` leg, so raising
         // tonality must not perturb the consonant inventory (drawn on the
         // separate `inventory` leg) — only add toned vowels.
-        let atonal = draw_phonology(&Seed(5), "x", &manikin_env());
-        let tonal = draw_phonology(&Seed(5), "x", &tonal_env());
+        let atonal = draw_phonology(
+            &Seed(5),
+            "x",
+            &manikin_env(),
+            &crate::typology::concatenative(),
+        );
+        let tonal = draw_phonology(
+            &Seed(5),
+            "x",
+            &tonal_env(),
+            &crate::typology::concatenative(),
+        );
         let consonants = |ph: &Phonology| -> Vec<Segment> {
             ph.inventory
                 .iter()
@@ -1039,5 +1422,192 @@ mod tests {
             consonants(&tonal),
             "the tone dimension must not change the drawn consonants"
         );
+    }
+
+    /// Pinned from the pre-Stage-3 tree at Task 8's byte-inert commit —
+    /// `the_control_bundle_draws_what_it_always_drew` measures these are
+    /// still what `concatenative` draws for `("goblin", Seed(42))` once the
+    /// per-bundle law is applied.
+    const CONTROL_CODA_COUNT: usize = 2;
+    /// See [`CONTROL_CODA_COUNT`].
+    const CONTROL_NUCLEI: [usize; 1] = [1];
+
+    /// Each bundle's coda law is visible in the drawn templates. These are
+    /// the four rules the campaign exists to introduce, so each gets its own
+    /// assertion rather than one loop — a loop would let three pass on the
+    /// strength of the fourth.
+    /// claim: invariant(forall-seed) — templatic never draws an open coda,
+    /// for every seed in 0..32.
+    #[test]
+    fn the_obstruent_obligatory_law_never_draws_an_open_coda() {
+        let env = manikin_env();
+        let typ = crate::typology::templatic();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            assert!(
+                !ph.codas.iter().any(|c| c.is_empty()),
+                "seed {seed}: templatic drew an open coda: {:?}",
+                ph.codas
+            );
+        }
+    }
+
+    /// claim: invariant(forall-seed) — isolating-tonal never draws a coda
+    /// cluster, for every seed in 0..32; whether it also admits an open
+    /// syllable somewhere in the sweep is the separate `saw_open` readout
+    /// below.
+    #[test]
+    fn the_open_or_nasal_law_admits_an_open_coda() {
+        let env = manikin_env();
+        let typ = crate::typology::isolating_tonal();
+        let mut saw_open = false;
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            for c in &ph.codas {
+                assert!(
+                    c.len() <= 1,
+                    "seed {seed}: isolating drew a coda cluster: {c:?}"
+                );
+                if c.is_empty() {
+                    saw_open = true;
+                }
+            }
+        }
+        assert!(saw_open, "isolating-tonal never drew an open syllable");
+    }
+
+    /// The onset law is what actually puts a liquid into a WORD, and Stage 2
+    /// proved the floor alone does not: proto-elf held `/r/` in its inventory
+    /// while no drawn onset slot could host it, so zero roots carried one
+    /// (spec §3.7). `sonorant-open` must therefore produce a sonorant-second
+    /// onset by construction, not by draw.
+    /// claim: invariant(forall-seed) — every onset cluster sonorant-open
+    /// draws has a sonorant second slot, for every seed in 0..32.
+    #[test]
+    fn the_sonorant_second_law_puts_a_sonorant_in_every_onset_cluster() {
+        let env = manikin_env();
+        let typ = crate::typology::sonorant_open();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            let clusters: Vec<&Vec<Manner>> = ph.onsets.iter().filter(|o| o.len() > 1).collect();
+            assert!(
+                !clusters.is_empty(),
+                "seed {seed}: sonorant-open drew no onset cluster at all"
+            );
+            for c in clusters {
+                assert!(
+                    matches!(c[1], Manner::Trill | Manner::Approximant | Manner::Nasal),
+                    "seed {seed}: cluster {c:?} second slot is not a sonorant"
+                );
+            }
+        }
+    }
+
+    /// Regression guard for the near-miss The Burr's controller caught by
+    /// mutation: the test above accepts `Nasal` as satisfying "sonorant
+    /// second slot", so reverting the onset helpers' predicate from
+    /// [`is_liquid_manner`] back to the wider [`is_sonorant_manner`] passes
+    /// every test in this file (nasal is always available and never
+    /// gated) while silently returning `proto elf`'s liquid-root count to
+    /// its pre-campaign 0 (spec §3.7's whole motivation). This test pins
+    /// the FORCED template specifically (index 0 — see
+    /// `draw_phonotactics`'s `i == 0` arm) to a liquid, not merely a
+    /// sonorant, second slot. It must NOT be widened into a blanket claim
+    /// over every onset: `sonorize_onset_cluster` leaves other templates'
+    /// naturally-drawn clusters alone unless they are already non-liquid,
+    /// and a nasal-second cluster elsewhere is legitimate — only the
+    /// designated template's guarantee is a liquid by construction.
+    /// claim: invariant(forall-seed) — sonorant-open's forced onset
+    /// template (index 0) has a liquid, not merely a sonorant, second
+    /// slot, for every seed in 0..32.
+    #[test]
+    fn the_forced_onset_template_carries_a_liquid_not_merely_a_sonorant() {
+        let env = manikin_env();
+        let typ = crate::typology::sonorant_open();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            let forced = &ph.onsets[0];
+            assert_eq!(
+                forced.len(),
+                2,
+                "seed {seed}: the forced onset template {forced:?} is not a two-slot cluster"
+            );
+            assert!(
+                matches!(forced[1], Manner::Trill | Manner::Approximant),
+                "seed {seed}: the forced onset template's second slot {:?} is not a liquid                  (Trill or Approximant) — a Nasal there is the exact regression this test                  guards against",
+                forced[1]
+            );
+        }
+    }
+
+    /// The outcome half of the regression guard above: not just that the
+    /// mechanism seats a liquid in a template, but that assigning real
+    /// proto roots over that phonology actually surfaces one — the direct
+    /// end-to-end claim spec §3.7 makes and the campaign's own readout
+    /// measures via `proto elf`. Harder to satisfy vacuously than the
+    /// mechanism test: a synthetic concept universe large enough that at
+    /// least one concept's per-concept draw lands on the forced template
+    /// (`draw_candidate` re-derives its own stream per concept, so this is
+    /// not guaranteed by any single draw the way the mechanism test is).
+    /// claim: invariant(forall-seed) — assigning 200 synthetic proto roots
+    /// over a sonorant-open phonology yields at least one root containing
+    /// a liquid, for every seed in 0..8.
+    #[test]
+    fn sonorant_open_proto_roots_actually_contain_a_liquid() {
+        let env = manikin_env();
+        let typ = crate::typology::sonorant_open();
+        let concepts: Vec<String> = (0..200).map(|i| format!("probe-concept-{i}")).collect();
+        let concept_refs: Vec<&str> = concepts.iter().map(String::as_str).collect();
+        for seed in 0..8u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            let roots =
+                crate::assign_proto_roots(&Seed(seed), "probe", &ph, &typ, &concept_refs, &[]);
+            let has_liquid = roots.values().any(|segments| {
+                segments.iter().any(|s| {
+                    matches!(
+                        s,
+                        Segment::Consonant {
+                            manner: Manner::Trill | Manner::Approximant,
+                            ..
+                        }
+                    )
+                })
+            });
+            assert!(
+                has_liquid,
+                "seed {seed}: none of {} assigned proto roots contain a liquid segment",
+                roots.len()
+            );
+        }
+    }
+
+    /// The single-slot law admits no clusters at all.
+    /// claim: invariant(forall-seed) — isolating-tonal never draws an onset
+    /// cluster, for every seed in 0..32.
+    #[test]
+    fn the_single_onset_law_draws_no_clusters() {
+        let env = manikin_env();
+        let typ = crate::typology::isolating_tonal();
+        for seed in 0..32u64 {
+            let ph = draw_phonology(&Seed(seed), "probe", &env, &typ);
+            for o in &ph.onsets {
+                assert!(
+                    o.len() <= 1,
+                    "seed {seed}: isolating-tonal drew an onset cluster {o:?}"
+                );
+            }
+        }
+    }
+
+    /// The control's templates must be reachable exactly as before, or P4's
+    /// control is compromised.
+    #[test]
+    fn the_control_bundle_draws_what_it_always_drew() {
+        let env = manikin_env();
+        let typ = crate::typology::concatenative();
+        let ph = draw_phonology(&Seed(42), "goblin", &env, &typ);
+        // Pinned from the pre-Stage-3 tree at Task 8's byte-inert commit.
+        assert_eq!(ph.codas.len(), CONTROL_CODA_COUNT);
+        assert_eq!(ph.nuclei, CONTROL_NUCLEI);
     }
 }

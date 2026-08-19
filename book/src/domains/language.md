@@ -73,20 +73,23 @@ earlier vectors already keep (see [Species](./species.md) and
 [The Manikin](./manikin.md)). This vector's manikin is the one that wears its
 asymmetry on its face: five of its six scalars sit at the **neutral
 midpoint** `0.5`, but **tonality** sits at a **designated default** of `0.0`
-— atonal, chosen because the shipped body plans afford no pitch contrast, not
-because zero is a middle — and the exotic manner is an enumeration with no
-middle at all, whose designated default is `None`. Seven dimensions: each one a
-named capacity the phonology engine intersects with whatever it draws, so that
+— atonal, chosen because the shipped humanoid body plans afford no pitch
+contrast, not because zero is a middle — and the exotic manner is an
+enumeration with no middle at all, whose designated default is `None`. Seven
+dimensions: each one a named capacity the phonology engine intersects with whatever it draws, so that
 any difference between two peoples' sounds recounts to a dimension by name
 rather than to an author's ear. The seventh, **tonality**, was the phonology
 epoch's own deliberate widening — the warning the earlier draft of this
 paragraph kept ("widening this vector is real design work belonging to a
 campaign willing to weigh it") discharged by a campaign that weighed it: tone is
 a capacity a body plan affords, so it earns a dimension rather than a hidden
-constant. The shipped humanoids sit at zero on it (atonal); the value earns its
-keep when the bestiary grows a serpent or a bird. Widening the vector further
-stays what it was — real design work belonging to a campaign willing to weigh
-it, nothing here growing without someone choosing to grow it.
+constant. The shipped humanoids sit at zero on it (atonal); [The
+Burr](../chronicle/the-burr.md) gave the tier its first real mover, proto-draconic,
+authored at `0.7` — the dimension's keep is no longer purely hypothetical, though
+the value is reached at the family's proto root, not yet in a shipped dragon's
+own mouth (see "Tone: a second channel," below, and decision 0157). Widening the
+vector further stays what it was — real design work belonging to a campaign
+willing to weigh it, nothing here growing without someone choosing to grow it.
 
 **The model card.** Every dimension below is **authored**, for both
 peoples — nothing in this table is drawn or fit, the same posture the
@@ -101,8 +104,8 @@ draconic-kin people's anatomy into seven numbers a formula can read.
 | Voicing contrast | scalar `[0,1]` | 0.5 | 0.6 | — |
 | Sibilance | scalar `[0,1]` | 0.5 | 0.9 | the draconic hiss — sibilant-rich |
 | Voice loudness | scalar `[0,1]` | 0.5 | 0.2 | small, frail, and stealthy — a dampable phonology |
-| Tonality | scalar `[0,1]` | 0.0 | 0.0 | atonal — the shipped humanoids carry no pitch contrast; tone is for the future bestiary |
-| Exotic manner (none, trill, click, or ejective) | enum | None | Trill | a signature resonant manner the anatomy affords |
+| Tonality | scalar `[0,1]` | 0.0 | 0.0 | atonal — kobold carries no pitch contrast; the manikin's own default stays 0.0 even after The Burr moved a shipped family (draconic's proto root, `0.7`) off it |
+| Exotic manner (none, trill, click, or ejective) | enum | None | Trill | declared for a resonant manner the anatomy affords — though since decision 0158 only click and ejective are actually gated by this field; see below |
 
 Goblin's authored articulation values currently coincide with the Manikin
 column on every row. Read the column with its two kinds of entry kept apart:
@@ -118,29 +121,81 @@ once one exists: the same treatment nocturnality received before the
 perception vector existed to spend it, an authored placeholder standing in
 for a formula that has not been written yet, its value unchanged on the day
 the formula arrives because 0.2 is already what that formula will compute.
-Voice loudness also reaches sideways into the row below it, in the vector's
-one load-bearing interaction: exotic manner names what a species'
-anatomy *can* produce, but the phonology engine's draw down-weights any
-exotic manner by how loud the species is willing to be, so a kobold is
-anatomically capable of a trill and only rarely lets one surface in a
-generated name: kobolds can trill, but their names hiss. Click
-and ejective sit in the same closed enumeration as trill, claimed by
-neither people this campaign — the same treatment the perception vector
-gave a crepuscular activity cycle before any species needed it: idle
-variants of a vocabulary already closed, ready the day a species anatomy
-calls for one, rather than added when that day arrives.
+Voice loudness also reaches sideways into the row below it, though what it
+reaches there changed this campaign. **The trill and the exotic tier
+(decision 0158).** Before The Burr, a trill sat behind the same closed
+`exotic` gate as click and ejective: a species drew one only if its `exotic`
+field declared `Trill`, and almost none did, so nearly every shipped tongue
+came out with zero liquid-bearing words — kobold, whose row declares
+`exotic: Trill`, was the lone exception (see [The Burr](../chronicle/the-burr.md)).
+That was a category error: an alveolar trill is an ordinary pulmonic consonant
+most human languages carry, not a rare marked articulation like a click or an
+ejective. The Burr moved it: a trill is now drawn on the ordinary manner path,
+for every species regardless of what its `exotic` field says. The `exotic`
+field itself is unchanged — `None`/`Trill`/`Click`/`Ejective` still names what
+a species' anatomy *can* produce, and kobold's row still declares `Trill` — but
+the declaration no longer *gates* the segment; only click and ejective still
+require it. Voice loudness's down-weight is unaffected and now reaches every
+species' trill the way it always reached kobold's alone: the phonology
+engine's inventory draw discounts any high-sonority consonant — a trill or an
+approximant — the quieter a species is, so a kobold is still anatomically
+capable of a trill and still only rarely lets one surface: kobolds can trill,
+but their names hiss, and now so, in principle, can everyone else's. Click and
+ejective sit in the same closed enumeration as trill, claimed by neither
+shipped people yet — the same treatment the perception vector gave a
+crepuscular activity cycle before any species needed it: idle variants of a
+vocabulary already closed, ready the day a species anatomy calls for one,
+rather than added when that day arrives. Ungating a trill put it *in reach*,
+not *in a word*: the inherited lexicon is still gated by each family's own
+phonotactic templates, so an audible liquid also needed the per-family
+phonotactic law (see "Typology bundles," below) — the gate was necessary and
+not sufficient, and the campaign measured both halves.
 
 **The envelope is authored; the phonology is drawn.** The articulation
 vector only says what a species' anatomy *affords* — it is an envelope, not
 an inventory. The actual sounds a people's names use are **drawn**, per
 species-culture, from labeled streams under that envelope's constraint: a
 **phoneme inventory**, a subset of the envelope-permitted segments biased by
-voice loudness exactly as the exotic-manner draw is, and **syllable
-phonotactics** — onset, nucleus, and coda templates with a drawn complexity
-— built once and reused for every name that species-culture ever generates.
+voice loudness exactly as the trill and exotic-manner draws are, and
+**syllable phonotactics** — onset, nucleus, and coda templates with a drawn
+complexity — built once and reused for every name that species-culture ever
+generates.
 Same seed, same labels, same language, every time: the phonology engine is
 pure and deterministic end to end, drawing nothing that the envelope did not
 first permit.
+
+**Typology bundles: a family's own rules, authored.** The envelope and the
+phonology draw above answer *what a species can produce*; a **typology
+bundle** (`family_typology`, `hornvale_language::typology`) answers a
+different question — *what rules turn a drawn inventory into a word* — and it
+is new this campaign (decisions 0156, 0157). A bundle is five more authored
+fields per family: **morphology** (how a stem is built — templatic,
+agglutinative, isolating, or the engine's original **concatenative**),
+**onset law** and **coda law** (what a syllable may begin and end with —
+whatever the phonotactics draw, or a law forcing a shape by construction),
+**harmony** (whether a word's vowels must agree, e.g. on backness), and
+**orthography** (how the family's segments are spelled). The five fields
+multiply to 288 possible combinations; four ship, each a hand-authored row
+reviewed as prose rather than a point admitted from the product space —
+the same discipline `family_proto` already keeps and decision 0011 applies to
+studies, because presenting the other 284 as supported would be the
+mistake. Dwarf draws `templatic`: a word is a three-consonant skeleton
+threaded with one of three vocalic templates, root-and-pattern morphology the
+way Arabic or Hebrew build a word, rather than concatenated the way every
+other shipped tongue is. Elf draws `sonorant-open`: a forced second onset
+slot that must be a liquid, plus backness harmony — the bundle that finally
+puts a trill or an approximant audibly in an elvish name rather than merely
+in its envelope, completing the half that ungating alone (decision 0158,
+above) left undone. Draconic draws `isolating-tonal`: short, unaffixed roots
+and open-or-nasal codas, the bundle actually built to spend the tone tier
+(see "Tone," below, for how much of that spend reaches a shipped word today).
+Goblinoid and every unfamilied kind (human, gnoll, and any future singleton)
+draw `concatenative` — the engine's pre-Burr behaviour, named as a bundle now
+and kept as the campaign's own control, whose output must not move beyond
+what the epoch bump alone forces. A family's typology is authored the same
+way its articulation vector is: never derived, never fit, and never shipped
+until a real family binds it (decision 0157) — an authored field with no
+family reaching it is scaffolding, not a feature.
 
 **Tone: a second channel, and how a lost sound becomes pitch.** Tonality maps
 to a drawn **tone inventory** — one tone for an atonal people (the neutral
@@ -165,11 +220,22 @@ the rule reads the derivation's own history and never the shared proto. A
 cascade may draw `Tonogenesis` only at a position where a merger has already
 fired — drawn earlier it would have nothing to condition on and would be the
 identity by construction — and only for a phonology that can actually host a
-toned vowel. The shipped peoples are atonal, so that second gate excludes
-tonogenesis from their draw entirely, rather than drawing it and finding it
-inert after the fact; their words still change only through the epoch's
-reseed, and the mechanism waits for the first tone-capable people the world
-admits.
+toned vowel. Every shipped *people* is still atonal at that gate — white-,
+red-, and black-dragon included, each authored at `0.0` same as the
+humanoids — so tonogenesis excludes itself from every shipped daughter's own
+descent entirely, rather than drawing it and finding it inert after the fact;
+their words still change only through the epoch's reseed. What has changed is
+the *proto* one level up: proto-draconic is now authored at `0.7` and draws a
+real, contrastive tone inventory at its root (decision 0157) — the
+tone-widening machinery `draw_tone_inventory` reaches a live value rather than
+sitting built and unit-tested behind 23 rows of `0.0`. That tone does not
+survive descent, though: each dragon daughter's own atonal phonology cannot
+host it, so nativization strips the inherited pitch back out on the way to a
+modern word — tone is *bound*, in the model card's own words, but not yet
+*audible* in a dragon's own mouth. Tonogenesis proper — the sound-change rule
+above, as against the proto's own tone draw — still waits for the first
+*people*, not just proto, the world admits with a nonzero tonality of its
+own.
 
 **Naming grammars, and the status-basis keying.** Five kinds of name this
 substrate generates — settlement names, deity names, deity epithets, personal
@@ -751,8 +817,9 @@ mechanism is untouched.
 
 **The loudness axis.** Voice loudness was never a decorative number. The
 model card already made it load-bearing once, biasing the phonology
-engine's inventory draw and down-weighting any exotic manner by how loud a
-species is willing to be — a kobold can trill, the model card says, but its
+engine's inventory draw and down-weighting any high-sonority manner — a
+trill or an approximant — by how loud a species is willing to be, exotic or
+not since decision 0158 — a kobold can trill, the model card says, but its
 names hiss. It would be tidy if this campaign gave the dimension a second,
 symmetrical job — biasing *which* cascade rules a lineage draws, fortition
 for the loud and lenition for the quiet — and an early pass through this

@@ -258,6 +258,7 @@ mod tests {
                 tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
+            &hornvale_language::typology::concatenative(),
         )
     }
 
@@ -343,6 +344,38 @@ mod tests {
     /// on the real derivation, where 187 volcanoes on seed 42 produce 187
     /// distinct names for `species = "aeldrin"` (worst collision count: 1,
     /// i.e. none).
+    /// A volcano name is a pure per-`(seed, species, kind, salt)` draw
+    /// (`volcano_name` salts on `volcano.source.0`, nothing more) — the same
+    /// shape settlement names have, and **decision 0024 already settled
+    /// this for that shape**: uniqueness is a property of a REFERENCE, not
+    /// of a name, and a small, measured, pinned base rate of collisions is
+    /// the honest behavior of meaningful toponymy, "exactly as Earth
+    /// accepts its forty-one Springfields." The constitutional constraints
+    /// 0024 names — no re-draws, no shared "used" set, pin isolation by
+    /// construction — apply here unchanged and foreclose every in-name
+    /// remedy, so this test asserts a BUDGET, not zero collisions.
+    ///
+    /// **Measured, not guessed:** at seed 42, `species = "aeldrin"`, 208
+    /// volcanoes draw 207 distinct names — one pair (`CellId(13124)` and
+    /// `CellId(28635)`) shares `"Zharji"`, the worst collision group is
+    /// size 2. The budget below (at most 5 duplicated names, no group
+    /// larger than 3) gives headroom for ordinary seed-to-seed birthday-
+    /// problem noise while staying far too tight for a REAL regression to
+    /// hide under — verified by hand: replacing the salt
+    /// (`u64::from(volcano.source.0)`) with a constant `0` collapses all
+    /// 208 volcanoes onto a single name (207 duplicates, one group of 208),
+    /// which this budget still catches by two orders of magnitude.
+    ///
+    /// This replaces an earlier test, `every_cell_of_one_edifice_carries_
+    /// one_name`, whose doc claimed it "can fail on its own" but could not:
+    /// under the shipped `volcano_name(&Volcano, …)` signature, the name is
+    /// a pure function of a `Volcano` value, and
+    /// `every_cell_of_one_edifice_resolves_to_one_volcano` already asserts
+    /// every cell of one cone resolves to the *same* `Volcano` (full
+    /// `PartialEq`, including `recurrence` and `style`). Two equal
+    /// `Volcano`s feeding a pure function are equal-name by construction —
+    /// that test's collapse-invariance was a theorem of its sibling, not an
+    /// independent check, and never could have gone red on its own.
     #[test]
     fn distinct_volcanoes_carry_distinct_names_for_one_people() {
         let (geo, terrain) = globe();
@@ -353,17 +386,29 @@ mod tests {
             all_cones.len() > 1,
             "fewer than two volcanoes on the test globe — distinctness is untestable here"
         );
-        let mut seen: BTreeMap<String, CellId> = BTreeMap::new();
+        let mut seen: BTreeMap<String, Vec<CellId>> = BTreeMap::new();
         for source in all_cones.keys() {
             let volcano = volcano_at(Seed(42), &terrain, *source).expect("an edifice cell");
             let name = volcano_name(Seed(42), &volcano, "aeldrin", &ph, &morph).roman;
-            if let Some(collision) = seen.insert(name.clone(), *source) {
-                panic!(
-                    "{source:?} and {collision:?} are different volcanoes yet share the name \
-                     {name:?}"
-                );
-            }
+            seen.entry(name).or_default().push(*source);
         }
+        let total = all_cones.len();
+        let distinct = seen.len();
+        let duplicated_names = total - distinct;
+        let worst_group = seen.values().map(Vec::len).max().unwrap_or(0);
+        assert!(
+            duplicated_names <= 5,
+            "{duplicated_names} of {total} names collided (budget 5, decision 0024's \
+             collision base rate) — a real regression, not birthday-problem noise: {:?}",
+            seen.iter()
+                .filter(|(_, cells)| cells.len() > 1)
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            worst_group <= 3,
+            "the worst-shared name covers {worst_group} volcanoes (budget 3) — a real \
+             regression, not birthday-problem noise"
+        );
     }
 
     /// The precondition [`volcano_at`]'s `expect` rests on, asserted rather

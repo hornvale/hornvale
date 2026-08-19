@@ -603,7 +603,13 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// blackbody one) re-places seed 42's settlements a second time this
 /// campaign, and the flagship's name goes `Goodo` -> **`Doadaga`**. Re-read
 /// from `book/src/gallery/possession-seed-42.md` as the note above insists.
-const GRIEVANCE_NPC: &str = "bugbear of Dooga";
+///
+/// A TENTH time (`the_first_mark.rs` records a ninth, `Doadaga` -> `Dooga`,
+/// at The Glasshouse's close), now at The Burr (Task 4): admitting an
+/// alveolar trill as an ordinary manner re-places seed 42's settlements yet
+/// again, `Dooga` -> **`Doaba`**. Both copies moved together — see
+/// `the_first_mark.rs`'s `the_two_grievance_npc_copies_agree`.
+const GRIEVANCE_NPC: &str = "bugbear of Doaba";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

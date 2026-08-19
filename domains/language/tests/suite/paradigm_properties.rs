@@ -8,6 +8,7 @@ use hornvale_language::morphology::ClassPosition;
 use hornvale_language::paradigm::{level_paradigm, realize_paradigm_cell};
 use hornvale_language::phoneme::{Backness, Height, Manner, Place, Segment, Tone};
 use hornvale_language::phonology::Phonology;
+use hornvale_language::typology::{Harmony, Orthography};
 use std::collections::BTreeMap;
 
 fn t() -> Segment {
@@ -51,6 +52,8 @@ fn scenario_phonology() -> Phonology {
         onsets: vec![vec![]],
         nuclei: vec![1],
         codas: vec![vec![Manner::Stop], vec![]],
+        harmony: Harmony::None,
+        orthography: Orthography::Digraph,
     }
 }
 

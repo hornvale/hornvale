@@ -10,7 +10,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `39`
 
-Score **21**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -27,20 +27,20 @@ Score **21**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 
 ### Seed `619`
 
-Score **20**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **19**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
 | `goblin-flagship-population` | 0 | 2 |
 | `mean-warning-legibility` | 0 | 0.046997699 |
+| `name-collision-rate` | 0 | 0.1 |
 | `rank-size-slope` | 0 | -1.1270738 |
-| `homophony-count-bugbear` | 0.0005005005 | 0 |
 | `name-people-recoverability` | 0.0005005005 | 0.6 |
-| `name-collision-rate` | 0.001001001 | 0.13333333 |
 | `settlement-count` | 0.001001001 | 37 |
 | `first-day-pays-tribute-to` | 0.001003009 | 703106.25 |
 | `chorus-variance` | 0.0015015015 | 0.0062652122 |
 | `largest-holding-share` | 0.002002002 | 0.06133829 |
+| `peoples-alive-at-bake-end` | 0.002002002 | 10 |
 
 ### Seed `652`
 
@@ -95,7 +95,7 @@ Score **16**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 
 ### Seed `775`
 
-Score **15**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -108,7 +108,7 @@ Score **15**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `goblin-settlement-count` | 0.0005005005 | 1 |
 | `chorus-param-spread` | 0.001001001 | 0.10767857 |
 | `divergence-magnitude-hobgoblin` | 0.0015015015 | 8 |
-| `name-prefix-settlement-scope` | 0.004004004 | 1 |
+| `name-people-recoverability` | 0.0055055055 | 0.5 |
 
 ### Seed `957`
 
@@ -185,10 +185,10 @@ Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | metric | depth | value |
 |---|---|---|
 | `year-std-days` | 0 | 1185.6202 |
-| `name-length-goblin` | 0.001001001 | 5 |
 | `chorus-distinctiveness` | 0.0025025025 | 0.18772295 |
 | `name-people-recoverability` | 0.0025025025 | 0.28571429 |
 | `brightening-per-gyr` | 0.004004004 | 0.23003798 |
+| `name-length-goblin` | 0.004004004 | 5.25 |
 | `first-day-pays-tribute-to` | 0.0050150451 | 675712.5 |
 | `obliquity-range` | 0.008008008 | 4.7244707 |
 | `kobold-settlement-count` | 0.0085085085 | 0 |
@@ -211,23 +211,6 @@ Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `mean-population` | 0.009009009 | 37.121662 |
 | `ocean-fraction` | 0.009009009 | 0.75301499 |
 | `pantheon-size-kobold` | 0.0096839959 | 16 |
-
-### Seed `694`
-
-Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `defensibility-capacity-rank-corr` | 0 | 0.44620851 |
-| `mean-population` | 0.001001001 | 40.151685 |
-| `goblin-flagship-surplus` | 0.002002002 | 0.050176574 |
-| `pop-weighted-abs-latitude` | 0.002002002 | 53.568164 |
-| `capacity-by-abs-latitude` | 0.006006006 | 0.28227902 |
-| `continent-count` | 0.0075075075 | 2 |
-| `homophony-count-hobgoblin` | 0.0085085085 | 32 |
-| `insolation-rel` | 0.009009009 | 1.0978476 |
-| `zone-position` | 0.009009009 | 0.010468529 |
-| `kobold-flagship-population` | 0.0096839959 | 70 |
 
 ### Seed `850`
 
@@ -258,10 +241,27 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `unrest-coverage` | 0.002002002 | 0.0010009277 |
 | `cave-fraction` | 0.004004004 | 0.041861652 |
 | `coincidence-days-per-century` | 0.004004004 | 509 |
-| `distinguishable-capacity-bugbear` | 0.005005005 | 864 |
+| `distinguishable-capacity-bugbear` | 0.004004004 | 864 |
 | `mean-depth-to-basement` | 0.009009009 | 21.70047 |
 | `pantheon-size-kobold` | 0.0096839959 | 16 |
 | `mean-ore-grade` | 0.015015015 | 0.042125904 |
+
+### Seed `694`
+
+Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `defensibility-capacity-rank-corr` | 0 | 0.44620851 |
+| `mean-population` | 0.001001001 | 40.151685 |
+| `goblin-flagship-surplus` | 0.002002002 | 0.050176574 |
+| `pop-weighted-abs-latitude` | 0.002002002 | 53.568164 |
+| `capacity-by-abs-latitude` | 0.006006006 | 0.28227902 |
+| `continent-count` | 0.0075075075 | 2 |
+| `insolation-rel` | 0.009009009 | 1.0978476 |
+| `zone-position` | 0.009009009 | 0.010468529 |
+| `kobold-flagship-population` | 0.0096839959 | 70 |
+| `largest-continent-share` | 0.012012012 | 0.9122721 |
 
 ### Seed `193`
 
@@ -274,8 +274,8 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `history-myth-hop-median` | 0.0015015015 | 1 |
 | `coast-roughness-slope` | 0.007007007 | 0.3362763 |
 | `pop-weighted-abs-latitude` | 0.007007007 | 7.1652447 |
+| `distinguishable-capacity-bugbear` | 0.0075075075 | 810 |
 | `shoreline-development` | 0.008008008 | 10.943626 |
-| `distinguishable-capacity-bugbear` | 0.0085085085 | 810 |
 | `first-day-is-ruin` | 0.009009009 | 54787.5 |
 | `first-day-occ-cause-migrated` | 0.009009009 | 54787.5 |
 | `largest-continent-share` | 0.015015015 | 0.21711504 |
@@ -295,7 +295,7 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `chorus-param-spread` | 0.0085085085 | 0.12856061 |
 | `kobold-settlement-count` | 0.0085085085 | 0 |
 | `name-pattern-signatures` | 0.0095095095 | 8 |
-| `name-syllables-goblin` | 0.010510511 | 2 |
+| `sediment-volume` | 0.011011011 | 742277.86 |
 
 ### Seed `68`
 
@@ -304,13 +304,13 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | metric | depth | value |
 |---|---|---|
 | `first-day-occ-cause-fled` | 0.002002002 | 273937.5 |
+| `name-prefix-settlement-scope` | 0.004004004 | 1 |
 | `chorus-distortion` | 0.005005005 | 0.41180556 |
 | `name-people-recoverability` | 0.0055055055 | 0.5 |
 | `peoples-alive-at-bake-end` | 0.0065065065 | 12 |
 | `peoples-placed` | 0.0065065065 | 12 |
 | `chorus-param-spread` | 0.0085085085 | 0.12856061 |
 | `kobold-settlement-count` | 0.0085085085 | 0 |
-| `name-prefix-settlement-scope` | 0.009009009 | 0.99856938 |
 | `name-pattern-signatures` | 0.0095095095 | 8 |
 | `history-myth-hop-median` | 0.010510511 | 8 |
 
@@ -346,7 +346,7 @@ Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `first-day-occ-cause-fled` | 0.006006006 | 82181.25 |
 | `forgotten-fraction` | 0.007007007 | 0.33992095 |
 | `endorheic-coverage` | 0.01001001 | 0.42894281 |
-| `homophony-count-bugbear` | 0.011011011 | 84 |
+| `coast-roughness-slope` | 0.013013013 | 0.12696211 |
 
 ### Seed `611`
 
@@ -365,22 +365,22 @@ Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `shoreline-development` | 0.016016016 | 5.6109967 |
 | `coast-roughness-slope` | 0.023023023 | 0.13484474 |
 
-### Seed `991`
+### Seed `730`
 
-Score **7**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
-| `deposit-density` | 0 | 0.58044349 |
-| `endorheic-coverage` | 0 | 0.45921657 |
-| `mean-land-elevation-m` | 0 | 2942.0455 |
-| `mountain-coverage` | 0 | 0.72677542 |
-| `cascade-rules-fired-bugbear` | 0.0025025025 | 4 |
-| `name-syllables-goblin` | 0.0025025025 | 1.8571429 |
-| `shoreline-development` | 0.006006006 | 5.3576247 |
-| `landmass-count` | 0.014514515 | 44 |
-| `alignment-drift-deg-per-kyr` | 0.014783527 | 0.30205556 |
-| `waterfall-count` | 0.015515516 | 3 |
+| `goblin-settlement-count` | 0.001001001 | 115 |
+| `karst-fraction` | 0.002002002 | 0.20883404 |
+| `greenhouse-forcing-k` | 0.004004004 | 0.99847507 |
+| `largest-holding-share` | 0.005005005 | 0.0056659069 |
+| `divergence-magnitude-bugbear` | 0.0065065065 | 9 |
+| `endorheic-coverage` | 0.007007007 | 0.15394609 |
+| `total-population` | 0.007007007 | 15355 |
+| `settlement-count` | 0.009009009 | 468 |
+| `homophony-count-bugbear` | 0.01001001 | 1 |
+| `vestige-density` | 0.012012012 | 0.041653134 |
 
 ### Seed `907`
 
@@ -454,6 +454,7 @@ Every numeric/integer census column with a domain and a role that this report di
 | `pantheon-size-goblin-twin` | too few present values: 0 < 50 |
 | `name-length-goblin-twin` | too few present values: 0 < 50 |
 | `pantheon-cyclic-share-goblin-twin` | too few present values: 0 < 50 |
+| `cascade-rules-fired-goblin` | both rails tied: 173 at min, 75 at max of 1000 |
 | `name-prefix-region-scope` | frozen: min == max across 1000 worlds |
 | `hue-depth-goblin` | frozen: min == max across 1000 worlds |
 | `hue-depth-kobold` | frozen: min == max across 1000 worlds |
@@ -464,10 +465,10 @@ Every numeric/integer census column with a domain and a role that this report di
 | `core-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `core-homophony-bugbear` | frozen: min == max across 1000 worlds |
 | `core-homophony-kobold` | frozen: min == max across 1000 worlds |
-| `homophony-merger-share-goblin` | frozen: min == max across 802 worlds |
-| `homophony-merger-share-hobgoblin` | frozen: min == max across 767 worlds |
+| `homophony-merger-share-goblin` | frozen: min == max across 790 worlds |
+| `homophony-merger-share-hobgoblin` | frozen: min == max across 745 worlds |
 | `homophony-merger-share-bugbear` | frozen: min == max across 998 worlds |
-| `homophony-merger-share-kobold` | frozen: min == max across 673 worlds |
+| `homophony-merger-share-kobold` | frozen: min == max across 664 worlds |
 | `confusable-homophony-goblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-hobgoblin` | frozen: min == max across 1000 worlds |
 | `confusable-homophony-bugbear` | frozen: min == max across 1000 worlds |

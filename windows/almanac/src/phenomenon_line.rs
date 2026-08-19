@@ -115,7 +115,15 @@ fn tongue_head(speaker: &Speaker, vocab: &CommonVocabulary, concept: &str) -> St
             ClassPosition::Suffix => format!("{plain} {}", marker.roman),
         },
         MorphDepth::Affix => match segments {
-            Some(segs) => affix(segs, &marker.segments, speaker.morph.class_position).roman,
+            Some(segs) => {
+                affix(
+                    segs,
+                    &marker.segments,
+                    speaker.morph.class_position,
+                    speaker.orthography,
+                )
+                .roman
+            }
             None => plain,
         },
     }
@@ -211,6 +219,7 @@ pub(crate) fn test_speaker(concepts: &[&str]) -> Speaker {
             tonality: 0.0,
             exotic: ExoticSeg::None,
         },
+        &hornvale_language::typology::concatenative(),
     );
     let exposures: BTreeMap<String, ExposureClass> = concepts
         .iter()
@@ -236,6 +245,7 @@ pub(crate) fn test_speaker(concepts: &[&str]) -> Speaker {
             class: BTreeMap::new(),
         },
         sky_animate: false,
+        orthography: ph.orthography,
     }
 }
 

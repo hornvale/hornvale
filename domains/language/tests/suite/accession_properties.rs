@@ -72,7 +72,12 @@ fn later_epoch_roots_end_closed_when_the_phonology_admits_both() {
     // re-search rather than weaken, so that is what was done. Seed 31 is the
     // first that satisfies the whole body on the merged tree.
     let seed = Seed(31);
-    let ph = draw_phonology(&seed, "goblin", &permissive_envelope());
+    let ph = draw_phonology(
+        &seed,
+        "goblin",
+        &permissive_envelope(),
+        &hornvale_language::typology::concatenative(),
+    );
     assert!(
         ph.codas.iter().any(|t| t.is_empty()),
         "fixture precondition: the phonology must admit an OPEN coda \
@@ -89,8 +94,15 @@ fn later_epoch_roots_end_closed_when_the_phonology_admits_both() {
 
     let concepts = ["water", "stone", "fire", "hill", "river", "ford"];
     let epoch_of = |c: &str| u32::from(matches!(c, "hill" | "river" | "ford"));
-    let assigned =
-        assign_proto_roots_with_epoch_for_test(&seed, "goblinoid", &ph, &concepts, &[], epoch_of);
+    let assigned = assign_proto_roots_with_epoch_for_test(
+        &seed,
+        "goblinoid",
+        &ph,
+        &hornvale_language::typology::concatenative(),
+        &concepts,
+        &[],
+        epoch_of,
+    );
 
     let old: Vec<_> = ["water", "stone", "fire"]
         .iter()
@@ -163,7 +175,12 @@ fn later_epoch_roots_end_closed_when_the_phonology_admits_both() {
 #[test]
 fn later_epoch_roots_degrade_to_epoch_zero_when_no_closed_coda_exists() {
     let seed = Seed(1);
-    let ph = draw_phonology(&seed, "goblin", &permissive_envelope());
+    let ph = draw_phonology(
+        &seed,
+        "goblin",
+        &permissive_envelope(),
+        &hornvale_language::typology::concatenative(),
+    );
     assert!(
         ph.codas.iter().all(|t| t.is_empty()),
         "fixture precondition: the phonology must admit NO closed coda \
@@ -179,6 +196,7 @@ fn later_epoch_roots_degrade_to_epoch_zero_when_no_closed_coda_exists() {
         &seed,
         "goblinoid",
         &ph,
+        &hornvale_language::typology::concatenative(),
         &concepts,
         &[],
         later_epoch,
@@ -187,6 +205,7 @@ fn later_epoch_roots_degrade_to_epoch_zero_when_no_closed_coda_exists() {
         &seed,
         "goblinoid",
         &ph,
+        &hornvale_language::typology::concatenative(),
         &concepts,
         &[],
         all_epoch_zero,
@@ -275,12 +294,18 @@ fn appending_the_elf_cohort_displaces_no_existing_proto_root() {
     let mut folded_moved_somewhere = false;
     for raw in 1u64..=8 {
         let seed = Seed(raw);
-        let ph = draw_phonology(&seed, "goblin", &permissive_envelope());
+        let ph = draw_phonology(
+            &seed,
+            "goblin",
+            &permissive_envelope(),
+            &hornvale_language::typology::concatenative(),
+        );
 
         let control = assign_proto_roots_with_epoch_for_test(
             &seed,
             "goblinoid",
             &ph,
+            &hornvale_language::typology::concatenative(),
             &without_elves,
             &[],
             shipped_epoch,
@@ -289,6 +314,7 @@ fn appending_the_elf_cohort_displaces_no_existing_proto_root() {
             &seed,
             "goblinoid",
             &ph,
+            &hornvale_language::typology::concatenative(),
             &all,
             &[],
             shipped_epoch,
@@ -297,6 +323,7 @@ fn appending_the_elf_cohort_displaces_no_existing_proto_root() {
             &seed,
             "goblinoid",
             &ph,
+            &hornvale_language::typology::concatenative(),
             &all,
             &[],
             folded_epoch,

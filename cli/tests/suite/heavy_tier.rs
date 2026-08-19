@@ -251,9 +251,9 @@ fn the_canonical_heavy_reason_states_no_duration() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 29] = [
+const EXPECTED_UNTOKENISED: [&str; 31] = [
     "...",
-    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar at 0.00 SE from it; three census epochs of one unchanged report read 0.5667, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing)",
+    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; four census epochs of one unchanged report read 0.5667, 0.6083, 0.6000 and 0.6083, all inside one SE of the bar, so the battery separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
     "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate and to 12/60 = 0.200 at The Underworld's close, denominator held at 60 both times, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 12 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
@@ -278,7 +278,9 @@ const EXPECTED_UNTOKENISED: [&str; 29] = [
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",
+    "search: re-derives the annihilate fixture's seed; run explicitly with --ignored",
     "search: re-derives the wear fixture's seed; run explicitly with --ignored",
+    "search: re-derives the wear-probe fixture's seed; run explicitly with --ignored",
     "superseded by decision 0016; kept for one release",
     "timekeeper: reads the run.json `make ci` writes; not a standalone test",
 ];

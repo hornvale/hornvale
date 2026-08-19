@@ -846,16 +846,32 @@ mod tests {
         // and nothing here measured which. A reader re-deriving this should
         // instrument `evaluable_columns` directly instead of diffing the
         // census, which is the mistake this note exists to save them.
+        //
+        // THE BURR (ROOT_EPOCH v4): evaluable 115 -> 114, excluded 50 -> 51,
+        // total unchanged at 165 — exactly one column moved from evaluable to
+        // excluded. IDENTIFIED by the method this note prescribes — instrument
+        // `evaluable_columns` and compare its evaluable/excluded sets under this
+        // refresh against the pre-refresh (The Underworld's) census, rather than
+        // diffing present values: the column is `cascade-rules-fired-goblin`,
+        // now excluded with reason `both rails tied: 173 at min, 75 at max of
+        // 1000`. It is a cascade metric and this epoch reseeds goblin's
+        // sound-change cascade, so its distribution now piles worlds at both
+        // rails instead of spreading a tail the ranker can rank on — a genuine
+        // degeneracy, not a CSV artifact, and NOT the `min == max` collapse the
+        // neighbouring `hue-depth-goblin` case pins. It surfaced only at the
+        // merge re-run: the previous chamber run reddened on `census_duration`
+        // first and nextest's fail-fast cancelled this test, so the budget red
+        // masked it (this test is not in the sub-floor tier a local gate runs).
         let c = committed();
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            115,
+            114,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            50,
+            51,
             "excluded count moved — re-measure and update this"
         );
     }

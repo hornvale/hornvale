@@ -116,6 +116,7 @@ fn permissive_proto() -> Phonology {
             tonality: 0.0,
             exotic: ExoticSeg::None,
         },
+        &hornvale_language::typology::concatenative(),
     )
 }
 
@@ -266,7 +267,12 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     let mut checked = 0usize;
     for seed in 0..64u64 {
         let proto = permissive_proto();
-        let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+        let ph = draw_phonology(
+            &Seed(seed),
+            "swept",
+            &swept_envelope(seed),
+            &hornvale_language::typology::concatenative(),
+        );
         let mut exposures = BTreeMap::new();
         for c in ["water", "fire", "moon", "shadow"] {
             exposures.insert(c.to_string(), ExposureClass::Steeped);
@@ -399,7 +405,12 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
 fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
     for seed in 0..64u64 {
         let proto = permissive_proto();
-        let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+        let ph = draw_phonology(
+            &Seed(seed),
+            "swept",
+            &swept_envelope(seed),
+            &hornvale_language::typology::concatenative(),
+        );
         let mut exposures = BTreeMap::new();
         for c in ["water", "fire", "moon", "shadow"] {
             exposures.insert(c.to_string(), ExposureClass::Steeped);

@@ -23,10 +23,11 @@ use crate::lexicon::{LexEntry, Lexicon};
 use crate::morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
 };
-use crate::naming::{Namer, render_views, segments_of};
+use crate::naming::{Namer, render_views_with, segments_of};
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
 use crate::streams;
+use crate::typology::Orthography;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -102,13 +103,18 @@ fn order_from_roll(roll: u32) -> ConstituentOrder {
 /// `.../grammar/copula` stream. Uses the exact syllable-fill mechanism
 /// [`crate::etymology::proto_root`] uses for proto-roots: one template
 /// syllable via [`Namer::draw_syllables`], flattened via [`segments_of`]
-/// and rendered via [`render_views`] — the same reduction every lexicon
-/// word and generated name goes through, so a drawn copula is
-/// indistinguishable in kind from any other word in the tongue.
-fn draw_copula_form(stream: &mut Stream, namer: &Namer) -> (Vec<Segment>, String) {
+/// and rendered via [`render_views_with`] under `orth` (the tongue's own
+/// [`Phonology::orthography`]) — the same reduction every lexicon word and
+/// generated name goes through, so a drawn copula is indistinguishable in
+/// kind from any other word in the tongue.
+fn draw_copula_form(
+    stream: &mut Stream,
+    namer: &Namer,
+    orth: Orthography,
+) -> (Vec<Segment>, String) {
     let syllables = namer.draw_syllables(stream, 1, 1, false);
     let segments = segments_of(&syllables);
-    let roman = render_views(&segments).roman;
+    let roman = render_views_with(&segments, orth).roman;
     (segments, roman)
 }
 
@@ -134,7 +140,7 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
         .derive(streams::COPULA)
         .stream();
     let (copula_segments, copula) = if copula_stream.range_u32(1, 100) <= 60 {
-        let (segments, roman) = draw_copula_form(&mut copula_stream, &namer);
+        let (segments, roman) = draw_copula_form(&mut copula_stream, &namer, ph.orthography);
         (Some(segments), Some(roman))
     } else {
         (None, None)
@@ -253,11 +259,18 @@ struct Marked {
 /// [`affix`] join when `current`'s segments are known. A segment-less word
 /// (a [`LexEntry::Compound`] complement) PANICS — the loud arm the T1
 /// review demanded; author the lexicon's compound-segment retention before
-/// Affix-marking a Compound.
-fn layer_affix(current: Marked, marker: &MorphForm, position: ClassPosition) -> Marked {
+/// Affix-marking a Compound. `orth` is the tongue's own
+/// [`crate::phonology::Phonology::orthography`] (spec §3.6), passed down
+/// from [`realize_tongue_deep`].
+fn layer_affix(
+    current: Marked,
+    marker: &MorphForm,
+    position: ClassPosition,
+    orth: Orthography,
+) -> Marked {
     match &current.segments {
         Some(segments) => {
-            let joined = affix(segments, &marker.segments, position);
+            let joined = affix(segments, &marker.segments, position, orth);
             Marked {
                 segments: Some(joined.segments),
                 roman: joined.roman,
@@ -306,6 +319,10 @@ enum Role {
 /// "the predicate". Noun-class marking always targets the complement noun:
 /// `Affix` joins the marker onto it per `morph.class_position`; `Particle`
 /// places the marker as a free word on that same side of the noun.
+///
+/// `orth` is the tongue's own [`crate::phonology::Phonology::orthography`]
+/// (spec §3.6): a VIEW, so it changes only the `Affix`-depth marker joins'
+/// spelling, never `morph`/`grammar`/`lexicon` or which draw fired.
 /// type-audit: bare-ok(prose)
 pub fn realize_tongue_deep(
     clause: &TongueClause,
@@ -313,6 +330,7 @@ pub fn realize_tongue_deep(
     morph: &TongueMorphology,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &Lexicon,
+    orth: Orthography,
 ) -> Result<String, TongueGap> {
     let mut complement = match lexicon.entry(&clause.complement_concept) {
         Some(LexEntry::Root { derivation, views }) => Marked {
@@ -347,7 +365,7 @@ pub fn realize_tongue_deep(
         match morph.noun_class_depth {
             MorphDepth::None => {}
             MorphDepth::Affix => {
-                complement = layer_affix(complement, marker, morph.class_position);
+                complement = layer_affix(complement, marker, morph.class_position, orth);
             }
             MorphDepth::Particle => class_particle = Some(marker.roman.clone()),
         }
@@ -372,9 +390,10 @@ pub fn realize_tongue_deep(
                         segments: grammar.copula_segments.clone(),
                         roman: copula.clone(),
                     };
-                    copula_roman = Some(layer_affix(cop, marker, ClassPosition::Suffix).roman);
+                    copula_roman =
+                        Some(layer_affix(cop, marker, ClassPosition::Suffix, orth).roman);
                 } else {
-                    complement = layer_affix(complement, marker, ClassPosition::Suffix);
+                    complement = layer_affix(complement, marker, ClassPosition::Suffix, orth);
                 }
             }
             MorphDepth::Particle => evidential_particle = Some(marker.roman.clone()),
@@ -461,6 +480,7 @@ mod tests {
     use super::*;
     use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
+    use crate::naming::render_views;
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use std::collections::BTreeMap;
@@ -484,7 +504,12 @@ mod tests {
     /// tests below vary the `species` argument to `tongue_grammar` itself,
     /// not this shared phonology.
     fn test_phonology() -> Phonology {
-        draw_phonology(&Seed(1), "test-tongue", &test_envelope())
+        draw_phonology(
+            &Seed(1),
+            "test-tongue",
+            &test_envelope(),
+            &crate::typology::concatenative(),
+        )
     }
 
     /// claim: structural(seed: 42) — determinism/species-keying at one fixed
@@ -867,7 +892,15 @@ mod tests {
             class: class_map.clone(),
         };
         assert_eq!(
-            realize_tongue_deep(&clause, &grammar, &shallow, &noun_class_of, &lex).unwrap(),
+            realize_tongue_deep(
+                &clause,
+                &grammar,
+                &shallow,
+                &noun_class_of,
+                &lex,
+                Orthography::Digraph,
+            )
+            .unwrap(),
             realize_tongue(&clause, &grammar, &lex).unwrap(),
             "MorphDepth::None on both axes must reproduce the C3 floor surface exactly"
         );
@@ -886,11 +919,22 @@ mod tests {
             .copula_segments
             .clone()
             .expect("overt_copula_grammar draws copula_segments alongside copula");
-        let expected_copula =
-            affix(&copula_segments, &witnessed_segments, ClassPosition::Suffix).roman;
-        let marked =
-            realize_tongue_deep(&clause, &grammar, &affix_evidential, &noun_class_of, &lex)
-                .unwrap();
+        let expected_copula = affix(
+            &copula_segments,
+            &witnessed_segments,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let marked = realize_tongue_deep(
+            &clause,
+            &grammar,
+            &affix_evidential,
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .unwrap();
         assert!(
             marked.contains(&expected_copula),
             "Affix evidential must suffix the marker onto the copula: {marked:?} \
@@ -912,6 +956,7 @@ mod tests {
             &particle_evidential,
             &noun_class_of,
             &lex,
+            Orthography::Digraph,
         )
         .unwrap();
         let tokens: Vec<&str> = particled.trim_end_matches('.').split(' ').collect();
@@ -935,11 +980,22 @@ mod tests {
             evidential: evidential_map.clone(),
             class: class_map.clone(),
         };
-        let expected_noun =
-            affix(&complement_segments, &class_segments, ClassPosition::Prefix).roman;
-        let class_marked =
-            realize_tongue_deep(&clause, &grammar, &class_affix_prefix, &noun_class_of, &lex)
-                .unwrap();
+        let expected_noun = affix(
+            &complement_segments,
+            &class_segments,
+            ClassPosition::Prefix,
+            Orthography::Digraph,
+        )
+        .roman;
+        let class_marked = realize_tongue_deep(
+            &clause,
+            &grammar,
+            &class_affix_prefix,
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .unwrap();
         assert!(
             class_marked.contains(&expected_noun),
             "class Affix + Prefix must precede the complement noun with the marker: \
@@ -958,6 +1014,7 @@ mod tests {
             &complement_segments,
             &witnessed_segments,
             ClassPosition::Suffix,
+            Orthography::Digraph,
         )
         .roman;
         let zero_marked = realize_tongue_deep(
@@ -966,6 +1023,7 @@ mod tests {
             &affix_evidential,
             &noun_class_of,
             &lex,
+            Orthography::Digraph,
         )
         .unwrap();
         assert!(
@@ -989,7 +1047,12 @@ mod tests {
             segments: None,
             roman: "Manywater".to_string(),
         };
-        let _ = layer_affix(current, &marker, ClassPosition::Suffix);
+        let _ = layer_affix(
+            current,
+            &marker,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        );
     }
 
     #[test]
@@ -1028,8 +1091,15 @@ mod tests {
         };
         let grammar = overt_copula_grammar(&ph);
 
-        let rendered = realize_tongue_deep(&clause, &grammar, &morph, &noun_class_of, &lex)
-            .expect("a Steeped complement must realize");
+        let rendered = realize_tongue_deep(
+            &clause,
+            &grammar,
+            &morph,
+            &noun_class_of,
+            &lex,
+            Orthography::Digraph,
+        )
+        .expect("a Steeped complement must realize");
         assert!(
             rendered.contains(&inferred_roman),
             "Inferred must render with its drawn form when passed explicitly: {rendered:?}"

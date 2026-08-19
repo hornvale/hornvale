@@ -380,6 +380,7 @@
 - [The Gazetteer](./chronicle/the-gazetteer.md)
 - [The Undertow](./chronicle/the-undertow.md)
 - [The Adit](./chronicle/the-adit.md)
+- [The Burr](./chronicle/the-burr.md)
 
 # Appendix: The Frontier
 
