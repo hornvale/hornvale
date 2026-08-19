@@ -355,7 +355,19 @@ fi
 # shellcheck source=scripts/sluice-phases.sh
 . "$repo_root/scripts/sluice-phases.sh"
 if [ -z "${HV_SLUICE_PHASES:-}" ]; then
-    changed="$(git diff --name-only "$base_sha".."$sha" 2>/dev/null || true)"
+    # THE BASE IS RESOLVED HERE, NOT BORROWED. An earlier cut of this block
+    # read `$base_sha`, which is assigned ~90 lines BELOW — under `set -u`
+    # that is an unbound variable and the chamber died before its first
+    # phase, on every merge, with `line 358: base_sha: unbound variable`.
+    # Resolving locally removes the ordering dependency entirely, so a future
+    # reorder of this file cannot reintroduce it. `|| true` plus `2>/dev/null`
+    # means an unresolvable base yields an empty `changed`, which
+    # sluice_is_prose_only treats as NOT prose-only — the full ladder.
+    prose_base="$(git -C "$repo_root" rev-parse "${HV_SLUICE_BASE:-origin/main}" 2>/dev/null || true)"
+    changed=""
+    if [ -n "$prose_base" ]; then
+        changed="$(git -C "$repo_root" diff --name-only "$prose_base".."$sha" 2>/dev/null || true)"
+    fi
     if sluice_is_prose_only "$changed"; then
         phases="$(sluice_drop_expensive_phases "$phases")"
         echo "sluice-run: PROSE-ONLY candidate — every changed path is hand-written prose."

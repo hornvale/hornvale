@@ -194,6 +194,12 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `room/layout/v1/rectilinear` | where the rectilinear method places chambers |
 | `room/layout/v1/grown` | where the growing method places chambers |
 | `room/layout/v1/anchors` | where a chamber's anchors land in its cells |
+| `underworld/level/v1/partition` | split-or-leaf decisions in a generated underworld level |
+| `underworld/level/v1/cellular` | cellular-automata cave carving within a leaf |
+| `underworld/level/v1/tunneler` | drunkard's-walk tunnel carving within a leaf |
+| `underworld/level/v1/rooms` | partitioned-rooms carving within a leaf |
+| `underworld/level/v1/style` | which content generator and worked/natural mix a leaf gets |
+| `underworld/level/v1/descent` | per-rung seed draw within one descent |
 
 ### hornvale-worldgen
 
