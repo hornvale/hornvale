@@ -44,7 +44,10 @@ pub use snapshot::{
 };
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
-pub use underworld_level::{Level, LevelCellKind, generate_level, generate_level_extent};
+pub use underworld_level::{
+    Level, LevelCellKind, generate_descent, generate_level, generate_level_extent,
+    generate_level_with_origin, generate_level_with_water,
+};
 pub use vantage::*;
 
 use std::io::{BufRead, Write};
