@@ -283,7 +283,7 @@ gen_chart_reference() {
 # derived flesh in the present-day grass. The framing paragraph below is
 # hand-authored; the fenced block is the `history` verb's exact, drift-checked
 # output. THE TWO MUST AGREE. `HISTORY_SITE` is the single source of the cell
-# id for both, and `cli/tests/docs_consistency.rs` asserts that the id named in
+# id for both, and `cli/tests/suite/docs_consistency.rs` asserts that the id named in
 # the prose is the one the block reports and that the block is not empty —
 # because they silently disagreed once. The moving-sea epoch (The Sundering)
 # emptied the previously-pinned cell 36918 while its hand-authored paragraph

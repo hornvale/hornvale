@@ -1,9 +1,9 @@
 # The set roster (The Staff). THE SINGLE SOURCE OF TRUTH for what a set is.
 # Read by scripts/sluice-run.sh (which resolves a phase name to its command)
-# and cli/tests/lane_sets.rs. scripts/census-canonical-host.sh does NOT read
+# and cli/tests/suite/lane_sets.rs. scripts/census-canonical-host.sh does NOT read
 # this file — its require_canonical_host() only takes a set NAME as $1, to
 # name the right dispatch line in its refusal prose. Do not restate this list
-# in prose anywhere — cli/tests/lane_sets.rs fails on a second copy, for the
+# in prose anywhere — cli/tests/suite/lane_sets.rs fails on a second copy, for the
 # reason docs/generated-paths.txt exists.
 #
 # `where` STILL SAYS `lane`, AND THAT IS NOT RESIDUE (The Sluice, Task 12).

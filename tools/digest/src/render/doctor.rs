@@ -20,7 +20,7 @@ use hornvale_kernel::ledger::Value;
 /// placeholder substituted here, not a frozen number.
 pub fn self_map(allowed: &[String], layers: &[String]) -> String {
     let layering = format!(
-        "== Layering (enforced: cli/tests/architecture.rs; picture: book/src/reference/layering.md)\n  \
+        "== Layering (enforced: cli/tests/suite/architecture.rs; picture: book/src/reference/layering.md)\n  \
          {}\n  \
          a domain depends on the kernel and NOTHING else; windows/worldgen is the\n  \
          composition root; external deps allowlist: {}\n",

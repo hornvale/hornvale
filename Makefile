@@ -653,7 +653,7 @@ regen-remote: ## ABANDONED (decision 0063) — censuses regenerate LOCALLY via s
 #     ancestry as a proxy for it and could say GO on a branch that conflicts.
 #   both-sides-added slugs (a decision/chronicle/retro filename minted twice)
 #     -> an add/add conflict, which the mouth reports as a conflict (exit 1).
-#   registry row IDs minted on both sides -> `cli/tests/docs_consistency.rs`
+#   registry row IDs minted on both sides -> `cli/tests/suite/docs_consistency.rs`
 #     asserts ID uniqueness, and the chamber runs it against the real merge
 #     product in the `gate` phase. Again: the object that lands, not a proxy.
 #   the board's hold-off advisory -> `scripts/sluice-request.sh`, which is now

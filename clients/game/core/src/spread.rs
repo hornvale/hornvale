@@ -113,7 +113,7 @@ mod tests {
         // this just proves compose() actually calls one of them either
         // way rather than leaving the plate blank for one band.
         // The binding is `snap`, not the shorter `s`: the repo-wide scan in
-        // `cli/tests/claim_shape.rs` treats a bare `s` as a seed-shaped name
+        // `cli/tests/suite/claim_shape.rs` treats a bare `s` as a seed-shaped name
         // (the census corpora spell that loop the short way), and this loop
         // walks two Snapshots. Tagging it `/// claim:` instead would declare
         // a quantified claim over seeds that this test does not make.
