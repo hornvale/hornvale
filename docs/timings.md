@@ -1562,3 +1562,16 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T01:13:17Z | gate-commit | 54.488 | 56.033 | 15.175 | 1.31 | 0 | dc794631 | campaign/the-gazetteer | MacBookPro | 10 |
 | 2026-08-19T01:48:12Z | gate-commit | 525.908 | 56.154 | 15.402 | 0.14 | 0 | e95ff43a | campaign/the-gazetteer | MacBookPro | 10 |
 | 2026-08-19T01:48:12Z | gate-commit | 192.650 | 56.251 | 15.427 | 0.37 | 0 | e95ff43a | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T11:53:06Z | gate-commit | 765.962 | 828.982 | 477.658 | 1.71 | 0 | 564e07fa | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T11:53:55Z | gate-commit | 23.925 | 54.689 | 14.711 | 2.90 | 0 | 564e07fa | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:08:23Z | gate-commit | 69.710 | 54.922 | 159.217 | 3.07 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:10:57Z | gate-commit | 112.791 | 86.836 | 253.404 | 3.02 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:20:16Z | gate-commit | 542.798 | 395.293 | 296.787 | 1.28 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:21:14Z | gate-commit | 23.990 | 53.877 | 14.471 | 2.85 | 0 | 3780374c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:53:26Z | gate-commit | 293.245 | 54.803 | 15.432 | 0.24 | 0 | faa64ddc | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:54:11Z | gate-commit | 24.978 | 54.853 | 15.121 | 2.80 | 0 | faa64ddc | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T12:59:07Z | gate-commit | 24.921 | 54.570 | 15.113 | 2.80 | 0 | ed8aaa7c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T13:00:05Z | gate-commit | 26.023 | 54.719 | 15.240 | 2.69 | 0 | ed8aaa7c | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T13:38:16Z | rebaseline | 30.586 | 78.142 | 5.491 | 2.73 | 0 | 1331e0c3 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T13:40:14Z | rebaseline | 112.685 | 256.881 | 27.675 | 2.53 | 0 | 1331e0c3 | campaign/the-gazetteer | MacBookPro | 10 |
+| 2026-08-19T14:02:32Z | gate-commit | 410.072 | 517.491 | 361.161 | 2.14 | 0 | 1331e0c3 | campaign/the-gazetteer | MacBookPro | 10 |

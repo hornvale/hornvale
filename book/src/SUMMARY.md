@@ -39,6 +39,7 @@
 - [The Sky of Seed 42](./gallery/the-sky.md)
 - [The Night Sky of Seed 42](./gallery/star-chart-seed-42.md)
 - [The Land of Seed 42](./gallery/elevation-seed-42.md)
+- [The Gazetteer of Seed 42](./gallery/gazetteer-seed-42.md)
 - [The Biomes of Seed 42](./gallery/biome-seed-42.md)
 - [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)
 - [The Peoples of Seed 42](./gallery/settlement-seed-42.md)

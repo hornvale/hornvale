@@ -5037,6 +5037,233 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
     language_of_in(world, &wc, species)
 }
 
+/// The world's peoples for gazetteer naming: every `SocialForm::Settled`
+/// kind in the canonical biosphere registry, registry (alphabetical) order.
+///
+/// Chosen over [`placed_peoples`] deliberately: a feature's name is a fact
+/// about the SPECIES' language, not about whether that species happened to
+/// place a flagship settlement in this particular world, and resolving it
+/// needs no settlement build at all — `BuildDepth::Terrain` suffices
+/// (`windows/CLAUDE.md`, "build to the shallowest sufficient depth"). This is
+/// the same roster `windows/worldgen/tests/gazetteer_naming.rs`'s own
+/// `worlds_peoples` helper measures against (15 peoples, seed-independent).
+/// type-audit: bare-ok(identifier-text: return)
+pub fn gazetteer_peoples() -> Vec<&'static str> {
+    hornvale_species::biosphere_registry()
+        .iter()
+        .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+        .map(|(k, _)| k.0)
+        .collect()
+}
+
+/// Every individuated feature of `world`'s terrain, grouped by class and
+/// sorted magnitude-descending / identity-ascending — the same total order
+/// [`hornvale_terrain::landscape::FeatureIndex`] already carries for the
+/// four domain classes, applied here to the volcano class `gazetteer_features`
+/// gathers separately and does not pre-sort (see `gazetteer.rs`'s module
+/// docs on why volcanoes cannot arrive alongside the other four already
+/// ordered).
+// Named construction site (decision 0092): the gazetteer's own terrain
+// sculpt, independent of `almanac_context`'s Single Sculpt — the two are
+// different callers building for different documents, never the same build
+// threaded twice.
+#[allow(clippy::disallowed_methods)]
+fn gazetteer_by_class(
+    world: &World,
+) -> Result<
+    std::collections::BTreeMap<
+        hornvale_terrain::landscape::FeatureClass,
+        Vec<hornvale_terrain::landscape::Feature>,
+    >,
+    BuildError,
+> {
+    let terrain = terrain_of(world)?;
+    let geo = terrain.geosphere().clone();
+    let mut by_class: std::collections::BTreeMap<_, Vec<_>> = std::collections::BTreeMap::new();
+    for f in gazetteer_features(world.seed, &geo, &terrain) {
+        by_class.entry(f.id.class).or_default().push(f);
+    }
+    for feats in by_class.values_mut() {
+        feats.sort_unstable_by_key(|f| (std::cmp::Reverse(f.magnitude), f.id.cell));
+    }
+    Ok(by_class)
+}
+
+/// One species' `(Phonology, MorphOptions)` naming pair, drawn the
+/// production way — [`language_of_in`] for the phonology,
+/// [`morph_options`] for the morphology from the species' own mind/society
+/// vectors — the identical construction the settlement-naming pass already
+/// performs (`chorus.rs`'s `morph_for` closure), never the flat all-`1.0`
+/// fixture `gazetteer.rs`'s own unit tests use. Panics if `species` is not a
+/// `Settled` kind (every caller sources `species` from
+/// [`gazetteer_peoples`], which filters on exactly that).
+fn gazetteer_namer_for(
+    world: &World,
+    wc: &WorldComponents,
+    species: &'static str,
+) -> (
+    hornvale_language::Phonology,
+    hornvale_language::MorphOptions,
+) {
+    let ph = language_of_in(world, wc, species);
+    let mind = wc.psyche.get(&KindId(species)).unwrap_or_else(|| {
+        panic!("gazetteer_namer_for: '{species}' carries no mind vector (referential integrity)")
+    });
+    let society = wc.society.get(&KindId(species)).unwrap_or_else(|| {
+        panic!("gazetteer_namer_for: '{species}' carries no society vector (referential integrity)")
+    });
+    (ph, morph_options(mind, society))
+}
+
+/// The gazetteer artifact's data: per class, the `cap` largest features
+/// (already sorted and capped) and the class's true total, each feature
+/// carrying every one of the world's peoples' names for it. The `hornvale
+/// gazetteer` CLI command's sole assembly step;
+/// [`hornvale_almanac::gazetteer::render`] formats what this returns.
+/// type-audit: bare-ok(count: cap), bare-ok(count: return)
+pub fn gazetteer_class_entries(
+    world: &World,
+    cap: usize,
+) -> Result<
+    Vec<(
+        hornvale_terrain::landscape::FeatureClass,
+        usize,
+        Vec<hornvale_almanac::gazetteer::Entry>,
+    )>,
+    BuildError,
+> {
+    let by_class = gazetteer_by_class(world)?;
+    let peoples = gazetteer_peoples();
+    let wc = WorldComponents::assemble()?;
+    let namers: std::collections::BTreeMap<
+        &'static str,
+        (
+            hornvale_language::Phonology,
+            hornvale_language::MorphOptions,
+        ),
+    > = peoples
+        .iter()
+        .map(|&species| (species, gazetteer_namer_for(world, &wc, species)))
+        .collect();
+
+    let mut out = Vec::with_capacity(by_class.len());
+    for (class, feats) in by_class {
+        let total = feats.len();
+        let entries = feats
+            .into_iter()
+            .take(cap)
+            .map(|f| {
+                let mut names = std::collections::BTreeMap::new();
+                for &species in &peoples {
+                    let (ph, morph) = namers
+                        .get(species)
+                        .expect("every gazetteer people has a namer built above");
+                    let name = feature_name(world.seed, f.id, species, ph, morph).roman;
+                    names.insert(species.to_string(), name);
+                }
+                hornvale_almanac::gazetteer::Entry {
+                    anchor: f.anchor,
+                    magnitude: f.magnitude,
+                    names,
+                }
+            })
+            .collect();
+        out.push((class, total, entries));
+    }
+    Ok(out)
+}
+
+/// The `explain gazetteer` target's data: per class, its total feature count
+/// and its single largest feature's full multi-name line —
+/// [`gazetteer_class_entries`] with `cap = 1`, reshaped into
+/// [`hornvale_explain::GazetteerClassSummary`]. A class with zero features
+/// (never true of seed 42's five, but not excluded by the type) is dropped
+/// rather than reported with a nonsensical zero-magnitude "largest".
+pub fn gazetteer_class_summaries(
+    world: &World,
+) -> Result<Vec<hornvale_explain::GazetteerClassSummary>, BuildError> {
+    Ok(gazetteer_class_entries(world, 1)?
+        .into_iter()
+        .filter_map(|(class, total, mut entries)| {
+            let largest = entries.pop()?;
+            Some(hornvale_explain::GazetteerClassSummary {
+                class,
+                total,
+                largest_magnitude: largest.magnitude,
+                largest_names: largest.names,
+            })
+        })
+        .collect())
+}
+
+#[cfg(test)]
+mod gazetteer_wiring_tests {
+    use super::*;
+
+    /// A bare `World::new` has no terrain pin facts, so `terrain_of` builds
+    /// at default pins — the same cheap, terrain-only depth
+    /// `gazetteer_class_entries`/`gazetteer_class_summaries` need (no
+    /// settlement build at all; see `gazetteer_peoples`'s doc comment).
+    fn bare_world(seed: u64) -> World {
+        World::new(Seed(seed))
+    }
+
+    #[test]
+    fn gazetteer_peoples_is_the_settled_roster_at_fifteen() {
+        // Seed-independent: the registry, not any generated world.
+        assert_eq!(gazetteer_peoples().len(), 15);
+    }
+
+    /// The entries this returns must actually carry names — the campaign's
+    /// own stop condition (Task 8 brief): a clean drift check is only
+    /// meaningful evidence if the naming join actually ran.
+    #[test]
+    fn gazetteer_class_entries_carries_real_names_for_every_people() {
+        let w = bare_world(42);
+        let entries = gazetteer_class_entries(&w, 3).expect("terrain-only build succeeds");
+        assert!(!entries.is_empty(), "seed 42 has individuated features");
+        let peoples = gazetteer_peoples();
+        let mut saw_any_entry = false;
+        for (_, total, capped) in &entries {
+            assert!(capped.len() <= 3, "cap of 3 must be respected");
+            assert!(
+                capped.len() <= *total,
+                "shown can never exceed the true total"
+            );
+            for entry in capped {
+                saw_any_entry = true;
+                assert_eq!(
+                    entry.names.len(),
+                    peoples.len(),
+                    "every people must contribute a name to every shown entry"
+                );
+                for name in entry.names.values() {
+                    assert!(!name.is_empty(), "a drawn name must not be empty");
+                }
+            }
+        }
+        assert!(saw_any_entry, "at least one class must have shown entries");
+    }
+
+    /// `cap = 1` collapses to exactly the largest feature per class, and
+    /// `gazetteer_class_summaries` must report the SAME magnitude/names —
+    /// the reshape must not silently pick a different feature.
+    #[test]
+    fn gazetteer_class_summaries_agree_with_the_capped_entries_they_reshape() {
+        let w = bare_world(42);
+        let entries = gazetteer_class_entries(&w, 1).expect("terrain-only build succeeds");
+        let summaries = gazetteer_class_summaries(&w).expect("terrain-only build succeeds");
+        assert_eq!(entries.len(), summaries.len());
+        for ((class, total, capped), summary) in entries.iter().zip(&summaries) {
+            assert_eq!(*class, summary.class);
+            assert_eq!(*total, summary.total);
+            let largest = capped.first().expect("cap=1 with total>0 has one entry");
+            assert_eq!(largest.magnitude, summary.largest_magnitude);
+            assert_eq!(&largest.names, &summary.largest_names);
+        }
+    }
+}
+
 /// Draw a `family`'s proto phonology from this world's seed and the
 /// family's authored proto ancestral vector
 /// ([`hornvale_language::family_proto`]) — the family name occupies the

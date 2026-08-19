@@ -7,6 +7,8 @@
 use hornvale_astronomy::facts;
 use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::CommonVocabulary;
+use hornvale_terrain::landscape::FeatureClass;
+use std::collections::BTreeMap;
 
 /// Locate the world entity: the unique subject carrying a `star-class` fact.
 fn world_entity(world: &World) -> Option<EntityId> {
@@ -127,6 +129,88 @@ pub fn explain_sky(world: &World, vocab: &CommonVocabulary) -> Option<String> {
     Some(out)
 }
 
+/// A feature's info line: every name it carries, joined —
+/// `"Mount McKinley, Denali"` (spec §3.4). `names` iterates in key
+/// (species-label) order, so this is deterministic and elects no lead.
+/// `hornvale_almanac::gazetteer::render_names` is this window's sibling
+/// surface and applies the identical rule, duplicated rather than shared:
+/// this window and the almanac window do not depend on each other
+/// (`windows/CLAUDE.md` — only the composition root may join terrain's
+/// feature identities to language's naming draw), so a three-line join is
+/// the cheaper edge to duplicate than to wire across.
+/// type-audit: bare-ok(identifier-text: names), bare-ok(identifier-text: return)
+pub fn render_multi_name(names: &BTreeMap<String, String>) -> String {
+    names.values().cloned().collect::<Vec<_>>().join(", ")
+}
+
+/// One class's plural word, for [`explain_gazetteer`]'s narration.
+/// Duplicated from `hornvale_almanac::gazetteer`'s own `class_words` for the
+/// same reason [`render_multi_name`] duplicates its join: no cross-window
+/// dependency exists to share it over.
+fn class_word(class: FeatureClass) -> &'static str {
+    match class {
+        FeatureClass::Volcano => "volcanoes",
+        FeatureClass::Landmass => "landmasses",
+        FeatureClass::Sea => "seas",
+        FeatureClass::SaltLake => "salt lakes",
+        FeatureClass::River => "rivers",
+    }
+}
+
+/// One feature class's gazetteer summary, for [`explain_gazetteer`]: how
+/// many features of the class exist, and the single largest one's full
+/// multi-name line (spec §3.4). This window cannot assemble its own
+/// summaries — a feature's name comes from `hornvale-worldgen`'s naming
+/// join, which this crate does not depend on (see [`render_multi_name`]'s
+/// doc comment) — so the composition root builds these and hands them in.
+/// type-audit: bare-ok(count: total), bare-ok(count: largest_magnitude), bare-ok(identifier-text: largest_names)
+pub struct GazetteerClassSummary {
+    /// Which class this summary covers.
+    pub class: FeatureClass,
+    /// How many features of this class the world carries.
+    pub total: usize,
+    /// The largest feature's magnitude.
+    pub largest_magnitude: u32,
+    /// The largest feature's every name, keyed by species label.
+    pub largest_names: BTreeMap<String, String>,
+}
+
+/// Narrate the world's named landscape (spec §3.4): how many features of
+/// each class exist, and — worked through the single largest of each — what
+/// its full multi-name line reads like. There is no observer at this
+/// surface, so a summary's `largest_names` line elects no lead (the same
+/// "without an observer" rule [`render_multi_name`] documents).
+///
+/// `None` if `summaries` is empty — a terrain with no individuated features
+/// at all. Never seed 42's, but a degenerate pin combination could in
+/// principle produce one, and an empty narration is a more honest answer
+/// than an empty string with no signal attached (mirrors [`explain_sky`]'s
+/// own `None`-on-absence contract).
+/// type-audit: bare-ok(artifact: return)
+pub fn explain_gazetteer(summaries: &[GazetteerClassSummary]) -> Option<String> {
+    if summaries.is_empty() {
+        return None;
+    }
+    let total: usize = summaries.iter().map(|s| s.total).sum();
+    let mut out = format!(
+        "This world's landscape carries {total} named feature(s) across {} classes.\n",
+        summaries.len()
+    );
+    for s in summaries {
+        out.push_str(&format!(
+            "  {}: {} feature(s); the largest carries magnitude {} and is named {} \
+             by {} of the world's peoples (derived — no primary name, species-label \
+             ascending, no lead).\n",
+            class_word(s.class),
+            s.total,
+            s.largest_magnitude,
+            render_multi_name(&s.largest_names),
+            s.largest_names.len()
+        ));
+    }
+    Some(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +286,39 @@ mod tests {
             explain_sky(&w, &vocab_for(&w)),
             explain_sky(&reloaded, &vocab_for(&reloaded))
         );
+    }
+
+    fn names(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    /// Spec §3.4: every name joined, species-label ascending (the
+    /// `BTreeMap` key order), no lead.
+    #[test]
+    fn render_multi_name_joins_species_ascending_with_no_lead() {
+        let n = names(&[("khorrun", "Denali"), ("aeldrin", "Mount McKinley")]);
+        assert_eq!(render_multi_name(&n), "Mount McKinley, Denali");
+    }
+
+    #[test]
+    fn explain_gazetteer_is_none_on_an_empty_summary_list() {
+        assert!(explain_gazetteer(&[]).is_none());
+    }
+
+    #[test]
+    fn explain_gazetteer_narrates_every_classs_largest_feature() {
+        let summaries = vec![GazetteerClassSummary {
+            class: FeatureClass::River,
+            total: 106,
+            largest_magnitude: 900,
+            largest_names: names(&[("aeldrin", "Roa"), ("khorrun", "Xoa")]),
+        }];
+        let out = explain_gazetteer(&summaries).expect("a nonempty summary list narrates");
+        assert!(out.contains("106 named feature(s)"));
+        assert!(out.contains("rivers"));
+        assert!(out.contains("Roa, Xoa"));
     }
 }

@@ -62,7 +62,9 @@ fn morph() -> MorphOptions {
 /// figures, which contradict its own chronicle (that is why Task 1 exists).
 ///
 /// Task 1's reported counts at seed 42, production level 6, default pins:
-/// landmass 10, sea 1, salt-lake 80, river 106, volcano 208. Each band is set
+/// landmass 10, sea 1, salt-lake 80, river 106. Task 1's probe never measured
+/// volcanoes — they live in `windows/worldgen`, outside a domain-layer probe
+/// — so the volcano 208 figure comes from Task 6 instead. Each band is set
 /// generously around its measured count so the test is a regression detector
 /// against a future terrain change, not a re-assertion of today's exact
 /// value: too narrow and an unrelated terrain tweak falsely reads as breaking
