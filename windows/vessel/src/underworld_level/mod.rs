@@ -176,11 +176,81 @@ pub fn generate_level_with_origin(
         dof += carve::carve(style.algorithm, rect, stream, &mut cells);
         leaf_styles.push(style);
     }
+    connect_split_boundaries(&tree, &mut cells);
     Level {
         extent,
         cells,
         dof,
         leaf_styles,
+    }
+}
+
+/// Every `Floor`/`Flooded` cell within `region`'s own leaf rects (not the
+/// whole level) — the candidate endpoints a connector can anchor to.
+fn walkable_cells_in(region: &region::Region, cells: &BTreeMap<Cell, LevelCellKind>) -> Vec<Cell> {
+    let mut out = Vec::new();
+    for rect in region::leaves(region) {
+        for x in rect.x..(rect.x + rect.w) {
+            for y in rect.y..(rect.y + rect.h) {
+                let cell = Cell(x, y);
+                if matches!(
+                    cells.get(&cell),
+                    Some(LevelCellKind::Floor) | Some(LevelCellKind::Flooded)
+                ) {
+                    out.push(cell);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The closest pair of cells (Manhattan distance) between two sets —
+/// O(len(a) * len(b)), fine for a one-time generation step at level-sized
+/// cell counts (a handful of splits, at most `MAX_COMPOSITE_DEPTH` deep).
+fn nearest_pair(a: &[Cell], b: &[Cell]) -> Option<(Cell, Cell)> {
+    let mut best: Option<(Cell, Cell, i32)> = None;
+    for &pa in a {
+        for &pb in b {
+            let dist = (pa.0 - pb.0).abs() + (pa.1 - pb.1).abs();
+            if best.is_none_or(|(_, _, d)| dist < d) {
+                best = Some((pa, pb, dist));
+            }
+        }
+    }
+    best.map(|(pa, pb, _)| (pa, pb))
+}
+
+/// Carve a straight L-shaped `Floor` corridor between two arbitrary
+/// cells — the same shape `carve::connect_centers` already uses for
+/// within-leaf room connections, generalized to take endpoints directly
+/// rather than deriving them from room rects.
+fn connect_cells(a: Cell, b: Cell, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+    for x in a.0.min(b.0)..=a.0.max(b.0) {
+        cells.insert(Cell(x, a.1), LevelCellKind::Floor);
+    }
+    for y in a.1.min(b.1)..=a.1.max(b.1) {
+        cells.insert(Cell(b.0, y), LevelCellKind::Floor);
+    }
+}
+
+/// Post-order walk of the partition tree: connect each `Split`'s two
+/// children to each other, after first recursing into both — so by the
+/// time a split connects its own two sides, each side is already fully
+/// connected internally (by induction), and joining any one point from
+/// each side joins the whole subtrees. This is the fix for the gap named
+/// in this task's own header: `region::cut` leaves a permanent wall gap
+/// between siblings, and nothing else in this module ever carves through
+/// it.
+fn connect_split_boundaries(region: &region::Region, cells: &mut BTreeMap<Cell, LevelCellKind>) {
+    if let region::Region::Split(a, b) = region {
+        connect_split_boundaries(a, cells);
+        connect_split_boundaries(b, cells);
+        let a_cells = walkable_cells_in(a, cells);
+        let b_cells = walkable_cells_in(b, cells);
+        if let Some((pa, pb)) = nearest_pair(&a_cells, &b_cells) {
+            connect_cells(pa, pb, cells);
+        }
     }
 }
 
@@ -767,5 +837,60 @@ mod tests {
             levels[0].cells, levels[1].cells,
             "two rungs must not produce the same cells even with matching origin/kind/depth"
         );
+    }
+
+    #[test]
+    /// claim: invariant(seed: 0..20) — every generated level's walkable
+    /// cells form exactly one connected component, for every seed in the
+    /// range. This is the property Task 2's original design silently failed
+    /// to guarantee for any level with more than one leaf.
+    fn every_walkable_cell_is_reachable_from_every_other() {
+        use hornvale_terrain::CaveKind;
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        use std::collections::{BTreeSet, VecDeque};
+
+        for seed_value in 0..20u64 {
+            let extent = Rect {
+                x: 0,
+                y: 0,
+                w: 40,
+                h: 24,
+            };
+            let level = generate_level_with_origin(
+                extent,
+                CaveKind::Fracture,
+                ChamberOrigin::Found,
+                NEUTRAL_WORKED_BIAS,
+                Seed(seed_value),
+            );
+            let walkable: BTreeSet<Cell> = level
+                .cells
+                .iter()
+                .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
+                .map(|(&c, _)| c)
+                .collect();
+            let Some(&start) = walkable.iter().next() else {
+                continue; // a degenerate all-wall level has nothing to check
+            };
+            let mut seen = BTreeSet::new();
+            let mut queue = VecDeque::new();
+            seen.insert(start);
+            queue.push_back(start);
+            while let Some(Cell(x, y)) = queue.pop_front() {
+                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                    let next = Cell(x + dx, y + dy);
+                    if walkable.contains(&next) && seen.insert(next) {
+                        queue.push_back(next);
+                    }
+                }
+            }
+            assert_eq!(
+                seen.len(),
+                walkable.len(),
+                "seed {seed_value}: {} of {} walkable cells unreachable from {start:?}",
+                walkable.len() - seen.len(),
+                walkable.len()
+            );
+        }
     }
 }
