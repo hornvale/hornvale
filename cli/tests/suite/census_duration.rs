@@ -166,6 +166,30 @@ const CENSUS_ALARM_SECS: f64 = 900.0;
 /// have thrown away; the ceiling keeps the tripwire that a bare alarm would
 /// have made unenforceable. **Neither number is a raise of the other.**
 ///
+/// **THE PAIR IS THE UNIT, AND IT IS EXPECTED TO RATCHET UP.** Nathan's framing,
+/// recorded because the first draft of this doc justified 1200 historically
+/// ("22% above the highest reading ever recorded") and that argument silently
+/// expires the moment a feature legitimately makes the census slower:
+///
+///   * ALARM is where the census *should* sit. RED is not an absolute ceiling
+///     but a statement that **one run jumped far enough that something is
+///     wrong** — a ~33% single-run increase, on a run we cannot even be sure
+///     will finish, is worth calling foul on regardless of the absolute number.
+///   * Both numbers move UP together as features land, holding roughly this
+///     ratio (RED ≈ typical × 1.3). Worked example: if the census settles
+///     regularly at 16 minutes, ALARM becomes ~17 min and RED ~21 min.
+///   * The trigger for re-setting them is **"the new normal is consistently
+///     near ALARM"**, never "a run went red". Raising because a run went red is
+///     the flap-hiding move this file has already refused once.
+///
+/// **Why 1200 has real headroom right now, forward-looking rather than
+/// historical:** the work in prospect is local-level — rooms, scenes, the
+/// game seam — rather than world-scale generation, so it should not move
+/// census time much. That argument is the thing to re-examine first if this
+/// ceiling ever starts flapping: it stops holding the moment campaigns return
+/// to world-scale generation, and a reader should suspect it before suspecting
+/// the number.
+///
 /// The durable repair the doc above names — denominate against `cpu_ratio` so
 /// contention and regression separate — is still owed and is now carried by
 /// `PROC-census-budget-denominated-by-cpu-ratio` in the idea registry. The
@@ -269,29 +293,55 @@ fn the_latest_census_is_under_the_refusal_ceiling() {
 ///
 /// It is three-valued in the house style (`tropes check`, type-audit's
 /// `waiver(...)`, seam-guard's `expect(survives: …)`):
-///   under the alarm    -> green, silent
-///   over, row present  -> green, and the follow-up is on the books
-///   over, row absent   -> RED, naming the row to file
+/// ```text
+/// under the alarm                        -> green, silent
+/// over, THIS RUN acknowledged with a
+///   non-empty finding                    -> green
+/// over, this run unacknowledged          -> RED: profile it and record it
+/// ```
+/// **Keyed on the RUN, not the condition**, and that is the whole design. The
+/// first version asserted an idea-registry row existed — satisfiable once, by
+/// anyone, on behalf of every future yellow run. This one cannot be inherited:
+/// a new slow run is a new row.
+///
+/// It still cannot verify that a flamegraph was taken or that anything got
+/// faster. It buys a forced look. Naming that limit here is deliberate — a
+/// check that does not state its direction reads as a guarantee it never made.
 #[test]
 fn a_census_over_the_alarm_threshold_owes_a_profiling_followup() {
-    const FOLLOWUP_ROW: &str = "PROC-census-budget-denominated-by-cpu-ratio";
     let rows = successful_census_rows();
     let (when, wall) = latest_by_timestamp(&rows);
     if wall <= CENSUS_ALARM_SECS {
         return;
     }
-    let registry = fs::read_to_string(repo_root().join("book/src/frontier/idea-registry.md"))
-        .expect("the idea registry is tracked and readable");
+    let log_path = repo_root().join("docs/timings/census-yellow-log.tsv");
+    let log = fs::read_to_string(&log_path).expect("the yellow log is tracked and readable");
+    let row = log
+        .lines()
+        .filter(|l| !l.starts_with('#'))
+        .find(|l| l.split('\t').next() == Some(when.as_str()));
+    let finding = row.and_then(|l| l.split('\t').nth(3)).unwrap_or("").trim();
     assert!(
-        registry.contains(FOLLOWUP_ROW),
+        !finding.is_empty(),
         "the latest census took {wall:.3} s (at {when}), over the \
-         {CENSUS_ALARM_SECS:.0} s alarm threshold — which is allowed, because \
-         that threshold sits inside the instrument's own noise — but the \
-         profiling follow-up it owes is NOT on the books.\n\
-         Add `{FOLLOWUP_ROW}` to book/src/frontier/idea-registry.md, or fix the \
-         census so this stops firing. Do not delete this test: it is the only \
-         thing keeping a known-slow census attached to the work of making it \
-         fast."
+         {CENSUS_ALARM_SECS:.0} s ALARM threshold.\n\
+         \n\
+         That is allowed — the alarm sits inside the instrument's own noise, so \
+         it cannot tell a regression from variance by itself. What is NOT \
+         allowed is letting it pass unlooked-at: O(n^2) work has slipped into \
+         this codebase more than once, and it enters as a yellow run long \
+         before it becomes an obvious one, when bisecting it is cheap rather \
+         than expensive.\n\
+         \n\
+         PROFILE IT — flamegraph the run — then add a row to \
+         docs/timings/census-yellow-log.tsv:\n\
+         \n\
+         \t{when}\t{wall:.3}\t<cpu_ratio>\t<what the profile showed>\n\
+         \n\
+         The `finding` column must not be empty. Acknowledging WITHOUT \
+         profiling is the failure this replaced: the previous version of this \
+         test asked only that an idea-registry row exist, which any single run \
+         could satisfy on behalf of every future one."
     );
 }
 

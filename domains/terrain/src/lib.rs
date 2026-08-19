@@ -21,6 +21,7 @@ pub mod globe;
 /// reimplement them.
 #[cfg(test)]
 mod land_elevation_attribution;
+pub mod landscape;
 pub mod lithology;
 pub mod pins;
 pub mod plates;

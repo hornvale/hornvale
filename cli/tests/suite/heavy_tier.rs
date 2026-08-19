@@ -251,7 +251,7 @@ fn the_canonical_heavy_reason_states_no_duration() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 37] = [
+const EXPECTED_UNTOKENISED: [&str; 29] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar at 0.00 SE from it; three census epochs of one unchanged report read 0.5667, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -272,14 +272,6 @@ const EXPECTED_UNTOKENISED: [&str; 37] = [
     "measurement: builds one full world; run explicitly with --ignored",
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
     "one-shot before-arm capture (The Fathom, Task 4 Step 1); run by hand, not a standing regression test - see module doc",
-    "probe: Stage-0 rift instrument, run by hand (spec §6)",
-    "probe: builds a seed-42 level-6 world and walks every mesh neighbour (0.2 s measured); run by hand",
-    "probe: builds all 64 the-ford-probe worlds at the canonical grid (17.5 s measured, --release); run by hand",
-    "probe: enumerates every branch of a whole coarse basin, twice (1.4 s measured); run by hand",
-    "probe: measurement only, run explicitly",
-    "probe: replays ~50k real nearest-line queries against the full 3,606-line network, each answered by the UNINDEXED reference scan (23.1 s measured, --release; 1.1 s when the oracle was the Task-4 index, which is why the module doc explains the trade); run by hand",
-    "probe: sweeps every transect twice — once transcribed, once through the shipped metric (0.3 s measured, --release, post-Task-4 index); run by hand",
-    "probe: walks every branch of 60 coarse cells per seed at an eighth of a room (21.8 s measured); run by hand",
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
     "regenerates the committed repose exposure fixture; run by hand - the drift check above is the gate",
@@ -398,7 +390,9 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
     let reasons = ignore_reasons();
     let mut untokenised: Vec<String> = reasons
         .iter()
-        .filter(|r| !r.contains("heavy:") && !r.contains("stale-second-opinion:"))
+        .filter(|r| {
+            !r.contains("heavy:") && !r.contains("stale-second-opinion:") && !r.contains("probe:")
+        })
         .cloned()
         .collect();
     untokenised.sort();
@@ -589,7 +583,18 @@ fn internally_parallel_heavy_tests() -> Vec<String> {
                 current = None;
             }
             if trimmed.starts_with("#[ignore = \"") {
-                next_fn_is_heavy = trimmed.contains("heavy:");
+                // `probe:` COUNTS HERE TOO, AND THE REASON IS THAT THIS
+                // ROSTER IS NOT ABOUT THE TIER. What it selects is a test that
+                // parallelises its OWN sweep across every core, so the pin
+                // exists to stop it saturating the box while other work runs.
+                // That property belongs to the test, not to which set invokes
+                // it: decision 0148 moved `the_fares_*` from `heavy:` to
+                // `probe:`, and a probe run BY HAND wants the pin for exactly
+                // the same reason a heavy one did. Keying on `heavy:` alone
+                // would have silently dropped two of the three batteries out
+                // of `.config/nextest.toml`'s scatter-sweep class — the pin
+                // would still have named them, and nothing would have said so.
+                next_fn_is_heavy = trimmed.contains("heavy:") || trimmed.contains("probe:");
                 current = None;
                 continue;
             }

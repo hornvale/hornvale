@@ -7,6 +7,20 @@
 //! two peoples end up remembering the same event at different resolutions
 //! with no contact between them.
 //!
+//! **That 6.75x is per-people; the crossing penalty's unit is not, and the
+//! difference is easy to assume away.** [`crate::derive`]'s crossing penalty is
+//! `span(FINEST)` — rung 1 of the ladder — and
+//! [`crate::ladder::PrecisionLadder::with_social`] sorts every rung by its
+//! actual length, so a generation (far longer than a day for every people the
+//! bake builds) always sorts ABOVE the astronomical rungs and never becomes
+//! rung 1. Measured on the panel: only **12 distinct `(finest, next)` rung
+//! pairs across 180 ladders** — one per world, not one per people. So the
+//! variation this module opens on is real and lives entirely above the rung
+//! the penalty is denominated in. A later design that proposes making the
+//! crossing unit per-people by reading each people's own `span(FINEST)` would
+//! be **inert by construction**: that rung is world-level, and the social rungs
+//! sit above it.
+//!
 //! The teller's people rather than the hearer's is a free choice: fission
 //! never crosses a people boundary (campaign 2 §3.1, zero of 658 typed edges
 //! and zero of 780 after main moved), so they are always the same.

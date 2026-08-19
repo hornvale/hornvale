@@ -14,19 +14,24 @@ use hornvale_hearsay::durations::PeopleDurations;
 use hornvale_hearsay::ladder::PeopleLadders;
 use hornvale_hearsay::lineage::lineage_of;
 use hornvale_hearsay::stance::Perpetration;
-use hornvale_hearsay::transmission::{Transmission, Walk};
+use hornvale_hearsay::transmission::{Crossing, Transmission, Walk};
 
 #[test]
-fn as_shipped_is_exactly_todays_three_arms() {
+fn as_shipped_is_exactly_todays_four_arms() {
     assert_eq!(Transmission::AS_SHIPPED.clock, Clock::Off);
     assert_eq!(
         Transmission::AS_SHIPPED.perpetration,
         Perpetration::Singleton
     );
     assert_eq!(Transmission::AS_SHIPPED.contact, Contact::Descent);
+    assert_eq!(Transmission::AS_SHIPPED.crossing, Crossing::Free);
+    // This string MOVES when an arm is added, and that is correct: it is a
+    // description of which arms the policy carries, not a measured outcome.
+    // Leaving `crossing` out of `label()` would let two different policies
+    // print one name and make a readout's arm columns ambiguous.
     assert_eq!(
         Transmission::AS_SHIPPED.label(),
-        "no-clock/singleton/descent"
+        "no-clock/singleton/descent/free"
     );
 }
 

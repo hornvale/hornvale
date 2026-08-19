@@ -185,3 +185,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0143](0143-the-underworld-carries-two-ladders.md) | The underworld carries two ladders, and neither derives the other | Accepted |
 | [0144](0144-a-caves-depth-is-a-budget-in-metres.md) | A cave's depth is a budget in metres, not a stratigraphic band | Accepted |
 | [0145](0145-one-community-per-place-not-per-cell.md) | One community per place, where a place is a cell and a rung | Accepted |
+| [0147](0147-a-feature-is-individuated-by-traversal-its-name-derived.md) | A landscape feature is individuated by traversal, and its name is derived, never committed | Accepted |
