@@ -178,9 +178,12 @@ candidate for that missing notion of belief and found it already refuted.** The
 obvious people-blind form of "changes on confirmation" is a count of concordant
 tellings — your own line supplies more of them, so ingroup preference would fall
 out as an output rather than being authored. That count is exactly what a
-frequency rule measures, and frequency and frequency-weighted selection were run
-against the shipped least-damage rule over the same worlds: of the 8 cells where
-they could have disagreed, **0** did. There is a structural reason as well as an
+frequency rule measures, and frequency and frequency-weighted selection were two
+of four people-blind alternatives — primacy and recency are the others — run
+against the shipped least-damage rule over the same worlds. Of the 8 cells where
+an alternative could have disagreed, **0** did; the frequency family carries
+**4** of those 8, and neither of its two rules moved a cell. There is a
+structural reason as well as an
 empirical one — under descent every holder receives exactly one telling, so a
 confirmation count is 1 everywhere the seam is absent, and a belief model would
 be exercised only at the seam.

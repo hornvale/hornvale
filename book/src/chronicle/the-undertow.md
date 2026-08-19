@@ -44,7 +44,8 @@ Restricting the channel does not restore disagreement. Pooling tracks the seam's
 **And the axis was the wrong axis anyway**, which is the more useful half. The
 victim-versus-raider story is a story about a *single* crossing, and single
 crossings are the minority case: **~70% of cross-people holders cross the seam
-more than once**, with crossing depths running out to 13, 19 and 9 hops; only
+more than once**, with crossing depths running out to 13, 19 and 9 *crossings*
+— the instrument counts boundary crossings on the winning path, not hops; only
 about 4% are the hop-zero co-witness line; and among the holders that do cross
 exactly once, the split between the two directions is near-balanced
 (41.6/58.4, 37.5/62.5, 42.4/57.6). A campaign frozen on direction would have
@@ -164,7 +165,8 @@ The probe was commissioned expecting to find the mechanism **inert**, and
 intending to correct the numerator. Two of the commissioning inputs were wrong.
 
 - **The rung gap is not the 41.7× the controller quoted.** The finest rung is a
-  world's *first moon*, and the step from it to the next-coarsest ranges
+  world's *day* — the next one up is its first moon, or its year on the one
+  moonless seed — and the step between them ranges
   **2.23× to 530.85×, median 12.56×** across the panel's 180 ladders. One seed
   steps 1.5507 d → 3.4606 d, where a half-rung penalty is **40.6% of the gap**.
   Another is moonless and steps 1.0010 d → 531.39 d, where the same penalty is
@@ -181,6 +183,15 @@ so no correction is warranted; it also shows the width-moved column is *constant
 in k — **a bigger penalty buys resolution, never reach** — and that the response
 saturates, 256× buying only about 20× the rungs under the rule most sensitive to
 it.
+
+That constancy has a countable cause, and it is worth stating because it is the
+kind of ceiling a magnitude argument cannot argue past: **7,066** of the
+multiplicative rule's 13,410 width-moved holders already sit at their ladder's
+**coarsest** rung, where no penalty of any size can push them further, there
+being no coarser rung to reach. (Under additive and quadrature that count is
+zero — their accumulated widths never run that far up the ladder.) A penalty is
+a width, and a width past the top of a ladder is a width the ladder cannot
+report.
 
 **The analytic estimate would have said the opposite.** Median headroom by
 calculation is 71× to 32,129×, which reads as *inert*. The 477 are the **tail**,
@@ -354,9 +365,11 @@ constant-denominator control at matched mean penalty.
 The shipped walk is **not always its own argmin**. Enumerated exhaustively —
 13,569,981 routes over 4,388 holders, which is the only instrument that could see
 it, since any reimplemented relaxation inherits the behaviour rather than
-detecting it — **36 of 13,164 contact holders (0.27%)** hold a telling with the
+detecting it — **36 of 13,164 holder-rule cells (0.27%)** hold a telling with the
 same width bits and the same remembered day as an available route, but one hop
-more. Descent is clean: 0 of 310,215.
+more. Descent is clean: 0 of 310,215. The denominator is a **(holder, rule)
+cell** and not a holder — 4,388 holders scored under each of three accumulation
+rules — which is why it exceeds the holder count it is built from.
 
 Under the crossing penalty it roughly **doubles, to 90 of 13,164 (0.68%)**, and
 the increase is almost entirely on one rule: the additive rule goes 32 → 88,
@@ -397,7 +410,32 @@ have been at stake, because a tree offers no choices.
 What stands open is sharper for both eliminations. Ingroup preference now exists
 as a derived output and is demonstrably paid by the communities it was designed
 for, and the aggregate this thread reports is blind to it — so the next instrument
-is not another mechanism but a **measure that can see one**. And the one question
+is not another mechanism but a **measure that can see one**.
+
+One candidate is already measured rather than merely proposed. The scale probe's
+**day-moved** column runs *above* its rung-moved one under the multiplicative
+rule — **468 against 417** — because a changed winning route re-floors the
+remembered day even where the rung that day is reported at does not move. A
+measure keyed on the remembered day is therefore strictly more sensitive than
+one keyed on the rung, on the same walk, at no extra cost. It is not the whole
+answer — a day that moves is not yet a disagreement between two accounts — but a
+thread that needs an instrument should start from the observable that already
+registers more.
+
+A second question this campaign asked and answered belongs here rather than
+buried in a probe, because a reader of the census-versus-panel argument would
+never think to open a hearsay probe to find it. The merge queue left an
+unexplained **1.89×** residual on `endings`, the 12-seed control reading high
+against the census. It is **not a seed-count artifact**: the 12-seed prefix reads
+**low** against a 100-seed panel (0.792× on `endings`, 0.744/0.744/0.726 on
+foreign, compared and mutually-exclusive), so correcting for seed count makes the
+residual *larger*, around 2.4×. All four z-scores sit within ~1.2 standard errors
+of the wide mean, so this bounds the sampling question rather than settling it in
+the other direction — but it moves the residual's explanation into what the
+census does *differently*: its build depth, its pin sets, or the denominator it
+divides by.
+
+And the one question
 this campaign was built to answer about its own derivation, it did not ask:
 whether a magnitude read from the world's contact history does anything a
 well-chosen constant would not. That arm is cheap, it is named, and until it runs,

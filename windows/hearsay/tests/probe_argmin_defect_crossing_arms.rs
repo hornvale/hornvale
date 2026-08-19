@@ -160,6 +160,22 @@
 //! Nothing in `windows/hearsay/src` changes and no fix is applied — the task
 //! brief forbids it in this campaign, to keep `Transmission::AS_SHIPPED`
 //! (which does not include this defect's correction either way) attributable.
+//!
+//! ## Cost, measured, so the next reader budgets from a number and not a guess
+//!
+//! On this Mac (`test` profile, which this workspace builds optimized):
+//! [`does_the_crossing_penalty_change_the_non_argmin_defect`] cost **728.24 s**
+//! (~12.1 min) on its authoring run and **432.03 s** on a re-run later the same
+//! day — **this is the most expensive test this campaign wrote**, and the
+//! spread between the two runs is the honest width of the estimate, not noise
+//! to average away. The cost is the exhaustive enumeration itself: 13,569,981
+//! simple routes over 4,388 holders across 12 seeds and both [`Crossing`] arms,
+//! where every sibling probe relaxes instead. A committed cost is a claim with
+//! a date; re-measure rather than extrapolate.
+//!
+//! Neither figure is paid by any gate. This test is `#[ignore]`d into the heavy
+//! set, and `hornvale-hearsay` has no entries in `gate-commit`'s subfloor
+//! roster at all — so nothing here runs until someone runs it by hand.
 
 use hornvale_hearsay::accumulate::{Accumulation, precision_at};
 use hornvale_hearsay::amplitude::gen_span;

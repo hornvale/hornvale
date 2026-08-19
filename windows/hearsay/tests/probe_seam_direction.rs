@@ -1352,6 +1352,26 @@ type Quantity = (&'static str, fn(&Wide) -> usize);
 /// a genuinely different denominator). If it reads far from 1.00x, small-panel
 /// sampling is a live candidate and a wider control is worth its cost.
 ///
+/// ## The answer this probe returned, so the conditional above is not left dangling
+///
+/// **The prefix reads LOW, not high** — per-seed means over seeds 0-11 against
+/// seeds 0-99: `endings` **0.792x**, `foreign` 0.744x, `compared` 0.744x,
+/// `mutex` 0.726x. So the first branch is the one that fired, in the direction
+/// that makes the residual WORSE: sampling cannot be the source of a 12-seed
+/// control reading *high* against the census, and correcting for seed count
+/// would push the 1.89x to roughly **2.4x** (1.89 / 0.79). The residual lives
+/// in what the census does DIFFERENTLY — build depth, pin sets, or the
+/// denominator it divides by — not in how many seeds it draws.
+///
+/// **Both halves of that are needed, and the second bounds the first.** All
+/// four z-scores sit within ~1.2 standard errors of the wide mean (|z| <= 1.18),
+/// so the 0.79x is NOT itself a demonstrated downward bias — it is what a
+/// 12-seed draw from a distribution this skewed looks like (per-seed `endings`
+/// over 100 seeds: min 58, median 589, max 2,574). The honest statement is that
+/// the 12-seed panel shows no measurable UPWARD amplification and the data
+/// cannot support a claim of downward amplification either. Quoting the ratio
+/// without the z would manufacture a finding; the probe prints both.
+///
 /// claim: structural(seed: panel) — false-positive seed-loop flag; the loop
 /// binds a census-panel prefix, not a search over seeds.
 #[test]

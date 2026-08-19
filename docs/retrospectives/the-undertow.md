@@ -170,6 +170,44 @@ author imagined, and a falsification that arrives in an unimagined shape does no
 inherit the table's gloss.** The verdict was frozen and stands; the *reading* of
 the verdict was not data and had to be re-derived against what actually happened.
 
+## The campaign committed its own headline defect, in the freshness sweep, one wave later
+
+Worth more than the correction it describes, because of where it happened.
+
+The section above states the rule: **a gloss written for one shape does not
+transfer to a different one, and a verdict's *reading* is not data.** The
+campaign's own book sweep then wrote an amendment to The Retelling's chronicle
+saying that frequency and frequency-weighted selection "were run … of the **8**
+cells where **they** could have disagreed, **0** did."
+
+The 8 is real and the source paragraphs are both correct. It is **4
+alternatives × 2 pooling rules** — primacy, frequency, frequency-weighted and
+recency — and the frequency family carries **4** of those 8. The amendment fused
+two paragraphs that had deliberately kept the four-rule attribution and the
+frequency-specific claim apart, and carried the larger denominator onto the
+smaller claim: the evidence was overstated **2×**. The conclusion survives (0 of
+8 entails 0 of 4); the number does not.
+
+Three things make this worth a section rather than a line.
+
+1. **It is the same defect class the campaign's headline lesson names**, written
+   by the campaign that named it, about a week's worth of its own findings.
+   Knowing the shape of an error is not protection against committing it.
+2. **The freshness sweep is where it happened, and that is not a coincidence.**
+   A sweep's job is to compress a new result into an old chapter's voice, which
+   means restating someone else's numbers in a paragraph that was not built to
+   hold them. That is exactly the operation that strips a figure from its
+   denominator.
+3. **Nothing mechanical could see it.** Both upstream sources were right; the
+   spec was right; the drift checks compare bytes, not attributions. It took a
+   whole-branch review reading the amendment against the probe's
+   `discriminating += 1` condition to find the denominator.
+
+**The transferable rule: when a sweep carries a number into a different
+paragraph, re-derive the number's denominator in that paragraph.** Not the
+number — the denominator. A figure that is correct in its home is the most
+plausible-looking wrong figure available anywhere else.
+
 ## Tooling: a heredoc that ate line continuations past three green gates
 
 Piping Rust doc/string edits through a **non-raw** Python triple-quoted heredoc
@@ -213,3 +251,16 @@ rather than hidden by a rate.
 - **The scratch ledger dies with the worktree.** Every ruling in this document
   existed only in `.superpowers/sdd/`, which is git-ignored. Nothing mechanical
   would have caught its loss.
+- **The commit gate was blind to this campaign's own `AS_SHIPPED` pin for its
+  whole run**, and said nothing while being so. `docs/timings/subfloor-roster.tsv`
+  line 708 reads
+  `hornvale-hearsay::transmission$as_shipped_is_exactly_todays_three_arms`; this
+  campaign renamed that test to `…_four_arms` in `52dc0045`, so nextest's `-E`
+  filter matches nothing, selects nothing, and reports green. The roster carries
+  98 `hornvale-hearsay` entries, none of them for `tests/crossing.rs` — the file
+  holding the mechanism's own assertions, including the one a constant cannot
+  satisfy — or for `tests/undertow_readout.rs`. This is the **"an allow-list gate
+  cannot see its list go short"** shape: the gate got *cheaper* as it went blind,
+  and nobody reads cheapness as a defect. Deliberately **not** hand-repaired
+  here — the chamber's `gate` phase rewrites the roster from a green full run, so
+  `make sluice` fixes it at merge and a hand edit would only race that.

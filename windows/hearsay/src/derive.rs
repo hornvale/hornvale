@@ -65,8 +65,11 @@ fn tellable(walk: &Walk, node: EntityId, event_day: Option<f64>) -> Vec<EntityId
 /// The people `occ` belongs to, or `""` when the ledger does not say.
 ///
 /// The empty string is not a sentinel to branch on: [`crate::contact::contact_of`]
-/// keys its people-pair tally through the same read, so an occupation with no
-/// `occ-people` is simply a people of its own name and the two sides agree.
+/// keys its people-pair tally through the same read, so both sides agree about
+/// what it means. What it means is that EVERY occupation with no `occ-people`
+/// collapses into ONE nameless people — **not** a people of its own name — so a
+/// step between two of them compares equal and pays no crossing penalty. Two
+/// unlabelled occupations are the same people here, never different ones.
 fn people_of(ledger: &Ledger, occ: EntityId) -> &str {
     match ledger.value_of(occ, hornvale_history::OCC_PEOPLE) {
         Some(Value::Text(p)) => p.as_str(),
