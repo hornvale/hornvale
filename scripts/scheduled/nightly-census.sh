@@ -77,8 +77,22 @@ if [ -z "$main_root" ]; then
     echo "nightly-census: could not resolve the main worktree from $REPO" >&2
     exit 1
 fi
-HV_CENSUS_WORKTREE="$main_root/canonical"
-export HV_CENSUS_WORKTREE
+# HV_CENSUS_WORKTREE IS DELIBERATELY NOT SET (decision 0146). It used to be
+# "$main_root/canonical", which put the census worktree INSIDE the repo —
+# untracked, un-ignored, and deletable by a `git clean -fdx` in the main
+# checkout. census-run.sh now anchors its own default to the main worktree
+# using this same `git worktree list --porcelain` resolution, so there is
+# nothing left for this script to compute.
+#
+# The two readers below still need to know WHERE the census wrote, so they ask
+# census-run.sh rather than recomputing it — `worktree` resolves and prints
+# the path under no lock, and asking the one definition is what stops this
+# script and that one drifting apart the way the old duplicated path did.
+census_wt="$(bash scripts/census-run.sh worktree)"
+if [ -z "$census_wt" ]; then
+    echo "nightly-census: could not resolve the census worktree path" >&2
+    exit 1
+fi
 
 HV_CENSUS_REF="$sha" bash scripts/census-run.sh \
     >/tmp/hv-nightly-census.log 2>&1
@@ -97,13 +111,13 @@ fi
 # `census-run.sh` does `run_root="$wt"; cd "$run_root"` (`:106`/`:110`) and
 # publishes `goldens=$run_root/book/src/laboratory/generated` into its own
 # claim file (`:126`) — so every golden this job produced landed in
-# $HV_CENSUS_WORKTREE, never in $REPO. Running `make lab-diff` here in $REPO
+# $census_wt, never in $REPO. Running `make lab-diff` here in $REPO
 # diffs an UNTOUCHED tree against its own HEAD: unconditionally "no metric
 # moved", so the COLUMNS MOVED notice — the entire point of this job — could
 # never fire. `make -C` runs the recipe with that tree as cwd, so both its
 # `git show HEAD:…` and its `book/src/laboratory/generated/…` read the tree
 # the census wrote.
-diff_out="$(make -C "$HV_CENSUS_WORKTREE" --no-print-directory lab-diff STUDY=the-census 2>/dev/null)"
+diff_out="$(make -C "$census_wt" --no-print-directory lab-diff STUDY=the-census 2>/dev/null)"
 diff_rc=$?
 
 # THE PREDICATE IS A POSITIVE MATCH, NOT `-n`. `render_diff` ALWAYS emits a
@@ -139,6 +153,6 @@ fi
 # isolated repo: `-- . --quiet` -> exit 1, file still ` M`; `--quiet -- .` ->
 # exit 0, clean. Found by Task 8's dry run, which checked `git status` rather
 # than trusting `exit=0`.
-git -C "$HV_CENSUS_WORKTREE" checkout --quiet -- . 2>/dev/null || true
+git -C "$census_wt" checkout --quiet -- . 2>/dev/null || true
 make board-sync >/dev/null 2>&1 || true
 exit 0
