@@ -35,7 +35,7 @@
 //! Only `Contact::WithRaidSeam` is enumerated (foreign endings only): the
 //! descent arm's argmin question does not depend on `Crossing` at all — see
 //! the note beside [`PANEL`] — and `probe_tiebreak_rules.rs` already holds it
-//! to zero at 0/310,215.
+//! to zero at 0/246,627.
 //!
 //! **One more thing this copy omits, harmless today, worth a line for
 //! whoever varies `clock` next (fix round 1, Minor 5):** the shipped
@@ -56,14 +56,14 @@
 //! is walked — it fires whenever a step crosses a people boundary, however
 //! that step was reached. But the founding tree gives every holder EXACTLY
 //! ONE telling (`probe_tiebreak_rules.rs`'s own control, reproduced above:
-//! 310,215 holders, 0 not-argmin), which is a structural fact about the tree
+//! 246,627 holders, 0 not-argmin), which is a structural fact about the tree
 //! — one path in, always — independent of any edge's width. A route that is
 //! the only candidate at its holder is trivially that holder's argmin no
 //! matter what the edges along it cost. So `Crossing` cannot move the descent
-//! row, and re-running 310,215 holders' worth of free enumeration to confirm
+//! row, and re-running 246,627 holders' worth of free enumeration to confirm
 //! a structural argument would spend real cost to learn nothing.
 //!
-//! ## Why `multiplicative` sits at zero under both arms, `additive` carries the effect
+//! ## Why `multiplicative` sits at zero under both arms, `additive` carries the whole defect
 //!
 //! **The scale-probe explanation this file's task report first gave
 //! ("the penalty's realized magnitude is small relative to real rung gaps")
@@ -71,6 +71,17 @@
 //! `Crossing::Free` too, where the penalty is identically zero.** The real
 //! cause is structural, in [`gen_span`] and [`Accumulation::step`], and has
 //! nothing to do with `Crossing` at all.
+//!
+//! **Re-derived against the merge product, that structural reading is
+//! STRONGER than it was when it was written.** On the pre-absorption
+//! substrate the two arms differed — 36 under `Free` against 90 under
+//! `ContactWeighted`, almost all of the rise on `additive` — so the arm
+//! looked like it moved the defect and every `additive` figure downstream
+//! carried a CONFOUNDED annotation. On the tree this campaign lands on the
+//! two arms are IDENTICAL at 49, all of it `additive`, with `quadrature` and
+//! `multiplicative` at exactly 0 under both. `Crossing` does not move this
+//! defect at all here, which is what the structural argument predicts and
+//! what the pre-absorption numbers muddied.
 //!
 //! `gen_span(teller, hearer) = |founded(hearer) - founded(teller)| / g`
 //! (`amplitude.rs:31-51`), where `g` is read from `teller` — the CURRENT
@@ -95,7 +106,7 @@
 //! the segment's endpoints, never on how many hops it took inside the
 //! segment. A route that never crosses a people boundary (the entire descent
 //! population, and the great majority of a contact route's length — the
-//! scale probe found 0 of 67,765 winning-path crossings by descent) is a
+//! scale probe found 0 of 26,798 winning-path crossings by descent) is a
 //! single segment end to end, which is where this file's own not-argmin
 //! samples sit.
 //!
@@ -148,7 +159,7 @@
 //! same population `probe_tiebreak_rules.rs` did, and it contains the shipped
 //! answer everywhere. The **one non-control assertion** pins this file's own
 //! `Crossing::Free` aggregate to the number this task measured directly from
-//! `probe_tiebreak_rules.rs` in the same session (36 of 13,164, 0.2735%) —
+//! `probe_tiebreak_rules.rs` in the same session (49 of 9,531, 0.5141%) —
 //! not because the defect is expected to hold at that exact count forever,
 //! but because two independently-restructured instruments landing on the
 //! same integer is the strongest evidence this file can offer that it is
@@ -168,10 +179,13 @@
 //! (~12.1 min) on its authoring run and **432.03 s** on a re-run later the same
 //! day — **this is the most expensive test this campaign wrote**, and the
 //! spread between the two runs is the honest width of the estimate, not noise
-//! to average away. The cost is the exhaustive enumeration itself: 13,569,981
-//! simple routes over 4,388 holders across 12 seeds and both [`Crossing`] arms,
-//! where every sibling probe relaxes instead. A committed cost is a claim with
-//! a date; re-measure rather than extrapolate.
+//! to average away. The cost is the exhaustive enumeration itself: 10,589,340
+//! simple routes over 3,177 holders across 12 seeds and both [`Crossing`] arms,
+//! where every sibling probe relaxes instead. **Both the cost figures and the
+//! route count above are PRE-ABSORPTION**: The Underworld moved settlement
+//! placement, the substrate shrank with it, and the re-measured cost is in
+//! `docs/timings.md`. A committed cost is a claim with a date; re-measure
+//! rather than extrapolate.
 //!
 //! Neither figure is paid by any gate. This test is `#[ignore]`d into the heavy
 //! set, and `hornvale-hearsay` has no entries in `gate-commit`'s subfloor
@@ -212,21 +226,27 @@ const MAX_DEPTH: u32 = 2_048;
 /// `parley_readout.rs::BASELINE_ENDINGS_12`, re-read as a control that this
 /// file's `read_world` reaches the same population `probe_tiebreak_rules.rs`
 /// did.
-const BASELINE_ENDINGS_12: usize = 5913;
+///
+/// **RE-DERIVED AGAINST THE MERGE PRODUCT** (5,913 / 138 before The
+/// Underworld moved settlement placement).
+const BASELINE_ENDINGS_12: usize = 4975;
 
 /// `parley_readout.rs::BASELINE_FOREIGN_12`, the same control for the foreign
 /// population this file enumerates over.
-const BASELINE_FOREIGN_12: usize = 138;
+const BASELINE_FOREIGN_12: usize = 102;
 
 /// This task's own direct measurement of `probe_tiebreak_rules.rs`'s S0b
-/// contact row, taken from `cargo test -p hornvale-hearsay --test
-/// probe_tiebreak_rules -- --ignored --nocapture` in this session (Task 3,
-/// The Undertow): `compared 13164, not the argmin 36, share 0.2735%`. Used
-/// below as the one non-control assertion — see the module doc.
-const REPRO_FREE_COMPARED: usize = 13164;
+/// contact row, run against the merge product: `compared 9531, not the argmin
+/// 49, share 0.5141%`. Used below as the one non-control assertion — see the
+/// module doc.
+///
+/// **RE-DERIVED AGAINST THE MERGE PRODUCT.** It read `13164 / 36 / 0.2735%`
+/// on the pre-absorption substrate. The two instruments still land on the
+/// same integer, which is the whole point of the assertion.
+const REPRO_FREE_COMPARED: usize = 9531;
 
 /// Companion to [`REPRO_FREE_COMPARED`].
-const REPRO_FREE_NOT_ARGMIN: usize = 36;
+const REPRO_FREE_NOT_ARGMIN: usize = 49;
 
 // ===========================================================================
 // THE ENUMERATOR — `probe_tiebreak_rules.rs`'s, extended with the crossing
@@ -877,17 +897,18 @@ fn does_the_crossing_penalty_change_the_non_argmin_defect() {
         );
     }
 
-    // CAVEAT (fix round 1, Important 3): capped_endings drops the SAME 14 of
-    // 138 foreign endings from every cell above, on BOTH arms — and a capped
-    // ending is by construction the densest one, the one with the MOST
+    // CAVEAT (fix round 1, Important 3): capped_endings drops the SAME small
+    // set of foreign endings from every cell above, on BOTH arms — and a
+    // capped ending is by construction the densest one, the one with the MOST
     // routes reaching it, which is exactly where a route-count-dependent
     // defect like this one is most likely to bite. So every rate printed
-    // above is a rate over the reachable, non-capped 124-of-138 subpopulation,
-    // not over the full foreign population — the absolute shares (0.2735%,
-    // 0.6837%) should be read as FLOORS, not point estimates. The 2.5x
-    // COMPARISON between the two arms is unaffected: both arms drop the
-    // identical 14 endings, so the ratio stays like-for-like even though
-    // neither side's absolute number is complete.
+    // above is a rate over the reachable, non-capped subpopulation, not over
+    // the full foreign population — the absolute shares should be read as
+    // FLOORS, not point estimates. The COMPARISON between the two arms is
+    // unaffected: both arms drop the identical endings, so the ratio stays
+    // like-for-like even though neither side's absolute number is complete.
+    // (Re-derived against the merge product the cap binds 2 of 102 foreign
+    // endings, where it bound 14 of 138 before main was absorbed.)
     let capped_per_rule = fold_cell(&rows, 0, 0).capped_endings;
     println!(
         "\n  CAVEAT: {capped_per_rule} of {foreign} foreign endings ({:.1}%) are capped on EVERY cell above and excluded before any comparison runs. Capped endings are the densest ones by construction (most routes reaching them), which is where this defect is most likely -- so the absolute shares above are FLOORS over the reachable subpopulation, not point estimates over the full population. The free-vs-contact-weighted RATIO is unaffected: both arms drop the identical {capped_per_rule} endings, so the comparison stays like-for-like even though neither side's absolute count is complete.",

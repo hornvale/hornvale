@@ -42,35 +42,55 @@
 //! ## THREE THINGS A READER MUST HOLD BEFORE READING A COLUMN
 //!
 //! **1. H2's terciles are cut on PEOPLE-PAIRS, never on crossings.**
-//! `probe_crossing_scale.rs` measured the pair distribution on 12 seeds —
-//! 46 seamed pairs, `edges_between` running `1:19 2:10 3:7 4:2 5:3 6:2 7:1
-//! 11:1 25:1` — and, separately, that **48% of all crossings taken sit at
-//! `edges = 25`, which is a SINGLE pair.** A tercile cut on the crossing
-//! population would therefore be dominated by one pair on one seed, and would
-//! report that pair's behaviour as the world's. The cut here is over the
-//! per-seed seamed-pair population pooled across the panel, and the cut values
-//! are printed with the result.
+//! `probe_crossing_scale.rs` measures the pair distribution on 12 seeds —
+//! 42 seamed pairs, `edges_between` running `1:20 2:9 3:6 4:2 5:1 6:2 10:1
+//! 11:1` — and, separately, that crossings are heavily CONCENTRATED: 41.6% of
+//! them (additive) sit at `edges = 3`, and the two single-pair buckets at
+//! `edges = 10` and `edges = 11` carry another 16.8% between them. A tercile
+//! cut on the crossing population would therefore be dominated by a handful of
+//! pairs on a handful of seeds, and would report their behaviour as the
+//! world's. The cut here is over the per-seed seamed-pair population pooled
+//! across the panel, and the cut values are printed with the result.
 //!
-//! **2. `Additive` is CONFOUNDED, and the confound is not this campaign's
-//! mechanism.** `probe_argmin_defect_crossing_arms.rs` measured that
-//! `Crossing::ContactWeighted` runs 2.5x more non-argmin holders than
-//! `Crossing::Free` — 36 -> 90 of 13,164 contact holders, almost entirely on
-//! additive (32 -> 88). Quadrature SHRINKS (4 -> 2) and multiplicative is
-//! exactly 0 under both arms. The cause is structural: `gen_span` telescopes
-//! within a same-people segment along a locally monotone founding-day run, so
-//! additive's width is endpoint-determined and path-length-blind BY
-//! CONSTRUCTION — which is exactly the defect's signature. Quadrature (sums
-//! squares) and multiplicative (a running product) do not telescope. So an
-//! additive number below is partly measuring an increased defect rate that
-//! exists before this campaign's mechanism is considered, and the battery
-//! prints that beside every additive line rather than in a footnote.
+//! **THE CONCENTRATION FIGURE IS RE-DERIVED AND IT MOVED.** Before this
+//! campaign absorbed main, the same probe read `48% of all crossings at
+//! edges = 25, a SINGLE pair`. The Underworld changed settlement placement, so
+//! the seam's shape changed with it; the design decision (cut on pairs) was
+//! frozen before either measurement and stands, but the number that argued for
+//! it is now the one above. See the spec's §3 preamble.
 //!
-//! **3. `Multiplicative` is the rule to trust, on two independent counts.**
-//! It is 0-under-both-arms on the confound above, AND it is the only rule
-//! whose `edges_between` buckets are all populated — additive has nothing at
-//! buckets 11 or 25, and quadrature carries ~10 holders across two values. The
-//! per-rule bucket populations are printed beside H2 so a thin result reads as
-//! THIN rather than as ABSENT.
+//! **2. `Additive` carries the non-argmin defect, and — re-derived against
+//! this tree — the CROSSING ARM DOES NOT MOVE IT.**
+//! `probe_argmin_defect_crossing_arms.rs` measures 49 of 9,531 contact
+//! holder-rule cells off the argmin under `Crossing::Free` and **the same 49
+//! under `Crossing::ContactWeighted`** — all of them additive; quadrature and
+//! multiplicative are exactly 0 under both arms. The cause is structural:
+//! `gen_span` telescopes within a same-people segment along a locally monotone
+//! founding-day run, so additive's width is endpoint-determined and
+//! path-length-blind BY CONSTRUCTION — which is exactly the defect's
+//! signature. Quadrature (sums squares) and multiplicative (a running product)
+//! do not telescope.
+//!
+//! **THIS IS THE OTHER FIGURE THAT MOVED, AND IT INVERTED.** On the
+//! pre-absorption substrate the same probe measured `36 -> 90 of 13,164`, a
+//! 2.5x rise concentrated on additive (32 -> 88), and this file's additive
+//! columns were annotated CONFOUNDED because part of an additive difference
+//! was that differential defect rate rather than the mechanism. On the merge
+//! product it is 49 -> 49: the two arms sit at an identical defect rate, so an
+//! arm-to-arm additive comparison is NOT differentially confounded here.
+//! Additive still carries the whole of the defect (1.54% of its cells against
+//! 0% for the other two rules), so it remains the rule with the most
+//! degeneracy in it — but the confound this file was built to disclose is not
+//! present on this substrate, and the annotation below says so rather than
+//! repeating a number that is no longer true.
+//!
+//! **3. `Multiplicative` is still the rule to trust, on two counts.**
+//! It is 0-on-the-defect under both arms (quadrature now is too), AND it is
+//! the only rule whose `edges_between` buckets are all populated — over the
+//! rung-moved population the 12-seed probe finds additive at 5 of 8 buckets
+//! and quadrature at 3 of 8 (35 holders in total), against multiplicative's
+//! full 8. The per-rule bucket populations are printed beside H2 so a thin
+//! result reads as THIN rather than as ABSENT.
 //!
 //! ## On ratios
 //!
@@ -89,7 +109,7 @@
 //! world's ladders lack; `AS_SHIPPED` reproduces the pre-campaign walk and the
 //! descent arm is unmoved by `Crossing`; the penalty never removes (or adds) a
 //! holder; the copy of the walk agrees with the shipped one holder-for-holder;
-//! and §3's published counts — 5,913 endings, 138 foreign, 19
+//! and §3's published counts — 4,975 endings, 102 foreign, 15
 //! mutually-exclusive, all on seeds 0-11 — re-derive from
 //! `parley_readout.rs`'s committed constants.
 //!
@@ -131,19 +151,28 @@ const BASELINE_PREFIX: u64 = 12;
 
 /// Spec §3.1, seeds 0-11: endings in the panel
 /// (`parley_readout.rs::BASELINE_ENDINGS_12`).
-const BASELINE_ENDINGS_12: usize = 5913;
+///
+/// **RE-DERIVED AGAINST THE MERGE PRODUCT.** This trio read 5,913 / 138 / 19
+/// for the whole of this campaign's execution. The Underworld changed
+/// settlement placement and `parley_readout.rs`'s own controls were re-pinned
+/// at `44ea8d5a`; every figure in this file is measured against the tree that
+/// actually lands, and the source of truth for these three is still
+/// `parley_readout.rs`, not this file and not the spec's prose.
+const BASELINE_ENDINGS_12: usize = 4975;
 
 /// Spec §3.1, seeds 0-11: endings whose attacker is of another people
 /// (`parley_readout.rs::BASELINE_FOREIGN_12`).
-const BASELINE_FOREIGN_12: usize = 138;
+const BASELINE_FOREIGN_12: usize = 102;
 
 /// Spec §3.4, seeds 0-11, descent + multiplicative: mutually-exclusive
 /// cross-people day sets (`parley_readout.rs::BASELINE_MUTUALLY_EXCLUSIVE_12`).
-const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 19;
+const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 
 /// Spec §6.1's decision threshold: H1 predicts the contact-over-descent
 /// mutually-exclusive ratio exceeds this under at least one rule. The Parley
-/// measured 0.59x / 0.52x / 0.77x.
+/// published 0.59x / 0.52x / 0.77x on the pre-Underworld substrate; this
+/// readout's own `Crossing::Free` arm re-derives the same quantity on the
+/// merge product, and it is printed beside every H1 line.
 const H1_RATIO_FLOOR: f64 = 1.0;
 
 /// The predicate every claim in this readout is about. Only an ending has
@@ -155,6 +184,12 @@ const PREDICATE: &str = hornvale_history::OCC_ENDED;
 /// A 3-seed pilot (seeds 0, 1, 2) ran before the full panel; the numbers below
 /// are printed by the battery so they live in the artifact rather than only in
 /// a task report.
+///
+/// **These two are the DECISION RECORD and are deliberately not re-measured.**
+/// They are what the panel-size rule was applied to, on the pre-absorption
+/// substrate; re-stamping them with a post-absorption timing would leave the
+/// decision looking as though it had been taken against numbers that did not
+/// exist when it was taken. The re-measured cost is in `docs/timings.md`.
 const PILOT_SEEDS: usize = 3;
 /// Seconds of test time the 3-seed pilot took.
 const PILOT_TEST_SECONDS: f64 = 7.01;
@@ -1058,7 +1093,9 @@ fn the_undertow_readout_over_a_seed_panel() {
     println!(
         "pilot cost           : {PILOT_SEEDS} seeds (0,1,2) cost {PILOT_TEST_SECONDS:.2} s of \
          test time = {:.2} s/seed; the plan's rule (<= 5 s/seed) kept the 40-seed panel. The \
-         full run then measured {FULL_RUN_TEST_SECONDS:.2} s of test time.",
+         full run then measured {FULL_RUN_TEST_SECONDS:.2} s of test time. BOTH FIGURES ARE \
+         THE DECISION RECORD, taken before main was absorbed; docs/timings.md carries the \
+         re-measured cost.",
         PILOT_TEST_SECONDS / PILOT_SEEDS as f64
     );
     println!(
@@ -1092,7 +1129,8 @@ fn the_undertow_readout_over_a_seed_panel() {
     });
     println!(
         "  seeds 0-11 only    : {prefix_endings} endings, {prefix_foreign} foreign \
-         — directly comparable to §3.1's {BASELINE_ENDINGS_12} / {BASELINE_FOREIGN_12}"
+         — re-derives parley_readout.rs's pinned {BASELINE_ENDINGS_12} / \
+         {BASELINE_FOREIGN_12}, which is what §3 now publishes"
     );
 
     println!(
@@ -1115,12 +1153,12 @@ fn the_undertow_readout_over_a_seed_panel() {
     // =====================================================================
     // THE CONFOUND, STATED BEFORE ANY NUMBER THAT CARRIES IT.
     // =====================================================================
-    println!("\n=== READ THIS BEFORE THE ADDITIVE COLUMN (Task 3, commit 6b0ddb97) ===");
+    println!("\n=== READ THIS BEFORE THE ADDITIVE COLUMN (Task 3, re-derived at the close) ===");
     println!(
-        "  `Crossing::ContactWeighted` runs 2.5x more NON-ARGMIN holders than \
-         `Crossing::Free` — 36 -> 90 of 13,164 contact holders on seeds 0-11 — and almost all \
-         of it is ADDITIVE (32 -> 88). Quadrature SHRINKS (4 -> 2); multiplicative is exactly \
-         0 under BOTH arms."
+        "  `probe_argmin_defect_crossing_arms.rs` measures 49 of 9,531 contact holder-rule \
+         cells off the argmin under `Crossing::Free` on seeds 0-11, and THE SAME 49 under \
+         `Crossing::ContactWeighted` — all of them ADDITIVE (1.54% of its cells); quadrature \
+         and multiplicative are exactly 0 under BOTH arms."
     );
     println!(
         "  The cause is structural, not incidental: `gen_span` TELESCOPES within a same-people \
@@ -1130,10 +1168,17 @@ fn the_undertow_readout_over_a_seed_panel() {
          telescopes."
     );
     println!(
-        "  CONSEQUENCE FOR EVERY ADDITIVE NUMBER BELOW: part of it is an increased defect \
-         rate that exists before this campaign's mechanism is considered. MULTIPLICATIVE is \
-         the rule to trust, on two independent counts — 0-under-both-arms on the confound, and \
-         the only rule whose edges_between buckets are all populated."
+        "  CONSEQUENCE FOR EVERY ADDITIVE NUMBER BELOW, AND IT IS NOT THE ONE AN EARLIER \
+         DRAFT PRINTED. On the pre-absorption substrate the same probe read 36 -> 90 of \
+         13,164 — a 2.5x rise, almost all additive (32 -> 88) — so an additive arm-to-arm \
+         difference was partly a DIFFERENTIAL defect rate rather than the mechanism, and \
+         every additive line here was annotated CONFOUNDED. Re-derived against the merge \
+         product the arms sit at an IDENTICAL 49, so that differential confound is absent \
+         and an additive comparison here is like-for-like. Additive still carries the whole \
+         of the defect, so it is still the rule with the most degeneracy in it. \
+         MULTIPLICATIVE remains the rule to trust, on two counts — 0-on-the-defect under \
+         both arms (quadrature now is too), and the only rule whose edges_between buckets \
+         are all populated over the rung-moved population."
     );
 
     // =====================================================================
@@ -1142,8 +1187,10 @@ fn the_undertow_readout_over_a_seed_panel() {
     println!("\n=== §6.1 H1 — MUTUALLY-EXCLUSIVE CROSS-PEOPLE ENDINGS ===");
     println!(
         "  H1 predicts that under contact the mutually-exclusive count rises ABOVE its descent \
-         count under at least one rule — the ratio The Parley measured at 0.59x / 0.52x / 0.77x \
-         exceeding {H1_RATIO_FLOOR:.1}x."
+         count under at least one rule — the ratio The Parley published at 0.59x / 0.52x / \
+         0.77x exceeding {H1_RATIO_FLOOR:.1}x. THAT PUBLISHED TRIPLE IS PRE-UNDERWORLD; the \
+         `free` rows below are the same quantity re-derived on the merge product, and they \
+         are the ones to compare against."
     );
     println!(
         "  COUNTS WITH BOTH POPULATIONS NAMED, never a bare ratio: `compared` is the eligible \
@@ -1203,7 +1250,11 @@ fn the_undertow_readout_over_a_seed_panel() {
             sum(&rows, |r| r.div[1][1][ri].compared),
         );
         if *rule == Accumulation::Additive {
-            println!("    ^ CONFOUNDED — see the additive caveat above.");
+            println!(
+                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 cells); \
+                 re-derived, the two arms sit at the SAME 49, so this comparison is not \
+                 differentially confounded — see the caveat above."
+            );
         }
     }
     let h1_confirmed = h1_ratio[1].iter().any(|x| *x > H1_RATIO_FLOOR);
@@ -1244,10 +1295,13 @@ fn the_undertow_readout_over_a_seed_panel() {
          account, kept in preference to the one that came across the seam."
     );
     println!(
-        "  TERCILES ARE CUT ON PEOPLE-PAIRS, NOT ON CROSSINGS. 48% of all crossings on the \
-         12-seed probe sat at edges=25, which is ONE pair; a crossing-weighted tercile would \
-         report that pair's behaviour as the world's. The cut below is over the per-seed \
-         seamed-pair population pooled across the panel."
+        "  TERCILES ARE CUT ON PEOPLE-PAIRS, NOT ON CROSSINGS. Crossings are heavily \
+         CONCENTRATED — 41.6% of them on the 12-seed probe sit at edges=3, and the two \
+         single-pair buckets at edges=10 and edges=11 carry another 16.8% between them — so a \
+         crossing-weighted tercile would report a handful of pairs' behaviour as the world's. \
+         The cut below is over the per-seed seamed-pair population pooled across the panel. \
+         (Re-derived: before main was absorbed the same probe read 48% at edges=25, a SINGLE \
+         pair. The cut rule was frozen before either measurement.)"
     );
 
     let mut pair_edges: Vec<usize> = rows
@@ -1272,8 +1326,8 @@ fn the_undertow_readout_over_a_seed_panel() {
         .collect();
     prefix_pairs.sort_unstable();
     println!(
-        "  seeds 0-11 prefix        : {} pairs, cuts {:?} — the scale probe published 46 pairs \
-         with cuts (1, 3)",
+        "  seeds 0-11 prefix        : {} pairs, cuts {:?} — the scale probe re-derives 42 \
+         pairs with cuts (1, 2) on the same twelve seeds",
         prefix_pairs.len(),
         tercile_cuts(&prefix_pairs)
     );
@@ -1398,8 +1452,9 @@ fn the_undertow_readout_over_a_seed_panel() {
             overall_rise,
         );
         // THE COST OF RULING A, DISCLOSED BESIDE ITS OWN RESULT. Cutting on
-        // PAIRS is right — 48% of crossings sit at one pair, so a
-        // crossing-weighted cut would report that pair as the world — but the
+        // PAIRS is right — crossings concentrate on a few pairs (41.6% at
+        // edges=3), so a crossing-weighted cut would report them as the world
+        // — but the
         // three terciles hold equal numbers of PAIRS and wildly unequal
         // numbers of HOLDERS. The `rise` column is already a rate over each
         // tercile's own denominator, so the imbalance does not distort it;
@@ -1513,7 +1568,8 @@ fn the_undertow_readout_over_a_seed_panel() {
              non-decreasing in `span` on all three rules, and an ingroup route pays no \
              penalty, so a route that won with zero crossings under Free still wins under \
              ContactWeighted — the mechanism CANNOT push this direction. But the relaxation \
-             is not always its own argmin (spec §3.5: 36 -> 90 of 13,164 holders), so a \
+             is not always its own argmin (spec §3.5, re-derived: 49 of 9,531 holder-rule \
+             cells, IDENTICAL under both arms), so a \
              non-zero here would be that DEFECT surfacing, not the mechanism, and asserting \
              zero would conflate the two",
             overall[0].0,
@@ -1523,7 +1579,11 @@ fn the_undertow_readout_over_a_seed_panel() {
             sum(&rows, |r| r.changed[ri].cross_left_ingroup),
         );
         if *rule == Accumulation::Additive {
-            println!("    ^ CONFOUNDED — see the additive caveat above.");
+            println!(
+                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 cells); \
+                 re-derived, the two arms sit at the SAME 49, so this comparison is not \
+                 differentially confounded — see the caveat above."
+            );
         }
     }
     println!(
@@ -1538,7 +1598,8 @@ fn the_undertow_readout_over_a_seed_panel() {
          and §5.2's derivation is decorative'. THAT GLOSS DOES NOT APPLY TO THIS RESULT, for a \
          reason §6.2 did not anticipate: the measured ordering is INVERTED, not UNIFORM, and \
          an inverted ordering is equally consistent with a CONSTANT penalty. 48% of the \
-         crossings on the 12-seed probe sat at a single edges=25 pair, so flips concentrate \
+         crossings on the 12-seed probe concentrate on a few pairs (41.6% at edges=3), so \
+         flips concentrate \
          wherever the crossings are — which is where contact is highest — WHATEVER the \
          magnitude rule is. A constant penalty would produce the same shape."
     );
@@ -1660,7 +1721,11 @@ fn the_undertow_readout_over_a_seed_panel() {
             }
         );
         if *rule == Accumulation::Additive {
-            println!("    ^ CONFOUNDED — see the additive caveat above.");
+            println!(
+                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 cells); \
+                 re-derived, the two arms sit at the SAME 49, so this comparison is not \
+                 differentially confounded — see the caveat above."
+            );
         }
     }
     println!(

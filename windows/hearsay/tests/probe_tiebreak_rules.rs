@@ -5,7 +5,9 @@
 //! rather than diverge — identical remembered-day sets rose under contact on
 //! every accumulation rule, and its frozen §6.5 divergence measure FELL
 //! (0.59x additive / 0.52x quadrature / 0.77x multiplicative, on its 40-seed
-//! panel). Its own reading blamed the edge's SYMMETRY. This campaign's first
+//! panel, before The Underworld moved settlement placement; re-derived on the
+//! merge product the same triple is 0.52x / 0.55x / 0.90x). Its own reading
+//! blamed the edge's SYMMETRY. This campaign's first
 //! probe (`probe_seam_direction.rs`) ruled that out: divergence falls under a
 //! one-way seam too, on every rule and in both directions, so pooling tracks
 //! seam VOLUME and not seam symmetry.
@@ -58,9 +60,10 @@
 //! **63,054,018 routes over three seeds**, exhausting a four-million
 //! expansion ceiling on 12 endings per contact cell — silently truncating
 //! precisely the best-connected endings. The descent arm is not the problem
-//! (the founding tree is a forest; its largest ending cost **258**
-//! expansions), so the contact arm is enumerated on **§6.5's own population**
-//! — the ~2.3% of endings whose attacker is of another people — which is the
+//! (the founding tree is a forest; its largest ending costs **338**
+//! expansions on the merge product), so the contact arm is enumerated on
+//! **§6.5's own population** — the ~2.1% of endings whose attacker is of
+//! another people — which is the
 //! population every S1 number is reported over anyway. The descent arm is
 //! still enumerated on everything, because it is free and because the fact it
 //! establishes is the load-bearing half of S0.
@@ -73,6 +76,13 @@
 //! route does not step across the seam once and run down a tree — it zigzags.
 //! There is no crossing cap here, and the winners' crossing histogram is
 //! reported instead.
+//!
+//! **That histogram is a PRE-UNDERWORLD pilot measurement and is not
+//! re-derivable from this file**, because the capped arm was removed with the
+//! bound it rejected. The design decision it supports stands on the live
+//! histogram this probe still prints — crossings run out to 8 on the merge
+//! product — and the three numbers above are kept as the record of what was
+//! tried, not as a current claim.
 //!
 //! ## What holds the instrument honest, and the ambiguity it uncovered
 //!
@@ -144,6 +154,11 @@ const PREDICATE: &str = hornvale_history::OCC_ENDED;
 const PILOT_SEEDS: usize = 3;
 
 /// Seconds of nextest time the 3-seed pilot took, measured on this Mac.
+///
+/// **The DECISION RECORD, deliberately not re-measured after main was
+/// absorbed**: it is what the panel-size rule was applied to, and re-stamping
+/// it would make the decision look as though it had been taken against
+/// numbers that did not exist when it was taken.
 const PILOT_TEST_SECONDS: f64 = 6.38;
 
 /// Seconds of nextest time the full 12-seed panel took, measured on this Mac.
@@ -189,23 +204,35 @@ const MAX_DEPTH: u32 = 2_048;
 // ---------------------------------------------------------------------------
 
 /// `parley_readout.rs::BASELINE_ENDINGS_12`: endings over seeds 0-11.
-const BASELINE_ENDINGS_12: usize = 5913;
+///
+/// **RE-DERIVED AGAINST THE MERGE PRODUCT.** This trio read 5,913 / 138 / 19
+/// for the whole of this campaign's execution; The Underworld changed
+/// settlement placement and `parley_readout.rs` was re-pinned at `44ea8d5a`.
+const BASELINE_ENDINGS_12: usize = 4975;
 
 /// `parley_readout.rs::BASELINE_FOREIGN_12`: endings over seeds 0-11 whose
 /// attacker is of another people.
-const BASELINE_FOREIGN_12: usize = 138;
+const BASELINE_FOREIGN_12: usize = 102;
 
 /// `parley_readout.rs::BASELINE_MUTUALLY_EXCLUSIVE_12`: mutually-exclusive
 /// cross-people day sets over seeds 0-11, under DESCENT and
 /// `Accumulation::Multiplicative` only.
-const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 19;
+const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 
 /// The Parley's published contact/descent ratio for the mutually-exclusive
 /// count, indexed by [`Accumulation::ALL`], from `book/src/chronicle/the-
-/// parley.md`. **A 40-SEED FIGURE.** This panel is its first twelve seeds, so
-/// this probe's own `least-damage` row is the comparable quantity and this
-/// array is printed only so the two are visible side by side.
+/// parley.md`. **A 40-SEED FIGURE, AND A PRE-UNDERWORLD ONE.** It is a
+/// citation of what that chapter published and is therefore not re-derived;
+/// [`UNDERTOW_MUTEX_RATIO_40`] is the same quantity measured on the tree this
+/// campaign lands on. This panel is the first twelve seeds of both, so this
+/// probe's own `least-damage` row is the comparable quantity and both arrays
+/// are printed only so the three are visible side by side.
 const PARLEY_MUTEX_RATIO_40: [f64; 3] = [0.59, 0.52, 0.77];
+
+/// The same 40-seed quantity re-derived on the merge product by
+/// `undertow_readout.rs`'s `Crossing::Free` arm — the pre-campaign behaviour,
+/// which is exactly what The Parley measured.
+const UNDERTOW_MUTEX_RATIO_40: [f64; 3] = [0.52, 0.55, 0.90];
 
 // ===========================================================================
 // THE SELECTION RULES.
@@ -949,11 +976,13 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
         for (ci, arm) in Contact::ALL.iter().enumerate() {
             // THE POPULATION RESTRICTION, AND THE WHOLE REASON THIS PROBE IS
             // AFFORDABLE. Under descent the graph is a forest and the
-            // enumeration is free (258 expansions on the largest ending of a
-            // 3-seed pilot); under contact it is not (63,054,018 routes on
-            // that same pilot, with 12 endings exhausting a four-million
-            // expansion ceiling). So the contact arm is enumerated only on
-            // §6.5's OWN population — the ~2.3% of endings whose attacker is
+            // enumeration is free (338 expansions on the largest ending of
+            // the merge product's panel); under contact it is not (63,054,018
+            // routes on a pre-absorption 3-seed pilot, with 12 endings
+            // exhausting a four-million expansion ceiling; the pilot's own
+            // figures are not re-derivable because the capped arm went with
+            // the bound it rejected). So the contact arm is enumerated only on
+            // §6.5's OWN population — the ~2.1% of endings whose attacker is
             // of another people — which is the population every number in S1
             // is reported over anyway. The descent arm is enumerated on
             // everything, because it costs nothing and because the fact it
@@ -1573,10 +1602,12 @@ fn whether_the_tiebreak_or_the_contact_pooled_the_accounts() {
             );
         }
         println!(
-            "    The Parley published {:.2}x for this rule on its 40-SEED panel; this panel \
-             is its first twelve seeds, so the `least-damage` row above is the comparable \
-             quantity and that figure is printed only for orientation.",
-            PARLEY_MUTEX_RATIO_40[ri]
+            "    The Parley published {:.2}x for this rule on its 40-SEED panel, measured \
+             before The Underworld moved settlement placement; re-derived on the merge \
+             product the same 40-seed quantity is {:.2}x. This panel is the first twelve \
+             seeds of both, so the `least-damage` row above is the comparable quantity and \
+             the two 40-seed figures are printed only for orientation.",
+            PARLEY_MUTEX_RATIO_40[ri], UNDERTOW_MUTEX_RATIO_40[ri]
         );
     }
 

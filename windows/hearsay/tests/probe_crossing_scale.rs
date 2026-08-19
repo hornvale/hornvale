@@ -135,11 +135,17 @@ const PREDICATE: &str = hornvale_history::OCC_ENDED;
 // ---------------------------------------------------------------------------
 
 /// `parley_readout.rs::BASELINE_ENDINGS_12`: endings over seeds 0-11.
-const BASELINE_ENDINGS_12: usize = 5913;
+///
+/// **RE-DERIVED AGAINST THE MERGE PRODUCT.** This pair read 5,913 / 138 for
+/// the whole of this campaign's execution. The Underworld changed settlement
+/// placement and `parley_readout.rs`'s own controls were re-pinned at
+/// `44ea8d5a`; the committed constant over there is still the live claim and
+/// this file follows it.
+const BASELINE_ENDINGS_12: usize = 4975;
 
 /// `parley_readout.rs::BASELINE_FOREIGN_12`: endings over seeds 0-11 whose
 /// attacker is of another people.
-const BASELINE_FOREIGN_12: usize = 138;
+const BASELINE_FOREIGN_12: usize = 102;
 
 /// The multipliers M5 re-walks the panel at. `1.0` is the shipped magnitude
 /// and doubles as M2's `ContactWeighted` arm, so it is not walked twice.

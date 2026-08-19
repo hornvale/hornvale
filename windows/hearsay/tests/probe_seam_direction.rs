@@ -105,25 +105,37 @@ const PREDICATE: &str = hornvale_history::OCC_ENDED;
 // has moved since that spec was written (The Underworld and The Illumination
 // landed, and The Parley's controls were re-pinned at 44ea8d5a), so the
 // committed constants are the live claim and the spec is the historical one.
-// At this commit the two AGREE — spec §3.1 publishes 5,913 / 138 and §3.4
-// publishes 19, and `parley_readout.rs` pins the same three numbers as
-// `BASELINE_ENDINGS_12`, `BASELINE_FOREIGN_12` and
-// `BASELINE_MUTUALLY_EXCLUSIVE_12`. The probe reports both sources anyway, so
-// a future divergence is visible in the output and not only in a red.
+// AT THIS COMMIT THE TWO DISAGREE, AND THE COMMITTED CONSTANT WINS. The
+// Parley's spec §3.1 publishes 5,913 / 138 and its §3.4 publishes 19; those
+// were measured before The Underworld changed settlement placement.
+// `parley_readout.rs` was re-pinned at `44ea8d5a` to 4,975 / 102 / 15, and
+// this file follows it, because a spec is a record of what a campaign
+// measured on the day and a committed constant is a claim about the tree it
+// sits in. The probe reports both sources, so the divergence is visible in
+// the output and not only in a red.
 // ---------------------------------------------------------------------------
 
-/// `parley_readout.rs::BASELINE_ENDINGS_12` (= spec §3.1): endings over seeds
-/// 0-11.
-const BASELINE_ENDINGS_12: usize = 5913;
+/// The Parley spec §3.1's PUBLISHED ending count, kept so the probe can print
+/// the two sources side by side and say whether they still agree. Historical:
+/// measured before The Underworld moved settlement placement.
+const PARLEY_SPEC_ENDINGS_12: usize = 5913;
 
-/// `parley_readout.rs::BASELINE_FOREIGN_12` (= spec §3.1): endings over seeds
-/// 0-11 whose attacker is of another people.
-const BASELINE_FOREIGN_12: usize = 138;
+/// The Parley spec §3.1's PUBLISHED foreign-attacker count. Historical, for
+/// the same reason as [`PARLEY_SPEC_ENDINGS_12`].
+const PARLEY_SPEC_FOREIGN_12: usize = 138;
 
-/// `parley_readout.rs::BASELINE_MUTUALLY_EXCLUSIVE_12` (= spec §3.4):
-/// mutually-exclusive cross-people day sets over seeds 0-11, under DESCENT
-/// and `Accumulation::Multiplicative` only.
-const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 19;
+/// `parley_readout.rs::BASELINE_ENDINGS_12`: endings over seeds 0-11.
+const BASELINE_ENDINGS_12: usize = 4975;
+
+/// `parley_readout.rs::BASELINE_FOREIGN_12`: endings over seeds 0-11 whose
+/// attacker is of another people.
+const BASELINE_FOREIGN_12: usize = 102;
+
+/// `parley_readout.rs::BASELINE_MUTUALLY_EXCLUSIVE_12`: mutually-exclusive
+/// cross-people day sets over seeds 0-11, under DESCENT and
+/// `Accumulation::Multiplicative` only. The Parley spec §3.4 published 19 on
+/// the pre-Underworld substrate.
+const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 
 /// Which side of a raid a seam edge points AWAY from.
 ///
@@ -974,11 +986,16 @@ fn which_way_the_account_crosses_the_seam() {
     println!(
         "  controls           : parley_readout.rs pins {BASELINE_ENDINGS_12} endings / \
          {BASELINE_FOREIGN_12} foreign on this panel; The Parley spec §3.1 published \
-         5,913 / 138. {}",
-        if BASELINE_ENDINGS_12 == 5913 && BASELINE_FOREIGN_12 == 138 {
+         {} / {}. {}",
+        PARLEY_SPEC_ENDINGS_12,
+        PARLEY_SPEC_FOREIGN_12,
+        if (BASELINE_ENDINGS_12, BASELINE_FOREIGN_12)
+            == (PARLEY_SPEC_ENDINGS_12, PARLEY_SPEC_FOREIGN_12)
+        {
             "The two AGREE at this commit."
         } else {
-            "THE TWO DISAGREE — read the committed constant, not the spec."
+            "THE TWO DISAGREE — read the committed constant, not the spec: The Underworld \
+             moved settlement placement after that spec was written."
         }
     );
     println!(
@@ -1142,9 +1159,11 @@ fn which_way_the_account_crosses_the_seam() {
         );
     }
     println!(
-        "  The Parley's readout measured 2.35% of endings reaching 3+ peoples under the \
-         undirected seam, with a maximum of 6, on its 40-seed panel; descent reaches 3 on \
-         exactly 0. This panel is its first 12 seeds."
+        "  The Parley's readout measures 2.33% of endings reaching 3+ peoples under the \
+         undirected seam, with a maximum of 5, on its 40-seed panel (re-derived on the merge \
+         product; it published 2.35% and a maximum of 6 before The Underworld moved \
+         settlement placement); descent reaches 3 on exactly 0. This panel is its first 12 \
+         seeds."
     );
 
     // =====================================================================
@@ -1355,19 +1374,19 @@ type Quantity = (&'static str, fn(&Wide) -> usize);
 /// ## The answer this probe returned, so the conditional above is not left dangling
 ///
 /// **The prefix reads LOW, not high** — per-seed means over seeds 0-11 against
-/// seeds 0-99: `endings` **0.792x**, `foreign` 0.744x, `compared` 0.744x,
-/// `mutex` 0.726x. So the first branch is the one that fired, in the direction
+/// seeds 0-99: `endings` **0.700x**, `foreign` 0.623x, `compared` 0.623x,
+/// `mutex` 0.616x. So the first branch is the one that fired, in the direction
 /// that makes the residual WORSE: sampling cannot be the source of a 12-seed
 /// control reading *high* against the census, and correcting for seed count
-/// would push the 1.89x to roughly **2.4x** (1.89 / 0.79). The residual lives
+/// would push the 1.89x to roughly **2.7x** (1.89 / 0.70). The residual lives
 /// in what the census does DIFFERENTLY — build depth, pin sets, or the
 /// denominator it divides by — not in how many seeds it draws.
 ///
 /// **Both halves of that are needed, and the second bounds the first.** All
-/// four z-scores sit within ~1.2 standard errors of the wide mean (|z| <= 1.18),
-/// so the 0.79x is NOT itself a demonstrated downward bias — it is what a
+/// four z-scores sit within ~1.7 standard errors of the wide mean (|z| <= 1.62),
+/// so the 0.70x is NOT itself a demonstrated downward bias — it is what a
 /// 12-seed draw from a distribution this skewed looks like (per-seed `endings`
-/// over 100 seeds: min 58, median 589, max 2,574). The honest statement is that
+/// over 100 seeds: min 38, median 543, max 2,472). The honest statement is that
 /// the 12-seed panel shows no measurable UPWARD amplification and the data
 /// cannot support a claim of downward amplification either. Quoting the ratio
 /// without the z would manufacture a finding; the probe prints both.
