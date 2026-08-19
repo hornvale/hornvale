@@ -53,7 +53,7 @@ use std::collections::BTreeSet;
 /// outputs on the seed-42 canonical `Geosphere::new(6)` network, captured on
 /// unmodified code before any change was contemplated. Compiled in rather than
 /// read at runtime — it is frozen, and no test here may rewrite it.
-const FIXTURE: &str = include_str!("fixtures/rill-width-law-seed-42-level-6.txt");
+const FIXTURE: &str = include_str!("../fixtures/rill-width-law-seed-42-level-6.txt");
 
 /// The number of distinct `(drainage, slope, spacing)` triples the seed-42
 /// level-6 network carries, over its 681 vertices. Exact rather than a floor:
