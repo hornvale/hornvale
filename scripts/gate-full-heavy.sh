@@ -4,7 +4,7 @@
 #
 # `#[ignore]` is overloaded in this tree: it marks BOTH cost-deferred heavy
 # batteries (censuses, the full pin product — greppable via the `heavy:`
-# reason token, see cli/tests/heavy_tier.rs and decision 0040) AND
+# reason token, see cli/tests/suite/heavy_tier.rs and decision 0040) AND
 # genuinely-deferred tests (WIP, flaky, superseded, or a documented physics
 # limitation like the single-craton hypsometry). `--run-ignored all` would
 # run the latter too and be red by design, so `make gate-full` must not use
@@ -12,7 +12,7 @@
 # meaningful green/red signal.
 #
 # The heavy roster is discovered from the source (never hand-maintained): the
-# fn on the line after each `#[ignore = "heavy:` tag. cli/tests/heavy_tier.rs
+# fn on the line after each `#[ignore = "heavy:` tag. cli/tests/suite/heavy_tier.rs
 # asserts every such tag is canonical, so this grep and that guard agree.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"

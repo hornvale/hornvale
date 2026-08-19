@@ -283,7 +283,7 @@ gate-run:
 	doctest_status=$$?; \
 	bash scripts/defect-ledger.sh target/nextest/ci/run.json || true; \
 	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ]; then \
-	    cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
+	    cargo test -q -p hornvale --test suite -- timings_alarm --ignored --nocapture; \
 	    alarm_status=$$?; \
 	else \
 	    alarm_status=0; \
@@ -600,15 +600,21 @@ timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
 # `hornvale-terrain --test channel_golden` was missing for exactly that reason
 # and cost The Glasshouse a debugging cycle. When you add a golden, add its
 # line here in the same commit.
+#
+# Every target below is `--test suite -- <name>`, not `--test <name>`: test-
+# binary consolidation (perf(*): consolidate N test binaries into 1) put
+# every crate's integration tests behind one `tests/suite.rs` binary named
+# `suite`, so the old per-file binary name is now a libtest name FILTER
+# passed after `--`, not a `--test` target of its own.
 rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
-	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
-	REBASELINE=1 cargo test -q -p hornvale-scene --test golden
-	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
-	REBASELINE=1 cargo test -q -p hornvale --test architecture
-	REBASELINE=1 cargo test -q -p hornvale-vessel --test session_snapshot
-	REBASELINE=1 cargo test -q -p hornvale-worldgen --test solitary_tongue
-	REBASELINE=1 cargo test -q -p hornvale-lab --test affect_trace_golden
-	REBASELINE=1 cargo test -q -p hornvale-terrain --test channel_golden
+	REBASELINE=1 cargo test -q -p hornvale --test suite -- lens_purity
+	REBASELINE=1 cargo test -q -p hornvale-scene --test suite -- golden
+	REBASELINE=1 cargo test -q -p hornvale-worldgen --test suite -- proto_goblinoid_golden
+	REBASELINE=1 cargo test -q -p hornvale --test suite -- architecture
+	REBASELINE=1 cargo test -q -p hornvale-vessel --test suite -- session_snapshot
+	REBASELINE=1 cargo test -q -p hornvale-worldgen --test suite -- solitary_tongue
+	REBASELINE=1 cargo test -q -p hornvale-lab --test suite -- affect_trace_golden
+	REBASELINE=1 cargo test -q -p hornvale-terrain --test suite -- channel_golden
 
 lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=the-census)
 	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }
@@ -653,7 +659,7 @@ regen-remote: ## ABANDONED (decision 0063) — censuses regenerate LOCALLY via s
 #     ancestry as a proxy for it and could say GO on a branch that conflicts.
 #   both-sides-added slugs (a decision/chronicle/retro filename minted twice)
 #     -> an add/add conflict, which the mouth reports as a conflict (exit 1).
-#   registry row IDs minted on both sides -> `cli/tests/docs_consistency.rs`
+#   registry row IDs minted on both sides -> `cli/tests/suite/docs_consistency.rs`
 #     asserts ID uniqueness, and the chamber runs it against the real merge
 #     product in the `gate` phase. Again: the object that lands, not a proxy.
 #   the board's hold-off advisory -> `scripts/sluice-request.sh`, which is now

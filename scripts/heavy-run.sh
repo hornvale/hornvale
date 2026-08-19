@@ -5,7 +5,7 @@
 # Why the heavy tier carries a canonical-host guard at all. It is not merely
 # expensive, it is an AUTHORING path: three of its tests write committed
 # artifacts —
-#   cli/tests/history_battery.rs        -> book/src/laboratory/generated/the-history/
+#   cli/tests/suite/history_battery.rs        -> book/src/laboratory/generated/the-history/
 #   windows/chronicle/.../sounding_sweep -> book/src/laboratory/generated/the-sounding/
 #   windows/worldgen/.../occupancy_readout -> tests/fixtures/occupancy.csv
 # — and census_fixtures_match_a_probe_of_live_seeds compares a LIVE probe

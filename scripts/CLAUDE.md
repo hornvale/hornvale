@@ -49,7 +49,7 @@ Key knobs:
   burden is on whoever clones — never regenerate from a shallow clone.
 - After regen, the drift check is `git diff` over the paths declared in
   **`docs/generated-paths.txt`** — the single source of truth, which no guide
-  restates (`cli/tests/generated_paths.rs` fails on a second copy, because an
+  restates (`cli/tests/suite/generated_paths.rs` fails on a second copy, because an
   inline list drifts the moment a generated directory is added). Read it:
   `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`.
   The notes that follow explain WHY particular entries are in that file; they
@@ -131,7 +131,7 @@ exactly that reason: it names the claim, not the deleted machinery.
   it moved to its own `campaign`-rung set instead.
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
   `gate-commit` and the stage gate's own suite both defer (see
-  `cli/tests/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
+  `cli/tests/suite/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
   `make heavy-remote REF=<sha>`, or as the LAST of the merge queue's chamber
   phases (`sluice-run.sh`, below), which is what `gate-campaign` used to
   dispatch it. It is deliberately not a stage-gate phase: at a measured mean
@@ -146,9 +146,9 @@ exactly that reason: it names the claim, not the deleted machinery.
   legal from any machine — but it reads the claim in the **local** `/tmp`, so
   from the Mac it always says "no". Use **`make heavy-status`** to ask the
   canonical box instead; that is almost always the question you mean. Carries the canonical-host guard, because the tier
-  **authors committed artifacts**: `the-history` (`cli/tests/history_battery.rs`),
-  `the-sounding` (`windows/chronicle/tests/sounding_sweep.rs`), and
-  `occupancy.csv` (`windows/worldgen/tests/occupancy_readout.rs`) — plus
+  **authors committed artifacts**: `the-history` (`cli/tests/suite/history_battery.rs`),
+  `the-sounding` (`windows/chronicle/tests/suite/sounding_sweep.rs`), and
+  `occupancy.csv` (`windows/worldgen/tests/suite/occupancy_readout.rs`) — plus
   `census_fixtures_match_a_probe_of_live_seeds`, which compares a live probe
   against lefford-authored fixtures. Review and commit those artifacts **on
   the canonical box**. Dispatch from the Mac with `make heavy-remote REF=<sha>`.

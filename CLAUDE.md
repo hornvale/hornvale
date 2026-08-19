@@ -387,10 +387,13 @@ make census-check                       # analysis-harness gate (needs duckdb + 
 # AWS differs on ~0.1% of discrete-count metrics, so it cannot be a parallel
 # reference. Goldens are authored on one enforced host (decision 0079).
 
-# Single test / single crate / the property batteries:
+# Single test / single crate / the property batteries. Every crate's
+# integration tests live behind one `tests/suite.rs` binary named `suite`
+# (test-binary consolidation), so a former per-file `--test <name>` target is
+# now a libtest name FILTER after `--test suite --`:
 cargo test -p hornvale-kernel text_of
-cargo test -p hornvale-astronomy --test genesis_properties
-cargo test -p hornvale-terrain --test tectonic_properties
+cargo test -p hornvale-astronomy --test suite -- genesis_properties
+cargo test -p hornvale-terrain --test suite -- tectonic_properties
 
 # The CLI (crate `hornvale` in cli/; `hornvale help` lists every flag):
 cargo run -p hornvale -- new --seed 42 --out world.json   # plus sky pins (--sky,

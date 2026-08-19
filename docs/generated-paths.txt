@@ -1,6 +1,6 @@
 # The drift-check path list — the single source of truth.
 #
-# `make rebaseline` diffs these; cli/tests/generated_paths.rs asserts each is
+# `make rebaseline` diffs these; cli/tests/suite/generated_paths.rs asserts each is
 # TRACKED, because `git diff --exit-code <path>` is silently vacuous against a
 # path with no index entry (CLAUDE.md, "Generated-artifact freshness").
 #

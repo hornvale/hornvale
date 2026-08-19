@@ -1674,6 +1674,36 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T11:34:50Z | sluice:seam-guard | 1067.306 | 21095.971 | 1111.683 | 20.81 | 0 | bcd4b187c |  | lefford | 40 |
 | 2026-08-19T11:39:16Z | sluice:clients | 265.377 | 465.489 | 34.678 | 1.88 | 0 | 666d7f5f2 |  | lefford | 40 |
 | 2026-08-19T12:13:02Z | sluice:heavy | 2026.461 | 33016.541 | 687.275 | 16.63 | 0 | d06ce9065 |  | lefford | 40 |
+| 2026-08-18T22:24:13Z | prewarm | 227.374 | 1303.906 | 165.840 | 6.46 | 0 | 2fc70c9a | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:15:34Z | gate-commit | 833.061 | 225.798 | 446.114 | 0.81 | 0 | 752af3bf | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:16:26Z | gate-commit | 34.993 | 59.957 | 15.527 | 2.16 | 0 | 752af3bf | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:48:41Z | gate-commit | 1204.794 | 180.757 | 439.427 | 0.51 | 0 | adb29c61 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T01:49:24Z | gate-commit | 24.647 | 54.838 | 14.727 | 2.82 | 0 | adb29c61 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T13:50:34Z | gate-commit | 581.139 | 167.313 | 302.899 | 0.81 | 0 | 4910ced5 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T13:51:55Z | gate-commit | 23.260 | 50.883 | 12.453 | 2.72 | 0 | 4910ced5 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T14:02:41Z | prewarm | 241.724 | 1117.414 | 59.981 | 4.87 | 0 | ca6f3431 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:03:31Z | gate-commit | 253.379 | 166.401 | 25.406 | 0.76 | 0 | ca6f3431 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:04:58Z | gate-commit | 24.683 | 52.013 | 12.646 | 2.62 | 0 | 241fba55 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:20:18Z | gate-commit | 85.094 | 54.060 | 14.674 | 0.81 | 0 | 2c8b3e0c | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:24:56Z | gate-commit | 39.783 | 57.875 | 14.430 | 1.82 | 0 | 85f22f00 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:26:40Z | gate-commit | 87.031 | 58.372 | 15.041 | 0.84 | 0 | fc74b412 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:28:33Z | gate-commit | 106.280 | 56.463 | 14.127 | 0.66 | 0 | 61525b19 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:30:21Z | gate-commit | 101.599 | 58.046 | 14.281 | 0.71 | 0 | 356e8461 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:31:57Z | gate-commit | 85.501 | 57.419 | 13.907 | 0.83 | 0 | 336ef095 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:33:22Z | gate-commit | 58.029 | 57.079 | 13.806 | 1.22 | 0 | 50f530d8 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:34:33Z | gate-commit | 64.413 | 56.208 | 13.289 | 1.08 | 0 | 46077c4a | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:35:41Z | gate-commit | 62.355 | 56.807 | 13.755 | 1.13 | 0 | e72e64f4 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:37:42Z | gate-commit | 48.315 | 52.178 | 12.984 | 1.35 | 0 | 7fd236b7 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:38:48Z | gate-commit | 43.871 | 55.425 | 17.309 | 1.66 | 0 | 9594a9e2 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:42:57Z | gate-commit | 204.943 | 55.584 | 17.685 | 0.36 | 0 | ed0a6675 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:45:43Z | gate-commit | 68.497 | 48.435 | 12.202 | 0.89 | 0 | 1d060584 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:46:49Z | gate-commit | 23.389 | 47.021 | 11.415 | 2.50 | 0 | 7c728de3 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T14:52:04Z | gate-commit | 27.609 | 47.278 | 10.919 | 2.11 | 0 | 614ff322 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T15:01:57Z | gate-commit | 22.242 | 43.835 | 10.221 | 2.43 | 0 | 1bf66f50 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T15:04:48Z | gate-commit | 21.570 | 40.974 | 8.428 | 2.29 | 0 | d6cdc926 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T15:42:53Z | gate-commit | 23.120 | 41.646 | 8.496 | 2.17 | 0 | f3b736be | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T16:29:09Z | gate-commit | 23.412 | 41.457 | 8.523 | 2.13 | 0 | eacb73fb | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T16:33:34Z | gate-commit | 22.089 | 40.922 | 8.504 | 2.24 | 0 | eacb73fb | campaign/the-crucible | MacBookPro | 10 |
 | 2026-08-19T13:06:06Z | gate-commit | 155.608 | 3128.939 | 358.767 | 22.41 | 0 | ca6f34310 | fix/census-path-and-main-guard | lefford | 40 |
 | 2026-08-19T13:11:15Z | gate-commit | 42.428 | 128.596 | 49.369 | 4.19 | 0 | ca6f34310 | fix/census-path-and-main-guard | lefford | 40 |
 | 2026-08-19T13:12:32Z | gate-commit | 42.258 | 123.617 | 47.813 | 4.06 | 0 | 9fb0d5122 | fix/census-path-and-main-guard | lefford | 40 |
@@ -1694,6 +1724,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T16:52:24Z | sluice:seam-guard | 1064.683 | 21126.571 | 1100.189 | 20.88 | 0 | 10c9d6736 |  | lefford | 40 |
 | 2026-08-19T16:56:56Z | sluice:clients | 271.736 | 479.999 | 33.366 | 1.89 | 0 | bb692f678 |  | lefford | 40 |
 | 2026-08-19T17:31:07Z | sluice:heavy | 2051.130 | 32959.710 | 697.260 | 16.41 | 0 | d2d20ad13 |  | lefford | 40 |
+| 2026-08-19T17:48:10Z | rebaseline | 122.297 | 234.204 | 12.389 | 2.02 | 0 | 20cf6d7f | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T17:49:09Z | gate-commit | 24.404 | 43.246 | 9.558 | 2.16 | 0 | 20cf6d7f | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T20:37:03Z | gate-commit | 31.124 | 57.075 | 17.829 | 2.41 | 0 | 724751c3 | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T20:42:47Z | gate-commit | 20.672 | 38.139 | 8.007 | 2.23 | 0 | 724751c3 | campaign/the-crucible | MacBookPro | 10 |
 | 2026-08-19T16:51:41Z | gate-commit | 60.777 | 52.547 | 118.257 | 2.81 | 0 | d26f5681 | campaign/the-gazetteer | MacBookPro | 10 |
 | 2026-08-19T16:52:01Z | gate-commit | 11.383 | 10.660 | 0.293 | 0.96 | 0 | d26f5681 | campaign/the-gazetteer | MacBookPro | 10 |
 | 2026-08-19T16:53:08Z | rebaseline | 52.425 | 230.604 | 11.578 | 4.62 | 0 | d26f5681 | campaign/the-gazetteer | MacBookPro | 10 |
@@ -1736,3 +1770,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-19T20:30:11Z | sluice:outboard | 35.861 | 22.860 | 36.156 | 1.65 | 0 | 4bf3d92ff |  | lefford | 40 |
 | 2026-08-19T20:36:24Z | sluice:gate | 372.616 | 10123.744 | 502.949 | 28.52 | 0 | ee98dcf33 |  | lefford | 40 |
 | 2026-08-19T20:39:15Z | sluice:clients | 170.640 | 364.925 | 19.552 | 2.25 | 0 | 3a48f8aa6 |  | lefford | 40 |
+| 2026-08-19T20:45:06Z | rebaseline | 79.620 | 232.572 | 12.057 | 3.07 | 0 | 5b3edebd | campaign/the-crucible | MacBookPro | 10 |
+| 2026-08-19T20:47:00Z | gate-commit | 96.555 | 558.666 | 29.225 | 6.09 | 0 | 5b3edebd | campaign/the-crucible | MacBookPro | 10 |

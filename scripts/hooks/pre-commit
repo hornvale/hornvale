@@ -67,7 +67,7 @@ fi
 # memory: any commit that stages one of the four files below must pass
 # `make census-check` before it can land — ~2.5 minutes, only paid on the
 # rare commit that actually touches these.
-census_guard_files='windows/lab/tests/calibration\.rs|windows/lab/tests/branches_family_calibration\.rs|windows/lab/tests/gathering_calibration\.rs|tools/census/queries/calibrate/golden-pins\.sql'
+census_guard_files='windows/lab/tests/suite/calibration\.rs|windows/lab/tests/suite/branches_family_calibration\.rs|windows/lab/tests/suite/gathering_calibration\.rs|tools/census/queries/calibrate/golden-pins\.sql'
 if git diff --cached --name-only | grep -qE "^(${census_guard_files})$"; then
     echo "pre-commit: a calibration-pin file is staged — running 'make census-check' (~2.5 min; this is the golden-pins.sql tripwire guard)..." >&2
     if ! make census-check; then

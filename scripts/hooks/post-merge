@@ -54,7 +54,7 @@
 #
 # Scope: only speaks when the merge actually touched a generated path, so an
 # ordinary absorption of unrelated code stays silent. `docs/generated-paths.txt`
-# is the single source of truth for that list (`cli/tests/generated_paths.rs`
+# is the single source of truth for that list (`cli/tests/suite/generated_paths.rs`
 # fails on a second copy), so this reads it rather than restating it.
 set -euo pipefail
 

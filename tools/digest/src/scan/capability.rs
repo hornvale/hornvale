@@ -7,7 +7,7 @@ use super::repo_root;
 /// to restate it and drifted: it still omitted `libm` long after decision 0041
 /// admitted it.
 pub fn allowed_external() -> Vec<String> {
-    let src = std::fs::read_to_string(repo_root().join("cli/tests/architecture.rs"))
+    let src = std::fs::read_to_string(repo_root().join("cli/tests/suite/architecture.rs"))
         .expect("architecture.rs is readable");
     let line = src
         .lines()
@@ -55,7 +55,7 @@ mod tests {
                 "serde".to_string(),
                 "serde_json".to_string()
             ],
-            "must match ALLOWED_EXTERNAL in cli/tests/architecture.rs, including libm (0041)"
+            "must match ALLOWED_EXTERNAL in cli/tests/suite/architecture.rs, including libm (0041)"
         );
     }
 
