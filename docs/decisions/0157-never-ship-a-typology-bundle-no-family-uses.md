@@ -1,7 +1,7 @@
-# 0148. Never ship a typology bundle no family uses
+# 0157. Never ship a typology bundle no family uses
 
 **Status:** Accepted (2026-08-19) · **Decider:** Nathan · **Relates:**
-[0147](0147-a-typology-bundle-is-authored-not-derived.md) (a bundle is
+[0156](0156-a-typology-bundle-is-authored-not-derived.md) (a bundle is
 authored), [0016](0016-measurement-is-preregistered.md) (measurement is
 preregistered)
 

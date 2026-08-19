@@ -87,7 +87,7 @@ constant. The shipped humanoids sit at zero on it (atonal); [The
 Burr](../chronicle/the-burr.md) gave the tier its first real mover, proto-draconic,
 authored at `0.7` — the dimension's keep is no longer purely hypothetical, though
 the value is reached at the family's proto root, not yet in a shipped dragon's
-own mouth (see "Tone: a second channel," below, and decision 0148). Widening the
+own mouth (see "Tone: a second channel," below, and decision 0157). Widening the
 vector further stays what it was — real design work belonging to a campaign
 willing to weigh it, nothing here growing without someone choosing to grow it.
 
@@ -105,7 +105,7 @@ draconic-kin people's anatomy into seven numbers a formula can read.
 | Sibilance | scalar `[0,1]` | 0.5 | 0.9 | the draconic hiss — sibilant-rich |
 | Voice loudness | scalar `[0,1]` | 0.5 | 0.2 | small, frail, and stealthy — a dampable phonology |
 | Tonality | scalar `[0,1]` | 0.0 | 0.0 | atonal — kobold carries no pitch contrast; the manikin's own default stays 0.0 even after The Burr moved a shipped family (draconic's proto root, `0.7`) off it |
-| Exotic manner (none, trill, click, or ejective) | enum | None | Trill | declared for a resonant manner the anatomy affords — though since decision 0149 only click and ejective are actually gated by this field; see below |
+| Exotic manner (none, trill, click, or ejective) | enum | None | Trill | declared for a resonant manner the anatomy affords — though since decision 0158 only click and ejective are actually gated by this field; see below |
 
 Goblin's authored articulation values currently coincide with the Manikin
 column on every row. Read the column with its two kinds of entry kept apart:
@@ -123,7 +123,7 @@ for a formula that has not been written yet, its value unchanged on the day
 the formula arrives because 0.2 is already what that formula will compute.
 Voice loudness also reaches sideways into the row below it, though what it
 reaches there changed this campaign. **The trill and the exotic tier
-(decision 0149).** Before The Burr, a trill sat behind the same closed
+(decision 0158).** Before The Burr, a trill sat behind the same closed
 `exotic` gate as click and ejective: a species drew one only if its `exotic`
 field declared `Trill`, and almost none did, so nearly every shipped tongue
 came out with zero liquid-bearing words — kobold, whose row declares
@@ -168,7 +168,7 @@ first permit.
 phonology draw above answer *what a species can produce*; a **typology
 bundle** (`family_typology`, `hornvale_language::typology`) answers a
 different question — *what rules turn a drawn inventory into a word* — and it
-is new this campaign (decisions 0147, 0148). A bundle is five more authored
+is new this campaign (decisions 0156, 0157). A bundle is five more authored
 fields per family: **morphology** (how a stem is built — templatic,
 agglutinative, isolating, or the engine's original **concatenative**),
 **onset law** and **coda law** (what a syllable may begin and end with —
@@ -185,7 +185,7 @@ way Arabic or Hebrew build a word, rather than concatenated the way every
 other shipped tongue is. Elf draws `sonorant-open`: a forced second onset
 slot that must be a liquid, plus backness harmony — the bundle that finally
 puts a trill or an approximant audibly in an elvish name rather than merely
-in its envelope, completing the half that ungating alone (decision 0149,
+in its envelope, completing the half that ungating alone (decision 0158,
 above) left undone. Draconic draws `isolating-tonal`: short, unaffixed roots
 and open-or-nasal codas, the bundle actually built to spend the tone tier
 (see "Tone," below, for how much of that spend reaches a shipped word today).
@@ -194,7 +194,7 @@ draw `concatenative` — the engine's pre-Burr behaviour, named as a bundle now
 and kept as the campaign's own control, whose output must not move beyond
 what the epoch bump alone forces. A family's typology is authored the same
 way its articulation vector is: never derived, never fit, and never shipped
-until a real family binds it (decision 0148) — an authored field with no
+until a real family binds it (decision 0157) — an authored field with no
 family reaching it is scaffolding, not a feature.
 
 **Tone: a second channel, and how a lost sound becomes pitch.** Tonality maps
@@ -226,7 +226,7 @@ humanoids — so tonogenesis excludes itself from every shipped daughter's own
 descent entirely, rather than drawing it and finding it inert after the fact;
 their words still change only through the epoch's reseed. What has changed is
 the *proto* one level up: proto-draconic is now authored at `0.7` and draws a
-real, contrastive tone inventory at its root (decision 0148) — the
+real, contrastive tone inventory at its root (decision 0157) — the
 tone-widening machinery `draw_tone_inventory` reaches a live value rather than
 sitting built and unit-tested behind 23 rows of `0.0`. That tone does not
 survive descent, though: each dragon daughter's own atonal phonology cannot
@@ -819,7 +819,7 @@ mechanism is untouched.
 model card already made it load-bearing once, biasing the phonology
 engine's inventory draw and down-weighting any high-sonority manner — a
 trill or an approximant — by how loud a species is willing to be, exotic or
-not since decision 0149 — a kobold can trill, the model card says, but its
+not since decision 0158 — a kobold can trill, the model card says, but its
 names hiss. It would be tidy if this campaign gave the dimension a second,
 symmetrical job — biasing *which* cascade rules a lineage draws, fortition
 for the loud and lenition for the quiet — and an early pass through this

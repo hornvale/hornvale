@@ -1,4 +1,4 @@
-# 0147. A typology bundle is authored, not derived
+# 0156. A typology bundle is authored, not derived
 
 **Status:** Accepted (2026-08-19) · **Decider:** Nathan · **Relates:**
 [0011](0011-studies-are-data-metrics-are-code.md) (studies are data),

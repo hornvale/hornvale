@@ -1,4 +1,4 @@
-# 0149. A trill is not an exotic manner
+# 0158. A trill is not an exotic manner
 
 **Status:** Accepted (2026-08-19) · **Decider:** Nathan · **Relates:**
 [0089](0089-an-epoch-freezes-when-a-world-saved-from-main-can-carry-it.md)
