@@ -651,46 +651,46 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): desert-elf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): desert-elf has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Peengpung | /peeŋpuŋ/ | Beengtung | Beengtung → no change → Peengpung |
+| `blood` | the circulating fluid of a body | Peeṅpuṅ | /peeŋpuŋ/ | Beengtung | Beengtung → no change → Peeṅpuṅ |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Ngengpaang | /ŋeŋpaaŋ/ | Ngengtaang | Ngengtaang → no change → Ngengpaang |
+| `bone` | the rigid frame of a body | Ṅeṅpaaṅ | /ŋeŋpaaŋ/ | Ngengtaang | Ngengtaang → no change → Ṅeṅpaaṅ |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): desert-elf has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
-| `bugbear-kind` | a bugbear | Szeng | /szeŋ/ | Sreng | Sreng → no change → Szeng |
+| `bugbear-kind` | a bugbear | Szeṅ | /szeŋ/ | Sreng | Sreng → no change → Szeṅ |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): desert-elf has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): desert-elf has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Zhzeng | /ʒzeŋ/ | Zhreng | Zhreng → no change → Zhzeng |
+| `child` | one's son or daughter | Žzeṅ | /ʒzeŋ/ | Zhreng | Zhreng → no change → Žzeṅ |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): desert-elf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Shzeangngaengszaong | /ʃzeaŋŋaeŋszaoŋ/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Šzeaṅṅaeṅszaoṅ | /ʃzeaŋŋaeŋszaoŋ/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): desert-elf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): desert-elf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): desert-elf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): desert-elf has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): desert-elf has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Zzeengshzoong | /zzeeŋʃzooŋ/ | Zreengshroong | Zreengshroong → no change → Zzeengshzoong |
-| `day` | the light half of the day-night cycle | Szoungpuung | /szouŋpuuŋ/ | Sroungtuung | Sroungtuung → no change → Szoungpuung |
+| `dark` | the color term for black/dark hues | Zzeeṅšzooṅ | /zzeeŋʃzooŋ/ | Zreengshroong | Zreengshroong → no change → Zzeeṅšzooṅ |
+| `day` | the light half of the day-night cycle | Szouṅpuuṅ | /szouŋpuuŋ/ | Sroungtuung | Sroungtuung → no change → Szouṅpuuṅ |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `desert-dwarf-kind` | a desert dwarf | Szeongpeang | /szeoŋpeaŋ/ | Sreongpeang | Sreongpeang → no change → Szeongpeang |
-| `desert-elf-kind` | a desert elf | Szeang | /szeaŋ/ | Sreang | Sreang → no change → Szeang |
-| `die` | to cease living | Gaonggaong | /gaoŋgaoŋ/ | Gaonggaong | Gaonggaong → no change → Gaonggaong |
+| `desert-dwarf-kind` | a desert dwarf | Szeoṅpeaṅ | /szeoŋpeaŋ/ | Sreongpeang | Sreongpeang → no change → Szeoṅpeaṅ |
+| `desert-elf-kind` | a desert elf | Szeaṅ | /szeaŋ/ | Sreang | Sreang → no change → Szeaṅ |
+| `die` | to cease living | Gaoṅgaoṅ | /gaoŋgaoŋ/ | Gaonggaong | Gaonggaong → no change → Gaoṅgaoṅ |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): desert-elf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Shzongngeng | /ʃzoŋŋeŋ/ | Shrongngeng | Shrongngeng → no change → Shzongngeng |
-| `drow-kind` | a drow | Gong | /goŋ/ | Gong | Gong → no change → Gong |
-| `earth` | the ground underfoot | Shzeangngaeng | /ʃzeaŋŋaeŋ/ | Shreangngaeng | Shreangngaeng → no change → Shzeangngaeng |
-| `east` | the direction of increasing longitude | Peung | /peuŋ/ | Peung | Peung → no change → Peung |
-| `eat` | to consume food | Pangpeng | /paŋpeŋ/ | Pangpeng | Pangpeng → no change → Pangpeng |
+| `drink` | to swallow liquid | Šzoṅṅeṅ | /ʃzoŋŋeŋ/ | Shrongngeng | Shrongngeng → no change → Šzoṅṅeṅ |
+| `drow-kind` | a drow | Goṅ | /goŋ/ | Gong | Gong → no change → Goṅ |
+| `earth` | the ground underfoot | Šzeaṅṅaeṅ | /ʃzeaŋŋaeŋ/ | Shreangngaeng | Shreangngaeng → no change → Šzeaṅṅaeṅ |
+| `east` | the direction of increasing longitude | Peuṅ | /peuŋ/ | Peung | Peung → no change → Peuṅ |
+| `eat` | to consume food | Paṅpeṅ | /paŋpeŋ/ | Pangpeng | Pangpeng → no change → Paṅpeṅ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): desert-elf has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): desert-elf has no exposure to 'erg' |
-| `eye` | the organ of sight | Pangzuang | /paŋzuaŋ/ | Pangduang | Pangduang → no change → Pangzuang |
+| `eye` | the organ of sight | Paṅzuaṅ | /paŋzuaŋ/ | Pangduang | Pangduang → no change → Paṅzuaṅ |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): desert-elf has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Pung | /puŋ/ | Bung | Bung → no change → Pung |
+| `fire` | flame and heat | Puṅ | /puŋ/ | Bung | Bung → no change → Puṅ |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): desert-elf has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): desert-elf has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Ngoengszuung | /ŋoeŋszuuŋ/ | Ngoengsruung | Ngoengsruung → no change → Ngoengszuung |
-| `ford` | where a river runs shallow enough to cross | Ngongshzang | /ŋoŋʃzaŋ/ | Ngongshrang | Ngongshrang → no change → Ngongshzang |
+| `foot` | the walking limb-end | Ṅoeṅszuuṅ | /ŋoeŋszuuŋ/ | Ngoengsruung | Ngoengsruung → no change → Ṅoeṅszuuṅ |
+| `ford` | where a river runs shallow enough to cross | Ṅoṅšzaṅ | /ŋoŋʃzaŋ/ | Ngongshrang | Ngongshrang → no change → Ṅoṅšzaṅ |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): desert-elf has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): desert-elf has no exposure to 'frost-heave' |
 | `gallery-forest` | Forest following a watercourse. | — | — | — | gap (experiential): desert-elf has no exposure to 'gallery-forest' |
@@ -702,27 +702,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): desert-elf has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): desert-elf has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): desert-elf has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Peonggong | /peoŋgoŋ/ | Teonggong | Teonggong → no change → Peonggong |
-| `gnoll-kind` | a gnoll | Peng | /peŋ/ | Peng | Peng → no change → Peng |
-| `goblin-kind` | a goblin | Ngangzhzung | /ŋaŋʒzuŋ/ | Ngangzhrung | Ngangzhrung → no change → Ngangzhzung |
-| `god` | a deity | Zoongpong | /zooŋpoŋ/ | Doongpong | Doongpong → no change → Zoongpong |
+| `gloom` | the deepest, starless dark | Peoṅgoṅ | /peoŋgoŋ/ | Teonggong | Teonggong → no change → Peoṅgoṅ |
+| `gnoll-kind` | a gnoll | Peṅ | /peŋ/ | Peng | Peng → no change → Peṅ |
+| `goblin-kind` | a goblin | Ṅaṅžzuṅ | /ŋaŋʒzuŋ/ | Ngangzhrung | Ngangzhrung → no change → Ṅaṅžzuṅ |
+| `god` | a deity | Zooṅpoṅ | /zooŋpoŋ/ | Doongpong | Doongpong → no change → Zooṅpoṅ |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): desert-elf has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Zongszaeng | /zoŋszaeŋ/ | Dongsraeng | Dongsraeng → no change → Zongszaeng |
-| `green` | the color term for green | Zongpoong | /zoŋpooŋ/ | Dongpoong | Dongpoong → no change → Zongpoong |
-| `gully-dwarf-kind` | a gully dwarf | Zzongngang | /zzoŋŋaŋ/ | Zrongngang | Zrongngang → no change → Zzongngang |
+| `great` | large in size or extent | Zoṅszaeṅ | /zoŋszaeŋ/ | Dongsraeng | Dongsraeng → no change → Zoṅszaeṅ |
+| `green` | the color term for green | Zoṅpooṅ | /zoŋpooŋ/ | Dongpoong | Dongpoong → no change → Zoṅpooṅ |
+| `gully-dwarf-kind` | a gully dwarf | Zzoṅṅaṅ | /zzoŋŋaŋ/ | Zrongngang | Zrongngang → no change → Zzoṅṅaṅ |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): desert-elf has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Ngueng | /ŋueŋ/ | Ngueng | Ngueng → no change → Ngueng |
-| `hearth` | the fire at the center of a home | Zeong | /zeoŋ/ | Deong | Deong → no change → Zeong |
+| `hand` | the manipulating limb-end | Ṅueṅ | /ŋueŋ/ | Ngueng | Ngueng → no change → Ṅueṅ |
+| `hearth` | the fire at the center of a home | Zeoṅ | /zeoŋ/ | Deong | Deong → no change → Zeoṅ |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): desert-elf has no exposure to 'heat' |
-| `high` | far above the ground | Shzongshzaong | /ʃzoŋʃzaoŋ/ | Shrongshraong | Shrongshraong → no change → Shzongshzaong |
-| `high-elf-kind` | a high elf | Zhzongszeung | /ʒzoŋszeuŋ/ | Zhrongsreung | Zhrongsreung → no change → Zhzongszeung |
+| `high` | far above the ground | Šzoṅšzaoṅ | /ʃzoŋʃzaoŋ/ | Shrongshraong | Shrongshraong → no change → Šzoṅšzaoṅ |
+| `high-elf-kind` | a high elf | Žzoṅszeuṅ | /ʒzoŋszeuŋ/ | Zhrongsreung | Zhrongsreung → no change → Žzoṅszeuṅ |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): desert-elf has no exposure to 'hill' |
-| `hill-dwarf-kind` | a hill dwarf | Zzuang | /zzuaŋ/ | Zruang | Zruang → no change → Zzuang |
-| `hobgoblin-kind` | a hobgoblin | Zzongshzoung | /zzoŋʃzouŋ/ | Zrongshroung | Zrongshroung → no change → Zzongshzoung |
+| `hill-dwarf-kind` | a hill dwarf | Zzuaṅ | /zzuaŋ/ | Zruang | Zruang → no change → Zzuaṅ |
+| `hobgoblin-kind` | a hobgoblin | Zzoṅšzouṅ | /zzoŋʃzouŋ/ | Zrongshroung | Zrongshroung → no change → Zzoṅšzouṅ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): desert-elf has no exposure to 'holdfast-tangle' |
-| `home` | one's dwelling | Zzaunggeng | /zzauŋgeŋ/ | Zraunggeng | Zraunggeng → no change → Zzaunggeng |
-| `human-kind` | a human | Ngongszung | /ŋoŋszuŋ/ | Ngongsrung | Ngongsrung → no change → Ngongszung |
+| `home` | one's dwelling | Zzauṅgeṅ | /zzauŋgeŋ/ | Zraunggeng | Zraunggeng → no change → Zzauṅgeṅ |
+| `human-kind` | a human | Ṅoṅszuṅ | /ŋoŋszuŋ/ | Ngongsrung | Ngongsrung → no change → Ṅoṅszuṅ |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): desert-elf has no exposure to 'ice-lead' |
@@ -730,97 +730,97 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): desert-elf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): desert-elf has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Zhzeeng | /ʒzeeŋ/ | Zhreeng | Zhreeng → no change → Zhzeeng |
-| `lake` | still water held in a hollow that has no outlet to the sea | Ngoangszaong | /ŋoaŋszaoŋ/ | — | compound: `little` + `water` |
+| `kobold-kind` | a kobold | Žzeeṅ | /ʒzeeŋ/ | Zhreeng | Zhreeng → no change → Žzeeṅ |
+| `lake` | still water held in a hollow that has no outlet to the sea | Ṅoaṅszaoṅ | /ŋoaŋszaoŋ/ | — | compound: `little` + `water` |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): desert-elf has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Ngaong | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ngaong |
+| `light` | the color term for white/light hues | Ṅaoṅ | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ṅaoṅ |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): desert-elf has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Ngoang | /ŋoaŋ/ | Ngoang | Ngoang → no change → Ngoang |
-| `low` | near the ground | Puangngeng | /puaŋŋeŋ/ | Puangngeng | Puangngeng → no change → Puangngeng |
-| `many` | an indefinitely large count | Shzoung | /ʃzouŋ/ | Shroung | Shroung → no change → Shzoung |
+| `little` | small in size or extent | Ṅoaṅ | /ŋoaŋ/ | Ngoang | Ngoang → no change → Ṅoaṅ |
+| `low` | near the ground | Puaṅṅeṅ | /puaŋŋeŋ/ | Puangngeng | Puangngeng → no change → Puaṅṅeṅ |
+| `many` | an indefinitely large count | Šzouṅ | /ʃzouŋ/ | Shroung | Shroung → no change → Šzouṅ |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): desert-elf has no exposure to 'marine-snow' |
-| `marsh` | soft wet ground | Gongszoang | /goŋszoaŋ/ | Gongsroang | Gongsroang → no change → Gongszoang |
+| `marsh` | soft wet ground | Goṅszoaṅ | /goŋszoaŋ/ | Gongsroang | Gongsroang → no change → Goṅszoaṅ |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): desert-elf has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
-| `millet` | a staple crop | Zzonggong | /zzoŋgoŋ/ | Zronggong | Zronggong → no change → Zzonggong |
-| `moon` | a moon | Paangzzoeng | /paaŋzzoeŋ/ | Taangzroeng | Taangzroeng → no change → Paangzzoeng |
+| `millet` | a staple crop | Zzoṅgoṅ | /zzoŋgoŋ/ | Zronggong | Zronggong → no change → Zzoṅgoṅ |
+| `moon` | a moon | Paaṅzzoeṅ | /paaŋzzoeŋ/ | Taangzroeng | Taangzroeng → no change → Paaṅzzoeṅ |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): desert-elf has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): desert-elf has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Guanggung | /guaŋguŋ/ | Guanggung | Guanggung → no change → Guanggung |
-| `move` | to go from one place to another | Shzungpeeng | /ʃzuŋpeeŋ/ | Shrungteeng | Shrungteeng → no change → Shzungpeeng |
+| `mouth` | the organ of eating and speech | Guaṅguṅ | /guaŋguŋ/ | Guanggung | Guanggung → no change → Guaṅguṅ |
+| `move` | to go from one place to another | Šzuṅpeeṅ | /ʃzuŋpeeŋ/ | Shrungteeng | Shrungteeng → no change → Šzuṅpeeṅ |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): desert-elf has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Ngang | /ŋaŋ/ | Ngang | Ngang → no change → Ngang |
-| `new` | recently come to be | Gaongngaang | /gaoŋŋaaŋ/ | Gaongngaang | Gaongngaang → no change → Gaongngaang |
-| `night` | the dark half of the day-night cycle | Paengngang | /paeŋŋaŋ/ | Paengngang | Paengngang → no change → Paengngang |
+| `name` | a word that identifies one who bears it | Ṅaṅ | /ŋaŋ/ | Ngang | Ngang → no change → Ṅaṅ |
+| `new` | recently come to be | Gaoṅṅaaṅ | /gaoŋŋaaŋ/ | Gaongngaang | Gaongngaang → no change → Gaoṅṅaaṅ |
+| `night` | the dark half of the day-night cycle | Paeṅṅaṅ | /paeŋŋaŋ/ | Paengngang | Paengngang → no change → Paeṅṅaṅ |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): desert-elf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Shzungpung | /ʃzuŋpuŋ/ | Shrungpung | Shrungpung → no change → Shzungpung |
-| `north-east` | between north and east | Shzungpungpeung | /ʃzuŋpuŋpeuŋ/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Shzungpungngeungpoung | /ʃzuŋpuŋŋeuŋpouŋ/ | — | compound: `north` + `west` |
-| `old` | long in existence | Ngaangpang | /ŋaaŋpaŋ/ | Ngaangpang | Ngaangpang → no change → Ngaangpang |
+| `north` | toward the pole of increasing latitude | Šzuṅpuṅ | /ʃzuŋpuŋ/ | Shrungpung | Shrungpung → no change → Šzuṅpuṅ |
+| `north-east` | between north and east | Šzuṅpuṅpeuṅ | /ʃzuŋpuŋpeuŋ/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Šzuṅpuṅṅeuṅpouṅ | /ʃzuŋpuŋŋeuŋpouŋ/ | — | compound: `north` + `west` |
+| `old` | long in existence | Ṅaaṅpaṅ | /ŋaaŋpaŋ/ | Ngaangpang | Ngaangpang → no change → Ṅaaṅpaṅ |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): desert-elf has no exposure to 'old-growth' |
-| `one` | the cardinal number 1 | Ngaung | /ŋauŋ/ | Ngaung | Ngaung → no change → Ngaung |
+| `one` | the cardinal number 1 | Ṅauṅ | /ŋauŋ/ | Ngaung | Ngaung → no change → Ṅauṅ |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): desert-elf has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): desert-elf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Zhzengszung | /ʒzeŋszuŋ/ | Zhrengsrung | Zhrengsrung → no change → Zhzengszung |
+| `over` | above; atop | Žzeṅszuṅ | /ʒzeŋszuŋ/ | Zhrengsrung | Zhrengsrung → no change → Žzeṅszuṅ |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): desert-elf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Zongzhzung | /zoŋʒzuŋ/ | Dongzhrung | Dongzhrung → no change → Zongzhzung |
-| `person` | a person; a member of a people (the autonym root) | Szeanggeang | /szeaŋgeaŋ/ | Sreanggeang | Sreanggeang → no change → Szeanggeang |
+| `parent` | one's father or mother | Zoṅžzuṅ | /zoŋʒzuŋ/ | Dongzhrung | Dongzhrung → no change → Zoṅžzuṅ |
+| `person` | a person; a member of a people (the autonym root) | Szeaṅgeaṅ | /szeaŋgeaŋ/ | Sreanggeang | Sreanggeang → no change → Szeaṅgeaṅ |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): desert-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): desert-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): desert-elf has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): desert-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): desert-elf has no exposure to 'rain' |
-| `red` | the color term for red | Gungngong | /guŋŋoŋ/ | Gungngong | Gungngong → no change → Gungngong |
+| `red` | the color term for red | Guṅṅoṅ | /guŋŋoŋ/ | Gungngong | Gungngong → no change → Guṅṅoṅ |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): desert-elf has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): desert-elf has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): desert-elf has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): desert-elf has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Ngengngong | /ŋeŋŋoŋ/ | Ngengngong | Ngengngong → no change → Ngengngong |
+| `rest` | to stop and recover strength | Ṅeṅṅoṅ | /ŋeŋŋoŋ/ | Ngengngong | Ngengngong → no change → Ṅeṅṅoṅ |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): desert-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): desert-elf has no exposure to 'rice' |
-| `river` | fresh water running across land | Peungpaung | /peuŋpauŋ/ | Peungpaung | Peungpaung → no change → Peungpaung |
+| `river` | fresh water running across land | Peuṅpauṅ | /peuŋpauŋ/ | Peungpaung | Peungpaung → no change → Peuṅpauṅ |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): desert-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): desert-elf has no exposure to 'sargassum-drift' |
-| `savanna` | a biome class | Ngeng | /ŋeŋ/ | Ngeng | Ngeng → no change → Ngeng |
+| `savanna` | a biome class | Ṅeṅ | /ŋeŋ/ | Ngeng | Ngeng → no change → Ṅeṅ |
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): desert-elf has no exposure to 'scattering-layer' |
-| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | Zaangngoung | /zaaŋŋouŋ/ | Daangngoung | Daangngoung → no change → Zaangngoung |
+| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | Zaaṅṅouṅ | /zaaŋŋouŋ/ | Daangngoung | Daangngoung → no change → Zaaṅṅouṅ |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): desert-elf has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Shzoungszaong | /ʃzouŋszaoŋ/ | — | compound: `many` + `water` |
-| `sea-elf-kind` | a sea elf | Ngoengzung | /ŋoeŋzuŋ/ | Ngoengdung | Ngoengdung → no change → Ngoengzung |
+| `sea` | a body of salt water | Šzouṅszaoṅ | /ʃzouŋszaoŋ/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | Ṅoeṅzuṅ | /ŋoeŋzuŋ/ | Ngoengdung | Ngoengdung → no change → Ṅoeṅzuṅ |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Pungpeng | /puŋpeŋ/ | Bungteng | Bungteng → no change → Pungpeng |
+| `shadow` | cast dark, distinct from open gloom | Puṅpeṅ | /puŋpeŋ/ | Bungteng | Bungteng → no change → Puṅpeṅ |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): desert-elf has no exposure to 'shrieker-kind' |
-| `shrubland` | a biome class | Pong | /poŋ/ | Pong | Pong → no change → Pong |
-| `sibling` | one's brother or sister | Szeengpong | /szeeŋpoŋ/ | Sreengbong | Sreengbong → no change → Szeengpong |
-| `sleep` | to rest unconscious | Geongngueng | /geoŋŋueŋ/ | Geongngueng | Geongngueng → no change → Geongngueng |
+| `shrubland` | a biome class | Poṅ | /poŋ/ | Pong | Pong → no change → Poṅ |
+| `sibling` | one's brother or sister | Szeeṅpoṅ | /szeeŋpoŋ/ | Sreengbong | Sreengbong → no change → Szeeṅpoṅ |
+| `sleep` | to rest unconscious | Geoṅṅueṅ | /geoŋŋueŋ/ | Geongngueng | Geongngueng → no change → Geoṅṅueṅ |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): desert-elf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): desert-elf has no exposure to 'snow' |
-| `snow-elf-kind` | a snow elf | Zzengngung | /zzeŋŋuŋ/ | Zrengngung | Zrengngung → no change → Zzengngung |
+| `snow-elf-kind` | a snow elf | Zzeṅṅuṅ | /zzeŋŋuŋ/ | Zrengngung | Zrengngung → no change → Zzeṅṅuṅ |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): desert-elf has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Ngengnguong | /ŋeŋŋuoŋ/ | Ngengnguong | Ngengnguong → no change → Ngengnguong |
-| `south-east` | between south and east | Ngengnguongpeung | /ŋeŋŋuoŋpeuŋ/ | — | compound: `south` + `east` |
-| `south-west` | between south and west | Ngengnguongngeungpoung | /ŋeŋŋuoŋŋeuŋpouŋ/ | — | compound: `south` + `west` |
-| `spirit` | a lesser or unseen supernatural presence | Szung | /szuŋ/ | Srung | Srung → no change → Szung |
+| `south` | toward the pole of decreasing latitude | Ṅeṅṅuoṅ | /ŋeŋŋuoŋ/ | Ngengnguong | Ngengnguong → no change → Ṅeṅṅuoṅ |
+| `south-east` | between south and east | Ṅeṅṅuoṅpeuṅ | /ŋeŋŋuoŋpeuŋ/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Ṅeṅṅuoṅṅeuṅpouṅ | /ŋeŋŋuoŋŋeuŋpouŋ/ | — | compound: `south` + `west` |
+| `spirit` | a lesser or unseen supernatural presence | Szuṅ | /szuŋ/ | Srung | Srung → no change → Szuṅ |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): desert-elf has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): desert-elf has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): desert-elf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Zhzeengzhzaong | /ʒzeeŋʒzaoŋ/ | Zhreengzhraong | Zhreengzhraong → no change → Zhzeengzhzaong |
-| `starlit` | dark faintly lit by stars | Zeengszoeng | /zeeŋszoeŋ/ | Deengsroeng | Deengsroeng → no change → Zeengszoeng |
-| `stone` | rock | Peengngung | /peeŋŋuŋ/ | Peengngung | Peengngung → no change → Peengngung |
-| `sun` | the sun | Pungzhzeong | /puŋʒzeoŋ/ | Tungzhreong | Tungzhreong → no change → Pungzhzeong |
+| `star` | a fixed point of light in the night sky | Žzeeṅžzaoṅ | /ʒzeeŋʒzaoŋ/ | Zhreengzhraong | Zhreengzhraong → no change → Žzeeṅžzaoṅ |
+| `starlit` | dark faintly lit by stars | Zeeṅszoeṅ | /zeeŋszoeŋ/ | Deengsroeng | Deengsroeng → no change → Zeeṅszoeṅ |
+| `stone` | rock | Peeṅṅuṅ | /peeŋŋuŋ/ | Peengngung | Peengngung → no change → Peeṅṅuṅ |
+| `sun` | the sun | Puṅžzeoṅ | /puŋʒzeoŋ/ | Tungzhreong | Tungzhreong → no change → Puṅžzeoṅ |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-forest' |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
-| `thorn-scrub` | Dry scrub of thorned shrubs. | Puongzeng | /puoŋzeŋ/ | Tuongdeng | Tuongdeng → no change → Puongzeng |
+| `thorn-scrub` | Dry scrub of thorned shrubs. | Puoṅzeṅ | /puoŋzeŋ/ | Tuongdeng | Tuongdeng → no change → Puoṅzeṅ |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): desert-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): desert-elf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Zengshzeng | /zeŋʃzeŋ/ | Dengshreng | Dengshreng → no change → Zengshzeng |
+| `tree` | a woody plant | Zeṅšzeṅ | /zeŋʃzeŋ/ | Dengshreng | Dengshreng → no change → Zeṅšzeṅ |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): desert-elf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): desert-elf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
@@ -830,25 +830,25 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): desert-elf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): desert-elf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Ngeengzhzung | /ŋeeŋʒzuŋ/ | Ngeengzhrung | Ngeengzhrung → no change → Ngeengzhzung |
-| `under` | beneath; below | Ngengngaeng | /ŋeŋŋaeŋ/ | Ngengngaeng | Ngengngaeng → no change → Ngengngaeng |
+| `two` | the cardinal number 2 | Ṅeeṅžzuṅ | /ŋeeŋʒzuŋ/ | Ngeengzhrung | Ngeengzhrung → no change → Ṅeeṅžzuṅ |
+| `under` | beneath; below | Ṅeṅṅaeṅ | /ŋeŋŋaeŋ/ | Ngengngaeng | Ngengngaeng → no change → Ṅeṅṅaeṅ |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): desert-elf has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): desert-elf has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): desert-elf has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): desert-elf lives by herding here and raises no staple |
-| `water` | the drinkable liquid | Szaong | /szaoŋ/ | Sraong | Sraong → no change → Szaong |
-| `west` | the direction of decreasing longitude | Ngeungpoung | /ŋeuŋpouŋ/ | Ngeungboung | Ngeungboung → no change → Ngeungpoung |
+| `water` | the drinkable liquid | Szaoṅ | /szaoŋ/ | Sraong | Sraong → no change → Szaoṅ |
+| `west` | the direction of decreasing longitude | Ṅeuṅpouṅ | /ŋeuŋpouŋ/ | Ngeungboung | Ngeungboung → no change → Ṅeuṅpouṅ |
 | `wheat` | a staple crop | — | — | — | gap (experiential): desert-elf has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): desert-elf has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Zanggang | /zaŋgaŋ/ | Danggang | Danggang → no change → Zanggang |
+| `wind` | moving air | Zaṅgaṅ | /zaŋgaŋ/ | Danggang | Danggang → no change → Zaṅgaṅ |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): desert-elf has no exposure to 'wind-scour' |
-| `wood-elf-kind` | a wood elf | Shzeongngung | /ʃzeoŋŋuŋ/ | Shreongngung | Shreongngung → no change → Shzeongngung |
-| `wooded-grassland` | Grassland with scattered trees. | Zzuanggeng | /zzuaŋgeŋ/ | Zruanggeng | Zruanggeng → no change → Zzuanggeng |
+| `wood-elf-kind` | a wood elf | Šzeoṅṅuṅ | /ʃzeoŋŋuŋ/ | Shreongngung | Shreongngung → no change → Šzeoṅṅuṅ |
+| `wooded-grassland` | Grassland with scattered trees. | Zzuaṅgeṅ | /zzuaŋgeŋ/ | Zruanggeng | Zruanggeng → no change → Zzuaṅgeṅ |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): desert-elf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): desert-elf has no exposure to 'xorn-kind' |
-| `yellow` | the color term for yellow | Pang | /paŋ/ | Bang | Bang → no change → Pang |
+| `yellow` | the color term for yellow | Paṅ | /paŋ/ | Bang | Bang → no change → Paṅ |
 | `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 
@@ -881,7 +881,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): drow has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | Poo | /poo/ | Tuong | Tuong → finalloss → Poo |
-| `dark` | the color term for black/dark hues | Roogshroo | /roogʃroo/ | Zreengshroong | Zreengshroong → clustersimplify → finalloss → Roogshroo |
+| `dark` | the color term for black/dark hues | Roogšroo | /roogʃroo/ | Zreengshroong | Zreengshroong → clustersimplify → finalloss → Roogšroo |
 | `day` | the light half of the day-night cycle | Roogpoo | /roogpoo/ | Sroungtuung | Sroungtuung → clustersimplify → finalloss → Roogpoo |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Roogpoa | /roogpoa/ | Sreongpeang | Sreongpeang → clustersimplify → finalloss → Roogpoa |
@@ -902,7 +902,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): drow has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): drow has no exposure to 'fish-shoal' |
 | `foot` | the walking limb-end | Googsroo | /googsroo/ | Ngoengsruung | Ngoengsruung → finalloss → Googsroo |
-| `ford` | where a river runs shallow enough to cross | Gogshra | /gogʃra/ | Ngongshrang | Ngongshrang → finalloss → Gogshra |
+| `ford` | where a river runs shallow enough to cross | Gogšra | /gogʃra/ | Ngongshrang | Ngongshrang → finalloss → Gogšra |
 | `forest-gap` | A break in the canopy where light reaches the ground. | Po | /po/ | Tung | Tung → finalloss → Po |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): drow has no exposure to 'frost-heave' |
 | `gallery-forest` | Forest following a watercourse. | Ga | /ga/ | Gang | Gang → finalloss → Ga |
@@ -916,7 +916,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): drow has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Pooggo | /pooggo/ | Teonggong | Teonggong → finalloss → Pooggo |
 | `gnoll-kind` | a gnoll | Po | /po/ | Peng | Peng → finalloss → Po |
-| `goblin-kind` | a goblin | Gagzhro | /gagʒro/ | Ngangzhrung | Ngangzhrung → finalloss → Gagzhro |
+| `goblin-kind` | a goblin | Gagžro | /gagʒro/ | Ngangzhrung | Ngangzhrung → finalloss → Gagžro |
 | `god` | a deity | Doogpo | /doogpo/ | Doongpong | Doongpong → finalloss → Doogpo |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): drow has no exposure to 'grass-sward' |
 | `great` | large in size or extent | Dogsrao | /dogsrao/ | Dongsraeng | Dongsraeng → finalloss → Dogsrao |
@@ -927,11 +927,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hand` | the manipulating limb-end | Goo | /goo/ | Ngueng | Ngueng → finalloss → Goo |
 | `hearth` | the fire at the center of a home | Doo | /doo/ | Deong | Deong → finalloss → Doo |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): drow has no exposure to 'heat' |
-| `high` | far above the ground | Rogshrao | /rogʃrao/ | Shrongshraong | Shrongshraong → clustersimplify → finalloss → Rogshrao |
+| `high` | far above the ground | Rogšrao | /rogʃrao/ | Shrongshraong | Shrongshraong → clustersimplify → finalloss → Rogšrao |
 | `high-elf-kind` | a high elf | Rogsroo | /rogsroo/ | Zhrongsreung | Zhrongsreung → clustersimplify → finalloss → Rogsroo |
 | `hill` | ground that rises above what surrounds it | Raggo | /raggo/ | Zhrangngung | Zhrangngung → clustersimplify → finalloss → Raggo |
 | `hill-dwarf-kind` | a hill dwarf | Roa | /roa/ | Zruang | Zruang → clustersimplify → finalloss → Roa |
-| `hobgoblin-kind` | a hobgoblin | Rogshroo | /rogʃroo/ | Zrongshroung | Zrongshroung → clustersimplify → finalloss → Rogshroo |
+| `hobgoblin-kind` | a hobgoblin | Rogšroo | /rogʃroo/ | Zrongshroung | Zrongshroung → clustersimplify → finalloss → Rogšroo |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): drow has no exposure to 'holdfast-tangle' |
 | `home` | one's dwelling | Raoggo | /raoggo/ | Zraunggeng | Zraunggeng → clustersimplify → finalloss → Raoggo |
 | `human-kind` | a human | Gogsro | /gogsro/ | Ngongsrung | Ngongsrung → finalloss → Gogsro |
@@ -977,7 +977,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): drow has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Rogsro | /rogsro/ | Zhrengsrung | Zhrengsrung → clustersimplify → finalloss → Rogsro |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): drow has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Dogzhro | /dogʒro/ | Dongzhrung | Dongzhrung → finalloss → Dogzhro |
+| `parent` | one's father or mother | Dogžro | /dogʒro/ | Dongzhrung | Dongzhrung → finalloss → Dogžro |
 | `person` | a person; a member of a people (the autonym root) | Roaggoa | /roaggoa/ | Sreanggeang | Sreanggeang → clustersimplify → finalloss → Roaggoa |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): drow has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): drow has no exposure to 'playa' |
@@ -1020,10 +1020,10 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): drow has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): drow has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): drow has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Roogzhrao | /roogʒrao/ | Zhreengzhraong | Zhreengzhraong → clustersimplify → finalloss → Roogzhrao |
+| `star` | a fixed point of light in the night sky | Roogžrao | /roogʒrao/ | Zhreengzhraong | Zhreengzhraong → clustersimplify → finalloss → Roogžrao |
 | `starlit` | dark faintly lit by stars | Doogsroo | /doogsroo/ | Deengsroeng | Deengsroeng → finalloss → Doogsroo |
 | `stone` | rock | Pooggo | /pooggo/ | Peengngung | Peengngung → finalloss → Pooggo |
-| `sun` | the sun | Pogzhroo | /pogʒroo/ | Tungzhreong | Tungzhreong → finalloss → Pogzhroo |
+| `sun` | the sun | Pogžroo | /pogʒroo/ | Tungzhreong | Tungzhreong → finalloss → Pogžroo |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | Rogdoo | /rogdoo/ | Shrongdeeng | Shrongdeeng → clustersimplify → finalloss → Rogdoo |
@@ -1032,23 +1032,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): drow has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): drow has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): drow has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Dogshro | /dogʃro/ | Dengshreng | Dengshreng → finalloss → Dogshro |
+| `tree` | a woody plant | Dogšro | /dogʃro/ | Dengshreng | Dengshreng → finalloss → Dogšro |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): drow has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): drow has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-rainforest' |
-| `tropical-seasonal-forest` | a biome class | Dogzhrao | /dogʒrao/ | Dungzhraung | Dungzhraung → finalloss → Dogzhrao |
+| `tropical-seasonal-forest` | a biome class | Dogžrao | /dogʒrao/ | Dungzhraung | Dungzhraung → finalloss → Dogžrao |
 | `tuber` | a staple crop | — | — | — | gap (experiential): drow has no exposure to 'tuber' |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | — | — | — | gap (experiential): drow has no exposure to 'tubeworm-thicket' |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): drow has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): drow has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Googzhro | /googʒro/ | Ngeengzhrung | Ngeengzhrung → finalloss → Googzhro |
+| `two` | the cardinal number 2 | Googžro | /googʒro/ | Ngeengzhrung | Ngeengzhrung → finalloss → Googžro |
 | `under` | beneath; below | Goggao | /goggao/ | Ngengngaeng | Ngengngaeng → finalloss → Goggao |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): drow has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | Poogdo | /poogdo/ | Toongdung | Toongdung → finalloss → Poogdo |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): drow has no exposure to 'vent-plume' |
-| `vine` | a staple crop | Googshroo | /googʃroo/ | Guongshrueng | Guongshrueng → finalloss → Googshroo |
+| `vine` | a staple crop | Googšroo | /googʃroo/ | Guongshrueng | Guongshrueng → finalloss → Googšroo |
 | `water` | the drinkable liquid | Rao | /rao/ | Sraong | Sraong → clustersimplify → finalloss → Rao |
 | `west` | the direction of decreasing longitude | Googboo | /googboo/ | Ngeungboung | Ngeungboung → finalloss → Googboo |
 | `wheat` | a staple crop | Goo | /goo/ | Ngoung | Ngoung → finalloss → Goo |
@@ -1720,25 +1720,25 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bugbear-kind` | a bugbear | Srem | /srem/ | Sreng | Sreng → no change → Srem |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): high-elf has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): high-elf has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Zhrem | /ʒrem/ | Zhreng | Zhreng → no change → Zhrem |
+| `child` | one's son or daughter | Žrem | /ʒrem/ | Zhreng | Zhreng → no change → Žrem |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): high-elf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Sraomshreammaem | /sraomʃreammaem/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Sraomšreammaem | /sraomʃreammaem/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): high-elf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): high-elf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): high-elf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): high-elf has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | Doom | /doom/ | Tuong | Tuong → lenition → Doom |
-| `dark` | the color term for black/dark hues | Zreemshroom | /zreemʃroom/ | Zreengshroong | Zreengshroong → no change → Zreemshroom |
+| `dark` | the color term for black/dark hues | Zreemšroom | /zreemʃroom/ | Zreengshroong | Zreengshroong → no change → Zreemšroom |
 | `day` | the light half of the day-night cycle | Sroomdoom | /sroomdoom/ | Sroungtuung | Sroungtuung → lenition → Sroomdoom |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Sreombeam | /sreombeam/ | Sreongpeang | Sreongpeang → lenition → Sreombeam |
 | `desert-elf-kind` | a desert elf | Sream | /sream/ | Sreang | Sreang → no change → Sream |
 | `die` | to cease living | Gaomgaom | /gaomgaom/ | Gaonggaong | Gaonggaong → no change → Gaomgaom |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): high-elf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Shrommem | /ʃrommem/ | Shrongngeng | Shrongngeng → no change → Shrommem |
+| `drink` | to swallow liquid | Šrommem | /ʃrommem/ | Shrongngeng | Shrongngeng → no change → Šrommem |
 | `drow-kind` | a drow | Gom | /gom/ | Gong | Gong → no change → Gom |
-| `earth` | the ground underfoot | Shreammaem | /ʃreammaem/ | Shreangngaeng | Shreangngaeng → no change → Shreammaem |
+| `earth` | the ground underfoot | Šreammaem | /ʃreammaem/ | Shreangngaeng | Shreangngaeng → no change → Šreammaem |
 | `east` | the direction of increasing longitude | Beom | /beom/ | Peung | Peung → lenition → Beom |
 | `eat` | to consume food | Bambem | /bambem/ | Pangpeng | Pangpeng → lenition → Bambem |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): high-elf has no exposure to 'eclipse' |
@@ -1764,7 +1764,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): high-elf has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Deomgom | /deomgom/ | Teonggong | Teonggong → lenition → Deomgom |
 | `gnoll-kind` | a gnoll | Bem | /bem/ | Peng | Peng → lenition → Bem |
-| `goblin-kind` | a goblin | Mamzhrom | /mamʒrom/ | Ngangzhrung | Ngangzhrung → no change → Mamzhrom |
+| `goblin-kind` | a goblin | Mamžrom | /mamʒrom/ | Ngangzhrung | Ngangzhrung → no change → Mamžrom |
 | `god` | a deity | Doombom | /doombom/ | Doongpong | Doongpong → lenition → Doombom |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): high-elf has no exposure to 'grass-sward' |
 | `great` | large in size or extent | Domsraem | /domsraem/ | Dongsraeng | Dongsraeng → no change → Domsraem |
@@ -1775,11 +1775,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hand` | the manipulating limb-end | Moem | /moem/ | Ngueng | Ngueng → no change → Moem |
 | `hearth` | the fire at the center of a home | Deom | /deom/ | Deong | Deong → no change → Deom |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): high-elf has no exposure to 'heat' |
-| `high` | far above the ground | Shromshraom | /ʃromʃraom/ | Shrongshraong | Shrongshraong → no change → Shromshraom |
-| `high-elf-kind` | a high elf | Zhromsreom | /ʒromsreom/ | Zhrongsreung | Zhrongsreung → no change → Zhromsreom |
+| `high` | far above the ground | Šromšraom | /ʃromʃraom/ | Shrongshraong | Shrongshraong → no change → Šromšraom |
+| `high-elf-kind` | a high elf | Žromsreom | /ʒromsreom/ | Zhrongsreung | Zhrongsreung → no change → Žromsreom |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): high-elf has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Zroam | /zroam/ | Zruang | Zruang → no change → Zroam |
-| `hobgoblin-kind` | a hobgoblin | Zromshroom | /zromʃroom/ | Zrongshroung | Zrongshroung → no change → Zromshroom |
+| `hobgoblin-kind` | a hobgoblin | Zromšroom | /zromʃroom/ | Zrongshroung | Zrongshroung → no change → Zromšroom |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): high-elf has no exposure to 'holdfast-tangle' |
 | `home` | one's dwelling | Zraomgem | /zraomgem/ | Zraunggeng | Zraunggeng → no change → Zraomgem |
 | `human-kind` | a human | Momsrom | /momsrom/ | Ngongsrung | Ngongsrung → no change → Momsrom |
@@ -1790,14 +1790,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): high-elf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): high-elf has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Zhreem | /ʒreem/ | Zhreeng | Zhreeng → no change → Zhreem |
+| `kobold-kind` | a kobold | Žreem | /ʒreem/ | Zhreeng | Zhreeng → no change → Žreem |
 | `lake` | still water held in a hollow that has no outlet to the sea | Sraommoam | /sraommoam/ | — | compound: `little` + `water` |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): high-elf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Maom | /maom/ | Ngaong | Ngaong → no change → Maom |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): high-elf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Moam | /moam/ | Ngoang | Ngoang → no change → Moam |
 | `low` | near the ground | Boammem | /boammem/ | Puangngeng | Puangngeng → lenition → Boammem |
-| `many` | an indefinitely large count | Shroom | /ʃroom/ | Shroung | Shroung → no change → Shroom |
+| `many` | an indefinitely large count | Šroom | /ʃroom/ | Shroung | Shroung → no change → Šroom |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): high-elf has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): high-elf has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): high-elf has no exposure to 'melt-pond' |
@@ -1807,15 +1807,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | Beem | /beem/ | Peeng | Peeng → lenition → Beem |
 | `mountain` | high ground | — | — | — | gap (experiential): high-elf has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Goamgom | /goamgom/ | Guanggung | Guanggung → no change → Goamgom |
-| `move` | to go from one place to another | Shromdeem | /ʃromdeem/ | Shrungteeng | Shrungteeng → lenition → Shromdeem |
+| `move` | to go from one place to another | Šromdeem | /ʃromdeem/ | Shrungteeng | Shrungteeng → lenition → Šromdeem |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): high-elf has no exposure to 'muskeg' |
 | `name` | a word that identifies one who bears it | Mam | /mam/ | Ngang | Ngang → no change → Mam |
 | `new` | recently come to be | Gaommaam | /gaommaam/ | Gaongngaang | Gaongngaang → no change → Gaommaam |
 | `night` | the dark half of the day-night cycle | Baemmam | /baemmam/ | Paengngang | Paengngang → lenition → Baemmam |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): high-elf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Shrombom | /ʃrombom/ | Shrungpung | Shrungpung → lenition → Shrombom |
-| `north-east` | between north and east | Beomshrombom | /beomʃrombom/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Meomboomshrombom | /meomboomʃrombom/ | — | compound: `north` + `west` |
+| `north` | toward the pole of increasing latitude | Šrombom | /ʃrombom/ | Shrungpung | Shrungpung → lenition → Šrombom |
+| `north-east` | between north and east | Beomšrombom | /beomʃrombom/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Meomboomšrombom | /meomboomʃrombom/ | — | compound: `north` + `west` |
 | `old` | long in existence | Maambam | /maambam/ | Ngaangpang | Ngaangpang → lenition → Maambam |
 | `old-growth` | Mature forest, closed above and open beneath. | Bomsrom | /bomsrom/ | Pongsrung | Pongsrung → lenition → Bomsrom |
 | `one` | the cardinal number 1 | Maom | /maom/ | Ngaung | Ngaung → no change → Maom |
@@ -1823,9 +1823,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): high-elf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Zhremsrom | /ʒremsrom/ | Zhrengsrung | Zhrengsrung → no change → Zhremsrom |
+| `over` | above; atop | Žremsrom | /ʒremsrom/ | Zhrengsrung | Zhrengsrung → no change → Žremsrom |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): high-elf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Domzhrom | /domʒrom/ | Dongzhrung | Dongzhrung → no change → Domzhrom |
+| `parent` | one's father or mother | Domžrom | /domʒrom/ | Dongzhrung | Dongzhrung → no change → Domžrom |
 | `person` | a person; a member of a people (the autonym root) | Sreamgeam | /sreamgeam/ | Sreanggeang | Sreanggeang → no change → Sreamgeam |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): high-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): high-elf has no exposure to 'playa' |
@@ -1849,7 +1849,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): high-elf has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): high-elf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): high-elf has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Sraomshroom | /sraomʃroom/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Sraomšroom | /sraomʃroom/ | — | compound: `many` + `water` |
 | `sea-elf-kind` | a sea elf | Moemdom | /moemdom/ | Ngoengdung | Ngoengdung → no change → Moemdom |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Bomdem | /bomdem/ | Bungteng | Bungteng → lenition → Bomdem |
@@ -1868,19 +1868,19 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): high-elf has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): high-elf has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): high-elf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Zhreemzhraom | /ʒreemʒraom/ | Zhreengzhraong | Zhreengzhraong → no change → Zhreemzhraom |
+| `star` | a fixed point of light in the night sky | Žreemžraom | /ʒreemʒraom/ | Zhreengzhraong | Zhreengzhraong → no change → Žreemžraom |
 | `starlit` | dark faintly lit by stars | Deemsroem | /deemsroem/ | Deengsroeng | Deengsroeng → no change → Deemsroem |
 | `stone` | rock | Beemmom | /beemmom/ | Peengngung | Peengngung → lenition → Beemmom |
-| `sun` | the sun | Domzhreom | /domʒreom/ | Tungzhreong | Tungzhreong → lenition → Domzhreom |
+| `sun` | the sun | Domžreom | /domʒreom/ | Tungzhreong | Tungzhreong → lenition → Domžreom |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
-| `temperate-forest` | a biome class | Shromdeem | /ʃromdeem/ | Shrongdeeng | Shrongdeeng → no change → Shromdeem |
+| `temperate-forest` | a biome class | Šromdeem | /ʃromdeem/ | Shrongdeeng | Shrongdeeng → no change → Šromdeem |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): high-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): high-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): high-elf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Demshrem | /demʃrem/ | Dengshreng | Dengshreng → no change → Demshrem |
+| `tree` | a woody plant | Demšrem | /demʃrem/ | Dengshreng | Dengshreng → no change → Demšrem |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): high-elf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): high-elf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
@@ -1890,13 +1890,13 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): high-elf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): high-elf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Meemzhrom | /meemʒrom/ | Ngeengzhrung | Ngeengzhrung → no change → Meemzhrom |
+| `two` | the cardinal number 2 | Meemžrom | /meemʒrom/ | Ngeengzhrung | Ngeengzhrung → no change → Meemžrom |
 | `under` | beneath; below | Memmaem | /memmaem/ | Ngengngaeng | Ngengngaeng → no change → Memmaem |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): high-elf has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | Doomdom | /doomdom/ | Toongdung | Toongdung → lenition → Doomdom |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): high-elf has no exposure to 'vent-plume' |
-| `vine` | a staple crop | Goomshroem | /goomʃroem/ | Guongshrueng | Guongshrueng → no change → Goomshroem |
+| `vine` | a staple crop | Goomšroem | /goomʃroem/ | Guongshrueng | Guongshrueng → no change → Goomšroem |
 | `water` | the drinkable liquid | Sraom | /sraom/ | Sraong | Sraong → no change → Sraom |
 | `west` | the direction of decreasing longitude | Meomboom | /meomboom/ | Ngeungboung | Ngeungboung → no change → Meomboom |
 | `wheat` | a staple crop | Moom | /moom/ | Ngoung | Ngoung → no change → Moom |
@@ -1904,7 +1904,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Damgam | /damgam/ | Danggang | Danggang → no change → Damgam |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): high-elf has no exposure to 'wind-scour' |
-| `wood-elf-kind` | a wood elf | Shreommom | /ʃreommom/ | Shreongngung | Shreongngung → no change → Shreommom |
+| `wood-elf-kind` | a wood elf | Šreommom | /ʃreommom/ | Shreongngung | Shreongngung → no change → Šreommom |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): high-elf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): high-elf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): high-elf has no exposure to 'xorn-kind' |
@@ -2992,25 +2992,25 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bugbear-kind` | a bugbear | Sren | /sren/ | Sreng | Sreng → no change → Sren |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): sea-elf has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): sea-elf has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Zhren | /ʒren/ | Zhreng | Zhreng → no change → Zhren |
+| `child` | one's son or daughter | Žren | /ʒren/ | Zhreng | Zhreng → no change → Žren |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): sea-elf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Shreannaensraun | /ʃreannaensraun/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Šreannaensraun | /ʃreannaensraun/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): sea-elf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): sea-elf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): sea-elf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | Nuun | /nuun/ | Nguung | Nguung → no change → Nuun |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): sea-elf has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): sea-elf has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Dreenshruun | /dreenʃruun/ | Zreengshroong | Zreengshroong → vowelshift → Dreenshruun |
+| `dark` | the color term for black/dark hues | Dreenšruun | /dreenʃruun/ | Zreengshroong | Zreengshroong → vowelshift → Dreenšruun |
 | `day` | the light half of the day-night cycle | Sruuntuun | /sruuntuun/ | Sroungtuung | Sroungtuung → vowelshift → Sruuntuun |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Sreunpean | /sreunpean/ | Sreongpeang | Sreongpeang → vowelshift → Sreunpean |
 | `desert-elf-kind` | a desert elf | Srean | /srean/ | Sreang | Sreang → no change → Srean |
 | `die` | to cease living | Baunbaun | /baunbaun/ | Gaonggaong | Gaonggaong → vowelshift → Baunbaun |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): sea-elf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Shrunnen | /ʃrunnen/ | Shrongngeng | Shrongngeng → vowelshift → Shrunnen |
+| `drink` | to swallow liquid | Šrunnen | /ʃrunnen/ | Shrongngeng | Shrongngeng → vowelshift → Šrunnen |
 | `drow-kind` | a drow | Bun | /bun/ | Gong | Gong → vowelshift → Bun |
-| `earth` | the ground underfoot | Shreannaen | /ʃreannaen/ | Shreangngaeng | Shreangngaeng → no change → Shreannaen |
+| `earth` | the ground underfoot | Šreannaen | /ʃreannaen/ | Shreangngaeng | Shreangngaeng → no change → Šreannaen |
 | `east` | the direction of increasing longitude | Peun | /peun/ | Peung | Peung → no change → Peun |
 | `eat` | to consume food | Panpen | /panpen/ | Pangpeng | Pangpeng → no change → Panpen |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): sea-elf has no exposure to 'eclipse' |
@@ -3036,7 +3036,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): sea-elf has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Teunbun | /teunbun/ | Teonggong | Teonggong → vowelshift → Teunbun |
 | `gnoll-kind` | a gnoll | Pen | /pen/ | Peng | Peng → no change → Pen |
-| `goblin-kind` | a goblin | Nanzhrun | /nanʒrun/ | Ngangzhrung | Ngangzhrung → no change → Nanzhrun |
+| `goblin-kind` | a goblin | Nanžrun | /nanʒrun/ | Ngangzhrung | Ngangzhrung → no change → Nanžrun |
 | `god` | a deity | Duunpun | /duunpun/ | Doongpong | Doongpong → vowelshift → Duunpun |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): sea-elf has no exposure to 'grass-sward' |
 | `great` | large in size or extent | Dunsraen | /dunsraen/ | Dongsraeng | Dongsraeng → vowelshift → Dunsraen |
@@ -3047,11 +3047,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hand` | the manipulating limb-end | Nuen | /nuen/ | Ngueng | Ngueng → no change → Nuen |
 | `hearth` | the fire at the center of a home | Deun | /deun/ | Deong | Deong → vowelshift → Deun |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): sea-elf has no exposure to 'heat' |
-| `high` | far above the ground | Shrunshraun | /ʃrunʃraun/ | Shrongshraong | Shrongshraong → vowelshift → Shrunshraun |
-| `high-elf-kind` | a high elf | Zhrunsreun | /ʒrunsreun/ | Zhrongsreung | Zhrongsreung → vowelshift → Zhrunsreun |
+| `high` | far above the ground | Šrunšraun | /ʃrunʃraun/ | Shrongshraong | Shrongshraong → vowelshift → Šrunšraun |
+| `high-elf-kind` | a high elf | Žrunsreun | /ʒrunsreun/ | Zhrongsreung | Zhrongsreung → vowelshift → Žrunsreun |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): sea-elf has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Druan | /druan/ | Zruang | Zruang → no change → Druan |
-| `hobgoblin-kind` | a hobgoblin | Drunshruun | /drunʃruun/ | Zrongshroung | Zrongshroung → vowelshift → Drunshruun |
+| `hobgoblin-kind` | a hobgoblin | Drunšruun | /drunʃruun/ | Zrongshroung | Zrongshroung → vowelshift → Drunšruun |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): sea-elf has no exposure to 'holdfast-tangle' |
 | `home` | one's dwelling | Draunben | /draunben/ | Zraunggeng | Zraunggeng → no change → Draunben |
 | `human-kind` | a human | Nunsrun | /nunsrun/ | Ngongsrung | Ngongsrung → vowelshift → Nunsrun |
@@ -3062,14 +3062,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | Nennuen | /nennuen/ | Ngengngoeng | Ngengngoeng → vowelshift → Nennuen |
 | `kelp-forest` | a biome class | Dreanbun | /dreanbun/ | Zreangbung | Zreangbung → no change → Dreanbun |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): sea-elf has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Zhreen | /ʒreen/ | Zhreeng | Zhreeng → no change → Zhreen |
+| `kobold-kind` | a kobold | Žreen | /ʒreen/ | Zhreeng | Zhreeng → no change → Žreen |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): sea-elf has no exposure to 'lake' |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): sea-elf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Naun | /naun/ | Ngaong | Ngaong → vowelshift → Naun |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): sea-elf has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Nuan | /nuan/ | Ngoang | Ngoang → vowelshift → Nuan |
 | `low` | near the ground | Puannen | /puannen/ | Puangngeng | Puangngeng → no change → Puannen |
-| `many` | an indefinitely large count | Shruun | /ʃruun/ | Shroung | Shroung → vowelshift → Shruun |
+| `many` | an indefinitely large count | Šruun | /ʃruun/ | Shroung | Shroung → vowelshift → Šruun |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): sea-elf has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): sea-elf has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): sea-elf has no exposure to 'melt-pond' |
@@ -3079,15 +3079,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): sea-elf has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): sea-elf has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Buanbun | /buanbun/ | Guanggung | Guanggung → no change → Buanbun |
-| `move` | to go from one place to another | Shrunteen | /ʃrunteen/ | Shrungteeng | Shrungteeng → no change → Shrunteen |
+| `move` | to go from one place to another | Šrunteen | /ʃrunteen/ | Shrungteeng | Shrungteeng → no change → Šrunteen |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): sea-elf has no exposure to 'muskeg' |
 | `name` | a word that identifies one who bears it | Nan | /nan/ | Ngang | Ngang → no change → Nan |
 | `new` | recently come to be | Baunnaan | /baunnaan/ | Gaongngaang | Gaongngaang → vowelshift → Baunnaan |
 | `night` | the dark half of the day-night cycle | Paennan | /paennan/ | Paengngang | Paengngang → no change → Paennan |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): sea-elf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Shrunpun | /ʃrunpun/ | Shrungpung | Shrungpung → no change → Shrunpun |
-| `north-east` | between north and east | Shrunpunpeun | /ʃrunpunpeun/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Shrunpunneunbuun | /ʃrunpunneunbuun/ | — | compound: `north` + `west` |
+| `north` | toward the pole of increasing latitude | Šrunpun | /ʃrunpun/ | Shrungpung | Shrungpung → no change → Šrunpun |
+| `north-east` | between north and east | Šrunpunpeun | /ʃrunpunpeun/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Šrunpunneunbuun | /ʃrunpunneunbuun/ | — | compound: `north` + `west` |
 | `old` | long in existence | Naanpan | /naanpan/ | Ngaangpang | Ngaangpang → no change → Naanpan |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): sea-elf has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Naun | /naun/ | Ngaung | Ngaung → no change → Naun |
@@ -3095,9 +3095,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): sea-elf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Zhrensrun | /ʒrensrun/ | Zhrengsrung | Zhrengsrung → no change → Zhrensrun |
+| `over` | above; atop | Žrensrun | /ʒrensrun/ | Zhrengsrung | Zhrengsrung → no change → Žrensrun |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): sea-elf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Dunzhrun | /dunʒrun/ | Dongzhrung | Dongzhrung → vowelshift → Dunzhrun |
+| `parent` | one's father or mother | Dunžrun | /dunʒrun/ | Dongzhrung | Dongzhrung → vowelshift → Dunžrun |
 | `person` | a person; a member of a people (the autonym root) | Sreanbean | /sreanbean/ | Sreanggeang | Sreanggeang → no change → Sreanbean |
 | `plankton-bloom` | Water thick with plankton. | Sraun | /sraun/ | Sraung | Sraung → no change → Sraun |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): sea-elf has no exposure to 'playa' |
@@ -3121,7 +3121,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): sea-elf has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): sea-elf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): sea-elf has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Shruunsraun | /ʃruunsraun/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Šruunsraun | /ʃruunsraun/ | — | compound: `many` + `water` |
 | `sea-elf-kind` | a sea elf | Nuendun | /nuendun/ | Ngoengdung | Ngoengdung → vowelshift → Nuendun |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Bunten | /bunten/ | Bungteng | Bungteng → no change → Bunten |
@@ -3138,12 +3138,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `south-west` | between south and west | Nennuunneunbuun | /nennuunneunbuun/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | Srun | /srun/ | Srung | Srung → no change → Srun |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): sea-elf has no exposure to 'spring' |
-| `spur-and-groove` | The ribbed seaward face of a reef. | Srunzhruun | /srunʒruun/ | Srungzhroung | Srungzhroung → vowelshift → Srunzhruun |
+| `spur-and-groove` | The ribbed seaward face of a reef. | Srunžruun | /srunʒruun/ | Srungzhroung | Srungzhroung → vowelshift → Srunžruun |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): sea-elf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Zhreenzhraun | /ʒreenʒraun/ | Zhreengzhraong | Zhreengzhraong → vowelshift → Zhreenzhraun |
+| `star` | a fixed point of light in the night sky | Žreenžraun | /ʒreenʒraun/ | Zhreengzhraong | Zhreengzhraong → vowelshift → Žreenžraun |
 | `starlit` | dark faintly lit by stars | Deensruen | /deensruen/ | Deengsroeng | Deengsroeng → vowelshift → Deensruen |
 | `stone` | rock | Peennun | /peennun/ | Peengngung | Peengngung → no change → Peennun |
-| `sun` | the sun | Tunzhreun | /tunʒreun/ | Tungzhreong | Tungzhreong → vowelshift → Tunzhreun |
+| `sun` | the sun | Tunžreun | /tunʒreun/ | Tungzhreong | Tungzhreong → vowelshift → Tunžreun |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-forest' |
@@ -3152,7 +3152,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): sea-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): sea-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): sea-elf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Denshren | /denʃren/ | Dengshreng | Dengshreng → no change → Denshren |
+| `tree` | a woody plant | Denšren | /denʃren/ | Dengshreng | Dengshreng → no change → Denšren |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): sea-elf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): sea-elf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
@@ -3162,7 +3162,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): sea-elf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): sea-elf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Neenzhrun | /neenʒrun/ | Ngeengzhrung | Ngeengzhrung → no change → Neenzhrun |
+| `two` | the cardinal number 2 | Neenžrun | /neenʒrun/ | Ngeengzhrung | Ngeengzhrung → no change → Neenžrun |
 | `under` | beneath; below | Nennaen | /nennaen/ | Ngengngaeng | Ngengngaeng → no change → Nennaen |
 | `upwelling` | a biome class | Paunnuun | /paunnuun/ | Paongngoung | Paongngoung → vowelshift → Paunnuun |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): sea-elf has no exposure to 'urchin-barren' |
@@ -3176,7 +3176,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Danban | /danban/ | Danggang | Danggang → no change → Danban |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): sea-elf has no exposure to 'wind-scour' |
-| `wood-elf-kind` | a wood elf | Shreunnun | /ʃreunnun/ | Shreongngung | Shreongngung → vowelshift → Shreunnun |
+| `wood-elf-kind` | a wood elf | Šreunnun | /ʃreunnun/ | Shreongngung | Shreongngung → vowelshift → Šreunnun |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): sea-elf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): sea-elf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): sea-elf has no exposure to 'xorn-kind' |
@@ -3192,51 +3192,51 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `abyssal-plain` | The flat floor of the deep ocean. | — | — | — | gap (experiential): snow-elf has no exposure to 'abyssal-plain' |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bait-ball` | A dense turning mass of fish. | — | — | — | gap (experiential): snow-elf has no exposure to 'bait-ball' |
-| `barley` | a staple crop | Sroongzrong | /srooŋzroŋ/ | Sruengzhreng | Sruengzhreng → no change → Sroongzrong |
+| `barley` | a staple crop | Srooṅzroṅ | /srooŋzroŋ/ | Sruengzhreng | Sruengzhreng → no change → Srooṅzroṅ |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): snow-elf has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Boongtong | /booŋtoŋ/ | Beengtung | Beengtung → no change → Boongtong |
+| `blood` | the circulating fluid of a body | Booṅtoṅ | /booŋtoŋ/ | Beengtung | Beengtung → no change → Booṅtoṅ |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.8 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Ngongtaang | /ŋoŋtaaŋ/ | Ngengtaang | Ngengtaang → no change → Ngongtaang |
-| `boreal-stand` | A stand of northern conifers. | Boangngaong | /boaŋŋaoŋ/ | Geangngaong | Geangngaong → no change → Boangngaong |
+| `bone` | the rigid frame of a body | Ṅoṅtaaṅ | /ŋoŋtaaŋ/ | Ngengtaang | Ngengtaang → no change → Ṅoṅtaaṅ |
+| `boreal-stand` | A stand of northern conifers. | Boaṅṅaoṅ | /boaŋŋaoŋ/ | Geangngaong | Geangngaong → no change → Boaṅṅaoṅ |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.8 |
-| `bugbear-kind` | a bugbear | Srong | /sroŋ/ | Sreng | Sreng → no change → Srong |
-| `burn` | Ground recovering from fire. | Sroong | /srooŋ/ | Sruung | Sruung → no change → Sroong |
+| `bugbear-kind` | a bugbear | Sroṅ | /sroŋ/ | Sreng | Sreng → no change → Sroṅ |
+| `burn` | Ground recovering from fire. | Srooṅ | /srooŋ/ | Sruung | Sruung → no change → Srooṅ |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): snow-elf has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Zrong | /zroŋ/ | Zhreng | Zhreng → no change → Zrong |
+| `child` | one's son or daughter | Zroṅ | /zroŋ/ | Zhreng | Zhreng → no change → Zroṅ |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): snow-elf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Shroangngaongsraong | /ʃroaŋŋaoŋsraoŋ/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Šroaṅṅaoṅsraoṅ | /ʃroaŋŋaoŋsraoŋ/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): snow-elf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): snow-elf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): snow-elf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): snow-elf has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): snow-elf has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Zroongshroong | /zrooŋʃrooŋ/ | Zreengshroong | Zreengshroong → no change → Zroongshroong |
-| `day` | the light half of the day-night cycle | Sroongtoong | /srooŋtooŋ/ | Sroungtuung | Sroungtuung → no change → Sroongtoong |
+| `dark` | the color term for black/dark hues | Zrooṅšrooṅ | /zrooŋʃrooŋ/ | Zreengshroong | Zreengshroong → no change → Zrooṅšrooṅ |
+| `day` | the light half of the day-night cycle | Srooṅtooṅ | /srooŋtooŋ/ | Sroungtuung | Sroungtuung → no change → Srooṅtooṅ |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `desert-dwarf-kind` | a desert dwarf | Sroongboang | /srooŋboaŋ/ | Sreongpeang | Sreongpeang → lenition → Sroongboang |
-| `desert-elf-kind` | a desert elf | Sroang | /sroaŋ/ | Sreang | Sreang → no change → Sroang |
-| `die` | to cease living | Baongbaong | /baoŋbaoŋ/ | Gaonggaong | Gaonggaong → no change → Baongbaong |
+| `desert-dwarf-kind` | a desert dwarf | Srooṅboaṅ | /srooŋboaŋ/ | Sreongpeang | Sreongpeang → lenition → Srooṅboaṅ |
+| `desert-elf-kind` | a desert elf | Sroaṅ | /sroaŋ/ | Sreang | Sreang → no change → Sroaṅ |
+| `die` | to cease living | Baoṅbaoṅ | /baoŋbaoŋ/ | Gaonggaong | Gaonggaong → no change → Baoṅbaoṅ |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): snow-elf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Shrongngong | /ʃroŋŋoŋ/ | Shrongngeng | Shrongngeng → no change → Shrongngong |
-| `drow-kind` | a drow | Bong | /boŋ/ | Gong | Gong → no change → Bong |
-| `earth` | the ground underfoot | Shroangngaong | /ʃroaŋŋaoŋ/ | Shreangngaeng | Shreangngaeng → no change → Shroangngaong |
-| `east` | the direction of increasing longitude | Boong | /booŋ/ | Peung | Peung → lenition → Boong |
-| `eat` | to consume food | Bangbong | /baŋboŋ/ | Pangpeng | Pangpeng → lenition → Bangbong |
+| `drink` | to swallow liquid | Šroṅṅoṅ | /ʃroŋŋoŋ/ | Shrongngeng | Shrongngeng → no change → Šroṅṅoṅ |
+| `drow-kind` | a drow | Boṅ | /boŋ/ | Gong | Gong → no change → Boṅ |
+| `earth` | the ground underfoot | Šroaṅṅaoṅ | /ʃroaŋŋaoŋ/ | Shreangngaeng | Shreangngaeng → no change → Šroaṅṅaoṅ |
+| `east` | the direction of increasing longitude | Booṅ | /booŋ/ | Peung | Peung → lenition → Booṅ |
+| `eat` | to consume food | Baṅboṅ | /baŋboŋ/ | Pangpeng | Pangpeng → lenition → Baṅboṅ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): snow-elf has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): snow-elf has no exposure to 'erg' |
-| `eye` | the organ of sight | Bangboang | /baŋboaŋ/ | Pangduang | Pangduang → lenition → Bangboang |
+| `eye` | the organ of sight | Baṅboaṅ | /baŋboaŋ/ | Pangduang | Pangduang → lenition → Baṅboaṅ |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): snow-elf has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Bong | /boŋ/ | Bung | Bung → no change → Bong |
+| `fire` | flame and heat | Boṅ | /boŋ/ | Bung | Bung → no change → Boṅ |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): snow-elf has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): snow-elf has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Ngoongsroong | /ŋooŋsrooŋ/ | Ngoengsruung | Ngoengsruung → no change → Ngoongsroong |
-| `ford` | where a river runs shallow enough to cross | Ngongshrang | /ŋoŋʃraŋ/ | Ngongshrang | Ngongshrang → no change → Ngongshrang |
+| `foot` | the walking limb-end | Ṅooṅsrooṅ | /ŋooŋsrooŋ/ | Ngoengsruung | Ngoengsruung → no change → Ṅooṅsrooṅ |
+| `ford` | where a river runs shallow enough to cross | Ṅoṅšraṅ | /ŋoŋʃraŋ/ | Ngongshrang | Ngongshrang → no change → Ṅoṅšraṅ |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): snow-elf has no exposure to 'forest-gap' |
-| `frost-heave` | Ground churned and patterned by freezing. | Shroongtoong | /ʃrooŋtooŋ/ | Shruongtuong | Shruongtuong → no change → Shroongtoong |
+| `frost-heave` | Ground churned and patterned by freezing. | Šrooṅtooṅ | /ʃrooŋtooŋ/ | Shruongtuong | Shruongtuong → no change → Šrooṅtooṅ |
 | `gallery-forest` | Forest following a watercourse. | — | — | — | gap (experiential): snow-elf has no exposure to 'gallery-forest' |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): snow-elf has no exposure to 'giant-constrictor-snake-kind' |
 | `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): snow-elf has no exposure to 'giant-crocodile-kind' |
@@ -3246,27 +3246,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): snow-elf has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): snow-elf has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): snow-elf has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Toongbong | /tooŋboŋ/ | Teonggong | Teonggong → no change → Toongbong |
-| `gnoll-kind` | a gnoll | Bong | /boŋ/ | Peng | Peng → lenition → Bong |
-| `goblin-kind` | a goblin | Ngangzrong | /ŋaŋzroŋ/ | Ngangzhrung | Ngangzhrung → no change → Ngangzrong |
-| `god` | a deity | Boongbong | /booŋboŋ/ | Doongpong | Doongpong → lenition → Boongbong |
+| `gloom` | the deepest, starless dark | Tooṅboṅ | /tooŋboŋ/ | Teonggong | Teonggong → no change → Tooṅboṅ |
+| `gnoll-kind` | a gnoll | Boṅ | /boŋ/ | Peng | Peng → lenition → Boṅ |
+| `goblin-kind` | a goblin | Ṅaṅzroṅ | /ŋaŋzroŋ/ | Ngangzhrung | Ngangzhrung → no change → Ṅaṅzroṅ |
+| `god` | a deity | Booṅboṅ | /booŋboŋ/ | Doongpong | Doongpong → lenition → Booṅboṅ |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): snow-elf has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Bongsraong | /boŋsraoŋ/ | Dongsraeng | Dongsraeng → no change → Bongsraong |
-| `green` | the color term for green | Bongboong | /boŋbooŋ/ | Dongpoong | Dongpoong → lenition → Bongboong |
-| `gully-dwarf-kind` | a gully dwarf | Zrongngang | /zroŋŋaŋ/ | Zrongngang | Zrongngang → no change → Zrongngang |
+| `great` | large in size or extent | Boṅsraoṅ | /boŋsraoŋ/ | Dongsraeng | Dongsraeng → no change → Boṅsraoṅ |
+| `green` | the color term for green | Boṅbooṅ | /boŋbooŋ/ | Dongpoong | Dongpoong → lenition → Boṅbooṅ |
+| `gully-dwarf-kind` | a gully dwarf | Zroṅṅaṅ | /zroŋŋaŋ/ | Zrongngang | Zrongngang → no change → Zroṅṅaṅ |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): snow-elf has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Ngoong | /ŋooŋ/ | Ngueng | Ngueng → no change → Ngoong |
-| `hearth` | the fire at the center of a home | Boong | /booŋ/ | Deong | Deong → no change → Boong |
+| `hand` | the manipulating limb-end | Ṅooṅ | /ŋooŋ/ | Ngueng | Ngueng → no change → Ṅooṅ |
+| `hearth` | the fire at the center of a home | Booṅ | /booŋ/ | Deong | Deong → no change → Booṅ |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): snow-elf has no exposure to 'heat' |
-| `high` | far above the ground | Shrongshraong | /ʃroŋʃraoŋ/ | Shrongshraong | Shrongshraong → no change → Shrongshraong |
-| `high-elf-kind` | a high elf | Zrongsroong | /zroŋsrooŋ/ | Zhrongsreung | Zhrongsreung → no change → Zrongsroong |
+| `high` | far above the ground | Šroṅšraoṅ | /ʃroŋʃraoŋ/ | Shrongshraong | Shrongshraong → no change → Šroṅšraoṅ |
+| `high-elf-kind` | a high elf | Zroṅsrooṅ | /zroŋsrooŋ/ | Zhrongsreung | Zhrongsreung → no change → Zroṅsrooṅ |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): snow-elf has no exposure to 'hill' |
-| `hill-dwarf-kind` | a hill dwarf | Zroang | /zroaŋ/ | Zruang | Zruang → no change → Zroang |
-| `hobgoblin-kind` | a hobgoblin | Zrongshroong | /zroŋʃrooŋ/ | Zrongshroung | Zrongshroung → no change → Zrongshroong |
+| `hill-dwarf-kind` | a hill dwarf | Zroaṅ | /zroaŋ/ | Zruang | Zruang → no change → Zroaṅ |
+| `hobgoblin-kind` | a hobgoblin | Zroṅšrooṅ | /zroŋʃrooŋ/ | Zrongshroung | Zrongshroung → no change → Zroṅšrooṅ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): snow-elf has no exposure to 'holdfast-tangle' |
-| `home` | one's dwelling | Zraongbong | /zraoŋboŋ/ | Zraunggeng | Zraunggeng → no change → Zraongbong |
-| `human-kind` | a human | Ngongsrong | /ŋoŋsroŋ/ | Ngongsrung | Ngongsrung → no change → Ngongsrong |
+| `home` | one's dwelling | Zraoṅboṅ | /zraoŋboŋ/ | Zraunggeng | Zraunggeng → no change → Zraoṅboṅ |
+| `human-kind` | a human | Ṅoṅsroṅ | /ŋoŋsroŋ/ | Ngongsrung | Ngongsrung → no change → Ṅoṅsroṅ |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): snow-elf has no exposure to 'ice-lead' |
@@ -3274,125 +3274,125 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): snow-elf has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): snow-elf has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Zroong | /zrooŋ/ | Zhreeng | Zhreeng → no change → Zroong |
+| `kobold-kind` | a kobold | Zrooṅ | /zrooŋ/ | Zhreeng | Zhreeng → no change → Zrooṅ |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): snow-elf has no exposure to 'lake' |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): snow-elf has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Ngaong | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ngaong |
+| `light` | the color term for white/light hues | Ṅaoṅ | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ṅaoṅ |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): snow-elf has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Ngoang | /ŋoaŋ/ | Ngoang | Ngoang → no change → Ngoang |
-| `low` | near the ground | Boangngong | /boaŋŋoŋ/ | Puangngeng | Puangngeng → lenition → Boangngong |
-| `many` | an indefinitely large count | Shroong | /ʃrooŋ/ | Shroung | Shroung → no change → Shroong |
+| `little` | small in size or extent | Ṅoaṅ | /ŋoaŋ/ | Ngoang | Ngoang → no change → Ṅoaṅ |
+| `low` | near the ground | Boaṅṅoṅ | /boaŋŋoŋ/ | Puangngeng | Puangngeng → lenition → Boaṅṅoṅ |
+| `many` | an indefinitely large count | Šrooṅ | /ʃrooŋ/ | Shroung | Shroung → no change → Šrooṅ |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): snow-elf has no exposure to 'marine-snow' |
-| `marsh` | soft wet ground | Bongsroang | /boŋsroaŋ/ | Gongsroang | Gongsroang → no change → Bongsroang |
+| `marsh` | soft wet ground | Boṅsroaṅ | /boŋsroaŋ/ | Gongsroang | Gongsroang → no change → Boṅsroaṅ |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): snow-elf has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `millet` | a staple crop | — | — | — | gap (experiential): snow-elf has no exposure to 'millet' |
-| `moon` | a moon | Taangzroong | /taaŋzrooŋ/ | Taangzroeng | Taangzroeng → no change → Taangzroong |
+| `moon` | a moon | Taaṅzrooṅ | /taaŋzrooŋ/ | Taangzroeng | Taangzroeng → no change → Taaṅzrooṅ |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): snow-elf has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): snow-elf has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Boangbong | /boaŋboŋ/ | Guanggung | Guanggung → no change → Boangbong |
-| `move` | to go from one place to another | Shrongtoong | /ʃroŋtooŋ/ | Shrungteeng | Shrungteeng → no change → Shrongtoong |
-| `muskeg` | Waterlogged peat ground in the boreal forest. | Boongbong | /booŋboŋ/ | Deungdong | Deungdong → no change → Boongbong |
-| `name` | a word that identifies one who bears it | Ngang | /ŋaŋ/ | Ngang | Ngang → no change → Ngang |
-| `new` | recently come to be | Baongngaang | /baoŋŋaaŋ/ | Gaongngaang | Gaongngaang → no change → Baongngaang |
-| `night` | the dark half of the day-night cycle | Baongngang | /baoŋŋaŋ/ | Paengngang | Paengngang → lenition → Baongngang |
+| `mouth` | the organ of eating and speech | Boaṅboṅ | /boaŋboŋ/ | Guanggung | Guanggung → no change → Boaṅboṅ |
+| `move` | to go from one place to another | Šroṅtooṅ | /ʃroŋtooŋ/ | Shrungteeng | Shrungteeng → no change → Šroṅtooṅ |
+| `muskeg` | Waterlogged peat ground in the boreal forest. | Booṅboṅ | /booŋboŋ/ | Deungdong | Deungdong → no change → Booṅboṅ |
+| `name` | a word that identifies one who bears it | Ṅaṅ | /ŋaŋ/ | Ngang | Ngang → no change → Ṅaṅ |
+| `new` | recently come to be | Baoṅṅaaṅ | /baoŋŋaaŋ/ | Gaongngaang | Gaongngaang → no change → Baoṅṅaaṅ |
+| `night` | the dark half of the day-night cycle | Baoṅṅaṅ | /baoŋŋaŋ/ | Paengngang | Paengngang → lenition → Baoṅṅaṅ |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): snow-elf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Shrongbong | /ʃroŋboŋ/ | Shrungpung | Shrungpung → lenition → Shrongbong |
-| `north-east` | between north and east | Shrongbongboong | /ʃroŋboŋbooŋ/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Shrongbongngoongboong | /ʃroŋboŋŋooŋbooŋ/ | — | compound: `north` + `west` |
-| `old` | long in existence | Ngaangbang | /ŋaaŋbaŋ/ | Ngaangpang | Ngaangpang → lenition → Ngaangbang |
+| `north` | toward the pole of increasing latitude | Šroṅboṅ | /ʃroŋboŋ/ | Shrungpung | Shrungpung → lenition → Šroṅboṅ |
+| `north-east` | between north and east | Šroṅboṅbooṅ | /ʃroŋboŋbooŋ/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Šroṅboṅṅooṅbooṅ | /ʃroŋboŋŋooŋbooŋ/ | — | compound: `north` + `west` |
+| `old` | long in existence | Ṅaaṅbaṅ | /ŋaaŋbaŋ/ | Ngaangpang | Ngaangpang → lenition → Ṅaaṅbaṅ |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): snow-elf has no exposure to 'old-growth' |
-| `one` | the cardinal number 1 | Ngaong | /ŋaoŋ/ | Ngaung | Ngaung → no change → Ngaong |
+| `one` | the cardinal number 1 | Ṅaoṅ | /ŋaoŋ/ | Ngaung | Ngaung → no change → Ṅaoṅ |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): snow-elf has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): snow-elf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Zrongsrong | /zroŋsroŋ/ | Zhrengsrung | Zhrengsrung → no change → Zrongsrong |
+| `over` | above; atop | Zroṅsroṅ | /zroŋsroŋ/ | Zhrengsrung | Zhrengsrung → no change → Zroṅsroṅ |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): snow-elf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Bongzrong | /boŋzroŋ/ | Dongzhrung | Dongzhrung → no change → Bongzrong |
-| `person` | a person; a member of a people (the autonym root) | Sroangboang | /sroaŋboaŋ/ | Sreanggeang | Sreanggeang → no change → Sroangboang |
+| `parent` | one's father or mother | Boṅzroṅ | /boŋzroŋ/ | Dongzhrung | Dongzhrung → no change → Boṅzroṅ |
+| `person` | a person; a member of a people (the autonym root) | Sroaṅboaṅ | /sroaŋboaŋ/ | Sreanggeang | Sreanggeang → no change → Sroaṅboaṅ |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): snow-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): snow-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): snow-elf has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): snow-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): snow-elf has no exposure to 'rain' |
-| `red` | the color term for red | Bongngong | /boŋŋoŋ/ | Gungngong | Gungngong → no change → Bongngong |
+| `red` | the color term for red | Boṅṅoṅ | /boŋŋoŋ/ | Gungngong | Gungngong → no change → Boṅṅoṅ |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): snow-elf has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): snow-elf has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): snow-elf has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): snow-elf has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Ngongngong | /ŋoŋŋoŋ/ | Ngengngong | Ngengngong → no change → Ngongngong |
+| `rest` | to stop and recover strength | Ṅoṅṅoṅ | /ŋoŋŋoŋ/ | Ngengngong | Ngengngong → no change → Ṅoṅṅoṅ |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): snow-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): snow-elf has no exposure to 'rice' |
-| `river` | fresh water running across land | Boongbaong | /booŋbaoŋ/ | Peungpaung | Peungpaung → lenition → Boongbaong |
+| `river` | fresh water running across land | Booṅbaoṅ | /booŋbaoŋ/ | Peungpaung | Peungpaung → lenition → Booṅbaoṅ |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): snow-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): snow-elf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): snow-elf has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): snow-elf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): snow-elf has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Shroongsraong | /ʃrooŋsraoŋ/ | — | compound: `many` + `water` |
-| `sea-elf-kind` | a sea elf | Ngoongbong | /ŋooŋboŋ/ | Ngoengdung | Ngoengdung → no change → Ngoongbong |
+| `sea` | a body of salt water | Šrooṅsraoṅ | /ʃrooŋsraoŋ/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | Ṅooṅboṅ | /ŋooŋboŋ/ | Ngoengdung | Ngoengdung → no change → Ṅooṅboṅ |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Bongtong | /boŋtoŋ/ | Bungteng | Bungteng → no change → Bongtong |
+| `shadow` | cast dark, distinct from open gloom | Boṅtoṅ | /boŋtoŋ/ | Bungteng | Bungteng → no change → Boṅtoṅ |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): snow-elf has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
-| `sibling` | one's brother or sister | Sroongbong | /srooŋboŋ/ | Sreengbong | Sreengbong → no change → Sroongbong |
-| `sleep` | to rest unconscious | Boongngoong | /booŋŋooŋ/ | Geongngueng | Geongngueng → no change → Boongngoong |
+| `sibling` | one's brother or sister | Srooṅboṅ | /srooŋboŋ/ | Sreengbong | Sreengbong → no change → Srooṅboṅ |
+| `sleep` | to rest unconscious | Booṅṅooṅ | /booŋŋooŋ/ | Geongngueng | Geongngueng → no change → Booṅṅooṅ |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): snow-elf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): snow-elf has no exposure to 'snow' |
-| `snow-elf-kind` | a snow elf | Zrongngong | /zroŋŋoŋ/ | Zrengngung | Zrengngung → no change → Zrongngong |
+| `snow-elf-kind` | a snow elf | Zroṅṅoṅ | /zroŋŋoŋ/ | Zrengngung | Zrengngung → no change → Zroṅṅoṅ |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): snow-elf has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Ngongngoong | /ŋoŋŋooŋ/ | Ngengnguong | Ngengnguong → no change → Ngongngoong |
-| `south-east` | between south and east | Ngongngoongboong | /ŋoŋŋooŋbooŋ/ | — | compound: `south` + `east` |
-| `south-west` | between south and west | Ngongngoongngoongboong | /ŋoŋŋooŋŋooŋbooŋ/ | — | compound: `south` + `west` |
-| `spirit` | a lesser or unseen supernatural presence | Srong | /sroŋ/ | Srung | Srung → no change → Srong |
-| `spring` | where water rises from the ground | Zroongtong | /zrooŋtoŋ/ | Zhruungtung | Zhruungtung → no change → Zroongtong |
+| `south` | toward the pole of decreasing latitude | Ṅoṅṅooṅ | /ŋoŋŋooŋ/ | Ngengnguong | Ngengnguong → no change → Ṅoṅṅooṅ |
+| `south-east` | between south and east | Ṅoṅṅooṅbooṅ | /ŋoŋŋooŋbooŋ/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Ṅoṅṅooṅṅooṅbooṅ | /ŋoŋŋooŋŋooŋbooŋ/ | — | compound: `south` + `west` |
+| `spirit` | a lesser or unseen supernatural presence | Sroṅ | /sroŋ/ | Srung | Srung → no change → Sroṅ |
+| `spring` | where water rises from the ground | Zrooṅtoṅ | /zrooŋtoŋ/ | Zhruungtung | Zhruungtung → no change → Zrooṅtoṅ |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): snow-elf has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): snow-elf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Zroongzraong | /zrooŋzraoŋ/ | Zhreengzhraong | Zhreengzhraong → no change → Zroongzraong |
-| `starlit` | dark faintly lit by stars | Boongsroong | /booŋsrooŋ/ | Deengsroeng | Deengsroeng → no change → Boongsroong |
-| `stone` | rock | Boongngong | /booŋŋoŋ/ | Peengngung | Peengngung → lenition → Boongngong |
-| `sun` | the sun | Tongzroong | /toŋzrooŋ/ | Tungzhreong | Tungzhreong → no change → Tongzroong |
+| `star` | a fixed point of light in the night sky | Zrooṅzraoṅ | /zrooŋzraoŋ/ | Zhreengzhraong | Zhreengzhraong → no change → Zrooṅzraoṅ |
+| `starlit` | dark faintly lit by stars | Booṅsrooṅ | /booŋsrooŋ/ | Deengsroeng | Deengsroeng → no change → Booṅsrooṅ |
+| `stone` | rock | Booṅṅoṅ | /booŋŋoŋ/ | Peengngung | Peengngung → lenition → Booṅṅoṅ |
+| `sun` | the sun | Toṅzrooṅ | /toŋzrooŋ/ | Tungzhreong | Tungzhreong → no change → Toṅzrooṅ |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `taiga` | a biome class | Zrongngong | /zroŋŋoŋ/ | Zhrengngong | Zhrengngong → no change → Zrongngong |
+| `taiga` | a biome class | Zroṅṅoṅ | /zroŋŋoŋ/ | Zhrengngong | Zhrengngong → no change → Zroṅṅoṅ |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): snow-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): snow-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): snow-elf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Bongshrong | /boŋʃroŋ/ | Dengshreng | Dengshreng → no change → Bongshrong |
+| `tree` | a woody plant | Boṅšroṅ | /boŋʃroŋ/ | Dengshreng | Dengshreng → no change → Boṅšroṅ |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): snow-elf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): snow-elf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
 | `tuber` | a staple crop | — | — | — | gap (experiential): snow-elf has no exposure to 'tuber' |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | — | — | — | gap (experiential): snow-elf has no exposure to 'tubeworm-thicket' |
-| `tundra` | a biome class | Ngoongsraong | /ŋooŋsraoŋ/ | Nguungsraong | Nguungsraong → no change → Ngoongsraong |
+| `tundra` | a biome class | Ṅooṅsraoṅ | /ŋooŋsraoŋ/ | Nguungsraong | Nguungsraong → no change → Ṅooṅsraoṅ |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): snow-elf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): snow-elf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Ngoongzrong | /ŋooŋzroŋ/ | Ngeengzhrung | Ngeengzhrung → no change → Ngoongzrong |
-| `under` | beneath; below | Ngongngaong | /ŋoŋŋaoŋ/ | Ngengngaeng | Ngengngaeng → no change → Ngongngaong |
+| `two` | the cardinal number 2 | Ṅooṅzroṅ | /ŋooŋzroŋ/ | Ngeengzhrung | Ngeengzhrung → no change → Ṅooṅzroṅ |
+| `under` | beneath; below | Ṅoṅṅaoṅ | /ŋoŋŋaoŋ/ | Ngengngaeng | Ngengngaeng → no change → Ṅoṅṅaoṅ |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): snow-elf has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): snow-elf has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): snow-elf has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): snow-elf has no exposure to 'vine' |
-| `water` | the drinkable liquid | Sraong | /sraoŋ/ | Sraong | Sraong → no change → Sraong |
-| `west` | the direction of decreasing longitude | Ngoongboong | /ŋooŋbooŋ/ | Ngeungboung | Ngeungboung → no change → Ngoongboong |
+| `water` | the drinkable liquid | Sraoṅ | /sraoŋ/ | Sraong | Sraong → no change → Sraoṅ |
+| `west` | the direction of decreasing longitude | Ṅooṅbooṅ | /ŋooŋbooŋ/ | Ngeungboung | Ngeungboung → no change → Ṅooṅbooṅ |
 | `wheat` | a staple crop | — | — | — | gap (experiential): snow-elf has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): snow-elf has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Bangbang | /baŋbaŋ/ | Danggang | Danggang → no change → Bangbang |
-| `wind-scour` | Ground swept bare by wind. | Ngong | /ŋoŋ/ | Ngung | Ngung → no change → Ngong |
-| `wood-elf-kind` | a wood elf | Shroongngong | /ʃrooŋŋoŋ/ | Shreongngung | Shreongngung → no change → Shroongngong |
+| `wind` | moving air | Baṅbaṅ | /baŋbaŋ/ | Danggang | Danggang → no change → Baṅbaṅ |
+| `wind-scour` | Ground swept bare by wind. | Ṅoṅ | /ŋoŋ/ | Ngung | Ngung → no change → Ṅoṅ |
+| `wood-elf-kind` | a wood elf | Šrooṅṅoṅ | /ʃrooŋŋoŋ/ | Shreongngung | Shreongngung → no change → Šrooṅṅoṅ |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): snow-elf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): snow-elf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): snow-elf has no exposure to 'xorn-kind' |
-| `yellow` | the color term for yellow | Bang | /baŋ/ | Bang | Bang → no change → Bang |
+| `yellow` | the color term for yellow | Baṅ | /baŋ/ | Bang | Bang → no change → Baṅ |
 | `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 
@@ -3619,10 +3619,10 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): wood-elf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): wood-elf has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Deengtu | /deeŋtu/ | Beengtung | Beengtung → finalloss → Deengtu |
+| `blood` | the circulating fluid of a body | Deeṅtu | /deeŋtu/ | Beengtung | Beengtung → finalloss → Deeṅtu |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `bone` | the rigid frame of a body | Ngengtaa | /ŋeŋtaa/ | Ngengtaang | Ngengtaang → finalloss → Ngengtaa |
+| `bone` | the rigid frame of a body | Ṅeṅtaa | /ŋeŋtaa/ | Ngengtaang | Ngengtaang → finalloss → Ṅeṅtaa |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): wood-elf has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Sde | /sde/ | Sreng | Sreng → finalloss → Sde |
@@ -3630,35 +3630,35 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): wood-elf has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Zde | /zde/ | Zhreng | Zhreng → finalloss → Zde |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): wood-elf has no exposure to 'closed-canopy' |
-| `coast` | where the land meets the sea | Sdausdeangngae | /sdausdeaŋŋae/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Sdausdeaṅṅae | /sdausdeaŋŋae/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): wood-elf has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): wood-elf has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): wood-elf has no exposure to 'coral-head' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): wood-elf has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | Tuu | /tuu/ | Tuong | Tuong → finalloss → vowelshift → Tuu |
-| `dark` | the color term for black/dark hues | Zdeengsduu | /zdeeŋsduu/ | Zreengshroong | Zreengshroong → finalloss → vowelshift → Zdeengsduu |
-| `day` | the light half of the day-night cycle | Sduungtuu | /sduuŋtuu/ | Sroungtuung | Sroungtuung → finalloss → vowelshift → Sduungtuu |
+| `dark` | the color term for black/dark hues | Zdeeṅsduu | /zdeeŋsduu/ | Zreengshroong | Zreengshroong → finalloss → vowelshift → Zdeeṅsduu |
+| `day` | the light half of the day-night cycle | Sduuṅtuu | /sduuŋtuu/ | Sroungtuung | Sroungtuung → finalloss → vowelshift → Sduuṅtuu |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `desert-dwarf-kind` | a desert dwarf | Sdeungtea | /sdeuŋtea/ | Sreongpeang | Sreongpeang → finalloss → vowelshift → Sdeungtea |
+| `desert-dwarf-kind` | a desert dwarf | Sdeuṅtea | /sdeuŋtea/ | Sreongpeang | Sreongpeang → finalloss → vowelshift → Sdeuṅtea |
 | `desert-elf-kind` | a desert elf | Sdea | /sdea/ | Sreang | Sreang → finalloss → Sdea |
-| `die` | to cease living | Gaunggau | /gauŋgau/ | Gaonggaong | Gaonggaong → finalloss → vowelshift → Gaunggau |
+| `die` | to cease living | Gauṅgau | /gauŋgau/ | Gaonggaong | Gaonggaong → finalloss → vowelshift → Gauṅgau |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): wood-elf has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Sdungnge | /sduŋŋe/ | Shrongngeng | Shrongngeng → finalloss → vowelshift → Sdungnge |
+| `drink` | to swallow liquid | Sduṅṅe | /sduŋŋe/ | Shrongngeng | Shrongngeng → finalloss → vowelshift → Sduṅṅe |
 | `drow-kind` | a drow | Gu | /gu/ | Gong | Gong → finalloss → vowelshift → Gu |
-| `earth` | the ground underfoot | Sdeangngae | /sdeaŋŋae/ | Shreangngaeng | Shreangngaeng → finalloss → Sdeangngae |
+| `earth` | the ground underfoot | Sdeaṅṅae | /sdeaŋŋae/ | Shreangngaeng | Shreangngaeng → finalloss → Sdeaṅṅae |
 | `east` | the direction of increasing longitude | Teu | /teu/ | Peung | Peung → finalloss → Teu |
-| `eat` | to consume food | Tangte | /taŋte/ | Pangpeng | Pangpeng → finalloss → Tangte |
+| `eat` | to consume food | Taṅte | /taŋte/ | Pangpeng | Pangpeng → finalloss → Taṅte |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): wood-elf has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): wood-elf has no exposure to 'erg' |
-| `eye` | the organ of sight | Tangdua | /taŋdua/ | Pangduang | Pangduang → finalloss → Tangdua |
+| `eye` | the organ of sight | Taṅdua | /taŋdua/ | Pangduang | Pangduang → finalloss → Taṅdua |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): wood-elf has no exposure to 'felsenmeer' |
 | `fire` | flame and heat | Du | /du/ | Bung | Bung → finalloss → Du |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): wood-elf has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): wood-elf has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Nguengsduu | /ŋueŋsduu/ | Ngoengsruung | Ngoengsruung → finalloss → vowelshift → Nguengsduu |
-| `ford` | where a river runs shallow enough to cross | Ngungsda | /ŋuŋsda/ | Ngongshrang | Ngongshrang → finalloss → vowelshift → Ngungsda |
+| `foot` | the walking limb-end | Ṅueṅsduu | /ŋueŋsduu/ | Ngoengsruung | Ngoengsruung → finalloss → vowelshift → Ṅueṅsduu |
+| `ford` | where a river runs shallow enough to cross | Ṅuṅsda | /ŋuŋsda/ | Ngongshrang | Ngongshrang → finalloss → vowelshift → Ṅuṅsda |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): wood-elf has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): wood-elf has no exposure to 'frost-heave' |
 | `gallery-forest` | Forest following a watercourse. | — | — | — | gap (experiential): wood-elf has no exposure to 'gallery-forest' |
@@ -3670,27 +3670,27 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): wood-elf has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): wood-elf has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): wood-elf has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Teunggu | /teuŋgu/ | Teonggong | Teonggong → finalloss → vowelshift → Teunggu |
+| `gloom` | the deepest, starless dark | Teuṅgu | /teuŋgu/ | Teonggong | Teonggong → finalloss → vowelshift → Teuṅgu |
 | `gnoll-kind` | a gnoll | Te | /te/ | Peng | Peng → finalloss → Te |
-| `goblin-kind` | a goblin | Ngangzdu | /ŋaŋzdu/ | Ngangzhrung | Ngangzhrung → finalloss → Ngangzdu |
-| `god` | a deity | Duungtu | /duuŋtu/ | Doongpong | Doongpong → finalloss → vowelshift → Duungtu |
+| `goblin-kind` | a goblin | Ṅaṅzdu | /ŋaŋzdu/ | Ngangzhrung | Ngangzhrung → finalloss → Ṅaṅzdu |
+| `god` | a deity | Duuṅtu | /duuŋtu/ | Doongpong | Doongpong → finalloss → vowelshift → Duuṅtu |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): wood-elf has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Dungsdae | /duŋsdae/ | Dongsraeng | Dongsraeng → finalloss → vowelshift → Dungsdae |
-| `green` | the color term for green | Dungtuu | /duŋtuu/ | Dongpoong | Dongpoong → finalloss → vowelshift → Dungtuu |
-| `gully-dwarf-kind` | a gully dwarf | Zdungnga | /zduŋŋa/ | Zrongngang | Zrongngang → finalloss → vowelshift → Zdungnga |
+| `great` | large in size or extent | Duṅsdae | /duŋsdae/ | Dongsraeng | Dongsraeng → finalloss → vowelshift → Duṅsdae |
+| `green` | the color term for green | Duṅtuu | /duŋtuu/ | Dongpoong | Dongpoong → finalloss → vowelshift → Duṅtuu |
+| `gully-dwarf-kind` | a gully dwarf | Zduṅṅa | /zduŋŋa/ | Zrongngang | Zrongngang → finalloss → vowelshift → Zduṅṅa |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): wood-elf has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Ngue | /ŋue/ | Ngueng | Ngueng → finalloss → Ngue |
+| `hand` | the manipulating limb-end | Ṅue | /ŋue/ | Ngueng | Ngueng → finalloss → Ṅue |
 | `hearth` | the fire at the center of a home | Deu | /deu/ | Deong | Deong → finalloss → vowelshift → Deu |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): wood-elf has no exposure to 'heat' |
-| `high` | far above the ground | Sdungsdau | /sduŋsdau/ | Shrongshraong | Shrongshraong → finalloss → vowelshift → Sdungsdau |
-| `high-elf-kind` | a high elf | Zdungsdeu | /zduŋsdeu/ | Zhrongsreung | Zhrongsreung → finalloss → vowelshift → Zdungsdeu |
+| `high` | far above the ground | Sduṅsdau | /sduŋsdau/ | Shrongshraong | Shrongshraong → finalloss → vowelshift → Sduṅsdau |
+| `high-elf-kind` | a high elf | Zduṅsdeu | /zduŋsdeu/ | Zhrongsreung | Zhrongsreung → finalloss → vowelshift → Zduṅsdeu |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): wood-elf has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Zdua | /zdua/ | Zruang | Zruang → finalloss → Zdua |
-| `hobgoblin-kind` | a hobgoblin | Zdungsduu | /zduŋsduu/ | Zrongshroung | Zrongshroung → finalloss → vowelshift → Zdungsduu |
+| `hobgoblin-kind` | a hobgoblin | Zduṅsduu | /zduŋsduu/ | Zrongshroung | Zrongshroung → finalloss → vowelshift → Zduṅsduu |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): wood-elf has no exposure to 'holdfast-tangle' |
-| `home` | one's dwelling | Zdaungge | /zdauŋge/ | Zraunggeng | Zraunggeng → finalloss → Zdaungge |
-| `human-kind` | a human | Ngungsdu | /ŋuŋsdu/ | Ngongsrung | Ngongsrung → finalloss → vowelshift → Ngungsdu |
+| `home` | one's dwelling | Zdauṅge | /zdauŋge/ | Zraunggeng | Zraunggeng → finalloss → Zdauṅge |
+| `human-kind` | a human | Ṅuṅsdu | /ŋuŋsdu/ | Ngongsrung | Ngongsrung → finalloss → vowelshift → Ṅuṅsdu |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): wood-elf has no exposure to 'ice-lead' |
@@ -3701,56 +3701,56 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kobold-kind` | a kobold | Zdee | /zdee/ | Zhreeng | Zhreeng → finalloss → Zdee |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): wood-elf has no exposure to 'lake' |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): wood-elf has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Ngau | /ŋau/ | Ngaong | Ngaong → finalloss → vowelshift → Ngau |
+| `light` | the color term for white/light hues | Ṅau | /ŋau/ | Ngaong | Ngaong → finalloss → vowelshift → Ṅau |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): wood-elf has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Ngua | /ŋua/ | Ngoang | Ngoang → finalloss → vowelshift → Ngua |
-| `low` | near the ground | Tuangnge | /tuaŋŋe/ | Puangngeng | Puangngeng → finalloss → Tuangnge |
+| `little` | small in size or extent | Ṅua | /ŋua/ | Ngoang | Ngoang → finalloss → vowelshift → Ṅua |
+| `low` | near the ground | Tuaṅṅe | /tuaŋŋe/ | Puangngeng | Puangngeng → finalloss → Tuaṅṅe |
 | `many` | an indefinitely large count | Sduu | /sduu/ | Shroung | Shroung → finalloss → vowelshift → Sduu |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): wood-elf has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): wood-elf has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): wood-elf has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): wood-elf has no exposure to 'millet' |
-| `moon` | a moon | Taangzdue | /taaŋzdue/ | Taangzroeng | Taangzroeng → finalloss → vowelshift → Taangzdue |
+| `moon` | a moon | Taaṅzdue | /taaŋzdue/ | Taangzroeng | Taangzroeng → finalloss → vowelshift → Taaṅzdue |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | Tee | /tee/ | Peeng | Peeng → finalloss → Tee |
 | `mountain` | high ground | — | — | — | gap (experiential): wood-elf has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Guanggu | /guaŋgu/ | Guanggung | Guanggung → finalloss → Guanggu |
-| `move` | to go from one place to another | Sdungtee | /sduŋtee/ | Shrungteeng | Shrungteeng → finalloss → Sdungtee |
+| `mouth` | the organ of eating and speech | Guaṅgu | /guaŋgu/ | Guanggung | Guanggung → finalloss → Guaṅgu |
+| `move` | to go from one place to another | Sduṅtee | /sduŋtee/ | Shrungteeng | Shrungteeng → finalloss → Sduṅtee |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): wood-elf has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Nga | /ŋa/ | Ngang | Ngang → finalloss → Nga |
-| `new` | recently come to be | Gaungngaa | /gauŋŋaa/ | Gaongngaang | Gaongngaang → finalloss → vowelshift → Gaungngaa |
-| `night` | the dark half of the day-night cycle | Taengnga | /taeŋŋa/ | Paengngang | Paengngang → finalloss → Taengnga |
+| `name` | a word that identifies one who bears it | Ṅa | /ŋa/ | Ngang | Ngang → finalloss → Ṅa |
+| `new` | recently come to be | Gauṅṅaa | /gauŋŋaa/ | Gaongngaang | Gaongngaang → finalloss → vowelshift → Gauṅṅaa |
+| `night` | the dark half of the day-night cycle | Taeṅṅa | /taeŋŋa/ | Paengngang | Paengngang → finalloss → Taeṅṅa |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): wood-elf has no exposure to 'nodule-field' |
-| `north` | toward the pole of increasing latitude | Sdungtu | /sduŋtu/ | Shrungpung | Shrungpung → finalloss → Sdungtu |
-| `north-east` | between north and east | Teusdungtu | /teusduŋtu/ | — | compound: `north` + `east` |
-| `north-west` | between north and west | Ngeungduusdungtu | /ŋeuŋduusduŋtu/ | — | compound: `north` + `west` |
-| `old` | long in existence | Ngaangta | /ŋaaŋta/ | Ngaangpang | Ngaangpang → finalloss → Ngaangta |
-| `old-growth` | Mature forest, closed above and open beneath. | Tungsdu | /tuŋsdu/ | Pongsrung | Pongsrung → finalloss → vowelshift → Tungsdu |
-| `one` | the cardinal number 1 | Ngau | /ŋau/ | Ngaung | Ngaung → finalloss → Ngau |
+| `north` | toward the pole of increasing latitude | Sduṅtu | /sduŋtu/ | Shrungpung | Shrungpung → finalloss → Sduṅtu |
+| `north-east` | between north and east | Teusduṅtu | /teusduŋtu/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Ṅeuṅduusduṅtu | /ŋeuŋduusduŋtu/ | — | compound: `north` + `west` |
+| `old` | long in existence | Ṅaaṅta | /ŋaaŋta/ | Ngaangpang | Ngaangpang → finalloss → Ṅaaṅta |
+| `old-growth` | Mature forest, closed above and open beneath. | Tuṅsdu | /tuŋsdu/ | Pongsrung | Pongsrung → finalloss → vowelshift → Tuṅsdu |
+| `one` | the cardinal number 1 | Ṅau | /ŋau/ | Ngaung | Ngaung → finalloss → Ṅau |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): wood-elf has no exposure to 'open-blue' |
 | `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): wood-elf has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Zdengsdu | /zdeŋsdu/ | Zhrengsrung | Zhrengsrung → finalloss → Zdengsdu |
+| `over` | above; atop | Zdeṅsdu | /zdeŋsdu/ | Zhrengsrung | Zhrengsrung → finalloss → Zdeṅsdu |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): wood-elf has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Dungzdu | /duŋzdu/ | Dongzhrung | Dongzhrung → finalloss → vowelshift → Dungzdu |
-| `person` | a person; a member of a people (the autonym root) | Sdeanggea | /sdeaŋgea/ | Sreanggeang | Sreanggeang → finalloss → Sdeanggea |
+| `parent` | one's father or mother | Duṅzdu | /duŋzdu/ | Dongzhrung | Dongzhrung → finalloss → vowelshift → Duṅzdu |
+| `person` | a person; a member of a people (the autonym root) | Sdeaṅgea | /sdeaŋgea/ | Sreanggeang | Sreanggeang → finalloss → Sdeaṅgea |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): wood-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): wood-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): wood-elf has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): wood-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): wood-elf has no exposure to 'rain' |
-| `red` | the color term for red | Gungngu | /guŋŋu/ | Gungngong | Gungngong → finalloss → vowelshift → Gungngu |
+| `red` | the color term for red | Guṅṅu | /guŋŋu/ | Gungngong | Gungngong → finalloss → vowelshift → Guṅṅu |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): wood-elf has no exposure to 'red-dragon-kind' |
 | `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `red-giant` | a cool, vast star late in its life | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): wood-elf has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): wood-elf has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): wood-elf has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Ngengngu | /ŋeŋŋu/ | Ngengngong | Ngengngong → finalloss → vowelshift → Ngengngu |
+| `rest` | to stop and recover strength | Ṅeṅṅu | /ŋeŋŋu/ | Ngengngong | Ngengngong → finalloss → vowelshift → Ṅeṅṅu |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): wood-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): wood-elf has no exposure to 'rice' |
-| `river` | fresh water running across land | Teungtau | /teuŋtau/ | Peungpaung | Peungpaung → finalloss → Teungtau |
+| `river` | fresh water running across land | Teuṅtau | /teuŋtau/ | Peungpaung | Peungpaung → finalloss → Teuṅtau |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): wood-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): wood-elf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -3758,37 +3758,37 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): wood-elf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): wood-elf has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Sdausduu | /sdausduu/ | — | compound: `many` + `water` |
-| `sea-elf-kind` | a sea elf | Nguengdu | /ŋueŋdu/ | Ngoengdung | Ngoengdung → finalloss → vowelshift → Nguengdu |
+| `sea-elf-kind` | a sea elf | Ṅueṅdu | /ŋueŋdu/ | Ngoengdung | Ngoengdung → finalloss → vowelshift → Ṅueṅdu |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Dungte | /duŋte/ | Bungteng | Bungteng → finalloss → Dungte |
+| `shadow` | cast dark, distinct from open gloom | Duṅte | /duŋte/ | Bungteng | Bungteng → finalloss → Duṅte |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): wood-elf has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Sdeengdu | /sdeeŋdu/ | Sreengbong | Sreengbong → finalloss → vowelshift → Sdeengdu |
-| `sleep` | to rest unconscious | Geungngue | /geuŋŋue/ | Geongngueng | Geongngueng → finalloss → vowelshift → Geungngue |
+| `sibling` | one's brother or sister | Sdeeṅdu | /sdeeŋdu/ | Sreengbong | Sreengbong → finalloss → vowelshift → Sdeeṅdu |
+| `sleep` | to rest unconscious | Geuṅṅue | /geuŋŋue/ | Geongngueng | Geongngueng → finalloss → vowelshift → Geuṅṅue |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): wood-elf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): wood-elf has no exposure to 'snow' |
-| `snow-elf-kind` | a snow elf | Zdengngu | /zdeŋŋu/ | Zrengngung | Zrengngung → finalloss → Zdengngu |
+| `snow-elf-kind` | a snow elf | Zdeṅṅu | /zdeŋŋu/ | Zrengngung | Zrengngung → finalloss → Zdeṅṅu |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): wood-elf has no exposure to 'snowfield' |
-| `south` | toward the pole of decreasing latitude | Ngengnguu | /ŋeŋŋuu/ | Ngengnguong | Ngengnguong → finalloss → vowelshift → Ngengnguu |
-| `south-east` | between south and east | Teungengnguu | /teuŋeŋŋuu/ | — | compound: `south` + `east` |
-| `south-west` | between south and west | Ngeungduungengnguu | /ŋeuŋduuŋeŋŋuu/ | — | compound: `south` + `west` |
+| `south` | toward the pole of decreasing latitude | Ṅeṅṅuu | /ŋeŋŋuu/ | Ngengnguong | Ngengnguong → finalloss → vowelshift → Ṅeṅṅuu |
+| `south-east` | between south and east | Teuṅeṅṅuu | /teuŋeŋŋuu/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Ṅeuṅduuṅeṅṅuu | /ŋeuŋduuŋeŋŋuu/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | Sdu | /sdu/ | Srung | Srung → finalloss → Sdu |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): wood-elf has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): wood-elf has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): wood-elf has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Zdeengzdau | /zdeeŋzdau/ | Zhreengzhraong | Zhreengzhraong → finalloss → vowelshift → Zdeengzdau |
-| `starlit` | dark faintly lit by stars | Deengsdue | /deeŋsdue/ | Deengsroeng | Deengsroeng → finalloss → vowelshift → Deengsdue |
-| `stone` | rock | Teengngu | /teeŋŋu/ | Peengngung | Peengngung → finalloss → Teengngu |
-| `sun` | the sun | Tungzdeu | /tuŋzdeu/ | Tungzhreong | Tungzhreong → finalloss → vowelshift → Tungzdeu |
+| `star` | a fixed point of light in the night sky | Zdeeṅzdau | /zdeeŋzdau/ | Zhreengzhraong | Zhreengzhraong → finalloss → vowelshift → Zdeeṅzdau |
+| `starlit` | dark faintly lit by stars | Deeṅsdue | /deeŋsdue/ | Deengsroeng | Deengsroeng → finalloss → vowelshift → Deeṅsdue |
+| `stone` | rock | Teeṅṅu | /teeŋŋu/ | Peengngung | Peengngung → finalloss → Teeṅṅu |
+| `sun` | the sun | Tuṅzdeu | /tuŋzdeu/ | Tungzhreong | Tungzhreong → finalloss → vowelshift → Tuṅzdeu |
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
-| `temperate-forest` | a biome class | Sdungdee | /sduŋdee/ | Shrongdeeng | Shrongdeeng → finalloss → vowelshift → Sdungdee |
+| `temperate-forest` | a biome class | Sduṅdee | /sduŋdee/ | Shrongdeeng | Shrongdeeng → finalloss → vowelshift → Sduṅdee |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): wood-elf has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): wood-elf has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): wood-elf has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Dengsde | /deŋsde/ | Dengshreng | Dengshreng → finalloss → Dengsde |
+| `tree` | a woody plant | Deṅsde | /deŋsde/ | Dengshreng | Dengshreng → finalloss → Deṅsde |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): wood-elf has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): wood-elf has no exposure to 'trench-wall' |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-rainforest' |
@@ -3798,21 +3798,21 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): wood-elf has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): wood-elf has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Ngeengzdu | /ŋeeŋzdu/ | Ngeengzhrung | Ngeengzhrung → finalloss → Ngeengzdu |
-| `under` | beneath; below | Ngengngae | /ŋeŋŋae/ | Ngengngaeng | Ngengngaeng → finalloss → Ngengngae |
+| `two` | the cardinal number 2 | Ṅeeṅzdu | /ŋeeŋzdu/ | Ngeengzhrung | Ngeengzhrung → finalloss → Ṅeeṅzdu |
+| `under` | beneath; below | Ṅeṅṅae | /ŋeŋŋae/ | Ngengngaeng | Ngengngaeng → finalloss → Ṅeṅṅae |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): wood-elf has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): wood-elf has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): wood-elf has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): wood-elf has no exposure to 'vine' |
 | `water` | the drinkable liquid | Sdau | /sdau/ | Sraong | Sraong → finalloss → vowelshift → Sdau |
-| `west` | the direction of decreasing longitude | Ngeungduu | /ŋeuŋduu/ | Ngeungboung | Ngeungboung → finalloss → vowelshift → Ngeungduu |
-| `wheat` | a staple crop | Nguu | /ŋuu/ | Ngoung | Ngoung → finalloss → vowelshift → Nguu |
+| `west` | the direction of decreasing longitude | Ṅeuṅduu | /ŋeuŋduu/ | Ngeungboung | Ngeungboung → finalloss → vowelshift → Ṅeuṅduu |
+| `wheat` | a staple crop | Ṅuu | /ŋuu/ | Ngoung | Ngoung → finalloss → vowelshift → Ṅuu |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): wood-elf has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
-| `wind` | moving air | Dangga | /daŋga/ | Danggang | Danggang → finalloss → Dangga |
+| `wind` | moving air | Daṅga | /daŋga/ | Danggang | Danggang → finalloss → Daṅga |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): wood-elf has no exposure to 'wind-scour' |
-| `wood-elf-kind` | a wood elf | Sdeungngu | /sdeuŋŋu/ | Shreongngung | Shreongngung → finalloss → vowelshift → Sdeungngu |
+| `wood-elf-kind` | a wood elf | Sdeuṅṅu | /sdeuŋŋu/ | Shreongngung | Shreongngung → finalloss → vowelshift → Sdeuṅṅu |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): wood-elf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): wood-elf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): wood-elf has no exposure to 'xorn-kind' |
@@ -3957,74 +3957,74 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 
 | Concept | Gloss | Proto | Desert-elf | Drow | High-elf | Sea-elf | Snow-elf | Wood-elf | Descent |
 |---|---|---|---|---|---|---|---|---|---|
-| `blood` | the circulating fluid of a body | *Beengtung /beeŋtuŋ/ | Peengpung /peeŋpuŋ/ | Boogpo /boogpo/ | Beemdom /beemdom/ | Beentun /beentun/ | Boongtong /booŋtoŋ/ | Deengtu /deeŋtu/ | *Beengtung → Peengpung / Boogpo / Beemdom / Beentun / Boongtong / Deengtu |
-| `bone` | the rigid frame of a body | *Ngengtaang /ŋeŋtaaŋ/ | Ngengpaang /ŋeŋpaaŋ/ | Gogpaa /gogpaa/ | Memdaam /memdaam/ | Nentaan /nentaan/ | Ngongtaang /ŋoŋtaaŋ/ | Ngengtaa /ŋeŋtaa/ | *Ngengtaang → Ngengpaang / Gogpaa / Memdaam / Nentaan / Ngongtaang / Ngengtaa |
-| `bugbear-kind` | a bugbear | *Sreng /sreŋ/ | Szeng /szeŋ/ | Ro /ro/ | Srem /srem/ | Sren /sren/ | Srong /sroŋ/ | Sde /sde/ | *Sreng → Szeng / Ro / Srem / Sren / Srong / Sde |
-| `child` | one's son or daughter | *Zhreng /ʒreŋ/ | Zhzeng /ʒzeŋ/ | Ro /ro/ | Zhrem /ʒrem/ | Zhren /ʒren/ | Zrong /zroŋ/ | Zde /zde/ | *Zhreng → Zhzeng / Ro / Zhrem / Zhren / Zrong / Zde |
-| `dark` | the color term for black/dark hues | *Zreengshroong /zreeŋʃrooŋ/ | Zzeengshzoong /zzeeŋʃzooŋ/ | Roogshroo /roogʃroo/ | Zreemshroom /zreemʃroom/ | Dreenshruun /dreenʃruun/ | Zroongshroong /zrooŋʃrooŋ/ | Zdeengsduu /zdeeŋsduu/ | *Zreengshroong → Zzeengshzoong / Roogshroo / Zreemshroom / Dreenshruun / Zroongshroong / Zdeengsduu |
-| `day` | the light half of the day-night cycle | *Sroungtuung /srouŋtuuŋ/ | Szoungpuung /szouŋpuuŋ/ | Roogpoo /roogpoo/ | Sroomdoom /sroomdoom/ | Sruuntuun /sruuntuun/ | Sroongtoong /srooŋtooŋ/ | Sduungtuu /sduuŋtuu/ | *Sroungtuung → Szoungpuung / Roogpoo / Sroomdoom / Sruuntuun / Sroongtoong / Sduungtuu |
-| `desert-dwarf-kind` | a desert dwarf | *Sreongpeang /sreoŋpeaŋ/ | Szeongpeang /szeoŋpeaŋ/ | Roogpoa /roogpoa/ | Sreombeam /sreombeam/ | Sreunpean /sreunpean/ | Sroongboang /srooŋboaŋ/ | Sdeungtea /sdeuŋtea/ | *Sreongpeang → Szeongpeang / Roogpoa / Sreombeam / Sreunpean / Sroongboang / Sdeungtea |
-| `desert-elf-kind` | a desert elf | *Sreang /sreaŋ/ | Szeang /szeaŋ/ | Roa /roa/ | Sream /sream/ | Srean /srean/ | Sroang /sroaŋ/ | Sdea /sdea/ | *Sreang → Szeang / Roa / Sream / Srean / Sroang / Sdea |
-| `die` | to cease living | *Gaonggaong /gaoŋgaoŋ/ | Gaonggaong /gaoŋgaoŋ/ | Gaoggao /gaoggao/ | Gaomgaom /gaomgaom/ | Baunbaun /baunbaun/ | Baongbaong /baoŋbaoŋ/ | Gaunggau /gauŋgau/ | *Gaonggaong → Gaonggaong / Gaoggao / Gaomgaom / Baunbaun / Baongbaong / Gaunggau |
-| `drink` | to swallow liquid | *Shrongngeng /ʃroŋŋeŋ/ | Shzongngeng /ʃzoŋŋeŋ/ | Roggo /roggo/ | Shrommem /ʃrommem/ | Shrunnen /ʃrunnen/ | Shrongngong /ʃroŋŋoŋ/ | Sdungnge /sduŋŋe/ | *Shrongngeng → Shzongngeng / Roggo / Shrommem / Shrunnen / Shrongngong / Sdungnge |
-| `drow-kind` | a drow | *Gong /goŋ/ | Gong /goŋ/ | Go /go/ | Gom /gom/ | Bun /bun/ | Bong /boŋ/ | Gu /gu/ | *Gong → Gong / Go / Gom / Bun / Bong / Gu |
-| `earth` | the ground underfoot | *Shreangngaeng /ʃreaŋŋaeŋ/ | Shzeangngaeng /ʃzeaŋŋaeŋ/ | Roaggao /roaggao/ | Shreammaem /ʃreammaem/ | Shreannaen /ʃreannaen/ | Shroangngaong /ʃroaŋŋaoŋ/ | Sdeangngae /sdeaŋŋae/ | *Shreangngaeng → Shzeangngaeng / Roaggao / Shreammaem / Shreannaen / Shroangngaong / Sdeangngae |
-| `east` | the direction of increasing longitude | *Peung /peuŋ/ | Peung /peuŋ/ | Poo /poo/ | Beom /beom/ | Peun /peun/ | Boong /booŋ/ | Teu /teu/ | *Peung → Peung / Poo / Beom / Peun / Boong / Teu |
-| `eat` | to consume food | *Pangpeng /paŋpeŋ/ | Pangpeng /paŋpeŋ/ | Pagpo /pagpo/ | Bambem /bambem/ | Panpen /panpen/ | Bangbong /baŋboŋ/ | Tangte /taŋte/ | *Pangpeng → Pangpeng / Pagpo / Bambem / Panpen / Bangbong / Tangte |
-| `eye` | the organ of sight | *Pangduang /paŋduaŋ/ | Pangzuang /paŋzuaŋ/ | Pagdoa /pagdoa/ | Bamdoam /bamdoam/ | Panduan /panduan/ | Bangboang /baŋboaŋ/ | Tangdua /taŋdua/ | *Pangduang → Pangzuang / Pagdoa / Bamdoam / Panduan / Bangboang / Tangdua |
-| `fire` | flame and heat | *Bung /buŋ/ | Pung /puŋ/ | Bo /bo/ | Bom /bom/ | Bun /bun/ | Bong /boŋ/ | Du /du/ | *Bung → Pung / Bo / Bom / Bun / Bong / Du |
-| `foot` | the walking limb-end | *Ngoengsruung /ŋoeŋsruuŋ/ | Ngoengszuung /ŋoeŋszuuŋ/ | Googsroo /googsroo/ | Moemsroom /moemsroom/ | Nuensruun /nuensruun/ | Ngoongsroong /ŋooŋsrooŋ/ | Nguengsduu /ŋueŋsduu/ | *Ngoengsruung → Ngoengszuung / Googsroo / Moemsroom / Nuensruun / Ngoongsroong / Nguengsduu |
-| `gloom` | the deepest, starless dark | *Teonggong /teoŋgoŋ/ | Peonggong /peoŋgoŋ/ | Pooggo /pooggo/ | Deomgom /deomgom/ | Teunbun /teunbun/ | Toongbong /tooŋboŋ/ | Teunggu /teuŋgu/ | *Teonggong → Peonggong / Pooggo / Deomgom / Teunbun / Toongbong / Teunggu |
-| `gnoll-kind` | a gnoll | *Peng /peŋ/ | Peng /peŋ/ | Po /po/ | Bem /bem/ | Pen /pen/ | Bong /boŋ/ | Te /te/ | *Peng → Peng / Po / Bem / Pen / Bong / Te |
-| `goblin-kind` | a goblin | *Ngangzhrung /ŋaŋʒruŋ/ | Ngangzhzung /ŋaŋʒzuŋ/ | Gagzhro /gagʒro/ | Mamzhrom /mamʒrom/ | Nanzhrun /nanʒrun/ | Ngangzrong /ŋaŋzroŋ/ | Ngangzdu /ŋaŋzdu/ | *Ngangzhrung → Ngangzhzung / Gagzhro / Mamzhrom / Nanzhrun / Ngangzrong / Ngangzdu |
-| `god` | a deity | *Doongpong /dooŋpoŋ/ | Zoongpong /zooŋpoŋ/ | Doogpo /doogpo/ | Doombom /doombom/ | Duunpun /duunpun/ | Boongbong /booŋboŋ/ | Duungtu /duuŋtu/ | *Doongpong → Zoongpong / Doogpo / Doombom / Duunpun / Boongbong / Duungtu |
-| `great` | large in size or extent | *Dongsraeng /doŋsraeŋ/ | Zongszaeng /zoŋszaeŋ/ | Dogsrao /dogsrao/ | Domsraem /domsraem/ | Dunsraen /dunsraen/ | Bongsraong /boŋsraoŋ/ | Dungsdae /duŋsdae/ | *Dongsraeng → Zongszaeng / Dogsrao / Domsraem / Dunsraen / Bongsraong / Dungsdae |
-| `gully-dwarf-kind` | a gully dwarf | *Zrongngang /zroŋŋaŋ/ | Zzongngang /zzoŋŋaŋ/ | Rogga /rogga/ | Zrommam /zrommam/ | Drunnan /drunnan/ | Zrongngang /zroŋŋaŋ/ | Zdungnga /zduŋŋa/ | *Zrongngang → Zzongngang / Rogga / Zrommam / Drunnan / Zrongngang / Zdungnga |
-| `hand` | the manipulating limb-end | *Ngueng /ŋueŋ/ | Ngueng /ŋueŋ/ | Goo /goo/ | Moem /moem/ | Nuen /nuen/ | Ngoong /ŋooŋ/ | Ngue /ŋue/ | *Ngueng → Ngueng / Goo / Moem / Nuen / Ngoong / Ngue |
-| `hearth` | the fire at the center of a home | *Deong /deoŋ/ | Zeong /zeoŋ/ | Doo /doo/ | Deom /deom/ | Deun /deun/ | Boong /booŋ/ | Deu /deu/ | *Deong → Zeong / Doo / Deom / Deun / Boong / Deu |
-| `high` | far above the ground | *Shrongshraong /ʃroŋʃraoŋ/ | Shzongshzaong /ʃzoŋʃzaoŋ/ | Rogshrao /rogʃrao/ | Shromshraom /ʃromʃraom/ | Shrunshraun /ʃrunʃraun/ | Shrongshraong /ʃroŋʃraoŋ/ | Sdungsdau /sduŋsdau/ | *Shrongshraong → Shzongshzaong / Rogshrao / Shromshraom / Shrunshraun / Shrongshraong / Sdungsdau |
-| `high-elf-kind` | a high elf | *Zhrongsreung /ʒroŋsreuŋ/ | Zhzongszeung /ʒzoŋszeuŋ/ | Rogsroo /rogsroo/ | Zhromsreom /ʒromsreom/ | Zhrunsreun /ʒrunsreun/ | Zrongsroong /zroŋsrooŋ/ | Zdungsdeu /zduŋsdeu/ | *Zhrongsreung → Zhzongszeung / Rogsroo / Zhromsreom / Zhrunsreun / Zrongsroong / Zdungsdeu |
-| `hill-dwarf-kind` | a hill dwarf | *Zruang /zruaŋ/ | Zzuang /zzuaŋ/ | Roa /roa/ | Zroam /zroam/ | Druan /druan/ | Zroang /zroaŋ/ | Zdua /zdua/ | *Zruang → Zzuang / Roa / Zroam / Druan / Zroang / Zdua |
-| `hobgoblin-kind` | a hobgoblin | *Zrongshroung /zroŋʃrouŋ/ | Zzongshzoung /zzoŋʃzouŋ/ | Rogshroo /rogʃroo/ | Zromshroom /zromʃroom/ | Drunshruun /drunʃruun/ | Zrongshroong /zroŋʃrooŋ/ | Zdungsduu /zduŋsduu/ | *Zrongshroung → Zzongshzoung / Rogshroo / Zromshroom / Drunshruun / Zrongshroong / Zdungsduu |
-| `home` | one's dwelling | *Zraunggeng /zrauŋgeŋ/ | Zzaunggeng /zzauŋgeŋ/ | Raoggo /raoggo/ | Zraomgem /zraomgem/ | Draunben /draunben/ | Zraongbong /zraoŋboŋ/ | Zdaungge /zdauŋge/ | *Zraunggeng → Zzaunggeng / Raoggo / Zraomgem / Draunben / Zraongbong / Zdaungge |
-| `human-kind` | a human | *Ngongsrung /ŋoŋsruŋ/ | Ngongszung /ŋoŋszuŋ/ | Gogsro /gogsro/ | Momsrom /momsrom/ | Nunsrun /nunsrun/ | Ngongsrong /ŋoŋsroŋ/ | Ngungsdu /ŋuŋsdu/ | *Ngongsrung → Ngongszung / Gogsro / Momsrom / Nunsrun / Ngongsrong / Ngungsdu |
-| `kobold-kind` | a kobold | *Zhreeng /ʒreeŋ/ | Zhzeeng /ʒzeeŋ/ | Roo /roo/ | Zhreem /ʒreem/ | Zhreen /ʒreen/ | Zroong /zrooŋ/ | Zdee /zdee/ | *Zhreeng → Zhzeeng / Roo / Zhreem / Zhreen / Zroong / Zdee |
-| `light` | the color term for white/light hues | *Ngaong /ŋaoŋ/ | Ngaong /ŋaoŋ/ | Gao /gao/ | Maom /maom/ | Naun /naun/ | Ngaong /ŋaoŋ/ | Ngau /ŋau/ | *Ngaong → Ngaong / Gao / Maom / Naun / Ngaong / Ngau |
-| `little` | small in size or extent | *Ngoang /ŋoaŋ/ | Ngoang /ŋoaŋ/ | Goa /goa/ | Moam /moam/ | Nuan /nuan/ | Ngoang /ŋoaŋ/ | Ngua /ŋua/ | *Ngoang → Ngoang / Goa / Moam / Nuan / Ngoang / Ngua |
-| `low` | near the ground | *Puangngeng /puaŋŋeŋ/ | Puangngeng /puaŋŋeŋ/ | Poaggo /poaggo/ | Boammem /boammem/ | Puannen /puannen/ | Boangngong /boaŋŋoŋ/ | Tuangnge /tuaŋŋe/ | *Puangngeng → Puangngeng / Poaggo / Boammem / Puannen / Boangngong / Tuangnge |
-| `many` | an indefinitely large count | *Shroung /ʃrouŋ/ | Shzoung /ʃzouŋ/ | Roo /roo/ | Shroom /ʃroom/ | Shruun /ʃruun/ | Shroong /ʃrooŋ/ | Sduu /sduu/ | *Shroung → Shzoung / Roo / Shroom / Shruun / Shroong / Sduu |
-| `moon` | a moon | *Taangzroeng /taaŋzroeŋ/ | Paangzzoeng /paaŋzzoeŋ/ | Paagdroo /paagdroo/ | Daamzroem /daamzroem/ | Taandruen /taandruen/ | Taangzroong /taaŋzrooŋ/ | Taangzdue /taaŋzdue/ | *Taangzroeng → Paangzzoeng / Paagdroo / Daamzroem / Taandruen / Taangzroong / Taangzdue |
-| `mouth` | the organ of eating and speech | *Guanggung /guaŋguŋ/ | Guanggung /guaŋguŋ/ | Goaggo /goaggo/ | Goamgom /goamgom/ | Buanbun /buanbun/ | Boangbong /boaŋboŋ/ | Guanggu /guaŋgu/ | *Guanggung → Guanggung / Goaggo / Goamgom / Buanbun / Boangbong / Guanggu |
-| `move` | to go from one place to another | *Shrungteeng /ʃruŋteeŋ/ | Shzungpeeng /ʃzuŋpeeŋ/ | Rogpoo /rogpoo/ | Shromdeem /ʃromdeem/ | Shrunteen /ʃrunteen/ | Shrongtoong /ʃroŋtooŋ/ | Sdungtee /sduŋtee/ | *Shrungteeng → Shzungpeeng / Rogpoo / Shromdeem / Shrunteen / Shrongtoong / Sdungtee |
-| `name` | a word that identifies one who bears it | *Ngang /ŋaŋ/ | Ngang /ŋaŋ/ | Ga /ga/ | Mam /mam/ | Nan /nan/ | Ngang /ŋaŋ/ | Nga /ŋa/ | *Ngang → Ngang / Ga / Mam / Nan / Ngang / Nga |
-| `new` | recently come to be | *Gaongngaang /gaoŋŋaaŋ/ | Gaongngaang /gaoŋŋaaŋ/ | Gaoggaa /gaoggaa/ | Gaommaam /gaommaam/ | Baunnaan /baunnaan/ | Baongngaang /baoŋŋaaŋ/ | Gaungngaa /gauŋŋaa/ | *Gaongngaang → Gaongngaang / Gaoggaa / Gaommaam / Baunnaan / Baongngaang / Gaungngaa |
-| `night` | the dark half of the day-night cycle | *Paengngang /paeŋŋaŋ/ | Paengngang /paeŋŋaŋ/ | Paogga /paogga/ | Baemmam /baemmam/ | Paennan /paennan/ | Baongngang /baoŋŋaŋ/ | Taengnga /taeŋŋa/ | *Paengngang → Paengngang / Paogga / Baemmam / Paennan / Baongngang / Taengnga |
-| `north` | toward the pole of increasing latitude | *Shrungpung /ʃruŋpuŋ/ | Shzungpung /ʃzuŋpuŋ/ | Rogpo /rogpo/ | Shrombom /ʃrombom/ | Shrunpun /ʃrunpun/ | Shrongbong /ʃroŋboŋ/ | Sdungtu /sduŋtu/ | *Shrungpung → Shzungpung / Rogpo / Shrombom / Shrunpun / Shrongbong / Sdungtu |
-| `old` | long in existence | *Ngaangpang /ŋaaŋpaŋ/ | Ngaangpang /ŋaaŋpaŋ/ | Gaagpa /gaagpa/ | Maambam /maambam/ | Naanpan /naanpan/ | Ngaangbang /ŋaaŋbaŋ/ | Ngaangta /ŋaaŋta/ | *Ngaangpang → Ngaangpang / Gaagpa / Maambam / Naanpan / Ngaangbang / Ngaangta |
-| `one` | the cardinal number 1 | *Ngaung /ŋauŋ/ | Ngaung /ŋauŋ/ | Gao /gao/ | Maom /maom/ | Naun /naun/ | Ngaong /ŋaoŋ/ | Ngau /ŋau/ | *Ngaung → Ngaung / Gao / Maom / Naun / Ngaong / Ngau |
-| `over` | above; atop | *Zhrengsrung /ʒreŋsruŋ/ | Zhzengszung /ʒzeŋszuŋ/ | Rogsro /rogsro/ | Zhremsrom /ʒremsrom/ | Zhrensrun /ʒrensrun/ | Zrongsrong /zroŋsroŋ/ | Zdengsdu /zdeŋsdu/ | *Zhrengsrung → Zhzengszung / Rogsro / Zhremsrom / Zhrensrun / Zrongsrong / Zdengsdu |
-| `parent` | one's father or mother | *Dongzhrung /doŋʒruŋ/ | Zongzhzung /zoŋʒzuŋ/ | Dogzhro /dogʒro/ | Domzhrom /domʒrom/ | Dunzhrun /dunʒrun/ | Bongzrong /boŋzroŋ/ | Dungzdu /duŋzdu/ | *Dongzhrung → Zongzhzung / Dogzhro / Domzhrom / Dunzhrun / Bongzrong / Dungzdu |
-| `person` | a person; a member of a people (the autonym root) | *Sreanggeang /sreaŋgeaŋ/ | Szeanggeang /szeaŋgeaŋ/ | Roaggoa /roaggoa/ | Sreamgeam /sreamgeam/ | Sreanbean /sreanbean/ | Sroangboang /sroaŋboaŋ/ | Sdeanggea /sdeaŋgea/ | *Sreanggeang → Szeanggeang / Roaggoa / Sreamgeam / Sreanbean / Sroangboang / Sdeanggea |
-| `red` | the color term for red | *Gungngong /guŋŋoŋ/ | Gungngong /guŋŋoŋ/ | Goggo /goggo/ | Gommom /gommom/ | Bunnun /bunnun/ | Bongngong /boŋŋoŋ/ | Gungngu /guŋŋu/ | *Gungngong → Gungngong / Goggo / Gommom / Bunnun / Bongngong / Gungngu |
-| `rest` | to stop and recover strength | *Ngengngong /ŋeŋŋoŋ/ | Ngengngong /ŋeŋŋoŋ/ | Goggo /goggo/ | Memmom /memmom/ | Nennun /nennun/ | Ngongngong /ŋoŋŋoŋ/ | Ngengngu /ŋeŋŋu/ | *Ngengngong → Ngengngong / Goggo / Memmom / Nennun / Ngongngong / Ngengngu |
-| `sea-elf-kind` | a sea elf | *Ngoengdung /ŋoeŋduŋ/ | Ngoengzung /ŋoeŋzuŋ/ | Googdo /googdo/ | Moemdom /moemdom/ | Nuendun /nuendun/ | Ngoongbong /ŋooŋboŋ/ | Nguengdu /ŋueŋdu/ | *Ngoengdung → Ngoengzung / Googdo / Moemdom / Nuendun / Ngoongbong / Nguengdu |
-| `shadow` | cast dark, distinct from open gloom | *Bungteng /buŋteŋ/ | Pungpeng /puŋpeŋ/ | Bogpo /bogpo/ | Bomdem /bomdem/ | Bunten /bunten/ | Bongtong /boŋtoŋ/ | Dungte /duŋte/ | *Bungteng → Pungpeng / Bogpo / Bomdem / Bunten / Bongtong / Dungte |
-| `sibling` | one's brother or sister | *Sreengbong /sreeŋboŋ/ | Szeengpong /szeeŋpoŋ/ | Roogbo /roogbo/ | Sreembom /sreembom/ | Sreenbun /sreenbun/ | Sroongbong /srooŋboŋ/ | Sdeengdu /sdeeŋdu/ | *Sreengbong → Szeengpong / Roogbo / Sreembom / Sreenbun / Sroongbong / Sdeengdu |
-| `sleep` | to rest unconscious | *Geongngueng /geoŋŋueŋ/ | Geongngueng /geoŋŋueŋ/ | Googgoo /googgoo/ | Geommoem /geommoem/ | Beunnuen /beunnuen/ | Boongngoong /booŋŋooŋ/ | Geungngue /geuŋŋue/ | *Geongngueng → Geongngueng / Googgoo / Geommoem / Beunnuen / Boongngoong / Geungngue |
-| `snow-elf-kind` | a snow elf | *Zrengngung /zreŋŋuŋ/ | Zzengngung /zzeŋŋuŋ/ | Roggo /roggo/ | Zremmom /zremmom/ | Drennun /drennun/ | Zrongngong /zroŋŋoŋ/ | Zdengngu /zdeŋŋu/ | *Zrengngung → Zzengngung / Roggo / Zremmom / Drennun / Zrongngong / Zdengngu |
-| `south` | toward the pole of decreasing latitude | *Ngengnguong /ŋeŋŋuoŋ/ | Ngengnguong /ŋeŋŋuoŋ/ | Goggoo /goggoo/ | Memmoom /memmoom/ | Nennuun /nennuun/ | Ngongngoong /ŋoŋŋooŋ/ | Ngengnguu /ŋeŋŋuu/ | *Ngengnguong → Ngengnguong / Goggoo / Memmoom / Nennuun / Ngongngoong / Ngengnguu |
-| `spirit` | a lesser or unseen supernatural presence | *Srung /sruŋ/ | Szung /szuŋ/ | Ro /ro/ | Srom /srom/ | Srun /srun/ | Srong /sroŋ/ | Sdu /sdu/ | *Srung → Szung / Ro / Srom / Srun / Srong / Sdu |
-| `star` | a fixed point of light in the night sky | *Zhreengzhraong /ʒreeŋʒraoŋ/ | Zhzeengzhzaong /ʒzeeŋʒzaoŋ/ | Roogzhrao /roogʒrao/ | Zhreemzhraom /ʒreemʒraom/ | Zhreenzhraun /ʒreenʒraun/ | Zroongzraong /zrooŋzraoŋ/ | Zdeengzdau /zdeeŋzdau/ | *Zhreengzhraong → Zhzeengzhzaong / Roogzhrao / Zhreemzhraom / Zhreenzhraun / Zroongzraong / Zdeengzdau |
-| `starlit` | dark faintly lit by stars | *Deengsroeng /deeŋsroeŋ/ | Zeengszoeng /zeeŋszoeŋ/ | Doogsroo /doogsroo/ | Deemsroem /deemsroem/ | Deensruen /deensruen/ | Boongsroong /booŋsrooŋ/ | Deengsdue /deeŋsdue/ | *Deengsroeng → Zeengszoeng / Doogsroo / Deemsroem / Deensruen / Boongsroong / Deengsdue |
-| `stone` | rock | *Peengngung /peeŋŋuŋ/ | Peengngung /peeŋŋuŋ/ | Pooggo /pooggo/ | Beemmom /beemmom/ | Peennun /peennun/ | Boongngong /booŋŋoŋ/ | Teengngu /teeŋŋu/ | *Peengngung → Peengngung / Pooggo / Beemmom / Peennun / Boongngong / Teengngu |
-| `sun` | the sun | *Tungzhreong /tuŋʒreoŋ/ | Pungzhzeong /puŋʒzeoŋ/ | Pogzhroo /pogʒroo/ | Domzhreom /domʒreom/ | Tunzhreun /tunʒreun/ | Tongzroong /toŋzrooŋ/ | Tungzdeu /tuŋzdeu/ | *Tungzhreong → Pungzhzeong / Pogzhroo / Domzhreom / Tunzhreun / Tongzroong / Tungzdeu |
-| `tree` | a woody plant | *Dengshreng /deŋʃreŋ/ | Zengshzeng /zeŋʃzeŋ/ | Dogshro /dogʃro/ | Demshrem /demʃrem/ | Denshren /denʃren/ | Bongshrong /boŋʃroŋ/ | Dengsde /deŋsde/ | *Dengshreng → Zengshzeng / Dogshro / Demshrem / Denshren / Bongshrong / Dengsde |
-| `two` | the cardinal number 2 | *Ngeengzhrung /ŋeeŋʒruŋ/ | Ngeengzhzung /ŋeeŋʒzuŋ/ | Googzhro /googʒro/ | Meemzhrom /meemʒrom/ | Neenzhrun /neenʒrun/ | Ngoongzrong /ŋooŋzroŋ/ | Ngeengzdu /ŋeeŋzdu/ | *Ngeengzhrung → Ngeengzhzung / Googzhro / Meemzhrom / Neenzhrun / Ngoongzrong / Ngeengzdu |
-| `under` | beneath; below | *Ngengngaeng /ŋeŋŋaeŋ/ | Ngengngaeng /ŋeŋŋaeŋ/ | Goggao /goggao/ | Memmaem /memmaem/ | Nennaen /nennaen/ | Ngongngaong /ŋoŋŋaoŋ/ | Ngengngae /ŋeŋŋae/ | *Ngengngaeng → Ngengngaeng / Goggao / Memmaem / Nennaen / Ngongngaong / Ngengngae |
-| `water` | the drinkable liquid | *Sraong /sraoŋ/ | Szaong /szaoŋ/ | Rao /rao/ | Sraom /sraom/ | Sraun /sraun/ | Sraong /sraoŋ/ | Sdau /sdau/ | *Sraong → Szaong / Rao / Sraom / Sraun / Sraong / Sdau |
-| `west` | the direction of decreasing longitude | *Ngeungboung /ŋeuŋbouŋ/ | Ngeungpoung /ŋeuŋpouŋ/ | Googboo /googboo/ | Meomboom /meomboom/ | Neunbuun /neunbuun/ | Ngoongboong /ŋooŋbooŋ/ | Ngeungduu /ŋeuŋduu/ | *Ngeungboung → Ngeungpoung / Googboo / Meomboom / Neunbuun / Ngoongboong / Ngeungduu |
-| `wind` | moving air | *Danggang /daŋgaŋ/ | Zanggang /zaŋgaŋ/ | Dagga /dagga/ | Damgam /damgam/ | Danban /danban/ | Bangbang /baŋbaŋ/ | Dangga /daŋga/ | *Danggang → Zanggang / Dagga / Damgam / Danban / Bangbang / Dangga |
-| `wood-elf-kind` | a wood elf | *Shreongngung /ʃreoŋŋuŋ/ | Shzeongngung /ʃzeoŋŋuŋ/ | Rooggo /rooggo/ | Shreommom /ʃreommom/ | Shreunnun /ʃreunnun/ | Shroongngong /ʃrooŋŋoŋ/ | Sdeungngu /sdeuŋŋu/ | *Shreongngung → Shzeongngung / Rooggo / Shreommom / Shreunnun / Shroongngong / Sdeungngu |
+| `blood` | the circulating fluid of a body | *Beengtung /beeŋtuŋ/ | Peeṅpuṅ /peeŋpuŋ/ | Boogpo /boogpo/ | Beemdom /beemdom/ | Beentun /beentun/ | Booṅtoṅ /booŋtoŋ/ | Deeṅtu /deeŋtu/ | *Beengtung → Peeṅpuṅ / Boogpo / Beemdom / Beentun / Booṅtoṅ / Deeṅtu |
+| `bone` | the rigid frame of a body | *Ngengtaang /ŋeŋtaaŋ/ | Ṅeṅpaaṅ /ŋeŋpaaŋ/ | Gogpaa /gogpaa/ | Memdaam /memdaam/ | Nentaan /nentaan/ | Ṅoṅtaaṅ /ŋoŋtaaŋ/ | Ṅeṅtaa /ŋeŋtaa/ | *Ngengtaang → Ṅeṅpaaṅ / Gogpaa / Memdaam / Nentaan / Ṅoṅtaaṅ / Ṅeṅtaa |
+| `bugbear-kind` | a bugbear | *Sreng /sreŋ/ | Szeṅ /szeŋ/ | Ro /ro/ | Srem /srem/ | Sren /sren/ | Sroṅ /sroŋ/ | Sde /sde/ | *Sreng → Szeṅ / Ro / Srem / Sren / Sroṅ / Sde |
+| `child` | one's son or daughter | *Zhreng /ʒreŋ/ | Žzeṅ /ʒzeŋ/ | Ro /ro/ | Žrem /ʒrem/ | Žren /ʒren/ | Zroṅ /zroŋ/ | Zde /zde/ | *Zhreng → Žzeṅ / Ro / Žrem / Žren / Zroṅ / Zde |
+| `dark` | the color term for black/dark hues | *Zreengshroong /zreeŋʃrooŋ/ | Zzeeṅšzooṅ /zzeeŋʃzooŋ/ | Roogšroo /roogʃroo/ | Zreemšroom /zreemʃroom/ | Dreenšruun /dreenʃruun/ | Zrooṅšrooṅ /zrooŋʃrooŋ/ | Zdeeṅsduu /zdeeŋsduu/ | *Zreengshroong → Zzeeṅšzooṅ / Roogšroo / Zreemšroom / Dreenšruun / Zrooṅšrooṅ / Zdeeṅsduu |
+| `day` | the light half of the day-night cycle | *Sroungtuung /srouŋtuuŋ/ | Szouṅpuuṅ /szouŋpuuŋ/ | Roogpoo /roogpoo/ | Sroomdoom /sroomdoom/ | Sruuntuun /sruuntuun/ | Srooṅtooṅ /srooŋtooŋ/ | Sduuṅtuu /sduuŋtuu/ | *Sroungtuung → Szouṅpuuṅ / Roogpoo / Sroomdoom / Sruuntuun / Srooṅtooṅ / Sduuṅtuu |
+| `desert-dwarf-kind` | a desert dwarf | *Sreongpeang /sreoŋpeaŋ/ | Szeoṅpeaṅ /szeoŋpeaŋ/ | Roogpoa /roogpoa/ | Sreombeam /sreombeam/ | Sreunpean /sreunpean/ | Srooṅboaṅ /srooŋboaŋ/ | Sdeuṅtea /sdeuŋtea/ | *Sreongpeang → Szeoṅpeaṅ / Roogpoa / Sreombeam / Sreunpean / Srooṅboaṅ / Sdeuṅtea |
+| `desert-elf-kind` | a desert elf | *Sreang /sreaŋ/ | Szeaṅ /szeaŋ/ | Roa /roa/ | Sream /sream/ | Srean /srean/ | Sroaṅ /sroaŋ/ | Sdea /sdea/ | *Sreang → Szeaṅ / Roa / Sream / Srean / Sroaṅ / Sdea |
+| `die` | to cease living | *Gaonggaong /gaoŋgaoŋ/ | Gaoṅgaoṅ /gaoŋgaoŋ/ | Gaoggao /gaoggao/ | Gaomgaom /gaomgaom/ | Baunbaun /baunbaun/ | Baoṅbaoṅ /baoŋbaoŋ/ | Gauṅgau /gauŋgau/ | *Gaonggaong → Gaoṅgaoṅ / Gaoggao / Gaomgaom / Baunbaun / Baoṅbaoṅ / Gauṅgau |
+| `drink` | to swallow liquid | *Shrongngeng /ʃroŋŋeŋ/ | Šzoṅṅeṅ /ʃzoŋŋeŋ/ | Roggo /roggo/ | Šrommem /ʃrommem/ | Šrunnen /ʃrunnen/ | Šroṅṅoṅ /ʃroŋŋoŋ/ | Sduṅṅe /sduŋŋe/ | *Shrongngeng → Šzoṅṅeṅ / Roggo / Šrommem / Šrunnen / Šroṅṅoṅ / Sduṅṅe |
+| `drow-kind` | a drow | *Gong /goŋ/ | Goṅ /goŋ/ | Go /go/ | Gom /gom/ | Bun /bun/ | Boṅ /boŋ/ | Gu /gu/ | *Gong → Goṅ / Go / Gom / Bun / Boṅ / Gu |
+| `earth` | the ground underfoot | *Shreangngaeng /ʃreaŋŋaeŋ/ | Šzeaṅṅaeṅ /ʃzeaŋŋaeŋ/ | Roaggao /roaggao/ | Šreammaem /ʃreammaem/ | Šreannaen /ʃreannaen/ | Šroaṅṅaoṅ /ʃroaŋŋaoŋ/ | Sdeaṅṅae /sdeaŋŋae/ | *Shreangngaeng → Šzeaṅṅaeṅ / Roaggao / Šreammaem / Šreannaen / Šroaṅṅaoṅ / Sdeaṅṅae |
+| `east` | the direction of increasing longitude | *Peung /peuŋ/ | Peuṅ /peuŋ/ | Poo /poo/ | Beom /beom/ | Peun /peun/ | Booṅ /booŋ/ | Teu /teu/ | *Peung → Peuṅ / Poo / Beom / Peun / Booṅ / Teu |
+| `eat` | to consume food | *Pangpeng /paŋpeŋ/ | Paṅpeṅ /paŋpeŋ/ | Pagpo /pagpo/ | Bambem /bambem/ | Panpen /panpen/ | Baṅboṅ /baŋboŋ/ | Taṅte /taŋte/ | *Pangpeng → Paṅpeṅ / Pagpo / Bambem / Panpen / Baṅboṅ / Taṅte |
+| `eye` | the organ of sight | *Pangduang /paŋduaŋ/ | Paṅzuaṅ /paŋzuaŋ/ | Pagdoa /pagdoa/ | Bamdoam /bamdoam/ | Panduan /panduan/ | Baṅboaṅ /baŋboaŋ/ | Taṅdua /taŋdua/ | *Pangduang → Paṅzuaṅ / Pagdoa / Bamdoam / Panduan / Baṅboaṅ / Taṅdua |
+| `fire` | flame and heat | *Bung /buŋ/ | Puṅ /puŋ/ | Bo /bo/ | Bom /bom/ | Bun /bun/ | Boṅ /boŋ/ | Du /du/ | *Bung → Puṅ / Bo / Bom / Bun / Boṅ / Du |
+| `foot` | the walking limb-end | *Ngoengsruung /ŋoeŋsruuŋ/ | Ṅoeṅszuuṅ /ŋoeŋszuuŋ/ | Googsroo /googsroo/ | Moemsroom /moemsroom/ | Nuensruun /nuensruun/ | Ṅooṅsrooṅ /ŋooŋsrooŋ/ | Ṅueṅsduu /ŋueŋsduu/ | *Ngoengsruung → Ṅoeṅszuuṅ / Googsroo / Moemsroom / Nuensruun / Ṅooṅsrooṅ / Ṅueṅsduu |
+| `gloom` | the deepest, starless dark | *Teonggong /teoŋgoŋ/ | Peoṅgoṅ /peoŋgoŋ/ | Pooggo /pooggo/ | Deomgom /deomgom/ | Teunbun /teunbun/ | Tooṅboṅ /tooŋboŋ/ | Teuṅgu /teuŋgu/ | *Teonggong → Peoṅgoṅ / Pooggo / Deomgom / Teunbun / Tooṅboṅ / Teuṅgu |
+| `gnoll-kind` | a gnoll | *Peng /peŋ/ | Peṅ /peŋ/ | Po /po/ | Bem /bem/ | Pen /pen/ | Boṅ /boŋ/ | Te /te/ | *Peng → Peṅ / Po / Bem / Pen / Boṅ / Te |
+| `goblin-kind` | a goblin | *Ngangzhrung /ŋaŋʒruŋ/ | Ṅaṅžzuṅ /ŋaŋʒzuŋ/ | Gagžro /gagʒro/ | Mamžrom /mamʒrom/ | Nanžrun /nanʒrun/ | Ṅaṅzroṅ /ŋaŋzroŋ/ | Ṅaṅzdu /ŋaŋzdu/ | *Ngangzhrung → Ṅaṅžzuṅ / Gagžro / Mamžrom / Nanžrun / Ṅaṅzroṅ / Ṅaṅzdu |
+| `god` | a deity | *Doongpong /dooŋpoŋ/ | Zooṅpoṅ /zooŋpoŋ/ | Doogpo /doogpo/ | Doombom /doombom/ | Duunpun /duunpun/ | Booṅboṅ /booŋboŋ/ | Duuṅtu /duuŋtu/ | *Doongpong → Zooṅpoṅ / Doogpo / Doombom / Duunpun / Booṅboṅ / Duuṅtu |
+| `great` | large in size or extent | *Dongsraeng /doŋsraeŋ/ | Zoṅszaeṅ /zoŋszaeŋ/ | Dogsrao /dogsrao/ | Domsraem /domsraem/ | Dunsraen /dunsraen/ | Boṅsraoṅ /boŋsraoŋ/ | Duṅsdae /duŋsdae/ | *Dongsraeng → Zoṅszaeṅ / Dogsrao / Domsraem / Dunsraen / Boṅsraoṅ / Duṅsdae |
+| `gully-dwarf-kind` | a gully dwarf | *Zrongngang /zroŋŋaŋ/ | Zzoṅṅaṅ /zzoŋŋaŋ/ | Rogga /rogga/ | Zrommam /zrommam/ | Drunnan /drunnan/ | Zroṅṅaṅ /zroŋŋaŋ/ | Zduṅṅa /zduŋŋa/ | *Zrongngang → Zzoṅṅaṅ / Rogga / Zrommam / Drunnan / Zroṅṅaṅ / Zduṅṅa |
+| `hand` | the manipulating limb-end | *Ngueng /ŋueŋ/ | Ṅueṅ /ŋueŋ/ | Goo /goo/ | Moem /moem/ | Nuen /nuen/ | Ṅooṅ /ŋooŋ/ | Ṅue /ŋue/ | *Ngueng → Ṅueṅ / Goo / Moem / Nuen / Ṅooṅ / Ṅue |
+| `hearth` | the fire at the center of a home | *Deong /deoŋ/ | Zeoṅ /zeoŋ/ | Doo /doo/ | Deom /deom/ | Deun /deun/ | Booṅ /booŋ/ | Deu /deu/ | *Deong → Zeoṅ / Doo / Deom / Deun / Booṅ / Deu |
+| `high` | far above the ground | *Shrongshraong /ʃroŋʃraoŋ/ | Šzoṅšzaoṅ /ʃzoŋʃzaoŋ/ | Rogšrao /rogʃrao/ | Šromšraom /ʃromʃraom/ | Šrunšraun /ʃrunʃraun/ | Šroṅšraoṅ /ʃroŋʃraoŋ/ | Sduṅsdau /sduŋsdau/ | *Shrongshraong → Šzoṅšzaoṅ / Rogšrao / Šromšraom / Šrunšraun / Šroṅšraoṅ / Sduṅsdau |
+| `high-elf-kind` | a high elf | *Zhrongsreung /ʒroŋsreuŋ/ | Žzoṅszeuṅ /ʒzoŋszeuŋ/ | Rogsroo /rogsroo/ | Žromsreom /ʒromsreom/ | Žrunsreun /ʒrunsreun/ | Zroṅsrooṅ /zroŋsrooŋ/ | Zduṅsdeu /zduŋsdeu/ | *Zhrongsreung → Žzoṅszeuṅ / Rogsroo / Žromsreom / Žrunsreun / Zroṅsrooṅ / Zduṅsdeu |
+| `hill-dwarf-kind` | a hill dwarf | *Zruang /zruaŋ/ | Zzuaṅ /zzuaŋ/ | Roa /roa/ | Zroam /zroam/ | Druan /druan/ | Zroaṅ /zroaŋ/ | Zdua /zdua/ | *Zruang → Zzuaṅ / Roa / Zroam / Druan / Zroaṅ / Zdua |
+| `hobgoblin-kind` | a hobgoblin | *Zrongshroung /zroŋʃrouŋ/ | Zzoṅšzouṅ /zzoŋʃzouŋ/ | Rogšroo /rogʃroo/ | Zromšroom /zromʃroom/ | Drunšruun /drunʃruun/ | Zroṅšrooṅ /zroŋʃrooŋ/ | Zduṅsduu /zduŋsduu/ | *Zrongshroung → Zzoṅšzouṅ / Rogšroo / Zromšroom / Drunšruun / Zroṅšrooṅ / Zduṅsduu |
+| `home` | one's dwelling | *Zraunggeng /zrauŋgeŋ/ | Zzauṅgeṅ /zzauŋgeŋ/ | Raoggo /raoggo/ | Zraomgem /zraomgem/ | Draunben /draunben/ | Zraoṅboṅ /zraoŋboŋ/ | Zdauṅge /zdauŋge/ | *Zraunggeng → Zzauṅgeṅ / Raoggo / Zraomgem / Draunben / Zraoṅboṅ / Zdauṅge |
+| `human-kind` | a human | *Ngongsrung /ŋoŋsruŋ/ | Ṅoṅszuṅ /ŋoŋszuŋ/ | Gogsro /gogsro/ | Momsrom /momsrom/ | Nunsrun /nunsrun/ | Ṅoṅsroṅ /ŋoŋsroŋ/ | Ṅuṅsdu /ŋuŋsdu/ | *Ngongsrung → Ṅoṅszuṅ / Gogsro / Momsrom / Nunsrun / Ṅoṅsroṅ / Ṅuṅsdu |
+| `kobold-kind` | a kobold | *Zhreeng /ʒreeŋ/ | Žzeeṅ /ʒzeeŋ/ | Roo /roo/ | Žreem /ʒreem/ | Žreen /ʒreen/ | Zrooṅ /zrooŋ/ | Zdee /zdee/ | *Zhreeng → Žzeeṅ / Roo / Žreem / Žreen / Zrooṅ / Zdee |
+| `light` | the color term for white/light hues | *Ngaong /ŋaoŋ/ | Ṅaoṅ /ŋaoŋ/ | Gao /gao/ | Maom /maom/ | Naun /naun/ | Ṅaoṅ /ŋaoŋ/ | Ṅau /ŋau/ | *Ngaong → Ṅaoṅ / Gao / Maom / Naun / Ṅaoṅ / Ṅau |
+| `little` | small in size or extent | *Ngoang /ŋoaŋ/ | Ṅoaṅ /ŋoaŋ/ | Goa /goa/ | Moam /moam/ | Nuan /nuan/ | Ṅoaṅ /ŋoaŋ/ | Ṅua /ŋua/ | *Ngoang → Ṅoaṅ / Goa / Moam / Nuan / Ṅoaṅ / Ṅua |
+| `low` | near the ground | *Puangngeng /puaŋŋeŋ/ | Puaṅṅeṅ /puaŋŋeŋ/ | Poaggo /poaggo/ | Boammem /boammem/ | Puannen /puannen/ | Boaṅṅoṅ /boaŋŋoŋ/ | Tuaṅṅe /tuaŋŋe/ | *Puangngeng → Puaṅṅeṅ / Poaggo / Boammem / Puannen / Boaṅṅoṅ / Tuaṅṅe |
+| `many` | an indefinitely large count | *Shroung /ʃrouŋ/ | Šzouṅ /ʃzouŋ/ | Roo /roo/ | Šroom /ʃroom/ | Šruun /ʃruun/ | Šrooṅ /ʃrooŋ/ | Sduu /sduu/ | *Shroung → Šzouṅ / Roo / Šroom / Šruun / Šrooṅ / Sduu |
+| `moon` | a moon | *Taangzroeng /taaŋzroeŋ/ | Paaṅzzoeṅ /paaŋzzoeŋ/ | Paagdroo /paagdroo/ | Daamzroem /daamzroem/ | Taandruen /taandruen/ | Taaṅzrooṅ /taaŋzrooŋ/ | Taaṅzdue /taaŋzdue/ | *Taangzroeng → Paaṅzzoeṅ / Paagdroo / Daamzroem / Taandruen / Taaṅzrooṅ / Taaṅzdue |
+| `mouth` | the organ of eating and speech | *Guanggung /guaŋguŋ/ | Guaṅguṅ /guaŋguŋ/ | Goaggo /goaggo/ | Goamgom /goamgom/ | Buanbun /buanbun/ | Boaṅboṅ /boaŋboŋ/ | Guaṅgu /guaŋgu/ | *Guanggung → Guaṅguṅ / Goaggo / Goamgom / Buanbun / Boaṅboṅ / Guaṅgu |
+| `move` | to go from one place to another | *Shrungteeng /ʃruŋteeŋ/ | Šzuṅpeeṅ /ʃzuŋpeeŋ/ | Rogpoo /rogpoo/ | Šromdeem /ʃromdeem/ | Šrunteen /ʃrunteen/ | Šroṅtooṅ /ʃroŋtooŋ/ | Sduṅtee /sduŋtee/ | *Shrungteeng → Šzuṅpeeṅ / Rogpoo / Šromdeem / Šrunteen / Šroṅtooṅ / Sduṅtee |
+| `name` | a word that identifies one who bears it | *Ngang /ŋaŋ/ | Ṅaṅ /ŋaŋ/ | Ga /ga/ | Mam /mam/ | Nan /nan/ | Ṅaṅ /ŋaŋ/ | Ṅa /ŋa/ | *Ngang → Ṅaṅ / Ga / Mam / Nan / Ṅaṅ / Ṅa |
+| `new` | recently come to be | *Gaongngaang /gaoŋŋaaŋ/ | Gaoṅṅaaṅ /gaoŋŋaaŋ/ | Gaoggaa /gaoggaa/ | Gaommaam /gaommaam/ | Baunnaan /baunnaan/ | Baoṅṅaaṅ /baoŋŋaaŋ/ | Gauṅṅaa /gauŋŋaa/ | *Gaongngaang → Gaoṅṅaaṅ / Gaoggaa / Gaommaam / Baunnaan / Baoṅṅaaṅ / Gauṅṅaa |
+| `night` | the dark half of the day-night cycle | *Paengngang /paeŋŋaŋ/ | Paeṅṅaṅ /paeŋŋaŋ/ | Paogga /paogga/ | Baemmam /baemmam/ | Paennan /paennan/ | Baoṅṅaṅ /baoŋŋaŋ/ | Taeṅṅa /taeŋŋa/ | *Paengngang → Paeṅṅaṅ / Paogga / Baemmam / Paennan / Baoṅṅaṅ / Taeṅṅa |
+| `north` | toward the pole of increasing latitude | *Shrungpung /ʃruŋpuŋ/ | Šzuṅpuṅ /ʃzuŋpuŋ/ | Rogpo /rogpo/ | Šrombom /ʃrombom/ | Šrunpun /ʃrunpun/ | Šroṅboṅ /ʃroŋboŋ/ | Sduṅtu /sduŋtu/ | *Shrungpung → Šzuṅpuṅ / Rogpo / Šrombom / Šrunpun / Šroṅboṅ / Sduṅtu |
+| `old` | long in existence | *Ngaangpang /ŋaaŋpaŋ/ | Ṅaaṅpaṅ /ŋaaŋpaŋ/ | Gaagpa /gaagpa/ | Maambam /maambam/ | Naanpan /naanpan/ | Ṅaaṅbaṅ /ŋaaŋbaŋ/ | Ṅaaṅta /ŋaaŋta/ | *Ngaangpang → Ṅaaṅpaṅ / Gaagpa / Maambam / Naanpan / Ṅaaṅbaṅ / Ṅaaṅta |
+| `one` | the cardinal number 1 | *Ngaung /ŋauŋ/ | Ṅauṅ /ŋauŋ/ | Gao /gao/ | Maom /maom/ | Naun /naun/ | Ṅaoṅ /ŋaoŋ/ | Ṅau /ŋau/ | *Ngaung → Ṅauṅ / Gao / Maom / Naun / Ṅaoṅ / Ṅau |
+| `over` | above; atop | *Zhrengsrung /ʒreŋsruŋ/ | Žzeṅszuṅ /ʒzeŋszuŋ/ | Rogsro /rogsro/ | Žremsrom /ʒremsrom/ | Žrensrun /ʒrensrun/ | Zroṅsroṅ /zroŋsroŋ/ | Zdeṅsdu /zdeŋsdu/ | *Zhrengsrung → Žzeṅszuṅ / Rogsro / Žremsrom / Žrensrun / Zroṅsroṅ / Zdeṅsdu |
+| `parent` | one's father or mother | *Dongzhrung /doŋʒruŋ/ | Zoṅžzuṅ /zoŋʒzuŋ/ | Dogžro /dogʒro/ | Domžrom /domʒrom/ | Dunžrun /dunʒrun/ | Boṅzroṅ /boŋzroŋ/ | Duṅzdu /duŋzdu/ | *Dongzhrung → Zoṅžzuṅ / Dogžro / Domžrom / Dunžrun / Boṅzroṅ / Duṅzdu |
+| `person` | a person; a member of a people (the autonym root) | *Sreanggeang /sreaŋgeaŋ/ | Szeaṅgeaṅ /szeaŋgeaŋ/ | Roaggoa /roaggoa/ | Sreamgeam /sreamgeam/ | Sreanbean /sreanbean/ | Sroaṅboaṅ /sroaŋboaŋ/ | Sdeaṅgea /sdeaŋgea/ | *Sreanggeang → Szeaṅgeaṅ / Roaggoa / Sreamgeam / Sreanbean / Sroaṅboaṅ / Sdeaṅgea |
+| `red` | the color term for red | *Gungngong /guŋŋoŋ/ | Guṅṅoṅ /guŋŋoŋ/ | Goggo /goggo/ | Gommom /gommom/ | Bunnun /bunnun/ | Boṅṅoṅ /boŋŋoŋ/ | Guṅṅu /guŋŋu/ | *Gungngong → Guṅṅoṅ / Goggo / Gommom / Bunnun / Boṅṅoṅ / Guṅṅu |
+| `rest` | to stop and recover strength | *Ngengngong /ŋeŋŋoŋ/ | Ṅeṅṅoṅ /ŋeŋŋoŋ/ | Goggo /goggo/ | Memmom /memmom/ | Nennun /nennun/ | Ṅoṅṅoṅ /ŋoŋŋoŋ/ | Ṅeṅṅu /ŋeŋŋu/ | *Ngengngong → Ṅeṅṅoṅ / Goggo / Memmom / Nennun / Ṅoṅṅoṅ / Ṅeṅṅu |
+| `sea-elf-kind` | a sea elf | *Ngoengdung /ŋoeŋduŋ/ | Ṅoeṅzuṅ /ŋoeŋzuŋ/ | Googdo /googdo/ | Moemdom /moemdom/ | Nuendun /nuendun/ | Ṅooṅboṅ /ŋooŋboŋ/ | Ṅueṅdu /ŋueŋdu/ | *Ngoengdung → Ṅoeṅzuṅ / Googdo / Moemdom / Nuendun / Ṅooṅboṅ / Ṅueṅdu |
+| `shadow` | cast dark, distinct from open gloom | *Bungteng /buŋteŋ/ | Puṅpeṅ /puŋpeŋ/ | Bogpo /bogpo/ | Bomdem /bomdem/ | Bunten /bunten/ | Boṅtoṅ /boŋtoŋ/ | Duṅte /duŋte/ | *Bungteng → Puṅpeṅ / Bogpo / Bomdem / Bunten / Boṅtoṅ / Duṅte |
+| `sibling` | one's brother or sister | *Sreengbong /sreeŋboŋ/ | Szeeṅpoṅ /szeeŋpoŋ/ | Roogbo /roogbo/ | Sreembom /sreembom/ | Sreenbun /sreenbun/ | Srooṅboṅ /srooŋboŋ/ | Sdeeṅdu /sdeeŋdu/ | *Sreengbong → Szeeṅpoṅ / Roogbo / Sreembom / Sreenbun / Srooṅboṅ / Sdeeṅdu |
+| `sleep` | to rest unconscious | *Geongngueng /geoŋŋueŋ/ | Geoṅṅueṅ /geoŋŋueŋ/ | Googgoo /googgoo/ | Geommoem /geommoem/ | Beunnuen /beunnuen/ | Booṅṅooṅ /booŋŋooŋ/ | Geuṅṅue /geuŋŋue/ | *Geongngueng → Geoṅṅueṅ / Googgoo / Geommoem / Beunnuen / Booṅṅooṅ / Geuṅṅue |
+| `snow-elf-kind` | a snow elf | *Zrengngung /zreŋŋuŋ/ | Zzeṅṅuṅ /zzeŋŋuŋ/ | Roggo /roggo/ | Zremmom /zremmom/ | Drennun /drennun/ | Zroṅṅoṅ /zroŋŋoŋ/ | Zdeṅṅu /zdeŋŋu/ | *Zrengngung → Zzeṅṅuṅ / Roggo / Zremmom / Drennun / Zroṅṅoṅ / Zdeṅṅu |
+| `south` | toward the pole of decreasing latitude | *Ngengnguong /ŋeŋŋuoŋ/ | Ṅeṅṅuoṅ /ŋeŋŋuoŋ/ | Goggoo /goggoo/ | Memmoom /memmoom/ | Nennuun /nennuun/ | Ṅoṅṅooṅ /ŋoŋŋooŋ/ | Ṅeṅṅuu /ŋeŋŋuu/ | *Ngengnguong → Ṅeṅṅuoṅ / Goggoo / Memmoom / Nennuun / Ṅoṅṅooṅ / Ṅeṅṅuu |
+| `spirit` | a lesser or unseen supernatural presence | *Srung /sruŋ/ | Szuṅ /szuŋ/ | Ro /ro/ | Srom /srom/ | Srun /srun/ | Sroṅ /sroŋ/ | Sdu /sdu/ | *Srung → Szuṅ / Ro / Srom / Srun / Sroṅ / Sdu |
+| `star` | a fixed point of light in the night sky | *Zhreengzhraong /ʒreeŋʒraoŋ/ | Žzeeṅžzaoṅ /ʒzeeŋʒzaoŋ/ | Roogžrao /roogʒrao/ | Žreemžraom /ʒreemʒraom/ | Žreenžraun /ʒreenʒraun/ | Zrooṅzraoṅ /zrooŋzraoŋ/ | Zdeeṅzdau /zdeeŋzdau/ | *Zhreengzhraong → Žzeeṅžzaoṅ / Roogžrao / Žreemžraom / Žreenžraun / Zrooṅzraoṅ / Zdeeṅzdau |
+| `starlit` | dark faintly lit by stars | *Deengsroeng /deeŋsroeŋ/ | Zeeṅszoeṅ /zeeŋszoeŋ/ | Doogsroo /doogsroo/ | Deemsroem /deemsroem/ | Deensruen /deensruen/ | Booṅsrooṅ /booŋsrooŋ/ | Deeṅsdue /deeŋsdue/ | *Deengsroeng → Zeeṅszoeṅ / Doogsroo / Deemsroem / Deensruen / Booṅsrooṅ / Deeṅsdue |
+| `stone` | rock | *Peengngung /peeŋŋuŋ/ | Peeṅṅuṅ /peeŋŋuŋ/ | Pooggo /pooggo/ | Beemmom /beemmom/ | Peennun /peennun/ | Booṅṅoṅ /booŋŋoŋ/ | Teeṅṅu /teeŋŋu/ | *Peengngung → Peeṅṅuṅ / Pooggo / Beemmom / Peennun / Booṅṅoṅ / Teeṅṅu |
+| `sun` | the sun | *Tungzhreong /tuŋʒreoŋ/ | Puṅžzeoṅ /puŋʒzeoŋ/ | Pogžroo /pogʒroo/ | Domžreom /domʒreom/ | Tunžreun /tunʒreun/ | Toṅzrooṅ /toŋzrooŋ/ | Tuṅzdeu /tuŋzdeu/ | *Tungzhreong → Puṅžzeoṅ / Pogžroo / Domžreom / Tunžreun / Toṅzrooṅ / Tuṅzdeu |
+| `tree` | a woody plant | *Dengshreng /deŋʃreŋ/ | Zeṅšzeṅ /zeŋʃzeŋ/ | Dogšro /dogʃro/ | Demšrem /demʃrem/ | Denšren /denʃren/ | Boṅšroṅ /boŋʃroŋ/ | Deṅsde /deŋsde/ | *Dengshreng → Zeṅšzeṅ / Dogšro / Demšrem / Denšren / Boṅšroṅ / Deṅsde |
+| `two` | the cardinal number 2 | *Ngeengzhrung /ŋeeŋʒruŋ/ | Ṅeeṅžzuṅ /ŋeeŋʒzuŋ/ | Googžro /googʒro/ | Meemžrom /meemʒrom/ | Neenžrun /neenʒrun/ | Ṅooṅzroṅ /ŋooŋzroŋ/ | Ṅeeṅzdu /ŋeeŋzdu/ | *Ngeengzhrung → Ṅeeṅžzuṅ / Googžro / Meemžrom / Neenžrun / Ṅooṅzroṅ / Ṅeeṅzdu |
+| `under` | beneath; below | *Ngengngaeng /ŋeŋŋaeŋ/ | Ṅeṅṅaeṅ /ŋeŋŋaeŋ/ | Goggao /goggao/ | Memmaem /memmaem/ | Nennaen /nennaen/ | Ṅoṅṅaoṅ /ŋoŋŋaoŋ/ | Ṅeṅṅae /ŋeŋŋae/ | *Ngengngaeng → Ṅeṅṅaeṅ / Goggao / Memmaem / Nennaen / Ṅoṅṅaoṅ / Ṅeṅṅae |
+| `water` | the drinkable liquid | *Sraong /sraoŋ/ | Szaoṅ /szaoŋ/ | Rao /rao/ | Sraom /sraom/ | Sraun /sraun/ | Sraoṅ /sraoŋ/ | Sdau /sdau/ | *Sraong → Szaoṅ / Rao / Sraom / Sraun / Sraoṅ / Sdau |
+| `west` | the direction of decreasing longitude | *Ngeungboung /ŋeuŋbouŋ/ | Ṅeuṅpouṅ /ŋeuŋpouŋ/ | Googboo /googboo/ | Meomboom /meomboom/ | Neunbuun /neunbuun/ | Ṅooṅbooṅ /ŋooŋbooŋ/ | Ṅeuṅduu /ŋeuŋduu/ | *Ngeungboung → Ṅeuṅpouṅ / Googboo / Meomboom / Neunbuun / Ṅooṅbooṅ / Ṅeuṅduu |
+| `wind` | moving air | *Danggang /daŋgaŋ/ | Zaṅgaṅ /zaŋgaŋ/ | Dagga /dagga/ | Damgam /damgam/ | Danban /danban/ | Baṅbaṅ /baŋbaŋ/ | Daṅga /daŋga/ | *Danggang → Zaṅgaṅ / Dagga / Damgam / Danban / Baṅbaṅ / Daṅga |
+| `wood-elf-kind` | a wood elf | *Shreongngung /ʃreoŋŋuŋ/ | Šzeoṅṅuṅ /ʃzeoŋŋuŋ/ | Rooggo /rooggo/ | Šreommom /ʃreommom/ | Šreunnun /ʃreunnun/ | Šrooṅṅoṅ /ʃrooŋŋoŋ/ | Sdeuṅṅu /sdeuŋŋu/ | *Shreongngung → Šzeoṅṅuṅ / Rooggo / Šreommom / Šreunnun / Šrooṅṅoṅ / Sdeuṅṅu |
 
 ### Goblinoid
 

@@ -11093,7 +11093,23 @@ mod tests {
         // the sonorant-open onsets all move, not only elf's. Same class of
         // mover as Task 4/5's, not a placement reshuffle. Still strictly
         // between 0 and 1.
-        assert_eq!(share, 0.8174273858921162, "seed 42 transparency drifted");
+        //
+        // The Burr re-pin (Task 15): 0.8174273858921162 -> 0.8091286307053942
+        // (a small decrease). Per-bundle orthography draws no stream (spec
+        // §3.6), so this is not a placement reshuffle or a phonology reseed —
+        // it moves `bare_surface`'s comparison itself: `name_transparency`
+        // asks whether a settlement's own surface name literally CONTAINS
+        // each concept's lexicon citation form, and orthography changes both
+        // sides' bytes (a compound's own `glossed_name` render and each
+        // component's `word_views` render are both threaded with the same
+        // `ph.orthography`, so the comparison stays apples-to-apples per
+        // species) — but a citation form that used to read as a two-letter
+        // digraph substring can land differently once it is a single
+        // diacritic letter or gains an `'` separator, so a handful of
+        // elf/dwarf compounds flip which way the `.contains` check falls.
+        // Still strictly between 0 and 1 — the distribution property this
+        // test guards. Not yet corroborated against a canonical census.
+        assert_eq!(share, 0.8091286307053942, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

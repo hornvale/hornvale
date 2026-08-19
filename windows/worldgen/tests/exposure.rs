@@ -561,7 +561,13 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
             // the rooter/gapper partition are unchanged.
             ("hill-dwarf", "Qangab".to_string()),
             ("hobgoblin", "Qebae".to_string()),
-            ("snow-elf", "Zroongtong".to_string()),
+            // The Burr (Task 15): per-bundle orthography — the elf bundle
+            // (sonorant-open) spells under `Orthography::Diacritic`, so the
+            // velar nasal `ŋ` that used to romanize as the digraph `ng`
+            // spells `ṅ` instead: `Zroongtong` -> `Zrooṅtoṅ`. A view over the
+            // same segments (no stream draw moved); the dwarf/goblinoid rows
+            // (`Digraph`) are unchanged.
+            ("snow-elf", "Zrooṅtoṅ".to_string()),
         ],
         "the set of peoples rooting 'spring' at seed 42 moved"
     );
@@ -999,15 +1005,20 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
     // list again — desert-elf, drow and snow-elf's words moved (`Zkeaz` ->
     // `Ngop`, `Koa` -> `Go`, `Bfoaz` -> `Ngob`); the rooter/gapper
     // partition is unchanged.
+    // The Burr (Task 15): per-bundle orthography — the elf bundle spells
+    // under `Orthography::Diacritic`, so `ng` (the velar nasal's digraph)
+    // spells `ṅ`: `Gongszoang` -> `Goṅszoaṅ`, `Bongsroang` -> `Boṅsroaṅ`. A
+    // view over the same segments (no stream draw moved); the non-elf rows
+    // (`Digraph`) are unchanged.
     assert_eq!(
         rooted,
         vec![
             ("bugbear", "Godoa".to_string()),
-            ("desert-elf", "Gongszoang".to_string()),
+            ("desert-elf", "Goṅszoaṅ".to_string()),
             ("drow", "Gogsroa".to_string()),
             ("gnoll", "Dshoopdshop".to_string()),
             ("hobgoblin", "Kotoa".to_string()),
-            ("snow-elf", "Bongsroang".to_string()),
+            ("snow-elf", "Boṅsroaṅ".to_string()),
         ],
         "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \
          is among them"

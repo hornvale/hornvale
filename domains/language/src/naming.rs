@@ -77,11 +77,11 @@
 use crate::etymology::{draw_wear_cascade, evolve};
 use crate::lexicon::{Headedness, LexEntry, Lexicon};
 use crate::phoneme::{
-    Manner, Segment, espeak_word, ipa, romanize, tone_mark_ipa, tone_mark_roman, tone_of,
+    Manner, Segment, espeak_word, ipa, romanize_with, tone_mark_ipa, tone_mark_roman, tone_of,
 };
 use crate::phonology::Phonology;
 use crate::streams;
-use crate::typology::harmonize;
+use crate::typology::{Orthography, harmonize};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 use std::collections::BTreeMap;
@@ -1164,7 +1164,7 @@ impl<'a> Namer<'a> {
         }
 
         let gloss = chosen.join("-");
-        (render_views(&segments), gloss)
+        (render_views_with(&segments, self.ph.orthography), gloss)
     }
 
     /// Build one candidate name from a single stream draw, applying the
@@ -1210,12 +1210,15 @@ impl<'a> Namer<'a> {
         // Harmony is the campaign's only word-level constraint, so it must
         // run over the whole flattened segment sequence AFTER the syllable
         // count and positional-nucleus reduction have settled (both are
-        // syllable-local) and BEFORE `render_views` calls `romanize`, so
-        // both the romanization and the IPA see the harmonized form.
-        // `Harmony::None` is the identity, so every other bundle's output is
-        // byte-identical through this call.
+        // syllable-local) and BEFORE `render_views_with` calls
+        // `romanize_with`, so both the romanization and the IPA see the
+        // harmonized form. `Harmony::None` is the identity, so every other
+        // bundle's output is byte-identical through this call. Orthography
+        // spells AFTER harmonizing, never before (RULING-2): harmonize
+        // stays upstream of the render, or harmony silently stops reaching
+        // the name while its own pure-function tests still pass.
         let segments = segments_of(&reduce_syllable_nuclei(&syllables, self.ph));
-        render_views(&harmonize(&segments, self.ph.harmony))
+        render_views_with(&harmonize(&segments, self.ph.harmony), self.ph.orthography)
     }
 
     /// Double a randomly chosen syllable of `syllables` in place, with
@@ -1339,10 +1342,10 @@ impl<'a> Namer<'a> {
     }
 }
 
-/// Render a bare segment sequence's three surface views in one pass — the
-/// segment-level half of the flatten-then-render pipeline
-/// [`Namer::build_name`] runs over [`Syllable`]s, factored out so a caller
-/// that already holds a flat
+/// Render a bare segment sequence's three surface views in one pass, under a
+/// per-bundle [`Orthography`] — the segment-level half of the
+/// flatten-then-render pipeline [`Namer::build_name`] runs over
+/// [`Syllable`]s, factored out so a caller that already holds a flat
 /// `Vec<Segment>` (lexicon's roots and recipe compounds, over `evolve`'s
 /// modern forms) reuses the same romanization/IPA/espeak logic instead of
 /// re-deriving it. `pub`, not `pub(crate)`: a [`crate::etymology::Derivation`]'s
@@ -1350,18 +1353,33 @@ impl<'a> Namer<'a> {
 /// (Task 11) needs this exact reduction to render a proto-form's roman
 /// spelling — the same view [`crate::lexicon::WordViews`] already gets for
 /// modern forms, so a proto-form's rendering can never drift from it.
-pub fn render_views(segments: &[Segment]) -> GeneratedName {
+///
+/// `Orthography` is a VIEW over `Segment` (spec §3.6): no stream draw moves
+/// when `orth` changes, but the returned `roman` string does. Under
+/// [`Orthography::Apostrophe`], a `'` separates a digraph romanization
+/// (`romanize_with` returning more than one ASCII byte) from an immediately
+/// following consonant — a sequence-level disambiguation only this function,
+/// holding the whole segment run, can apply; [`romanize_with`] itself stays
+/// per-segment and spells `Digraph`/`Apostrophe` identically.
+pub fn render_views_with(segments: &[Segment], orth: Orthography) -> GeneratedName {
     let mut roman = String::new();
     let mut ipa_str = String::new();
-    for seg in segments {
+    for (i, seg) in segments.iter().enumerate() {
         // Segment quality first, then its tone mark (spec §6): a combining
         // diacritic on the roman vowel, a Chao tone letter after the IPA
         // vowel. Both are empty for `Tone::Neutral`, so an atonal word renders
         // exactly as before the tone tier. espeak stays tone-blind — lexical
         // tone is espeak-weak, a known audio limit (spec §9), so the segmental
         // formulation stands and the pitch is simply not voiced.
-        roman.push_str(romanize(seg));
+        let piece = romanize_with(seg, orth);
+        roman.push_str(piece);
         roman.push_str(tone_mark_roman(tone_of(seg)));
+        if orth == Orthography::Apostrophe
+            && piece.len() > 1
+            && matches!(segments.get(i + 1), Some(Segment::Consonant { .. }))
+        {
+            roman.push('\'');
+        }
         ipa_str.push_str(ipa(seg));
         ipa_str.push_str(tone_mark_ipa(tone_of(seg)));
     }
@@ -1370,6 +1388,13 @@ pub fn render_views(segments: &[Segment]) -> GeneratedName {
         ipa: ipa_str,
         espeak: espeak_word(segments),
     }
+}
+
+/// [`render_views_with`] under [`Orthography::Digraph`], today's global
+/// convention — every caller with no [`Phonology`] in scope (a test, or a
+/// path with no bundle) uses this directly.
+pub fn render_views(segments: &[Segment]) -> GeneratedName {
+    render_views_with(segments, Orthography::Digraph)
 }
 
 /// Flatten `syllables` (onset → nucleus → coda, in sequence) into their
@@ -1932,6 +1957,39 @@ mod tests {
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use std::collections::BTreeMap;
+
+    /// The Apostrophe convention's sequence-level half, which
+    /// `romanize_with` cannot itself see (it is per-segment): a digraph
+    /// romanization immediately followed by another consonant gets a `'`
+    /// separator, so a reader never mis-parses where the digraph ends. The
+    /// templatic (dwarf) bundle's own strict C-V-C-V-C skeleton never
+    /// creates this adjacency for a single root — every dwarf root in the
+    /// committed dictionary is consequently `Apostrophe`-identical to
+    /// `Digraph` — so this direct check is what actually exercises the
+    /// branch `dictionary-generated.md` alone cannot demonstrate.
+    #[test]
+    fn apostrophe_orthography_separates_a_digraph_from_a_following_consonant() {
+        use crate::phoneme::Place;
+        let velar_nasal = Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Nasal,
+            voiced: true,
+        };
+        let alveolar_stop = Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Stop,
+            voiced: false,
+        };
+        let segs = [velar_nasal, alveolar_stop];
+        let digraph = render_views_with(&segs, Orthography::Digraph).roman;
+        let apostrophe = render_views_with(&segs, Orthography::Apostrophe).roman;
+        assert_eq!(digraph, "Ngt");
+        assert_eq!(apostrophe, "Ng't");
+        // A digraph at the WORD END (no following segment) never gets a
+        // trailing apostrophe — there is nothing to disambiguate it from.
+        let bare = render_views_with(&[velar_nasal], Orthography::Apostrophe).roman;
+        assert_eq!(bare, "Ng");
+    }
 
     /// A neutral shape profile for tests that are not about shape: an even
     /// three-way preference at β = 1, so `glossed_name` draws each
@@ -2570,6 +2628,7 @@ mod tests {
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
             harmony: crate::typology::Harmony::None,
+            orthography: crate::typology::Orthography::Digraph,
         }
     }
 

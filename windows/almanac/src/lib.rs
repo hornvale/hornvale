@@ -160,6 +160,11 @@ pub struct Speaker {
     /// the struct stays plain data; a renderer rebuilds the classifier with
     /// `hornvale_language::noun_class_with_sky(sky_animate, concept)`.
     pub sky_animate: bool,
+    /// This people's own [`hornvale_language::Phonology::orthography`] —
+    /// a VIEW over `Segment` (spec §3.6), read by [`phenomenon_line`]'s
+    /// `Affix`-depth tongue path so a marked head noun spells under the
+    /// same convention every other word in this tongue does.
+    pub orthography: hornvale_language::Orthography,
 }
 
 /// Everything the almanac needs, gathered by the composition root.

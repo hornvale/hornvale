@@ -8859,11 +8859,13 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         let morph = tongue_morphology_of(world, &species).ok()?;
         let sky_animate = day_schema_from(world, &species, &terrain, &climate)
             == Some(hornvale_language::SchemaId::Agentive);
+        let orthography = language_of(world, &species).orthography;
         Some(hornvale_almanac::Speaker {
             species,
             lexicon,
             morph,
             sky_animate,
+            orthography,
         })
     });
     Ok(AlmanacContext {

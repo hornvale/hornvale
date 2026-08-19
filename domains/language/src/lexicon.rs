@@ -15,6 +15,7 @@ use crate::packs::compound_recipe;
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
 use crate::streams;
+use crate::typology::Orthography;
 use hornvale_kernel::Seed;
 use hornvale_kernel::seed::StreamLabel;
 use std::collections::BTreeMap;
@@ -200,11 +201,13 @@ fn root_modern<'a>(
     }
 }
 
-/// Render a bare segment sequence's [`WordViews`], via
-/// [`crate::naming::render_views`] — the shared segment→views reduction
-/// naming.rs exposes.
-fn word_views(segments: &[Segment]) -> WordViews {
-    let rendered = crate::naming::render_views(segments);
+/// Render a bare segment sequence's [`WordViews`] under `orth`, via
+/// [`crate::naming::render_views_with`] — the shared segment→views reduction
+/// naming.rs exposes. `orth` is the family/species [`Phonology`]'s own
+/// [`Orthography`] (spec §3.6): a VIEW, so no stream draw moves when it
+/// changes, but the returned strings do.
+fn word_views(segments: &[Segment], orth: Orthography) -> WordViews {
+    let rendered = crate::naming::render_views_with(segments, orth);
     WordViews {
         roman: rendered.roman,
         ipa: rendered.ipa,
@@ -220,6 +223,7 @@ fn compound_entry(
     concept: &str,
     entries: &BTreeMap<String, LexEntry>,
     headedness: Headedness,
+    orth: Orthography,
 ) -> LexEntry {
     let Some((modifier, head)) = compound_recipe(concept) else {
         return LexEntry::Gap {
@@ -242,7 +246,7 @@ fn compound_entry(
     LexEntry::Compound {
         modifier: modifier.to_string(),
         head: head.to_string(),
-        views: word_views(&joined),
+        views: word_views(&joined, orth),
     }
 }
 
@@ -344,7 +348,7 @@ pub fn build_lexicon(
         if matches!(class, ExposureClass::Steeped) {
             let proto = proto_roots[concept].clone();
             let derivation = evolve(&proto, &cascade, ph);
-            let views = word_views(&derivation.modern);
+            let views = word_views(&derivation.modern, ph.orthography);
             entries.insert(concept.clone(), LexEntry::Root { derivation, views });
         }
     }
@@ -354,7 +358,7 @@ pub fn build_lexicon(
         match class {
             ExposureClass::Steeped => {}
             ExposureClass::KnowsOf => {
-                let entry = compound_entry(concept, &entries, headedness);
+                let entry = compound_entry(concept, &entries, headedness, ph.orthography);
                 entries.insert(concept.clone(), entry);
             }
             ExposureClass::Unknown { reason } => {

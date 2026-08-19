@@ -143,10 +143,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Vjongmjom | /vjoŋmjom/ | `[[vj'oNmjom]]` | <audio controls preload="none" src="../audio/d98ead1c.mp3"></audio> |
-| Settlement | Ngemvjamngeng | /ŋemvjamŋeŋ/ | `[[N'emvjamNeN]]` | <audio controls preload="none" src="../audio/111cb9f7.mp3"></audio> |
-| Settlement | Ngemmengngjeng | /ŋemmeŋŋjeŋ/ | `[[N'emmeNNjeN]]` | <audio controls preload="none" src="../audio/6a25c0de.mp3"></audio> |
-| Deity | Mjangngjang | /mjaŋŋjaŋ/ | `[[mj'aNNjaN]]` | <audio controls preload="none" src="../audio/1a3f04b3.mp3"></audio> |
+| Settlement | Vjoṅmjom | /vjoŋmjom/ | `[[vj'oNmjom]]` | <audio controls preload="none" src="../audio/d98ead1c.mp3"></audio> |
+| Settlement | Ṅemvjamṅeṅ | /ŋemvjamŋeŋ/ | `[[N'emvjamNeN]]` | <audio controls preload="none" src="../audio/111cb9f7.mp3"></audio> |
+| Settlement | Ṅemmeṅṅjeṅ | /ŋemmeŋŋjeŋ/ | `[[N'emmeNNjeN]]` | <audio controls preload="none" src="../audio/6a25c0de.mp3"></audio> |
+| Deity | Mjaṅṅjaṅ | /mjaŋŋjaŋ/ | `[[mj'aNNjaN]]` | <audio controls preload="none" src="../audio/1a3f04b3.mp3"></audio> |
 
 ## Drow
 
@@ -179,9 +179,9 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Kxraakxror | /kʼraakʼror/ | `[[kr'aakror]]` | <audio controls preload="none" src="../audio/35596598.mp3"></audio> |
+| Settlement | Ḳraaḳror | /kʼraakʼror/ | `[[kr'aakror]]` | <audio controls preload="none" src="../audio/35596598.mp3"></audio> |
 | Settlement | Braabrarbra | /braabrarbra/ | `[[br'aabrarbra]]` | <audio controls preload="none" src="../audio/dc4c4be3.mp3"></audio> |
-| Settlement | Kxrazhra | /kʼraʒra/ | `[[kr'aZra]]` | <audio controls preload="none" src="../audio/6852d470.mp3"></audio> |
+| Settlement | Ḳražra | /kʼraʒra/ | `[[kr'aZra]]` | <audio controls preload="none" src="../audio/6852d470.mp3"></audio> |
 | Deity | Droarpror | /droarpror/ | `[[dr'oarpror]]` | <audio controls preload="none" src="../audio/35f3618e.mp3"></audio> |
 
 ## Gnoll
@@ -298,10 +298,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Qxakbfebzhneb | /qxakbfebʒneb/ | `[[qx'akbfebZneb]]` | <audio controls preload="none" src="../audio/64540194.mp3"></audio> |
-| Settlement | Kfokzhnek | /kfokʒnek/ | `[[kf'okZnek]]` | <audio controls preload="none" src="../audio/bc9adf66.mp3"></audio> |
+| Settlement | Qxakbfebzh'neb | /qxakbfebʒneb/ | `[[qx'akbfebZneb]]` | <audio controls preload="none" src="../audio/64540194.mp3"></audio> |
+| Settlement | Kfokzh'nek | /kfokʒnek/ | `[[kf'okZnek]]` | <audio controls preload="none" src="../audio/bc9adf66.mp3"></audio> |
 | Settlement | Kxeqkfak | /kxeqkfak/ | `[[kx'eqkfak]]` | <audio controls preload="none" src="../audio/a7a7b9eb.mp3"></audio> |
-| Deity | Bfobshmog | /bfobʃmog/ | `[[bf'obSmog]]` | <audio controls preload="none" src="../audio/54479628.mp3"></audio> |
+| Deity | Bfobsh'mog | /bfobʃmog/ | `[[bf'obSmog]]` | <audio controls preload="none" src="../audio/54479628.mp3"></audio> |
 
 ## High-elf
 
@@ -596,10 +596,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
-| Settlement | Fraangofro | /fraaŋofro/ | `[[fr'aaNofro]]` | <audio controls preload="none" src="../audio/afa4d5c8.mp3"></audio> |
-| Settlement | Fraongngofrang | /fraoŋŋofraŋ/ | `[[fr'aoNNofraN]]` | <audio controls preload="none" src="../audio/b4ab9630.mp3"></audio> |
-| Settlement | Froongngongfrong | /frooŋŋoŋfroŋ/ | `[[fr'ooNNoNfroN]]` | <audio controls preload="none" src="../audio/4d3f85b6.mp3"></audio> |
-| Deity | Fraangfrangfrong | /fraaŋfraŋfroŋ/ | `[[fr'aaNfraNfroN]]` | <audio controls preload="none" src="../audio/2d981399.mp3"></audio> |
+| Settlement | Fraaṅofro | /fraaŋofro/ | `[[fr'aaNofro]]` | <audio controls preload="none" src="../audio/afa4d5c8.mp3"></audio> |
+| Settlement | Fraoṅṅofraṅ | /fraoŋŋofraŋ/ | `[[fr'aoNNofraN]]` | <audio controls preload="none" src="../audio/b4ab9630.mp3"></audio> |
+| Settlement | Frooṅṅoṅfroṅ | /frooŋŋoŋfroŋ/ | `[[fr'ooNNoNfroN]]` | <audio controls preload="none" src="../audio/4d3f85b6.mp3"></audio> |
+| Deity | Fraaṅfraṅfroṅ | /fraaŋfraŋfroŋ/ | `[[fr'aaNfraNfroN]]` | <audio controls preload="none" src="../audio/2d981399.mp3"></audio> |
 
 ## White-dragon
 
@@ -667,7 +667,7 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Kind | Romanization | IPA | Espeak | Audio |
 |---|---|---|---|---|
 | Settlement | Tjantjoj | /tjantjoj/ | `[[tj'antjoj]]` | <audio controls preload="none" src="../audio/7a437aa5.mp3"></audio> |
-| Settlement | Sjenqjang | /sjenqjaŋ/ | `[[sj'enqjaN]]` | <audio controls preload="none" src="../audio/58646960.mp3"></audio> |
-| Settlement | Sjoonsjong | /sjoonsjoŋ/ | `[[sj'oonsjoN]]` | <audio controls preload="none" src="../audio/17c716e2.mp3"></audio> |
-| Deity | Tjuojzjung | /tjuojzjuŋ/ | `[[tj'uojzjuN]]` | <audio controls preload="none" src="../audio/b655f5a2.mp3"></audio> |
+| Settlement | Sjenqjaṅ | /sjenqjaŋ/ | `[[sj'enqjaN]]` | <audio controls preload="none" src="../audio/58646960.mp3"></audio> |
+| Settlement | Sjoonsjoṅ | /sjoonsjoŋ/ | `[[sj'oonsjoN]]` | <audio controls preload="none" src="../audio/17c716e2.mp3"></audio> |
+| Deity | Tjuojzjuṅ | /tjuojzjuŋ/ | `[[tj'uojzjuN]]` | <audio controls preload="none" src="../audio/b655f5a2.mp3"></audio> |
 

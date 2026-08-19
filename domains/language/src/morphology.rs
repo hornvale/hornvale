@@ -13,10 +13,11 @@
 #![warn(missing_docs)]
 
 use crate::etymology::{Cascade, evolve};
-use crate::naming::{Namer, render_views, segments_of};
+use crate::naming::{Namer, render_views_with, segments_of};
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
 use crate::streams;
+use crate::typology::Orthography;
 use hornvale_kernel::Seed;
 use hornvale_kernel::seed::StreamLabel;
 use std::collections::BTreeMap;
@@ -309,7 +310,7 @@ fn evolve_axis(
         .map(|&value| {
             let proto = draw_morph_proto(seed, family, axis, value, proto_ph);
             let derivation = evolve(&proto, cascade, daughter_ph);
-            let roman = render_views(&derivation.modern).roman;
+            let roman = render_views_with(&derivation.modern, daughter_ph.orthography).roman;
             (
                 value,
                 MorphForm {
@@ -366,15 +367,23 @@ pub fn morph_forms(
 
 /// Join `stem` and `affix` at the SEGMENT level — never string
 /// concatenation across the boundary — in `position`'s order, then render
-/// the joined sequence's romanization in one pass via [`render_views`]. This
-/// is the assembly law: rendering the whole joined sequence at once (rather
-/// than rendering each side separately and gluing the two strings) is what
-/// lets a boundary-sensitive rendering rule (this crate's capitalization
-/// rule: [`render_views`] capitalizes only the WHOLE string's first letter)
-/// take effect correctly — see `affix_is_segment_level_not_string_concat`
-/// in this module's tests for the measured difference.
+/// the joined sequence's romanization in one pass via [`render_views_with`]
+/// under `orth`. This is the assembly law: rendering the whole joined
+/// sequence at once (rather than rendering each side separately and gluing
+/// the two strings) is what lets a boundary-sensitive rendering rule (this
+/// crate's capitalization rule: [`render_views_with`] capitalizes only the
+/// WHOLE string's first letter) take effect correctly — see
+/// `affix_is_segment_level_not_string_concat` in this module's tests for the
+/// measured difference. `orth` is a VIEW (spec §3.6): pass the joined word's
+/// own tongue's [`Phonology::orthography`], or [`Orthography::Digraph`] at a
+/// call site with no `Phonology` in scope.
 /// type-audit: bare-ok(identifier-text)
-pub fn affix(stem: &[Segment], affix: &[Segment], position: ClassPosition) -> MorphForm {
+pub fn affix(
+    stem: &[Segment],
+    affix: &[Segment],
+    position: ClassPosition,
+    orth: Orthography,
+) -> MorphForm {
     let mut segments = Vec::with_capacity(stem.len() + affix.len());
     match position {
         ClassPosition::Prefix => {
@@ -386,7 +395,7 @@ pub fn affix(stem: &[Segment], affix: &[Segment], position: ClassPosition) -> Mo
             segments.extend_from_slice(affix);
         }
     }
-    let roman = render_views(&segments).roman;
+    let roman = render_views_with(&segments, orth).roman;
     MorphForm { segments, roman }
 }
 
@@ -394,6 +403,7 @@ pub fn affix(stem: &[Segment], affix: &[Segment], position: ClassPosition) -> Mo
 mod tests {
     use super::*;
     use crate::etymology::{RuleKind, SoundRule, proto_root};
+    use crate::naming::render_views;
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
 
     /// A permissive phonology (full vowel space, every place/manner
@@ -534,7 +544,12 @@ mod tests {
             "fixture needs nonempty segments on both sides of the boundary"
         );
 
-        let joined = affix(&stem, &affix_segs, ClassPosition::Suffix);
+        let joined = affix(
+            &stem,
+            &affix_segs,
+            ClassPosition::Suffix,
+            Orthography::Digraph,
+        );
         let joined_segments: Vec<Segment> = stem.iter().chain(&affix_segs).copied().collect();
         assert_eq!(
             joined.roman,

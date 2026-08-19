@@ -446,15 +446,21 @@ pub fn render_volume_from(
             // Steeped by construction) — Witnessed (C7's readout law).
             evidential: Evidential::Witnessed,
         };
-        let tongue_line =
-            realize_tongue_deep(&self_statement, &grammar, &morph, &noun_class_of, &lexicon)
-                .unwrap_or_else(|gap| {
-                    panic!(
-                        "the self-statement law (spec §5) is violated for {kind}: \
+        let tongue_line = realize_tongue_deep(
+            &self_statement,
+            &grammar,
+            &morph,
+            &noun_class_of,
+            &lexicon,
+            ph.orthography,
+        )
+        .unwrap_or_else(|gap| {
+            panic!(
+                "the self-statement law (spec §5) is violated for {kind}: \
                  gap on {} ({})",
-                        gap.concept, gap.reason
-                    )
-                });
+                gap.concept, gap.reason
+            )
+        });
         tongue_lines.push(format!(
             "{tongue_line} (in the {kind} tongue: \"{common_line}\")"
         ));
@@ -481,13 +487,22 @@ pub fn render_volume_from(
             &morph,
             &noun_class_of,
             &lexicon,
+            ph.orthography,
         );
         tongue_lines.push(format!(
             "{world_line} (in the {kind} tongue: \"{name} is the earth.\")"
         ));
 
         for probe in &probes {
-            match probe_tongue(probe, kind, &grammar, &morph, &noun_class_of, &lexicon) {
+            match probe_tongue(
+                probe,
+                kind,
+                &grammar,
+                &morph,
+                &noun_class_of,
+                &lexicon,
+                ph.orthography,
+            ) {
                 Ok(line) => tongue_lines.push(format!(
                     "{line} (in the {kind} tongue: \"{} is a {}.\")",
                     probe.subject, probe.concept
@@ -597,6 +612,7 @@ fn chorus_sections_from(
                         &morph,
                         &noun_class_of,
                         &lexicon,
+                        ph.orthography,
                     );
                     let tongue_taught_line =
                         format!("{taught_line} (\"{name} is the earth — as it is taught.\")");
@@ -1863,6 +1879,7 @@ fn probe_tongue(
     morph: &TongueMorphology,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
+    orth: hornvale_language::Orthography,
 ) -> Result<String, hornvale_language::TongueGap> {
     realize_tongue_deep(
         &TongueClause {
@@ -1876,6 +1893,7 @@ fn probe_tongue(
         morph,
         noun_class_of,
         lexicon,
+        orth,
     )
 }
 
@@ -1905,6 +1923,7 @@ fn planet_name_of(world: &World) -> Option<String> {
 /// returning a `Result`, since a gap here is an invariant violation, not a
 /// coverage fact to record (contrast the C3 planet-concept probe, which
 /// gaps by design).
+#[allow(clippy::too_many_arguments)]
 fn world_statement(
     kind: &str,
     planet_name: &str,
@@ -1913,19 +1932,22 @@ fn world_statement(
     morph: &TongueMorphology,
     noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
+    orth: hornvale_language::Orthography,
 ) -> String {
     let clause = TongueClause {
         subject: planet_name.to_string(),
         complement_concept: "earth".to_string(),
         evidential,
     };
-    realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon).unwrap_or_else(|gap| {
-        panic!(
-            "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
+    realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon, orth).unwrap_or_else(
+        |gap| {
+            panic!(
+                "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
              universal-stratum Steeped and must never gap",
-            gap.concept, gap.reason
-        )
-    })
+                gap.concept, gap.reason
+            )
+        },
+    )
 }
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
@@ -3770,8 +3792,16 @@ mod tests {
             concept: "planet".to_string(),
             subject: "Vebe".to_string(),
         };
-        let line = probe_tongue(&probe, "goblin", &grammar, &morph, &noun_class_of, &lexicon)
-            .expect("a Steeped concept realizes");
+        let line = probe_tongue(
+            &probe,
+            "goblin",
+            &grammar,
+            &morph,
+            &noun_class_of,
+            &lexicon,
+            ph.orthography,
+        )
+        .expect("a Steeped concept realizes");
         assert!(
             !line.is_empty() && line.ends_with('.'),
             "a realized sentence: {line}"

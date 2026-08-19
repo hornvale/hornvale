@@ -3,19 +3,19 @@
 The land holds 241 settlement(s).
 The chief bugbear settlement, Doaba, holds 68 souls amid tropical-rainforest.
 The chief desert-dwarf settlement, Shaxasxanapdavag, holds 51 souls amid shrubland.
-The chief desert-elf settlement, Ngoangszaong, holds 22 souls amid shrubland.
+The chief desert-elf settlement, Ṅoaṅszaoṅ, holds 22 souls amid shrubland.
 The chief drow settlement, Goo, holds 29 souls amid temperate-forest.
 The chief gnoll settlement, Psaxqsoxpshapzhaznoqzha, holds 32 souls amid shrubland.
 The chief goblin settlement, Nenotata, holds 37 souls amid temperate-forest.
 The chief gully-dwarf settlement, Shakat, holds 37 souls amid tropical-seasonal-forest.
-The chief high-elf settlement, Shromdee, holds 34 souls amid temperate-forest.
-The chief hill-dwarf settlement, Mabashsajat, holds 35 souls amid temperate-forest.
+The chief high-elf settlement, Šromdee, holds 34 souls amid temperate-forest.
+The chief hill-dwarf settlement, Mabash'sajat, holds 35 souls amid temperate-forest.
 The chief hobgoblin settlement, Bobeqa, holds 73 souls amid temperate-forest.
 The chief human settlement, Pere, holds 32 souls amid temperate-forest.
 The chief kobold settlement, Rororararo, holds 48 souls amid shrubland.
-The chief sea-elf settlement, Shreannaensraunduundun, holds 33 souls amid kelp-forest.
-The chief snow-elf settlement, Zrongngong, holds 28 souls amid taiga.
-The chief wood-elf settlement, Ngungsda, holds 35 souls amid temperate-forest.
+The chief sea-elf settlement, Šreannaensraunduundun, holds 33 souls amid kelp-forest.
+The chief snow-elf settlement, Zroṅṅoṅ, holds 28 souls amid taiga.
+The chief wood-elf settlement, Ṅuṅsda, holds 35 souls amid temperate-forest.
 
 ```text
                                                                         

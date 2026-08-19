@@ -1383,6 +1383,7 @@ mod tests {
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
             harmony: crate::typology::Harmony::None,
+            orthography: crate::typology::Orthography::Digraph,
         }
     }
 
@@ -1427,6 +1428,7 @@ mod tests {
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
             harmony: crate::typology::Harmony::None,
+            orthography: crate::typology::Orthography::Digraph,
         }
     }
 
@@ -1921,6 +1923,7 @@ mod tests {
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![Manner::Stop], vec![]],
             harmony: crate::typology::Harmony::None,
+            orthography: crate::typology::Orthography::Digraph,
         }
     }
 
@@ -2602,6 +2605,7 @@ mod tests {
             nuclei: vec![1],
             codas: vec![vec![]],
             harmony: crate::typology::Harmony::None,
+            orthography: crate::typology::Orthography::Digraph,
         };
         // Thirty concepts: 30 > 8, so NO fixed-length-3 assignment can be
         // injective — only lengthening resolves it.

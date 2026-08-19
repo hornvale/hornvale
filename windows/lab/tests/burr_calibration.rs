@@ -44,7 +44,19 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// (varying the melody per daughter) would differentiate them; this campaign
 /// ships the citation form uniformly and reports its cost. Pinned from the
 /// measured run per decision 0016; never tuned.
-const BASELINE: f64 = 0.7791327913279132;
+///
+/// Stage 5 (per-bundle orthography, Task 15): 0.7913279132791328. Accuracy
+/// **rose** +0.0122 back above Stage 4. The classifier reads character
+/// trigrams, and orthography changes exactly those characters for the elf
+/// (Diacritic: `ŋ`→`ṅ`, `ʃ`→`š`, `ʒ`→`ž`, the ejective `kʼ`→`ḳ`, the click
+/// `ǃ`→`ṭ`) and dwarf (Apostrophe: a `'` before a consonant following a
+/// digraph) bundles — a rendering view, not a phonological change, so this
+/// move is orthogonal to Stage 4's structural one: the digraph-heavy elf
+/// words the Stage 3 finding turned on (`sh`/`zh`/`ng`) become
+/// single-diacritic trigrams, which is more informative per character than
+/// the two-letter digraph every OTHER bundle still shares. Pinned from the
+/// measured run per decision 0016; never tuned.
+const BASELINE: f64 = 0.7913279132791328;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

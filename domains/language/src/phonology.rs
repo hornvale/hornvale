@@ -11,7 +11,7 @@ use crate::phoneme::{
     Manner, Place, Segment, Tone, canonical_segments, sonority, sonority_of_manner,
 };
 use crate::streams;
-use crate::typology::{CodaLaw, Harmony, OnsetLaw, Typology};
+use crate::typology::{CodaLaw, Harmony, OnsetLaw, Orthography, Typology};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
@@ -112,6 +112,12 @@ pub struct Phonology {
     /// format field: `Phonology` carries no `serde` derive and is re-derived
     /// from the seed on every load, never persisted.
     pub harmony: Harmony,
+    /// How this family's segments are spelled in the romanization — copied
+    /// from the [`Typology`] this phonology was drawn under, exactly like
+    /// [`Phonology::harmony`]. A VIEW over `Segment`: no stream draw moves
+    /// when this field changes, but every committed name string does (spec
+    /// §3.6). Not a save-format field, for the same reason `harmony` isn't.
+    pub orthography: Orthography,
 }
 
 /// Below this labiality, every labial segment is forbidden outright.
@@ -884,6 +890,7 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope, typ: &Typology
         nuclei,
         codas,
         harmony: typ.harmony,
+        orthography: typ.orthography,
     };
     // Capacity floor (spec §5): widen a tone-capable species' tone inventory
     // until it clears the floor. A no-op for atonal species (byte-identical
@@ -1286,6 +1293,7 @@ mod tests {
             nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
             harmony: Harmony::None,
+            orthography: Orthography::Digraph,
         }
     }
 
