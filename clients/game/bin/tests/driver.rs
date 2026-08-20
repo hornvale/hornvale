@@ -2,6 +2,7 @@
 //! the loop (a verb advances the turn).
 
 use hornvale_game::driver::Driver;
+use hornvale_game::input::Action;
 
 /// The driver's ONLY output is snapshot JSON. If this ever returns a typed
 /// value, the containment in The Quire spec section 6 has been broken.
@@ -62,4 +63,63 @@ fn releasing_still_returns_a_parseable_snapshot() {
     let json = d.handle("release");
     let snap = hornvale_game_core::Snapshot::parse(&json).expect("release still yields a snapshot");
     assert!(!snap.narration.prose.is_empty());
+}
+
+/// The cursor is a plate primitive. At a band whose resolver does not exist
+/// yet, it still moves and still reports — it refuses honestly rather than
+/// resolving against the wrong plate. Faking a resolution here would be
+/// worse than refusing, because a wrong name is indistinguishable from a
+/// right one.
+///
+/// `Driver` has no `for_test` seam (see the task report: adding one to
+/// widen the public surface for a single test was rejected). The smallest
+/// honest way to reach a chamber-band session is the same one
+/// `scripts/possession-chamber.txt` and the committed
+/// `session-seed-42-chamber.json` fixture already use — a single `enter`
+/// from seed 42's flagship opening position — so this test drives a real
+/// `Driver` through it rather than inventing a lighter-weight seam.
+#[test]
+fn look_mode_at_an_unresolved_band_refuses_rather_than_resolving() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    driver.handle("enter");
+    let snap = hornvale_game_core::Snapshot::parse(&driver.snapshot())
+        .expect("a live session always yields a parseable snapshot");
+    assert!(
+        matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }),
+        "seed 42's flagship must land in the chamber band after one `enter`"
+    );
+
+    driver.apply(Action::EnterLook);
+    driver.apply(Action::CursorBy(1, 0));
+    assert!(
+        driver.cursor().is_some(),
+        "the cursor must exist at every band"
+    );
+    assert_eq!(driver.strip_text(), Some("nothing here yet"));
+}
+
+/// The walk band DOES have a resolver (the terrain-feature index, scoped to
+/// the observer's own cell — see `driver.rs`'s module doc for why cursor
+/// motion does not change which cell is queried this campaign). Entering
+/// look mode at seed 42's flagship opening position (walk band) must report
+/// a real name, not the unresolved-band refusal — this is what would catch
+/// a regression that accidentally routed every band through the same
+/// refusal.
+#[test]
+fn look_mode_at_the_walk_band_resolves_a_real_name() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    let snap = hornvale_game_core::Snapshot::parse(&driver.snapshot()).unwrap();
+    assert!(matches!(
+        snap.spatial,
+        hornvale_game_core::Spatial::Walk { .. }
+    ));
+
+    driver.apply(Action::EnterLook);
+    let strip = driver.strip_text();
+    assert!(strip.is_some(), "the walk band must resolve to something");
+    assert_ne!(
+        strip,
+        Some("nothing here yet"),
+        "the walk band has a real resolver and must not report the unresolved-band refusal"
+    );
 }

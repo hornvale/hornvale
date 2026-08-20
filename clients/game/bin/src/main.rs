@@ -62,39 +62,42 @@ fn run(args: &[String]) -> Result<(), String> {
     outcome.map_err(|e| e.to_string())
 }
 
-/// Draw `json` at the terminal's current size, clamped up to the monochrome
-/// floor `hornvale-game-core` refuses to render below.
+/// Draw the driver's current state at the terminal's current size, clamped
+/// up to the monochrome floor `hornvale-game-core` refuses to render below.
 ///
-/// No cursor position and no look-mode strip yet — this driver has no
-/// notion of look mode (Task 1's `Mode`/`Action` live in `input.rs`, and
-/// wiring them through the driver is Task 3's job), so every redraw reports
-/// `None` for both and the terminal cursor stays parked out of the way.
-fn redraw(term: &term::Term, json: &str) -> std::io::Result<()> {
+/// Reads `driver.snapshot()`/`cursor()`/`strip_text()` fresh each call
+/// rather than being handed them, so every call site redraws the driver's
+/// true current state rather than whatever it happened to return from the
+/// action that triggered the redraw (`Event::Resize` has no action at all).
+fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
     let (cols, rows) = crossterm::terminal::size()?;
     let w = cols.max(MIN_WIDTH);
     let h = rows.max(MIN_HEIGHT);
-    match hornvale_game_core::render_with(json, w, h, None, None) {
+    let json = driver.snapshot();
+    match hornvale_game_core::render_with(&json, w, h, driver.cursor(), driver.strip_text()) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
     }
 }
 
-/// The main loop: draw the opening, then read one key at a time. A mapped
-/// key is sent to the driver unconditionally (the client never validates —
-/// see `input`'s module doc) and the reply is redrawn; an unmapped key does
-/// nothing at all, costing no turn and no redraw. `release` (bound to
-/// capital `Q`) ends the loop after its own reply is drawn, so the user sees
-/// the sim's own parting line before the terminal is restored.
+/// The main loop: draw the opening, then read one key at a time. Each key is
+/// mapped to an [`input::Action`] under the driver's current [`input::Mode`]
+/// — `Action::None` does nothing at all, costing no turn and no redraw;
+/// every other action is applied and its reply redrawn. `release` (bound to
+/// capital `Q`, normal mode only) ends the loop after its own reply is
+/// drawn, so the user sees the sim's own parting line before the terminal is
+/// restored.
 fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     use crossterm::event::{Event, read};
 
-    redraw(term, &driver.snapshot())?;
+    redraw(term, driver)?;
     loop {
         match read()? {
             Event::Key(key) => {
-                let Some(verb) = input::verb_for(key) else {
+                let action = input::action_for(key, driver.mode());
+                if matches!(action, input::Action::None) {
                     continue;
-                };
+                }
                 // Detected by matching the SENT verb, not the sim's answer —
                 // correct today only because `input::verb_for` is the sole
                 // source of outgoing verbs and its only release-shaped line
@@ -103,14 +106,14 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
                 // a future free-text input mode lets a player type `quit`
                 // directly, this check needs to grow with it or move to
                 // reading the driver's answer instead.
-                let released = verb == "release";
-                let json = driver.handle(&verb);
-                redraw(term, &json)?;
+                let released = matches!(&action, input::Action::Verb(v) if v == "release");
+                driver.apply(action);
+                redraw(term, driver)?;
                 if released {
                     return Ok(());
                 }
             }
-            Event::Resize(_, _) => redraw(term, &driver.snapshot())?,
+            Event::Resize(_, _) => redraw(term, driver)?,
             _ => {}
         }
     }
