@@ -153,3 +153,28 @@ other sessions for it is exactly the duplicate-`0134` shape the merge queue
 exists to prevent. If a constitutional decision is later judged warranted (the
 "measure before mechanism" sequencing rule is a candidate), it should be minted
 against the merged tree, not raced for during the close.
+
+## Deferred, with homes
+
+Three followups carry their own idea-registry rows, each with the measurement
+that motivates it: `TOOL-traced-shipped-walk-unification` (fold the shipped walk
+into a projection of the traced one — refactors pinned code, out of a
+measurement campaign's scope), `TOOL-touchstone-readout-artifact` (the
+discrimination as a committed drift-checked artifact rather than heavy-battery
+stdout), and `TOOL-hearsay-enumerate-select-consolidation` (two of the three
+enumerate/select copies remain in the pre-existing probes).
+
+Two smaller items, recorded so they are not lost with the scratch:
+
+- **A verbatim DRY duplication** — `touchstone.rs`'s five-flag-plus-`any`
+  accumulation block is repeated between `tail_counts` and
+  `tail_by_people_pair`. Both are unit-tested and correct; a shared
+  `fn accumulate(&mut TailCounts, &BeliefDelta)` is a fair cleanup, not
+  merge-blocking. The final whole-branch review triaged it as
+  defer-acceptable.
+- **The positive control's aggregate delta sits at exactly +4**, the edge of the
+  `<= 4` ceiling the readout asserts. This is not an unguarded risk — it is the
+  intended tripwire: a substrate drift that pushed it over would redden the
+  readout rather than pass silently, which is the coupling a headline claim
+  wants. Worth knowing at the next re-run only so the red is read as "the world
+  moved, re-derive," never "loosen the ceiling."
