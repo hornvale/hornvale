@@ -1,7 +1,7 @@
 //! Underworld level generation: a chamber's own shape (The Adit).
 //!
 //! A chamber is a bucket, not a place (spec keystone) — `ChamberAddr`
-//! addresses which of up to `SLOTS_PER_BAND` interchangeable habitats
+//! addresses which of up to `BRANCHES_PER_SYSTEM` interchangeable habitats
 //! exists; nothing here changes that. This module builds a second,
 //! independent layer: a real room/corridor level for a rung of one cave
 //! system. `FRAME`-tier under decision 0069, same as `crate::lattice`:

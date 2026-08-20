@@ -22,7 +22,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_kernel::{CellId, Seed};
 use hornvale_terrain::{BandKind, Cave, CaveKind, DelveRung, GeothermalGradient, rung_at_depth};
 use hornvale_worldgen::chamber::{
-    ChamberAddr, ChamberOrigin, SLOTS_PER_BAND, chamber_at, chamber_exists, passages_from,
+    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, chamber_at,
+    chamber_exists, passages_from,
 };
 
 /// The column every fixture below is built against: 401 m of cover on 35 km
@@ -122,12 +123,13 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     // property is identical in all three framings.)
     let no_overrides = BTreeMap::new();
     for band in 0..=1u8 {
-        for slot in 0..SLOTS_PER_BAND {
+        for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
                 entrance: 0,
                 band,
-                slot,
+                branch,
+                floor: 0,
             };
             assert_eq!(
                 chamber_exists(seed, &shallow, fixture_gradient(), addr),
@@ -155,7 +157,7 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 /// The lattice is a fixed size regardless of what any particular cave
 /// realizes; occupancy within it is sparse and varies by seed. Over a cave
 /// reaching the `Underdeep` rung, the address space checked here is
-/// `SLOTS_PER_BAND * 3` (bands `0..=2`, `Undercroft..=Deeps`) — constant
+/// `BRANCHES_PER_SYSTEM * 3` (bands `0..=2`, `Undercroft..=Deeps`) — constant
 /// across every seed — while the number of addresses that EXIST is strictly
 /// less than that, and differs seed to seed. The loop stops one rung short of
 /// the fixture's own budget on purpose: every address it probes is in budget,
@@ -180,13 +182,14 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
         let mut total = 0u32;
         let mut existing = 0u32;
         for band in 0..=2u8 {
-            for slot in 0..SLOTS_PER_BAND {
+            for branch in 0..BRANCHES_PER_SYSTEM {
                 total += 1;
                 let addr = ChamberAddr {
                     cell,
                     entrance: 0,
                     band,
-                    slot,
+                    branch,
+                    floor: 0,
                 };
                 if chamber_exists(seed, &cave, fixture_gradient(), addr) {
                     existing += 1;
@@ -195,9 +198,9 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
         }
         assert_eq!(
             total,
-            u32::from(SLOTS_PER_BAND) * 3,
+            u32::from(BRANCHES_PER_SYSTEM) * 3,
             "the address space over an Underdeep-reaching cave must be a constant \
-             SLOTS_PER_BAND * 3 over the bands probed"
+             BRANCHES_PER_SYSTEM * 3 over the bands probed"
         );
         assert!(
             existing < total,
@@ -233,12 +236,13 @@ fn every_passage_is_traversable_in_both_directions() {
         for raw_cell in [0u32, 1, 9, 42] {
             let cell = CellId(raw_cell);
             for band in 0..=2u8 {
-                for slot in 0..SLOTS_PER_BAND {
+                for branch in 0..BRANCHES_PER_SYSTEM {
                     let addr = ChamberAddr {
                         cell,
                         entrance: 0,
                         band,
-                        slot,
+                        branch,
+                        floor: 0,
                     };
                     for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
                         let back = passages_from(seed, &cave, fixture_gradient(), neighbour);
@@ -264,8 +268,8 @@ fn every_passage_is_traversable_in_both_directions() {
 /// So this test reports the measured fraction and grounds the bar in a
 /// prediction made BEFORE running it, not tuned after: `EXISTENCE_DENSITY`
 /// is a coin flip (0.5) applied independently per address, and the
-/// canonical entrance address (`band = 0, slot = 0`) has at most two
-/// lattice neighbours (`band 0/slot 1` and `band 1/slot 0`) plus needs to
+/// canonical entrance address (`branch = 0, band = 0, floor = 0`) has at most
+/// two lattice neighbours (`branch 1/band 0` and `branch 0/band 1`) plus needs to
 /// exist itself, so back-of-envelope under independence the reach rate is
 /// well under half (`0.5 * (1 - 0.5^2) = 0.375`). **Measured over 1000
 /// probe entrances (seeds 1..=100 x 10 cells): 410/1000 = 0.4100** — close
@@ -296,7 +300,8 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
                 cell,
                 entrance: 0,
                 band: 0,
-                slot: 0,
+                branch: 0,
+                floor: 0,
             };
             probed += 1;
             if chamber_exists(seed, &cave, fixture_gradient(), entrance) {
@@ -374,12 +379,13 @@ fn an_override_wins_over_the_derived_default() {
     // one to override, one to leave alone as the "unaffected" witness.
     let mut existing = Vec::new();
     for band in 0..=2u8 {
-        for slot in 0..SLOTS_PER_BAND {
+        for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
                 entrance: 0,
                 band,
-                slot,
+                branch,
+                floor: 0,
             };
             if chamber_exists(seed, &cave, fixture_gradient(), addr) {
                 existing.push(addr);
@@ -497,21 +503,33 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     // Direction 1: same stratum, different rung. On this column the basement
     // contact is at 401 m, and at 24 K/km the Shallows (2 K) begin at 83 m and
     // the Deeps (8 K) at 333 m — both still in the cover; the Underdeep (25 K)
-    // at 1042 m and the Sunless (50 K) at 2083 m are both in the basement. So
+    // at 1042 m and the Nadir (50 K) at 2083 m are both in the basement. So
     // the sweep sees two distinct rung pairs that share a stratum.
+    //
+    // **The sweep covers the FLOOR axis too, and that is a widening rather
+    // than a rescue** (The Stope, `chamber/v3`). The lattice gained a `floor`,
+    // so "every address in the fixture's budget" is 20× the set it used to be;
+    // sweeping only `floor = 0` would enumerate a 1/20 slice and call it the
+    // lattice. It also matters here in particular: the epoch relocated every
+    // existence draw, and at `floor = 0` alone this fixture happens to realize
+    // no `Shallows` chamber at all, so the `Shallows`/`Deeps` pair that shares
+    // the cover is invisible in that slice. The assertion below is unchanged.
     let mut seen: Vec<(DelveRung, hornvale_climate::Stratum)> = Vec::new();
     for band in 0..=3u8 {
-        for slot in 0..SLOTS_PER_BAND {
-            let addr = ChamberAddr {
-                cell,
-                entrance: 0,
-                band,
-                slot,
-            };
-            if let Some(chamber) =
-                chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)
-            {
-                seen.push((chamber.rung, chamber.stratum));
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            for floor in 0..FLOORS_PER_RUN_CEILING {
+                let addr = ChamberAddr {
+                    cell,
+                    entrance: 0,
+                    band,
+                    branch,
+                    floor,
+                };
+                if let Some(chamber) =
+                    chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)
+                {
+                    seen.push((chamber.rung, chamber.stratum));
+                }
             }
         }
     }
@@ -538,7 +556,8 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
         cell,
         entrance: 0,
         band: 2,
-        slot: 0,
+        branch: 0,
+        floor: 0,
     };
     let cool = GeothermalGradient::new(15.0);
     let hot = GeothermalGradient::new(30.0);
@@ -587,12 +606,13 @@ fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
     let mut by_band: Vec<(u8, DelveRung)> = Vec::new();
     for raw_cell in 0u32..40 {
         for band in 0..=3u8 {
-            for slot in 0..SLOTS_PER_BAND {
+            for branch in 0..BRANCHES_PER_SYSTEM {
                 let addr = ChamberAddr {
                     cell: CellId(raw_cell),
                     entrance: 0,
                     band,
-                    slot,
+                    branch,
+                    floor: 0,
                 };
                 if let Some(chamber) =
                     chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)

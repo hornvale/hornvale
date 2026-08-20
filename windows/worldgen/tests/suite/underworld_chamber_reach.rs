@@ -16,7 +16,7 @@
 //!   the ladder the gate is being re-pointed at.
 //!
 //! The comparable figure is **addressable** addresses,
-//! `(rank + 1) * SLOTS_PER_BAND`: a pure lattice count with no draw in it, so
+//! `(rank + 1) * BRANCHES_PER_SYSTEM`: a pure lattice count with no draw in it, so
 //! it survives the `chamber/v1` → `chamber/v2` key change that the re-point
 //! forces. **Realized** — what `chamber_exists` actually admits — is printed
 //! beside it, but a realized count before the epoch and one after it are drawn
@@ -50,6 +50,24 @@
 //! seed 7:    rung hist=[84, 599, 121, 150, 727] addr 13.992 | realized 11747  (6.988/cave)
 //! seed 1234: rung hist=[91, 144, 366, 129, 536] addr 14.765 | realized 9384   (7.412/cave)
 //! ```
+//!
+//! **After the `chamber/v3` epoch** (The Stope, Task 1, 2026-08-20 — `floor`
+//! added, `slot` → `branch`, `Sunless` → `Nadir`, all three spelled into
+//! `chamber_key`), measured over the floor-0 slice of the new lattice, which
+//! is the same address set this probe enumerated before floors existed:
+//!
+//! ```text
+//! seed 42:   rung hist=[77, 131, 399, 53, 214]  addr 12.897 | realized 5602   (6.410/cave)
+//! seed 7:    rung hist=[84, 599, 121, 150, 727] addr 13.992 | realized 11754  (6.992/cave)
+//! seed 1234: rung hist=[91, 144, 366, 129, 536] addr 14.765 | realized 9320   (7.362/cave)
+//! ```
+//!
+//! **The control this file was built to print did its job.** Both arms'
+//! histograms and both addressable means are byte-identical to the `chamber/v2`
+//! reading above — the worlds did not move and the reach did not move — while
+//! `realized` shifted by −0.04 / +0.06 / −0.68%. `realized / addressable` is
+//! 0.497 / 0.500 / 0.499, still `EXISTENCE_DENSITY = 0.5`. That is the exact
+//! signature of a re-keying: the same lattice, the same gate, different draws.
 //!
 //! The "after" arm was re-taken when review's finer re-bin moved
 //! `DEEPS_TOP_K` from 10 K to 8 K (see that constant's own doc). The earlier
@@ -85,7 +103,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_terrain::{BandKind, DelveRung, TerrainPins, rung_at_depth};
-use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -115,7 +133,7 @@ fn rung_rank(rung: DelveRung) -> Option<u8> {
         DelveRung::Shallows => Some(1),
         DelveRung::Deeps => Some(2),
         DelveRung::Underdeep => Some(3),
-        DelveRung::Sunless => Some(4),
+        DelveRung::Nadir => Some(4),
     }
 }
 
@@ -165,15 +183,16 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
                 .expect("rung_at_depth never returns Surface");
             band_hist[b as usize] += 1;
             rung_hist[r as usize] += 1;
-            band_addressable += (b as usize + 1) * SLOTS_PER_BAND as usize;
-            rung_addressable += (r as usize + 1) * SLOTS_PER_BAND as usize;
+            band_addressable += (b as usize + 1) * BRANCHES_PER_SYSTEM as usize;
+            rung_addressable += (r as usize + 1) * BRANCHES_PER_SYSTEM as usize;
 
             // Realized under whichever gate this build carries. Scanning the
-            // whole lattice (every band, every slot) rather than only the
+            // floor-0 slice of the lattice (every band, every branch) rather than
+            // only the
             // in-budget part is deliberate: it means this loop measures the
             // gate rather than restating it.
             for band in 0..=4u8 {
-                for slot in 0..SLOTS_PER_BAND {
+                for branch in 0..BRANCHES_PER_SYSTEM {
                     if chamber_exists(
                         seed,
                         &cave,
@@ -182,7 +201,8 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
                             cell,
                             entrance: 0,
                             band,
-                            slot,
+                            branch,
+                            floor: 0,
                         },
                     ) {
                         realized += 1;

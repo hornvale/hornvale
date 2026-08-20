@@ -33,16 +33,29 @@ hornvale_kernel::stream_labels! {
     /// ordinal. `crate::chamber`'s private `chamber_key` is the one place
     /// the composed key is spelled.
     ///
-    /// **Epoch v2 (The Underworld, spec §4.1).** `ChamberAddr.band` used to
-    /// index the stratigraphic ladder (`BandKind`/`Stratum`) and now indexes
-    /// the **delve ladder** (`hornvale_terrain::DelveRung`), whose rungs are
-    /// ΔT thresholds above the surface datum rather than rock units. The
-    /// composed key therefore spells a different set of names for the same
-    /// `(cell, entrance, slot)`, which re-derives every chamber in every
-    /// world — exactly the case `chamber_key`'s own doc said would be "an
-    /// epoch, not a fix to that assertion". `chamber/v1` is retired and must
-    /// never be reused.
-    CHAMBER = "chamber/v2" => "the underworld chamber derivation, keyed on a delve-ladder address";
+    /// **Epoch v3 (The Stope, spec §3.1 and amendment B.3).** The ADDRESS
+    /// changed shape, in three ways that each re-key every chamber and which
+    /// therefore ride one epoch rather than three:
+    ///
+    /// 1. `ChamberAddr` gained a **`floor`**, the rung the lattice was
+    ///    missing — a band used to be one interior-less point per column.
+    ///    A key that did not spell it would derive one stream for every floor
+    ///    of a run, which is to say the floors would all be one chamber.
+    /// 2. `slot` was renamed **`branch`** (spec §3.1: "slot reads as a
+    ///    position and it is an identity"), and the key's field order changed
+    ///    with it.
+    /// 3. The deepest rung was renamed **`Sunless` -> `Nadir`** (amendment
+    ///    B.3), and `chamber_key` spells the rung's NAME, so the rename alone
+    ///    relocates every chamber that sits at rank 4.
+    ///
+    /// **Epoch v2 (The Underworld, spec §4.1)** was the previous one:
+    /// `ChamberAddr.band` stopped indexing the stratigraphic ladder
+    /// (`BandKind`/`Stratum`) and started indexing the **delve ladder**
+    /// (`hornvale_terrain::DelveRung`), whose rungs are ΔT thresholds above
+    /// the surface datum rather than rock units.
+    ///
+    /// `chamber/v1` and `chamber/v2` are retired and must never be reused.
+    CHAMBER = "chamber/v3" => "the underworld chamber derivation, keyed on a delve-ladder address with a floor";
     /// The volcano-identity derivation (The Repose). Keyed on the edifice's
     /// **source contact cell** — a place in the fixed geosphere, never a
     /// generation ordinal, and never the query cell a caller happened to ask
@@ -61,7 +74,7 @@ hornvale_kernel::stream_labels! {
     /// who asks, so a narrower query filters the same sequence rather than
     /// drawing an unrelated one. A block index is a coordinate on a lattice
     /// that tiles the timeline before anything is generated into it, exactly
-    /// as `ChamberAddr`'s `band`/`slot` are — not a generation ordinal
+    /// as `ChamberAddr`'s `band`/`branch`/`floor` are — not a generation ordinal
     /// (decision 0102, The Salt, The Tolerance). `crate::hazard`'s private
     /// `event_key` is the one place the composed key is spelled.
     HAZARD_EVENT = "hazard/event/v1" => "the per-cell hazard-event draw, keyed on (cell, process, world-time block)";

@@ -41,7 +41,7 @@
 //! form.** Stating it jointly ("neither kind's modal rung equals its argmax")
 //! is true but flattens the difference that matters:
 //!
-//! - **duergar** — argmaxes `Sunless` / `Sunless` / `Underdeep`; measured modal
+//! - **duergar** — argmaxes `Nadir` / `Nadir` / `Underdeep`; measured modal
 //!   rungs `Undercroft` / `Underdeep` / `Undercroft`. On two of three seeds the
 //!   mode is `Undercroft`, which is **no formation's argmax at all**, so
 //!   terrain did not merely pick between authored answers — it produced one
@@ -92,13 +92,30 @@
 //! ## H1 — the ladder varies (needs ≥ 4 of 5 rungs, and ≤ 70% in one)
 //!
 //! ```text
-//! seed    caves  chambers   Undercroft  Shallows    Deeps  Underdeep  Sunless   worst rung
-//!   42      874      5604        31.3%     28.7%    23.9%       9.0%     7.1%        31.3%
-//!    7     1681     11747        27.9%     26.9%    17.4%      15.1%    12.7%        27.9%
-//! 1234     1266      9384        26.8%     25.0%    22.1%      14.4%    11.8%        26.8%
+//! seed    caves  chambers   Undercroft  Shallows    Deeps  Underdeep  Nadir     worst rung
+//!   42      874      5602        31.3%     28.7%    23.3%       9.4%     7.2%        31.3%
+//!    7     1681     11754        28.8%     27.0%    17.2%      14.7%    12.4%        28.8%
+//! 1234     1266      9320        27.7%     25.1%    22.3%      13.9%    11.0%        27.7%
 //! ```
 //!
 //! **HOLDS**: 5 of 5 rungs occupied on every seed, worst share 31.3%.
+//!
+//! **RE-PINNED 2026-08-20 for `chamber/v3`** (The Stope, Task 1). The address
+//! gained a `floor`, `slot` became `branch`, and the deepest rung was renamed
+//! `Sunless` → `Nadir` — all three spelled into `chamber_key`, so every
+//! existence draw in every world relocated. Under `chamber/v2` this table read
+//! 5604 / 11747 / 9384 chambers and 31.3 / 27.9 / 26.8% worst share; the
+//! counts moved by −0.04 / +0.06 / −0.68%, which is a re-draw at the same
+//! `EXISTENCE_DENSITY`, not a change of reach.
+//!
+//! **Nothing else in this readout moved, and that is a finding rather than a
+//! coincidence.** Every H2 figure below — seated-rung histograms, the quartile
+//! overlap, the Jaccards, the distinct-value counts, `maybe_raid`'s
+//! co-seating — is byte-identical across the epoch, because [`seat_at`] is a
+//! function of the RUNG and the column, never of which chamber addresses
+//! exist. Chamber existence and delve seating turned out not to be joined at
+//! all. The measurement here is a floor-0 slice of the new lattice, matching
+//! how the probe enumerated the lattice before floors existed.
 //!
 //! ## H2 floor — the modal seated rung (needs the two kinds to differ)
 //!
@@ -261,7 +278,7 @@ use hornvale_species::{
     MetabolicClass, SocialForm,
 };
 use hornvale_terrain::{CaveKind, DelveRung, TerrainPins, rungs, water_table_depth_m};
-use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists, rung_rank};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists, rung_rank};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::delve_seating::{chamber_fit, seat_at, seating_for};
 use hornvale_worldgen::{
@@ -756,12 +773,13 @@ fn the_separation_readout() {
             caves += 1;
             let gradient = terrain.geothermal_gradient_at(cell);
             for (rank, _) in ladder.iter().enumerate() {
-                for slot in 0..SLOTS_PER_BAND {
+                for branch in 0..BRANCHES_PER_SYSTEM {
                     let addr = ChamberAddr {
                         cell,
                         entrance: 0,
                         band: rank as u8,
-                        slot,
+                        branch,
+                        floor: 0,
                     };
                     if chamber_exists(seed, &cave, gradient, addr) {
                         *chamber_hist.entry(rank).or_default() += 1;

@@ -66,7 +66,7 @@ use hornvale_terrain::{
     BandKind, Cave, CaveKind, DelveRung, GeneratedTerrain, GeothermalGradient, TerrainPins,
     rung_at_depth,
 };
-use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -97,7 +97,7 @@ fn band_index(band: BandKind) -> usize {
 /// is still used, unchanged, for the cave-substrate histogram: that one is
 /// asking the archive question ("which rock does this void reach"), which is
 /// still `BandKind`'s job and was never the gate's.
-const RUNG_NAMES: [&str; 5] = ["Undercroft", "Shallows", "Deeps", "Underdeep", "Sunless"];
+const RUNG_NAMES: [&str; 5] = ["Undercroft", "Shallows", "Deeps", "Underdeep", "Nadir"];
 
 /// Position of `rung` in [`RUNG_NAMES`]. `Surface` is not a habitation rung
 /// and [`rung_at_depth`] never returns it, so it has no bucket; the arm
@@ -109,7 +109,7 @@ fn rung_index(rung: DelveRung) -> usize {
         DelveRung::Shallows => 1,
         DelveRung::Deeps => 2,
         DelveRung::Underdeep => 3,
-        DelveRung::Sunless => 4,
+        DelveRung::Nadir => 4,
     }
 }
 
@@ -453,7 +453,7 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 /// reaches delve rung `rung_idx` ([`rung_index`]'s own numbering, `0..=4`):
 /// `chamber_exists`'s gate is `addr.band <= rung_rank(rung_at_depth(cave.
 /// depth_reach_m, gradient))`, and `addr.band` ranges over `0..=rung_idx` at
-/// [`SLOTS_PER_BAND`] slots each.
+/// [`BRANCHES_PER_SYSTEM`] slots each.
 ///
 /// **This used to be indexed by `band_index(cave.deepest_band)`**, because the
 /// gate used to be `addr.band <= band_rank(cave.deepest_band)`. The arithmetic
@@ -462,7 +462,7 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 /// would now compare a measured count against a prediction for a different
 /// cave's reach.
 fn addresses_in_budget(rung_idx: usize) -> usize {
-    (rung_idx + 1) * usize::from(SLOTS_PER_BAND)
+    (rung_idx + 1) * usize::from(BRANCHES_PER_SYSTEM)
 }
 
 /// Every chamber address that exists over the FULL five-band lattice at
@@ -475,12 +475,13 @@ fn addresses_in_budget(rung_idx: usize) -> usize {
 fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
     for band in 0..RUNG_NAMES.len() as u8 {
-        for slot in 0..SLOTS_PER_BAND {
+        for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
                 entrance: 0,
                 band,
-                slot,
+                branch,
+                floor: 0,
             };
             if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
@@ -490,7 +491,8 @@ fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell:
     count
 }
 
-/// Whether `cave`'s canonical entrance address (`band = 0, slot = 0` — the
+/// Whether `cave`'s canonical entrance address (`branch = 0, band = 0,
+/// floor = 0` — the
 /// cave mouth `deep_realm_chamber.rs`'s `a_cave_mouth_reaches_at_least_one_
 /// chamber` measures) holds no chamber: spec §3.4 rung 0, `Sealed` — "the
 /// void exists and is unreachable." Task 5's `delve` refuses such a cave by
@@ -504,7 +506,8 @@ fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId
             cell,
             entrance: 0,
             band: 0,
-            slot: 0,
+            branch: 0,
+            floor: 0,
         },
     )
 }

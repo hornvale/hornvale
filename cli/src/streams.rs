@@ -325,7 +325,7 @@ mod tests {
                 // The Deep Realm: the underworld chamber derivation. Born at
                 // v1, versioned from birth like `settlement/disposition v1`
                 // below, because its key (a ChamberAddr's cell, entrance,
-                // band NAME and slot — see `windows/worldgen/src/
+                // branch, band NAME and floor — see `windows/worldgen/src/
                 // chamber.rs`'s `chamber_key`) is a save-format contract
                 // the moment anything commits a chamber fact, which that
                 // campaign deliberately did not do (spec §3.1/§3.3).
@@ -340,7 +340,16 @@ mod tests {
                 // re-derives — the exact case `chamber_key`'s own doc named
                 // as "an epoch, not a fix to that assertion". `chamber/v1` is
                 // retired and never reused.
-                "chamber v2",
+                //
+                // **The Stope bumps it to v3**, for three changes that each
+                // re-key every chamber and therefore ride one epoch: the
+                // address gained a `floor` (a band used to be one
+                // interior-less point per column), `slot` was renamed
+                // `branch`, and the deepest delve rung was renamed
+                // `Sunless` -> `Nadir` — which matters here because the key
+                // spells the rung's NAME. `chamber/v2` joins `chamber/v1` in
+                // retirement; neither is ever reused.
+                "chamber v3",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.

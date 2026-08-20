@@ -31,7 +31,7 @@ use hornvale_kernel::{CellId, Seed};
 use hornvale_terrain::{Cave, CaveKind, DelveRung, GeothermalGradient, StratigraphicColumn};
 use hornvale_vessel::{Cell, Level, LevelCellKind, generate_descent};
 use hornvale_worldgen::chamber::{
-    Chamber, ChamberAddr, ChamberOrigin, ChamberOverrides, SLOTS_PER_BAND, chamber_at,
+    BRANCHES_PER_SYSTEM, Chamber, ChamberAddr, ChamberOrigin, ChamberOverrides, chamber_at,
     chamber_exists,
 };
 
@@ -62,7 +62,7 @@ const REACH_M: f64 = 2000.0;
 
 /// Search cells `0..50` under `seed`/`cave`/`gradient` for one whose lattice
 /// has a real, *existing* chamber address at every band in `bands` (in any
-/// slot) — existence is sparse (`deep_realm_chamber.rs`'s own
+/// branch) — existence is sparse (`deep_realm_chamber.rs`'s own
 /// `the_lattice_is_fixed_and_existence_is_sparse`), so not every cell
 /// qualifies. Returns one `ChamberAddr` per requested band, in the same
 /// order.
@@ -77,12 +77,13 @@ fn find_addrs_at_bands(
         let mut found = Vec::new();
         for &band in bands {
             let mut hit = None;
-            for slot in 0..SLOTS_PER_BAND {
+            for branch in 0..BRANCHES_PER_SYSTEM {
                 let addr = ChamberAddr {
                     cell,
                     entrance: 0,
                     band,
-                    slot,
+                    branch,
+                    floor: 0,
                 };
                 if chamber_exists(seed, cave, gradient, addr) {
                     hit = Some(addr);

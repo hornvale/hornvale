@@ -22,7 +22,7 @@ use hornvale_kernel::{CellId, Seed};
 use hornvale_terrain::{
     BandKind, Cave, CaveKind, DelveRung, GeothermalGradient, TerrainPins, rung_at_depth,
 };
-use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -43,7 +43,7 @@ const BAND_LADDER: [DelveRung; 5] = [
     DelveRung::Shallows,
     DelveRung::Deeps,
     DelveRung::Underdeep,
-    DelveRung::Sunless,
+    DelveRung::Nadir,
 ];
 
 /// The geothermal gradient every hand-built fixture below is placed under,
@@ -92,12 +92,13 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
     for band in 0..BAND_LADDER.len() as u8 {
-        for slot in 0..SLOTS_PER_BAND {
+        for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
                 entrance: 0,
                 band,
-                slot,
+                branch,
+                floor: 0,
             };
             if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
@@ -119,7 +120,7 @@ fn deepest_reached(
     cell: CellId,
 ) -> Option<DelveRung> {
     (0..BAND_LADDER.len() as u8).rev().find_map(|band| {
-        let reached = (0..SLOTS_PER_BAND).any(|slot| {
+        let reached = (0..BRANCHES_PER_SYSTEM).any(|branch| {
             chamber_exists(
                 seed,
                 cave,
@@ -128,7 +129,8 @@ fn deepest_reached(
                     cell,
                     entrance: 0,
                     band,
-                    slot,
+                    branch,
+                    floor: 0,
                 },
             )
         });

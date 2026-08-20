@@ -1,8 +1,14 @@
 //! THE STOPE, Task 0: where does a cave system's delve TERMINATE, and how
-//! rare is [`DelveRung::Sunless`]?
+//! rare is [`DelveRung::Nadir`]?
+//!
+//! **The rung was named `Sunless` when every reading below was taken.** This
+//! file was swept to `Nadir` by Task 1, because it is live code naming a live
+//! enum and a stale spelling here would not compile; the rename itself is
+//! spec amendment B.3, and it is a consequence of exactly the numbers this
+//! probe reported. The measurements are unchanged — only the word is.
 //!
 //! **A measurement that can end the campaign.** Spec §3.3 plans characters
-//! for the deepest rung; if no cave system's delve reaches `Sunless`, that
+//! for the deepest rung; if no cave system's delve reaches `Nadir`, that
 //! rung has no tenants and the design must be reconsidered before any of it
 //! is built. Nothing here changes production code — the terminating rung is
 //! already a pure read over shipped fields.
@@ -31,11 +37,11 @@
 //! ## The branch table (the campaign brief's Step 3), as a decision rule
 //!
 //! ```text
-//! Sunless > 25%     -> the ladder's ΔT boundaries decide rarity, not this
+//! Nadir > 25%       -> the ladder's ΔT boundaries decide rarity, not this
 //!                      campaign. STOP: an ordinary eldritch band is a
 //!                      finding about The Underworld's calibration.
-//! Sunless 1% - 15%  -> proceed; report the exact rate.
-//! Sunless < 1%      -> the deepest characters have no tenants. STOP.
+//! Nadir 1% - 15%    -> proceed; report the exact rate.
+//! Nadir < 1%        -> the deepest characters have no tenants. STOP.
 //! (15%, 25%]        -> THE BRIEF NAMES NO ARM HERE. See below.
 //! ```
 //!
@@ -62,7 +68,7 @@
 //!   Shallows        131    14.99%        234.9      252.1      266.1
 //!   Deeps           399    45.65%        483.5      483.5     1003.4
 //!   Underdeep        53     6.06%       1433.5     1502.0     1513.6
-//!   Sunless         214    24.49%       2145.7     2398.9     2723.6
+//!   Nadir           214    24.49%       2145.7     2398.9     2723.6
 //!   depth_reach_m all systems: p10 200.0 p25 399.5 p50 483.5 p75 1502.0 p90 2271.9 max 2723.6
 //!
 //! seed 7      land cells 19332   cave systems 1681
@@ -70,7 +76,7 @@
 //!   Shallows        599    35.63%        227.9      250.8      250.8
 //!   Deeps           121     7.20%        518.0      985.1      986.0
 //!   Underdeep       150     8.92%       1551.4     1929.1     1940.4
-//!   Sunless         727    43.25%       2260.4     2474.3     2913.4
+//!   Nadir           727    43.25%       2260.4     2474.3     2913.4
 //!   depth_reach_m all systems: p10 215.3 p25 227.9 p50 1408.6 p75 2246.6 p90 2474.3 max 2913.4
 //!
 //! seed 1234   land cells 11684   cave systems 1266
@@ -78,11 +84,11 @@
 //!   Shallows        144    11.37%        207.6      227.4      234.3
 //!   Deeps           366    28.91%        478.2      686.9      932.9
 //!   Underdeep       129    10.19%       1458.6     1903.8     2039.1
-//!   Sunless         536    42.34%       2441.5     2702.6     3000.0
+//!   Nadir           536    42.34%       2441.5     2702.6     3000.0
 //!   depth_reach_m all systems: p10 201.7 p25 461.1 p50 1201.2 p75 2311.7 p90 2694.0 max 3000.0
 //!
 //! pooled      systems 3821   hist [252, 874, 886, 332, 1477]
-//!   Sunless 1477/3821 = 38.65%
+//!   Nadir 1477/3821 = 38.65%
 //!
 //! per-seed branch:  42 -> UnspecifiedByTheBrief (24.49%)
 //!                    7 -> BoundariesDecideRarity (43.25%)
@@ -90,8 +96,8 @@
 //! pooled branch:         BoundariesDecideRarity (38.65%)
 //! ```
 //!
-//! **Branch: `Sunless > 25%` — STOP.** 38.65% of cave systems pooled (24.49 /
-//! 43.25 / 42.34% per seed) terminate at `Sunless`. The rung is not rare; it
+//! **Branch: `Nadir > 25%` — STOP.** 38.65% of cave systems pooled (24.49 /
+//! 43.25 / 42.34% per seed) terminate at `Nadir`. The rung is not rare; it
 //! is the largest class on two of three seeds and the second largest on the
 //! third. §3.3's deepest characters have abundant tenants, and how rare the
 //! band *is* is decided by `HABITABLE_CEILING_K = 50.0` and the reach clamps
@@ -122,11 +128,11 @@
 //! those — **asserts the branch**, so the number stops being prose in a doc
 //! comment that nothing re-checks.
 //!
-//! ## Follow-up, 2026-08-20: could `Sunless` be split into a sixth rung?
+//! ## Follow-up, 2026-08-20: could `Nadir` be split into a sixth rung?
 //!
-//! Nathan asked what a sixth rung below `Sunless` would admit, targeting
+//! Nathan asked what a sixth rung below `Nadir` would admit, targeting
 //! `P(reach it | reached Underdeep) ~ 0-10%`.
-//! [`could_sunless_be_split_into_a_sixth_rung`] takes the reading.
+//! [`could_nadir_be_split_into_a_sixth_rung`] takes the reading.
 //!
 //! **THE ANSWER IS NO, AND THE PRIOR THAT PREDICTED IT WAS WRONG ABOUT WHY.**
 //! The hypothesis on the table was that the super-50 K population is a clamp
@@ -190,7 +196,7 @@
 //!
 //! So there is no X that is simultaneously occupied on every preregistered
 //! seed, inside the target band, and stable. The useful answer is that
-//! `Sunless` is not a tail that can be subdivided; it is a mode with a
+//! `Nadir` is not a tail that can be subdivided; it is a mode with a
 //! two-cave whisker.
 //!
 //! Test fixture (decision 0092): calls the composition-root entry points
@@ -218,7 +224,7 @@ const PROCEED_CEILING: f64 = 0.15;
 /// enough that the deepest characters have no tenants.
 const NO_TENANTS_BELOW: f64 = 0.01;
 
-/// Which arm of the brief's Step 3 branch table a Sunless share falls in.
+/// Which arm of the brief's Step 3 branch table a Nadir share falls in.
 ///
 /// Four arms for a three-arm table on purpose: the table leaves `(15%, 25%]`
 /// unnamed, and a share landing there is a defect in the table, not a value
@@ -235,7 +241,7 @@ enum Branch {
     UnspecifiedByTheBrief,
 }
 
-/// Apply the branch table to one Sunless share.
+/// Apply the branch table to one Nadir share.
 fn classify(share: f64) -> Branch {
     if share < NO_TENANTS_BELOW {
         Branch::NoTenants
@@ -258,7 +264,7 @@ fn rung_rank(rung: DelveRung) -> Option<usize> {
         DelveRung::Shallows => Some(1),
         DelveRung::Deeps => Some(2),
         DelveRung::Underdeep => Some(3),
-        DelveRung::Sunless => Some(4),
+        DelveRung::Nadir => Some(4),
     }
 }
 
@@ -271,10 +277,10 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
     sorted[i]
 }
 
-/// claim: rate(Sunless share of cave systems; seeds 42 / 7 / 1234) — over the
+/// claim: rate(Nadir share of cave systems; seeds 42 / 7 / 1234) — over the
 /// cave-bearing land cells of each seed, the share of cave systems whose
 /// delve terminates at each rung of the delve ladder, and the branch of the
-/// campaign brief's Step 3 table that the pooled `Sunless` share selects.
+/// campaign brief's Step 3 table that the pooled `Nadir` share selects.
 ///
 /// It prints the full distribution, but it is not a bare readout: the branch
 /// is a **decision rule**, encoded and asserted, so a later change that moves
@@ -339,7 +345,7 @@ fn where_does_a_delve_terminate() {
         }
 
         reach.sort_by(f64::total_cmp);
-        let sunless_share = hist[4] as f64 / systems.max(1) as f64;
+        let nadir_share = hist[4] as f64 / systems.max(1) as f64;
 
         println!(
             "\n== seed {seed_value} ==  land cells {land}  cave systems {systems}  \
@@ -376,9 +382,9 @@ fn where_does_a_delve_terminate() {
             reach.last().copied().unwrap_or(f64::NAN),
         );
         println!(
-            "  Sunless share {:.2}%  ->  branch {:?}",
-            sunless_share * 100.0,
-            classify(sunless_share)
+            "  Nadir share {:.2}%  ->  branch {:?}",
+            nadir_share * 100.0,
+            classify(nadir_share)
         );
 
         pooled_systems += systems;
@@ -392,7 +398,7 @@ fn where_does_a_delve_terminate() {
     let pooled_branch = classify(pooled_share);
     println!(
         "\n== pooled ==  systems {pooled_systems}  hist {pooled_hist:?}  \
-         Sunless {}/{} = {:.2}%  ->  branch {pooled_branch:?}",
+         Nadir {}/{} = {:.2}%  ->  branch {pooled_branch:?}",
         pooled_hist[4],
         pooled_systems,
         pooled_share * 100.0
@@ -423,7 +429,7 @@ fn where_does_a_delve_terminate() {
         assert_ne!(
             classify(share),
             Branch::NoTenants,
-            "seed {seed_value}: Sunless holds {}/{systems} systems ({:.2}%) — \
+            "seed {seed_value}: Nadir holds {}/{systems} systems ({:.2}%) — \
              the deepest characters have no tenants and the design must be \
              reconsidered (brief Step 3, the `~0%` arm)",
             hist[4],
@@ -431,7 +437,7 @@ fn where_does_a_delve_terminate() {
         );
         assert!(
             share > PROCEED_CEILING,
-            "seed {seed_value}: Sunless share {:.2}% is at or below the brief's \
+            "seed {seed_value}: Nadir share {:.2}% is at or below the brief's \
              proceed ceiling of {:.0}% — the panel no longer agrees on the \
              branch this campaign was authorised under; re-read Step 3 rather \
              than adjusting this bound",
@@ -462,7 +468,7 @@ fn where_does_a_delve_terminate() {
     assert_eq!(
         pooled_branch,
         Branch::BoundariesDecideRarity,
-        "pooled Sunless share is {:.2}% ({}/{pooled_systems}), which selects \
+        "pooled Nadir share is {:.2}% ({}/{pooled_systems}), which selects \
          {pooled_branch:?}; this campaign's Task 0 landed on \
          {:?} and everything downstream assumes it",
         pooled_share * 100.0,
@@ -471,7 +477,7 @@ fn where_does_a_delve_terminate() {
     );
     assert!(
         pooled_share > ABUNDANT_ABOVE,
-        "pooled Sunless share {:.2}% must exceed {:.0}% for the \
+        "pooled Nadir share {:.2}% must exceed {:.0}% for the \
          BoundariesDecideRarity branch to hold",
         pooled_share * 100.0,
         ABUNDANT_ABOVE * 100.0
@@ -479,14 +485,14 @@ fn where_does_a_delve_terminate() {
 }
 
 // ---------------------------------------------------------------------------
-// THE SIXTH RUNG — could `Sunless` be split, and is there a stable X?
+// THE SIXTH RUNG — could `Nadir` be split, and is there a stable X?
 // ---------------------------------------------------------------------------
 
-/// The ΔT at which `Sunless` begins — `hornvale_terrain::HABITABLE_CEILING_K`,
+/// The ΔT at which `Nadir` begins — `hornvale_terrain::HABITABLE_CEILING_K`,
 /// re-stated here as the floor of the population this readout examines rather
 /// than imported, so that a change to the ladder does not silently redefine
-/// what "above Sunless's floor" means in a table already printed.
-const SUNLESS_FLOOR_K: f64 = 50.0;
+/// what "above Nadir's floor" means in a table already printed.
+const NADIR_FLOOR_K: f64 = 50.0;
 
 /// The ΔT at which `Underdeep` begins — the conditioning event for the target
 /// Nathan named, `P(reach the new rung | reached Underdeep)`.
@@ -503,7 +509,7 @@ const MAX_POSSIBLE_DELTA_T_K: f64 = 30.0 * (CAVE_REACH_CEILING_M / 1000.0);
 ///
 /// The panel Nathan's question named was `{55, 60, 65, 70, 75, 80, 90, 100}`.
 /// It is **extended downward and finely**, because the first run showed the
-/// entire occupied range above `Sunless`'s floor ends by 68.1 K on the hottest
+/// entire occupied range above `Nadir`'s floor ends by 68.1 K on the hottest
 /// seed: every candidate at or above 70 K scores an unbroken column of zeros
 /// and the three points below it are too coarse to see where the population
 /// actually stops. The extra rows are 57-63 K, and they are added to *look*,
@@ -519,7 +525,7 @@ const CANDIDATE_SPLITS_K: [f64; 14] = [
 const CLAMP_EPSILON_M: f64 = 1e-6;
 
 /// claim: rate(share of cave systems above candidate sixth-rung floors; seeds
-/// 42 / 7 / 1234) — the shape of the ΔT distribution above `Sunless`'s floor,
+/// 42 / 7 / 1234) — the shape of the ΔT distribution above `Nadir`'s floor,
 /// how much of it sits on a reach clamp, and what a sixth rung placed at each
 /// candidate X would admit.
 ///
@@ -533,7 +539,7 @@ const CLAMP_EPSILON_M: f64 = 1e-6;
 /// checked rather than narrated.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
-fn could_sunless_be_split_into_a_sixth_rung() {
+fn could_nadir_be_split_into_a_sixth_rung() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut pooled_super: usize = 0;
     let mut pooled_systems: usize = 0;
@@ -596,10 +602,10 @@ fn could_sunless_be_split_into_a_sixth_rung() {
         let systems = delta_t.len();
         delta_t.sort_by(f64::total_cmp);
         gradients.sort_by(f64::total_cmp);
-        let super_sunless: Vec<f64> = delta_t
+        let super_nadir: Vec<f64> = delta_t
             .iter()
             .copied()
-            .filter(|d| *d >= SUNLESS_FLOOR_K)
+            .filter(|d| *d >= NADIR_FLOOR_K)
             .collect();
         let reached_underdeep = delta_t.iter().filter(|d| **d >= UNDERDEEP_FLOOR_K).count();
         let seed_max = delta_t.last().copied().unwrap_or(f64::NAN);
@@ -629,25 +635,25 @@ fn could_sunless_be_split_into_a_sixth_rung() {
 
         // (1) The shape of the super-50 K population.
         println!(
-            "  ΔT >= {SUNLESS_FLOOR_K} K: {}/{systems} ({:.2}%)   \
+            "  ΔT >= {NADIR_FLOOR_K} K: {}/{systems} ({:.2}%)   \
              p50 {:.3}  p75 {:.3}  p90 {:.3}  p99 {:.3}  max {:.3}",
-            super_sunless.len(),
-            super_sunless.len() as f64 / systems.max(1) as f64 * 100.0,
-            pct(&super_sunless, 0.50),
-            pct(&super_sunless, 0.75),
-            pct(&super_sunless, 0.90),
-            pct(&super_sunless, 0.99),
-            super_sunless.last().copied().unwrap_or(f64::NAN),
+            super_nadir.len(),
+            super_nadir.len() as f64 / systems.max(1) as f64 * 100.0,
+            pct(&super_nadir, 0.50),
+            pct(&super_nadir, 0.75),
+            pct(&super_nadir, 0.90),
+            pct(&super_nadir, 0.99),
+            super_nadir.last().copied().unwrap_or(f64::NAN),
         );
 
-        // 1 K bin occupancy from the Sunless floor to the max, zeros included
+        // 1 K bin occupancy from the Nadir floor to the max, zeros included
         // so a valley is visible as a valley rather than as an absent row.
-        let top = seed_max.ceil().max(SUNLESS_FLOOR_K + 1.0) as i64;
-        let lo = SUNLESS_FLOOR_K as i64;
+        let top = seed_max.ceil().max(NADIR_FLOOR_K + 1.0) as i64;
+        let lo = NADIR_FLOOR_K as i64;
         println!("  1 K bins over [{lo}, {top}) K (count per bin):");
         let mut line = String::new();
         for edge in lo..top {
-            let count = super_sunless
+            let count = super_nadir
                 .iter()
                 .filter(|d| **d >= edge as f64 && **d < (edge + 1) as f64)
                 .count();
@@ -677,14 +683,14 @@ fn could_sunless_be_split_into_a_sixth_rung() {
             println!(
                 "  {x:>6.0} {at_or_above:>8} {:>12.2}% {:>15.2}% {:>19.2}% {:>13.2}%",
                 at_or_above as f64 / systems.max(1) as f64 * 100.0,
-                at_or_above as f64 / super_sunless.len().max(1) as f64 * 100.0,
+                at_or_above as f64 / super_nadir.len().max(1) as f64 * 100.0,
                 at_or_above as f64 / reached_underdeep.max(1) as f64 * 100.0,
                 near as f64 / systems.max(1) as f64 * 100.0,
             );
         }
         println!(
-            "  (denominators: all systems {systems}; >= {SUNLESS_FLOOR_K} K              {}; >= {UNDERDEEP_FLOOR_K} K {reached_underdeep})",
-            super_sunless.len()
+            "  (denominators: all systems {systems}; >= {NADIR_FLOOR_K} K              {}; >= {UNDERDEEP_FLOOR_K} K {reached_underdeep})",
+            super_nadir.len()
         );
 
         assert!(
@@ -692,18 +698,18 @@ fn could_sunless_be_split_into_a_sixth_rung() {
             "seed {seed_value} has no cave systems — this readout is vacuous"
         );
         assert!(
-            !super_sunless.is_empty(),
-            "seed {seed_value} has no system above {SUNLESS_FLOOR_K} K — there is \
+            !super_nadir.is_empty(),
+            "seed {seed_value} has no system above {NADIR_FLOOR_K} K — there is \
              nothing to split and the readout below is vacuous"
         );
 
         pooled_systems += systems;
-        pooled_super += super_sunless.len();
+        pooled_super += super_nadir.len();
         pooled_at_reach_ceiling += at_reach_ceiling;
     }
 
     println!(
-        "\n===== pooled =====  systems {pooled_systems}  ΔT >= {SUNLESS_FLOOR_K} K: \
+        "\n===== pooled =====  systems {pooled_systems}  ΔT >= {NADIR_FLOOR_K} K: \
          {pooled_super} ({:.2}%)  at the reach ceiling: {pooled_at_reach_ceiling} ({:.2}%)  \
          observed max ΔT {observed_max_delta_t:.3} K of a possible \
          {MAX_POSSIBLE_DELTA_T_K:.1} K",
