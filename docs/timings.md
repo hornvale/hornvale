@@ -1948,3 +1948,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T19:37:53Z | rebaseline | 57.383 | 240.044 | 12.736 | 4.41 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T19:39:23Z | game-check | 81.518 | 507.183 | 6.008 | 6.30 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T19:39:51Z | gate-commit | 23.732 | 50.224 | 12.017 | 2.62 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:55:31Z | rebaseline | 65.709 | 238.660 | 10.958 | 3.80 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:57:58Z | game-check | 131.961 | 522.073 | 6.980 | 4.01 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:58:25Z | gate-commit | 23.333 | 49.654 | 11.845 | 2.64 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:00:10Z | gate-commit | 23.404 | 49.835 | 11.984 | 2.64 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
