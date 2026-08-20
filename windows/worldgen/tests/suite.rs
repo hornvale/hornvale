@@ -125,6 +125,8 @@ mod occupancy_readout;
 mod person_promotion;
 #[path = "suite/pin_enumeration.rs"]
 mod pin_enumeration;
+#[path = "suite/portolan_resolution.rs"]
+mod portolan_resolution;
 #[path = "suite/profile.rs"]
 mod profile;
 #[path = "suite/proto_goblinoid_golden.rs"]
