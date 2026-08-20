@@ -3300,3 +3300,45 @@ another are both true at once (the campaign's own §6 caution, measured). So the
 floor gains a clean exemplar rather than a new question: a bet whose
 Laboratory-scorable half can rise handsomely while its *sufficient* half stays
 taste-gated, and the honest report names which half the number was about.
+
+### The missing measure exists now, and it separates what the aggregate could not (2026-08-19)
+
+The entry immediately above — *Two candidate causes were eliminated, and the
+measure went blind* — closed on a specific sentence: **the blocker on the myth thread's
+corroboration half is no longer a missing mechanism but a missing measure**,
+and *for the first time its obstacle is an instrument rather than a world*.
+[The Touchstone](./chronicle/the-touchstone.md) (2026-08-19) built the
+instrument, so that obstacle is discharged.
+
+It is a per-holder belief-delta (`hornvale_hearsay::touchstone`): it promotes
+the route- and width-carrying walk out of a test-file copy into the library,
+diffs two transmission arms into a component-change vector over every holder —
+`{route, day, rung, hops, width}` — and reports a distribution with a
+people-pair cut, where the divergence aggregate reported one scalar. And it was
+held to a preregistered discrimination frozen before the measurement code
+existed: it is valid only if it separates a change that rewrites beliefs from
+one that provably does not, on the same panel where the aggregate reads
+near-zero for both. It does. Over the selection-rule swap — a working mechanism
+the aggregate misses — it fires for **63.77%** of holders while the aggregate
+moves +4 of about a hundred; over a people-homogeneous population under an
+inert crossing-arm swap, provably zero by the `crossing_penalty` theorem, it
+fires for **0.00%** while the aggregate moves +0. Sixty percentage points of
+separation where the aggregate separates the two by roughly nothing — which is
+exactly what an instrument that can tell a working mechanism from a decorative
+one has to do.
+
+**What this does and does not move.** It does not score the corroboration bet
+itself — that still waits on a mechanism campaign — but it changes the bet's
+*position*: the thread now has an instrument its next mechanism can be believed
+through, where three campaigns running had built mechanisms their own headline
+number could not see. **Two honesties came with it, because this thread has
+paid for their absence.** The instrument reads 63.77% against a route-blind
+`Claim`-diff of 62.64% over the same population; the surplus is not
+over-counting but the route and width channels living *outside* the `Claim`,
+confirmed by the day and hops channels reproducing the `Claim`-diff to the
+digit. And the Undertow's 41.9% selection-swap value-churn did not reproduce on
+this tree (38.37% now); it was recorded as substrate drift, not rescued, and
+the frozen 0.20 success floor was not lowered — the discrimination clears the
+unlowered floor more than threefold. The next question is the one the touchstone
+is a *precondition* for and does not answer: whether a penalty magnitude read
+from contact history does anything a well-chosen constant would not.

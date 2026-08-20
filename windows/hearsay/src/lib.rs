@@ -16,6 +16,8 @@ pub mod durations;
 pub mod ladder;
 pub mod lineage;
 pub mod stance;
+pub mod touchstone;
+pub mod traced;
 pub mod transmission;
 
 /// The hop count of every holder of a claim about `(subject, predicate)`.
