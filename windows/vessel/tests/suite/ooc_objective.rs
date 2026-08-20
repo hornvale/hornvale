@@ -43,6 +43,14 @@
 //! search that quietly found nothing and let its test pass would be strictly
 //! worse than the hardcoded seed it replaces.
 //!
+//! Each search is *ordered* rather than shortened — see [`search_from`]. A
+//! world build is ~4 s, and an unordered sweep pays that per seed until its
+//! first hit, which cost the arrival fixture 136.5 s and made one test the
+//! straggler setting the whole crate's wall time. Trying the last known hit
+//! first costs one build; the full range is still swept behind it, so the
+//! discipline above is unchanged and a rotted hint slows a test rather than
+//! breaking one.
+//!
 //! The preconditions here are read through the **public** surface only —
 //! `Session::purview`'s walk-band agent marks for "a creature is co-located"
 //! and `SessionSnapshot::sensed.present` for "the body senses it" — so the
@@ -54,6 +62,31 @@ use hornvale_vessel::{PossessOpts, Session, Turn};
 /// enough that "no world in here withholds a creature" would be a real
 /// finding about the sim rather than about the sample.
 const SIGHT_SEEDS: std::ops::Range<u64> = 0..64;
+
+/// [`SIGHT_SEEDS`] reordered to try `hint` first — the seed this fixture
+/// last hit on — then every other seed in the range, in order.
+///
+/// **This is a cost fix, and it concedes nothing to the search discipline
+/// the module header states.** The range is still swept in full; a hint that
+/// stops satisfying its predicate costs one wasted build and the search
+/// carries on to find whichever seed does, exactly as before. The panic at
+/// the end still fires only when *nothing* in the range works.
+///
+/// Why it is here: a world build is ~4 s, so an unordered search pays that
+/// once per seed until its first hit. The arrival fixture below hits at seed
+/// 28 and measured **136.5 s** — one test more than doubling the crate's
+/// wall time, and doing it as a straggler that finishes last, so
+/// parallelism cannot hide it (every other test in `hornvale-vessel` is
+/// ≤ 7 s). Hinted, it pays one build.
+///
+/// The hint is a *performance* claim, never a correctness one. Nothing goes
+/// red when it rots — the sweep absorbs it — so do not treat a hint as a
+/// pinned seed, and do not assert on it. If a fixture starts running slow,
+/// its hint has rotted: run it once, read the seed it returns, update the
+/// hint.
+fn search_from(hint: u64) -> impl Iterator<Item = u64> {
+    std::iter::once(hint).chain(SIGHT_SEEDS.filter(move |&s| s != hint))
+}
 
 /// A world at `seed`, or `None` if this seed has no world to build.
 fn world_at(seed: u64) -> Option<hornvale_kernel::World> {
@@ -152,7 +185,7 @@ fn is_inside(session: &Session<'_>) -> bool {
 /// **without** the feature under test: the walk-band chart says the creature
 /// is here, and the chamber-band snapshot says the body does not sense it.
 fn world_withholding_a_colocated_creature() -> (u64, hornvale_kernel::World, String) {
-    for seed in SIGHT_SEEDS {
+    for seed in search_from(1) {
         let Some(world) = world_at(seed) else {
             continue;
         };
@@ -199,7 +232,7 @@ fn world_withholding_a_colocated_creature() -> (u64, hornvale_kernel::World, Str
 /// — so the third read observes the state the `wait` produced and nothing
 /// later.
 fn world_where_an_unsensed_creature_departs() -> (u64, hornvale_kernel::World, String) {
-    for seed in SIGHT_SEEDS {
+    for seed in search_from(3) {
         let Some(world) = world_at(seed) else {
             continue;
         };
@@ -262,7 +295,7 @@ fn world_where_an_unsensed_creature_departs() -> (u64, hornvale_kernel::World, S
 /// is. Pinning seed 28 would buy the time back and is exactly what the module
 /// header refuses, for the reason it gives.
 fn world_where_an_unsensed_creature_arrives() -> (u64, hornvale_kernel::World, String) {
-    for seed in SIGHT_SEEDS {
+    for seed in search_from(28) {
         let Some(world) = world_at(seed) else {
             continue;
         };
