@@ -658,20 +658,27 @@ pub fn action_suite_pack() -> &'static [(&'static str, &'static str)] {
 /// precedent's own words ("a star HAS a class... the fact is objective")
 /// but asserts the opposite of what is true of an operator instrument
 /// (there is no referent, objective or otherwise, for any culture to fail
-/// to have met) — and reusing it here would also silently misroute through
-/// `exposure_of_impl`'s existing Unnameable block into
-/// `GapReason::Unnameable` instead of `GapReason::Extradiegetic`, the
-/// wrong claim about the world. `Void::Gap` says the hole is "expected to
-/// be filled later", which contradicts `GapReason::Extradiegetic`'s own
-/// doc ("this gap can never close"). `Void::Uncognized` carries a
-/// `pending_wave` field built for the cognition edge specifically. Below,
-/// every entry registers `Void::Imperceptible` on its lexeme edge instead:
-/// its literal claim — "this edge cannot realize the concept" — holds for
-/// a structural reason (nothing in the world ever emits an operator
-/// instrument as a phenomenon, so no culture could ever come to perceive,
-/// then name, one), even though its doc prose was written with the
-/// percept edge specifically in mind. Named here as the finding it is,
-/// not silently forced.
+/// to have met). Reusing it would not misroute anything downstream —
+/// `exposure_of_impl`'s Extradiegetic block runs LAST and unconditionally,
+/// so it overwrites whatever the Unnameable block assigned regardless of
+/// which `Void` a concept was registered with. The actual problem sits one
+/// level up from that: a bare registry `Void::Unnamed` reading cannot
+/// DISTINGUISH "objectively real, nobody here has named it" (a spectral
+/// class) from "not real at all" (an operator instrument) — the two are
+/// indistinguishable from the `Void` alone, which is exactly why
+/// classification here is driven by pack membership
+/// (`extradiegetic_pack()`) rather than by any generic Void-reading rule.
+/// `Void::Gap` says the hole is "expected to be filled later", which
+/// contradicts `GapReason::Extradiegetic`'s own doc ("this gap can never
+/// close"). `Void::Uncognized` carries a `pending_wave` field built for the
+/// cognition edge specifically. Below, every entry registers
+/// `Void::Imperceptible` on its lexeme edge instead: its literal claim —
+/// "this edge cannot realize the concept" — holds for a structural reason
+/// (nothing in the world ever emits an operator instrument as a
+/// phenomenon, so no culture could ever come to perceive, then name, one),
+/// even though its doc prose was written with the percept edge
+/// specifically in mind. Named here as the finding it is, not silently
+/// forced.
 /// type-audit: bare-ok(identifier-text)
 pub fn extradiegetic_pack() -> &'static [(&'static str, &'static str)] {
     &[
@@ -701,6 +708,23 @@ pub fn extradiegetic_pack() -> &'static [(&'static str, &'static str)] {
             "to ease someone's hostility by an act the simulation itself did not choose — `soothe`",
         ),
     ]
+}
+
+/// True when `concept` is one of [`extradiegetic_pack`]'s operator
+/// instruments — no referent in the world at all, so no `Void` reading over
+/// the registry could ever answer this question on its own (see that
+/// function's own doc). The single home for this predicate: both of its
+/// callers (`cli/src/proto.rs`'s reference-page renderer and
+/// `windows/worldgen`'s test-side proto-goblinoid golden) sit above
+/// `hornvale_language` in the layering, so hoisting it here — rather than
+/// duplicating a `&str`-keyed lookup in each — is a plain import, not a
+/// layering violation the way importing `windows/worldgen`'s `&World`-keyed
+/// `is_unnameable` into a domain would be.
+/// type-audit: bare-ok(flag)
+pub fn is_extradiegetic(concept: &str) -> bool {
+    extradiegetic_pack()
+        .iter()
+        .any(|(name, _)| *name == concept)
 }
 
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,

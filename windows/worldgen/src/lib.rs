@@ -6091,13 +6091,17 @@ fn exposure_of_impl(
     // above, not about any one species' experience.
     //
     // Read directly from the pack roster rather than from a registry `Void`
-    // reading the way the Unnameable block does: none of the four `Void`
-    // variants was built for "this referent does not exist at all", and
-    // `extradiegetic_pack`'s own doc records why reusing `Void::Unnamed`
-    // specifically would silently misroute these concepts through the
-    // block above into `GapReason::Unnameable` instead of the
-    // `GapReason::Extradiegetic` this task requires. So classification here
-    // is driven by pack membership, not by the (documented-compromise)
+    // reading the way the Unnameable block does. Reusing `Void::Unnamed` for
+    // these concepts would NOT misroute anything through the block above —
+    // this block runs last and unconditionally, so it overwrites whatever
+    // the Unnameable block assigned regardless of which `Void` a concept was
+    // registered with. The actual problem is one level up: a bare registry
+    // `Void::Unnamed` reading cannot DISTINGUISH "objectively real, nobody
+    // here has named it" (a spectral class) from "not real at all" (an
+    // operator instrument) — the two are indistinguishable from the `Void`
+    // alone, so a generic Void-driven rule could never tell them apart.
+    // `extradiegetic_pack`'s own doc records this in full. So classification
+    // here is driven by pack membership, not by the (documented-compromise)
     // `Void::Imperceptible` these concepts register with — the two are
     // deliberately decoupled.
     //

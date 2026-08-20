@@ -57,17 +57,6 @@ fn is_unnameable(world: &World, concept: &str) -> bool {
     )
 }
 
-/// True when `concept` is one of `hornvale_language::extradiegetic_pack`'s
-/// operator instruments (The Deed, Task 2) — no referent in the world at
-/// all, a stronger absence than [`is_unnameable`]'s. Mirrors
-/// `cli/src/proto.rs`'s `is_extradiegetic` (duplicated rather than
-/// imported, same layering reason as `is_unnameable` above).
-fn is_extradiegetic(concept: &str) -> bool {
-    hornvale_language::extradiegetic_pack()
-        .iter()
-        .any(|(name, _)| *name == concept)
-}
-
 /// The seed-42 proto-root table: every registered concept's proto-root,
 /// assigned via the SAME merger-aware, injective `assign_proto_roots`
 /// (epoch `root/v4`) the `hornvale proto` reference page renders through
@@ -89,14 +78,15 @@ fn render_root_table_snapshot(world: &World) -> String {
         .registry
         .concepts()
         .map(|c| c.name.as_str())
-        .filter(|name| !is_unnameable(world, name) && !is_extradiegetic(name))
+        .filter(|name| !is_unnameable(world, name) && !hornvale_language::is_extradiegetic(name))
         .collect();
     let typ = typology_for(Some(FAMILY));
     let assignment =
         assign_proto_roots(&world.seed, FAMILY, &phonology, &typ, &universe, &daughters);
     let mut lines = Vec::new();
     for concept in world.registry.concepts() {
-        if is_unnameable(world, &concept.name) || is_extradiegetic(&concept.name) {
+        if is_unnameable(world, &concept.name) || hornvale_language::is_extradiegetic(&concept.name)
+        {
             continue;
         }
         let views = render_views(&assignment[&concept.name]);

@@ -1562,3 +1562,42 @@ fn extradiegetic_concepts_never_reach_the_proto_root_universe() {
         }
     }
 }
+
+/// The Deed, Task 2, fix round 1 (Finding 5): a latent name-collision
+/// hazard between `hornvale_language::extradiegetic_pack` and any other
+/// domain. `register_concepts`'s pack loop skips a name another domain
+/// already registered (`if registry.concept(concept).is_some() { continue; }`
+/// — decision 0025, one concept name one owner), so if some other domain
+/// ever registers an in-world `provoke`, `soothe`, `survey`, `help`, or
+/// `identify` (all plausible names for a real act or instrument),
+/// `extradiegetic_pack`'s own registration would silently be skipped —
+/// **and** `windows/worldgen`'s `exposure_of_impl` would still overwrite
+/// that concept's exposure to `Unknown/Extradiegetic` unconditionally for
+/// every species in every world (its final block is membership-driven, not
+/// gated on which domain actually owns the name), silently blanking a real
+/// in-world concept's lexeme with no compile error and no other test
+/// noticing. This is a tripwire, not a `domain == "language"` guard inside
+/// production code: it fails loudly at the moment of collision, over the
+/// real composition `register_all` builds, rather than trying to prevent
+/// the collision structurally.
+#[test]
+fn no_other_domain_claims_an_extradiegetic_concept_name() {
+    let mut registry = hornvale_kernel::ConceptRegistry::default();
+    hornvale_worldgen::register_all(&mut registry)
+        .expect("register_all registers every domain's concepts");
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        let concept = registry
+            .concept(name)
+            .unwrap_or_else(|| panic!("'{name}' must be registered once register_all completes"));
+        assert_eq!(
+            concept.domain, "language",
+            "'{name}' is owned by domain {:?}, not \"language\" — some other domain \
+             registered it first, so `extradiegetic_pack`'s registration in packs.rs \
+             was silently skipped while `windows/worldgen`'s exposure derivation still \
+             unconditionally overwrites '{name}' to Unknown/Extradiegetic for every \
+             species — mint a different extradiegetic-pack name instead of colliding \
+             with a real in-world concept",
+            concept.domain
+        );
+    }
+}
