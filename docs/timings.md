@@ -1965,3 +1965,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T17:33:20Z | sluice:outboard | 35.020 | 21.076 | 33.089 | 1.55 | 0 | cc94eb220 |  | lefford | 40 |
 | 2026-08-20T17:39:59Z | sluice:gate | 398.605 | 10777.476 | 426.686 | 28.11 | 0 | b59a73c4b |  | lefford | 40 |
 | 2026-08-20T17:44:43Z | sluice:clients | 283.994 | 748.582 | 37.533 | 2.77 | 0 | 06119a466 |  | lefford | 40 |
+| 2026-08-20T18:12:54Z | rebaseline | 72.187 | 234.603 | 12.190 | 3.42 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T18:14:08Z | gate-commit | 73.583 | 411.105 | 35.170 | 6.06 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
