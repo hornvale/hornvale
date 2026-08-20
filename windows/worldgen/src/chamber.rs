@@ -456,7 +456,7 @@ fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
 /// it is unreachable through either public entry point (both gate on
 /// [`rung_rank`] first), and naming it beats both a panic and a silent
 /// collision with band 0.
-fn chamber_key(addr: ChamberAddr) -> String {
+pub(crate) fn chamber_key(addr: ChamberAddr) -> String {
     let band = rung_of_rank(addr.band).map_or("out-of-ladder", rung_name);
     format!(
         "{}/{}/{}/{band}/{}",
@@ -1203,6 +1203,190 @@ mod tests {
             "chamber/v2 is retired; The Stope re-shaped the address it keyed"
         );
         assert_ne!(crate::streams::CHAMBER.as_str(), "chamber/v1");
+    }
+
+    /// **The SHIPPED existence draw travels [`crate::streams::CHAMBER`],
+    /// keyed on the WHOLE address.** This starts from [`chamber_exists`] —
+    /// the function every world actually calls — and compares it against the
+    /// derivation spelled out here, so re-parenting [`chamber_stream`], or
+    /// handing it anything other than `chamber_key(addr)`, reddens it.
+    ///
+    /// **The hole this closes had been open across two epochs.** Task 2's own
+    /// [`the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg`]
+    /// says so in its closing paragraph: `chamber_stream`'s parent was
+    /// unpinned, an accidental `derive(RUN_FLOORS)` there would relocate every
+    /// chamber in every world, and the only thing that could have objected —
+    /// the artifact drift check — was structurally blind to the chamber
+    /// lattice (Task 2's §6). Both halves are fixed together in Task 2b: this
+    /// is the unit half.
+    ///
+    /// Two arms, and the second is what makes the first non-vacuous:
+    ///
+    /// 1. the shipped verdict equals the `CHAMBER`-parented, whole-address
+    ///    derivation at every probed address;
+    /// 2. it DIFFERS from the `RUN_FLOORS`-parented derivation of the same
+    ///    key at at least one of them. Arm 1 alone would survive a re-parented
+    ///    `chamber_stream` if the two legs happened to agree everywhere — each
+    ///    address is an independent coin flip, so agreement everywhere is
+    ///    merely unlikely rather than impossible, and it is asserted rather
+    ///    than assumed.
+    ///
+    /// **What this test cannot see, stated because the sibling test's own
+    /// lesson is that a re-implementation is not a witness:** arm 1 calls
+    /// [`chamber_key`], so a change to `chamber_key`'s *format string* moves
+    /// both sides together and passes here. That direction is held by
+    /// [`the_chamber_key_spelling_is_pinned`] and by
+    /// [`the_existence_verdict_is_byte_pinned_over_a_known_lattice_slice`],
+    /// whose goldens are literal integers.
+    #[test]
+    fn the_existence_draw_travels_the_chamber_leg_and_is_keyed_on_the_whole_address() {
+        let seed = Seed(90210);
+        let column = fixture_column();
+        // At the reach ceiling under a 24 K/km cell: ΔT = 72 K, which is the
+        // Nadir, so every band 0..=4 is inside the budget and none of
+        // `chamber_exists`'s earlier gates can be what decides a verdict here.
+        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
+        let gradient = GeothermalGradient::new(24.0);
+
+        let mut probed = 0usize;
+        let mut disagreed = 0usize;
+        for raw_cell in 0u32..12 {
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for band in 0..5u8 {
+                    let run = RunAddr {
+                        cell: CellId(raw_cell),
+                        entrance: 0,
+                        branch,
+                        band,
+                    };
+                    // Only the floors this run realizes: past them the floor
+                    // gate refuses before any draw happens, so a verdict there
+                    // would say nothing about which stream was consulted.
+                    for floor in 0..floors_in_run(seed, run) {
+                        let addr = ChamberAddr {
+                            cell: CellId(raw_cell),
+                            entrance: 0,
+                            branch,
+                            band,
+                            floor,
+                        };
+                        let via_chamber_leg = seed
+                            .derive(crate::streams::CHAMBER)
+                            .derive(StreamLabel::dynamic(&chamber_key(addr)))
+                            .stream()
+                            .next_f64()
+                            < EXISTENCE_DENSITY;
+                        let via_run_leg = seed
+                            .derive(crate::streams::RUN_FLOORS)
+                            .derive(StreamLabel::dynamic(&chamber_key(addr)))
+                            .stream()
+                            .next_f64()
+                            < EXISTENCE_DENSITY;
+
+                        let shipped = chamber_exists(seed, &cave, gradient, addr);
+                        assert_eq!(
+                            shipped,
+                            via_chamber_leg,
+                            "{}: chamber_exists answered {shipped}, but the CHAMBER \
+                             leg keyed on the whole address derives {via_chamber_leg} \
+                             — the shipped existence draw is not travelling the \
+                             derivation it declares",
+                            chamber_key(addr)
+                        );
+                        probed += 1;
+                        if via_chamber_leg != via_run_leg {
+                            disagreed += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert!(probed > 0, "the sweep probed no realized address at all");
+        assert!(
+            disagreed > 0,
+            "the two legs agreed on all {probed} probed addresses, so arm 1 \
+             would pass under a re-parented chamber_stream — this test is \
+             vacuous as written and needs a wider or different sample"
+        );
+    }
+
+    /// The existence verdict is **byte-pinned over a known slice of the
+    /// lattice** — one literal `u32` per `(branch, band)`, bit `f` set when
+    /// floor `f` exists. The same discipline
+    /// [`the_run_draw_is_byte_pinned_for_known_keys`] carries, and the
+    /// cheapest possible witness that ANY part of the existence derivation
+    /// moved: the parent leg, the key's spelling, `next_f64`'s draw
+    /// semantics, [`EXISTENCE_DENSITY`], the floor ceiling, or the run draw
+    /// the floor gate reads.
+    ///
+    /// **The goldens are literal integers, not values re-derived through the
+    /// path they claim to pin.** That is the whole difference between a pin
+    /// and a restatement: every expression this test names is one the shipped
+    /// call reads, and none of them can move both sides of the comparison at
+    /// once.
+    ///
+    /// 20 floors fit a `u32` with room to spare
+    /// ([`FLOORS_PER_RUN_CEILING`]); a wider lattice would need a wider mask,
+    /// and the assertion below says so rather than truncating.
+    ///
+    /// If this fails, every chamber in every world has moved. That is an
+    /// **epoch** (`chamber/v4`), not a fix to these numbers.
+    #[test]
+    fn the_existence_verdict_is_byte_pinned_over_a_known_lattice_slice() {
+        assert!(
+            u32::from(FLOORS_PER_RUN_CEILING) <= u32::BITS,
+            "the lattice admits {FLOORS_PER_RUN_CEILING} floors, which no \
+             longer fits the u32 masks below — widen the mask type rather \
+             than letting the pin silently cover only the first 32 floors"
+        );
+
+        let seed = Seed(42);
+        let column = fixture_column();
+        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
+        let gradient = GeothermalGradient::new(24.0);
+
+        // Cell 9, entrance 0. Row-major over (branch 0..4, band 0..5), so each
+        // line below is one branch's undercroft / shallows / deeps /
+        // underdeep / nadir. Decimal, matching what `assert_eq!` prints on a
+        // failure, so the two can be compared by eye.
+        //
+        // A zero is a legitimate reading, not a hole in the pin: branch 1's
+        // nadir run realizes no floor at all, which is exactly the sparsity
+        // this lattice is supposed to have.
+        let expected: [u32; 20] = [
+            1, 29, 1059, 17, 1, //
+            3, 248, 260587, 63, 0, //
+            2, 8, 23178, 42, 10, //
+            12, 6, 12017, 48, 1,
+        ];
+
+        let mut got = [0u32; 20];
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            for band in 0..5u8 {
+                let mut mask = 0u32;
+                for floor in 0..FLOORS_PER_RUN_CEILING {
+                    if chamber_exists(
+                        seed,
+                        &cave,
+                        gradient,
+                        ChamberAddr {
+                            cell: CellId(9),
+                            entrance: 0,
+                            branch,
+                            band,
+                            floor,
+                        },
+                    ) {
+                        mask |= 1u32 << u32::from(floor);
+                    }
+                }
+                got[usize::from(branch) * 5 + usize::from(band)] = mask;
+            }
+        }
+        assert_eq!(
+            got, expected,
+            "the realized-floor masks of cell 9's lattice moved off their pin"
+        );
     }
 
     /// `chamber_exists` already refuses a `branch` outside the lattice and a

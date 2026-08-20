@@ -102,6 +102,7 @@ pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
+pub mod underworld_readout;
 pub mod vestige;
 pub mod volcano;
 pub use ablation::ChannelMask;
