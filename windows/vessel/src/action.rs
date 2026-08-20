@@ -121,7 +121,6 @@ impl Action {
 /// Whether an act is subject to the body's state or bypasses it. A property
 /// of the ACTION, not of the invocation: `examine` and `!examine` are
 /// different acts, so a verb never carries both moods (spec §2.1).
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mood {
     /// Subject to the body's state; charges time; may post facts.
