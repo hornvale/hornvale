@@ -193,6 +193,19 @@ thing no assertion can settle. A criterion falsified is a finding: if the
 derivable axes alone cannot clear the structural bar, that points at the
 appearance/disease substrate (§5 deferred), and the campaign says so.
 
+**The axis-space coverage map** (also reported, not asserted). Where do the 15
+peoples land on each axis, and on the warmth × competence plane — which regions
+are populated and which are *empty*? This is the deliverable that answers "do the
+existing peoples span the landscape," and its empty regions are a **measured**
+shopping list for a follow-on **roster-expansion** campaign: rather than adding
+species by intuition, author them to fill the corners the readout shows bare (the
+aquatic/slime corner where a Kuo-toa-like people would sit is the obvious
+candidate, alongside the appearance/disease axes that would exercise it). Adding
+sentient species is substrate-moving and epoch-adjacent (a census refresh, broad
+fixture drift — the roster last moved 9→15 in The Radiation), so it is
+deliberately *not* in this campaign; The Cant measures the current roster and
+produces the map that makes the expansion principled.
+
 ## 8. Non-goals
 
 - **Not** the held, transmissible belief — no `Claim`/myth-register work, no
