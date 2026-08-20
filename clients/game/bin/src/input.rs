@@ -134,7 +134,7 @@ pub enum Action {
 /// `Action::EnterLook` instead of falling through to `verb_for`, where it is
 /// deliberately unbound (see that function's doc). Every other key's meaning
 /// is untouched, which is what
-/// [`normal_mode_dispatches_exactly_what_verb_for_does`](tests::normal_mode_dispatches_exactly_what_verb_for_does)
+/// [`normal_mode_agrees_with_verb_for_across_the_full_keyspace`](tests::normal_mode_agrees_with_verb_for_across_the_full_keyspace)
 /// pins.
 ///
 /// **[`Mode::Look`]** maps the twelve movement keys (arrows, `hjkl`, and the
@@ -358,41 +358,68 @@ mod tests {
         assert_eq!(verb_for(key), None);
     }
 
-    /// Normal mode is UNCHANGED. Every binding that worked before this
-    /// campaign must still work identically — the mode is added around
-    /// `verb_for`, never inside it, so this is checking that the wrapper is
-    /// transparent rather than that the map is correct.
+    /// Normal mode is UNCHANGED, swept across the full keyspace rather than
+    /// a hand-picked list. A prior version of this test enumerated 20 of
+    /// `verb_for`'s 27 bindings by hand and stayed green while silently
+    /// missing `2 3 4 6 7 8 Q` — inert today because `Mode::Normal` is a
+    /// total delegation to `verb_for` with one `x` exception, but a future
+    /// per-key special case (say, a `Char('Q')` arm shadowing the
+    /// delegation once Task 3 wires this up) would ship undetected by a
+    /// partial list. So this sweeps every printable-ASCII `Char` plus the
+    /// named variants `verb_for` matches, and asserts agreement on all of
+    /// them rather than a sample.
+    ///
+    /// `x` is the one deliberate divergence — `verb_for` returns `None`
+    /// (see its doc) but `action_for` returns `EnterLook` — and is
+    /// special-cased below rather than folded into the general rule.
+    ///
+    /// The binding-count assertion is what keeps the sweep honest against
+    /// itself: 27 is `verb_for`'s current count of distinct bound keys (4
+    /// named arrows + 23 `Char` bindings). A change to `verb_for` that adds
+    /// or removes a binding must move this number deliberately — that is
+    /// the point, not a nuisance failure.
     #[test]
-    fn normal_mode_dispatches_exactly_what_verb_for_does() {
-        for code in [
+    fn normal_mode_agrees_with_verb_for_across_the_full_keyspace() {
+        let named = [
             KeyCode::Up,
             KeyCode::Down,
             KeyCode::Left,
             KeyCode::Right,
-            KeyCode::Char('h'),
-            KeyCode::Char('j'),
-            KeyCode::Char('k'),
-            KeyCode::Char('l'),
-            KeyCode::Char('y'),
-            KeyCode::Char('u'),
-            KeyCode::Char('b'),
-            KeyCode::Char('n'),
-            KeyCode::Char('.'),
-            KeyCode::Char('<'),
-            KeyCode::Char('>'),
-            KeyCode::Char('m'),
-            KeyCode::Char('?'),
-            KeyCode::Char('1'),
-            KeyCode::Char('5'),
-            KeyCode::Char('9'),
-        ] {
+            KeyCode::Esc,
+            KeyCode::Enter,
+            KeyCode::Tab,
+            KeyCode::Backspace,
+        ];
+        let printable_chars = (0x20u8..=0x7Eu8).map(|b| KeyCode::Char(b as char));
+
+        let mut bound_count = 0usize;
+        for code in named.into_iter().chain(printable_chars) {
             let key = KeyEvent::new(code, KeyModifiers::NONE);
+
+            if code == KeyCode::Char('x') {
+                assert_eq!(verb_for(key), None, "x must stay unbound in verb_for");
+                assert!(
+                    matches!(action_for(key, Mode::Normal), Action::EnterLook),
+                    "x must enter look mode in Mode::Normal"
+                );
+                continue;
+            }
+
             match (verb_for(key), action_for(key, Mode::Normal)) {
-                (Some(v), Action::Verb(a)) => assert_eq!(v, a, "{code:?} changed meaning"),
+                (Some(v), Action::Verb(a)) => {
+                    assert_eq!(v, a, "{code:?} changed meaning");
+                    bound_count += 1;
+                }
                 (None, Action::None) => {}
                 (v, a) => panic!("{code:?}: verb_for gave {v:?} but action_for gave {a:?}"),
             }
         }
+
+        assert_eq!(
+            bound_count, 27,
+            "verb_for's binding count moved -- update this count deliberately \
+             if a binding was intentionally added or removed"
+        );
     }
 
     /// `x` enters look mode. Chosen because it is FREE — the taken set is
