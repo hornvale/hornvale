@@ -27,6 +27,8 @@ mod body_mass;
 mod course_properties;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
+#[path = "suite/gate_table.rs"]
+mod gate_table;
 #[path = "suite/lantern_fabric.rs"]
 mod lantern_fabric;
 #[path = "suite/lantern_lens.rs"]

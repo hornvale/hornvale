@@ -1,0 +1,63 @@
+//! The body-state gate (spec §3.3): whether a body's own state permits an
+//! act, decided against the act's [`Mood`](crate::action::Mood).
+//!
+//! Built as a table even though it has exactly one row today. The reason is
+//! empirical, not anticipatory: `Session::needs` in this crate already
+//! carries an ad-hoc perception gate that had to be patched after a verb
+//! walked around it as a side channel, and `Session::chart`'s own doc
+//! records a second, still-open version of the same shape. A table with an
+//! exhaustive match — no wildcard arm — turns the next omission into a
+//! compile error: Arc III's `Dominated` row, and the spec's own
+//! `unconscious`/`blind`/`target invisible` rows, must be classified before
+//! they can compile.
+//!
+//! Nothing in this task consults [`verdict`] yet — Task 7 does.
+
+use crate::action::Mood;
+
+/// A body's state, as the gate reads it. One row today ([`BodyState::Awake`]
+/// / [`BodyState::Asleep`]); Arc III adds `Dominated`, and the spec names
+/// `unconscious`, `blind`, and `target invisible` as future rows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BodyState {
+    /// The body can act freely; no in-character act is gated.
+    Awake,
+    /// The body is asleep; an in-character act is refused.
+    Asleep,
+}
+
+impl BodyState {
+    /// Every body state, one representative per variant — mirrors
+    /// [`Action::all`](crate::action::Action::all)'s roster discipline, and
+    /// is the cross product [`verdict`]'s own tests sweep.
+    pub fn all() -> Vec<BodyState> {
+        vec![BodyState::Awake, BodyState::Asleep]
+    }
+}
+
+/// Whether the gate lets an act through.
+/// type-audit: bare-ok(prose: Refused.0)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Verdict {
+    /// The act may proceed.
+    Permitted,
+    /// The act is refused, with a player-legible reason (decision 0007: a
+    /// refusal fails loudly, never silently).
+    Refused(String),
+}
+
+/// Whether `state` permits an act of the given `mood`. An exhaustive match
+/// over `(state, mood)` with **no wildcard arm**, so a new [`BodyState`] row
+/// (or a new [`Mood`]) fails to compile here until it is classified.
+///
+/// An out-of-character act bypasses the body's state entirely (spec §2.2):
+/// it is permitted in every row. An in-character act is subject to the
+/// body's state; today only sleep gates it.
+pub fn verdict(state: BodyState, mood: Mood) -> Verdict {
+    match (state, mood) {
+        (BodyState::Awake, Mood::InCharacter) => Verdict::Permitted,
+        (BodyState::Asleep, Mood::InCharacter) => Verdict::Refused("you are asleep".to_string()),
+        (BodyState::Awake, Mood::OutOfCharacter) => Verdict::Permitted,
+        (BodyState::Asleep, Mood::OutOfCharacter) => Verdict::Permitted,
+    }
+}
