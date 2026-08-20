@@ -3,7 +3,7 @@
 *Arc I.b of The Bridle. Ships the unified action suite, the `!` namespace,
 the body-state gate, and in-character acts that charge time and post facts.
 The daybook, which the metaplan assigned to this arc, is carved out to Arc
-I.c (**The Tally**) — see §2.5.*
+I.c (**The Waybill**) — see §2.5.*
 
 **Program spec:** `2026-08-19-the-bridle-metaplan.md`. That document holds
 the motivation, the keystone, and the arc sequence; this one does not
@@ -111,7 +111,7 @@ by it.
 **Accepted cost, stated plainly:** a long possession commits many facts and
 saved worlds grow. Creatures already pay this.
 
-### 2.5 The daybook is carved out to Arc I.c (The Tally)
+### 2.5 The daybook is carved out to Arc I.c (The Waybill)
 
 The metaplan lists the daybook in Arc I.b's "Ships" column, but it appears
 nowhere in that arc's acceptance test — and it carries its own CLI surface,
@@ -134,7 +134,7 @@ corners:
 | transcript (out) | `possess --script in > out` | exists — the gallery pages *are* transcripts |
 | command replay (in) | `possess --script <PATH>` | exists, byte-golden |
 | played world (out) | `possess --out <PATH>` | exists — the checkpoint, a cache |
-| **daybook (record)** | — | **The Tally's delta** |
+| **daybook (record)** | — | **The Waybill's delta** |
 
 *(The Z-machine reading is design provenance, from knowledge rather than
 measurement; nothing in this repo depends on it being exactly right.)*
