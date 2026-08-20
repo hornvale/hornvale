@@ -157,6 +157,8 @@ mod solitary_tongue;
 mod species_worlds;
 #[path = "suite/tense_shadow.rs"]
 mod tense_shadow;
+#[path = "suite/termination_probe.rs"]
+mod termination_probe;
 #[path = "suite/threading_equivalence.rs"]
 mod threading_equivalence;
 #[path = "suite/tilth_phase_diagram.rs"]
