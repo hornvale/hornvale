@@ -166,7 +166,11 @@ cd ../.. && git commit -m "feat(game): look mode, added around verb_for rather t
 - Test: in-module `#[cfg(test)]` in `strip.rs`, plus `clients/game/core/tests/` as needed
 
 **Interfaces:**
-- Consumes: `Mode`, `Action` (Task 1).
+- Consumes: **nothing from Task 1.** `Mode`/`Action` live in
+  `clients/game/bin/src/input.rs`, and `hornvale-game-core` has **no
+  dependency on bin** — do not try to import them into core. This task's
+  `term.rs` half needs only a cursor position, not a mode. Task 1 and Task 2
+  are independent.
 - Produces:
   - `pub struct Cursor { pub x: u16, pub y: u16 }`
   - `pub fn render_with(json: &str, w: u16, h: u16, cursor: Option<Cursor>, strip: Option<&str>) -> Result<(Grid, Option<(u16, u16)>), Error>` — the grid, plus the **screen** position the terminal cursor should sit at.
