@@ -213,6 +213,20 @@ fn write_command_line(
 /// exit-list sentence, under either of its wordings (see the module doc),
 /// so that sentence is carried as ordinary [`Source::Prose`] text, same as
 /// the rest of the passage.
+///
+/// `echo`, when `Some`, is the most recently SUBMITTED line (Task 3, The
+/// Stylus) — not the live buffer `line` carries — drawn on the row
+/// immediately above the command row so the page reads ask-then-answer: the
+/// question the player sent, directly above the sim's own reply. That row
+/// is RESERVED out of `prose_rows` when `echo` is `Some`, the same
+/// never-silently-steal discipline [`TRUNCATION_MARKER`] already uses,
+/// rather than being drawn over whatever prose happened to land there.
+/// Attributed to [`Source::Echo`] — deliberately not `Typed` (this text has
+/// already been sent to `Session::handle`, so `Typed`'s own "not sent yet"
+/// reasoning no longer holds) and not `Prose` (it is the player's own line,
+/// never derived from any `vessel/session/v2` field — see that variant's
+/// doc).
+#[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 8; splitting the position/size pair or the two text channels into a struct would hide, not clarify, the ask-then-answer layout this function's own doc explains
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
@@ -221,11 +235,13 @@ pub fn draw(
     height: u16,
     focus: Focus,
     line: CommandLine<'_>,
+    echo: Option<&str>,
 ) -> Option<(u16, u16)> {
     if height == 0 {
         return None;
     }
-    let prose_rows = height - 1;
+    let echo_rows: u16 = if echo.is_some() { 1 } else { 0 };
+    let prose_rows = height.saturating_sub(1).saturating_sub(echo_rows);
     let wrapped = wrap(&narration.prose, width as usize);
     let overflows = wrapped.len() as u16 > prose_rows;
     // When the prose overflows, the last visible row is sacrificed to the
@@ -243,6 +259,16 @@ pub fn draw(
         write_line(into, origin.0, marker_row, TRUNCATION_MARKER);
     }
     let command_row = origin.1 + height - 1;
+    if let Some(text) = echo {
+        let echo_row = command_row.saturating_sub(1);
+        for (i, ch) in text.chars().enumerate() {
+            into.set(
+                origin.0 + i as u16,
+                echo_row,
+                Cell::glyph(ch, Weight::Normal, Source::Echo),
+            );
+        }
+    }
     into.set(
         origin.0,
         command_row,
@@ -296,6 +322,7 @@ mod tests {
             3,
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
         );
         assert_eq!(g.get(0, 2).unwrap().glyph, Some(PROMPT_GLYPH));
         assert_eq!(g.get(0, 0).unwrap().glyph, Some('h'));
@@ -322,6 +349,7 @@ mod tests {
                 text: "look",
                 caret: 4,
             },
+            None,
         );
         let row: String = (0..6)
             .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
@@ -356,6 +384,7 @@ mod tests {
                 text: "look",
                 caret: 4,
             },
+            None,
         );
         assert_eq!(caret, None);
         let row: String = (0..6)
@@ -386,6 +415,7 @@ mod tests {
                 text: "look",
                 caret: 1,
             },
+            None,
         );
         assert_eq!(caret, Some((3, 2)));
     }
@@ -415,6 +445,7 @@ mod tests {
                 text: &long,
                 caret: 60,
             },
+            None,
         );
         let (cx, _) = caret.expect("the CLI is focused, so a caret is reported");
         assert!(
@@ -450,6 +481,7 @@ mod tests {
             10,
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
         );
         let text = g.to_plain_text();
         assert!(
@@ -484,9 +516,75 @@ mod tests {
             10,
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
         );
         let text = g.to_plain_text();
         assert!(!text.contains("more, not shown"));
         assert!(text.contains("Ways on: NE, NW, S."));
+    }
+
+    /// The echoed line is drawn immediately above the command row, and the
+    /// row it takes is RESERVED out of the prose area (never stolen from
+    /// wherever prose would otherwise have landed) — mirroring
+    /// `TRUNCATION_MARKER`'s own reservation discipline.
+    #[test]
+    fn the_echoed_line_is_drawn_immediately_above_the_command_row() {
+        let n = Narration {
+            prose: "You are here.".to_string(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 4);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            4,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            Some("look"),
+        );
+        let echo_row: String = (0..6)
+            .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
+            .collect();
+        assert_eq!(
+            echo_row, "look  ",
+            "the echo sits on the row directly above the command row"
+        );
+        assert_eq!(
+            g.get(0, 3).unwrap().glyph,
+            Some(PROMPT_GLYPH),
+            "the command row itself is unaffected by the echo above it"
+        );
+        assert_eq!(g.get(0, 3).unwrap().source, Source::Chrome);
+        assert_eq!(g.get(0, 2).unwrap().source, Source::Echo);
+    }
+
+    /// With no echo yet (a fresh session, nothing submitted), the row above
+    /// the command line must be ordinary prose space, not a permanently
+    /// reserved blank — the reservation only happens when there is
+    /// something to reserve it for.
+    #[test]
+    fn with_no_echo_the_row_above_the_command_line_is_ordinary_prose_space() {
+        let n = Narration {
+            prose: "one\ntwo\nthree".to_string(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 4);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            4,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+        );
+        let text = g.to_plain_text();
+        assert!(
+            text.contains("three"),
+            "with no echo, all three prose rows fit above the command row: {text:?}"
+        );
     }
 }

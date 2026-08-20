@@ -85,7 +85,9 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// the row beneath the plate is reserved (see the module doc). `line` is
 /// the command line's contents, drawn into the entry pane regardless of
 /// `focus` — only whether its caret is *reported* depends on focus, never
-/// whether its text is drawn (see `entry::draw`'s doc).
+/// whether its text is drawn (see `entry::draw`'s doc). `echo` is the most
+/// recently SUBMITTED line, drawn above the command row (see `entry::draw`'s
+/// doc for the ask-then-answer layout and why that row is reserved).
 pub fn compose(
     snapshot: &crate::Snapshot,
     w: u16,
@@ -93,6 +95,7 @@ pub fn compose(
     strip: Option<&str>,
     focus: crate::Focus,
     line: crate::CommandLine<'_>,
+    echo: Option<&str>,
 ) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
@@ -114,6 +117,7 @@ pub fn compose(
         content_height,
         focus,
         line,
+        echo,
     );
 
     if let Some(text) = strip {
@@ -149,6 +153,7 @@ mod tests {
             None,
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
         );
         assert_eq!(g.width(), 80);
         assert_eq!(g.height(), 24);
@@ -175,6 +180,7 @@ mod tests {
                 None,
                 crate::Focus::Cli,
                 crate::CommandLine::default(),
+                None,
             );
             let text = g.to_plain_text();
             let plate_has_ink = text
@@ -198,6 +204,7 @@ mod tests {
             Some("a cairn"),
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
         );
         let text = g.to_plain_text();
         let strip_row = text.lines().nth(20).unwrap();

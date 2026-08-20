@@ -4,6 +4,7 @@
 //! See `driver`'s module doc for the containment rule this exists to hold.
 
 pub mod driver;
+pub mod history;
 pub mod input;
 pub mod line;
 pub mod term;

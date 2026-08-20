@@ -144,6 +144,17 @@ pub enum Source {
     /// doc now names: neither derived from world state nor declared inert,
     /// because the client did not become typeable until this task.
     Typed,
+    /// The most recently SUBMITTED line, echoed above the command row so
+    /// the page reads ask-then-answer (spec §6, The Stylus Task 3).
+    /// **Deliberately not [`Source::Typed`]**: unlike the live buffer, this
+    /// text HAS already been sent to `Session::handle`, so `Typed`'s own
+    /// "not sent yet" reasoning no longer holds once a line is echoed.
+    /// **Also deliberately not [`Source::Prose`]**: it is the player's own
+    /// composed line, not narration the sim produced — attributing it to
+    /// `Prose` would claim a wire provenance nothing on `vessel/session/v2`
+    /// backs (the echo is `bin`'s own record of what it sent, held
+    /// alongside `Driver`, never a field read off a `Snapshot`).
+    Echo,
 }
 
 /// One character cell. A tile is a drop-in replacement for exactly one of
