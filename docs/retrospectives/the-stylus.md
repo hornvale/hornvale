@@ -91,6 +91,42 @@ Happened mid-boundary, after removing a throwaway worktree. Caught only
 because the next command printed `pwd && git branch` before doing anything
 else. Nothing was committed to `main`.
 
+**That framing is too narrow, and the wider version is the campaign's second
+pattern.** "The harness reset my shell" makes it something that happens *to*
+you, implying the remedy is vigilance. The general rule is a property of the
+question instead: **the tree you measure must be the tree that holds the
+change.** A reset shell is one way to break that invariant, not the invariant.
+
+Four instances turned up in a single day, across this campaign and the
+operator session it was corresponding with:
+
+| instance | why it did not look wrong |
+|---|---|
+| a grep for a CLAUDE.md paragraph run in the main checkout, while the edit lived on a branch in a worktree | returned a confident **zero**; the author nearly concluded their own edit had not applied |
+| a diffstat reported without naming which two trees it compared | a real number, describing a comparison nobody had specified |
+| a roster warning sent about `subfloor-roster.tsv` and `clients/` tests | correct in form; `Cargo.toml`'s `exclude` list means no gate run over any tree could ever produce such a row |
+| a positive control that returned zero (mine) | I grepped "look mode" against a chronicle that legitimately only ever writes `Mode { Normal, Look }` |
+
+**Measuring the wrong thing announces itself. Measuring the right thing in the
+wrong place never does** — the query succeeds and returns a clean answer about
+a tree you did not mean.
+
+Two rules, and the second is the one that generalises:
+
+1. Name the tree a result came from, and confirm it holds the change.
+   `git branch --show-current` answers it for a worktree; `git cat-file -e
+   <sha>` answers it for a remote. Branch-local and unpushed work is invisible
+   from every other tree.
+2. **A zero is the most dangerous result**, being indistinguishable from
+   success. Pair it with a positive control — **and if the control also
+   returns zero, the control is wrong, not the finding.** That is exactly how
+   the fourth instance above was caught, and it is the only reason it was.
+
+Rule 2 matters because the alternative — noticing that an answer has the wrong
+*shape* — only works when you already know the expected value, which is not
+the usual case. See
+[[PROC-measure-the-tree-that-holds-the-change]].
+
 ## Deferred minors, with homes
 
 - `input.rs:1-2`'s module-doc opener overstated `action_for`'s reach ("on its
