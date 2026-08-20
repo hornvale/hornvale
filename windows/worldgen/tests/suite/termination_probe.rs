@@ -122,12 +122,83 @@
 //! those — **asserts the branch**, so the number stops being prose in a doc
 //! comment that nothing re-checks.
 //!
+//! ## Follow-up, 2026-08-20: could `Sunless` be split into a sixth rung?
+//!
+//! Nathan asked what a sixth rung below `Sunless` would admit, targeting
+//! `P(reach it | reached Underdeep) ~ 0-10%`.
+//! [`could_sunless_be_split_into_a_sixth_rung`] takes the reading.
+//!
+//! **THE ANSWER IS NO, AND THE PRIOR THAT PREDICTED IT WAS WRONG ABOUT WHY.**
+//! The hypothesis on the table was that the super-50 K population is a clamp
+//! atom — everything pinned at `CAVE_REACH_CEILING_M`, so the class is
+//! `gradient x 3.0` and has no interior. **Measured, 3 of 3821 systems (0.08%)
+//! sit at that ceiling**; on seeds 42 and 7 the count is zero. The 200 m
+//! lava-tube ceiling binds on 0.77-2.53%, all of it shallow. The gradient
+//! clamps bind on nothing at all: the realized band is 20.694-29.226 K/km
+//! inside a `[15, 30]` clamp. **No clamp is binding on the population in
+//! question.**
+//!
+//! What is true is the compression, by a different route. ΔT above 50 K is one
+//! mode with a thin whisker: 50-60 K holds 212 / 722 / 530 of the 214 / 727 /
+//! 536 systems above the floor — **98.6% / 99.3% / 98.9%** — and p99 is only
+//! 58.5 / 59.9 / 61.0 K. The observed max ΔT is **68.086 K against a possible
+//! 90.0 K**, so a quarter of the theoretical headroom is never used: reach and
+//! gradient do not attain their maxima together (a joint fact this readout
+//! bounds but does not decompose).
+//!
+//! ```text
+//! seed   systems   at 3000 m   at 200 m   ΔT>=50K   p50    p75    p90    p99    max
+//!   42       874    0 (0.00%)  14 (1.60%)  24.49%  54.598 55.963 57.508 58.525 61.298
+//!    7      1681    0 (0.00%)  13 (0.77%)  43.25%  55.183 56.620 57.697 59.901 67.603
+//! 1234      1266    3 (0.24%)  32 (2.53%)  42.34%  56.710 58.817 59.733 61.028 68.086
+//!
+//! gradient K/km realized:  42: 21.670 / 24.419 / 29.226   (min / p50 / max)
+//!                           7: 21.317 / 25.004 / 29.123
+//!                        1234: 20.694 / 23.082 / 29.049
+//! ```
+//!
+//! **Every candidate X fails on one of two axes, and the two failures are the
+//! same fact seen twice.** Inside the mode (X <= 59) the class is far too big
+//! and the edge sits in traffic; outside it (X >= 61) the edge is quiet only
+//! because the region is empty, and a "stability" figure taken over 2 systems
+//! measures emptiness, not stability.
+//!
+//! ```text
+//! X (K)  systems 42/7/1234   P(>=X | Underdeep) 42/7/1234   within +-0.5 K 42/7/1234
+//!   55      88 / 386 / 333     32.96% / 44.01% / 50.08%       4.69% / 7.67% / 0.87%
+//!   58       9 /  65 / 186      3.37% /  7.41% / 27.97%       2.17% / 2.44% / 3.48%
+//!   59       2 /  33 / 113      0.75% /  3.76% / 16.99%       0.11% / 1.31% / 7.50%
+//!   60       2 /   5 /  36      0.75% /  0.57% /  5.41%       0.00% / 1.01% / 4.11%
+//!   61       2 /   2 /   6      0.75% /  0.23% /  0.90%       0.23% / 0.12% / 0.95%
+//!   62       0 /   2 /   5      0.00% /  0.23% /  0.75%       0.00% / 0.00% / 0.00%
+//!   65+      0 /   2 /   5      0.00% /  0.23% /  0.75%       0.00% / 0.06% / 0.00%
+//!   70+      0 /   0 /   0      0.00% /  0.00% /  0.00%       0.00% / 0.00% / 0.00%
+//! ```
+//!
+//! Against the ladder's own edges (2 K and 8 K at 0.0%, 25 K at 0.2-1.1%,
+//! 50 K at 0.0-1.5% and documented as the least well-placed):
+//!
+//! - **X = 60 is the only candidate in the target band on all three seeds**
+//!   (0.57-5.41%), and its stability is **4.11% on seed 1234 — 2.7x the worst
+//!   edge in the ladder**, worse than the 10 K edge that was condemned and
+//!   moved. Its rate also swings 9.5x across the panel.
+//! - **X = 61 has stability comparable to the 25 K edge** (0.12-0.95%) and
+//!   admits **2 / 2 / 6 systems per world**. Seed 42's entire population above
+//!   it is two caves.
+//! - **X >= 62 gives seed 42 zero tenants** — the reading Task 0 exists to
+//!   refuse, reappearing one rung down.
+//!
+//! So there is no X that is simultaneously occupied on every preregistered
+//! seed, inside the target band, and stable. The useful answer is that
+//! `Sunless` is not a tail that can be subdivided; it is a mode with a
+//! two-cave whisker.
+//!
 //! Test fixture (decision 0092): calls the composition-root entry points
 //! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_terrain::{DelveRung, TerrainPins, rung_at_depth, rungs};
+use hornvale_terrain::{CAVE_REACH_CEILING_M, DelveRung, TerrainPins, rung_at_depth, rungs};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -404,6 +475,249 @@ fn where_does_a_delve_terminate() {
          BoundariesDecideRarity branch to hold",
         pooled_share * 100.0,
         ABUNDANT_ABOVE * 100.0
+    );
+}
+
+// ---------------------------------------------------------------------------
+// THE SIXTH RUNG — could `Sunless` be split, and is there a stable X?
+// ---------------------------------------------------------------------------
+
+/// The ΔT at which `Sunless` begins — `hornvale_terrain::HABITABLE_CEILING_K`,
+/// re-stated here as the floor of the population this readout examines rather
+/// than imported, so that a change to the ladder does not silently redefine
+/// what "above Sunless's floor" means in a table already printed.
+const SUNLESS_FLOOR_K: f64 = 50.0;
+
+/// The ΔT at which `Underdeep` begins — the conditioning event for the target
+/// Nathan named, `P(reach the new rung | reached Underdeep)`.
+const UNDERDEEP_FLOOR_K: f64 = 25.0;
+
+/// The largest ΔT any cave can carry: the gradient's upper clamp
+/// (`OCEANIC_GRADIENT_K_PER_KM = 30.0`, private to
+/// `domains/terrain/src/strata.rs`) times [`CAVE_REACH_CEILING_M`] in km.
+/// `delve.rs`'s own module doc states the same 90 K bound in prose; this is
+/// the checkable form of it.
+const MAX_POSSIBLE_DELTA_T_K: f64 = 30.0 * (CAVE_REACH_CEILING_M / 1000.0);
+
+/// Candidate floors for a hypothetical sixth rung, in K above the datum.
+///
+/// The panel Nathan's question named was `{55, 60, 65, 70, 75, 80, 90, 100}`.
+/// It is **extended downward and finely**, because the first run showed the
+/// entire occupied range above `Sunless`'s floor ends by 68.1 K on the hottest
+/// seed: every candidate at or above 70 K scores an unbroken column of zeros
+/// and the three points below it are too coarse to see where the population
+/// actually stops. The extra rows are 57-63 K, and they are added to *look*,
+/// not to find a value that scores well — see this test's verdict in the
+/// module doc, which is that none does.
+const CANDIDATE_SPLITS_K: [f64; 14] = [
+    55.0, 57.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0, 65.0, 70.0, 75.0, 80.0, 90.0, 100.0,
+];
+
+/// How close to a clamp counts as sitting *on* it. The reach values are
+/// arithmetic products of quantities that are themselves clamped, so an exact
+/// `==` would undercount by a few ULP without changing the finding.
+const CLAMP_EPSILON_M: f64 = 1e-6;
+
+/// claim: rate(share of cave systems above candidate sixth-rung floors; seeds
+/// 42 / 7 / 1234) — the shape of the ΔT distribution above `Sunless`'s floor,
+/// how much of it sits on a reach clamp, and what a sixth rung placed at each
+/// candidate X would admit.
+///
+/// **A design readout, not a gate on the ladder.** It changes no production
+/// code and asserts nothing about where a sixth rung should go — placing one
+/// is a decision, and a test that pinned a preferred X would be this
+/// campaign's opinion masquerading as a measurement. What it *does* assert is
+/// the physical ceiling the question runs into: no cave's reach exceeds
+/// [`CAVE_REACH_CEILING_M`], so no cave's ΔT can exceed
+/// [`MAX_POSSIBLE_DELTA_T_K`]. That bound is the answer's mechanism, so it is
+/// checked rather than narrated.
+#[test]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+fn could_sunless_be_split_into_a_sixth_rung() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let mut pooled_super: usize = 0;
+    let mut pooled_systems: usize = 0;
+    let mut pooled_at_reach_ceiling: usize = 0;
+    let mut observed_max_delta_t = f64::NEG_INFINITY;
+
+    for seed_value in SEEDS {
+        let seed = hornvale_kernel::Seed(seed_value);
+        let artifacts = build_world_to_with_artifacts(
+            seed,
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            &wc,
+            BuildDepth::Terrain,
+        )
+        .expect("probe seed builds");
+        let terrain = artifacts
+            .terrain
+            .expect("terrain is Some at BuildDepth::Terrain");
+        let geo = terrain.geosphere();
+
+        let mut land = 0usize;
+        let mut delta_t: Vec<f64> = Vec::new();
+        let mut gradients: Vec<f64> = Vec::new();
+        let mut at_reach_ceiling = 0usize;
+        // `LAVATUBE_CEILING_M` is private to `domains/terrain/src/cave_depth.rs`
+        // (line 128); its value is restated here because a test outside that
+        // module cannot import it.
+        let lavatube_ceiling_m = 200.0_f64;
+        let mut at_lavatube_ceiling = 0usize;
+
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                continue;
+            }
+            land += 1;
+            let Some(cave) = terrain.cave_at(cell) else {
+                continue;
+            };
+            let gradient = terrain.geothermal_gradient_at(cell);
+            delta_t.push(gradient.get() * (cave.depth_reach_m / 1000.0));
+            gradients.push(gradient.get());
+            if (cave.depth_reach_m - CAVE_REACH_CEILING_M).abs() <= CLAMP_EPSILON_M {
+                at_reach_ceiling += 1;
+            }
+            if (cave.depth_reach_m - lavatube_ceiling_m).abs() <= CLAMP_EPSILON_M {
+                at_lavatube_ceiling += 1;
+            }
+            assert!(
+                cave.depth_reach_m <= CAVE_REACH_CEILING_M + CLAMP_EPSILON_M,
+                "seed {seed_value}: a cave reaches {} m, past CAVE_REACH_CEILING_M \
+                 ({CAVE_REACH_CEILING_M}) — the ΔT ceiling this readout reasons \
+                 from does not hold",
+                cave.depth_reach_m
+            );
+        }
+
+        let systems = delta_t.len();
+        delta_t.sort_by(f64::total_cmp);
+        gradients.sort_by(f64::total_cmp);
+        let super_sunless: Vec<f64> = delta_t
+            .iter()
+            .copied()
+            .filter(|d| *d >= SUNLESS_FLOOR_K)
+            .collect();
+        let reached_underdeep = delta_t.iter().filter(|d| **d >= UNDERDEEP_FLOOR_K).count();
+        let seed_max = delta_t.last().copied().unwrap_or(f64::NAN);
+        observed_max_delta_t = observed_max_delta_t.max(seed_max);
+
+        println!("\n===== seed {seed_value} =====  land cells {land}  cave systems {systems}");
+
+        // (4) The gradient band actually realized.
+        println!(
+            "  gradient K/km realized: min {:.3}  p50 {:.3}  max {:.3}  \
+             -> ceiling ΔT = max x {:.1} km = {:.3} K",
+            gradients.first().copied().unwrap_or(f64::NAN),
+            pct(&gradients, 0.50),
+            gradients.last().copied().unwrap_or(f64::NAN),
+            CAVE_REACH_CEILING_M / 1000.0,
+            gradients.last().copied().unwrap_or(f64::NAN) * (CAVE_REACH_CEILING_M / 1000.0),
+        );
+
+        // (2) How much of the population sits ON a clamp.
+        println!(
+            "  at CAVE_REACH_CEILING_M ({CAVE_REACH_CEILING_M} m): {at_reach_ceiling}/{systems} \
+             ({:.2}%)   at LAVATUBE_CEILING_M ({lavatube_ceiling_m} m): \
+             {at_lavatube_ceiling}/{systems} ({:.2}%)",
+            at_reach_ceiling as f64 / systems.max(1) as f64 * 100.0,
+            at_lavatube_ceiling as f64 / systems.max(1) as f64 * 100.0,
+        );
+
+        // (1) The shape of the super-50 K population.
+        println!(
+            "  ΔT >= {SUNLESS_FLOOR_K} K: {}/{systems} ({:.2}%)   \
+             p50 {:.3}  p75 {:.3}  p90 {:.3}  p99 {:.3}  max {:.3}",
+            super_sunless.len(),
+            super_sunless.len() as f64 / systems.max(1) as f64 * 100.0,
+            pct(&super_sunless, 0.50),
+            pct(&super_sunless, 0.75),
+            pct(&super_sunless, 0.90),
+            pct(&super_sunless, 0.99),
+            super_sunless.last().copied().unwrap_or(f64::NAN),
+        );
+
+        // 1 K bin occupancy from the Sunless floor to the max, zeros included
+        // so a valley is visible as a valley rather than as an absent row.
+        let top = seed_max.ceil().max(SUNLESS_FLOOR_K + 1.0) as i64;
+        let lo = SUNLESS_FLOOR_K as i64;
+        println!("  1 K bins over [{lo}, {top}) K (count per bin):");
+        let mut line = String::new();
+        for edge in lo..top {
+            let count = super_sunless
+                .iter()
+                .filter(|d| **d >= edge as f64 && **d < (edge + 1) as f64)
+                .count();
+            line.push_str(&format!("{edge:>4}:{count:<6}"));
+            if (edge - lo + 1) % 8 == 0 {
+                println!("   {line}");
+                line.clear();
+            }
+        }
+        if !line.is_empty() {
+            println!("   {line}");
+        }
+
+        // (3) The candidate split table.
+        println!(
+            "  {:>6} {:>8} {:>13} {:>16} {:>20} {:>14}",
+            "X (K)",
+            "systems",
+            "share of ALL",
+            "P(>=X | >=50K)",
+            "P(>=X | Underdeep)",
+            "within +-0.5 K"
+        );
+        for x in CANDIDATE_SPLITS_K {
+            let at_or_above = delta_t.iter().filter(|d| **d >= x).count();
+            let near = delta_t.iter().filter(|d| (**d - x).abs() <= 0.5).count();
+            println!(
+                "  {x:>6.0} {at_or_above:>8} {:>12.2}% {:>15.2}% {:>19.2}% {:>13.2}%",
+                at_or_above as f64 / systems.max(1) as f64 * 100.0,
+                at_or_above as f64 / super_sunless.len().max(1) as f64 * 100.0,
+                at_or_above as f64 / reached_underdeep.max(1) as f64 * 100.0,
+                near as f64 / systems.max(1) as f64 * 100.0,
+            );
+        }
+        println!(
+            "  (denominators: all systems {systems}; >= {SUNLESS_FLOOR_K} K              {}; >= {UNDERDEEP_FLOOR_K} K {reached_underdeep})",
+            super_sunless.len()
+        );
+
+        assert!(
+            systems > 0,
+            "seed {seed_value} has no cave systems — this readout is vacuous"
+        );
+        assert!(
+            !super_sunless.is_empty(),
+            "seed {seed_value} has no system above {SUNLESS_FLOOR_K} K — there is \
+             nothing to split and the readout below is vacuous"
+        );
+
+        pooled_systems += systems;
+        pooled_super += super_sunless.len();
+        pooled_at_reach_ceiling += at_reach_ceiling;
+    }
+
+    println!(
+        "\n===== pooled =====  systems {pooled_systems}  ΔT >= {SUNLESS_FLOOR_K} K: \
+         {pooled_super} ({:.2}%)  at the reach ceiling: {pooled_at_reach_ceiling} ({:.2}%)  \
+         observed max ΔT {observed_max_delta_t:.3} K of a possible \
+         {MAX_POSSIBLE_DELTA_T_K:.1} K",
+        pooled_super as f64 / pooled_systems.max(1) as f64 * 100.0,
+        pooled_at_reach_ceiling as f64 / pooled_systems.max(1) as f64 * 100.0,
+    );
+
+    // The mechanism the whole answer rests on, checked rather than narrated:
+    // reach is clamped, the gradient is clamped, so ΔT has a hard ceiling.
+    assert!(
+        observed_max_delta_t <= MAX_POSSIBLE_DELTA_T_K + CLAMP_EPSILON_M,
+        "observed max ΔT {observed_max_delta_t} K exceeds the ceiling the clamps \
+         imply ({MAX_POSSIBLE_DELTA_T_K} K); the reasoning about a sixth rung's \
+         headroom is built on that ceiling"
     );
 }
 
