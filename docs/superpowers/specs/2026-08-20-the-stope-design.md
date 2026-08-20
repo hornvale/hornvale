@@ -583,3 +583,135 @@ prevent. Left as written; carried to the retrospective.
 7  MEASURE 4.2, 4.3, and B.7's two additions
 8  DoD, plus a decision record for chamber/v3 AND the rename
 ```
+
+---
+
+# AMENDMENT C, 2026-08-20: the tree, the descent, and what §4.2 actually meant
+
+Nathan's rulings, in conversation, after Task 2's measurement exposed two
+things §3 had assumed without stating. Both corrections make the underworld
+**smaller and more shaped**, not larger.
+
+## C.1 A system has ONE to FOUR branches, drawn, and MOSTLY ONE
+
+**What ships today is always exactly four.** `chamber_exists` admits
+`branch` 0..3 unconditionally, there is no branch-count draw anywhere, and at
+`EXISTENCE_DENSITY = 0.5` over ~22 floors the chance a branch comes out empty
+is effectively zero. So every cave system in every world currently has four
+full columns. That was never designed; it is `BRANCHES_PER_SYSTEM` being read
+as a population instead of as a lattice size.
+
+**The intent is a tree of maximum width four, minimum width one, and most of
+the time width one.** The branch *count* becomes its own draw, keyed on the
+lattice like every other (decision 0102), weighted hard toward 1.
+
+`BRANCHES_PER_SYSTEM = 4` stays exactly as it is — it is the lattice's own
+size, and the draw decides realization within it. This is the same
+lattice-ceiling/drawn-realization split Task 2 applied to floors, and the same
+reason 0102 requires it.
+
+## C.2 A branch is a SUBTREE WITH A ROOT FLOOR, not a parallel shaft
+
+§3.4 pictured branches as parallel columns from the surface. Nathan's ruling
+is the NetHack relation instead — the Gnomish Mines hanging off the main
+dungeon:
+
+```
+main line          branch
+  floor 0
+  floor 1
+  floor 2  ------>  root floor       <- the branch's own descent starts HERE
+  floor 3            floor 1
+  ...                floor 2
+```
+
+**A branch has a root floor on its parent.** The main line is the branch
+whose root is the surface. Everything else hangs off something.
+
+This is what makes "mostly width one" a shape rather than a weighting: a
+system is a spine with occasional side-descents, which is the roguelike
+structure the campaign is trying to reach, and it is why the Deeps is where
+the creative work belongs (§B.4's table, and Nathan's "the Wild West").
+
+## C.3 An entrance maps to a FLOOR, and §3.4's two-door case falls out for free
+
+**This supersedes §3.4's "entrance → branch is a mapping."** An entrance maps
+to a **floor** — main-line floor 0, or any branch's root floor.
+
+§3.4's motivating case survives unchanged and needs no separate mechanism:
+*the well in the town square drops into the natural cave; the blacksmith's
+cellar drops into the dwarven works* is simply two entrances whose mapped
+floors are the main line's head and a branch's root. One mechanism, both
+readings, and the more general one is the cheaper one.
+
+## C.4 THE DESCENT IS A SEQUENCE. "Same floor number connects" was a BUG
+
+The rule `passages_from` implements — floor *N* of band *k* joins floor *N* of
+band *k±1* — is not a design decision anyone defended. It is what the function
+did when a band held one interior-less point, where it was correct by
+vacuity, and it survived Task 1 unexamined. Task 2's draw then made it
+actively wrong: with `Deeps` 5-20 over `Underdeep` 5-10, a Deeps chamber at
+floor >= 10 could never descend at all, and only `Underdeep` floors 0-4 could
+ever reach the `Nadir` — an undesigned structural gate sitting on top of the
+barrier gate B.5 specifies.
+
+**The rule is Nathan's, and the existing draws already implement it:**
+
+> Floor 3 exits downward onto Floor 4. Floor 4 is in the same band as Floor 3
+> if that band has floors left, or the next band down if it does not.
+
+**`floors_in_run` IS the sojourn time in that chain.** The chance Nathan asked
+about ("a Markov thing") already lives in the count draw, one level up, rather
+than being rolled again at each step — so this needs no new randomness and no
+new stream.
+
+What changes is one function: descending past a band's last floor lands on
+**floor 0 of the next band**. **The address does not change** — `floor` stays a
+lattice coordinate within a band, and a descent's running depth is a
+presentational count, not an address. `chamber/v3` survives; no epoch.
+
+## C.5 §4.2's real denominator is DEPTH, not COUNT — and neither reading offered was right
+
+The controller ruled per-branch over per-system after unblinding (recorded as
+a defect in its own right, B.8's family). **Nathan's ruling is a third
+reading neither of us proposed, and it is the correct one:**
+
+> Declare a maximum **depth**, and let branches and alternate floors increase
+> the **count** beyond it.
+
+So the two quantities are different questions and only one of them is gated:
+
+```
+MAIN-LINE DEPTH   the spine, surface to termination.   GATED. ~50 max.
+                  §3.1's frozen ranges sum to 15-50 ONCE, which is exactly
+                  this quantity --- the ranges were right all along and the
+                  sentence describing them was wrong.
+
+TOTAL FLOORS      main line plus every branch.         REPORTED, not gated.
+                  Theoretical maximum 4 x 50 = 200, reached only by a
+                  system running the full ladder at maximum width --- which
+                  C.1 makes vanishingly rare and which Nathan independently
+                  called "probably structurally impossible" (three alternate
+                  staircases in a row, forty-nine times).
+```
+
+**Two independent derivations of 200 agree**, which is the reason to trust the
+frozen ranges rather than retune them: Nathan reached it from "three alternate
+floors for each of fifty levels"; the ranges reach it by summing per-band
+maxima and multiplying by the lattice width. Nobody fitted one to the other.
+
+Measured main-line depth today is 22 / 24 / 27 (median, seeds 42 / 7 / 1234)
+and 32-33 for a full-ladder descent — inside the intent, with headroom to 50.
+
+## C.6 What this changes about the task shape
+
+```
+3   character AND barrier per branch, PLUS the branch-count draw (C.1) and
+    the branch's root floor (C.2)
+3b  NEW. the descent is a sequence: band transition is forced by the drawn
+    sojourn, not by matching floor numbers (C.4). Lands BEFORE Task 4,
+    which builds descents out of runs and must inherit the corrected rule
+    rather than the accident
+5   entrances map to FLOORS, not branches (C.3)
+7   prereg amended: GATE main-line depth, REPORT total floors (C.5)
+```
