@@ -104,10 +104,71 @@ The spike's renderer already exists at
 `math::ln`/`math::tan` — the libm-backed path, so it is cross-platform
 deterministic. **Reuse its projection; do not write a second one.**
 
-**Mercator diverges at the poles.** Latitude is clamped to ±85°, the standard
-choice, and **the clamp is disclosed in the caption** — decision 0142's rule
-that a lost axis is declared, applied to lost *area*. The polar caps are not
-drawn and the map says so rather than implying the planet ends.
+### 3.1 The projection's central line is derived from the world's physics
+
+**A fixed geographic graticule is wrong for this world model, and the failure
+is not hypothetical.** Tidal locking is pinnable (`--rotation locked`), commits
+a `TIDALLY_LOCKED` fact, and drives a genuinely different climate:
+`domains/climate/src/temperature.rs` organises a locked world's temperature as
+*"a substellar cosine, hottest at `+x` and floored on the night side."*
+
+The geometry, verified rather than assumed — `kernel/src/geosphere.rs:235-236`
+gives `latitude = asin(z)`, `longitude = atan2(y, x)`, so **`+x` is exactly
+(lat 0°, lon 0°)**, matching the convention `domains/astronomy` states twice
+(*"the substellar point sits on the prime meridian"*).
+
+So on a locked world the substellar point is on the equator, and the habitable
+band is the **terminator** — the great circle 90° away, which runs **pole to
+pole** through longitudes ±90°. A geographic Mercator puts **half the habitable
+ring inside the polar clamp**: on the one world type where the poles are the
+only livable ground, the clamp discards it.
+
+**Therefore the projection is oblique, and its central line comes from the
+world:**
+
+| world | central line | what falls in the clamp |
+|---|---|---|
+| spinning | the geographic equator | the polar ice caps |
+| tidally locked | the **terminator** | the substellar desert and the antistellar ice |
+
+The clamp then always discards the least interesting 10°, which is what a
+clamp is for. On a locked world the projection's two poles land precisely on
+the substellar and antistellar points — the two places nobody lives.
+
+**Note a property worth preserving:** a great circle's pole is 90° from every
+point on it, so the terminator's pole *is* the substellar point. Making the
+terminator the projection's equator therefore means putting the projection's
+pole at `+x` — an axis swap, not an arbitrary rotation. Task 1 derives the
+exact form; the spec fixes the requirement, not the matrix.
+
+The central line is computed **once at world load** from committed facts, and
+does not move as the player does (§3.2).
+
+### 3.2 Re-centring is a command, not a behaviour
+
+Nathan's original proposal was to roll the projection continuously so the
+cursor's position is always undistorted — a true oblique Mercator, and
+cartographically sound. It is **not** the default here, for three reasons:
+
+- **The map would reflow every keypress.** Landmarks move while the player is
+  navigating by them, which defeats the one thing a map is for.
+- **It destroys the cacheable layer.** `RENDER-three-channels-three-clocks`
+  records that the glyph layer is geological and the most cacheable thing on
+  screen; a per-cursor projection makes it per-keypress.
+- It pays transcendental math over every plate cell, constantly, for a benefit
+  that is already present near the central line.
+
+So: **stable by default, re-centrable on demand.** An explicit command rolls
+the projection to put the cursor on the central line. The player gets the
+oblique view when they ask for it and a map that holds still when they do not.
+
+### 3.3 The clamp is disclosed
+
+Mercator diverges at its poles, so the projection's latitude is clamped —
+±85° in the **projection's own frame**, not the geographic one. **The caption
+states the clamp and names the central line**, because on a locked world "what
+is missing" is a different pair of places than a reader would assume. This is
+decision 0142's rule that a lost axis is declared, applied to lost *area*.
 
 ---
 
@@ -178,7 +239,9 @@ wall-clock, and no animation loop. §7 F3 settles how.
 - **No new external dependency.** `clients/game` carries `crossterm` and
   nothing more.
 - **No polar fabrication.** Above the clamp, nothing is drawn and the caption
-  says so.
+  says so — naming the central line, since the clamped pair depends on it.
+- **No per-cursor reflow by default** (§3.2). Re-centring is an explicit
+  command; the map holds still unless asked to move.
 - **No detail below the cell floor** (§4.3).
 - **The 80×24 floor is inherited and may not be weakened.** If the world plate
   does not fit at the floor, the plate changes, not the floor.
@@ -191,6 +254,13 @@ wall-clock, and no animation loop. §7 F3 settles how.
 ceiling from a ~110 km cell spacing. **Settled by:** Task 1 measures the
 actual equatorial cell count at level 6 and reports the ladder's real rungs.
 Every zoom constant comes from that measurement, not from this section.
+
+**F1b — the central line's derivation, and its exact form.** §3.1 fixes the
+requirement (projection pole at the substellar point for a locked world, the
+geographic pole otherwise) and deliberately does not fix the rotation.
+**Settled by:** Task 1 derives it, states whether it is an exact axis swap as
+§3.1 suggests, and confirms it is transcendental-free if so — a rotation that
+needs no `sin`/`cos` is one fewer cross-platform surface.
 
 **F2 — what `Source` does a caller-supplied plate cell carry?** `Source::Look`
 established the precedent for content `core` cannot verify. **Settled by:**
@@ -235,6 +305,13 @@ window's offset and the resolver's — **the exact defect class this campaign
 has already hit twice** (a stale cursor, then a hardcoded plate height). A
 test that only runs at one scroll offset cannot see it.
 
+**H4 — a locked world's habitable band is not in the clamp.** Generate a world
+with `--rotation locked`, and confirm the terminator band renders inside the
+drawn area rather than inside the clamped one. *Falsified if* the habitable
+ring is clipped, which would mean the central line is not being derived from
+the rotation regime at all — the defect this whole section exists to prevent,
+and one that a spinning-world test cannot see.
+
 **H3 is the one at real risk.** Both prior instances were "a wrong name
 indistinguishable from a right one", and both were introduced by a fix that
 changed what a value depended on. Scroll adds an offset to every screen→cell
@@ -267,6 +344,11 @@ computation, which is precisely that shape a third time.
 
 ## 11. Decision to promote
 
+> **A map's frame is a fact about the world, not about the graticule.** The
+> line a projection holds true is derived from the world's own physics — the
+> equator where a world spins, the terminator where it is tidally locked — so
+> that what a projection must discard is always the ground nobody occupies.
+>
 > **A view of the world is a lens, not a band.** The character occupies a
 > band; a map is something they consult. So a whole-world view adds no variant
 > to the session schema and carries no per-turn payload — the client renders it
@@ -279,11 +361,14 @@ computation, which is precisely that shape a third time.
 ## 12. Task outline
 
 **Stage 1 — the chart**
-1. Measure the zoom ladder (F1). Reuse the spike's projection; no second copy.
+1. Measure the zoom ladder (F1) and derive the central line (F1b). Reuse the
+   spike's projection; no second copy. **Test on a `--rotation locked` world,
+   not only seed 42** — a spinning-world fixture cannot see H4's defect.
 2. The world plate rendered in `bin`, composed by `core`; F2, F4, H1.
 
 **Stage 2 — moving in it**
-3. Zoom and cursor-driven scroll; F5, H2, H3.
+3. Zoom, cursor-driven scroll, and the explicit re-centre command (§3.2);
+   F5, H2, H3, H4.
 4. The strip carries the chain and scrolls; F3.
 
 **Stage 3 — close**
