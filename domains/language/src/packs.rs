@@ -598,6 +598,111 @@ const RECIPES: &[(&str, &str, &str)] = &[
     ("north-west", "north", "west"),
 ];
 
+/// The action suite's in-character concepts with no existing name (The
+/// Deed, Task 2, spec §3.2 groups B/C): `(concept, doc)` pairs naming WHAT
+/// a world-act is, folding every verb that differs only by scale or gating
+/// onto the concept it resolves to — `map`/`examine`/`look`/`needs`/
+/// `knows`/`wait`/`write`/`consult` fold onto these seven, while
+/// `go`/`back`/`enter`/`out`/`dive`/`surface`/`delve`/`climb` are all
+/// *going* and reuse [`universal_stratum`]'s existing `move`, minting
+/// nothing.
+///
+/// Registered directly by [`register_concepts`], deliberately NOT chained
+/// into any Swadesh pack: none of these seven is core, and nothing today
+/// grants any of them `ExposureClass::Steeped` or `KnowsOf` — a culture's
+/// exposure to literacy, cartography, or reading another's state is a
+/// question this task does not resolve, so each registers an honest
+/// `Void::Gap` lexeme (see [`register_concepts`]) rather than a promised
+/// one; every species falls through to the generic `Experiential` gap
+/// until a later task grants one of these an exposure rule.
+/// type-audit: bare-ok(identifier-text)
+pub fn action_suite_pack() -> &'static [(&'static str, &'static str)] {
+    &[
+        (
+            "look",
+            "to visually attend to something, near or far — `look`, `examine`",
+        ),
+        (
+            "chart",
+            "to form a picture of the space around oneself — `map`",
+        ),
+        ("sense", "to perceive another's felt bodily state — `needs`"),
+        (
+            "know",
+            "to hold something in memory or understanding — `knows`",
+        ),
+        ("wait", "to let time pass without acting — `wait`"),
+        ("write", "to set words down in writing — `write`"),
+        ("read", "to take meaning from written words — `consult`"),
+    ]
+}
+
+/// The action suite's OUT-OF-CHARACTER concepts (The Deed, Task 2, spec
+/// §3.2 group A): operator instruments with no referent in the world at
+/// all — `!why`/`!npcs`/`!help`/`!eyes`/`!whoami`/`provoke`/`soothe`.
+/// `(concept, doc)` pairs, deliberately NOT a [`PackEntry`] roster and NOT
+/// chained into [`register_concepts`]'s pack loop: pack membership maps
+/// straight to `ExposureClass::Steeped` (`windows/worldgen`'s
+/// `exposure_of_impl`, its first loop over [`universal_stratum`]), and an
+/// operator instrument silently acquiring core vocabulary in every culture
+/// is exactly the failure this task exists to close.
+/// `hornvale_worldgen::exposure_of_impl` reads this list directly — not any
+/// registry `Void` reading, see the note below for why — and classifies
+/// every name here `Unknown { reason: GapReason::Extradiegetic }`,
+/// unconditionally, for every species in every world.
+///
+/// **The registered `Void` choice, and why it is a documented compromise
+/// rather than a clean fit.** None of the four `Void` variants was built
+/// for "this referent does not exist in the world at all":
+/// `Void::Unnamed` is the closest in the astronomy spectral-class
+/// precedent's own words ("a star HAS a class... the fact is objective")
+/// but asserts the opposite of what is true of an operator instrument
+/// (there is no referent, objective or otherwise, for any culture to fail
+/// to have met) — and reusing it here would also silently misroute through
+/// `exposure_of_impl`'s existing Unnameable block into
+/// `GapReason::Unnameable` instead of `GapReason::Extradiegetic`, the
+/// wrong claim about the world. `Void::Gap` says the hole is "expected to
+/// be filled later", which contradicts `GapReason::Extradiegetic`'s own
+/// doc ("this gap can never close"). `Void::Uncognized` carries a
+/// `pending_wave` field built for the cognition edge specifically. Below,
+/// every entry registers `Void::Imperceptible` on its lexeme edge instead:
+/// its literal claim — "this edge cannot realize the concept" — holds for
+/// a structural reason (nothing in the world ever emits an operator
+/// instrument as a phenomenon, so no culture could ever come to perceive,
+/// then name, one), even though its doc prose was written with the
+/// percept edge specifically in mind. Named here as the finding it is,
+/// not silently forced.
+/// type-audit: bare-ok(identifier-text)
+pub fn extradiegetic_pack() -> &'static [(&'static str, &'static str)] {
+    &[
+        (
+            "recount",
+            "to narrate the dated history of who someone is — `!why`",
+        ),
+        (
+            "survey",
+            "to enumerate every creature the world holds — `!npcs`",
+        ),
+        ("help", "to list the operator's own instructions — `!help`"),
+        (
+            "lens",
+            "to choose or report which colour lens one's sight uses — `!eyes`",
+        ),
+        (
+            "identify",
+            "to report which body one currently occupies — `!whoami`",
+        ),
+        (
+            "provoke",
+            "to make someone hostile by an act the simulation itself did not choose — `provoke`",
+        ),
+        (
+            "soothe",
+            "to ease someone's hostility by an act the simulation itself did not choose — `soothe`",
+        ),
+    ]
+}
+
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
 /// per ladder in [`color_pack`]. Derivation from a culture's perception
 /// vector lives in worldgen (Task 8) — this struct is just the input shape.
@@ -674,6 +779,61 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             },
             lexeme: Correspondent::Present(Lexicalization::Expected),
             percept,
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    // The action suite's in-character concepts (The Deed, Task 2): honest
+    // `Void::Gap` lexemes — nothing grants any of these `Steeped`/`KnowsOf`
+    // today, so declaring `Expected` here would be a broken promise
+    // (`cli/tests/suite/correspondence.rs`'s `every_expected_lexeme_is_
+    // actually_lexicalizable`). See `action_suite_pack`'s own doc.
+    for (concept, doc) in action_suite_pack() {
+        if registry.concept(concept).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: concept.to_string(),
+                domain: "language".to_string(),
+                kind: ConceptKind::Act,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap(
+                "no exposure rule grants this concept Steeped or KnowsOf yet",
+            )),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    // The action suite's out-of-character concepts (The Deed, Task 2):
+    // registered directly, never chained into `packs` above, so membership
+    // here confers no `ExposureClass` on its own — see `extradiegetic_pack`'s
+    // own doc for the full reasoning, including the `Void::Imperceptible`
+    // choice on the lexeme edge.
+    for (concept, doc) in extradiegetic_pack() {
+        if registry.concept(concept).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: concept.to_string(),
+                domain: "language".to_string(),
+                kind: ConceptKind::Act,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Imperceptible(
+                "an operator instrument; no referent in the world exists for any \
+                 culture to come to name",
+            )),
+            percept: Correspondent::Absent(Void::Imperceptible(
+                "the world never emits this as a phenomenon; it has no in-world referent",
+            )),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",
             }),

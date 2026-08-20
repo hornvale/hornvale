@@ -1501,3 +1501,64 @@ fn human_is_the_hue_ladders_deepest_witness() {
     );
     assert_eq!(d.luminance, 1, "and the shallowest luminance ladder");
 }
+
+/// The Deed, Task 2: the silent-failure proof this task exists to avoid.
+/// `packs.rs` is a Swadesh-style core-vocabulary roster and
+/// `exposure_of_impl` maps pack membership straight to
+/// `ExposureClass::Steeped`, and a `Steeped` concept is never `Unknown` —
+/// so Task 1's `GapReason::Extradiegetic` filter in
+/// `hornvale_language::proto_root_universe` would never be consulted if an
+/// out-of-character concept (an operator instrument like `!why`) ended up
+/// registered the same way `move`/`drink`/`eat`/`rest` are. This asserts
+/// the real behaviour over a real generated world, not the reasoning that
+/// it "should" hold: every `hornvale_language::extradiegetic_pack` concept
+/// classifies `Unknown { reason: Extradiegetic }` for a real settled
+/// species, and none of them appears in `proto_root_universe`'s output —
+/// the exact set `assign_proto_roots` draws proto-roots for, and therefore
+/// the exact set a `LexEntry::Root` could ever come from.
+#[test]
+fn extradiegetic_concepts_never_reach_the_proto_root_universe() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let exposures = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
+
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        assert!(
+            matches!(
+                exposures.get(*name),
+                Some(ExposureClass::Unknown {
+                    reason: GapReason::Extradiegetic(_)
+                })
+            ),
+            "'{name}' must classify Unknown/Extradiegetic for goblin, got {:?}",
+            exposures.get(*name)
+        );
+    }
+
+    let universe = hornvale_language::proto_root_universe(&exposures);
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        assert!(
+            !universe.contains(name),
+            "'{name}' is an out-of-character operator instrument and must \
+             never enter the proto-root universe — if it does, Task 1's \
+             Extradiegetic filter is not being consulted and every culture \
+             is one build away from silently drawing it a word"
+        );
+    }
+
+    // The lexicon itself never roots one either — the end-to-end guarantee
+    // the universe check above is a proxy for.
+    let lex = lexicon_from(&w, "goblin", &terrain, &climate).unwrap();
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        match lex.entry(name) {
+            Some(LexEntry::Root { .. }) => {
+                panic!("'{name}' must never resolve to a lexicon Root entry")
+            }
+            Some(LexEntry::Gap {
+                reason: GapReason::Extradiegetic(_),
+            }) => {}
+            other => panic!("'{name}' expected an Extradiegetic Gap entry, got {other:?}"),
+        }
+    }
+}

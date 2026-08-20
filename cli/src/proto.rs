@@ -159,11 +159,21 @@ pub fn render_proto(family: &str) -> Result<String, String> {
     // `windows/worldgen`'s exposure classifier applies via
     // `GapReason::Unnameable`. Otherwise this page would keep asserting the
     // ancestor had a word for a referent no culture here can name at all.
+    //
+    // Also exclude every `hornvale_language::extradiegetic_pack` concept
+    // (The Deed, Task 2): an operator instrument (`!why`, `provoke`, ...)
+    // has no referent in the world AT ALL, a stronger claim than
+    // `is_unnameable`'s ("real, but no culture has met it"), so it must
+    // never reach this table either — this page is a proto-root reference,
+    // and `windows/worldgen`'s `exposure_of_impl` only ever consults the
+    // registered `Void` for the Unnameable case, never for Extradiegetic
+    // (see that pack's own doc for why), so this page needs its own check
+    // rather than inheriting one from the registry.
     let universe: Vec<&str> = world
         .registry
         .concepts()
         .map(|c| c.name.as_str())
-        .filter(|name| !is_unnameable(&world, name))
+        .filter(|name| !is_unnameable(&world, name) && !is_extradiegetic(name))
         .collect();
     // The merger-aware assignment (epoch root/v4): the same daughters the
     // composition root feeds `build_lexicon`, so this page's proto-roots are
@@ -173,7 +183,7 @@ pub fn render_proto(family: &str) -> Result<String, String> {
     let assignment =
         assign_proto_roots(&world.seed, family, &phonology, &typ, &universe, &daughters);
     for concept in world.registry.concepts() {
-        if is_unnameable(&world, &concept.name) {
+        if is_unnameable(&world, &concept.name) || is_extradiegetic(&concept.name) {
             continue;
         }
         let proto = &assignment[&concept.name];
@@ -198,6 +208,19 @@ fn is_unnameable(world: &World, concept: &str) -> bool {
         world.registry.manifest(concept).map(|m| &m.lexeme),
         Some(Correspondent::Absent(Void::Unnamed(_)))
     )
+}
+
+/// True when `concept` is one of `hornvale_language::extradiegetic_pack`'s
+/// operator instruments (The Deed, Task 2) — no referent in the world at
+/// all, a stronger absence than [`is_unnameable`]'s. Membership-driven
+/// rather than a registry `Void` reading for the same reason
+/// `windows/worldgen`'s `exposure_of_impl` reads the pack directly: no
+/// `Void` variant was built for "this does not exist", so nothing in the
+/// registry can answer this question on its own.
+fn is_extradiegetic(concept: &str) -> bool {
+    hornvale_language::extradiegetic_pack()
+        .iter()
+        .any(|(name, _)| *name == concept)
 }
 
 /// A segment's raw structural feature-bundle, compactly rendered — mirrors

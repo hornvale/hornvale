@@ -249,6 +249,11 @@ fn gaps_have_reasons() {
         "needs",
         "encountered the main sequence",
         "raises no staple",
+        // The Deed, Task 2: `windows/worldgen`'s final Extradiegetic block
+        // composes `"{name} is an operator instrument; it has no referent
+        // in the world"` for every `hornvale_language::extradiegetic_pack`
+        // concept.
+        "operator instrument",
     ];
 
     // Language/lexicon coverage is a speaker-only concern. Since The Eremite the

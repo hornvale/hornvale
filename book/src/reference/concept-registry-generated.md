@@ -172,6 +172,7 @@
 | `bugbear-kind` | species | living | a bugbear |
 | `burn` | climate | substance | Ground recovering from fire. |
 | `carrion-crawler-kind` | species | living | a carrion crawler |
+| `chart` | language | act | to form a picture of the space around oneself — `map` |
 | `child` | language | kin | one's son or daughter |
 | `closed-canopy` | climate | substance | Tall closed-canopy tropical forest. |
 | `coast` | terrain | terrain | where the land meets the sea |
@@ -227,6 +228,7 @@
 | `hand` | language | body | the manipulating limb-end |
 | `hearth` | settlement | social | the fire at the center of a home |
 | `heat` | climate | quality | felt, oppressive warmth |
+| `help` | language | act | to list the operator's own instructions — `!help` |
 | `high` | language | quality | far above the ground |
 | `high-elf-kind` | species | living | a high elf |
 | `hill` | terrain | terrain | ground that rises above what surrounds it |
@@ -238,16 +240,20 @@
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |
 | `ice-lead` | climate | substance | A channel of open water through sea ice. |
+| `identify` | language | act | to report which body one currently occupies — `!whoami` |
 | `island` | terrain | terrain | land the water surrounds |
 | `kelp-canopy` | climate | substance | The floating canopy of a kelp forest. |
 | `kelp-forest` | climate | terrain | a biome class |
 | `killer-whale-kind` | species | living | a killer whale |
+| `know` | language | act | to hold something in memory or understanding — `knows` |
 | `kobold-kind` | species | living | a kobold |
 | `lake` | terrain | terrain | still water held in a hollow that has no outlet to the sea |
+| `lens` | language | act | to choose or report which colour lens one's sight uses — `!eyes` |
 | `liana-forest` | climate | substance | Tropical forest tangled with climbing vines. |
 | `light` | language | quality | the color term for white/light hues |
 | `lightless-water` | climate | substance | Water below all light. |
 | `little` | language | quality | small in size or extent |
+| `look` | language | act | to visually attend to something, near or far — `look`, `examine` |
 | `low` | language | quality | near the ground |
 | `many` | language | quality | an indefinitely large count |
 | `marine-snow` | climate | substance | Organic debris drifting endlessly down. |
@@ -282,8 +288,11 @@
 | `plankton-bloom` | climate | substance | Water thick with plankton. |
 | `playa` | climate | substance | A dry lake bed of salt and cracked clay. |
 | `pressure-ridge` | climate | substance | Sea ice buckled into a ridge. |
+| `provoke` | language | act | to make someone hostile by an act the simulation itself did not choose — `provoke` |
 | `rafted-floe` | climate | substance | Ice floes driven over one another. |
 | `rain` | climate | substance | liquid precipitation |
+| `read` | language | act | to take meaning from written words — `consult` |
+| `recount` | language | act | to narrate the dated history of who someone is — `!why` |
 | `red` | language | quality | the color term for red |
 | `red-dragon-kind` | species | living | a red dragon |
 | `red-dwarf` | astronomy | celestial | the commonest and faintest main-sequence star |
@@ -304,6 +313,7 @@
 | `sea` | terrain | terrain | a body of salt water |
 | `sea-elf-kind` | species | living | a sea elf |
 | `sea-ice` | climate | terrain | a biome class |
+| `sense` | language | act | to perceive another's felt bodily state — `needs` |
 | `shadow` | language | quality | cast dark, distinct from open gloom |
 | `shrieker-kind` | species | living | a shrieker |
 | `shrubland` | climate | terrain | a biome class |
@@ -313,6 +323,7 @@
 | `snow` | climate | substance | frozen precipitation |
 | `snow-elf-kind` | species | living | a snow elf |
 | `snowfield` | climate | substance | An unbroken field of snow. |
+| `soothe` | language | act | to ease someone's hostility by an act the simulation itself did not choose — `soothe` |
 | `south` | language | quality | toward the pole of decreasing latitude |
 | `south-east` | language | quality | between south and east |
 | `south-west` | language | quality | between south and west |
@@ -325,6 +336,7 @@
 | `stone` | terrain | substance | rock |
 | `sun` | astronomy | celestial | the sun |
 | `sun-like-star` | astronomy | celestial | a distant star resembling this world's own sun |
+| `survey` | language | act | to enumerate every creature the world holds — `!npcs` |
 | `taiga` | climate | terrain | a biome class |
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
@@ -349,6 +361,7 @@
 | `valley` | terrain | terrain | low ground between heights |
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
 | `vine` | climate | substance | a staple crop |
+| `wait` | language | act | to let time pass without acting — `wait` |
 | `water` | language | substance | the drinkable liquid |
 | `west` | language | quality | the direction of decreasing longitude |
 | `wheat` | climate | substance | a staple crop |
@@ -359,6 +372,7 @@
 | `wood-elf-kind` | species | living | a wood elf |
 | `wooded-grassland` | climate | substance | Grassland with scattered trees. |
 | `woolly-mammoth-kind` | species | living | a woolly mammoth |
+| `write` | language | act | to set words down in writing — `write` |
 | `xorn-kind` | species | living | a xorn |
 | `yellow` | language | quality | the color term for yellow |
 | `yellow-dwarf` | astronomy | celestial | a main-sequence star of the sun's own kind |

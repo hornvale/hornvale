@@ -760,6 +760,12 @@
         "kind": "Living",
         "doc": "a carrion crawler"
       },
+      "chart": {
+        "name": "chart",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to form a picture of the space around oneself — `map`"
+      },
       "child": {
         "name": "child",
         "domain": "language",
@@ -1090,6 +1096,12 @@
         "kind": "Quality",
         "doc": "felt, oppressive warmth"
       },
+      "help": {
+        "name": "help",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to list the operator's own instructions — `!help`"
+      },
       "high": {
         "name": "high",
         "domain": "language",
@@ -1156,6 +1168,12 @@
         "kind": "Substance",
         "doc": "A channel of open water through sea ice."
       },
+      "identify": {
+        "name": "identify",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to report which body one currently occupies — `!whoami`"
+      },
       "island": {
         "name": "island",
         "domain": "terrain",
@@ -1180,6 +1198,12 @@
         "kind": "Living",
         "doc": "a killer whale"
       },
+      "know": {
+        "name": "know",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to hold something in memory or understanding — `knows`"
+      },
       "kobold-kind": {
         "name": "kobold-kind",
         "domain": "species",
@@ -1191,6 +1215,12 @@
         "domain": "terrain",
         "kind": "Terrain",
         "doc": "still water held in a hollow that has no outlet to the sea"
+      },
+      "lens": {
+        "name": "lens",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to choose or report which colour lens one's sight uses — `!eyes`"
       },
       "liana-forest": {
         "name": "liana-forest",
@@ -1215,6 +1245,12 @@
         "domain": "language",
         "kind": "Quality",
         "doc": "small in size or extent"
+      },
+      "look": {
+        "name": "look",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to visually attend to something, near or far — `look`, `examine`"
       },
       "low": {
         "name": "low",
@@ -1420,6 +1456,12 @@
         "kind": "Substance",
         "doc": "Sea ice buckled into a ridge."
       },
+      "provoke": {
+        "name": "provoke",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to make someone hostile by an act the simulation itself did not choose — `provoke`"
+      },
       "rafted-floe": {
         "name": "rafted-floe",
         "domain": "climate",
@@ -1431,6 +1473,18 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "liquid precipitation"
+      },
+      "read": {
+        "name": "read",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to take meaning from written words — `consult`"
+      },
+      "recount": {
+        "name": "recount",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to narrate the dated history of who someone is — `!why`"
       },
       "red": {
         "name": "red",
@@ -1552,6 +1606,12 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "sense": {
+        "name": "sense",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to perceive another's felt bodily state — `needs`"
+      },
       "shadow": {
         "name": "shadow",
         "domain": "language",
@@ -1605,6 +1665,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "An unbroken field of snow."
+      },
+      "soothe": {
+        "name": "soothe",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to ease someone's hostility by an act the simulation itself did not choose — `soothe`"
       },
       "south": {
         "name": "south",
@@ -1677,6 +1743,12 @@
         "domain": "astronomy",
         "kind": "Celestial",
         "doc": "a distant star resembling this world's own sun"
+      },
+      "survey": {
+        "name": "survey",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to enumerate every creature the world holds — `!npcs`"
       },
       "taiga": {
         "name": "taiga",
@@ -1822,6 +1894,12 @@
         "kind": "Substance",
         "doc": "a staple crop"
       },
+      "wait": {
+        "name": "wait",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to let time pass without acting — `wait`"
+      },
       "water": {
         "name": "water",
         "domain": "language",
@@ -1881,6 +1959,12 @@
         "domain": "species",
         "kind": "Living",
         "doc": "a woolly mammoth"
+      },
+      "write": {
+        "name": "write",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to set words down in writing — `write`"
       },
       "xorn-kind": {
         "name": "xorn-kind",

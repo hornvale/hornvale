@@ -13,6 +13,7 @@ brown: Paane /paane/
 bugbear-kind: Deetee /deetee/
 burn: Pa /pa/
 carrion-crawler-kind: Tapo /tapo/
+chart: Nodoe /nodoe/
 child: Doena /doena/
 closed-canopy: Noapa /noapa/
 coast: Neoda /neoda/
@@ -83,12 +84,14 @@ island: Gope /gope/
 kelp-canopy: Pano /pano/
 kelp-forest: Naa /naa/
 killer-whale-kind: Gaqo /gaqo/
+know: Naena /naena/
 kobold-kind: Naeno /naeno/
 lake: Qao /qao/
 liana-forest: Neene /neene/
 light: Noaqaa /noaqaa/
 lightless-water: Pao /pao/
 little: Neodoe /neodoe/
+look: Gogo /gogo/
 low: Keono /keono/
 many: Naona /naona/
 marine-snow: Qeapao /qeapao/
@@ -123,6 +126,7 @@ playa: Qena /qena/
 pressure-ridge: Nootaa /nootaa/
 rafted-floe: Qoe /qoe/
 rain: Nope /nope/
+read: Neeta /neeta/
 red: Qage /qage/
 red-dragon-kind: Keadaa /keadaa/
 reef-rubble: Qo /qo/
@@ -141,6 +145,7 @@ scoured-ice: Do /do/
 sea: Qae /qae/
 sea-elf-kind: Pe /pe/
 sea-ice: Qoono /qoono/
+sense: Naetoa /naetoa/
 shadow: Nano /nano/
 shrieker-kind: Goo /goo/
 shrubland: De /de/
@@ -185,6 +190,7 @@ urchin-barren: Noqea /noqea/
 valley: Ganee /ganee/
 vent-plume: Naga /naga/
 vine: Nenoo /nenoo/
+wait: Qaate /qaate/
 water: Qa /qa/
 west: Deokeo /deokeo/
 wheat: Pote /pote/
@@ -194,5 +200,6 @@ wind-scour: Nanaa /nanaa/
 wood-elf-kind: Gepeo /gepeo/
 wooded-grassland: Dedea /dedea/
 woolly-mammoth-kind: Denee /denee/
+write: Nenae /nenae/
 xorn-kind: Kaqo /kaqo/
 yellow: Daodo /daodo/
