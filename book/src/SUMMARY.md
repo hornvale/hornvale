@@ -381,6 +381,7 @@
 - [The Undertow](./chronicle/the-undertow.md)
 - [The Adit](./chronicle/the-adit.md)
 - [The Burr](./chronicle/the-burr.md)
+- [The Touchstone](./chronicle/the-touchstone.md)
 
 # Appendix: The Frontier
 
