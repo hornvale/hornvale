@@ -1916,3 +1916,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T16:16:50Z | gate-commit | 22.638 | 49.773 | 11.868 | 2.72 | 0 | 69dec43c | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T16:22:58Z | game-check | 53.697 | 283.834 | 5.485 | 5.39 | 0 | bdf95861 | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T16:24:45Z | gate-commit | 22.755 | 49.338 | 11.789 | 2.69 | 0 | bdf95861 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:40:56Z | game-check | 54.247 | 289.676 | 6.104 | 5.45 | 0 | b590d290 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:43:34Z | game-check | 53.035 | 282.263 | 4.119 | 5.40 | 0 | b590d290 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:45:22Z | gate-commit | 23.038 | 49.906 | 12.036 | 2.69 | 0 | b590d290 | campaign/the-stylus | MacBookPro | 10 |
