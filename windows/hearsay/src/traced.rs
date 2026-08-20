@@ -184,31 +184,55 @@ fn tellable(walk: &Walk, node: EntityId, event_day: Option<f64>) -> Vec<(EntityI
     out
 }
 
+/// How a cross-people step is priced, for The Cupel's measurement arms.
+///
+/// `crossing_info`'s `from == to` guard fires first under EVERY variant here
+/// — a same-people step pays zero whatever the model, which is what
+/// preserves ingroup-preference-as-output and the negative control
+/// (`touchstone_controls_probe.rs`'s theorem fixture).
+///
+/// type-audit: bare-ok(ratio: ConstantDenominator.0)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PenaltyModel {
+    /// A people boundary costs nothing (the shipped `Crossing::Free`).
+    Free,
+    /// The derived magnitude `span(FINEST)/(1+edges)` (shipped
+    /// `Crossing::ContactWeighted`).
+    Derived,
+    /// A constant denominator: `span(FINEST)/D`, the same divisor on every
+    /// crossing whatever the two peoples' edge count. `D` must be finite and
+    /// positive; the caller (the readout) sets it to the matched-mean value.
+    ConstantDenominator(f64),
+}
+
 /// What the step `teller -> hearer` pays for crossing a people boundary
 /// (`derive.rs`'s private `crossing_penalty`), with the `edges_between` that
 /// priced it handed back so the winning route can carry it.
 ///
 /// `Some(edges)` whenever the step's teller and hearer belong to different
-/// peoples, whatever [`Crossing`] arm is in force — under [`Crossing::Free`]
-/// the returned penalty is `0.0`, but the crossing itself still happened.
-/// `x + 0.0` is exact in IEEE-754 for every finite `x`, which is what keeps
-/// the two arms' widths identical to the penny under `Free` and lets the
-/// agreement battery hold both arms to the shipped walk exactly.
+/// peoples, whatever [`PenaltyModel`] arm is in force — under
+/// [`PenaltyModel::Free`] the returned penalty is `0.0`, but the crossing
+/// itself still happened. `x + 0.0` is exact in IEEE-754 for every finite
+/// `x`, which is what keeps the `Free` and `Derived` arms' widths identical
+/// to the penny under `Crossing::Free` and lets the agreement battery hold
+/// both to the shipped walk exactly.
 ///
 /// **The two early-return checks are in the opposite order from
-/// `derive.rs::crossing_penalty`** (people-equality first here, `Crossing::
-/// Free` first there) — deliberate, not a drift to fix by mirroring: this
+/// `derive.rs::crossing_penalty`** (people-equality first here, the `Free`
+/// arm first there) — deliberate, not a drift to fix by mirroring: this
 /// function needs `edges_between` even under `Free` (to report the crossing),
 /// which `derive.rs` never computes at all in that branch, so the two
 /// checks cannot share one order and still each do their own job. The
-/// returned `f64` is identical across all four (people-equal ×
-/// `Crossing`-arm) combinations either way — `from == to` short-circuits to
-/// `(0.0, None)` before `Crossing` is even read, on both orderings.
+/// returned `f64` is identical across the (people-equal × `PenaltyModel`-arm)
+/// combinations `derive.rs` also computes either way — `from == to`
+/// short-circuits to `(0.0, None)` before the model is even read, on both
+/// orderings.
 fn crossing_info(
     walk: &Walk,
     ladder: &PrecisionLadder,
     teller: EntityId,
     hearer: EntityId,
+    penalty: PenaltyModel,
 ) -> (f64, Option<u32>) {
     let (from, to) = (
         people_of(walk.ledger, teller),
@@ -218,22 +242,35 @@ fn crossing_info(
         return (0.0, None);
     }
     let edges = walk.contact.edges_between(from, to);
-    if walk.policy.crossing == Crossing::Free {
-        return (0.0, Some(edges as u32));
-    }
-    let unit = ladder
-        .span(Precision::FINEST)
-        .map(|days| days.get())
-        .unwrap_or(0.0);
-    (unit / (1.0 + edges as f64), Some(edges as u32))
+    let unit = || {
+        ladder
+            .span(Precision::FINEST)
+            .map(|days| days.get())
+            .unwrap_or(0.0)
+    };
+    let magnitude = match penalty {
+        PenaltyModel::Free => 0.0,
+        PenaltyModel::Derived => unit() / (1.0 + edges as f64),
+        PenaltyModel::ConstantDenominator(d) => unit() / d,
+    };
+    (magnitude, Some(edges as u32))
 }
 
 /// The seam-aware relaxation, carrying the route and width the shipped
-/// [`crate::derive::variants_about_accumulating`] drops. Projects to that
-/// function exactly: `traced_variants_about_accumulating(..).into_iter()
-/// .map(|t| t.claim).collect()` equals `variants_about_accumulating(..)`
-/// holder-for-holder under every policy, rule, and predicate the two share —
-/// `tests/traced_walk.rs`'s heavy agreement battery is the guard.
+/// [`crate::derive::variants_about_accumulating`] drops, generalized over
+/// [`PenaltyModel`] so a caller can re-walk a crossing under a penalty the
+/// shipped [`Crossing`] enum does not express (The Cupel's constant-
+/// denominator arm). [`traced_variants_about_accumulating`] is the thin
+/// wrapper that recovers the shipped behaviour by mapping `walk.policy.
+/// crossing` to its matching [`PenaltyModel`] arm and delegating here — see
+/// that function's doc for the agreement guarantee.
+///
+/// The penalty feeds the width-first ordering key (`crossing_info`'s
+/// magnitude is added into `span` before `rule.step`), so a caller comparing
+/// two penalty arms must call this function once per arm and let each
+/// re-walk from scratch — post-processing one arm's held tellings can never
+/// reproduce the other, because a different penalty can change which route
+/// wins at a holder, not just the winning route's width.
 ///
 /// Line for line the shipped relaxation (same width-first key, same strict
 /// replacement, same clock and witness rules — see `derive.rs`'s doc comment
@@ -242,13 +279,14 @@ fn crossing_info(
 /// width at emit, and the winning route's cross-people steps.
 ///
 /// type-audit: bare-ok(identifier-text: predicate)
-pub fn traced_variants_about_accumulating(
+pub fn traced_variants_with_penalty(
     walk: &Walk,
     ladders: &PeopleLadders,
     durations: &PeopleDurations,
     rule: Accumulation,
     subject: EntityId,
     predicate: &str,
+    penalty: PenaltyModel,
 ) -> Vec<HeldTelling> {
     let ledger = walk.ledger;
     let lineage = walk.lineage;
@@ -319,8 +357,8 @@ pub fn traced_variants_about_accumulating(
             if !admits(walk, event_day, hearer) {
                 continue; // the clock refuses the STEP, which orphans the line below it
             }
-            let (penalty, edges) = crossing_info(walk, ladder, node, hearer);
-            let span = gen_span(ledger, durations, node, hearer) + penalty;
+            let (crossing_penalty, edges) = crossing_info(walk, ladder, node, hearer, penalty);
+            let span = gen_span(ledger, durations, node, hearer) + crossing_penalty;
             let next_width = rule.step(width, span);
             let precision = precision_at(ladder, next_width);
             let next_object = match &claim.object {
@@ -363,4 +401,34 @@ pub fn traced_variants_about_accumulating(
             crossings: t.crossings,
         })
         .collect()
+}
+
+/// The seam-aware relaxation under the shipped [`Crossing`] policy, carrying
+/// the route and width the shipped [`crate::derive::variants_about_accumulating`]
+/// drops. Projects to that function exactly:
+/// `traced_variants_about_accumulating(..).into_iter().map(|t| t.claim)
+/// .collect()` equals `variants_about_accumulating(..)` holder-for-holder
+/// under every policy, rule, and predicate the two share —
+/// `tests/traced_walk.rs`'s heavy agreement battery is the guard.
+///
+/// A thin wrapper over [`traced_variants_with_penalty`]: maps
+/// `walk.policy.crossing` to its matching [`PenaltyModel`] arm
+/// (`Crossing::Free -> PenaltyModel::Free`, `Crossing::ContactWeighted ->
+/// PenaltyModel::Derived`) and delegates. This is the only place that
+/// mapping is made, so the two enums cannot drift apart silently.
+///
+/// type-audit: bare-ok(identifier-text: predicate)
+pub fn traced_variants_about_accumulating(
+    walk: &Walk,
+    ladders: &PeopleLadders,
+    durations: &PeopleDurations,
+    rule: Accumulation,
+    subject: EntityId,
+    predicate: &str,
+) -> Vec<HeldTelling> {
+    let penalty = match walk.policy.crossing {
+        Crossing::Free => PenaltyModel::Free,
+        Crossing::ContactWeighted => PenaltyModel::Derived,
+    };
+    traced_variants_with_penalty(walk, ladders, durations, rule, subject, predicate, penalty)
 }

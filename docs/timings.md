@@ -1875,6 +1875,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T02:37:32Z | sluice:outboard | 35.491 | 21.910 | 35.683 | 1.62 | 0 | d1827eb91 |  | lefford | 40 |
 | 2026-08-20T02:43:29Z | sluice:gate | 356.370 | 9846.901 | 341.166 | 28.59 | 0 | d123648f8 |  | lefford | 40 |
 | 2026-08-20T02:46:31Z | sluice:clients | 182.037 | 369.786 | 11.417 | 2.09 | 0 | ebbbc2d08 |  | lefford | 40 |
+| 2026-08-20T13:52:58Z | prewarm | 62.641 | 442.709 | 19.177 | 7.37 | 0 | 74aac3f8 | campaign/the-cupel | MacBookPro | 10 |
 | 2026-08-20T14:31:53Z | prewarm | 152.860 | 1065.125 | 39.042 | 7.22 | 0 | 74aac3f8 | campaign/the-tally | MacBookPro | 10 |
 | 2026-08-20T14:32:59Z | gate-commit | 32.459 | 86.391 | 14.755 | 3.12 | 0 | 74aac3f8 | campaign/the-tally | MacBookPro | 10 |
 | 2026-08-20T14:34:01Z | gate-commit | 29.113 | 49.795 | 10.794 | 2.08 | 0 | 74aac3f8 | campaign/the-tally | MacBookPro | 10 |
@@ -1883,3 +1884,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T15:09:12Z | sluice:outboard | 35.559 | 22.084 | 35.742 | 1.63 | 0 | ca9facf30 |  | lefford | 40 |
 | 2026-08-20T15:15:12Z | sluice:gate | 359.770 | 9900.907 | 339.753 | 28.46 | 0 | 651e5c2f4 |  | lefford | 40 |
 | 2026-08-20T15:18:06Z | sluice:clients | 173.634 | 351.356 | 11.524 | 2.09 | 0 | cc02b80e5 |  | lefford | 40 |
+| 2026-08-20T15:58:00Z | rebaseline | 157.490 | 242.035 | 10.821 | 1.61 | 0 | c1a4fb8c | campaign/the-cupel | MacBookPro | 10 |
