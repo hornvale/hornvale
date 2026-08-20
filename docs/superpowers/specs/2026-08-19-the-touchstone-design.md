@@ -129,40 +129,91 @@ Define, for a pair of arms, **`changed_tail`** = the fraction of (holder,
 event) pairs reached under both arms for which **any** tracked component
 {route, day, rung, hops, width} differs.
 
+**Both controls are FROZEN below, with reachability evidence re-derived on
+this tree** (Task 1, `windows/hearsay/tests/touchstone_controls_probe.rs`, the
+12-seed census-prefix panel; run
+`cargo nextest run -p hornvale-hearsay --run-ignored all -E
+'test(touchstone_controls_probe)'`). No instrument exists yet: the probe
+hand-rolls a `Claim`-inequality diff, so nothing here was tuned by the thing it
+will judge.
+
 **Positive control — a working mechanism the aggregate misses.** The
-selection-rule (ordering-key) swap of `probe_tiebreak_rules.rs`, whose signature
-is already measured: it rewrites the held telling at **~41.9% of holders** while
-moving the aggregate by **≤4 of 100**. Prediction: **`positive_tail ≥ 20%`** — a
-floor set well below the 41.9% held-telling-change signature and an order of
-magnitude above the aggregate's ≤4/100 ≈ 4%. Note the touchstone may
-legitimately report **more** change than the 41.9% Claim-diff rate, because
-`route` and `width` live *outside* the `Claim` — a holder's winning witness can
-flip with no change to the emitted day, rung, or hops. That is the instrument
-seeing what a Claim-diff cannot, not over-counting.
+**selection-rule (ordering-key) swap** of `probe_tiebreak_rules.rs`, under
+`(Contact::WithRaidSeam, Accumulation::Multiplicative)` — the aggregate's own
+arm and rule:
 
-**Negative control — a genuinely inert change.** A non-trivial configuration
-change that provably rewrites nothing an honest holder believes on this panel.
-Prediction: **`negative_tail ≤ 1%`**.
+- **Arm A (baseline)** — today's shipped selection: smallest final width →
+  fewest hops → witness, i.e. the shipped walk `variants_about_accumulating`
+  itself (`derive.rs:472`; the ordering key `least_damage_key`,
+  `probe_tiebreak_rules.rs:347`).
+- **Arm B (changed)** — the **`Selection::Recency`** rule (most hops, then
+  least damage; `probe_tiebreak_rules.rs:289`), applied to the candidate set
+  the seam delivers to each holder (`enumerate`, `probe_tiebreak_rules.rs:509`;
+  `select`, `:362`).
 
-The negative control is what supplies the ceiling the positive floor needs: an
-instrument wired to fire on everything would redden the negative, so a passing
-negative is the evidence that a high positive is signal rather than a constant.
+Re-derived on this tree over 3,177 (holder, foreign-ending) pairs: arm B
+**rewrites the held telling (`Claim`-diff: remembered day, rung, or hops
+differs) at 62.64% of holders** (1,990 / 3,177), while the divergence aggregate
+`mutually_exclusive` moves **from 10 to 14 — a delta of +4 of ~102**. The
+day-only value-change rate is 38.37% (1,219). Prediction: **`positive_tail ≥
+20%`** — a floor the 62.64% held-telling churn clears by 3×, an order of
+magnitude above the aggregate's ≤4/~100 ≈ 4%. The touchstone will legitimately
+report **more** than the `Claim`-diff rate, because `route` and `width` live
+*outside* the `Claim`; that is the instrument seeing what a `Claim`-diff cannot,
+not over-counting.
 
-> **Pre-freeze task (blocks the freeze, not the campaign):** identify the
-> non-trivial negative control and **verify it is reachable and non-vacuous
-> before freezing it** — the Parley campaign preregistered a control that was
-> unreachable by construction, and the Undertow one that was vacuous because
-> its fixture could not discriminate its own mutation. The identity change
-> (arm A = arm B) gives zero by *construction* and is retained only as a
-> mutation-floor sanity check, **not** as the scientific negative. Candidate
-> non-trivial negatives, to be checked: an arm whose effect is provably empty
-> on the measured event population (e.g. a clock variation over a dateless
-> subpopulation), or a contact edge no winning route traverses. The chosen
-> control and its reachability evidence are the first ledger entry after G3.
+Two findings recorded with the freeze, neither a rescue (no floor was
+lowered):
+
+1. **The exact prior 41.9% *value*-change signature does not reproduce on this
+   tree** — the strongest value-change here is recency's 38.37%, under 40%. The
+   substrate has moved (settlement placement, per the Undertow/Underworld) since
+   that figure was measured. The dissociation **property** — a selection swap
+   rewriting a large fraction of held tellings while the aggregate barely
+   twitches — reproduces robustly; the exact magnitude does not.
+2. **The positive control requires an *enumeration-based* selection rule.**
+   `Selection::Primacy` — the one alternative expressible as a shipped-shape
+   relaxation — rewrites only 19.86% of `Claim`s (below the 20% floor), so it is
+   not a viable positive control. Recency and frequency (31.35%) clear the floor
+   but need the whole arriving candidate set, so **arm B is produced by the
+   enumeration, exactly as `probe_tiebreak_rules.rs` does**, not by a pure
+   relaxation. Tasks 3–4 must feed arm B that way.
+
+**Negative control — a genuinely inert change, provably zero by a theorem.**
+`(Contact::Descent, Crossing::Free)` vs `(Contact::Descent,
+Crossing::ContactWeighted)`, on the **sub-population of holders whose entire
+ancestry shares one people** ("people-homogeneous-ancestry" holders).
+
+- **The theorem.** Under `Contact::Descent` the only route is descent (the seam
+  is never consulted). For a holder whose whole ancestry chain is one people,
+  every descent step has `people_of(teller) == people_of(hearer)`, so
+  `crossing_penalty` returns 0 on every step — its `from == to` early-return
+  guard (`derive.rs:124`) — under **both** `Crossing::Free` and
+  `Crossing::ContactWeighted`. Identical width ⇒ identical rung, remembered day,
+  hops, and route ⇒ the two configs produce **bit-identical `Claim`s** for every
+  such holder. This is a code theorem, not a measurement.
+- **Non-vacuous.** On the panel's 102 foreign endings, **2,014 holders have
+  people-homogeneous ancestry**, and the probe asserts their claims bit-identical
+  across the two `Crossing` arms (churn = 0). The count is > 0, so the control is
+  reachable.
+- **Mutation-proven.** Deleting the `from == to` guard reddens the theorem
+  fixture (`touchstone_controls_probe_negative_theorem`): `ContactWeighted` then
+  charges a full finest rung on every same-people step
+  (`edges_between(p, p) == 0`, so the penalty is `span(FINEST) / (1 + 0)`),
+  moving the rung and remembered day. Verified by running the mutation; see the
+  Task 1 report.
+
+Prediction: **`negative_tail ≤ 1%`** — exactly 0 on the provable sub-population,
+the ≤1% being slack for the measurement framing. The identity change (arm A =
+arm B) gives zero by *construction* and is retained only as a mutation-floor
+sanity check, **not** as this scientific negative. The negative control is what
+supplies the ceiling the positive floor needs: an instrument wired to fire on
+everything would redden the negative, so a passing negative is the evidence that
+a high positive is signal rather than a constant.
 
 **Success criterion (the headline result).** The touchstone passes iff
 `positive_tail ≥ 20%` **and** `negative_tail ≤ 1%`, giving a separation margin
-of at least 20× where the divergence aggregate separates the two by ≤4/100 in
+of at least 20× where the divergence aggregate separates the two by ≤4/~100 in
 absolute count — i.e. does not separate them at all. A falsified prediction is
 a finding, not a failure: if the positive control does **not** move the
 touchstone, the thread's dissociation is deeper than a missing decomposition
@@ -241,9 +292,14 @@ requirement here.
 1. The measure is **promoted into the library**, not added as more test-file
    scaffolding — "studies are data, metrics are code" (decision 0011).
 2. A **traced sibling walk**, not walk unification; unification deferred.
-3. Controls **preregistered** here with a numeric success criterion; the
-   non-trivial negative control's identity and reachability are a **pre-freeze
-   task**.
+3. Controls **preregistered and FROZEN** in §4 with a numeric success
+   criterion, both re-derived on this tree (Task 1). The negative control's
+   pre-freeze task is **discharged**: `(Descent, Free)` vs
+   `(Descent, ContactWeighted)` on people-homogeneous-ancestry holders, provably
+   zero by the `crossing_penalty` `from == to` theorem, non-empty (2,014
+   holders), mutation-proven. The positive control is the `Recency` selection
+   swap; its exact prior 41.9% *value* magnitude did not reproduce (substrate
+   drift, a recorded finding), while the dissociation property did.
 4. Delivery as a **heavy battery**, explicitly not a census metric; no epoch,
    no kernel edit, window-only.
 
@@ -258,6 +314,9 @@ requirement here.
   dissociation which is over all holders), with the people-pair cut as a
   secondary view — versus restricting to the cross-people population the
   aggregate itself measures. Recommendation: all holders + people-pair cut.
-- **Negative control identity** — deferred to the pre-freeze task by design,
-  but flagged here because a wrong choice is the single most expensive mistake
-  available (Parley/Undertow both made it).
+- **Negative control identity** — **RESOLVED in §4** (the pre-freeze task is
+  discharged): `(Descent, Free)` vs `(Descent, ContactWeighted)` on
+  people-homogeneous-ancestry holders, provably zero and non-vacuous (2,014
+  holders on the panel). Kept in this list only as the record that it was the
+  single most expensive mistake available (Parley/Undertow both made it) and was
+  closed before the freeze rather than after.
