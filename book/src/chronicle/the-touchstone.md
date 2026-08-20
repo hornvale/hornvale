@@ -15,7 +15,7 @@ cross-people endings on which the victim's people and the raider's people each
 hold a day the other holds nowhere. It is the thread's headline, and three
 times running it has watched a mechanism rewrite beliefs across thousands of
 communities and barely twitched: the [Undertow](./the-undertow.md)'s crossing
-penalty changed what was held at a tenth of a percent of 1.2 million holders
+penalty changed what was held at 0.10–0.25% of 1.2 million holders
 and moved the aggregate by two endings of 421; a selection-rule swap rewrote
 the held telling at up to 41.9% of holders and moved it by four of a hundred.
 Seen once, that is a fact about a mechanism. Seen three times, it is a fact
@@ -160,7 +160,7 @@ holders); the surplus comes only from the two channels outside the `Claim`.
 The Undertow measured a selection swap moving the *value* of the held telling at
 41.9% of holders. On this tree the strongest value-change is recency's 38.37% —
 under 40%. The substrate has moved since that figure was measured; settlement
-placement shifted under the thread more than once. This was recorded as a
+placement shifted under the thread since 41.9% was last measured. This was recorded as a
 finding, not repaired: the frozen 0.20 floor was **not** lowered to flatter the
 result, and the discrimination clears the unlowered floor by more than
 threefold. The dissociation *property* — a selection swap rewriting a large

@@ -3303,8 +3303,8 @@ taste-gated, and the honest report names which half the number was about.
 
 ### The missing measure exists now, and it separates what the aggregate could not (2026-08-19)
 
-The entry two above — *Two candidate causes were eliminated, and the measure
-went blind* — closed on a specific sentence: **the blocker on the myth thread's
+The entry immediately above — *Two candidate causes were eliminated, and the
+measure went blind* — closed on a specific sentence: **the blocker on the myth thread's
 corroboration half is no longer a missing mechanism but a missing measure**,
 and *for the first time its obstacle is an instrument rather than a world*.
 [The Touchstone](./chronicle/the-touchstone.md) (2026-08-19) built the
