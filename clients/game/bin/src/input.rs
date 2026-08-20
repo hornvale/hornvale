@@ -1,5 +1,7 @@
-//! Keys to actions — the routing table [`action_for`] maps every keypress
-//! through on its way to a verb line.
+//! Keys to actions — the routing table [`action_for`] maps every keypress to
+//! an [`Action`]. Most variants (`CaretBy`, `DeleteBack`, `HistoryPrev`/
+//! `Next`, `ToggleFocus`, `Zoom`, …) never become a verb line at all; only
+//! [`Action::Submit`] sends the buffer's text on to the session.
 //!
 //! **The client never validates.** Nathan's ruling: the client sends text
 //! and renders the reply; `Session::handle` tokenizes and parses, and an

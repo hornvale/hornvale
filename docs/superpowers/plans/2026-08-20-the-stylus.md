@@ -1,5 +1,15 @@
 # The Stylus Implementation Plan
 
+**Status: COMPLETE** (2026-08-20). All six tasks (0-5) implemented and
+gated on `campaign/the-stylus`, including Task 0's absorption of The
+Portolan part I's paused branch. The readouts are in the
+[chronicle](../../../book/src/chronicle/the-stylus.md) (and, since Task 0
+lands it too, [The Portolan's own chronicle entry](../../../book/src/chronicle/the-portolan.md));
+the process lessons are in the
+[retrospective](../../retrospectives/the-stylus.md) (and
+[The Portolan's](../../retrospectives/the-portolan.md)). G6 (the merge) is
+Nathan's own hard stop and is not exercised by this close.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The terminal client accepts typed commands — a real command line
