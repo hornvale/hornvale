@@ -171,3 +171,67 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
     driver.apply(Action::CursorBy(5, 0));
     assert_eq!(driver.strip_text(), at_observer.as_deref());
 }
+
+/// FIX ROUND 2: `resolve_walk_band` must resolve against the plate's REAL
+/// content height, not a fixed floor assumption. `Driver::resize` threads
+/// the live terminal height in exactly the way `main`'s `play` loop does;
+/// this test plays the same proof the round-2 reviewer ran directly
+/// against seed 42's real flagship chart: at the default cursor position
+/// `(20, 10)` (the plate's centre at the 20-row floor), a taller terminal
+/// (40 rows -> content height 36, centre row 18) makes `(20, 10)` a
+/// different, off-centre box — no chart cell lands there — so the strip
+/// must change from the observer's real name to `UNNAMED_TERRAIN`, not
+/// silently keep answering as if the plate were still 20 rows tall.
+#[test]
+fn resize_re_resolves_against_the_real_plate_height() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    driver.apply(Action::EnterLook);
+    let at_floor_height = driver.strip_text().map(str::to_string);
+    assert_eq!(
+        at_floor_height.as_deref(),
+        Some("Vngashngatva"),
+        "at the 20-row floor, screen (20, 10) is the observer's own box"
+    );
+
+    // A 40-row terminal: real content height is 40 - RESERVED_ROWS(4) = 36
+    // (the same arithmetic `spread::compose`/`content_height` apply), so
+    // the real centre row is 18, not 10 -- the cursor's SCREEN position
+    // (20, 10) has not moved, but it is no longer the observer's box.
+    driver.resize(40);
+    let at_taller_height = driver.strip_text().map(str::to_string);
+    assert_ne!(
+        at_taller_height, at_floor_height,
+        "resizing must re-resolve against the real plate height, not repeat the floor's stale answer"
+    );
+    assert_eq!(
+        at_taller_height.as_deref(),
+        Some("unnamed terrain"),
+        "no chart cell lands on (20, 10) once the real centre moves to (20, 18), so \
+         the walk-band chain comes up empty there (not None -- Look mode always \
+         reports something; NOTHING_HERE_YET is reserved for a resolver-absent band)"
+    );
+
+    // Move the cursor to what is NOW the real centre -- it must resolve
+    // the observer's own name again, proving the resolver is keyed off the
+    // plate's live height end to end, not merely detecting a mismatch.
+    driver.apply(Action::CursorBy(0, 8)); // (20, 10) -> (20, 18), the new centre
+    assert_eq!(driver.strip_text(), at_floor_height.as_deref());
+}
+
+/// The cursor's clamp must also track the real plate height (the reviewer's
+/// "while you are there" check): at a 40-row terminal the plate is 36 rows
+/// tall, so the cursor must be able to reach row 35 -- unreachable if the
+/// clamp were still pinned to the 20-row floor.
+#[test]
+fn the_cursor_clamp_tracks_the_real_plate_height_too() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    driver.resize(40);
+    driver.apply(Action::EnterLook);
+    driver.apply(Action::CursorBy(0, 1000)); // drive it hard into the bottom clamp
+    let cursor = driver.cursor().expect("look mode always has a cursor");
+    assert_eq!(
+        cursor.y, 35,
+        "the clamp must reach row 35 (content height 36, 0-indexed) at a 40-row terminal, \
+         not stop at the 20-row floor's row 19"
+    );
+}

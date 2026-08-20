@@ -47,6 +47,19 @@ pub const PLATE_WIDTH: u16 = 40;
 /// margin row beneath it.
 const RESERVED_ROWS: u16 = 4;
 
+/// The plate's content height for a `w`-by-`h` grid — `h` minus
+/// [`RESERVED_ROWS`]. `pub` because the plate's real height is NOT the
+/// 80x24 floor's fixed 20 rows once a terminal is taller than the floor
+/// (`main.rs`'s `h = rows.max(MIN_HEIGHT)` is a lower bound only, no
+/// upper), and a caller outside this crate (`bin`'s cursor resolver) needs
+/// the SAME number [`compose`] itself draws into, not a second copy of this
+/// one-line subtraction. Two callers computing "the plate's content
+/// height" independently is exactly the shape that let a fixed-height
+/// assumption silently name the wrong cell at any non-floor terminal size.
+pub const fn content_height(h: u16) -> u16 {
+    h.saturating_sub(RESERVED_ROWS)
+}
+
 /// Copy every non-blank cell of `src` into `dst`, offset by `origin`.
 /// Blank cells are skipped rather than overwriting whatever `dst` already
 /// carries there, so drawing order between panes never matters.
@@ -70,7 +83,7 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// either way the row beneath the plate is reserved (see the module doc).
 pub fn compose(snapshot: &crate::Snapshot, w: u16, h: u16, strip: Option<&str>) -> Grid {
     let mut page = Grid::new(w, h);
-    let content_height = h.saturating_sub(RESERVED_ROWS);
+    let content_height = content_height(h);
     let plate_width = PLATE_WIDTH.min(w);
     let entry_width = w.saturating_sub(plate_width);
 

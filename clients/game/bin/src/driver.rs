@@ -86,14 +86,17 @@ const NOTHING_HERE_YET: &str = "nothing here yet";
 /// of 40,962 cells like this; spec §3.4).
 const UNNAMED_TERRAIN: &str = "unnamed terrain";
 
-/// The plate's content height at the 80x24 floor. `hornvale-game-core`'s
-/// `RESERVED_ROWS` (private to that crate) is 4 at this floor — the strip's
-/// own row, a gutter, the endpaper, and a margin (see `spread.rs`'s module
-/// doc) — so content occupies the remaining rows. The look-mode cursor is
-/// bounded to this fixed floor-sized plate regardless of the terminal's
-/// actual size: a known simplification (this campaign does not thread the
-/// live terminal size into the driver — see the task report).
-const PLATE_CONTENT_HEIGHT: u16 = hornvale_game_core::MIN_HEIGHT - 4;
+/// The plate's content height Driver assumes before the first real
+/// terminal size is known — [`hornvale_game_core::spread::content_height`]
+/// at the 80x24 floor. **Not a standing assumption**: `main`'s `play` loop
+/// calls [`Driver::resize`] with the live terminal height at startup and on
+/// every resize event, which overwrites `self.plate_height` with the real
+/// number — this constant only covers the brief window before that first
+/// call (fix round 2: an earlier revision used this fixed floor value
+/// unconditionally, which named the wrong cell on any terminal taller than
+/// 24 rows — see the module doc).
+const FLOOR_PLATE_CONTENT_HEIGHT: u16 =
+    hornvale_game_core::spread::content_height(hornvale_game_core::MIN_HEIGHT);
 
 /// Why a [`Driver`] could not start.
 ///
@@ -156,9 +159,10 @@ pub struct Driver {
     /// reset it); [`Driver::cursor`] reports it only in [`Mode::Look`].
     cursor: Cursor,
     /// The look-mode strip's cached text — recomputed on `EnterLook` and
-    /// `CursorBy` (see module doc: this campaign's resolver does not vary
-    /// with the cursor's screen position, so recomputation is cheap and
-    /// simple rather than actually necessary; F2 measures the real cost).
+    /// `CursorBy`, since fix round 1 the resolved name genuinely depends on
+    /// the cursor's screen position (see the module doc for the chain);
+    /// F2 measures the real per-call cost, which is why recomputing on
+    /// every `CursorBy` rather than something more elaborate is fine.
     strip: Option<String>,
     /// The world's landscape features, indexed by cell, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
@@ -173,6 +177,14 @@ pub struct Driver {
     geo: hornvale_kernel::Geosphere,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
+    /// The plate's REAL content height, in grid rows — synced from the live
+    /// terminal by [`Driver::resize`] (fix round 2: an earlier revision
+    /// used a floor-sized constant unconditionally here, which named the
+    /// wrong cell — see the module doc). Starts at
+    /// [`FLOOR_PLATE_CONTENT_HEIGHT`] before the first real size is known;
+    /// `main`'s `play` loop calls `resize` before the first draw, so a
+    /// live session never resolves against the stale default.
+    plate_height: u16,
     /// The possessed agent's species, phonology and naming morphology,
     /// resolved once at `start` (an agent's species does not change during
     /// a session) — the same triple [`resolve_at`] needs on every call.
@@ -272,17 +284,43 @@ impl Driver {
             mode: Mode::Normal,
             cursor: Cursor {
                 x: hornvale_game_core::spread::PLATE_WIDTH / 2,
-                y: PLATE_CONTENT_HEIGHT / 2,
+                y: FLOOR_PLATE_CONTENT_HEIGHT / 2,
             },
             strip: None,
             index,
             nearest,
             geo,
             seed: world_ref.seed,
+            plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
             namer: (species, ph, morph),
         };
         driver.refresh();
         Ok(driver)
+    }
+
+    /// Sync the plate's REAL content height from the live terminal's row
+    /// count `h` (`main`'s `play` loop calls this at startup and on every
+    /// resize event, before the first/next draw). Uses
+    /// [`hornvale_game_core::spread::content_height`] — the SAME
+    /// computation `compose` itself applies to derive the plate it actually
+    /// draws into, not a second copy of it (fix round 2's own lesson,
+    /// applied to itself: two independent "what is the plate's content
+    /// height" computations is exactly the shape that produced the bug this
+    /// method fixes).
+    ///
+    /// Re-clamps the cursor into the new bounds: a terminal shrinking after
+    /// the cursor moved into rows a taller plate offered must not leave it
+    /// parked outside the plate that is about to be drawn. In look mode,
+    /// also re-resolves the strip: the cursor's SCREEN position is
+    /// unchanged by a resize, but which real cell that screen position
+    /// names can change (the plate's centre moves), so the displayed text
+    /// must not go on describing whatever the old height resolved.
+    pub fn resize(&mut self, h: u16) {
+        self.plate_height = hornvale_game_core::spread::content_height(h);
+        self.move_cursor(0, 0);
+        if self.mode == Mode::Look {
+            self.refresh_strip();
+        }
     }
 
     /// Which thing keys currently drive — the character, or the look-mode
@@ -337,11 +375,13 @@ impl Driver {
     }
 
     /// Move the cursor by `(dx, dy)` grid cells, clamped to the plate's
-    /// bounds at the 80x24 floor (see `PLATE_CONTENT_HEIGHT`'s doc for the
-    /// known simplification this is).
+    /// REAL bounds (`self.plate_height`, kept live by [`Driver::resize`] —
+    /// fix round 2: an earlier revision clamped to the 80x24 floor's fixed
+    /// height regardless of the terminal's actual size, which could not
+    /// reach rows a taller plate actually draws).
     fn move_cursor(&mut self, dx: i16, dy: i16) {
         let max_x = i32::from(hornvale_game_core::spread::PLATE_WIDTH) - 1;
-        let max_y = i32::from(PLATE_CONTENT_HEIGHT) - 1;
+        let max_y = i32::from(self.plate_height).saturating_sub(1).max(0);
         let nx = (i32::from(self.cursor.x) + i32::from(dx)).clamp(0, max_x);
         let ny = (i32::from(self.cursor.y) + i32::from(dy)).clamp(0, max_y);
         self.cursor.x = nx as u16;
@@ -385,7 +425,7 @@ impl Driver {
             chart,
             (0, 0),
             hornvale_game_core::spread::PLATE_WIDTH,
-            PLATE_CONTENT_HEIGHT,
+            self.plate_height,
             self.cursor.x,
             self.cursor.y,
         )?;
