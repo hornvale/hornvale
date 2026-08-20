@@ -65,7 +65,11 @@ use std::process::Command;
 // entries, harvested from a green stage gate. The third verdict — a declared
 // crate that is now PRESENT is RED — is what forced this deletion rather than
 // leaving a false acknowledgement standing.
-const DECLARED_ABSENT: &[(&str, &str)] = &[];
+const DECLARED_ABSENT: &[(&str, &str)] = &[(
+    "hornvale-sentiment",
+    "new crate (campaign/the-cant); roster entry lands when the chamber's gate \
+     phase measures its tests at merge — delete this row once the roster covers it",
+)];
 
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {
