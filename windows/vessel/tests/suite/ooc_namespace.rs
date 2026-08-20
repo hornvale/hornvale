@@ -113,9 +113,18 @@ fn the_sigil_eyes_still_has_both_its_report_and_set_arms() {
 }
 
 /// An unclassified `!<in-character verb>` must not silently alias to the
-/// bare form's behaviour — the sigil selects a namespace, and a verb group B
-/// has not reached yet (Task 6) must refuse in the out-of-character
-/// namespace exactly as an unknown verb would in the bare one.
+/// bare form's behaviour — the sigil selects a namespace, and a verb with no
+/// classified out-of-character half must refuse there exactly as an unknown
+/// verb would in the bare namespace.
+///
+/// **`!look` is now permanently unclassified, not merely pending** (The
+/// Deed, Task 6). When this test was written it read "a verb group B has not
+/// reached yet (Task 6)", which forecast an arm that was then deliberately
+/// not built: `look` has no perceptual gate to take to its permissive limit —
+/// none of its three band arms consults sight, eyes, lens or knowledge — so
+/// an out-of-character half would have been an observational alias. See
+/// `ooc_objective.rs`'s `neither_look_nor_knows_has_an_objective_half`, which
+/// pins the same refusal alongside `!knows` with the finding recorded.
 #[test]
 fn an_unclassified_sigil_verb_refuses_rather_than_aliasing_to_the_bare_form() {
     let w = world();
@@ -131,8 +140,9 @@ fn an_unclassified_sigil_verb_refuses_rather_than_aliasing_to_the_bare_form() {
     };
     assert!(
         sigilled.to_lowercase().contains("no verb"),
-        "`!look` is not yet a classified out-of-character verb (Task 6's job) and \
-         must refuse, not silently reuse `look`'s own answer; got: {sigilled}"
+        "`!look` is not a classified out-of-character verb (Task 6 decided it has \
+         no gate to relax) and must refuse, not silently reuse `look`'s own \
+         answer; got: {sigilled}"
     );
     assert_ne!(
         bare, sigilled,

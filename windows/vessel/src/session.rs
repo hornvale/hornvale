@@ -54,6 +54,17 @@ const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 /// type-audit: bare-ok(count)
 const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
 
+/// The `eyes` an out-of-character chart is drawn through (The Deed, Task 6,
+/// spec §3.2): the observer step declined.
+///
+/// [`crate::eyes::resolve`] answers `None` for this, which is the permissive
+/// limit of the chart's one gating parameter — the plain terrain, not the
+/// colour this body's photoreceptors project onto it. Named rather than
+/// written inline at each `!` arm so the objective view has exactly one
+/// definition, the same discipline [`Perceiving::Objectively`] keeps for the
+/// sight gate.
+const OBJECTIVE_EYES: crate::eyes::Eyes = crate::eyes::Eyes::Off;
+
 // A creature's `kind`, `datum` and `salience` on the plan are NOT this module's
 // to invent: they are `crate::purview`'s `AGENT_MARK_KIND`, `creature_datum` and
 // `AGENT_SALIENCE`, the same three the walk-band chart marks the same creature
@@ -222,6 +233,14 @@ operator instruments (out-of-character; bypass the body, never the world):
   !provoke [who]   shift a co-located NPC's disposition, your own mark
   !soothe [who]    ease a co-located NPC's disposition, your own mark
   !help            this list
+
+the objective halves (out-of-character; the same view, ungated):
+  !map [out N]     the chart drawn in plain terrain, not through your eyes
+  !examine <thing> as examine, but a creature standing here in the dark
+                   answers too
+  !needs           the felt state of everyone here, seen or unseen
+  !wait [N]        as wait, and the clock moves the same; the world's comings
+                   and goings are narrated whether you could see them or not
 ";
 
 /// The world-scoped half of starting a possession: everything
@@ -588,6 +607,33 @@ struct Sighting {
     /// is why [`Session::snapshot`] narrows `sensed.present` only on a creature
     /// this map DOES place.
     placed: std::collections::BTreeMap<EntityId, crate::lattice::Cell>,
+}
+
+/// Whether a read of who is present is narrowed by what the possessed body
+/// can perceive, or takes that gate to its permissive limit (The Deed, Task
+/// 6, spec §3.2).
+///
+/// **This is the whole of group B's out-of-character halves, and it is one
+/// enum rather than a second rendering path on purpose.** `!needs`,
+/// `!examine` and `!wait` are the same renderers their bare twins are, called
+/// with this parameter flipped — so a change to how a creature is described,
+/// or to what counts as sensed, cannot land in one mood and miss the other.
+/// The alternative (a parallel objective renderer) is exactly how `examine`
+/// came to answer one creature with two different sentences across a band
+/// boundary, which §6 exists to prevent.
+///
+/// [`Perceiving::Objectively`] is *not* a fourth row of
+/// [`Session::sensed_npcs`]' table — it is that predicate with nothing to
+/// narrow it, which is precisely what `sensed_npcs(None)` already means out
+/// of doors.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Perceiving {
+    /// Through the possessed body: the chamber band's shadowcast narrows who
+    /// is sensed. What every bare verb has always done.
+    Body,
+    /// At the permissive limit: every co-located creature, whatever the body
+    /// can see. The out-of-character view.
+    Objectively,
 }
 
 impl<'w> Session<'w> {
@@ -963,7 +1009,7 @@ impl<'w> Session<'w> {
         // exists to catch: see `SpatialChannel`'s doc.
         let spatial = match self.inside.as_ref() {
             Some(inside) => SpatialChannel::Chamber {
-                plan: self.chamber_plan(inside, marks)?,
+                plan: self.chamber_plan(inside, marks, &self.eyes)?,
             },
             // `purview(0)` is the same call `map` makes out of doors, at the
             // same zoom, so the pane shows what the verb would have shown.
@@ -1227,6 +1273,32 @@ impl<'w> Session<'w> {
     /// deliberate method with a redacted mark list, not a silent pass here.
     /// type-audit: bare-ok(count: zoom_out)
     pub fn purview(&self, zoom_out: u32) -> Result<hornvale_scene::SurroundsScene, VesselError> {
+        self.purview_through(zoom_out, &self.eyes)
+    }
+
+    /// [`Self::purview`], drawn through `eyes` rather than the session's own
+    /// (The Deed, Task 6).
+    ///
+    /// **`eyes` is the chart's one gating parameter, and this is where its
+    /// permissive limit is taken.** `purview_scene` receives `knowledge` and
+    /// `eyes`; only the second has an objective limit. `eyes` resolving to
+    /// `None` declines the observer step entirely and yields the uncoloured
+    /// terrain — the world as it is rather than as this body's photoreceptors
+    /// project it. `knowledge` does not: it marks which cells have been
+    /// WALKED, and rendering every cell as remembered would be a lie rather
+    /// than an objective view, so `!map` leaves the fog exactly as `map` draws
+    /// it. Deciding per parameter is the point; "both parameters at their
+    /// permissive limit" is a half-truth.
+    ///
+    /// Private, unlike its caller: the objective chart is reached through the
+    /// `!map` verb, and a `pub` second charting entry point would be one more
+    /// way for a caller who has not read `handle` to draw a chamber-band
+    /// chart, which is exactly what the assertion below exists to stop.
+    fn purview_through(
+        &self,
+        zoom_out: u32,
+        eyes: &crate::eyes::Eyes,
+    ) -> Result<hornvale_scene::SurroundsScene, VesselError> {
         debug_assert!(
             self.inside.is_none(),
             "the walk-band chart marks every derived NPC ungated, so drawing it \
@@ -1242,9 +1314,95 @@ impl<'w> Session<'w> {
             self.day,
             zoom_out,
             &self.agent,
-            &self.eyes,
+            eyes,
             self.calendar.as_ref(),
         )
+    }
+
+    /// The out-of-character namespace's own dispatch: every verb reachable
+    /// behind a leading `!` (The Deed, spec §2.1/§3.2).
+    ///
+    /// **A named handler, not a second inline match.** [`Self::handle`]'s
+    /// bare-verb match was re-indented one level into an `else` at Task 5 and
+    /// this file is ~5,800 lines; growing a second match inside it would put
+    /// two dispatch tables in one screenful of `git blame`. The split is also
+    /// semantic: `!` selects a NAMESPACE, and these are different acts from
+    /// their bare spellings rather than the same acts invoked with extra
+    /// authority (spec §2.1 reverses the metaplan on exactly this point).
+    ///
+    /// # Two groups, and what distinguishes them
+    ///
+    /// **Group A** — `why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe` —
+    /// are operator instruments with no in-character counterpart, so this
+    /// namespace is their only entry point (Task 5 retired the bare forms).
+    ///
+    /// **Group B's objective halves** — `map`/`examine`/`needs`/`wait` — each
+    /// render the same thing their bare twin does, through the same renderer,
+    /// with that renderer's own gating parameter taken to its permissive
+    /// limit: [`OBJECTIVE_EYES`] for the chart, [`Perceiving::Objectively`]
+    /// for the sight gate. There is no second rendering path anywhere in this
+    /// arm, deliberately.
+    ///
+    /// # Two of spec §3.2's six group-B verbs are NOT here
+    ///
+    /// `!look` and `!knows` are absent because neither has a gate to relax,
+    /// and an out-of-character form observationally identical to its
+    /// in-character twin is a no-op that advertises a capability the surface
+    /// does not have. `Session::knows` prints every entry of
+    /// `self.knowledge` — the player's own knowledge is the subject, not
+    /// something withheld from them — and `look`'s three band arms
+    /// ([`Self::describe_here`], [`Self::describe_chamber_here`],
+    /// [`Self::describe_underground_here`]) consult no sight, eyes, lens or
+    /// knowledge at all: they render the place, and the place is objective
+    /// already. Giving either one a `!` form would mean rendering a DIFFERENT
+    /// object, which is the renderer fork this task exists not to do.
+    /// `tests/suite/ooc_objective.rs` pins both as unknown verbs so a later
+    /// campaign cannot add a silent alias without going red first.
+    fn handle_ooc(&mut self, verb: &str, rest: &str) -> Turn {
+        match verb {
+            // Group A: the operator instruments (The Deed, spec §3.2).
+            // Bare forms are retired — this namespace is their only entry
+            // point now, and it carries no in-character counterpart for
+            // any of the seven, by design.
+            "why" => Turn::Out(self.why(rest)),
+            "npcs" => Turn::Out(self.list_npcs()),
+            "help" => Turn::Out(HELP.to_string()),
+            // Bare `!eyes` reports whose eyes the chart is coloured
+            // through and what their projection drops; `!eyes <name>`
+            // switches them.
+            "eyes" if rest.is_empty() => Turn::Out(self.eyes_report()),
+            "eyes" => self.set_eyes(rest),
+            "whoami" => Turn::Out(self.whoami()),
+            "provoke" => self.act_on_disposition(rest, 1),
+            "soothe" => self.act_on_disposition(rest, -1),
+            // Group B's objective halves (Task 6). BAND-AWARE IN EXACTLY THE
+            // SAME SHAPE their bare twins are, arm for arm: the objective
+            // view of a chamber is still a chamber, and an out-of-character
+            // form that silently drew the walk band from indoors would
+            // disclose the surrounding locale rather than the room the
+            // possession stands in. A band guard is not a perception gate,
+            // so none of it relaxes here.
+            "map" if self.inside.is_some() && rest.is_empty() => {
+                self.out(self.plan_here(&OBJECTIVE_EYES))
+            }
+            "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
+            "map" => self.map(rest, &OBJECTIVE_EYES),
+            "examine" if self.inside.is_some() && !rest.is_empty() => {
+                Turn::Out(self.examine_chamber(rest, Perceiving::Objectively))
+            }
+            "examine" if self.underground.is_some() && !rest.is_empty() => {
+                Turn::Out(self.examine_underground(rest))
+            }
+            "examine" => self.examine(rest, &OBJECTIVE_EYES),
+            "needs" => Turn::Out(self.needs(Perceiving::Objectively)),
+            // The one out-of-character act that MOVES THE CLOCK (spec §3.4).
+            // Its objective half is the departure/arrival narration, not the
+            // advance: the day advances identically under both moods, which
+            // is what makes observing a state you cannot act in possible at
+            // all rather than indistinguishable from the game having hung.
+            "wait" => self.wait(rest, Perceiving::Objectively),
+            other => Turn::Out(format!("No verb '!{other}' ('!help' lists them).")),
+        }
     }
 
     /// One verb, one response. `Turn::Released` ends the possession.
@@ -1270,24 +1428,7 @@ impl<'w> Session<'w> {
         let ooc = verb.starts_with('!');
         let verb = verb.strip_prefix('!').unwrap_or(verb);
         let turn = if ooc {
-            // Group A: the operator instruments (The Deed, spec §3.2).
-            // Bare forms are retired — this namespace is their only entry
-            // point now, and it carries no in-character counterpart for
-            // any of the seven, by design.
-            match verb {
-                "why" => Turn::Out(self.why(rest)),
-                "npcs" => Turn::Out(self.list_npcs()),
-                "help" => Turn::Out(HELP.to_string()),
-                // Bare `!eyes` reports whose eyes the chart is coloured
-                // through and what their projection drops; `!eyes <name>`
-                // switches them.
-                "eyes" if rest.is_empty() => Turn::Out(self.eyes_report()),
-                "eyes" => self.set_eyes(rest),
-                "whoami" => Turn::Out(self.whoami()),
-                "provoke" => self.act_on_disposition(rest, 1),
-                "soothe" => self.act_on_disposition(rest, -1),
-                other => Turn::Out(format!("No verb '!{other}' ('!help' lists them).")),
-            }
+            self.handle_ooc(verb, rest)
         } else {
             match verb {
                 "" => Turn::Out(String::new()),
@@ -1314,9 +1455,11 @@ impl<'w> Session<'w> {
                 // plan has no coarser rung, so an argument indoors is refused rather
                 // than silently ignored — an ignored argument is how a player comes
                 // to believe they asked for something and got it.
-                "map" if self.inside.is_some() && rest.is_empty() => self.out(self.plan_here()),
+                "map" if self.inside.is_some() && rest.is_empty() => {
+                    self.out(self.plan_here(&self.eyes))
+                }
                 "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
-                "map" => self.map(rest),
+                "map" => self.map(rest, &self.eyes),
                 // `go` is band-aware for the same reason `look` and `map` are, and
                 // this arm is the reversal The Blocking owes The Lintel: indoors a
                 // compass bearing means one CELL, not one locale. §1b.6's law is
@@ -1349,7 +1492,7 @@ impl<'w> Session<'w> {
                 // it still falls through to `examine`'s own "Examine what?" hint,
                 // which is as true indoors as out.
                 "examine" if self.inside.is_some() && !rest.is_empty() => {
-                    Turn::Out(self.examine_chamber(rest))
+                    Turn::Out(self.examine_chamber(rest, Perceiving::Body))
                 }
                 // The underworld's own band, mirroring the two arms above: a cave
                 // chamber's rock is not the surface locale's canopy and forest, so
@@ -1361,7 +1504,7 @@ impl<'w> Session<'w> {
                 "examine" if self.underground.is_some() && !rest.is_empty() => {
                     Turn::Out(self.examine_underground(rest))
                 }
-                "examine" => self.examine(rest),
+                "examine" => self.examine(rest, &self.eyes),
                 // `back` retraces the WALK-band trail, so it stays refused where `go`
                 // no longer is: the capability this campaign built is intra-chamber
                 // GEOMETRY, and a walk-band trail is not geometry.
@@ -1373,9 +1516,9 @@ impl<'w> Session<'w> {
                     Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
                 }
                 "back" => self.back(),
-                "wait" => self.wait(rest),
+                "wait" => self.wait(rest, Perceiving::Body),
                 "knows" => Turn::Out(self.knows()),
-                "needs" => Turn::Out(self.needs()),
+                "needs" => Turn::Out(self.needs(Perceiving::Body)),
                 "write" => Turn::Out(self.write(rest)),
                 "consult" => Turn::Out(self.consult()),
                 "dive" => self.dive(),
@@ -2403,11 +2546,12 @@ impl<'w> Session<'w> {
         &self,
         inside: &Inside,
         marks: Vec<crate::plan::PlanMark>,
+        eyes: &crate::eyes::Eyes,
     ) -> Result<crate::plan::SessionPlan, VesselError> {
         let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
         let fabric = self.fabric_here();
         let light = crate::light::light_field(&inside.lattice, &self.chamber_sources(inside));
-        let observer = crate::eyes::resolve(&self.eyes, &self.agent).map(|(o, _)| o);
+        let observer = crate::eyes::resolve(eyes, &self.agent).map(|(o, _)| o);
         let shading = match (observer.as_ref(), fabric.as_ref()) {
             (Some(observer), Some(fabric)) => Some(crate::plan::Shading {
                 observer,
@@ -2452,7 +2596,7 @@ impl<'w> Session<'w> {
     /// escape sequence, no caption. That is not a convenience, it is how the
     /// committed transcripts stay unlensed by construction rather than by
     /// remembering a flag.
-    fn plan_here(&self) -> Result<String, VesselError> {
+    fn plan_here(&self, eyes: &crate::eyes::Eyes) -> Result<String, VesselError> {
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (the arm checks first), the same guard
             // and the same reason as `describe_chamber_here`: fabricating a plan
@@ -2471,7 +2615,7 @@ impl<'w> Session<'w> {
         let (picture, disclosure) = match self.lens {
             crate::lens::Lens::Off => (plan.picture, String::new()),
             lens => {
-                let coloured = self.chamber_plan(inside, Vec::new())?;
+                let coloured = self.chamber_plan(inside, Vec::new(), eyes)?;
                 (
                     tint(&plan.picture, &coloured, &lens),
                     format!(" — lens: {}", lens.label()),
@@ -2695,7 +2839,7 @@ impl<'w> Session<'w> {
     /// The refusal is BYTE-IDENTICAL to the outdoor path's. Two wordings for one
     /// question — "what is this thing I cannot see?" — is precisely the drift §6
     /// exists to prevent, and the parity test asserts on the prefix.
-    fn examine_chamber(&self, noun: &str) -> String {
+    fn examine_chamber(&self, noun: &str, how: Perceiving) -> String {
         let wanted = noun.trim().to_lowercase();
         if let Some(interior) = self.chamber_interior_here() {
             for id in interior.ids() {
@@ -2741,12 +2885,21 @@ impl<'w> Session<'w> {
         // pays nothing: `sighting` is the one costly read on this path
         // (`anchor_cells`, 42 us median / 410 us p99), and before the hoist even
         // the parity test's own deliberate miss paid it.
+        //
+        // 4. **`how` is the only thing `!examine` changes** (The Deed, Task 6).
+        //    Under `Perceiving::Objectively` the label match still resolves
+        //    against the co-located roster and still answers with
+        //    `creature_datum` — the SAME sentence, for the reason point 2
+        //    gives; only the narrowing below is taken to its permissive limit.
+        //    Everything above this arm (the anchors, the `you` mark, the glyph
+        //    legend) is objective already, which is why the parameter reaches
+        //    no further than this.
         if let Some(npc) = self
             .colocated_npcs()
             .into_iter()
             .find(|npc| npc.label.to_lowercase() == wanted)
         {
-            let sensed = self.sensed_npcs(self.sighting().as_ref());
+            let sensed = self.perceived_npcs(how);
             if sensed.iter().any(|n| n.entity == npc.entity) {
                 return crate::purview::creature_datum(&npc.label, &npc.species);
             }
@@ -2754,7 +2907,7 @@ impl<'w> Session<'w> {
         format!("You see no {noun} here.")
     }
 
-    fn wait(&mut self, arg: &str) -> Turn {
+    fn wait(&mut self, arg: &str, how: Perceiving) -> Turn {
         // The world moves without you: advance the day, then run the NPC
         // layer's tick against the session-owned ledger (the possessed
         // agent's own frozen reads are untouched — only `self.ledger`
@@ -2783,8 +2936,14 @@ impl<'w> Session<'w> {
         // would silently delete every departure line. The honest question for a
         // departure is whether the player could see the creature WHILE IT WAS
         // HERE, and this is the only moment that question is still answerable.
+        //
+        // `how` is what `!wait` moves (The Deed, Task 6): at the permissive
+        // limit this roster is every creature standing here, so the departure of
+        // one the possession could not see is narrated rather than dropped. That,
+        // and not the clock, is `!wait`'s discriminator — the clock advances
+        // identically under both moods (spec §3.4).
         let sensed_before: std::collections::BTreeSet<EntityId> = self
-            .sensed_npcs(self.sighting().as_ref())
+            .perceived_npcs(how)
             .iter()
             .map(|npc| npc.entity)
             .collect();
@@ -2911,7 +3070,7 @@ impl<'w> Session<'w> {
                 if let Err(e) = self.absorb_here() {
                     return Turn::Out(format!("error: {e}"));
                 }
-                Turn::Out(self.narrate_motion(moved, &before, &sensed_before))
+                Turn::Out(self.narrate_motion(moved, &before, &sensed_before, how))
             }
             Err(e) => Turn::Out(format!("Time falters: {e}")),
         }
@@ -2965,12 +3124,19 @@ impl<'w> Session<'w> {
         moved: usize,
         before: &[RoomAddr],
         sensed_before: &std::collections::BTreeSet<EntityId>,
+        how: Perceiving,
     ) -> String {
         if moved == 0 {
             return "Time passes; the world keeps its shape.".to_string();
         }
+        // The arrival half's gate, and it takes `how` for the same reason
+        // `sensed_before` (the departure half's) does: an ARRIVAL is judged
+        // against who can be seen NOW, a departure against who could be seen
+        // THEN, and an out-of-character `wait` must relax both or it would
+        // narrate half the traffic. One parameter, both moments (The Deed,
+        // Task 6).
         let sensed_now: std::collections::BTreeSet<EntityId> = self
-            .sensed_npcs(self.sighting().as_ref())
+            .perceived_npcs(how)
             .iter()
             .map(|npc| npc.entity)
             .collect();
@@ -3012,7 +3178,7 @@ impl<'w> Session<'w> {
     /// nothing to inherit from. That bound is refused here in player-facing
     /// language, never as the locale layer's internal "canonical grid"
     /// wording.
-    fn map(&self, rest: &str) -> Turn {
+    fn map(&self, rest: &str, eyes: &crate::eyes::Eyes) -> Turn {
         let zoom = match rest.split_whitespace().collect::<Vec<_>>().as_slice() {
             [] => 0u32,
             ["out"] => 1,
@@ -3058,7 +3224,7 @@ impl<'w> Session<'w> {
                     .to_string(),
             );
         }
-        let scene = match self.purview(zoom) {
+        let scene = match self.purview_through(zoom, eyes) {
             Ok(s) => s,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
@@ -3091,7 +3257,7 @@ impl<'w> Session<'w> {
         // already show that rather than requiring an opt-in. `Eyes::Off`
         // falls all the way back to the plain terrain lens: no observer, no
         // tint, no escape sequence — the same posture a screen reader takes.
-        let lens = if self.eyes == crate::eyes::Eyes::Off {
+        let lens = if eyes == &crate::eyes::Eyes::Off {
             "terrain"
         } else {
             "colour"
@@ -3191,7 +3357,7 @@ impl<'w> Session<'w> {
     /// the full union other callers and the thesis test depend on). A noun
     /// named by both grains still resolves to the prose datum, because the
     /// prose catalog is checked, and answered from, first.
-    fn examine(&self, noun: &str) -> Turn {
+    fn examine(&self, noun: &str, eyes: &crate::eyes::Eyes) -> Turn {
         if noun.is_empty() {
             return Turn::Out("Examine what?".to_string());
         }
@@ -3203,7 +3369,12 @@ impl<'w> Session<'w> {
         if let Some(n) = prose.nouns.iter().find(|n| n.matches(&wanted)) {
             return Turn::Out(n.datum.clone());
         }
-        let scene = match self.purview(0) {
+        // Drawn through the CALLER's eyes (The Deed, Task 6). Nothing
+        // observable turns on it here — the legend carries nouns and datums,
+        // not colour — but `!examine` claiming an objective read while
+        // building the scene through this body's photoreceptors would be a
+        // small lie, and the objective draw is the cheaper of the two anyway.
+        let scene = match self.purview_through(0, eyes) {
             Ok(s) => s,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
@@ -3362,6 +3533,26 @@ impl<'w> Session<'w> {
     ///
     /// Out of doors `sighting` is `None`, so this is exactly `colocated_npcs`
     /// and no band but the chamber narrows anything.
+    /// Who is here, as `how` decides: [`Perceiving::Body`] narrows by sight,
+    /// [`Perceiving::Objectively`] does not.
+    ///
+    /// **The single definition of group B's permissive limit** (The Deed,
+    /// Task 6). Every out-of-character half routes through here rather than
+    /// each writing `sensed_npcs(None)` for itself, for the same reason
+    /// `sensed_npcs` exists at all: three copies of a perception rule is how
+    /// a verb and a channel come to disagree about who the possession can
+    /// see, which is the defect The Sighting spent four fix rounds closing.
+    fn perceived_npcs(&self, how: Perceiving) -> Vec<&Npc> {
+        match how {
+            Perceiving::Body => self.sensed_npcs(self.sighting().as_ref()),
+            // `sensed_npcs`' own filter with nothing to filter ON — exactly
+            // what it already computes out of doors, where `sighting` is
+            // `None`. Not a bypass of the predicate: the predicate itself,
+            // at its limit.
+            Perceiving::Objectively => self.sensed_npcs(None),
+        }
+    }
+
     fn sensed_npcs(&self, sighting: Option<&Sighting>) -> Vec<&Npc> {
         self.colocated_npcs()
             .into_iter()
@@ -3478,14 +3669,23 @@ impl<'w> Session<'w> {
     /// rides player-acts-mutate, Campaign IV). A co-located NPC's drive IS a
     /// real fold over its own committed history, so its felt state is
     /// meaningful the moment the drive model exists.
-    fn needs(&self) -> String {
+    fn needs(&self, how: Perceiving) -> String {
         // GATED ON SIGHT, through the same predicate `sensed.present` and
         // `examine` use (The Sighting, fix round 2). Ungated this verb was a
         // side channel straight around the structural redaction `snapshot` had
         // just performed: it named — by label AND by felt state — a creature the
         // pane had withheld one verb earlier. `sensed_npcs` is `colocated_npcs`
         // out of doors, so nothing outside the chamber band changes.
-        let here = self.sensed_npcs(self.sighting().as_ref());
+        //
+        // `how` is the ONLY difference between `needs` and `!needs` (The Deed,
+        // Task 6). The bare verb passes `Perceiving::Body` and is byte-identical
+        // to what it was; the out-of-character half passes
+        // `Perceiving::Objectively` and reads the same felt state through the
+        // same arbitration for every creature actually standing here. Note that
+        // this leaves the gate above intact rather than removing it: the side
+        // channel The Sighting closed was the BARE verb walking around a
+        // redaction, and the bare verb still cannot.
+        let here = self.perceived_npcs(how);
         if here.is_empty() {
             return "No one else is here to read.".to_string();
         }
@@ -4044,7 +4244,7 @@ mod tests {
             .next()
             .expect("a multi-word name has a first word")
             .to_lowercase();
-        let reply = match session.examine(&head) {
+        let reply = match session.examine(&head, &session.eyes) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("examine must not release"),
         };
@@ -4107,7 +4307,7 @@ mod tests {
     fn examine_still_refuses_plainly_when_nothing_is_wrong() {
         let w = seam_world();
         let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-        let reply = match session.examine("a-noun-no-grain-surfaced") {
+        let reply = match session.examine("a-noun-no-grain-surfaced", &session.eyes) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("examine must not release"),
         };
@@ -4195,7 +4395,7 @@ mod tests {
                 .all(|n| session.occupancy.at(n.entity).is_none()),
             "before any `wait`, occupancy has never been populated"
         );
-        session.wait("1");
+        session.wait("1", Perceiving::Body);
         for npc in &session.npcs {
             assert!(
                 session.occupancy.at(npc.entity).is_some(),
@@ -4221,7 +4421,7 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         session.day = WorldTime::new(f64::MAX).expect("f64::MAX is finite");
-        match session.wait(&f64::MAX.to_string()) {
+        match session.wait(&f64::MAX.to_string(), Perceiving::Body) {
             Turn::Out(msg) => assert!(
                 msg.contains("finite") || msg.to_lowercase().contains("day"),
                 "expected an error naming the clock overflow, got: {msg}"
@@ -4894,7 +5094,9 @@ mod tests {
             .expect("a chamber to stand in");
         let before = session.inside.as_ref().unwrap().cell;
         let row_of = |session: &Session| {
-            let plan = session.plan_here().expect("inside, so a plan draws");
+            let plan = session
+                .plan_here(&session.eyes)
+                .expect("inside, so a plan draws");
             plan.lines()
                 .position(|l| l.contains(crate::lattice::render::YOU))
                 .expect("the plan marks where you stand")
@@ -5461,16 +5663,16 @@ mod tests {
             !marks.iter().any(|m| m.noun == refused),
             "precondition: the refused creature is genuinely UNDRAWN"
         );
-        let answered = session.examine_chamber(&refused);
+        let answered = session.examine_chamber(&refused, Perceiving::Body);
         assert!(
             !answered.starts_with("You see no"),
             "an unplaced but present creature must be examinable — `present` must \
              imply examinable, or the channel and the verb disagree: {answered}"
         );
         assert!(
-            session.needs().contains(&refused),
+            session.needs(Perceiving::Body).contains(&refused),
             "and `needs` must read it too, for the same reason: {}",
-            session.needs()
+            session.needs(Perceiving::Body)
         );
         // ...and it stays ACTABLE-ON. The sight gate on `colocated_npc` (fix
         // round 3) must narrow on sight and on nothing else: an undrawable
@@ -5570,13 +5772,15 @@ mod tests {
         );
         assert_eq!(marks_of(&session).len(), 1, "precondition: and IS drawn");
         assert!(
-            !session.examine_chamber(&label).starts_with("You see no"),
+            !session
+                .examine_chamber(&label, Perceiving::Body)
+                .starts_with("You see no"),
             "precondition: and ANSWERS examine while it is depicted"
         );
         assert!(
-            session.needs().contains(&label),
+            session.needs(Perceiving::Body).contains(&label),
             "precondition: and `needs` reads it: {}",
-            session.needs()
+            session.needs(Perceiving::Body)
         );
 
         session.occupancy.place(who, &room, far);
@@ -5594,7 +5798,7 @@ mod tests {
         // (fix round 1, so the noun does not stop answering at a doorway) — but
         // gated on SIGHT, not on co-location. Ungated it would hand back the
         // creature `snapshot` had just structurally redacted, one verb later.
-        let refused = session.examine_chamber(&label);
+        let refused = session.examine_chamber(&label, Perceiving::Body);
         assert!(
             refused.starts_with("You see no"),
             "examine must refuse a creature sight withheld, or it is a side \
@@ -5605,7 +5809,7 @@ mod tests {
         // richer leak than `examine`'s, since it also reports the creature's
         // interior. It is band-blind (`handle` does not gate it on `inside`), so
         // the gate lives in the verb rather than in the dispatch.
-        let read = session.needs();
+        let read = session.needs(Perceiving::Body);
         assert!(
             !read.contains(&label),
             "`needs` must not read a creature sight withheld — it is the same \
@@ -5676,7 +5880,7 @@ mod tests {
                 }
             })
             .collect();
-        let narrated = session.narrate_motion(1, &arriving, &nowhere);
+        let narrated = session.narrate_motion(1, &arriving, &nowhere, Perceiving::Body);
         assert!(
             !narrated.contains(&label),
             "`wait` must not announce the ARRIVAL of a creature sight withheld — \
@@ -5692,7 +5896,7 @@ mod tests {
         // needs both halves pinned, or only one direction of breaking it is
         // visible.
         session.occupancy.place(who, &room, near);
-        let seen_arriving = session.narrate_motion(1, &arriving, &nowhere);
+        let seen_arriving = session.narrate_motion(1, &arriving, &nowhere, Perceiving::Body);
         assert!(
             seen_arriving.contains(&label),
             "an arrival the player CAN see must still be narrated — without this \
@@ -5721,7 +5925,7 @@ mod tests {
             !session.colocated_npcs().iter().any(|n| n.entity == who),
             "precondition: the creature really left the room"
         );
-        let leaving = session.narrate_motion(1, &was_here, &nowhere);
+        let leaving = session.narrate_motion(1, &was_here, &nowhere, Perceiving::Body);
         assert!(
             !leaving.contains(&label),
             "`wait` must not announce the DEPARTURE of a creature the player \
@@ -5733,7 +5937,7 @@ mod tests {
         // the sensed-before set, MUST name it — otherwise the two negatives
         // would pass simply because this branch never narrates anything.
         let seen: std::collections::BTreeSet<EntityId> = [who].into_iter().collect();
-        let announced = session.narrate_motion(1, &was_here, &seen);
+        let announced = session.narrate_motion(1, &was_here, &seen, Perceiving::Body);
         assert!(
             announced.contains(&label),
             "a departure the player COULD see must still be narrated — without \

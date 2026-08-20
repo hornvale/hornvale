@@ -2071,7 +2071,13 @@ impl<'a> Drive for Thermal<'a> {
             | Action::Eyes
             | Action::Whoami
             | Action::Provoke
-            | Action::Soothe => 0.0,
+            | Action::Soothe
+            // Group B's objective halves (The Deed, Task 6) are player-only
+            // in exactly the same way, and answer for the same reason.
+            | Action::ObjectiveMap
+            | Action::ObjectiveExamine
+            | Action::ObjectiveNeeds
+            | Action::ObjectiveWait => 0.0,
         }
     }
 }
@@ -2822,7 +2828,13 @@ impl<'a> Drive for Danger<'a> {
             | Action::Eyes
             | Action::Whoami
             | Action::Provoke
-            | Action::Soothe => 0.0,
+            | Action::Soothe
+            // Group B's objective halves (The Deed, Task 6) are player-only
+            // in exactly the same way, and answer for the same reason.
+            | Action::ObjectiveMap
+            | Action::ObjectiveExamine
+            | Action::ObjectiveNeeds
+            | Action::ObjectiveWait => 0.0,
         }
     }
     fn survival_override(&self, urgency: f64) -> bool {
@@ -3573,8 +3585,15 @@ pub fn arbitrate(
             | Action::Eyes
             | Action::Whoami
             | Action::Provoke
-            | Action::Soothe => unreachable!(
-                "no creature drive ever proposes a group-A operator instrument (The Deed)"
+            | Action::Soothe
+            // Group B's objective halves (The Deed, Task 6): equally
+            // player-only, equally absent from every `candidate_actions`.
+            | Action::ObjectiveMap
+            | Action::ObjectiveExamine
+            | Action::ObjectiveNeeds
+            | Action::ObjectiveWait => unreachable!(
+                "no creature drive ever proposes a player-only act (The Deed) — neither a \
+                 group-A operator instrument nor a group-B objective half"
             ),
         };
         Resolution {
@@ -5207,11 +5226,17 @@ impl<'a> DriveMovements<'a> {
                 | Action::Eyes
                 | Action::Whoami
                 | Action::Provoke
-                | Action::Soothe,
+                | Action::Soothe
+                // Group B's objective halves (The Deed, Task 6): player-only
+                // on the same terms, and never constructed in this file.
+                | Action::ObjectiveMap
+                | Action::ObjectiveExamine
+                | Action::ObjectiveNeeds
+                | Action::ObjectiveWait,
             ) => unreachable!(
-                "no creature drive ever proposes a group-A operator instrument (The Deed) \
-                 — those are player-only, and no `candidate_actions`/`proposal` in this \
-                 file constructs one"
+                "no creature drive ever proposes a player-only act (The Deed) — neither a \
+                 group-A operator instrument nor a group-B objective half is reachable \
+                 here, and no `candidate_actions`/`proposal` in this file constructs one"
             ),
             Intent::Hold => {
                 // Idle (or unreachable): jump to the next act-crossing in
@@ -8775,10 +8800,12 @@ mod tests {
                 | Action::Eyes
                 | Action::Whoami
                 | Action::Provoke
-                | Action::Soothe => {
-                    unreachable!(
-                        "plan_to_water never emits a group-A operator instrument (The Deed)"
-                    )
+                | Action::Soothe
+                | Action::ObjectiveMap
+                | Action::ObjectiveExamine
+                | Action::ObjectiveNeeds
+                | Action::ObjectiveWait => {
+                    unreachable!("plan_to_water never emits a player-only act (The Deed)")
                 }
             }
         }

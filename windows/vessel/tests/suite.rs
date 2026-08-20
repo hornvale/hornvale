@@ -43,6 +43,8 @@ mod lantern_seam;
 mod liveness_genesis;
 #[path = "suite/ooc_namespace.rs"]
 mod ooc_namespace;
+#[path = "suite/ooc_objective.rs"]
+mod ooc_objective;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
 #[path = "suite/possession_moves.rs"]

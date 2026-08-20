@@ -170,6 +170,23 @@ pub fn base_ticks(action: &Action) -> Ticks {
         | Action::Whoami
         | Action::Provoke
         | Action::Soothe => Ticks(0),
+        // Group B's objective halves (The Deed, Task 6) charge nothing for
+        // the same reason, `!wait` INCLUDED — and that last one is worth a
+        // sentence, because spec §3.4 calls `!wait` "the exception that moves
+        // the clock" and this arm looks like it contradicts that.
+        //
+        // It does not. `Session::wait` advances the day by the SPAN THE
+        // PLAYER ASKED FOR (`wait 3` is three days, under either mood), which
+        // is the act's effect and is parameterised by its argument.
+        // `base_ticks` answers a different question — what an act costs the
+        // body that performs it, keyed on `Action` alone with nowhere to put
+        // a span — and the honest answer for an out-of-character act is
+        // still zero. Charging a constant here would add a second, silent
+        // clock movement on top of the one the player named.
+        Action::ObjectiveMap
+        | Action::ObjectiveExamine
+        | Action::ObjectiveNeeds
+        | Action::ObjectiveWait => Ticks(0),
     }
 }
 

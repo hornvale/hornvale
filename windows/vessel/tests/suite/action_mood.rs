@@ -47,8 +47,9 @@ fn every_creature_action_is_in_character() {
 }
 
 /// The complement: group A's seven operator instruments (The Deed, spec
-/// §3.2) must all read `OutOfCharacter`. Together with the test above, this
-/// exercises every one of the twelve rostered variants at least once.
+/// §3.2) must all read `OutOfCharacter`. Together with the tests either side
+/// of it, this exercises every one of the sixteen rostered variants at least
+/// once.
 #[test]
 fn every_group_a_instrument_is_out_of_character() {
     let instruments = [
@@ -69,16 +70,47 @@ fn every_group_a_instrument_is_out_of_character() {
     }
 }
 
-/// Anti-vacuity for the pair above: `Action::all()`'s full roster is
-/// partitioned exactly into the two sets those tests enumerate by hand, so
-/// neither test can have silently drifted from the real roster (an
-/// omitted or duplicated variant here would show up as this count
-/// disagreeing with `Action::all().len()`).
+/// Group B's objective halves (The Deed, Task 6) are out of character too,
+/// and they are the discriminating half of this file's mood coverage in a way
+/// group A is not: a group-A verb has NO in-character spelling, so classifying
+/// one is barely a choice. `!map`/`!examine`/`!needs`/`!wait` each sit beside a
+/// bare verb of the same name that is in character, which is the whole content
+/// of spec §2.1 — mood is a property of the ACTION, and `examine` and
+/// `!examine` are different acts rather than one act with two authorities.
+///
+/// Read from `action::OBJECTIVE_HALVES` rather than re-listed here on purpose:
+/// that constant is what `Session::handle_ooc` is written against, so a fifth
+/// half added there without a mood lands in this loop automatically. The
+/// length is asserted so the loop cannot silently empty.
+#[test]
+fn every_group_b_objective_half_is_out_of_character() {
+    assert_eq!(
+        hornvale_vessel::action::OBJECTIVE_HALVES.len(),
+        4,
+        "four of spec §3.2's six group-B verbs ship an objective half; `look` and \
+         `knows` deliberately do not (they have no gate to relax) — see \
+         tests/suite/ooc_objective.rs"
+    );
+    for action in hornvale_vessel::action::OBJECTIVE_HALVES {
+        assert_eq!(
+            action.mood(),
+            Mood::OutOfCharacter,
+            "{action:?} is group B's objective half and must be out of character"
+        );
+    }
+}
+
+/// Anti-vacuity for the three above: `Action::all()`'s full roster is
+/// partitioned exactly into the three sets those tests enumerate, so none of
+/// them can have silently drifted from the real roster (an omitted or
+/// duplicated variant would show up as this count disagreeing with
+/// `Action::all().len()`).
 #[test]
 fn every_rostered_action_is_classified() {
     assert_eq!(
-        creature_actions().len() + 7,
+        creature_actions().len() + 7 + hornvale_vessel::action::OBJECTIVE_HALVES.len(),
         Action::all().len(),
-        "creature_actions() + the 7 group-A instruments must cover the whole roster"
+        "creature_actions() + the 7 group-A instruments + group B's objective \
+         halves must cover the whole roster"
     );
 }

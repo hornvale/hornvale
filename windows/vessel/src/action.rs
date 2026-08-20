@@ -50,7 +50,38 @@ pub enum Action {
     /// Ease a co-located NPC's disposition downward, marked as the player's
     /// own act (The Deed, group A).
     Soothe,
+    /// Draw the OBJECTIVE chart — `!map` (The Deed, group B). The same
+    /// renderer `map` draws, with the observer step declined, so it shows the
+    /// terrain rather than this body's colour projection of it.
+    ObjectiveMap,
+    /// Examine a named thing objectively — `!examine` (The Deed, group B):
+    /// the chamber band's sight narrowing taken to its permissive limit, so a
+    /// creature standing here in the dark still answers.
+    ObjectiveExamine,
+    /// Read every co-located creature's felt state ungated — `!needs` (The
+    /// Deed, group B), through the same affect arbitration `needs` reads.
+    ObjectiveNeeds,
+    /// Let the world move without you, out of character — `!wait` (The Deed,
+    /// group B). The one out-of-character act that advances the clock (spec
+    /// §3.4); its objective half is the motion narration, which names a
+    /// creature the body could neither see arrive nor see go.
+    ObjectiveWait,
 }
+
+/// Spec §3.2's group B, whose bare verbs are in character and whose `!`
+/// forms are these — exactly the four that HAVE an objective view to render.
+///
+/// `look` and `knows` are the two group-B verbs with no variant here, and
+/// their absence is a finding rather than an omission: neither carries a gate
+/// whose permissive limit would render anything different, so an
+/// out-of-character half would have been an alias. See
+/// `Session::handle_ooc`'s doc and `tests/suite/ooc_objective.rs`.
+pub const OBJECTIVE_HALVES: [Action; 4] = [
+    Action::ObjectiveMap,
+    Action::ObjectiveExamine,
+    Action::ObjectiveNeeds,
+    Action::ObjectiveWait,
+];
 
 /// Whether an action's effect is position rather than a committed fact.
 /// type-audit: bare-ok(flag: return)
@@ -95,6 +126,16 @@ pub fn precondition_reads_committed_state(a: &Action) -> bool {
         | Action::Whoami
         | Action::Provoke
         | Action::Soothe => false,
+        // Group B's objective halves (The Deed, Task 6), for the same reason:
+        // no creature plans one, and none of the four reads committed state
+        // as a PRECONDITION. `!wait` and `!needs` read the ledger to produce
+        // their ANSWER, which is a different question — this one asks what
+        // must already be true before the act may happen, and for these four
+        // the answer is nothing.
+        Action::ObjectiveMap
+        | Action::ObjectiveExamine
+        | Action::ObjectiveNeeds
+        | Action::ObjectiveWait => false,
     }
 }
 
@@ -134,6 +175,10 @@ impl Action {
             Action::Whoami,
             Action::Provoke,
             Action::Soothe,
+            Action::ObjectiveMap,
+            Action::ObjectiveExamine,
+            Action::ObjectiveNeeds,
+            Action::ObjectiveWait,
         ]
     }
 
@@ -164,6 +209,23 @@ impl Action {
             Action::Whoami => "identify",
             Action::Provoke => "provoke",
             Action::Soothe => "soothe",
+            // Group B's Task 2 concepts (The Deed), read VERBATIM from the
+            // cohort-11 comment in `domains/language/src/accession.rs`:
+            // `map`->`chart`, `examine`->`look`, `needs`->`sense`,
+            // `wait`->`wait`. Taken from that comment rather than derived
+            // positionally, precisely because a positional reading of "these
+            // verbs onto those concepts" is the silent mispairing the roster
+            // cannot afford — and because two of the six group-B verbs ship
+            // no variant at all, so the positions do not line up.
+            //
+            // `examine` and `look` fold onto the ONE concept `look` by SCOPE
+            // — a focused look at a named thing against a survey of the
+            // surroundings — the same shape `MoveTo`/`MoveWithin` fold onto
+            // `move` by SCALE.
+            Action::ObjectiveMap => "chart",
+            Action::ObjectiveExamine => "look",
+            Action::ObjectiveNeeds => "sense",
+            Action::ObjectiveWait => "wait",
         }
     }
 }
@@ -197,6 +259,15 @@ impl Action {
             | Action::Whoami
             | Action::Provoke
             | Action::Soothe => Mood::OutOfCharacter,
+            // Group B's objective halves (The Deed, spec §3.2): the `!`
+            // spelling IS the mood, and mood is a property of the ACTION
+            // rather than of the invocation (spec §2.1) — `examine` and
+            // `!examine` are different acts, which is why no variant here
+            // ever answers both.
+            Action::ObjectiveMap
+            | Action::ObjectiveExamine
+            | Action::ObjectiveNeeds
+            | Action::ObjectiveWait => Mood::OutOfCharacter,
         }
     }
 }
@@ -220,6 +291,10 @@ fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
         Action::Whoami => "identify",
         Action::Provoke => "provoke",
         Action::Soothe => "soothe",
+        Action::ObjectiveMap => "chart",
+        Action::ObjectiveExamine => "look",
+        Action::ObjectiveNeeds => "sense",
+        Action::ObjectiveWait => "wait",
     }
 }
 
