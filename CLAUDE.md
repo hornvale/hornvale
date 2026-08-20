@@ -172,18 +172,35 @@ make doctor        # the repo self-map — run this first in a fresh session
 # to keep going (fast, continuous) — removes the mispricing at its source
 # rather than trying to make one instrument serve both. See decision 0132.
 #
-# GATE-COMMIT'S COST TRACKS THE EDIT'S BLAST RADIUS in the kernel ->
-# domains/* -> windows/* -> cli layering, not the size of the suite.
-# Measured end to end, one line added and reverted in each layer:
-#   kernel/   470.8 s   <- as costly as the old full-workspace gate
-#   domains/   ~84   s
-#   cli/       17   s
-#   no source change at all   10-16 s
-# The sub-floor test tier itself executes its 2,746 selected tests in
-# **4.4 s**; the rest of that wall time is compiling and linking test
-# binaries, which a gate that by definition runs after a source change
-# cannot avoid regardless of which tests it selects — this is also why
-# `gate-fast`'s test-scoping approach only ever bought ~10%. A test with no
+# GATE-COMMIT'S COST IS ITS COMPILATION UNITS, NOT ITS TESTS AND NOT ITS
+# LAYER. This block used to say the cost "tracks the edit's blast radius in
+# the kernel -> domains/* -> windows/* -> cli layering". That is a real
+# effect and it is not the driver, and reading it as the driver sent one
+# campaign hunting Spotlight, argv chunking, linking and memory pressure —
+# five wrong hypotheses — before the cheapest decisive test was run.
+# Measured 2026-08-19, one run decomposed end to end:
+#   clippy build                        141   s
+#   nextest build                        86   s
+#   TEST EXECUTION (3,070 tests)          6.2 s   <- 0.75% of the gate
+#   ------------------------------------------
+#   wall                                833   s
+# The decisive test is two commands, and it is what this paragraph is FOR:
+#   cargo clippy --workspace                 real 21.3 s  user  3.3 s  sys   4.6 s
+#   cargo clippy --workspace --all-targets   real 62.8 s  user 52.0 s  sys 162.1 s
+# `--all-targets` turns every integration-test FILE into its own crate. The
+# 260 test targets alone cost **+157.5 s of kernel time**, ~0.6 s each, just
+# to exist. That is why the slow runs are SYS-dominated (9 of the 12 slowest
+# in docs/timings.md have sys > user, and compilation is user-dominated),
+# and why `gate-fast`'s test-scoping only ever bought ~10%: it scoped tests,
+# and tests were never the cost.
+# THE FIX SHIPPED (The Crucible): integration tests consolidated behind one
+# `tests/suite.rs` per crate, measured -33% wall and -28% sys on the pilot.
+# `cli/tests/suite/test_binary_ratchet.rs` now freezes the roster of
+# top-level `tests/*.rs` files so the problem cannot re-accrete — 13 had
+# already crept back before it was written. A warm-tree gate-commit is
+# ~25 s; a kernel-layer edit still costs more, because it rebuilds more
+# units, which is the layering effect correctly stated.
+# The sub-floor tier's own execution is seconds and always was. A test with no
 # recorded baseline duration is EXCLUDED from gate-commit by design (coverage
 # is the stage gate's job, not the commit gate's — see spec §4.3).
 #
