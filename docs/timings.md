@@ -1875,3 +1875,23 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T02:37:32Z | sluice:outboard | 35.491 | 21.910 | 35.683 | 1.62 | 0 | d1827eb91 |  | lefford | 40 |
 | 2026-08-20T02:43:29Z | sluice:gate | 356.370 | 9846.901 | 341.166 | 28.59 | 0 | d123648f8 |  | lefford | 40 |
 | 2026-08-20T02:46:31Z | sluice:clients | 182.037 | 369.786 | 11.417 | 2.09 | 0 | ebbbc2d08 |  | lefford | 40 |
+| 2026-08-19T21:10:11Z | rebaseline | 58.417 | 229.504 | 11.890 | 4.13 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T21:11:54Z | gate-commit | 85.511 | 84.519 | 43.602 | 1.50 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T21:12:17Z | gate-commit | 22.682 | 49.363 | 11.004 | 2.66 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T21:42:31Z | gate-commit | 35.827 | 49.548 | 11.006 | 1.69 | 0 | 93ebbbac | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T22:00:00Z | gate-commit | 49.664 | 49.574 | 11.034 | 1.22 | 0 | 56e49e71 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T22:52:19Z | gate-commit | 59.584 | 53.555 | 12.278 | 1.10 | 0 | e2698c03 | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T22:58:56Z | gate-commit | 74.370 | 51.272 | 12.385 | 0.86 | 0 | e61a11fc | campaign/the-planes | MacBookPro | 10 |
+| 2026-08-19T23:10:47Z | prewarm | 202.181 | 1078.527 | 41.013 | 5.54 | 0 | b5a0e047 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-19T23:11:09Z | gate-commit | 58.390 | 90.815 | 15.727 | 1.82 | 0 | b5a0e047 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-19T23:22:10Z | gate-commit | 40.220 | 97.943 | 25.542 | 3.07 | 0 | ccd9076e | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-19T23:23:20Z | gate-commit | 24.144 | 49.454 | 11.601 | 2.53 | 0 | ccd9076e | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T00:15:00Z | gate-commit | 4.603 | 9.304 | 1.753 | 2.40 | 0 | dc6cfb1f | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T00:16:06Z | gate-commit | 27.781 | 59.757 | 21.165 | 2.91 | 0 | dc6cfb1f | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T00:18:23Z | gate-commit | 22.034 | 48.528 | 11.335 | 2.72 | 0 | dc6cfb1f | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T01:02:55Z | gate-commit | 24.520 | 49.959 | 11.806 | 2.52 | 0 | 7a3a4691 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T02:14:15Z | gate-commit | 43.542 | 74.498 | 24.306 | 2.27 | 0 | 664e02ef | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T02:15:23Z | gate-commit | 32.592 | 52.360 | 11.853 | 1.97 | 0 | 664e02ef | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T11:42:42Z | gate-commit | 26.175 | 59.583 | 22.743 | 3.15 | 0 | decf4c57 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T11:46:52Z | gate-commit | 22.025 | 48.264 | 11.353 | 2.71 | 0 | decf4c57 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T13:45:42Z | gate-commit | 23.805 | 49.708 | 11.536 | 2.57 | 0 | a98b0b38 | campaign/the-winze | MacBookPro | 10 |
