@@ -2054,6 +2054,17 @@ impl<'a> Drive for Thermal<'a> {
             },
             // No consume — none of `Drink`/`Rest`/`Eat` serves comfort.
             Action::Drink | Action::Rest | Action::Eat => 0.0,
+            // Group A operator instruments (The Deed) are player-only;
+            // `candidate_actions` never proposes one to a drive.
+            Action::Why
+            | Action::Npcs
+            | Action::Help
+            | Action::Eyes
+            | Action::Whoami
+            | Action::Provoke
+            | Action::Soothe => unreachable!(
+                "no creature drive ever proposes a group-A operator instrument (The Deed)"
+            ),
         }
     }
 }
@@ -2791,6 +2802,17 @@ impl<'a> Drive for Danger<'a> {
             // Fine movement is not yet wired into any drive's plan (The
             // Threshold task 6+), so it eases no fear today either.
             Action::Drink | Action::Rest | Action::Eat | Action::MoveWithin(_) => 0.0,
+            // Group A operator instruments (The Deed) are player-only;
+            // `candidate_actions` never proposes one to a drive.
+            Action::Why
+            | Action::Npcs
+            | Action::Help
+            | Action::Eyes
+            | Action::Whoami
+            | Action::Provoke
+            | Action::Soothe => unreachable!(
+                "no creature drive ever proposes a group-A operator instrument (The Deed)"
+            ),
         }
     }
     fn survival_override(&self, urgency: f64) -> bool {
@@ -3531,6 +3553,19 @@ pub fn arbitrate(
             // `Searching` is reserved for gradient-following toward an
             // UNKNOWN target, which this branch structurally cannot be.
             Action::MoveWithin(_) => (AffectLabel::Eager, 0.5),
+            // Group A operator instruments (The Deed) are player-only; a
+            // drive's candidate list never contains one, so `chosen` (drawn
+            // from `candidates`, itself built by `candidate_actions`) can
+            // never be one either.
+            Action::Why
+            | Action::Npcs
+            | Action::Help
+            | Action::Eyes
+            | Action::Whoami
+            | Action::Provoke
+            | Action::Soothe => unreachable!(
+                "no creature drive ever proposes a group-A operator instrument (The Deed)"
+            ),
         };
         Resolution {
             intent: Intent::Do(chosen),
@@ -5140,6 +5175,19 @@ impl<'a> DriveMovements<'a> {
                 // different in kind from a room-scale `Hold`.
                 occupancy.walk(npc.entity, &st.interior, next);
             }
+            Intent::Do(
+                Action::Why
+                | Action::Npcs
+                | Action::Help
+                | Action::Eyes
+                | Action::Whoami
+                | Action::Provoke
+                | Action::Soothe,
+            ) => unreachable!(
+                "no creature drive ever proposes a group-A operator instrument (The Deed) \
+                 — those are player-only, and no `candidate_actions`/`proposal` in this \
+                 file constructs one"
+            ),
             Intent::Hold => {
                 // Idle (or unreachable): jump to the next act-crossing in
                 // closed form rather than spinning day-by-day (`hold_step`,
@@ -8695,6 +8743,17 @@ mod tests {
                 }
                 Action::MoveWithin(_) => {
                     unreachable!("plan_to_water never emits MoveWithin (The Threshold task 6+)")
+                }
+                Action::Why
+                | Action::Npcs
+                | Action::Help
+                | Action::Eyes
+                | Action::Whoami
+                | Action::Provoke
+                | Action::Soothe => {
+                    unreachable!(
+                        "plan_to_water never emits a group-A operator instrument (The Deed)"
+                    )
                 }
             }
         }

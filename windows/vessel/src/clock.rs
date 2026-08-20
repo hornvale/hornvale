@@ -126,9 +126,17 @@ pub fn tempo(mass_kg: f64) -> f64 {
 }
 
 /// The authored base cost of each action, before the creature's tempo. Five
-/// dials replacing the single historical `MOVE_DURATION`; none is zero, so the
-/// cost model is TOTAL (spec §2 rung 1). `Rest` keeps its jump-to-waking
-/// elsewhere — this is only the cost of the act of lying down.
+/// creature dials replacing the single historical `MOVE_DURATION`; none of
+/// those five is zero, so the cost model is TOTAL for every act a creature
+/// can plan (spec §2 rung 1). `Rest` keeps its jump-to-waking elsewhere —
+/// this is only the cost of the act of lying down.
+///
+/// Group A's seven operator instruments (The Deed) are the deliberate
+/// exception: an out-of-character act "charges nothing by default" (spec
+/// Arc I.b §3.4), so their dial is `Ticks(0)`. This is inert today — nothing
+/// routes a group-A `Action` through [`cost_ticks`], dispatch stays
+/// string-based for them — but the match must still be exhaustive, and
+/// `0` is the honest answer for what they *would* cost if ever charged.
 ///
 /// The match is exhaustive by variant deliberately, the same discipline
 /// `action::precondition_reads_committed_state` keeps: a new `Action` must
@@ -153,6 +161,15 @@ pub fn base_ticks(action: &Action) -> Ticks {
         Action::Eat => Ticks(3_000),
         // Lying DOWN is quick; the sleep itself is the jump-to-waking, not this.
         Action::Rest => Ticks(150),
+        // Group A: operator instruments charge nothing by default (spec
+        // §3.4) — see the doc above.
+        Action::Why
+        | Action::Npcs
+        | Action::Help
+        | Action::Eyes
+        | Action::Whoami
+        | Action::Provoke
+        | Action::Soothe => Ticks(0),
     }
 }
 

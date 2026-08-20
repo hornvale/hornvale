@@ -192,8 +192,6 @@ verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser);
                    indoors, the floor plan of the building you are in
-  eyes [who]       whose eyes you see colour through (a species, 'own',
-                   'standard', or 'off'); bare, it says what yours drop
   go <dir>         walk a compass exit, out of doors (n ne e se s sw w nw);
                    the bare direction works on its own too
   dive             descend a layer of the water column; 'surface' comes back
@@ -207,18 +205,23 @@ verbs:
   examine <thing>  anything look or the floor plan names
   back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
-  whoami           the one you possess
   knows            everything they have seen
-  npcs             the derived NPCs sharing this world (label, number)
-  why <who>        recount an NPC's dated history (by label or number)
   needs            read the felt state of anyone sharing this room
-  provoke [who]    shift a co-located NPC's disposition, your own mark
-  soothe [who]     ease a co-located NPC's disposition, your own mark
   write <sentence> speak a line of Common; you absorb what it says, written
                    into your own margin
   consult          read the Book's Reckoning at your own day, and whatever
                    your margin has initiated you into
   release          let go (quit works too)
+
+operator instruments (out-of-character; bypass the body, never the world):
+  !whoami          the one you possess
+  !npcs            the derived NPCs sharing this world (label, number)
+  !why <who>       recount an NPC's dated history (by label or number)
+  !eyes [who]      whose eyes you see colour through (a species, 'own',
+                   'standard', or 'off'); bare, it says what yours drop
+  !provoke [who]   shift a co-located NPC's disposition, your own mark
+  !soothe [who]    ease a co-located NPC's disposition, your own mark
+  !help            this list
 ";
 
 /// The world-scoped half of starting a possession: everything
@@ -1252,145 +1255,172 @@ impl<'w> Session<'w> {
             Some((v, r)) => (v, r.trim()),
             None => (line, ""),
         };
-        if !verb.is_empty() {
+        let verb_present = !verb.is_empty();
+        if verb_present {
             self.turn += 1;
         }
-        let turn = match verb {
-            "" => Turn::Out(String::new()),
-            // `look` is the one existing verb that must become band-aware:
-            // inside a structure it renders the chamber, out of doors the
-            // locale. Everything else reads `self.agent.position`, which never
-            // leaves the walk band, so nothing else changes.
-            "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
-            "look" if self.submerged.is_some() => self.out(self.describe_here()),
-            // Underground (The Deep Realm, Task 5): the chamber lattice's
-            // content is read straight from `self.underground`, never
-            // through `describe_here`'s locale pipeline — that pipeline's
-            // stratum handling (`expr_at_stratum`) is water-specific (a
-            // vantage stratum that disagrees with the cell's own substitutes
-            // `Formation::OpenWater`), so feeding it a rock `Stratum` would
-            // render nonsense rather than a chamber.
-            "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
-            "look" => self.out(self.describe_here()),
-            // `map` is band-aware for exactly the reason `look` is, and it is the
-            // SAME verb rather than a new one: §6's contract is that any pane
-            // capability must first BE a verb, so the fewer verbs meaning one
-            // thing each, the better. Indoors the chart would draw the LOCALE the
-            // structure sits in, which is not where the possession is standing. A
-            // plan has no coarser rung, so an argument indoors is refused rather
-            // than silently ignored — an ignored argument is how a player comes
-            // to believe they asked for something and got it.
-            "map" if self.inside.is_some() && rest.is_empty() => self.out(self.plan_here()),
-            "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
-            "map" => self.map(rest),
-            // Bare `eyes` reports whose eyes the chart is coloured through and
-            // what their projection drops; `eyes <name>` switches them (The
-            // Beholding, Task 5).
-            "eyes" if rest.is_empty() => Turn::Out(self.eyes_report()),
-            "eyes" => self.set_eyes(rest),
-            // `go` is band-aware for the same reason `look` and `map` are, and
-            // this arm is the reversal The Blocking owes The Lintel: indoors a
-            // compass bearing means one CELL, not one locale. §1b.6's law is
-            // untouched — a cell step stays inside the chamber band — and the
-            // guard still matters exactly as much, because without it `go n` from
-            // a chamber renders the NEIGHBOURING LOCALE with no sentence
-            // acknowledging the building had been left.
-            "go" if self.inside.is_some() => self.step(rest),
-            // The water column, by contrast, is NOT reversed: it has no lattice
-            // to step across, so a bearing under water still has nowhere to go
-            // (The Column). Two bands, two answers, one verb.
-            "go" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
-            // The chamber lattice, likewise: this campaign ships only the
-            // entrance address, no walkable interior, so a bearing from it
-            // has nowhere to mean either (The Deep Realm, Task 5).
-            "go" if self.underground.is_some() => {
-                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+        // `!` selects the out-of-character namespace (The Deed, spec
+        // §2.1/§3.2): stripped here, before verb lookup, so the sigil
+        // routes to a SEPARATE lookup table below rather than becoming part
+        // of the verb string itself. That separation is load-bearing, not
+        // cosmetic — it is what keeps an unclassified "!<in-character
+        // verb>" (group B's own `!`-forms are Task 6's job, not this one's)
+        // an ordinary unknown-verb refusal instead of silently falling
+        // through and aliasing to the bare form's behaviour.
+        let ooc = verb.starts_with('!');
+        let verb = verb.strip_prefix('!').unwrap_or(verb);
+        let turn = if ooc {
+            // Group A: the operator instruments (The Deed, spec §3.2).
+            // Bare forms are retired — this namespace is their only entry
+            // point now, and it carries no in-character counterpart for
+            // any of the seven, by design.
+            match verb {
+                "why" => Turn::Out(self.why(rest)),
+                "npcs" => Turn::Out(self.list_npcs()),
+                "help" => Turn::Out(HELP.to_string()),
+                // Bare `!eyes` reports whose eyes the chart is coloured
+                // through and what their projection drops; `!eyes <name>`
+                // switches them.
+                "eyes" if rest.is_empty() => Turn::Out(self.eyes_report()),
+                "eyes" => self.set_eyes(rest),
+                "whoami" => Turn::Out(self.whoami()),
+                "provoke" => self.act_on_disposition(rest, 1),
+                "soothe" => self.act_on_disposition(rest, -1),
+                other => Turn::Out(format!("No verb '!{other}' ('!help' lists them).")),
             }
-            "go" => self.go(rest),
-            // Band-aware, for the same reason `look` is: the outdoor path resolves
-            // against the LOCALE's two grains, which know nothing of what stands
-            // in a chamber, so it would answer "You see no <noun> here." about a
-            // thing the chamber's own prose had just listed. Indoors it resolves
-            // against the chamber's anchors and the floor plan's own legend
-            // instead — the reversal of `INDOOR_EXAMINE_REFUSAL`, which stated
-            // that limit honestly while nothing authored a detail. A BARE
-            // `examine` is a different question — the player named nothing — so
-            // it still falls through to `examine`'s own "Examine what?" hint,
-            // which is as true indoors as out.
-            "examine" if self.inside.is_some() && !rest.is_empty() => {
-                Turn::Out(self.examine_chamber(rest))
+        } else {
+            match verb {
+                "" => Turn::Out(String::new()),
+                // `look` is the one existing verb that must become band-aware:
+                // inside a structure it renders the chamber, out of doors the
+                // locale. Everything else reads `self.agent.position`, which never
+                // leaves the walk band, so nothing else changes.
+                "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
+                "look" if self.submerged.is_some() => self.out(self.describe_here()),
+                // Underground (The Deep Realm, Task 5): the chamber lattice's
+                // content is read straight from `self.underground`, never
+                // through `describe_here`'s locale pipeline — that pipeline's
+                // stratum handling (`expr_at_stratum`) is water-specific (a
+                // vantage stratum that disagrees with the cell's own substitutes
+                // `Formation::OpenWater`), so feeding it a rock `Stratum` would
+                // render nonsense rather than a chamber.
+                "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
+                "look" => self.out(self.describe_here()),
+                // `map` is band-aware for exactly the reason `look` is, and it is the
+                // SAME verb rather than a new one: §6's contract is that any pane
+                // capability must first BE a verb, so the fewer verbs meaning one
+                // thing each, the better. Indoors the chart would draw the LOCALE the
+                // structure sits in, which is not where the possession is standing. A
+                // plan has no coarser rung, so an argument indoors is refused rather
+                // than silently ignored — an ignored argument is how a player comes
+                // to believe they asked for something and got it.
+                "map" if self.inside.is_some() && rest.is_empty() => self.out(self.plan_here()),
+                "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
+                "map" => self.map(rest),
+                // `go` is band-aware for the same reason `look` and `map` are, and
+                // this arm is the reversal The Blocking owes The Lintel: indoors a
+                // compass bearing means one CELL, not one locale. §1b.6's law is
+                // untouched — a cell step stays inside the chamber band — and the
+                // guard still matters exactly as much, because without it `go n` from
+                // a chamber renders the NEIGHBOURING LOCALE with no sentence
+                // acknowledging the building had been left.
+                "go" if self.inside.is_some() => self.step(rest),
+                // The water column, by contrast, is NOT reversed: it has no lattice
+                // to step across, so a bearing under water still has nowhere to go
+                // (The Column). Two bands, two answers, one verb.
+                "go" if self.submerged.is_some() => {
+                    Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
+                }
+                // The chamber lattice, likewise: this campaign ships only the
+                // entrance address, no walkable interior, so a bearing from it
+                // has nowhere to mean either (The Deep Realm, Task 5).
+                "go" if self.underground.is_some() => {
+                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+                }
+                "go" => self.go(rest),
+                // Band-aware, for the same reason `look` is: the outdoor path resolves
+                // against the LOCALE's two grains, which know nothing of what stands
+                // in a chamber, so it would answer "You see no <noun> here." about a
+                // thing the chamber's own prose had just listed. Indoors it resolves
+                // against the chamber's anchors and the floor plan's own legend
+                // instead — the reversal of `INDOOR_EXAMINE_REFUSAL`, which stated
+                // that limit honestly while nothing authored a detail. A BARE
+                // `examine` is a different question — the player named nothing — so
+                // it still falls through to `examine`'s own "Examine what?" hint,
+                // which is as true indoors as out.
+                "examine" if self.inside.is_some() && !rest.is_empty() => {
+                    Turn::Out(self.examine_chamber(rest))
+                }
+                // The underworld's own band, mirroring the two arms above: a cave
+                // chamber's rock is not the surface locale's canopy and forest, so
+                // resolving an underground `examine` against `examine`'s own prose
+                // catalog is the defect The Handle's Task 4 fixes — it fell through
+                // to the bare arm below, which reads the LOCALE overhead, and
+                // answered "You see no rock here." about the very rock the descent
+                // had just named.
+                "examine" if self.underground.is_some() && !rest.is_empty() => {
+                    Turn::Out(self.examine_underground(rest))
+                }
+                "examine" => self.examine(rest),
+                // `back` retraces the WALK-band trail, so it stays refused where `go`
+                // no longer is: the capability this campaign built is intra-chamber
+                // GEOMETRY, and a walk-band trail is not geometry.
+                "back" if self.inside.is_some() => Turn::Out(INDOOR_BACK_REFUSAL.to_string()),
+                "back" if self.submerged.is_some() => {
+                    Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
+                }
+                "back" if self.underground.is_some() => {
+                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+                }
+                "back" => self.back(),
+                "wait" => self.wait(rest),
+                "knows" => Turn::Out(self.knows()),
+                "needs" => Turn::Out(self.needs()),
+                "write" => Turn::Out(self.write(rest)),
+                "consult" => Turn::Out(self.consult()),
+                "dive" => self.dive(),
+                "surface" => self.surface(),
+                "delve" => self.delve(),
+                "climb" => self.climb(),
+                "enter" => self.enter(rest),
+                "out" => self.leave(),
+                // Coarse-ward is still refused: possessing a settlement, a culture
+                // or a civilization is a deferred arc of its own (0077). This
+                // sentence is byte-pinned in the galleries — do not reword it.
+                "exit" => Turn::Out(
+                    "The grain of the world resists; that way lies another scale of things."
+                        .to_string(),
+                ),
+                "release" | "quit" => Turn::Released("You let go.".to_string()),
+                // A bare compass token IS a movement command. The room names the
+                // three nearest bearings — "the nearest ground lies SE, N, SW" —
+                // and every one of those tokens must be typeable; `parse_compass`
+                // already accepted them, and only this dispatch arm was missing.
+                // (The Rhumb: those three no longer bound what `go` accepts, but
+                // they are still real destinations the prose promises, so the
+                // invariant they were written to satisfy is unchanged.)
+                //
+                // It carries `go`'s own band guards, and must: this arm dispatches
+                // to `self.go` directly, so without them repeated here a bare `n`
+                // typed inside a structure would slip past the band split that
+                // `"go" if self.inside.is_some()` exists to make, and silently
+                // render the neighbouring locale from indoors. Indoors it therefore
+                // means what `go n` means indoors — one CELL of the floor plan, and
+                // `step` refuses a bare diagonal with the geometry as the reason.
+                other if self.inside.is_some() && parse_compass(other).is_some() => {
+                    self.step(other)
+                }
+                other if self.submerged.is_some() && parse_compass(other).is_some() => {
+                    Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
+                }
+                other if self.underground.is_some() && parse_compass(other).is_some() => {
+                    Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+                }
+                other if parse_compass(other).is_some() => self.go(other),
+                other => Turn::Out(format!("No verb '{other}' ('!help' lists them).")),
             }
-            // The underworld's own band, mirroring the two arms above: a cave
-            // chamber's rock is not the surface locale's canopy and forest, so
-            // resolving an underground `examine` against `examine`'s own prose
-            // catalog is the defect The Handle's Task 4 fixes — it fell through
-            // to the bare arm below, which reads the LOCALE overhead, and
-            // answered "You see no rock here." about the very rock the descent
-            // had just named.
-            "examine" if self.underground.is_some() && !rest.is_empty() => {
-                Turn::Out(self.examine_underground(rest))
-            }
-            "examine" => self.examine(rest),
-            // `back` retraces the WALK-band trail, so it stays refused where `go`
-            // no longer is: the capability this campaign built is intra-chamber
-            // GEOMETRY, and a walk-band trail is not geometry.
-            "back" if self.inside.is_some() => Turn::Out(INDOOR_BACK_REFUSAL.to_string()),
-            "back" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
-            "back" if self.underground.is_some() => {
-                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
-            }
-            "back" => self.back(),
-            "wait" => self.wait(rest),
-            "whoami" => Turn::Out(self.whoami()),
-            "knows" => Turn::Out(self.knows()),
-            "npcs" => Turn::Out(self.list_npcs()),
-            "why" => Turn::Out(self.why(rest)),
-            "needs" => Turn::Out(self.needs()),
-            "provoke" => self.act_on_disposition(rest, 1),
-            "soothe" => self.act_on_disposition(rest, -1),
-            "write" => Turn::Out(self.write(rest)),
-            "consult" => Turn::Out(self.consult()),
-            "dive" => self.dive(),
-            "surface" => self.surface(),
-            "delve" => self.delve(),
-            "climb" => self.climb(),
-            "enter" => self.enter(rest),
-            "out" => self.leave(),
-            // Coarse-ward is still refused: possessing a settlement, a culture
-            // or a civilization is a deferred arc of its own (0077). This
-            // sentence is byte-pinned in the galleries — do not reword it.
-            "exit" => Turn::Out(
-                "The grain of the world resists; that way lies another scale of things."
-                    .to_string(),
-            ),
-            "help" => Turn::Out(HELP.to_string()),
-            "release" | "quit" => Turn::Released("You let go.".to_string()),
-            // A bare compass token IS a movement command. The room names the
-            // three nearest bearings — "the nearest ground lies SE, N, SW" —
-            // and every one of those tokens must be typeable; `parse_compass`
-            // already accepted them, and only this dispatch arm was missing.
-            // (The Rhumb: those three no longer bound what `go` accepts, but
-            // they are still real destinations the prose promises, so the
-            // invariant they were written to satisfy is unchanged.)
-            //
-            // It carries `go`'s own band guards, and must: this arm dispatches
-            // to `self.go` directly, so without them repeated here a bare `n`
-            // typed inside a structure would slip past the band split that
-            // `"go" if self.inside.is_some()` exists to make, and silently
-            // render the neighbouring locale from indoors. Indoors it therefore
-            // means what `go n` means indoors — one CELL of the floor plan, and
-            // `step` refuses a bare diagonal with the geometry as the reason.
-            other if self.inside.is_some() && parse_compass(other).is_some() => self.step(other),
-            other if self.submerged.is_some() && parse_compass(other).is_some() => {
-                Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
-            }
-            other if self.underground.is_some() && parse_compass(other).is_some() => {
-                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
-            }
-            other if parse_compass(other).is_some() => self.go(other),
-            other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
         };
-        if !verb.is_empty() {
+        if verb_present {
             self.last_text = match &turn {
                 Turn::Out(s) | Turn::Released(s) => s.clone(),
             };
@@ -4129,7 +4159,14 @@ mod tests {
         assert_eq!(session.snapshot().unwrap().turn, 0);
         session.handle("look");
         assert_eq!(session.snapshot().unwrap().turn, 1);
-        session.handle("whoami");
+        // Incidental choice of a second verb — this test pins turn
+        // bookkeeping, not `!whoami`'s own answer, so any recognised verb
+        // would do. Sigilled anyway (The Deed, Task 5) rather than leaning
+        // on the now-retired bare form's unknown-verb refusal, which would
+        // still pass here (a refusal is a non-empty, turn-consuming `Turn`
+        // too — see `handle`'s own `verb_present` bookkeeping) but for a
+        // reason this test does not intend to exercise.
+        session.handle("!whoami");
         assert_eq!(session.snapshot().unwrap().turn, 2);
     }
 
@@ -4215,7 +4252,9 @@ mod tests {
     fn a_blank_line_clobbers_neither_turn_nor_narration() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        session.handle("whoami");
+        // Incidental choice of a verb — this test pins that a blank line
+        // clobbers neither counter, not `!whoami`'s own answer.
+        session.handle("!whoami");
         let before = session.snapshot().unwrap();
         session.handle("");
         let after = session.snapshot().unwrap();
@@ -4243,7 +4282,7 @@ mod tests {
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let before = session.snapshot().unwrap();
         assert!(before.social.iter().all(|s| s.grievance == 0.0));
-        session.handle("provoke");
+        session.handle("!provoke");
         let after = session.snapshot().unwrap();
         assert!(
             after.social.iter().any(|s| s.grievance > 0.0),
@@ -4255,11 +4294,11 @@ mod tests {
     fn narration_follows_the_verb_not_the_room() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        session.handle("whoami");
+        session.handle("!whoami");
         let snap = session.snapshot().unwrap();
         assert!(
             snap.narration.prose.starts_with("A "),
-            "after `whoami` the narration is the whoami answer, not the room block: {:?}",
+            "after `!whoami` the narration is the whoami answer, not the room block: {:?}",
             snap.narration.prose
         );
         assert!(
@@ -4732,8 +4771,8 @@ mod tests {
             Turn::Released(_) => panic!("map must not release"),
         };
         assert!(chart.contains("[lens: colour"), "{chart}");
-        // `eyes off` falls all the way back to the plain terrain lens.
-        session.handle("eyes off");
+        // `!eyes off` falls all the way back to the plain terrain lens.
+        session.handle("!eyes off");
         let bare = match session.handle("map") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("map must not release"),
@@ -5437,9 +5476,9 @@ mod tests {
         // round 3) must narrow on sight and on nothing else: an undrawable
         // creature is not an unseen one, so refusing to provoke it would make
         // the placement scan decide what the player may do.
-        let acted = match session.handle(&format!("provoke {refused}")) {
+        let acted = match session.handle(&format!("!provoke {refused}")) {
             Turn::Out(t) => t,
-            Turn::Released(_) => panic!("provoke must not release"),
+            Turn::Released(_) => panic!("!provoke must not release"),
         };
         assert!(
             acted.contains(&refused),
@@ -5585,9 +5624,9 @@ mod tests {
         // named one: it selects the first sensed NPC, and unfiltered it would
         // silently pick the hidden creature without the player ever naming it.
         for arg in ["", &label] {
-            let acted = match session.handle(&format!("provoke {arg}")) {
+            let acted = match session.handle(&format!("!provoke {arg}")) {
                 Turn::Out(t) => t,
-                Turn::Released(_) => panic!("provoke must not release"),
+                Turn::Released(_) => panic!("!provoke must not release"),
             };
             assert!(
                 !acted.contains(&label),

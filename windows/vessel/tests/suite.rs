@@ -41,6 +41,8 @@ mod lantern_night;
 mod lantern_seam;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/ooc_namespace.rs"]
+mod ooc_namespace;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
 #[path = "suite/possession_moves.rs"]

@@ -20,7 +20,7 @@ use hornvale_vessel::{PossessOpts, Session, Turn};
 /// unrelated neighbour's water access into three tests that say nothing
 /// about it.
 fn walked(session: &mut Session, label: &str) -> bool {
-    match session.handle(&format!("why {label}")) {
+    match session.handle(&format!("!why {label}")) {
         Turn::Out(s) => s.contains("position on a day"),
         Turn::Released(_) => panic!("why never releases"),
     }
@@ -240,7 +240,7 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
     // Before any wait, the NPC has no committed agent-at yet (day-0 pin):
     // recounting it either says nothing is recorded, or (since the NPC
     // entity was minted this session) never mentions "day".
-    let before = out_text(session.handle(&format!("why {label}")));
+    let before = out_text(session.handle(&format!("!why {label}")));
     assert!(
         !before.contains("day"),
         "before any wait, no dated agent-at exists to recount: {before}"
@@ -265,7 +265,7 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
         "measured: this NPC's own settlement is on-water; it never walks"
     );
 
-    let recount = out_text(session.handle(&format!("why {label}")));
+    let recount = out_text(session.handle(&format!("!why {label}")));
     assert!(
         recount.contains(label.as_str()),
         "the recount leads with the NPC's own name: {recount}"
@@ -389,26 +389,26 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
 fn why_resolves_by_numeric_id_and_reports_an_unknown_target() {
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let listing = match session.handle("npcs") {
+    let listing = match session.handle("!npcs") {
         Turn::Out(s) => s,
-        _ => panic!("npcs must not release"),
+        _ => panic!("!npcs must not release"),
     };
     let id: u64 = listing
         .lines()
         .nth(1)
         .and_then(|l| l.split(['[', ']']).nth(1))
         .and_then(|s| s.parse().ok())
-        .expect("npcs lists at least one [id] label line");
+        .expect("!npcs lists at least one [id] label line");
     // Advance across a full drive cycle (the-wanting) so the id-resolved
     // NPC has a committed, dated agent-at to recount.
     session.handle("wait 7");
-    match session.handle(&format!("why {id}")) {
+    match session.handle(&format!("!why {id}")) {
         Turn::Out(s) => assert!(s.contains("day"), "id-resolved recount names a day: {s}"),
-        _ => panic!("why must not release"),
+        _ => panic!("!why must not release"),
     }
-    match session.handle("why nobody-by-this-name") {
+    match session.handle("!why nobody-by-this-name") {
         Turn::Out(s) => assert!(s.contains("No one here answers")),
-        _ => panic!("why must not release"),
+        _ => panic!("!why must not release"),
     }
 }
 
@@ -423,7 +423,7 @@ fn provoke_commits_one_player_authored_disposition_fact() {
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
     let before = session.committed_disposition_count();
-    let turn = session.handle("provoke");
+    let turn = session.handle("!provoke");
     let after = session.committed_disposition_count();
     match turn {
         Turn::Out(s) => assert!(
@@ -452,7 +452,7 @@ fn a_repeat_same_day_provoke_is_a_ledger_no_op_and_the_narration_says_so() {
         Turn::Released(s) => panic!("provoke never releases: {s}"),
     };
 
-    let first = out_text(session.handle("provoke"));
+    let first = out_text(session.handle("!provoke"));
     assert_eq!(
         session.committed_disposition_count(),
         1,
@@ -463,7 +463,7 @@ fn a_repeat_same_day_provoke_is_a_ledger_no_op_and_the_narration_says_so() {
         "the first provoke is the effect narration: {first}"
     );
 
-    let second = out_text(session.handle("provoke"));
+    let second = out_text(session.handle("!provoke"));
     assert_eq!(
         session.committed_disposition_count(),
         1,
@@ -643,15 +643,15 @@ fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
     // threshold. Same-day repeats dedup (Task 1), so each provoke here is
     // separated by a `wait` — three distinct days of antagonism.
     let (mut b, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
+    b.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
     b.handle("wait");
-    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
+    b.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
     b.handle("wait");
     assert!(
         !b.would_turn_hostile(GRIEVANCE_NPC),
         "two provokes is below threshold"
     );
-    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
+    b.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
     assert!(
         b.would_turn_hostile(GRIEVANCE_NPC),
         "three provokes crosses the threshold"
@@ -659,7 +659,7 @@ fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
 
     // soothe pulls back below the threshold (intent vs outcome).
     b.handle("wait");
-    b.handle(&format!("soothe {GRIEVANCE_NPC}")); // day 3.5: grievance 2
+    b.handle(&format!("!soothe {GRIEVANCE_NPC}")); // day 3.5: grievance 2
     assert!(
         !b.would_turn_hostile(GRIEVANCE_NPC),
         "soothe pulls the NPC back below hostile"

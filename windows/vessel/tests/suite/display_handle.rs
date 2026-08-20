@@ -33,7 +33,7 @@ fn out_text(t: Turn) -> String {
 fn the_npc_listing_prints_a_short_handle_not_a_raw_entity_id() {
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let listing = out_text(session.handle("npcs"));
+    let listing = out_text(session.handle("!npcs"));
     assert!(
         listing.contains("[1]"),
         "the listing must offer a short, typeable handle: {listing}"
@@ -55,7 +55,7 @@ fn the_npc_listing_prints_a_short_handle_not_a_raw_entity_id() {
 fn a_short_handle_addresses_the_same_npc_the_label_does() {
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let listing = out_text(session.handle("npcs"));
+    let listing = out_text(session.handle("!npcs"));
     let first_line = listing
         .lines()
         .nth(1)
@@ -65,8 +65,8 @@ fn a_short_handle_addresses_the_same_npc_the_label_does() {
         .map(|(_, label)| label)
         .expect("a handle line carries a label after the bracketed handle");
 
-    let by_handle = out_text(session.handle("why 1"));
-    let by_label = out_text(session.handle(&format!("why {first_label}")));
+    let by_handle = out_text(session.handle("!why 1"));
+    let by_label = out_text(session.handle(&format!("!why {first_label}")));
     assert_eq!(
         by_handle, by_label,
         "handle and label must address the same NPC"

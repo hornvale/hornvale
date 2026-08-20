@@ -32,7 +32,7 @@ No direction here is closed; the nearest ground lies E, NW, SW.
 You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-> whoami
+> !whoami
 A bugbear of Doaba (agent 7649963730982468685), day 0, room 896860167.
 > enter
 [chamber 235106516365287, day 0]

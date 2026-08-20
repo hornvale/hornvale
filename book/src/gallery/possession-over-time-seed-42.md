@@ -20,7 +20,7 @@ No direction here is closed; the nearest ground lies E, NW, SW.
 [room 896860167, day 0]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
-> npcs
+> !npcs
 7 NPC(s) derived this session:
   [1] bugbear of Doaba
   [2] hobgoblin of Noaba
@@ -55,7 +55,7 @@ Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The s
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
 The bugbear of Doaba grows restless.
-> why hobgoblin
+> !why hobgoblin
 hobgoblin of Noaba:
 - canonical name of an entity: hobgoblin of Noaba (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)

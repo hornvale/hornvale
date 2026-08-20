@@ -81,7 +81,11 @@ pub fn verb_for(key: KeyEvent) -> Option<String> {
         KeyCode::Char('<') => "out",
         KeyCode::Char('.') | KeyCode::Char('5') => "wait",
         KeyCode::Char('m') => "map",
-        KeyCode::Char('?') => "help",
+        // Sigilled (The Deed, Task 5): bare `help` is retired in
+        // `Session::handle`'s vocabulary, and this client has no free-text
+        // entry mode for the player to type `!help` themselves — the key
+        // mapping is the only route, so it must track the retirement.
+        KeyCode::Char('?') => "!help",
         KeyCode::Char('Q') => "release",
         _ => return None,
     };
@@ -167,7 +171,7 @@ mod tests {
             (KeyCode::Char('.'), "wait"),
             (KeyCode::Char('5'), "wait"),
             (KeyCode::Char('m'), "map"),
-            (KeyCode::Char('?'), "help"),
+            (KeyCode::Char('?'), "!help"),
             (KeyCode::Char('Q'), "release"),
         ];
         for (code, want) in cases {

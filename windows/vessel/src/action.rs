@@ -30,6 +30,26 @@ pub enum Action {
     /// position, which is NEVER serialized (decision 0069) — which is what
     /// makes this the one action catch-up may replay.
     MoveWithin(AnchorId),
+    /// Recount a co-located NPC's dated history (The Deed, group A). An
+    /// operator instrument — no creature ever plans one.
+    Why,
+    /// List the derived NPCs sharing this world (The Deed, group A).
+    Npcs,
+    /// Print the verb list (The Deed, group A).
+    Help,
+    /// Report or switch whose eyes the chart is coloured through (The Deed,
+    /// group A). One variant covers both the report and the set forms —
+    /// they differ only in `rest`, which the dispatch layer reads, not this
+    /// enum.
+    Eyes,
+    /// Name the one you possess (The Deed, group A).
+    Whoami,
+    /// Shift a co-located NPC's disposition upward, marked as the player's
+    /// own act (The Deed, group A).
+    Provoke,
+    /// Ease a co-located NPC's disposition downward, marked as the player's
+    /// own act (The Deed, group A).
+    Soothe,
 }
 
 /// Whether an action's effect is position rather than a committed fact.
@@ -63,6 +83,18 @@ pub fn precondition_reads_committed_state(a: &Action) -> bool {
         Action::MoveWithin(_) => false,
         // Standing at the water / at home / on forage — all positional.
         Action::Drink | Action::Rest | Action::Eat => false,
+        // The group-A operator instruments (The Deed) have no GOAP
+        // precondition at all — no creature ever plans one, so catch-up
+        // never asks this question about them. `false` for the same reason
+        // as the arms above: nothing here reads position OR committed state
+        // in the sense this function means.
+        Action::Why
+        | Action::Npcs
+        | Action::Help
+        | Action::Eyes
+        | Action::Whoami
+        | Action::Provoke
+        | Action::Soothe => false,
     }
 }
 
@@ -95,6 +127,13 @@ impl Action {
             Action::Rest,
             Action::Eat,
             Action::MoveWithin(crate::interior::AnchorId(0)),
+            Action::Why,
+            Action::Npcs,
+            Action::Help,
+            Action::Eyes,
+            Action::Whoami,
+            Action::Provoke,
+            Action::Soothe,
         ]
     }
 
@@ -114,6 +153,17 @@ impl Action {
             Action::Drink => "drink",
             Action::Rest => "rest",
             Action::Eat => "eat",
+            // Group A's Task 2 concepts (The Deed), verbatim from the
+            // derived roster: `why`->`recount`, `npcs`->`survey`,
+            // `help`->`help`, `eyes`->`lens`, `whoami`->`identify`,
+            // `provoke`->`provoke`, `soothe`->`soothe`.
+            Action::Why => "recount",
+            Action::Npcs => "survey",
+            Action::Help => "help",
+            Action::Eyes => "lens",
+            Action::Whoami => "identify",
+            Action::Provoke => "provoke",
+            Action::Soothe => "soothe",
         }
     }
 }
@@ -138,6 +188,15 @@ impl Action {
         match self {
             Action::MoveTo(_) | Action::MoveWithin(_) => Mood::InCharacter,
             Action::Drink | Action::Rest | Action::Eat => Mood::InCharacter,
+            // Group A: operator instruments, out-of-character only (The
+            // Deed, spec §3.2) — no in-character counterpart is meaningful.
+            Action::Why
+            | Action::Npcs
+            | Action::Help
+            | Action::Eyes
+            | Action::Whoami
+            | Action::Provoke
+            | Action::Soothe => Mood::OutOfCharacter,
         }
     }
 }
@@ -154,6 +213,13 @@ fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
         Action::Drink => "drink",
         Action::Rest => "rest",
         Action::Eat => "eat",
+        Action::Why => "recount",
+        Action::Npcs => "survey",
+        Action::Help => "help",
+        Action::Eyes => "lens",
+        Action::Whoami => "identify",
+        Action::Provoke => "provoke",
+        Action::Soothe => "soothe",
     }
 }
 

@@ -49,7 +49,10 @@ fn world() -> World {
 }
 
 /// The same script the committed transcript walks, up to its first `go`.
-const SCRIPT: &[&str] = &["look", "examine sky", "whoami"];
+/// `whoami` is sigilled (The Deed, Task 5): the bare form is retired, and
+/// this script exists to snapshot a real verb's narration at each step, not
+/// the now-retired form's unknown-verb refusal.
+const SCRIPT: &[&str] = &["look", "examine sky", "!whoami"];
 
 /// Day **0**, not `PossessOpts::default()`'s noon.
 ///
