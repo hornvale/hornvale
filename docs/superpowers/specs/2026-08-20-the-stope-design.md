@@ -288,3 +288,74 @@ Gnomish Mines relation — a branch with its own generator hanging off a main
 dungeon. The scale organon is what exposed the missing `floor` rung and the
 vestigial `entrance` one, sitting either side of the grain the lattice
 actually addresses.
+
+---
+
+# AMENDMENT, 2026-08-20: three corrections found while writing the plan
+
+Each was found by checking a claim in §3 against the tree before a task
+inherited it. The design is unchanged; three of its premises were wrong, and
+all three make the campaign SMALLER.
+
+## A.1 The epoch label is `chamber/v3`, not `chamber/v2`
+
+`CHAMBER` is **already** `chamber/v2` — bumped by The Underworld when
+`ChamberAddr.band` switched from indexing the stratigraphic ladder to the
+delve ladder. Its own doc: *"`chamber/v1` is retired and must never be
+reused."* §5 said v2; it is **v3**.
+
+## A.2 A level generator already ships, and it is already descent-shaped
+
+The Adit landed `generate_descent`
+(`windows/vessel/src/underworld_level/mod.rs:404`):
+
+```rust
+pub fn generate_descent(
+    rungs: &[DelveRung],          // ALREADY a sequence
+    cave_kind: CaveKind,
+    origins: &[ChamberOrigin],
+    depths_m: &[f64],
+    water_table_m: f64,
+    seed: Seed,
+) -> Vec<Level>
+```
+
+It is tested against real `Chamber`/`Cave` values and flood-fills each level
+to assert one connected walkable component
+(`windows/vessel/tests/suite/underworld_level_generation.rs`).
+
+**So §3.2's "an engine generates the floor's map" is not new work.** It
+exists, it takes a *sequence* of rungs, and it already returns a `Vec<Level>`.
+The campaign's contribution is therefore narrower and better-seated than §3
+implies:
+
+```
+  today   rungs: &[DelveRung] with ONE entry per band
+  Stope   MANY entries per band --- a run --- and a CHARACTER selecting
+          WHICH engine builds it. generate_descent becomes one
+          implementation behind a selector rather than the only path.
+```
+
+## A.3 `CaveKind` is read after all — one rung below where it matters
+
+§3.6 called it "shipped, derived, and unread", and named it the campaign's
+cheapest win. `generate_descent` takes `cave_kind`, so karst / lava-tube /
+fracture **do** already differentiate the generated map.
+
+The true statement is one rung up: **nothing in `windows/worldgen` uses cave
+kind to select a character, pick an engine, or vary anything at world
+scale.** It remains a free three-valued variety axis; it is just not free in
+the place §3.6 claimed. Registry row renamed `MAP-cavekind-selects-nothing`.
+
+## A.4 What this changes about the plan
+
+Three seams, not a rewrite:
+
+```
+1. ChamberAddr gains `floor`; `slot` -> `branch`; chamber/v3 epoch
+2. the rungs slice carries a RUN --- many entries per band, not one
+3. a character selects the engine for a run; generate_descent is the
+   first implementation behind that selector
+```
+
+Everything else in §3 stands, and §4's preregistration is unaffected.
