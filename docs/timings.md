@@ -1945,3 +1945,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T18:41:38Z | sluice:artifacts | 167.541 | 1531.517 | 81.490 | 9.63 | 0 | 5ed9b5f21 |  | lefford | 40 |
 | 2026-08-20T18:42:31Z | sluice:outboard | 52.534 | 65.720 | 40.089 | 2.01 | 0 | c71ebe594 |  | lefford | 40 |
 | 2026-08-20T18:49:51Z | sluice:gate | 440.380 | 12056.664 | 473.227 | 28.45 | 0 | 1bf21b055 |  | lefford | 40 |
+| 2026-08-20T19:37:53Z | rebaseline | 57.383 | 240.044 | 12.736 | 4.41 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:39:23Z | game-check | 81.518 | 507.183 | 6.008 | 6.30 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:39:51Z | gate-commit | 23.732 | 50.224 | 12.017 | 2.62 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
