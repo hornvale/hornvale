@@ -88,6 +88,99 @@ pub fn verb_for(key: KeyEvent) -> Option<String> {
     Some(verb.to_string())
 }
 
+/// Which thing keys currently drive: the character, or a free-roaming
+/// cursor.
+///
+/// This is the mode this module was missing before The Portolan: the client
+/// had exactly one interpretation of a keypress. [`action_for`] is built
+/// *around* [`verb_for`] to add a second one without touching the first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    /// Keys drive the character, via [`verb_for`] — unchanged from before
+    /// this campaign.
+    Normal,
+    /// Keys drive a cursor instead of the character. Entered with `x`,
+    /// left with `Esc`.
+    Look,
+}
+
+/// What one key press means, once a [`Mode`] is taken into account.
+///
+/// This is [`verb_for`]'s `Option<String>` widened to also express mode
+/// transitions and cursor motion, so [`action_for`] can return one type
+/// regardless of mode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Action {
+    /// Send this verb line to the driver — exactly what a `Some(verb)` from
+    /// [`verb_for`] used to mean on its own.
+    Verb(String),
+    /// Move the look-mode cursor by `(dx, dy)` grid units. Never produced in
+    /// [`Mode::Normal`].
+    CursorBy(i16, i16),
+    /// Enter look mode. Only ever produced for `x` in [`Mode::Normal`].
+    EnterLook,
+    /// Leave look mode. Only ever produced for `Esc` in [`Mode::Look`].
+    LeaveLook,
+    /// The key has no meaning in the current mode. Like `verb_for`
+    /// returning `None`, this costs no turn and draws nothing.
+    None,
+}
+
+/// Map one key press to an [`Action`], given the current [`Mode`].
+///
+/// **[`Mode::Normal`]** delegates to [`verb_for`] and wraps its result —
+/// `Some(verb)` becomes `Action::Verb(verb)`, `None` becomes `Action::None`
+/// — with one exception: `x` (a bare press, no chord) becomes
+/// `Action::EnterLook` instead of falling through to `verb_for`, where it is
+/// deliberately unbound (see that function's doc). Every other key's meaning
+/// is untouched, which is what
+/// [`normal_mode_dispatches_exactly_what_verb_for_does`](tests::normal_mode_dispatches_exactly_what_verb_for_does)
+/// pins.
+///
+/// **[`Mode::Look`]** maps the twelve movement keys (arrows, `hjkl`, and the
+/// diagonal `yubn`) to `Action::CursorBy`, `Esc` to `Action::LeaveLook`, and
+/// **everything else to `Action::None`** — look mode never falls through to
+/// a normal-mode verb, so a key with no cursor meaning costs no turn and
+/// does not walk the character while the player believes they are looking.
+/// The same chord/kind discipline as `verb_for` applies: only a
+/// [`KeyEventKind::Press`] with no modifier beyond [`KeyModifiers::SHIFT`]
+/// is mapped.
+pub fn action_for(key: KeyEvent, mode: Mode) -> Action {
+    match mode {
+        Mode::Normal => {
+            let is_bare_press = key.kind == KeyEventKind::Press
+                && key.modifiers.difference(KeyModifiers::SHIFT).is_empty();
+            if is_bare_press && key.code == KeyCode::Char('x') {
+                return Action::EnterLook;
+            }
+            match verb_for(key) {
+                Some(verb) => Action::Verb(verb),
+                None => Action::None,
+            }
+        }
+        Mode::Look => {
+            if key.kind != KeyEventKind::Press {
+                return Action::None;
+            }
+            if !key.modifiers.difference(KeyModifiers::SHIFT).is_empty() {
+                return Action::None;
+            }
+            match key.code {
+                KeyCode::Esc => Action::LeaveLook,
+                KeyCode::Up | KeyCode::Char('k') => Action::CursorBy(0, -1),
+                KeyCode::Down | KeyCode::Char('j') => Action::CursorBy(0, 1),
+                KeyCode::Left | KeyCode::Char('h') => Action::CursorBy(-1, 0),
+                KeyCode::Right | KeyCode::Char('l') => Action::CursorBy(1, 0),
+                KeyCode::Char('y') => Action::CursorBy(-1, -1),
+                KeyCode::Char('u') => Action::CursorBy(1, -1),
+                KeyCode::Char('b') => Action::CursorBy(-1, 1),
+                KeyCode::Char('n') => Action::CursorBy(1, 1),
+                _ => Action::None,
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -263,5 +356,97 @@ mod tests {
         let mut key = press(KeyCode::Up);
         key.kind = KeyEventKind::Release;
         assert_eq!(verb_for(key), None);
+    }
+
+    /// Normal mode is UNCHANGED. Every binding that worked before this
+    /// campaign must still work identically — the mode is added around
+    /// `verb_for`, never inside it, so this is checking that the wrapper is
+    /// transparent rather than that the map is correct.
+    #[test]
+    fn normal_mode_dispatches_exactly_what_verb_for_does() {
+        for code in [
+            KeyCode::Up,
+            KeyCode::Down,
+            KeyCode::Left,
+            KeyCode::Right,
+            KeyCode::Char('h'),
+            KeyCode::Char('j'),
+            KeyCode::Char('k'),
+            KeyCode::Char('l'),
+            KeyCode::Char('y'),
+            KeyCode::Char('u'),
+            KeyCode::Char('b'),
+            KeyCode::Char('n'),
+            KeyCode::Char('.'),
+            KeyCode::Char('<'),
+            KeyCode::Char('>'),
+            KeyCode::Char('m'),
+            KeyCode::Char('?'),
+            KeyCode::Char('1'),
+            KeyCode::Char('5'),
+            KeyCode::Char('9'),
+        ] {
+            let key = KeyEvent::new(code, KeyModifiers::NONE);
+            match (verb_for(key), action_for(key, Mode::Normal)) {
+                (Some(v), Action::Verb(a)) => assert_eq!(v, a, "{code:?} changed meaning"),
+                (None, Action::None) => {}
+                (v, a) => panic!("{code:?}: verb_for gave {v:?} but action_for gave {a:?}"),
+            }
+        }
+    }
+
+    /// `x` enters look mode. Chosen because it is FREE — the taken set is
+    /// `? . < > 1-9 b h j k l m n Q u y`, checked, and `x` is the roguelike
+    /// convention for exactly this.
+    #[test]
+    fn x_enters_look_mode_and_escape_leaves_it() {
+        let x = KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE);
+        assert!(matches!(action_for(x, Mode::Normal), Action::EnterLook));
+        let esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+        assert!(matches!(action_for(esc, Mode::Look), Action::LeaveLook));
+    }
+
+    /// In look mode the SAME movement keys drive the cursor instead of the
+    /// character. This is the collision the mode exists to resolve, so it is
+    /// asserted for every direction rather than sampled.
+    #[test]
+    fn look_mode_moves_the_cursor_not_the_character() {
+        for (code, dx, dy) in [
+            (KeyCode::Char('h'), -1i16, 0i16),
+            (KeyCode::Char('l'), 1, 0),
+            (KeyCode::Char('k'), 0, -1),
+            (KeyCode::Char('j'), 0, 1),
+            (KeyCode::Char('y'), -1, -1),
+            (KeyCode::Char('u'), 1, -1),
+            (KeyCode::Char('b'), -1, 1),
+            (KeyCode::Char('n'), 1, 1),
+            (KeyCode::Left, -1, 0),
+            (KeyCode::Right, 1, 0),
+            (KeyCode::Up, 0, -1),
+            (KeyCode::Down, 0, 1),
+        ] {
+            let key = KeyEvent::new(code, KeyModifiers::NONE);
+            match action_for(key, Mode::Look) {
+                Action::CursorBy(gx, gy) => assert_eq!((gx, gy), (dx, dy), "{code:?}"),
+                other => panic!("{code:?} in look mode gave {other:?}, wanted CursorBy"),
+            }
+            // The same key in normal mode must still move the CHARACTER.
+            assert!(
+                matches!(action_for(key, Mode::Normal), Action::Verb(_)),
+                "{code:?} lost its normal-mode meaning"
+            );
+        }
+    }
+
+    /// A key with no meaning in look mode does NOT fall through to its
+    /// normal-mode verb — that would walk the character while the player
+    /// believes they are looking.
+    #[test]
+    fn look_mode_does_not_fall_through_to_movement_verbs() {
+        let enter_room = KeyEvent::new(KeyCode::Char('>'), KeyModifiers::NONE);
+        assert!(
+            !matches!(action_for(enter_room, Mode::Look), Action::Verb(_)),
+            "look mode leaked a verb"
+        );
     }
 }
