@@ -461,16 +461,36 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 make seam-guard-list   # the roster and its call sites (cheap, no build)
 make seam-guard        # neutralise each site, run scoped tests, report verdicts
 cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # narrow
-# Both registered seams are currently GUARDED across all 7 call sites — no
-# `expect(survives: …)` declaration exists anywhere in the tree, so a survivor
-# at any site would fail the gate. `docs/audits/seam-guard-roster.md` (the
-# committed, drift-checked artifact) lists what is registered and what has
-# been declared; it never carries verdicts (those cost a scoped test run per
-# site), so a "GUARDED" status is a fact about the last `make seam-guard` run,
-# not something this file or that one can assert on their own — re-run it for
-# the current answer. The declaration mechanism itself stays live: the point
-# is to keep any future declaration under review pressure, not that one is
-# expected.
+# **NOTHING RUNS SEAM-GUARD FOR YOU ANY MORE, AND THAT CHANGES WHAT THE
+# ROSTER MEANS (decision 0148).** 0148 took `seam-guard` and `heavy` off the
+# merge phase list because the two were 80.5% of a merge's wall time. So it
+# now runs only when a human types `make seam-guard` — there is no schedule,
+# no gate, and no phase behind it.
+#
+# `docs/audits/seam-guard-roster.md` (the committed, drift-checked artifact)
+# lists what is REGISTERED and what has been DECLARED. It has never carried
+# verdicts — those cost a scoped test run per site — so it cannot tell you
+# whether anything is currently guarded, and since 0148 there is no bound at
+# all on how long ago the last verdict was taken. **A registered seam nobody
+# probes emits no output while sitting in a healthy-looking committed
+# artifact, so a reader sees a registration and infers coverage.** That is a
+# quieter failure than a check that runs and reports on the wrong set: the
+# latter at least leaves a trace you can go interrogate.
+#
+# This paragraph used to name a live verdict ("currently GUARDED across all 7
+# call sites"). It was 7 when written and the tool reports 8; the roster
+# artifact was right the whole time and the prose beside it rotted. A verdict
+# is a fact with a timestamp and this file has no way to keep one fresh, so it
+# no longer states one — **run `make seam-guard` and read its output; that is
+# the only current answer, and it needs a CLEAN working tree** (it refuses on
+# a dirty one, including a merely TRACKED modification, and that refusal exits
+# non-zero in a way that reads like "found survivors" rather than "your tree
+# is dirty").
+#
+# No `expect(survives: …)` declaration exists anywhere in the tree, so a
+# survivor at any site would fail the run. The declaration mechanism stays
+# live: the point is to keep any future declaration under review pressure,
+# not that one is expected.
 
 # The digest — the project's own fact ledger, also OUTSIDE the workspace (The
 # Digest). docs/digest/facts.jsonl is the compacted, TIME-FREE store of what
