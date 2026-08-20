@@ -16,6 +16,7 @@ pub mod durations;
 pub mod ladder;
 pub mod lineage;
 pub mod stance;
+pub mod touchstone;
 pub mod traced;
 pub mod transmission;
 
