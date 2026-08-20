@@ -64,6 +64,23 @@ impl From<serde_json::Error> for Error {
     }
 }
 
+/// Which pane a key press is addressed to.
+///
+/// This is the client's one input mode, and it replaces The Portolan part
+/// I's `Mode { Normal, Look }`: there is no longer a mode to enter in order
+/// to point at something, only a question of which pane is listening.
+/// Toggled by `Esc`; a printable key pressed while the map is focused
+/// returns focus here and types itself, so the common path costs no
+/// keypress at all (spec §2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Focus {
+    /// The command line is listening. Text is the default destination.
+    #[default]
+    Cli,
+    /// The map is listening: arrows drive the map cursor, `-`/`+`/`=` zoom.
+    Map,
+}
+
 /// A free-roaming cursor's screen position, in grid cells.
 ///
 /// **The cursor is not ink.** It is the terminal's own hardware cursor,

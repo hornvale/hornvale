@@ -92,11 +92,18 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
 
 /// The main loop: sync the driver's plate height, draw the opening, then
 /// read one key at a time. Each key is mapped to an [`input::Action`] under
-/// the driver's current [`input::Mode`] — `Action::None` does nothing at
-/// all, costing no turn and no redraw; every other action is applied and
-/// its reply redrawn. `release` (bound to capital `Q`, normal mode only)
-/// ends the loop after its own reply is drawn, so the user sees the sim's
-/// own parting line before the terminal is restored.
+/// the driver's current [`hornvale_game_core::Focus`] — `Action::None` does
+/// nothing at all, costing no turn and no redraw; every other action is
+/// applied and its reply redrawn.
+///
+/// **Release detection is not wired here yet.** Before this campaign,
+/// `release` was detected by matching the sent verb line
+/// (`Action::Verb("release")`) and ending the loop so the user could see
+/// the sim's own parting line before the terminal was restored. `Action` no
+/// longer carries a verb line at all — a keypress now reaches the line
+/// buffer, not the driver, until it is submitted (Task 3's job) — so there
+/// is nothing here yet for a release check to match against. Task 3 must
+/// reintroduce this once `Action::Submit` actually sends the buffer's text.
 ///
 /// `driver.resize` is called here (startup) and on every `Event::Resize` —
 /// never on a plain key press, since a terminal's size does not change
@@ -111,24 +118,12 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     loop {
         match read()? {
             Event::Key(key) => {
-                let action = input::action_for(key, driver.mode());
+                let action = input::action_for(key, driver.focus());
                 if matches!(action, input::Action::None) {
                     continue;
                 }
-                // Detected by matching the SENT verb, not the sim's answer —
-                // correct today only because `input::verb_for` is the sole
-                // source of outgoing verbs and its only release-shaped line
-                // is the literal string `"release"` (it never emits
-                // `"quit"`, the sim's other synonym for the same thing). If
-                // a future free-text input mode lets a player type `quit`
-                // directly, this check needs to grow with it or move to
-                // reading the driver's answer instead.
-                let released = matches!(&action, input::Action::Verb(v) if v == "release");
                 driver.apply(action);
                 redraw(term, driver)?;
-                if released {
-                    return Ok(());
-                }
             }
             Event::Resize(_, _) => {
                 let (_, h) = terminal_size()?;

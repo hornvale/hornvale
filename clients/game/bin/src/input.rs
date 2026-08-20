@@ -33,6 +33,7 @@
 //! the key code is even inspected.
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use hornvale_game_core::Focus;
 
 /// Map one key press to a verb line, or `None` if the key is unmapped.
 ///
@@ -88,96 +89,85 @@ pub fn verb_for(key: KeyEvent) -> Option<String> {
     Some(verb.to_string())
 }
 
-/// Which thing keys currently drive: the character, or a free-roaming
-/// cursor.
+/// What one key press means, once [`Focus`] is taken into account.
 ///
-/// This is the mode this module was missing before The Portolan: the client
-/// had exactly one interpretation of a keypress. [`action_for`] is built
-/// *around* [`verb_for`] to add a second one without touching the first.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Mode {
-    /// Keys drive the character, via [`verb_for`] — unchanged from before
-    /// this campaign.
-    Normal,
-    /// Keys drive a cursor instead of the character. Entered with `x`,
-    /// left with `Esc`.
-    Look,
-}
-
-/// What one key press means, once a [`Mode`] is taken into account.
-///
-/// This is [`verb_for`]'s `Option<String>` widened to also express mode
-/// transitions and cursor motion, so [`action_for`] can return one type
-/// regardless of mode.
+/// **The table is TOTAL**: every `KeyCode` maps to exactly one variant in
+/// each focus state, and [`Action::None`] is a destination like any other.
+/// H3 is falsified by a key whose destination cannot be predicted from what
+/// is on screen, so "unhandled" is not an option this enum offers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
-    /// Send this verb line to the driver — exactly what a `Some(verb)` from
-    /// [`verb_for`] used to mean on its own.
-    Verb(String),
-    /// Move the look-mode cursor by `(dx, dy)` grid units. Never produced in
-    /// [`Mode::Normal`].
+    /// Insert this character at the caret — the CLI's answer to almost
+    /// every printable key.
+    Type(char),
+    /// Return focus to the CLI and insert this character. One keypress,
+    /// produced only when the map is focused (spec §2).
+    FocusAndType(char),
+    /// Delete the character before the caret.
+    DeleteBack,
+    /// Move the text caret by this many characters.
+    CaretBy(i16),
+    /// Recall the previous line from history.
+    HistoryPrev,
+    /// Recall the next line from history.
+    HistoryNext,
+    /// Submit the buffer. On an empty buffer this must cost no turn
+    /// (spec §6) — that is the driver's call, not the router's.
+    Submit,
+    /// Move the map cursor by `(dx, dy)` grid cells.
     CursorBy(i16, i16),
-    /// Enter look mode. Only ever produced for `x` in [`Mode::Normal`].
-    EnterLook,
-    /// Leave look mode. Only ever produced for `Esc` in [`Mode::Look`].
-    LeaveLook,
-    /// The key has no meaning in the current mode. Like `verb_for`
-    /// returning `None`, this costs no turn and draws nothing.
+    /// Zoom the map in (`1`) or out (`-1`). **Routed, not implemented** —
+    /// zoom itself is The Portolan part II's. The driver accepts and
+    /// ignores it; what matters now is that `-` on the map does not fall
+    /// through to the buffer and type a `-`.
+    Zoom(i8),
+    /// Move focus to the other pane.
+    ToggleFocus,
+    /// The key does nothing in this focus state. Costs no turn, draws
+    /// nothing, and is a deliberate destination — `Tab` is the clearest
+    /// case (spec §3.3).
     None,
 }
 
-/// Map one key press to an [`Action`], given the current [`Mode`].
+/// Map one key press to an [`Action`], given the current [`Focus`].
 ///
-/// **[`Mode::Normal`]** delegates to [`verb_for`] and wraps its result —
-/// `Some(verb)` becomes `Action::Verb(verb)`, `None` becomes `Action::None`
-/// — with one exception: `x` (a bare press, no chord) becomes
-/// `Action::EnterLook` instead of falling through to `verb_for`, where it is
-/// deliberately unbound (see that function's doc). Every other key's meaning
-/// is untouched, which is what
-/// [`normal_mode_agrees_with_verb_for_across_the_full_keyspace`](tests::normal_mode_agrees_with_verb_for_across_the_full_keyspace)
-/// pins.
+/// **The direction this function enforces:** total in both focus states.
+/// Every key has a defined destination; none falls through unanswered.
 ///
-/// **[`Mode::Look`]** maps the twelve movement keys (arrows, `hjkl`, and the
-/// diagonal `yubn`) to `Action::CursorBy`, `Esc` to `Action::LeaveLook`, and
-/// **everything else to `Action::None`** — look mode never falls through to
-/// a normal-mode verb, so a key with no cursor meaning costs no turn and
-/// does not walk the character while the player believes they are looking.
-/// The same chord/kind discipline as `verb_for` applies: only a
-/// [`KeyEventKind::Press`] with no modifier beyond [`KeyModifiers::SHIFT`]
-/// is mapped.
-pub fn action_for(key: KeyEvent, mode: Mode) -> Action {
-    match mode {
-        Mode::Normal => {
-            let is_bare_press = key.kind == KeyEventKind::Press
-                && key.modifiers.difference(KeyModifiers::SHIFT).is_empty();
-            if is_bare_press && key.code == KeyCode::Char('x') {
-                return Action::EnterLook;
-            }
-            match verb_for(key) {
-                Some(verb) => Action::Verb(verb),
-                None => Action::None,
-            }
-        }
-        Mode::Look => {
-            if key.kind != KeyEventKind::Press {
-                return Action::None;
-            }
-            if !key.modifiers.difference(KeyModifiers::SHIFT).is_empty() {
-                return Action::None;
-            }
-            match key.code {
-                KeyCode::Esc => Action::LeaveLook,
-                KeyCode::Up | KeyCode::Char('k') => Action::CursorBy(0, -1),
-                KeyCode::Down | KeyCode::Char('j') => Action::CursorBy(0, 1),
-                KeyCode::Left | KeyCode::Char('h') => Action::CursorBy(-1, 0),
-                KeyCode::Right | KeyCode::Char('l') => Action::CursorBy(1, 0),
-                KeyCode::Char('y') => Action::CursorBy(-1, -1),
-                KeyCode::Char('u') => Action::CursorBy(1, -1),
-                KeyCode::Char('b') => Action::CursorBy(-1, 1),
-                KeyCode::Char('n') => Action::CursorBy(1, 1),
-                _ => Action::None,
-            }
-        }
+/// The chord discipline is unchanged from [`verb_for`] and applies before
+/// the key code is inspected: only a bare [`KeyEventKind::Press`] with no
+/// modifier beyond [`KeyModifiers::SHIFT`] does anything at all, so
+/// `Ctrl-L` types nothing just as it used to walk nowhere.
+pub fn action_for(key: KeyEvent, focus: Focus) -> Action {
+    if key.kind != KeyEventKind::Press {
+        return Action::None;
+    }
+    if !key.modifiers.difference(KeyModifiers::SHIFT).is_empty() {
+        return Action::None;
+    }
+    match focus {
+        Focus::Cli => match key.code {
+            KeyCode::Char(c) => Action::Type(c),
+            KeyCode::Left => Action::CaretBy(-1),
+            KeyCode::Right => Action::CaretBy(1),
+            KeyCode::Up => Action::HistoryPrev,
+            KeyCode::Down => Action::HistoryNext,
+            KeyCode::Enter => Action::Submit,
+            KeyCode::Backspace => Action::DeleteBack,
+            KeyCode::Esc => Action::ToggleFocus,
+            _ => Action::None,
+        },
+        Focus::Map => match key.code {
+            KeyCode::Char('-') => Action::Zoom(-1),
+            KeyCode::Char('+') | KeyCode::Char('=') => Action::Zoom(1),
+            KeyCode::Char(c) => Action::FocusAndType(c),
+            KeyCode::Left => Action::CursorBy(-1, 0),
+            KeyCode::Right => Action::CursorBy(1, 0),
+            KeyCode::Up => Action::CursorBy(0, -1),
+            KeyCode::Down => Action::CursorBy(0, 1),
+            KeyCode::Esc => Action::ToggleFocus,
+            _ => Action::None,
+        },
     }
 }
 
@@ -358,122 +348,166 @@ mod tests {
         assert_eq!(verb_for(key), None);
     }
 
-    /// Normal mode is UNCHANGED, swept across the full keyspace rather than
-    /// a hand-picked list. A prior version of this test enumerated 20 of
-    /// `verb_for`'s 27 bindings by hand and stayed green while silently
-    /// missing `2 3 4 6 7 8 Q` — inert today because `Mode::Normal` is a
-    /// total delegation to `verb_for` with one `x` exception, but a future
-    /// per-key special case (say, a `Char('Q')` arm shadowing the
-    /// delegation once Task 3 wires this up) would ship undetected by a
-    /// partial list. So this sweeps every printable-ASCII `Char` plus the
-    /// named variants `verb_for` matches, and asserts agreement on all of
-    /// them rather than a sample.
+    /// **H1, and the whole point of the campaign.** With the CLI focused,
+    /// every printable ASCII character types ITSELF. Not "most keys" and
+    /// not a sampled list: the assertion is that the count of printable
+    /// characters doing anything other than typing themselves is ZERO.
     ///
-    /// `x` is the one deliberate divergence — `verb_for` returns `None`
-    /// (see its doc) but `action_for` returns `EnterLook` — and is
-    /// special-cased below rather than folded into the general rule.
-    ///
-    /// The binding-count assertion is what keeps the sweep honest against
-    /// itself: 27 is `verb_for`'s current count of distinct bound keys (4
-    /// named arrows + 23 `Char` bindings). A change to `verb_for` that adds
-    /// or removes a binding must move this number deliberately — that is
-    /// the point, not a nuisance failure.
+    /// Part I's sweep asserted the opposite property against `verb_for` (a
+    /// binding count of 27) and is superseded here rather than deleted: the
+    /// sweep was always the right test, and it now asserts that almost
+    /// every key is text (spec §4).
     #[test]
-    fn normal_mode_agrees_with_verb_for_across_the_full_keyspace() {
-        let named = [
-            KeyCode::Up,
-            KeyCode::Down,
-            KeyCode::Left,
-            KeyCode::Right,
-            KeyCode::Esc,
-            KeyCode::Enter,
-            KeyCode::Tab,
-            KeyCode::Backspace,
-        ];
-        let printable_chars = (0x20u8..=0x7Eu8).map(|b| KeyCode::Char(b as char));
-
-        let mut bound_count = 0usize;
-        for code in named.into_iter().chain(printable_chars) {
-            let key = KeyEvent::new(code, KeyModifiers::NONE);
-
-            if code == KeyCode::Char('x') {
-                assert_eq!(verb_for(key), None, "x must stay unbound in verb_for");
-                assert!(
-                    matches!(action_for(key, Mode::Normal), Action::EnterLook),
-                    "x must enter look mode in Mode::Normal"
-                );
-                continue;
-            }
-
-            match (verb_for(key), action_for(key, Mode::Normal)) {
-                (Some(v), Action::Verb(a)) => {
-                    assert_eq!(v, a, "{code:?} changed meaning");
-                    bound_count += 1;
-                }
-                (None, Action::None) => {}
-                (v, a) => panic!("{code:?}: verb_for gave {v:?} but action_for gave {a:?}"),
+    fn every_printable_character_types_itself_when_the_cli_is_focused() {
+        let mut not_text = Vec::new();
+        for b in 0x20u8..=0x7Eu8 {
+            let c = b as char;
+            let key = KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE);
+            match action_for(key, Focus::Cli) {
+                Action::Type(got) if got == c => {}
+                other => not_text.push((c, format!("{other:?}"))),
             }
         }
-
-        assert_eq!(
-            bound_count, 27,
-            "verb_for's binding count moved -- update this count deliberately \
-             if a binding was intentionally added or removed"
+        assert!(
+            not_text.is_empty(),
+            "these printable characters did not type themselves with the CLI \
+             focused: {not_text:?}"
         );
     }
 
-    /// `x` enters look mode. Chosen because it is FREE — the taken set is
-    /// `? . < > 1-9 b h j k l m n Q u y`, checked, and `x` is the roguelike
-    /// convention for exactly this.
+    /// The other half of totality: the sweep above says what text does, and
+    /// this says every non-printable key has a DEFINED destination too. H3
+    /// is falsified by a key whose destination cannot be predicted.
     #[test]
-    fn x_enters_look_mode_and_escape_leaves_it() {
-        let x = KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE);
-        assert!(matches!(action_for(x, Mode::Normal), Action::EnterLook));
-        let esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
-        assert!(matches!(action_for(esc, Mode::Look), Action::LeaveLook));
+    fn the_named_keys_route_predictably_with_the_cli_focused() {
+        let cases = [
+            (KeyCode::Left, Action::CaretBy(-1)),
+            (KeyCode::Right, Action::CaretBy(1)),
+            (KeyCode::Up, Action::HistoryPrev),
+            (KeyCode::Down, Action::HistoryNext),
+            (KeyCode::Enter, Action::Submit),
+            (KeyCode::Backspace, Action::DeleteBack),
+            (KeyCode::Esc, Action::ToggleFocus),
+            (KeyCode::Tab, Action::None),
+        ];
+        for (code, want) in cases {
+            let key = KeyEvent::new(code, KeyModifiers::NONE);
+            assert_eq!(action_for(key, Focus::Cli), want, "{code:?}");
+        }
     }
 
-    /// In look mode the SAME movement keys drive the cursor instead of the
-    /// character. This is the collision the mode exists to resolve, so it is
-    /// asserted for every direction rather than sampled.
+    /// With the map focused, a printable character returns focus to the CLI
+    /// AND types itself — one keypress, not two (spec §2). The zoom keys
+    /// are the deliberate exception, checked separately below.
     #[test]
-    fn look_mode_moves_the_cursor_not_the_character() {
-        for (code, dx, dy) in [
-            (KeyCode::Char('h'), -1i16, 0i16),
-            (KeyCode::Char('l'), 1, 0),
-            (KeyCode::Char('k'), 0, -1),
-            (KeyCode::Char('j'), 0, 1),
-            (KeyCode::Char('y'), -1, -1),
-            (KeyCode::Char('u'), 1, -1),
-            (KeyCode::Char('b'), -1, 1),
-            (KeyCode::Char('n'), 1, 1),
-            (KeyCode::Left, -1, 0),
-            (KeyCode::Right, 1, 0),
-            (KeyCode::Up, 0, -1),
-            (KeyCode::Down, 0, 1),
-        ] {
-            let key = KeyEvent::new(code, KeyModifiers::NONE);
-            match action_for(key, Mode::Look) {
-                Action::CursorBy(gx, gy) => assert_eq!((gx, gy), (dx, dy), "{code:?}"),
-                other => panic!("{code:?} in look mode gave {other:?}, wanted CursorBy"),
+    fn a_printable_character_bounces_focus_back_to_the_cli_and_types() {
+        let mut wrong = Vec::new();
+        for b in 0x20u8..=0x7Eu8 {
+            let c = b as char;
+            if matches!(c, '-' | '+' | '=') {
+                continue;
             }
-            // The same key in normal mode must still move the CHARACTER.
-            assert!(
-                matches!(action_for(key, Mode::Normal), Action::Verb(_)),
-                "{code:?} lost its normal-mode meaning"
+            let key = KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE);
+            match action_for(key, Focus::Map) {
+                Action::FocusAndType(got) if got == c => {}
+                other => wrong.push((c, format!("{other:?}"))),
+            }
+        }
+        assert!(wrong.is_empty(), "did not bounce-and-type: {wrong:?}");
+    }
+
+    /// The zoom keys must NOT bounce and must NOT type. This is the
+    /// assertion discriminating a routed zoom binding from a character that
+    /// merely falls through to the buffer.
+    #[test]
+    fn the_zoom_keys_zoom_on_the_map_and_type_on_the_cli() {
+        let cases = [
+            ('-', Action::Zoom(-1)),
+            ('+', Action::Zoom(1)),
+            ('=', Action::Zoom(1)),
+        ];
+        for (c, want) in cases {
+            let key = KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE);
+            assert_eq!(action_for(key, Focus::Map), want, "{c} on the map");
+            assert_eq!(
+                action_for(key, Focus::Cli),
+                Action::Type(c),
+                "{c} must be ordinary text on the CLI"
             );
         }
     }
 
-    /// A key with no meaning in look mode does NOT fall through to its
-    /// normal-mode verb — that would walk the character while the player
-    /// believes they are looking.
+    /// The named keys with the map focused. `Enter` and `Backspace` are
+    /// deliberately inert here: both act on a buffer whose caret is not
+    /// being shown, and a destructive or turn-costing key must not fire
+    /// against a surface the player cannot see.
     #[test]
-    fn look_mode_does_not_fall_through_to_movement_verbs() {
-        let enter_room = KeyEvent::new(KeyCode::Char('>'), KeyModifiers::NONE);
-        assert!(
-            !matches!(action_for(enter_room, Mode::Look), Action::Verb(_)),
-            "look mode leaked a verb"
-        );
+    fn the_named_keys_route_predictably_with_the_map_focused() {
+        let cases = [
+            (KeyCode::Left, Action::CursorBy(-1, 0)),
+            (KeyCode::Right, Action::CursorBy(1, 0)),
+            (KeyCode::Up, Action::CursorBy(0, -1)),
+            (KeyCode::Down, Action::CursorBy(0, 1)),
+            (KeyCode::Esc, Action::ToggleFocus),
+            (KeyCode::Tab, Action::None),
+            (KeyCode::Enter, Action::None),
+            (KeyCode::Backspace, Action::None),
+        ];
+        for (code, want) in cases {
+            let key = KeyEvent::new(code, KeyModifiers::NONE);
+            assert_eq!(action_for(key, Focus::Map), want, "{code:?}");
+        }
+    }
+
+    /// `Tab` is reserved for completion and bound to NOTHING, in both focus
+    /// states (spec §3.3). Spending it is the mistake this test makes loud:
+    /// it fails the moment anyone gives `Tab` a meaning.
+    #[test]
+    fn tab_is_bound_to_nothing_in_either_focus() {
+        let tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
+        assert_eq!(action_for(tab, Focus::Cli), Action::None);
+        assert_eq!(action_for(tab, Focus::Map), Action::None);
+    }
+
+    /// The chord discipline survives the rewrite: `Ctrl-L` must not type an
+    /// `l` any more than it used to walk the player east. Checked in BOTH
+    /// focus states, because the routing table is now two tables.
+    #[test]
+    fn a_chord_is_inert_in_either_focus() {
+        let codes = [
+            KeyCode::Char('l'),
+            KeyCode::Char('c'),
+            KeyCode::Enter,
+            KeyCode::Left,
+        ];
+        for code in codes {
+            for m in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+                for focus in [Focus::Cli, Focus::Map] {
+                    assert_eq!(
+                        action_for(KeyEvent::new(code, m), focus),
+                        Action::None,
+                        "{code:?} with {m:?} in {focus:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// A bare SHIFT is not a chord — it is how a capital letter arrives at
+    /// all, and `Q` must type a `Q` now rather than releasing.
+    #[test]
+    fn shift_still_types_a_capital_and_q_no_longer_releases() {
+        let q = KeyEvent::new(KeyCode::Char('Q'), KeyModifiers::SHIFT);
+        assert_eq!(action_for(q, Focus::Cli), Action::Type('Q'));
+    }
+
+    /// A key-release event must never do anything — one physical keystroke
+    /// must not type two characters any more than it could cost two turns.
+    #[test]
+    fn a_release_event_is_inert_in_either_focus() {
+        let mut key = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE);
+        key.kind = KeyEventKind::Release;
+        assert_eq!(action_for(key, Focus::Cli), Action::None);
+        assert_eq!(action_for(key, Focus::Map), Action::None);
     }
 }

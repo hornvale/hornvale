@@ -58,9 +58,9 @@
 //! room a bearing-inversion would have, using data both `chart::cell_at`
 //! and `Session::purview` already carry.
 
-use crate::input::{Action, Mode};
+use crate::input::Action;
 use hornvale_astronomy::SkyPins;
-use hornvale_game_core::Cursor;
+use hornvale_game_core::{Cursor, Focus};
 use hornvale_kernel::{NearestCellIndex, RoomId, Seed, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::TerrainPins;
@@ -152,17 +152,19 @@ pub struct Driver {
     /// and by every `handle`, so `snapshot()` never needs to touch the
     /// session again.
     cached: String,
-    /// Which thing keys drive — the character, or the look-mode cursor.
-    mode: Mode,
-    /// The look-mode cursor's screen position, in plate grid cells. Held
-    /// regardless of `mode` (so leaving and re-entering look mode does not
-    /// reset it); [`Driver::cursor`] reports it only in [`Mode::Look`].
+    /// Which pane keys currently drive — the command line, or the map
+    /// cursor. Replaces The Portolan part I's `Mode { Normal, Look }`.
+    focus: Focus,
+    /// The map cursor's screen position, in plate grid cells. Held
+    /// regardless of `focus` (so leaving and re-entering the map does not
+    /// reset it); [`Driver::cursor`] reports it only in [`Focus::Map`].
     cursor: Cursor,
-    /// The look-mode strip's cached text — recomputed on `EnterLook` and
-    /// `CursorBy`, since fix round 1 the resolved name genuinely depends on
-    /// the cursor's screen position (see the module doc for the chain);
-    /// F2 measures the real per-call cost, which is why recomputing on
-    /// every `CursorBy` rather than something more elaborate is fine.
+    /// The map strip's cached text — recomputed on `ToggleFocus` (into
+    /// [`Focus::Map`]) and `CursorBy`, since fix round 1 the resolved name
+    /// genuinely depends on the cursor's screen position (see the module
+    /// doc for the chain); F2 measures the real per-call cost, which is why
+    /// recomputing on every `CursorBy` rather than something more
+    /// elaborate is fine.
     strip: Option<String>,
     /// The world's landscape features, indexed by cell, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
@@ -281,7 +283,7 @@ impl Driver {
             ctx,
             session,
             cached: String::new(),
-            mode: Mode::Normal,
+            focus: Focus::Cli,
             cursor: Cursor {
                 x: hornvale_game_core::spread::PLATE_WIDTH / 2,
                 y: FLOOR_PLATE_CONTENT_HEIGHT / 2,
@@ -310,65 +312,98 @@ impl Driver {
     ///
     /// Re-clamps the cursor into the new bounds: a terminal shrinking after
     /// the cursor moved into rows a taller plate offered must not leave it
-    /// parked outside the plate that is about to be drawn. In look mode,
-    /// also re-resolves the strip: the cursor's SCREEN position is
+    /// parked outside the plate that is about to be drawn. With the map
+    /// focused, also re-resolves the strip: the cursor's SCREEN position is
     /// unchanged by a resize, but which real cell that screen position
     /// names can change (the plate's centre moves), so the displayed text
     /// must not go on describing whatever the old height resolved.
     pub fn resize(&mut self, h: u16) {
         self.plate_height = hornvale_game_core::spread::content_height(h);
         self.move_cursor(0, 0);
-        if self.mode == Mode::Look {
+        if self.focus == Focus::Map {
             self.refresh_strip();
         }
     }
 
-    /// Which thing keys currently drive — the character, or the look-mode
-    /// cursor. `main`'s input loop reads this every keypress to choose
-    /// between [`crate::input::verb_for`]'s normal-mode dispatch and
-    /// [`crate::input::action_for`]'s mode-aware one.
-    pub fn mode(&self) -> Mode {
-        self.mode
+    /// Which pane keys currently drive — the command line, or the map
+    /// cursor. `main`'s input loop reads this every keypress to choose how
+    /// [`crate::input::action_for`] routes the key.
+    pub fn focus(&self) -> Focus {
+        self.focus
     }
 
-    /// The look-mode cursor's screen position, or `None` outside look mode
-    /// — matching `render_with`'s `cursor` parameter, which hides the
-    /// terminal's hardware cursor on `None`.
+    /// Move focus to the other pane — entering the map (re)resolves the
+    /// strip at the cursor's current position; leaving it clears the strip,
+    /// matching the old `EnterLook`/`LeaveLook` transitions.
+    pub fn toggle_focus(&mut self) {
+        self.focus = match self.focus {
+            Focus::Cli => Focus::Map,
+            Focus::Map => Focus::Cli,
+        };
+        if self.focus == Focus::Map {
+            self.refresh_strip();
+        } else {
+            self.strip = None;
+        }
+    }
+
+    /// The map cursor's screen position, or `None` unless the map is
+    /// focused — matching `render_with`'s `cursor` parameter, which hides
+    /// the terminal's hardware cursor on `None`.
     pub fn cursor(&self) -> Option<Cursor> {
-        (self.mode == Mode::Look).then_some(self.cursor)
+        (self.focus == Focus::Map).then_some(self.cursor)
     }
 
-    /// The look-mode strip's current text, or `None` outside look mode —
+    /// The map strip's current text, or `None` unless the map is focused —
     /// matching `render_with`'s `strip` parameter.
     pub fn strip_text(&self) -> Option<&str> {
-        if self.mode == Mode::Look {
+        if self.focus == Focus::Map {
             self.strip.as_deref()
         } else {
             None
         }
     }
 
-    /// Apply one input [`Action`]: send a verb line exactly as before this
-    /// campaign, move the cursor, or toggle look mode. Costs a turn only
-    /// for [`Action::Verb`] — cursor motion and mode toggles are free,
-    /// matching `input`'s own "costs no turn" contract for everything it
-    /// does not map to a verb.
+    /// Apply one input [`Action`]: move the map cursor, toggle focus, or —
+    /// for everything the buffer will eventually own — do nothing yet.
+    /// `Type`, `FocusAndType`, `DeleteBack`, `CaretBy`, `HistoryPrev`,
+    /// `HistoryNext`, `Submit` and `Zoom` are routed here but not wired: the
+    /// line buffer and its submission are Task 3's job. Only `ToggleFocus`
+    /// and `CursorBy` are live today, and neither costs a turn — matching
+    /// `input`'s own "costs no turn" contract for everything that is not a
+    /// submitted line.
     pub fn apply(&mut self, action: Action) {
         match action {
-            Action::Verb(line) => {
-                self.handle(&line);
-            }
-            Action::EnterLook => {
-                self.mode = Mode::Look;
-                self.refresh_strip();
-            }
-            Action::LeaveLook => {
-                self.mode = Mode::Normal;
-                self.strip = None;
+            Action::ToggleFocus => {
+                self.toggle_focus();
             }
             Action::CursorBy(dx, dy) => {
                 self.move_cursor(dx, dy);
                 self.refresh_strip();
+            }
+            Action::Type(_) => {
+                // Task 3 wires this to the buffer.
+            }
+            Action::FocusAndType(_) => {
+                // Task 3 wires this to the buffer.
+            }
+            Action::DeleteBack => {
+                // Task 3 wires this to the buffer.
+            }
+            Action::CaretBy(_) => {
+                // Task 3 wires this to the buffer.
+            }
+            Action::HistoryPrev => {
+                // Task 3 wires this to the buffer.
+            }
+            Action::HistoryNext => {
+                // Task 3 wires this to the buffer.
+            }
+            Action::Submit => {
+                // Task 3 wires this to the buffer.
+            }
+            Action::Zoom(_) => {
+                // Task 3 wires this to the buffer.
             }
             Action::None => {}
         }

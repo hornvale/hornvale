@@ -89,7 +89,7 @@ fn look_mode_at_an_unresolved_band_refuses_rather_than_resolving() {
         "seed 42's flagship must land in the chamber band after one `enter`"
     );
 
-    driver.apply(Action::EnterLook);
+    driver.apply(Action::ToggleFocus);
     driver.apply(Action::CursorBy(1, 0));
     assert!(
         driver.cursor().is_some(),
@@ -114,7 +114,7 @@ fn look_mode_at_the_walk_band_resolves_a_real_name() {
         hornvale_game_core::Spatial::Walk { .. }
     ));
 
-    driver.apply(Action::EnterLook);
+    driver.apply(Action::ToggleFocus);
     let strip = driver.strip_text();
     assert!(strip.is_some(), "the walk band must resolve to something");
     assert_ne!(
@@ -147,7 +147,7 @@ fn look_mode_at_the_walk_band_resolves_a_real_name() {
 #[test]
 fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-    driver.apply(Action::EnterLook);
+    driver.apply(Action::ToggleFocus);
     let at_observer = driver.strip_text().map(str::to_string);
     assert_eq!(
         at_observer.as_deref(),
@@ -185,7 +185,7 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
 #[test]
 fn resize_re_resolves_against_the_real_plate_height() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-    driver.apply(Action::EnterLook);
+    driver.apply(Action::ToggleFocus);
     let at_floor_height = driver.strip_text().map(str::to_string);
     assert_eq!(
         at_floor_height.as_deref(),
@@ -226,7 +226,7 @@ fn resize_re_resolves_against_the_real_plate_height() {
 fn the_cursor_clamp_tracks_the_real_plate_height_too() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     driver.resize(40);
-    driver.apply(Action::EnterLook);
+    driver.apply(Action::ToggleFocus);
     driver.apply(Action::CursorBy(0, 1000)); // drive it hard into the bottom clamp
     let cursor = driver.cursor().expect("look mode always has a cursor");
     assert_eq!(
