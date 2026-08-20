@@ -1,9 +1,14 @@
 # The Stylus — design
 
-**Status:** COMPLETE (2026-08-20) — approved at G3, implemented, and merged
-via `campaign/the-stylus`. **Campaign:** The Stylus. **Branch:**
-`campaign/the-stylus`. §13 promotes the post-G3 decision-ledger entries
-(the scratch ledger is not the durable record).
+**Status:** IMPLEMENTED (2026-08-20) — approved at G3, built and gated on
+`campaign/the-stylus`; **the merge is G6 and belongs to Nathan.** Note that
+Stage 1 of this campaign reached `main` early, by accident: a `kind=stage`
+queue request pushed when a stage gate never should (the plumbing was sound;
+the kind was hand-typed at the operator's exec line). That is recorded in the
+retrospective, and it is not the same thing as this campaign having merged.
+**Campaign:** The Stylus. **Branch:** `campaign/the-stylus`. §13 promotes the
+post-G3 decision-ledger entries (the scratch ledger is not the durable
+record).
 
 The terminal client learns to accept typed commands. Focus moves between the
 map and the command line with `Esc`; everything else follows from that.
