@@ -219,10 +219,38 @@ by §5.2, and Task 2 reports what it chose.
 The spread's rule: gutters and rules carry no ink, and reserving them means
 *not drawing there*, never a drawn border.
 
-**The cursor obeys it by construction.** A blinking underline is a cell
-*attribute*, not a glyph — it modifies the cell without consuming it, so the
-terrain beneath stays readable. A drawn box or bracket would consume cells and
-is refused by the same rule that refuses drawn borders elsewhere.
+**The cursor obeys it by construction, and better than this section first
+claimed.** An earlier draft said "a blinking underline is a cell *attribute*".
+It is not: `Cell` carries `glyph`/`weight`/`ink`/`source`, and `Weight` is
+`Dim`/`Normal`/`Bold` only — there is **no underline attribute**, so that
+draft was proposing a change to the cell model without saying so.
+
+The real answer is cheaper. `term.rs` currently hides the terminal's own
+cursor at setup (`EnterAlternateScreen, Hide`). **Show it instead**, style it
+`SetCursorStyle::BlinkingUnderScore` (crossterm 0.29 `cursor.rs:374`), and
+`MoveTo` the selected cell after painting. A hardware cursor occupies **no
+grid cell at all** — it is not ink, so the rule is satisfied absolutely rather
+than by argument. `Cell` does not change, `Weight` does not gain a variant,
+and the cursor is where a screen reader expects it.
+
+The `Grid` (or its caller) carries **one** cursor position, not a per-cell
+flag: the cursor is a property of the view, not of forty-by-twenty cells.
+
+### 5.3 A modal input layer, which does not exist yet
+
+`input.rs::verb_for` already binds **`hjkl`, the arrows, and `1`-`9`** to
+`go <dir>` — the character's own movement. The cursor cannot share them, and
+**the client has no mode concept at all today**. This is the largest thing
+this campaign adds and the earlier draft did not name it: "a free cursor moved
+by key" reads as additive and is not.
+
+Free keys, checked: `x`, `;`, `:`. The roguelike convention is a *look mode* —
+`x` enters, movement keys drive the cursor, `Escape` leaves — and it is the
+right precedent because it resolves the collision without renaming any binding
+a player already knows.
+
+**Consequence for the schema:** none. A mode is client state; it never reaches
+`vessel/session/v2`.
 
 ---
 
@@ -240,6 +268,13 @@ moves a stream, or touches a save-format label. No epoch.**
 ---
 
 ## 7. What is unverified, and how each is settled
+
+**F0 — the modal layer's blast radius.** `verb_for` is a pure
+`KeyEvent -> Option<String>` map with no state. A mode means input dispatch
+gains state, and every existing binding must keep working unchanged when the
+mode is off. **Settled by:** Task 1 keeps `verb_for` intact and adds the mode
+*around* it rather than inside it, and asserts every pre-existing binding is
+unchanged in normal mode.
 
 **F1 — the strip's row assignment against the 80×24 floor.** Adding a
 plate-width strip costs a row the plate has today. **Settled by:** Task 2
