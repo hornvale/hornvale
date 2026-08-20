@@ -62,6 +62,53 @@ pub enum FeatureClass {
     River = 4,
 }
 
+impl FeatureClass {
+    /// Declared per-class cursor specificity: **lower is more specific**,
+    /// mirroring the scene protocol's existing sense (`Mark.salience`:
+    /// agent 5, flagship 10, other settlement 20 — `windows/scene`). This is
+    /// a **separate** ordering from the discriminant above (which is a
+    /// naming salt and must not move) and from [`FeatureIndex`]'s own
+    /// magnitude-descending order (which answers "what are the important
+    /// features", the gazetteer page); this one answers "what am I pointing
+    /// at", the cursor.
+    ///
+    /// **Declared, not derived from extent.** The Portolan's resolution spike
+    /// measured that 99.84% of multi-feature cells form a proper containment
+    /// chain (a strict subset of a distinct extent is strictly smaller), so
+    /// extent-ascending agrees with specificity *today*, by construction —
+    /// but inferring salience from size would silently break the moment a
+    /// class arrives whose size does not track its specificity. A new class
+    /// must state where it sits here, explicitly.
+    ///
+    /// **Total order — every pair must disagree.** A tie would make the
+    /// cursor's most-specific-first pick unpredictable
+    /// (`salience_is_declared_most_specific_first` pins this: five classes,
+    /// five distinct values).
+    /// type-audit: bare-ok(index: return)
+    pub fn salience(self) -> u8 {
+        match self {
+            // A point-like edifice: the most specific thing a cursor can
+            // stand on, whether it rises from land or (measured: 6.9% of
+            // multi-feature cells) from the sea floor.
+            FeatureClass::Volcano => 0,
+            // An endorheic sink: smaller and more specific than the river
+            // catchment or landmass that contains it.
+            FeatureClass::SaltLake => 1,
+            // A catchment: a linear feature, more specific than the
+            // landmass it drains but less specific than a point feature
+            // nested within it.
+            FeatureClass::River => 2,
+            // A connected component of land: contains volcanoes, salt
+            // lakes and rivers, so it is less specific than any of them.
+            FeatureClass::Landmass => 3,
+            // A connected component of ocean: the least specific class —
+            // measured, it is the outermost container a submarine volcano
+            // nests inside.
+            FeatureClass::Sea => 4,
+        }
+    }
+}
+
 /// A feature's stable identity: its class and its canonical cell.
 /// type-audit: bare-ok(index: cell)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -235,6 +282,53 @@ impl FeatureIndex {
     /// ordered by [`Self::of`].
     pub fn all(&self) -> impl Iterator<Item = &Feature> {
         self.by_class.values().flat_map(|feats| feats.iter())
+    }
+}
+
+/// `CellId -> Vec<FeatureId>`: every feature covering a given cell, most
+/// specific first. The Portolan's cursor query — "what am I pointing at" —
+/// answered as a lookup rather than a scan.
+///
+/// **Built once at world load and never invalidated.** The feature stack for
+/// a cell is immutable for the world's lifetime (terrain does not move), so
+/// this is not a per-turn cache; a caller builds it exactly once from the
+/// genesis-time feature set and holds it for the world's whole life.
+///
+/// Ordered by [`FeatureClass::salience`] ascending, ties broken by
+/// [`FeatureId`]'s own `Ord` (which orders `class` then `cell`) for a total,
+/// deterministic order — the same reasoning [`FeatureIndex`] documents for
+/// its own tie-break, applied to a different ordering key.
+#[derive(Clone, Debug, Default)]
+pub struct CellFeatureIndex {
+    by_cell: BTreeMap<CellId, Vec<FeatureId>>,
+}
+
+impl CellFeatureIndex {
+    /// Index every `features[i].extent` cell, most-specific-first. Cost is
+    /// `O(sum of extent sizes * log)`, one pass over every feature's own
+    /// extent rather than one scan of every cell per feature — the same
+    /// complexity shape the resolution spike measured `resolve_at`'s
+    /// candidate cost against (`docs/superpowers/specs/2026-08-19-the-
+    /// portolan-design.md` §4).
+    pub fn build(features: &[Feature]) -> CellFeatureIndex {
+        let mut by_cell: BTreeMap<CellId, Vec<FeatureId>> = BTreeMap::new();
+        for feature in features {
+            for &cell in &feature.extent {
+                by_cell.entry(cell).or_default().push(feature.id);
+            }
+        }
+        for ids in by_cell.values_mut() {
+            ids.sort_unstable_by_key(|id| (id.class.salience(), *id));
+        }
+        CellFeatureIndex { by_cell }
+    }
+
+    /// Every feature covering `cell`, most specific first. Empty (never a
+    /// panic) for a cell no feature's extent contains — seed 42 measured
+    /// 377 of 40,962 cells (0.92%) like this: real terrain below every
+    /// class's individuation floor, not "nothing there."
+    pub fn at(&self, cell: CellId) -> &[FeatureId] {
+        self.by_cell.get(&cell).map(Vec::as_slice).unwrap_or(&[])
     }
 }
 
@@ -626,5 +720,142 @@ mod tests {
             (FeatureClass::Sea, sea),
         ]);
         assert_eq!(index.all().count(), land_count + sea_count);
+    }
+
+    /// A handful of hand-built features for [`CellFeatureIndex`]'s tests:
+    /// a Volcano nested inside a Landmass (a containment chain — cells 3-4),
+    /// a standalone Sea, and a River/SaltLake pair sharing exactly one cell
+    /// with neither a subset of the other (a sibling overlap — cell 31) —
+    /// the two shapes the resolution spike found in real data (99.84% chain,
+    /// a 0.16% sliver of overlap).
+    fn test_features() -> Vec<Feature> {
+        vec![
+            Feature {
+                id: FeatureId {
+                    class: FeatureClass::Landmass,
+                    cell: CellId(0),
+                },
+                extent: (0..10).map(CellId).collect(),
+                anchor: CellId(0),
+                magnitude: 10,
+            },
+            Feature {
+                id: FeatureId {
+                    class: FeatureClass::Volcano,
+                    cell: CellId(3),
+                },
+                extent: [CellId(3), CellId(4)].into_iter().collect(),
+                anchor: CellId(3),
+                magnitude: 2,
+            },
+            Feature {
+                id: FeatureId {
+                    class: FeatureClass::Sea,
+                    cell: CellId(20),
+                },
+                extent: (20..25).map(CellId).collect(),
+                anchor: CellId(20),
+                magnitude: 5,
+            },
+            Feature {
+                id: FeatureId {
+                    class: FeatureClass::River,
+                    cell: CellId(30),
+                },
+                extent: [CellId(30), CellId(31)].into_iter().collect(),
+                anchor: CellId(30),
+                magnitude: 2,
+            },
+            Feature {
+                id: FeatureId {
+                    class: FeatureClass::SaltLake,
+                    cell: CellId(32),
+                },
+                extent: [CellId(31), CellId(32)].into_iter().collect(),
+                anchor: CellId(32),
+                magnitude: 2,
+            },
+        ]
+    }
+
+    /// Salience is DECLARED per class, not inferred from extent. Lower is
+    /// more specific. The cursor names the volcano, not the continent it
+    /// stands on -- that is the whole ordering, and inferring it from size
+    /// would break the moment a class arrives whose size does not track its
+    /// specificity.
+    #[test]
+    fn salience_is_declared_most_specific_first() {
+        use FeatureClass::*;
+        assert!(Volcano.salience() < Landmass.salience());
+        assert!(SaltLake.salience() < Landmass.salience());
+        assert!(River.salience() < Landmass.salience());
+        assert!(
+            Landmass.salience() < Sea.salience() || Sea.salience() < Landmass.salience(),
+            "every pair must be ordered; a tie makes the cursor unpredictable"
+        );
+        let mut ranks: Vec<u8> = [Volcano, Landmass, Sea, SaltLake, River]
+            .iter()
+            .map(|c| c.salience())
+            .collect();
+        ranks.sort_unstable();
+        ranks.dedup();
+        assert_eq!(
+            ranks.len(),
+            5,
+            "salience must be a total order -- no two classes may tie"
+        );
+    }
+
+    /// The index answers containment, and it agrees with the extents it was
+    /// built from. Checked against EVERY cell of every feature rather than
+    /// sampled, because a partial index reads exactly like a complete one.
+    #[test]
+    fn the_index_agrees_with_the_extents_it_was_built_from() {
+        let feats = test_features();
+        let index = CellFeatureIndex::build(&feats);
+        for f in &feats {
+            for cell in &f.extent {
+                assert!(
+                    index.at(*cell).contains(&f.id),
+                    "index lost {:?} at {cell:?}",
+                    f.id
+                );
+            }
+        }
+        for f in &feats {
+            for id in index.at(*f.extent.iter().next().expect("nonempty")) {
+                let owner = feats
+                    .iter()
+                    .find(|g| g.id == *id)
+                    .expect("index invented a feature");
+                assert!(
+                    owner
+                        .extent
+                        .contains(f.extent.iter().next().expect("nonempty"))
+                );
+            }
+        }
+    }
+
+    /// A cell with no feature resolves to an empty slice, not a panic.
+    /// Seed 42's real terrain measured 377 of 40,962 cells like this.
+    #[test]
+    fn a_cell_with_no_feature_resolves_to_none() {
+        let index = CellFeatureIndex::build(&[]);
+        assert!(index.at(CellId(0)).is_empty());
+    }
+
+    /// Cell 3 is covered by both the Volcano and the Landmass that contains
+    /// it. The volcano is more specific (lower salience) and must sort
+    /// first -- this is the property `resolve_at` (`windows/worldgen`)
+    /// relies on to answer with `index.at(cell).first()`.
+    #[test]
+    fn at_orders_most_specific_first() {
+        let feats = test_features();
+        let index = CellFeatureIndex::build(&feats);
+        let stack = index.at(CellId(3));
+        assert_eq!(stack.len(), 2);
+        assert_eq!(stack[0].class, FeatureClass::Volcano);
+        assert_eq!(stack[1].class, FeatureClass::Landmass);
     }
 }

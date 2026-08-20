@@ -33,6 +33,7 @@
 //! the key code is even inspected.
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use hornvale_game_core::Focus;
 
 /// Map one key press to a verb line, or `None` if the key is unmapped.
 ///
@@ -90,6 +91,88 @@ pub fn verb_for(key: KeyEvent) -> Option<String> {
         _ => return None,
     };
     Some(verb.to_string())
+}
+
+/// What one key press means, once [`Focus`] is taken into account.
+///
+/// **The table is TOTAL**: every `KeyCode` maps to exactly one variant in
+/// each focus state, and [`Action::None`] is a destination like any other.
+/// H3 is falsified by a key whose destination cannot be predicted from what
+/// is on screen, so "unhandled" is not an option this enum offers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Action {
+    /// Insert this character at the caret — the CLI's answer to almost
+    /// every printable key.
+    Type(char),
+    /// Return focus to the CLI and insert this character. One keypress,
+    /// produced only when the map is focused (spec §2).
+    FocusAndType(char),
+    /// Delete the character before the caret.
+    DeleteBack,
+    /// Move the text caret by this many characters.
+    CaretBy(i16),
+    /// Recall the previous line from history.
+    HistoryPrev,
+    /// Recall the next line from history.
+    HistoryNext,
+    /// Submit the buffer. On an empty buffer this must cost no turn
+    /// (spec §6) — that is the driver's call, not the router's.
+    Submit,
+    /// Move the map cursor by `(dx, dy)` grid cells.
+    CursorBy(i16, i16),
+    /// Zoom the map in (`1`) or out (`-1`). **Routed, not implemented** —
+    /// zoom itself is The Portolan part II's. The driver accepts and
+    /// ignores it; what matters now is that `-` on the map does not fall
+    /// through to the buffer and type a `-`.
+    Zoom(i8),
+    /// Move focus to the other pane.
+    ToggleFocus,
+    /// The key does nothing in this focus state. Costs no turn, draws
+    /// nothing, and is a deliberate destination — `Tab` is the clearest
+    /// case (spec §3.3).
+    None,
+}
+
+/// Map one key press to an [`Action`], given the current [`Focus`].
+///
+/// **The direction this function enforces:** total in both focus states.
+/// Every key has a defined destination; none falls through unanswered.
+///
+/// The chord discipline is unchanged from [`verb_for`] and applies before
+/// the key code is inspected: only a bare [`KeyEventKind::Press`] with no
+/// modifier beyond [`KeyModifiers::SHIFT`] does anything at all, so
+/// `Ctrl-L` types nothing just as it used to walk nowhere.
+pub fn action_for(key: KeyEvent, focus: Focus) -> Action {
+    if key.kind != KeyEventKind::Press {
+        return Action::None;
+    }
+    if !key.modifiers.difference(KeyModifiers::SHIFT).is_empty() {
+        return Action::None;
+    }
+    match focus {
+        Focus::Cli => match key.code {
+            KeyCode::Char(c) => Action::Type(c),
+            KeyCode::Left => Action::CaretBy(-1),
+            KeyCode::Right => Action::CaretBy(1),
+            KeyCode::Up => Action::HistoryPrev,
+            KeyCode::Down => Action::HistoryNext,
+            KeyCode::Enter => Action::Submit,
+            KeyCode::Backspace => Action::DeleteBack,
+            KeyCode::Esc => Action::ToggleFocus,
+            _ => Action::None,
+        },
+        Focus::Map => match key.code {
+            KeyCode::Char('-') => Action::Zoom(-1),
+            KeyCode::Char('+') | KeyCode::Char('=') => Action::Zoom(1),
+            KeyCode::Char(c) => Action::FocusAndType(c),
+            KeyCode::Left => Action::CursorBy(-1, 0),
+            KeyCode::Right => Action::CursorBy(1, 0),
+            KeyCode::Up => Action::CursorBy(0, -1),
+            KeyCode::Down => Action::CursorBy(0, 1),
+            KeyCode::Esc => Action::ToggleFocus,
+            _ => Action::None,
+        },
+    }
 }
 
 #[cfg(test)]
@@ -267,5 +350,168 @@ mod tests {
         let mut key = press(KeyCode::Up);
         key.kind = KeyEventKind::Release;
         assert_eq!(verb_for(key), None);
+    }
+
+    /// **H1, and the whole point of the campaign.** With the CLI focused,
+    /// every printable ASCII character types ITSELF. Not "most keys" and
+    /// not a sampled list: the assertion is that the count of printable
+    /// characters doing anything other than typing themselves is ZERO.
+    ///
+    /// Part I's sweep asserted the opposite property against `verb_for` (a
+    /// binding count of 27) and is superseded here rather than deleted: the
+    /// sweep was always the right test, and it now asserts that almost
+    /// every key is text (spec §4).
+    #[test]
+    fn every_printable_character_types_itself_when_the_cli_is_focused() {
+        let mut not_text = Vec::new();
+        for b in 0x20u8..=0x7Eu8 {
+            let c = b as char;
+            let key = KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE);
+            match action_for(key, Focus::Cli) {
+                Action::Type(got) if got == c => {}
+                other => not_text.push((c, format!("{other:?}"))),
+            }
+        }
+        assert!(
+            not_text.is_empty(),
+            "these printable characters did not type themselves with the CLI \
+             focused: {not_text:?}"
+        );
+    }
+
+    /// The other half of totality: the sweep above says what text does, and
+    /// this says every non-printable key has a DEFINED destination too. H3
+    /// is falsified by a key whose destination cannot be predicted.
+    #[test]
+    fn the_named_keys_route_predictably_with_the_cli_focused() {
+        let cases = [
+            (KeyCode::Left, Action::CaretBy(-1)),
+            (KeyCode::Right, Action::CaretBy(1)),
+            (KeyCode::Up, Action::HistoryPrev),
+            (KeyCode::Down, Action::HistoryNext),
+            (KeyCode::Enter, Action::Submit),
+            (KeyCode::Backspace, Action::DeleteBack),
+            (KeyCode::Esc, Action::ToggleFocus),
+            (KeyCode::Tab, Action::None),
+        ];
+        for (code, want) in cases {
+            let key = KeyEvent::new(code, KeyModifiers::NONE);
+            assert_eq!(action_for(key, Focus::Cli), want, "{code:?}");
+        }
+    }
+
+    /// With the map focused, a printable character returns focus to the CLI
+    /// AND types itself — one keypress, not two (spec §2). The zoom keys
+    /// are the deliberate exception, checked separately below.
+    #[test]
+    fn a_printable_character_bounces_focus_back_to_the_cli_and_types() {
+        let mut wrong = Vec::new();
+        for b in 0x20u8..=0x7Eu8 {
+            let c = b as char;
+            if matches!(c, '-' | '+' | '=') {
+                continue;
+            }
+            let key = KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE);
+            match action_for(key, Focus::Map) {
+                Action::FocusAndType(got) if got == c => {}
+                other => wrong.push((c, format!("{other:?}"))),
+            }
+        }
+        assert!(wrong.is_empty(), "did not bounce-and-type: {wrong:?}");
+    }
+
+    /// The zoom keys must NOT bounce and must NOT type. This is the
+    /// assertion discriminating a routed zoom binding from a character that
+    /// merely falls through to the buffer.
+    #[test]
+    fn the_zoom_keys_zoom_on_the_map_and_type_on_the_cli() {
+        let cases = [
+            ('-', Action::Zoom(-1)),
+            ('+', Action::Zoom(1)),
+            ('=', Action::Zoom(1)),
+        ];
+        for (c, want) in cases {
+            let key = KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE);
+            assert_eq!(action_for(key, Focus::Map), want, "{c} on the map");
+            assert_eq!(
+                action_for(key, Focus::Cli),
+                Action::Type(c),
+                "{c} must be ordinary text on the CLI"
+            );
+        }
+    }
+
+    /// The named keys with the map focused. `Enter` and `Backspace` are
+    /// deliberately inert here: both act on a buffer whose caret is not
+    /// being shown, and a destructive or turn-costing key must not fire
+    /// against a surface the player cannot see.
+    #[test]
+    fn the_named_keys_route_predictably_with_the_map_focused() {
+        let cases = [
+            (KeyCode::Left, Action::CursorBy(-1, 0)),
+            (KeyCode::Right, Action::CursorBy(1, 0)),
+            (KeyCode::Up, Action::CursorBy(0, -1)),
+            (KeyCode::Down, Action::CursorBy(0, 1)),
+            (KeyCode::Esc, Action::ToggleFocus),
+            (KeyCode::Tab, Action::None),
+            (KeyCode::Enter, Action::None),
+            (KeyCode::Backspace, Action::None),
+        ];
+        for (code, want) in cases {
+            let key = KeyEvent::new(code, KeyModifiers::NONE);
+            assert_eq!(action_for(key, Focus::Map), want, "{code:?}");
+        }
+    }
+
+    /// `Tab` is reserved for completion and bound to NOTHING, in both focus
+    /// states (spec §3.3). Spending it is the mistake this test makes loud:
+    /// it fails the moment anyone gives `Tab` a meaning.
+    #[test]
+    fn tab_is_bound_to_nothing_in_either_focus() {
+        let tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
+        assert_eq!(action_for(tab, Focus::Cli), Action::None);
+        assert_eq!(action_for(tab, Focus::Map), Action::None);
+    }
+
+    /// The chord discipline survives the rewrite: `Ctrl-L` must not type an
+    /// `l` any more than it used to walk the player east. Checked in BOTH
+    /// focus states, because the routing table is now two tables.
+    #[test]
+    fn a_chord_is_inert_in_either_focus() {
+        let codes = [
+            KeyCode::Char('l'),
+            KeyCode::Char('c'),
+            KeyCode::Enter,
+            KeyCode::Left,
+        ];
+        for code in codes {
+            for m in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+                for focus in [Focus::Cli, Focus::Map] {
+                    assert_eq!(
+                        action_for(KeyEvent::new(code, m), focus),
+                        Action::None,
+                        "{code:?} with {m:?} in {focus:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// A bare SHIFT is not a chord — it is how a capital letter arrives at
+    /// all, and `Q` must type a `Q` now rather than releasing.
+    #[test]
+    fn shift_still_types_a_capital_and_q_no_longer_releases() {
+        let q = KeyEvent::new(KeyCode::Char('Q'), KeyModifiers::SHIFT);
+        assert_eq!(action_for(q, Focus::Cli), Action::Type('Q'));
+    }
+
+    /// A key-release event must never do anything — one physical keystroke
+    /// must not type two characters any more than it could cost two turns.
+    #[test]
+    fn a_release_event_is_inert_in_either_focus() {
+        let mut key = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE);
+        key.kind = KeyEventKind::Release;
+        assert_eq!(action_for(key, Focus::Cli), Action::None);
+        assert_eq!(action_for(key, Focus::Map), Action::None);
     }
 }
