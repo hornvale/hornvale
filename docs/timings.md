@@ -1875,3 +1875,15 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T02:37:32Z | sluice:outboard | 35.491 | 21.910 | 35.683 | 1.62 | 0 | d1827eb91 |  | lefford | 40 |
 | 2026-08-20T02:43:29Z | sluice:gate | 356.370 | 9846.901 | 341.166 | 28.59 | 0 | d123648f8 |  | lefford | 40 |
 | 2026-08-20T02:46:31Z | sluice:clients | 182.037 | 369.786 | 11.417 | 2.09 | 0 | ebbbc2d08 |  | lefford | 40 |
+| 2026-08-20T15:08:40Z | prewarm | 147.748 | 1062.686 | 38.642 | 7.45 | 0 | 6d7e1ca9 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T15:21:06Z | gate-commit | 38.442 | 113.582 | 26.941 | 3.66 | 0 | 6d7e1ca9 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T15:22:01Z | gate-commit | 22.545 | 50.405 | 11.460 | 2.74 | 0 | 6d7e1ca9 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:15:28Z | gate-commit | 22.560 | 50.358 | 11.434 | 2.74 | 0 | db23f36b | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:16:21Z | gate-commit | 22.553 | 50.378 | 11.842 | 2.76 | 0 | db23f36b | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:37:33Z | gate-commit | 33.077 | 105.880 | 21.607 | 3.85 | 0 | 76f65816 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:39:19Z | gate-commit | 31.060 | 53.571 | 11.815 | 2.11 | 0 | 76f65816 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:47:12Z | rebaseline | 53.688 | 235.307 | 12.373 | 4.61 | 0 | 9cae88e3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:48:15Z | gate-commit | 38.875 | 107.644 | 18.285 | 3.24 | 0 | 9cae88e3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:48:53Z | gate-commit | 24.779 | 51.539 | 11.932 | 2.56 | 0 | 9cae88e3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:59:11Z | gate-commit | 34.917 | 91.722 | 17.524 | 3.13 | 0 | b1cb04d5 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:59:48Z | gate-commit | 22.797 | 50.350 | 11.628 | 2.72 | 0 | b1cb04d5 | campaign/the-deed | MacBookPro | 10 |
