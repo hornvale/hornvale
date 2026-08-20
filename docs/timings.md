@@ -1927,6 +1927,17 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T16:16:00Z | sluice:clients | 178.401 | 356.813 | 11.414 | 2.06 | 0 | 28c72e9a9 |  | lefford | 40 |
 | 2026-08-20T16:53:06Z | rebaseline | 52.335 | 232.932 | 11.459 | 4.67 | 0 | d9ed93ad | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T16:56:09Z | gate-commit | 31.311 | 89.760 | 18.932 | 3.47 | 0 | d9ed93ad | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:56:54Z | gate-commit | 22.797 | 50.436 | 11.426 | 2.71 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T18:51:18Z | game-check | 0.240 | 0.171 | 0.043 | 0.89 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T18:51:25Z | game-check | 0.735 | 0.696 | 0.173 | 1.18 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T18:51:56Z | game-check | 1.306 | 1.334 | 0.470 | 1.38 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T18:53:45Z | game-check | 95.588 | 530.928 | 7.751 | 5.64 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T18:58:18Z | game-check | 85.996 | 515.570 | 4.828 | 6.05 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T18:59:51Z | gate-commit | 31.456 | 53.748 | 12.365 | 2.10 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:14:17Z | game-check | 124.156 | 522.501 | 5.395 | 4.25 | 0 | 5e87b9cb | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:16:02Z | gate-commit | 35.590 | 54.529 | 12.353 | 1.88 | 0 | 5e87b9cb | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:30:00Z | game-check | 119.566 | 511.065 | 7.914 | 4.34 | 0 | 10066d8e | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:32:02Z | gate-commit | 24.043 | 50.922 | 12.301 | 2.63 | 0 | 10066d8e | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T17:32:45Z | sluice:artifacts | 114.009 | 891.601 | 40.773 | 8.18 | 0 | c806677f1 |  | lefford | 40 |
 | 2026-08-20T17:33:20Z | sluice:outboard | 35.020 | 21.076 | 33.089 | 1.55 | 0 | cc94eb220 |  | lefford | 40 |
 | 2026-08-20T17:39:59Z | sluice:gate | 398.605 | 10777.476 | 426.686 | 28.11 | 0 | b59a73c4b |  | lefford | 40 |
@@ -1942,3 +1953,21 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T20:57:48Z | sluice:outboard | 35.177 | 22.083 | 36.315 | 1.66 | 0 | 2c14fc515 |  | lefford | 40 |
 | 2026-08-20T21:04:33Z | sluice:gate | 404.359 | 10898.466 | 426.439 | 28.01 | 0 | 926fc501f |  | lefford | 40 |
 | 2026-08-20T21:08:58Z | sluice:clients | 265.015 | 692.969 | 32.690 | 2.74 | 0 | 0131ae0a7 |  | lefford | 40 |
+| 2026-08-20T19:37:53Z | rebaseline | 57.383 | 240.044 | 12.736 | 4.41 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:39:23Z | game-check | 81.518 | 507.183 | 6.008 | 6.30 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:39:51Z | gate-commit | 23.732 | 50.224 | 12.017 | 2.62 | 0 | 3050f7da | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:55:31Z | rebaseline | 65.709 | 238.660 | 10.958 | 3.80 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:57:58Z | game-check | 131.961 | 522.073 | 6.980 | 4.01 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T19:58:25Z | gate-commit | 23.333 | 49.654 | 11.845 | 2.64 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:00:10Z | gate-commit | 23.404 | 49.835 | 11.984 | 2.64 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:24:00Z | game-check | 104.082 | 511.024 | 7.544 | 4.98 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:24:28Z | gate-commit | 25.002 | 49.734 | 11.719 | 2.46 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:25:56Z | rebaseline | 59.310 | 233.727 | 11.436 | 4.13 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:28:44Z | game-check | 114.850 | 512.453 | 6.005 | 4.51 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:29:24Z | gate-commit | 35.591 | 54.331 | 12.258 | 1.87 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:31:14Z | gate-commit | 25.071 | 50.648 | 12.291 | 2.51 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:36:26Z | gate-commit | 23.552 | 49.798 | 11.790 | 2.61 | 0 | 9c3633ca | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:40:53Z | gate-commit | 24.647 | 48.146 | 10.503 | 2.38 | 0 | 53ff339c | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:41:43Z | rebaseline | 50.202 | 232.836 | 10.144 | 4.84 | 0 | 53ff339c | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:42:44Z | gate-commit | 26.880 | 51.119 | 12.037 | 2.35 | 0 | 53ff339c | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:46:40Z | gate-commit | 39.000 | 53.510 | 12.222 | 1.69 | 0 | e1f25106 | campaign/the-stylus | MacBookPro | 10 |

@@ -1,5 +1,18 @@
 # The Portolan Implementation Plan
 
+**Status: Part I COMPLETE, landed via `campaign/the-stylus` (2026-08-20).**
+Tasks 1-4 were implemented and reviewed on this branch (`campaign/the-portolan`)
+before it was deliberately paused at 4/5 tasks. The Stylus's Task 0 absorbed
+this branch — its own spec was written assuming this cursor already existed
+— and this plan's own Task 5 (chronicle, retrospective) was executed as
+part of *that* campaign's close, since a merge landing this branch owed it
+regardless of which plan's Task 5 wrote it. See
+[the chronicle](../../../book/src/chronicle/the-portolan.md) and
+[the retrospective](../../retrospectives/the-portolan.md). Part I's own
+`Mode { Normal, Look }` was superseded by The Stylus's `Focus { Cli, Map }`
+in the same merge (decision 0159). **Part II** (fog of discovery) is
+spec'd and planned separately, and resumes on this foundation.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A free-roaming cursor in the terminal client's plate: it selects a cell, the sim answers what is there, and the most specific feature's name appears in a strip beneath the map.

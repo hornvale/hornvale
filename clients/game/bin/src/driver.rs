@@ -58,7 +58,9 @@
 //! room a bearing-inversion would have, using data both `chart::cell_at`
 //! and `Session::purview` already carry.
 
+use crate::history::History;
 use crate::input::Action;
+use crate::line::Line;
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{Cursor, Focus};
 use hornvale_kernel::{NearestCellIndex, RoomId, Seed, World};
@@ -66,15 +68,15 @@ use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::TerrainPins;
 use hornvale_terrain::landscape::CellFeatureIndex;
 use hornvale_vessel::{
-    PossessOpts, PossessTarget, Session, VesselError, WorldContext, snapshot_json,
+    PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
 use hornvale_worldgen::{
     BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
     language_of_in, morph_options, resolve_at, terrain_of,
 };
 
-/// What the strip says in look mode over a band this campaign has no
-/// resolver for (walk and chamber both draw a real plate; only the
+/// What the strip says, with the map focused, over a band this campaign has
+/// no resolver for (walk and chamber both draw a real plate; only the
 /// terrain-feature index answers a query — spec §3.1/§9). Faking a
 /// resolution would be worse than refusing: a wrong name is
 /// indistinguishable from a right one, and this string never is one.
@@ -191,6 +193,18 @@ pub struct Driver {
     /// resolved once at `start` (an agent's species does not change during
     /// a session) — the same triple [`resolve_at`] needs on every call.
     namer: (String, Phonology, MorphOptions),
+    /// The command line's editable buffer — the one reversible thing this
+    /// struct owns (The Stylus, Task 3).
+    line: Line,
+    /// Recalled command lines, walked by `Action::HistoryPrev`/
+    /// `HistoryNext`.
+    history: History,
+    /// The most recently submitted line, echoed for the record so the
+    /// display can read ask-then-answer (spec §6) — `None` before the first
+    /// submission this session. Not reset on later turns other than being
+    /// overwritten by the next submission: it names "what was asked most
+    /// recently", not "what was asked this exact turn".
+    echo: Option<String>,
 }
 
 impl Driver {
@@ -295,6 +309,9 @@ impl Driver {
             seed: world_ref.seed,
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
             namer: (species, ph, morph),
+            line: Line::new(),
+            history: History::new(),
+            echo: None,
         };
         driver.refresh();
         Ok(driver)
@@ -365,48 +382,95 @@ impl Driver {
         }
     }
 
-    /// Apply one input [`Action`]: move the map cursor, toggle focus, or —
-    /// for everything the buffer will eventually own — do nothing yet.
-    /// `Type`, `FocusAndType`, `DeleteBack`, `CaretBy`, `HistoryPrev`,
-    /// `HistoryNext`, `Submit` and `Zoom` are routed here but not wired: the
-    /// line buffer and its submission are Task 3's job. Only `ToggleFocus`
-    /// and `CursorBy` are live today, and neither costs a turn — matching
-    /// `input`'s own "costs no turn" contract for everything that is not a
-    /// submitted line.
-    pub fn apply(&mut self, action: Action) {
+    /// Apply one input [`Action`], returning whether the session RELEASED.
+    ///
+    /// This is now the loop's own answer to "was that the last keypress" —
+    /// replacing `main.rs`'s old check on the literal verb line it had just
+    /// sent, which could only ever see the `"release"` spelling (ledger #8:
+    /// the sim honours `"quit"` too, and once free text reaches the buffer
+    /// the caller cannot tell which synonym a player typed without asking
+    /// the driver). Only [`Action::Submit`] can ever return `true`.
+    ///
+    /// `Type`/`FocusAndType` insert into the buffer (`FocusAndType` also
+    /// returns focus to the CLI — spec §2's one-keypress bounce);
+    /// `DeleteBack`/`CaretBy` edit it; `HistoryPrev`/`HistoryNext` recall a
+    /// remembered line (past the newest empties the buffer, matching
+    /// [`crate::history::History::next`]'s own contract); `Submit` sends
+    /// the buffer — or, on an empty buffer, does nothing at all and returns
+    /// `false` (spec §6: the buffer is the last reversible thing before an
+    /// irreversible act, so a stray `Enter` must not cost a turn).
+    /// `CursorBy`/`ToggleFocus` are unchanged from part I. `Zoom` is
+    /// accepted and ignored — zoom itself belongs to The Portolan part II,
+    /// a paused follow-on campaign; this arm is where it will be
+    /// implemented. What matters now is only that a zoom key never falls
+    /// through to the buffer and types itself.
+    pub fn apply(&mut self, action: Action) -> bool {
         match action {
             Action::ToggleFocus => {
                 self.toggle_focus();
+                false
             }
             Action::CursorBy(dx, dy) => {
                 self.move_cursor(dx, dy);
                 self.refresh_strip();
+                false
             }
-            Action::Type(_) => {
-                // Task 3 wires this to the buffer.
+            Action::Type(c) => {
+                self.line.insert(c);
+                false
             }
-            Action::FocusAndType(_) => {
-                // Task 3 wires this to the buffer.
+            Action::FocusAndType(c) => {
+                // Route through `toggle_focus()` rather than setting
+                // `self.focus` directly: `FocusAndType` is only ever
+                // produced while the map is focused (`input::action_for`),
+                // so this toggle always lands on `Focus::Cli` — and, as a
+                // side effect, clears `self.strip`, keeping the invariant
+                // `toggle_focus`'s own doc states ("leaving it clears the
+                // strip"). A direct assignment here left that invariant
+                // with two owners and one violator; `strip_text()`
+                // happened to mask it by re-checking focus before
+                // returning, but a second reader of `self.strip` would not
+                // have been so lucky.
+                self.toggle_focus();
+                self.line.insert(c);
+                false
             }
             Action::DeleteBack => {
-                // Task 3 wires this to the buffer.
+                self.line.backspace();
+                false
             }
-            Action::CaretBy(_) => {
-                // Task 3 wires this to the buffer.
+            Action::CaretBy(dx) => {
+                match dx.cmp(&0) {
+                    std::cmp::Ordering::Less => self.line.caret_left(),
+                    std::cmp::Ordering::Greater => self.line.caret_right(),
+                    std::cmp::Ordering::Equal => {}
+                }
+                false
             }
             Action::HistoryPrev => {
-                // Task 3 wires this to the buffer.
+                if let Some(text) = self.history.prev() {
+                    self.line.set(text.to_string());
+                }
+                false
             }
             Action::HistoryNext => {
-                // Task 3 wires this to the buffer.
+                match self.history.next() {
+                    Some(text) => self.line.set(text.to_string()),
+                    None => self.line.set(String::new()),
+                }
+                false
             }
             Action::Submit => {
-                // Task 3 wires this to the buffer.
+                if self.line.is_empty() {
+                    return false;
+                }
+                let taken = self.line.take();
+                self.history.push(taken.clone());
+                self.echo = Some(taken.clone());
+                self.handle(&taken)
             }
-            Action::Zoom(_) => {
-                // Task 3 wires this to the buffer.
-            }
-            Action::None => {}
+            Action::Zoom(_) => false,
+            Action::None => false,
         }
     }
 
@@ -424,10 +488,10 @@ impl Driver {
         self.cursor.y = ny as u16;
     }
 
-    /// Recompute `self.strip` for the current band, mode and cursor
-    /// position. See the module doc: only the walk band resolves, and it
-    /// resolves the cell the CURSOR points at, not the observer's own —
-    /// every other band answers [`NOTHING_HERE_YET`] honestly.
+    /// Recompute `self.strip` for the current band and cursor position. See
+    /// the module doc: only the walk band resolves, and it resolves the
+    /// cell the CURSOR points at, not the observer's own — every other band
+    /// answers [`NOTHING_HERE_YET`] honestly.
     fn refresh_strip(&mut self) {
         self.strip = Some(self.resolve());
     }
@@ -487,19 +551,41 @@ impl Driver {
         self.cached.clone()
     }
 
-    /// Hand one line to the session and return the resulting snapshot JSON.
+    /// Hand one line to the session, refresh the cached snapshot, and
+    /// report whether the possession RELEASED.
     ///
     /// The client never validates a move before sending it: `Session::
     /// handle` tokenizes and parses, and an illegal or unrecognised verb
     /// comes back as the sim's own prose (e.g. "No way n from here."),
-    /// already folded into the returned snapshot's `narration.prose` — this
-    /// function has no need to branch on `Turn::Out` vs `Turn::Released` to
-    /// report that back, because both carry the same text the snapshot
-    /// already carries.
-    pub fn handle(&mut self, line: &str) -> String {
-        let _turn = self.session.handle(line);
+    /// already folded into the returned snapshot's `narration.prose` — a
+    /// caller that only wants to display the reply can read [`Self::
+    /// snapshot`] afterward and never needs the bool. What it cannot get
+    /// from the snapshot is whether the possession is OVER: `Turn::Out` and
+    /// `Turn::Released` both carry ordinary prose, so this is the one place
+    /// that still inspects the [`Turn`] itself, and it does so to answer
+    /// exactly that question (ledger #8 — see [`Self::apply`]'s doc).
+    pub fn handle(&mut self, line: &str) -> bool {
+        let turn = self.session.handle(line);
         self.refresh();
-        self.cached.clone()
+        matches!(turn, Turn::Released(_))
+    }
+
+    /// The command buffer's current text — what has been typed but not yet
+    /// submitted.
+    pub fn line_text(&self) -> String {
+        self.line.text()
+    }
+
+    /// The command buffer's caret, as a character offset — see
+    /// [`crate::line::Line::caret`].
+    pub fn caret(&self) -> usize {
+        self.line.caret()
+    }
+
+    /// The most recently submitted line, echoed for the record (see the
+    /// `echo` field's own doc for what "most recent" means across turns).
+    pub fn echo(&self) -> Option<&str> {
+        self.echo.as_deref()
     }
 
     /// Re-derive `cached` from the live session. A snapshot read can fail

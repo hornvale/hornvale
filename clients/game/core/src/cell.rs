@@ -31,24 +31,24 @@ pub enum Ink {
 /// The snapshot channel a drawn cell traces back to — the executable form of
 /// the brief's "trace listing: every visible datum on the composed screen,
 /// and which channel from the inventory it came from." For every variant
-/// except [`Source::Look`], "traces back to" is true *by construction*:
-/// this crate parsed the value off a `Snapshot` field before ever drawing
-/// it, so the provenance claim is one the crate can verify against its own
-/// parse.
+/// except [`Source::Look`], [`Source::Typed`], and [`Source::Echo`],
+/// "traces back to" is true *by construction*: this crate parsed the value
+/// off a `Snapshot` field before ever drawing it, so the provenance claim is
+/// one the crate can verify against its own parse.
 ///
 /// Every drawn cell must name one of these. The brief's original two
 /// categories were **derived from world state** (every variant below except
 /// [`Source::Chrome`]) and **declared inert** ([`Source::Chrome`], and
 /// nothing else) — that was a complete accounting when the client only ever
 /// showed prose sent back from the sim. Task 2 (The Stylus) gave the client
-/// a THIRD category, because the client became typeable: [`Source::Typed`]
-/// is neither derived from world state (it has never been sent to the sim,
-/// so no `Snapshot` field backs it) nor inert decoration (it changes on
-/// every keystroke, where `Chrome`'s whole claim rests on being a hardcoded
-/// constant). [`Source::Look`] sits in the world-derived category by claim,
-/// not by construction — it is the one variant whose provenance this crate
-/// cannot itself check; see its doc for what that means and the caller
-/// discipline it rests on.
+/// a THIRD category, because the client became typeable: text authored at
+/// this terminal, never on the wire — `bin` owns it and this crate cannot
+/// verify it. [`Source::Typed`] (the live, unsent buffer) and
+/// [`Source::Echo`] (the most recently submitted line) are its two members;
+/// see each variant's own doc for what distinguishes them. [`Source::Look`]
+/// sits in the world-derived category by claim, not by construction — it is
+/// a third variant whose provenance this crate cannot itself check; see its
+/// doc for what that means and the caller discipline it rests on.
 ///
 /// There is deliberately **no `Social` variant**. `hornvale-game-core`'s own
 /// schema mirror omits the `social` channel entirely (see `schema.rs`'s
@@ -104,8 +104,8 @@ pub enum Source {
     /// that need should be met by parsing the sim's authoritative sentence,
     /// not by re-deriving it from lower-level fields a second time.
     Chrome,
-    /// The look-mode strip beneath the plate (`strip.rs`): the resolved
-    /// feature name under the free-roaming cursor. Deliberately **not**
+    /// The map strip beneath the plate (`strip.rs`): the resolved feature
+    /// name under the free-roaming cursor. Deliberately **not**
     /// [`Source::Chrome`] — the strip's content, once a name is resolved
     /// (The Portolan's Task 3), is drawn from world state the same as the
     /// chart or the floor plan is, so lumping it into `Chrome` would be the
@@ -114,11 +114,12 @@ pub enum Source {
     /// gutters, margins, the entry's own prompt), never a catch-all for
     /// content whose real channel was merely inconvenient to name.
     ///
-    /// **This is not a snapshot channel, and unlike every sibling variant
-    /// its provenance is not verifiable by construction.** `Chart`, `Plan`,
-    /// `Prose`, and `Identity` each trace to a field this crate itself
-    /// parsed off `Snapshot` — the crate can point at the exact struct
-    /// field that justifies the label. `Look`'s text does not: it traces to
+    /// **This is not a snapshot channel, and — like [`Source::Typed`] and
+    /// [`Source::Echo`], its two siblings in that respect — its provenance
+    /// is not verifiable by construction.** `Chart`, `Plan`, `Prose`, and
+    /// `Identity` each trace to a field this crate itself parsed off
+    /// `Snapshot` — the crate can point at the exact struct field that
+    /// justifies the label. `Look`'s text does not: it traces to
     /// `resolve_at` in `windows/worldgen`, answered by a `CellFeatureIndex`
     /// over `domains/terrain` and queried live by `bin` (Task 3) — it is
     /// not carried on `vessel/session/v2` at all, so there is no `Snapshot`
@@ -140,10 +141,24 @@ pub enum Source {
     /// deliberately not [`Source::Prose`]**: the buffer has not been sent to
     /// `Session::handle` yet, so it is not narration the sim produced —
     /// attributing it to `Prose` would claim a wire provenance nothing on
-    /// `vessel/session/v2` backs. It is the third category the enum's own
-    /// doc now names: neither derived from world state nor declared inert,
-    /// because the client did not become typeable until this task.
+    /// `vessel/session/v2` backs. It is one of the two members of the third
+    /// category the enum's own doc now names — text authored at this
+    /// terminal, never on the wire — and is distinguished from its sibling
+    /// [`Source::Echo`] by not yet having been sent: the buffer is live,
+    /// unsent, and mutates on every keystroke, where `Echo` is a fixed
+    /// record of a line already submitted.
     Typed,
+    /// The most recently SUBMITTED line, echoed above the command row so
+    /// the page reads ask-then-answer (spec §6, The Stylus Task 3).
+    /// **Deliberately not [`Source::Typed`]**: unlike the live buffer, this
+    /// text HAS already been sent to `Session::handle`, so `Typed`'s own
+    /// "not sent yet" reasoning no longer holds once a line is echoed.
+    /// **Also deliberately not [`Source::Prose`]**: it is the player's own
+    /// composed line, not narration the sim produced — attributing it to
+    /// `Prose` would claim a wire provenance nothing on `vessel/session/v2`
+    /// backs (the echo is `bin`'s own record of what it sent, held
+    /// alongside `Driver`, never a field read off a `Snapshot`).
+    Echo,
 }
 
 /// One character cell. A tile is a drop-in replacement for exactly one of

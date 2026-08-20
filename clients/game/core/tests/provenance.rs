@@ -121,12 +121,39 @@ fn the_typed_buffer_is_reachable_from_a_real_render() {
             caret: 4,
         },
         None,
+        None,
     )
     .unwrap();
     let p = grid.provenance();
     assert!(
         p.get(&Source::Typed).copied().unwrap_or(0) > 0,
         "the typed command-line buffer must be drawn and attributed: {p:?}"
+    );
+}
+
+/// Mirrors the assertion above for the SUBMITTED line: proves
+/// `Source::Echo` (The Stylus Task 3) is reachable from a real render, not
+/// merely declared in the enum. Neither `render` nor the test above
+/// exercises it — both pass no `echo` — so this calls `render_with` with
+/// one populated, the same way a live `bin` session does immediately after
+/// `Action::Submit`.
+#[test]
+fn the_echoed_line_is_reachable_from_a_real_render() {
+    let (grid, _) = render_with(
+        WALK_FIXTURE,
+        80,
+        24,
+        Focus::Cli,
+        None,
+        CommandLine::default(),
+        None,
+        Some("look"),
+    )
+    .unwrap();
+    let p = grid.provenance();
+    assert!(
+        p.get(&Source::Echo).copied().unwrap_or(0) > 0,
+        "the echoed submitted line must be drawn and attributed: {p:?}"
     );
 }
 

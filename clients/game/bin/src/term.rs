@@ -55,7 +55,7 @@ impl Term {
     ///
     /// **The cursor is shown, not hidden, at setup.** The Portolan gives the
     /// terminal's own hardware cursor a job: it reports the free-roaming
-    /// look-mode cursor's position (see [`Grid`]'s crate,
+    /// map cursor's position (see [`Grid`]'s crate,
     /// `hornvale_game_core::Cursor`) by moving the *real* cursor there
     /// rather than drawing ink onto the grid. [`Term::draw`] hides it again
     /// on any redraw that has no position to report.
