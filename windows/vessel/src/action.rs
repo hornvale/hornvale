@@ -118,6 +118,31 @@ impl Action {
     }
 }
 
+/// Whether an act is subject to the body's state or bypasses it. A property
+/// of the ACTION, not of the invocation: `examine` and `!examine` are
+/// different acts, so a verb never carries both moods (spec §2.1).
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mood {
+    /// Subject to the body's state; charges time; may post facts.
+    InCharacter,
+    /// Bypasses the body's state, never the world's rules. May still commit,
+    /// stamped with operator provenance (spec §2.2).
+    OutOfCharacter,
+}
+
+impl Action {
+    /// This act's mood. Exhaustive by variant with NO wildcard arm, so a new
+    /// action fails to compile until it is classified — the same discipline
+    /// as `action_variants_must_all_be_rostered`.
+    pub fn mood(&self) -> Mood {
+        match self {
+            Action::MoveTo(_) | Action::MoveWithin(_) => Mood::InCharacter,
+            Action::Drink | Action::Rest | Action::Eat => Mood::InCharacter,
+        }
+    }
+}
+
 /// Compile-time tripwire: a new [`Action`] variant breaks this match — every
 /// variant is named and there is no `_` arm — forcing [`Action::all`] and
 /// [`Action::concept_name`] to be revisited. The `manifest.rs` destructure

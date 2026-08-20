@@ -19,6 +19,8 @@ mod common;
 
 #[path = "suite/action_module.rs"]
 mod action_module;
+#[path = "suite/action_mood.rs"]
+mod action_mood;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
 #[path = "suite/course_properties.rs"]
