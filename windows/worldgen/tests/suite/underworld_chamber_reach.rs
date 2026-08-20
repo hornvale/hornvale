@@ -318,18 +318,35 @@ fn quantile(sorted: &[usize], q: f64) -> usize {
 ///
 /// ```text
 ///                          seed 42      seed 7    seed 1234    §4.2 arm
-///   per-branch drawn  med       22          24           27    5-25 / 5-25 / HOLE
-///   per-system drawn  med       90         107          108    >50 on all three
-///   per-system realiz med       46          52           53    HOLE / >50 / >50
+///   per-system drawn  med        90         107          108    >50 on all three
+///   per-system realiz med        46          52           53    HOLE / >50 / >50
+///   per-branch drawn  med        22          24           27    5-25 / 5-25 / HOLE
 ///   realized per cave       42.848      43.577       49.174
 /// ```
 ///
-/// **§3.1's own population lands squarely inside §3.1's own number.** A
-/// full-ladder BRANCH draws min 17, median 32–33, max 48–49 against the
-/// intended 15–50, on all three seeds. That is the arithmetic §3.1 did: its
-/// five ranges sum to exactly 15–50, once — so the sentence beside them says
-/// *system* and computes *branch*. Multiply by [`BRANCHES_PER_SYSTEM`] and a
-/// full-ladder system draws 68–196.
+/// **§4.2's own denominator is the SYSTEM — "the distribution of total floors
+/// per system" — and under it the arm is ">50 routinely: too many" on all
+/// three seeds.** That is the preregistered reading and it is stated first,
+/// because picking the denominator that passes after seeing the data is the
+/// shape of retuning even when the reasoning behind it is sound.
+///
+/// **The per-branch row is a post-hoc resolution of an inconsistency INTERNAL
+/// to the frozen spec, and it is flagged as post-hoc.** §3.1's sentence says
+/// "15-50 floors in a system that runs the full ladder"; its parenthetical
+/// says "the counts are drawn per branch"; and its arithmetic sums the five
+/// ranges **once** — `1+3+5+5+1 = 15`, `5+10+20+10+5 = 50` — which is one
+/// branch's total, not a system's. That arithmetic needs no measurement at
+/// all: it is a property of the table as written. Whether the campaign wants
+/// the intended range read per branch or per system is a fidelity call, and
+/// it is Nathan's, not this readout's.
+///
+/// **Do not read the full-ladder branch min/max as evidence for that
+/// resolution.** This test asserts `(lo_bound..=hi_bound).contains(&drawn)`
+/// per branch, and for `deepest == 4` those bounds ARE 15 and 50 — so a
+/// full-ladder branch is inside 15-50 by construction and the readout would
+/// have gone red rather than reported otherwise. What is NOT forced, and is
+/// therefore informative, is the **median: 32 / 32 / 33**, near the middle of
+/// the range rather than piled at an edge.
 ///
 /// **The frozen ranges are not retuned to move any of this** (the campaign's
 /// standing rule, and amendment B.7's). The per-band means come out at 2.976 /
@@ -341,6 +358,13 @@ fn quantile(sorted: &[usize], q: f64) -> usize {
 /// readings fell in it** — the same preregistration defect amendment B.8
 /// recorded for §4.1's 15–25% gap. Named, not repaired: closing a table after
 /// unblinding is what preregistration exists to prevent. See [`arm`].
+///
+/// **NONE OF THESE COUNTS IS PLAYER-REACHABLE TODAY.** `passages_from` never
+/// varies `floor`, and `windows/vessel`'s `delve_at` enters at
+/// `band: 0, floor: 0`, so a possession can reach exactly one chamber and no
+/// floor above zero is traversable at all until spec §7's junction task. The
+/// 42.8/cave figure is a count of what the lattice DERIVES, not of what
+/// anyone can walk.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn how_many_floors_does_a_run_realize() {

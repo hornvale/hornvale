@@ -586,13 +586,29 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     // and `stratum` from the rung, the gradient and the column; NEITHER reads
     // `floor`. So every realized floor of a run contributes an IDENTICAL
     // `(rung, stratum)` pair, and widening adds no content axis whatever. What
-    // it adds is trials: the independent existence draws per band go from 4 to
-    // 4 x (this band's drawn run length), which since Task 2 is 4-20 at
-    // `Undercroft` and 20-80 at `Deeps` rather than a flat 80 — the sweep
-    // walks the ceiling and `chamber_exists` refuses the floors past each
-    // run's own count. Either way the chance of a band contributing no sample
-    // at all is bounded by 2^-16 (its worst case, four runs of one floor),
-    // against 1/16 before the floor axis existed.
+    // it adds is trials: the independent existence draws per band go from 4
+    // (one floor x four branches) to 4 x (this band's drawn run length) — the
+    // sweep walks the ceiling and `chamber_exists` refuses the floors past
+    // each run's own count.
+    //
+    // **The worst case at `Undercroft` is not improved by the floor axis at
+    // all, and an earlier version of this comment claimed a 4096x margin that
+    // does not exist.** The chance a band contributes no sample is
+    // 2^-(realized floors in that band), and the WORST case is four branches
+    // all drawing their band's frozen minimum:
+    //
+    //   Undercroft (min 1)  4 draws   2^-4  = 1/16   <- unchanged from before
+    //   Shallows   (min 3)  12 draws  2^-12
+    //   Deeps      (min 5)  20 draws  2^-20
+    //   Underdeep  (min 5)  20 draws  2^-20
+    //
+    // 1/16 is exactly the pre-floor-axis figure, because a run of one floor
+    // IS the pre-floor-axis lattice. What the axis buys is the EXPECTATION:
+    // at the per-band means (3 / 6.5 / 12.5 / 7.5) the four-branch totals are
+    // 12 / 26 / 50 / 30 draws, i.e. 2^-12 / 2^-26 / 2^-50 / 2^-30. So the
+    // guard against a vacuous band is much better on average and no better at
+    // all in the worst case, which is the honest statement and the one that
+    // should be inherited.
     //
     // That is worth doing, and it is a patch over an older defect rather than
     // a fix for it. **This test demonstrates a DETERMINISTIC fact — that two

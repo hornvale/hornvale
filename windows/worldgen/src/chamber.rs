@@ -819,6 +819,33 @@ pub fn chamber_at(
 /// them baked into the one function whose whole virtue is that it guesses
 /// nothing.
 ///
+/// **TASK 2'S FLOOR DRAW TURNED THAT DEFERRAL INTO A SECOND, UNDESIGNED
+/// STRUCTURAL GATE ON DEPTH, AND IT IS NOT A COSMETIC CONSEQUENCE.** The
+/// `band + 1` candidate carries the caller's own `floor`, and
+/// [`chamber_exists`] now requires `floor < floors_in_run` of THAT
+/// neighbour's run. The bands' frozen ranges are not nested, so a chamber can
+/// sit at a floor its own run has and the run below does not — and then it
+/// cannot descend at all:
+///
+/// ```text
+///   Deeps 5-20 sits over Underdeep 5-10
+///       a Deeps chamber at floor >= 10 can NEVER descend
+///   Underdeep 5-10 sits over Nadir 1-5
+///       an Underdeep chamber at floor >= 5 can NEVER reach the Nadir
+/// ```
+///
+/// Amendment B.5 makes the Nadir the endgame and B.7 preregisters the gate on
+/// reaching it at **0-10%**, set by the barrier draw. After Task 2 the Nadir
+/// is *additionally* reachable only from Underdeep floors 0-4 — a second gate
+/// nobody designed, sitting underneath the one Nathan did, and multiplying
+/// into B.7's rate. Whichever way spec §7 task 6 resolves vertical
+/// connection, it should resolve this deliberately rather than inherit it.
+///
+/// **Deliberately left unasserted.** A test pinning "a Deeps chamber above
+/// floor 10 has no descent" would freeze an accident as a contract, and the
+/// task that designs junctions is the one that should choose. Recorded here,
+/// and carried into that task's dispatch, rather than mechanised.
+///
 /// The candidate-generation rule below is unchanged from before `floor`
 /// existed — it varies `branch` and `band` and nothing else. **It does not
 /// follow that the floor-0 graph is unchanged**, and this doc said otherwise
@@ -1577,6 +1604,20 @@ mod tests {
     /// [`crate::streams::CHAMBER`] and [`crate::streams::RUN_FLOORS`] are
     /// different parents. Under that, key-shape collisions are not a hazard
     /// this design has.
+    ///
+    /// **WHAT THIS TEST DOES NOT HOLD, stated because the campaign report
+    /// once claimed it did.** It derives both legs INLINE and calls neither
+    /// [`run_stream`] nor [`floors_in_run`], so it is a property of the two
+    /// label CONSTANTS and says nothing about which parent the shipped draw
+    /// actually travels. Review demonstrated the gap with a one-token
+    /// mutation — `run_stream`'s `derive(RUN_FLOORS)` to `derive(CHAMBER)`,
+    /// which changes every floor count in every world — and the whole crate
+    /// stayed green (371 lib tests, 286 suite tests). The assertion that
+    /// closes it is
+    /// [`the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg`],
+    /// which starts from `floors_in_run` instead. Both are kept: this one
+    /// says the separation is AVAILABLE, that one says the shipped path USES
+    /// it.
     #[test]
     fn the_run_leg_and_the_chamber_leg_cannot_collide() {
         let seed = Seed(1);
@@ -1597,6 +1638,147 @@ mod tests {
                 under_chamber, under_run,
                 "the key {text:?} derives the same seed under both legs, so the \
                  two draws are not separated by their parent"
+            );
+        }
+    }
+
+    /// **The SHIPPED run draw travels [`crate::streams::RUN_FLOORS`], not
+    /// [`crate::streams::CHAMBER`].** This starts from [`floors_in_run`] —
+    /// the function the world actually calls — and compares it against the
+    /// derivation spelled out here, so re-parenting [`run_stream`] reddens it.
+    ///
+    /// Review found that nothing held this: mutating `run_stream`'s parent
+    /// from `RUN_FLOORS` to `CHAMBER` changes the floor count of every run in
+    /// every world, and the entire crate stayed green. The neighbouring test
+    /// looked like it covered this and did not — it derived both legs inline
+    /// and never touched the shipped path. **The general lesson, which
+    /// applies past this function: a test that RE-IMPLEMENTS a derivation
+    /// cannot witness the real one.**
+    ///
+    /// Two arms, and the second is what makes the first non-vacuous:
+    ///
+    /// 1. the shipped answer equals the `RUN_FLOORS`-parented derivation, at
+    ///    every probed run;
+    /// 2. it DIFFERS from the `CHAMBER`-parented derivation at at least one
+    ///    of them. Arm 1 alone would pass under the mutation if the two
+    ///    parents happened to agree on every probe — with a 1-in-5 to
+    ///    1-in-16 chance of agreeing per run, a small sample could be
+    ///    unlucky, so the disagreement is asserted rather than assumed.
+    ///
+    /// **`chamber_stream`'s parent is unpinned in exactly this way**, and
+    /// that is a pre-existing gap rather than a regression this campaign
+    /// introduced: re-parenting it would relocate every chamber, and what
+    /// would object is the artifact drift check — which §6 of this campaign's
+    /// Task 2 report establishes is structurally blind to the chamber
+    /// lattice. Worth a follow-up; not fixed here, because a chamber-leg
+    /// assertion is not this task's subject and inventing one silently would
+    /// hide that the artifact-level witness is missing.
+    #[test]
+    fn the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg() {
+        let seed = Seed(90210);
+        let mut disagreed = false;
+        let mut probed = 0usize;
+        for raw_cell in 0u32..40 {
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for band in 0..5u8 {
+                    let run = RunAddr {
+                        cell: CellId(raw_cell),
+                        entrance: 0,
+                        branch,
+                        band,
+                    };
+                    let rung = rung_of_rank(run.band).expect("ranks 0..=4 name a rung");
+                    let (lo, hi) = floors_range(rung).expect("a habitation rung has a range");
+
+                    let via_run_leg = seed
+                        .derive(crate::streams::RUN_FLOORS)
+                        .derive(StreamLabel::dynamic(&run_key(run)))
+                        .stream()
+                        .range_u32(u32::from(lo), u32::from(hi));
+                    let via_chamber_leg = seed
+                        .derive(crate::streams::CHAMBER)
+                        .derive(StreamLabel::dynamic(&run_key(run)))
+                        .stream()
+                        .range_u32(u32::from(lo), u32::from(hi));
+
+                    let shipped = u32::from(floors_in_run(seed, run));
+                    assert_eq!(
+                        shipped, via_run_leg,
+                        "{run:?}: floors_in_run answered {shipped}, but the \
+                         RUN_FLOORS leg derives {via_run_leg} — the shipped draw \
+                         is not travelling the leg it declares"
+                    );
+                    probed += 1;
+                    if via_run_leg != via_chamber_leg {
+                        disagreed = true;
+                    }
+                }
+            }
+        }
+        assert!(probed > 0, "the sweep probed nothing");
+        assert!(
+            disagreed,
+            "the two legs agreed on all {probed} probed runs, so arm 1 above \
+             would pass under a re-parented run_stream — this test is vacuous \
+             as written and needs a wider or different sample"
+        );
+    }
+
+    /// The run draw is **byte-pinned for four known keys**, one per distinct
+    /// frozen range plus a repeat — the same discipline
+    /// `tolerance_draw::the_draw_is_byte_pinned_for_a_known_key` carries, and
+    /// the cheapest possible witness that ANY part of the derivation moved:
+    /// the parent leg, the key spelling, `range_u32`'s draw semantics, or the
+    /// range table.
+    ///
+    /// If this fails, every run in every world is a different length. That is
+    /// an epoch (`chamber/run-floors/v2`), not a fix to these numbers.
+    #[test]
+    fn the_run_draw_is_byte_pinned_for_known_keys() {
+        let seed = Seed(42);
+        for (cell, entrance, branch, band, expected) in [
+            (9u32, 0u8, 3u8, 2u8, 16u8), // 9/0/3/deeps,        range 5-20
+            (0, 1, 0, 0, 2),             // 0/1/0/undercroft,   range 1-5
+            (17, 0, 2, 4, 4),            // 17/0/2/nadir,       range 1-5
+            (5, 0, 1, 3, 5),             // 5/0/1/underdeep,    range 5-10
+        ] {
+            let run = RunAddr {
+                cell: CellId(cell),
+                entrance,
+                branch,
+                band,
+            };
+            assert_eq!(
+                floors_in_run(seed, run),
+                expected,
+                "the run {} moved off its pin",
+                run_key(run)
+            );
+        }
+    }
+
+    /// **The lattice ceiling must be at least as tall as the tallest thing
+    /// the draw can ask for**, or a run reports a length the lattice refuses.
+    ///
+    /// [`chamber_exists`] checks `floor >= FLOORS_PER_RUN_CEILING` BEFORE it
+    /// checks `floor >= floors_in_run(..)`, so a future range with `hi > 20`
+    /// would produce runs that claim N floors and realize 20 — a silent,
+    /// permanent truncation with no error anywhere. One assertion closes it,
+    /// and it belongs beside the table rather than in a reviewer's head.
+    #[test]
+    fn the_lattice_ceiling_covers_every_bands_frozen_maximum() {
+        for rank in 0..5u8 {
+            let rung = rung_of_rank(rank).expect("ranks 0..=4 name a rung");
+            let (lo, hi) = floors_range(rung).expect("a habitation rung has a range");
+            assert!(
+                lo >= 1,
+                "{rung:?} may draw {lo} floors, so its run can be empty"
+            );
+            assert!(
+                hi <= FLOORS_PER_RUN_CEILING,
+                "{rung:?} may draw {hi} floors but the lattice admits only \
+                 {FLOORS_PER_RUN_CEILING}, so chamber_exists would truncate \
+                 the run silently — the ceiling gate runs first"
             );
         }
     }
