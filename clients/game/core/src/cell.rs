@@ -36,13 +36,19 @@ pub enum Ink {
 /// it, so the provenance claim is one the crate can verify against its own
 /// parse.
 ///
-/// Every drawn cell must name one of these. The brief allows exactly two
-/// categories and no third: a mark is either **derived from world state**
-/// (every variant below except [`Source::Chrome`]) or **declared inert**
-/// ([`Source::Chrome`], and nothing else). [`Source::Look`] sits in the
-/// world-derived category by claim, not by construction — it is the one
-/// variant whose provenance this crate cannot itself check; see its doc
-/// for what that means and the caller discipline it rests on.
+/// Every drawn cell must name one of these. The brief's original two
+/// categories were **derived from world state** (every variant below except
+/// [`Source::Chrome`]) and **declared inert** ([`Source::Chrome`], and
+/// nothing else) — that was a complete accounting when the client only ever
+/// showed prose sent back from the sim. Task 2 (The Stylus) gave the client
+/// a THIRD category, because the client became typeable: [`Source::Typed`]
+/// is neither derived from world state (it has never been sent to the sim,
+/// so no `Snapshot` field backs it) nor inert decoration (it changes on
+/// every keystroke, where `Chrome`'s whole claim rests on being a hardcoded
+/// constant). [`Source::Look`] sits in the world-derived category by claim,
+/// not by construction — it is the one variant whose provenance this crate
+/// cannot itself check; see its doc for what that means and the caller
+/// discipline it rests on.
 ///
 /// There is deliberately **no `Social` variant**. `hornvale-game-core`'s own
 /// schema mirror omits the `social` channel entirely (see `schema.rs`'s
@@ -125,6 +131,19 @@ pub enum Source {
     /// hint or placeholder, or the label becomes exactly the false claim
     /// `Chrome` is reserved to avoid.
     Look,
+    /// The player's own unsent keystrokes: the command line's buffer text,
+    /// drawn by `entry.rs` after the `>` prompt. **Deliberately not
+    /// [`Source::Chrome`]**, even though both live on the same command row
+    /// — `Chrome` is reserved for genuinely inert decoration, and this text
+    /// is neither inert (it changes on every keystroke the player types)
+    /// nor a hardcoded constant the way `PROMPT_GLYPH` is. **Also
+    /// deliberately not [`Source::Prose`]**: the buffer has not been sent to
+    /// `Session::handle` yet, so it is not narration the sim produced —
+    /// attributing it to `Prose` would claim a wire provenance nothing on
+    /// `vessel/session/v2` backs. It is the third category the enum's own
+    /// doc now names: neither derived from world state nor declared inert,
+    /// because the client did not become typeable until this task.
+    Typed,
 }
 
 /// One character cell. A tile is a drop-in replacement for exactly one of

@@ -8,8 +8,9 @@
 //! dependency (crossterm) is enough for this campaign.
 
 use hornvale_game::driver::Driver;
+use hornvale_game::line::Line;
 use hornvale_game::{input, term};
-use hornvale_game_core::{MIN_HEIGHT, MIN_WIDTH};
+use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_vessel::PossessTarget;
 
 const USAGE: &str = "usage: hornvale-game --seed <N> [--target flagship|most-populous-settlement]";
@@ -75,16 +76,35 @@ fn terminal_size() -> std::io::Result<(u16, u16)> {
     Ok((cols.max(MIN_WIDTH), rows.max(MIN_HEIGHT)))
 }
 
-/// Draw the driver's current state at the terminal's current size.
+/// Draw the driver's current state, plus `line`'s current buffer, at the
+/// terminal's current size.
 ///
-/// Reads `driver.snapshot()`/`cursor()`/`strip_text()` fresh each call
-/// rather than being handed them, so every call site redraws the driver's
-/// true current state rather than whatever it happened to return from the
-/// action that triggered the redraw (`Event::Resize` has no action at all).
-fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
+/// Reads `driver.snapshot()`/`focus()`/`cursor()`/`strip_text()` fresh each
+/// call rather than being handed them, so every call site redraws the
+/// driver's true current state rather than whatever it happened to return
+/// from the action that triggered the redraw (`Event::Resize` has no
+/// action at all). `line` is a separate parameter, not read off `driver`,
+/// because the command buffer lives in `bin::line::Line`
+/// (`hornvale-game-core` has no hornvale dependency and cannot own it, and
+/// `Driver`'s own containment rule — see its module doc — is narrower than
+/// "anything the game needs" would suggest).
+fn redraw(term: &term::Term, driver: &Driver, line: &Line) -> std::io::Result<()> {
     let (w, h) = terminal_size()?;
     let json = driver.snapshot();
-    match hornvale_game_core::render_with(&json, w, h, driver.cursor(), driver.strip_text()) {
+    let text = line.text();
+    let cmd_line = CommandLine {
+        text: &text,
+        caret: line.caret(),
+    };
+    match hornvale_game_core::render_with(
+        &json,
+        w,
+        h,
+        driver.focus(),
+        driver.cursor(),
+        cmd_line,
+        driver.strip_text(),
+    ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
     }
@@ -112,9 +132,15 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
 fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     use crossterm::event::{Event, read};
 
+    // The command buffer. Not yet wired to `Action::Type`/`DeleteBack`/etc
+    // — `Driver::apply`'s own doc says those are Task 3's job — so it stays
+    // empty through this task, but `redraw` already reads it every call,
+    // which is what lets Task 3 land as a pure input-routing change with no
+    // render-path edits of its own.
+    let line = Line::new();
     let (_, h) = terminal_size()?;
     driver.resize(h);
-    redraw(term, driver)?;
+    redraw(term, driver, &line)?;
     loop {
         match read()? {
             Event::Key(key) => {
@@ -123,12 +149,12 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
                     continue;
                 }
                 driver.apply(action);
-                redraw(term, driver)?;
+                redraw(term, driver, &line)?;
             }
             Event::Resize(_, _) => {
                 let (_, h) = terminal_size()?;
                 driver.resize(h);
-                redraw(term, driver)?;
+                redraw(term, driver, &line)?;
             }
             _ => {}
         }

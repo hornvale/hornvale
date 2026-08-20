@@ -348,8 +348,9 @@ impl Driver {
     }
 
     /// The map cursor's screen position, or `None` unless the map is
-    /// focused — matching `render_with`'s `cursor` parameter, which hides
-    /// the terminal's hardware cursor on `None`.
+    /// focused — matching `render_with`'s `map_cursor` parameter, which
+    /// hides the terminal's hardware cursor on `None` (only consulted at
+    /// all under `Focus::Map`; see `render_with`'s own doc).
     pub fn cursor(&self) -> Option<Cursor> {
         (self.focus == Focus::Map).then_some(self.cursor)
     }
