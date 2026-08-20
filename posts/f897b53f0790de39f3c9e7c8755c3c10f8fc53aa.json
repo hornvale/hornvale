@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-cupel","note":"sluice: queued req-59e46d37dbb1 for campaign/the-cupel at 59e46d37 (merge) -- The Cupel close, settles KNOW-derived-vs-constant-penalty. Substrate byte-identical to base after absorbing The Tally; readout re-derived on the merge product (day tail 1.34%, unchanged).","paths":["scripts/sluice-queue.sh"],"polarity":"fyi"}
