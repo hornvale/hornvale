@@ -115,22 +115,38 @@ Expected: that path, branch `campaign/the-stylus`, and a clean tree apart
 from untracked `.superpowers/`.
 **If the branch is anything else, STOP and report** — do not proceed.
 
-- [ ] **Step 2: Absorb main into part I's branch first**
-
-Part I is **50 commits behind main** (measured 2026-08-20). Merging it into
-this branch directly would import a stale tree.
+- [ ] **Step 2: Bring this branch up to main**
 
 ```bash
-cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-portolan && \
+cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-stylus && \
   pwd && git branch --show-current && \
   git fetch origin && git merge origin/main
 ```
 
-Expected: branch `campaign/the-portolan`, and a merge that either completes
-or reports conflicts.
+Expected: branch `campaign/the-stylus`, already up to date or a clean
+fast-forward — this branch is main plus a spec and a plan commit.
+
+- [ ] **Step 3: Merge part I into The Stylus**
+
+**Do NOT touch `.claude/worktrees/the-portolan` or the
+`campaign/the-portolan` branch.** Part I is 50 commits behind main, but
+absorbing main into *it* first is unnecessary: this branch already carries
+main's tip, so merging part I in here produces exactly the same tree without
+mutating a paused campaign's branch. Everything happens in this worktree.
+
+```bash
+cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-stylus && \
+  pwd && git branch --show-current && \
+  git merge campaign/the-portolan
+```
+
+Expected: a merge commit. `git merge-tree --write-tree campaign/the-stylus
+campaign/the-portolan` reported this combination clean on 2026-08-20 — but
+re-verify rather than assume, and do not treat a clean merge as evidence the
+code still works. That is Step 4's job.
 
 **Decision rule — do not predict which:**
-- *Completes clean* → go to Step 3.
+- *Completes clean* → go to Step 4.
 - *Conflicts in `clients/game/`* → resolve them, preferring part I's side for
   input/cursor code and main's side for everything else. Report every file.
 - *Conflicts elsewhere* → resolve to main's side unless part I clearly
@@ -140,33 +156,23 @@ or reports conflicts.
   hand-resolve. Take either side; Step 5's `make rebaseline` authors the
   correct content.
 
-- [ ] **Step 3: Verify part I is green against today's main, before merging it here**
-
-```bash
-cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-portolan && \
-  make game-check
-```
-
-Expected: PASS. A clean textual merge is not evidence the premise survived —
-50 commits of main have moved underneath this code and nothing has compiled
-it against them until now.
-
-**Decision rule:**
-- *Green* → go to Step 4.
-- *Red* → fix it there, on `campaign/the-portolan`, and commit the fix there.
-  It is part I's regression, not The Stylus's. Report what broke and why.
-
-- [ ] **Step 4: Merge part I into The Stylus**
+- [ ] **Step 4: Verify part I actually survives contact with today's main**
 
 ```bash
 cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-stylus && \
-  pwd && git branch --show-current && \
-  git merge campaign/the-portolan
+  make game-check
 ```
 
-Expected: branch `campaign/the-stylus`, merge completes. (`git merge-tree`
-reported this combination clean on 2026-08-20, *before* Step 2's absorption
-of main — re-verify rather than assume it still is.)
+Expected: PASS. **A clean textual merge is not evidence the premise
+survived** — 50 commits of main have moved underneath part I's client code
+and nothing has compiled the two together until this moment. This is the
+step that finds out.
+
+**Decision rule:**
+- *Green* → go to Step 5.
+- *Red* → fix it here, on this branch, and report what broke and why. It is
+  part I's regression surfacing, not a defect you introduced; say so in the
+  report so the retrospective can record it.
 
 - [ ] **Step 5: Regenerate artifacts and commit any drift**
 
@@ -197,16 +203,30 @@ cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-stylus && \
 
 Expected: both PASS.
 
+`git merge` at Step 4 already created the merge commit. **Commit here only if
+Step 5 produced drift** — do not add an empty commit on top of the merge.
+
+```bash
+cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-stylus && \
+  pwd && git branch --show-current && git status --short
+```
+
+- *Nothing staged or modified* → the merge commit stands alone; skip to Step 7.
+- *Generated paths drifted* → `git add` them and commit:
+
 ```bash
 cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-stylus && \
   pwd && git branch --show-current && \
-  git commit --allow-empty -m "merge(the-stylus): absorb The Portolan part I and main
+  git commit -m "chore(artifacts): regenerate after absorbing part I
 
 The spec quotes part I's input layer as current and names removing look mode
 as a task; neither was in this branch's tree. Part I absorbed main (50
 commits) first, so what lands here is part I against today's main rather
 than against its own stale base. Decision ledger #6."
 ```
+
+If the merge commit's own default message is unhelpful, amend it with the
+text above — but never amend after pushing.
 
 - [ ] **Step 7: Report what you observed**
 
