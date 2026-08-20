@@ -219,9 +219,12 @@ mod tests {
     }
 
     /// The named keys with the map focused. `Enter` and `Backspace` are
-    /// deliberately inert here: both act on a buffer whose caret is not
-    /// being shown, and a destructive or turn-costing key must not fire
-    /// against a surface the player cannot see.
+    /// deliberately inert here — not because the buffer itself is hidden
+    /// (`entry::draw`'s own doc: the line's TEXT is drawn under either
+    /// focus; losing focus only stops reporting the caret's position), but
+    /// because both act destructively or irreversibly on a buffer the
+    /// player is not currently aimed at, and only the caret's position is
+    /// hidden while the map has focus, not the text itself.
     #[test]
     fn the_named_keys_route_predictably_with_the_map_focused() {
         let cases = [

@@ -420,7 +420,18 @@ impl Driver {
                 false
             }
             Action::FocusAndType(c) => {
-                self.focus = Focus::Cli;
+                // Route through `toggle_focus()` rather than setting
+                // `self.focus` directly: `FocusAndType` is only ever
+                // produced while the map is focused (`input::action_for`),
+                // so this toggle always lands on `Focus::Cli` — and, as a
+                // side effect, clears `self.strip`, keeping the invariant
+                // `toggle_focus`'s own doc states ("leaving it clears the
+                // strip"). A direct assignment here left that invariant
+                // with two owners and one violator; `strip_text()`
+                // happened to mask it by re-checking focus before
+                // returning, but a second reader of `self.strip` would not
+                // have been so lucky.
+                self.toggle_focus();
                 self.line.insert(c);
                 false
             }

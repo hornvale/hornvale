@@ -1952,3 +1952,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T19:57:58Z | game-check | 131.961 | 522.073 | 6.980 | 4.01 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T19:58:25Z | gate-commit | 23.333 | 49.654 | 11.845 | 2.64 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T20:00:10Z | gate-commit | 23.404 | 49.835 | 11.984 | 2.64 | 0 | dc2c5077 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:24:00Z | game-check | 104.082 | 511.024 | 7.544 | 4.98 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:24:28Z | gate-commit | 25.002 | 49.734 | 11.719 | 2.46 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:25:56Z | rebaseline | 59.310 | 233.727 | 11.436 | 4.13 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:28:44Z | game-check | 114.850 | 512.453 | 6.005 | 4.51 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T20:29:24Z | gate-commit | 35.591 | 54.331 | 12.258 | 1.87 | 0 | 544ac78f | campaign/the-stylus | MacBookPro | 10 |

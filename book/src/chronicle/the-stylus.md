@@ -52,8 +52,10 @@ kernel's determinism rules forbid outright.
 ## The routing table is total, and totality is the property that matters
 
 Under `Focus::Cli`, `←`/`→` move the caret and edit the line for free,
-`↑`/`↓` recall history (the unmodified shell convention), and every printable
-character is typed. Under `Focus::Map`, `←`/`→`/`↑`/`↓` move the map cursor,
+`↑`/`↓` recall a previously submitted line — replacing whatever is currently
+in the buffer, a narrower promise than the shell convention of stashing and
+restoring a half-typed line — and every printable character is typed. Under
+`Focus::Map`, `←`/`→`/`↑`/`↓` move the map cursor,
 `-`/`+`/`=` are reserved for The Portolan part II's zoom, and any printable
 character bounces focus back to `Cli` *and types itself* — so the common
 path, typing, costs no extra keypress to reach even from the map. `Esc` is

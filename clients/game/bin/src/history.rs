@@ -8,8 +8,8 @@
 //!
 //! **The walk position is an index counted from the END of `entries`**, not
 //! a plain array index: `None` means "not currently walking" (the state
-//! immediately after construction, and immediately after every [`History::
-//! push`] or [`History::reset`]), and `Some(n)` for `n >= 1` means "`n`
+//! immediately after construction, and immediately after every
+//! [`History::push`]), and `Some(n)` for `n >= 1` means "`n`
 //! entries back from the most recent", so `Some(1)` names the newest entry
 //! and `Some(entries.len())` names the oldest. Counting from the end rather
 //! than from the start means the walk position stays meaningful across a
@@ -87,12 +87,6 @@ impl History {
                 self.entries.get(idx).map(String::as_str)
             }
         }
-    }
-
-    /// Restart the walk from the newest entry, without touching what has
-    /// been recorded.
-    pub fn reset(&mut self) {
-        self.pos = None;
     }
 }
 

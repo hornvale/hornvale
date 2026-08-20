@@ -97,10 +97,29 @@ else. Nothing was committed to `main`.
   way to a verb line" — only `Action::Submit` becomes one). Fixed in this
   close, not deferred, since it is new prose this campaign introduced in a
   crate whose docs are load-bearing.
-- Two boundary cases are hand-traced correct but unpinned by tests: a line
-  exactly as wide as the pane, and a multi-byte glyph preceding the caret in
-  the render path.
-- The echo-clipping logic counts `char`s, not display width or grapheme
-  clusters — pre-existing idiom across the file, not introduced here.
+- `Driver::apply` briefly carried eight identical empty match arms — a shape
+  the plan mandated for a task boundary, dead on arrival until a later task
+  gave each arm a real body. Self-resolved, but worth keeping as a process
+  observation: **a plan can mandate a shape that is dead on arrival for two
+  tasks**, and nothing caught that gap until the arms filled in.
+- One boundary case is hand-traced correct but unpinned by a test: a line
+  exactly as wide as the pane.
+- ~~A multi-byte glyph preceding the caret in the render path~~ — STRUCK on
+  the final review. Every index in the path was traced: `write_command_line`
+  builds a `Vec<char>` and does all window arithmetic in char counts,
+  `write_line` is `line.chars().enumerate()`, `wrap` measures with
+  `word.chars().count()`, and the echo block is `text.chars().collect()`.
+  There is no byte offset anywhere in `entry.rs`, so a multi-byte-but-
+  single-column glyph cannot misalign anything — carrying this as debt would
+  only invite someone to "fix" code that is already correct.
+- The echo-clipping logic counts `char`s, not display *width* — that is a
+  real gap, but it is not a single-function bug: `wrap`, `write_line`,
+  `write_command_line`, `strip::draw`, and the echo block are ALL
+  char-counted, so a wide (e.g. CJK) glyph would misalign every one of them
+  the same way, and fixing the echo alone would make one function disagree
+  with the four around it. Too broad, and too crate-spanning, for a
+  retrospective bullet to usefully carry — moved to
+  [[CLIENT-display-width-not-char-count]], where a reader looking for open
+  work will actually find it.
 - The windowing rule is documented on the private `write_command_line`, not
   summarised on the public `draw`.

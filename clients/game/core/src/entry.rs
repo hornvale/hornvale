@@ -268,7 +268,13 @@ pub fn draw(
         write_line(into, origin.0, marker_row, TRUNCATION_MARKER);
     }
     let command_row = origin.1 + height - 1;
-    if let Some(text) = echo {
+    // Guard the degenerate `height == 1` case: `echo_row` would be
+    // `command_row.saturating_sub(1)`, one row ABOVE `origin`'s pane —
+    // writing into whatever the plate or strip drew there. Unreachable
+    // in-tree (`compose` always passes `origin.1 = 0` under the 80x24
+    // floor), but `draw` is `pub`, and the neighbouring `height == 0` case
+    // is already guarded above.
+    if let Some(text) = echo.filter(|_| height >= 2) {
         let echo_row = command_row.saturating_sub(1);
         let echo_width = width as usize;
         let chars: Vec<char> = text.chars().collect();
@@ -476,6 +482,39 @@ mod tests {
             cx < width,
             "caret at column {cx} is outside a {width}-column pane"
         );
+    }
+
+    /// **A line exactly as wide as the editable pane** (`width -
+    /// PROMPT_COLUMNS` characters, caret one past the last) is the boundary
+    /// case between the unscrolled and the scrolled branch of
+    /// [`write_command_line`]'s windowing rule. Pins it at the exact
+    /// column: the caret must land on the pane's last visible column, not
+    /// one past it.
+    #[test]
+    fn a_line_exactly_as_wide_as_the_pane_lands_the_caret_on_its_last_column() {
+        let n = Narration {
+            prose: "hi".to_string(),
+            nouns: vec![],
+        };
+        let width = 20u16;
+        let available = width - PROMPT_COLUMNS;
+        let mut g = crate::Grid::new(width, 3);
+        let exact: String = std::iter::repeat_n('a', available as usize).collect();
+        let caret = draw(
+            &n,
+            &mut g,
+            (0, 0),
+            width,
+            3,
+            crate::Focus::Cli,
+            crate::CommandLine {
+                text: &exact,
+                caret: available as usize,
+            },
+            None,
+        );
+        let (cx, _) = caret.expect("the CLI is focused, so a caret is reported");
+        assert_eq!(cx, width - 1, "caret should sit on the pane's last column");
     }
 
     /// The regression this campaign's review found: a 400-word synthetic

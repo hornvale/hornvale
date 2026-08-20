@@ -71,8 +71,13 @@ Everything falls out of it:
 - **`←`/`→` edit the line for free** when focus is on the CLI, so `Home`/`End`
   and `Ctrl+W` become optional polish rather than compensation for a lost
   affordance.
-- **`↑`/`↓` have no meaning in a single-line field**, so history lands on the
-  shell convention, unmodified, exactly where a user expects it.
+- **`↑`/`↓` have no meaning in a single-line field**, so history lands where a
+  user expects it — `↑`/`↓` recall a previously submitted line, and recall
+  replaces whatever is currently in the buffer. That is a narrower promise
+  than the full shell/readline convention, which also stashes a partially
+  typed line and restores it on the way back down; this implementation does
+  not stash, so a half-typed command is lost to a stray `↑` (see
+  [[CLIENT-history-stashes-the-in-progress-line]]).
 - **Typing a letter on the map returns focus to the CLI and types it**, so the
   common path costs no keypress at all. `Esc` is needed only to go *to* the
   map.
