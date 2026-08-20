@@ -5,15 +5,17 @@
 //! ledger facts are committed here and no session/tick wiring exists yet
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
+use crate::action::{
+    Action, is_replayable_in_catch_up, plan_to_room, plan_to_room_memo, plan_to_water,
+};
 use crate::agent::{settlement_position, walk_depth};
 use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
 use hornvale_kernel::{
-    ANIMAL_PREY, AStarSolver, ConditionResponse, EntityId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
-    PLANT_FORAGE, ResourceVector, RoomAddr, RoomId, RoomMeshMemo, SearchSpace, Solver, TickSystem,
-    Value, World, WorldTime, astar,
+    ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, Lineage, PHOTOSYNTHATE, PLANT_FORAGE,
+    ResourceVector, RoomAddr, RoomId, RoomMeshMemo, TickSystem, Value, World, WorldTime,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, MetabolicClass};
@@ -1403,7 +1405,7 @@ pub fn shared_believed_water(
 /// What the agent perceives of the world — the `view` the decision reads. Splits
 /// SELF-knowledge (position, drive — always true) from world-BELIEF
 /// (`believed_water` — a cache that may be absent/ignorant) and immediate
-/// perceived affordance (`explore_step`). PSY-6's "plan over belief, not truth"
+/// perceived proposal (`explore_step`). PSY-6's "plan over belief, not truth"
 /// (UNI-16), realized: the ground-truth `water` argument `decide` once took now
 /// lives here as belief.
 /// type-audit: bare-ok(ratio: drive), bare-ok(ratio: fatigue)
@@ -1446,10 +1448,10 @@ pub enum Intent {
 /// policy consults. Thirst (`Thirst`) is the single implementor this stage;
 /// later temperament work adds siblings (thermal comfort, …) behind the SAME
 /// seam. `urgency`/`act_threshold` are the "need" half (the drive's current
-/// pressure and the level at which it acts); `affordance` is the "how to
+/// pressure and the level at which it acts); `proposal` is the "how to
 /// reduce it" half (the next executable step, or `None` when the drive cannot
 /// currently be advanced). A STOCK drive (thirst) reads only the precomputed
-/// `Perceived` view (self-knowledge + belief + immediate affordance) — never
+/// `Perceived` view (self-knowledge + belief + immediate proposal) — never
 /// truth — so it is pure over the view a tick already assembled. A FLOW drive
 /// (`Thermal`) additionally senses the ambient field at its OWN position
 /// directly (you feel the temperature of the cell you stand in), so it carries
@@ -1463,7 +1465,7 @@ pub trait Drive {
     fn urgency(&self, view: &Perceived) -> f64;
 
     /// The seek threshold: at urgency ≥ this, the drive acts (plans toward its
-    /// affordance); below it, the drive yields.
+    /// proposal); below it, the drive yields.
     /// type-audit: bare-ok(ratio: return)
     fn act_threshold(&self) -> f64;
 
@@ -1490,22 +1492,28 @@ pub trait Drive {
     /// exploration step when ignorant. Equivalently, the `argmax` over
     /// candidate actions of [`serviceability`](Drive::serviceability) — the
     /// single-drive path.
+    ///
+    /// **Named `proposal`, not `affordance`, deliberately** (The Tackle,
+    /// Arc I.a). This is the actor->action arrow: a drive proposing its own
+    /// next step. Gibson's *affordance* is the object->actor arrow -- a thing
+    /// advertising what may be done with it -- and Arc IV (The Offer) needs
+    /// the word for exactly that. One term cannot carry both directions.
     /// type-audit: bare-ok(count: budget)
-    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action>;
+    fn proposal(&self, view: &Perceived, budget: usize) -> Option<Action>;
 
     /// Extra candidate actions this drive proposes, BEYOND [`arbitrate`]'s
     /// fixed room-scale set (the position's three neighbours as `MoveTo`, plus
     /// `Drink`/`Rest`/`Eat`) — the seam a drive whose action space is FINER
     /// than the room graph uses to make its own moves visible to the
     /// multi-drive utility scan. The default is empty, and is correct for
-    /// every drive built before The Threshold: each one's `affordance` already
+    /// every drive built before The Threshold: each one's `proposal` already
     /// picks among the room-graph's own neighbours (a room-scale A* plan's or
     /// gradient step's first hop is, by construction, always a room-graph
     /// neighbour), so it is already present in the fixed set and needs no
     /// second listing here. `Thermal` is the first drive that reasons over a
     /// DIFFERENT graph (the room interior's anchors), so it is the first to
     /// override this — see its own doc for why the override is exactly its
-    /// `affordance`'s own within-room choice, not a separate enumeration.
+    /// `proposal`'s own within-room choice, not a separate enumeration.
     /// type-audit: bare-ok(count: _budget)
     fn candidate_actions(&self, _view: &Perceived, _budget: usize) -> Vec<Action> {
         Vec::new()
@@ -1525,19 +1533,19 @@ pub trait Drive {
     /// How well `action` serves this drive from the view's position, in
     /// `[0, 1]` — the reduction in the drive's remaining cost (the action-
     /// centric arbitration term, §5). For thirst: `1.0` for the step its
-    /// [`affordance`](Drive::affordance) would take (the A*/explore first step,
+    /// [`proposal`](Drive::proposal) would take (the A*/explore first step,
     /// or `Drink` at water), else `0.0`. For thermal: the drop in thermal
     /// urgency at the neighbour (`0.0` if it doesn't improve comfort, and `0.0`
     /// for `Drink` — a flow drive has no consume).
     ///
-    /// `affordance` is `arbitrate`'s caller-owned, per-call lazy cache
+    /// `proposal` is `arbitrate`'s caller-owned, per-call lazy cache
     /// (the-waymark, ledger #9): calling it returns this drive's own
-    /// [`affordance`](Drive::affordance) for the view/budget fixed across
+    /// [`proposal`](Drive::proposal) for the view/budget fixed across
     /// the whole `arbitrate` call, computed at most ONCE no matter how many
     /// candidate actions `serviceability` is asked about (`arbitrate`'s
     /// `grab_utility`/`utility` fold calls this once per candidate, always
     /// against the same view). An implementation whose formula doesn't need
-    /// its own affordance (thermal/fatigue/danger/social all score a
+    /// its own proposal (thermal/fatigue/danger/social all score a
     /// candidate directly) simply never calls it, so it costs those drives
     /// nothing — the closure is a THUNK, not an eager value: laziness is
     /// decided per-drive, by whether this body calls it at all, never by the
@@ -1550,7 +1558,7 @@ pub trait Drive {
         action: &Action,
         view: &Perceived,
         budget: usize,
-        affordance: &mut dyn FnMut() -> Option<Action>,
+        proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64;
 
     /// Whether this drive is pursued WHILE ASLEEP — the off-phase (The Slumber,
@@ -1632,7 +1640,7 @@ pub struct Affect {
     /// How activated the mind is: the greatest urgency among ACTIVE drives
     /// (0 when none is active).
     pub arousal: f64,
-    /// Whether the pursued drive is reducing (+) or its affordance is failing
+    /// Whether the pursued drive is reducing (+) or its proposal is failing
     /// (−): making-progress minus blocked, in `-1.0..=1.0`.
     pub valence: f64,
     /// The circumplex region `(valence, arousal)` falls in.
@@ -1680,7 +1688,7 @@ pub struct Resolution {
 }
 
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
-/// `drive_at` fold surfaced on the view; `affordance` is the existing
+/// `drive_at` fold surfaced on the view; `proposal` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
 /// the same `DriveParams`/`SUSTENANCE` the fold uses.
 /// type-audit: bare-ok(return)
@@ -1702,7 +1710,7 @@ impl Drive for Thirst {
         // is the urgency the drive will gain over `horizon × HORIZON_DAYS` days.
         self.params.rise * horizon * ANTICIPATION_HORIZON_DAYS
     }
-    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
+    fn proposal(&self, view: &Perceived, budget: usize) -> Option<Action> {
         match &view.believed_water {
             // Knows water: the first step of the A* plan toward it (None when
             // that known water is unreachable within budget).
@@ -1724,17 +1732,17 @@ impl Drive for Thirst {
         action: &Action,
         _view: &Perceived,
         _budget: usize,
-        affordance: &mut dyn FnMut() -> Option<Action>,
+        proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64 {
-        // A stock drive serves exactly the ONE step its affordance would take
+        // A stock drive serves exactly the ONE step its proposal would take
         // (the A*/explore first move, or `Drink` at water) — an indicator, so
-        // the single-drive `argmax` is precisely `affordance` and the thirst-
-        // only decision is byte-identical to Stage 0. `affordance` is
+        // the single-drive `argmax` is precisely `proposal` and the thirst-
+        // only decision is byte-identical to Stage 0. `proposal` is
         // `arbitrate`'s caller-owned, per-call lazy cache (the-waymark,
         // ledger #9) — this drive is exactly the reason it exists (this call
         // is repeated once per candidate action, always against the same
         // view/budget), but the drive itself holds no cache of its own.
-        match affordance() {
+        match proposal() {
             Some(a) if &a == action => 1.0,
             _ => 0.0,
         }
@@ -1780,7 +1788,7 @@ const SWITCH_MARGIN: f64 = 0.1;
 /// comfort reads the CURRENT cell's per-day temperature against the species'
 /// temperature niche every tick: discomfort is instantaneous, and stepping to
 /// a more comfortable neighbour reduces it directly (no belief cache, no A* —
-/// the comfort gradient step IS the affordance, like thirst's `explore_step`).
+/// the comfort gradient step IS the proposal, like thirst's `explore_step`).
 ///
 /// Holds the species' temperature [`ConditionResponse`] (its thermal setpoint
 /// `optimum` and tolerance `width`) plus the terrain and day it senses at — a
@@ -1812,7 +1820,7 @@ pub struct Thermal<'a> {
     /// [`crate::interior::warmth_at`] (see [`Self::urgency_here`]) rather
     /// than passed in, so there is exactly one source of truth for "warmth
     /// at an anchor" and the drive can also ask it about anchors the
-    /// creature is not currently standing at (`Self::affordance`'s
+    /// creature is not currently standing at (`Self::proposal`'s
     /// within-room branch).
     ///
     /// `None` means exactly what the old `warmth: None` meant: no interior
@@ -1888,16 +1896,16 @@ impl<'a> Thermal<'a> {
         }
     }
 
-    /// The within-room DESTINATION [`Self::affordance`]'s within-room branch
+    /// The within-room DESTINATION [`Self::proposal`]'s within-room branch
     /// would eventually walk to, hop by hop — returned directly rather than
     /// as a first step (The Threshold task 7). Catch-up's cap-exceeded
     /// fallback (spec §5.3: "places the creature at its drive-preferred
     /// anchor") needs exactly this, and needs it WITHOUT re-deriving
-    /// `affordance`'s own judgment about whether to move at all: this is
-    /// literally `affordance`'s within-room branch (same gate, same
+    /// `proposal`'s own judgment about whether to move at all: this is
+    /// literally `proposal`'s within-room branch (same gate, same
     /// `warmest_anchor` call), just stopping short of the `route_within`
     /// step that turns a destination into a first hop. `None` under the
-    /// identical conditions `affordance` would decline a within-room move:
+    /// identical conditions `proposal` would decline a within-room move:
     /// already inside the tolerance band, no interior here, no anchor
     /// strictly more comfortable than the current one, or — spec §8a's
     /// stranding case — a warmer anchor exists but [`route_within`] cannot
@@ -1926,7 +1934,7 @@ impl<'a> Drive for Thermal<'a> {
         // the room it is in rather than the weather outside it. `interior:
         // None` reads the pre-Hearth identity. `urgency` carries no `budget`
         // parameter (the `Drive` trait's `urgency` never has), so this reuses
-        // the same routing budget `affordance`/`serviceability` are given
+        // the same routing budget `proposal`/`serviceability` are given
         // elsewhere in this drive's own live construction
         // (`INTERIOR_WARMTH_BUDGET`) — small, fixed, and already justified at
         // its own definition (the interior graph is at most 9 anchors).
@@ -1935,7 +1943,7 @@ impl<'a> Drive for Thermal<'a> {
     fn act_threshold(&self) -> f64 {
         THERMAL_ACT
     }
-    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
+    fn proposal(&self, view: &Perceived, budget: usize) -> Option<Action> {
         // Satisfied inside the tolerance band — nothing to do (a flow drive
         // needs no plan; this gate reads AMBIENT comfort only, exactly as it
         // did before The Threshold — a room already inside the niche band
@@ -1992,15 +2000,15 @@ impl<'a> Drive for Thermal<'a> {
         // utility scan: its fixed candidate set is built from `RoomAddr`
         // neighbours and cannot express an `AnchorId`. Rather than a second,
         // independent enumeration of the interior's anchors (which could
-        // drift from what `affordance` itself would choose), this simply
-        // republishes `affordance`'s own decision WHEN it is a `MoveWithin` —
+        // drift from what `proposal` itself would choose), this simply
+        // republishes `proposal`'s own decision WHEN it is a `MoveWithin` —
         // the within-room branch above already is the argmax over the
         // interior's anchors, so there is nothing more useful to offer.
         // Nothing else needs a candidate: the room-scale `MoveTo` case is
         // already in the fixed set (comfort_step's target is always a room
         // neighbour), and no OTHER drive scores an anchor-graph action, so a
         // single candidate here costs the scan nothing.
-        match self.affordance(view, budget) {
+        match self.proposal(view, budget) {
             Some(a @ Action::MoveWithin(_)) => vec![a],
             _ => Vec::new(),
         }
@@ -2016,13 +2024,13 @@ impl<'a> Drive for Thermal<'a> {
         action: &Action,
         view: &Perceived,
         budget: usize,
-        _affordance: &mut dyn FnMut() -> Option<Action>,
+        _proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64 {
         // A flow drive is served by PRESENCE in a kinder cell: the reduction in
         // thermal urgency at the destination (0 if the step doesn't improve
         // comfort). No consume — `Drink` serves it not at all. Scores each
-        // candidate DIRECTLY (never via `affordance`), so the ledger #9 cache
-        // costs this drive nothing — `_affordance` is never called.
+        // candidate DIRECTLY (never via `proposal`), so the ledger #9 cache
+        // costs this drive nothing — `_proposal` is never called.
         match action {
             Action::MoveTo(n) => (self.urgency_at(&view.position) - self.urgency_at(n)).max(0.0),
             // THE THRESHOLD'S CROSSING: the within-room twin of the `MoveTo`
@@ -2089,7 +2097,7 @@ fn comfort_step(
 /// The warmest anchor in `interior` — the one whose FELT temperature
 /// (`ambient` plus that anchor's own [`warmth_at`]) is CLOSEST to `optimum`
 /// — or `None` when no anchor OTHER than `from` is strictly more comfortable
-/// than `from` itself. [`Thermal::affordance`]'s within-room counterpart to
+/// than `from` itself. [`Thermal::proposal`]'s within-room counterpart to
 /// [`comfort_step`]: the same `total_cmp`-then-ascending-id tie-break and the
 /// same "strictly better than here" gate, but scanning the interior's
 /// anchors rather than a room's three neighbours, and scoring VALUE (`warmth_at`,
@@ -2254,7 +2262,7 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
 /// urgency accrues over time and is reset by a discrete `Rest`. A creature
-/// sleeps **where it is** — its affordance is always `Rest` — so an explorer
+/// sleeps **where it is** — its proposal is always `Rest` — so an explorer
 /// beds down in the field at nightfall rather than trekking home, and a creature
 /// stranded from home can still rest (it is never *fatigue*-blocked). `home` is
 /// retained as a reserved hook for a future rest-QUALITY refinement (a safe,
@@ -2262,7 +2270,7 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 /// type-audit: bare-ok(return)
 pub struct Fatigue {
     /// The creature's home — reserved for a future rest-quality refinement
-    /// (unused by the affordance today: rest is in place).
+    /// (unused by the proposal today: rest is in place).
     pub home: RoomAddr,
 }
 
@@ -2273,7 +2281,7 @@ impl Drive for Fatigue {
     fn act_threshold(&self) -> f64 {
         FATIGUE_ACT
     }
-    fn affordance(&self, _view: &Perceived, _budget: usize) -> Option<Action> {
+    fn proposal(&self, _view: &Perceived, _budget: usize) -> Option<Action> {
         // Sleep where you are — rest is always available (The Slumber v2).
         Some(Action::Rest)
     }
@@ -2288,10 +2296,10 @@ impl Drive for Fatigue {
         action: &Action,
         _view: &Perceived,
         _budget: usize,
-        _affordance: &mut dyn FnMut() -> Option<Action>,
+        _proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64 {
         // Served by resting in place; nothing else eases fatigue. Never
-        // calls `_affordance` (ledger #9's cache costs this drive nothing).
+        // calls `_proposal` (ledger #9's cache costs this drive nothing).
         match action {
             Action::Rest => 1.0,
             _ => 0.0,
@@ -2443,7 +2451,7 @@ pub fn hunger_at(
 /// (the `hunger_at` fold, held here rather than surfaced on the shared
 /// `Perceived` view — like [`Thermal`], hunger reads inputs it carries: the
 /// pre-folded urgency, the diet niche, and the food field it senses). Its
-/// affordance is to EAT where the cell's [`food_value`] clears
+/// proposal is to EAT where the cell's [`food_value`] clears
 /// [`EAT_THRESHOLD`], else to climb the food gradient toward a richer cell
 /// ([`forage_step`]). Its ceiling is SURVIVAL (starving is lethal, like
 /// thirst, unlike comfort/fatigue). Reads the niche as a continuous mix — no
@@ -2485,7 +2493,7 @@ impl<'a> Drive for Hunger<'a> {
         // that climb exactly as thirst's does (§6).
         HUNGER.rise * horizon * ANTICIPATION_HORIZON_DAYS
     }
-    fn affordance(&self, view: &Perceived, _budget: usize) -> Option<Action> {
+    fn proposal(&self, view: &Perceived, _budget: usize) -> Option<Action> {
         // Eat in place where the cell is rich enough; else forage toward a
         // richer neighbour (None when boxed in / everywhere barren → the
         // creature holds, reading distress if hungry).
@@ -2507,13 +2515,13 @@ impl<'a> Drive for Hunger<'a> {
         action: &Action,
         _view: &Perceived,
         _budget: usize,
-        affordance: &mut dyn FnMut() -> Option<Action>,
+        proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64 {
-        // A stock drive serves exactly the ONE step its affordance would take
+        // A stock drive serves exactly the ONE step its proposal would take
         // (Eat here, or the forage step) — an indicator, so the single-drive
-        // argmax is precisely `affordance` (mirrors thirst). `affordance` is
+        // argmax is precisely `proposal` (mirrors thirst). `proposal` is
         // `arbitrate`'s caller-owned, per-call lazy cache (ledger #9).
-        match affordance() {
+        match proposal() {
             Some(a) if &a == action => 1.0,
             _ => 0.0,
         }
@@ -2749,7 +2757,7 @@ impl<'a> Drive for Danger<'a> {
     fn act_threshold(&self) -> f64 {
         DANGER_ACT
     }
-    fn affordance(&self, view: &Perceived, _budget: usize) -> Option<Action> {
+    fn proposal(&self, view: &Perceived, _budget: usize) -> Option<Action> {
         // Flee: step to the safest neighbour (by THIS creature's threat niche),
         // or `None` when boxed in by threat on every side (cornered → Frustrated).
         // A flow drive needs no plan (no A*), so `budget` is unused.
@@ -2767,7 +2775,7 @@ impl<'a> Drive for Danger<'a> {
         action: &Action,
         view: &Perceived,
         _budget: usize,
-        _affordance: &mut dyn FnMut() -> Option<Action>,
+        _proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64 {
         // SIGNED (unclamped, unlike thermal): the DROP in the creature's own felt
         // threat at the neighbour it would step to — positive toward safety,
@@ -2777,7 +2785,7 @@ impl<'a> Drive for Danger<'a> {
         // The gradient is over FELT threat (terrain PLUS remembered dread, The
         // Shudder), so a creature standing on now-safe ground it only REMEMBERS
         // as frightening is served by stepping off it. Never calls
-        // `_affordance` (ledger #9's cache costs this drive nothing).
+        // `_proposal` (ledger #9's cache costs this drive nothing).
         match action {
             Action::MoveTo(n) => self.felt_threat_at(&view.position) - self.felt_threat_at(n),
             // Fine movement is not yet wired into any drive's plan (The
@@ -2858,7 +2866,7 @@ const SOCIAL_CEIL: f64 = 0.6;
 /// a relocation). This is exactly what keeps a natural world un-lonely (a
 /// reachable home is served → not distress) AND leaves a genuinely stranded
 /// creature's thirst/other distress unmasked (social dormant). Computed ONCE per
-/// drive construction (the plan is reused for the affordance), so the drive's
+/// drive construction (the plan is reused for the proposal), so the drive's
 /// `urgency` stays O(1).
 ///
 /// Takes the plan's hop count directly (the-waymark, Task 4: both callers —
@@ -2879,7 +2887,7 @@ fn loneliness_from_distance(distance: Option<usize>) -> f64 {
 /// PROXIMITY TO HOME (a creature's home is its people). Loneliness rises with
 /// distance from home while home is REACHABLE, and lapses to `0` (dormant) once
 /// home is beyond homing range — social is COMFORT, so an unreachable home is a
-/// relocation, not a distress. The affordance is the first step home. Silent
+/// relocation, not a distress. The proposal is the first step home. Silent
 /// while asleep. Like thermal/danger it commits no fact and adds no `Action`
 /// (homing is a `MoveTo`). Both the loneliness urgency and the home-step are
 /// precomputed once (from a single `plan_to_room`) and carried here — like
@@ -2903,7 +2911,7 @@ impl Drive for Social {
     fn act_threshold(&self) -> f64 {
         SOCIAL_ACT
     }
-    fn affordance(&self, _view: &Perceived, _budget: usize) -> Option<Action> {
+    fn proposal(&self, _view: &Perceived, _budget: usize) -> Option<Action> {
         // Head home — the precomputed first step toward one's people.
         self.home_step.clone()
     }
@@ -2918,11 +2926,11 @@ impl Drive for Social {
         action: &Action,
         _view: &Perceived,
         _budget: usize,
-        _affordance: &mut dyn FnMut() -> Option<Action>,
+        _proposal: &mut dyn FnMut() -> Option<Action>,
     ) -> f64 {
         // Served by the ONE step toward home (an indicator, like thirst/fatigue)
         // — already precomputed at construction (Task 4), so this never calls
-        // `_affordance` either (ledger #9's cache costs this drive nothing).
+        // `_proposal` either (ledger #9's cache costs this drive nothing).
         match &self.home_step {
             Some(a) if a == action => 1.0,
             _ => 0.0,
@@ -3028,7 +3036,7 @@ impl HomeNavCache {
     /// real search (costing exactly what every caller always paid) and
     /// counts it in `searches`. `mesh_memo` (the-waymark, Task 6 — ledger #7's
     /// re-plan) is threaded straight through to a real search's
-    /// [`plan_to_room_memo`] call, so a MISS no longer recomputes
+    /// [`crate::action::plan_to_room_memo`] call, so a MISS no longer recomputes
     /// `RoomAddr::neighbors` from scratch on every `astar` expansion when the
     /// caller has a session-lived [`RoomMeshMemo`] to share — a cache HIT
     /// above never touches it at all.
@@ -3080,7 +3088,7 @@ impl HomeNavCache {
 /// yields exactly the old control flow (thirsty and knows water → A* first step
 /// and drink; thirsty and ignorant → the explore step, or `Hold` if nowhere
 /// new; not thirsty and away → plan home; else `Hold`), because with one drive
-/// the max-utility action IS its [`affordance`](Drive::affordance) and the
+/// the max-utility action IS its [`proposal`](Drive::proposal) and the
 /// grab/weigh latency is irrelevant. A fresh `Idle` mode per call keeps it
 /// stateless, as before. `arbitrate` is the multi-drive live path.
 ///
@@ -3192,17 +3200,17 @@ pub struct Disposition {
 /// it) — but no external caller has actually been verified beyond that grep,
 /// so this is noted rather than asserted.
 ///
-/// `arbitrate`'s own caller-owned, per-call lazy affordance cache (the-
+/// `arbitrate`'s own caller-owned, per-call lazy proposal cache (the-
 /// waymark, ledger #9 — the caller-owned reshape of Task 6b's `RefCell`-per-
 /// drive design, which the review ruled crossed the Constitution's no-
 /// interior-mutability constraint). `cache[i]` holds drive `i`'s own
-/// [`Drive::affordance`] answer for THIS `arbitrate` call's `view`/`budget`
+/// [`Drive::proposal`] answer for THIS `arbitrate` call's `view`/`budget`
 /// once it has been asked for at least once, `None` until then.
 ///
 /// The laziness is exact and per-drive, not per-call: `serviceability`
-/// receives the affordance as a THUNK (`&mut dyn FnMut() -> Option<Action>`)
+/// receives the proposal as a THUNK (`&mut dyn FnMut() -> Option<Action>`)
 /// rather than an already-resolved value, so a drive whose own formula never
-/// needs its affordance (thermal/fatigue/danger/social all score a candidate
+/// needs its proposal (thermal/fatigue/danger/social all score a candidate
 /// directly — see each one's own `serviceability` doc) simply never calls
 /// the thunk, and `cache[i]` is never populated for it — no drive pays for a
 /// search it doesn't ask for, exactly as before this cache existed. A drive
@@ -3220,7 +3228,7 @@ pub struct Disposition {
 ///
 /// **No production recompute-and-assert guard (controller correction,
 /// ledger #9 round 2).** An earlier version of this cache recomputed
-/// `Drive::affordance` and `debug_assert_eq!`'d it against the cached value
+/// `Drive::proposal` and `debug_assert_eq!`'d it against the cached value
 /// on EVERY cache hit, gated on `#[cfg(debug_assertions)]`. That traded
 /// away the entire point of the cache under the exact profile that matters:
 /// `debug_assertions` is on by default in the `dev`/`test` Cargo profiles,
@@ -3231,7 +3239,7 @@ pub struct Disposition {
 /// this campaign's own gate performs — the water-search count measured
 /// right back at the pre-optimization baseline (1632/40 ticks) under the
 /// one profile the fix was meant to speed up. The named test
-/// `arbitrates_affordance_cache_matches_a_fresh_recompute` already pins
+/// `arbitrates_proposal_cache_matches_a_fresh_recompute` already pins
 /// "cached answer == fresh recompute" for the real production path,
 /// unconditionally (not gated on `debug_assertions`, so it holds in every
 /// build), and pays for exactly ONE extra recompute total — not one per
@@ -3251,17 +3259,17 @@ fn cached_serviceability(
     action: &Action,
 ) -> f64 {
     let slot = &mut cache[i];
-    let mut affordance = || -> Option<Action> {
+    let mut proposal = || -> Option<Action> {
         match slot {
             Some(cached) => cached.clone(),
             None => {
-                let value = drives[i].affordance(view, budget);
+                let value = drives[i].proposal(view, budget);
                 *slot = Some(value.clone());
                 value
             }
         }
     };
-    drives[i].serviceability(action, view, budget, &mut affordance)
+    drives[i].serviceability(action, view, budget, &mut proposal)
 }
 
 /// type-audit: bare-ok(count: budget)
@@ -3285,7 +3293,7 @@ pub fn arbitrate(
     } = *disposition;
     // Learned helplessness (§7, the sticky scar): the survival drive has gone
     // unmet so long the creature has GIVEN UP — it Holds regardless of any
-    // affordance (the behavioural difference: it stops trying, where a merely
+    // proposal (the behavioural difference: it stops trying, where a merely
     // Frustrated creature would still strain), reading `Helpless`. Computed by
     // the caller as a fold over `last_drank` (`learned_helplessness`), which
     // probes periodically so this reverses; here it simply short-circuits the
@@ -3405,10 +3413,10 @@ pub fn arbitrate(
         candidates.extend(d.candidate_actions(view, budget));
     }
 
-    // `arbitrate`'s own per-call lazy affordance cache (ledger #9) — see
+    // `arbitrate`'s own per-call lazy proposal cache (ledger #9) — see
     // `cached_serviceability`'s own doc. One slot per drive, all empty until
-    // (if ever) a drive's `serviceability` asks for its own affordance.
-    let mut affordance_cache: Vec<Option<Option<Action>>> = vec![None; drives.len()];
+    // (if ever) a drive's `serviceability` asks for its own proposal.
+    let mut proposal_cache: Vec<Option<Option<Action>>> = vec![None; drives.len()];
 
     // A drive's best single-drive (grab-style) utility over the candidates —
     // the score the commitment switch compares incumbent vs challenger on.
@@ -3424,7 +3432,7 @@ pub fn arbitrate(
     let loudest = (0..drives.len())
         .filter(|&i| active[i])
         .fold(None::<(usize, f64)>, |best, i| {
-            let u = grab_utility(&mut affordance_cache, i);
+            let u = grab_utility(&mut proposal_cache, i);
             match best {
                 Some((_, bu)) if u.total_cmp(&bu).is_le() => best,
                 _ => Some((i, u)),
@@ -3444,8 +3452,8 @@ pub fn arbitrate(
         {
             let inc = drives.iter().position(|d| d.kind() == k).unwrap();
             if loudest != inc
-                && grab_utility(&mut affordance_cache, loudest)
-                    .total_cmp(&(grab_utility(&mut affordance_cache, inc) + SWITCH_MARGIN))
+                && grab_utility(&mut proposal_cache, loudest)
+                    .total_cmp(&(grab_utility(&mut proposal_cache, inc) + SWITCH_MARGIN))
                     .is_gt()
             {
                 loudest
@@ -3475,9 +3483,9 @@ pub fn arbitrate(
 
     // The max-utility action, earliest-on-ties (ascending RoomAddr, Drink last).
     let mut best_i = 0usize;
-    let mut best_u = utility(&mut affordance_cache, &candidates[0]);
+    let mut best_u = utility(&mut proposal_cache, &candidates[0]);
     for (i, a) in candidates.iter().enumerate().skip(1) {
-        let u = utility(&mut affordance_cache, a);
+        let u = utility(&mut proposal_cache, a);
         if u.total_cmp(&best_u).is_gt() {
             best_u = u;
             best_i = i;
@@ -3513,7 +3521,7 @@ pub fn arbitrate(
             // within-room target is never a matter of belief or an unknown
             // gradient — `interior_of` is a pure, immediate derivation (no
             // partial observation, no belief cache; `interior/mod.rs`), and
-            // `Thermal::affordance` only ever proposes this step AFTER
+            // `Thermal::proposal` only ever proposes this step AFTER
             // `route_within` has already verified a real path exists to it
             // (the unroutable case falls back to the `MoveTo` gradient
             // above, and so never reaches this arm). So a creature taking
@@ -3997,7 +4005,7 @@ const INTERIOR_WARMTH_BUDGET: usize = 64;
 /// [`Thermal::interior`] borrows from. Where the pre-crossing model
 /// ([`warmth_at`] read here directly, folded into a bare `f64`) collapsed
 /// this to a single number at construction time, this returns the GRAPH
-/// itself, because `Thermal::affordance`'s within-room branch (The
+/// itself, because `Thermal::proposal`'s within-room branch (The
 /// Threshold's crossing) needs to ask the interior about anchors other than
 /// the one the caller happens to hand it.
 ///
@@ -4561,7 +4569,7 @@ fn catch_up(
         // The cap was spent before real time caught up: give up stepping
         // through the interior and jump straight to where Thermal wants to
         // be right now — `preferred_anchor` is the SAME gate, target, AND
-        // `route_within` reachability check `Thermal::affordance`'s own
+        // `route_within` reachability check `Thermal::proposal`'s own
         // within-room branch uses (including spec §8a's stranding case), so
         // this cannot suggest a move the live drive itself would have
         // declined, and cannot place the creature across an edge it could
@@ -5122,7 +5130,7 @@ impl<'a> DriveMovements<'a> {
                 // other act; that charge happened above, with every other
                 // action's, so this arm has only the occupancy to update.
                 //
-                // `Thermal::affordance`'s within-room branch only ever proposes
+                // `Thermal::proposal`'s within-room branch only ever proposes
                 // an anchor reachable by `route_within`'s FIRST hop, which is
                 // by construction adjacent to wherever the creature currently
                 // stands, so `walk` should always succeed here. Its bool return
@@ -5289,15 +5297,12 @@ pub fn derive_npcs(
                 .map(|t| t.niche.clone())
                 .unwrap_or_else(default_diet_niche);
             // Body mass (The Action Clock): the allometric driver of every
-            // action's cost. A species missing from the biosphere registry
-            // falls back EXPLICITLY to the clock's reference mass — `tempo`
-            // clamps a nonsense value anyway, but the fallback is stated here
-            // rather than left implicit, so a defaulted creature reads at
-            // exactly tempo 1.0.
-            let mass_kg = biosphere
-                .get_by_label(&species)
-                .map(|t| t.mass.kilograms())
-                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
+            // action's cost. Derived through `clock::mass_for_species` — the
+            // ONE derivation every body shares, creature and possessed alike,
+            // which is what makes the player's tariff the same tariff rather
+            // than a parallel one. The fallback for a species missing from the
+            // biosphere registry lives there.
+            let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -5422,11 +5427,10 @@ pub fn derive_wild_npcs(
                 .unwrap_or_else(default_diet_niche);
             // Body mass (The Action Clock), as in `derive_npcs`: the fauna are
             // most of the health battery's population, so the wild path must
-            // carry the trait too or the tempo spread collapses.
-            let mass_kg = biosphere
-                .get_by_label(&species)
-                .map(|t| t.mass.kilograms())
-                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
+            // carry the trait too or the tempo spread collapses. Same shared
+            // derivation, deliberately — a second copy here is exactly what
+            // this call replaced.
+            let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -5565,350 +5569,6 @@ fn parse_activity(t: &str) -> ActivityCycle {
         "crepuscular" => ActivityCycle::Crepuscular,
         _ => ActivityCycle::Diurnal,
     }
-}
-
-/// A GOAP action — a precondition/effect transformation over the plan state.
-/// Minimal + heterogeneous (the precondition chain needs two kinds); the MAP-27
-/// authored-verb DSL is a followup.
-/// type-audit: bare-ok(return)
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Action {
-    /// Walk to an adjacent room (precondition: adjacency; effect: position).
-    MoveTo(RoomAddr),
-    /// Drink (precondition: at the water room; effect: hydrated).
-    Drink,
-    /// Rest / sleep (precondition: at home; effect: fatigue reset) — The
-    /// Slumber's discharge action, the fatigue analogue of `Drink`.
-    Rest,
-    /// Eat / graze (precondition: standing on a cell rich enough to feed;
-    /// effect: hunger reset) — The Provender's discharge action, the hunger
-    /// analogue of `Drink`.
-    Eat,
-    /// Walk to another anchor inside the current room (The Threshold).
-    /// Precondition: adjacency in the room's anchor graph. Effect: fine
-    /// position, which is NEVER serialized (decision 0069) — which is what
-    /// makes this the one action catch-up may replay.
-    MoveWithin(AnchorId),
-}
-
-/// Whether an action's effect is position rather than a committed fact.
-/// type-audit: bare-ok(flag: return)
-pub fn is_movement(a: &Action) -> bool {
-    matches!(a, Action::MoveTo(_) | Action::MoveWithin(_))
-}
-
-/// Whether an action's precondition reads committed state rather than position
-/// alone. Today nothing does — every precondition in this file is adjacency or
-/// standing-here — and catch-up (The Threshold) depends on that: it replays a
-/// creature's movement while suppressing the actions that commit facts, which
-/// reconstructs a past that could actually have happened only while no
-/// movement is gated by a committed effect. A barred door needing unbarring
-/// would end it.
-///
-/// **The guard is the exhaustive match, not the test.** An earlier draft took
-/// `_a` and returned a bare `false`, with a test asserting the answer is
-/// `false` for movement actions — which reduces to `assert!(!false)` and
-/// cannot fail for any input. It would have caught a new action only if
-/// whoever added it *remembered* to come here and flip the answer, i.e.
-/// exactly when the guard was not needed. Matching every variant by name
-/// instead means adding one to [`Action`] fails to COMPILE here, which is this
-/// project's usual preference for structural enforcement over discipline.
-/// type-audit: bare-ok(flag: return)
-pub fn precondition_reads_committed_state(a: &Action) -> bool {
-    match a {
-        // Adjacency in the room graph; nothing committed is read.
-        Action::MoveTo(_) => false,
-        // Adjacency in the anchor graph; likewise.
-        Action::MoveWithin(_) => false,
-        // Standing at the water / at home / on forage — all positional.
-        Action::Drink | Action::Rest | Action::Eat => false,
-    }
-}
-
-/// Whether catch-up (spec §5) may replay this action. Exactly the actions
-/// whose effects are ephemeral: coarse `MoveTo` writes `agent-at`, and
-/// `Drink`/`Rest`/`Eat` each commit a fact, so only fine movement qualifies.
-/// The partition is "does it commit", not "is it movement".
-/// type-audit: bare-ok(flag: return)
-pub fn is_replayable_in_catch_up(a: &Action) -> bool {
-    matches!(a, Action::MoveWithin(_))
-}
-
-impl Action {
-    /// Every action kind the planner can emit, one representative per variant
-    /// — the roster the correspondence audit reconciles against the concept
-    /// registry (The Actants). `MoveTo` carries an address, so its
-    /// representative uses a placeholder: the audit reads only which VARIANTS
-    /// exist, never their payloads.
-    ///
-    /// Kept exhaustive by [`action_variants_must_all_be_rostered`]: a new
-    /// variant fails to compile until it is listed here, so an act can never
-    /// enter the world without the audit noticing it has no word.
-    pub fn all() -> Vec<Action> {
-        vec![
-            Action::MoveTo(RoomAddr {
-                face: 0,
-                path: Vec::new(),
-            }),
-            Action::Drink,
-            Action::Rest,
-            Action::Eat,
-            Action::MoveWithin(crate::interior::AnchorId(0)),
-        ]
-    }
-
-    /// The concept name that would name this act, whether or not it is
-    /// registered. The audit reports the ones that are not.
-    /// type-audit: bare-ok(identifier-text: return)
-    pub fn concept_name(&self) -> &'static str {
-        match self {
-            // Both movement variants answer to one concept. They differ in
-            // SCALE — between rooms, and between anchors inside a room (The
-            // Threshold) — which is a mechanism distinction, not a vocabulary
-            // one: a language has a word for going, not two words separated by
-            // how far. If a people ever needs to say `approach` distinctly from
-            // `move`, that is a new concept and a deliberate one, not a second
-            // name minted here by accident.
-            Action::MoveTo(_) | Action::MoveWithin(_) => "move",
-            Action::Drink => "drink",
-            Action::Rest => "rest",
-            Action::Eat => "eat",
-        }
-    }
-}
-
-/// Compile-time tripwire: a new [`Action`] variant breaks this match — every
-/// variant is named and there is no `_` arm — forcing [`Action::all`] and
-/// [`Action::concept_name`] to be revisited. The `manifest.rs` destructure
-/// tripwire applied to an enum. Never remove, never add a wildcard arm.
-#[allow(dead_code)]
-fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
-    match a {
-        Action::MoveTo(_) => "move",
-        Action::MoveWithin(_) => "move",
-        Action::Drink => "drink",
-        Action::Rest => "rest",
-        Action::Eat => "eat",
-    }
-}
-
-/// The GOAP planning state A* searches: where the agent is and whether it has
-/// drunk. `Ord` for the deterministic search.
-/// type-audit: bare-ok(flag: hydrated)
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PlanState {
-    /// The agent's room.
-    pub position: RoomAddr,
-    /// Whether the sustenance goal is met (has drunk this plan).
-    pub hydrated: bool,
-}
-
-/// The extra `MoveTo` cost the planners charge for stepping INTO a
-/// remembered-dangerous cell (The Haunt): a finite detour budget over the
-/// baseline edge cost of `1`, so the A* routes AROUND remembered-bad ground
-/// whenever a detour is cheaper than the penalty, yet still braves it when the
-/// detour would exceed the penalty (survival-override for free — the finite cost
-/// IS the override, never a wall). Deliberately SMALL (decision-ledger #4): the
-/// planners run Dijkstra-mode (`heuristic() == 0`, budget `PLAN_BUDGET` node
-/// expansions), so a LARGE penalty makes A* exhaust its budget exploring the
-/// cost-radius around a chokepoint remembered cell and return `None` — the
-/// creature freezes instead of detouring (the over-avoidance failure; `20` froze
-/// ~900 seed-42 fauna). `5` keeps the cost-radius within budget so avoidance is
-/// graceful (the seed-42 possession `stirred` count barely moves — a handful of
-/// beasts detour, none freeze). Decoupling magnitude from budget via an
-/// admissible geometric heuristic (for STRONG avoidance) is reserved.
-/// type-audit: bare-ok(count)
-const REMEMBERED_PENALTY: u64 = 5;
-
-/// The `MoveTo` edge cost into `n` given the remembered-danger set: the baseline
-/// `1`, plus [`REMEMBERED_PENALTY`] when `n` is remembered-dangerous. For an
-/// EMPTY `avoid` set every edge stays `1` — the byte-identity property both
-/// planners share.
-fn move_cost(n: &RoomAddr, avoid: &std::collections::BTreeSet<RoomAddr>) -> u64 {
-    if avoid.contains(n) {
-        1 + REMEMBERED_PENALTY
-    } else {
-        1
-    }
-}
-
-/// The GOAP search space for the sustenance goal: reach water and drink.
-/// type-audit: bare-ok(return)
-pub struct GoapSpace<'a> {
-    /// The water room the `Drink` action requires.
-    pub water: RoomAddr,
-    /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
-    /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
-    pub avoid: &'a std::collections::BTreeSet<RoomAddr>,
-}
-impl<'a> SearchSpace for GoapSpace<'a> {
-    type State = PlanState;
-    type Action = Action;
-    fn successors(&self, s: &PlanState) -> Vec<(Action, PlanState, u64)> {
-        if s.hydrated {
-            return Vec::new(); // goal reached; no need to expand
-        }
-        let mut out: Vec<(Action, PlanState, u64)> = s
-            .position
-            .neighbors()
-            .into_iter()
-            .map(|n| {
-                let cost = move_cost(&n, self.avoid);
-                (
-                    Action::MoveTo(n.clone()),
-                    PlanState {
-                        position: n,
-                        hydrated: false,
-                    },
-                    cost,
-                )
-            })
-            .collect();
-        if s.position == self.water {
-            out.push((
-                Action::Drink,
-                PlanState {
-                    position: s.position.clone(),
-                    hydrated: true,
-                },
-                1,
-            ));
-        }
-        out
-    }
-    fn goal(&self, s: &PlanState) -> bool {
-        s.hydrated
-    }
-    fn heuristic(&self, _s: &PlanState) -> u64 {
-        0 // Dijkstra-mode; a geometric heuristic is a followup
-    }
-}
-
-/// Plan the `[move*, drink]` journey to satisfy the sustenance goal, or `None`
-/// if water is unreachable within `budget`. `avoid` is the remembered-danger set
-/// the A* routes around (The Haunt); pass an empty set for the memory-less path.
-/// type-audit: bare-ok(count: budget)
-pub fn plan_to_water(
-    from: &RoomAddr,
-    water: &RoomAddr,
-    budget: usize,
-    avoid: &std::collections::BTreeSet<RoomAddr>,
-) -> Option<Vec<Action>> {
-    astar(
-        &GoapSpace {
-            water: water.clone(),
-            avoid,
-        },
-        PlanState {
-            position: from.clone(),
-            hydrated: false,
-        },
-        budget,
-    )
-}
-
-/// A navigation-only space (the home-return goal — no Drink): goal is arrival.
-struct NavSpace<'a> {
-    dest: RoomAddr,
-    /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
-    /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
-    avoid: &'a std::collections::BTreeSet<RoomAddr>,
-}
-impl<'a> NavSpace<'a> {
-    /// The `move_cost`/`avoid` edge-building rule, shared verbatim by
-    /// [`SearchSpace::successors`] and [`SearchSpace::successors_memo`]
-    /// below (the-waymark, Task 6) so memoizing the raw neighbor lookup can
-    /// never accidentally also change how an edge's cost is computed — the
-    /// memo boundary is `neighbors`/`neighbors_memo` ALONE, never the
-    /// successor list this builds from it.
-    fn edges_from(&self, neighbors: [RoomAddr; 3]) -> Vec<(Action, RoomAddr, u64)> {
-        neighbors
-            .into_iter()
-            .map(|n| {
-                let cost = move_cost(&n, self.avoid);
-                (Action::MoveTo(n.clone()), n, cost)
-            })
-            .collect()
-    }
-}
-impl<'a> SearchSpace for NavSpace<'a> {
-    type State = RoomAddr;
-    type Action = Action;
-    fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
-        self.edges_from(s.neighbors())
-    }
-    /// Ledger #7's re-plan (the-waymark, Task 6): consults a caller-owned
-    /// [`RoomMeshMemo`] for the neighbor lookup instead of recomputing the
-    /// icosphere lattice arithmetic on every `astar` expansion — this is the
-    /// specific hot path (`RoomAddr::neighbors` inside `NavSpace::successors`
-    /// → `astar` expansions) Task 3's memo was built for but could not reach,
-    /// because `SearchSpace::successors(&self, ...)` alone had no way to
-    /// thread a caller's memo down into it. Byte-identical to `successors`
-    /// either way ([`RoomAddr::neighbors_memo`] is a cache of the same pure
-    /// function `neighbors` computes), and the `edges_from` cost rule is
-    /// untouched — only which of `neighbors`/`neighbors_memo` supplies the
-    /// three rooms it costs.
-    fn successors_memo(
-        &self,
-        s: &RoomAddr,
-        memo: Option<&mut RoomMeshMemo>,
-    ) -> Vec<(Action, RoomAddr, u64)> {
-        let neighbors = match memo {
-            Some(m) => s.neighbors_memo(m),
-            None => s.neighbors(),
-        };
-        self.edges_from(neighbors)
-    }
-    fn goal(&self, s: &RoomAddr) -> bool {
-        *s == self.dest
-    }
-    fn heuristic(&self, _s: &RoomAddr) -> u64 {
-        0
-    }
-}
-
-/// [`plan_to_room`], threading a caller-owned [`RoomMeshMemo`] through the
-/// underlying [`AStarSolver`] search instead of recomputing `RoomAddr::
-/// neighbors` on every expansion (the-waymark, Task 6 — ledger #7's
-/// re-plan). `mesh_memo: None` is exactly `plan_to_room`'s own behavior
-/// (`NavSpace::successors_memo`'s default-free override still falls back to
-/// plain `neighbors`); `Some(memo)` is byte-identical too, by construction —
-/// see `NavSpace::successors_memo`'s own doc. `pub(crate)`: today's one
-/// caller worth the memo is [`HomeNavCache::home_nav`], which already sits
-/// in this module; a future external caller can widen this if it ever needs
-/// to.
-pub(crate) fn plan_to_room_memo(
-    from: &RoomAddr,
-    dest: &RoomAddr,
-    budget: usize,
-    avoid: &std::collections::BTreeSet<RoomAddr>,
-    mesh_memo: Option<&mut RoomMeshMemo>,
-) -> Option<Vec<Action>> {
-    AStarSolver.solve(
-        &NavSpace {
-            dest: dest.clone(),
-            avoid,
-        },
-        from.clone(),
-        budget,
-        mesh_memo,
-    )
-}
-
-/// Plan a pure navigation path to `dest` (the home-return goal), or `None`.
-/// `avoid` is the remembered-danger set the A* routes around (The Haunt); pass
-/// an empty set for the memory-less path. A thin delegator to
-/// [`plan_to_room_memo`] with `mesh_memo: None` (the-waymark, Task 6) — every
-/// existing caller (there is no session memo in scope at most of them) is
-/// unchanged.
-/// type-audit: bare-ok(count: budget)
-pub fn plan_to_room(
-    from: &RoomAddr,
-    dest: &RoomAddr,
-    budget: usize,
-    avoid: &std::collections::BTreeSet<RoomAddr>,
-) -> Option<Vec<Action>> {
-    plan_to_room_memo(from, dest, budget, avoid, None)
 }
 
 /// Which anchor each creature stands at, inside the presence bubble.
@@ -6056,6 +5716,7 @@ mod tests {
     // sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
+    use crate::action::{is_movement, precondition_reads_committed_state};
     use hornvale_kernel::{ConceptRegistry, Seed, test_lineage};
 
     /// Test-only helper: fits the coexistence stack once and reads the `k`
@@ -9725,7 +9386,7 @@ mod tests {
         };
         assert!(
             matches!(
-                danger.affordance(&view_at(x.clone()), PLAN_BUDGET),
+                danger.proposal(&view_at(x.clone()), PLAN_BUDGET),
                 Some(Action::MoveTo(_))
             ),
             "it has somewhere to go — the dread is dischargeable"
@@ -10077,7 +9738,7 @@ mod tests {
     }
 
     #[test]
-    fn hunger_affordance_eats_at_a_rich_cell_and_forages_from_a_barren_one() {
+    fn hunger_proposal_eats_at_a_rich_cell_and_forages_from_a_barren_one() {
         let barren = raddr(1.0);
         // Plant EVERY neighbour barren except one, so the forage step is
         // unambiguous (unplanted rooms default to DEFAULT_FORAGE, which would
@@ -10107,7 +9768,7 @@ mod tests {
         };
         // Barren cell: forage toward the richer neighbour.
         assert_eq!(
-            hunger.affordance(&view_barren, PLAN_BUDGET),
+            hunger.proposal(&view_barren, PLAN_BUDGET),
             Some(Action::MoveTo(rich.clone())),
             "a hungry creature on barren ground forages toward richer ground"
         );
@@ -10121,7 +9782,7 @@ mod tests {
             explore_step: None,
         };
         assert_eq!(
-            hunger.affordance(&view_rich, PLAN_BUDGET),
+            hunger.proposal(&view_rich, PLAN_BUDGET),
             Some(Action::Eat),
             "a hungry creature on rich ground eats in place"
         );
@@ -10243,7 +9904,7 @@ mod tests {
         };
         let view = view_at(here.clone());
         let step = danger
-            .affordance(&view, PLAN_BUDGET)
+            .proposal(&view, PLAN_BUDGET)
             .expect("dread on flat ground still offers a step off it");
         let Action::MoveTo(to) = step else {
             panic!("fleeing is a MoveTo");
@@ -10269,7 +9930,7 @@ mod tests {
             alarm: None,
             dread: None,
         };
-        assert_eq!(danger.affordance(&view_at(here), PLAN_BUDGET), None);
+        assert_eq!(danger.proposal(&view_at(here), PLAN_BUDGET), None);
     }
 
     #[test]
@@ -10294,7 +9955,7 @@ mod tests {
             dread: None,
         };
         assert_eq!(
-            danger.affordance(&view_at(here.clone()), PLAN_BUDGET),
+            danger.proposal(&view_at(here.clone()), PLAN_BUDGET),
             Some(Action::MoveTo(ns[0].clone())),
             "flees to the safest neighbour"
         );
@@ -10314,7 +9975,7 @@ mod tests {
             dread: None,
         };
         assert_eq!(
-            danger_boxed.affordance(&view_at(here), PLAN_BUDGET),
+            danger_boxed.proposal(&view_at(here), PLAN_BUDGET),
             None,
             "boxed in by threat everywhere → holds (cornered)"
         );
@@ -11092,7 +10753,7 @@ mod tests {
     }
 
     #[test]
-    fn social_affordance_and_serviceability_are_the_home_step() {
+    fn social_proposal_and_serviceability_are_the_home_step() {
         let home = raddr(1.0);
         let step = home.neighbors()[0].clone();
         let social = Social {
@@ -11101,9 +10762,9 @@ mod tests {
         };
         let view = view_at(home.neighbors()[1].clone());
         assert_eq!(
-            social.affordance(&view, PLAN_BUDGET),
+            social.proposal(&view, PLAN_BUDGET),
             Some(Action::MoveTo(step.clone())),
-            "the affordance is the precomputed step home"
+            "the proposal is the precomputed step home"
         );
         assert_eq!(
             social.serviceability(&Action::MoveTo(step), &view, PLAN_BUDGET, &mut || None),
@@ -11497,7 +11158,7 @@ mod tests {
     }
 
     #[test]
-    fn thermal_affordance_steps_toward_the_comfortable_neighbor_both_directions() {
+    fn thermal_proposal_steps_toward_the_comfortable_neighbor_both_directions() {
         // TOO COLD → warmer neighbour; TOO HOT → cooler neighbour; both toward
         // the optimum. The comfort step is the neighbour whose temperature is
         // CLOSEST to the optimum, exactly as `downhill_step` picks the lowest.
@@ -11520,7 +11181,7 @@ mod tests {
         };
         let view = at(home.clone());
         assert_eq!(
-            drive.affordance(&view, PLAN_BUDGET),
+            drive.proposal(&view, PLAN_BUDGET),
             Some(Action::MoveTo(ns[0].clone())),
             "too cold: steps toward the warmer neighbour"
         );
@@ -11543,7 +11204,7 @@ mod tests {
             interior: None,
         };
         assert_eq!(
-            drive.affordance(&view, PLAN_BUDGET),
+            drive.proposal(&view, PLAN_BUDGET),
             Some(Action::MoveTo(ns[0].clone())),
             "too hot: steps toward the cooler neighbour"
         );
@@ -11552,7 +11213,7 @@ mod tests {
     #[test]
     fn thermal_within_tolerance_is_satisfied_no_urgency_no_step() {
         // Inside the tolerance band: urgency is exactly 0 (< act) and there is
-        // no affordance (nothing to do), even though a strictly-more-optimal
+        // no proposal (nothing to do), even though a strictly-more-optimal
         // neighbour exists — comfort is a satisfied state, not a maximizer.
         let home = raddr(1.0);
         let ns = home.neighbors();
@@ -11571,7 +11232,7 @@ mod tests {
         assert_eq!(drive.urgency(&view), 0.0, "inside the band → zero urgency");
         assert!(drive.urgency(&view) < drive.act_threshold());
         assert_eq!(
-            drive.affordance(&view, PLAN_BUDGET),
+            drive.proposal(&view, PLAN_BUDGET),
             None,
             "comfortable → no comfort step"
         );
@@ -11601,7 +11262,7 @@ mod tests {
         };
         assert_eq!(cold.urgency(&view), 0.0, "the cold niche tolerates 2 °C");
         assert_eq!(
-            cold.affordance(&view, PLAN_BUDGET),
+            cold.proposal(&view, PLAN_BUDGET),
             None,
             "tolerated → the cold niche stays put"
         );
@@ -11614,14 +11275,14 @@ mod tests {
         };
         assert!(warm.urgency(&view) > 0.0, "the warm niche flees 2 °C");
         assert_eq!(
-            warm.affordance(&view, PLAN_BUDGET),
+            warm.proposal(&view, PLAN_BUDGET),
             Some(Action::MoveTo(ns[0].clone())),
             "the warm niche steps toward the warmer neighbour"
         );
     }
 
     #[test]
-    fn thermal_urgency_and_affordance_are_deterministic_and_recompute_identically() {
+    fn thermal_urgency_and_proposal_are_deterministic_and_recompute_identically() {
         // Reload-stable by construction: the thermal drive reads only its held
         // niche + terrain + day (no ledger, no stored state), so recomputing
         // twice is byte-identical.
@@ -11643,8 +11304,8 @@ mod tests {
         let view = at(home.clone());
         assert_eq!(drive.urgency(&view), drive.urgency(&view));
         assert_eq!(
-            drive.affordance(&view, PLAN_BUDGET),
-            drive.affordance(&view, PLAN_BUDGET)
+            drive.proposal(&view, PLAN_BUDGET),
+            drive.proposal(&view, PLAN_BUDGET)
         );
     }
 
@@ -11673,7 +11334,7 @@ mod tests {
         };
         let view = at(home.clone());
         assert_eq!(
-            drive.affordance(&view, PLAN_BUDGET),
+            drive.proposal(&view, PLAN_BUDGET),
             Some(Action::MoveTo(smaller)),
             "an equal-deviation tie resolves to the smaller RoomAddr"
         );
@@ -11791,14 +11452,14 @@ mod tests {
     }
 
     #[test]
-    fn arbitrates_affordance_cache_matches_a_fresh_recompute() {
+    fn arbitrates_proposal_cache_matches_a_fresh_recompute() {
         // Names the mechanism (the-waymark, ledger #9): `arbitrate` computes
-        // each drive's own `Drive::affordance` lazily, at most ONCE per
+        // each drive's own `Drive::proposal` lazily, at most ONCE per
         // call, and reuses it across every candidate action
         // `grab_utility`/`utility` ask about (`cached_serviceability`, in
         // `arbitrate`'s own body — grep for it). This pins that the cached
         // answer `arbitrate` actually ACTS on is exactly what a fresh,
-        // standalone `Thirst::affordance` call on the SAME view/budget
+        // standalone `Thirst::proposal` call on the SAME view/budget
         // produces — the memoized == recomputed bar.
         //
         // In this caller-owned shape the "key" is just positional identity:
@@ -11835,11 +11496,11 @@ mod tests {
         // A fresh, standalone recompute on the SAME view/budget `arbitrate`
         // below is given — the answer the cache must reproduce.
         let fresh = thirst
-            .affordance(&view, PLAN_BUDGET)
+            .proposal(&view, PLAN_BUDGET)
             .expect("water is known and reachable from home");
         let drives: [&dyn Drive; 1] = [&thirst];
         // Six fixed candidates (three neighbours + Drink/Rest/Eat) means
-        // `cached_serviceability` is asked about thirst's affordance six
+        // `cached_serviceability` is asked about thirst's proposal six
         // times over in `grab_utility` alone, and again in `utility` — a
         // real cache hit, not just a single-shot compute.
         let resolution = arb(
@@ -11856,7 +11517,7 @@ mod tests {
         assert_eq!(
             resolution.intent,
             Intent::Do(fresh),
-            "arbitrate must act on exactly what a fresh, standalone affordance recompute gives"
+            "arbitrate must act on exactly what a fresh, standalone proposal recompute gives"
         );
     }
 
@@ -12301,7 +11962,7 @@ mod tests {
     }
 
     #[test]
-    fn a_helpless_creature_gives_up_even_with_a_reachable_affordance() {
+    fn a_helpless_creature_gives_up_even_with_a_reachable_proposal() {
         // THE BEHAVIOURAL DIFFERENCE (§7): a helpless creature Holds and reads
         // Helpless even when it COULD act — where a Frustrated creature strains,
         // a helpless one has stopped trying. Same view; the `helpless` flag alone
@@ -12631,7 +12292,7 @@ mod tests {
     #[test]
     fn the_fatigue_drive_rests_in_place_wherever_the_creature_is() {
         // A creature sleeps where it is (The Slumber v2): rest is always the
-        // affordance, home or away — so an explorer beds down in the field and a
+        // proposal, home or away — so an explorer beds down in the field and a
         // stranded creature is never fatigue-blocked.
         let home = raddr(1.0);
         let away = home.neighbors()[0].clone();
@@ -12645,7 +12306,7 @@ mod tests {
                 believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             };
-            assert_eq!(rest.affordance(&view, PLAN_BUDGET), Some(Action::Rest));
+            assert_eq!(rest.proposal(&view, PLAN_BUDGET), Some(Action::Rest));
         }
     }
 
@@ -13089,7 +12750,7 @@ mod tests {
     // --- The Threshold's crossing (task 6): Thermal seeks WITHIN a room. ---
 
     #[test]
-    fn thermal_affordance_crosses_the_room_toward_the_hearth() {
+    fn thermal_proposal_crosses_the_room_toward_the_hearth() {
         // THE THRESHOLD'S CROSSING, the payoff: on a REAL composed interior
         // (not a hand-built toy — the same one The Hearth's own anti-hub test
         // proves is non-degenerate), a creature standing at the threshold —
@@ -13125,7 +12786,7 @@ mod tests {
                 day,
                 interior: Some((&interior, anchor)),
             };
-            match drive.affordance(&view, 64) {
+            match drive.proposal(&view, 64) {
                 Some(Action::MoveWithin(next)) => {
                     let before = warmth_at(&interior, anchor, 64);
                     let after = warmth_at(&interior, next, 64);
@@ -13147,7 +12808,7 @@ mod tests {
                     assert_eq!(
                         anchor, hearth_id,
                         "the walk should end at the hearth, not give up early \
-                         (next affordance: {other:?})"
+                         (next proposal: {other:?})"
                     );
                     break;
                 }
@@ -13161,7 +12822,7 @@ mod tests {
     }
 
     #[test]
-    fn thermal_affordance_falls_back_to_the_room_scale_gradient_when_the_hearth_is_unroutable() {
+    fn thermal_proposal_falls_back_to_the_room_scale_gradient_when_the_hearth_is_unroutable() {
         // spec §8a: a seasonal-passability read can leave the traversable
         // graph disconnected even though the BASE graph validated as
         // connected at composition time — a creature stranded away from its
@@ -13198,7 +12859,7 @@ mod tests {
         };
 
         assert_eq!(
-            drive.affordance(&view, 64),
+            drive.proposal(&view, 64),
             Some(Action::MoveTo(ns[0].clone())),
             "the hearth is unroutable from the door, so the drive must fall \
              back to the between-rooms gradient rather than treating the \
@@ -13214,7 +12875,7 @@ mod tests {
         // reachability check of its own. If `preferred_anchor` named a
         // target `route_within` cannot reach, a stranded creature would be
         // teleported across the very edge spec §8a says it cannot cross.
-        // Reuses the `stranded` fixture from the `affordance` fallback test
+        // Reuses the `stranded` fixture from the `proposal` fallback test
         // above: a hearth with no edge to the door, so a genuinely warmer
         // anchor exists but is unroutable.
         use crate::interior::{AnchorKind, Interior};
@@ -13304,7 +12965,7 @@ mod tests {
         // fixed room-scale candidate set is built from `RoomAddr` neighbours
         // and cannot express an `AnchorId` on its own — this proves
         // `Drive::candidate_actions` actually makes `MoveWithin` reachable
-        // via the live multi-drive path, not merely via `Thermal::affordance`
+        // via the live multi-drive path, not merely via `Thermal::proposal`
         // called in isolation (the test above).
         use crate::interior::{AnchorKind, Interior};
         let mut interior = Interior::new();
@@ -13355,7 +13016,7 @@ mod tests {
              arbitration, not merely exist as a possibility: {resolution:?}"
         );
         // THE AFFECT LABEL: beelining to a KNOWN, VERIFIED-REACHABLE target —
-        // `Thermal::affordance` only ever proposes this step after
+        // `Thermal::proposal` only ever proposes this step after
         // `route_within` has confirmed a real path — reads Eager, on the
         // same basis as `Fatigue`'s always-known walk home, not Searching
         // (reserved for gradient-following toward an UNKNOWN target).
@@ -14263,11 +13924,11 @@ mod tests {
         //
         // `cold_niche`'s narrower width (8.0) SATURATES `serviceability`
         // (which reads the CLAMPED `urgency_of`, unlike `warmest_anchor`'s
-        // own raw-deviation comparison `affordance` uses) once two anchors
+        // own raw-deviation comparison `proposal` uses) once two anchors
         // both sit more than one band-width past the edge — exactly what a
         // corridor this long (7 hops of `WARMTH_DECAY`) does by its far
         // end, making every step past the first read as ZERO improvement
-        // to `arbitrate`'s utility scan even though `affordance` still
+        // to `arbitrate`'s utility scan even though `proposal` still
         // wants to take it. Task 6's own hearth-crossing test hit this
         // same trap and is why its niche is `width: 12.0`, not the
         // off-the-shelf `cold_niche`/`warm_niche` (see that test's own
@@ -14616,11 +14277,11 @@ mod tests {
 
     /// A single reverse Dijkstra rooted at `home`, mirroring `astar`'s own
     /// frontier discipline by hand (the same `(f, g, state)` `BTreeSet`
-    /// order, `heuristic() == 0` — Dijkstra mode, matching [`NavSpace`] —
+    /// order, `heuristic() == 0` — Dijkstra mode, matching `NavSpace` —
     /// and the same first-strict-improvement-wins relaxation `astar` itself
     /// uses) rather than through `SearchSpace` (there is no goal state to
     /// hand it — the point is reaching everything within budget). Valid
-    /// ONLY for empty-avoid queries: [`move_cost`] with an empty set is `1`
+    /// ONLY for empty-avoid queries: `move_cost` with an empty set is `1`
     /// uniformly, so every edge is symmetric and a room's distance FROM
     /// `home` equals its distance TO `home`.
     struct ReverseField {

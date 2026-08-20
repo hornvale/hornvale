@@ -180,7 +180,7 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
     // about, or given a word — the verb-side twin of an unnamed creature.
     // `Action::all()` is held exhaustive by a compile-time tripwire, so this
     // audit cannot silently miss a newly added act.
-    let orphan_acts: Vec<&'static str> = hornvale_vessel::liveness::Action::all()
+    let orphan_acts: Vec<&'static str> = hornvale_vessel::action::Action::all()
         .iter()
         .map(|a| a.concept_name())
         .filter(|name| registry.concept(name).is_none())
@@ -487,7 +487,7 @@ mod tests {
             .find(|l| l.starts_with("Orphan acts"))
             .unwrap_or_else(|| panic!("no orphan-acts line in the manifest view"));
 
-        for act in hornvale_vessel::liveness::Action::all() {
+        for act in hornvale_vessel::action::Action::all() {
             let name = act.concept_name();
             let named = registry.concept(name).is_some();
             let listed = line
@@ -563,7 +563,7 @@ mod tests {
             "the species roster should be non-trivial"
         );
         assert!(
-            hornvale_vessel::liveness::Action::all().len() >= 4,
+            hornvale_vessel::action::Action::all().len() >= 4,
             "the action roster should be non-trivial"
         );
         assert_eq!(
