@@ -235,6 +235,75 @@ merely a usage trap — carried to follow-ups rather than fixed here, because th
 board's CAS/append path is off the fast lane and this campaign was
 byte-identity-locked on `windows/vessel`.
 
+## 10. The only independent evidence arrived from the merge queue
+
+*Added after the merge, from the exchange with the chamber operator.*
+
+Every check in §§1–9 was run by me, on my branch tip, against a criterion I
+wrote. The campaign established that its acceptance check *could* go red — a
+positive control — and treated that as the bar. It is not the bar; it is one
+of three questions:
+
+| question | what answers it |
+|---|---|
+| Does the check pass? | run it |
+| *Can* it fail? | a positive control |
+| **Who configured it, and on which object?** | an instrument you did not build, on the object that lands |
+
+The chamber's run differs from mine on **both** halves of the third, and they
+are separable:
+
+- **A different object.** I regenerated on the branch tip. The chamber
+  regenerated on `main` + branch *merged* — the thing that actually lands.
+  Those are not the same tree and only one is the deliverable.
+- **A different configurer.** The operator did not build the phases and did
+  not know this campaign's acceptance criterion until told, so the result
+  cannot have inherited a blind spot from my instrumentation choices.
+
+The result: regeneration on the merge product moved **nothing** but the
+chamber's own timing rows, and the audit report between the branch tip and the
+regenerated merge product is byte-identical. That — not the local
+`drift-exit=0` this plan spent five tasks establishing — is the byte-identity
+claim discharged.
+
+**Consequence for how a green is reported.** "I verified it locally" and "the
+chamber verified it on the merge product" are different claims, and only the
+second is independent. Say which one you have.
+
+**Why it was worth the queue slot** is not that the chamber ran more tests. It
+is that it measured the deliverable with an instrument this campaign did not
+configure. A merge product tested by the author's own instrument against the
+author's own criterion still inherits the author's blind spots.
+
+### 10a. A diffstat is not a finding until you name which two trees it compares
+
+The same exchange caught one more, and it is §1's pattern surviving past the
+merge. I told the operator to expect the audit report "at 3 insertions / 3
+deletions and nothing else."
+
+That figure is this **branch's diff against `main`** — a change I authored.
+The operator was measuring a different quantity: **what regeneration moves on
+the merge product**, where the correct answer was **zero**, because the report
+was already correct. I named a number without naming its two trees, in the
+same message that asked for the other comparison to be measured.
+
+It extends the denominator rule (`right-measurement-wrong-attribution`, 6th
+instance): a ratio is not a finding until you name its denominator, and a
+diffstat is not a finding until you name which two trees it compares. `git
+diff` takes two arguments and the number is meaningless without them.
+
+The tell was that the figure was **persuasive**. A concrete `+3/-3` sounds
+checked in a way "it should be fine" does not, and that specificity is what
+stopped me re-reading it.
+
+Two figures for the same file appear in this document and they are **not the
+same measurement**, which is the trap in miniature. §8's `+2 in the vessel
+crate` is a *count delta* — a tallied number inside the report changing by two
+— and §8 is sound because it names the commit whose diff it describes (Task
+4's). The `+3/-3` here is a *line diff* of the file, against `main`. Same
+artifact, different units, different comparisons. Neither number means
+anything carried alone.
+
 ## What held up well
 
 **Splitting Arc I was the right call, and the reason generalizes.** The two
@@ -323,3 +392,20 @@ this. Recorded now because the connection will not be obvious later.
 The recipe should single-quote or escape. Cheap and self-contained; not done
 here because this campaign was byte-identity-locked on `windows/vessel` and must
 not carry unrelated tree changes.
+
+**F-7 — register a seam in the action layer, and name who runs it.** The
+extracted planners (`plan_to_water`, `plan_to_room` in
+`windows/vessel/src/action.rs`) have no `seam-guard:` registration, and neither
+does anything else in `windows/vessel` — the tree's only two seams are in
+`windows/worldgen` and `windows/almanac`. A pure extraction is precisely the
+change that can leave a function's contribution unheld by any assertion without
+moving a byte of output, so this is the crate that wants one. **Registration
+alone is not enough:** since decision 0148 nothing runs `make seam-guard`
+automatically, so the same commit must say *who* runs it and *when*. A
+registered-but-never-probed seam emits no output while appearing in a
+committed, drift-checked roster that reads as authoritative — a quieter failure
+than a check that runs against the wrong set. Owner: The Deed (Arc I.b), the
+arc that starts changing behaviour there. `CLAUDE.md`'s seam-guard paragraph
+was tightened from caveat to warning in the same commit as this addendum, and
+its stale "all 7 call sites" corrected (the tool reports 8).
+
