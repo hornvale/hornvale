@@ -1,0 +1,13 @@
+domains/paleoclimate/tests/paleo_properties.rs
+windows/hearsay/tests/crossing.rs
+windows/hearsay/tests/probe_argmin_defect_crossing_arms.rs
+windows/hearsay/tests/probe_crossing_scale.rs
+windows/hearsay/tests/probe_seam_direction.rs
+windows/hearsay/tests/probe_tiebreak_rules.rs
+windows/hearsay/tests/touchstone_controls_probe.rs
+windows/hearsay/tests/touchstone_readout.rs
+windows/hearsay/tests/touchstone.rs
+windows/hearsay/tests/traced_walk.rs
+windows/hearsay/tests/undertow_readout.rs
+windows/lab/tests/burr_calibration.rs
+windows/worldgen/tests/gazetteer_naming.rs
