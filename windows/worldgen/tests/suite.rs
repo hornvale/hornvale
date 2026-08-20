@@ -121,6 +121,8 @@ mod niche_breadth_probe;
 mod non_void_roster;
 #[path = "suite/occupancy_readout.rs"]
 mod occupancy_readout;
+#[path = "suite/off_lithology_decorrelation_probe.rs"]
+mod off_lithology_decorrelation_probe;
 #[path = "suite/ore_separation_probe.rs"]
 mod ore_separation_probe;
 #[path = "suite/ore_viability_probe.rs"]
