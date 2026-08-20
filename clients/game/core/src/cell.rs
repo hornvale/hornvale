@@ -30,12 +30,19 @@ pub enum Ink {
 
 /// The snapshot channel a drawn cell traces back to — the executable form of
 /// the brief's "trace listing: every visible datum on the composed screen,
-/// and which channel from the inventory it came from."
+/// and which channel from the inventory it came from." For every variant
+/// except [`Source::Look`], "traces back to" is true *by construction*:
+/// this crate parsed the value off a `Snapshot` field before ever drawing
+/// it, so the provenance claim is one the crate can verify against its own
+/// parse.
 ///
 /// Every drawn cell must name one of these. The brief allows exactly two
 /// categories and no third: a mark is either **derived from world state**
 /// (every variant below except [`Source::Chrome`]) or **declared inert**
-/// ([`Source::Chrome`], and nothing else).
+/// ([`Source::Chrome`], and nothing else). [`Source::Look`] sits in the
+/// world-derived category by claim, not by construction — it is the one
+/// variant whose provenance this crate cannot itself check; see its doc
+/// for what that means and the caller discipline it rests on.
 ///
 /// There is deliberately **no `Social` variant**. `hornvale-game-core`'s own
 /// schema mirror omits the `social` channel entirely (see `schema.rs`'s
@@ -100,6 +107,23 @@ pub enum Source {
     /// reverse: `Chrome` is reserved for genuinely inert decoration (rules,
     /// gutters, margins, the entry's own prompt), never a catch-all for
     /// content whose real channel was merely inconvenient to name.
+    ///
+    /// **This is not a snapshot channel, and unlike every sibling variant
+    /// its provenance is not verifiable by construction.** `Chart`, `Plan`,
+    /// `Prose`, and `Identity` each trace to a field this crate itself
+    /// parsed off `Snapshot` — the crate can point at the exact struct
+    /// field that justifies the label. `Look`'s text does not: it traces to
+    /// `resolve_at` in `windows/worldgen`, answered by a `CellFeatureIndex`
+    /// over `domains/terrain` and queried live by `bin` (Task 3) — it is
+    /// not carried on `vessel/session/v2` at all, so there is no `Snapshot`
+    /// field for this crate to check the label against. Structurally, the
+    /// string handed to `strip::draw` is as opaque to `hornvale-game-core`
+    /// as `Chrome`'s hardcoded glyph: an input this crate cannot itself
+    /// verify. So `Look`'s honesty is a **caller discipline**, not a
+    /// crate-enforced guarantee — `bin` must only ever pass a genuinely
+    /// resolved feature name into the strip parameter, never a hardcoded
+    /// hint or placeholder, or the label becomes exactly the false claim
+    /// `Chrome` is reserved to avoid.
     Look,
 }
 
