@@ -123,3 +123,51 @@ fn look_mode_at_the_walk_band_resolves_a_real_name() {
         "the walk band has a real resolver and must not report the unresolved-band refusal"
     );
 }
+
+/// FIX ROUND 1: the cursor must genuinely track. Moving it off the
+/// observer's own box changes the resolved cell, and therefore the strip
+/// text, rather than recomputing the same answer regardless of position.
+///
+/// **Why the covering assertion is "names something" -> "unnamed terrain"
+/// rather than two different NAMED features**, checked and worth recording:
+/// a swept probe over every reachable box within seed 42's flagship
+/// walk-band view found every `Some` box resolves to the SAME nearest
+/// terrain `CellId` as the observer (`CellId(22195)`, confirmed by
+/// instrumenting `resolve_walk_band` directly) — the visible neighbourhood
+/// spans `distance_rad` on the order of 1e-4 (tens of metres), while
+/// `NearestCellIndex` snaps onto one of only 40,962 cells tiling the whole
+/// globe (roughly hundreds of kilometres apart at seed 42's `GLOBE_LEVEL`).
+/// So a walk-band session structurally cannot cross a terrain-feature
+/// boundary within view except by standing within metres of one — a real
+/// scale mismatch this fix exposed, not a limitation of the test. What IS
+/// reachable, and does prove the cursor is read: a box the observer's own
+/// chart has no cell in at all (`cell_at` returns `None`, screen offset
+/// `(15, 10)`, five columns west of centre `(20, 10)`) — a different,
+/// real, honestly-reported outcome from the observer's own box.
+#[test]
+fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    driver.apply(Action::EnterLook);
+    let at_observer = driver.strip_text().map(str::to_string);
+    assert_eq!(
+        at_observer.as_deref(),
+        Some("Vngashngatva"),
+        "the observer's own box must resolve to seed 42's real landmass name"
+    );
+
+    // Five columns west: no chart cell projects onto this box (verified by
+    // instrumenting `chart::cell_at` directly), so the resolver honestly
+    // reports UNNAMED_TERRAIN rather than repeating the observer's name.
+    driver.apply(Action::CursorBy(-5, 0));
+    let five_west = driver.strip_text().map(str::to_string);
+    assert_ne!(
+        five_west, at_observer,
+        "the strip must change when the cursor moves off the observer's box"
+    );
+    assert_eq!(five_west.as_deref(), Some("unnamed terrain"));
+
+    // And moving back must restore the observer's own answer — proving the
+    // dependency runs both ways, not just away from the start.
+    driver.apply(Action::CursorBy(5, 0));
+    assert_eq!(driver.strip_text(), at_observer.as_deref());
+}

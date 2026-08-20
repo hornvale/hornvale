@@ -23,33 +23,45 @@
 //! does not reopen the containment described above; it is still true that
 //! no `Agent`/`Knowledge`/`WorldContext` value ever crosses out.
 //!
-//! **Resolution is scoped honestly, not fully.** Spec §3.1 assigns the
-//! cursor query to `bin`; §9 defers "the walk / chamber / delve resolvers"
-//! (session-level cells/marks/agents) to a future campaign. This campaign
-//! wires the terrain-feature index (declared salience, `CellFeatureIndex`,
-//! `resolve_at` — all real, tested, and measured directly against seed 42 in
-//! the task report's F2/F3/H1). But the terminal client has no plate that
-//! draws the "world"/Mercator band those measurements assume — only the
-//! walk-band chart and the chamber-band floor plan exist today — and
-//! inverting the walk-band chart's screen projection back to a `CellId`
-//! needs geometry no task in this campaign's file list touches (`chart.rs`'s
-//! `project` is private and per-band-scaled; a wire `ChartCell` carries no
-//! `CellId` at all — the Room Mesh, a different addressing scheme, is the
-//! closest thing that does, and reconciling it is deferred walk-band-
-//! resolver work, not this one). So this campaign's resolver answers for
-//! exactly the one `CellId` it can obtain honestly and cheaply — the
-//! **observer's own cell** — for as long as look mode is open at the walk
-//! band, regardless of where the on-screen cursor sits; every other band
-//! honestly refuses (`NOTHING_HERE_YET`). The cursor's on-screen motion is
-//! real (Task 1/2 shipped it); its resolution's spatial precision is the
-//! part carried forward. Flagged explicitly for review, in the same spirit
-//! as the task brief's own "Driver is delicate" note asking scope calls to
-//! be surfaced rather than forced.
+//! **Resolution genuinely tracks the cursor.** Spec §3.1 assigns the cursor
+//! query to `bin`; §9 defers "the walk / chamber / delve resolvers"
+//! (session-level cells/marks/agents) to a future campaign — so only the
+//! walk band resolves here, and every other band honestly answers
+//! [`NOTHING_HERE_YET`]. At the walk band, the *pointed-at* cell is what
+//! gets resolved, not the observer's own (an earlier revision of this
+//! module resolved the observer's cell unconditionally — a fix round
+//! caught that this made the strip position-invariant while the cursor
+//! visibly moved, exactly the "a wrong name is indistinguishable from a
+//! right one" failure the design spec warns against).
+//!
+//! The chain from a screen position to a [`hornvale_kernel::CellId`]:
+//! [`hornvale_game_core::chart::cell_at`] (new, shared with `draw` via a
+//! common `boxes_of` helper — never a second copy of the projection) finds
+//! which wire [`hornvale_game_core::ChartCell`] occupies the cursor's box
+//! and its index into `chart.cells`. `chart.cells` is a field-for-field,
+//! order-preserving mirror of the real `hornvale_scene::SurroundsScene`
+//! (`Session::snapshot` embeds that scene directly — nothing reorders or
+//! filters it in transit), so re-deriving the SAME scene with
+//! `self.session.purview(0)` (the identical call `Session::snapshot` itself
+//! makes for the walk band) and indexing into its `cells` at that same
+//! position names the identical real cell — no float matching, no new
+//! trigonometry. That real cell's `room: u64` unpacks
+//! ([`hornvale_kernel::RoomId::unpack`]) to a real
+//! [`hornvale_kernel::RoomAddr`], whose [`hornvale_kernel::RoomAddr::coord`]
+//! feeds the same `NearestCellIndex` lookup already used for the observer.
+//!
+//! No new geometry was written for this: `RoomId::unpack`, `RoomAddr::coord`
+//! and `NearestCellIndex::nearest` all already existed: `kernel::room` has
+//! no inverse of `bearing_to`/`distance_rad_to` (a destination from an
+//! origin, a bearing and a distance), so this deliberately does not need
+//! one — the index-into-a-freshly-rebuilt-scene route reaches the same
+//! room a bearing-inversion would have, using data both `chart::cell_at`
+//! and `Session::purview` already carry.
 
 use crate::input::{Action, Mode};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::Cursor;
-use hornvale_kernel::{NearestCellIndex, Seed, World};
+use hornvale_kernel::{NearestCellIndex, RoomId, Seed, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::TerrainPins;
 use hornvale_terrain::landscape::CellFeatureIndex;
@@ -336,31 +348,61 @@ impl Driver {
         self.cursor.y = ny as u16;
     }
 
-    /// Recompute `self.strip` for the current band and mode. See the module
-    /// doc: only the walk band resolves, and only for the observer's own
-    /// cell — every other band answers [`NOTHING_HERE_YET`] honestly.
+    /// Recompute `self.strip` for the current band, mode and cursor
+    /// position. See the module doc: only the walk band resolves, and it
+    /// resolves the cell the CURSOR points at, not the observer's own —
+    /// every other band answers [`NOTHING_HERE_YET`] honestly.
     fn refresh_strip(&mut self) {
         self.strip = Some(self.resolve());
     }
 
     /// The strip text for the current turn: [`NOTHING_HERE_YET`] unless the
-    /// current snapshot is a walk-band scene, in which case the observer's
-    /// own cell is resolved against the terrain-feature index —
-    /// [`UNNAMED_TERRAIN`] if the resolver runs and finds nothing there.
+    /// current snapshot is a walk-band scene, in which case the cell the
+    /// cursor points at ([`Self::resolve_walk_band`]; see the module doc
+    /// for the chain from a screen position to a `CellId`) is resolved
+    /// against the terrain-feature index — [`UNNAMED_TERRAIN`] if that
+    /// chain comes up empty at any step.
     fn resolve(&self) -> String {
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
         };
-        if !matches!(snap.spatial, hornvale_game_core::Spatial::Walk { .. }) {
+        let hornvale_game_core::Spatial::Walk { chart } = snap.spatial else {
             return NOTHING_HERE_YET.to_string();
-        }
-        let coord = self.session.agent().position.coord();
-        let cell = self
+        };
+        self.resolve_walk_band(&chart)
+            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string())
+    }
+
+    /// The walk band's own resolution chain, cursor position to name.
+    /// `None` at any step means "genuinely nothing individuated there" (no
+    /// chart cell occupies the cursor's box, the real scene could not be
+    /// re-derived, the room address does not unpack, or the terrain index
+    /// has no feature at the resolved cell) — the caller maps `None` to
+    /// [`UNNAMED_TERRAIN`], never to [`NOTHING_HERE_YET`] (that string is
+    /// reserved for a band with no resolver at all, which this is not).
+    fn resolve_walk_band(&self, chart: &hornvale_game_core::Chart) -> Option<String> {
+        let (index, _cell) = hornvale_game_core::chart::cell_at(
+            chart,
+            (0, 0),
+            hornvale_game_core::spread::PLATE_WIDTH,
+            PLATE_CONTENT_HEIGHT,
+            self.cursor.x,
+            self.cursor.y,
+        )?;
+        // The real scene, re-derived with the SAME call `Session::snapshot`
+        // itself makes for the walk band (`purview(0)`, `windows/vessel/src/
+        // session.rs`'s own comment on that call site) — see the module doc
+        // for why `chart.cells[index]` and `scene.cells[index]` name the
+        // identical cell.
+        let scene = self.session.purview(0).ok()?;
+        let real_cell = scene.cells.get(index)?;
+        let room = RoomId(real_cell.room).unpack().ok()?;
+        let coord = room.coord();
+        let cell_id = self
             .nearest
             .nearest(&self.geo, coord.latitude, coord.longitude);
         let (species, ph, morph) = &self.namer;
-        resolve_at(&self.index, cell, self.seed, species, ph, morph)
-            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string())
+        resolve_at(&self.index, cell_id, self.seed, species, ph, morph)
     }
 
     /// The current turn's `vessel/session/v2` JSON — what `hornvale-game-
