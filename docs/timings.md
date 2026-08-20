@@ -1883,3 +1883,25 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T15:09:12Z | sluice:outboard | 35.559 | 22.084 | 35.742 | 1.63 | 0 | ca9facf30 |  | lefford | 40 |
 | 2026-08-20T15:15:12Z | sluice:gate | 359.770 | 9900.907 | 339.753 | 28.46 | 0 | 651e5c2f4 |  | lefford | 40 |
 | 2026-08-20T15:18:06Z | sluice:clients | 173.634 | 351.356 | 11.524 | 2.09 | 0 | cc02b80e5 |  | lefford | 40 |
+| 2026-08-19T22:53:32Z | prewarm | 136.240 | 850.457 | 41.544 | 6.55 | 0 | 21f06adb | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-19T23:28:49Z | gate-commit | 69.186 | 80.460 | 27.507 | 1.56 | 0 | 21f06adb | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-19T23:30:56Z | gate-commit | 23.541 | 49.012 | 11.471 | 2.57 | 0 | 21f06adb | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T01:04:10Z | gate-commit | 2.190 | 1.971 | 0.104 | 0.95 | 0 | 14c7725c | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T01:04:24Z | gate-commit | 2.541 | 2.178 | 0.231 | 0.95 | 0 | 14c7725c | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T01:05:00Z | gate-commit | 24.488 | 50.804 | 11.771 | 2.56 | 0 | 14c7725c | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T01:05:41Z | gate-commit | 23.856 | 49.744 | 12.237 | 2.60 | 0 | 14c7725c | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T02:08:17Z | gate-commit | 44.616 | 52.594 | 12.576 | 1.46 | 0 | f868465d | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T02:17:59Z | gate-commit | 22.286 | 48.541 | 11.523 | 2.70 | 0 | 9999449a | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T02:51:27Z | gate-commit | 22.486 | 48.739 | 11.626 | 2.68 | 0 | 698ab0dd | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T02:52:07Z | gate-commit | 22.247 | 48.641 | 11.295 | 2.69 | 0 | 48869474 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T03:00:42Z | gate-commit | 22.237 | 48.556 | 11.262 | 2.69 | 0 | 1a6caa11 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T03:29:40Z | gate-commit | 20.275 | 29.983 | 12.082 | 2.07 | 0 | 2013e5d5 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T03:30:50Z | gate-commit | 59.393 | 316.847 | 31.863 | 5.87 | 0 | 2013e5d5 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T03:33:03Z | gate-commit | 22.361 | 49.130 | 11.038 | 2.69 | 0 | 2013e5d5 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T03:36:13Z | gate-commit | 39.096 | 75.875 | 45.712 | 3.11 | 0 | 2013e5d5 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T04:05:36Z | gate-commit | 22.290 | 48.512 | 11.037 | 2.67 | 0 | 9f69e4e2 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T04:08:21Z | gate-commit | 22.171 | 48.515 | 11.001 | 2.68 | 0 | 9f69e4e2 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T04:08:58Z | gate-commit | 21.844 | 48.413 | 11.096 | 2.72 | 0 | 9f69e4e2 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T04:16:11Z | gate-commit | 21.999 | 48.428 | 10.798 | 2.69 | 0 | 81d940d9 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T04:32:00Z | gate-commit | 22.247 | 48.396 | 10.890 | 2.66 | 0 | 81d940d9 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T04:33:54Z | gate-commit | 22.009 | 48.504 | 10.873 | 2.70 | 0 | 81d940d9 | campaign/the-portolan | MacBookPro | 10 |

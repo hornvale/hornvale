@@ -18,7 +18,7 @@
 //! controlling terminal simply closes (SIGHUP). Confirmed with a pty
 //! harness sending a real `SIGINT` from outside — see the task report.
 
-use crossterm::cursor::{Hide, MoveTo, Show};
+use crossterm::cursor::{Hide, MoveTo, SetCursorStyle, Show};
 use crossterm::execute;
 use crossterm::queue;
 use crossterm::style::{Attribute, Print, SetAttribute};
@@ -47,10 +47,18 @@ static OPEN: AtomicBool = AtomicBool::new(false);
 pub struct Term;
 
 impl Term {
-    /// Enter raw mode and the alternate screen, hide the cursor, install a
-    /// panic hook that restores the terminal before the previous hook
-    /// (Rust's default backtrace printer, ordinarily) runs, and start
-    /// [`watch_signals`]. Fails if a [`Term`] is already open.
+    /// Enter raw mode and the alternate screen, show the cursor styled as a
+    /// blinking underscore, install a panic hook that restores the terminal
+    /// before the previous hook (Rust's default backtrace printer,
+    /// ordinarily) runs, and start [`watch_signals`]. Fails if a [`Term`]
+    /// is already open.
+    ///
+    /// **The cursor is shown, not hidden, at setup.** The Portolan gives the
+    /// terminal's own hardware cursor a job: it reports the free-roaming
+    /// look-mode cursor's position (see [`Grid`]'s crate,
+    /// `hornvale_game_core::Cursor`) by moving the *real* cursor there
+    /// rather than drawing ink onto the grid. [`Term::draw`] hides it again
+    /// on any redraw that has no position to report.
     pub fn open() -> io::Result<Term> {
         if OPEN.swap(true, Ordering::SeqCst) {
             return Err(io::Error::other(
@@ -58,7 +66,12 @@ impl Term {
             ));
         }
         enable_raw_mode()?;
-        execute!(io::stdout(), EnterAlternateScreen, Hide)?;
+        execute!(
+            io::stdout(),
+            EnterAlternateScreen,
+            Show,
+            SetCursorStyle::BlinkingUnderScore
+        )?;
         let previous = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |info| {
             let _ = Term::restore();
@@ -83,7 +96,13 @@ impl Term {
     /// Draw `grid` to the alternate screen from the top-left, honouring
     /// [`Weight`]: `Bold` sets the bold attribute, `Dim` sets dim, `Normal`
     /// resets — a single buffered write per redraw, flushed once at the end.
-    pub fn draw(&self, grid: &Grid) -> io::Result<()> {
+    ///
+    /// `cursor` is the screen position `hornvale_game_core::render_with`
+    /// reported (never a grid cell's ink — see [`Term::open`]'s doc): when
+    /// `Some`, the real terminal cursor is shown and moved there after
+    /// painting; when `None`, it is hidden, parked out of the way of the
+    /// freshly painted page.
+    pub fn draw(&self, grid: &Grid, cursor: Option<(u16, u16)>) -> io::Result<()> {
         let mut out = io::stdout();
         queue!(out, MoveTo(0, 0), SetAttribute(Attribute::Reset))?;
         let mut current = Weight::Normal;
@@ -106,6 +125,10 @@ impl Term {
             }
         }
         queue!(out, SetAttribute(Attribute::Reset))?;
+        match cursor {
+            Some((x, y)) => queue!(out, Show, MoveTo(x, y))?,
+            None => queue!(out, Hide)?,
+        }
         out.flush()
     }
 

@@ -97,6 +97,7 @@ pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod render;
+pub mod resolve;
 pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
@@ -136,6 +137,7 @@ pub use history_emit::{
 /// new dependency edge — the layering graph is unchanged.
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
+pub use resolve::resolve_at;
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{
