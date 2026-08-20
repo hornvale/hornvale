@@ -1928,3 +1928,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T16:53:06Z | rebaseline | 52.335 | 232.932 | 11.459 | 4.67 | 0 | d9ed93ad | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T16:56:09Z | gate-commit | 31.311 | 89.760 | 18.932 | 3.47 | 0 | d9ed93ad | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T17:32:45Z | sluice:artifacts | 114.009 | 891.601 | 40.773 | 8.18 | 0 | c806677f1 |  | lefford | 40 |
+| 2026-08-20T17:33:20Z | sluice:outboard | 35.020 | 21.076 | 33.089 | 1.55 | 0 | cc94eb220 |  | lefford | 40 |
