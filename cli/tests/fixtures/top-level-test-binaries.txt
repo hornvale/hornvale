@@ -1,5 +1,7 @@
 domains/paleoclimate/tests/paleo_properties.rs
 windows/hearsay/tests/crossing.rs
+windows/hearsay/tests/cupel_readout.rs
+windows/hearsay/tests/cupel_substrate_probe.rs
 windows/hearsay/tests/probe_argmin_defect_crossing_arms.rs
 windows/hearsay/tests/probe_crossing_scale.rs
 windows/hearsay/tests/probe_seam_direction.rs
