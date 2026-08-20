@@ -117,9 +117,17 @@
 //! all. The measurement here is a floor-0 slice of the new lattice, matching
 //! how the probe enumerated the lattice before floors existed — which is what
 //! makes the `chambers` column comparable across the epoch, and what stops it
-//! being a count of the chambers in a world. Every in-budget run currently
-//! admits all `FLOORS_PER_RUN_CEILING` floors, so the unsliced population is
-//! 20× higher; how many floors a run actually realizes is Task 2's draw.
+//! being a count of the chambers in a world.
+//!
+//! **Task 2's per-run floor draw landed and this readout is byte-identical
+//! across it** (re-run 2026-08-20: 5602 / 11754 / 9320, every H1 and H2 figure
+//! unchanged). That is invariance by construction, not an unbitten gate: every
+//! band's frozen floor range has a minimum of at least 1, so **floor 0 exists
+//! in every run that exists at all**, and a floor-0 slice cannot see a draw
+//! that only ever removes floors above it. The unsliced population is no
+//! longer 20× — it is 42.8 / 43.6 / 49.2 realized chambers per cave, measured
+//! by `underworld_chamber_reach::how_many_floors_does_a_run_realize`, which is
+//! where a count of the chambers in a world actually lives.
 //!
 //! ## H2 floor — the modal seated rung (needs the two kinds to differ)
 //!

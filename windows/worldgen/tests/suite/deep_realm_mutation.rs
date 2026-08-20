@@ -91,8 +91,12 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 /// baking the ladder's shape into this helper too.
 ///
 /// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
-/// carries `FLOORS_PER_RUN_CEILING` floors per run now, so this is 1/20 of the
-/// address space. Every caller here uses this helper COMPARATIVELY — a deep
+/// admits `FLOORS_PER_RUN_CEILING` floors per run, so this is 1/20 of the
+/// address space — and since Task 2's per-run floor draw, floor 0 is also the
+/// only floor EVERY run admits (every band's frozen range has a minimum of at
+/// least 1), which is what keeps the two arms below sampling the same
+/// population rather than two differently-truncated ones.
+/// Every caller here uses this helper COMPARATIVELY — a deep
 /// cave's count against a shallow one's, an authored budget's against a
 /// fabricated one's — and both arms sample the identical slice under the
 /// identical density, so the comparison is sound and the slice is not a

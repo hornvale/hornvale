@@ -587,8 +587,12 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     // `floor`. So every realized floor of a run contributes an IDENTICAL
     // `(rung, stratum)` pair, and widening adds no content axis whatever. What
     // it adds is trials: the independent existence draws per band go from 4 to
-    // 80, so the chance of a band contributing no sample at all falls from
-    // 1/16 to 2^-80.
+    // 4 x (this band's drawn run length), which since Task 2 is 4-20 at
+    // `Undercroft` and 20-80 at `Deeps` rather than a flat 80 — the sweep
+    // walks the ceiling and `chamber_exists` refuses the floors past each
+    // run's own count. Either way the chance of a band contributing no sample
+    // at all is bounded by 2^-16 (its worst case, four runs of one floor),
+    // against 1/16 before the floor axis existed.
     //
     // That is worth doing, and it is a patch over an older defect rather than
     // a fix for it. **This test demonstrates a DETERMINISTIC fact — that two

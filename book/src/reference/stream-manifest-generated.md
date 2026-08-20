@@ -214,6 +214,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
 | `chamber/v3` | the underworld chamber derivation, keyed on a delve-ladder address with a floor |
+| `chamber/run-floors/v1` | how many floors one run realizes, keyed on (cell, entrance, branch, band) |
 | `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact cell |
 | `hazard/event/v1` | the per-cell hazard-event draw, keyed on (cell, process, world-time block) |
 

@@ -463,14 +463,24 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 /// "how big is the address space" would find this function, and the number it
 /// returns is a twentieth of that answer.
 ///
-/// **Pairing it with a floor-0 measurement is deliberate and sufficient.**
+/// **Pairing it with a floor-0 measurement is deliberate, and after The
+/// Stope's Task 2 it is also load-bearing rather than merely economical.**
 /// [`chamber_count_at`] samples the same slice, and the Binomial this
-/// prediction feeds is per-address at
-/// [`PREDICTED_EXISTENCE_DENSITY`] — a per-address density holds on any subset
-/// of the lattice, so a one-floor slice is a smaller sample of the same
-/// distribution, never a different one. Widening both would multiply a
-/// 66-second live readout by 20 to sharpen a fit that is already the shape
-/// under test.
+/// prediction feeds is per-address at [`PREDICTED_EXISTENCE_DENSITY`].
+///
+/// That density used to hold on **any** subset of the lattice, which is what
+/// this doc said. It no longer does: `chamber_exists` now refuses any floor at
+/// or past its run's drawn count (`chamber::floors_in_run`), so the marginal
+/// existence probability of an arbitrary address is `0.5 × P(floor < the run's
+/// drawn count)` — well under 0.5, and varying by band. **Floor 0 is the one
+/// slice where the old reading survives**, because every band's frozen range
+/// has a minimum of at least 1, so floor 0 is admitted by every run.
+///
+/// So a one-floor slice at floor 0 remains a smaller sample of the *same*
+/// distribution; a slice at any other floor, or a sweep over the whole axis,
+/// would not be, and would drag the measured density below the frozen
+/// prediction for a reason that has nothing to do with `EXISTENCE_DENSITY`.
+/// Widening this is no longer a cost question.
 ///
 /// **This used to be indexed by `band_index(cave.deepest_band)`**, because the
 /// gate used to be `addr.band <= band_rank(cave.deepest_band)`. The arithmetic
@@ -486,11 +496,14 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 /// `(seed, cell)`, gated by `cave`'s own measured depth budget.
 ///
 /// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
-/// now carries `FLOORS_PER_RUN_CEILING` floors per run, so this walks 1/20 of
-/// it. That is the right sample for what it feeds — see
-/// [`addresses_in_budget_per_floor`], whose prediction is per-address and
-/// therefore holds on any subset — but it is emphatically not a count of the
-/// chambers in a world. Mirrors
+/// admits `FLOORS_PER_RUN_CEILING` floors per run, so this walks 1/20 of the
+/// address space. That is the right sample for what it feeds — and after Task
+/// 2's per-run draw it is the ONLY floor that still is, because floor 0 is the
+/// one every run admits; see [`addresses_in_budget_per_floor`] for why any
+/// other slice would measure a density the prediction does not name. It is
+/// emphatically not a count of the chambers in a world: the realized
+/// population is 42.8–49.2 per cave over the seed panel, measured by
+/// `underworld_chamber_reach::how_many_floors_does_a_run_realize`. Mirrors
 /// `deep_realm_mutation.rs`'s private `chamber_count` helper, restated here
 /// rather than shared — a test helper is not part of any crate's public
 /// surface, and that file already restates the band ladder for the same

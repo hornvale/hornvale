@@ -555,11 +555,15 @@ pub fn made_chambers(
         let gradient = terrain.geothermal_gradient_at(cell);
         // **`floor: 0` is a deliberate narrowing, not the whole run** (The
         // Stope). A settled community occupies the floors its run realizes,
-        // and how many those are is a drawn quantity Task 2 owns; marking
-        // every floor the lattice ADMITS would claim a community fills the
-        // ceiling rather than its run. This function still has no production
-        // call site (see its own doc), so the narrowing costs nothing a player
-        // can reach, and widening it belongs with the draw that says how wide.
+        // and how many those are is `chamber::floors_in_run`, which landed in
+        // Task 2 — so the reason for the narrowing has changed and the
+        // narrowing has not. Widening it now would be *possible* (walk
+        // `0..floors_in_run(seed, addr.run())` instead of pinning zero) and it
+        // would be a claim this campaign has not measured: that a community
+        // fills every floor of its run rather than some part of it. This
+        // function still has no production call site (see its own doc), so the
+        // narrowing costs nothing a player can reach, and the widening belongs
+        // with whatever campaign decides how much of a run a people occupies.
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,

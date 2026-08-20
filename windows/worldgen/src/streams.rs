@@ -56,6 +56,34 @@ hornvale_kernel::stream_labels! {
     ///
     /// `chamber/v1` and `chamber/v2` are retired and must never be reused.
     CHAMBER = "chamber/v3" => "the underworld chamber derivation, keyed on a delve-ladder address with a floor";
+    /// How many floors one **run** realizes — the floors of one `branch`
+    /// within one `band` (The Stope, Task 2; spec §3.1's per-band ranges).
+    /// Keyed on a [`crate::chamber::RunAddr`]: cell, entrance, branch and
+    /// band, a place in the fixed lattice and never a generation ordinal
+    /// (decision 0102).
+    ///
+    /// **A SEPARATE ROOT LEG FROM [`CHAMBER`], AND THAT IS THE COLLISION
+    /// ARGUMENT.** A run key (`cell/entrance/branch/band`) is a strict prefix
+    /// of a chamber key (`cell/entrance/branch/band/floor`), so the two
+    /// strings can never be equal — but prefix-inequality is a property of
+    /// today's spelling, and a later campaign that made `floor` optional in
+    /// the key would break it silently. Deriving the run draw under its own
+    /// permanent label instead means the two dynamic legs hang off
+    /// **different parent seeds**, so even a byte-identical key string yields
+    /// a different stream. `the_run_leg_and_the_chamber_leg_cannot_collide`
+    /// in `crate::chamber` asserts exactly that, on the same string.
+    ///
+    /// **Additive, not an epoch.** A new label derives its own independent
+    /// stream and perturbs no existing one, so `chamber/v3` stays and no
+    /// address relocates. What DOES change is which addresses exist: before
+    /// this leg every in-budget run admitted all
+    /// [`crate::chamber::FLOORS_PER_RUN_CEILING`] floors, and now it admits
+    /// the drawn count. That is a world change, carried by the gate rather
+    /// than by the key.
+    ///
+    /// The `/v1` suffix is the epoch discipline `settlement/name/v2` set:
+    /// re-shaping the run key later takes a `/v2`, never a rename.
+    RUN_FLOORS = "chamber/run-floors/v1" => "how many floors one run realizes, keyed on (cell, entrance, branch, band)";
     /// The volcano-identity derivation (The Repose). Keyed on the edifice's
     /// **source contact cell** — a place in the fixed geosphere, never a
     /// generation ordinal, and never the query cell a caller happened to ask

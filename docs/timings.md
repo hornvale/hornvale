@@ -1968,3 +1968,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T18:12:54Z | rebaseline | 72.187 | 234.603 | 12.190 | 3.42 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T18:14:08Z | gate-commit | 73.583 | 411.105 | 35.170 | 6.06 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T18:14:52Z | gate-commit | 22.763 | 50.235 | 11.784 | 2.72 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T18:37:04Z | quick | 13.184 | 11.343 | 0.335 | 0.89 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T18:38:11Z | rebaseline | 61.885 | 236.083 | 12.164 | 4.01 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T18:39:24Z | rebaseline | 56.349 | 234.954 | 11.537 | 4.37 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T18:50:08Z | gate-commit | 46.055 | 65.631 | 16.723 | 1.79 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |

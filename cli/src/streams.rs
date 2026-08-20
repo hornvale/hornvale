@@ -350,6 +350,28 @@ mod tests {
                 // spells the rung's NAME. `chamber/v2` joins `chamber/v1` in
                 // retirement; neither is ever reused.
                 "chamber v3",
+                // The Stope, Task 2: how many floors one RUN — the floors of
+                // one branch within one band — realizes. A NEW label,
+                // ADDITIVE at v1: it derives its own independent stream and
+                // perturbs none of the ones above it, so `chamber/v3` stays
+                // and no chamber address relocates. What it changes is which
+                // addresses EXIST — before it, every in-budget run admitted
+                // all `FLOORS_PER_RUN_CEILING` floors, and the lattice
+                // ceiling was standing in for a distribution.
+                //
+                // Versioned from birth for the same reason `chamber` and
+                // `entity/identity` are: its KEY is a save-format contract
+                // (a RunAddr's cell, entrance, branch and band NAME — see
+                // `windows/worldgen/src/chamber.rs`'s `run_key`), and
+                // re-shaping it re-decides how long every run in every world
+                // is.
+                //
+                // **Its own leg, rather than a key shape under `chamber`,**
+                // so a run draw and a chamber draw are separated by their
+                // PARENT and not by the observation that one key is a strict
+                // prefix of the other. See `windows/worldgen/src/streams.rs`'s
+                // `RUN_FLOORS`.
+                "chamber/run-floors v1",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.
