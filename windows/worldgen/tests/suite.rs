@@ -199,3 +199,5 @@ mod warren_readout;
 mod waterline_probe;
 #[path = "suite/watershed_measure.rs"]
 mod watershed_measure;
+#[path = "suite/winze_energy_probe.rs"]
+mod winze_energy_probe;
