@@ -234,12 +234,16 @@ operator instruments (out-of-character; bypass the body, never the world):
   !soothe [who]    ease a co-located NPC's disposition, your own mark
   !help            this list
 
-the objective halves (out-of-character; the same view, ungated):
-  !map [out N]     the chart drawn in plain terrain, not through your eyes
-  !examine <thing> as examine, but a creature standing here in the dark
-                   answers too
-  !needs           the felt state of everyone here, seen or unseen
-  !wait [N]        as wait, and the clock moves the same; the world's comings
+the objective halves (out-of-character; the same view with the gate at its
+limit — so where nothing is being withheld, each answers exactly as its bare
+twin does):
+  !map [out N]     the chart drawn in plain terrain, not through your eyes;
+                   indoors it differs only when a lens is on
+  !examine <thing> as examine, but indoors a creature standing here in the
+                   dark answers too
+  !needs           the felt state of everyone here, seen or unseen; only
+                   indoors is anyone unseen
+  !wait [N]        as wait, and the clock moves the same; indoors, the comings
                    and goings are narrated whether you could see them or not
 ";
 
@@ -1342,6 +1346,26 @@ impl<'w> Session<'w> {
     /// limit: [`OBJECTIVE_EYES`] for the chart, [`Perceiving::Objectively`]
     /// for the sight gate. There is no second rendering path anywhere in this
     /// arm, deliberately.
+    ///
+    /// # THE LIMIT IS INERT IN SOME BANDS, AND EACH ARM SAYS WHERE
+    ///
+    /// Every one of the four discriminates *somewhere* — that is the STOP rule
+    /// this task applied per verb, and it is why these four shipped and
+    /// `!look`/`!knows` did not. It is not a promise that each differs from its
+    /// bare twin *everywhere*, and three of them are exact aliases in a
+    /// nameable band:
+    ///
+    /// | arm | where it discriminates | where it is an alias, and why |
+    /// |---|---|---|
+    /// | `!map` | out of doors, and indoors under a lens | indoors under [`crate::lens::Lens::Off`] — the plan carries no colour to decline, so the bytes match `map` exactly |
+    /// | `!examine` | the chamber band, on a creature sight withheld | the walk band (the objective eyes reach [`Self::purview_through`] but the legend carries nouns and datums, never colour) and underground (no creature arm at all) |
+    /// | `!needs` | the chamber band | out of doors, where `sighting()` is `None` and [`Perceiving::Body`] already *is* the limit |
+    /// | `!wait` | the chamber band, on both halves of the motion narration | out of doors, for the same reason as `!needs` |
+    ///
+    /// An alias here is the honest outcome, not a defect: the objective view of
+    /// a place with nothing withheld is the subjective view of it. What would
+    /// be a defect is advertising otherwise, so [`HELP`] states the band each
+    /// arm is *for* rather than promising a difference it cannot always make.
     ///
     /// # Two of spec §3.2's six group-B verbs are NOT here
     ///
@@ -2596,6 +2620,12 @@ impl<'w> Session<'w> {
     /// escape sequence, no caption. That is not a convenience, it is how the
     /// committed transcripts stay unlensed by construction rather than by
     /// remembering a flag.
+    ///
+    /// **A plan with no observer takes that same path even under a lens**, and
+    /// the arm below records why: with `eyes` resolving to `None` there is no
+    /// colour for the lens to filter, so tinting is already the identity and
+    /// only the caption would have differed. `!map` reaches it through
+    /// [`OBJECTIVE_EYES`]; a bare `map` reaches it after `!eyes off`.
     fn plan_here(&self, eyes: &crate::eyes::Eyes) -> Result<String, VesselError> {
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (the arm checks first), the same guard
@@ -2614,6 +2644,20 @@ impl<'w> Session<'w> {
             .collect();
         let (picture, disclosure) = match self.lens {
             crate::lens::Lens::Off => (plan.picture, String::new()),
+            // NO OBSERVER MEANS NO COLOUR, SO THERE IS NOTHING FOR A LENS TO
+            // FILTER (The Deed, Task 6 fix round 1). `eyes::resolve` returns
+            // `None` for `Eyes::Off` — which is [`OBJECTIVE_EYES`], what
+            // `!map` passes, and equally what a player selects by typing
+            // `!eyes off` before a bare `map`. `chamber_plan` then builds its
+            // `Shading` as `None`, every palette entry carries `color: None`,
+            // and `tint` returns the picture unchanged glyph for glyph. The
+            // caption exists so a render through one lens cannot present
+            // itself as another; captioning an untinted plan `— lens: lantern`
+            // is that same false disclosure with the lens count at zero. So an
+            // unobserved plan falls to the `Lens::Off` shape it is already
+            // byte-identical to, rather than announcing a filter that did
+            // nothing.
+            _ if crate::eyes::resolve(eyes, &self.agent).is_none() => (plan.picture, String::new()),
             lens => {
                 let coloured = self.chamber_plan(inside, Vec::new(), eyes)?;
                 (
@@ -3533,6 +3577,25 @@ impl<'w> Session<'w> {
     ///
     /// Out of doors `sighting` is `None`, so this is exactly `colocated_npcs`
     /// and no band but the chamber narrows anything.
+    ///
+    /// **One caller was added and no fourth row** (The Deed, Task 6):
+    /// [`Self::perceived_npcs`] chooses between this predicate narrowed by
+    /// `sighting()` and this predicate called with `None`. The
+    /// out-of-character halves take exactly the limit the sentence above
+    /// already describes, so every row of the table holds under both moods.
+    fn sensed_npcs(&self, sighting: Option<&Sighting>) -> Vec<&Npc> {
+        self.colocated_npcs()
+            .into_iter()
+            .filter(|npc| {
+                !sighting.is_some_and(|s| {
+                    s.placed
+                        .get(&npc.entity)
+                        .is_some_and(|cell| !s.lit.contains(cell))
+                })
+            })
+            .collect()
+    }
+
     /// Who is here, as `how` decides: [`Perceiving::Body`] narrows by sight,
     /// [`Perceiving::Objectively`] does not.
     ///
@@ -3551,19 +3614,6 @@ impl<'w> Session<'w> {
             // at its limit.
             Perceiving::Objectively => self.sensed_npcs(None),
         }
-    }
-
-    fn sensed_npcs(&self, sighting: Option<&Sighting>) -> Vec<&Npc> {
-        self.colocated_npcs()
-            .into_iter()
-            .filter(|npc| {
-                !sighting.is_some_and(|s| {
-                    s.placed
-                        .get(&npc.entity)
-                        .is_some_and(|cell| !s.lit.contains(cell))
-                })
-            })
-            .collect()
     }
 
     /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty

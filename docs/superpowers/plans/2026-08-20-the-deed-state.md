@@ -12,7 +12,7 @@ move it into scratch.*
 
 ---
 
-## Status: Tasks 1-5 complete, 6-8 remain
+## Status: Tasks 1-6 complete, 7-8 remain
 
 | Task | Ships | State |
 |---|---|---|
@@ -21,8 +21,8 @@ move it into scratch.*
 | 3 | `Mood` as a property of the action | complete, clean after 1 fix round |
 | 4 | The body-state gate table + roster tripwire | complete, clean after 1 fix round |
 | 5 | The `!` namespace; group A's bare forms retired | complete, clean after 1 fix round |
-| **6** | **Group B's out-of-character halves** | **next** |
-| 7 | In-character acts charge time and post facts | not started — the acceptance test |
+| 6 | Group B's out-of-character halves — **four** arms, not six | complete, clean after 1 fix round |
+| **7** | **In-character acts charge time and post facts** | **next** — the acceptance test |
 | 8 | Close the campaign | not started |
 
 Main absorbed at `c45d3120`. `gate-commit` green throughout.
@@ -46,6 +46,47 @@ commented dispatch arms already points at Task 5 in a 5,800-line file.
 STOP if no discriminating fixture can be built. An out-of-character form that
 is observationally identical to its in-character twin is a no-op, and shipping
 it would be worse than not shipping it.
+
+**Task 6 shipped FOUR arms, and the two missing ones are the finding.**
+`!map`, `!examine`, `!needs` and `!wait` render the objective view — the
+existing renderer's own gating parameter at its permissive limit, never a
+second rendering path. `!look` and `!knows` are deliberately **not** shipped,
+because the STOP rule applied per verb (ledger #13) and neither has a
+parameter to relax:
+
+- `look`'s three band arms (`describe_here`, `describe_chamber_here`,
+  `describe_underground_here`) consult no sight, eyes, lens or knowledge at
+  all. They render the place, and the place is objective already.
+- `knows` prints every entry of `self.knowledge`. That store *is*
+  perception-filtered, but upstream — `absorb_here` absorbs
+  `self.projection.project(&v, &self.agent.perception)` — so the gate is at
+  absorb time and is not a parameter of the renderer. (An earlier statement
+  of this, in the Task 6 commit message, said `knows` has "no gate at all";
+  that is wrong about the mechanism while right about the verdict.)
+
+`ooc_objective.rs`'s `neither_look_nor_knows_has_an_objective_half` pins both
+as unknown verbs, so a later campaign cannot add a silent alias without going
+red first. `!wait` charges time exactly as `wait` does (spec §3.4); the other
+three charge nothing.
+
+**Task 7 — `cost_ticks`' `.max(1)` will charge an out-of-character act a tick
+it must not pay.** `base_ticks` returns `Ticks(0)` for all four
+`Objective*` variants, and its own comment says why: "Charging a constant here
+would add a second, silent clock movement on top of the one the player named."
+But `cost_ticks` (`windows/vessel/src/clock.rs:217-225`) ends
+`Ticks((scaled.round() as u64).max(1))`, so any Task 7 wiring that routes an
+out-of-character act through `cost_ticks` charges **1 tick, not 0** —
+producing exactly the second silent advance `base_ticks` avoids, and most
+visibly for `!wait`, which already moves the clock by the player's named span.
+Nothing routes through it yet, so this is a trap and not a live defect. Two
+candidate resolutions, neither chosen here:
+
+1. Task 7 branches on `Action::mood()` before calling `cost_ticks`, so an
+   `OutOfCharacter` action never reaches the floor.
+2. `cost_ticks` does not apply `.max(1)` to an `OutOfCharacter` action —
+   keeping the floor where its doc's justification actually applies ("a free
+   action would let a creature act unboundedly at one instant", which is a
+   statement about in-character acts).
 
 **Task 7 — the sleep verb.** The acceptance test ("the player sleeps, IC
 refuses, OOC works") cannot pass without a verb that puts the body to sleep,

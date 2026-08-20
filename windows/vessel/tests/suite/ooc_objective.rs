@@ -15,9 +15,15 @@
 //! [`neither_look_nor_knows_has_an_objective_half`] records that as a
 //! finding rather than leaving it to be rediscovered:
 //!
-//! - **`knows`** (`Session::knows`) dumps `self.knowledge` wholesale with no
-//!   gate at all. The player's knowledge *is* the subject, so there is no
-//!   permissive limit to take.
+//! - **`knows`** (`Session::knows`) prints every entry of `self.knowledge`
+//!   with no gate **of its own**. It is not ungated upstream — `absorb_here`
+//!   fills that store through `self.projection.project(&v,
+//!   &self.agent.perception)`, so perception has already decided what is in
+//!   it — but that filter runs at absorb time and is not a parameter of the
+//!   renderer, so there is nothing here to take to a limit. The player's
+//!   knowledge *is* the subject; relaxing it would mean re-deriving what the
+//!   body never absorbed, which is a different object, not a wider view of
+//!   this one.
 //! - **`look`** (`Session::describe_here` / `describe_chamber_here` /
 //!   `describe_underground_here`) has no perceptual gate either — none of
 //!   the three band arms consults `sensed_npcs`, `sighting`, `eyes`, `lens`
@@ -229,6 +235,71 @@ fn world_where_an_unsensed_creature_departs() -> (u64, hornvale_kernel::World, S
     );
 }
 
+/// A world where, one `wait` after entering, a creature the possession
+/// **cannot** sense ARRIVES in the chamber — the fixture the arrival half of
+/// `!wait` discriminates on.
+///
+/// This is a second fixture rather than a second assertion on the departure
+/// one because `narrate_motion` gates the two transitions on two **different**
+/// rosters: a departure on `sensed_before` (captured in `Session::wait` before
+/// the day advances), an arrival on `sensed_now` (recomputed inside
+/// `narrate_motion`, because a creature that is here now is judged by what can
+/// be seen now). Fix round 1 established that the departure test alone leaves
+/// the arrival roster unguarded: rewiring `sensed_now` to `Perceiving::Body`
+/// left the entire vessel suite green.
+///
+/// Read through the public surface, in three observations that between them
+/// pin the whole transition: the walk-band chart before `enter` (the creature
+/// is NOT here), the chamber-band snapshot after the `wait` (the body does not
+/// sense it), and the walk-band chart after `out` (it IS here). `out` runs no
+/// tick, so the third read observes the state the `wait` produced.
+///
+/// **It is the most expensive test in this crate, and the cost is the search**
+/// — the hit is at seed 28, so 29 worlds are built at ~4.5 s each (measured
+/// 130.7 s on a MacBook Pro; the departure fixture hits early and costs 18.5 s
+/// for the same shape). Widening the wait to three days was tried and lands on
+/// the same seed 24 s slower, so the span is not the lever: world construction
+/// is. Pinning seed 28 would buy the time back and is exactly what the module
+/// header refuses, for the reason it gives.
+fn world_where_an_unsensed_creature_arrives() -> (u64, hornvale_kernel::World, String) {
+    for seed in SIGHT_SEEDS {
+        let Some(world) = world_at(seed) else {
+            continue;
+        };
+        let found = {
+            let Ok((mut session, _)) = Session::start(&world, &PossessOpts::default()) else {
+                continue;
+            };
+            session.handle("wait");
+            let before = colocated_creature_nouns(&session);
+            session.handle("enter");
+            if !is_inside(&session) {
+                None
+            } else {
+                session.handle("wait");
+                // Read WHILE STILL INSIDE: `sensed.present` is the chamber
+                // band's narrowed roster, and it is exactly the moment
+                // `narrate_motion` asks its arrival question about.
+                let sensed = sensed_labels(&session);
+                session.handle("out");
+                colocated_creature_nouns(&session)
+                    .into_iter()
+                    .find(|noun| !before.contains(noun) && !sensed.contains(noun))
+            }
+        };
+        if let Some(noun) = found {
+            return (seed, world, noun);
+        }
+    }
+    panic!(
+        "no seed in {SIGHT_SEEDS:?} produces a chamber a creature the possession \
+         cannot sense ARRIVES in — the search found nothing, so the arrival half \
+         of `!wait`'s discriminator could not be built. Either the arrival \
+         narration or the sight narrowing regressed, or every world in the range \
+         stopped exercising the pair."
+    );
+}
+
 /// `!map` — the gate is `eyes`, and its permissive limit is the observer
 /// step declined (`Eyes::Off` → `eyes::resolve` → `None`): the objective,
 /// uncoloured terrain chart, not the one this body's photoreceptors
@@ -266,6 +337,101 @@ fn the_objective_map_draws_the_uncoloured_chart() {
         subjective, objective,
         "`!map` must not be an alias for `map`: it draws the objective terrain, \
          not this body's colour projection of it"
+    );
+}
+
+/// A lantern-lensed possession of the seed-42 world, standing in its first
+/// chamber. The lens is the only thing that differs from every other fixture
+/// here, and it is set through `PossessOpts` because that is the only way in:
+/// the CLI's interactive path selects `Lens::Lantern` the same way
+/// (`cli/src/main.rs`), while `--script` selects `Lens::Off` so committed
+/// transcripts stay unlensed.
+fn lantern_session_inside(
+    world: &hornvale_kernel::World,
+    eyes: hornvale_vessel::eyes::Eyes,
+) -> Session<'_> {
+    let opts = PossessOpts {
+        lens: hornvale_vessel::lens::Lens::Lantern,
+        eyes,
+        ..PossessOpts::default()
+    };
+    let (mut s, _) = Session::start(world, &opts).expect("seed 42 possesses");
+    s.handle("enter");
+    assert!(
+        is_inside(&s),
+        "precondition: the seed-42 possession must open a chamber, or the plan \
+         under test is never drawn"
+    );
+    s
+}
+
+/// `!map` indoors under a lens must not caption a plan it never tinted (fix
+/// round 1).
+///
+/// `!map` passes `OBJECTIVE_EYES` (`Eyes::Off`), `eyes::resolve` answers
+/// `None` for it, `chamber_plan` therefore builds no `Shading`, every palette
+/// entry carries `color: None`, and `tint` hands the picture back glyph for
+/// glyph. Appending ` — lens: lantern` to that says a filter ran which did
+/// not — the one thing the caption exists to prevent, with the lens count at
+/// zero instead of one.
+///
+/// The positive control is the load-bearing half: bare `map` under the same
+/// lens and the same session MUST still be captioned and MUST still carry
+/// escape bytes. Without it, "the objective plan is uncaptioned" would be
+/// satisfied just as well by a lens that was never on.
+#[test]
+fn the_objective_plan_is_not_captioned_with_a_lens_it_never_applied() {
+    let w = world();
+    let mut s = lantern_session_inside(&w, hornvale_vessel::eyes::Eyes::Own);
+    let subjective = out(&mut s, "map");
+    let objective = out(&mut s, "!map");
+
+    assert!(
+        subjective.contains("lens: lantern"),
+        "positive control: bare `map` indoors under `--lens lantern` must still \
+         caption itself, or this pair proves nothing. Got: {subjective}"
+    );
+    assert!(
+        subjective.contains("\u{1b}["),
+        "positive control: the captioned plan must actually be tinted. Got: \
+         {subjective:?}"
+    );
+    assert!(
+        !objective.contains("lens:"),
+        "`!map` declines the observer step, so nothing on its plan carries a \
+         colour and the lens filters nothing — it must not caption itself as \
+         lensed. Got: {objective}"
+    );
+    assert!(
+        !objective.contains("\u{1b}["),
+        "precondition: the objective plan must be untinted — that is what makes \
+         the caption a false one. Got: {objective:?}"
+    );
+}
+
+/// The same falsehood is reachable on the BARE path, which is why the fix is
+/// keyed on the resolved observer rather than on the `!` namespace: a player
+/// who types `!eyes off` and then a bare `map` has declined the observer step
+/// just as `!map` does, and must get the same honest caption.
+///
+/// This is also the guard on the fix's own blast radius. The bare path is the
+/// one Task 6 must leave untouched, so it is pinned in both directions here:
+/// uncaptioned when the eyes are off, captioned when they are not (the test
+/// above holds the second half on the same session shape).
+#[test]
+fn a_bare_plan_drawn_with_the_eyes_off_is_not_captioned_either() {
+    let w = world();
+    let mut s = lantern_session_inside(&w, hornvale_vessel::eyes::Eyes::Off);
+    let drawn = out(&mut s, "map");
+
+    assert!(
+        !drawn.contains("lens:"),
+        "a possession whose eyes are off draws no colour, so a lens filters \
+         nothing and the plan must not caption itself as lensed. Got: {drawn}"
+    );
+    assert!(
+        !drawn.contains("\u{1b}["),
+        "precondition: eyes off must draw an untinted plan. Got: {drawn:?}"
     );
 }
 
@@ -377,6 +543,46 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     );
 }
 
+/// `!wait`'s ARRIVAL half, which is a second gate and needs a second test.
+///
+/// `Session::wait` captures `sensed_before` and `narrate_motion` recomputes
+/// `sensed_now`; the departure test above exercises only the first. Fix round
+/// 1 proved the gap rather than reasoning about it — rewiring the `sensed_now`
+/// computation to `Perceiving::Body` left all 579 vessel tests green.
+#[test]
+fn the_objective_wait_narrates_an_arrival_the_body_could_not_see() {
+    let (seed, w, hidden) = world_where_an_unsensed_creature_arrives();
+
+    let (mut s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    s.handle("wait");
+    s.handle("enter");
+    let subjective = out(&mut s, "wait");
+
+    let (mut s2, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    s2.handle("wait");
+    s2.handle("enter");
+    let objective = out(&mut s2, "!wait");
+
+    assert!(
+        !is_unknown_verb(&objective),
+        "`!wait` must be a recognised out-of-character verb, got: {objective}"
+    );
+    assert!(
+        !subjective.contains(&hidden),
+        "precondition (seed {seed}): bare `wait` must drop the arrival of \
+         `{hidden}`, whom the body cannot see. Got: {subjective}"
+    );
+    assert!(
+        objective.contains("You notice") && objective.contains(&hidden),
+        "`!wait` must narrate `{hidden}` arriving — the arrival the body could \
+         not witness. Got: {objective}"
+    );
+    assert_ne!(
+        subjective, objective,
+        "`!wait` must not be an alias for `wait` on the arrival half either"
+    );
+}
+
 /// `!wait` is the one out-of-character act that moves the clock (spec §3.4:
 /// out-of-character "charges nothing by default — `!wait` is the exception
 /// that moves the clock"). Without it, being asleep would be
@@ -413,9 +619,13 @@ fn the_objective_wait_moves_the_clock_exactly_as_the_bare_form_does() {
 /// **not** ship, pinned so a later campaign cannot add a silent alias
 /// without this going red first.
 ///
-/// `knows` has no gate: it prints every entry of `self.knowledge`, and the
-/// player's knowledge is the subject rather than something withheld from
-/// them. `look` has no gate either: its three band arms
+/// `knows` has no gate **the renderer could relax**: it prints every entry of
+/// `self.knowledge`, and while that store is itself perception-filtered
+/// (`absorb_here` absorbs `self.projection.project(&v,
+/// &self.agent.perception)`), the filter runs upstream at absorb time rather
+/// than as a parameter of `knows`. The player's knowledge is the subject, so
+/// a permissive limit would have to re-derive what the body never absorbed —
+/// a different object. `look` has no gate either: its three band arms
 /// (`describe_here`, `describe_chamber_here`, `describe_underground_here`)
 /// read the place, and none of them consults sight, eyes, lens or
 /// knowledge. Neither has a permissive limit to take, so an out-of-character
