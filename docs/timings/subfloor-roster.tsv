@@ -1140,6 +1140,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -1148,7 +1149,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1207,7 +1207,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2454,9 +2453,9 @@ hornvale-vessel::hornvale_vessel$liveness::tests::home_nav_cache_is_keyed_by_hom
 hornvale-vessel::hornvale_vessel$liveness::tests::home_nav_cache_is_per_entity_never_global
 hornvale-vessel::hornvale_vessel$liveness::tests::home_nav_moving_triggers_exactly_one_new_search
 hornvale-vessel::hornvale_vessel$liveness::tests::home_nav_pays_zero_searches_for_a_stationary_unchanged_belief_entity_after_warmup
-hornvale-vessel::hornvale_vessel$liveness::tests::hunger_proposal_eats_at_a_rich_cell_and_forages_from_a_barren_one
 hornvale-vessel::hornvale_vessel$liveness::tests::hunger_folds_eaten_and_resets_on_a_meal
 hornvale-vessel::hornvale_vessel$liveness::tests::hunger_integrates_faster_over_a_hot_occupancy
+hornvale-vessel::hornvale_vessel$liveness::tests::hunger_proposal_eats_at_a_rich_cell_and_forages_from_a_barren_one
 hornvale-vessel::hornvale_vessel$liveness::tests::is_awake_follows_the_sun_and_the_activity_cycle
 hornvale-vessel::hornvale_vessel$liveness::tests::is_water_delegates_to_terrain_is_fresh_water
 hornvale-vessel::hornvale_vessel$liveness::tests::learned_helplessness_onsets_after_prolonged_thirst_and_probes_periodically
@@ -2493,10 +2492,10 @@ hornvale-vessel::hornvale_vessel$liveness::tests::the_shudder_is_felt_on_the_pha
 hornvale-vessel::hornvale_vessel$liveness::tests::the_shun_a_frightened_creature_detours_around_remembered_ground_a_control_goes_through
 hornvale-vessel::hornvale_vessel$liveness::tests::the_thermal_drive_folds_the_hearths_warmth_additively
 hornvale-vessel::hornvale_vessel$liveness::tests::the_threat_niche_is_derived_from_nature
+hornvale-vessel::hornvale_vessel$liveness::tests::thermal_comfort_step_breaks_ties_by_ascending_room_addr
 hornvale-vessel::hornvale_vessel$liveness::tests::thermal_proposal_crosses_the_room_toward_the_hearth
 hornvale-vessel::hornvale_vessel$liveness::tests::thermal_proposal_falls_back_to_the_room_scale_gradient_when_the_hearth_is_unroutable
 hornvale-vessel::hornvale_vessel$liveness::tests::thermal_proposal_steps_toward_the_comfortable_neighbor_both_directions
-hornvale-vessel::hornvale_vessel$liveness::tests::thermal_comfort_step_breaks_ties_by_ascending_room_addr
 hornvale-vessel::hornvale_vessel$liveness::tests::thermal_respects_the_niche_cold_tolerates_what_warm_flees
 hornvale-vessel::hornvale_vessel$liveness::tests::thermal_serviceability_scores_the_within_room_step_by_warmth_gained
 hornvale-vessel::hornvale_vessel$liveness::tests::thermal_urgency_and_proposal_are_deterministic_and_recompute_identically
@@ -2555,6 +2554,12 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_determin
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
+hornvale-vessel::suite$action_module::every_action_variant_still_carries_a_concept_name
+hornvale-vessel::suite$action_module::the_action_layer_has_its_own_module
+hornvale-vessel::suite$body_mass::an_absent_biosphere_falls_back_to_the_reference_mass
+hornvale-vessel::suite$body_mass::an_unknown_species_falls_back_to_the_reference_mass
+hornvale-vessel::suite$body_mass::the_inline_creature_derivation_and_mass_for_species_agree
+hornvale-vessel::suite$body_mass::the_two_fallback_arms_are_the_same_value
 hornvale-vessel::suite$course_properties::a_due_north_course_never_leaves_its_meridian
 hornvale-vessel::suite$course_properties::a_fixed_priority_exit_matching_cycle_traps_in_a_closed_room_set
 hornvale-vessel::suite$course_properties::a_memoryless_walk_leaves_the_meridian_that_h1_pins
