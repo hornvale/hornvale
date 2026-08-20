@@ -102,8 +102,15 @@ else. Nothing was committed to `main`.
   gave each arm a real body. Self-resolved, but worth keeping as a process
   observation: **a plan can mandate a shape that is dead on arrival for two
   tasks**, and nothing caught that gap until the arms filled in.
-- One boundary case is hand-traced correct but unpinned by a test: a line
-  exactly as wide as the pane.
+- ~~One boundary case is hand-traced correct but unpinned by a test: a line
+  exactly as wide as the pane.~~ — CLOSED in the fix wave, which added
+  `a_line_exactly_as_wide_as_the_pane_lands_the_caret_on_its_last_column`
+  (`clients/game/core/src/entry.rs`). Kept struck rather than deleted because
+  the way it survived is the lesson: **the same commit that added the test
+  left this sentence asserting no test existed.** The re-review caught it, and
+  it is the campaign's own recurring shape landing one last time inside the
+  work that was closing it out — a doc claim cannot be verified by a test, so
+  it reads as freshly checked while being false.
 - ~~A multi-byte glyph preceding the caret in the render path~~ — STRUCK on
   the final review. Every index in the path was traced: `write_command_line`
   builds a `Vec<char>` and does all window arithmetic in char counts,
