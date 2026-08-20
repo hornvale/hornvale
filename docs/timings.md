@@ -1972,3 +1972,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T18:38:11Z | rebaseline | 61.885 | 236.083 | 12.164 | 4.01 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T18:39:24Z | rebaseline | 56.349 | 234.954 | 11.537 | 4.37 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T18:50:08Z | gate-commit | 46.055 | 65.631 | 16.723 | 1.79 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T18:51:01Z | gate-commit | 27.800 | 52.009 | 12.130 | 2.31 | 0 | 5bdf0f38 | campaign/the-stope | MacBookPro | 10 |
