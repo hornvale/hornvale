@@ -1985,3 +1985,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T20:11:26Z | rebaseline | 68.268 | 239.842 | 12.124 | 3.69 | 0 | 4dfb552a | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T20:12:24Z | gate-commit | 52.226 | 233.927 | 27.812 | 5.01 | 0 | 4dfb552a | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T20:20:48Z | gate-commit | 35.366 | 54.931 | 12.244 | 1.90 | 0 | 4dfb552a | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T20:42:24Z | rebaseline | 70.105 | 245.672 | 12.594 | 3.68 | 0 | b8abc2b2 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T20:43:41Z | rebaseline | 65.421 | 241.889 | 12.520 | 3.89 | 0 | b8abc2b2 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T20:44:54Z | rebaseline | 57.857 | 239.311 | 12.182 | 4.35 | 0 | b8abc2b2 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T20:46:25Z | rebaseline | 67.947 | 238.833 | 11.234 | 3.68 | 0 | b8abc2b2 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T20:47:50Z | rebaseline | 77.291 | 241.810 | 12.037 | 3.28 | 0 | b8abc2b2 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T20:48:53Z | rebaseline | 55.853 | 235.435 | 12.055 | 4.43 | 0 | b8abc2b2 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-20T20:54:18Z | gate-commit | 39.816 | 77.243 | 33.507 | 2.78 | 0 | b8abc2b2 | campaign/the-stope | MacBookPro | 10 |

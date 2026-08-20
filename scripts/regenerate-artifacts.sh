@@ -651,19 +651,28 @@ gen_underworld_lattice() {
     printf 'systems each has, how many chambers exist beneath them, how those chambers\n'
     printf 'distribute over the delve ladder and over the rock they sit in, and then --\n'
     printf 'run by run -- the first three cave systems of each world.\n\n'
-    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A chamber is never stored. Existence and content are pure functions of an\n'
     printf 'address, so this page is a *witness*, not a record: every line is re-derived\n'
     printf 'from the seed on each regeneration, and a change to the derivation key, to\n'
-    printf 'the existence draw, to a run'"'"'s drawn length or to the depth the rock grants\n'
-    printf 'a cave moves bytes here.\n\n'
+    printf 'the existence draw, to a run'"'"'s drawn length, to a chamber'"'"'s content or\n'
+    printf 'to the depth the rock grants a cave moves bytes here.\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '`reachable` is the count a player would actually experience: chambers\n'
+    printf 'reachable from an entrance by the passage graph, which today has no\n'
+    printf 'vertical connection at all -- so everything above floor 0 is cut off. That\n'
+    printf 'gap is the number, not a rounding error.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'The `key` column is the real derivation key of that run'"'"'s floor 0 --\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'the string `StreamLabel::dynamic` hashes -- not a rendering of the address.\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'A `#` is a floor that exists; a `.` is one the draw refused, or one whose\n'
-    printf 'band sits deeper than the cave'"'"'s own budget reaches.\n\n'
+    printf 'Each run shows one glyph per floor the LATTICE admits, never per floor the\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'run drew: a `#` exists, a `.` was refused by the existence draw (or sits\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'deeper than the cave'"'"'s budget reaches), and a `_` is past that run'"'"'s\n'
+    printf 'own drawn length. Bounding the row by the drawn length instead is what made\n'
+    printf 'an earlier version of this page unable to see either floor gate at all.\n\n'
     printf '```text\n'
     run -p hornvale -- underworld --seed 42
     printf '\n'

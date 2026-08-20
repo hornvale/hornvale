@@ -15,16 +15,14 @@
 //! So this renders the lattice into a committed, drift-checked artifact. It
 //! is a **witness**, not a census: the numbers here are whatever the world
 //! says, and no assertion in this crate holds them to a value. What holds them
-//! is `git diff --exit-code` over the declared paths — a change to chamber
-//! existence, to a chamber's content, to the run draw, to the derivation key
-//! or to the reach the terrain grants moves bytes in a file somebody has to
-//! look at.
+//! is `git diff --exit-code` over the declared paths.
 //!
 //! **What it is deliberately built out of.**
 //!
 //! - **The shipped entry points, only.** Every existence verdict comes from
-//!   [`crate::chamber::chamber_at`] and every floor count from
-//!   [`crate::chamber::floors_in_run`]. Nothing here re-implements a
+//!   [`crate::chamber::chamber_at`], every floor count from
+//!   [`crate::chamber::floors_in_run`], every passage from
+//!   [`crate::chamber::passages_from`]. Nothing here re-implements a
 //!   derivation, because a re-implementation cannot witness the real one —
 //!   Task 2's own lesson, learned when a test that derived both legs inline
 //!   let a re-parented `run_stream` through.
@@ -39,15 +37,61 @@
 //!   and both go through [`hornvale_kernel::quantize`] here at the boundary —
 //!   never in the compute path the lattice actually reads.
 //!
+//! # THE LOOP BOUND IS THE LATTICE, NEVER A DRAW — read this before editing
+//!
+//! The floor walk is `0..FLOORS_PER_RUN_CEILING`, a **constant**, and it must
+//! stay one. The first version of this module walked `0..drawn`, where
+//! `drawn = floors_in_run(..)` is *the same value* `chamber_exists`'s own
+//! floor gate compares against — so the gate could never fire on any address
+//! this readout asked about, and review proved it by deleting the gate
+//! outright and getting a byte-identical artifact. That mutation deletes the
+//! whole of Task 2 (it is what makes a run a distribution rather than a
+//! constant) and the witness did not move.
+//!
+//! **An instrument that derives its own loop bound from the draw it is meant
+//! to witness is self-consistent by construction and cannot ask a question the
+//! gate could answer differently.** Both floor gates
+//! ([`crate::chamber::FLOORS_PER_RUN_CEILING`] and the drawn length) are now
+//! visible and distinguishable, and [`Tallies::past_run_length`] is the
+//! sharpest reading of the second: it is 0 in a healthy tree and large the
+//! moment the gate stops gating.
+//!
+//! # What this witness does NOT see today, stated rather than discovered
+//!
+//! - **The `entrance` axis.** Every address here is built at
+//!   [`WITNESSED_ENTRANCES`] = 1, i.e. `entrance: 0`, because that is the only
+//!   entrance the lattice has a producer for. Entrances become plural in Task
+//!   5, and extending this is that task's job: the loops below are shaped so
+//!   the extension is raising that constant and sourcing the per-cell count,
+//!   not a rewrite.
+//! - **`ChamberOrigin::Made`.** The `origin` field *is* read and tallied
+//!   ([`Tallies::by_origin`]), so [`crate::chamber::resolve_origin`] is wired
+//!   end to end — but the override source this hands `chamber_at` is
+//!   [`crate::chamber::ChamberOverrides::new`], an empty map, so `made` is 0
+//!   **by construction** and will stay 0 however good Task 4's writer is.
+//!   `crate::delve_seating::made_chambers` is the writer, and it needs a
+//!   `History` and a seating map — both far above `BuildDepth::Terrain`, which
+//!   is why this cheap readout cannot call it. **Task 4's job is to hand this
+//!   function a real override source**; until it does, a `made` of 0 means
+//!   "nobody asked", not "nothing was made".
+//! - **Vertical connection.** [`crate::chamber::passages_from`] does not treat
+//!   `floor` as an adjacency axis yet, so [`Tallies::reachable`] counts only
+//!   the entrance floor's component. That is not a defect in this readout: it
+//!   is the exact quantity amendment C.4 exists to move, printed so Task 3b
+//!   has something that can actually change.
+//!
 //! **Cost.** One `BuildDepth::Terrain` world per seed, and a scan of the
 //! lattice over cave-bearing land cells. See `scripts/regenerate-artifacts.sh`
 //! for the seed panel it is rendered over.
+
+use std::collections::BTreeSet;
 
 use hornvale_kernel::{Seed, quantize};
 use hornvale_terrain::GeneratedTerrain;
 
 use crate::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_at, chamber_key, floors_in_run,
+    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, RunAddr, chamber_at,
+    chamber_key, floors_in_run, passages_from,
 };
 
 /// How many bands the delve ladder's habitation rungs occupy — the range
@@ -56,6 +100,17 @@ use crate::chamber::{
 /// readout only needs to know how far to count, and the *names* reach the
 /// artifact through `chamber_key`, which is the authority.
 const HABITATION_BANDS: u8 = 5;
+
+/// How many entrances per cave system this witness walks — **1 today, and
+/// that is a stated gap rather than a claim about the world.**
+///
+/// `ChamberAddr::entrance` is a real lattice axis; nothing in the shipped path
+/// produces a second entrance yet (`windows/vessel`'s `delve_at` is pinned at
+/// `entrance: 0`, and so is `delve_seating`). Task 5 makes entrances plural.
+/// Every loop below counts `0..WITNESSED_ENTRANCES` rather than hard-coding a
+/// literal, so that task extends the witness by raising this and sourcing the
+/// per-cell count — an edit, not a rewrite.
+const WITNESSED_ENTRANCES: u8 = 1;
 
 /// The habitation rungs' spellings **in this readout's tallies** —
 /// presentation, deliberately not the key's table. See [`stratum_word`] for
@@ -70,6 +125,22 @@ const ROCK_WORDS: [&str; 5] = ["regolith", "cover", "basement", "roots", "undern
 /// that the section shows a cave system rather than an anecdote, few enough
 /// that the artifact stays reviewable by eye at 20 rows apiece.
 const TRANSECT_SYSTEMS: usize = 3;
+
+/// The glyph for a floor that exists — read from the shipped answer, and
+/// tested **first**, which is what makes the two refusal glyphs below unable
+/// to hide a gate that stopped gating.
+const GLYPH_EXISTS: char = '#';
+
+/// The glyph for a floor inside its run's drawn length that the existence draw
+/// refused.
+const GLYPH_REFUSED: char = '.';
+
+/// The glyph for a floor **past** its run's drawn length — inside the
+/// lattice's own ceiling, so this readout still asks about it, and refused.
+/// A gate that stopped gating turns roughly half of these into
+/// [`GLYPH_EXISTS`], which is exactly the movement review's mutation proved
+/// the first version of this module could not produce.
+const GLYPH_PAST_RUN: char = '_';
 
 /// A stratum's spelling **in this readout** — presentation, deliberately not
 /// the save-format table.
@@ -114,17 +185,20 @@ fn rock_rank(stratum: hornvale_climate::Stratum) -> Option<usize> {
     }
 }
 
-/// One cave system's realized lattice: for each `(branch, band)` run, the key
-/// its floor 0 derives from, how many floors the run drew, and which of those
-/// floors exist.
+/// One cave system's run in the lattice: the key its floor 0 derives from, how
+/// many floors the run drew, and what the shipped path answered at **every**
+/// floor the lattice admits — not merely the drawn ones.
 struct RunRow {
     /// `chamber_key` of this run's floor 0 — the real derivation key, so the
     /// epoch label's consequences and the key's field order reach the artifact.
     key: String,
-    /// The floor count [`floors_in_run`] drew for this run.
+    /// The floor count [`floors_in_run`] drew for this run, printed as its own
+    /// value. It is **reported**, never used as this row's loop bound: see the
+    /// module doc's loop-bound section for what happened when it was.
     drawn: u8,
-    /// `#` per realized floor, `.` per refused one, in floor order, `drawn`
-    /// characters long.
+    /// One glyph per floor of the lattice's own ceiling, in floor order,
+    /// always [`FLOORS_PER_RUN_CEILING`] characters long:
+    /// [`GLYPH_EXISTS`] / [`GLYPH_PAST_RUN`] / [`GLYPH_REFUSED`].
     realized: String,
     /// The rock the run's chambers sit in, read off the first realized
     /// chamber's own [`crate::chamber::Chamber::stratum`]. `"-"` when the run
@@ -138,20 +212,82 @@ struct RunRow {
 struct Tallies {
     /// Cave-bearing land cells — one cave system apiece.
     systems: usize,
+    /// Cave-bearing **ocean** cells, which this readout skips.
+    ///
+    /// Counted rather than silently dropped, for the same reason
+    /// [`Tallies::off_ladder_rock`] is: spec B.1 measures this at zero on all
+    /// three panel seeds today, and "X is on land" has been wrong in this
+    /// codebase before. A skip nobody counts is indistinguishable from an
+    /// absence.
+    ocean_systems: usize,
     /// Realized chambers, over the whole lattice of every cave system.
     chambers: usize,
     /// Realized chambers per band, `undercroft` … `nadir`.
     by_band: [usize; HABITATION_BANDS as usize],
     /// Realized chambers per rock unit, `regolith` … `underneath`.
     by_rock: [usize; 5],
+    /// Realized chambers per [`ChamberOrigin`], `[found, made]`.
+    ///
+    /// `made` is 0 **by construction** while the override source is empty —
+    /// see the module doc. Read and printed anyway, because that is what puts
+    /// the field on a wire Task 4 can move rather than leaving it for Task 4's
+    /// review to discover it never was on one.
+    by_origin: [usize; 2],
     /// Realized chambers reporting a stratum no chamber should be able to sit
     /// in (a marine or surface register). Expected 0; printed regardless,
     /// because a silently dropped anomaly is not a witness.
     off_ladder_rock: usize,
+    /// **Realized chambers at a floor past their own run's drawn length** —
+    /// the direct reading of `chamber_exists`'s drawn-floor gate.
+    ///
+    /// 0 in a healthy tree, and large the moment that gate stops gating. This
+    /// is the counter review's gate-deletion mutation could not move in the
+    /// first version of this module, because that version never asked about a
+    /// floor past the drawn length at all.
+    past_run_length: usize,
     /// Floors drawn across every run of every cave system, whether or not the
     /// band is inside a cave's budget. Separates "the run draw moved" from
     /// "the reach moved": the first moves this, the second does not.
     drawn_floors: usize,
+    /// Chambers **reachable from an entrance** by [`passages_from`], summed
+    /// over every cave system whose entrance chamber exists.
+    ///
+    /// The quantity a player actually experiences, and the one an existence
+    /// count cannot see: a chamber can exist and have nowhere to descend from
+    /// or into. Amendment C.4 is about exactly this, so it is printed here for
+    /// Task 3b to move.
+    reachable: usize,
+    /// Cave systems whose entrance chamber (`branch 0, band 0, floor 0`)
+    /// exists at all — [`Tallies::reachable`]'s denominator, without which a
+    /// fallen reachability figure cannot be told from fewer open entrances.
+    open_entrances: usize,
+}
+
+/// Chambers reachable from `entry` by [`passages_from`], `entry` included.
+///
+/// A plain breadth-first walk over the shipped adjacency function: nothing
+/// here knows the adjacency rule, which is the point — Task 3b changes that
+/// rule and this number moves without this function being touched.
+///
+/// `BTreeSet`, never a `HashSet` (workspace rule); the walk order is not
+/// observed, only the final count is.
+fn reachable_from(
+    seed: Seed,
+    cave: &hornvale_terrain::Cave,
+    gradient: hornvale_terrain::GeothermalGradient,
+    entry: ChamberAddr,
+) -> usize {
+    let mut seen: BTreeSet<ChamberAddr> = BTreeSet::new();
+    let mut queue: Vec<ChamberAddr> = vec![entry];
+    seen.insert(entry);
+    while let Some(addr) = queue.pop() {
+        for next in passages_from(seed, cave, gradient, addr) {
+            if seen.insert(next) {
+                queue.push(next);
+            }
+        }
+    }
+    seen.len()
 }
 
 /// Render one world's chamber lattice as the committed underworld witness.
@@ -168,81 +304,122 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     let mut out = String::new();
     let mut tallies = Tallies {
         systems: 0,
+        ocean_systems: 0,
         chambers: 0,
         by_band: [0; HABITATION_BANDS as usize],
         by_rock: [0; 5],
+        by_origin: [0; 2],
         off_ladder_rock: 0,
+        past_run_length: 0,
         drawn_floors: 0,
+        reachable: 0,
+        open_entrances: 0,
     };
     // The first `TRANSECT_SYSTEMS` cave systems in cell order, walked in full.
     let mut transect: Vec<(hornvale_kernel::CellId, String, Vec<RunRow>)> = Vec::new();
+    // THE OVERRIDE SOURCE, named rather than inlined: this is the one line
+    // Task 4 replaces to put `ChamberOrigin::Made` into the artifact. Empty
+    // today, so `by_origin[1]` is 0 by construction — see the module doc.
     let overrides = crate::chamber::ChamberOverrides::new();
 
     for cell in terrain.geosphere().cells() {
-        if terrain.is_ocean(cell) {
-            continue;
-        }
         let Some(cave) = terrain.cave_at(cell) else {
             continue;
         };
+        if terrain.is_ocean(cell) {
+            // Counted, not silently dropped. Zero on all three panel seeds
+            // today; the day it is not, the artifact says so.
+            tallies.ocean_systems += 1;
+            continue;
+        }
         tallies.systems += 1;
         let gradient = terrain.geothermal_gradient_at(cell);
         let column = terrain.column_at(cell);
         let want_transect = transect.len() < TRANSECT_SYSTEMS;
         let mut rows: Vec<RunRow> = Vec::new();
 
-        for branch in 0..BRANCHES_PER_SYSTEM {
-            for band in 0..HABITATION_BANDS {
-                let run = RunAddr {
-                    cell,
-                    entrance: 0,
-                    branch,
-                    band,
-                };
-                let drawn = floors_in_run(seed, run);
-                tallies.drawn_floors += usize::from(drawn);
-
-                let mut realized = String::new();
-                let mut rock = "-";
-                for floor in 0..drawn {
-                    let addr = ChamberAddr {
+        for entrance in 0..WITNESSED_ENTRANCES {
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for band in 0..HABITATION_BANDS {
+                    let run = RunAddr {
                         cell,
-                        entrance: 0,
+                        entrance,
                         branch,
                         band,
-                        floor,
                     };
-                    match chamber_at(seed, &cave, gradient, &column, addr, &overrides) {
-                        None => realized.push('.'),
-                        Some(chamber) => {
-                            realized.push('#');
-                            tallies.chambers += 1;
-                            tallies.by_band[usize::from(band)] += 1;
-                            match rock_rank(chamber.stratum) {
-                                Some(rank) => tallies.by_rock[rank] += 1,
-                                None => tallies.off_ladder_rock += 1,
-                            }
-                            if rock == "-" {
-                                rock = stratum_word(chamber.stratum);
-                            }
-                        }
-                    }
-                }
+                    let drawn = floors_in_run(seed, run);
+                    tallies.drawn_floors += usize::from(drawn);
 
-                if want_transect {
-                    rows.push(RunRow {
-                        key: chamber_key(ChamberAddr {
+                    let mut realized = String::new();
+                    let mut rock = "-";
+                    // THE LATTICE'S OWN CEILING, never `drawn`. See the module
+                    // doc: bounding this walk by the draw made the drawn-floor
+                    // gate unfalsifiable.
+                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                        let addr = ChamberAddr {
                             cell,
-                            entrance: 0,
+                            entrance,
                             branch,
                             band,
-                            floor: 0,
-                        }),
-                        drawn,
-                        realized,
-                        rock,
-                    });
+                            floor,
+                        };
+                        match chamber_at(seed, &cave, gradient, &column, addr, &overrides) {
+                            // The EXISTS arm is first, so no refusal glyph
+                            // computed from `drawn` can mask a chamber the
+                            // shipped path admitted past it.
+                            Some(chamber) => {
+                                realized.push(GLYPH_EXISTS);
+                                tallies.chambers += 1;
+                                tallies.by_band[usize::from(band)] += 1;
+                                if floor >= drawn {
+                                    tallies.past_run_length += 1;
+                                }
+                                match rock_rank(chamber.stratum) {
+                                    Some(rank) => tallies.by_rock[rank] += 1,
+                                    None => tallies.off_ladder_rock += 1,
+                                }
+                                match chamber.origin {
+                                    ChamberOrigin::Found => tallies.by_origin[0] += 1,
+                                    ChamberOrigin::Made => tallies.by_origin[1] += 1,
+                                }
+                                if rock == "-" {
+                                    rock = stratum_word(chamber.stratum);
+                                }
+                            }
+                            None if floor >= drawn => realized.push(GLYPH_PAST_RUN),
+                            None => realized.push(GLYPH_REFUSED),
+                        }
+                    }
+
+                    if want_transect {
+                        rows.push(RunRow {
+                            key: chamber_key(ChamberAddr {
+                                cell,
+                                entrance,
+                                branch,
+                                band,
+                                floor: 0,
+                            }),
+                            drawn,
+                            realized,
+                            rock,
+                        });
+                    }
                 }
+            }
+
+            // Reachability from this entrance's own mouth — the address
+            // `windows/vessel`'s `delve_at` descends into.
+            let entry = ChamberAddr {
+                cell,
+                entrance,
+                branch: 0,
+                band: 0,
+                floor: 0,
+            };
+            if chamber_at(seed, &cave, gradient, &column, entry, &overrides).is_some() {
+                tallies.open_entrances += 1;
+                tallies.reachable += reachable_from(seed, &cave, gradient, entry);
             }
         }
 
@@ -268,12 +445,19 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     ));
     out.push_str(&format!(
         "  lattice         {BRANCHES_PER_SYSTEM} branches per system, {HABITATION_BANDS} bands, \
-         {} floors admitted per run\n",
-        crate::chamber::FLOORS_PER_RUN_CEILING
+         {FLOORS_PER_RUN_CEILING} floors admitted per run, \
+         {WITNESSED_ENTRANCES} entrance witnessed\n"
     ));
-    out.push_str(&format!("  cave systems    {}\n", tallies.systems));
+    out.push_str(&format!(
+        "  cave systems    {}  (ocean-cell caves skipped: {})\n",
+        tallies.systems, tallies.ocean_systems
+    ));
     out.push_str(&format!("  floors drawn    {}\n", tallies.drawn_floors));
     out.push_str(&format!("  chambers        {}\n", tallies.chambers));
+    out.push_str(&format!(
+        "  reachable       {} from {} open entrances\n",
+        tallies.reachable, tallies.open_entrances
+    ));
     out.push_str("  by band         ");
     for (band, count) in tallies.by_band.iter().enumerate() {
         // Presentation words, not the key's table (see `stratum_word`'s doc):
@@ -289,9 +473,20 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         out.push_str(&format!("{word}:{count}  "));
     }
     out.push_str(&format!("off-ladder:{}\n", tallies.off_ladder_rock));
+    out.push_str(&format!(
+        "  by origin       found:{}  made:{}\n",
+        tallies.by_origin[0], tallies.by_origin[1]
+    ));
+    out.push_str(&format!(
+        "  past run length {}   (chambers beyond their run's drawn floors)\n",
+        tallies.past_run_length
+    ));
 
     out.push_str("\n  the first three cave systems, run by run\n");
-    out.push_str("  (key = the floor-0 derivation key; # = a floor that exists)\n");
+    out.push_str(&format!(
+        "  (key = the floor-0 derivation key; {GLYPH_EXISTS} exists, \
+         {GLYPH_REFUSED} refused, {GLYPH_PAST_RUN} past the run's drawn floors)\n"
+    ));
     for (cell, head, rows) in &transect {
         out.push_str(&format!("\n  cell {} — {head}\n", cell.0));
         for row in rows {
@@ -331,6 +526,14 @@ mod tests {
         .expect("the probe seed builds")
         .terrain
         .expect("terrain is Some at BuildDepth::Terrain")
+    }
+
+    /// The glyph run of every transect row in `text` — everything after the
+    /// `" floors  "` column.
+    fn glyph_rows(text: &str) -> Vec<&str> {
+        text.lines()
+            .filter_map(|line| line.split(" floors  ").nth(1))
+            .collect()
     }
 
     /// **The readout is byte-identical across independent builds of the same
@@ -373,6 +576,9 @@ mod tests {
             .lines()
             .find_map(|l| l.trim().strip_prefix("cave systems").map(str::trim))
             .expect("the readout reports a cave-system count")
+            .split_whitespace()
+            .next()
+            .expect("the cave-system line leads with its count")
             .parse()
             .expect("the cave-system count is a number");
         assert!(systems > 0, "seed 42 rendered no cave system at all");
@@ -386,13 +592,171 @@ mod tests {
         assert!(chambers > 0, "seed 42 rendered no chamber at all");
 
         assert!(
-            text.contains('#'),
+            text.contains(GLYPH_EXISTS),
             "no transect row shows a realized floor, so the per-system section \
              witnesses nothing"
         );
         assert!(
             text.contains(crate::streams::CHAMBER.as_str()),
             "the readout does not name the epoch it was derived under"
+        );
+    }
+
+    /// **THE FLOOR WALK IS BOUNDED BY THE LATTICE, NOT BY THE DRAW** — the
+    /// regression guard for the defect review found, stated as a property of
+    /// the rendered text so it holds whatever the loop is rewritten into.
+    ///
+    /// Two arms, and the second is what makes the first mean something:
+    ///
+    /// 1. every transect row's glyph run is exactly
+    ///    [`FLOORS_PER_RUN_CEILING`] long — a row bounded by its own `drawn`
+    ///    would be shorter, and `drawn` is at most the ceiling and usually far
+    ///    under it;
+    /// 2. at least one row actually carries [`GLYPH_PAST_RUN`], i.e. the
+    ///    readout really did ask about a floor past the drawn length and got a
+    ///    refusal. Arm 1 alone would pass if every run happened to draw the
+    ///    full ceiling; arm 2 says the interesting region is genuinely being
+    ///    probed.
+    ///
+    /// With both, deleting `chamber_exists`'s drawn-floor gate has to move the
+    /// artifact: the glyphs at those positions are decided by the shipped
+    /// answer, tested before either refusal glyph.
+    #[test]
+    fn the_transect_walks_the_lattice_ceiling_rather_than_the_drawn_count() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let rows = glyph_rows(&text);
+        assert!(!rows.is_empty(), "the transect rendered no row at all");
+
+        for row in &rows {
+            assert_eq!(
+                row.chars().count(),
+                usize::from(FLOORS_PER_RUN_CEILING),
+                "a transect row is {} glyphs long, not the lattice ceiling of \
+                 {FLOORS_PER_RUN_CEILING} — the floor walk is bounded by \
+                 something other than the lattice, which is how the drawn-floor \
+                 gate became unfalsifiable once already: {row:?}",
+                row.chars().count()
+            );
+        }
+        assert!(
+            rows.iter().any(|r| r.contains(GLYPH_PAST_RUN)),
+            "no transect row probed a floor past its run's drawn length, so \
+             the drawn-floor gate is never exercised by this artifact"
+        );
+    }
+
+    /// **A chamber past its run's drawn length is a gate failure, and the
+    /// readout reports it as a number** — 0 in a healthy tree.
+    ///
+    /// Asserted here as well as printed, because this is the one tally whose
+    /// healthy value is known in advance: `chamber_exists` refuses every floor
+    /// at or past `floors_in_run`, so any nonzero reading is that gate not
+    /// gating, not a world being unusual.
+    #[test]
+    fn no_chamber_exists_past_its_runs_drawn_length() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let past: usize = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("past run length").map(str::trim))
+            .expect("the readout reports a past-run-length count")
+            .split_whitespace()
+            .next()
+            .expect("the past-run-length line leads with its count")
+            .parse()
+            .expect("the past-run-length count is a number");
+        assert_eq!(
+            past, 0,
+            "{past} chambers exist at a floor past their run's drawn length — \
+             chamber_exists's drawn-floor gate is not gating"
+        );
+    }
+
+    /// **Reachability is reported, is nonzero, and is a strict subset of
+    /// existence** — the quantity amendment C.4 moves, and the one an
+    /// existence count cannot see.
+    ///
+    /// The strictness is the interesting arm and it is asserted rather than
+    /// hoped for: `passages_from` does not treat `floor` as an adjacency axis
+    /// yet, so every chamber above floor 0 is unreachable from the entrance
+    /// today. `reachable == chambers` would mean either that this readout
+    /// stopped walking the graph or that vertical connection landed — both
+    /// worth a red rather than a silent pass.
+    #[test]
+    fn reachability_is_reported_and_is_a_strict_subset_of_existence() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let reachable: usize = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("reachable").map(str::trim))
+            .expect("the readout reports a reachable count")
+            .split_whitespace()
+            .next()
+            .expect("the reachable line leads with its count")
+            .parse()
+            .expect("the reachable count is a number");
+        let chambers: usize = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("chambers").map(str::trim))
+            .expect("the readout reports a chamber count")
+            .parse()
+            .expect("the chamber count is a number");
+
+        assert!(
+            reachable > 0,
+            "no chamber is reachable from any entrance, so the reachability \
+             figure witnesses nothing"
+        );
+        assert!(
+            reachable < chambers,
+            "reachable ({reachable}) is not strictly under existence \
+             ({chambers}); with `floor` still absent from passages_from's \
+             adjacency rule every chamber above floor 0 must be unreachable, \
+             so this means the graph walk or the adjacency rule moved"
+        );
+    }
+
+    /// The `origin` field is **read**, not merely carried — and the readout
+    /// says so with a `found`/`made` split whose halves sum to the chamber
+    /// count.
+    ///
+    /// `made` is 0 by construction today (the override source is empty; see
+    /// the module doc), so the sum is what carries the assertion: it fails if
+    /// a chamber is ever counted into neither half, which is the shape a
+    /// widened [`ChamberOrigin`] would take.
+    #[test]
+    fn every_chamber_is_counted_under_exactly_one_origin() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let origin_line = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("by origin").map(str::trim))
+            .expect("the readout reports an origin split");
+        let found: usize = origin_line
+            .split_whitespace()
+            .find_map(|w| w.strip_prefix("found:"))
+            .expect("the origin split names found")
+            .parse()
+            .expect("the found count is a number");
+        let made: usize = origin_line
+            .split_whitespace()
+            .find_map(|w| w.strip_prefix("made:"))
+            .expect("the origin split names made")
+            .parse()
+            .expect("the made count is a number");
+        let chambers: usize = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("chambers").map(str::trim))
+            .expect("the readout reports a chamber count")
+            .parse()
+            .expect("the chamber count is a number");
+
+        assert_eq!(
+            found + made,
+            chambers,
+            "the origin split ({found} found + {made} made) does not account \
+             for all {chambers} chambers"
         );
     }
 }
