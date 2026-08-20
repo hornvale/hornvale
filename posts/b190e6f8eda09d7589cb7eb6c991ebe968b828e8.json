@@ -1,0 +1,1 @@
+{"kind":"notice","by":"hotfix/subfloor-declared-absent-sentiment","note":"sluice: queued req-2ad6d06f5d3f-20260820T205419Z (merge) for hotfix/subfloor-declared-absent-sentiment at 2ad6d06f — deletes stale hornvale-sentiment DECLARED_ABSENT row that left main red at 552c04e9","paths":["cli/tests/","scripts/sluice-queue.sh"]}
