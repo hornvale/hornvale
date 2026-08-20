@@ -64,12 +64,17 @@ fn run(args: &[String]) -> Result<(), String> {
 
 /// Draw `json` at the terminal's current size, clamped up to the monochrome
 /// floor `hornvale-game-core` refuses to render below.
+///
+/// No cursor position and no look-mode strip yet — this driver has no
+/// notion of look mode (Task 1's `Mode`/`Action` live in `input.rs`, and
+/// wiring them through the driver is Task 3's job), so every redraw reports
+/// `None` for both and the terminal cursor stays parked out of the way.
 fn redraw(term: &term::Term, json: &str) -> std::io::Result<()> {
     let (cols, rows) = crossterm::terminal::size()?;
     let w = cols.max(MIN_WIDTH);
     let h = rows.max(MIN_HEIGHT);
-    match hornvale_game_core::render(json, w, h) {
-        Ok(grid) => term.draw(&grid),
+    match hornvale_game_core::render_with(json, w, h, None, None) {
+        Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
     }
 }

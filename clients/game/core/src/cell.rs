@@ -91,6 +91,16 @@ pub enum Source {
     /// that need should be met by parsing the sim's authoritative sentence,
     /// not by re-deriving it from lower-level fields a second time.
     Chrome,
+    /// The look-mode strip beneath the plate (`strip.rs`): the resolved
+    /// feature name under the free-roaming cursor. Deliberately **not**
+    /// [`Source::Chrome`] — the strip's content, once a name is resolved
+    /// (The Portolan's Task 3), is drawn from world state the same as the
+    /// chart or the floor plan is, so lumping it into `Chrome` would be the
+    /// same false-provenance mistake the deleted `WaysOn` variant made in
+    /// reverse: `Chrome` is reserved for genuinely inert decoration (rules,
+    /// gutters, margins, the entry's own prompt), never a catch-all for
+    /// content whose real channel was merely inconvenient to name.
+    Look,
 }
 
 /// One character cell. A tile is a drop-in replacement for exactly one of
