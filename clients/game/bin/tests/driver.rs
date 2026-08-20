@@ -85,7 +85,7 @@ fn releasing_still_returns_a_parseable_snapshot() {
 /// from seed 42's flagship opening position — so this test drives a real
 /// `Driver` through it rather than inventing a lighter-weight seam.
 #[test]
-fn look_mode_at_an_unresolved_band_refuses_rather_than_resolving() {
+fn map_focus_at_an_unresolved_band_refuses_rather_than_resolving() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     driver.handle("enter");
     let snap = hornvale_game_core::Snapshot::parse(&driver.snapshot())
@@ -106,13 +106,13 @@ fn look_mode_at_an_unresolved_band_refuses_rather_than_resolving() {
 
 /// The walk band DOES have a resolver (the terrain-feature index, scoped to
 /// the observer's own cell — see `driver.rs`'s module doc for why cursor
-/// motion does not change which cell is queried this campaign). Entering
-/// look mode at seed 42's flagship opening position (walk band) must report
+/// motion does not change which cell is queried this campaign). Focusing
+/// the map at seed 42's flagship opening position (walk band) must report
 /// a real name, not the unresolved-band refusal — this is what would catch
 /// a regression that accidentally routed every band through the same
 /// refusal.
 #[test]
-fn look_mode_at_the_walk_band_resolves_a_real_name() {
+fn map_focus_at_the_walk_band_resolves_a_real_name() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     let snap = hornvale_game_core::Snapshot::parse(&driver.snapshot()).unwrap();
     assert!(matches!(
@@ -213,8 +213,9 @@ fn resize_re_resolves_against_the_real_plate_height() {
         at_taller_height.as_deref(),
         Some("unnamed terrain"),
         "no chart cell lands on (20, 10) once the real centre moves to (20, 18), so \
-         the walk-band chain comes up empty there (not None -- Look mode always \
-         reports something; NOTHING_HERE_YET is reserved for a resolver-absent band)"
+         the walk-band chain comes up empty there (not None -- the strip always \
+         reports something once the map is focused; NOTHING_HERE_YET is reserved \
+         for a resolver-absent band)"
     );
 
     // Move the cursor to what is NOW the real centre -- it must resolve
@@ -234,7 +235,9 @@ fn the_cursor_clamp_tracks_the_real_plate_height_too() {
     driver.resize(40);
     driver.apply(Action::ToggleFocus);
     driver.apply(Action::CursorBy(0, 1000)); // drive it hard into the bottom clamp
-    let cursor = driver.cursor().expect("look mode always has a cursor");
+    let cursor = driver
+        .cursor()
+        .expect("the map always has a cursor once focused");
     assert_eq!(
         cursor.y, 35,
         "the clamp must reach row 35 (content height 36, 0-indexed) at a 40-row terminal, \

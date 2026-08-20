@@ -1,5 +1,5 @@
-//! The look-mode strip: one row beneath the plate, reporting the resolved
-//! feature name under the free-roaming cursor.
+//! The map strip: one row beneath the plate, reporting the resolved feature
+//! name under the free-roaming cursor, shown whenever the map is focused.
 //!
 //! **Plate width, not full width.** The endpaper (`endpaper.rs`) already
 //! owns a full-width row and its own job — an identity strip (who/where/

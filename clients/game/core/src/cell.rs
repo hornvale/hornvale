@@ -104,8 +104,8 @@ pub enum Source {
     /// that need should be met by parsing the sim's authoritative sentence,
     /// not by re-deriving it from lower-level fields a second time.
     Chrome,
-    /// The look-mode strip beneath the plate (`strip.rs`): the resolved
-    /// feature name under the free-roaming cursor. Deliberately **not**
+    /// The map strip beneath the plate (`strip.rs`): the resolved feature
+    /// name under the free-roaming cursor. Deliberately **not**
     /// [`Source::Chrome`] — the strip's content, once a name is resolved
     /// (The Portolan's Task 3), is drawn from world state the same as the
     /// chart or the floor plan is, so lumping it into `Chrome` would be the

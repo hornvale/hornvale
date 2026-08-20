@@ -127,7 +127,7 @@ pub struct Cursor {
 /// of the two is ever consulted per call; the other's input is simply
 /// unused for that turn, not merged or overridden.
 ///
-/// `strip`, when `Some`, is drawn as the look-mode strip beneath the plate
+/// `strip`, when `Some`, is drawn as the map strip beneath the plate
 /// (see `strip::draw`); the row it occupies is reserved either way (see
 /// `spread`'s module doc), so a caller that starts passing `Some` never
 /// resizes the plate a second time.
@@ -178,7 +178,7 @@ pub fn render_with(
 /// floor ([`MIN_WIDTH`] by [`MIN_HEIGHT`]).
 ///
 /// Delegates to [`render_with`] with the CLI focused, no map cursor, an
-/// empty command line and no look-mode strip — kept as its own entry point
+/// empty command line and no map strip — kept as its own entry point
 /// because existing callers (`tests/`, the terminal binary) depend on this
 /// exact signature. It drops the returned cursor position entirely, so the
 /// default focus/empty-line choice is unobservable through this function;

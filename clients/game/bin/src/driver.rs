@@ -75,8 +75,8 @@ use hornvale_worldgen::{
     language_of_in, morph_options, resolve_at, terrain_of,
 };
 
-/// What the strip says in look mode over a band this campaign has no
-/// resolver for (walk and chamber both draw a real plate; only the
+/// What the strip says, with the map focused, over a band this campaign has
+/// no resolver for (walk and chamber both draw a real plate; only the
 /// terrain-feature index answers a query — spec §3.1/§9). Faking a
 /// resolution would be worse than refusing: a wrong name is
 /// indistinguishable from a right one, and this string never is one.
@@ -477,10 +477,10 @@ impl Driver {
         self.cursor.y = ny as u16;
     }
 
-    /// Recompute `self.strip` for the current band, mode and cursor
-    /// position. See the module doc: only the walk band resolves, and it
-    /// resolves the cell the CURSOR points at, not the observer's own —
-    /// every other band answers [`NOTHING_HERE_YET`] honestly.
+    /// Recompute `self.strip` for the current band and cursor position. See
+    /// the module doc: only the walk band resolves, and it resolves the
+    /// cell the CURSOR points at, not the observer's own — every other band
+    /// answers [`NOTHING_HERE_YET`] honestly.
     fn refresh_strip(&mut self) {
         self.strip = Some(self.resolve());
     }
