@@ -26,6 +26,8 @@ mod augmented_walk;
 mod clock;
 #[path = "suite/contact.rs"]
 mod contact;
+#[path = "suite/cupel_penalty.rs"]
+mod cupel_penalty;
 #[path = "suite/derive.rs"]
 mod derive;
 #[path = "suite/divergence.rs"]
