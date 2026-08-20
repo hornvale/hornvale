@@ -1032,10 +1032,38 @@ After the existing prompt `set`, draw the line's text starting at
 `origin.0 + 2` (prompt, then a space), and compute the caret's column.
 Available text columns are `width - 2`.
 
-**Attribute the typed text to `Source::Chrome`, not `Source::Prose`** — it
-is not the sim's narration, it is the player's own unsent keystrokes.
-`Source::Prose` would be a false provenance claim of exactly the kind
-`entry.rs`'s own doc already warns about for the prompt glyph.
+**The typed text needs its own `Source` variant — NOT `Chrome`, and not
+`Prose`.** An earlier draft of this plan said `Chrome`; reading
+`core/src/cell.rs:30-115` showed that to be the mistake this enum has already
+made twice, so the instruction is reversed here and ledger #13 records why.
+
+`Source` states a hard two-category contract: a drawn cell is either *derived
+from world state* (every variant but `Chrome`) or *declared inert* (`Chrome`,
+"and nothing else"). **Typed text is neither** — it is not on the wire, and it
+is not inert decoration. `Chrome`'s own doc forbids this use in as many words:
+*"Never a dumping ground for a cell whose real channel was merely inconvenient
+to name"*, and it admits the prompt only because `PROMPT_GLYPH` is a hardcoded
+constant. A live buffer is not a constant.
+
+The precedent is in the same file: `Source::Look` exists because The Portolan
+faced this identical choice for the strip's resolved feature name and refused
+to lump it into `Chrome` — *"the same false-provenance mistake the deleted
+`WaysOn` variant made in reverse"*. `WaysOn` was itself deleted twice for
+false provenance.
+
+**Why this is a defect and not a preference.**
+`core/tests/provenance.rs:80-84` is, by its own comment, *"the only assertion
+in this file that proves `Source::Chrome` is reachable"*, and it asserts
+`Chrome > 0`. Attributing the buffer to `Chrome` would therefore pass
+**silently** while redefining "declared inert" to include live player input —
+a green test whose meaning has quietly changed.
+
+So: add a variant (confirm the name against local convention), document it as
+the player's own unsent keystrokes, and **amend the enum's category doc** —
+there are three categories now, because the client acquired a third when it
+became typeable, which it was not when that doc was written. Add a
+`provenance.rs` assertion that the new variant is reachable, matching the one
+that exists for `Chrome`.
 
 **Update the module doc**, whose opening claim now reads "a prompt, **not a
 text box**". It is a text box now; say so, and keep the sentence about why
