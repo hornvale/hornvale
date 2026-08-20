@@ -394,4 +394,13 @@ fn touchstone_readout() {
         negative_tail <= 0.01,
         "instrument fires on a provably-inert change: {negative_tail}"
     );
+    // The symmetric "+0" half of the dissociation the chronicle reports: the
+    // NEGATIVE control moves the divergence aggregate by exactly 0, provably —
+    // every descent step is within one people (fission never crosses a people
+    // boundary), so crossing_penalty's `from == to` guard returns 0 under both
+    // Crossing arms and every descent-reached holder's day pick is identical.
+    assert_eq!(
+        aggregate_delta_negative, 0,
+        "negative control moved the divergence aggregate: {aggregate_delta_negative}"
+    );
 }
