@@ -65,17 +65,21 @@ people-pair* (the derived part, the `1/(1+edges)` shape), not to the average
 level. The exact estimator for `D` is **frozen in §4 from the Task 0 substrate
 probe**, not from reasoning.
 
-**Two measures, one headline** (and NOT an additive decomposition — a holder
-moved by both level and shape is counted in both, so `tail(Derived,Free) ≠
-tail(Constant,Free) + tail(Derived,Constant)` on counts; the three are reported
-separately):
+**Three arm-comparisons, one headline comparison** (and NOT an additive
+decomposition — a holder moved by both level and shape is counted in both, so
+`tail(Derived,Free) ≠ tail(Constant,Free) + tail(Derived,Constant)` on counts;
+the three are reported separately):
 
-- **Derived vs Constant → the derivation's marginal effect. THE HEADLINE.**
-  Does the derivation's *shape* buy any belief difference *beyond* its level?
-- Constant vs Free → the level effect exists at all — a positive anchor that
-  this axis moves belief, so a small headline is a real null and not a dead
+- **Derived vs Constant → the derivation's marginal effect. THE HEADLINE
+  COMPARISON.** Does the derivation's *shape* buy any belief difference *beyond*
+  its level?
+- Constant vs Free → the level effect exists at all — an anchor that this axis
+  moves the instrument, so a small headline is a real null and not a dead
   instrument.
 - Derived vs Free → the total penalty effect, for context.
+
+Within that headline comparison, belief is read on **two co-primary channels**
+(next paragraph): the remembered day and the winning account.
 
 **Endpoints (two co-primaries, set by §3's substrate finding):** the
 **remembered day** (`day_changed`) — what a holder believes — and, because the
