@@ -282,3 +282,131 @@ it is something" (the physical seal, unmodelled).
 Every mechanism in §4 is Nathan's. The contribution of this document is
 checking each against the tree and finding that three of the four things it
 needs are declared and unproduced.
+
+---
+
+# AMENDMENT, 2026-08-19: a mine is FOUNDED for ore, not reclassified onto it
+
+§4.1 said a settlement founded on rich ore *is* a `Mine`. **Measured false,
+and the way it is false is the campaign's most useful finding.** The section
+stands above; this replaces it.
+
+## B.1 What Task 1 measured
+
+```
+prospectivity = 0.6*setting + 0.3*unrest + 0.1*metamorphic_grade
+                setting = 0.1 off a plate boundary, 0.4-0.7 on one
+
+seed 42  land:      min 0.0600  p50 0.0602  p75 0.0667  p90 0.1442  max 0.6771
+seed 7   land:      min 0.0600  p50 0.0623  p75 0.1191  p90 0.2113  max 0.7398
+seed 7   occupied:  min 0.0600  p50 0.0607  p75 0.0653  p90 0.1213  max 0.5679
+
+occupations in land's top prospectivity decile: 0.48% / 2.75% / 11.81%
+  --- at or BELOW the ~10% chance alone would produce, never above
+```
+
+Two facts, and the second is the important one:
+
+1. **Prospectivity is a near-constant floor with a thin tail.** Off a plate
+   boundary `setting = 0.1`, so most land sits at `0.6 x 0.1 = 0.06`; on seed
+   42, 75% of land lies in a band 0.0067 wide. There is almost nothing to
+   separate on.
+2. **Settlements are UNDER-represented in high-ore ground**, not merely
+   indifferent to it — and that is the model being *correct*. Ore is high on
+   plate boundaries and unrest; farmland is not. Agrarian siting puts
+   settlements where ore isn't, by construction.
+
+## B.2 The general error, and it cost three mechanisms
+
+**A derivation cannot reclassify a population that was placed by a different
+objective.** Every occupation in Hornvale is sited by capacity-maximising
+agrarian logic. Relabelling some of them as mines cannot work, because that
+logic has already put them where ore is not — correctly, and it would be a
+worse model if it hadn't.
+
+This is the same error as The Planes' first two mechanisms, which tried to
+find wounds among cells and caves the world had placed for unrelated reasons.
+Three deaths, one cause: **reclassification, where creation was needed.**
+
+## B.3 A mine is a daughter founded on a different objective
+
+`Bake::grow` already spawns daughter settlements and already scores candidate
+sites:
+
+```rust
+let dest = traversable_neighbors(self.cur(), site)
+    .filter(|&n| self.vacant_for(era, n, dpidx))
+    .max_by(|a, b| {
+        let sa = caps_now()[dpidx].at(*a) * river_factor(river_prox.get(*a));
+        ...  // tie-break: lowest CellId, total_cmp
+    });
+self.open(people, dest, year, DAUGHTER_POP, Founding::From(parent), ...)
+```
+
+It already carries `Founding::From(parent)`. **A mining camp is a daughter
+founded on ore instead of on fertility, from a parent that supplies it** —
+which is what a mining camp is.
+
+So the change is **a second scoring objective inside one existing site
+choice**, not a new founding path:
+
+```
+TODAY      score = capacity * river_factor          (one objective)
+PROPOSED   an expansion is occasionally a WORKING, scoring
+           score = f(prospectivity)                 (the other objective)
+           and opening with function = Mine
+```
+
+**Genesis is untouched.** That is deliberate and it bounds the blast radius:
+genesis is the most byte-identity-sensitive path in the bake, and this design
+never enters it.
+
+## B.4 Can anything live where the ore is? Measured: yes
+
+The obvious objection to B.3 is that a settlement founded on ore starves,
+since ore tracks unrest and plate boundaries. Task 1b measured it before this
+section was written:
+
+```
+fraction of top-prospectivity-decile land cells viable for at least one people
+                  VIABLE_MIN=2.0     SURVIVE_K=5.0
+  worst seed          71.49%            56.51%     (seed 1234)
+  range               71-97%            56-97%
+```
+
+Per-decile median capacity **does** decline as prospectivity rises on 2 of 3
+seeds — the anti-correlation is real and visible — but typical capacity runs
+in the 10s-30s against a floor of 2-5, so it rarely flips a cell unviable.
+Mutation control: forcing the capacity closure to `0.0` drives the fraction
+to 0%, so the non-zero result is not a probe that cannot fail.
+
+**Mines need not be satellite-only.** The design is writable.
+
+## B.5 The viability floor is `SURVIVE_K`, not `VIABLE_MIN`
+
+An earlier brief of mine named `VIABLE_MIN = 2.0` as "the bake's own floor".
+**Wrong, and worth recording because a spec that inherits it would compare
+the wrong quantities.** Every use of `VIABLE_MIN` in `history_bake.rs`
+compares it to a *population* (`if pop < VIABLE_MIN`), never to a capacity.
+
+The floor a genesis founding's own starvation arithmetic uses is
+`SURVIVE_K = GENESIS_POP / COLLAPSE_PRESSURE = 10.0 / 2.0 = 5.0`, derived
+independently by `niche_breadth_probe.rs`. **Any spec needing a single
+viability floor uses `SURVIVE_K`.**
+
+## B.6 What is NOT decided here
+
+- **How often an expansion is a working.** A rate, chosen from measured data
+  the way every other constant in this campaign must be — not frozen in prose.
+- **The ore scoring function.** Given B.1's near-constant floor, a naive
+  `max_by(prospectivity)` will tie across most of the map. The scoring must be
+  shown to discriminate before it is adopted, and that is a measurement.
+- Everything in §4.2-§4.6 stands: depth, the per-increment hazard, the
+  survivorship shape, decaying and fallible knowledge, and naming nothing.
+
+## B.7 Save-format consequence, restated
+
+This changes **placement**, so every world's history moves — a larger blast
+radius than the reclassification design had, and the reason B.3 keeps genesis
+out of scope. Re-pin in the commit that causes the move; treat an *absence*
+of drift as a stop.
