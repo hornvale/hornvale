@@ -136,7 +136,12 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
 struct SeedMeasurement {
     seed_value: u64,
     /// Six vectors, cave-bearing cells only, in `FIELD_NAMES` order.
+    /// **PAIRED by cell** — index `i` is the same cell in every vector, which
+    /// is what makes `pearson` over them meaningful. Never sort these.
     fields: [Vec<f64>; 6],
+    /// The same six, each independently ascending. For percentiles ONLY;
+    /// correlating these computes a maximum over pairings, not a correlation.
+    sorted_fields: [Vec<f64>; 6],
     photosynthate_land: Vec<f64>,
     plant_forage_land: Vec<f64>,
     land_cells: usize,
@@ -180,8 +185,20 @@ fn measure(seed_value: u64) -> SeedMeasurement {
             axis.push(v);
         }
     }
-    for axis in &mut fields {
-        axis.sort_by(f64::total_cmp);
+    // PAIRED, not sorted. An earlier version sorted each axis here, before
+    // `pearson` saw them — which destroys the per-cell pairing and, by the
+    // rearrangement inequality, computes the MAXIMUM correlation achievable
+    // over any pairing of the two multisets rather than the correlation of
+    // the data. Two unrelated fields with similar marginal shapes score near
+    // 1.0 under that bug. It produced a matrix with no pairwise |r| below
+    // 0.5488 and a STOP verdict that did not survive being re-measured.
+    //
+    // Percentiles genuinely need sorted input, so the sorted copies are
+    // taken separately and the paired vectors are what `pearson` reads.
+    let mut sorted_fields: [Vec<f64>; 6] = Default::default();
+    for (dst, src) in sorted_fields.iter_mut().zip(fields.iter()) {
+        *dst = src.clone();
+        dst.sort_by(f64::total_cmp);
     }
 
     // M1 — PHOTOSYNTHATE (`base_carrying`) and PLANT_FORAGE, over land.
@@ -230,6 +247,7 @@ fn measure(seed_value: u64) -> SeedMeasurement {
     SeedMeasurement {
         seed_value,
         fields,
+        sorted_fields,
         photosynthate_land,
         plant_forage_land,
         land_cells,
@@ -261,7 +279,7 @@ fn winze_energy_probe() {
         );
 
         // --- M4: distributions ---
-        for (name, v) in FIELD_NAMES.iter().zip(m.fields.iter()) {
+        for (name, v) in FIELD_NAMES.iter().zip(m.sorted_fields.iter()) {
             any_field_measured |= !v.is_empty();
             let p90 = pct(v, 0.90);
             let top_decile: Vec<f64> = v.iter().copied().filter(|&x| x >= p90).collect();

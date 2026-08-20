@@ -1867,3 +1867,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T00:18:23Z | gate-commit | 22.034 | 48.528 | 11.335 | 2.72 | 0 | dc6cfb1f | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-20T01:02:55Z | gate-commit | 24.520 | 49.959 | 11.806 | 2.52 | 0 | 7a3a4691 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-20T02:14:15Z | gate-commit | 43.542 | 74.498 | 24.306 | 2.27 | 0 | 664e02ef | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T02:15:23Z | gate-commit | 32.592 | 52.360 | 11.853 | 1.97 | 0 | 664e02ef | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T11:42:42Z | gate-commit | 26.175 | 59.583 | 22.743 | 3.15 | 0 | decf4c57 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T11:46:52Z | gate-commit | 22.025 | 48.264 | 11.353 | 2.71 | 0 | decf4c57 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-20T13:45:42Z | gate-commit | 23.805 | 49.708 | 11.536 | 2.57 | 0 | a98b0b38 | campaign/the-winze | MacBookPro | 10 |
