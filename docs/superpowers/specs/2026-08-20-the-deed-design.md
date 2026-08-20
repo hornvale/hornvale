@@ -169,8 +169,12 @@ missed `quit`, which sits mid-line in `"release" | "quit"` and escapes a
 line-anchored extraction — the count is derived from every quoted token in
 the dispatch, not from a pattern that assumes one verb per line.)*
 
-**Group A's bare forms are retired.** `why` becomes `!why`. Consistency is
-the point: an operator instrument that does not look like one is how
+**Group A's bare forms are retired**, all seven: `!why`, `!npcs`, `!help`,
+`!eyes`, `!whoami`, **`!provoke`**, **`!soothe`**. The last two are named
+explicitly because they are the surprising ones — they commit facts, and
+elsewhere this document discusses them bare when describing what they do
+*today*. The target spelling is sigilled, like the rest of group A.
+Consistency is the point: an operator instrument that does not look like one is how
 `Session::needs` came to be a side channel (§3.3). The hint path for a bare
 form typed out of habit is deferred to a registry row (§9) — until it
 exists, a bare group-A verb is an ordinary unknown-verb refusal.
