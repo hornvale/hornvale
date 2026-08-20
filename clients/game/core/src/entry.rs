@@ -226,6 +226,15 @@ fn write_command_line(
 /// reasoning no longer holds) and not `Prose` (it is the player's own line,
 /// never derived from any `vessel/session/v2` field — see that variant's
 /// doc).
+///
+/// **A line wider than the pane is clipped with a visible marker, not
+/// silently.** Unlike the live buffer (which tracks a caret and scrolls its
+/// window — see [`write_command_line`]), the echo is static text with
+/// nothing to scroll toward, so there is no caret-tracked window to build
+/// for it; the honest analogue of [`TRUNCATION_MARKER`]'s own "say so, don't
+/// just drop it" rule is a single `…` in the last column when the line does
+/// not fit, rather than a longer marker string that would itself overflow a
+/// narrow pane.
 #[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 8; splitting the position/size pair or the two text channels into a struct would hide, not clarify, the ask-then-answer layout this function's own doc explains
 pub fn draw(
     narration: &Narration,
@@ -261,11 +270,26 @@ pub fn draw(
     let command_row = origin.1 + height - 1;
     if let Some(text) = echo {
         let echo_row = command_row.saturating_sub(1);
-        for (i, ch) in text.chars().enumerate() {
+        let echo_width = width as usize;
+        let chars: Vec<char> = text.chars().collect();
+        let overflows_echo = chars.len() > echo_width;
+        let visible_len = if overflows_echo {
+            echo_width.saturating_sub(1)
+        } else {
+            chars.len()
+        };
+        for (i, ch) in chars.iter().take(visible_len).enumerate() {
             into.set(
                 origin.0 + i as u16,
                 echo_row,
-                Cell::glyph(ch, Weight::Normal, Source::Echo),
+                Cell::glyph(*ch, Weight::Normal, Source::Echo),
+            );
+        }
+        if overflows_echo {
+            into.set(
+                origin.0 + visible_len as u16,
+                echo_row,
+                Cell::glyph('\u{2026}', Weight::Normal, Source::Echo),
             );
         }
     }
@@ -558,6 +582,63 @@ mod tests {
         );
         assert_eq!(g.get(0, 3).unwrap().source, Source::Chrome);
         assert_eq!(g.get(0, 2).unwrap().source, Source::Echo);
+    }
+
+    /// A submitted line wider than the pane must clip with a VISIBLE
+    /// marker, not silently at the grid edge — review finding on Task 3
+    /// (Minor): the echo has no caret to scroll toward the way the live
+    /// buffer does, so the honest analogue of `TRUNCATION_MARKER` is a
+    /// single `\u{2026}` in the last column rather than a scrolling window.
+    #[test]
+    fn an_echoed_line_wider_than_the_pane_is_clipped_with_a_visible_marker() {
+        let n = Narration {
+            prose: "hi".to_string(),
+            nouns: vec![],
+        };
+        let width = 10u16;
+        let mut g = crate::Grid::new(width, 4);
+        let long: String = std::iter::repeat_n('a', 20).collect();
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            width,
+            4,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            Some(&long),
+        );
+        let echo_row: String = (0..width)
+            .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
+            .collect();
+        assert_eq!(
+            echo_row, "aaaaaaaaa\u{2026}",
+            "9 columns of the line plus a truncation glyph in the last column"
+        );
+    }
+
+    /// The marker from the test above must never appear on an echo that
+    /// already fits — otherwise every ordinary short command would show a
+    /// spurious "truncated" signal.
+    #[test]
+    fn an_echoed_line_that_fits_shows_no_truncation_marker() {
+        let n = Narration {
+            prose: "hi".to_string(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 4);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            4,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            Some("look"),
+        );
+        let text = g.to_plain_text();
+        assert!(!text.contains('\u{2026}'));
     }
 
     /// With no echo yet (a fresh session, nothing submitted), the row above

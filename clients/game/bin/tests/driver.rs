@@ -272,9 +272,34 @@ fn a_whole_typed_line_reaches_the_sim_and_its_answer_returns() {
 /// **Spec §6.** `Enter` on an empty buffer must not advance the world. The
 /// buffer is the last point of reversibility before an irreversible act,
 /// and a stray keypress must not cost the player a turn of the world.
+///
+/// **Review finding (Task 3, Needs fixes):** the original version of this
+/// test asserted only `!released` and an unchanged `snapshot()` — both of
+/// which also hold if the guard were DELETED, because `Session::handle("")`
+/// is itself a silent no-op (no turn, no `last_text` change). That made the
+/// test pass "by coincidence of the sim's tolerance rather than by proving
+/// the guard ran" — it could not tell "the driver never called the
+/// session" apart from "the driver called it with an empty string and the
+/// sim shrugged." So this version first puts real state in place (a
+/// genuine submit of `"look"`, populating `echo` and `history`) and THEN
+/// submits empty, checking that the guard-protected state — `echo()` and a
+/// `HistoryPrev` recall — survives untouched. A guard-less regression would
+/// push `""` onto history and overwrite `echo` with `Some("")`, which
+/// `d.snapshot()` alone can never see (verified by mutation — see the task
+/// report).
 #[test]
 fn enter_on_an_empty_line_costs_no_turn() {
     let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");
+    for c in "look".chars() {
+        d.apply(Action::Type(c));
+    }
+    d.apply(Action::Submit);
+    assert_eq!(
+        d.echo(),
+        Some("look"),
+        "a real submit must land in echo before the empty-submit probe below"
+    );
+
     let before = d.snapshot();
     let released = d.apply(Action::Submit);
     assert!(!released);
@@ -282,6 +307,18 @@ fn enter_on_an_empty_line_costs_no_turn() {
         d.snapshot(),
         before,
         "an empty submit must change nothing at all"
+    );
+    assert_eq!(
+        d.echo(),
+        Some("look"),
+        "an empty submit must not overwrite the last real echo with an empty one"
+    );
+
+    d.apply(Action::HistoryPrev);
+    assert_eq!(
+        d.line_text(),
+        "look",
+        "an empty submit must not push an empty entry onto history, shadowing the real one"
     );
 }
 
