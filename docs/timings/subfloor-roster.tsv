@@ -670,6 +670,8 @@ hornvale-hearsay::suite$contact::an_ending_with_no_named_attacker_makes_no_edge
 hornvale-hearsay::suite$contact::an_occupation_in_several_raids_carries_several_peers_ascending
 hornvale-hearsay::suite$contact::the_graph_counts_edges_between_two_peoples
 hornvale-hearsay::suite$contact::two_same_day_raids_by_one_attacker_stay_two_peers
+hornvale-hearsay::suite$cupel_fine_ladder::cupel_fine_ladder_day_channel_discriminates_when_the_ladder_is_fine_enough
+hornvale-hearsay::suite$cupel_penalty::cupel_penalty_constant_denominator_moves_a_holders_width
 hornvale-hearsay::suite$derive::a_chain_of_one_stance_carries_the_day_unchanged
 hornvale-hearsay::suite$derive::a_child_founded_before_the_ending_was_elsewhere
 hornvale-hearsay::suite$derive::a_holder_reachable_by_two_paths_keeps_the_least_corrupted_telling
@@ -1171,6 +1173,8 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1178,7 +1182,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1239,7 +1242,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2065,11 +2067,13 @@ hornvale-terrain::hornvale_terrain$globe::tests::summary_reports_the_globe
 hornvale-terrain::hornvale_terrain$globe::tests::the_carved_globe_has_a_shelf_mode_and_consistent_drainage
 hornvale-terrain::hornvale_terrain$globe::tests::the_globe_retains_the_post_carve_downhill_graph
 hornvale-terrain::hornvale_terrain$globe::tests::the_retained_downhill_matches_a_fresh_derivation
+hornvale-terrain::hornvale_terrain$landscape::tests::a_cell_with_no_feature_resolves_to_none
 hornvale-terrain::hornvale_terrain$landscape::tests::a_features_identity_is_the_lowest_cell_of_its_extent
 hornvale-terrain::hornvale_terrain$landscape::tests::a_rivers_identity_is_a_terminal_of_the_flow_forest
 hornvale-terrain::hornvale_terrain$landscape::tests::all_yields_every_feature_across_classes
 hornvale-terrain::hornvale_terrain$landscape::tests::an_all_false_predicate_yields_no_components
 hornvale-terrain::hornvale_terrain$landscape::tests::an_all_true_predicate_yields_one_component_of_every_cell
+hornvale-terrain::hornvale_terrain$landscape::tests::at_orders_most_specific_first
 hornvale-terrain::hornvale_terrain$landscape::tests::components_are_ordered_by_their_lowest_cell_id
 hornvale-terrain::hornvale_terrain$landscape::tests::components_partition_their_members
 hornvale-terrain::hornvale_terrain$landscape::tests::every_land_cell_belongs_to_exactly_one_catchment
@@ -2077,8 +2081,10 @@ hornvale-terrain::hornvale_terrain$landscape::tests::features_order_by_magnitude
 hornvale-terrain::hornvale_terrain$landscape::tests::magnitude_is_the_extent_size
 hornvale-terrain::hornvale_terrain$landscape::tests::of_an_absent_class_is_an_empty_slice
 hornvale-terrain::hornvale_terrain$landscape::tests::ordering_is_independent_of_input_order
+hornvale-terrain::hornvale_terrain$landscape::tests::salience_is_declared_most_specific_first
 hornvale-terrain::hornvale_terrain$landscape::tests::the_floor_cuts_on_catchment_size
 hornvale-terrain::hornvale_terrain$landscape::tests::the_floor_excludes_components_below_it
+hornvale-terrain::hornvale_terrain$landscape::tests::the_index_agrees_with_the_extents_it_was_built_from
 hornvale-terrain::hornvale_terrain$lithology::tests::a_felsic_rock_is_brighter_than_a_mafic_one
 hornvale-terrain::hornvale_terrain$lithology::tests::active_and_passive_margins_both_appear_across_seeds
 hornvale-terrain::hornvale_terrain$lithology::tests::andesite_is_reachable_across_seeds
@@ -2584,6 +2590,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2766,6 +2773,7 @@ hornvale-worldgen::hornvale_worldgen$person_promote::tests::selection_takes_the_
 hornvale-worldgen::hornvale_worldgen$render::tests::every_kind_valence_pair_has_a_distinct_palette_color
 hornvale-worldgen::hornvale_worldgen$render::tests::most_dread_picks_the_highest_dread_layer_breaking_ties_first
 hornvale-worldgen::hornvale_worldgen$render::tests::venerated_and_forgotten_read_distinctly_within_a_kind
+hornvale-worldgen::hornvale_worldgen$resolve::tests::an_empty_index_resolves_to_none
 hornvale-worldgen::hornvale_worldgen$schedule::tests::a_dependency_violating_order_is_rejected
 hornvale-worldgen::hornvale_worldgen$schedule::tests::derived_schedule_is_pinned
 hornvale-worldgen::hornvale_worldgen$schedule::tests::genesis_declarations_pass_the_single_writer_check

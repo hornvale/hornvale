@@ -24,6 +24,12 @@ hornvale-vessel = { path = "../../../windows/vessel" }
 # identical reason.
 hornvale-astronomy = { path = "../../../domains/astronomy" }
 hornvale-terrain = { path = "../../../domains/terrain" }
+# The Portolan (Task 3): `resolve_at` takes a `Phonology`/`MorphOptions` pair
+# (`hornvale-worldgen`'s `language_of_in`/`morph_options` build them), so the
+# driver needs the type names to hold what it resolves once at `start` — an
+# in-repo path dependency, not a new external crate, so decision 0004's
+# allowlist (which does not bind `clients/` anyway) is not in play.
+hornvale-language = { path = "../../../domains/language" }
 crossterm = "0.29"
 # CONCERN, flagged per the task brief: a third new dependency beyond
 # crossterm. Added only after review found that an external SIGINT/SIGTERM/

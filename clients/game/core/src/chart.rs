@@ -186,6 +186,75 @@ fn box_rank(cell: &ChartCell, index: usize) -> BoxRank {
     )
 }
 
+/// Every occupied box in `chart`, keyed by its `(row, col)` offset from the
+/// observer's own box (before `draw`'s `origin`/centre translation is
+/// applied) — the one place [`project`] and [`box_rank`] run. Shared by
+/// [`draw`] (which paints the winner of each box) and [`cell_at`] (which
+/// looks one up for the cursor), so the two can never disagree about which
+/// cell a box belongs to — see this module's doc on why that agreement is
+/// exactly the thing this file has gotten wrong before.
+fn boxes_of(chart: &Chart) -> BTreeMap<(i64, i64), (BoxRank, &ChartCell)> {
+    let farthest = chart
+        .cells
+        .iter()
+        .map(|c| c.distance_rad)
+        .fold(0.0f64, f64::max);
+    let rings = i64::from(chart.radius.max(1));
+
+    let mut boxes: BTreeMap<(i64, i64), (BoxRank, &ChartCell)> = BTreeMap::new();
+    for (i, cell) in chart.cells.iter().enumerate() {
+        let at = project(cell.bearing_deg, cell.distance_rad, farthest, rings);
+        let rank = box_rank(cell, i);
+        match boxes.get(&at) {
+            Some((held, _)) if *held <= rank => {}
+            _ => {
+                boxes.insert(at, (rank, cell));
+            }
+        }
+    }
+    boxes
+}
+
+/// The chart cell whose box lands on screen position `(x, y)`, for a chart
+/// drawn at `origin` into a `width`-by-`height` plate — exactly the box
+/// [`draw`] would have painted there, via the SAME [`boxes_of`] rather than
+/// a second copy of the projection (see this module's doc: two copies of
+/// this geometry is how a chart and a cursor come to disagree about which
+/// cell is where, and that has already bitten this file once).
+///
+/// Returns the winning [`ChartCell`] together with its index into
+/// `chart.cells` — the caller (`bin`, which cannot depend on
+/// `hornvale-scene` any more than this crate can) needs the index to relate
+/// the wire cell back to the SAME position in a freshly-drawn
+/// `hornvale_scene::SurroundsScene::cells`: `chart.cells` is a
+/// field-for-field, order-preserving wire mirror of that real list (nothing
+/// in the snapshot pipeline reorders or filters it — `Session::snapshot`
+/// embeds the real `SurroundsScene` directly and this crate's `Chart`
+/// independently mirrors its wire shape), so `chart.cells[i]` and
+/// `scene.cells[i]` name the identical cell. Bearing/distance alone would
+/// need a float-equality match against a value that has round-tripped
+/// through quantized JSON; the index does not.
+///
+/// `None` when no cell's box lands on `(x, y)` — a real position (inside
+/// the plate) that simply has nothing projected onto it, distinct from a
+/// resolver-absent band.
+pub fn cell_at(
+    chart: &Chart,
+    origin: (u16, u16),
+    width: u16,
+    height: u16,
+    x: u16,
+    y: u16,
+) -> Option<(usize, &ChartCell)> {
+    let centre_x = origin.0 as i64 + width as i64 / 2;
+    let centre_y = origin.1 as i64 + height as i64 / 2;
+    let row = y as i64 - centre_y;
+    let col = x as i64 - centre_x;
+    boxes_of(chart)
+        .get(&(row, col))
+        .map(|(rank, cell)| (rank.3, *cell))
+}
+
 /// Draw `chart` into `into`, anchored so the observer lands at `origin`
 /// plus half of `into`'s own width and height — "relative to origin plus a
 /// centre offset" per the brief. The observer is at distance zero from
@@ -205,26 +274,8 @@ fn box_rank(cell: &ChartCell, index: usize) -> BoxRank {
 pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
     let centre_x = origin.0 as i64 + into.width() as i64 / 2;
     let centre_y = origin.1 as i64 + into.height() as i64 / 2;
-    let farthest = chart
-        .cells
-        .iter()
-        .map(|c| c.distance_rad)
-        .fold(0.0f64, f64::max);
-    let rings = i64::from(chart.radius.max(1));
 
-    let mut boxes: BTreeMap<(i64, i64), (BoxRank, &ChartCell)> = BTreeMap::new();
-    for (i, cell) in chart.cells.iter().enumerate() {
-        let at = project(cell.bearing_deg, cell.distance_rad, farthest, rings);
-        let rank = box_rank(cell, i);
-        match boxes.get(&at) {
-            Some((held, _)) if *held <= rank => {}
-            _ => {
-                boxes.insert(at, (rank, cell));
-            }
-        }
-    }
-
-    for ((row, col), (_, cell)) in boxes {
+    for ((row, col), (_, cell)) in boxes_of(chart) {
         let x = centre_x + col;
         let y = centre_y + row;
         if x < 0 || y < 0 || x >= into.width() as i64 || y >= into.height() as i64 {
@@ -448,5 +499,61 @@ mod tests {
             Weight::Normal,
             "the unknown arm falls back to Normal and the cell is still drawn"
         );
+    }
+
+    /// `cell_at` finds exactly the box `draw` paints there — checked by
+    /// screen position, on the identical chart
+    /// `a_seam_cell_is_drawn_under_north_up` draws: the seam cell (index 1,
+    /// bearing 90, distance 1.0) lands two columns right of centre
+    /// `(4, 2)` -> `(6, 2)`; the observer's own box (index 0) is centre
+    /// itself. This is the guard the cursor's resolution now depends on —
+    /// `cell_at` and `draw` sharing `boxes_of` is what keeps them from
+    /// disagreeing about which cell a box belongs to.
+    #[test]
+    fn cell_at_finds_the_same_box_draw_paints() {
+        let mut seam = chart_cell(90.0, 1.0, "sensed");
+        seam.seam = true;
+        seam.u = None;
+        seam.v = None;
+        seam.w = None;
+        seam.up = None;
+        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), seam]);
+
+        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 4, 2).expect("the observer's own box");
+        assert_eq!(idx, 0);
+        assert_eq!(cell.state, "here");
+
+        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 6, 2).expect("the seam cell's box");
+        assert_eq!(idx, 1);
+        assert_eq!(cell.state, "sensed");
+    }
+
+    /// A screen position no cell projects onto resolves to `None`, not a
+    /// panic and not the nearest cell — the caller (`Driver::resolve`)
+    /// depends on this to report an honest absence rather than a wrong
+    /// name.
+    #[test]
+    fn cell_at_of_an_unoccupied_box_is_none() {
+        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here")]);
+        assert!(cell_at(&chart, (0, 0), 9, 5, 0, 0).is_none());
+    }
+
+    /// `cell_at` obeys the same collision rule `draw` does: the more
+    /// salient of two cells sharing a box is the one `cell_at` reports —
+    /// mirroring `the_more_salient_of_two_colliding_cells_keeps_the_box`,
+    /// from the query side instead of the paint side.
+    #[test]
+    fn cell_at_obeys_box_rank_on_a_collision() {
+        let mut low = chart_cell(90.0, 1.0, "sensed");
+        low.marks = vec![mark(20)];
+        let mut high = chart_cell(90.0, 1.0, "remembered");
+        high.marks = vec![mark(5)];
+        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), low, high]);
+        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 6, 2).expect("the collided box");
+        assert_eq!(
+            idx, 2,
+            "the more salient cell (index 2) must win, not document order"
+        );
+        assert_eq!(cell.state, "remembered");
     }
 }

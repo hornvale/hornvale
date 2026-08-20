@@ -57,10 +57,21 @@
 //! second copy of an exit list this crate has already gotten wrong once by
 //! trying to keep one on hand.
 
-use crate::{Cell, Narration, Source, Weight};
+use crate::{Cell, CommandLine, Focus, Narration, Source, Weight};
 
-/// The glyph the command line opens with — a prompt, not a text box.
+/// The glyph the command line opens with. **This used to be true
+/// unqualified as "a prompt, not a text box"** — before Task 2 (The
+/// Stylus), the command row carried only this fixed glyph, with nothing
+/// editable drawn after it. It is a text box now: [`draw`] renders the
+/// live [`CommandLine`] buffer immediately after this glyph and reports the
+/// caret's screen position. The constant itself still names only the
+/// glyph, not the row's new behaviour.
 const PROMPT_GLYPH: char = '>';
+
+/// Columns the prompt and the space after it cost on the command row —
+/// `PROMPT_GLYPH` plus one separating space — subtracted from `width` to
+/// get the columns available for the buffer's own text.
+const PROMPT_COLUMNS: u16 = 2;
 
 /// Drawn on the last visible prose row in place of that row's own text
 /// when the wrapped prose is longer than the space available — an honest
@@ -126,11 +137,60 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
     }
 }
 
+/// Draw `line`'s visible window into `into` starting at `(x0, y)`, one
+/// glyph per column, attributed to [`Source::Typed`] (the player's own
+/// unsent keystrokes — see that variant's doc). Returns the caret's screen
+/// column: `x0` plus however many of the visible window's columns precede
+/// it, which by construction is always strictly less than `x0 + available`
+/// (see the windowing note below), so a caller never has to clamp it again.
+///
+/// **Windowing.** `line.caret` is a character offset, never a byte offset
+/// (matching [`CommandLine::caret`]'s own contract), so it is resolved
+/// against `line.text.chars()`, not byte indices. When the whole buffer
+/// fits in `available` columns, the window starts at column 0 and the
+/// caret sits at its own offset, unscrolled. When it does not, the
+/// **simplest rule that keeps the caret on screen** applies: the window's
+/// left edge trails the caret by exactly `available - 1` characters, so an
+/// overflowing caret always lands on the pane's rightmost visible column
+/// rather than running off the edge. There is no left-context lookahead
+/// beyond that — the window scrolls exactly as far as the caret has moved
+/// past the right edge, never further.
+fn write_command_line(
+    into: &mut crate::Grid,
+    x0: u16,
+    y: u16,
+    line: CommandLine<'_>,
+    available: u16,
+) -> u16 {
+    let chars: Vec<char> = line.text.chars().collect();
+    let caret = line.caret.min(chars.len());
+    let avail = available as usize;
+    let window_start = caret.saturating_sub(avail.saturating_sub(1));
+    for (i, ch) in chars.iter().skip(window_start).take(avail).enumerate() {
+        into.set(
+            x0 + i as u16,
+            y,
+            Cell::glyph(*ch, Weight::Normal, Source::Typed),
+        );
+    }
+    x0 + (caret - window_start) as u16
+}
+
 /// Draw the entry into `into`: `narration.prose` word-wrapped to `width`
-/// columns, filling up to `height - 1` rows from `origin` downward, then a
-/// bare `>` prompt on the last of those `height` rows — the command line,
-/// read as the next line the character is about to write rather than as a
-/// text field to fill in.
+/// columns, filling up to `height - 1` rows from `origin` downward, then
+/// the `>` prompt and `line`'s editable buffer on the last of those
+/// `height` rows — the command line, read as the next line the character
+/// is about to write, now drawn as an actual text box rather than a bare
+/// glyph (see [`PROMPT_GLYPH`]'s doc for what changed).
+///
+/// Returns the caret's screen position — `Some((x, y))` only when `focus`
+/// is [`Focus::Cli`], `None` under [`Focus::Map`]. This is the one hardware
+/// cursor's location, never ink on the grid (spec §2.1 forbids ornament
+/// occupying an informative cell), so a terminal places its own cursor
+/// there and this function never draws anything at that position beyond
+/// the buffer's own glyphs. `line`'s TEXT is drawn either way — losing
+/// focus does not erase what the player typed, only stops reporting where
+/// in it they are.
 ///
 /// If the wrapped prose is longer than the rows available, the last
 /// visible prose row is replaced with [`TRUNCATION_MARKER`] rather than
@@ -145,19 +205,25 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// client read off the wire. (An earlier draft attributed the prompt to a
 /// since-deleted `Source::WaysOn`, on the theory that the command line
 /// represents the character's own "ways on" — see [`Source::Chrome`]'s doc
-/// for why that was a false provenance claim.) This module never
-/// special-cases the prose's own trailing exit-list sentence, under either
-/// of its wordings (see the module doc), so that sentence is carried as
-/// ordinary [`Source::Prose`] text, same as the rest of the passage.
+/// for why that was a false provenance claim.) The buffer's own text is
+/// attributed to [`Source::Typed`], not `Chrome` and not `Prose` — see that
+/// variant's doc for why lumping it into either would be a false
+/// provenance claim of the same shape `Chrome`'s doc already warns
+/// against. This module never special-cases the prose's own trailing
+/// exit-list sentence, under either of its wordings (see the module doc),
+/// so that sentence is carried as ordinary [`Source::Prose`] text, same as
+/// the rest of the passage.
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
     origin: (u16, u16),
     width: u16,
     height: u16,
-) {
+    focus: Focus,
+    line: CommandLine<'_>,
+) -> Option<(u16, u16)> {
     if height == 0 {
-        return;
+        return None;
     }
     let prose_rows = height - 1;
     let wrapped = wrap(&narration.prose, width as usize);
@@ -169,8 +235,8 @@ pub fn draw(
     } else {
         prose_rows
     };
-    for (i, line) in wrapped.iter().take(visible_rows as usize).enumerate() {
-        write_line(into, origin.0, origin.1 + i as u16, line);
+    for (i, l) in wrapped.iter().take(visible_rows as usize).enumerate() {
+        write_line(into, origin.0, origin.1 + i as u16, l);
     }
     if overflows {
         let marker_row = origin.1 + visible_rows;
@@ -182,6 +248,15 @@ pub fn draw(
         command_row,
         Cell::glyph(PROMPT_GLYPH, Weight::Bold, Source::Chrome),
     );
+    let available = width.saturating_sub(PROMPT_COLUMNS);
+    let caret_col = write_command_line(
+        into,
+        origin.0 + PROMPT_COLUMNS,
+        command_row,
+        line,
+        available,
+    );
+    (focus == Focus::Cli).then_some((caret_col, command_row))
 }
 
 #[cfg(test)]
@@ -213,9 +288,139 @@ mod tests {
             nouns: vec![],
         };
         let mut g = crate::Grid::new(10, 3);
-        draw(&n, &mut g, (0, 0), 10, 3);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            10,
+            3,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+        );
         assert_eq!(g.get(0, 2).unwrap().glyph, Some(PROMPT_GLYPH));
         assert_eq!(g.get(0, 0).unwrap().glyph, Some('h'));
+    }
+
+    /// The buffer is drawn after the prompt on the command row, and the
+    /// caret's screen position is reported for the terminal to place its
+    /// own cursor at — never drawn as ink.
+    #[test]
+    fn the_buffer_is_drawn_after_the_prompt_and_the_caret_is_reported() {
+        let n = Narration {
+            prose: "hi".to_string(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 3);
+        let caret = draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            3,
+            crate::Focus::Cli,
+            crate::CommandLine {
+                text: "look",
+                caret: 4,
+            },
+        );
+        let row: String = (0..6)
+            .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
+            .collect();
+        assert_eq!(row, "> look");
+        assert_eq!(
+            caret,
+            Some((6, 2)),
+            "the caret sits one past the last character"
+        );
+    }
+
+    /// With the map focused the entry pane reports NO cursor position — the
+    /// one hardware cursor is over on the plate, and that is how focus is
+    /// shown (spec §2.1). The line's TEXT is still drawn: the buffer does
+    /// not disappear because the player looked away.
+    #[test]
+    fn the_caret_is_not_reported_when_the_map_is_focused() {
+        let n = Narration {
+            prose: "hi".to_string(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 3);
+        let caret = draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            3,
+            crate::Focus::Map,
+            crate::CommandLine {
+                text: "look",
+                caret: 4,
+            },
+        );
+        assert_eq!(caret, None);
+        let row: String = (0..6)
+            .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
+            .collect();
+        assert_eq!(
+            row, "> look",
+            "the buffer stays visible while the map has focus"
+        );
+    }
+
+    /// The caret follows the caret INDEX, not the end of the text.
+    #[test]
+    fn the_caret_reports_the_index_not_the_end() {
+        let n = Narration {
+            prose: "hi".to_string(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 3);
+        let caret = draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            3,
+            crate::Focus::Cli,
+            crate::CommandLine {
+                text: "look",
+                caret: 1,
+            },
+        );
+        assert_eq!(caret, Some((3, 2)));
+    }
+
+    /// **A line longer than the pane must keep the caret visible.** The
+    /// entry pane is 40 columns at the 80x24 floor; a command can be
+    /// longer. Whatever windowing you choose, the invariant is that the
+    /// reported caret is inside the pane — a caret drawn off-screen is a
+    /// cursor the player cannot find.
+    #[test]
+    fn a_line_wider_than_the_pane_keeps_the_caret_on_screen() {
+        let n = Narration {
+            prose: "hi".to_string(),
+            nouns: vec![],
+        };
+        let width = 20u16;
+        let mut g = crate::Grid::new(width, 3);
+        let long: String = std::iter::repeat_n('a', 60).collect();
+        let caret = draw(
+            &n,
+            &mut g,
+            (0, 0),
+            width,
+            3,
+            crate::Focus::Cli,
+            crate::CommandLine {
+                text: &long,
+                caret: 60,
+            },
+        );
+        let (cx, _) = caret.expect("the CLI is focused, so a caret is reported");
+        assert!(
+            cx < width,
+            "caret at column {cx} is outside a {width}-column pane"
+        );
     }
 
     /// The regression this campaign's review found: a 400-word synthetic
@@ -237,7 +442,15 @@ mod tests {
         // width 40, height 10 => 9 prose rows, nowhere near enough for
         // 400 words: this must overflow.
         let mut g = crate::Grid::new(40, 10);
-        draw(&n, &mut g, (0, 0), 40, 10);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            40,
+            10,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+        );
         let text = g.to_plain_text();
         assert!(
             text.contains("more, not shown"),
@@ -263,7 +476,15 @@ mod tests {
             nouns: vec![],
         };
         let mut g = crate::Grid::new(40, 10);
-        draw(&n, &mut g, (0, 0), 40, 10);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            40,
+            10,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+        );
         let text = g.to_plain_text();
         assert!(!text.contains("more, not shown"));
         assert!(text.contains("Ways on: NE, NW, S."));

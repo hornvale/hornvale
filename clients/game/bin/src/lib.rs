@@ -5,4 +5,5 @@
 
 pub mod driver;
 pub mod input;
+pub mod line;
 pub mod term;

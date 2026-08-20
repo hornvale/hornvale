@@ -382,6 +382,7 @@
 - [The Adit](./chronicle/the-adit.md)
 - [The Burr](./chronicle/the-burr.md)
 - [The Touchstone](./chronicle/the-touchstone.md)
+- [The Cupel](./chronicle/the-cupel.md)
 - [The Tackle](./chronicle/the-tackle.md)
 
 # Appendix: The Frontier
