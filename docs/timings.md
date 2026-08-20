@@ -1906,3 +1906,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T15:09:12Z | sluice:outboard | 35.559 | 22.084 | 35.742 | 1.63 | 0 | ca9facf30 |  | lefford | 40 |
 | 2026-08-20T15:15:12Z | sluice:gate | 359.770 | 9900.907 | 339.753 | 28.46 | 0 | 651e5c2f4 |  | lefford | 40 |
 | 2026-08-20T15:18:06Z | sluice:clients | 173.634 | 351.356 | 11.524 | 2.09 | 0 | cc02b80e5 |  | lefford | 40 |
+| 2026-08-20T15:28:11Z | rebaseline | 51.084 | 231.651 | 12.281 | 4.78 | 0 | c2349725 | campaign/the-stope | MacBookPro | 10 |
