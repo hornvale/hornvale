@@ -655,13 +655,22 @@ pub fn chamber_at(
 ///
 /// **`floor` is NOT an adjacency axis here, and that is a deferral rather than
 /// a claim about the world** (The Stope, spec §7 task 6: "junctions: derived,
-/// never drawn"). This function holds `floor` fixed, which reproduces exactly
-/// the graph it produced before `floor` existed — at `floor = 0`, byte for
-/// byte in shape. It means the lattice currently has one disconnected copy of
-/// this graph per floor, which is the honest state of an address space whose
+/// never drawn"). Every neighbour this function offers carries the caller's
+/// own `addr.floor`, so the lattice currently has one disconnected copy of
+/// this graph per floor. That is the honest state of an address space whose
 /// vertical connections have not been designed yet, rather than a guess at
 /// them baked into the one function whose whole virtue is that it guesses
 /// nothing.
+///
+/// The candidate-generation rule below is unchanged from before `floor`
+/// existed — it varies `branch` and `band` and nothing else. **It does not
+/// follow that the floor-0 graph is unchanged**, and this doc said otherwise
+/// until review caught it: `chamber_exists` draws per address, `chamber_key`
+/// spells `floor`, and the `chamber/v3` epoch re-keyed every one of those
+/// draws, so which candidates survive `retain` moved at every floor including
+/// zero. `every_neighbour_stays_on_the_callers_floor` in
+/// `deep_realm_chamber.rs` asserts the half that IS a property of this
+/// function.
 ///
 /// "Differs by 1" is symmetric in its two arguments by inspection — it is
 /// not computed relative to a starting address, so there is nothing that
@@ -853,6 +862,83 @@ mod tests {
         }
     }
 
+    /// The fixture column `deep_realm_chamber.rs` states its rung/stratum
+    /// arithmetic against: 401 m of cover on continental basement, band tops
+    /// `[0, 1, 401, 17700.5, 35000]` m.
+    fn fixture_column() -> StratigraphicColumn {
+        hornvale_terrain::column(
+            35.0,
+            0.3,
+            true,
+            400.0,
+            1.0,
+            hornvale_terrain::RockClass::Sandstone,
+            hornvale_terrain::Basement::Continental,
+        )
+    }
+
+    /// **The rung→stratum map is many-to-one, and that fact consumes no
+    /// existence draw.** This is the deterministic statement of the property
+    /// `deep_realm_chamber.rs`'s `a_chamber_reports_both_its_rung_and_its_
+    /// stratum` demonstrates end to end — and the reason it is stated here as
+    /// well is that the end-to-end version can only *hunt* for an example
+    /// through a random existence draw, so a re-keying can redden it while the
+    /// property is untouched. The `chamber/v3` epoch did exactly that.
+    ///
+    /// [`stratum_at`] is private, so this can only live in this module. It
+    /// reads the same table `chamber_at` reads and calls nothing that draws.
+    ///
+    /// Both directions, the same two the integration test asserts:
+    ///
+    /// - two DISTINCT rungs share a stratum (so `rung` cannot be recovered
+    ///   from `stratum`) — at 24 K/km, `Shallows` (83 m) and `Deeps` (333 m)
+    ///   are both in the cover, and `Underdeep` (1042 m) and `Nadir` (2083 m)
+    ///   are both in the basement;
+    /// - one rung sits in DIFFERENT strata under different gradients (so
+    ///   `stratum` cannot be a function of `addr.band`) — `Deeps` is 533 m
+    ///   under a 15 K/km cell and 267 m under a 30 K/km one, straddling the
+    ///   401 m contact.
+    #[test]
+    fn the_rung_to_stratum_map_is_many_to_one_and_gradient_dependent() {
+        let column = fixture_column();
+        let gradient = GeothermalGradient::new(24.0);
+
+        let mapped: Vec<(DelveRung, hornvale_climate::Stratum)> = (0..5u8)
+            .filter_map(rung_of_rank)
+            .map(|rung| (rung, stratum_of_band(stratum_at(rung, gradient, &column))))
+            .collect();
+        assert_eq!(mapped.len(), 5, "every rank 0..=4 must map to a stratum");
+
+        let shares_a_stratum = mapped.iter().any(|&(rung_a, stratum_a)| {
+            mapped
+                .iter()
+                .any(|&(rung_b, stratum_b)| stratum_a == stratum_b && rung_a != rung_b)
+        });
+        assert!(
+            shares_a_stratum,
+            "no two rungs share a stratum on this column, so `rung` could be a \
+             relabelling of `stratum`: {mapped:?}"
+        );
+
+        let cool = stratum_of_band(stratum_at(
+            DelveRung::Deeps,
+            GeothermalGradient::new(15.0),
+            &column,
+        ));
+        let hot = stratum_of_band(stratum_at(
+            DelveRung::Deeps,
+            GeothermalGradient::new(30.0),
+            &column,
+        ));
+        assert_ne!(
+            cool, hot,
+            "the Deeps sits at 533 m under 15 K/km and 267 m under 30 K/km, \
+             which straddle this column's 401 m contact — a `stratum` read \
+             from the cell must differ, and one derived from `addr.band` \
+             cannot"
+        );
+    }
+
     /// **The key must spell `floor`, or two floors of one run derive the same
     /// stream and are the same chamber.** This is the whole reason The Stope's
     /// address change is an epoch rather than an additive field.
@@ -947,15 +1033,7 @@ mod tests {
     #[test]
     fn an_out_of_range_floor_does_not_exist() {
         let seed = Seed(90210);
-        let column = hornvale_terrain::column(
-            35.0,
-            0.3,
-            true,
-            400.0,
-            1.0,
-            hornvale_terrain::RockClass::Sandstone,
-            hornvale_terrain::Basement::Continental,
-        );
+        let column = fixture_column();
         // A cave at the reach ceiling, so the BAND gate cannot be what
         // refuses — band 0 is inside any budget, but a deep cave keeps the
         // fixture honest if a later reader moves the band under test.

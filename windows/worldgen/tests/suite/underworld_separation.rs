@@ -115,7 +115,11 @@
 //! function of the RUNG and the column, never of which chamber addresses
 //! exist. Chamber existence and delve seating turned out not to be joined at
 //! all. The measurement here is a floor-0 slice of the new lattice, matching
-//! how the probe enumerated the lattice before floors existed.
+//! how the probe enumerated the lattice before floors existed — which is what
+//! makes the `chambers` column comparable across the epoch, and what stops it
+//! being a count of the chambers in a world. Every in-budget run currently
+//! admits all `FLOORS_PER_RUN_CEILING` floors, so the unsliced population is
+//! 20× higher; how many floors a run actually realizes is Task 2's draw.
 //!
 //! ## H2 floor — the modal seated rung (needs the two kinds to differ)
 //!

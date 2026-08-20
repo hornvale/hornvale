@@ -157,12 +157,18 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 /// The lattice is a fixed size regardless of what any particular cave
 /// realizes; occupancy within it is sparse and varies by seed. Over a cave
 /// reaching the `Underdeep` rung, the address space checked here is
-/// `BRANCHES_PER_SYSTEM * 3` (bands `0..=2`, `Undercroft..=Deeps`) — constant
-/// across every seed — while the number of addresses that EXIST is strictly
-/// less than that, and differs seed to seed. The loop stops one rung short of
-/// the fixture's own budget on purpose: every address it probes is in budget,
-/// so a `false` from `chamber_exists` can only mean the draw refused it, never
-/// that the gate did.
+/// `BRANCHES_PER_SYSTEM * FLOORS_PER_RUN_CEILING * 3` (bands `0..=2`,
+/// `Undercroft..=Deeps`) — constant across every seed — while the number of
+/// addresses that EXIST is strictly less than that, and differs seed to seed.
+/// The loop stops one rung short of the fixture's own budget on purpose: every
+/// address it probes is in budget, so a `false` from `chamber_exists` can only
+/// mean the draw refused it, never that the gate did.
+///
+/// **The floor axis is swept, and it has to be** (The Stope, `chamber/v3`).
+/// This test's subject IS the lattice's size, so enumerating one floor and
+/// calling the count "the address space" would assert a constant over 1/20 of
+/// the thing named. Before this campaign the two were the same set; they are
+/// not now.
 /// claim: invariant(forall-seed) — lattice size is fixed, existence is
 /// sparse and seed-varying (seedless sweep, audit §5: builds no world;
 /// named explicitly in the task brief)
@@ -183,24 +189,26 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
         let mut existing = 0u32;
         for band in 0..=2u8 {
             for branch in 0..BRANCHES_PER_SYSTEM {
-                total += 1;
-                let addr = ChamberAddr {
-                    cell,
-                    entrance: 0,
-                    band,
-                    branch,
-                    floor: 0,
-                };
-                if chamber_exists(seed, &cave, fixture_gradient(), addr) {
-                    existing += 1;
+                for floor in 0..FLOORS_PER_RUN_CEILING {
+                    total += 1;
+                    let addr = ChamberAddr {
+                        cell,
+                        entrance: 0,
+                        band,
+                        branch,
+                        floor,
+                    };
+                    if chamber_exists(seed, &cave, fixture_gradient(), addr) {
+                        existing += 1;
+                    }
                 }
             }
         }
         assert_eq!(
             total,
-            u32::from(BRANCHES_PER_SYSTEM) * 3,
+            u32::from(BRANCHES_PER_SYSTEM) * u32::from(FLOORS_PER_RUN_CEILING) * 3,
             "the address space over an Underdeep-reaching cave must be a constant \
-             BRANCHES_PER_SYSTEM * 3 over the bands probed"
+             BRANCHES_PER_SYSTEM * FLOORS_PER_RUN_CEILING * 3 over the bands probed"
         );
         assert!(
             existing < total,
@@ -225,6 +233,13 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
 /// holds in the shipped code, not merely believed to — it walks every
 /// address in the probed region of the lattice, for several seeds and
 /// cells, and checks both directions of every passage it finds.
+///
+/// **Sampled across the floor axis rather than at `floor = 0` alone** (The
+/// Stope, `chamber/v3`): every floor is its own set of existence draws, so a
+/// single-floor sweep would check the symmetry on 1/20 of the lattice. The
+/// floors probed are the two ends and two interior values rather than all 20 —
+/// this is a symmetry property with no floor-varying mechanism behind it, so
+/// the edges are where an off-by-one in the candidate walk would show.
 /// claim: invariant(forall-seed) — passage bidirectionality over a
 /// hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
@@ -237,26 +252,86 @@ fn every_passage_is_traversable_in_both_directions() {
             let cell = CellId(raw_cell);
             for band in 0..=2u8 {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let addr = ChamberAddr {
-                        cell,
-                        entrance: 0,
-                        band,
-                        branch,
-                        floor: 0,
-                    };
-                    for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
-                        let back = passages_from(seed, &cave, fixture_gradient(), neighbour);
-                        assert!(
-                            back.contains(&addr),
-                            "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
+                    for floor in [0, 1, 7, FLOORS_PER_RUN_CEILING - 1] {
+                        let addr = ChamberAddr {
+                            cell,
+                            entrance: 0,
+                            band,
+                            branch,
+                            floor,
+                        };
+                        for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
+                            let back = passages_from(seed, &cave, fixture_gradient(), neighbour);
+                            assert!(
+                                back.contains(&addr),
+                                "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
                              {neighbour:?} as a passage, but {neighbour:?}'s own \
                              passages do not list {addr:?} back — a one-way passage"
-                        );
+                            );
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/// **Every passage stays on the caller's floor.** `passages_from` varies
+/// `branch` and `band` and nothing else, so `floor` is not an adjacency axis:
+/// vertical connection between floors is spec §7 task 6's (junctions, derived,
+/// never drawn), and until it lands the lattice has one disconnected copy of
+/// the passage graph per floor.
+///
+/// That was stated in `passages_from`'s doc and asserted nowhere. Before this
+/// test, no test in the workspace constructed a `ChamberAddr` with `floor > 0`
+/// and asked for its passages at all — prose a reviewer has to check by
+/// inspection is a missing assertion.
+///
+/// The `saw_a_passage` control is not decoration: "no neighbour changed floor"
+/// is satisfied vacuously by a function that returns nothing, and existence
+/// here is a coin-flip draw per address.
+/// claim: invariant(forall-seed) — passages preserve `floor` over a
+/// hand-built lattice (seedless sweep, audit §5: builds no world)
+#[test]
+fn every_neighbour_stays_on_the_callers_floor() {
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
+    let mut saw_a_passage = false;
+
+    for raw_seed in [1u64, 2, 3] {
+        let seed = Seed(raw_seed);
+        for raw_cell in [0u32, 9, 42] {
+            let cell = CellId(raw_cell);
+            for band in 0..=2u8 {
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                        let addr = ChamberAddr {
+                            cell,
+                            entrance: 0,
+                            band,
+                            branch,
+                            floor,
+                        };
+                        for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
+                            saw_a_passage = true;
+                            assert_eq!(
+                                neighbour.floor, addr.floor,
+                                "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
+                                 {neighbour:?} as a passage, but they are on \
+                                 different floors — `floor` is not an adjacency \
+                                 axis until junctions land"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        saw_a_passage,
+        "no address in the probed lattice had any passage at all, so the \
+         floor-preservation assertion above never ran"
+    );
 }
 
 /// Step 4's connectivity guard (plan Task 3). An entrance you cannot get
@@ -506,14 +581,25 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     // at 1042 m and the Nadir (50 K) at 2083 m are both in the basement. So
     // the sweep sees two distinct rung pairs that share a stratum.
     //
-    // **The sweep covers the FLOOR axis too, and that is a widening rather
-    // than a rescue** (The Stope, `chamber/v3`). The lattice gained a `floor`,
-    // so "every address in the fixture's budget" is 20× the set it used to be;
-    // sweeping only `floor = 0` would enumerate a 1/20 slice and call it the
-    // lattice. It also matters here in particular: the epoch relocated every
-    // existence draw, and at `floor = 0` alone this fixture happens to realize
-    // no `Shallows` chamber at all, so the `Shallows`/`Deeps` pair that shares
-    // the cover is invisible in that slice. The assertion below is unchanged.
+    // **The sweep covers the FLOOR axis too — but be clear what that buys**
+    // (The Stope, `chamber/v3`). `chamber_at` derives `rung` from `addr.band`
+    // and `stratum` from the rung, the gradient and the column; NEITHER reads
+    // `floor`. So every realized floor of a run contributes an IDENTICAL
+    // `(rung, stratum)` pair, and widening adds no content axis whatever. What
+    // it adds is trials: the independent existence draws per band go from 4 to
+    // 80, so the chance of a band contributing no sample at all falls from
+    // 1/16 to 2^-80.
+    //
+    // That is worth doing, and it is a patch over an older defect rather than
+    // a fix for it. **This test demonstrates a DETERMINISTIC fact — that two
+    // rungs share one stratum under this column and gradient — by hunting for
+    // an example through a random existence draw**, which is the only reason
+    // re-keying the lattice could ever have reddened it. The deterministic
+    // statement of the same property, consuming no draw at all, is
+    // `the_rung_to_stratum_map_is_many_to_one_and_gradient_dependent` in
+    // `chamber.rs`'s own module tests, where `stratum_at` is visible. This
+    // test's job is the end-to-end path; that one's is the claim. The
+    // assertion below is unchanged from before the epoch.
     let mut seen: Vec<(DelveRung, hornvale_climate::Stratum)> = Vec::new();
     for band in 0..=3u8 {
         for branch in 0..BRANCHES_PER_SYSTEM {

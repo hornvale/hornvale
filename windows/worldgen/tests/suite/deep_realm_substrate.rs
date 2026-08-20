@@ -449,11 +449,28 @@ const N_RADII: usize = 5;
 /// type-audit: bare-ok(ratio)
 const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 
-/// How many lattice addresses are in budget for a cave whose depth budget
-/// reaches delve rung `rung_idx` ([`rung_index`]'s own numbering, `0..=4`):
-/// `chamber_exists`'s gate is `addr.band <= rung_rank(rung_at_depth(cave.
-/// depth_reach_m, gradient))`, and `addr.band` ranges over `0..=rung_idx` at
-/// [`BRANCHES_PER_SYSTEM`] slots each.
+/// How many lattice addresses are in budget **on one floor** for a cave whose
+/// depth budget reaches delve rung `rung_idx` ([`rung_index`]'s own numbering,
+/// `0..=4`): `chamber_exists`'s gate is `addr.band <= rung_rank(rung_at_depth(
+/// cave.depth_reach_m, gradient))`, and `addr.band` ranges over `0..=rung_idx`
+/// at [`BRANCHES_PER_SYSTEM`] branches each.
+///
+/// **`_per_floor` is in the name because this is NOT the lattice's size, and
+/// after The Stope (`chamber/v3`) the two differ by a factor of
+/// `FLOORS_PER_RUN_CEILING`.** Before that campaign a band held one point per
+/// branch and the distinction did not exist. It is a name rather than a
+/// comment because the misreading is inheritable: a later task reaching for
+/// "how big is the address space" would find this function, and the number it
+/// returns is a twentieth of that answer.
+///
+/// **Pairing it with a floor-0 measurement is deliberate and sufficient.**
+/// [`chamber_count_at`] samples the same slice, and the Binomial this
+/// prediction feeds is per-address at
+/// [`PREDICTED_EXISTENCE_DENSITY`] — a per-address density holds on any subset
+/// of the lattice, so a one-floor slice is a smaller sample of the same
+/// distribution, never a different one. Widening both would multiply a
+/// 66-second live readout by 20 to sharpen a fit that is already the shape
+/// under test.
 ///
 /// **This used to be indexed by `band_index(cave.deepest_band)`**, because the
 /// gate used to be `addr.band <= band_rank(cave.deepest_band)`. The arithmetic
@@ -461,12 +478,19 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 /// depth axis at the delve ladder, so bucketing on the stratigraphic band
 /// would now compare a measured count against a prediction for a different
 /// cave's reach.
-fn addresses_in_budget(rung_idx: usize) -> usize {
+fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
     (rung_idx + 1) * usize::from(BRANCHES_PER_SYSTEM)
 }
 
-/// Every chamber address that exists over the FULL five-band lattice at
-/// `(seed, cell)`, gated by `cave`'s own measured depth budget. Mirrors
+/// Every chamber address that exists over the five bands **of floor 0** at
+/// `(seed, cell)`, gated by `cave`'s own measured depth budget.
+///
+/// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
+/// now carries `FLOORS_PER_RUN_CEILING` floors per run, so this walks 1/20 of
+/// it. That is the right sample for what it feeds — see
+/// [`addresses_in_budget_per_floor`], whose prediction is per-address and
+/// therefore holds on any subset — but it is emphatically not a count of the
+/// chambers in a world. Mirrors
 /// `deep_realm_mutation.rs`'s private `chamber_count` helper, restated here
 /// rather than shared — a test helper is not part of any crate's public
 /// surface, and that file already restates the band ladder for the same
@@ -853,7 +877,7 @@ fn report_h2_depth_weld_and_reachability() {
             .map(|(c, _, _)| c)
             .collect();
         band_bucket_total += counts.len();
-        let n_addr = addresses_in_budget(idx) as f64;
+        let n_addr = addresses_in_budget_per_floor(idx) as f64;
         let theoretical_mean = n_addr * PREDICTED_EXISTENCE_DENSITY;
         let theoretical_sd =
             (n_addr * PREDICTED_EXISTENCE_DENSITY * (1.0 - PREDICTED_EXISTENCE_DENSITY)).sqrt();

@@ -64,10 +64,24 @@
 //!
 //! **The control this file was built to print did its job.** Both arms'
 //! histograms and both addressable means are byte-identical to the `chamber/v2`
-//! reading above — the worlds did not move and the reach did not move — while
-//! `realized` shifted by −0.04 / +0.06 / −0.68%. `realized / addressable` is
-//! 0.497 / 0.500 / 0.499, still `EXISTENCE_DENSITY = 0.5`. That is the exact
-//! signature of a re-keying: the same lattice, the same gate, different draws.
+//! reading above — the terrain did not move and the cave's REACH did not
+//! move — while `realized` shifted by −0.04 / +0.06 / −0.68%. `realized /
+//! addressable` is 0.497 / 0.500 / 0.499, still `EXISTENCE_DENSITY = 0.5`.
+//! That is the exact signature of a re-keying: the same lattice geometry, the
+//! same gate, different draws.
+//!
+//! **What that sentence must NOT be read as saying is that the worlds did not
+//! move — they did, by a factor of twenty, and an earlier draft of this
+//! paragraph said the opposite.** `chamber_exists` draws independently per
+//! address INCLUDING `floor` (`chamber.rs`), and every in-budget run currently
+//! admits all `FLOORS_PER_RUN_CEILING` floors, so the chamber population of a
+//! real world went from ~6.4 per cave to ~128 per cave in the same commit that
+//! took this reading. The three figures above are a **floor-0 slice**, chosen
+//! so they compare like with like against the `chamber/v2` row — which is what
+//! makes them a clean re-keying control, and exactly what stops them from
+//! being a census of the underworld. The unsliced count is a Task 2 subject:
+//! it draws the realized floors per run, and until it does, "20 floors
+//! everywhere" is the lattice ceiling standing in for a distribution.
 //!
 //! The "after" arm was re-taken when review's finer re-bin moved
 //! `DEEPS_TOP_K` from 10 K to 8 K (see that constant's own doc). The earlier
