@@ -7,3 +7,5 @@
 mod axes;
 #[path = "suite/axis_spread_probe.rs"]
 mod axis_spread_probe;
+#[path = "suite/judgment.rs"]
+mod judgment;

@@ -15,17 +15,21 @@
 #![warn(missing_docs)]
 
 mod axes;
+mod judgment;
+mod weights;
 
 pub use axes::{Axis, axis_distance};
+pub use judgment::{Emotion, Judgment, snap_judgment};
+pub use weights::weight_vector;
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_kernel::{Mass, ResourceVector};
 use hornvale_language::speech::{ArticulationVector, articulation_registry};
 use hornvale_species::{
-    BiosphereTraits, ConditionNiche, HabitatRealm, LifeSchedule, MetabolicClass, PerceptionVector,
-    SocietyVector, biosphere_registry, habitat_realm_registry, perception_registry,
-    society_registry,
+    BiosphereTraits, ConditionNiche, HabitatRealm, LifeSchedule, MetabolicClass, MindVector,
+    PerceptionVector, SocietyVector, biosphere_registry, habitat_realm_registry,
+    perception_registry, psyche_registry, society_registry,
 };
 
 /// One people, as this crate identifies it — the species catalog's stable
@@ -64,6 +68,10 @@ pub struct PeopleTraits {
     pub schedule: LifeSchedule,
     /// Social-organization vector, feeding `Sociality`.
     pub society: SocietyVector,
+    /// Individual-mind vector, feeding [`crate::weight_vector`]'s threat
+    /// multiplier (`threat_response`). Added in Task 2; no Task-1 axis
+    /// reads it.
+    pub mind: MindVector,
     /// Perception/activity vector, feeding `ActivityCycle`.
     pub perception: PerceptionVector,
     /// Speech articulation vector, feeding `Language`.
@@ -93,6 +101,7 @@ pub fn catalog() -> BTreeMap<PeopleId, PeopleTraits> {
     let habitat = habitat_realm_registry();
     let perception = perception_registry();
     let articulation = articulation_registry();
+    let psyche = psyche_registry();
 
     // `society.ids()` is deterministic ascending-by-key; that order becomes
     // the `u32` index `niche::predation` wants.
@@ -128,6 +137,9 @@ pub fn catalog() -> BTreeMap<PeopleId, PeopleTraits> {
                 society: *society
                     .get(id)
                     .expect("id came from society_registry().ids(), so it has a row"),
+                mind: *psyche.get(id).unwrap_or_else(|| {
+                    panic!("{id:?} is a settling people but has no psyche_registry row")
+                }),
                 perception: *perception.get(id).unwrap_or_else(|| {
                     panic!("{id:?} is a settling people but has no perception_registry row")
                 }),

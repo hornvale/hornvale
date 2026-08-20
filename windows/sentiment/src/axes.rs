@@ -266,7 +266,8 @@ mod smoke_tests {
     use hornvale_kernel::{Mass, PLANT_FORAGE, ResourceVector};
     use hornvale_language::speech::ExoticManner;
     use hornvale_species::{
-        ActivityCycle, HabitatRealm, LifeSchedule, MetabolicClass, Sociality, StatusBasis,
+        ActivityCycle, HabitatRealm, LifeSchedule, MetabolicClass, MindVector, Sociality,
+        StatusBasis,
     };
     use std::collections::BTreeSet;
 
@@ -309,6 +310,7 @@ mod smoke_tests {
                 status_basis: StatusBasis::Rank,
                 in_group_radius: 0.5,
             },
+            mind: MindVector::MANIKIN,
             perception: PerceptionVector {
                 activity: ActivityCycle::Diurnal,
                 night_vision: 0.5,
