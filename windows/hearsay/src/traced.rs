@@ -194,6 +194,16 @@ fn tellable(walk: &Walk, node: EntityId, event_day: Option<f64>) -> Vec<(EntityI
 /// `x + 0.0` is exact in IEEE-754 for every finite `x`, which is what keeps
 /// the two arms' widths identical to the penny under `Free` and lets the
 /// agreement battery hold both arms to the shipped walk exactly.
+///
+/// **The two early-return checks are in the opposite order from
+/// `derive.rs::crossing_penalty`** (people-equality first here, `Crossing::
+/// Free` first there) — deliberate, not a drift to fix by mirroring: this
+/// function needs `edges_between` even under `Free` (to report the crossing),
+/// which `derive.rs` never computes at all in that branch, so the two
+/// checks cannot share one order and still each do their own job. The
+/// returned `f64` is identical across all four (people-equal ×
+/// `Crossing`-arm) combinations either way — `from == to` short-circuits to
+/// `(0.0, None)` before `Crossing` is even read, on both orderings.
 fn crossing_info(
     walk: &Walk,
     ladder: &PrecisionLadder,

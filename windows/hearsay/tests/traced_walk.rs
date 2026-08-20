@@ -470,3 +470,143 @@ fn the_route_field_is_load_bearing() {
         held_2.crossings
     );
 }
+
+/// A ledger where holder `2` is reachable from teller `1` BOTH as a
+/// founding-tree child AND as a raid peer, so `tellable`'s
+/// `Carrier::Descent`-before-`Carrier::Seam` tie-break (traced.rs's own
+/// addition — the shipped `derive.rs::tellable` dedups plain `EntityId`s and
+/// has no such tie to break) actually fires:
+///
+/// - `1` (human), founded day 0, `occ-ended` day 500 — the event under test.
+///   Witness set is `{1}` alone (no attacker named, and no child founded on
+///   day 500).
+/// - `2` (kobold), founded day 200, child of `1` in the founding tree — the
+///   DESCENT route onto it.
+/// - `2` itself later ends (day 600, `occ-ended-by` `1`) — this plants an
+///   undirected raid edge `2 <-> 1` in the seam, stamped after the event, so
+///   under `Contact::WithRaidSeam` `2` is ALSO one of `1`'s raid peers — the
+///   SEAM route onto the same hearer.
+///
+/// `1` and `2` are different peoples, so the step onto `2` is a genuine
+/// cross-people crossing whichever carrier wins, which is what makes the
+/// winning carrier observable in `crossings` rather than merely internal to
+/// `tellable`'s resolution.
+fn a_hearer_reachable_both_as_child_and_as_raid_peer() -> Ledger {
+    let mut led = ledger_with(&[(1, None), (2, Some(1))]);
+    for (occ, day) in [(1, 0.0), (2, 200.0)] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_FOUNDED,
+            Value::Number(day),
+        );
+    }
+    for (occ, people) in [(1, "human"), (2, "kobold")] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_PEOPLE,
+            Value::Text(people.to_string()),
+        );
+    }
+    // The event under test: 1 ends, no named attacker.
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(500.0),
+    );
+    // 2's own later ending plants the raid edge 2 <-> 1, after the event.
+    put(
+        &mut led,
+        2,
+        hornvale_history::OCC_ENDED,
+        Value::Number(600.0),
+    );
+    put(
+        &mut led,
+        2,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(1)),
+    );
+    common::put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::DAY_LENGTH_STD,
+        Value::Number(1.0),
+    );
+    common::put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::MOON_PERIOD_STD,
+        Value::Number(41.7),
+    );
+    common::put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::YEAR_LENGTH_STD,
+        Value::Number(372.4),
+    );
+    led
+}
+
+/// The property the Task 2 review flagged as untested: when a hearer is
+/// reachable both as a founding-tree child and as a raid peer of the same
+/// teller, the winning route's carrier must be `Carrier::Descent` — the
+/// tie-break `tellable`'s doc comment documents but which nothing had
+/// exercised (the agreement battery can't see `Carrier` at all, since
+/// `Claim` carries no route, and `two_witnesses_converging_on_one_holder`'s
+/// holder `50` has no lineage parent, so it was never doubly-reachable).
+///
+/// Proven a real mutation: inverting the tie-break (reordering the `Carrier`
+/// enum so `Seam` sorts before `Descent`) reddens this test — recorded in
+/// the fix report rather than committed as a live mutation.
+#[test]
+fn the_descent_seam_tie_break_favors_descent() {
+    let led = a_hearer_reachable_both_as_child_and_as_raid_peer();
+    let lineage = lineage_of(&led);
+    let contact = contact_of(&led);
+    let durations = durations();
+    let ladders = PeopleLadders::of(&led, &durations);
+    let policy = Transmission {
+        contact: Contact::WithRaidSeam,
+        crossing: Crossing::Free,
+        ..Transmission::AS_SHIPPED
+    };
+    let walk = Walk {
+        ledger: &led,
+        lineage: &lineage,
+        contact: &contact,
+        policy,
+    };
+    let held_2 = traced_variants_about_accumulating(
+        &walk,
+        &ladders,
+        &durations,
+        Accumulation::Additive,
+        eid(1),
+        PREDICATE,
+    )
+    .into_iter()
+    .find(|t| t.claim.holder == eid(2))
+    .expect("fixture must reach holder 2 both ways under Contact::WithRaidSeam");
+
+    // Control: the raid edge really is there and really does cross a people
+    // boundary, so an empty `crossings` here would mean the fixture failed
+    // to set up the tie at all rather than that the tie-break favours
+    // descent.
+    assert_eq!(
+        held_2.crossings.len(),
+        1,
+        "the doubly-reachable step must still cross exactly one people \
+         boundary: {:?}",
+        held_2.crossings
+    );
+    assert_eq!(
+        held_2.crossings[0].carrier,
+        Carrier::Descent,
+        "a hearer reachable both as a child and as a raid peer must be \
+         attributed to descent: {:?}",
+        held_2.crossings
+    );
+}
