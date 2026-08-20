@@ -4,7 +4,7 @@
 //! Built as a table even though it has exactly one row today. The reason is
 //! empirical, not anticipatory: `Session::needs` in this crate already
 //! carries an ad-hoc perception gate that had to be patched after a verb
-//! walked around it as a side channel, and `Session::chart`'s own doc
+//! walked around it as a side channel, and `Session::purview`'s own doc
 //! records a second, still-open version of the same shape. A table with an
 //! exhaustive match — no wildcard arm — turns the next omission into a
 //! compile error: Arc III's `Dominated` row, and the spec's own
@@ -32,6 +32,19 @@ impl BodyState {
     /// is the cross product [`verdict`]'s own tests sweep.
     pub fn all() -> Vec<BodyState> {
         vec![BodyState::Awake, BodyState::Asleep]
+    }
+}
+
+/// Compile-time tripwire: a new [`BodyState`] variant breaks this match —
+/// every variant is named and there is no `_` arm — forcing
+/// [`BodyState::all`] and [`verdict`] to be revisited. The same discipline
+/// as `action.rs`'s `action_variants_must_all_be_rostered`. Never remove,
+/// never add a wildcard arm.
+#[allow(dead_code)]
+fn body_state_variants_must_all_be_rostered(s: &BodyState) -> &'static str {
+    match s {
+        BodyState::Awake => "awake",
+        BodyState::Asleep => "asleep",
     }
 }
 
