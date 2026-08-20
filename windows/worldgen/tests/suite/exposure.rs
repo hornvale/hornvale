@@ -1150,7 +1150,8 @@ fn every_unknown_entrys_reason_is_non_empty() {
                 let text = match reason {
                     GapReason::Experiential(s)
                     | GapReason::Perceptual(s)
-                    | GapReason::Unnameable(s) => s,
+                    | GapReason::Unnameable(s)
+                    | GapReason::Extradiegetic(s) => s,
                 };
                 assert!(
                     !text.trim().is_empty(),
@@ -1212,6 +1213,7 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
                 hornvale_language::GapReason::Experiential(s) => s,
                 hornvale_language::GapReason::Perceptual(s) => s,
                 hornvale_language::GapReason::Unnameable(s) => s,
+                hornvale_language::GapReason::Extradiegetic(s) => s,
             };
             assert!(
                 !text.is_empty(),

@@ -267,6 +267,7 @@ fn gaps_have_reasons() {
                     GapReason::Experiential(s) => s,
                     GapReason::Perceptual(s) => s,
                     GapReason::Unnameable(s) => s,
+                    GapReason::Extradiegetic(s) => s,
                 };
                 assert!(
                     !text.is_empty(),
