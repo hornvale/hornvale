@@ -3342,3 +3342,45 @@ the frozen 0.20 success floor was not lowered — the discrimination clears the
 unlowered floor more than threefold. The next question is the one the touchstone
 is a *precondition* for and does not answer: whether a penalty magnitude read
 from contact history does anything a well-chosen constant would not.
+
+### The lean can be derived, but the derivable axes cannot like (2026-08-20)
+
+[The Cant](./chronicle/the-cant.md) takes the thread's other half — not how a
+belief *travels* but what an evaluative belief *is* — and asks whether a
+believable snap-judgment predisposition between peoples can be **derived** from
+authored attributes rather than authored directly. It ships the mechanism the
+"situated error" target needs: `v(A→B)` over eight attribute-distance axes,
+weighted by the judging people's own psychology, projected onto a
+warmth × competence plane, 0021-clean because the only thing that ranks is the
+judge's own derived weight-vector. Four of five structural floors hold — the
+matrix is asymmetric (all 105 unordered pairs differ by direction), similar
+peoples land warm (`r = −0.896`), the fifteen personalities are distinct.
+
+**The mechanism half of the bet advances; a new gap opens beneath it.** The
+fifth floor — *it likes* — is falsified: of 210 cross-people judgments, zero
+reach admiration (124 contempt, 80 envy, 6 pity). The derivable axes produce a
+predisposition that is relational, asymmetric, and derived — exactly what the
+prohibition wanted — and that predisposition is *only ever cold*. This is not a
+retune artefact: every axis's signature pushes warmth down from its maximum, so
+warmth has nowhere to go but down, and there is no positive-warmth channel in
+what the current substrate can express. The null was reported, not rescued; no
+constant was moved to reach or dodge it.
+
+**The re-score, and the constraint it exposes.** What advances is the demonstration
+that situated error is *constructible* — a world's peoples can hold strong,
+relational, mutually-inconsistent views arrived at from what they materially are,
+with no authored ranking. What is newly owed, and newly scorable, is a
+constraint the null makes concrete: a world whose derived prejudice makes every
+people a xenophobe toward every other does not *function* — an elven merchant
+who can only sneer does not trade — and a simulation of that is worse, not truer,
+than one where views are held, are wrong, and still leave room for commerce and
+exchange. So the target is sharpened from "derive prejudice" to "derive prejudice
+that leaves the world livable," and the levers are named: a positive-warmth
+substrate (appearance, kinship), a baseline consideration between sapients, and a
+perturbation that recentres sentiment on the neutral point rather than the
+negative. **One thing that must not be read into it:** the null is
+*near-boundary* — the warmest pair misses admiration by 0.048, and the neutral
+point it misses against was a free parameter frozen before the measurement, not a
+substrate fact. So "zero admiration" scores the current axes and the current
+neutral point together; it is a floor beneath the thread, not a wall.
+

@@ -384,6 +384,7 @@
 - [The Touchstone](./chronicle/the-touchstone.md)
 - [The Cupel](./chronicle/the-cupel.md)
 - [The Tackle](./chronicle/the-tackle.md)
+- [The Cant](./chronicle/the-cant.md)
 
 # Appendix: The Frontier
 

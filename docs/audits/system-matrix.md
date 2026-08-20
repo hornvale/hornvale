@@ -49,3 +49,4 @@ instrument's own bias in its own output; it does not correct for it.
 - `windows/lab`
 - `windows/locale`
 - `windows/scene`
+- `windows/sentiment`
