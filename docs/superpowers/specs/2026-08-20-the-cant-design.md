@@ -131,22 +131,32 @@ API at Task 0. **Every axis is a normalized distance in `[0,1]`.**
 | sociality mismatch | `SocietyVector` (Hierarchic/Communal, `status_basis`) | sym | ↓ competence ("no order") |
 | activity cycle | `PerceptionVector` (diurnal/nocturnal, night-vision) | sym | ↓ warmth ("of the night") |
 | reproductive tempo | `reproductive_tempo`, r-vs-K from `allometry` | sym | ↓ warmth ("breed like vermin") |
-| religion | deity / doctrine / `Sentiment` distance (`domains/religion`) | sym | ↓ warmth (alien rites) |
-| language | articulation-vector distance (`domains/language`) | sym | ↓ competence (unintelligible) |
+| language | **authored** articulation-vector distance (`SPECIES_LABIALITY` … — per-species, world-invariant; NOT the per-world lexicon) | sym | ↓ competence (unintelligible) |
 | size / threat | `SPECIES_MASS_KG`, predation danger | **asym** | ↑ threat-competence, ↓ warmth |
+
+**Every axis above is a pure function of the peoples' authored model cards, so
+the baseline needs no world — the whole derivation is a read over the species
+catalog (`hornvale_species`), never a built world.** That keeps the campaign
+fast (no worldgen, no heavy battery) and keeps §2's "world-invariant" honest.
 
 **Weights `w_A`** derive from A's own psychology: `in_group_radius` (a global
 multiplier — insularity), `threat_response` (weights predation/size), and
 `status_basis`/sociality (weights sociality-mismatch). The exact weight law is a
 Task-2 design detail, frozen after the Task-0 probe.
 
-**Deferred to c9+ (need new derived substrate):**
-- **Appearance / morphology** — there is *no* visual-appearance field today (only
-  vocal-tract articulation vectors). "Slimy, fishlike" has no home yet. This is
-  the most vivid axis and its absence is a real limitation of c8 (§7).
-- **Disease-cue / purity** (the behavioral immune system) — no disease-proneness
-  or cue-mapping exists. Its three-level derivation (A prone to disease D; cue X
-  carries D; B resembles X) is a c9 substrate-building campaign of its own.
+**Deferred:**
+- **Religion / cosmological strangeness** — deities and doctrines are drawn
+  *per world*, so a religion-based prejudice is world-varying by construction and
+  belongs to a later **world-context** layer, not the world-invariant baseline
+  (§2). Deferred for consistency, not for want of substrate.
+- **Appearance / morphology** (needs new substrate) — there is *no* visual-
+  appearance field today (only vocal-tract articulation vectors). "Slimy,
+  fishlike" has no home yet; the most vivid axis, and its absence is a real
+  limitation of c8 (§7).
+- **Disease-cue / purity** (needs new substrate) — the behavioral immune system;
+  no disease-proneness or cue-mapping exists. Its three-level derivation (A prone
+  to disease D; cue X carries D; B resembles X) is a substrate-building campaign
+  of its own.
 
 ## 6. Task 0 — substrate probe (grounds the freeze, Cupel discipline)
 
@@ -230,5 +240,6 @@ produces the map that makes the expansion principled.
   derivable axes *alone* suffice; a weak result is a finding, not a failure.
 - **Home** (new window vs worldgen/lab module) — decided at G3/plan.
 - **Illustrative kuo-toa is not modeled** — the readout uses the real 15 peoples.
-- Deliver as a heavy believability battery with re-derivable reported numbers
-  (Cupel precedent), not a census metric.
+- Deliver as a **fast** believability readout — a pure species-catalog read, no
+  worldgen and no heavy tier (a consequence of §5's world-invariance) — with
+  re-derivable reported numbers (Cupel precedent), not a census metric.
