@@ -1887,3 +1887,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T15:58:00Z | rebaseline | 157.490 | 242.035 | 10.821 | 1.61 | 0 | c1a4fb8c | campaign/the-cupel | MacBookPro | 10 |
 | 2026-08-20T16:06:21Z | sluice:artifacts | 85.442 | 649.343 | 28.101 | 7.93 | 0 | abec69bd3 |  | lefford | 40 |
 | 2026-08-20T16:06:57Z | sluice:outboard | 35.565 | 22.497 | 36.319 | 1.65 | 0 | 7aca4abcd |  | lefford | 40 |
+| 2026-08-20T16:13:01Z | sluice:gate | 364.288 | 9958.475 | 366.516 | 28.34 | 0 | eb6544b50 |  | lefford | 40 |
