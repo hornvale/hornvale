@@ -154,7 +154,7 @@ git add windows/hearsay/src/traced.rs windows/hearsay/src/lib.rs windows/hearsay
 git commit -m "feat(hearsay): traced walk exposing witness, width, and route the Claim discards"
 ```
 
-**Stage-boundary absorption:** after Task 2, absorb `main` — `make sluice-stage BRANCH=campaign/the-touchstone REF=$(git rev-parse HEAD)`.
+**Do NOT absorb `main` here (ruling, decision-ledger).** The Touchstone is a preregistered measurement: Task 1 froze the control populations/signatures on this substrate, and Task 4's readout must see the same physics (CLAUDE.md "never absorb mid-measurement"). Absorption is deferred until after Task 4's readout — see Task 4.
 
 ---
 
@@ -290,7 +290,7 @@ git add windows/hearsay/tests/touchstone_readout.rs windows/hearsay/tests/undert
 git commit -m "test(touchstone): the discrimination result — the instrument sees what the aggregate cannot"
 ```
 
-**Stage-boundary absorption** after Task 4.
+**Now absorb `main` — the readout is complete, so measurement consistency is preserved.** `make sluice-stage BRANCH=campaign/the-touchstone REF=$(git rev-parse HEAD)`. If the merge product moves the substrate, **re-derive Task 4's readout on it** and record the moved numbers in the absorbing commit — never rebaseline to go green (the Undertow lesson). Then proceed to Task 5.
 
 ---
 
