@@ -293,17 +293,85 @@ fn cupel_readout() {
                 add_counts(&mut dc_world, &tail_counts(&derived_s, &constant_world_s));
             }
 
-            // ---- Step 5: the negative control -- derived-arm same-people holders.
+            // ---- Step 5: the negative control -- people-homogeneous-ancestry
+            // holders, walked under `Contact::Descent` (fix round 2). Two
+            // problems, found in order:
+            //
+            // (a) `crossings.is_empty()` is guard-coupled -- deleting
+            //     `crossing_info`'s `from == to` guard makes same-people steps
+            //     record as crossings, which moves exactly the holders this
+            //     control cares about OUT of that filter and masks the very
+            //     penalty difference the mutation introduces (negative_tail
+            //     stayed 0 against a shrunk 2541 -> 303 population when the
+            //     controller re-fired it). Fixed by identifying the
+            //     sub-population with `ancestry` -- a ledger/lineage fact the
+            //     mutation cannot move -- instead.
+            // (b) That alone is not sufficient UNDER `Contact::WithRaidSeam`:
+            //     a holder's own founding ancestry can be one people while the
+            //     WINNING route that reaches it still leaves and re-enters
+            //     that people through a raid seam (the round-trip shape
+            //     `two_peoples_joined_by_a_later_raid`'s sibling fixture,
+            //     `a_round_trip_through_another_people`, documents), which
+            //     pays a real penalty and genuinely differs between Derived
+            //     and Constant -- measured directly: negative_tail = 0.2916
+            //     over 3587 holders on THIS tree's real, unmutated code when
+            //     the homog filter alone was applied to the WithRaidSeam arms.
+            //     `touchstone_readout.rs`'s own negative control avoids this
+            //     by walking under `Contact::Descent`, where a step can never
+            //     cross a people boundary at all (fission never does, per
+            //     `amplitude.rs`), so `crossing_info`'s guard fires on every
+            //     step of every route regardless of which holder is asked
+            //     about -- provably same-people, not just ancestrally so.
+            //     Mirrored here: a SEPARATE Descent-contact walk, Derived vs
+            //     Constant(D_panel) to match the headline's own arm pair.
+            let walk_descent = Walk {
+                ledger: led,
+                lineage: &s.read.lineage,
+                contact: &s.read.contact,
+                policy: Transmission {
+                    contact: Contact::Descent,
+                    ..Transmission::AS_SHIPPED
+                },
+            };
+            let derived_descent = traced_variants_with_penalty(
+                &walk_descent,
+                &s.read.ladders,
+                &s.read.durations,
+                RULE,
+                *subject,
+                PREDICATE,
+                PenaltyModel::Derived,
+            );
+            let constant_descent = traced_variants_with_penalty(
+                &walk_descent,
+                &s.read.ladders,
+                &s.read.durations,
+                RULE,
+                *subject,
+                PREDICATE,
+                PenaltyModel::ConstantDenominator(d_panel),
+            );
+            let homog_set: BTreeSet<EntityId> = derived_descent
+                .iter()
+                .filter(|t| {
+                    common::people_homogeneous(led, &s.read.lineage.ancestry(t.claim.holder))
+                })
+                .map(|t| t.claim.holder)
+                .collect();
+            let derived_neg = filter_by_holder(&derived_descent, &homog_set);
+            let constant_neg = filter_by_holder(&constant_descent, &homog_set);
+            add_counts(&mut neg, &tail_counts(&derived_neg, &constant_neg));
+
+            // ---- footnote: same-people in derived, but cross-people in constant.
+            // (Unchanged: this footnote is deliberately keyed on the derived
+            // arm's own `crossings.is_empty()`, since its whole point is to
+            // notice a route that flips ACROSS that very boundary -- it is
+            // not the negative control's sub-population.)
             let neg_set: BTreeSet<EntityId> = derived_tellings
                 .iter()
                 .filter(|t| t.crossings.is_empty())
                 .map(|t| t.claim.holder)
                 .collect();
-            let derived_neg = filter_by_holder(derived_tellings, &neg_set);
-            let constant_neg = filter_by_holder(&constant_tellings, &neg_set);
-            add_counts(&mut neg, &tail_counts(&derived_neg, &constant_neg));
-
-            // ---- footnote: same-people in derived, but cross-people in constant.
             let constant_by_holder: BTreeMap<EntityId, &HeldTelling> = constant_tellings
                 .iter()
                 .map(|t| (t.claim.holder, t))
