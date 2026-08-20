@@ -48,17 +48,6 @@ fn a_bare_group_a_verb_is_no_longer_a_command() {
     }
 }
 
-/// The sigil form is the retirement's only remaining entry point.
-#[test]
-fn the_sigil_form_answers() {
-    let w = world();
-    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    match s.handle("!whoami") {
-        Turn::Out(text) => assert!(!text.is_empty(), "`!whoami` must answer"),
-        Turn::Released(_) => panic!("`!whoami` must not end the possession"),
-    }
-}
-
 /// Every one of the seven group-A verbs, not just `whoami`: the bare form
 /// refuses and the sigil form answers. `eyes` is checked with an argument
 /// too, since it carries two dispatch arms (report / set) that both moved.
@@ -73,8 +62,8 @@ fn every_group_a_verb_retired_its_bare_form() {
         "provoke",
         "soothe",
     ];
+    let w = world();
     for bare_line in cases {
-        let w = world();
         let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
         match s.handle(bare_line) {
             Turn::Out(text) => assert!(
@@ -88,8 +77,10 @@ fn every_group_a_verb_retired_its_bare_form() {
         let sigilled = format!("!{bare_line}");
         match s.handle(&sigilled) {
             Turn::Out(text) => assert!(
-                !text.to_lowercase().contains("no verb"),
-                "`{sigilled}` must be a recognised out-of-character verb, got: {text}"
+                !text.is_empty() && !text.to_lowercase().contains("no verb"),
+                "`{sigilled}` must be a recognised out-of-character verb that actually \
+                 answers, not merely a non-refusal (an empty string would pass the \
+                 refusal check alone), got: {text}"
             ),
             Turn::Released(_) => panic!("`{sigilled}` must not end the possession"),
         }
@@ -107,7 +98,12 @@ fn the_sigil_eyes_still_has_both_its_report_and_set_arms() {
         Turn::Out(t) => t,
         Turn::Released(_) => panic!("`!eyes` must not end the possession"),
     };
-    assert!(!report.is_empty(), "bare `!eyes` must report");
+    assert!(
+        !report.is_empty() && !report.to_lowercase().contains("no verb"),
+        "bare `!eyes` must actually report, not merely answer with a non-empty \
+         refusal (fix round 1, Finding 2 — the earlier `!report.is_empty()` alone \
+         could not fail: this crate's refusal text is itself non-empty), got: {report}"
+    );
 
     let (mut s2, _opening2) = Session::start(&w, &PossessOpts::default()).unwrap();
     match s2.handle("!eyes off") {

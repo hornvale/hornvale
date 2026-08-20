@@ -162,7 +162,7 @@ pub fn render_proto(family: &str) -> Result<String, String> {
     //
     // Also exclude every `hornvale_language::extradiegetic_pack` concept
     // (The Deed, Task 2) via `hornvale_language::is_extradiegetic`: an
-    // operator instrument (`!why`, `provoke`, ...) has no referent in the
+    // operator instrument (`!why`, `!provoke`, ...) has no referent in the
     // world AT ALL, a stronger claim than `is_unnameable`'s ("real, but no
     // culture has met it"), so it must never reach this table either. This
     // is a plain membership check, not a registry `Void` reading — see

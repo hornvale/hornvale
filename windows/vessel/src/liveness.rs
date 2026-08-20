@@ -2055,16 +2055,23 @@ impl<'a> Drive for Thermal<'a> {
             // No consume — none of `Drink`/`Rest`/`Eat` serves comfort.
             Action::Drink | Action::Rest | Action::Eat => 0.0,
             // Group A operator instruments (The Deed) are player-only;
-            // `candidate_actions` never proposes one to a drive.
+            // `candidate_actions` never proposes one to a drive. But unlike
+            // `DriveMovements::apply` (below), this is a `pub trait` method
+            // over a `pub` `Action::all()` roster that a FUTURE reverse
+            // audit could walk directly (this crate's own
+            // `tests/suite/action_module.rs:25` already does exactly that
+            // shape against a different public `Action` function) — so a
+            // panic here would fail such an audit outright. `0.0` is the
+            // same defined answer the arm above already gives for "this
+            // action serves this drive not at all", and buys total
+            // coverage for free (fix round 1, Finding 1).
             Action::Why
             | Action::Npcs
             | Action::Help
             | Action::Eyes
             | Action::Whoami
             | Action::Provoke
-            | Action::Soothe => unreachable!(
-                "no creature drive ever proposes a group-A operator instrument (The Deed)"
-            ),
+            | Action::Soothe => 0.0,
         }
     }
 }
@@ -2803,16 +2810,19 @@ impl<'a> Drive for Danger<'a> {
             // Threshold task 6+), so it eases no fear today either.
             Action::Drink | Action::Rest | Action::Eat | Action::MoveWithin(_) => 0.0,
             // Group A operator instruments (The Deed) are player-only;
-            // `candidate_actions` never proposes one to a drive.
+            // `candidate_actions` never proposes one to a drive. `0.0`
+            // rather than `unreachable!`, same reasoning as `Thermal`'s own
+            // `serviceability` above: this is a `pub trait` method over a
+            // `pub` `Action::all()` roster a future reverse audit could
+            // walk directly, and the arm above already returns `0.0` for
+            // the identical meaning (fix round 1, Finding 1).
             Action::Why
             | Action::Npcs
             | Action::Help
             | Action::Eyes
             | Action::Whoami
             | Action::Provoke
-            | Action::Soothe => unreachable!(
-                "no creature drive ever proposes a group-A operator instrument (The Deed)"
-            ),
+            | Action::Soothe => 0.0,
         }
     }
     fn survival_override(&self, urgency: f64) -> bool {
@@ -5175,6 +5185,21 @@ impl<'a> DriveMovements<'a> {
                 // different in kind from a room-scale `Hold`.
                 occupancy.walk(npc.entity, &st.interior, next);
             }
+            // KEPT as `unreachable!` (fix round 1, Finding 1) — unlike the
+            // two `Drive::serviceability` sites this task also touches,
+            // this arm sits DOWNSTREAM of a charge this same function
+            // already took: `st.day += days_of(cost_ticks(action, ...))`
+            // above (before this match) reads `base_ticks(action)`, which
+            // is `Ticks(0)` for every group-A instrument. `cost_ticks`'s
+            // own `.max(1)` floor happens to keep today's actual charge
+            // non-zero, but that floor is documented for an unrelated
+            // reason (a free action executing unboundedly at one instant)
+            // — this loop's own strict-progress guarantee is not entitled
+            // to lean on it. A `0.0`-returning arm here would trade a
+            // compile-time-verified panic for a silent dependency on an
+            // incidental floor elsewhere; if that floor ever changed, a
+            // zero-progress `Intent::Do` would hang this walk instead of
+            // failing loudly. A panic is strictly better than a hang.
             Intent::Do(
                 Action::Why
                 | Action::Npcs

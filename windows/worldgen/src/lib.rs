@@ -6084,7 +6084,7 @@ fn exposure_of_impl(
 
     // Unknown/Extradiegetic: FINAL and UNCONDITIONAL — every concept
     // `hornvale_language::extradiegetic_pack()` lists (The Deed, Task 2) is
-    // an operator instrument (`!why`, `!npcs`, `provoke`, ...) with no
+    // an operator instrument (`!why`, `!npcs`, `!provoke`, ...) with no
     // referent in the world at all, so no species can ever be
     // Steeped/KnowsOf in it and no culture can ever come to know it — a
     // claim about the WORLD, exactly like the Unnameable block immediately

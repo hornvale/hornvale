@@ -275,8 +275,16 @@ mod tests {
 
     #[test]
     fn no_action_is_free() {
-        // THE TOTALITY PROPERTY (spec §2 rung 1). Every action costs something,
-        // so a future action cannot silently be added for free.
+        // THE TOTALITY PROPERTY (spec §2 rung 1) — for CREATURE acts. Every
+        // creature action costs something, so a future creature action
+        // cannot silently be added for free. Narrowed from "every action"
+        // (fix round 1, Finding 3): group A's seven operator instruments
+        // (The Deed) are the deliberate exception — `base_ticks`'s own doc
+        // states it plainly, "an out-of-character act charges nothing by
+        // default" (spec §3.4) — so this property was never meant to hold
+        // for them, and this list stays the hand-picked creature roster
+        // rather than `Action::all()` so it cannot silently start failing
+        // on an instrument this test was never about.
         let every = [
             Action::MoveTo(RoomAddr {
                 face: 0,
