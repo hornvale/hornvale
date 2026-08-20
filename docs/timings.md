@@ -1905,3 +1905,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T04:16:11Z | gate-commit | 21.999 | 48.428 | 10.798 | 2.69 | 0 | 81d940d9 | campaign/the-portolan | MacBookPro | 10 |
 | 2026-08-20T04:32:00Z | gate-commit | 22.247 | 48.396 | 10.890 | 2.66 | 0 | 81d940d9 | campaign/the-portolan | MacBookPro | 10 |
 | 2026-08-20T04:33:54Z | gate-commit | 22.009 | 48.504 | 10.873 | 2.70 | 0 | 81d940d9 | campaign/the-portolan | MacBookPro | 10 |
+| 2026-08-20T15:58:01Z | prewarm | 264.308 | 1096.565 | 38.047 | 4.29 | 0 | 62627de2 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T15:58:26Z | game-check | 168.414 | 357.371 | 13.023 | 2.20 | 0 | 62627de2 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:00:16Z | rebaseline | 105.120 | 234.201 | 10.508 | 2.33 | 0 | 62627de2 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:02:21Z | game-check | 97.270 | 291.738 | 3.724 | 3.04 | 0 | 62627de2 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:04:24Z | gate-commit | 118.086 | 388.223 | 31.845 | 3.56 | 0 | 62627de2 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:06:09Z | gate-commit | 35.070 | 56.238 | 12.097 | 1.95 | 0 | 62627de2 | campaign/the-stylus | MacBookPro | 10 |
+| 2026-08-20T16:06:49Z | gate-commit | 33.521 | 54.738 | 12.042 | 1.99 | 0 | 62627de2 | campaign/the-stylus | MacBookPro | 10 |
