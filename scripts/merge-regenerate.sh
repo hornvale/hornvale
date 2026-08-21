@@ -60,8 +60,11 @@ if [ -n "$theirs" ]; then
         echo "merge-regenerate: octopus merge detected; refusing to regenerate '$path' automatically" >&2
         exit 1
     fi
-    others="$(git -c merge.hv-regenerate.driver=/bin/false \
-        merge-tree --write-tree HEAD "$theirs" \
+    # merge-tree exits nonzero when ANY conflict exists (including our
+    # own path); pipefail would turn that into a driver failure, so the
+    # pipeline's git leg is tolerated and only `others` decides.
+    others="$( { git -c merge.hv-regenerate.driver=/bin/false \
+        merge-tree --write-tree HEAD "$theirs" || true; } \
         | awk 'NR > 1 && NF >= 4 && $4 != p' p="$path")"
     if [ -n "$others" ]; then
         echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
