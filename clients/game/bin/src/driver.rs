@@ -214,9 +214,12 @@ pub struct Driver {
 /// the reader declined colour, and the caption goes with it — the picture
 /// and its honesty line are one channel, suppressed together. Pure apart
 /// from that one environment read, so tests can drive it hermetically.
+fn colour_allowed() -> bool {
+    hornvale_game_core::Ink::from_wire(Some([0, 0, 0])) != hornvale_game_core::Ink::Plain
+}
+
 fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> String {
-    let coloured =
-        hornvale_game_core::Ink::from_wire(Some([0, 0, 0])) != hornvale_game_core::Ink::Plain;
+    let coloured = colour_allowed();
     match (sight, coloured) {
         (Some(sight), true) => {
             let mut text = base;
@@ -687,12 +690,9 @@ mod caption_tests {
         // SAFETY: the caller holds ENV_LOCK, so no sibling thread in this
         // test binary touches the environment concurrently.
         unsafe {
-            match &value {
+            match value {
                 Some(w) => std::env::set_var("NO_COLOR", w),
-                None => match saved {
-                    Some(ref v) => std::env::set_var("NO_COLOR", v),
-                    None => std::env::remove_var("NO_COLOR"),
-                },
+                None => std::env::remove_var("NO_COLOR"),
             }
         }
         let out = f();

@@ -40,10 +40,12 @@ impl Ink {
     /// legible, never faked as black. Tests that need the coloured path to
     /// be hermetic call this directly instead of touching the environment.
     pub fn resolve(color: Option<[u8; 3]>, colour_allowed: bool) -> Ink {
-        if !colour_allowed || color.is_none() {
+        if !colour_allowed {
             return Ink::Plain;
         }
-        color.map(Ink::Rgb).unwrap_or(Ink::Plain)
+        // A `None` claim is also plain (absence is legible, never faked as
+        // black); only a real claim under allowed colour yields an ink.
+        color.map_or(Ink::Plain, Ink::Rgb)
     }
 
     /// Resolve a wire colour claim to ink. A non-empty `NO_COLOR` (the

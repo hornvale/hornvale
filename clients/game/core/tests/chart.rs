@@ -54,12 +54,16 @@ fn the_weight_map_discriminates_the_epistemic_states() {
 /// The fixture's cells carry scene colours, and at least one drawn cell
 /// must show a non-Plain ink — the chart pane tints from the wire.
 /// Hermetic against a developer's exported `NO_COLOR`: saved, removed,
-/// restored around the draw and its assertion.
+/// restored around the draw and its assertion. The core crate's locked
+/// `test_env` helper is `pub(crate)` and unit-test-only, so it is not
+/// reachable from this integration binary; the save/restore here is safe
+/// because no other test in this binary touches the environment.
 #[test]
 fn the_fixture_cells_carry_colour_off_the_wire() {
     let saved = std::env::var_os("NO_COLOR");
-    // SAFETY: single-threaded test body; nextest runs each test in its own
-    // process, so no sibling test observes the mutation or the restore.
+    // SAFETY: env mutation is UB under concurrency; no sibling test in this
+    // integration binary reads or writes the environment, so none can
+    // observe the mutation or the restore.
     unsafe { std::env::remove_var("NO_COLOR") };
     let c = walk_chart();
     assert!(
@@ -69,7 +73,7 @@ fn the_fixture_cells_carry_colour_off_the_wire() {
     let mut g = Grid::new(40, 12);
     chart::draw(&c, &mut g, (0, 0));
     match saved {
-        // SAFETY: as above — no concurrent env access in this process.
+        // SAFETY: as above — no concurrent env access in this binary.
         Some(v) => unsafe { std::env::set_var("NO_COLOR", v) },
         // SAFETY: as above.
         None => unsafe { std::env::remove_var("NO_COLOR") },
