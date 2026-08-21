@@ -144,6 +144,11 @@ pub struct ChartCell {
     pub water: u32,
     /// Index into `relief_legend`.
     pub relief: u32,
+    /// The cell's colour as seen through the observing eye, present only when
+    /// the scene was built through the producer's coloured builder — absence
+    /// means "no colour claimed here", never black.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<[u8; 3]>,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
     /// Great-circle initial azimuth from the observer to this cell, degrees

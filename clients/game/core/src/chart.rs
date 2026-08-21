@@ -284,7 +284,12 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
         into.set(
             x as u16,
             y as u16,
-            Cell::glyph(glyph_of(&cell.state), weight_of(&cell.state), Source::Chart),
+            Cell::inked(
+                glyph_of(&cell.state),
+                weight_of(&cell.state),
+                Source::Chart,
+                cell.color,
+            ),
         );
     }
 }
@@ -292,6 +297,7 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Ink;
 
     fn mark(salience: u32) -> Mark {
         Mark {
@@ -374,6 +380,7 @@ mod tests {
             biome: 0,
             water: 0,
             relief: 0,
+            color: None,
             marks: vec![],
             bearing_deg,
             distance_rad,
@@ -555,5 +562,30 @@ mod tests {
             "the more salient cell (index 2) must win, not document order"
         );
         assert_eq!(cell.state, "remembered");
+    }
+
+    /// A cell that claims a colour draws [`Ink::Rgb`] — the chart pane
+    /// tints from the scene, mirroring the plan pane.
+    #[test]
+    fn a_coloured_cell_draws_rgb_ink() {
+        let mut tinted = chart_cell(90.0, 1.0, "sensed");
+        tinted.color = Some([36, 36, 1]);
+        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
+        let mut g = crate::Grid::new(9, 5);
+        draw(&chart, &mut g, (0, 0));
+        assert_eq!(g.get(6, 2).unwrap().ink, Ink::Rgb([36, 36, 1]));
+    }
+
+    /// Absence of a colour claim is Plain ink — "no colour claimed here",
+    /// never black.
+    #[test]
+    fn an_uncoloured_cell_draws_plain_ink() {
+        let chart = minimal_chart(vec![
+            chart_cell(0.0, 0.0, "here"),
+            chart_cell(90.0, 1.0, "sensed"),
+        ]);
+        let mut g = crate::Grid::new(9, 5);
+        draw(&chart, &mut g, (0, 0));
+        assert_eq!(g.get(6, 2).unwrap().ink, Ink::Plain);
     }
 }
