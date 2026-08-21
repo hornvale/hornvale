@@ -134,4 +134,39 @@ if ! grep -q "Scenario Three B" book/src/SUMMARY.md; then
 fi
 pass "scenario 3: union merge kept both sides' SUMMARY.md bullets"
 
+# --- Scenario 4: the driver refuses to regenerate while OTHER paths are ---
+# still unmerged. The working tree is then not the merge product: any
+# regeneration reflects ours' content for those paths, so succeeding here
+# would bake a confidently-wrong artifact into a merge the human then
+# completes by taking theirs elsewhere. The driver must exit nonzero and
+# leave its own path unmerged like any other conflict.
+echo "--- Scenario 4: driver refuses while an unrelated path is unmerged ---"
+
+git checkout "$base_branch" -q
+git checkout -b scenario4-a -q
+echo "readme-a" >> README.md
+git add README.md
+git commit -q -m "test: scenario4-a README edit"
+echo "stray-a3" >> book/src/reference/phonology.md
+git add book/src/reference/phonology.md
+git commit -q -m "test: scenario4-a stray phonology edit"
+
+git checkout "$base_branch" -q
+git checkout -b scenario4-b -q
+echo "readme-b" >> README.md
+git add README.md
+git commit -q -m "test: scenario4-b README edit (forces a genuine two-sided conflict)"
+echo "stray-b3" >> book/src/reference/phonology.md
+git add book/src/reference/phonology.md
+git commit -q -m "test: scenario4-b stray phonology edit"
+
+if git merge scenario4-a -q 2>/dev/null; then
+    fail "scenario 4: expected the merge to report a conflict (README conflicts), but it succeeded"
+fi
+if ! git ls-files -u -- book/src/reference/phonology.md | grep -q .; then
+    fail "scenario 4: phonology.md was resolved by the driver while README.md was still unmerged -- it regenerated from a tree that was not the merge product"
+fi
+git merge --abort
+pass "scenario 4: driver refused while an unrelated path was unmerged; phonology.md left for human resolution"
+
 echo "All scenarios passed."
