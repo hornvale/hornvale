@@ -1,7 +1,7 @@
 # The Chroma — design
 
 **Date:** 2026-08-21
-**Status:** draft (G3 review pending)
+**Status:** approved (G3, 2026-08-21); implemented — see [the plan](../plans/2026-08-21-the-chroma.md)
 **Predecessor:** The Stylus (2026-08-20)
 **Campaign worktree:** `.claude/worktrees/the-chroma` (`campaign/the-chroma`)
 

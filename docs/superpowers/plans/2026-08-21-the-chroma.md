@@ -1,5 +1,7 @@
 # The Chroma Implementation Plan
 
+> **Status:** COMPLETE — all 6 tasks executed and reviewed, 2026-08-21.
+
 > **REQUIRED SUB-SKILL:** Use the executing-plans skill to implement this plan task-by-task.
 
 **Goal:** Give `clients/game`'s TUI color — the chamber plan takes its palette colors and the walk-band chart takes the scene's per-cell colors, both already on the wire — under the monochrome-floor discipline.
