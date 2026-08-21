@@ -2016,3 +2016,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-21T21:03:54Z | gate-commit | 23.241 | 49.128 | 11.310 | 2.60 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T21:05:14Z | gate-commit | 22.652 | 49.608 | 11.535 | 2.70 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T21:57:26Z | sluice:artifacts | 62.754 | 535.626 | 20.539 | 8.86 | 0 | 8f974ad3b |  | lefford | 40 |
+| 2026-08-21T21:58:02Z | sluice:outboard | 35.264 | 21.978 | 34.767 | 1.61 | 0 | 47a864244 |  | lefford | 40 |
