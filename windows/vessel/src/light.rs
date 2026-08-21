@@ -98,6 +98,20 @@ fn chebyshev(a: Cell, b: Cell) -> f64 {
 /// type-audit: bare-ok(ratio)
 pub const ATTENUATION: f64 = 1.0;
 
+/// A source's emitted spectrum scaled by `k`, band-wise. Vessel-local on
+/// purpose (The Wick, spec §2.1): intensity is a property of the *source
+/// composition* in `session.rs::chamber_sources`, not of the colour model,
+/// so the kernel gains no API for it.
+/// type-audit: bare-ok(ratio: k)
+pub fn scaled(illuminant: &Illuminant, k: f64) -> Illuminant {
+    let mut bands = [0.0f64; BANDS];
+    for (out, value) in bands.iter_mut().zip(illuminant.get()) {
+        *out = value * k;
+    }
+    Illuminant::new(bands)
+        .expect("scaling a valid illuminant by a positive factor keeps every band valid")
+}
+
 /// A source's light after travelling `distance` cells: every band scaled by
 /// `1 / (1 + ATTENUATION * distance²)`.
 ///

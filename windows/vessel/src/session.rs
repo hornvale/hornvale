@@ -2312,7 +2312,14 @@ impl<'w> Session<'w> {
     fn chamber_sources(&self, inside: &Inside) -> Vec<crate::light::Source> {
         let mut sources = vec![crate::light::Source {
             at: inside.cell,
-            illuminant: hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+            // The Wick (spec §2.1): the implicit torch burns four times
+            // brighter — "carry more candles". The falloff shape is
+            // untouched and pinned by the fence test; hearth and doorway
+            // sources keep their own levels.
+            illuminant: crate::light::scaled(
+                &hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+                4.0, // The Wick, spec §2.1
+            ),
             radius: SIGHT_RADIUS,
         }];
 
