@@ -2002,3 +2002,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-21T19:20:19Z | game-check | 77.289 | 498.715 | 3.373 | 6.50 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T19:20:58Z | gate-commit | 21.332 | 45.056 | 12.215 | 2.68 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T19:22:57Z | game-check | 78.024 | 501.446 | 3.397 | 6.47 | 0 | 389d498d | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:27:18Z | game-check | 78.374 | 494.646 | 5.041 | 6.38 | 0 | 5e8a25d0 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:27:45Z | gate-commit | 21.388 | 45.125 | 12.339 | 2.69 | 0 | 5e8a25d0 | campaign/the-chroma | MacBookPro | 10 |
