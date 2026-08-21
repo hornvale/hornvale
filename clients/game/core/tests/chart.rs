@@ -1,4 +1,4 @@
-use hornvale_game_core::{Grid, Snapshot, Spatial, Weight, chart};
+use hornvale_game_core::{Grid, Ink, Snapshot, Spatial, Weight, chart};
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 
@@ -49,6 +49,40 @@ fn the_weight_map_discriminates_the_epistemic_states() {
     assert!(map.contains('B'), "a `here` cell must be bold");
     assert!(map.contains('N'), "sensed cells must be normal weight");
     assert!(map.contains('.'), "unreached cells must be unmarked");
+}
+
+/// The fixture's cells carry scene colours, and at least one drawn cell
+/// must show a non-Plain ink — the chart pane tints from the wire.
+/// Hermetic against a developer's exported `NO_COLOR`: saved, removed,
+/// restored around the draw and its assertion. The core crate's locked
+/// `test_env` helper is `pub(crate)` and unit-test-only, so it is not
+/// reachable from this integration binary; the save/restore here is safe
+/// because no other test in this binary touches the environment.
+#[test]
+fn the_fixture_cells_carry_colour_off_the_wire() {
+    let saved = std::env::var_os("NO_COLOR");
+    // SAFETY: env mutation is UB under concurrency; no sibling test in this
+    // integration binary reads or writes the environment, so none can
+    // observe the mutation or the restore.
+    unsafe { std::env::remove_var("NO_COLOR") };
+    let c = walk_chart();
+    assert!(
+        c.cells.iter().any(|cell| cell.color.is_some()),
+        "the fixture's chart cells must carry colour claims"
+    );
+    let mut g = Grid::new(40, 12);
+    chart::draw(&c, &mut g, (0, 0));
+    match saved {
+        // SAFETY: as above — no concurrent env access in this binary.
+        Some(v) => unsafe { std::env::set_var("NO_COLOR", v) },
+        // SAFETY: as above.
+        None => unsafe { std::env::remove_var("NO_COLOR") },
+    }
+    let tinted = (0..g.height())
+        .flat_map(|y| (0..g.width()).map(move |x| (x, y)))
+        .filter(|&(x, y)| g.get(x, y).is_some_and(|c| !matches!(c.ink, Ink::Plain)))
+        .count();
+    assert!(tinted > 0, "at least one drawn cell must be tinted");
 }
 
 /// The reference picture for this fixture, straight from Hornvale's OWN

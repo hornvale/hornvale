@@ -8,7 +8,6 @@
 //! dependency (crossterm) is enough for this campaign.
 
 use hornvale_game::driver::Driver;
-use hornvale_game::line::Line;
 use hornvale_game::{input, term};
 use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_vessel::PossessTarget;
@@ -76,25 +75,26 @@ fn terminal_size() -> std::io::Result<(u16, u16)> {
     Ok((cols.max(MIN_WIDTH), rows.max(MIN_HEIGHT)))
 }
 
-/// Draw the driver's current state, plus `line`'s current buffer, at the
-/// terminal's current size.
+/// Draw the driver's current state at the terminal's current size.
 ///
-/// Reads `driver.snapshot()`/`focus()`/`cursor()`/`strip_text()` fresh each
-/// call rather than being handed them, so every call site redraws the
-/// driver's true current state rather than whatever it happened to return
-/// from the action that triggered the redraw (`Event::Resize` has no
-/// action at all). `line` is a separate parameter, not read off `driver`,
-/// because the command buffer lives in `bin::line::Line`
-/// (`hornvale-game-core` has no hornvale dependency and cannot own it, and
-/// `Driver`'s own containment rule — see its module doc — is narrower than
-/// "anything the game needs" would suggest).
-fn redraw(term: &term::Term, driver: &Driver, line: &Line) -> std::io::Result<()> {
+/// Reads `driver.snapshot()`/`focus()`/`cursor()`/`strip_text()`/
+/// `line_text()`/`caret()`/`echo()` fresh each call rather than being
+/// handed them, so every call site redraws the driver's true current state
+/// rather than whatever it happened to return from the action that
+/// triggered the redraw (`Event::Resize` has no action at all). The command
+/// buffer moved into `Driver` itself with Task 3 (The Stylus) — it used to
+/// be a separate `bin::line::Line` this loop owned alongside the driver,
+/// but `Driver::apply` now needs to mutate it directly to answer `Submit`,
+/// so `Driver` owns it and this function reads it back through the small
+/// accessors rather than threading a second mutable buffer through the
+/// loop.
+fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
     let (w, h) = terminal_size()?;
     let json = driver.snapshot();
-    let text = line.text();
+    let text = driver.line_text();
     let cmd_line = CommandLine {
         text: &text,
-        caret: line.caret(),
+        caret: driver.caret(),
     };
     match hornvale_game_core::render_with(
         &json,
@@ -104,6 +104,7 @@ fn redraw(term: &term::Term, driver: &Driver, line: &Line) -> std::io::Result<()
         driver.cursor(),
         cmd_line,
         driver.strip_text(),
+        driver.echo(),
     ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
@@ -116,14 +117,16 @@ fn redraw(term: &term::Term, driver: &Driver, line: &Line) -> std::io::Result<()
 /// nothing at all, costing no turn and no redraw; every other action is
 /// applied and its reply redrawn.
 ///
-/// **Release detection is not wired here yet.** Before this campaign,
+/// **Release now reads the driver's own answer.** Before this campaign,
 /// `release` was detected by matching the sent verb line
-/// (`Action::Verb("release")`) and ending the loop so the user could see
-/// the sim's own parting line before the terminal was restored. `Action` no
-/// longer carries a verb line at all — a keypress now reaches the line
-/// buffer, not the driver, until it is submitted (Task 3's job) — so there
-/// is nothing here yet for a release check to match against. Task 3 must
-/// reintroduce this once `Action::Submit` actually sends the buffer's text.
+/// (`Action::Verb("release")`) — a check that could only ever see the
+/// `"release"` spelling, even though the sim also honours `"quit"` (ledger
+/// #8). `Driver::apply` now returns whether the possession RELEASED, so
+/// this loop asks the driver directly rather than re-deriving the answer
+/// from what it happened to send. The final `redraw` still runs before the
+/// loop returns, so the player sees the sim's own parting line before the
+/// terminal is restored (`main`'s `run` explicitly drops the terminal only
+/// after `play` returns).
 ///
 /// `driver.resize` is called here (startup) and on every `Event::Resize` —
 /// never on a plain key press, since a terminal's size does not change
@@ -132,15 +135,9 @@ fn redraw(term: &term::Term, driver: &Driver, line: &Line) -> std::io::Result<()
 fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     use crossterm::event::{Event, read};
 
-    // The command buffer. Not yet wired to `Action::Type`/`DeleteBack`/etc
-    // — `Driver::apply`'s own doc says those are Task 3's job — so it stays
-    // empty through this task, but `redraw` already reads it every call,
-    // which is what lets Task 3 land as a pure input-routing change with no
-    // render-path edits of its own.
-    let line = Line::new();
     let (_, h) = terminal_size()?;
     driver.resize(h);
-    redraw(term, driver, &line)?;
+    redraw(term, driver)?;
     loop {
         match read()? {
             Event::Key(key) => {
@@ -148,13 +145,16 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
                 if matches!(action, input::Action::None) {
                     continue;
                 }
-                driver.apply(action);
-                redraw(term, driver, &line)?;
+                let released = driver.apply(action);
+                redraw(term, driver)?;
+                if released {
+                    return Ok(());
+                }
             }
             Event::Resize(_, _) => {
                 let (_, h) = terminal_size()?;
                 driver.resize(h);
-                redraw(term, driver, &line)?;
+                redraw(term, driver)?;
             }
             _ => {}
         }

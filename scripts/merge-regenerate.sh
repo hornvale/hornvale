@@ -33,6 +33,48 @@ path="$4"
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
+# Refuse unless this path is the ONLY conflicted one in the merge as a
+# whole. When any other path is conflicted, the working tree is not the
+# merge product (those paths sit at ours' content), so a regeneration
+# here would silently bake ours-flavored output into an artifact the
+# human then commits after resolving the rest, possibly by taking
+# theirs. Exit nonzero and let git leave this path unmerged like any
+# other conflict.
+#
+# Neither the index nor the merge state files can be the signal here:
+# git performs the whole merge in memory and writes conflict stages,
+# MERGE_HEAD and friends only AFTER every driver has run (all verified
+# empty mid-merge against real git, not assumed from prose). What git
+# DOES hand the driver is the other head itself, as a GITHEAD_<sha>
+# environment variable. From it we recompute the merge with `git
+# merge-tree --write-tree`, whose output lists the conflicted paths.
+# Two cautions verified directly: merge-tree HONORS .gitattributes
+# merge drivers (so ours is disabled below, or the probe would recurse
+# into itself), and its first output line is the merged tree oid, with
+# conflicted entries in `ls-files -u` format after it.
+theirs="$(env | sed -n 's/^GITHEAD_\([0-9a-fA-F]\{40\}\)=.*/\1/p')"
+if [ -n "$theirs" ]; then
+    # More than one GITHEAD_ means an octopus merge; we cannot model
+    # that, so refuse rather than guess.
+    if [ "$(env | grep -c '^GITHEAD_')" -gt 1 ]; then
+        echo "merge-regenerate: octopus merge detected; refusing to regenerate '$path' automatically" >&2
+        exit 1
+    fi
+    # merge-tree exits nonzero when ANY conflict exists (including our
+    # own path); pipefail would turn that into a driver failure, so the
+    # pipeline's git leg is tolerated and only `others` decides.
+    # Conflicted entries are `mode oid stage\tpath` lines; merge-tree
+    # also appends human-readable "Auto-merging"/"CONFLICT" message
+    # lines, so match the entry shape explicitly.
+    others="$( { git -c merge.hv-regenerate.driver=/bin/false \
+        merge-tree --write-tree HEAD "$theirs" || true; } \
+        | awk '$1 ~ /^[0-7]+$/ && $2 ~ /^[0-9a-f]+$/ && length($2) == 40 && $3 ~ /^[0-9]$/ && $4 != p' p="$path")"
+    if [ -n "$others" ]; then
+        echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
+        exit 1
+    fi
+fi
+
 tmp_out="$(mktemp)"
 trap 'rm -f "$tmp_out"' EXIT
 

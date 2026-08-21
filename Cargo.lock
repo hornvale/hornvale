@@ -228,6 +228,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-sentiment"
+version = "0.1.0"
+dependencies = [
+ "hornvale-demography",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-species",
+]
+
+[[package]]
 name = "hornvale-settlement"
 version = "0.1.0"
 dependencies = [

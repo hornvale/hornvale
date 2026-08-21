@@ -272,6 +272,8 @@ pub fn cell_at(
 /// `into`'s bounds are silently skipped, matching `Grid::set`'s own
 /// discipline of refusing rather than wrapping an out-of-range write.
 pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
+    // Tinting honours NO_COLOR: `Cell::inked` resolves the colour through
+    // `Ink::from_wire`, which yields Plain when the reader declined colour.
     let centre_x = origin.0 as i64 + into.width() as i64 / 2;
     let centre_y = origin.1 as i64 + into.height() as i64 / 2;
 
@@ -284,14 +286,65 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
         into.set(
             x as u16,
             y as u16,
-            Cell::glyph(glyph_of(&cell.state), weight_of(&cell.state), Source::Chart),
+            Cell::inked(
+                glyph_of(&cell.state),
+                weight_of(&cell.state),
+                Source::Chart,
+                cell.color,
+            ),
         );
     }
+}
+
+/// The honesty caption for a coloured chart: whose eyes the reader is
+/// seeing through, which projection, and what that projection does NOT
+/// carry. Pure — the caller decides whether colour (and therefore this
+/// caption) is allowed at all, so suppression lives in exactly one place
+/// per caller and this function never touches the environment.
+///
+/// The wording names the observer, the projection, and the lost axis by
+/// SUBSTRING contract: tests assert those three appear, not the exact
+/// sentence (wording reviewed at the visual pass).
+pub fn disclosure(sight: &crate::Sight) -> String {
+    format!(
+        "seen through {}'s eyes — {} sight; {}",
+        sight.observer, sight.projection, sight.preserves
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Ink;
+    use crate::cell::test_env::{with_no_color_removed, with_no_color_set};
+
+    /// The seed-42 turn-0 fixture's own sight declaration, as a literal —
+    /// the values the committed fixture carries (`spatial.chart.sight`),
+    /// so the caption is asserted against what the sim actually emits.
+    fn fixture_sight() -> crate::Sight {
+        crate::Sight {
+            observer: "bugbear".into(),
+            channels: 3,
+            chromatic: 2,
+            projection: "yellow-blue".into(),
+            preserves: "the short-to-long opposition; the red-green axis is not carried".into(),
+            sun_altitude_deg: -56.010669,
+            channel_roles: vec!["chromatic".into(), "chromatic".into(), "achromatic".into()],
+            projection_slots: Some([1, 1, 0]),
+            projection_norms: Some([3.862, 3.862, 1.98]),
+        }
+    }
+
+    /// The caption names whose eyes, the projection, and what is NOT
+    /// carried — by SUBSTRING, not exact sentence (wording reviewed at the
+    /// visual pass).
+    #[test]
+    fn disclosure_names_observer_projection_and_lost_axis() {
+        let d = disclosure(&fixture_sight());
+        assert!(d.contains("bugbear"), "names the observer species: {d}");
+        assert!(d.contains("yellow-blue"), "names the projection: {d}");
+        assert!(d.contains("red-green"), "names the lost axis: {d}");
+    }
 
     fn mark(salience: u32) -> Mark {
         Mark {
@@ -355,6 +408,7 @@ mod tests {
             relief_legend: vec![],
             cells,
             legend: vec![],
+            sight: None,
         }
     }
 
@@ -374,6 +428,7 @@ mod tests {
             biome: 0,
             water: 0,
             relief: 0,
+            color: None,
             marks: vec![],
             bearing_deg,
             distance_rad,
@@ -555,5 +610,48 @@ mod tests {
             "the more salient cell (index 2) must win, not document order"
         );
         assert_eq!(cell.state, "remembered");
+    }
+
+    /// A cell that claims a colour draws [`Ink::Rgb`] — the chart pane
+    /// tints from the scene, mirroring the plan pane. Hermetic against a
+    /// developer's exported `NO_COLOR`: saved, removed, restored.
+    #[test]
+    fn a_coloured_cell_draws_rgb_ink() {
+        with_no_color_removed(|| {
+            let mut tinted = chart_cell(90.0, 1.0, "sensed");
+            tinted.color = Some([36, 36, 1]);
+            let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
+            let mut g = crate::Grid::new(9, 5);
+            draw(&chart, &mut g, (0, 0));
+            assert_eq!(g.get(6, 2).unwrap().ink, Ink::Rgb([36, 36, 1]));
+        });
+    }
+
+    /// The suppression end-to-end through [`draw`]: with `NO_COLOR` set
+    /// non-empty, a coloured cell draws [`Ink::Plain`] — the reader
+    /// declined colour, and the chart honours it.
+    #[test]
+    fn no_color_suppresses_tint_through_draw() {
+        with_no_color_set("1", || {
+            let mut tinted = chart_cell(90.0, 1.0, "sensed");
+            tinted.color = Some([36, 36, 1]);
+            let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
+            let mut g = crate::Grid::new(9, 5);
+            draw(&chart, &mut g, (0, 0));
+            assert_eq!(g.get(6, 2).unwrap().ink, Ink::Plain);
+        });
+    }
+
+    /// Absence of a colour claim is Plain ink — "no colour claimed here",
+    /// never black.
+    #[test]
+    fn an_uncoloured_cell_draws_plain_ink() {
+        let chart = minimal_chart(vec![
+            chart_cell(0.0, 0.0, "here"),
+            chart_cell(90.0, 1.0, "sensed"),
+        ]);
+        let mut g = crate::Grid::new(9, 5);
+        draw(&chart, &mut g, (0, 0));
+        assert_eq!(g.get(6, 2).unwrap().ink, Ink::Plain);
     }
 }

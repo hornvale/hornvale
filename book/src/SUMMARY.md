@@ -384,6 +384,10 @@
 - [The Touchstone](./chronicle/the-touchstone.md)
 - [The Cupel](./chronicle/the-cupel.md)
 - [The Tackle](./chronicle/the-tackle.md)
+- [The Cant](./chronicle/the-cant.md)
+- [The Portolan](./chronicle/the-portolan.md)
+- [The Stylus](./chronicle/the-stylus.md)
+- [The Chroma](./chronicle/the-chroma.md)
 
 # Appendix: The Frontier
 
