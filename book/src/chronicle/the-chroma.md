@@ -35,7 +35,7 @@ degrades to an uncoloured glyph, never to a wrong one.
 
 The withholding rules mirror the producer exactly: the `@` mark and every
 mark draw untinted, because marks are identity and identity belongs to
-glyph (`CLIENT-four-channels`: colour carries substance, and is the channel
+glyph — colour carries substance, and is the channel
 that may fail).
 
 ## The caption is the honesty
@@ -43,7 +43,7 @@ that may fail).
 A coloured chart names what it claims to be. When the walk band renders
 tinted, the map strip appends a disclosure read off the document's sight
 block — for seed 42's possessed bugbear: *seen through a bugbear's eyes —
-yellow-blue sight; the red-green axis is not carried.* RENDER-9's rule,
+yellow-blue sight; the red-green axis is not carried.* The lens rule —
 aimed at the caption: nothing on screen is exempt from having been chosen.
 The caption suppresses with the colour (`NO_COLOR`), because a fidelity
 claim above a monochrome render would be the dishonesty it exists to

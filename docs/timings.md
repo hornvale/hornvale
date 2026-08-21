@@ -2011,3 +2011,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-21T20:10:55Z | game-check | 78.482 | 497.475 | 4.497 | 6.40 | 0 | 30b39498 | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T20:11:29Z | gate-commit | 22.560 | 46.145 | 13.018 | 2.62 | 0 | 30b39498 | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T20:53:38Z | gate-commit | 23.128 | 50.334 | 12.229 | 2.71 | 0 | 8795d53c | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:02:38Z | gate-commit | 22.486 | 47.540 | 10.429 | 2.58 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:03:15Z | gate-commit | 22.927 | 48.144 | 10.804 | 2.57 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:03:54Z | gate-commit | 23.241 | 49.128 | 11.310 | 2.60 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:05:14Z | gate-commit | 22.652 | 49.608 | 11.535 | 2.70 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
