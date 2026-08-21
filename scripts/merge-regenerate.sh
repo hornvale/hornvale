@@ -52,7 +52,7 @@ cd "$repo_root"
 # merge drivers (so ours is disabled below, or the probe would recurse
 # into itself), and its first output line is the merged tree oid, with
 # conflicted entries in `ls-files -u` format after it.
-theirs="$(env | sed -n 's/^GITHEAD_[0-9a-fA-F]\{40\}=//p')"
+theirs="$(env | sed -n 's/^GITHEAD_\([0-9a-fA-F]\{40\}\)=.*/\1/p')"
 if [ -n "$theirs" ]; then
     # More than one GITHEAD_ means an octopus merge; we cannot model
     # that, so refuse rather than guess.
