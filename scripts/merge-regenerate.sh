@@ -68,7 +68,7 @@ if [ -n "$theirs" ]; then
     # lines, so match the entry shape explicitly.
     others="$( { git -c merge.hv-regenerate.driver=/bin/false \
         merge-tree --write-tree HEAD "$theirs" || true; } \
-        | awk '$1 ~ /^[0-7]+$/ && $2 ~ /^[0-9a-f]{40}$/ && $3 ~ /^[0-9]$/ && $4 != p' p="$path")"
+        | awk '$1 ~ /^[0-7]+$/ && $2 ~ /^[0-9a-f]+$/ && length($2) == 40 && $3 ~ /^[0-9]$/ && $4 != p' p="$path")"
     if [ -n "$others" ]; then
         echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
         exit 1
