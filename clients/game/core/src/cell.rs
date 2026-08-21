@@ -20,12 +20,43 @@ pub enum Weight {
     Bold,
 }
 
-/// What a thing IS. Monochrome for this campaign; colour is deferred.
+/// What a thing IS. `Plain` is the floor; `Rgb` carries substance off the
+/// wire. **Foreground = cover, background = substrate**: if a future
+/// campaign adds background colour (`Ink::Duo { fg, bg }`), fg carries what
+/// grows/sits on a cell and bg the material under it — both claims of
+/// substance per CLIENT-four-channels, never identity or attention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Ink {
     /// The default ink.
     #[default]
     Plain,
+    /// A truecolor foreground claim carried off the wire.
+    Rgb([u8; 3]),
+}
+
+impl Ink {
+    /// The pure decision behind [`Ink::from_wire`]: with colour disallowed,
+    /// or with no colour claimed, the ink is [`Ink::Plain`] — absence is
+    /// legible, never faked as black. Tests that need the coloured path to
+    /// be hermetic call this directly instead of touching the environment.
+    pub fn resolve(color: Option<[u8; 3]>, colour_allowed: bool) -> Ink {
+        if !colour_allowed {
+            return Ink::Plain;
+        }
+        // A `None` claim is also plain (absence is legible, never faked as
+        // black); only a real claim under allowed colour yields an ink.
+        color.map_or(Ink::Plain, Ink::Rgb)
+    }
+
+    /// Resolve a wire colour claim to ink. A non-empty `NO_COLOR` (the
+    /// reader declined colour) and a `None` claim both yield
+    /// [`Ink::Plain`]; see [`Ink::resolve`] for the pure decision.
+    pub fn from_wire(color: Option<[u8; 3]>) -> Ink {
+        Self::resolve(
+            color,
+            std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty()),
+        )
+    }
 }
 
 /// The snapshot channel a drawn cell traces back to — the executable form of
@@ -197,6 +228,16 @@ impl Cell {
         }
     }
 
+    /// A cell with a colour claim resolved through [`Ink::from_wire`].
+    pub fn inked(glyph: char, weight: Weight, source: Source, color: Option<[u8; 3]>) -> Cell {
+        Cell {
+            glyph: Some(glyph),
+            weight,
+            ink: Ink::from_wire(color),
+            source,
+        }
+    }
+
     /// Unmarked paper — never known, never drawn. Not a space, and not black.
     pub fn is_blank(&self) -> bool {
         self.glyph.is_none()
@@ -314,5 +355,83 @@ impl Grid {
             }
         }
         counts
+    }
+}
+
+/// Test-only home for the crate's `NO_COLOR` save/restore helpers and the
+/// mutex serialising them. `NO_COLOR` is process-global state, and the lib
+/// unit tests all run as threads of ONE binary under plain `cargo test`
+/// (nextest's process-per-test isolation does NOT apply to `game-check`),
+/// so every test that mutates it — and every test that asserts resolved
+/// ink through the draw path — must hold [`ENV_LOCK`] for its body.
+#[cfg(test)]
+pub(crate) mod test_env {
+    /// Serialises every `NO_COLOR` mutation and every colour-resolution
+    /// assertion across the threaded lib test binary.
+    pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
+    /// Takes [`ENV_LOCK`] itself; do NOT call while already holding it.
+    /// The env ops are `unsafe` because they are UB under concurrency;
+    /// SAFETY here rests on the lock, not on nextest isolation.
+    pub(crate) fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(None, f)
+    }
+
+    /// Run `f` with `NO_COLOR` set to a non-empty value, restoring the
+    /// prior state after. Takes [`ENV_LOCK`] itself; do NOT call while
+    /// already holding it.
+    pub(crate) fn with_no_color_set<R>(value: &str, f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(Some(value), f)
+    }
+
+    fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let _env = ENV_LOCK.lock().unwrap();
+        let saved = std::env::var_os("NO_COLOR");
+        // SAFETY: the caller holds ENV_LOCK, so no other test in this
+        // threaded binary touches the environment concurrently.
+        unsafe { std::env::remove_var("NO_COLOR") };
+        if let Some(v) = value {
+            // SAFETY: as above.
+            unsafe { std::env::set_var("NO_COLOR", v) };
+        }
+        let out = f();
+        match saved {
+            Some(v) => {
+                // SAFETY: as above.
+                unsafe { std::env::set_var("NO_COLOR", v) };
+            }
+            None => {
+                // SAFETY: as above.
+                unsafe { std::env::remove_var("NO_COLOR") };
+            }
+        }
+        out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_env::ENV_LOCK;
+    use super::*;
+
+    /// Absent colour means "no colour claimed here", never black — the
+    /// producer's own rule (windows/vessel/src/session.rs `tint`).
+    #[test]
+    fn absent_wire_colour_is_plain_ink() {
+        assert_eq!(Ink::from_wire(None), Ink::Plain);
+    }
+
+    /// NO_COLOR maps every Rgb to Plain at cell-build time, so the buffer
+    /// itself is monochrome and degradation is observable, not silent.
+    #[test]
+    fn no_color_env_forces_plain_ink() {
+        // SAFETY: NO_COLOR is process-global env state; ENV_LOCK serialises
+        // this mutation against every sibling thread in the test binary.
+        let _env = ENV_LOCK.lock().unwrap();
+        unsafe { std::env::set_var("NO_COLOR", "1") };
+        assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Plain);
+        unsafe { std::env::remove_var("NO_COLOR") };
+        assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Rgb([36, 36, 1]));
     }
 }

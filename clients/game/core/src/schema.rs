@@ -144,6 +144,11 @@ pub struct ChartCell {
     pub water: u32,
     /// Index into `relief_legend`.
     pub relief: u32,
+    /// The cell's colour as seen through the observing eye, present only when
+    /// the scene was built through the producer's coloured builder — absence
+    /// means "no colour claimed here", never black.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<[u8; 3]>,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
     /// Great-circle initial azimuth from the observer to this cell, degrees
@@ -176,6 +181,40 @@ pub struct Chart {
     pub cells: Vec<ChartCell>,
     /// One `(noun, datum)` pair of the chart's catalog.
     pub legend: Vec<LegendEntry>,
+    /// The chart's sight declaration (`scene/surrounds/v2`'s `sight` block),
+    /// present only when the scene is coloured — an uncoloured scene omits
+    /// the key entirely, so this is `Option` with a serde default and is
+    /// skipped when `None` on the way back out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sight: Option<Sight>,
+}
+
+/// The walk-band chart's sight declaration, mirroring `scene/surrounds/v2`'s
+/// `Sight`. The fields the disclosure caption reads (`observer`,
+/// `projection`, `preserves`) plus the rest of the wire record — the mirror's
+/// other job is to be a faithful model of the emitted contract, and a partial
+/// record is a worse proof that it is sufficient (module doc).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Sight {
+    /// The species (or other named eye) the chart was coloured through.
+    pub observer: String,
+    /// How many channels the observer senses with.
+    pub channels: u32,
+    /// How many of those are chromatic.
+    pub chromatic: u32,
+    /// The observer's projection name, or `"none"`.
+    pub projection: String,
+    /// What that projection preserves — and, read honestly, what it does not.
+    pub preserves: String,
+    /// The sun's elevation above the horizon, degrees, the light was built
+    /// from.
+    pub sun_altitude_deg: f64,
+    /// `"chromatic"` or `"achromatic"` per channel, in channel order.
+    pub channel_roles: Vec<String>,
+    /// Which channel drives R, G, B, or `None` with no projection.
+    pub projection_slots: Option<[u32; 3]>,
+    /// The per-output-slot normalizers, or `None` with no projection.
+    pub projection_norms: Option<[f64; 3]>,
 }
 
 /// A salience-ranked thing standing on a cell.

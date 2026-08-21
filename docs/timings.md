@@ -1975,3 +1975,43 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T23:00:45Z | sluice:outboard | 34.717 | 20.643 | 30.545 | 1.47 | 0 | 1d354633b |  | lefford | 40 |
 | 2026-08-20T23:07:29Z | sluice:gate | 403.174 | 10921.330 | 429.051 | 28.15 | 0 | 7dafec336 |  | lefford | 40 |
 | 2026-08-20T23:12:03Z | sluice:clients | 273.822 | 1085.455 | 39.956 | 4.11 | 0 | 96539eb09 |  | lefford | 40 |
+| 2026-08-21T16:17:21Z | prewarm | 154.337 | 1094.036 | 41.797 | 7.36 | 0 | d656064e | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:00:52Z | gate-commit | 30.907 | 83.762 | 17.138 | 3.26 | 0 | 63177e6c | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:09:57Z | gate-commit | 21.813 | 45.352 | 12.667 | 2.66 | 0 | 0a6ddbdc | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:16:40Z | gate-commit | 20.995 | 45.020 | 12.216 | 2.73 | 0 | f6de3ada | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:25:05Z | gate-commit | 20.894 | 44.777 | 11.997 | 2.72 | 0 | 6fdb3057 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:33:55Z | game-check | 79.155 | 495.873 | 4.881 | 6.33 | 0 | 126126b0 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:34:28Z | gate-commit | 21.365 | 45.134 | 12.297 | 2.69 | 0 | 126126b0 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:53:00Z | game-check | 0.232 | 0.139 | 0.047 | 0.80 | 0 | f1c8e875 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:54:26Z | game-check | 84.104 | 507.472 | 5.283 | 6.10 | 0 | f1c8e875 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:54:56Z | gate-commit | 21.385 | 45.134 | 12.372 | 2.69 | 0 | f1c8e875 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:04:22Z | game-check | 0.420 | 0.254 | 0.100 | 0.84 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:04:29Z | game-check | 0.738 | 0.494 | 0.258 | 1.02 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:04:33Z | game-check | 0.567 | 0.366 | 0.147 | 0.90 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:04:55Z | game-check | 0.724 | 0.508 | 0.261 | 1.06 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:06:20Z | game-check | 76.141 | 490.410 | 3.122 | 6.48 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:08:32Z | game-check | 0.655 | 0.421 | 0.147 | 0.87 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:09:56Z | game-check | 77.083 | 497.558 | 3.348 | 6.50 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:10:16Z | game-check | 0.603 | 0.419 | 0.135 | 0.92 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:15:47Z | game-check | 0.688 | 0.809 | 0.411 | 1.77 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:16:02Z | game-check | 0.573 | 0.436 | 0.099 | 0.93 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:16:24Z | game-check | 0.565 | 0.435 | 0.095 | 0.94 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:16:52Z | game-check | 2.764 | 4.431 | 3.561 | 2.89 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:16:56Z | game-check | 0.770 | 0.504 | 0.213 | 0.93 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:18:51Z | game-check | 77.090 | 493.219 | 4.543 | 6.46 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:20:19Z | game-check | 77.289 | 498.715 | 3.373 | 6.50 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:20:58Z | gate-commit | 21.332 | 45.056 | 12.215 | 2.68 | 0 | 7103c0c8 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:22:57Z | game-check | 78.024 | 501.446 | 3.397 | 6.47 | 0 | 389d498d | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:27:18Z | game-check | 78.374 | 494.646 | 5.041 | 6.38 | 0 | 5e8a25d0 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:27:45Z | gate-commit | 21.388 | 45.125 | 12.339 | 2.69 | 0 | 5e8a25d0 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:44:08Z | game-check | 78.681 | 499.530 | 4.204 | 6.40 | 0 | 7c369aaa | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T19:44:34Z | gate-commit | 21.448 | 45.164 | 12.275 | 2.68 | 0 | 7c369aaa | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T20:09:09Z | game-check | 0.235 | 0.145 | 0.050 | 0.83 | 0 | 30b39498 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T20:09:13Z | game-check | 0.816 | 0.653 | 0.411 | 1.30 | 0 | 30b39498 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T20:10:55Z | game-check | 78.482 | 497.475 | 4.497 | 6.40 | 0 | 30b39498 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T20:11:29Z | gate-commit | 22.560 | 46.145 | 13.018 | 2.62 | 0 | 30b39498 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T20:53:38Z | gate-commit | 23.128 | 50.334 | 12.229 | 2.71 | 0 | 8795d53c | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:02:38Z | gate-commit | 22.486 | 47.540 | 10.429 | 2.58 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:03:15Z | gate-commit | 22.927 | 48.144 | 10.804 | 2.57 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:03:54Z | gate-commit | 23.241 | 49.128 | 11.310 | 2.60 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T21:05:14Z | gate-commit | 22.652 | 49.608 | 11.535 | 2.70 | 0 | 4e33f410 | campaign/the-chroma | MacBookPro | 10 |

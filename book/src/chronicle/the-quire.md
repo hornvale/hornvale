@@ -4,7 +4,8 @@ A quire is the gathering of folded leaves from which a book is bound — the
 smallest unit a binder actually handles. This campaign bound the first
 gathering of a visual brief that had been written and never built: a native
 character-grid client you can walk a Hornvale world around in, at eighty
-columns by twenty-four rows, in monochrome.
+columns by twenty-four rows, in monochrome. (The Chroma later gave the
+client colour; see [that chronicle](the-chroma.md).)
 
 That sentence is the least interesting thing about the campaign. What is worth
 recording is that two of its opening questions turned out to have no answer
@@ -237,10 +238,11 @@ gate, in two crates: a rendering core with no simulation dependency, and a
 binary that links the possession layer and owns exactly the terminal. The
 spread is a plate on the left, a written entry on the right, an identity strip
 below. The outdoor plate draws the sheared lattice; the indoor plate draws the
-floor plan; the band switches by itself. The three epistemic ink weights are the
-whole visual channel in monochrome — bold for *here*, normal for *sensed*, dim
+floor plan; the band switches by itself. The three epistemic ink weights were the whole visual channel in
+monochrome — bold for *here*, normal for *sensed*, dim
 for *remembered*, and never-known ground is not written at all, which is
-unmarked paper rather than black fog.
+unmarked paper rather than black fog. (Colour arrived later as the
+substance channel; see [The Chroma](the-chroma.md).)
 
 **Two things the spec put in scope shipped smaller than it said, and neither
 was written down until this review.** They are recorded here rather than
