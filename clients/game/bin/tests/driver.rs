@@ -155,10 +155,18 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     driver.apply(Action::ToggleFocus);
     let at_observer = driver.strip_text().map(str::to_string);
-    assert_eq!(
-        at_observer.as_deref(),
-        Some("Vngashngatva"),
-        "the observer's own box must resolve to seed 42's real landmass name"
+    // The strip now carries the sight-disclosure caption after the name
+    // (Task 5): the name first, then the honesty line.
+    let at_observer_text = at_observer
+        .as_deref()
+        .expect("the strip always reports once the map is focused");
+    assert!(
+        at_observer_text.starts_with("Vngashngatva"),
+        "the observer's own box must resolve to seed 42's real landmass name, got {at_observer_text:?}"
+    );
+    assert!(
+        at_observer_text.contains("bugbear"),
+        "the disclosure rides along: {at_observer_text:?}"
     );
 
     // Five columns west: no chart cell projects onto this box (verified by
@@ -170,7 +178,13 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
         five_west, at_observer,
         "the strip must change when the cursor moves off the observer's box"
     );
-    assert_eq!(five_west.as_deref(), Some("unnamed terrain"));
+    let five_west_text = five_west
+        .as_deref()
+        .expect("the strip always reports once the map is focused");
+    assert!(
+        five_west_text.starts_with("unnamed terrain"),
+        "five west is honestly unnamed, got {five_west_text:?}"
+    );
 
     // And moving back must restore the observer's own answer — proving the
     // dependency runs both ways, not just away from the start.
@@ -193,10 +207,11 @@ fn resize_re_resolves_against_the_real_plate_height() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     driver.apply(Action::ToggleFocus);
     let at_floor_height = driver.strip_text().map(str::to_string);
-    assert_eq!(
-        at_floor_height.as_deref(),
-        Some("Vngashngatva"),
-        "at the 20-row floor, screen (20, 10) is the observer's own box"
+    assert!(
+        at_floor_height
+            .as_deref()
+            .is_some_and(|t| t.starts_with("Vngashngatva")),
+        "at the 20-row floor, screen (20, 10) is the observer's own box, got {at_floor_height:?}"
     );
 
     // A 40-row terminal: real content height is 40 - RESERVED_ROWS(4) = 36
@@ -209,13 +224,15 @@ fn resize_re_resolves_against_the_real_plate_height() {
         at_taller_height, at_floor_height,
         "resizing must re-resolve against the real plate height, not repeat the floor's stale answer"
     );
-    assert_eq!(
-        at_taller_height.as_deref(),
-        Some("unnamed terrain"),
+    let at_taller_text = at_taller_height
+        .as_deref()
+        .expect("the strip always reports once the map is focused");
+    assert!(
+        at_taller_text.starts_with("unnamed terrain"),
         "no chart cell lands on (20, 10) once the real centre moves to (20, 18), so \
          the walk-band chain comes up empty there (not None -- the strip always \
          reports something once the map is focused; NOTHING_HERE_YET is reserved \
-         for a resolver-absent band)"
+         for a resolver-absent band), got {at_taller_text:?}"
     );
 
     // Move the cursor to what is NOW the real centre -- it must resolve

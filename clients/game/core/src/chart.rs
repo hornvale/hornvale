@@ -296,10 +296,54 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
     }
 }
 
+/// The honesty caption for a coloured chart: whose eyes the reader is
+/// seeing through, which projection, and what that projection does NOT
+/// carry. Pure — the caller decides whether colour (and therefore this
+/// caption) is allowed at all, so suppression lives in exactly one place
+/// per caller and this function never touches the environment.
+///
+/// The wording names the observer, the projection, and the lost axis by
+/// SUBSTRING contract: tests assert those three appear, not the exact
+/// sentence (wording reviewed at the visual pass).
+pub fn disclosure(sight: &crate::Sight) -> String {
+    format!(
+        "seen through {}'s eyes — {} sight; {}",
+        sight.observer, sight.projection, sight.preserves
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Ink;
+
+    /// The seed-42 turn-0 fixture's own sight declaration, as a literal —
+    /// the values the committed fixture carries (`spatial.chart.sight`),
+    /// so the caption is asserted against what the sim actually emits.
+    fn fixture_sight() -> crate::Sight {
+        crate::Sight {
+            observer: "bugbear".into(),
+            channels: 3,
+            chromatic: 2,
+            projection: "yellow-blue".into(),
+            preserves: "the short-to-long opposition; the red-green axis is not carried".into(),
+            sun_altitude_deg: -56.010669,
+            channel_roles: vec!["chromatic".into(), "chromatic".into(), "achromatic".into()],
+            projection_slots: Some([1, 1, 0]),
+            projection_norms: Some([3.862, 3.862, 1.98]),
+        }
+    }
+
+    /// The caption names whose eyes, the projection, and what is NOT
+    /// carried — by SUBSTRING, not exact sentence (wording reviewed at the
+    /// visual pass).
+    #[test]
+    fn disclosure_names_observer_projection_and_lost_axis() {
+        let d = disclosure(&fixture_sight());
+        assert!(d.contains("bugbear"), "names the observer species: {d}");
+        assert!(d.contains("yellow-blue"), "names the projection: {d}");
+        assert!(d.contains("red-green"), "names the lost axis: {d}");
+    }
 
     /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
     /// The env ops are `unsafe` because they are UB under concurrency;
@@ -400,6 +444,7 @@ mod tests {
             relief_legend: vec![],
             cells,
             legend: vec![],
+            sight: None,
         }
     }
 

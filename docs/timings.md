@@ -1979,3 +1979,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-21T18:00:52Z | gate-commit | 30.907 | 83.762 | 17.138 | 3.26 | 0 | 63177e6c | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T18:09:57Z | gate-commit | 21.813 | 45.352 | 12.667 | 2.66 | 0 | 0a6ddbdc | campaign/the-chroma | MacBookPro | 10 |
 | 2026-08-21T18:16:40Z | gate-commit | 20.995 | 45.020 | 12.216 | 2.73 | 0 | f6de3ada | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:25:05Z | gate-commit | 20.894 | 44.777 | 11.997 | 2.72 | 0 | 6fdb3057 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:33:55Z | game-check | 79.155 | 495.873 | 4.881 | 6.33 | 0 | 126126b0 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:34:28Z | gate-commit | 21.365 | 45.134 | 12.297 | 2.69 | 0 | 126126b0 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:53:00Z | game-check | 0.232 | 0.139 | 0.047 | 0.80 | 0 | f1c8e875 | campaign/the-chroma | MacBookPro | 10 |
+| 2026-08-21T18:54:26Z | game-check | 84.104 | 507.472 | 5.283 | 6.10 | 0 | f1c8e875 | campaign/the-chroma | MacBookPro | 10 |

@@ -207,6 +207,27 @@ pub struct Driver {
     echo: Option<String>,
 }
 
+/// Append the sight-disclosure caption to a resolved strip text — the
+/// honesty line that says whose eyes the coloured chart was drawn through.
+/// The colour probe is the same one the drawing path uses
+/// ([`hornvale_game_core::Ink::from_wire`]): a non-empty `NO_COLOR` means
+/// the reader declined colour, and the caption goes with it — the picture
+/// and its honesty line are one channel, suppressed together. Pure apart
+/// from that one environment read, so tests can drive it hermetically.
+fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> String {
+    let coloured =
+        hornvale_game_core::Ink::from_wire(Some([0, 0, 0])) != hornvale_game_core::Ink::Plain;
+    match (sight, coloured) {
+        (Some(sight), true) => {
+            let mut text = base;
+            text.push_str(" — ");
+            text.push_str(&hornvale_game_core::chart::disclosure(sight));
+            text
+        }
+        _ => base,
+    }
+}
+
 impl Driver {
     /// Build a fresh world for `seed` (default sky/terrain/settlement pins,
     /// generated sky — the same defaults `clients/vessel/wasm`'s `hv_start`
@@ -509,8 +530,10 @@ impl Driver {
         let hornvale_game_core::Spatial::Walk { chart } = snap.spatial else {
             return NOTHING_HERE_YET.to_string();
         };
-        self.resolve_walk_band(&chart)
-            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string())
+        let base = self
+            .resolve_walk_band(&chart)
+            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
+        caption(base, chart.sight.as_ref())
     }
 
     /// The walk band's own resolution chain, cursor position to name.
@@ -617,5 +640,96 @@ impl Drop for Driver {
             drop(Box::from_raw(self.ctx));
             drop(Box::from_raw(self.world));
         }
+    }
+}
+
+#[cfg(test)]
+mod caption_tests {
+    use super::caption;
+    use hornvale_game_core::schema::Sight;
+
+    /// The seed-42 turn-0 fixture's sight values, as a literal.
+    fn fixture_sight() -> Sight {
+        Sight {
+            observer: "bugbear".into(),
+            channels: 3,
+            chromatic: 2,
+            projection: "yellow-blue".into(),
+            preserves: "the short-to-long opposition; the red-green axis is not carried".into(),
+            sun_altitude_deg: -56.010669,
+            channel_roles: vec!["chromatic".into(), "chromatic".into(), "achromatic".into()],
+            projection_slots: Some([1, 1, 0]),
+            projection_norms: Some([3.862, 3.862, 1.98]),
+        }
+    }
+
+    /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
+    fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(None, f)
+    }
+
+    /// Run `f` with `NO_COLOR` set to a non-empty value, restoring
+    /// whatever it was after.
+    fn with_no_color_set<R>(value: &str, f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(Some(value), f)
+    }
+
+    fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let saved = std::env::var_os("NO_COLOR");
+        // SAFETY: single-threaded test body; nextest's process-per-test
+        // isolation bounds the blast radius, the same posture chart.rs's
+        // own hermetic helpers take.
+        unsafe {
+            match &value {
+                Some(w) => std::env::set_var("NO_COLOR", w),
+                None => match saved {
+                    Some(ref v) => std::env::set_var("NO_COLOR", v),
+                    None => std::env::remove_var("NO_COLOR"),
+                },
+            }
+        }
+        let out = f();
+        // SAFETY: as above.
+        unsafe {
+            match saved {
+                Some(v) => std::env::set_var("NO_COLOR", v),
+                None => std::env::remove_var("NO_COLOR"),
+            }
+        }
+        out
+    }
+
+    /// Colour allowed and a sight declaration present: the disclosure is
+    /// APPENDED to the resolver's text, never replacing it.
+    #[test]
+    fn colour_allowed_appends_the_disclosure() {
+        with_no_color_removed(|| {
+            let out = caption("googo ridge".to_string(), Some(&fixture_sight()));
+            assert!(out.starts_with("googo ridge"), "{out}");
+            assert!(out.contains("bugbear"), "{out}");
+            assert!(out.contains("yellow-blue"), "{out}");
+            assert!(out.contains("red-green"), "{out}");
+        });
+    }
+
+    /// A non-empty `NO_COLOR` is the reader declining colour, and the
+    /// caption goes with it — the picture and its honesty line are one
+    /// channel, suppressed together.
+    #[test]
+    fn no_color_suppresses_the_caption() {
+        with_no_color_set("1", || {
+            let out = caption("googo ridge".to_string(), Some(&fixture_sight()));
+            assert_eq!(out, "googo ridge");
+        });
+    }
+
+    /// No sight declaration (an uncoloured scene omits the key entirely):
+    /// the strip text passes through untouched.
+    #[test]
+    fn no_sight_no_caption() {
+        with_no_color_removed(|| {
+            let out = caption("googo ridge".to_string(), None);
+            assert_eq!(out, "googo ridge");
+        });
     }
 }
