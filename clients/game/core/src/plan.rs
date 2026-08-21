@@ -88,16 +88,22 @@ fn glyph_of(kind: &str) -> char {
     }
 }
 
+/// The palette entry a plan cell at row-major index `i` names. `None` if
+/// `i` or the index it names is out of range — both schema violations the
+/// producer does not allow (`plan.cells`' own doc: "Length is exactly
+/// `w * h`"; `plan_of`'s own doc: "every index names a real palette
+/// entry"), but this function stays infallible rather than panicking on a
+/// malformed wire document.
+fn cell_entry(plan: &Plan, i: usize) -> Option<&crate::PaletteEntry> {
+    let ix = *plan.cells.get(i)?;
+    plan.palette.get(ix as usize)
+}
+
 /// The glyph a plan cell at row-major index `i` draws, read from its
 /// palette entry. `None` if `i` or the index it names is out of range —
-/// both schema violations the producer does not allow (`plan.cells`' own
-/// doc: "Length is exactly `w * h`"; `plan_of`'s own doc: "every index
-/// names a real palette entry"), but this function stays infallible rather
-/// than panicking on a malformed wire document.
+/// see [`cell_entry`] for why this stays infallible.
 fn cell_glyph(plan: &Plan, i: usize) -> Option<char> {
-    let ix = *plan.cells.get(i)?;
-    let entry = plan.palette.get(ix as usize)?;
-    Some(glyph_of(&entry.kind))
+    Some(glyph_of(&cell_entry(plan, i)?.kind))
 }
 
 /// The grid position for a lattice-local point `(x, y)`, offset by the
@@ -134,15 +140,27 @@ pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
             let row = (i as i32) / w;
             let x = plan.extent.x + col;
             let y = plan.extent.y + row;
-            let Some(glyph) = cell_glyph(plan, i) else {
+            let Some(entry) = cell_entry(plan, i) else {
                 continue;
             };
             if let Some((gx, gy)) = grid_pos(plan, x, y, origin, into) {
-                into.set(gx, gy, Cell::glyph(glyph, Weight::Normal, Source::Plan));
+                into.set(
+                    gx,
+                    gy,
+                    Cell::inked(
+                        glyph_of(&entry.kind),
+                        Weight::Normal,
+                        Source::Plan,
+                        entry.color,
+                    ),
+                );
             }
         }
     }
 
+    // Spec §2.2: `you` is identity, and identity belongs to glyph — it is
+    // never tinted, even standing on a coloured cell (mirrors the producer's
+    // `windows/vessel/src/session.rs` `tint()` withholding).
     if let Some((gx, gy)) = grid_pos(plan, plan.you.x, plan.you.y, origin, into) {
         into.set(gx, gy, Cell::glyph(YOU_GLYPH, Weight::Bold, Source::Plan));
     }
@@ -169,6 +187,9 @@ fn draw_mark(plan: &Plan, m: &PlanMark, origin: (u16, u16), into: &mut crate::Gr
     let Some(glyph) = cell_glyph(plan, i) else {
         return;
     };
+    // Spec §2.2: marks are identity, not cover — they re-draw the cell's
+    // glyph Plain, never tinted (mirrors the producer's
+    // `windows/vessel/src/session.rs` `tint()` withholding).
     if let Some((gx, gy)) = grid_pos(plan, m.x, m.y, origin, into) {
         into.set(gx, gy, Cell::glyph(glyph, Weight::Normal, Source::Plan));
     }
@@ -280,6 +301,63 @@ mod tests {
         // glyph, only prove it wins should a future geometry collide.
         assert_eq!(g.get(2, 0).unwrap().glyph, Some(THRESHOLD_GLYPH));
         assert_eq!(g.get(1, 1).unwrap().glyph, Some(YOU_GLYPH));
+    }
+
+    /// A palette entry's colour rides its glyph; an entry claiming no colour
+    /// draws Plain. Fixture-driven: real seed-42 palette values.
+    #[test]
+    fn palette_colour_reaches_the_cell() {
+        let mut p = small_plan();
+        p.palette[0].color = Some([8, 8, 0]);
+        p.palette[1].color = Some([36, 36, 1]);
+        let mut g = crate::Grid::new(5, 5);
+        draw(&p, &mut g, (0, 0));
+        assert_eq!(
+            g.get(0, 0).unwrap().ink,
+            crate::Ink::Rgb([8, 8, 0]),
+            "wall cell carries its palette colour"
+        );
+        assert_eq!(g.get(1, 0).unwrap().ink, crate::Ink::Rgb([36, 36, 1]));
+        assert_eq!(
+            g.get(2, 0).unwrap().ink,
+            crate::Ink::Plain,
+            "threshold claims no colour, draws Plain"
+        );
+    }
+
+    /// The you-mark is never tinted, even standing on a coloured cell —
+    /// identity belongs to glyph (ledger #4; mirrors producer tint()).
+    #[test]
+    fn the_you_mark_stays_plain_over_a_coloured_cell() {
+        let mut p = small_plan();
+        p.palette[1].color = Some([36, 36, 1]);
+        p.you = PlanPoint { x: 1, y: 0 }; // `you` stands on the coloured floor.
+        let mut g = crate::Grid::new(5, 5);
+        draw(&p, &mut g, (0, 0));
+        let cell = g.get(1, 0).unwrap();
+        assert_eq!(cell.glyph, Some(YOU_GLYPH));
+        assert_eq!(cell.ink, crate::Ink::Plain, "identity stays plain");
+        assert_eq!(cell.weight, Weight::Bold);
+    }
+
+    /// Marks re-draw their cell's glyph untinted, same rule.
+    #[test]
+    fn marks_draw_untinted() {
+        let mut p = small_plan();
+        p.palette[2].color = Some([8, 8, 0]);
+        p.marks = vec![PlanMark {
+            x: 2,
+            y: 0,
+            noun: "goblin".to_string(),
+            kind: "agent".to_string(),
+            datum: "A goblin stands here.".to_string(),
+            salience: 5,
+        }];
+        let mut g = crate::Grid::new(5, 5);
+        draw(&p, &mut g, (0, 0));
+        let cell = g.get(2, 0).unwrap();
+        assert_eq!(cell.glyph, Some(THRESHOLD_GLYPH));
+        assert_eq!(cell.ink, crate::Ink::Plain, "marks are identity, not cover");
     }
 
     #[test]
