@@ -41,22 +41,27 @@ cd "$repo_root"
 # theirs. Exit nonzero and let git leave this path unmerged like any
 # other conflict.
 #
-# The index CANNOT be the signal here: git performs the whole merge in
-# memory and writes conflict stages to the index only AFTER every
-# driver has run, so `git ls-files -u` is always empty at this moment
-# (verified against real git behavior, not assumed from prose). The
-# signal instead is `git merge-tree --write-tree`, which recomputes the
-# merge in memory and lists the conflicted paths. Two cautions verified
-# directly: it HONORS .gitattributes merge drivers (so ours is disabled
-# below, or the probe would recurse into itself), and its first output
-# line is the merged tree oid, with conflicted entries in `ls-files
-# -u` format after it. Only real merges are checked (MERGE_HEAD); a
-# lone cherry-pick/rebase conflict falls through to the legacy
-# regenerate-always behavior.
-gitdir="$(git rev-parse --git-dir)"
-if [ -f "$gitdir/MERGE_HEAD" ]; then
+# Neither the index nor the merge state files can be the signal here:
+# git performs the whole merge in memory and writes conflict stages,
+# MERGE_HEAD and friends only AFTER every driver has run (all verified
+# empty mid-merge against real git, not assumed from prose). What git
+# DOES hand the driver is the other head itself, as a GITHEAD_<sha>
+# environment variable. From it we recompute the merge with `git
+# merge-tree --write-tree`, whose output lists the conflicted paths.
+# Two cautions verified directly: merge-tree HONORS .gitattributes
+# merge drivers (so ours is disabled below, or the probe would recurse
+# into itself), and its first output line is the merged tree oid, with
+# conflicted entries in `ls-files -u` format after it.
+theirs="$(env | sed -n 's/^GITHEAD_[0-9a-fA-F]\{40\}=//p')"
+if [ -n "$theirs" ]; then
+    # More than one GITHEAD_ means an octopus merge; we cannot model
+    # that, so refuse rather than guess.
+    if [ "$(env | grep -c '^GITHEAD_')" -gt 1 ]; then
+        echo "merge-regenerate: octopus merge detected; refusing to regenerate '$path' automatically" >&2
+        exit 1
+    fi
     others="$(git -c merge.hv-regenerate.driver=/bin/false \
-        merge-tree --write-tree HEAD MERGE_HEAD \
+        merge-tree --write-tree HEAD "$theirs" \
         | awk 'NR > 1 && NF >= 4 && $4 != p' p="$path")"
     if [ -n "$others" ]; then
         echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
