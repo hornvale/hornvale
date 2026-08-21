@@ -87,19 +87,82 @@
 use std::collections::BTreeSet;
 
 use hornvale_kernel::{Seed, quantize};
-use hornvale_terrain::GeneratedTerrain;
+use hornvale_terrain::{DelveRung, GeneratedTerrain};
 
 use crate::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, RunAddr, chamber_at,
-    chamber_key, floors_in_run, passages_from,
+    chamber_key, floors_in_run, passages_from, rung_rank,
 };
 
-/// How many bands the delve ladder's habitation rungs occupy — the range
-/// `ChamberAddr::band` indexes. Stated locally rather than imported because
-/// `chamber.rs` keeps its own rank↔rung bijection private on purpose; the
-/// readout only needs to know how far to count, and the *names* reach the
-/// artifact through `chamber_key`, which is the authority.
-const HABITATION_BANDS: u8 = 5;
+/// A habitation rung's spelling **in this readout's tallies** — presentation,
+/// deliberately not the key's table. See [`stratum_word`] for why that
+/// distinction is load-bearing rather than fussy.
+///
+/// **Exhaustive over [`DelveRung`], and that is the whole point of its
+/// existence.** This function is what ties the band walk below to the delve
+/// ladder: a sixth rung fails THIS to compile, so the readout cannot be
+/// silently left one band short of the lattice it is meant to witness.
+///
+/// `None` for `Surface`, which is a rung of the ladder but not a *habitation*
+/// rung and has no position in a lattice of underground places — the same
+/// answer `chamber::rung_rank` gives it.
+fn band_word(rung: DelveRung) -> Option<&'static str> {
+    match rung {
+        DelveRung::Surface => None,
+        DelveRung::Undercroft => Some("undercroft"),
+        DelveRung::Shallows => Some("shallows"),
+        DelveRung::Deeps => Some("deeps"),
+        DelveRung::Underdeep => Some("underdeep"),
+        DelveRung::Nadir => Some("nadir"),
+    }
+}
+
+/// The habitation bands this readout walks, as `(rank, word)` in rank order —
+/// **derived from the delve ladder, never restated as a literal.**
+///
+/// # Why this is a function and not a `const 5`
+///
+/// It was a `const HABITATION_BANDS: u8 = 5` for one review round, and review
+/// found the same defect the module doc's loop-bound section is about, one
+/// axis over. `FLOORS_PER_RUN_CEILING` and `BRANCHES_PER_SYSTEM` are imported
+/// from the lattice; the band count alone was a local literal tied to nothing.
+/// So a sixth delve rung would have compiled this module unchanged, the walk
+/// would have kept stopping at five, and **that rung's chambers would have
+/// vanished from `chambers`, from `by_band` and from every transect row with
+/// no compile error and no test red** — every internal consistency assertion
+/// survives it, because `by_band` still sums to `chambers` when both are
+/// undercounted by the same missing band.
+///
+/// Two independent guards now, and they fail at different times on purpose:
+///
+/// 1. [`band_word`] is exhaustive over [`DelveRung`], so a sixth variant fails
+///    at COMPILE time;
+/// 2. the `expect` below fails at RUN time if anyone gives `band_word` a
+///    catch-all arm — a rung the lattice places but this readout has no word
+///    for is an error, never a silent skip.
+///
+/// The rank comes from [`rung_rank`], the lattice's own one explicit mapping,
+/// so what counts as a band here is by construction what counts as a band in
+/// [`ChamberAddr::band`].
+fn habitation_bands() -> Vec<(u8, &'static str)> {
+    let mut bands: Vec<(u8, &'static str)> = hornvale_terrain::rungs()
+        .iter()
+        .filter_map(|&rung| {
+            let rank = rung_rank(rung)?;
+            let word = band_word(rung).expect(
+                "a rung the lattice gives a band rank must have a word in this \
+                 readout — band_word is exhaustive over DelveRung so that this \
+                 cannot be reached by adding a variant, only by adding a \
+                 catch-all arm",
+            );
+            Some((rank, word))
+        })
+        .collect();
+    // Rank order, not ladder-declaration order: `by_band`'s slots are indexed
+    // by rank, and nothing promises `rungs()` is already sorted that way.
+    bands.sort_by_key(|&(rank, _)| rank);
+    bands
+}
 
 /// How many entrances per cave system this witness walks — **1 today, and
 /// that is a stated gap rather than a claim about the world.**
@@ -111,12 +174,6 @@ const HABITATION_BANDS: u8 = 5;
 /// literal, so that task extends the witness by raising this and sourcing the
 /// per-cell count — an edit, not a rewrite.
 const WITNESSED_ENTRANCES: u8 = 1;
-
-/// The habitation rungs' spellings **in this readout's tallies** —
-/// presentation, deliberately not the key's table. See [`stratum_word`] for
-/// why the distinction is load-bearing rather than fussy.
-const BAND_WORDS: [&str; HABITATION_BANDS as usize] =
-    ["undercroft", "shallows", "deeps", "underdeep", "nadir"];
 
 /// The five subterranean rock units' spellings, in [`rock_rank`]'s order.
 const ROCK_WORDS: [&str; 5] = ["regolith", "cover", "basement", "roots", "underneath"];
@@ -222,8 +279,8 @@ struct Tallies {
     ocean_systems: usize,
     /// Realized chambers, over the whole lattice of every cave system.
     chambers: usize,
-    /// Realized chambers per band, `undercroft` … `nadir`.
-    by_band: [usize; HABITATION_BANDS as usize],
+    /// Realized chambers per band, in [`habitation_bands`] order.
+    by_band: Vec<usize>,
     /// Realized chambers per rock unit, `regolith` … `underneath`.
     by_rock: [usize; 5],
     /// Realized chambers per [`ChamberOrigin`], `[found, made]`.
@@ -306,7 +363,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         systems: 0,
         ocean_systems: 0,
         chambers: 0,
-        by_band: [0; HABITATION_BANDS as usize],
+        by_band: habitation_bands().iter().map(|_| 0).collect(),
         by_rock: [0; 5],
         by_origin: [0; 2],
         off_ladder_rock: 0,
@@ -340,7 +397,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
 
         for entrance in 0..WITNESSED_ENTRANCES {
             for branch in 0..BRANCHES_PER_SYSTEM {
-                for band in 0..HABITATION_BANDS {
+                for band in 0..habitation_bands().len() as u8 {
                     let run = RunAddr {
                         cell,
                         entrance,
@@ -444,9 +501,10 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         crate::streams::RUN_FLOORS.as_str()
     ));
     out.push_str(&format!(
-        "  lattice         {BRANCHES_PER_SYSTEM} branches per system, {HABITATION_BANDS} bands, \
+        "  lattice         {BRANCHES_PER_SYSTEM} branches per system, {} bands, \
          {FLOORS_PER_RUN_CEILING} floors admitted per run, \
-         {WITNESSED_ENTRANCES} entrance witnessed\n"
+         {WITNESSED_ENTRANCES} entrance witnessed\n",
+        habitation_bands().len()
     ));
     out.push_str(&format!(
         "  cave systems    {}  (ocean-cell caves skipped: {})\n",
@@ -459,11 +517,10 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         tallies.reachable, tallies.open_entrances
     ));
     out.push_str("  by band         ");
-    for (band, count) in tallies.by_band.iter().enumerate() {
+    for ((_, word), count) in habitation_bands().iter().zip(&tallies.by_band) {
         // Presentation words, not the key's table (see `stratum_word`'s doc):
         // the save-format spelling of a rung reaches this artifact through the
         // transect's keys, which is the authority. These may be reworded.
-        let word = BAND_WORDS[band];
         out.push_str(&format!("{word}:{count}  "));
     }
     out.push('\n');
