@@ -356,8 +356,61 @@ impl Grid {
     }
 }
 
+/// Test-only home for the crate's `NO_COLOR` save/restore helpers and the
+/// mutex serialising them. `NO_COLOR` is process-global state, and the lib
+/// unit tests all run as threads of ONE binary under plain `cargo test`
+/// (nextest's process-per-test isolation does NOT apply to `game-check`),
+/// so every test that mutates it — and every test that asserts resolved
+/// ink through the draw path — must hold [`ENV_LOCK`] for its body.
+#[cfg(test)]
+pub(crate) mod test_env {
+    /// Serialises every `NO_COLOR` mutation and every colour-resolution
+    /// assertion across the threaded lib test binary.
+    pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
+    /// Takes [`ENV_LOCK`] itself; do NOT call while already holding it.
+    /// The env ops are `unsafe` because they are UB under concurrency;
+    /// SAFETY here rests on the lock, not on nextest isolation.
+    pub(crate) fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(None, f)
+    }
+
+    /// Run `f` with `NO_COLOR` set to a non-empty value, restoring the
+    /// prior state after. Takes [`ENV_LOCK`] itself; do NOT call while
+    /// already holding it.
+    pub(crate) fn with_no_color_set<R>(value: &str, f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(Some(value), f)
+    }
+
+    fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let _env = ENV_LOCK.lock().unwrap();
+        let saved = std::env::var_os("NO_COLOR");
+        // SAFETY: the caller holds ENV_LOCK, so no other test in this
+        // threaded binary touches the environment concurrently.
+        unsafe { std::env::remove_var("NO_COLOR") };
+        if let Some(v) = value {
+            // SAFETY: as above.
+            unsafe { std::env::set_var("NO_COLOR", v) };
+        }
+        let out = f();
+        match saved {
+            Some(v) => {
+                // SAFETY: as above.
+                unsafe { std::env::set_var("NO_COLOR", v) };
+            }
+            None => {
+                // SAFETY: as above.
+                unsafe { std::env::remove_var("NO_COLOR") };
+            }
+        }
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::test_env::ENV_LOCK;
     use super::*;
 
     /// Absent colour means "no colour claimed here", never black — the
@@ -371,8 +424,9 @@ mod tests {
     /// itself is monochrome and degradation is observable, not silent.
     #[test]
     fn no_color_env_forces_plain_ink() {
-        // SAFETY: tests run process-per-test under nextest; no other test
-        // reads this var concurrently.
+        // SAFETY: NO_COLOR is process-global env state; ENV_LOCK serialises
+        // this mutation against every sibling thread in the test binary.
+        let _env = ENV_LOCK.lock().unwrap();
         unsafe { std::env::set_var("NO_COLOR", "1") };
         assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Plain);
         unsafe { std::env::remove_var("NO_COLOR") };

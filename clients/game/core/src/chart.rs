@@ -316,6 +316,7 @@ pub fn disclosure(sight: &crate::Sight) -> String {
 mod tests {
     use super::*;
     use crate::Ink;
+    use crate::cell::test_env::{with_no_color_removed, with_no_color_set};
 
     /// The seed-42 turn-0 fixture's own sight declaration, as a literal —
     /// the values the committed fixture carries (`spatial.chart.sight`),
@@ -343,43 +344,6 @@ mod tests {
         assert!(d.contains("bugbear"), "names the observer species: {d}");
         assert!(d.contains("yellow-blue"), "names the projection: {d}");
         assert!(d.contains("red-green"), "names the lost axis: {d}");
-    }
-
-    /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
-    /// The env ops are `unsafe` because they are UB under concurrency;
-    /// SAFETY here rests on the body being single-threaded and nextest's
-    /// process-per-test isolation bounding the blast radius.
-    fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
-        with_no_color_set_inner(None, f)
-    }
-
-    /// Run `f` with `NO_COLOR` set to a non-empty value, restoring the
-    /// prior state after. Same safety argument as [`with_no_color_removed`].
-    fn with_no_color_set<R>(value: &str, f: impl FnOnce() -> R) -> R {
-        with_no_color_set_inner(Some(value), f)
-    }
-
-    fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
-        let saved = std::env::var_os("NO_COLOR");
-        // SAFETY: single-threaded test body; nextest runs each test in its
-        // own process, so no sibling test observes the mutation.
-        unsafe { std::env::remove_var("NO_COLOR") };
-        if let Some(v) = value {
-            // SAFETY: as above — no concurrent env access in this process.
-            unsafe { std::env::set_var("NO_COLOR", v) };
-        }
-        let out = f();
-        match saved {
-            Some(v) => {
-                // SAFETY: as above — restoration before the test returns.
-                unsafe { std::env::set_var("NO_COLOR", v) };
-            }
-            None => {
-                // SAFETY: as above.
-                unsafe { std::env::remove_var("NO_COLOR") };
-            }
-        }
-        out
     }
 
     fn mark(salience: u32) -> Mark {

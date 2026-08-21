@@ -663,6 +663,13 @@ mod caption_tests {
         }
     }
 
+    /// Serialises this binary's `NO_COLOR` regime flips. This bin's unit
+    /// tests run as threads of one process under plain `cargo test`, and
+    /// `NO_COLOR` is process-global state, so every mutation — and every
+    /// caption assertion that reads it through the draw path — must hold
+    /// this lock.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
     fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
         with_no_color_set_inner(None, f)
@@ -675,10 +682,10 @@ mod caption_tests {
     }
 
     fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let _env = ENV_LOCK.lock().unwrap();
         let saved = std::env::var_os("NO_COLOR");
-        // SAFETY: single-threaded test body; nextest's process-per-test
-        // isolation bounds the blast radius, the same posture chart.rs's
-        // own hermetic helpers take.
+        // SAFETY: the caller holds ENV_LOCK, so no sibling thread in this
+        // test binary touches the environment concurrently.
         unsafe {
             match &value {
                 Some(w) => std::env::set_var("NO_COLOR", w),
@@ -689,7 +696,7 @@ mod caption_tests {
             }
         }
         let out = f();
-        // SAFETY: as above.
+        // SAFETY: as above — ENV_LOCK is held for the whole body.
         unsafe {
             match saved {
                 Some(v) => std::env::set_var("NO_COLOR", v),
