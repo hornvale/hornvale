@@ -33,6 +33,17 @@ path="$4"
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
+# Refuse unless this path is the ONLY unmerged one. When any other path
+# is still conflicted, the working tree is not the merge product (those
+# paths sit at ours' content), so a regeneration here would silently
+# bake ours-flavored output into an artifact the human then commits
+# after resolving the rest, possibly by taking theirs. Exit nonzero and
+# let git leave this path unmerged like any other conflict.
+if [ -n "$(git ls-files -u | awk '$4 != p' p="$path")" ]; then
+    echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
+    exit 1
+fi
+
 tmp_out="$(mktemp)"
 trap 'rm -f "$tmp_out"' EXIT
 
