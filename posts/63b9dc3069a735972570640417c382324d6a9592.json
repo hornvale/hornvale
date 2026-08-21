@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-chroma","note":"sluice: queued req-b9e61c31cae4-20260821T205357Z for campaign/the-chroma at b9e61c31 (kind=stage — gates the merge product, never pushes)","paths":["scripts/sluice-queue.sh"]}
