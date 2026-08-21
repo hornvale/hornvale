@@ -332,6 +332,8 @@ mod tests {
     /// identity belongs to glyph (ledger #4; mirrors producer tint()).
     #[test]
     fn the_you_mark_stays_plain_over_a_coloured_cell() {
+        // SAFETY: ink resolution reads process-global NO_COLOR; ENV_LOCK
+        // serialises this read against every mutating sibling thread.
         let _env = crate::cell::test_env::ENV_LOCK.lock().unwrap();
         let mut p = small_plan();
         p.palette[1].color = Some([36, 36, 1]);
@@ -347,6 +349,8 @@ mod tests {
     /// Marks re-draw their cell's glyph untinted, same rule.
     #[test]
     fn marks_draw_untinted() {
+        // SAFETY: ink resolution reads process-global NO_COLOR; ENV_LOCK
+        // serialises this read against every mutating sibling thread.
         let _env = crate::cell::test_env::ENV_LOCK.lock().unwrap();
         let mut p = small_plan();
         p.palette[2].color = Some([8, 8, 0]);

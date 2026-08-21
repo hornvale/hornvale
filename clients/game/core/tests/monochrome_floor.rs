@@ -112,17 +112,8 @@ fn assert_identical(a: &Grid, b: &Grid, label: &str) {
 }
 
 fn check(json: &str, label: &str) {
-    let coloured = with_no_color_removed(|| {
-        eprintln!(
-            "DBG coloured env NO_COLOR={:?}",
-            std::env::var_os("NO_COLOR")
-        );
-        render(json)
-    });
-    let plain = with_no_color_set("1", || {
-        eprintln!("DBG plain env NO_COLOR={:?}", std::env::var_os("NO_COLOR"));
-        render(json)
-    });
+    let coloured = with_no_color_removed(|| render(json));
+    let plain = with_no_color_set("1", || render(json));
     assert_identical(&coloured, &plain, label);
     let tinted = (0..coloured.height())
         .flat_map(|y| (0..coloured.width()).map(move |x| (x, y)))
