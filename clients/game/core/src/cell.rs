@@ -35,14 +35,25 @@ pub enum Ink {
 }
 
 impl Ink {
-    /// Resolve a wire colour claim to ink. `None` (no colour claimed) and
-    /// `NO_COLOR` set (the reader declined colour) both yield [`Ink::Plain`]
-    /// — absence is legible, never faked as black.
-    pub fn from_wire(color: Option<[u8; 3]>) -> Ink {
-        if std::env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty()) {
+    /// The pure decision behind [`Ink::from_wire`]: with colour disallowed,
+    /// or with no colour claimed, the ink is [`Ink::Plain`] — absence is
+    /// legible, never faked as black. Tests that need the coloured path to
+    /// be hermetic call this directly instead of touching the environment.
+    pub fn resolve(color: Option<[u8; 3]>, colour_allowed: bool) -> Ink {
+        if !colour_allowed || color.is_none() {
             return Ink::Plain;
         }
         color.map(Ink::Rgb).unwrap_or(Ink::Plain)
+    }
+
+    /// Resolve a wire colour claim to ink. A non-empty `NO_COLOR` (the
+    /// reader declined colour) and a `None` claim both yield
+    /// [`Ink::Plain`]; see [`Ink::resolve`] for the pure decision.
+    pub fn from_wire(color: Option<[u8; 3]>) -> Ink {
+        Self::resolve(
+            color,
+            std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty()),
+        )
     }
 }
 

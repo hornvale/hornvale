@@ -272,6 +272,8 @@ pub fn cell_at(
 /// `into`'s bounds are silently skipped, matching `Grid::set`'s own
 /// discipline of refusing rather than wrapping an out-of-range write.
 pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
+    // Tinting honours NO_COLOR: `Cell::inked` resolves the colour through
+    // `Ink::from_wire`, which yields Plain when the reader declined colour.
     let centre_x = origin.0 as i64 + into.width() as i64 / 2;
     let centre_y = origin.1 as i64 + into.height() as i64 / 2;
 
@@ -298,6 +300,43 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
 mod tests {
     use super::*;
     use crate::Ink;
+
+    /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
+    /// The env ops are `unsafe` because they are UB under concurrency;
+    /// SAFETY here rests on the body being single-threaded and nextest's
+    /// process-per-test isolation bounding the blast radius.
+    fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(None, f)
+    }
+
+    /// Run `f` with `NO_COLOR` set to a non-empty value, restoring the
+    /// prior state after. Same safety argument as [`with_no_color_removed`].
+    fn with_no_color_set<R>(value: &str, f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(Some(value), f)
+    }
+
+    fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let saved = std::env::var_os("NO_COLOR");
+        // SAFETY: single-threaded test body; nextest runs each test in its
+        // own process, so no sibling test observes the mutation.
+        unsafe { std::env::remove_var("NO_COLOR") };
+        if let Some(v) = value {
+            // SAFETY: as above — no concurrent env access in this process.
+            unsafe { std::env::set_var("NO_COLOR", v) };
+        }
+        let out = f();
+        match saved {
+            Some(v) => {
+                // SAFETY: as above — restoration before the test returns.
+                unsafe { std::env::set_var("NO_COLOR", v) };
+            }
+            None => {
+                // SAFETY: as above.
+                unsafe { std::env::remove_var("NO_COLOR") };
+            }
+        }
+        out
+    }
 
     fn mark(salience: u32) -> Mark {
         Mark {
@@ -565,15 +604,33 @@ mod tests {
     }
 
     /// A cell that claims a colour draws [`Ink::Rgb`] — the chart pane
-    /// tints from the scene, mirroring the plan pane.
+    /// tints from the scene, mirroring the plan pane. Hermetic against a
+    /// developer's exported `NO_COLOR`: saved, removed, restored.
     #[test]
     fn a_coloured_cell_draws_rgb_ink() {
-        let mut tinted = chart_cell(90.0, 1.0, "sensed");
-        tinted.color = Some([36, 36, 1]);
-        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
-        let mut g = crate::Grid::new(9, 5);
-        draw(&chart, &mut g, (0, 0));
-        assert_eq!(g.get(6, 2).unwrap().ink, Ink::Rgb([36, 36, 1]));
+        with_no_color_removed(|| {
+            let mut tinted = chart_cell(90.0, 1.0, "sensed");
+            tinted.color = Some([36, 36, 1]);
+            let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
+            let mut g = crate::Grid::new(9, 5);
+            draw(&chart, &mut g, (0, 0));
+            assert_eq!(g.get(6, 2).unwrap().ink, Ink::Rgb([36, 36, 1]));
+        });
+    }
+
+    /// The suppression end-to-end through [`draw`]: with `NO_COLOR` set
+    /// non-empty, a coloured cell draws [`Ink::Plain`] — the reader
+    /// declined colour, and the chart honours it.
+    #[test]
+    fn no_color_suppresses_tint_through_draw() {
+        with_no_color_set("1", || {
+            let mut tinted = chart_cell(90.0, 1.0, "sensed");
+            tinted.color = Some([36, 36, 1]);
+            let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
+            let mut g = crate::Grid::new(9, 5);
+            draw(&chart, &mut g, (0, 0));
+            assert_eq!(g.get(6, 2).unwrap().ink, Ink::Plain);
+        });
     }
 
     /// Absence of a colour claim is Plain ink — "no colour claimed here",
