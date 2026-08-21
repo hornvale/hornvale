@@ -20,12 +20,30 @@ pub enum Weight {
     Bold,
 }
 
-/// What a thing IS. Monochrome for this campaign; colour is deferred.
+/// What a thing IS. `Plain` is the floor; `Rgb` carries substance off the
+/// wire. **Foreground = cover, background = substrate**: if a future
+/// campaign adds background colour (`Ink::Duo { fg, bg }`), fg carries what
+/// grows/sits on a cell and bg the material under it — both claims of
+/// substance per CLIENT-four-channels, never identity or attention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Ink {
     /// The default ink.
     #[default]
     Plain,
+    /// A truecolor foreground claim carried off the wire.
+    Rgb([u8; 3]),
+}
+
+impl Ink {
+    /// Resolve a wire colour claim to ink. `None` (no colour claimed) and
+    /// `NO_COLOR` set (the reader declined colour) both yield [`Ink::Plain`]
+    /// — absence is legible, never faked as black.
+    pub fn from_wire(color: Option<[u8; 3]>) -> Ink {
+        if std::env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty()) {
+            return Ink::Plain;
+        }
+        color.map(Ink::Rgb).unwrap_or(Ink::Plain)
+    }
 }
 
 /// The snapshot channel a drawn cell traces back to — the executable form of
@@ -197,6 +215,16 @@ impl Cell {
         }
     }
 
+    /// A cell with a colour claim resolved through [`Ink::from_wire`].
+    pub fn inked(glyph: char, weight: Weight, source: Source, color: Option<[u8; 3]>) -> Cell {
+        Cell {
+            glyph: Some(glyph),
+            weight,
+            ink: Ink::from_wire(color),
+            source,
+        }
+    }
+
     /// Unmarked paper — never known, never drawn. Not a space, and not black.
     pub fn is_blank(&self) -> bool {
         self.glyph.is_none()
@@ -314,5 +342,29 @@ impl Grid {
             }
         }
         counts
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Absent colour means "no colour claimed here", never black — the
+    /// producer's own rule (windows/vessel/src/session.rs `tint`).
+    #[test]
+    fn absent_wire_colour_is_plain_ink() {
+        assert_eq!(Ink::from_wire(None), Ink::Plain);
+    }
+
+    /// NO_COLOR maps every Rgb to Plain at cell-build time, so the buffer
+    /// itself is monochrome and degradation is observable, not silent.
+    #[test]
+    fn no_color_env_forces_plain_ink() {
+        // SAFETY: tests run process-per-test under nextest; no other test
+        // reads this var concurrently.
+        unsafe { std::env::set_var("NO_COLOR", "1") };
+        assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Plain);
+        unsafe { std::env::remove_var("NO_COLOR") };
+        assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Rgb([36, 36, 1]));
     }
 }
