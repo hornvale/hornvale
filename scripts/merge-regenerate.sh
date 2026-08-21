@@ -33,15 +33,35 @@ path="$4"
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-# Refuse unless this path is the ONLY unmerged one. When any other path
-# is still conflicted, the working tree is not the merge product (those
-# paths sit at ours' content), so a regeneration here would silently
-# bake ours-flavored output into an artifact the human then commits
-# after resolving the rest, possibly by taking theirs. Exit nonzero and
-# let git leave this path unmerged like any other conflict.
-if [ -n "$(git ls-files -u | awk '$4 != p' p="$path")" ]; then
-    echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
-    exit 1
+# Refuse unless this path is the ONLY conflicted one in the merge as a
+# whole. When any other path is conflicted, the working tree is not the
+# merge product (those paths sit at ours' content), so a regeneration
+# here would silently bake ours-flavored output into an artifact the
+# human then commits after resolving the rest, possibly by taking
+# theirs. Exit nonzero and let git leave this path unmerged like any
+# other conflict.
+#
+# The index CANNOT be the signal here: git performs the whole merge in
+# memory and writes conflict stages to the index only AFTER every
+# driver has run, so `git ls-files -u` is always empty at this moment
+# (verified against real git behavior, not assumed from prose). The
+# signal instead is `git merge-tree --write-tree`, which recomputes the
+# merge in memory and lists the conflicted paths. Two cautions verified
+# directly: it HONORS .gitattributes merge drivers (so ours is disabled
+# below, or the probe would recurse into itself), and its first output
+# line is the merged tree oid, with conflicted entries in `ls-files
+# -u` format after it. Only real merges are checked (MERGE_HEAD); a
+# lone cherry-pick/rebase conflict falls through to the legacy
+# regenerate-always behavior.
+gitdir="$(git rev-parse --git-dir)"
+if [ -f "$gitdir/MERGE_HEAD" ]; then
+    others="$(git -c merge.hv-regenerate.driver=/bin/false \
+        merge-tree --write-tree HEAD MERGE_HEAD \
+        | awk 'NR > 1 && NF >= 4 && $4 != p' p="$path")"
+    if [ -n "$others" ]; then
+        echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
+        exit 1
+    fi
 fi
 
 tmp_out="$(mktemp)"
