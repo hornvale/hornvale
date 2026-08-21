@@ -63,9 +63,12 @@ if [ -n "$theirs" ]; then
     # merge-tree exits nonzero when ANY conflict exists (including our
     # own path); pipefail would turn that into a driver failure, so the
     # pipeline's git leg is tolerated and only `others` decides.
+    # Conflicted entries are `mode oid stage\tpath` lines; merge-tree
+    # also appends human-readable "Auto-merging"/"CONFLICT" message
+    # lines, so match the entry shape explicitly.
     others="$( { git -c merge.hv-regenerate.driver=/bin/false \
         merge-tree --write-tree HEAD "$theirs" || true; } \
-        | awk 'NR > 1 && NF >= 4 && $4 != p' p="$path")"
+        | awk '$1 ~ /^[0-7]+$/ && $2 ~ /^[0-9a-f]{40}$/ && $3 ~ /^[0-9]$/ && $4 != p' p="$path")"
     if [ -n "$others" ]; then
         echo "merge-regenerate: other unresolved conflicts present; refusing to regenerate '$path' from a tree that is not the merge product" >&2
         exit 1
