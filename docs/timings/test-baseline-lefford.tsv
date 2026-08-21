@@ -1,4 +1,4 @@
-# Hornvale test-duration baseline (The Timekeeper). Recorded at 7dafec336.
+# Hornvale test-duration baseline (The Timekeeper). Recorded at f5970ba20.
 # One row per test: <test-id>\t<seconds, millisecond precision>.
 # The reserved id <below-floor> carries a THIRD field instead:
 # <below-floor>\t<summed seconds>\t<count of tests folded in>.
@@ -55,8 +55,8 @@ hornvale-lab::burr_calibration$the_baseline_assignment_accuracy_is_pinned	6.408
 hornvale-lab::burr_calibration$the_baseline_sits_between_chance_and_certainty	6.396
 hornvale-lab::hornvale_lab$blackbox::tests::record_failure_writes_a_world_that_round_trips_to_the_directly_built_one	23.222
 hornvale-lab::hornvale_lab$census_claim::tests::a_timeout_names_the_holder_and_what_to_do	3.016
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric	1.147
-hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings	1.052
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4	1.084
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic	1.114
 hornvale-lab::hornvale_lab$domesday::render::tests::d8_findings_appear_on_the_index_and_not_on_any_domain_page	1.286
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_page_or_the_index_cites_the_registry	1.454
 hornvale-lab::hornvale_lab$metrics::tests::a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor	14.548
@@ -138,7 +138,7 @@ hornvale-lab::suite$depth_ladder::depth_scoped_metrics_match_full_build	21.356
 hornvale-lab::suite$fixture_staleness::a_stale_fixture_fails_with_the_regeneration_instruction	11.898
 hornvale-lab::suite$gathering_calibration::world_level_population_conserves_against_total_capacity	10.021
 hornvale-lab::suite$health_calibration::a_stranded_creature_is_scored_chronic_end_to_end	1.938
-hornvale-lab::suite$health_calibration::a_stranded_creature_learns_helplessness_end_to_end	2.188
+hornvale-lab::suite$health_calibration::a_stranded_creature_learns_helplessness_end_to_end	1.554
 hornvale-lab::suite$health_calibration::by_species_separates_a_stricken_people_end_to_end	2.046
 hornvale-lab::suite$health_calibration::heat_hastens_thirst_end_to_end	3.545
 hornvale-lab::suite$health_calibration::the_harness_scenarios_are_deterministic	3.407
@@ -160,8 +160,8 @@ hornvale-lab::suite$tripwire::the_committed_census_agrees_with_a_live_rebuild_of
 hornvale-lab::suite$wear_funnel::the_wear_funnel_is_reproducible	36.957
 hornvale-locale::hornvale_locale$budget::tests::budget_is_deterministic	6.037
 hornvale-locale::hornvale_locale$budget::tests::placed_sites_are_a_small_minority	2.726
-hornvale-locale::hornvale_locale$budget::tests::placement_is_byte_identical_on_rebuild	4.905
-hornvale-locale::hornvale_locale$substrate::tests::high_unrest_cells_read_volcanic	3.217
+hornvale-locale::hornvale_locale$budget::tests::placement_is_byte_identical_on_rebuild	6.301
+hornvale-locale::hornvale_locale$substrate::tests::high_unrest_cells_read_volcanic	2.349
 hornvale-locale::hornvale_locale$substrate::tests::substrate_is_deterministic_and_total	3.070
 hornvale-locale::hornvale_locale$surface::tests::a_desert_cell_leans_sand_or_silt_not_vegetation	1.580
 hornvale-locale::hornvale_locale$surface::tests::a_frozen_cell_carries_snow_and_reads_snow_dominant	1.664
@@ -203,7 +203,7 @@ hornvale-locale::suite$water_reading::the_ordinal_is_recoverable_as_a_function_o
 hornvale-locale::suite$water_reading::the_room_declares_which_fields_are_grid_and_channel_resolution	1.587
 hornvale-locale::suite$water_reading::the_width_clause_binds_when_the_step_shrinks	1.998
 hornvale-locale::suite$wetness_reading::a_walk_gets_damper_as_it_descends	2.419
-hornvale-locale::suite$wetness_reading::damp_below_the_median_is_always_inside_a_valley	1.971
+hornvale-locale::suite$wetness_reading::damp_below_the_median_is_always_inside_a_valley	2.413
 hornvale-locale::suite$wetness_reading::descending_walks_of_the_required_length_exist	1.997
 hornvale-locale::suite$wetness_reading::only_the_ground_is_grounded	1.708
 hornvale-locale::suite$wetness_reading::the_micro_draw_order_is_unchanged	1.809
