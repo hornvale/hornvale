@@ -74,6 +74,41 @@ weaker every time the registry grows, while reading as total. Registered as
 `PROC-registry-id-ban-cannot-see-slugs`; the campaign's own chronicle was
 rewritten to obey the rule the check could not enforce.
 
+## The close found the stale decision, not the sweep
+
+The book freshness sweep caught The Portolan's stale mode model. What it did
+**not** catch was that the shipped-registry row for the typed command line
+cited **decision 0159**, whose consequence bullets enumerate two focus states
+and name `Esc` as the sole route into the map — both false after this
+campaign. That surfaced only at the close checklist's "registry flips" step,
+by reading the row's **Where** cell rather than its Idea text.
+
+The lesson is about where staleness hides: a freshness sweep naturally scans
+*prose chapters*, and decision records do not read like prose that can go
+stale — they are dated and append-only, which makes them feel immune. They
+are not. A decision's **consequences** can be falsified by a later campaign
+while its **rule** stands, and that is the case that needs an amending record
+(0160 here), not a superseding one. Grep `docs/decisions/` for the surface
+you changed, not only `book/`.
+
+## A cwd reset put three files in the wrong tree
+
+Writing to memory reset the shell's cwd from the campaign worktree to the
+main checkout, silently. The next three edits — decision 0160, the registry
+repoint, the digest regeneration — all landed in **main's** working tree, and
+the `docs_consistency` run that reported them green tested main's tree rather
+than the branch. Caught by a routine `git log` in the worktree showing an
+older HEAD than expected.
+
+Two things made it recoverable rather than expensive: main's checkout was
+otherwise clean, so the stray edits stood out immediately; and the decision
+file was untracked there, so it moved rather than needing reconstruction. The
+standing rule (re-anchor cwd before verifying or committing) is not enough on
+its own — the reset happened *between* commands, with a one-line notice that
+is easy to read past. **The check that actually works is confirming the
+expected HEAD in the tree you think you are in, before trusting any gate
+result from it.**
+
 ## Process: the scratch was gone
 
 The worktree carried no `.superpowers/sdd/` at all when this session picked

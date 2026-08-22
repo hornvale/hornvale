@@ -78,6 +78,16 @@ Grain — the snapshot channel builds its chart at a hardcoded zoom while the
 `map` verb honours the argument — seen from the client's side here for the
 first time.
 
+The mode model is ratified as decision 0160, which **amends** decision 0159
+rather than superseding it: 0159's rule — a key's meaning depends on focus
+and nothing else, the table is total, text is the default destination — is
+untouched, and only its two-state enumeration needed restating. The
+substantive change buried in that restatement is that **`Esc` is no longer a
+route to the map**. 0159 had named `Esc` the sole route in and reserved a
+fallback binding against the risk of a single point of failure; entry now
+depends on the command line instead, which is the client's most robust
+surface rather than its most fragile, so the reserved binding stays unspent.
+
 ## What shipped, concretely
 
 `Focus::Walk` as the default in `hornvale-game-core`, with `render_with`'s
