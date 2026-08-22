@@ -34,8 +34,8 @@ use std::collections::BTreeMap;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, Seed, Stream};
 use hornvale_terrain::{
-    BandKind, Cave, DelveRung, GeothermalGradient, StratigraphicColumn, delta_t_range_of,
-    rung_at_depth,
+    BandKind, Cave, DelveRung, GeneratedTerrain, GeothermalGradient, StratigraphicColumn,
+    delta_t_range_of, rung_at_depth,
 };
 
 /// Branch columns in the fixed lattice, beneath one cave-system address
@@ -1087,6 +1087,130 @@ pub fn passages_from(
 
     candidates.retain(|&candidate| chamber_exists(seed, cave, gradient, candidate));
     candidates
+}
+
+// --- Junctions: the underworld becomes a network (The Stope, Task 6) ---
+//
+// `MAP-underworld-shortcut`: "hard to enter, easy to traverse once inside;
+// two points far apart on the surface can be close below." Before this
+// function that was false by construction — one cave never connected to
+// another.
+
+/// Whether a junction joins `addr`'s system to ANOTHER cave system — the
+/// chambers in other systems reachable from this one at its band (The Stope,
+/// Task 6; spec's `MAP-underworld-shortcut`).
+///
+/// **THE CONSTRAINT: a junction is DERIVED, never drawn.** The body consumes
+/// no stream leg of its own. Every input it reads is a fact already in the
+/// world — cell adjacency from the geosphere, each cell's cave budget and
+/// geothermal gradient, each branch's already-drawn character, each
+/// endpoint's already-gated existence ([`chamber_exists`], which travels its
+/// own pre-existing address key). Same inputs give the same links with no
+/// new draw anywhere, so a shortcut is a fact about the geology rather than
+/// a die roll on top of an epoch, and re-cutting a stream label can never
+/// relocate one. The `seed` parameter stays for exactly that reason: it keys
+/// the FACTS the derivation reads (`chamber_exists`, `character_at`), not
+/// any draw of its own.
+///
+/// **The derivation rule**, stated once so it cannot drift into a second
+/// copy: two systems are joined at a shared delve band exactly when
+///
+/// 1. both cells are cave-bearing LAND cells (an ocean system has no
+///    surface one can walk in from — same reading [`crate::underworld_readout`]
+///    applies),
+/// 2. the two cells are adjacent on the geosphere,
+/// 3. both MAIN LINES realize an existing chamber at the shared band —
+///    canonical endpoints `(entrance 0, branch 0, floor 0)`, gated by
+///    [`chamber_exists`] under each cell's OWN cave and gradient, and
+/// 4. the characters of both main lines can occupy the shared rung:
+///    [`crate::character::bands_of`] of each side contains the rung at
+///    [`ChamberAddr::band`]. A drow-tier Underdeep may open into wild cave;
+///    it does not open into fungus gardens three rungs up. Compatibility as
+///    shared eligibility is the weakest rule that still makes a character
+///    matter — equal characters would couple two independent draws, and no
+///    compatibility at all would make the character axis invisible to the
+///    network.
+///
+/// **Endpoints are CANONICAL, which is what makes symmetry hold by
+/// construction** rather than by agreement between two derivations — the
+/// exact defect spec §3.2 named the "one genuinely hard problem" and
+/// [`passages_from`] dissolved for the intra-system graph. The predicate
+/// above is stated over the unordered pair of canonical endpoints, so
+/// `junctions_at(A)` names `B` if and only if `junctions_at(B)` names `A`,
+/// with nothing stored and nothing to keep in sync.
+///
+/// **A junction never crosses a band**: every answer sits at precisely
+/// `addr.band`. Two systems meet where their depths overlap or not at all —
+/// anything else would be a vertical teleport, and the depth ladder would
+/// mean nothing.
+///
+/// `addr`'s `entrance`, `branch` and `floor` are deliberately ignored:
+/// junctions join SYSTEMS at a shared BAND, so the answer depends only on
+/// `(addr.cell, addr.band)` — every chamber of one system at one band stands
+/// on the same far side of the same doors.
+pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -> Vec<ChamberAddr> {
+    // Past the habitation ladder there is no shared rung to stand on and no
+    // character can be eligible for it.
+    let Some(rung) = crate::chamber::rung_of_rank(addr.band) else {
+        return Vec::new();
+    };
+    let Some(here_cave) = terrain.cave_at(addr.cell) else {
+        return Vec::new();
+    };
+    if terrain.is_ocean(addr.cell) {
+        return Vec::new();
+    }
+    let here = ChamberAddr {
+        entrance: 0,
+        branch: 0,
+        floor: 0,
+        ..addr
+    };
+    if !chamber_exists(
+        seed,
+        &here_cave,
+        terrain.geothermal_gradient_at(addr.cell),
+        here,
+    ) {
+        return Vec::new();
+    }
+    if !crate::character::bands_of(crate::character::character_at(seed, here)).contains(&rung) {
+        return Vec::new();
+    }
+
+    let mut joined = Vec::new();
+    for &neighbour in terrain.geosphere().neighbors(addr.cell) {
+        if terrain.is_ocean(neighbour) {
+            continue;
+        }
+        let Some(cave) = terrain.cave_at(neighbour) else {
+            continue;
+        };
+        let there = ChamberAddr {
+            entrance: 0,
+            branch: 0,
+            floor: 0,
+            cell: neighbour,
+            band: addr.band,
+        };
+        if !chamber_exists(
+            seed,
+            &cave,
+            terrain.geothermal_gradient_at(neighbour),
+            there,
+        ) {
+            continue;
+        }
+        if !crate::character::bands_of(crate::character::character_at(seed, there)).contains(&rung)
+        {
+            continue;
+        }
+        joined.push(there);
+    }
+    // Deterministic answer order regardless of the geosphere's neighbour
+    // ordering; `CellId` is an integer newtype, so `sort_by_key` is total.
+    joined.sort_by_key(|a| a.cell);
+    joined
 }
 
 #[cfg(test)]

@@ -91,7 +91,7 @@
 //! lattice over cave-bearing land cells. See `scripts/regenerate-artifacts.sh`
 //! for the seed panel it is rendered over.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_kernel::{Seed, quantize};
 use hornvale_terrain::{DelveRung, GeneratedTerrain};
@@ -387,6 +387,62 @@ fn reachable_union(
 /// stratigraphic column, and nothing above terrain.
 ///
 /// **Byte-identical for a given `(seed, terrain)`**, and asserted as such
+/// The junction network between cave systems (The Stope, Task 6), read
+/// through [`crate::chamber::junctions_at`] — the shipped derivation, never a
+/// re-implementation. Returns `(links, system pairs, largest component)`:
+/// every band-level link is counted, pairs are deduplicated across bands, and
+/// the largest component joins systems into one walkable underworld. All
+/// derived facts; nothing here consumes a stream.
+fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, usize) {
+    let mut adjacency: BTreeMap<hornvale_kernel::CellId, BTreeSet<hornvale_kernel::CellId>> =
+        BTreeMap::new();
+    let mut links = 0usize;
+    for cell in terrain.geosphere().cells() {
+        if terrain.is_ocean(cell) || terrain.cave_at(cell).is_none() {
+            continue;
+        }
+        for band in 0..habitation_bands().len() as u8 {
+            let addr = ChamberAddr {
+                cell,
+                entrance: 0,
+                branch: 0,
+                band,
+                floor: 0,
+            };
+            for far in crate::chamber::junctions_at(seed, terrain, addr) {
+                links += 1;
+                adjacency.entry(cell).or_default().insert(far.cell);
+                adjacency.entry(far.cell).or_default().insert(cell);
+            }
+        }
+    }
+    let pairs: usize = adjacency.values().map(|set| set.len()).sum::<usize>() / 2;
+    // Largest connected component by breadth-first sweep over the deduped
+    // pair graph. Visited is a `BTreeSet`, not a hash set: determinism is
+    // constitutional even where order cannot change the answer.
+    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    let mut largest = 0usize;
+    for start in adjacency.keys().copied().collect::<Vec<_>>() {
+        if visited.contains(&start) {
+            continue;
+        }
+        let mut component = vec![start];
+        visited.insert(start);
+        let mut i = 0;
+        while i < component.len() {
+            let cell = component[i];
+            i += 1;
+            for &next in &adjacency[&cell] {
+                if visited.insert(next) {
+                    component.push(next);
+                }
+            }
+        }
+        largest = largest.max(component.len());
+    }
+    (links, pairs, largest)
+}
+
 /// rather than observed — see this module's tests. No wall clock, no map
 /// iteration order, no float in the compute path.
 /// type-audit: bare-ok(prose: return)
@@ -589,6 +645,12 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     out.push_str(&format!(
         "  reachable       {} from {} open entrances\n",
         tallies.reachable, tallies.open_entrances
+    ));
+    let (links, pairs, largest) = junction_network(seed, terrain);
+    out.push_str(&format!(
+        "  junctions       {} links across {} system pairs; largest network {} systems \
+         (MAP-underworld-shortcut)\n",
+        links, pairs, largest
     ));
     out.push_str("  by band         ");
     for ((_, word), count) in habitation_bands().iter().zip(&tallies.by_band) {

@@ -673,6 +673,10 @@ gen_underworld_lattice() {
     printf 'deeper than the cave'"'"'s budget reaches), and a `_` is past that run'"'"'s\n'
     printf 'own drawn length. Bounding the row by the drawn length instead is what made\n'
     printf 'an earlier version of this page unable to see either floor gate at all.\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'The `junctions` line counts the links between DIFFERENT cave systems that\n'
+    printf '`junctions_at` derives at each shared delve band -- derived, not drawn: it\n'
+    printf 'consumes no stream, so a shortcut is a fact about the geology, not a die roll.\n\n'
     printf '```text\n'
     run -p hornvale -- underworld --seed 42
     printf '\n'

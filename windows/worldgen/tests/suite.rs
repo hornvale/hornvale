@@ -111,6 +111,8 @@ mod history_units;
 mod hollow_readout;
 #[path = "suite/insolation_probe.rs"]
 mod insolation_probe;
+#[path = "suite/junctions.rs"]
+mod junctions;
 #[path = "suite/keeping_probe.rs"]
 mod keeping_probe;
 #[path = "suite/lantern_probe.rs"]
