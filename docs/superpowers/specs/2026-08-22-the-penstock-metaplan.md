@@ -473,6 +473,62 @@ measurement (the query/plan/commit split) can still say the whole read side
 is noise. But stage 7 is no longer speculative, and any future reading of
 this program should start here rather than at §6's table.
 
+### 6.2 MEASURED, 2026-08-22: the query/plan/commit split, and the verdict on §11
+
+Stage 1's last instrument (`windows/vessel/examples/agent_scaling.rs`,
+commits `43d851a5e`/`60237bbb5`). Seed 42, 221 settlements, real agents via
+`derive_npcs` with `k` as the sweep variable, 20 ticks, `--release`:
+
+```
+  agents    ms/tick   facts/a/tick  search/a/tick    total_bytes
+      10     68.216       2.2150        1.7750           1720654
+      50    503.724       2.8250        2.2790           2106071
+     100   1267.741       2.6780        2.0675           2512286
+     200   5722.748       2.8960        2.2822           3519536
+
+  fitted slope, ms/tick vs agents        1.43
+  per-segment   10->50  50->100  100->200
+    run 1        1.24     1.33     2.17
+    run 2        1.27     1.11     1.99
+  marginal bytes/agent  ~9,468
+```
+
+**§11's first falsifier does NOT fire: plan cost does not swamp query cost.
+The program continues past stage 1.** State the reasoning honestly, because
+it is indirect: both *directly measured* terms — plan (`HomeNavCache::
+searches`) and commit (ledger delta) — are **flat per agent**, i.e. linear in
+agent count. Total tick cost is **superlinear**. Neither measured term
+explains the excess, so the unmeasured residual is the plausible driver.
+**That is an argument from elimination, not a measurement of query cost**,
+and no stage should treat it as the latter.
+
+**The single fitted exponent understates the trend.** The curve accelerates:
+the 100→200 segment is 2.17 and 1.99 on two runs — near-quadratic across the
+range that actually matters — while the fitted 1.43 averages that away. Any
+plan built on "1.43" is planning for a gentler world than the measured one.
+
+**A named suspect, with structural support but not confirmation.**
+`hazard_memory_memo` (`liveness.rs:1219`) and `alarm_field_memo` (`:3907`)
+are whole-population reads performed per creature, and `roster: &[Npc]`
+appears at four call sites — the shape that produces an exponent between 1
+and 2. This is a hypothesis. Stage 2 should confirm or kill it before
+building anything, because it names exactly the locality query §4 predicted
+views would serve, and a wrong suspect would send stage 2 at the wrong axis.
+
+**A discrepancy that stays open, deliberately.** This bench reports 2.2–2.9
+facts/agent/tick where §6.1's instrument reports 0.93–0.95 — the same named
+metric, ~3× apart. Ruled out with code evidence: tick semantics (both build
+`DriveMovements` over one `WorldTime` day), the `TURNED_HOSTILE` pass
+(bounded, and it can only *raise* the lower figure), `Session::wait`'s double
+evaluation (only the second commits), `absorb_here`, and tick count. The
+surviving hypothesis is **roster composition**: `ordered_for_derivation`
+sorts settlements population-descending with only home pinned, so §6.1's
+instrument samples the three largest plus wild fauna while this one reaches
+into small marginal settlements with none — and species, mass and
+distance-to-water all feed the action clock. **Unquantified, and left so.**
+§6.1's conclusion is unaffected because it rests on the *shape* (flat, not
+falling), which both instruments agree on; only the magnitude differs.
+
 ## 7. The standing gate
 
 **Determinism.** Byte-identity of committed artifacts before and after, every
