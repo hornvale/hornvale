@@ -632,13 +632,26 @@ stage 7 becomes the program.
 
 - [ ] **Step 1: Read the existing driver before writing anything**
 
-The tick harness you need already exists in `windows/vessel/src/liveness.rs`'s
-own `#[cfg(test)]` block — search for `hornvale_kernel::tick(&ledger, &[&sys],
-&["drive-movements"], &reg)`, which appears at several call sites (e.g. around
-lines 7743, 8044, 8736). **Copy a working construction from there rather than
-inventing one**; this plan deliberately does not prescribe the roster
-construction, because the author did not verify it and the implementer can
-read it.
+**AMENDED after verification — the obvious route does not exist.** The tick
+constructions inside `windows/vessel/src/liveness.rs`'s own `#[cfg(test)]`
+block CANNOT be copied into an integration test: `commit_agent_at`
+(`liveness.rs:5780`), `shared_belief_npc` (`:6159`) and `PlantedTerrain`
+(`:9563`) all live inside that test module (which begins at `:5712`) and are
+invisible to `tests/`, a separate crate. `DriveMovements` (`:4108`),
+`SUSTENANCE` (`:185`), `Npc` (`:28`) and `LocaleTerrain` (`:585`) *are*
+public, but no external code builds a `DriveMovements` today at all.
+
+**Use `Session` instead**, which drives the tick internally, and build on the
+scaffolding that already exists for exactly this: `windows/vessel/tests/
+common/mod.rs` offers `build(seed) -> Option<World>` and
+`world_that_draws_a_creature() -> (u64, World)`, and it is already declared
+in `tests/suite.rs` — reach it with `use crate::common;`. Read
+`tests/suite/possession_moves.rs` for a worked example of driving a session.
+
+This task needs facts committed per agent per tick, which does **not** require
+controlling the agent count, so the Session route is sufficient. Task 5 is the
+one that must sweep agent count, and it pays for its own roster construction
+because of it.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -710,6 +723,23 @@ rate does not GROW across a run, which is the unbounded-log tripwire."
 
 This is the bench that decides whether stages 2–8 are worth building. If plan
 cost swamps query cost, the metaplan stops at stage 1 (§11).
+
+**AMENDED after verification, same finding as Task 4's Step 1.** This bench
+must SWEEP agent count, which `Session` cannot do, so unlike Task 4 it has to
+build its own roster — and it must do so from the PUBLIC surface, because
+`commit_agent_at`, `shared_belief_npc` and `PlantedTerrain` are
+`#[cfg(test)]`-only and unreachable from `examples/`. What is public and
+usable: `DriveMovements` (`liveness.rs:4108`), `SUSTENANCE` (`:185`), `Npc`
+(`:28`, 14 pub fields) and `LocaleTerrain` (`:585`). Constructing the roster
+by hand is the cost this task pays for being able to vary N.
+
+Moving this bench inside the crate's own `#[cfg(test)]` module was considered
+and rejected: `cli/tests/suite/heavy_tier.rs` freezes the set of untokenised
+`#[ignore]` reasons with an `assert_eq!` against a roster, so a new ignored
+test is a reviewed act against a guarded list; and since decision 0148 the
+heavy tier runs only via `make heavy-remote` on the canonical box under the
+shared claim, so a bench there would cost lefford time forever to answer a
+question asked once.
 
 - [ ] **Step 1: Widen `HomeNavCache::searches`, deliberately**
 
