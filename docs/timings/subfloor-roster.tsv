@@ -2620,6 +2620,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2823,7 +2824,6 @@ hornvale-worldgen::hornvale_worldgen$tests::deity_name_seed_is_pure_and_entity_i
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_crate_names_are_unique_and_nonempty
 hornvale-worldgen::hornvale_worldgen$tests::domains_roster_registers_language_after_its_lenders
 hornvale-worldgen::hornvale_worldgen$tests::exactly_one_axis_is_unfloored_and_it_is_the_undercutter
-hornvale-worldgen::hornvale_worldgen$tests::globe_level_pin_selects_the_canonical_grid
 hornvale-worldgen::hornvale_worldgen$tests::goblin_lens_is_exactly_identity
 hornvale-worldgen::hornvale_worldgen$tests::goblin_voice_params_sit_at_the_manikin_identity
 hornvale-worldgen::hornvale_worldgen$tests::high_cirrus_over_a_clear_sky_dims_only_slightly

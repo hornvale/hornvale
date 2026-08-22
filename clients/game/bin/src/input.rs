@@ -45,7 +45,8 @@ use hornvale_game_core::Focus;
 /// What one key press means, once [`Focus`] is taken into account.
 ///
 /// **The table is TOTAL**: every `KeyCode` maps to exactly one variant in
-/// each focus state, and [`Action::None`] is a destination like any other.
+/// each of the three focus states (Cli, Map, and Walk — Walk is the
+/// default), and [`Action::None`] is a destination like any other.
 /// H3 is falsified by a key whose destination cannot be predicted from what
 /// is on screen, so "unhandled" is not an option this enum offers.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -74,9 +75,13 @@ pub enum Action {
     /// ignores it; what matters now is that `-` on the map does not fall
     /// through to the buffer and type a `-`.
     Zoom(i8),
+    /// Send this movement word (`"north"`, `"up"`, …) to the session as if
+    /// submitted. Produced only under [`Focus::Walk`]; executed by the
+    /// driver's `apply`, which routes it through the same path `Submit` uses.
+    Move(&'static str),
     /// Move focus to the other pane.
     ToggleFocus,
-    /// The key does nothing in this focus state. Costs no turn, draws
+    /// The key does nothing in this focus. Costs no turn, draws
     /// nothing, and is a deliberate destination — `Tab` is the clearest
     /// case (spec §3.3).
     None,
@@ -84,8 +89,8 @@ pub enum Action {
 
 /// Map one key press to an [`Action`], given the current [`Focus`].
 ///
-/// **The direction this function enforces:** total in both focus states.
-/// Every key has a defined destination; none falls through unanswered.
+/// **The direction this function enforces:** total in all three focus
+/// states. Every key has a defined destination; none falls through unanswered.
 ///
 /// The chord discipline is unchanged from the deleted `verb_for` (see the
 /// module doc) and applies before the key code is inspected: only a bare
@@ -120,6 +125,17 @@ pub fn action_for(key: KeyEvent, focus: Focus) -> Action {
             KeyCode::Up => Action::CursorBy(0, -1),
             KeyCode::Down => Action::CursorBy(0, 1),
             KeyCode::Esc => Action::ToggleFocus,
+            _ => Action::None,
+        },
+        Focus::Walk => match key.code {
+            KeyCode::Up => Action::Move("north"),
+            KeyCode::Down => Action::Move("south"),
+            KeyCode::Left => Action::Move("west"),
+            KeyCode::Right => Action::Move("east"),
+            KeyCode::Char('<') => Action::Move("up"),
+            KeyCode::Char('>') => Action::Move("down"),
+            KeyCode::Esc => Action::ToggleFocus,
+            KeyCode::Char(c) => Action::FocusAndType(c),
             _ => Action::None,
         },
     }
@@ -243,21 +259,22 @@ mod tests {
         }
     }
 
-    /// `Tab` is reserved for completion and bound to NOTHING, in both focus
-    /// states (spec §3.3). Spending it is the mistake this test makes loud:
-    /// it fails the moment anyone gives `Tab` a meaning.
+    /// `Tab` is reserved for completion and bound to NOTHING, in all three
+    /// focus states (spec §3.3). Spending it is the mistake this test makes
+    /// loud: it fails the moment anyone gives `Tab` a meaning.
     #[test]
-    fn tab_is_bound_to_nothing_in_either_focus() {
+    fn tab_is_bound_to_nothing_in_any_focus() {
         let tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
         assert_eq!(action_for(tab, Focus::Cli), Action::None);
         assert_eq!(action_for(tab, Focus::Map), Action::None);
+        assert_eq!(action_for(tab, Focus::Walk), Action::None);
     }
 
     /// The chord discipline survives the rewrite: `Ctrl-L` must not type an
-    /// `l` any more than it used to walk the player east. Checked in BOTH
-    /// focus states, because the routing table is now two tables.
+    /// `l` any more than it used to walk the player east. Checked in ALL
+    /// three focus states, because the routing table is now three tables.
     #[test]
-    fn a_chord_is_inert_in_either_focus() {
+    fn a_chord_is_inert_in_any_focus() {
         let codes = [
             KeyCode::Char('l'),
             KeyCode::Char('c'),
@@ -266,7 +283,7 @@ mod tests {
         ];
         for code in codes {
             for m in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
-                for focus in [Focus::Cli, Focus::Map] {
+                for focus in [Focus::Cli, Focus::Map, Focus::Walk] {
                     assert_eq!(
                         action_for(KeyEvent::new(code, m), focus),
                         Action::None,
@@ -288,11 +305,102 @@ mod tests {
     /// A key-release event must never do anything — one physical keystroke
     /// must not type two characters any more than it could cost two turns.
     #[test]
-    fn a_release_event_is_inert_in_either_focus() {
+    fn a_release_event_is_inert_in_any_focus() {
         let mut key = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE);
         key.kind = KeyEventKind::Release;
         assert_eq!(action_for(key, Focus::Cli), Action::None);
         assert_eq!(action_for(key, Focus::Map), Action::None);
+        assert_eq!(action_for(key, Focus::Walk), Action::None);
+    }
+
+    /// The six movement bindings under Walk. `<`/`>` arrive SHIFTed — they are
+    /// the only shifted characters that do anything but type.
+    #[test]
+    fn the_movement_keys_send_move_actions_when_walking() {
+        let cases = [
+            (
+                KeyEvent::new(KeyCode::Up, KeyModifiers::NONE),
+                Action::Move("north"),
+            ),
+            (
+                KeyEvent::new(KeyCode::Down, KeyModifiers::NONE),
+                Action::Move("south"),
+            ),
+            (
+                KeyEvent::new(KeyCode::Left, KeyModifiers::NONE),
+                Action::Move("west"),
+            ),
+            (
+                KeyEvent::new(KeyCode::Right, KeyModifiers::NONE),
+                Action::Move("east"),
+            ),
+            (
+                KeyEvent::new(KeyCode::Char('<'), KeyModifiers::SHIFT),
+                Action::Move("up"),
+            ),
+            (
+                KeyEvent::new(KeyCode::Char('>'), KeyModifiers::SHIFT),
+                Action::Move("down"),
+            ),
+        ];
+        for (key, want) in cases {
+            assert_eq!(action_for(key, Focus::Walk), want, "{key:?}");
+        }
+    }
+
+    /// Every OTHER printable character bounces to the CLI and types itself
+    /// under Walk — the same one-keypress convention Map uses, extended to the
+    /// third focus. `<`/`>` are the deliberate exceptions (tested above).
+    #[test]
+    fn a_printable_character_bounces_from_walk_too() {
+        let mut wrong = Vec::new();
+        for b in 0x20u8..=0x7Eu8 {
+            let c = b as char;
+            if matches!(c, '<' | '>') {
+                continue;
+            }
+            for m in [KeyModifiers::NONE, KeyModifiers::SHIFT] {
+                let key = KeyEvent::new(KeyCode::Char(c), m);
+                if !matches!(action_for(key, Focus::Walk), Action::FocusAndType(got) if got == c) {
+                    wrong.push((c, format!("{m:?}")));
+                }
+            }
+        }
+        assert!(wrong.is_empty(), "did not bounce-and-type: {wrong:?}");
+    }
+
+    /// Totality's Walk column: every non-printable key has a defined
+    /// destination, and Esc toggles.
+    #[test]
+    fn the_named_keys_route_predictably_when_walking() {
+        let cases = [
+            (KeyCode::Esc, Action::ToggleFocus),
+            (KeyCode::Tab, Action::None),
+            (KeyCode::Enter, Action::None),
+            (KeyCode::Backspace, Action::None),
+        ];
+        for (code, want) in cases {
+            let key = KeyEvent::new(code, KeyModifiers::NONE);
+            assert_eq!(action_for(key, Focus::Walk), want, "{code:?}");
+        }
+    }
+
+    /// Chords stay inert in the third state too, and a release event never
+    /// acts under Walk.
+    #[test]
+    fn chords_and_releases_stay_inert_when_walking() {
+        for code in [KeyCode::Char('l'), KeyCode::Left] {
+            for m in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+                assert_eq!(
+                    action_for(KeyEvent::new(code, m), Focus::Walk),
+                    Action::None,
+                    "{code:?} with {m:?}"
+                );
+            }
+        }
+        let mut key = KeyEvent::new(KeyCode::Up, KeyModifiers::NONE);
+        key.kind = KeyEventKind::Release;
+        assert_eq!(action_for(key, Focus::Walk), Action::None);
     }
 
     /// `SHIFT` combined with `CONTROL` (e.g. a terminal reporting
@@ -303,7 +411,7 @@ mod tests {
     /// focus` does not itself cover (that test only exercises `CONTROL` and
     /// `ALT` alone, never `SHIFT | CONTROL` together).
     #[test]
-    fn shift_plus_control_is_still_inert_in_either_focus() {
+    fn shift_plus_control_is_still_inert_in_any_focus() {
         let key = KeyEvent::new(
             KeyCode::Char('Q'),
             KeyModifiers::SHIFT | KeyModifiers::CONTROL,

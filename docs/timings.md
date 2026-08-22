@@ -2154,3 +2154,15 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-22T23:36:44Z | rebaseline | 52.244 | 237.829 | 12.041 | 4.78 | 0 | ab00d1cf4 | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-22T23:38:19Z | gate-commit | 22.952 | 50.516 | 11.666 | 2.71 | 0 | ab00d1cf4 | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-22T23:40:18Z | gate-commit | 22.583 | 50.535 | 11.496 | 2.75 | 0 | 47002938f | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T15:09:36Z | prewarm | 175.634 | 1116.563 | 41.260 | 6.59 | 0 | 5592b8ec5 | campaign/the-stride | MacBookPro | 10 |
+| 2026-08-22T15:28:24Z | gate-commit | 31.658 | 85.328 | 17.306 | 3.24 | 0 | e49c95e08 | campaign/the-stride | MacBookPro | 10 |
+| 2026-08-22T15:30:50Z | gate-commit | 21.742 | 45.660 | 12.761 | 2.69 | 0 | 7d2b5b6f5 | campaign/the-stride | MacBookPro | 10 |
+| 2026-08-22T21:31:24Z | gate-commit | 27.833 | 52.330 | 12.775 | 2.34 | 0 | 7f4aca161 | campaign/the-stride | MacBookPro | 10 |
+| 2026-08-22T21:41:53Z | game-check | 202.638 | 730.876 | 8.353 | 3.65 | 0 | 7c52b214d | campaign/the-stride | MacBookPro | 10 |
+| 2026-08-22T22:19:48Z | gate-commit | 27.393 | 52.585 | 12.163 | 2.36 | 0 | 2bc94dfe8 | campaign/the-stride | MacBookPro | 10 |
+| 2026-08-22T23:28:55Z | sluice:artifacts | 117.275 | 1033.582 | 46.558 | 9.21 | 0 | 0b71d4808 |  | lefford | 40 |
+| 2026-08-22T23:29:30Z | sluice:outboard | 35.196 | 22.136 | 36.002 | 1.65 | 0 | c6923f7f4 |  | lefford | 40 |
+| 2026-08-22T23:36:15Z | sluice:gate | 404.440 | 10913.750 | 433.236 | 28.06 | 0 | 10cb686cd |  | lefford | 40 |
+| 2026-08-22T23:43:12Z | sluice:clients | 417.373 | 1479.229 | 42.389 | 3.65 | 0 | 1fddcc552 |  | lefford | 40 |
+| 2026-08-22T23:47:18Z | gate-commit | 22.976 | 49.249 | 11.142 | 2.63 | 0 | c0d94fbcb | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T23:47:50Z | gate-commit | 22.870 | 49.275 | 10.839 | 2.63 | 0 | c0d94fbcb | campaign/the-stope | MacBookPro | 10 |
