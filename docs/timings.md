@@ -2028,3 +2028,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-22T19:24:49Z | gate-commit | 93.643 | 61.076 | 35.205 | 1.03 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
 | 2026-08-22T19:26:54Z | gate-commit | 96.982 | 60.209 | 34.467 | 0.98 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
 | 2026-08-22T19:33:52Z | gate-commit | 95.860 | 61.003 | 35.446 | 1.01 | 0 | 917c13e45 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:35:46Z | gate-commit | 90.502 | 59.674 | 34.664 | 1.04 | 0 | 917c13e45 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:50:13Z | gate-commit | 107.851 | 65.203 | 39.178 | 0.97 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:50:47Z | gate-commit | 23.993 | 14.405 | 3.543 | 0.75 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:52:45Z | gate-commit | 98.718 | 64.611 | 40.077 | 1.06 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |

@@ -724,14 +724,26 @@ rate does not GROW across a run, which is the unbounded-log tripwire."
 This is the bench that decides whether stages 2–8 are worth building. If plan
 cost swamps query cost, the metaplan stops at stage 1 (§11).
 
-**AMENDED after verification, same finding as Task 4's Step 1.** This bench
-must SWEEP agent count, which `Session` cannot do, so unlike Task 4 it has to
-build its own roster — and it must do so from the PUBLIC surface, because
-`commit_agent_at`, `shared_belief_npc` and `PlantedTerrain` are
-`#[cfg(test)]`-only and unreachable from `examples/`. What is public and
-usable: `DriveMovements` (`liveness.rs:4108`), `SUSTENANCE` (`:185`), `Npc`
-(`:28`, 14 pub fields) and `LocaleTerrain` (`:585`). Constructing the roster
-by hand is the cost this task pays for being able to vary N.
+**AMENDED TWICE. Do not hand-build a roster — the deriver is public and takes
+the count as a parameter.** An earlier amendment said this bench would have to
+construct `Npc`s field by field. That was wrong, and the correction came out of
+Task 4's review: **`derive_npcs(world, ctx, ledger, k, home_settlement) ->
+Vec<Npc>` is `pub`** at `liveness.rs:5259`, and its `k` truncates the ordered
+settlement list — **so `k` IS the sweep variable**, one agent per settlement, up
+to the world's settlement count. `derive_wild_npcs` (`:5400`) is public too.
+`DriveMovements` (`:4108`) has a `pub npcs` field, and `SUSTENANCE` (`:185`) is
+public.
+
+This is strictly better than a hand-built roster: real agents, real placement,
+real drives, and far less code. Copy the construction from `Session::start`
+(`windows/vessel/src/session.rs`, around lines 690-720), which is the live
+caller.
+
+**The one open risk is `LocaleContext`** — `derive_npcs` needs one and the
+plan author did not verify it is constructible from outside the crate. Check
+that first; if it is not reachable, say so and report BLOCKED rather than
+falling back to hand-building, because the fallback is a much bigger job than
+this task is scoped for.
 
 Moving this bench inside the crate's own `#[cfg(test)]` module was considered
 and rejected: `cli/tests/suite/heavy_tier.rs` freezes the set of untokenised
