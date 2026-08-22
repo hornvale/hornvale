@@ -267,7 +267,16 @@ contents."
 - Produces: no new API. Behaviour must be **bit-identical**; this is a pure
   performance change.
 
-Both sites currently read:
+**There are FIVE matches for this pattern and exactly TWO are yours.**
+`grep -n 'find(AGENT_AT).filter' windows/vessel/src/liveness.rs` returns
+958, 1230, 8295, 8480, 8574. The last three are inside the `#[cfg(test)]`
+module beginning at line 5712 and must be **left alone deliberately**: they
+are naive scans, and keeping them naive keeps them an independent oracle
+against the indexed path production now uses — the same property
+`index_equals_scan_*` exists to preserve. Converting them would make the
+test and the code under test share one mechanism.
+
+Both production sites currently read:
 
 ```rust
 for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
