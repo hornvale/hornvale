@@ -1,4 +1,4 @@
-# Hornvale test-duration baseline (The Timekeeper). Recorded at 07b1458a4.
+# Hornvale test-duration baseline (The Timekeeper). Recorded at 10cb686cd.
 # One row per test: <test-id>\t<seconds, millisecond precision>.
 # The reserved id <below-floor> carries a THIRD field instead:
 # <below-floor>\t<summed seconds>\t<count of tests folded in>.
@@ -56,7 +56,7 @@ hornvale-lab::burr_calibration$the_baseline_sits_between_chance_and_certainty	6.
 hornvale-lab::hornvale_lab$blackbox::tests::record_failure_writes_a_world_that_round_trips_to_the_directly_built_one	23.222
 hornvale-lab::hornvale_lab$census_claim::tests::a_timeout_names_the_holder_and_what_to_do	3.016
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings	1.037
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two	1.035
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two	1.319
 hornvale-lab::hornvale_lab$domesday::render::tests::d8_findings_appear_on_the_index_and_not_on_any_domain_page	1.286
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_page_or_the_index_cites_the_registry	1.454
 hornvale-lab::hornvale_lab$metrics::tests::a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor	14.548
@@ -173,7 +173,7 @@ hornvale-locale::hornvale_locale$tests::blend_and_inheritance_pin_exact_values	1
 hornvale-locale::hornvale_locale$tests::cached_readers_assert_against_geo_level_aliasing_on_read	2.250
 hornvale-locale::hornvale_locale$tests::describe_above_the_grid_errors	1.993
 hornvale-locale::hornvale_locale$tests::describe_and_reflectance_agree_on_one_dominant_cell	1.566
-hornvale-locale::hornvale_locale$tests::describe_is_deterministic_across_two_contexts	3.951
+hornvale-locale::hornvale_locale$tests::describe_is_deterministic_across_two_contexts	3.061
 hornvale-locale::hornvale_locale$tests::describe_over_deep_address_errors	1.677
 hornvale-locale::hornvale_locale$tests::describe_reports_the_cave_at_its_dominant_corner_on_seed_42	1.931
 hornvale-locale::hornvale_locale$tests::exits_are_three_lateral_plus_vertical	2.043
@@ -200,7 +200,7 @@ hornvale-locale::suite$water_reading::the_document_appends_keys_and_removes_none
 hornvale-locale::suite$water_reading::the_fordable_fraction_of_the_network_is_within_its_interval	2.209
 hornvale-locale::suite$water_reading::the_loud_reach_population_is_pinned_as_a_witness	1.643
 hornvale-locale::suite$water_reading::the_ordinal_is_recoverable_as_a_function_over_a_room	1.691
-hornvale-locale::suite$water_reading::the_room_declares_which_fields_are_grid_and_channel_resolution	2.013
+hornvale-locale::suite$water_reading::the_room_declares_which_fields_are_grid_and_channel_resolution	1.600
 hornvale-locale::suite$water_reading::the_width_clause_binds_when_the_step_shrinks	1.998
 hornvale-locale::suite$wetness_reading::a_walk_gets_damper_as_it_descends	2.419
 hornvale-locale::suite$wetness_reading::damp_below_the_median_is_always_inside_a_valley	2.413
@@ -384,7 +384,6 @@ hornvale-vessel::hornvale_vessel$session::tests::wait_populates_occupancy_for_ev
 hornvale-vessel::hornvale_vessel$session::tests::wait_routes_a_clock_overflow_instead_of_panicking	10.356
 hornvale-vessel::hornvale_vessel$snapshot::tests::floats_are_quantized_at_the_emit_boundary	10.128
 hornvale-vessel::hornvale_vessel$snapshot::tests::the_envelope_carries_the_schema_tag_and_channel_keys	9.881
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural	1.036
 hornvale-vessel::suite$course_properties::a_repeated_direction_continues_the_course_and_a_new_one_reseeds_it	11.245
 hornvale-vessel::suite$course_properties::go_lands_on_the_neighbour_nearest_its_requested_bearing	33.511
 hornvale-vessel::suite$course_properties::no_lateral_refusal_survives_anywhere_on_the_walk_band	109.167
@@ -569,6 +568,7 @@ hornvale-worldgen::hornvale_worldgen$tests::generated_sky_reconstructs_and_belie
 hornvale-worldgen::hornvale_worldgen$tests::generated_sky_round_trips_through_save_and_load	9.159
 hornvale-worldgen::hornvale_worldgen$tests::generated_worlds_are_deterministic	15.656
 hornvale-worldgen::hornvale_worldgen$tests::genesis_observes_an_unoccluded_sky	7.746
+hornvale-worldgen::hornvale_worldgen$tests::globe_level_pin_selects_the_canonical_grid	1.011
 hornvale-worldgen::hornvale_worldgen$tests::glossed_names_are_stable_across_two_builds	15.680
 hornvale-worldgen::hornvale_worldgen$tests::goblin_lexicon_mechanism_is_stable_given_fixed_exposures	8.962
 hornvale-worldgen::hornvale_worldgen$tests::goblin_observation_reproduces_the_unlensed_path_bytewise	10.900
@@ -828,7 +828,7 @@ hornvale::hornvale$repl::tests::unknown_commands_are_reported_not_fatal	4.363
 hornvale::hornvale$repl::tests::village_and_castes_and_beliefs_report	4.050
 hornvale::hornvale$repl::tests::why_a_belief_recounts_through_the_species_eyes	18.707
 hornvale::hornvale$repl::tests::why_appends_named_for_when_a_name_gloss_fact_exists	8.443
-hornvale::hornvale$repl::tests::why_explains_belief_one	2.659
+hornvale::hornvale$repl::tests::why_explains_belief_one	3.419
 hornvale::hornvale$repl::tests::why_recounts_any_entity_by_id	10.633
 hornvale::hornvale$repl::tests::word_reports_every_species_entry_for_a_steeped_concept	10.380
 hornvale::hornvale$repl::tests::word_with_an_unregistered_concept_is_reported_not_fatal	8.494
