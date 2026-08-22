@@ -177,3 +177,50 @@ fn the_root_guide_names_the_declared_path_list() {
          and writes a fresh inline list"
     );
 }
+
+/// No generated artifact is routed through a **regenerating** merge driver.
+///
+/// The ratchet for decision 0160. `.gitattributes` once routed six
+/// fully-re-derived documents through `merge=hv-regenerate`, a driver that
+/// discarded both sides' text and reran the generator. The premise was sound
+/// and the implementation could not deliver it: git invokes a merge driver
+/// **before** the merge product exists on disk — `ort` has not yet written the
+/// incoming files — so regeneration at that moment measures the wrong tree.
+///
+/// The failure is not intermittent. Git calls a driver only when **both** sides
+/// changed the path, which is exactly when the two sources differ, which is
+/// exactly when the working tree is not the merge product. Every invocation
+/// emitted ours' answer and silently dropped theirs; the merges where these
+/// files came out correct are merges where the driver never ran. Measured on
+/// 2026-08-20: the same two commits merged in opposite directions produced two
+/// clean, conflict-free, *different* results — one losing six primitives, the
+/// other losing an entire crate's row from a default-deny audit.
+///
+/// **Direction this check enforces:** it fails on the *reappearance* of a
+/// regenerating driver attribute. It says nothing about whether the remaining
+/// `merge=union` (Tier A) entries are correct — those are a different
+/// mechanism with a different failure mode (union is wrong for a *rewrite*,
+/// right for an append) and are deliberately out of scope here.
+#[test]
+fn no_generated_artifact_is_routed_through_a_regenerating_merge_driver() {
+    let attributes = std::fs::read_to_string(repo_root().join(".gitattributes"))
+        .expect(".gitattributes is tracked at the repository root");
+
+    let offenders: Vec<&str> = attributes
+        .lines()
+        .filter(|line| !line.trim_start().starts_with('#'))
+        .filter(|line| line.contains("merge=hv-regenerate"))
+        .collect();
+
+    assert!(
+        offenders.is_empty(),
+        "a `merge=hv-regenerate` attribute is back in .gitattributes. A merge \
+         driver cannot regenerate a merge product, because at the moment git \
+         invokes it the merge product does not exist on disk — it will emit \
+         whichever side happens to be checked out and silently drop the other. \
+         Read docs/decisions/0160-a-generated-artifact-cannot-be-merged-by-\
+         regenerating-it.md before re-adding one; the mechanism that works is \
+         scripts/hooks/post-merge's advisory to run `make rebaseline`:\n  {}",
+        offenders.join("\n  ")
+    );
+}
