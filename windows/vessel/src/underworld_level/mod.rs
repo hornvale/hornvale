@@ -120,8 +120,8 @@ fn choose_leaf_style(
     // the identity, preserving the historical behaviour exactly.
     let worked_chance = match character {
         Character::WildCave => blended,
-        // Gardens are cultivated in living caverns: never more than a
-        // third of a level reads as built.
+        // Gardens are cultivated in living caverns: never more than 35%
+        // of a level reads as built.
         Character::FungalGardens => blended.min(0.35),
         // A drow-tier civilization carves: at least three fifths does.
         Character::DrowTier => blended.max(0.60),
@@ -987,7 +987,9 @@ mod tests {
                     levels.iter().map(|l| l.cells.clone()).collect::<Vec<_>>(),
                 );
             }
-            if cell_sets[&Character::DrowTier] != cell_sets[&Character::WildCave] {
+            if cell_sets[&Character::DrowTier] != cell_sets[&Character::WildCave]
+                || cell_sets[&Character::FungalGardens] != cell_sets[&Character::WildCave]
+            {
                 cells_differ += 1;
             }
         }
@@ -1100,9 +1102,10 @@ mod tests {
     }
 
     #[test]
-    /// claim: invariant(seed: single) — every generated level's walkable
-    /// cells form exactly one connected component, for every seed in the
-    /// range, swept across every `CaveKind` x `ChamberOrigin` combination.
+    /// claim: invariant(seed: 0..20 x all kinds x all origins) — every
+    /// generated level's walkable cells form exactly one connected
+    /// component, for every seed in the range, swept across every
+    /// `CaveKind` x `ChamberOrigin` combination.
     /// This is the property Task 2's original design silently failed to
     /// guarantee for any level with more than one leaf.
     ///
