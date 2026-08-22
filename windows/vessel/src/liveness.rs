@@ -3026,6 +3026,19 @@ impl HomeNavCache {
         Self::default()
     }
 
+    /// How many real `plan_to_room` searches this cache has run, ever.
+    ///
+    /// The field stays `pub(crate)` — nothing outside this crate may WRITE
+    /// or reset it. This read-only accessor exists because The Penstock's
+    /// stage-1 instrument set needs the plan half of the query/plan/commit
+    /// split, and that bench lives in `examples/`, which is a separate
+    /// crate. A deterministic search count is exactly the witness the
+    /// metaplan asks for in preference to a wall-clock proxy.
+    /// type-audit: bare-ok(count: return)
+    pub fn searches(&self) -> u64 {
+        self.searches
+    }
+
     /// `home_nav(entity) → (distance, first_step)`: the seam [`decide_step`]
     /// (and [`affect_of_memo_occupied`]) read instead of ever calling
     /// `plan_to_room` directly. A cache hit — `pos`, `home`, and `budget` all
