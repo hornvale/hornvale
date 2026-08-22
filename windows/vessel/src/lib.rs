@@ -46,8 +46,8 @@ pub use snapshot::{
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
 pub use underworld_level::{
-    Level, LevelCellKind, generate_descent, generate_level, generate_level_extent,
-    generate_level_with_origin, generate_level_with_water,
+    Level, LevelCellKind, generate_descent, generate_descent_for_character, generate_level,
+    generate_level_extent, generate_level_with_origin, generate_level_with_water,
 };
 pub use vantage::*;
 

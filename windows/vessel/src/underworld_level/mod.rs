@@ -99,16 +99,33 @@ pub const NEUTRAL_WORKED_BIAS: f64 = 0.5;
 fn choose_leaf_style(
     cave_kind: hornvale_terrain::CaveKind,
     origin: hornvale_worldgen::chamber::ChamberOrigin,
+    character: hornvale_worldgen::character::Character,
     inherited_worked_bias: f64,
     stream: &mut hornvale_kernel::Stream,
     dof: &mut u32,
 ) -> LeafStyle {
     use hornvale_worldgen::chamber::ChamberOrigin;
+    use hornvale_worldgen::character::Character;
     let base_chance = match origin {
         ChamberOrigin::Made => 0.85,
         ChamberOrigin::Found => 0.10,
     };
-    let worked_chance = (0.5 * base_chance + 0.5 * inherited_worked_bias).clamp(0.0, 1.0);
+    let blended = (0.5 * base_chance + 0.5 * inherited_worked_bias).clamp(0.0, 1.0);
+    // The character's engine dial, applied AFTER the origin blend (The
+    // Stope, Task 4; spec §A.2/A.3): a floor/cap on the final worked
+    // chance, so a character's tendency survives `Found` origins instead
+    // of being halved away by the blend. `CaveKind` varies WHICH natural
+    // algorithm a leaf gets; the character varies HOW OFTEN a leaf is
+    // worked at all — orthogonal axes, no double-variation. WildCave is
+    // the identity, preserving the historical behaviour exactly.
+    let worked_chance = match character {
+        Character::WildCave => blended,
+        // Gardens are cultivated in living caverns: never more than a
+        // third of a level reads as built.
+        Character::FungalGardens => blended.min(0.35),
+        // A drow-tier civilization carves: at least three fifths does.
+        Character::DrowTier => blended.max(0.60),
+    };
     let roll = stream.next_f64();
     *dof += 1;
     let worked = roll < worked_chance;
@@ -135,10 +152,12 @@ fn choose_leaf_style(
 /// `lattice::allocate`/`lattice::grow` already use, and this module's own
 /// `region::build_region` already follows correctly.
 /// type-audit: bare-ok(ratio: inherited_worked_bias)
+#[allow(clippy::too_many_arguments)]
 pub fn generate_level_with_origin(
     extent: Rect,
     cave_kind: hornvale_terrain::CaveKind,
     origin: hornvale_worldgen::chamber::ChamberOrigin,
+    character: hornvale_worldgen::character::Character,
     inherited_worked_bias: f64,
     seed: Seed,
 ) -> Level {
@@ -162,6 +181,7 @@ pub fn generate_level_with_origin(
         let style = choose_leaf_style(
             cave_kind,
             origin,
+            character,
             inherited_worked_bias,
             &mut style_stream,
             &mut dof,
@@ -266,6 +286,7 @@ pub fn generate_level(extent: Rect, seed: Seed) -> Level {
         extent,
         hornvale_terrain::CaveKind::Karst,
         hornvale_worldgen::chamber::ChamberOrigin::Found,
+        hornvale_worldgen::character::Character::WildCave,
         NEUTRAL_WORKED_BIAS,
         seed,
     )
@@ -278,17 +299,25 @@ pub fn generate_level(extent: Rect, seed: Seed) -> Level {
 /// a per-cell one, and the basin is the first leaf in generation order
 /// rather than a further seeded choice.
 /// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(ratio: inherited_worked_bias)
+#[allow(clippy::too_many_arguments)]
 pub fn generate_level_with_water(
     extent: Rect,
     cave_kind: hornvale_terrain::CaveKind,
     origin: hornvale_worldgen::chamber::ChamberOrigin,
+    character: hornvale_worldgen::character::Character,
     depth_m: f64,
     water_table_m: f64,
     inherited_worked_bias: f64,
     seed: Seed,
 ) -> Level {
-    let mut level =
-        generate_level_with_origin(extent, cave_kind, origin, inherited_worked_bias, seed);
+    let mut level = generate_level_with_origin(
+        extent,
+        cave_kind,
+        origin,
+        character,
+        inherited_worked_bias,
+        seed,
+    );
     if hornvale_worldgen::chamber::is_sump(origin, depth_m, water_table_m)
         && let Some(basin) = region_first_leaf_rect(extent, seed)
     {
@@ -409,12 +438,63 @@ pub fn generate_descent(
     water_table_m: f64,
     seed: Seed,
 ) -> Vec<Level> {
+    generate_descent_for_character(
+        rungs,
+        cave_kind,
+        origins,
+        depths_m,
+        water_table_m,
+        hornvale_worldgen::character::Character::WildCave,
+        seed,
+    )
+}
+
+/// The initial worked-bias one [`Character`]'s engine set starts its
+/// descent with (The Stope, Task 4; spec §A.2/A.3). A character selects
+/// among engine SETS by parameterizing the ONE descent engine's
+/// worked/natural mix — not by adding three wholly new generators, and not
+/// by varying what [`CaveKind`](hornvale_terrain::CaveKind) already varies:
+/// kind chooses among the NATURAL-leaf algorithms (Karst→CellularCave,
+/// LavaTube→Tunneler, Fracture→AngularRooms), so character moves the
+/// ORTHOGONAL axis, how many leaves are worked at all. WildCave sits exactly
+/// at [`NEUTRAL_WORKED_BIAS`], which is what keeps `generate_descent`'s
+/// historical output byte-identical through the delegation below.
+/// type-audit: bare-ok(ratio)
+fn engine_worked_bias(character: hornvale_worldgen::character::Character) -> f64 {
+    use hornvale_worldgen::character::Character;
+    match character {
+        Character::WildCave => NEUTRAL_WORKED_BIAS,
+        // Gardens are cultivated in living caverns: mildly shaped, mostly
+        // found space.
+        Character::FungalGardens => 0.35,
+        // A drow-tier civilization carves: the descent reads as built.
+        Character::DrowTier => 0.85,
+    }
+}
+
+/// As [`generate_descent`], with `character` selecting the engine set (The
+/// Stope, Task 4; spec §A.2/A.3): one descent implementation behind a
+/// selector, parameterized rather than tripled. The character's only lever
+/// is the INITIAL worked-bias the descent's inertia compounding starts
+/// from ([`engine_worked_bias`]) — every seeded draw, stream label and
+/// consumption order is exactly `generate_descent`'s, so the WildCave path
+/// is byte-identical to it and no stream contract moves.
+/// type-audit: bare-ok(diagnostic-value: depths_m), bare-ok(diagnostic-value: water_table_m)
+pub fn generate_descent_for_character(
+    rungs: &[hornvale_terrain::DelveRung],
+    cave_kind: hornvale_terrain::CaveKind,
+    origins: &[hornvale_worldgen::chamber::ChamberOrigin],
+    depths_m: &[f64],
+    water_table_m: f64,
+    character: hornvale_worldgen::character::Character,
+    seed: Seed,
+) -> Vec<Level> {
     assert_eq!(rungs.len(), origins.len(), "one origin per rung");
     assert_eq!(rungs.len(), depths_m.len(), "one depth per rung");
     let mut descent_stream = seed
         .derive(crate::streams::UNDERWORLD_LEVEL_DESCENT)
         .stream();
-    let mut bias = NEUTRAL_WORKED_BIAS;
+    let mut bias = engine_worked_bias(character);
     let mut levels = Vec::with_capacity(rungs.len());
     for (i, &rung) in rungs.iter().enumerate() {
         let extent = generate_level_extent(rung);
@@ -423,6 +503,7 @@ pub fn generate_descent(
             extent,
             cave_kind,
             origins[i],
+            character,
             depths_m[i],
             water_table_m,
             bias,
@@ -438,6 +519,7 @@ pub fn generate_descent(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_worldgen::character::Character;
 
     #[test]
     fn generation_is_deterministic() {
@@ -498,6 +580,7 @@ mod tests {
                 extent,
                 CaveKind::Karst,
                 ChamberOrigin::Made,
+                Character::WildCave,
                 NEUTRAL_WORKED_BIAS,
                 Seed(s),
             );
@@ -505,6 +588,7 @@ mod tests {
                 extent,
                 CaveKind::Karst,
                 ChamberOrigin::Found,
+                Character::WildCave,
                 NEUTRAL_WORKED_BIAS,
                 Seed(s),
             );
@@ -542,6 +626,7 @@ mod tests {
             extent,
             CaveKind::Fracture,
             origin,
+            Character::WildCave,
             NEUTRAL_WORKED_BIAS,
             Seed(4),
         );
@@ -570,6 +655,7 @@ mod tests {
             extent,
             CaveKind::Karst,
             ChamberOrigin::Found,
+            Character::WildCave,
             100.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
@@ -584,6 +670,7 @@ mod tests {
             extent,
             CaveKind::Karst,
             ChamberOrigin::Made,
+            Character::WildCave,
             100.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
@@ -598,6 +685,7 @@ mod tests {
             extent,
             CaveKind::Karst,
             ChamberOrigin::Found,
+            Character::WildCave,
             5.0,
             10.0,
             NEUTRAL_WORKED_BIAS,
@@ -852,8 +940,167 @@ mod tests {
         );
     }
 
+    /// claim: rate(seed: 0..60) — Task 4 (spec §A.2/A.3): two branches with
+    /// DIFFERENT characters, over the SAME bands, produce structurally
+    /// different descents. Asserted as properties, never a golden string:
+    /// (1) the mean realized worked-fraction of the first rung orders by
+    /// character — DrowTier (a carving civilization) above WildCave above
+    /// FungalGardens — because a character selects an engine set whose dial
+    /// positions are the worked/natural mix, the one axis `cave_kind` does
+    /// NOT already vary (kind picks among NATURAL-leaf algorithms);
+    /// (2) for the majority of individual seeds the two descents' cells
+    /// differ somewhere in the descent, so the ordering is not carried by a
+    /// statistical shadow alone.
     #[test]
-    /// claim: invariant(seed: 0..20) — every generated level's walkable
+    fn different_characters_produce_structurally_different_descents() {
+        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+
+        let rungs = [DelveRung::Undercroft, DelveRung::Shallows];
+        let origins = [ChamberOrigin::Found; 2];
+        let depths_m = [20.0, 60.0];
+        const TRIALS: usize = 60;
+        let mut totals = BTreeMap::from([
+            (Character::WildCave, 0.0),
+            (Character::FungalGardens, 0.0),
+            (Character::DrowTier, 0.0),
+        ]);
+        let mut cells_differ = 0usize;
+        for s in 0..TRIALS as u64 {
+            let mut cell_sets = BTreeMap::new();
+            for character in hornvale_worldgen::character::CHARACTERS {
+                let levels = generate_descent_for_character(
+                    &rungs,
+                    CaveKind::Karst,
+                    &origins,
+                    &depths_m,
+                    500.0,
+                    *character,
+                    Seed(s),
+                );
+                let first = &levels[0];
+                let worked = first.leaf_styles.iter().filter(|s| s.worked).count() as f64;
+                let total = first.leaf_styles.len().max(1) as f64;
+                *totals.get_mut(character).expect("roster character") += worked / total;
+                cell_sets.insert(
+                    *character,
+                    levels.iter().map(|l| l.cells.clone()).collect::<Vec<_>>(),
+                );
+            }
+            if cell_sets[&Character::DrowTier] != cell_sets[&Character::WildCave] {
+                cells_differ += 1;
+            }
+        }
+        let mean = |c: Character| totals[&c] / TRIALS as f64;
+        assert!(
+            mean(Character::DrowTier) > mean(Character::WildCave),
+            "a drow-tier descent must read more worked than a wild-cave one \
+             ({:.3} vs {:.3})",
+            mean(Character::DrowTier),
+            mean(Character::WildCave)
+        );
+        assert!(
+            mean(Character::FungalGardens) < mean(Character::WildCave),
+            "a fungal-gardens descent must read less worked than a wild-cave one \
+             ({:.3} vs {:.3})",
+            mean(Character::FungalGardens),
+            mean(Character::WildCave)
+        );
+        assert!(
+            cells_differ * 2 > TRIALS,
+            "same-seed descents under different characters must differ \
+             structurally for the majority of seeds: got {cells_differ}/{TRIALS}"
+        );
+    }
+
+    /// claim: invariant(seed: 0..12 x all characters x all kinds) — Task 4
+    /// step 4: the connectivity invariant holds for EVERY engine the
+    /// selector can pick, i.e. for every character. Flood-fills the
+    /// standable cells (stairs included — `place_connections` runs on this
+    /// path too) of every level of every descent. Positive control counts
+    /// multi-leaf levels so the cross-leaf connector is actually exercised.
+    #[test]
+    fn every_character_engine_keeps_every_level_connected() {
+        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        use std::collections::{BTreeSet, VecDeque};
+
+        let rungs = [DelveRung::Undercroft, DelveRung::Shallows, DelveRung::Deeps];
+        let origins = [
+            ChamberOrigin::Found,
+            ChamberOrigin::Made,
+            ChamberOrigin::Found,
+        ];
+        let depths_m = [20.0, 60.0, 120.0];
+        let mut composite_levels_probed = 0;
+        for cave_kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+            for character in hornvale_worldgen::character::CHARACTERS {
+                for s in 0..12u64 {
+                    let levels = generate_descent_for_character(
+                        &rungs,
+                        cave_kind,
+                        &origins,
+                        &depths_m,
+                        500.0,
+                        *character,
+                        Seed(s),
+                    );
+                    for (i, level) in levels.iter().enumerate() {
+                        if level.leaf_styles.len() > 1 {
+                            composite_levels_probed += 1;
+                        }
+                        let standable: BTreeSet<Cell> = level
+                            .cells
+                            .iter()
+                            .filter(|(_, k)| {
+                                matches!(
+                                    k,
+                                    LevelCellKind::Floor
+                                        | LevelCellKind::Flooded
+                                        | LevelCellKind::StairsDown
+                                        | LevelCellKind::StairsUp
+                                )
+                            })
+                            .map(|(&c, _)| c)
+                            .collect();
+                        assert!(
+                            !standable.is_empty(),
+                            "{character:?} seed {s} level {i}: no standable cells"
+                        );
+                        let start = *standable.iter().next().expect("non-empty above");
+                        let mut seen = BTreeSet::new();
+                        let mut queue = VecDeque::new();
+                        seen.insert(start);
+                        queue.push_back(start);
+                        while let Some(Cell(x, y)) = queue.pop_front() {
+                            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                                let next = Cell(x + dx, y + dy);
+                                if standable.contains(&next) && seen.insert(next) {
+                                    queue.push_back(next);
+                                }
+                            }
+                        }
+                        assert_eq!(
+                            seen.len(),
+                            standable.len(),
+                            "{character:?}/{cave_kind:?} seed {s} level {i}: {} of {} standable \
+                             cells unreachable from {start:?}",
+                            standable.len() - seen.len(),
+                            standable.len()
+                        );
+                    }
+                }
+            }
+        }
+        assert!(
+            composite_levels_probed > 0,
+            "this sweep never generated a composite level — the cross-leaf \
+             connector would go unexercised"
+        );
+    }
+
+    #[test]
+    /// claim: invariant(seed: single) — every generated level's walkable
     /// cells form exactly one connected component, for every seed in the
     /// range, swept across every `CaveKind` x `ChamberOrigin` combination.
     /// This is the property Task 2's original design silently failed to
@@ -892,6 +1139,7 @@ mod tests {
                         extent,
                         cave_kind,
                         origin,
+                        Character::WildCave,
                         NEUTRAL_WORKED_BIAS,
                         Seed(seed_value),
                     );
