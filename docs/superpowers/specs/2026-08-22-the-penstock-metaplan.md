@@ -320,6 +320,77 @@ invalidations dispatched per tick, replans per agent per hundred ticks, and
 the **preemption-to-invalidation ratio** — which says whether creatures are
 being interrupted by the world or by their own appetites.
 
+### 5.8 Scope note: preemption is `PSY-6`'s, and it mostly ships
+
+§5.7 over-reached, and the correction matters for the stage list. Preemption
+is **not** this program's to build. `arbitrate` (`windows/vessel/src/
+liveness.rs:3277`) already resolves competing drives — utility as Σ active
+capped-urgency × serviceability, survival capped above comfort ("soft Maslow,
+no priority table"), committed with hysteresis, and gated on `&Perceived`
+rather than the ledger, so §5.7's perception rule is already enforced by the
+type. The bugbear is already a drive: `Danger` carries a threat niche,
+`boldness` (banked `threat_response`), alarm contagion from nearby frightened
+creatures, and remembered dread — a believed phobia distinguished from sensed
+alarm by provenance alone. A health threshold is another drive, and the
+two-threshold dead-band that stops it thrashing shipped with The Wanting.
+
+**The Penstock's whole interface to preemption is therefore two things:** the
+invalidation half (§5.6, §5.7), and the counters — invalidations per tick,
+replans per agent per hundred ticks, and the preemption-to-invalidation ratio.
+
+**One gap is real, and it is the one a long mission needs.** All of the above
+arbitrates what to do *next tick*; nothing protects a *multi-tick plan*.
+`time_horizon` looked like the commitment dial and is not — it is
+`anticipation_lead`, which lowers the act threshold so a far-sighted creature
+acts on a need it can project. It makes creatures act **earlier**, never
+persist **longer**. The only commitment input `arbitrate` takes is `incoming:
+Mode`, hysteresis on switching, which knows nothing about how far through a
+journey the creature is. Absent a progress-weighted term, a creature
+interrupted often enough completes nothing — **preemption starvation**, the
+precise failure "let creatures hold long missions" is meant to avoid.
+
+### 5.9 The capstone study: is the sunk-cost bias adaptive?
+
+The commitment ratchet — commitment rising with sunk progress — is introduced
+above as an engineering fix. It is also, exactly, **the sunk-cost fallacy and
+the escalation of commitment**, which turns a tuning constant into a
+scientific object and gives this program a terminal payoff worth naming now
+even though it is stages away.
+
+**Preregistered hypothesis** (0016; frozen here, before the code that moves
+it): in an environment with noisy threat signals and non-zero switching costs,
+the commitment slope maximizing total need-satisfaction is strictly **greater
+than zero** — a sunk-cost bias is *adaptive*, not merely irrational — and the
+optimum rises with both signal noise and switching cost.
+
+- **Independent variable:** commitment-ratchet slope, 0 (memoryless) upward.
+- **Dependent:** mission-completion rate, threat-response latency, deaths,
+  and total need-satisfaction as the fitness measure.
+- **Environment parameters:** threat-signal noise; switching cost.
+- **Falsified if** the optimum sits at slope 0, or the response is monotone
+  with no interior optimum. A null here is the headline, not a failure.
+
+**What makes it more than tuning: the knee of that curve is the boundary
+between a virtue and a pathology.** Left of it, persistence is adaptive
+commitment; right of it, the same mechanism is escalation of commitment.
+Locating that point is a result, not a parameter choice.
+
+Two caveats worth freezing with the hypothesis. **Roster power**
+(`MEM-roster-power`): the sweep needs creatures actually occupying both ends
+of `threat_response` and `deliberation_latency`, or one side of the
+comparison has no sample and the study is unmeasurable for reasons that look
+like a null. And **Buridan's ass cannot occur here** — a deterministic total
+order with seed tie-breaks means perfect indifference never paralyses an
+agent; it resolves arbitrarily but reproducibly. That is a design position
+worth stating rather than a happy accident, and it means the study measures
+persistence, never paralysis.
+
+Precedent that this kind of result is reachable: **learned helplessness
+already ships** as an emergent sticky scar in `arbitrate` — a creature whose
+survival drive has gone unmet long enough stops trying, behaviourally
+distinct from a merely frustrated one. The capstone would be the second
+instance of that pattern, not the first.
+
 ## 6. The campaign carve
 
 Strangler-fig; each stage shippable, reversible, and measurement-gated on the
