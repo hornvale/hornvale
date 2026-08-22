@@ -281,8 +281,9 @@ single-predicate — `find(AGENT_AT).filter` only, on one line, missing
 multi-line filter chains and every predicate other than `AGENT_AT`.
 Completeness is exactly what enumeration by grep gets wrong. A broader scan
 (every predicate, `.filter(|f| f.subject == …)` spanning lines) finds
-**twelve** production `find(pred).filter(subject == e)` call sites before
-the `#[cfg(test)]` module, of which this task fixes two. The other ten,
+**twelve** production `find(pred).filter(subject == e)` call sites still
+unfixed before the `#[cfg(test)]` module — fourteen in total, since the two
+this task fixes are additional to that list. Those twelve,
 several hotter than the two fixed here, are listed at
 `docs/superpowers/specs/2026-08-22-the-penstock-metaplan.md` §4 and §6.2.
 This does not change what Task 2 itself does — the two sites below are

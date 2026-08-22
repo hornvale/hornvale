@@ -134,8 +134,12 @@ agent's entire history, per agent, per tick, which is quadratic in session
 length. The existing SPO-backed `facts_about(e).filter(|f| f.predicate == …)`
 is **1,088× faster at 1M facts** (48,288 ms → 44 ms) and adds no machinery.
 
-**Corrected count: twelve call sites exist, of which two are fixed, ten
-remain.** The plan's own single-line, single-predicate grep found five
+**Corrected count: FOURTEEN call sites existed, of which two are fixed and
+twelve remain.** (An earlier correction said "twelve exist, two fixed, ten
+remain" — itself wrong, and wrong in an instructive way: the enumerated list
+below is of the sites STILL UNFIXED, so the two already repointed are
+additional to it, not among it. An off-by-two that survived a review, a fix
+brief and a fix wave before a re-derivation caught it.) The plan's own single-line, single-predicate grep found five
 matches and named two as production; completeness is what enumeration gets
 wrong, and a broader scan (every predicate, spanning `.filter(|f| ...)`
 across lines) finds twelve production sites (before the `#[cfg(test)]`
@@ -143,8 +147,9 @@ module): `:127` `latest_committed_position`, `:849` `agent_sightings`,
 `:936` the thirst read in `drive_at`, `:1042` `build_emitter_scan`, `:2257`
 `fatigue_at`, `:2442` the hunger read, `:3710` `affect_of`, `:4154`
 `room_entry_day`, `:4430` `last_fact_day_at_or_before`, and `:4909`/`:4916`/
-`:4923` inside `WalkState::begin` (DRANK/RESTED/EATEN). The two this
-campaign fixed (`:958`, `:1230`, above) are the least hot of the twelve:
+`:4923` inside `WalkState::begin` (DRANK/RESTED/EATEN) — twelve sites, all
+still unfixed. The two this campaign fixed (`:958`, `:1230`, above) are
+additional to that list, and are the least hot of the fourteen:
 several remaining sites run **once per creature per tick** — the three in
 `WalkState::begin` and `room_entry_day` — and `latest_committed_position`
 runs once per creature **per band member** it is compared against, which is
@@ -563,8 +568,13 @@ Both functions **are** quadratic in agent count, but for a different reason:
 - **The largest, and previously unnamed: `shared_believed_water`
   (`liveness.rs:1366`)**, called once per creature per tick from
   `WalkState::begin` (`:4931`), which loops the *whole band* calling
-  `agent_position` per member (`:1380`) — O(A²·k) per tick, where `k` is
-  band size.
+  `agent_position` per member (`:1380`) — **O(A²) per tick**. An earlier
+  draft wrote O(A²·k) "where k is band size", which overstates it by a power
+  of A: `WalkState::begin` is called as
+  `WalkState::begin(frozen, npc, &self.npcs, …)` from inside
+  `for npc in &self.npcs` (`:4713`), so the band IS the whole roster and
+  k = A. The ranking is unchanged — this is still the worst of the three —
+  but the magnitude is not what that notation claimed.
 
 So the superlinear residual is most likely **the same defect Task 2 fixed,
 at sites Task 2 missed** — more `find(pred).filter(subject == e)` call sites
