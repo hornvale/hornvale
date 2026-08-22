@@ -270,6 +270,31 @@ pub fn branch_count_of(seed: Seed, cell: CellId, entrance: u8) -> u8 {
     }
 }
 
+/// The habitation band ranks, ascending — **derived from the delve ladder,
+/// never restated as a literal.**
+///
+/// This exists because `root_floor_of` walked `(0..5u8)`, which Task 7's
+/// probe found as the eighth instance of this campaign's signature defect
+/// and the only one in SHIPPED code. `chamber::rung_of_rank` is private to
+/// its module, so the route from here is the ladder itself
+/// ([`hornvale_terrain::rungs`]) filtered through the lattice's one explicit
+/// mapping ([`crate::chamber::rung_rank`]) — the same seam
+/// `tests/suite/junctions.rs` uses. `Surface` has no habitation rank and
+/// drops out here exactly as it does there.
+///
+/// A sixth habitation rung is already caught by `rung_of_rank(5) == None`
+/// (`chamber.rs`), so this was never a silent narrowing — but that tripwire
+/// only tells the next person the ladder grew, and then leaves them to find
+/// every bound by hand. This one now moves on its own.
+fn habitation_ranks() -> Vec<u8> {
+    let mut ranks: Vec<u8> = hornvale_terrain::rungs()
+        .iter()
+        .filter_map(|&rung| crate::chamber::rung_rank(rung))
+        .collect();
+    ranks.sort_unstable();
+    ranks
+}
+
 /// Where a non-main-line branch roots on its parent (spec C.2) — `None`
 /// for the main line, whose root IS the surface, and for any branch outside
 /// the lattice.
@@ -298,7 +323,8 @@ pub fn root_floor_of(seed: Seed, cell: CellId, entrance: u8, branch: u8) -> Opti
     if branch == 0 || branch >= BRANCHES_PER_SYSTEM {
         return None;
     }
-    let parent_realizes: Vec<(u8, u8)> = (0..5u8)
+    let parent_realizes: Vec<(u8, u8)> = habitation_ranks()
+        .into_iter()
         .map(|band| {
             (
                 band,
