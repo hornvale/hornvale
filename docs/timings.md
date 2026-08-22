@@ -1966,3 +1966,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-22T21:22:05Z | rebaseline | 70.540 | 232.148 | 11.529 | 3.45 | 0 | 21f32555e | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-22T21:23:30Z | gate-commit | 29.987 | 62.969 | 26.026 | 2.97 | 0 | 21f32555e | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-22T21:29:21Z | rebaseline | 45.561 | 236.785 | 11.172 | 5.44 | 0 | 98a892918 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T21:30:24Z | gate-commit | 27.662 | 54.726 | 13.885 | 2.48 | 0 | 98a892918 | campaign/the-deed | MacBookPro | 10 |
