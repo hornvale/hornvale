@@ -780,6 +780,26 @@ mod tests {
         );
     }
 
+    /// **The transect really draws past-branch glyphs** — the non-vacuity
+    /// arm for [`GLYPH_PAST_BRANCH`] as a rendered fact, the branch-count
+    /// counterpart of [`some_transect_row_carries_the_past_run_glyph`]: at
+    /// least one row on the panel seed carries it, so a change that stops
+    /// emitting it cannot pass silently behind rows that all happen to be
+    /// refusals of another kind.
+    #[test]
+    fn some_transect_row_carries_the_past_branch_glyph() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let rows = glyph_rows(&text);
+        assert!(!rows.is_empty(), "the transect rendered no row at all");
+        assert!(
+            rows.iter().any(|r| r.contains(GLYPH_PAST_BRANCH)),
+            "no transect row contains the {} glyph — the readout never renders \
+             a past-branch position, so anything keyed to it is untested",
+            GLYPH_PAST_BRANCH
+        );
+    }
+
     /// **A chamber past its system's drawn branch count is a gate failure,
     /// and the readout reports it as a number** — 0 in a healthy tree, the
     /// branch-count counterpart of `no_chamber_exists_past_its_runs_drawn_length`:
