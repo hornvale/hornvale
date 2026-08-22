@@ -123,7 +123,8 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
         }
     }
     assert!(total > 0, "the panel drew no branches at all");
-    let share = f64::from(drow as u32) / f64::from(total as u32);
+    let share = f64::from(u32::try_from(drow).expect("panel draws fit u32"))
+        / f64::from(u32::try_from(total).expect("panel draws fit u32"));
     assert!(
         share > 0.0,
         "no branch on the whole panel ({total} draws) drew the drow-tier \

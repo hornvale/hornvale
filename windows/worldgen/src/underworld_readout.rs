@@ -761,6 +761,51 @@ mod tests {
         );
     }
 
+    /// **The transect really draws past-run glyphs** — the non-vacuity arm
+    /// for [`GLYPH_PAST_RUN`] as a rendered fact: at least one row on the
+    /// panel seed carries it, so a change that stops emitting it (a glyph
+    /// swap, a loop rewrite) cannot pass silently behind rows that all
+    /// happen to be refusals of another kind.
+    #[test]
+    fn some_transect_row_carries_the_past_run_glyph() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let rows = glyph_rows(&text);
+        assert!(!rows.is_empty(), "the transect rendered no row at all");
+        assert!(
+            rows.iter().any(|r| r.contains(GLYPH_PAST_RUN)),
+            "no transect row contains the {} glyph — the readout never renders \
+             a past-run position, so anything keyed to it is untested",
+            GLYPH_PAST_RUN
+        );
+    }
+
+    /// **A chamber past its system's drawn branch count is a gate failure,
+    /// and the readout reports it as a number** — 0 in a healthy tree, the
+    /// branch-count counterpart of `no_chamber_exists_past_its_runs_drawn_length`:
+    /// `chamber_exists` refuses every band and floor of a column past its
+    /// system's drawn branches, so any nonzero reading is that gate not
+    /// gating, not a world being unusual.
+    #[test]
+    fn no_chamber_exists_past_its_systems_drawn_branches() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let past: usize = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("past branch cnt").map(str::trim))
+            .expect("the readout reports a past-branch-count tally")
+            .split_whitespace()
+            .next()
+            .expect("the past-branch-count line leads with its count")
+            .parse()
+            .expect("the past-branch-count tally is a number");
+        assert_eq!(
+            past, 0,
+            "{past} chambers exist past their system's drawn branch count — \
+             chamber_exists's drawn-branch gate is not gating"
+        );
+    }
+
     /// **Reachability is reported, is nonzero, and is a strict subset of
     /// existence** — the quantity amendment C.4 moves, and the one an
     /// existence count cannot see.

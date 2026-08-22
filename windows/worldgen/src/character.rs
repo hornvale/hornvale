@@ -278,7 +278,14 @@ pub fn branch_count_of(seed: Seed, cell: CellId, entrance: u8) -> u8 {
 /// actually realizes: the eligible bands are the ranks whose parent run has
 /// at least one floor, the band is uniform over those, and the floor is
 /// uniform over that run's realized count — so the answer is never a
-/// dangling junction. Today every habitation band realizes ≥1 floor by
+/// dangling junction. If every parent run drew 0 floors the eligible set is
+/// empty and this returns `None`: a branch rooted NOWHERE, with nothing to
+/// hang off. Realizing the branch is
+/// [`crate::chamber::chamber_exists`]'s job regardless — a returned root
+/// does not imply the branch's system realized it (its own
+/// [`branch_count_of`] draw may have been smaller).
+///
+/// Today every habitation band realizes ≥1 floor by
 /// construction (every frozen range bottoms out at 1), but the filter is
 /// written anyway so the guarantee survives a future range change without
 /// depending on that coincidence.
@@ -308,11 +315,19 @@ pub fn root_floor_of(seed: Seed, cell: CellId, entrance: u8, branch: u8) -> Opti
         })
         .filter(|&(_, count)| count > 0)
         .collect();
+    if parent_realizes.is_empty() {
+        // Every parent run drew 0 floors: no eligible band exists, so the
+        // branch roots nowhere rather than underflowing the tally.
+        return None;
+    }
     let mut stream = seed
         .derive(crate::streams::BRANCH_ROOT)
         .derive(StreamLabel::dynamic(&branch_key(cell, entrance, branch)))
         .stream();
-    let band_index = stream.range_u32(0, (parent_realizes.len() - 1) as u32);
+    let band_index = stream.range_u32(
+        0,
+        u32::try_from(parent_realizes.len() - 1).expect("bands fit u32"),
+    );
     let (band, parent_count) = parent_realizes
         [usize::try_from(band_index).expect("range_u32 answered inside the eligible set")];
     let floor = stream.range_u32(0, u32::from(parent_count - 1));
