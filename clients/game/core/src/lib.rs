@@ -169,16 +169,17 @@ pub fn render_with(
     let (grid, caret) = spread::compose(&snapshot, w, h, strip, focus, line, echo);
     // ONE hardware cursor, so its location IS the focus indicator: with
     // `Focus::Cli` it is the caret in the entry pane; with `Focus::Map`,
-    // the map cursor on the plate. Never both — but a mode may claim no
-    // cursor at all (`Focus::Walk` reports neither). See `Focus`.
+    // the map cursor on the plate — never both, though a mode may claim no
+    // cursor at all (`Focus::Map` without a map cursor, or `Focus::Walk`,
+    // reports none). See `Focus`.
     let cursor = match focus {
         Focus::Cli => caret,
         Focus::Map => map_cursor.map(|c| (c.x, c.y)),
         // Walk drives neither pane's cursor: the buffer is not being edited
         // (printable keys bounce to the CLI), so the caret is not reported;
         // the map cursor is not moving either. Deliberately NEITHER — the
-        // "never both, never neither" rule above is about ambiguity between
-        // the two pane cursors, and Walk claims no cursor at all.
+        // "never both" rule above is about ambiguity between the two pane
+        // cursors, and Walk claims no cursor at all.
         Focus::Walk => None,
     };
     Ok((grid, cursor))
