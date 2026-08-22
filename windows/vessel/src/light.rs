@@ -58,6 +58,15 @@ pub const TORCH_KELVIN: f64 = 1900.0;
 /// type-audit: bare-ok(ratio)
 pub const HEARTH_KELVIN: f64 = 1200.0;
 
+/// How much of the sky's daylight reaches even where no source does (The
+/// Wick, spec §2.2) — chosen empirically, not by theory: seed 42's chamber
+/// wall fabric renders `[29, 28, 23]` under `0.02 × noon daylight`, clearly
+/// visible but clearly darker than the dimmest flame-lit neighbour
+/// (`[64, 50, 13]` at distance 4 of the ×4 torch). `0.05` was already too
+/// close (`[49, 48, 41]`); `0.01` read as near-black next to the glyph.
+/// type-audit: bare-ok(ratio)
+pub const SKYGLOW_SCALE: f64 = 0.02;
+
 /// Something that emits light, at a cell.
 ///
 /// A source is **placed**, never drawn: a hearth is at its chamber's wall, a

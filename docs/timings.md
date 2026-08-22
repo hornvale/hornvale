@@ -2025,3 +2025,14 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-21T22:59:45Z | gate-commit | 11.774 | 14.004 | 0.954 | 1.27 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
 | 2026-08-21T23:00:27Z | gate-commit | 30.224 | 65.327 | 17.440 | 2.74 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
 | 2026-08-21T23:05:07Z | gate-commit | 22.980 | 49.844 | 11.683 | 2.68 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-21T23:05:44Z | gate-commit | 23.260 | 49.951 | 11.832 | 2.66 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:12Z | gate-commit | 2.204 | 2.012 | 0.089 | 0.95 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:26Z | gate-commit | 2.113 | 2.010 | 0.078 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:41Z | gate-commit | 2.120 | 2.008 | 0.090 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:57Z | gate-commit | 3.809 | 5.204 | 0.547 | 1.51 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:09:13Z | gate-commit | 2.917 | 3.887 | 0.504 | 1.51 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:09:53Z | gate-commit | 8.199 | 21.006 | 4.454 | 3.11 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:11:09Z | gate-commit | 17.136 | 30.132 | 4.600 | 2.03 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:11:33Z | gate-commit | 10.995 | 10.703 | 0.220 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:11:52Z | gate-commit | 10.987 | 10.700 | 0.216 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:12:36Z | gate-commit | 31.548 | 71.597 | 17.055 | 2.81 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
