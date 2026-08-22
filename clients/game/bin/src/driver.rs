@@ -154,8 +154,10 @@ pub struct Driver {
     /// and by every `handle`, so `snapshot()` never needs to touch the
     /// session again.
     cached: String,
-    /// Which pane keys currently drive — the command line, or the map
-    /// cursor. Replaces The Portolan part I's `Mode { Normal, Look }`.
+    /// Which pane keys currently drive — the walk view's movement keys, the
+    /// command line, or the map cursor. Startup is [`Focus::Walk`] (arrow
+    /// keys move immediately); replaces The Portolan part I's `Mode {
+    /// Normal, Look }`.
     focus: Focus,
     /// The map cursor's screen position, in plate grid cells. Held
     /// regardless of `focus` (so leaving and re-entering the map does not
@@ -321,7 +323,7 @@ impl Driver {
             ctx,
             session,
             cached: String::new(),
-            focus: Focus::Cli,
+            focus: Focus::Walk,
             cursor: Cursor {
                 x: hornvale_game_core::spread::PLATE_WIDTH / 2,
                 y: FLOOR_PLATE_CONTENT_HEIGHT / 2,
@@ -373,13 +375,15 @@ impl Driver {
         self.focus
     }
 
-    /// Move focus to the other pane — entering the map (re)resolves the
-    /// strip at the cursor's current position; leaving it clears the strip,
-    /// matching the old `EnterLook`/`LeaveLook` transitions.
+    /// Move focus to the other pane — Walk→Cli, Cli→Walk, Map→Walk (Esc
+    /// always leaves the map for the walk view). Entering the map (re)resolves
+    /// the strip at the cursor's current position; leaving it clears the
+    /// strip, matching the old `EnterLook`/`LeaveLook` transitions.
     pub fn toggle_focus(&mut self) {
         self.focus = match self.focus {
-            Focus::Cli => Focus::Map,
-            Focus::Map => Focus::Cli,
+            Focus::Cli => Focus::Walk,
+            Focus::Map => Focus::Walk,
+            Focus::Walk => Focus::Cli,
         };
         if self.focus == Focus::Map {
             self.refresh_strip();
@@ -422,7 +426,12 @@ impl Driver {
     /// [`crate::history::History::next`]'s own contract); `Submit` sends
     /// the buffer — or, on an empty buffer, does nothing at all and returns
     /// `false` (spec §6: the buffer is the last reversible thing before an
-    /// irreversible act, so a stray `Enter` must not cost a turn).
+    /// irreversible act, so a stray `Enter` must not cost a turn). A
+    /// submitted line whose first token is exactly `map` additionally
+    /// enters the map focus (exact-after-trim, mirroring `Session::handle`'s
+    /// first-token convention).
+    /// `Move` executes a walk-mode direction exactly like a submitted line
+    /// (echo + history + `handle`), minus any buffer involvement.
     /// `CursorBy`/`ToggleFocus` are unchanged from part I. `Zoom` is
     /// accepted and ignored — zoom itself belongs to The Portolan part II,
     /// a paused follow-on campaign; this arm is where it will be
@@ -444,18 +453,22 @@ impl Driver {
                 false
             }
             Action::FocusAndType(c) => {
-                // Route through `toggle_focus()` rather than setting
-                // `self.focus` directly: `FocusAndType` is only ever
-                // produced while the map is focused (`input::action_for`),
-                // so this toggle always lands on `Focus::Cli` — and, as a
-                // side effect, clears `self.strip`, keeping the invariant
+                // Land on `Focus::Cli` EXPLICITLY rather than routing
+                // through `toggle_focus()`: `toggle_focus` now maps BOTH
+                // Map and Walk to Walk (Esc's contract), so a toggle from
+                // either producing focus would leave the player on the walk
+                // view instead of the command line — and never on Cli at
+                // all. `FocusAndType` is produced under both Map and Walk
+                // (`input::action_for`) and means "I want to type": one
+                // keypress lands on the CLI and types (spec §2). The strip
+                // is still cleared here by hand, keeping the invariant
                 // `toggle_focus`'s own doc states ("leaving it clears the
-                // strip"). A direct assignment here left that invariant
-                // with two owners and one violator; `strip_text()`
-                // happened to mask it by re-checking focus before
-                // returning, but a second reader of `self.strip` would not
-                // have been so lucky.
-                self.toggle_focus();
+                // strip") with this arm named as its second owner; an
+                // earlier revision left that invariant with two owners and
+                // one violator, masked only because `strip_text()`
+                // re-checks focus before returning.
+                self.focus = Focus::Cli;
+                self.strip = None;
                 self.line.insert(c);
                 false
             }
@@ -491,11 +504,40 @@ impl Driver {
                 let taken = self.line.take();
                 self.history.push(taken.clone());
                 self.echo = Some(taken.clone());
+                let released = self.handle(&taken);
+                // Mirror `Session::handle`'s first-token convention: a line
+                // whose first token is exactly `map` also enters the map
+                // focus. Exact-after-trim — `" map "` triggers; `"map x"`
+                // does not; `"examine map"` does not. Guarded on not already
+                // being focused so re-submitting `map` from the map does not
+                // pay a strip refresh for an identical answer.
+                if taken.trim().split_whitespace().next() == Some("map") && self.focus != Focus::Map
+                {
+                    self.enter_map();
+                }
+                released
+            }
+            Action::Move(word) => {
+                // A walk-mode arrow key acts like a submitted line — same
+                // echo, same history recall — but never touches the buffer:
+                // the keystroke never entered it, so nothing is left behind
+                // or cleared by moving.
+                let taken = word.to_string();
+                self.history.push(taken.clone());
+                self.echo = Some(taken.clone());
                 self.handle(&taken)
             }
             Action::Zoom(_) => false,
             Action::None => false,
         }
+    }
+
+    /// Enter the map focus and resolve its strip. Also called by `apply`'s
+    /// `Submit` arm when a submitted line's first token is exactly `map`
+    /// (see there).
+    fn enter_map(&mut self) {
+        self.focus = Focus::Map;
+        self.refresh_strip();
     }
 
     /// Move the cursor by `(dx, dy)` grid cells, clamped to the plate's
