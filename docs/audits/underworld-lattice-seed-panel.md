@@ -31,7 +31,7 @@ seed 42
   cave systems    874  (ocean-cell caves skipped: 0)
   floors drawn    113546
   chambers        14976
-  reachable       869 from 396 open entrances
+  reachable       1158 from 396 open entrances
   by band         undercroft:2017  shallows:4107  deeps:6682  underdeep:1655  nadir:515  
   by rock         regolith:936  cover:417  basement:13623  roots:0  underneath:0  off-ladder:0
   by origin       found:14976  made:0
@@ -113,7 +113,7 @@ seed 7
   cave systems    1681  (ocean-cell caves skipped: 0)
   floors drawn    218312
   chambers        29559
-  reachable       1996 from 829 open entrances
+  reachable       2462 from 829 open entrances
   by band         undercroft:4037  shallows:8307  deeps:10124  underdeep:5293  nadir:1798  
   by rock         regolith:2159  cover:1712  basement:25688  roots:0  underneath:0  off-ladder:0
   by origin       found:29559  made:0
@@ -195,7 +195,7 @@ seed 1234
   cave systems    1266  (ocean-cell caves skipped: 0)
   floors drawn    165367
   chambers        25165
-  reachable       1537 from 641 open entrances
+  reachable       1905 from 641 open entrances
   by band         undercroft:3066  shallows:6222  deeps:10609  underdeep:4039  nadir:1229  
   by rock         regolith:1487  cover:1418  basement:22260  roots:0  underneath:0  off-ladder:0
   by origin       found:25165  made:0

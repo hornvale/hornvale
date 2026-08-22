@@ -827,29 +827,18 @@ pub fn chamber_at(
 /// - same `band`, `branch` differing by 1, **or**
 /// - same `branch`, `band` differing by 1.
 ///
-/// **`floor` is NOT an adjacency axis here, and that is a deferral rather than
-/// a claim about the world** (The Stope, spec §7 task 6: "junctions: derived,
-/// never drawn"). Every neighbour this function offers carries the caller's
-/// own `addr.floor`, so the lattice currently has one disconnected copy of
-/// this graph per floor. That is the honest state of an address space whose
-/// vertical connections have not been designed yet, rather than a guess at
-/// them baked into the one function whose whole virtue is that it guesses
-/// nothing.
+/// **The vertical axis IS a sequence now (The Stope, amendment C.4).** The
+/// run's drawn length ([`floors_in_run`]) is its sojourn time: descending
+/// from floor `f` reaches floor `f + 1` of the SAME run while the run has
+/// floors left, else floor 0 of the next band down; ascending is the exact
+/// mirror (floor `f - 1`, or the previous band's last floor when `f = 0`).
+/// Sideways neighbours stay on the caller's own `addr.floor`, unchanged.
+/// This replaced the accidental same-floor rule that joined floor *N* of
+/// band *k* to floor *N* of band *k±1* — correct only while every band held
+/// one floor, and after Task 2's drawn counts an undesigned structural gate:
+/// Deeps floor >= 10 could never descend at all, and the Nadir was reachable
+/// only from Underdeep floors 0-4.
 ///
-/// **TASK 2'S FLOOR DRAW TURNED THAT DEFERRAL INTO A SECOND, UNDESIGNED
-/// STRUCTURAL GATE ON DEPTH, AND IT IS NOT A COSMETIC CONSEQUENCE.** The
-/// `band + 1` candidate carries the caller's own `floor`, and
-/// [`chamber_exists`] now requires `floor < floors_in_run` of THAT
-/// neighbour's run. The bands' frozen ranges are not nested, so a chamber can
-/// sit at a floor its own run has and the run below does not — and then it
-/// cannot descend at all:
-///
-/// ```text
-///   Deeps 5-20 sits over Underdeep 5-10
-///       a Deeps chamber at floor >= 10 can NEVER descend
-///   Underdeep 5-10 sits over Nadir 1-5
-///       an Underdeep chamber at floor >= 5 can NEVER reach the Nadir
-/// ```
 ///
 /// Amendment B.5 makes the Nadir the endgame and B.7 preregisters the gate on
 /// reaching it at **0-10%**, set by the barrier draw. After Task 2 the Nadir
@@ -858,20 +847,14 @@ pub fn chamber_at(
 /// into B.7's rate. Whichever way spec §7 task 6 resolves vertical
 /// connection, it should resolve this deliberately rather than inherit it.
 ///
-/// **Deliberately left unasserted.** A test pinning "a Deeps chamber above
-/// floor 10 has no descent" would freeze an accident as a contract, and the
-/// task that designs junctions is the one that should choose. Recorded here,
-/// and carried into that task's dispatch, rather than mechanised.
-///
 /// The candidate-generation rule below is unchanged from before `floor`
 /// existed — it varies `branch` and `band` and nothing else. **It does not
 /// follow that the floor-0 graph is unchanged**, and this doc said otherwise
 /// until review caught it: `chamber_exists` draws per address, `chamber_key`
 /// spells `floor`, and the `chamber/v3` epoch re-keyed every one of those
 /// draws, so which candidates survive `retain` moved at every floor including
-/// zero. `every_neighbour_stays_on_the_callers_floor` in
-/// `deep_realm_chamber.rs` asserts the half that IS a property of this
-/// function.
+/// zero. `every_passage_is_sideways_or_one_step_of_the_descent_sequence` in
+/// `deep_realm_chamber.rs` asserts the shape C.4 gives it.
 ///
 /// "Differs by 1" is symmetric in its two arguments by inspection — it is
 /// not computed relative to a starting address, so there is nothing that
@@ -931,19 +914,44 @@ pub fn passages_from(
         });
     }
 
-    // Same branch, adjacent band. Guaranteed not to underflow/overflow: addr
-    // passed the chamber_exists check above, so addr.band <= the cave's own
-    // rung rank <= 4 (rung_rank's maximum return value).
-    if addr.band > 0 {
+    // Same branch, one step of the descent sequence (C.4): down to the next
+    // floor of this run, or — past the run's drawn length — floor 0 of the
+    // band below; up to the previous floor, or — from floor 0 — the band
+    // above's last floor. The two directions are exact mirrors, so symmetry
+    // holds by construction. Off-the-ladder candidates are filtered by the
+    // retain below through `chamber_exists`'s own gate (`band` past the rung
+    // rank, `floor >= floors_in_run`), so end-of-space needs no special case.
+    let floors = floors_in_run(seed, addr.run());
+    if addr.floor + 1 < floors {
         candidates.push(ChamberAddr {
-            band: addr.band - 1,
+            floor: addr.floor + 1,
+            ..addr
+        });
+    } else {
+        candidates.push(ChamberAddr {
+            band: addr.band + 1,
+            floor: 0,
             ..addr
         });
     }
-    candidates.push(ChamberAddr {
-        band: addr.band + 1,
-        ..addr
-    });
+    if addr.floor > 0 {
+        candidates.push(ChamberAddr {
+            floor: addr.floor - 1,
+            ..addr
+        });
+    } else if addr.band > 0 {
+        candidates.push(ChamberAddr {
+            band: addr.band - 1,
+            floor: floors_in_run(
+                seed,
+                RunAddr {
+                    band: addr.band - 1,
+                    ..addr.run()
+                },
+            ) - 1,
+            ..addr
+        });
+    }
 
     candidates.retain(|&candidate| chamber_exists(seed, cave, gradient, candidate));
     candidates

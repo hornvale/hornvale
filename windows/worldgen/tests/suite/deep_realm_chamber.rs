@@ -22,9 +22,37 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_kernel::{CellId, Seed};
 use hornvale_terrain::{BandKind, Cave, CaveKind, DelveRung, GeothermalGradient, rung_at_depth};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, chamber_at,
-    chamber_exists, passages_from,
+    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, RunAddr, chamber_at,
+    chamber_exists, floors_in_run, passages_from,
 };
+
+/// The descent rule under test (The Stope, amendment C.4): floor `f`'s
+/// downward neighbour is floor `f + 1` of the SAME run while the run has
+/// floors left, else floor 0 of the next band down. Spelled once here so the
+/// rule-pin tests state the rule rather than restating the implementation's
+/// control flow; every assertion below still travels through the shipped
+/// entry points (`passages_from`, `chamber_exists`, `floors_in_run`).
+fn descent_target(seed: Seed, addr: ChamberAddr) -> ChamberAddr {
+    if addr.floor + 1 < floors_in_run(seed, addr.run()) {
+        ChamberAddr {
+            floor: addr.floor + 1,
+            ..addr
+        }
+    } else {
+        ChamberAddr {
+            band: addr.band + 1,
+            floor: 0,
+            ..addr
+        }
+    }
+}
+
+/// A neighbour of `addr` is **sideways** when it stays on the caller's band
+/// and floor (the branch axis). Everything else is part of the vertical
+/// descent sequence.
+fn is_sideways(addr: ChamberAddr, neighbour: &ChamberAddr) -> bool {
+    neighbour.band == addr.band && neighbour.floor == addr.floor
+}
 
 /// The column every fixture below is built against: 401 m of cover on 35 km
 /// of continental crust, which is an ordinary land column the generator
@@ -276,24 +304,21 @@ fn every_passage_is_traversable_in_both_directions() {
     }
 }
 
-/// **Every passage stays on the caller's floor.** `passages_from` varies
-/// `branch` and `band` and nothing else, so `floor` is not an adjacency axis:
-/// vertical connection between floors is spec §7 task 6's (junctions, derived,
-/// never drawn), and until it lands the lattice has one disconnected copy of
-/// the passage graph per floor.
+/// **Every passage is either sideways or one step of the descent sequence.**
+/// Before amendment C.4 this test pinned the opposite — `floor` was not an
+/// adjacency axis at all, and the lattice was one disconnected copy of the
+/// graph per floor. C.4 makes the vertical axis a SEQUENCE (a run's drawn
+/// length is the sojourn; past it, the next band's floor 0), so the pin is
+/// rewritten: sideways neighbours stay on the caller's band and floor, and
+/// any non-sideways neighbour is exactly one step up or down that sequence.
 ///
-/// That was stated in `passages_from`'s doc and asserted nowhere. Before this
-/// test, no test in the workspace constructed a `ChamberAddr` with `floor > 0`
-/// and asked for its passages at all — prose a reviewer has to check by
-/// inspection is a missing assertion.
-///
-/// The `saw_a_passage` control is not decoration: "no neighbour changed floor"
-/// is satisfied vacuously by a function that returns nothing, and existence
-/// here is a coin-flip draw per address.
-/// claim: invariant(forall-seed) — passages preserve `floor` over a
-/// hand-built lattice (seedless sweep, audit §5: builds no world)
+/// The `saw_a_passage` control is not decoration: "every neighbour is one
+/// sequence step" is satisfied vacuously by a function that returns nothing,
+/// and existence here is a coin-flip draw per address.
+/// claim: invariant(forall-seed) — every passage is sideways or one descent
+/// step over a hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
-fn every_neighbour_stays_on_the_callers_floor() {
+fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
     let mut saw_a_passage = false;
 
@@ -313,12 +338,45 @@ fn every_neighbour_stays_on_the_callers_floor() {
                         };
                         for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
                             saw_a_passage = true;
-                            assert_eq!(
-                                neighbour.floor, addr.floor,
+                            if is_sideways(addr, &neighbour) {
+                                continue;
+                            }
+                            // One step of the sequence, in either direction:
+                            // within a band, adjacent floors; across the seam,
+                            // floor 0 below or the run above's last floor.
+                            let expected_down = descent_target(seed, addr);
+                            let expected_up = if addr.floor > 0 {
+                                Some(ChamberAddr {
+                                    floor: addr.floor - 1,
+                                    ..addr
+                                })
+                            } else if addr.band > 0 {
+                                Some(ChamberAddr {
+                                    band: addr.band - 1,
+                                    floor: floors_in_run(
+                                        seed,
+                                        RunAddr {
+                                            band: addr.band - 1,
+                                            ..addr.run()
+                                        },
+                                    ) - 1,
+                                    ..addr
+                                })
+                            } else {
+                                None
+                            };
+                            let is_sequence_step = neighbour == expected_down
+                                || expected_up.is_some_and(|up| neighbour == up);
+                            // Sideways-in-band steps share the band; seam steps
+                            // differ by exactly one rung of the ladder.
+                            assert!(
+                                is_sequence_step
+                                    && neighbour.band.abs_diff(addr.band) <= 1
+                                    && neighbour.branch == addr.branch,
                                 "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
-                                 {neighbour:?} as a passage, but they are on \
-                                 different floors — `floor` is not an adjacency \
-                                 axis until junctions land"
+                                 {neighbour:?} as a passage, which is neither \
+                                 sideways nor one step of the descent sequence \
+                                 (C.4)"
                             );
                         }
                     }
@@ -332,6 +390,345 @@ fn every_neighbour_stays_on_the_callers_floor() {
         "no address in the probed lattice had any passage at all, so the \
          floor-preservation assertion above never ran"
     );
+}
+
+/// The delve ladder's rank of the fixture's deepest rung, spelled here because
+/// `hornvale_terrain` does not export one (`Surface` maps to `None`, matching
+/// `chamber::rung_rank`).
+fn rung_rank(rung: DelveRung) -> Option<u8> {
+    match rung {
+        DelveRung::Surface => None,
+        DelveRung::Undercroft => Some(0),
+        DelveRung::Shallows => Some(1),
+        DelveRung::Deeps => Some(2),
+        DelveRung::Underdeep => Some(3),
+        DelveRung::Nadir => Some(4),
+    }
+}
+
+/// **Amendment C.4: descending from a run's LAST realized floor lands on
+/// floor 0 of the next band down.** The old rule joined floor *N* of band
+/// *k* to floor *N* of band *k±1* — correct only by vacuity when every band
+/// held one floor, and actively wrong after Task 2's drawn counts (a Deeps
+/// chamber at floor >= 10 could never descend at all).
+///
+/// This test walks the lattice until it finds a chamber sitting on its own
+/// run's last realized floor with a deeper neighbour, then pins that the
+/// deeper neighbour is floor 0 of the next band — and ONLY that shape. Under
+/// the old same-floor rule the deeper candidate carries the caller's own
+/// floor, which is nonzero here by the `floors > 1` control, so this went red
+/// behaviourally before the fix.
+/// claim: invariant(forall-seed) — last-floor descent lands on floor 0 of
+/// the next band, over a hand-built lattice (audit §5: builds no world)
+#[test]
+fn descending_from_a_runs_last_floor_lands_on_floor_zero_of_the_next_band() {
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
+    let mut cases = 0u32;
+
+    for raw_seed in 1u64..=20 {
+        let seed = Seed(raw_seed);
+        for raw_cell in 0u32..10 {
+            let cell = CellId(raw_cell);
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for band in 0..=2u8 {
+                    let run = RunAddr {
+                        cell,
+                        entrance: 0,
+                        branch,
+                        band,
+                    };
+                    let floors = floors_in_run(seed, run);
+                    // Control: a last floor that is also floor 0 cannot
+                    // distinguish the rules — demand a run with somewhere to
+                    // have come from.
+                    if floors < 2 {
+                        continue;
+                    }
+                    let addr = ChamberAddr {
+                        cell,
+                        entrance: 0,
+                        branch,
+                        band,
+                        floor: floors - 1,
+                    };
+                    if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
+                        continue;
+                    }
+                    let deeper: Vec<ChamberAddr> =
+                        passages_from(seed, &cave, fixture_gradient(), addr)
+                            .into_iter()
+                            .filter(|n| !is_sideways(addr, n))
+                            .collect();
+                    // The upward half of the sequence always exists for a
+                    // non-root floor; the downward half may be thinned by the
+                    // existence draw, so only assert when it spoke at all.
+                    if let Some(down) = deeper
+                        .iter()
+                        .copied()
+                        .find(|n| n.band > addr.band || n.floor > addr.floor)
+                    {
+                        cases += 1;
+                        assert_eq!(
+                            down.floor, 0,
+                            "seed {raw_seed} cell {raw_cell}: descending from \
+                             {addr:?} (its run's last floor) landed on floor {} \
+                             of band {} — the descent did not restart at floor 0 \
+                             of the next band (C.4)",
+                            down.floor, down.band
+                        );
+                        assert_eq!(
+                            down.band,
+                            addr.band + 1,
+                            "seed {raw_seed} cell {raw_cell}: descending from \
+                             {addr:?} (its run's last floor) stayed in band {}",
+                            down.band
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        cases > 0,
+        "no last-floor descent was ever observed, so the assertion above \
+         never ran"
+    );
+    println!("last-floor descent cases observed: {cases}");
+}
+
+/// **Amendment C.4: descending from any EARLIER floor stays in the band** —
+/// the run's drawn length IS the sojourn time; the chance lives in the count
+/// draw, one level up, not in a per-step roll. `floors_in_run` is asserted
+/// directly so the pin is against the drawn quantity, not a copy of it.
+/// Under the old same-floor rule the only downward candidate sat in the NEXT
+/// band, so this went red behaviourally before the fix.
+/// claim: invariant(forall-seed) — within-band descent short of the run's
+/// drawn length, over a hand-built lattice (audit §5: builds no world)
+#[test]
+fn descending_from_an_earlier_floor_stays_in_the_band() {
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
+    let mut cases = 0u32;
+
+    for raw_seed in 1u64..=20 {
+        let seed = Seed(raw_seed);
+        for raw_cell in 0u32..10 {
+            let cell = CellId(raw_cell);
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for band in 0..=2u8 {
+                    let run = RunAddr {
+                        cell,
+                        entrance: 0,
+                        branch,
+                        band,
+                    };
+                    let floors = floors_in_run(seed, run);
+                    for floor in 0..floors.saturating_sub(1) {
+                        let addr = ChamberAddr {
+                            cell,
+                            entrance: 0,
+                            branch,
+                            band,
+                            floor,
+                        };
+                        if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
+                            continue;
+                        }
+                        let down = descent_target(seed, addr);
+                        // Only assert when the forced target cleared the same
+                        // existence coin every chamber faces.
+                        if !chamber_exists(seed, &cave, fixture_gradient(), down) {
+                            continue;
+                        }
+                        cases += 1;
+                        let deeper: Vec<ChamberAddr> =
+                            passages_from(seed, &cave, fixture_gradient(), addr)
+                                .into_iter()
+                                // A descent is exactly one step DOWN the
+                                // sequence: the next floor in-band, or the
+                                // next band's floor 0. (Filtering by
+                                // `floor > addr.floor` alone would catch the
+                                // upward seam neighbour — band-1's last
+                                // floor — which sits ABOVE this address.)
+                                .filter(|n| {
+                                    (n.band == addr.band && n.floor == addr.floor + 1)
+                                        || (n.band == addr.band + 1 && n.floor == 0)
+                                })
+                                .collect();
+                        assert!(
+                            deeper.contains(&down),
+                            "seed {raw_seed} cell {raw_cell}: {addr:?} does not list \
+                             its own run's next floor {down:?} as a passage; got \
+                             {deeper:?} — a floor short of its run's drawn length \
+                             must descend WITHIN the band (C.4)"
+                        );
+                        assert!(
+                            deeper.iter().all(|n| n.band == addr.band),
+                            "seed {raw_seed} cell {raw_cell}: {addr:?} is short of \
+                             its run's drawn length ({floors}) yet lists a \
+                             cross-band descent {deeper:?} — the sojourn is the \
+                             COUNT DRAW, not a per-step roll (C.4)"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        cases > 0,
+        "no within-band descent was ever observed, so the assertions above \
+         never ran"
+    );
+    println!("within-band descent cases observed: {cases}");
+}
+
+/// **The deepest band's last floor has no downward neighbour** — the ladder
+/// ends, and end-of-space is ordinary bounded-lattice behaviour, not a gate.
+/// With [`DEEP_REACH_M`] the cave's deepest realized rank is 3 (`Underdeep`),
+/// pinned below rather than assumed.
+/// claim: invariant(forall-seed) — the ladder's end has no descent, over a
+/// hand-built lattice (audit §5: builds no world)
+#[test]
+fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
+    let deepest = rung_rank(rung_at_depth(DEEP_REACH_M, fixture_gradient()))
+        .expect("fixture reach is underground");
+    assert_eq!(
+        deepest, 3,
+        "fixture premise: DEEP_REACH_M reaches Underdeep"
+    );
+
+    let mut cases = 0u32;
+    for raw_seed in 1u64..=20 {
+        let seed = Seed(raw_seed);
+        for raw_cell in 0u32..10 {
+            let cell = CellId(raw_cell);
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                let run = RunAddr {
+                    cell,
+                    entrance: 0,
+                    branch,
+                    band: deepest,
+                };
+                let floors = floors_in_run(seed, run);
+                let addr = ChamberAddr {
+                    cell,
+                    entrance: 0,
+                    branch,
+                    band: deepest,
+                    floor: floors - 1,
+                };
+                if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
+                    continue;
+                }
+                cases += 1;
+                for neighbour in passages_from(seed, &cave, fixture_gradient(), addr) {
+                    // A descent is exactly one step DOWN the sequence (C.4):
+                    // next band, or next floor in-band. The upward neighbour
+                    // (this band's previous floor) is not a descent.
+                    let descends = neighbour.band == addr.band + 1
+                        || (neighbour.band == addr.band && neighbour.floor == addr.floor + 1);
+                    assert!(
+                        is_sideways(addr, &neighbour) || !descends,
+                        "seed {raw_seed} cell {raw_cell}: {addr:?} is the last floor \
+                         of the deepest band yet lists a DOWNWARD neighbour \
+                         {neighbour:?} — there is nowhere below the ladder's end"
+                    );
+                }
+            }
+        }
+    }
+    assert!(cases > 0, "no deepest-band last floor was ever probed");
+}
+
+/// **THE BROKEN PROPERTY (C.4): every realized floor of every band has a
+/// downward neighbour, unless it is the last floor of the deepest band** —
+/// asserted over the whole lattice, not just floor 0. This is the assertion
+/// the old same-floor rule failed outright: with `Deeps` 5-20 over
+/// `Underdeep` 5-10, a Deeps chamber at floor >= 10 had NO descent at all,
+/// an undesigned structural gate stacked on the barrier gate B.5 specifies.
+///
+/// "Has a downward neighbour" is two halves, and both are asserted:
+///
+/// 1. **Structural**: the rule's forced target sits inside the lattice AND
+///    inside its own run's drawn length — checked through `floors_in_run`,
+///    never through a copied constant. The old rule failed THIS half: from
+///    Deeps floor 15 it offered Underdeep floor 15, past that run's drawn 10.
+/// 2. **Graph**: when the target clears the same existence coin every
+///    chamber faces, `passages_from` offers it. The density draw may refuse
+///    the target — that is the ordinary per-address coin, not a structural
+///    gate — but a refused-by-the-draw target must never be the ONLY reason
+///    a descent is missing.
+///
+/// claim: invariant(forall-seed) — every realized floor descends unless it
+/// ends the deepest band, over a hand-built lattice (audit §5: builds no world)
+#[test]
+fn every_realized_floor_descends_unless_it_ends_the_deepest_band() {
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
+    let gradient = fixture_gradient();
+    let deepest =
+        rung_rank(rung_at_depth(DEEP_REACH_M, gradient)).expect("fixture reach is underground");
+
+    let mut probed = 0u32;
+    for raw_seed in [1u64, 2, 3, 4, 5] {
+        let seed = Seed(raw_seed);
+        for raw_cell in [0u32, 9, 42] {
+            let cell = CellId(raw_cell);
+            for band in 0..=deepest {
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                        let addr = ChamberAddr {
+                            cell,
+                            entrance: 0,
+                            band,
+                            branch,
+                            floor,
+                        };
+                        if !chamber_exists(seed, &cave, gradient, addr) {
+                            continue;
+                        }
+                        probed += 1;
+                        let ends_the_ladder =
+                            band == deepest && floor + 1 >= floors_in_run(seed, addr.run());
+                        if ends_the_ladder {
+                            continue;
+                        }
+                        let target = descent_target(seed, addr);
+                        let target_floors = floors_in_run(seed, target.run());
+                        assert!(
+                            target_floors > 0,
+                            "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
+                             target {target:?} is off the habitation ladder — a \
+                             structural gate C.4 removed"
+                        );
+                        assert!(
+                            target.floor < target_floors,
+                            "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
+                             target {target:?} sits past its run's drawn length \
+                             ({target_floors}) — the old same-floor gate, still live"
+                        );
+                        if chamber_exists(seed, &cave, gradient, target) {
+                            let passages = passages_from(seed, &cave, gradient, addr);
+                            assert!(
+                                passages.contains(&target),
+                                "seed {raw_seed} cell {raw_cell}: {addr:?} exists, its \
+                                 descent target {target:?} exists, yet passages are \
+                                 {passages:?} — the sequence is broken mid-band or \
+                                 at the band seam (C.4)"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        probed > 100,
+        "only {probed} existing chambers were probed — the sweep is not \
+         covering the lattice"
+    );
+    println!("realized floors probed for the descent property: {probed}");
 }
 
 /// Step 4's connectivity guard (plan Task 3). An entrance you cannot get
