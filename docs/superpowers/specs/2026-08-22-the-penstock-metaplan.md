@@ -219,7 +219,25 @@ one before it.
 | 4 | The lifecycle | count budget, two-tier eviction, hysteresis | stage 3 shows the rebuild pass actually dominates |
 | 5 | The condensation boundary | the observable half: condense/dissolve as a pure function; the field/entity fidelity study | stages 2–4, plus a Lab study design |
 | 6 | Row width | predicate interning, provenance interning-or-drop | measured — plausibly a larger memory win than all of 2–4 |
-| 7 | Storage tier (deferred) | decision 0037's address-prefix partition | 0037's own condition: a long-running deployment measures a ledger that will not fit |
+| 7 | **Log bounding** | a fact-lifetime mechanism: what may leave the log, and how the seed plus the surviving prefix still re-derives the world | stage 1's facts-per-agent-per-tick counter shows a long session accumulates without bound |
+| 8 | Storage tier (deferred) | decision 0037's address-prefix partition, disk paging, segment merging | 0037's own condition: a long-running deployment measures a ledger that will not fit |
+
+**Stage 7 is not part of stage 8, and separating them is a correction this
+plan needed.** "LSM machinery" reads as one deferred bundle, but decomposing
+it gives eight parts — append-only log, sorted derived indexes, persistence,
+segmentation, compaction, tombstones and GC, read-path skipping, leveling —
+of which Hornvale already has the first three. Of the rest, **compaction's
+semantic half is independently motivated by the in-memory case and cannot
+wait for disk.** The ledger is append-only and never removes facts, so a
+session running for hours with many agents grows without bound *in RAM*; the
+working set does not help, because the thing growing is the log itself. Every
+sibling architecture (event sourcing, Datomic, WALs, git's packfiles) answers
+this with a snapshot or checkpoint so readers need not replay from zero.
+Hornvale has the strongest possible checkpoint for build-state — the seed
+re-derives everything — and **none at all for a long session's accumulated
+sim history.** `MEM-1`'s melt (fact → phenomenon → myth) is already the
+diegetic form of exactly this mechanism, which is a strong hint that the
+non-diegetic form should be designed alongside it rather than invented twice.
 
 Stage 1 is deliberately not a cache. It is a bug fix and a set of
 instruments, and it exists to tell us whether stages 2–4 are worth anything.
@@ -271,7 +289,7 @@ seeded from wall-clock").
 
 **In:** the derived working set — views, derived components, their lifetime,
 the condensation boundary, and the instruments that gate all of it.
-**Out:** the fact ledger's storage representation (stage 7, and 0037's gate);
+**Out:** the fact ledger's on-disk representation (stage 8, and 0037's gate);
 the field/entity fidelity question (a Lab study); anything client-side
 (0022/0023).
 
@@ -300,3 +318,6 @@ is not a plan:
   twice before dissolving is strictly worse than recomputing.
 - **The row-width win (stage 6) exceeds everything stages 2–4 buy.** Entirely
   possible, and it would re-order the program.
+- **The unbounded log turns out to bind first.** If stage 1's counter shows a
+  realistic session outgrows RAM before query cost ever matters, stage 7
+  becomes the program and everything above it is premature.
