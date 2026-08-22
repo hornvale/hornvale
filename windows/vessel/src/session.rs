@@ -2313,7 +2313,14 @@ impl<'w> Session<'w> {
     fn chamber_sources(&self, inside: &Inside) -> Vec<crate::light::Source> {
         let mut sources = vec![crate::light::Source {
             at: inside.cell,
-            illuminant: hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+            // The Wick (spec §2.1): the implicit torch burns four times
+            // brighter — "carry more candles". The falloff shape is
+            // untouched and pinned by the fence test; hearth and doorway
+            // sources keep their own levels.
+            illuminant: crate::light::scaled(
+                &hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+                4.0, // The Wick, spec §2.1
+            ),
             radius: SIGHT_RADIUS,
         }];
 
@@ -2338,20 +2345,27 @@ impl<'w> Session<'w> {
             });
         }
 
+        for &(_, _, at) in &inside.lattice.doorways {
+            sources.push(crate::light::Source {
+                at,
+                illuminant: self.daylight(),
+                radius: SIGHT_RADIUS,
+            });
+        }
+        sources
+    }
+
+    /// The world's daylight at the possession's position and day — one call,
+    /// shared by the doorway sources and the skyglow ambient so the two can
+    /// never disagree about which sky they are under.
+    fn daylight(&self) -> hornvale_kernel::color::Illuminant {
         let (day, _altitude) = crate::eyes::daylight_at(
             self.world,
             self.calendar.as_ref(),
             self.day,
             self.agent.position.coord().latitude,
         );
-        for &(_, _, at) in &inside.lattice.doorways {
-            sources.push(crate::light::Source {
-                at,
-                illuminant: day,
-                radius: SIGHT_RADIUS,
-            });
-        }
-        sources
+        day
     }
 
     /// The chamber plan for the room stood in — **the one derivation of the
@@ -2384,6 +2398,7 @@ impl<'w> Session<'w> {
                 observer,
                 fabric,
                 light: &light,
+                ambient: crate::light::scaled(&self.daylight(), crate::light::SKYGLOW_SCALE),
             }),
             _ => None,
         };
