@@ -2049,3 +2049,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-22T21:31:24Z | gate-commit | 27.833 | 52.330 | 12.775 | 2.34 | 0 | 7f4aca161 | campaign/the-stride | MacBookPro | 10 |
 | 2026-08-22T21:41:53Z | game-check | 202.638 | 730.876 | 8.353 | 3.65 | 0 | 7c52b214d | campaign/the-stride | MacBookPro | 10 |
 | 2026-08-22T22:19:48Z | gate-commit | 27.393 | 52.585 | 12.163 | 2.36 | 0 | 2bc94dfe8 | campaign/the-stride | MacBookPro | 10 |
+| 2026-08-22T23:28:55Z | sluice:artifacts | 117.275 | 1033.582 | 46.558 | 9.21 | 0 | 0b71d4808 |  | lefford | 40 |
