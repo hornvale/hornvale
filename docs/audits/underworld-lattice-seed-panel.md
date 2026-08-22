@@ -26,7 +26,16 @@ an earlier version of this page unable to see either floor gate at all.
 
 The `junctions` line counts the links between DIFFERENT cave systems that
 `junctions_at` derives at each shared delve band -- derived, not drawn: it
-consumes no stream, so a shortcut is a fact about the geology, not a die roll.
+consumes no stream leg OF ITS OWN, so a shortcut is a fact about the geology
+rather than a die roll on top of an epoch. (It does travel the legs the facts
+it reads already have -- an existence draw here, a branch character there --
+and an earlier version of this page dropped that qualifier and asserted the
+falsehood that it consumes no stream at all.) A link is an EDGE, counted once
+rather than once per endpoint; `largest network` is the largest component
+within a SINGLE band, because a junction never crosses one -- so systems
+joined only at the Undercroft and systems joined only at the Nadir are two
+networks, not one, and unioning them would name a component nothing can
+walk.
 
 ```text
 seed 42
@@ -37,7 +46,7 @@ seed 42
   floors drawn    159432
   chambers        21328
   reachable       1496 from 511 open entrances
-  junctions       1844 links across 735 system pairs; largest network 57 systems (MAP-underworld-shortcut)
+  junctions       922 links across 735 system pairs; largest network 27 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:2871  shallows:5894  deeps:9442  underdeep:2387  nadir:734  
   by rock         regolith:1402  cover:650  basement:19276  roots:0  underneath:0  off-ladder:0
   by origin       found:21328  made:0
@@ -121,7 +130,7 @@ seed 7
   floors drawn    309377
   chambers        42131
   reachable       3277 from 1070 open entrances
-  junctions       4088 links across 1493 system pairs; largest network 75 systems (MAP-underworld-shortcut)
+  junctions       2044 links across 1493 system pairs; largest network 23 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:5666  shallows:11717  deeps:14428  underdeep:7761  nadir:2559  
   by rock         regolith:3106  cover:2459  basement:36566  roots:0  underneath:0  off-ladder:0
   by origin       found:42131  made:0
@@ -245,7 +254,7 @@ seed 1234
   floors drawn    236721
   chambers        36393
   reachable       2493 from 831 open entrances
-  junctions       3368 links across 1258 system pairs; largest network 118 systems (MAP-underworld-shortcut)
+  junctions       1684 links across 1258 system pairs; largest network 65 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:4446  shallows:8884  deeps:15249  underdeep:6006  nadir:1808  
   by rock         regolith:2217  cover:2121  basement:32055  roots:0  underneath:0  off-ladder:0
   by origin       found:36393  made:0
@@ -360,5 +369,4 @@ seed 1234
     49/1/3/deeps/0               -           16 floors  ~~~~~~~~~~~~~~~~____
     49/1/3/underdeep/0           -            6 floors  ~~~~~~______________
     49/1/3/nadir/0               -            5 floors  ~~~~~_______________
-
 ```

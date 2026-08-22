@@ -1115,9 +1115,13 @@ pub fn passages_from(
 /// **The derivation rule**, stated once so it cannot drift into a second
 /// copy: two systems are joined at a shared delve band exactly when
 ///
-/// 1. both cells are cave-bearing LAND cells (an ocean system has no
-///    surface one can walk in from — same reading [`crate::underworld_readout`]
-///    applies),
+/// 1. both cells are cave-bearing — and being LAND cells is *entailed by*
+///    that, not gated beside it:
+///    [`hornvale_terrain::GeneratedTerrain::cave_at`] answers `None` for an
+///    ocean cell as its first act, so an ocean system has no cave to join
+///    with, let alone a surface one can walk in from. This clause read as
+///    two independent gates for one review round, and the second one was
+///    dead code the whole time (Task 6, review round 1),
 /// 2. the two cells are adjacent on the geosphere,
 /// 3. both MAIN LINES realize an existing chamber at the shared band —
 ///    canonical endpoints `(entrance 0, branch 0, floor 0)`, gated by
@@ -1144,20 +1148,37 @@ pub fn passages_from(
 /// anything else would be a vertical teleport, and the depth ladder would
 /// mean nothing.
 ///
-/// `addr`'s `entrance`, `branch` and `floor` are deliberately ignored:
-/// junctions join SYSTEMS at a shared BAND, so the answer depends only on
-/// `(addr.cell, addr.band)` — every chamber of one system at one band stands
-/// on the same far side of the same doors.
+/// **`addr`'s `entrance`, `branch` and `floor` are ignored by the
+/// PROJECTION, and not by the question of EXISTENCE** (Task 6, review round
+/// 1). Which junctions this system has depends only on `(addr.cell,
+/// addr.band)` — every chamber of one system at one band stands on the same
+/// far side of the same doors, so the answer is projected onto the canonical
+/// main line and the other three fields never reach it. But *whether* there
+/// is anyone standing there to ask is a question about `addr` itself, and
+/// this function gates on it exactly as [`passages_from`] does: **a
+/// non-existent `addr` has no junctions**, because there is nothing to
+/// traverse from nowhere. The first version answered a `branch: 99` address
+/// with three junctions while `passages_from` answered it with no passages,
+/// and a consumer composing the two into one traversal graph would have
+/// inherited that disagreement.
 pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -> Vec<ChamberAddr> {
     // Past the habitation ladder there is no shared rung to stand on and no
     // character can be eligible for it.
     let Some(rung) = crate::chamber::rung_of_rank(addr.band) else {
         return Vec::new();
     };
+    // `cave_at` refuses an ocean cell before anything else it does, so this
+    // is the land gate as well as the cave gate — a second `is_ocean` test
+    // beside it could never fire.
     let Some(here_cave) = terrain.cave_at(addr.cell) else {
         return Vec::new();
     };
-    if terrain.is_ocean(addr.cell) {
+    let here_gradient = terrain.geothermal_gradient_at(addr.cell);
+    // Nowhere has no junctions, matching `passages_from`'s convention for
+    // the intra-system graph. This gate is about the ASKING address — its
+    // entrance, branch and floor included — and is why a `branch: 99`
+    // address answers with nothing.
+    if !chamber_exists(seed, &here_cave, here_gradient, addr) {
         return Vec::new();
     }
     let here = ChamberAddr {
@@ -1166,12 +1187,10 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
         floor: 0,
         ..addr
     };
-    if !chamber_exists(
-        seed,
-        &here_cave,
-        terrain.geothermal_gradient_at(addr.cell),
-        here,
-    ) {
+    // ...and this one is about the MAIN LINE the answer is projected onto,
+    // which is what makes symmetry hold by construction. Both are required:
+    // neither implies the other away from the canonical address.
+    if !chamber_exists(seed, &here_cave, here_gradient, here) {
         return Vec::new();
     }
     if !crate::character::bands_of(crate::character::character_at(seed, here)).contains(&rung) {
@@ -1180,9 +1199,8 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
 
     let mut joined = Vec::new();
     for &neighbour in terrain.geosphere().neighbors(addr.cell) {
-        if terrain.is_ocean(neighbour) {
-            continue;
-        }
+        // No `is_ocean` test here either, for the same reason as above: it
+        // was strictly redundant with `cave_at`'s own first gate.
         let Some(cave) = terrain.cave_at(neighbour) else {
             continue;
         };

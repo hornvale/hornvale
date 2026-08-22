@@ -71,6 +71,30 @@
 //! Reachability follows C.3's union rule: the mouths of ONE system are seeds
 //! into ONE shared seen set, so overlapping per-entrance components cannot
 //! double-count ([`reachable_union`]).
+//!
+//! # What this witness does NOT see today, stated rather than discovered
+//!
+//! This header was *replaced* by Task 5's `entrance` section rather than kept
+//! beside it, which left the last two bullets below sitting under a heading
+//! about something else for two tasks. Restored here, because an unwitnessed
+//! axis nobody wrote down is how a hole survives — that is the standing rule
+//! this list exists to serve.
+//!
+//! - **A junction sees ENTRANCE 0, BRANCH 0 and nothing else.**
+//!   [`crate::chamber::junctions_at`] projects onto the canonical main line,
+//!   so whether another entrance's branches realize a chamber at that band is
+//!   invisible to the network. On seed 42 that is **252 of 874 systems**
+//!   (29%) with more than one entrance, every one of them judged by its
+//!   first. Widening the projection is a design change, not a bug fix: it is
+//!   what makes symmetry hold by construction (see that function's doc), so
+//!   any widening owes a new symmetry argument.
+//! - **Past-the-ladder junction behaviour is never exercised.** A band past
+//!   the last habitation rung answers empty, and every loop that asks — this
+//!   one and the tests' — derives its bound from the delve ladder, so no
+//!   caller in the tree ever hands it an off-ladder band.
+//!   `a_junction_past_the_ladder_is_empty` in
+//!   `windows/worldgen/tests/suite/junctions.rs` asks it deliberately;
+//!   nothing else does.
 //! - **`ChamberOrigin::Made`.** The `origin` field *is* read and tallied
 //!   ([`Tallies::by_origin`]), so [`crate::chamber::resolve_origin`] is wired
 //!   end to end — but the override source this hands `chamber_at` is
@@ -380,25 +404,44 @@ fn reachable_union(
     seen.len()
 }
 
-/// Render one world's chamber lattice as the committed underworld witness.
-///
-/// The world must be built to at least `BuildDepth::Terrain`; a chamber needs
-/// a cave's depth budget, its cell's geothermal gradient and its cell's
-/// stratigraphic column, and nothing above terrain.
-///
-/// **Byte-identical for a given `(seed, terrain)`**, and asserted as such
 /// The junction network between cave systems (The Stope, Task 6), read
 /// through [`crate::chamber::junctions_at`] — the shipped derivation, never a
-/// re-implementation. Returns `(links, system pairs, largest component)`:
-/// every band-level link is counted, pairs are deduplicated across bands, and
-/// the largest component joins systems into one walkable underworld. All
-/// derived facts; nothing here consumes a stream.
+/// re-implementation. Every fact here is derived; nothing consumes a stream
+/// leg of its own.
+///
+/// Returns `(links, system pairs, largest single-band component)`.
+///
+/// **`links` counts EDGES, not answers** (review round 1). It was the ordered
+/// count for one commit: `junctions_at` answers from both endpoints, so every
+/// edge was tallied twice while `pairs` divided by two, and the artifact read
+/// "1844 links across 735 system pairs" — inviting 2.5 links per pair when
+/// the truth was 1.25. The fix is a set of unordered `(band, lo, hi)` keys
+/// rather than a division, because a set is right by construction even if
+/// symmetry ever broke; halving an ordered count is correct only under an
+/// invariant this function does not itself check, and this campaign has been
+/// bitten twice by numbers that were only right under an unstated one.
+///
+/// **`largest` is the largest component WITHIN a single band, and that is the
+/// only such figure a delve could spend.** A junction never crosses a band
+/// (Task 6's third constraint), so collapsing all five bands into one
+/// adjacency map before the sweep — which the first version did — puts
+/// systems joined only at the Undercroft in the same "network" as systems
+/// joined only at the Nadir, with no route between them. Measured on seed 42:
+/// the union reported **57**, no single band exceeded **27**, and **not one**
+/// of the 735 pairs joined at every band. The word *walkable* is deliberately
+/// gone from this doc — it was what made a union across band-layers read as a
+/// traversable component, and a number in the costume of a measurement is
+/// this campaign's signature defect.
 fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, usize) {
-    let mut adjacency: BTreeMap<hornvale_kernel::CellId, BTreeSet<hornvale_kernel::CellId>> =
+    // Unordered `(lo, hi)` cell pairs, keyed by the band they join at. The
+    // per-band split is not presentation: it is what keeps the component
+    // sweep below inside one traversable layer.
+    let mut by_band: BTreeMap<u8, BTreeSet<(hornvale_kernel::CellId, hornvale_kernel::CellId)>> =
         BTreeMap::new();
-    let mut links = 0usize;
     for cell in terrain.geosphere().cells() {
-        if terrain.is_ocean(cell) || terrain.cave_at(cell).is_none() {
+        // `cave_at` refuses an ocean cell as its first act, so it is the land
+        // gate too; an `is_ocean` test beside it could never fire.
+        if terrain.cave_at(cell).is_none() {
             continue;
         }
         for band in 0..habitation_bands().len() as u8 {
@@ -410,16 +453,39 @@ fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, us
                 floor: 0,
             };
             for far in crate::chamber::junctions_at(seed, terrain, addr) {
-                links += 1;
-                adjacency.entry(cell).or_default().insert(far.cell);
-                adjacency.entry(far.cell).or_default().insert(cell);
+                let pair = if cell < far.cell {
+                    (cell, far.cell)
+                } else {
+                    (far.cell, cell)
+                };
+                by_band.entry(band).or_default().insert(pair);
             }
         }
     }
-    let pairs: usize = adjacency.values().map(|set| set.len()).sum::<usize>() / 2;
-    // Largest connected component by breadth-first sweep over the deduped
-    // pair graph. Visited is a `BTreeSet`, not a hash set: determinism is
-    // constitutional even where order cannot change the answer.
+    let links: usize = by_band.values().map(BTreeSet::len).sum();
+    let pairs: usize = by_band
+        .values()
+        .flatten()
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .len();
+    let largest = by_band.values().map(largest_component).max().unwrap_or(0);
+    (links, pairs, largest)
+}
+
+/// The size of the largest connected component of an undirected edge set,
+/// by breadth-first sweep. `visited` is a `BTreeSet`, not a hash set:
+/// determinism is constitutional even where iteration order cannot change
+/// the answer.
+fn largest_component(
+    edges: &BTreeSet<(hornvale_kernel::CellId, hornvale_kernel::CellId)>,
+) -> usize {
+    let mut adjacency: BTreeMap<hornvale_kernel::CellId, BTreeSet<hornvale_kernel::CellId>> =
+        BTreeMap::new();
+    for &(lo, hi) in edges {
+        adjacency.entry(lo).or_default().insert(hi);
+        adjacency.entry(hi).or_default().insert(lo);
+    }
     let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
     let mut largest = 0usize;
     for start in adjacency.keys().copied().collect::<Vec<_>>() {
@@ -440,11 +506,25 @@ fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, us
         }
         largest = largest.max(component.len());
     }
-    (links, pairs, largest)
+    largest
 }
 
+/// Render one world's chamber lattice as the committed underworld witness.
+///
+/// The world must be built to at least `BuildDepth::Terrain`; a chamber needs
+/// a cave's depth budget, its cell's geothermal gradient and its cell's
+/// stratigraphic column, and nothing above terrain.
+///
+/// **Byte-identical for a given `(seed, terrain)`**, and asserted as such
 /// rather than observed — see this module's tests. No wall clock, no map
 /// iteration order, no float in the compute path.
+///
+/// **Do not insert a function into this doc block.** One review round found
+/// [`junction_network`] wedged between its two halves, leaving the
+/// byte-identity promise — the single most load-bearing sentence about this
+/// artifact — attached to a private helper while the `pub` function it
+/// describes carried the trailing clause. Both compiled, and both satisfied
+/// `#![warn(missing_docs)]`, which is exactly why nothing caught it.
 /// type-audit: bare-ok(prose: return)
 pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     let mut out = String::new();
@@ -649,7 +729,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     let (links, pairs, largest) = junction_network(seed, terrain);
     out.push_str(&format!(
         "  junctions       {} links across {} system pairs; largest network {} systems \
-         (MAP-underworld-shortcut)\n",
+         at one band (MAP-underworld-shortcut)\n",
         links, pairs, largest
     ));
     out.push_str("  by band         ");

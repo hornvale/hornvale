@@ -675,8 +675,19 @@ gen_underworld_lattice() {
     printf 'an earlier version of this page unable to see either floor gate at all.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'The `junctions` line counts the links between DIFFERENT cave systems that\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf '`junctions_at` derives at each shared delve band -- derived, not drawn: it\n'
-    printf 'consumes no stream, so a shortcut is a fact about the geology, not a die roll.\n\n'
+    printf 'consumes no stream leg OF ITS OWN, so a shortcut is a fact about the geology\n'
+    printf 'rather than a die roll on top of an epoch. (It does travel the legs the facts\n'
+    printf 'it reads already have -- an existence draw here, a branch character there --\n'
+    printf 'and an earlier version of this page dropped that qualifier and asserted the\n'
+    printf 'falsehood that it consumes no stream at all.) A link is an EDGE, counted once\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'rather than once per endpoint; `largest network` is the largest component\n'
+    printf 'within a SINGLE band, because a junction never crosses one -- so systems\n'
+    printf 'joined only at the Undercroft and systems joined only at the Nadir are two\n'
+    printf 'networks, not one, and unioning them would name a component nothing can\n'
+    printf 'walk.\n\n'
     printf '```text\n'
     run -p hornvale -- underworld --seed 42
     printf '\n'
