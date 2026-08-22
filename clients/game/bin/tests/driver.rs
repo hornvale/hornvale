@@ -477,15 +477,25 @@ fn a_move_action_echoes_historys_and_leaves_the_buffer_alone() {
     assert_eq!(d.line_text(), "north", "the move must be recallable");
 }
 
-/// Only a line whose FIRST TOKEN is exactly `map` enters the map
-/// (Session::handle's own first-token convention, mirrored after-trim):
-/// surrounding whitespace is tolerated, extra words are not.
+/// Only BARE `map` enters the map focus: surrounding whitespace is
+/// tolerated, arguments are not. The rule mirrors the sim's own
+/// bare-from-argument split (`Session::handle`'s `rest.is_empty()` guards
+/// on `map` and `eyes`), not a first-token rule — `map out 2` has `map` as
+/// its first token and must NOT focus.
+///
+/// `map out 2` is the case that pins the decision, because the plausible
+/// wrong answer ("it drew a chart, focus it") is wrong twice over:
+/// `Session::map` takes `&self`, so no argument form moves the plate at
+/// all, and the plate is redrawn from `Spatial` every turn regardless. See
+/// the driver's Submit arm for the full reasoning.
 #[test]
-fn only_an_exact_first_token_of_map_enters_the_map() {
+fn only_bare_map_enters_the_map() {
     for (line, want_map) in [
         ("map", true),
         (" map ", true),
         ("map x", false),
+        ("map out", false),
+        ("map out 2", false),
         ("examine map", false),
     ] {
         let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");

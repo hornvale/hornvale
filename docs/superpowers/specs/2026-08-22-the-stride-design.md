@@ -62,15 +62,33 @@ The buffer itself is untouched — no visible animation on movement keys.
 
 ### Mode entry on submit
 
-After `Submit` takes the line, the driver trims it, splits off the first
-token (mirroring `Session::handle`'s verb convention), and if it equals
-`map`, flips focus to Map **after** handling. Exact whole-line match after
-trim: `" map "` triggers; `"map x"` and `"examine map"` do not.
+After `Submit` takes the line, the driver trims it and flips focus to Map
+**after** handling if the whole trimmed line is exactly `map`. `" map "`
+triggers; `"map x"`, `"map out 2"` and `"examine map"` do not.
+
+**Correction, made during execution:** an earlier draft of this paragraph
+stated two incompatible rules in consecutive sentences — "splits off the
+first token … and if it equals `map`" (which admits `map out 2`) and
+"exact whole-line match after trim" (which does not). The implementation
+took the first reading and the test took the second, and the campaign found
+it as a red suite rather than at review. The whole-line rule is the correct
+one, for a reason neither sentence gave:
+
+- `Session::map` takes `&self` and returns prose. **No argument form of
+  `map` can move the plate**, so "it drew a chart, so focus it" — the
+  intuition behind the first-token reading — is false.
+- The plate is redrawn from `Spatial` every turn regardless
+  (`spread::compose`). Submitting `map` in this client is therefore a
+  **mode gesture**, not a fetch, and focusing after `map out 2` would put a
+  cursor on an unzoomed plate the player did not ask about.
+- Bare-vs-argument is a distinction the sim already draws, so mirroring it
+  invents nothing: `Session::handle` guards its own `map` and `eyes` arms
+  on `rest.is_empty()`.
 
 Deliberately NOT done:
 
 - No structured verb exposure on `Turn` — the client mirrors the sim's
-  stable first-token convention in one place (`driver.rs`, already the
+  stable bare-`map` spelling in one place (`driver.rs`, already the
   only session-aware module). Upgrade path exists if a second verb ever
   needs UI side effects.
 - No `!map` variant — the sim has no `!` prefix idiom today; inventing

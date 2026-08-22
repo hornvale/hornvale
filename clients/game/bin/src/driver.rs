@@ -163,8 +163,8 @@ pub struct Driver {
     /// regardless of `focus` (so leaving and re-entering the map does not
     /// reset it); [`Driver::cursor`] reports it only in [`Focus::Map`].
     cursor: Cursor,
-    /// The map strip's cached text — recomputed on `ToggleFocus` (into
-    /// [`Focus::Map`]) and `CursorBy`, since fix round 1 the resolved name
+    /// The map strip's cached text — recomputed by [`Driver::enter_map`]
+    /// (the map's one door) and on `CursorBy`, since fix round 1 the resolved name
     /// genuinely depends on the cursor's screen position (see the module
     /// doc for the chain); F2 measures the real per-call cost, which is why
     /// recomputing on every `CursorBy` rather than something more
@@ -368,28 +368,32 @@ impl Driver {
         }
     }
 
-    /// Which pane keys currently drive — the command line, or the map
-    /// cursor. `main`'s input loop reads this every keypress to choose how
-    /// [`crate::input::action_for`] routes the key.
+    /// Which of the three modes keys currently drive — the walk view, the
+    /// command line, or the map cursor. `main`'s input loop reads this
+    /// every keypress to choose how [`crate::input::action_for`] routes the
+    /// key.
     pub fn focus(&self) -> Focus {
         self.focus
     }
 
     /// Move focus to the other pane — Walk→Cli, Cli→Walk, Map→Walk (Esc
-    /// always leaves the map for the walk view). Entering the map (re)resolves
-    /// the strip at the cursor's current position; leaving it clears the
-    /// strip, matching the old `EnterLook`/`LeaveLook` transitions.
+    /// always leaves the map for the walk view).
+    ///
+    /// This is Esc's transition and Esc's ONLY. It can never ARRIVE at the
+    /// map: every arm below lands on Cli or Walk, so the map has exactly
+    /// one door ([`Self::enter_map`], from a bare `map` submission) and
+    /// this function is always a departure from it. The strip is therefore
+    /// unconditionally cleared here — an earlier revision carried a
+    /// `focus == Focus::Map` branch that refreshed it, which was dead the
+    /// moment `map` entry moved to its own function, and read as though Esc
+    /// could still open the map.
     pub fn toggle_focus(&mut self) {
         self.focus = match self.focus {
             Focus::Cli => Focus::Walk,
             Focus::Map => Focus::Walk,
             Focus::Walk => Focus::Cli,
         };
-        if self.focus == Focus::Map {
-            self.refresh_strip();
-        } else {
-            self.strip = None;
-        }
+        self.strip = None;
     }
 
     /// The map cursor's screen position, or `None` unless the map is
@@ -505,14 +509,28 @@ impl Driver {
                 self.history.push(taken.clone());
                 self.echo = Some(taken.clone());
                 let released = self.handle(&taken);
-                // Mirror `Session::handle`'s first-token convention: a line
-                // whose first token is exactly `map` also enters the map
-                // focus. Exact-after-trim — `" map "` triggers; `"map x"`
-                // does not; `"examine map"` does not. Guarded on not already
-                // being focused so re-submitting `map` from the map does not
-                // pay a strip refresh for an identical answer.
-                if taken.trim().split_whitespace().next() == Some("map") && self.focus != Focus::Map
-                {
+                // BARE `map` — and only bare `map` — enters the map focus.
+                // This mirrors a convention the sim already keeps rather
+                // than inventing one: `Session::handle` splits its own
+                // bare-from-argument forms on `rest.is_empty()` (see the
+                // `"map" if self.inside.is_some() && rest.is_empty()` and
+                // `"eyes" if rest.is_empty()` arms), because the two mean
+                // different things. So `" map "` triggers; `"map x"`,
+                // `"map out 2"` and `"examine map"` do not.
+                //
+                // `map out N` is the case worth stating, because "it drew a
+                // chart, so focus it" is the plausible wrong answer:
+                // `Session::map` takes `&self` and returns prose, so NO
+                // argument form can move the plate. The plate is redrawn
+                // from `Spatial` every turn regardless (`spread::compose`),
+                // which is why submitting `map` is a MODE GESTURE and not a
+                // fetch. Focusing after `map out 2` would hand the player a
+                // cursor on an unzoomed plate they did not ask about.
+                //
+                // Guarded on not already being focused so re-submitting
+                // `map` from the map does not pay a strip refresh for an
+                // identical answer.
+                if taken.trim() == "map" && self.focus != Focus::Map {
                     self.enter_map();
                 }
                 released
