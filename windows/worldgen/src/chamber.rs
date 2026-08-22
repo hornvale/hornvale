@@ -658,6 +658,15 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
 /// travels that leg, and the root itself is the branch's own established
 /// draw, so an entrance and the branch it opens into can never disagree
 /// about where the junction sits.
+///
+/// **Accepted asymmetry between mouth and gate.** The side branch is drawn
+/// from entrance 0's `branch_count_of` lattice, but a mouth at entrance N is
+/// later adjudicated by [`chamber_exists`] against entrance N's own drawn
+/// branch width — so a mouth can name a branch its own entrance never
+/// realized and be refused downstream, where the witness treats it as a
+/// shut door. This is accepted, not an oversight: C.3 sanctions
+/// per-entrance realization, and an aperture into a branch that entrance's
+/// lattice did not realize is simply not open.
 /// type-audit: bare-ok(index: entrance)
 pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
     const HEAD: EntranceMouth = EntranceMouth {
@@ -686,7 +695,8 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
             floor: root.floor,
         },
         // The side branch roots nowhere (every parent run drew 0 floors);
-        // the door still opens, into the head.
+        // the door falls back to the head (openness is still decided
+        // downstream by `chamber_at`).
         None => HEAD,
     }
 }
@@ -2319,14 +2329,9 @@ mod tests {
                 }
             }
         }
-        let (seed, cell, first, second) = found.expect(
+        found.expect(
             "no multi-entrance system on the sweep opened its two entrances \
              onto different floors — C.3's two-door reading is unrealizable",
-        );
-        assert_ne!(
-            first, second,
-            "cell {:?} of seed {} reported differing mouths twice",
-            cell, seed.0
         );
     }
 

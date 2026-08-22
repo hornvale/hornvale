@@ -333,9 +333,11 @@ struct Tallies {
     /// or into. Amendment C.4 is about exactly this, so it is printed here for
     /// Task 3b to move.
     reachable: usize,
-    /// Cave systems whose entrance chamber (`branch 0, band 0, floor 0`)
-    /// exists at all — [`Tallies::reachable`]'s denominator, without which a
-    /// fallen reachability figure cannot be told from fewer open entrances.
+    /// Cave systems with at least one drawn open mouth — every drawn
+    /// entrance whose mouth is adjudicated open by `chamber_at`, not merely
+    /// witnessed entrance 0. [`Tallies::reachable`]'s denominator, without
+    /// which a fallen reachability figure cannot be told from fewer open
+    /// entrances.
     open_entrances: usize,
 }
 
@@ -349,7 +351,7 @@ struct Tallies {
 /// INTO); summing per-entrance counts would double-count exactly those
 /// chambers and overstate the world.
 ///
-/// A plain breadth-first walk over the shipped adjacency function: nothing
+/// A plain flood-fill walk over the shipped adjacency function: nothing
 /// here knows the adjacency rule, which is the point — Task 3b changes that
 /// rule and this number moves without this function being touched.
 ///
