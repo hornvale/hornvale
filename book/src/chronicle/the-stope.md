@@ -35,10 +35,15 @@ chamber in every world. Three changes rode one epoch, `chamber/v3`:
   not make. The rung is the open-ended bottom bin above an *authored*
   habitability ceiling, so it means "past where the model stopped", not
   "extraordinarily deep" — and leftover buckets are large by construction:
-  38.65% of cave systems terminate there, pooled over the seed panel, a number
-  that had been published in the ladder's own module documentation, to the
-  unit, since The Underworld. The campaign's first measurement falsified its
-  own spec by re-reading something already written down.
+  38.65% of cave systems terminate there, pooled over the seed panel.
+
+  **The spec predicted this rung would be rare, and the refutation was already
+  sitting in the tree when the prediction was written.** The ladder's own
+  module documentation had carried the per-seed shares — 24.5% / 43.2% /
+  42.3% — since The Underworld laid the ladder down three days earlier
+  (`eb9921af7`), and Task 0's measurement reproduced them to the unit. The
+  only arithmetic the campaign added was the pooling. A measurement that can
+  end a campaign was, in this instance, a table nobody had re-read.
 
 An **epoch suffix**, never a rename in place. The label is the contract: a
 world is a seed plus a ledger and everything else is re-derived, so renaming
