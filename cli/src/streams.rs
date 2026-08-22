@@ -375,6 +375,14 @@ mod tests {
                 "chamber/branch-character v1",
                 "chamber/branch-count v1",
                 "chamber/branch-root v1",
+                // The two Task 5 entrance legs (amendment C.3): how many
+                // apertures a system opens, and which floor each opens into.
+                // Both additive NEW labels at v1, both keyed on stable
+                // lattice places (cell; cell + entrance index). See
+                // `windows/worldgen/src/streams.rs`'s ENTRANCE_COUNT /
+                // ENTRANCE_MOUTH.
+                "chamber/entrance-count v1",
+                "chamber/entrance-mouth v1",
                 "chamber/run-floors v1",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label

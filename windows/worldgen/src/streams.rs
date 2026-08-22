@@ -104,6 +104,26 @@ hornvale_kernel::stream_labels! {
     /// `BRANCHES_PER_SYSTEM` as the ceiling. Keyed on the SYSTEM: cell and
     /// entrance, no branch.
     BRANCH_COUNT = "chamber/branch-count/v1" => "how many branches one cave system realizes, keyed on (cell, entrance)";
+    /// How many apertures one cave system opens to the surface (The Stope,
+    /// Task 5; amendment C.3). Keyed on the SYSTEM's cell alone — no
+    /// entrance index, because the count is a fact about the system as a
+    /// whole and an entrance index could not be defined before this draw
+    /// answered. Terrain reports one cave per cell with no aperture count,
+    /// so the plural is derived here at the composition root rather than
+    /// read off the cave.
+    ///
+    /// A separate root leg from [`CHAMBER`] for the same collision argument
+    /// [`RUN_FLOORS`]'s doc states: additive, perturbs no existing draw,
+    /// and the `/v1` epoch discipline applies to any later re-shaping of
+    /// the key.
+    ENTRANCE_COUNT = "chamber/entrance-count/v1" => "how many surface apertures one cave system opens, keyed on cell";
+    /// Which floor of the system's lattice one entrance opens into (The
+    /// Stope, Task 5; amendment C.3) — main-line floor 0, or a branch's
+    /// root floor (C.2). Keyed on the ENTRANCE's place: cell and entrance
+    /// index, a place in the fixed lattice and never a generation ordinal
+    /// (decision 0102). Same separate-root-leg and `/v1` discipline as
+    /// [`ENTRANCE_COUNT`].
+    ENTRANCE_MOUTH = "chamber/entrance-mouth/v1" => "which floor of the lattice one entrance opens into, keyed on (cell, entrance)";
     /// Where a non-main-line branch hangs off its parent (The Stope, Task 3;
     /// amendment C.2) — a floor of the main line, drawn over the floors that
     /// parent actually realizes. Keyed on the CHILD branch's place: cell,

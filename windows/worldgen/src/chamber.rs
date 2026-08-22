@@ -569,6 +569,128 @@ pub fn floors_in_run(seed: Seed, run: RunAddr) -> u8 {
     u8::try_from(drawn).expect("range_u32(lo, hi) never exceeds hi, which is a u8")
 }
 
+// --- Entrances are plural (The Stope, Task 5; spec amendment C.3) ---
+//
+// Amendment C.3 supersedes §3.4's "entrance → branch": **an entrance maps
+// to a FLOOR** of the system's lattice — main-line floor 0, or a branch's
+// root floor (C.2). §3.4's two-door case falls out for free: the town-square
+// well and the blacksmith's cellar are two entrances whose mapped floors are
+// the main line's head and a branch's root. One mechanism, both readings.
+//
+// Terrain reports one cave per cell with no aperture count
+// (`hornvale_terrain::GeneratedTerrain::cave_at`), so both quantities below
+// are DERIVED here at the composition root from what the cave already
+// carries — exactly what [`ChamberAddr::entrance`]'s own doc anticipated.
+//
+// Both draws key on stable lattice places (decision 0102): the count on the
+// system's cell alone, the mouth on `(cell, entrance index)`.
+
+/// Where one entrance opens into its system's lattice (C.3): a branch, a
+/// band rank and a floor, all coordinates the system actually realizes —
+/// an aperture opens INTO a place, never onto a construction step.
+///
+/// The system's canonical lattice is `(cell, entrance 0)` and every mouth
+/// addresses INTO it, so two entrances land in ONE shared graph — two
+/// breadth-first walks from two mouths overlap, which is why a consumer
+/// counting reachability must union them rather than sum
+/// (`windows/worldgen/src/underworld_readout.rs` does exactly that).
+/// type-audit: bare-ok(index: branch), bare-ok(index: band), bare-ok(index: floor)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct EntranceMouth {
+    /// Which branch column the descent starts on (`0..BRANCHES_PER_SYSTEM`).
+    pub branch: u8,
+    /// Which delve-ladder rank of that column the mouth sits at.
+    pub band: u8,
+    /// Which floor of that run the mouth sits at.
+    pub floor: u8,
+}
+
+/// How many apertures one cave system opens to the surface (C.3) — derived,
+/// not carried: terrain's cave model has no aperture count, so the plural
+/// lives here at the composition root.
+///
+/// Weighted hard toward 1 (70% one entrance, then 20% / 7% / 3%), mirroring
+/// C.1's shape judgement for branches: mostly one door, occasionally more.
+/// These weights are the initial authoring choice, stated here and measured
+/// by `some_system_draws_more_than_one_entrance` and the panel artifact —
+/// they were not fitted to land a distribution, and must not be retuned to
+/// move one.
+///
+/// Keyed on the SYSTEM's cell alone under [`crate::streams::ENTRANCE_COUNT`]
+/// — no entrance index, because the count is a fact about the system as a
+/// whole and an entrance index cannot be named before this draw answers.
+/// type-audit: bare-ok(count: return)
+pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
+    let r = seed
+        .derive(crate::streams::ENTRANCE_COUNT)
+        .derive(StreamLabel::dynamic(&format!("{}", cell.0)))
+        .stream()
+        .next_f64();
+    if r < 0.70 {
+        1
+    } else if r < 0.90 {
+        2
+    } else if r < 0.97 {
+        3
+    } else {
+        4
+    }
+}
+
+/// Which floor of the system's lattice one entrance opens into (C.3).
+///
+/// **Entrance 0 is the main line's head by definition** — `EntranceMouth`
+/// `{ branch: 0, band: 0, floor: 0 }` — with no draw at all:
+/// it is the aperture `windows/vessel`'s `delve_at` descends through, and
+/// making it literal rather than drawn pins the primary entrance at the
+/// address every existing caller already uses.
+///
+/// Every other entrance draws ONE side branch of the main line (uniform over
+/// `1..branch_count_of(cell)`; a width-one system has none, so its extra
+/// doors fall back to the head — two doors into the same hall, which is a
+/// legitimate C.3 reading) and maps to that branch's ROOT FLOOR (C.2):
+/// [`crate::character::root_floor_of`], which never names a floor the main
+/// line failed to realize. A branch that roots nowhere returns the head
+/// rather than a dangling aperture.
+///
+/// Keyed on the entrance's place `(cell, entrance index)` under
+/// [`crate::streams::ENTRANCE_MOUTH`] (decision 0102); the side-branch pick
+/// travels that leg, and the root itself is the branch's own established
+/// draw, so an entrance and the branch it opens into can never disagree
+/// about where the junction sits.
+/// type-audit: bare-ok(index: entrance)
+pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
+    const HEAD: EntranceMouth = EntranceMouth {
+        branch: 0,
+        band: 0,
+        floor: 0,
+    };
+    if entrance == 0 {
+        return HEAD;
+    }
+    let branches = crate::character::branch_count_of(seed, cell, 0);
+    if branches <= 1 {
+        // No side branch exists to open into: this door joins the head.
+        return HEAD;
+    }
+    let mut stream = seed
+        .derive(crate::streams::ENTRANCE_MOUTH)
+        .derive(StreamLabel::dynamic(&format!("{}/{}", cell.0, entrance)))
+        .stream();
+    let picked = stream.range_u32(1, u32::from(branches - 1));
+    let branch = u8::try_from(picked).expect("range_u32(1, branches-1) fits a u8");
+    match crate::character::root_floor_of(seed, cell, 0, branch) {
+        Some(root) => EntranceMouth {
+            branch,
+            band: root.band,
+            floor: root.floor,
+        },
+        // The side branch roots nowhere (every parent run drew 0 floors);
+        // the door still opens, into the head.
+        None => HEAD,
+    }
+}
+
 /// Whether a chamber exists at `addr`, under `cave`'s measured depth
 /// budget in this cell. Sparse and derived: no chamber is ever stored, so
 /// "exists" is a per-address predicate — a fixed-density draw, gated so
@@ -2153,5 +2275,274 @@ mod tests {
                 assert_ne!(a, b, "two bands share the spelling {a:?}");
             }
         }
+    }
+
+    // --- Task 5: entrances become plural (spec amendment C.3) ---
+
+    /// The entrance-count draw is **non-vacuous**: across a sweep of seeds
+    /// and cells, some system draws MORE than one aperture. A draw that
+    /// always answered 1 would make every test below pass and plural
+    /// entrances not exist.
+    /// claim: rate(seed x cell sweep) — some system draws >1 aperture
+    #[test]
+    fn some_system_draws_more_than_one_entrance() {
+        let multi = (0u64..8)
+            .flat_map(|s| (0u32..60).map(move |c| entrance_count(Seed(s * 1000 + 7), CellId(c))))
+            .any(|n| n > 1);
+        assert!(
+            multi,
+            "no system on the sweep drew more than one entrance — the count \
+             draw is degenerate and plural entrances do not exist"
+        );
+    }
+
+    /// The BG3 case: two entrances of ONE system may open on DIFFERENT
+    /// floors of the lattice — one at the main-line head, another at a
+    /// branch's root floor (C.2), per C.3. Asserted as an existence over a
+    /// sweep: the draw must be CAPABLE of disagreement, not always so.
+    /// claim: rate(seed x cell sweep) — some pair of mouths disagrees
+    #[test]
+    fn two_entrances_of_one_system_may_open_on_different_floors() {
+        let mut found = None;
+        'outer: for s in 0u64..40 {
+            for c in 0u32..80 {
+                let seed = Seed(s * 1000 + 7);
+                let cell = CellId(c);
+                if entrance_count(seed, cell) < 2 {
+                    continue;
+                }
+                let first = entrance_mouth(seed, cell, 0);
+                let second = entrance_mouth(seed, cell, 1);
+                if first != second {
+                    found = Some((seed, cell, first, second));
+                    break 'outer;
+                }
+            }
+        }
+        let (seed, cell, first, second) = found.expect(
+            "no multi-entrance system on the sweep opened its two entrances \
+             onto different floors — C.3's two-door reading is unrealizable",
+        );
+        assert_ne!(
+            first, second,
+            "cell {:?} of seed {} reported differing mouths twice",
+            cell, seed.0
+        );
+    }
+
+    /// The mapping is deterministic: the same address in, the same floor
+    /// out — and it is a real mapping, not a constant (two systems may
+    /// differ).
+    /// claim: invariant(forall-swept-seed) — same mouth in, same floor out
+    #[test]
+    fn the_entrance_mapping_is_deterministic_and_varies_by_system() {
+        let mut distinct_heads = std::collections::BTreeSet::new();
+        for s in 0u64..4 {
+            for c in 0u32..30 {
+                let seed = Seed(s * 1000 + 7);
+                let cell = CellId(c);
+                let once = entrance_mouth(seed, cell, 1);
+                let twice = entrance_mouth(seed, cell, 1);
+                assert_eq!(
+                    once, twice,
+                    "entrance 1 of cell {c} moved between two identical asks"
+                );
+                distinct_heads.insert(once);
+            }
+        }
+        assert!(
+            distinct_heads.len() > 1,
+            "every probed system mapped entrance 1 to the same floor — the \
+             mapping is a constant, not a derivation"
+        );
+    }
+
+    /// Entrance 0 is the main line's head by definition, with no draw —
+    /// C.3's first reading. It is the same at every cell, which is what
+    /// makes `delve_at`'s pinned `branch = 0, band = 0, floor = 0` descent
+    /// the primary entrance.
+    /// claim: invariant(forall-swept-seed) — mouth 0 is the head everywhere
+    #[test]
+    fn entrance_zero_is_the_main_line_head_everywhere() {
+        for s in 0u64..3 {
+            for c in 0u32..20 {
+                assert_eq!(
+                    entrance_mouth(Seed(s * 1000 + 7), CellId(c), 0),
+                    EntranceMouth {
+                        branch: 0,
+                        band: 0,
+                        floor: 0
+                    },
+                    "entrance 0 of cell {c} is not the main-line head"
+                );
+            }
+        }
+    }
+
+    /// The two new legs are byte-pinned for known keys — literal counts and
+    /// literal mouths, the cheapest witness that any part of either
+    /// derivation moved.
+    #[test]
+    fn the_entrance_draws_are_byte_pinned_for_known_keys() {
+        let seed = Seed(42);
+        for (cell, expected) in [(9u32, 1u8), (6, 2), (17, 3), (5, 1)] {
+            assert_eq!(
+                entrance_count(seed, CellId(cell)),
+                expected,
+                "cell {cell} moved off its entrance-count pin"
+            );
+        }
+        for (cell, entrance, expected) in [
+            (
+                9u32,
+                0u8,
+                EntranceMouth {
+                    branch: 0,
+                    band: 0,
+                    floor: 0,
+                },
+            ),
+            (
+                6,
+                1,
+                EntranceMouth {
+                    branch: 1,
+                    band: 0,
+                    floor: 1,
+                },
+            ),
+            (
+                31,
+                1,
+                EntranceMouth {
+                    branch: 3,
+                    band: 3,
+                    floor: 3,
+                },
+            ),
+            (
+                5,
+                1,
+                EntranceMouth {
+                    branch: 0,
+                    band: 0,
+                    floor: 0,
+                },
+            ),
+        ] {
+            assert_eq!(
+                entrance_mouth(seed, CellId(cell), entrance),
+                expected,
+                "cell {cell} entrance {entrance} moved off its mouth pin"
+            );
+        }
+    }
+
+    /// Each shipped entrance draw travels ITS OWN leg, not a sibling's —
+    /// the Task 2/3 pattern. Arm 1: the shipped answer equals its declared
+    /// leg everywhere probed. Arm 2: it differs from at least one sibling
+    /// leg somewhere, so arm 1 cannot pass under a re-parented draw.
+    #[test]
+    fn each_entrance_draw_travels_its_own_leg_and_not_a_siblings() {
+        let seed = Seed(90210);
+        // --- entrance count ---
+        let mut count_disagreed = false;
+        for c in 0u32..40 {
+            let shipped = entrance_count(seed, CellId(c));
+            let own = seed
+                .derive(crate::streams::ENTRANCE_COUNT)
+                .derive(StreamLabel::dynamic(&format!("{}", c)))
+                .stream()
+                .next_f64();
+            assert_eq!(
+                shipped,
+                count_from_raw(own),
+                "entrance_count does not travel the ENTRANCE_COUNT leg at cell {c}"
+            );
+            let sibling = seed
+                .derive(crate::streams::BRANCH_COUNT)
+                .derive(StreamLabel::dynamic(&format!("{}/0", c)))
+                .stream()
+                .next_f64();
+            if count_from_raw(sibling) != shipped {
+                count_disagreed = true;
+            }
+        }
+        assert!(
+            count_disagreed,
+            "the entrance-count draw agreed with the branch-count leg everywhere"
+        );
+
+        // --- entrance mouth ---
+        let mut mouth_disagreed = false;
+        for c in 0u32..200 {
+            if entrance_count(seed, CellId(c)) < 2 {
+                continue;
+            }
+            // A width-two system cannot disagree: its single side branch is
+            // the only thing either leg could pick. Only a wider system
+            // discriminates the legs.
+            if crate::character::branch_count_of(seed, CellId(c), 0) < 3 {
+                continue;
+            }
+            let shipped = entrance_mouth(seed, CellId(c), 1);
+            let own = seed
+                .derive(crate::streams::ENTRANCE_MOUTH)
+                .derive(StreamLabel::dynamic(&format!("{}/1", c)))
+                .stream();
+            assert_eq!(
+                Some(shipped),
+                mouth_from_raw(seed, CellId(c), own),
+                "entrance_mouth does not travel the ENTRANCE_MOUTH leg at cell {c}"
+            );
+            let sib = seed
+                .derive(crate::streams::BRANCH_ROOT)
+                .derive(StreamLabel::dynamic(&format!("{}/1", c)))
+                .stream();
+            if Some(shipped) != mouth_from_raw(seed, CellId(c), sib) {
+                mouth_disagreed = true;
+            }
+        }
+        assert!(
+            mouth_disagreed,
+            "the mouth draw agreed with the branch-root leg everywhere"
+        );
+    }
+
+    fn count_from_raw(r: f64) -> u8 {
+        if r < 0.70 {
+            1
+        } else if r < 0.90 {
+            2
+        } else if r < 0.97 {
+            3
+        } else {
+            4
+        }
+    }
+
+    /// Re-derives the mouth from a caller-supplied first-draw stream — the
+    /// leg witness's comparison half. The side-branch pick comes from the
+    /// given stream; the root itself is the branch's own established draw.
+    fn mouth_from_raw(
+        seed: Seed,
+        cell: CellId,
+        mut stream: hornvale_kernel::Stream,
+    ) -> Option<EntranceMouth> {
+        let branches = crate::character::branch_count_of(seed, cell, 0);
+        if branches <= 1 {
+            return Some(EntranceMouth {
+                branch: 0,
+                band: 0,
+                floor: 0,
+            });
+        }
+        let picked = stream.range_u32(1, u32::from(branches - 1));
+        let branch = u8::try_from(picked).ok()?;
+        crate::character::root_floor_of(seed, cell, 0, branch).map(|root| EntranceMouth {
+            branch,
+            band: root.band,
+            floor: root.floor,
+        })
     }
 }

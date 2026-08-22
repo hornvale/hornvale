@@ -56,14 +56,21 @@
 //! sharpest reading of the second: it is 0 in a healthy tree and large the
 //! moment the gate stops gating.
 //!
-//! # What this witness does NOT see today, stated rather than discovered
+//! # The `entrance` axis, plural since Task 5 (amendment C.3)
 //!
-//! - **The `entrance` axis.** Every address here is built at
-//!   [`WITNESSED_ENTRANCES`] = 1, i.e. `entrance: 0`, because that is the only
-//!   entrance the lattice has a producer for. Entrances become plural in Task
-//!   5, and extending this is that task's job: the loops below are shaped so
-//!   the extension is raising that constant and sourcing the per-cell count,
-//!   not a rewrite.
+//! Every system here is walked over its **DRAWN** entrance count —
+//! [`crate::chamber::entrance_count`], keyed on the cell — never a module
+//! constant: the first draft carried a `WITNESSED_ENTRANCES = 1` const, which
+//! was the same self-consistent-by-construction defect the floor loop's doc
+//! section describes, one axis over. A count draw that stopped counting would
+//! otherwise have shrunk the witness in lockstep with the world and moved no
+//! byte. `windows/vessel`'s `delve_at` is still pinned at `entrance: 0` (the
+//! primary mouth, literal by C.3), so the *player* sees one door; the witness
+//! deliberately sees more, because its job is what the world says.
+//!
+//! Reachability follows C.3's union rule: the mouths of ONE system are seeds
+//! into ONE shared seen set, so overlapping per-entrance components cannot
+//! double-count ([`reachable_union`]).
 //! - **`ChamberOrigin::Made`.** The `origin` field *is* read and tallied
 //!   ([`Tallies::by_origin`]), so [`crate::chamber::resolve_origin`] is wired
 //!   end to end — but the override source this hands `chamber_at` is
@@ -163,17 +170,6 @@ fn habitation_bands() -> Vec<(u8, &'static str)> {
     bands.sort_by_key(|&(rank, _)| rank);
     bands
 }
-
-/// How many entrances per cave system this witness walks — **1 today, and
-/// that is a stated gap rather than a claim about the world.**
-///
-/// `ChamberAddr::entrance` is a real lattice axis; nothing in the shipped path
-/// produces a second entrance yet (`windows/vessel`'s `delve_at` is pinned at
-/// `entrance: 0`, and so is `delve_seating`). Task 5 makes entrances plural.
-/// Every loop below counts `0..WITNESSED_ENTRANCES` rather than hard-coding a
-/// literal, so that task extends the witness by raising this and sourcing the
-/// per-cell count — an edit, not a rewrite.
-const WITNESSED_ENTRANCES: u8 = 1;
 
 /// The five subterranean rock units' spellings, in [`rock_rank`]'s order.
 const ROCK_WORDS: [&str; 5] = ["regolith", "cover", "basement", "roots", "underneath"];
@@ -321,6 +317,14 @@ struct Tallies {
     /// band is inside a cave's budget. Separates "the run draw moved" from
     /// "the reach moved": the first moves this, the second does not.
     drawn_floors: usize,
+    /// Entrances DRAWN across every cave system — the sum of
+    /// [`crate::chamber::entrance_count`] over all systems, reported so a
+    /// count draw that degenerated to 1 everywhere is visible as this figure
+    /// collapsing onto [`Tallies::systems`].
+    entrances: usize,
+    /// Cave systems that drew MORE than one entrance (C.3's plural). Expected
+    /// nonzero on any healthy panel; 0 means the count draw is degenerate.
+    multi_entrance_systems: usize,
     /// Chambers **reachable from an entrance** by [`passages_from`], summed
     /// over every cave system whose entrance chamber exists.
     ///
@@ -335,7 +339,15 @@ struct Tallies {
     open_entrances: usize,
 }
 
-/// Chambers reachable from `entry` by [`passages_from`], `entry` included.
+/// Chambers reachable from ANY of `mouths` by [`passages_from`], mouths
+/// included.
+///
+/// **One shared seen set across every mouth** — the union of the per-entrance
+/// components, never the sum. Two breadth-first walks from two mouths of one
+/// system overlap wherever their components meet (they always do when both
+/// open into the shared lattice at `entrance 0`, which every mouth addresses
+/// INTO); summing per-entrance counts would double-count exactly those
+/// chambers and overstate the world.
 ///
 /// A plain breadth-first walk over the shipped adjacency function: nothing
 /// here knows the adjacency rule, which is the point — Task 3b changes that
@@ -343,15 +355,19 @@ struct Tallies {
 ///
 /// `BTreeSet`, never a `HashSet` (workspace rule); the walk order is not
 /// observed, only the final count is.
-fn reachable_from(
+fn reachable_union(
     seed: Seed,
     cave: &hornvale_terrain::Cave,
     gradient: hornvale_terrain::GeothermalGradient,
-    entry: ChamberAddr,
+    mouths: &[ChamberAddr],
 ) -> usize {
     let mut seen: BTreeSet<ChamberAddr> = BTreeSet::new();
-    let mut queue: Vec<ChamberAddr> = vec![entry];
-    seen.insert(entry);
+    let mut queue: Vec<ChamberAddr> = Vec::new();
+    for &entry in mouths {
+        if seen.insert(entry) {
+            queue.push(entry);
+        }
+    }
     while let Some(addr) = queue.pop() {
         for next in passages_from(seed, cave, gradient, addr) {
             if seen.insert(next) {
@@ -385,6 +401,8 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         past_run_length: 0,
         past_branch_count: 0,
         drawn_floors: 0,
+        entrances: 0,
+        multi_entrance_systems: 0,
         reachable: 0,
         open_entrances: 0,
     };
@@ -408,10 +426,21 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         tallies.systems += 1;
         let gradient = terrain.geothermal_gradient_at(cell);
         let column = terrain.column_at(cell);
+        // THE SYSTEM'S DRAWN ENTRANCE COUNT, never a module constant: the
+        // same falsifiability rule the floor walk follows. A count draw that
+        // stopped counting must shrink the WORLD, not this witness's view of
+        // it — bounding by a const would have made the two move together and
+        // the drift invisible.
+        let drawn_entrances = crate::chamber::entrance_count(seed, cell);
+        tallies.entrances += usize::from(drawn_entrances);
+        if drawn_entrances > 1 {
+            tallies.multi_entrance_systems += 1;
+        }
         let want_transect = transect.len() < TRANSECT_SYSTEMS;
         let mut rows: Vec<RunRow> = Vec::new();
+        let mut mouths: Vec<ChamberAddr> = Vec::new();
 
-        for entrance in 0..WITNESSED_ENTRANCES {
+        for entrance in 0..drawn_entrances {
             // The system's drawn branch width, read once per entrance and
             // REPORTED against, never used as a loop bound: every branch the
             // lattice admits is still walked, so a branch gate that stopped
@@ -491,20 +520,30 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                 }
             }
 
-            // Reachability from this entrance's own mouth — the address
-            // `windows/vessel`'s `delve_at` descends into.
+            // This entrance's own mouth (C.3): entrance 0 is the main line's
+            // head, every other opens into its drawn branch root — but the
+            // mouth ADDRESS in the lattice is what reachability seeds on,
+            // so it is read from the shipped mapping rather than restated.
+            let mouth = crate::chamber::entrance_mouth(seed, cell, entrance);
             let entry = ChamberAddr {
                 cell,
                 entrance,
-                branch: 0,
-                band: 0,
-                floor: 0,
+                branch: mouth.branch,
+                band: mouth.band,
+                floor: mouth.floor,
             };
             if chamber_at(seed, &cave, gradient, &column, entry, &overrides).is_some() {
                 tallies.open_entrances += 1;
-                tallies.reachable += reachable_from(seed, &cave, gradient, entry);
+                // Only an OPEN mouth seeds the walk: a shut door contributes
+                // nothing to what a player can reach, and seeding it anyway
+                // would count the doorway itself as reached.
+                mouths.push(entry);
             }
         }
+
+        // ONE union per system: every open mouth seeds one shared seen set,
+        // so overlapping components cannot double-count (C.3).
+        tallies.reachable += reachable_union(seed, &cave, gradient, &mouths);
 
         if want_transect {
             // Quantized at the emit boundary and nowhere else: the lattice
@@ -528,9 +567,16 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     ));
     out.push_str(&format!(
         "  lattice         {BRANCHES_PER_SYSTEM} branches per system, {} bands, \
-         {FLOORS_PER_RUN_CEILING} floors admitted per run, \
-         {WITNESSED_ENTRANCES} entrance witnessed\n",
+         {FLOORS_PER_RUN_CEILING} floors admitted per run\n",
         habitation_bands().len()
+    ));
+    out.push_str(&format!(
+        "  entrances       {} drawn across {} systems, {} multi-entrance \
+         ({})\n",
+        tallies.entrances,
+        tallies.systems,
+        tallies.multi_entrance_systems,
+        crate::streams::ENTRANCE_COUNT.as_str(),
     ));
     out.push_str(&format!(
         "  cave systems    {}  (ocean-cell caves skipped: {})\n",
@@ -867,6 +913,59 @@ mod tests {
              ({chambers}); with `floor` still absent from passages_from's \
              adjacency rule every chamber above floor 0 must be unreachable, \
              so this means the graph walk or the adjacency rule moved"
+        );
+    }
+
+    /// **The entrance walk follows the DRAWN count, and plural entrances
+    /// are witnessed** (Task 5, amendment C.3): the `entrances` line reports
+    /// strictly more drawn doors than cave systems, i.e. at least one system
+    /// on the panel seed drew a second aperture — the non-vacuity arm for
+    /// C.3 in this artifact.
+    #[test]
+    fn the_witness_walks_drawn_entrances_and_sees_a_plural_one() {
+        let seed = Seed(42);
+        let text = render_underworld(seed, &terrain_for(seed));
+        let line = text
+            .lines()
+            .find(|l| l.trim().starts_with("entrances"))
+            .expect("the readout reports an entrances line");
+        let nums: Vec<usize> = line
+            .split_whitespace()
+            .filter_map(|w| w.parse::<usize>().ok())
+            .collect();
+        assert!(
+            nums.len() >= 2,
+            "the entrances line does not carry its counts: {line:?}"
+        );
+        let (drawn, systems) = (nums[0], nums[1]);
+        assert_eq!(
+            systems,
+            text.lines()
+                .find_map(|l| l
+                    .trim()
+                    .strip_prefix("cave systems")?
+                    .split_whitespace()
+                    .next()?
+                    .parse::<usize>()
+                    .ok())
+                .expect("cave-system count"),
+            "the entrances line's denominator disagrees with the cave-system count"
+        );
+        assert!(
+            drawn >= systems,
+            "{drawn} entrances drawn across {systems} systems — below one \
+             apiece means the count draw answered under its own minimum"
+        );
+        assert!(
+            nums.get(2).copied().unwrap_or(0) > 0,
+            "no multi-entrance system on seed 42's panel — C.3's plural is \
+             not witnessed by this artifact"
+        );
+        // The union rule's visible consequence: reachable stays a strict
+        // subset of existence even with every mouth seeding one shared walk.
+        assert!(
+            !text.contains("reachable  0 "),
+            "the union walk reached nothing"
         );
     }
 
