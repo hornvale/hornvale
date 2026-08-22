@@ -658,9 +658,9 @@ gen_underworld_lattice() {
     printf 'to the depth the rock grants a cave moves bytes here.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf '`reachable` is the count a player would actually experience: chambers\n'
-    printf 'reachable from an entrance by the passage graph, which today has no\n'
-    printf 'vertical connection at all -- so everything above floor 0 is cut off. That\n'
-    printf 'gap is the number, not a rounding error.\n\n'
+    printf 'reachable from an entrance by the passage graph, whose vertical axis is\n'
+    printf 'the descent sequence (a run'"'"'s drawn length is its sojourn; past it, the\n'
+    printf 'next band'"'"'s floor 0). That sequence is the number, not a rounding error.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'The `key` column is the real derivation key of that run'"'"'s floor 0 --\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal

@@ -12,9 +12,9 @@ the existence draw, to a run's drawn length, to a chamber's content or
 to the depth the rock grants a cave moves bytes here.
 
 `reachable` is the count a player would actually experience: chambers
-reachable from an entrance by the passage graph, which today has no
-vertical connection at all -- so everything above floor 0 is cut off. That
-gap is the number, not a rounding error.
+reachable from an entrance by the passage graph, whose vertical axis is
+the descent sequence (a run's drawn length is its sojourn; past it, the
+next band's floor 0). That sequence is the number, not a rounding error.
 
 The `key` column is the real derivation key of that run's floor 0 --
 the string `StreamLabel::dynamic` hashes -- not a rendering of the address.
