@@ -2019,3 +2019,23 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-21T21:58:02Z | sluice:outboard | 35.264 | 21.978 | 34.767 | 1.61 | 0 | 47a864244 |  | lefford | 40 |
 | 2026-08-21T22:03:53Z | sluice:gate | 350.961 | 9834.190 | 334.572 | 28.97 | 0 | f5970ba20 |  | lefford | 40 |
 | 2026-08-21T22:06:59Z | sluice:clients | 185.993 | 971.943 | 25.816 | 5.36 | 0 | fe6880381 |  | lefford | 40 |
+| 2026-08-21T22:32:35Z | prewarm | 57.285 | 366.317 | 15.137 | 6.66 | 0 | a00c1abc | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-21T22:58:50Z | gate-commit | 6.065 | 5.773 | 0.194 | 0.98 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-21T22:59:20Z | gate-commit | 7.598 | 9.893 | 0.911 | 1.42 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-21T22:59:45Z | gate-commit | 11.774 | 14.004 | 0.954 | 1.27 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-21T23:00:27Z | gate-commit | 30.224 | 65.327 | 17.440 | 2.74 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-21T23:05:07Z | gate-commit | 22.980 | 49.844 | 11.683 | 2.68 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-21T23:05:44Z | gate-commit | 23.260 | 49.951 | 11.832 | 2.66 | 0 | 7c86f299 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:12Z | gate-commit | 2.204 | 2.012 | 0.089 | 0.95 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:26Z | gate-commit | 2.113 | 2.010 | 0.078 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:41Z | gate-commit | 2.120 | 2.008 | 0.090 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:08:57Z | gate-commit | 3.809 | 5.204 | 0.547 | 1.51 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:09:13Z | gate-commit | 2.917 | 3.887 | 0.504 | 1.51 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:09:53Z | gate-commit | 8.199 | 21.006 | 4.454 | 3.11 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:11:09Z | gate-commit | 17.136 | 30.132 | 4.600 | 2.03 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:11:33Z | gate-commit | 10.995 | 10.703 | 0.220 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:11:52Z | gate-commit | 10.987 | 10.700 | 0.216 | 0.99 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:12:36Z | gate-commit | 31.548 | 71.597 | 17.055 | 2.81 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:13:11Z | gate-commit | 22.759 | 50.082 | 11.783 | 2.72 | 0 | b1af9a39 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:18:07Z | game-check | 90.283 | 546.494 | 11.573 | 6.18 | 0 | 04a0db70 | campaign/the-wick | MacBookPro | 10 |
+| 2026-08-22T00:18:30Z | gate-commit | 22.498 | 49.934 | 11.533 | 2.73 | 0 | 04a0db70 | campaign/the-wick | MacBookPro | 10 |
