@@ -261,6 +261,65 @@ threads an optional `RoomMeshMemo` and its doc already contemplates widening
 that memo type "when a second domain wants a different memo." This store is
 that second domain.
 
+### 5.7 Replan triggers: the invalidation key IS the monitor
+
+A creature that reconsiders every tick is both expensive and stupid — it
+cannot hold a long mission. The alternative is **rationale-based execution
+monitoring**: watch only the conditions the plan's rationale depended on, and
+otherwise commit. That monitor set is precisely §5.6's dependency key, so one
+mechanism serves both — but only after a distinction the obvious three
+examples quietly straddle.
+
+**Invalidation and preemption are different, and only one of them is this
+store's job.**
+
+| trigger | what actually changed | mechanism |
+|---|---|---|
+| a door opens on the route | the plan's **preconditions** | **invalidation** — dependency set touched; replan the *same* goal |
+| a bugbear appears | nothing about the plan; a **different goal now outranks it** | **preemption** — goal arbitration, then plan afresh |
+| health drops below 50% | likewise: the plan still executes fine | **preemption**, on internal state |
+
+Two of the three are not invalidation at all. The plan remains perfectly
+valid; what changed is which goal deserves the agent. Conflating them costs
+both directions: replanning the same goal when the agent should switch goals,
+or treating every salience change as a cache miss and thrashing. Invalidation
+belongs to the plan store; preemption belongs to the motivation engine
+(`PSY-6`), and the two meet only at "the agent needs a plan now."
+
+**A threshold is a discrete event, not a polled predicate.** "Health below
+50%" must not be re-evaluated every tick for every agent. Commit the
+*crossing* as a fact and let the trigger watch that — the divergence-commits
+rule (The Quickening) applied to a continuous quantity. The threshold is where
+the smooth becomes discrete, which is exactly what the ledger is for.
+
+**Dispatch invalidation from the commit, never poll it from the agent.** The
+naive monitor replaces N replans with N × |deps| checks per tick, which is
+worse. Invert it: when a fact commits, look up which plans registered a
+dependency on that (subject, predicate, place) and mark only those dirty. The
+existing permutation indexes are already that dispatch table. Cost becomes
+O(dependents of the touched fact) rather than O(agents), and it is the same
+position-versioned machinery §5.6 needs anyway.
+
+**Triggers evaluate against perception, not the ledger.** A bugbear that has
+not been *seen* must not preempt anything, or every creature is omniscient.
+`observe` already ranks by salience through a `PerceptionLens` with a
+`VISIBILITY_FLOOR` (`kernel/src/phenomena.rs`), so the preemption ranking and
+the perception gate are the same existing call. This is the same trap as
+§5.6's optimality one, one level over: the mechanism must run over what the
+agent can know, never over what is true.
+
+**"Instant" means the next tick, and that is a real constraint.** The tick is
+bulk-synchronous — every system reads the frozen tick-N snapshot and writes
+land in N+1 — so a fact committed during tick N is not visible to a monitor
+until N+1. One tick of latency is the default; same-tick reaction is the
+documented opt-in that needs the topological schedule (ECS metaplan §3.6,
+§4.6). A design that assumes zero-latency reaction is assuming the opt-in.
+
+Three counters fall out, and they belong in stage 1's instrument set:
+invalidations dispatched per tick, replans per agent per hundred ticks, and
+the **preemption-to-invalidation ratio** — which says whether creatures are
+being interrupted by the world or by their own appetites.
+
 ## 6. The campaign carve
 
 Strangler-fig; each stage shippable, reversible, and measurement-gated on the
