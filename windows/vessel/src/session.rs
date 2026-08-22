@@ -1,10 +1,14 @@
 //! The possession session: a pure step function over a frozen world. Every
 //! verb is read-only; possessing a world never changes it.
 
+use crate::action::{Action, Mood};
+use crate::clock::{climb_factor, cost_ticks, days_of, mass_for_species};
+use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Npc, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, affect_of_memo_occupied,
-    agent_position, built_rooms, derive_npcs, derive_wild_npcs,
+    LocaleTerrain, Npc, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain,
+    affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
+    derive_wild_npcs, next_awake_day, rested_fact, species_activity,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -53,6 +57,53 @@ const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 /// caller can quietly disagree with the first.
 /// type-audit: bare-ok(count)
 const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
+
+/// Spec §3.2's group D — session control, which is *not an act* and therefore
+/// carries no [`Mood`] at all. These are the only bare verbs the body-state
+/// gate does not stand in front of: a body you cannot let go of is a hang, not
+/// a capability, and `exit`'s coarse-ward refusal is a statement about the
+/// world's grain rather than about this body.
+///
+/// Everything else in the bare namespace IS the in-character namespace (spec
+/// §3.2: group B bare forms are "subjective, gated" and group C is "gated by
+/// body state"), which is why [`Session::refused_by_the_body`] asks the gate
+/// once for the whole match rather than per arm.
+const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
+
+/// The provenance a walk-band step commits under (The Deed, Task 7).
+///
+/// **An in-world reason, deliberately, and this is the acceptance test's
+/// hinge.** A creature's `agent-at` provenance names its errand ("went down to
+/// the river it knew (thirst)"); the keystone requires that "nothing in the
+/// trace may reveal that a different mind chose", so a possessed body's must
+/// name an errand too. It must never name the driver — `provoke`/`soothe`
+/// stamp `player: …` precisely because those ARE operator acts (spec §2.3),
+/// and an in-character act is the opposite case.
+const WALKED_PROVENANCE: &str = "walked on (its own errand)";
+
+/// The provenance `back` commits under — the same in-world register as
+/// [`WALKED_PROVENANCE`], naming the retrace rather than the retracer.
+const RETRACED_PROVENANCE: &str = "turned back the way it came";
+
+/// The provenance `sleep` commits its `rested` fact under, in the same
+/// register `liveness.rs` uses for a creature's own Rest ("slept at home
+/// (fatigue eased)").
+const SLEPT_PROVENANCE: &str = "lay down and slept (fatigue eased)";
+
+/// What `sleep` says. It names `!wait` on purpose: an in-character `wait` is
+/// gated the moment the body goes under, so a player told nothing here would
+/// have a body that refuses every verb and no way to learn which one still
+/// works — precisely the "indistinguishable from the game having hung" state
+/// spec §3.4 argues out-of-character exists to prevent.
+const SLEEP_REPLY: &str = "You lie down and let go of the day. Time still passes for the world, and \
+     '!wait' still passes it for you; the body wakes on its own.";
+
+/// What the body says when the gate refuses. The reason itself comes from
+/// [`crate::gate::verdict`], so a new [`BodyState`] row cannot reach a player
+/// without a sentence of its own.
+fn body_refusal(reason: &str) -> String {
+    format!("You cannot — {reason}.")
+}
 
 /// The `eyes` an out-of-character chart is drawn through (The Deed, Task 6,
 /// spec §3.2): the observer step declined.
@@ -216,6 +267,8 @@ verbs:
   examine <thing>  anything look or the floor plan names
   back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
+  sleep            lie down and sleep; the body stops obeying until its own
+                   cycle wakes it, and only '!' verbs answer meanwhile
   knows            everything they have seen
   needs            read the felt state of anyone sharing this room
   write <sentence> speak a line of Common; you absorb what it says, written
@@ -496,6 +549,22 @@ pub struct Session<'w> {
     /// central claim.
     /// type-audit: bare-ok(prose: last_text)
     last_text: String,
+    /// The moment the body's own cycle next wakes it, or `None` while it is
+    /// awake (The Deed, Task 7).
+    ///
+    /// The body state is DERIVED from this rather than stored beside it
+    /// ([`Session::body_state`]), so there is no second field to keep in step
+    /// and no "settle" pass to forget: the clock advancing IS the waking.
+    /// Computed by `liveness::next_awake_day` — the very function a creature's
+    /// own `Rest` jumps by — so the possessed body sleeps by its species'
+    /// cycle and not by a second rule invented for the player.
+    wake_at: Option<WorldTime>,
+    /// The possessed body's mass in kilograms, derived ONCE at `start` through
+    /// [`crate::clock::mass_for_species`] — the same one derivation every
+    /// creature reads, which is what makes the player's tariff the same tariff
+    /// rather than a parallel one (The Tackle extracted it for exactly this).
+    /// type-audit: bare-ok(ratio: body_mass_kg)
+    body_mass_kg: f64,
     /// Where the possession is indoors, or `None` at the walk band.
     ///
     /// The possessed agent's own `position` stays at the WALK band throughout —
@@ -791,6 +860,12 @@ impl<'w> Session<'w> {
         // this. Built once here, the same one-shot-at-start discipline as
         // `calendar`/`predator`/`prey`.
         let built = built_rooms(world, ctx);
+        // The possessed body's own mass, through the ONE shared derivation
+        // (The Tackle): read here, once, exactly as `derive_npcs` reads a
+        // creature's. Bound before the struct literal because `agent` is moved
+        // into it.
+        let species_for_mass = agent.species.clone();
+        let biosphere_for_mass = hornvale_species::biosphere_registry();
         let mut session = Session {
             world,
             wctx: held,
@@ -811,6 +886,8 @@ impl<'w> Session<'w> {
             prey,
             built,
             occupancy: Occupancy::default(),
+            wake_at: None,
+            body_mass_kg: mass_for_species(&species_for_mass, Some(&biosphere_for_mass)),
             turn: 0,
             last_text: String::new(),
             inside: None,
@@ -1062,6 +1139,18 @@ impl<'w> Session<'w> {
             },
             spatial,
         })
+    }
+
+    /// The day the possession stands on — the same `WorldTime` every fact this
+    /// session commits is stamped with, and the number the walk-band room line
+    /// prints.
+    ///
+    /// Typed rather than a bare `f64` (decision 0126): a day is a point on an
+    /// axis, and handing a caller the primitive is exactly what 0126 supersedes
+    /// 0014 to stop. It carries no `type-audit:` tag for the same reason —
+    /// there is no primitive at this boundary to tag.
+    pub fn day(&self) -> WorldTime {
+        self.day
     }
 
     /// How many `agent-at` facts the session's owned ledger has committed —
@@ -1323,6 +1412,186 @@ impl<'w> Session<'w> {
         )
     }
 
+    // ---- The Deed, Task 7: the gate, the clock, and the ledger -----------
+    //
+    // Three questions a possessed body's act must answer, kept apart on
+    // purpose because the plan text that collapsed them violated a ratified
+    // decision. MAY it act (the gate)? What does it COST (the clock)? Does it
+    // change the WORLD (the ledger)? Decision 0069 answers the third with a
+    // flat NO for every band change and every within-room step — "entering a
+    // room, moving within it, and leaving *cannot* alter the world" — while
+    // saying in the same breath that "the only thing spent is turns", which is
+    // the second question answered YES. `clock::base_ticks` already prices a
+    // within-room step at a tenth of a room-to-room move, so the cost model
+    // has contemplated this all along.
+
+    /// The body's state, as the gate reads it — DERIVED from [`Self::wake_at`]
+    /// rather than stored, so the clock advancing past the next waking IS the
+    /// waking and there is no second field to fall out of step.
+    fn body_state(&self) -> BodyState {
+        match self.wake_at {
+            Some(wake) if self.day < wake => BodyState::Asleep,
+            _ => BodyState::Awake,
+        }
+    }
+
+    /// The refusal the body owes this bare verb, or `None` to let it through.
+    ///
+    /// Asked ONCE for the whole bare match rather than per arm, because the
+    /// bare namespace *is* the in-character namespace (spec §3.2) — the `!`
+    /// namespace is the other one, and [`Self::handle_ooc`] never consults the
+    /// gate at all (spec §2.2: an out-of-character act bypasses the body's
+    /// state entirely). [`SESSION_CONTROL`] is the only exemption and its own
+    /// doc says why.
+    ///
+    /// A refusal charges nothing and commits nothing: it is not an act. The
+    /// gate is therefore consulted BEFORE the match, never inside a handler
+    /// that has already moved the clock.
+    fn refused_by_the_body(&self, verb: &str) -> Option<String> {
+        if verb.is_empty() || SESSION_CONTROL.contains(&verb) {
+            return None;
+        }
+        match verdict(self.body_state(), Mood::InCharacter) {
+            Verdict::Permitted => None,
+            Verdict::Refused(reason) => Some(body_refusal(&reason)),
+        }
+    }
+
+    /// The planet's rotation period in standard days, as the action clock
+    /// needs it — `None` on a tidally-locked world, which the rotation pin
+    /// admits. Extracted from `wait`'s own inline read so the player's charge
+    /// and the NPC layer's cannot disagree about the tick rate.
+    /// type-audit: bare-ok(ratio: return)
+    fn day_length_std(&self) -> Option<f64> {
+        self.calendar
+            .as_ref()
+            .and_then(|c| c.day_length())
+            .map(|d| d.get())
+    }
+
+    /// Charge `action` against THIS BODY'S OWN MASS and advance the day.
+    ///
+    /// The creature path's two lines, verbatim in shape
+    /// (`liveness.rs`'s `DriveMovements` walk): `cost_ticks` keyed on the
+    /// action and the body, `days_of` to convert at the commit boundary.
+    /// `cost_ticks` takes no driver parameter — it never did — which is the
+    /// whole reason routing the player through it makes the tariff the same
+    /// tariff rather than a parallel one.
+    ///
+    /// **Out-of-character acts must never reach here**, and that is enforced
+    /// by the caller rather than by a branch inside: `cost_ticks` floors its
+    /// result at `Ticks(1)`, so an out-of-character action — every one of
+    /// which `base_ticks` deliberately prices at `Ticks(0)` — would be charged
+    /// one tick it must not pay, re-creating the second silent clock movement
+    /// `base_ticks`'s own comment exists to avoid. See [`Self::handle_ooc`],
+    /// which charges nothing.
+    ///
+    /// Errs on a clock overflow rather than saturating: `wait` already routes
+    /// that through its own error channel (a live `possess` stdin can reach
+    /// `wait 1e308` twice), and a move that cannot be timed must not happen.
+    fn charge(&mut self, action: &Action, terrain_factor: f64) -> Result<(), String> {
+        debug_assert_eq!(
+            action.mood(),
+            Mood::InCharacter,
+            "an out-of-character act must not reach the clock: cost_ticks \
+             floors at one tick, which base_ticks prices at zero on purpose"
+        );
+        let ticks = cost_ticks(action, self.body_mass_kg, terrain_factor);
+        let days = days_of(ticks, self.day_length_std());
+        match WorldTime::new(self.day.day() + days) {
+            Ok(d) => {
+                self.day = d;
+                Ok(())
+            }
+            Err(e) => Err(format!("error: {e}")),
+        }
+    }
+
+    /// Charge one WITHIN-ROOM step (The Deed, Task 7): `Action::MoveWithin`'s
+    /// own dial — a tenth of a room-to-room move, the ratio The Threshold
+    /// authored — scaled by this body's mass like every other act. No terrain
+    /// factor: `climb_factor` is a `MoveTo` modifier alone (spec §3.1), and a
+    /// step inside a room changes no room and so has no elevation pair.
+    ///
+    /// **It commits nothing, and that is decision 0069, not an omission.**
+    /// Fine position is never serialized, so "moving within a room *cannot*
+    /// alter the world" — while "the only thing spent is turns", which is this
+    /// charge. `the_blocking::walking_a_chamber_commits_nothing` holds the
+    /// other half.
+    ///
+    /// The `AnchorId(0)` payload is a placeholder, exactly as
+    /// [`Action::all`](crate::action::Action::all)'s representative is: a
+    /// chamber lattice cell is not an interior anchor, and neither
+    /// [`crate::clock::cost_ticks`] nor [`Action::mood`] reads the payload.
+    /// Passing a real-looking anchor from another graph would be the worse
+    /// lie.
+    fn charge_within_room(&mut self) -> Result<(), String> {
+        self.charge(&Action::MoveWithin(crate::interior::AnchorId(0)), 1.0)
+    }
+
+    /// The uphill factor a walk-band step pays, read exactly as the creature
+    /// path reads it: `climb_factor` over the two rooms' elevations, before
+    /// the position moves. A `MoveTo` modifier alone (spec §3.1).
+    /// type-audit: bare-ok(ratio: return)
+    fn climb_to(&self, dest: &RoomAddr) -> f64 {
+        let terrain = self.terrain_here();
+        climb_factor(
+            terrain.elevation(&self.agent.position),
+            terrain.elevation(dest),
+        )
+    }
+
+    /// Commit the possessed body's `agent-at` for where it now stands, through
+    /// the very constructor the NPC layer commits a creature's with
+    /// (`liveness::agent_at_fact`) — which is what makes the two
+    /// indistinguishable BY CONSTRUCTION rather than by two implementations
+    /// agreeing today.
+    fn commit_agent_at(&mut self, provenance: &str) {
+        let fact = agent_at_fact(
+            self.agent_entity(),
+            &self.agent.position,
+            self.day.day(),
+            provenance,
+        );
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("AGENT_AT is registered every session and non-functional");
+    }
+
+    /// Lie down and sleep (The Deed, Task 7). A new verb, and the only one
+    /// this arc adds: the acceptance test needs a body that can stop obeying,
+    /// and none of the 26 existing verbs could produce one.
+    ///
+    /// **It mints nothing.** It routes to the existing [`Action::Rest`] — so
+    /// it costs what lying down costs, and commits the same `rested` fact a
+    /// creature's own Rest commits — and `rest`/`sleep` are both already
+    /// registered concepts, so no concept, cohort or accession entry moves.
+    ///
+    /// **When it wakes** is `liveness::next_awake_day`, the same scan a
+    /// creature's Rest jumps by. That function answers "the next moment this
+    /// species is awake", which is at least one scan step away, so the body is
+    /// genuinely under until the clock advances. It is honest but coarse: a
+    /// body that lies down *during* its own waking phase wakes at the next
+    /// scan step rather than sleeping through to the following night. Naming
+    /// a finer rule would be inventing a second sleep model beside the
+    /// creature layer's, which this task declines to do.
+    fn sleep(&mut self) -> Turn {
+        if let Err(e) = self.charge(&Action::Rest, 1.0) {
+            return Turn::Out(e);
+        }
+        let fact = rested_fact(self.agent_entity(), self.day.day(), SLEPT_PROVENANCE);
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("RESTED is registered every session and non-functional");
+        let wake = {
+            let activity = species_activity(self.world, &self.agent.species);
+            let terrain = self.terrain_here();
+            next_awake_day(activity, &terrain, &self.agent.position, self.day.day())
+        };
+        self.wake_at = WorldTime::new(wake).ok();
+        Turn::Out(SLEEP_REPLY.to_string())
+    }
+
     /// The out-of-character namespace's own dispatch: every verb reachable
     /// behind a leading `!` (The Deed, spec §2.1/§3.2).
     ///
@@ -1453,6 +1722,11 @@ impl<'w> Session<'w> {
         let verb = verb.strip_prefix('!').unwrap_or(verb);
         let turn = if ooc {
             self.handle_ooc(verb, rest)
+        } else if let Some(refusal) = self.refused_by_the_body(verb) {
+            // The body-state gate (The Deed, Task 7, spec §3.3), consulted
+            // ONCE for the whole in-character namespace and BEFORE any
+            // handler runs, so a refusal charges no time and commits no fact.
+            Turn::Out(refusal)
         } else {
             match verb {
                 "" => Turn::Out(String::new()),
@@ -1543,6 +1817,12 @@ impl<'w> Session<'w> {
                 "wait" => self.wait(rest, Perceiving::Body),
                 "knows" => Turn::Out(self.knows()),
                 "needs" => Turn::Out(self.needs(Perceiving::Body)),
+                // The one verb this arc adds (The Deed, Task 7): the
+                // acceptance test needs a body that can stop obeying, and
+                // none of spec §3.2's 26 could produce one. Routed to the
+                // existing `Action::Rest` machinery — no new concept, no new
+                // cost dial, no new predicate.
+                "sleep" => self.sleep(),
                 "write" => Turn::Out(self.write(rest)),
                 "consult" => Turn::Out(self.consult()),
                 "dive" => self.dive(),
@@ -1945,9 +2225,23 @@ impl<'w> Session<'w> {
         let delta = crate::course::step_length_rad(&self.agent.position);
         course.reckoned = crate::course::rhumb_advance(course.reckoned, bearing, delta);
         let dest = crate::course::nearest_neighbour(&self.agent.position, course.reckoned);
+        // The Deed, Task 7: a walk-band step is an in-character act, so it
+        // pays the action clock against this body's own mass and posts the
+        // `agent-at` a creature's step posts. Charged BEFORE the position
+        // moves — the climb factor is a pair of elevations and the second one
+        // is where we are going — and the whole act is abandoned if the clock
+        // cannot represent the result, exactly as `wait` abandons an overflow.
+        let ground = self.climb_to(&dest);
+        if let Err(e) = self.charge(&Action::MoveTo(dest.clone()), ground) {
+            return Turn::Out(e);
+        }
         self.course = Some(course);
         let from = std::mem::replace(&mut self.agent.position, dest);
         self.trail.push(from);
+        // Decision 0069's committed tier: the WALK band is an entity's
+        // persisted position, so this one commits. The fine layer below it —
+        // `step`, `enter`/`out`, `dive`/`delve` — does not, and must not.
+        self.commit_agent_at(WALKED_PROVENANCE);
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
@@ -1961,7 +2255,19 @@ impl<'w> Session<'w> {
         let Some(prev) = self.trail.pop() else {
             return Turn::Out("You have not walked anywhere yet.".to_string());
         };
+        // A retrace is a walk-band step like any other (The Deed, Task 7), and
+        // the plan's own table omitted it — it charges and commits exactly as
+        // `go` does, because decision 0069's committed tier is the ROOM, and
+        // `back` changes the room. Charged before the move, and the trail entry
+        // is pushed back if the clock refuses, so a failed retrace loses
+        // nothing.
+        let ground = self.climb_to(&prev);
+        if let Err(e) = self.charge(&Action::MoveTo(prev.clone()), ground) {
+            self.trail.push(prev);
+            return Turn::Out(e);
+        }
         self.agent.position = prev;
+        self.commit_agent_at(RETRACED_PROVENANCE);
         // A retrace is not a continuation of any heading.
         self.course = None;
         if let Err(e) = self.absorb_here() {
@@ -2149,11 +2455,17 @@ impl<'w> Session<'w> {
                 let Some(cell) = crate::lattice::cell_beyond(&inside.lattice, target, next) else {
                     return Turn::Out("error: that doorway opens on no floor at all".to_string());
                 };
+                if let Err(e) = self.charge_within_room() {
+                    return Turn::Out(e);
+                }
                 let inside = self.inside.as_mut().expect("checked above");
                 inside.at = next;
                 inside.cell = cell;
                 return self.out(self.describe_chamber_here());
             }
+        }
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
         }
         let inside = self.inside.as_mut().expect("checked above");
         inside.cell = target;
@@ -3061,11 +3373,7 @@ impl<'w> Session<'w> {
             // The planet's rotation period, so the action clock's tick divides
             // the local day exactly (The Action Clock, spec §4.1). `None` on a
             // tidally-locked world, which the rotation pin admits.
-            day_length_std: self
-                .calendar
-                .as_ref()
-                .and_then(|c| c.day_length())
-                .map(|d| d.get()),
+            day_length_std: self.day_length_std(),
             terrain: &terrain,
         };
         // Recover this tick's within-room `Occupancy` alongside the facts

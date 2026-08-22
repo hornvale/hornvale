@@ -2081,3 +2081,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-22T13:09:07Z | sluice:clients | 218.967 | 1009.561 | 29.909 | 4.75 | 0 | 4160a2e51 |  | lefford | 40 |
 | 2026-08-22T21:35:58Z | rebaseline | 87.243 | 242.129 | 9.957 | 2.89 | 0 | f0013304f | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-22T21:38:02Z | gate-commit | 88.036 | 133.118 | 20.556 | 1.75 | 0 | f0013304f | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T22:15:46Z | rebaseline | 91.469 | 237.660 | 10.208 | 2.71 | 0 | 95d7cd598 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T22:20:15Z | gate-commit | 36.264 | 90.626 | 15.205 | 2.92 | 0 | 95d7cd598 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T22:23:33Z | gate-commit | 28.324 | 59.377 | 16.923 | 2.69 | 0 | 95d7cd598 | campaign/the-deed | MacBookPro | 10 |

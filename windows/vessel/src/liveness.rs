@@ -2227,7 +2227,7 @@ pub fn waking_offset(activity: ActivityCycle) -> f64 {
 /// sleeping creature JUMPS through its off-phase in one `Rest` rather than
 /// spinning (The Slumber, spec §4). A bounded scan (at most ~1.5 days, one full
 /// cycle plus margin) at [`WAKE_SCAN_STEP`]; deterministic (compute-path only).
-fn next_awake_day(
+pub(crate) fn next_awake_day(
     activity: ActivityCycle,
     terrain: &dyn Terrain,
     room: &RoomAddr,
@@ -4102,7 +4102,12 @@ fn landing_interior(pos: &RoomAddr, terrain: &dyn Terrain) -> Option<(Interior, 
 
 /// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
 /// `provenance` naming why.
-fn agent_at_fact(entity: EntityId, target: &RoomAddr, day: f64, provenance: &str) -> Fact {
+pub(crate) fn agent_at_fact(
+    entity: EntityId,
+    target: &RoomAddr,
+    day: f64,
+    provenance: &str,
+) -> Fact {
     Fact {
         subject: entity,
         predicate: AGENT_AT.to_string(),
@@ -4139,7 +4144,7 @@ fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 
 /// A committed `rested` fact: `entity` slept (reset its fatigue) on `day` — The
 /// Slumber's discharge, the fatigue twin of [`drank_fact`].
-fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+pub(crate) fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: RESTED.to_string(),
@@ -5644,7 +5649,7 @@ pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTre
 /// The species' activity-cycle, from its committed `SPECIES_ACTIVITY_CYCLE`
 /// fact on the species' own entity (resolved by name via `species_entity`).
 /// Defaults to `Diurnal` if the species or the fact is missing.
-fn species_activity(world: &World, species: &str) -> ActivityCycle {
+pub(crate) fn species_activity(world: &World, species: &str) -> ActivityCycle {
     hornvale_species::species_entity(world, species)
         .and_then(|e| {
             match world

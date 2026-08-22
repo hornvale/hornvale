@@ -45,6 +45,8 @@ mod liveness_genesis;
 mod ooc_namespace;
 #[path = "suite/ooc_objective.rs"]
 mod ooc_objective;
+#[path = "suite/player_acts_commit.rs"]
+mod player_acts_commit;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
 #[path = "suite/possession_moves.rs"]

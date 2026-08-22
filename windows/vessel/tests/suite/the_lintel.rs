@@ -143,18 +143,55 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
     );
 }
 
+/// The session's total fact count taken IMMEDIATELY BEFORE the `enter` that
+/// succeeds — scouting exactly as [`enter_somewhere_built`] does, but
+/// reporting the baseline from inside the loop.
+///
+/// **A separate scout, for a reason a shorter test would have hidden (The
+/// Deed, Task 7).** Since a walk-band step now commits an `agent-at`, a
+/// baseline taken before the scout would fold the scout's own commits into
+/// this guard. The obvious repair — walk first, leave, then re-enter and
+/// re-leave with the baseline in between — is WORSE THAN VACUOUS: `enter` and
+/// `out` charge no time, so the second pair's envelope would be identical to
+/// the first's, and `Ledger::commit` dedups an exact full-envelope match. A
+/// mutant that committed on `out` was measured to leave this test GREEN under
+/// that shape. Taking the baseline inside the loop is what makes any commit
+/// here novel, and therefore visible.
+fn fact_count_before_a_successful_enter(session: &mut Session<'_>, limit: usize) -> Option<usize> {
+    for step in 0..limit {
+        let before = session.committed_fact_count();
+        let reply = out(session.handle("enter"));
+        if !reply.starts_with("Nothing here is built") {
+            return Some(before);
+        }
+        // Not built here — step along and try again.
+        let moved = out(session.handle(if step % 2 == 0 { "go n" } else { "go ne" }));
+        if moved.starts_with("No way") {
+            let _ = session.handle("back");
+        }
+    }
+    None
+}
+
 #[test]
 fn entering_and_leaving_commits_nothing() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
-    let before = session.committed_agent_at_count();
     // `expect`, not `let _`: the guard is only meaningful if a descent actually
     // happened. Discarding the result would pass just as well on a session that
     // never got inside anything.
-    enter_somewhere_built(&mut session, 12).expect("a descent must actually happen to be guarded");
+    let before = fact_count_before_a_successful_enter(&mut session, 12)
+        .expect("a descent must actually happen to be guarded");
     let _ = session.handle("out");
+
+    // `committed_fact_count`, not `committed_agent_at_count` (The Deed, Task
+    // 7). Its own doc argues the total is the right instrument here: a
+    // per-predicate accessor can only falsify a commit it was told to expect,
+    // and THIS campaign is the "later campaign introducing a new predicate"
+    // that doc names — it adds commit paths to the session, so the weaker
+    // guard is exactly the one it could walk past.
     assert_eq!(
-        session.committed_agent_at_count(),
+        session.committed_fact_count(),
         before,
         "a band change is session state; nothing commits"
     );

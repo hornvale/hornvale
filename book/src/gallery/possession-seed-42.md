@@ -93,11 +93,11 @@ A recess cut back from the main space, deep enough to sit in.
 > examine a wall
 Set close and plumb, with no gap in it wide enough to pass.
 > out
-[room 896860167, day 0]
+[room 896860167, day 0.011719999738288106]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > go n
-[room 896958471, day 0]
+[room 896958471, day 0.12902999711871282]
 Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies NE, W, SE.
 > map out 2
@@ -120,23 +120,23 @@ No direction here is closed; the nearest ground lies NE, W, SE.
 > enter
 Nothing here is built; there is nothing to enter.
 > look
-[room 896958471, day 0]
+[room 896958471, day 0.12902999711871282]
 Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies NE, W, SE.
 > out
 You are already out of doors.
 > go ne
-[room 896958567, day 0]
+[room 896958567, day 0.2462099945020405]
 Tropical rainforest — a liana tangle, sun-warmed, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies NW, SW, E.
 > back
-[room 896958471, day 0]
-Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+[room 896958471, day 0.3634199918846983]
+Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies NE, W, SE.
 > wait 90
-Time passes. You sense movement nearby (183 stirred).
+Time passes. You sense movement nearby (184 stirred).
 > examine sky
-Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are shrinking. The sky is a flat overcast.
 > knows
 5 things seen:
   room/896860167 = {"schema":"locale/room/v2","id":896860167,"face":7,"path"…
