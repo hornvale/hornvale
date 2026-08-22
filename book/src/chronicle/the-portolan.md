@@ -74,6 +74,14 @@ and the strip's *resolution* — the substance of this campaign — are
 unaffected; what changed is only how a player tells the client "I mean the
 map, not the command line."
 
+**Superseded again, after it merged.** [The Stride](./the-stride.md) grew
+that `Focus` a third state — `{ Walk, Cli, Map }`, with `Walk` the default —
+so `Esc` no longer toggles between two panes: it cycles Walk↔Cli, and from
+the map it returns to Walk. The map is now entered by submitting the command
+`map` rather than by any key, which means this section's `Esc` is a
+departure from the map and never an arrival at it. The cursor's *position*
+and the strip's *resolution* are again unaffected.
+
 This campaign's own mutation-proved keyspace sweep survived the change and
 now proves a different property (the routing table's totality, not this
 mode's own keyset); its diagonal-motion assertions were deleted along with
