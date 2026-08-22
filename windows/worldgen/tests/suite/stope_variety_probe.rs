@@ -127,6 +127,7 @@
 //! C.1   BRANCH COUNT (per entrance)
 //!   mode is 1 -> proceed
 //!   mode > 1  -> the tree is not a tree
+//!   (a TIE for the top) -> THE TABLE NAMES NO ARM. See below.
 //!
 //! B.7   P(Nadir access | branch reached Underdeep)
 //!   0-10% -> the intent
@@ -136,12 +137,19 @@
 //! B.7   BARRIER STATE SHARE   reported as a distribution, NEVER gated
 //! ```
 //!
-//! **Two of these tables have holes, and both are recorded rather than
+//! **Three of these tables have holes, and all three are recorded rather than
 //! repaired** (B.8's discipline — repairing a table *now*, knowing the answer,
 //! is what preregistration exists to prevent):
 //!
 //! - C.5's depth table names no arm for `median > 40 with max <= 50`.
 //!   [`DepthVerdict::UnspecifiedByTheBrief`] exists for it. It did not fire.
+//! - C.1's branch-count table names no arm for a TIE at the top of the
+//!   histogram, and this is the only classifier here where a tie is possible
+//!   at all. [`BranchCountVerdict::UnspecifiedByTheBrief`] exists for it.
+//!   Until review round 1 the tie was broken toward `ModeIsOne` — the PASSING
+//!   arm — by a `Reverse(*count)` inside the `max_by_key`, which is B.8's own
+//!   defect class committed inside the file that records B.8. It does not bind
+//!   today: the top two are 58.37% and 27.08%.
 //! - B.7's Nadir table **overlaps**: `~0%` is a subset of `0-10%`, so a rate
 //!   of 0.4% satisfies two arms with opposite verdicts. Encoded here under the
 //!   only self-consistent reading — *exactly zero* is `EndgameUnreachable`,
@@ -279,7 +287,11 @@
 //! scarce thing, and is a controller question about the authored weights rather
 //! than anything this probe can adjudicate.
 //!
-//! ## `P(Nadir access | branch reached Underdeep)` — B.7
+//! ## `P(Nadir access | branch reached Underdeep)` — B.7, CONDITIONED
+//!
+//! Numerator and denominator are conditioned alike here, which is what B.7
+//! asks for. The unconditional counters live in the section below and are
+//! **different numbers**; the probe conflated them until review round 1.
 //!
 //! ```text
 //!   reading                  42            7          1234        POOLED
@@ -304,32 +316,131 @@
 //! realized branches:
 //!
 //! ```text
-//!   realizes a Nadir chamber in the lattice   1912 / 6136   31.160%
+//!   realizes a Nadir chamber in the lattice   1928 / 6136   31.421%
 //!   reaches the Underdeep BY WALKING            27 / 6136    0.440%
-//!   reaches the Nadir     BY WALKING            10 / 6136    0.163%
+//!   reaches the Nadir     BY WALKING            22 / 6136    0.359%   <- ratcheted
 //! ```
+//!
+//! **THESE ARE UNCONDITIONAL COUNTS, AND TWO OF THEM WERE NOT.** Until review
+//! round 1 both Nadir counters were incremented inside `absorb`'s
+//! `if b.reached_underdeep` / `if b.lattice_underdeep` blocks and then printed
+//! against `self.branches` under the word UNCONDITIONAL — a conditioned
+//! numerator over an unconditional denominator, reading 0.163% and 31.160%.
+//! The nesting is *correct* for B.7's conditional, whose denominator is
+//! conditioned the same way, so both pairs are now counted and printed
+//! separately and each is named where it is printed.
+//!
+//! **What the nesting was deleting is the interesting half.** Of the 22
+//! branches that reach a Nadir chamber by walking, **12 never reach an
+//! Underdeep chamber on the same branch** — you arrive at the bottom without
+//! passing through the layer above. That is the majority of the population,
+//! and the conditioned counter erased exactly it.
 //!
 //! **The deep underworld exists and is very nearly unwalkable.** An independent
 //! instrument already said so and nobody had read it as this:
 //! `docs/audits/underworld-lattice-seed-panel.md` reports seed 42 as **21,328
 //! chambers, 1,496 reachable from 511 open entrances** — 7.0%. This probe's own
 //! walk reproduces that pair **exactly** on all three seeds (1496/511,
-//! 3277/1070, 2493/831), from a different call site, which is the strongest
-//! corroboration available here.
+//! 3277/1070, 2493/831), from a different call site.
 //!
-//! **The mechanism is C.4's descent rule meeting the 0.5 existence coin.** C.4
-//! made a band's exit its LAST realized floor, and reaching that floor requires
-//! every floor between to exist. A run of `n` floors is therefore traversed with
-//! probability on the order of `0.5^(n-1)`, and the frozen ranges make `n` large
-//! exactly where depth matters (`Shallows` 3-10, `Deeps` 5-20). The witness's own
-//! first example is the whole story: `30/0/0/undercroft/0` reads `##.` — floors
-//! 0 and 1 exist, floor 2 does not, and floor 2 is the only way down. That system
-//! has 2 reachable chambers out of a 30-floor spine.
+//! **That corroborates THE WALK, and only the walk.** It is a reachable/open-
+//! mouth pair, so it pins this probe's traversal against an independently
+//! written one — it says nothing about the Nadir tallies, which is precisely
+//! where the defect above was. This module printed it immediately after the
+//! Nadir figure as though it covered that too; it is now attached to what it
+//! actually covers, and the POOLED row says outright that no committed line
+//! corroborates it (the witness prints per-seed pairs only, and no 7266/2412
+//! line exists in it).
+//!
+//! ## THE MECHANISM — NOT PERCOLATION, AND THE REAL ONE IS A DESIGN LEVER
+//!
+//! **The account this module gave until review round 1 was wrong, and it was
+//! wrong in a checkable way** — which is why the evidence is now printed every
+//! run rather than asserted in prose. It read: *"C.4's descent rule meeting the
+//! 0.5 existence coin, so traversing an n-floor run costs ~0.5^(n-1)"*. That
+//! is a closed form, and it fails two independent tests.
+//!
+//! **Test 1 — route ablation** (printed every run, under `ROUTE ABLATION`).
+//! Restrict the walk to entrance 0's mouth, the surface head, which is the
+//! only route the descent-chain story describes:
+//!
+//! ```text
+//!   nadir reached, all mouths                  22 / 6136 = 0.359%
+//!   nadir reached, entrance 0 only              2 / 6136 = 0.033%  <- 9.1% of it
+//!   nadir reached, no lateral moves            12 / 6136 = 0.196%
+//!   nadir reached, entrance 0 AND no lateral    0 / 6136 = 0.000%
+//! ```
+//!
+//! **91% of Nadir reaches do not descend from the surface at all**, and the
+//! last line is the sharpest statement of it: the pure spine-descent route the
+//! closed form describes delivers **exactly zero** branches. The 2 the
+//! head-only walk does find get there by stepping sideways onto another branch
+//! first. (The two ablations needing a production change were taken with
+//! `scripts/mutate.py` and the tree restored — see the mutation ledger below.)
+//!
+//! **Test 2 — density sweep.** `0.5^(n-1)` predicts a constant elasticity
+//! `d ln R / d ln p` equal to the number of floors that must exist — at least
+//! 10 by §3.1's minima, and ~19-28 for a typical spine. Mutating
+//! `EXISTENCE_DENSITY` alone:
+//!
+//! ```text
+//!   p     nadir reached / 6136     entrance-0-only share   elasticity
+//!   0.3      9   0.147%                    0%
+//!   0.5     22   0.359%  (shipped)         9.1%              1.75
+//!   0.7     97   1.581%                   57.7%              4.41
+//!   0.9   1023  16.672%                   83.7%              9.37
+//! ```
+//!
+//! The elasticity is not constant and every value is 3-15x below what the
+//! closed form requires. The absolute prediction misses by five orders of
+//! magnitude: a full-ladder spine at the pooled median depth of 24 gives
+//! `0.5^23 = 1.2e-7`, against an observed `22/1928 = 1.1e-2` among the branches
+//! that realize a Nadir chamber at all.
+//!
+//! **The true mechanism is `entrance_mouth` -> `root_floor_of`, and it is a
+//! dial.** A side entrance does not descend; it maps to its branch's ROOT
+//! FLOOR, and `root_floor_of` picks that band **uniform over the parent's
+//! realized bands** — today always all five, since every frozen range bottoms
+//! out at 1. So roughly one side entrance in five is a door opening directly
+//! into the Nadir band. Printed every run, under `DEEP-MOUTH CENSUS`:
+//!
+//! ```text
+//!   680 DRAWN side-branch mouths (entrance > 0 AND branch > 0)
+//!     band 0 Undercroft  161  23.68%   surviving chamber_exists: 25
+//!     band 1 Shallows    126  18.53%                             12
+//!     band 2 Deeps       148  21.76%                             18
+//!     band 3 Underdeep   108  15.88%                              7
+//!     band 4 Nadir       137  20.15%                             12
+//! ```
+//!
+//! That is `root_floor_of`'s uniform pick reproducing itself to within 4
+//! points, visible directly. **The denominator is the load-bearing part and it
+//! is easy to get wrong**: a further 923 non-head entrances fall back to the
+//! surface head (a width-one system, or a side branch that roots nowhere), and
+//! folding those in puts 68% of the population at band 0 and understates the
+//! deep share threefold. A drawn side-branch mouth is exactly
+//! `entrance > 0 && branch > 0`, since `root_floor_of` refuses branch 0.
+//!
+//! Lateral branch moves supply most of the remainder (22 -> 12 with lateral
+//! disabled). The rising elasticity and the rising entrance-0 share are the
+//! same fact, and they are the signature of a **mixture**: at the shipped
+//! p = 0.5 a near-linear deep-mouth route dominates, and only above p ~ 0.7
+//! does the high-exponent descent chain take over at all.
+//!
+//! **So the design statement is not "the deep underworld is nearly
+//! unwalkable".** It is: **the deep underworld is essentially only reachable
+//! through a door that opens directly into it.** That is a live design lever —
+//! `root_floor_of`'s band pick — and not a percolation constant. Weighting that
+//! pick toward the shallow bands makes the Nadir rarer without touching the
+//! geology, the ladder or the existence coin; leaving it uniform is what makes
+//! the endgame reachable at all today.
 //!
 //! This is **not** B.7's `~0%` arm, which is about the conditional and does not
-//! fire. It is a quantity no frozen table covers, reported here without a
-//! verdict because inventing one after unblinding is the thing preregistration
-//! exists to stop. It is the controller's to rule on.
+//! fire. It is a quantity no frozen table covers; the rate itself now carries a
+//! ratchet band ([`NADIR_WALK_RATE_FLOOR`]) so a change of this size cannot
+//! pass silently again, but no *verdict* is invented for it, because inventing
+//! one after unblinding is the thing preregistration exists to stop. It is the
+//! controller's to rule on.
 //!
 //! ## THE JOINT TABLE — (character x terminating band), "the campaign's product"
 //!
@@ -388,14 +499,27 @@
 //!
 //! # NON-VACUITY AND THE POSITIVE CONTROLS
 //!
-//! Every distribution asserts its corpus is non-empty — systems, branches, the
-//! joint table, both conditional denominators, every character and every
-//! barrier state — because a share over an empty corpus is `0/1 = 0` and reads
-//! as a finding. The reachability walk additionally asserts both that something
-//! is reachable and that not everything is, so neither a dead walk nor an
-//! ungated one can pass as a measurement.
+//! Every distribution asserts its corpus is non-empty — systems, branches,
+//! both conditional denominators, every character and every barrier state —
+//! because a share over an empty corpus is `0/1 = 0` and reads as a finding.
+//! The reachability walk additionally asserts both that something is reachable
+//! and that not everything is, so neither a dead walk nor an ungated one can
+//! pass as a measurement.
 //!
-//! Four mutations of the SHIPPED derivation, applied with `scripts/mutate.py`
+//! **The joint table's guard was the exception, and it was an implication
+//! rather than a guard** (review round 1). `!joint.is_empty()` sat behind
+//! `branches > 0`, and `absorb` inserts a joint entry for every branch, so it
+//! could not fail unless the assertion in front of it already had: the table
+//! this file calls "the campaign's product" had no guard of its own, and an
+//! empty *cell* passed trivially. It is now guarded by two clauses that can
+//! each fail with `branches > 0` — the table must occupy at least two distinct
+//! terminating bands (a table entirely in the `(none)` column, or piled into
+//! one band, is degenerate), and every character must occupy at least one cell
+//! with a realized band.
+//!
+//! **The headline was unasserted too**; see [`NADIR_WALK_RATE_FLOOR`].
+//!
+//! Mutations of the SHIPPED derivation, applied with `scripts/mutate.py`
 //! (which refuses a pattern that matches zero or more than one site), each
 //! reddening the assertion it targets and nothing else. The tree was restored
 //! and `git diff` confirmed empty after each:
@@ -414,6 +538,27 @@
 //!       same gate, proving the >50 arm is reachable and not decorative.
 //! C  branch_count_of: 0.60 -> 0.05   mode 1 (59.07%) -> 2 (80.15%)
 //!    => BranchCountVerdict::TreeIsNotATree, panics on C.1's assertion.
+//! D  EXISTENCE_DENSITY: 0.5 -> 0.7   walked-Nadir 0.359% -> 1.581%
+//!    => panics on the headline ratchet. This is the control the probe did
+//!       NOT have: the same one-character change exited 0 before F3.
+//! E  this probe's own `terminating = Some(rank)` -> `None`
+//!    the joint table collapses entirely into the `(none)` column (4004 /
+//!    1832 / 300 by character) while `realized` — and therefore every
+//!    conditional denominator — is untouched
+//!    => panics on the joint table's own guard. What it proves is about the
+//!       OLD guard: `!joint.is_empty()` saw 6,136 entries on that tree and
+//!       was satisfied, and every vacuity assertion ahead of it passed, so
+//!       the campaign's product table reported nothing at all through a run
+//!       that would have exited 0.
+//! ```
+//!
+//! Two further mutations were taken as MEASUREMENTS rather than controls —
+//! they produce the mechanism evidence above and assert nothing:
+//!
+//! ```text
+//! S  EXISTENCE_DENSITY: 0.5 -> 0.3 / 0.7 / 0.9   the density sweep table
+//! L  passages_from: both lateral `addr.branch +/- 1` pushes disabled
+//!    walked-Nadir 22 -> 12; entrance-0-only 2 -> 0
 //! ```
 //!
 //! A red from a compile error would prove nothing about an assertion, so each
@@ -467,6 +612,27 @@ const TOTAL_FLOORS_CEILING: u32 = 4 * MAIN_LINE_DEPTH_CEILING;
 
 /// B.7's ceiling for `P(Nadir access | branch reached Underdeep)`.
 const NADIR_GATE_CEILING: f64 = 0.10;
+
+/// THE HEADLINE RATCHET, floor — the share of all realized branches reaching
+/// a Nadir chamber by walking, pooled over the panel.
+///
+/// **Why a ratchet exists here at all.** Every frozen table in this file gates
+/// a quantity the spec preregistered, and none of them gates the number this
+/// probe's own finding is about. Review round 1 demonstrated the gap the
+/// cheapest possible way: mutating `EXISTENCE_DENSITY` from 0.5 to 0.7 — one
+/// character of shipped production code — moved this rate 4.4x and the probe
+/// still exited 0, because the whole block was printed rather than asserted.
+///
+/// **Why a BAND and not a point.** The quantity is a count of 22 branches out
+/// of 6,136; pinning the exact integer would redden on any change that moved
+/// the world at all, which trains a reader to re-baseline without looking. The
+/// band is roughly half to double the measured 0.359% (11 to 46 branches) —
+/// wide enough to survive incidental motion, tight enough that every point of
+/// the density sweep in this module's header lands outside it.
+const NADIR_WALK_RATE_FLOOR: f64 = 0.0018;
+
+/// THE HEADLINE RATCHET, ceiling. See [`NADIR_WALK_RATE_FLOOR`].
+const NADIR_WALK_RATE_CEILING: f64 = 0.0075;
 
 /// The delve ladder's habitation rungs as `(rank, rung)`, shallowest first —
 /// **derived from [`rungs`] through the shipped [`rung_rank`]**, never
@@ -586,19 +752,35 @@ enum BranchCountVerdict {
     ModeIsOne,
     /// The mode is above 1 — the tree is not a tree.
     TreeIsNotATree,
+    /// **The histogram has no unique mode.** Two or more counts tie for the
+    /// top, so "the mode is 1" is neither true nor false. C.1's table names no
+    /// arm for it, exactly as C.5's names none for `median > 40 with
+    /// max <= 50`, and it is recorded here rather than resolved by a
+    /// tie-break — this classifier used to break the tie toward the PASSING
+    /// arm, which is a tie silently rounded into a green verdict.
+    ///
+    /// It does not bind today: the top two counts are 58.37% and 27.08%. It is
+    /// the only classifier in this file where a tie is possible at all.
+    UnspecifiedByTheBrief,
 }
 
 /// Apply C.1's table to a histogram indexed by count.
+///
+/// A tie for the top is [`BranchCountVerdict::UnspecifiedByTheBrief`], never
+/// broken toward an arm — see that variant.
 fn classify_branch_count(hist: &BTreeMap<u8, usize>) -> BranchCountVerdict {
-    let mode = hist
+    let Some(top) = hist.values().copied().max() else {
+        return BranchCountVerdict::UnspecifiedByTheBrief;
+    };
+    let modes: Vec<u8> = hist
         .iter()
-        .max_by_key(|&(count, n)| (*n, std::cmp::Reverse(*count)))
+        .filter(|&(_, n)| *n == top)
         .map(|(count, _)| *count)
-        .unwrap_or(0);
-    if mode == 1 {
-        BranchCountVerdict::ModeIsOne
-    } else {
-        BranchCountVerdict::TreeIsNotATree
+        .collect();
+    match modes.as_slice() {
+        [1] => BranchCountVerdict::ModeIsOne,
+        [_] => BranchCountVerdict::TreeIsNotATree,
+        _ => BranchCountVerdict::UnspecifiedByTheBrief,
     }
 }
 
@@ -649,6 +831,13 @@ struct BranchReading {
     reached_underdeep: bool,
     /// A chamber of this branch at the Nadir rank is reachable likewise.
     reached_nadir: bool,
+    /// The Underdeep rank is reachable when the walk is seeded from
+    /// **entrance 0's mouth alone** — the surface head, which is the only
+    /// route the "descend the spine" story describes. The route ablation
+    /// behind this module's mechanism note.
+    reached_underdeep_head_only: bool,
+    /// The Nadir rank is reachable from the surface head alone, likewise.
+    reached_nadir_head_only: bool,
     /// `bands_of(character)` contains `Nadir` — the character table's own
     /// verdict, which `chamber_exists` never consults.
     table_admits_nadir: bool,
@@ -673,6 +862,19 @@ struct SystemReading {
     /// directly against the committed witness's `reachable ... from ... open
     /// entrances` line.
     reachable_chambers: usize,
+    /// THE DEEP-MOUTH CENSUS: the band each NON-HEAD mouth (`entrance > 0`)
+    /// opens into, as drawn, before `chamber_exists` adjudicates it. A side
+    /// entrance is mapped by `entrance_mouth` through `root_floor_of`, whose
+    /// band pick is uniform over the parent's realized bands — so this is
+    /// where the deep-mouth mechanism is visible directly.
+    mouth_bands: Vec<u8>,
+    /// The same, restricted to mouths that survive `chamber_exists` — the
+    /// doors that are actually open.
+    open_mouth_bands: Vec<u8>,
+    /// Non-head entrances whose mouth fell back to the surface head (a
+    /// width-one system, or a side branch that roots nowhere). Counted so the
+    /// deep-mouth denominator is visibly the DRAWN population, not the roster.
+    head_fallbacks: usize,
     /// The realized branch columns of the canonical lattice.
     branches: Vec<BranchReading>,
 }
@@ -730,7 +932,7 @@ fn read_system(
     // is the readout's openness test but needs a stratum column; the
     // existence half of its verdict is `chamber_exists`, which is the gate
     // this probe is about.
-    let mouths: Vec<ChamberAddr> = (0..entrances)
+    let all_mouths: Vec<ChamberAddr> = (0..entrances)
         .map(|e| {
             let m = entrance_mouth(seed, cell, e);
             ChamberAddr {
@@ -741,11 +943,56 @@ fn read_system(
                 floor: m.floor,
             }
         })
+        .collect();
+    // THE DEEP-MOUTH CENSUS, taken before adjudication, over the mouths that
+    // actually carry a draw. TWO exclusions, and the second decides the
+    // denominator:
+    //
+    //  - entrance 0 is the surface head BY DEFINITION (`entrance_mouth`
+    //    returns `HEAD` with no draw at all), so it is not a drawn mouth;
+    //  - a non-zero entrance ALSO returns `HEAD` when the system has width 1,
+    //    or when its picked side branch roots nowhere. Those are fallbacks,
+    //    not deep-mouth draws, and they are `branch == 0` — the only way a
+    //    mouth can carry branch 0, since `root_floor_of` refuses branch 0.
+    //
+    // So a DRAWN side-branch mouth is exactly `entrance > 0 && branch > 0`.
+    // Folding the fallbacks in would put ~2/3 of the population at band 0 and
+    // understate the deep share threefold.
+    let head_fallbacks = all_mouths
+        .iter()
+        .filter(|m| m.entrance > 0 && m.branch == 0)
+        .count();
+    let mouth_bands: Vec<u8> = all_mouths
+        .iter()
+        .filter(|m| m.entrance > 0 && m.branch > 0)
+        .map(|m| m.band)
+        .collect();
+    let mouths: Vec<ChamberAddr> = all_mouths
+        .into_iter()
         .filter(|&entry| chamber_exists(seed, cave, gradient, entry))
+        .collect();
+    let open_mouth_bands: Vec<u8> = mouths
+        .iter()
+        .filter(|m| m.entrance > 0 && m.branch > 0)
+        .map(|m| m.band)
         .collect();
     let reached = reachable_union(seed, cave, gradient, &mouths);
     let reached_branch_bands: BTreeSet<(u8, u8)> =
         reached.iter().map(|a| (a.branch, a.band)).collect();
+
+    // THE ROUTE ABLATION. The same walk seeded from entrance 0's mouth alone
+    // — the surface head, `EntranceMouth { branch: 0, band: 0, floor: 0 }` by
+    // definition. Every other mouth is a SIDE entrance, which
+    // `entrance_mouth` maps through `root_floor_of` to a band drawn uniformly
+    // over the parent's realized bands, so it can open directly into any band
+    // including the Nadir. Restricting to the head is therefore exactly the
+    // "you must descend the whole spine" story, and the gap between the two
+    // walks is how much of the deep reach does NOT come from descending.
+    let head_mouths: Vec<ChamberAddr> =
+        mouths.iter().copied().filter(|m| m.entrance == 0).collect();
+    let reached_head = reachable_union(seed, cave, gradient, &head_mouths);
+    let head_branch_bands: BTreeSet<(u8, u8)> =
+        reached_head.iter().map(|a| (a.branch, a.band)).collect();
 
     let mut main_line_depth = 0u32;
     let mut total_floors = 0u32;
@@ -797,6 +1044,8 @@ fn read_system(
             lattice_nadir: realized.contains(&nadir),
             reached_underdeep: reached_branch_bands.contains(&(branch, underdeep)),
             reached_nadir: reached_branch_bands.contains(&(branch, nadir)),
+            reached_underdeep_head_only: head_branch_bands.contains(&(branch, underdeep)),
+            reached_nadir_head_only: head_branch_bands.contains(&(branch, nadir)),
             table_admits_nadir: bands_of(character).contains(&DelveRung::Nadir),
         });
     }
@@ -809,6 +1058,9 @@ fn read_system(
         total_floors,
         open_mouths: mouths.len(),
         reachable_chambers: reached.len(),
+        mouth_bands,
+        open_mouth_bands,
+        head_fallbacks,
         branches,
     }
 }
@@ -821,7 +1073,11 @@ struct Tallies {
     /// Ocean cells carrying a cave, excluded and counted so the choice is
     /// visible rather than implied.
     ocean_caves: usize,
-    /// Land cells with no cave — the other half of the excluded population.
+    /// **Every** land cell, cave-bearing or not — the population [`systems`]
+    /// is drawn FROM, not a disjoint remainder. `land_cells - systems` is the
+    /// cave-free half; the two printed numbers must never be added.
+    ///
+    /// [`systems`]: Tallies::systems
     land_cells: usize,
     /// Realized branch columns of every canonical lattice — the branch
     /// denominator.
@@ -845,12 +1101,41 @@ struct Tallies {
     totals: Vec<u32>,
     /// Branches realizing a chamber at the Underdeep rank.
     lattice_underdeep: usize,
-    /// ... of which realize one at the Nadir rank.
-    lattice_nadir: usize,
+    /// **CONDITIONED.** Of [`lattice_underdeep`], those also realizing a
+    /// chamber at the Nadir rank — B.7's numerator, conditioned exactly as
+    /// its denominator is.
+    ///
+    /// [`lattice_underdeep`]: Tallies::lattice_underdeep
+    lattice_nadir_given_underdeep: usize,
+    /// **UNCONDITIONAL.** Every branch realizing a Nadir chamber, whether or
+    /// not it realizes an Underdeep one. This is the population figure, and
+    /// it is a different number: nesting it inside the Underdeep test — which
+    /// is what this probe did until review round 1 — silently drops every
+    /// branch that reaches the bottom without the layer above.
+    lattice_nadir_all: usize,
     /// Branches with a mouth-reachable Underdeep chamber.
     reached_underdeep: usize,
-    /// ... of which have a mouth-reachable Nadir chamber.
-    reached_nadir: usize,
+    /// **CONDITIONED.** Of [`reached_underdeep`], those also reaching a Nadir
+    /// chamber — B.7's graph numerator, conditioned like its denominator.
+    ///
+    /// [`reached_underdeep`]: Tallies::reached_underdeep
+    reached_nadir_given_underdeep: usize,
+    /// **UNCONDITIONAL.** Every branch reaching a Nadir chamber by walking.
+    /// The headline number, and the one the chronicle quotes.
+    reached_nadir_all: usize,
+    /// Of [`reached_nadir_all`], those reaching the Nadir WITHOUT reaching
+    /// the Underdeep on the same branch — arriving at the bottom without
+    /// passing through the layer above. This is the population the old nested
+    /// counter was deleting, and it is the majority of it.
+    ///
+    /// [`reached_nadir_all`]: Tallies::reached_nadir_all
+    reached_nadir_without_underdeep: usize,
+    /// THE ROUTE ABLATION: branches reaching the Underdeep when the walk is
+    /// seeded from **entrance 0's mouth alone** (the surface head).
+    reached_underdeep_head_only: usize,
+    /// THE ROUTE ABLATION: branches reaching the Nadir from the surface head
+    /// alone. The evidence for this module's mechanism note.
+    reached_nadir_head_only: usize,
     /// Underdeep-realizing branches whose CHARACTER table admits `Nadir`.
     table_admits_nadir: usize,
     /// Mouths that pass `chamber_exists`, summed over systems.
@@ -858,6 +1143,13 @@ struct Tallies {
     /// Chambers reachable from an open mouth, summed over systems — the
     /// cross-check against the committed witness.
     reachable_chambers: usize,
+    /// THE DEEP-MOUTH CENSUS, by band: every DRAWN side-branch mouth.
+    mouth_bands: BTreeMap<u8, usize>,
+    /// The same, restricted to mouths surviving `chamber_exists`.
+    open_mouth_bands: BTreeMap<u8, usize>,
+    /// Non-head entrances that fell back to the surface head, excluded from
+    /// the census above and counted here so the exclusion is visible.
+    head_fallbacks: usize,
 }
 
 impl Tallies {
@@ -876,6 +1168,13 @@ impl Tallies {
         self.totals.push(sys.total_floors);
         self.open_mouths += sys.open_mouths;
         self.reachable_chambers += sys.reachable_chambers;
+        self.head_fallbacks += sys.head_fallbacks;
+        for &band in &sys.mouth_bands {
+            *self.mouth_bands.entry(band).or_default() += 1;
+        }
+        for &band in &sys.open_mouth_bands {
+            *self.open_mouth_bands.entry(band).or_default() += 1;
+        }
         for b in &sys.branches {
             self.branches += 1;
             *self.by_character.entry(b.character).or_default() += 1;
@@ -884,20 +1183,39 @@ impl Tallies {
                 .joint
                 .entry((b.character, b.terminating_band))
                 .or_default() += 1;
+            // CONDITIONED (B.7's pair): numerator and denominator conditioned
+            // alike. UNCONDITIONAL: over every realized branch. Both are kept
+            // because they answer different questions, and they are counted in
+            // separate statements so neither can be read as the other.
             if b.lattice_underdeep {
                 self.lattice_underdeep += 1;
                 if b.lattice_nadir {
-                    self.lattice_nadir += 1;
+                    self.lattice_nadir_given_underdeep += 1;
                 }
                 if b.table_admits_nadir {
                     self.table_admits_nadir += 1;
                 }
             }
+            if b.lattice_nadir {
+                self.lattice_nadir_all += 1;
+            }
             if b.reached_underdeep {
                 self.reached_underdeep += 1;
                 if b.reached_nadir {
-                    self.reached_nadir += 1;
+                    self.reached_nadir_given_underdeep += 1;
                 }
+            }
+            if b.reached_nadir {
+                self.reached_nadir_all += 1;
+                if !b.reached_underdeep {
+                    self.reached_nadir_without_underdeep += 1;
+                }
+            }
+            if b.reached_underdeep_head_only {
+                self.reached_underdeep_head_only += 1;
+            }
+            if b.reached_nadir_head_only {
+                self.reached_nadir_head_only += 1;
             }
         }
     }
@@ -929,12 +1247,24 @@ impl Tallies {
         self.depths.extend_from_slice(&other.depths);
         self.totals.extend_from_slice(&other.totals);
         self.lattice_underdeep += other.lattice_underdeep;
-        self.lattice_nadir += other.lattice_nadir;
+        self.lattice_nadir_given_underdeep += other.lattice_nadir_given_underdeep;
+        self.lattice_nadir_all += other.lattice_nadir_all;
         self.reached_underdeep += other.reached_underdeep;
-        self.reached_nadir += other.reached_nadir;
+        self.reached_nadir_given_underdeep += other.reached_nadir_given_underdeep;
+        self.reached_nadir_all += other.reached_nadir_all;
+        self.reached_nadir_without_underdeep += other.reached_nadir_without_underdeep;
+        self.reached_underdeep_head_only += other.reached_underdeep_head_only;
+        self.reached_nadir_head_only += other.reached_nadir_head_only;
         self.table_admits_nadir += other.table_admits_nadir;
         self.open_mouths += other.open_mouths;
         self.reachable_chambers += other.reachable_chambers;
+        self.head_fallbacks += other.head_fallbacks;
+        for (k, v) in &other.mouth_bands {
+            *self.mouth_bands.entry(*k).or_default() += v;
+        }
+        for (k, v) in &other.open_mouth_bands {
+            *self.open_mouth_bands.entry(*k).or_default() += v;
+        }
     }
 
     /// The per-character shares, in [`CHARACTERS`] order.
@@ -947,21 +1277,55 @@ impl Tallies {
             .collect()
     }
 
+    /// **The headline rate**: the share of all realized branches that reach a
+    /// Nadir chamber by walking, unconditionally. This is the quantity
+    /// [`NADIR_WALK_RATE_FLOOR`]/[`NADIR_WALK_RATE_CEILING`] ratchet.
+    fn nadir_walk_rate(&self) -> f64 {
+        self.reached_nadir_all as f64 / self.branches.max(1) as f64
+    }
+
     /// Print every table this probe reports, under `label`.
-    fn report(&mut self, label: &str) {
+    ///
+    /// `witness_covers` says whether the committed witness
+    /// (`docs/audits/underworld-lattice-seed-panel.md`) carries a comparable
+    /// line for this label. It prints **per seed** and nothing else, so the
+    /// POOLED row cannot claim corroboration that does not exist: the witness
+    /// has no pooled pair, and this probe printed the claim unconditionally
+    /// until review round 1.
+    fn report(&mut self, label: &str, witness_covers: bool) {
         self.depths.sort_unstable();
         self.totals.sort_unstable();
         println!(
-            "\n== {label} ==  land cells {}  cave systems {}  realized branches {}  \
+            "\n== {label} ==  land cells {} (OF WHICH cave-bearing: {} — the two are \
+             nested, never summed; {} land cells carry no cave)  realized branches {}  \
              (ocean cells carrying a cave: {}, excluded)",
-            self.land_cells, self.systems, self.branches, self.ocean_caves
+            self.land_cells,
+            self.systems,
+            self.land_cells.saturating_sub(self.systems),
+            self.branches,
+            self.ocean_caves
         );
-        println!(
-            "  reachability cross-check: {} chambers reachable from {} open mouths \
-             (the committed witness `docs/audits/underworld-lattice-seed-panel.md` \
-             prints the same pair)",
-            self.reachable_chambers, self.open_mouths
-        );
+        // WHAT THIS CORROBORATES IS THE WALK, AND ONLY THE WALK. The witness
+        // reports the same reachable/open-mouth pair from a different call
+        // site, so agreement pins this probe's traversal. It says nothing
+        // about the Nadir tallies below, which is where review round 1 found
+        // the defect — attaching it to those was the mistake.
+        if witness_covers {
+            println!(
+                "  reachability cross-check (corroborates THE WALK, not the Nadir \
+                 tallies below): {} chambers reachable from {} open mouths — the \
+                 committed witness `docs/audits/underworld-lattice-seed-panel.md` \
+                 prints this pair per seed",
+                self.reachable_chambers, self.open_mouths
+            );
+        } else {
+            println!(
+                "  reachability cross-check: {} chambers reachable from {} open mouths \
+                 (POOLED — the committed witness prints per-seed pairs only, so no \
+                 committed line corroborates this row)",
+                self.reachable_chambers, self.open_mouths
+            );
+        }
 
         println!("  -- branch count PER ENTRANCE (C.1, GATED) --  denominator: entrances drawn");
         let entrances: usize = self.branch_count_per_entrance.values().sum();
@@ -1049,20 +1413,25 @@ impl Tallies {
             self.totals.last().copied().unwrap_or(0),
         );
 
-        println!("  -- P(Nadir access | branch reached Underdeep) (B.7) --");
-        let lattice = self.lattice_nadir as f64 / self.lattice_underdeep.max(1) as f64;
-        let graph = self.reached_nadir as f64 / self.reached_underdeep.max(1) as f64;
+        println!(
+            "  -- P(Nadir access | branch reached Underdeep) (B.7) — CONDITIONED: \
+             numerator and denominator alike --"
+        );
+        let lattice =
+            self.lattice_nadir_given_underdeep as f64 / self.lattice_underdeep.max(1) as f64;
+        let graph =
+            self.reached_nadir_given_underdeep as f64 / self.reached_underdeep.max(1) as f64;
         let table = self.table_admits_nadir as f64 / self.lattice_underdeep.max(1) as f64;
         println!(
             "     lattice existence  {:>6}/{:<6} = {:>6.2}%   verdict {:?}",
-            self.lattice_nadir,
+            self.lattice_nadir_given_underdeep,
             self.lattice_underdeep,
             lattice * 100.0,
             classify_nadir_gate(lattice)
         );
         println!(
             "     graph reachability {:>6}/{:<6} = {:>6.2}%   verdict {:?}",
-            self.reached_nadir,
+            self.reached_nadir_given_underdeep,
             self.reached_underdeep,
             graph * 100.0,
             classify_nadir_gate(graph)
@@ -1077,27 +1446,86 @@ impl Tallies {
         // The conditional above has a denominator that is itself the finding.
         // Printed UNCONDITIONALLY as well, because a conditional read off a
         // near-empty denominator is exactly the shape that reads as reassuring
-        // and is not. No preregistered table covers these two; they are
-        // reported, not classified.
-        println!("     UNCONDITIONAL, over all realized branches (no frozen table covers these):");
+        // and is not. No preregistered table covers these; they are reported,
+        // not classified — except the walked Nadir rate, which carries the
+        // ratchet below because it is the headline.
+        //
+        // EVERY NUMERATOR HERE IS UNCONDITIONAL. Until review round 1 the two
+        // Nadir counters were nested inside the Underdeep test and printed
+        // under this heading, so the number labelled unconditional was a
+        // conditioned count over an unconditional denominator.
         println!(
-            "       reaches Underdeep by walking {:>6}/{:<6} = {:>6.3}%",
+            "  -- UNCONDITIONAL, over all realized branches (separate counters from \
+             the conditioned pair above) --"
+        );
+        println!(
+            "       reaches Underdeep by walking  {:>6}/{:<6} = {:>6.3}%",
             self.reached_underdeep,
             self.branches,
             self.reached_underdeep as f64 / self.branches.max(1) as f64 * 100.0
         );
         println!(
-            "       reaches Nadir     by walking {:>6}/{:<6} = {:>6.3}%",
-            self.reached_nadir,
+            "       reaches Nadir     by walking  {:>6}/{:<6} = {:>6.3}%   <- THE HEADLINE",
+            self.reached_nadir_all,
             self.branches,
-            self.reached_nadir as f64 / self.branches.max(1) as f64 * 100.0
+            self.nadir_walk_rate() * 100.0
+        );
+        println!(
+            "         ... of those, WITHOUT reaching the Underdeep on the same branch: \
+             {}/{} — arriving at the bottom without passing through the layer above",
+            self.reached_nadir_without_underdeep, self.reached_nadir_all
         );
         println!(
             "       realizes Nadir in the lattice {:>6}/{:<6} = {:>6.3}%",
-            self.lattice_nadir,
+            self.lattice_nadir_all,
             self.branches,
-            self.lattice_nadir as f64 / self.branches.max(1) as f64 * 100.0
+            self.lattice_nadir_all as f64 / self.branches.max(1) as f64 * 100.0
         );
+        // THE ROUTE ABLATION — the mechanism evidence. If the deep reach were
+        // the spine being descended, restricting the walk to the surface head
+        // would barely move it.
+        println!(
+            "       ROUTE ABLATION, walk seeded from ENTRANCE 0's mouth alone (the \
+             surface head):"
+        );
+        println!(
+            "         reaches Underdeep {:>6}/{:<6} = {:>6.3}%  ({:>5.1}% of the \
+             all-mouths count)",
+            self.reached_underdeep_head_only,
+            self.branches,
+            self.reached_underdeep_head_only as f64 / self.branches.max(1) as f64 * 100.0,
+            self.reached_underdeep_head_only as f64 / self.reached_underdeep.max(1) as f64 * 100.0
+        );
+        println!(
+            "         reaches Nadir     {:>6}/{:<6} = {:>6.3}%  ({:>5.1}% of the \
+             all-mouths count)",
+            self.reached_nadir_head_only,
+            self.branches,
+            self.reached_nadir_head_only as f64 / self.branches.max(1) as f64 * 100.0,
+            self.reached_nadir_head_only as f64 / self.reached_nadir_all.max(1) as f64 * 100.0
+        );
+        // THE DEEP-MOUTH CENSUS — the other half of the mechanism evidence,
+        // and the half that names the lever. `entrance_mouth` maps a side
+        // entrance to its branch's root floor, and `root_floor_of` picks that
+        // band UNIFORM over the parent's realized bands (all five today, since
+        // every frozen range bottoms out at 1). So roughly one side entrance
+        // in five is a door that opens directly into the Nadir band.
+        let non_head: usize = self.mouth_bands.values().sum();
+        println!(
+            "       DEEP-MOUTH CENSUS: {non_head} DRAWN side-branch mouths (entrance > 0 \
+             AND branch > 0; a further {} non-head entrances fell back to the surface \
+             head and are excluded), by the band `entrance_mouth` maps them to — \
+             DRAWN / surviving `chamber_exists`:",
+            self.head_fallbacks
+        );
+        for (band, n) in &self.mouth_bands {
+            let open = self.open_mouth_bands.get(band).copied().unwrap_or(0);
+            println!(
+                "         band {band} {:<12} {n:>5} {:>6.2}%   open {open:>5}",
+                band_word(Some(*band)),
+                *n as f64 / non_head.max(1) as f64 * 100.0
+            );
+        }
 
         println!("  -- JOINT (character x terminating band) — the campaign's product --");
         println!(
@@ -1127,6 +1555,35 @@ impl Tallies {
     }
 }
 
+/// C.1's tie arm is reachable, and the passing arm is not where a tie lands.
+///
+/// A pure test over [`classify_branch_count`], costing no world build, because
+/// the arm it covers cannot be reached from the shipped panel — the top two
+/// counts are 58.37% and 27.08%, so without this the variant would be
+/// unexercised code asserting nothing. It is the guard on review round 1's F5:
+/// the classifier used to break a 1-vs-2 tie toward `ModeIsOne` through a
+/// `Reverse(*count)` in its `max_by_key`, quietly rounding an unspecified
+/// reading into C.1's passing arm.
+#[test]
+fn a_tie_for_the_modal_branch_count_is_not_rounded_into_the_passing_arm() {
+    let tied: BTreeMap<u8, usize> = [(1u8, 100usize), (2, 100)].into_iter().collect();
+    assert_eq!(
+        classify_branch_count(&tied),
+        BranchCountVerdict::UnspecifiedByTheBrief,
+        "a 1-vs-2 tie must not resolve to an arm C.1 never named"
+    );
+
+    // The two arms C.1 DOES name still resolve, so the guard above has not
+    // simply swallowed the classifier.
+    let one: BTreeMap<u8, usize> = [(1u8, 101usize), (2, 100)].into_iter().collect();
+    assert_eq!(classify_branch_count(&one), BranchCountVerdict::ModeIsOne);
+    let two: BTreeMap<u8, usize> = [(1u8, 100usize), (2, 101)].into_iter().collect();
+    assert_eq!(
+        classify_branch_count(&two),
+        BranchCountVerdict::TreeIsNotATree
+    );
+}
+
 /// claim: rate(share of branches by character, by barrier state and by
 /// terminating band, and the main-line depth and branch-count distributions;
 /// seeds 42 / 7 / 1234) —
@@ -1148,7 +1605,13 @@ impl Tallies {
 ///   gradient clamp — these decide `deepest`, so they move both depth and the
 ///   Nadir conditional.
 /// - `EXISTENCE_DENSITY` — the per-address coin, which decides which of the
-///   drawn floors are realized and therefore every terminating band.
+///   drawn floors are realized and therefore every terminating band. It also
+///   moves the ratcheted headline hard and non-linearly: 0.5 -> 0.7 is 4.4x,
+///   0.7 -> 0.9 another 10.5x (see the density sweep in the module header).
+/// - `root_floor_of`'s band pick (`windows/worldgen/src/character.rs`) — the
+///   uniform-over-realized-bands draw that puts ~1 side entrance in 5 straight
+///   into the Nadir band. This is the mechanism behind the walked-Nadir rate,
+///   and the one dial that moves it without touching geology or the ladder.
 /// - Giving `barrier_of` or `bands_of` a consumer inside `chamber_exists`
 ///   would make B.7's question answerable for the first time; the Nadir
 ///   assertions here are the baseline that change must be read against.
@@ -1203,9 +1666,9 @@ fn did_the_stope_solve_the_oatmeal_problem() {
     }
 
     for (seed_value, t) in per_seed.iter_mut() {
-        t.report(&format!("seed {seed_value}"));
+        t.report(&format!("seed {seed_value}"), true);
     }
-    pooled.report("POOLED");
+    pooled.report("POOLED", false);
 
     // --- Vacuity guards ----------------------------------------------------
     // Every share below is 0/1 = 0 over an empty corpus, which is
@@ -1236,10 +1699,42 @@ fn did_the_stope_solve_the_oatmeal_problem() {
             "seed {seed_value}: no branch has a mouth-reachable Underdeep \
              chamber — the graph reading of B.7's conditional is vacuous"
         );
+        // THE JOINT TABLE'S OWN GUARD. `!joint.is_empty()` — which is what
+        // stood here until review round 1 — cannot fail while `branches > 0`,
+        // because `absorb` inserts an entry for every branch: it was the
+        // branch guard restated, and the campaign's product table had none of
+        // its own. Both clauses below CAN fail with branches > 0: a table
+        // whose every branch realized nothing lands entirely in the `(none)`
+        // column, and a table concentrated in one band is a degenerate product
+        // even though the corpus is full.
+        let occupied_bands: BTreeSet<u8> = t
+            .joint
+            .iter()
+            .filter(|&(_, n)| *n > 0)
+            .filter_map(|(&(_, band), _)| band)
+            .collect();
         assert!(
-            !t.joint.is_empty(),
-            "seed {seed_value}: the joint (character x band) table is empty"
+            occupied_bands.len() >= 2,
+            "seed {seed_value}: the joint (character x band) table occupies {} \
+             terminating band(s) — a product table concentrated in one band (or \
+             entirely in the `(none)` column) is degenerate, and a share read \
+             off it means nothing. Occupied: {occupied_bands:?}",
+            occupied_bands.len()
         );
+        for c in CHARACTERS {
+            let realized: usize = t
+                .joint
+                .iter()
+                .filter(|&(&(ch, band), _)| ch == *c && band.is_some())
+                .map(|(_, n)| *n)
+                .sum();
+            assert!(
+                realized > 0,
+                "seed {seed_value}: {c:?} occupies no cell of the joint table with \
+                 a realized terminating band — its whole row is `(none)`, so the \
+                 table says nothing about where that character bottoms out"
+            );
+        }
     }
     // The character axis must be occupied, or a 100% share would be a
     // one-member roster rather than oatmeal.
@@ -1341,7 +1836,7 @@ fn did_the_stope_solve_the_oatmeal_problem() {
     // asserted only on the pool, and the unconditional rate is what the
     // headline should quote.
     for (seed_value, t) in &per_seed {
-        let lattice = t.lattice_nadir as f64 / t.lattice_underdeep as f64;
+        let lattice = t.lattice_nadir_given_underdeep as f64 / t.lattice_underdeep as f64;
         let table = t.table_admits_nadir as f64 / t.lattice_underdeep as f64;
         assert_eq!(
             classify_nadir_gate(lattice),
@@ -1352,7 +1847,7 @@ fn did_the_stope_solve_the_oatmeal_problem() {
              is structural; a move off it means something now gates access, and \
              that is a finding to report, not a bound to adjust.",
             lattice * 100.0,
-            t.lattice_nadir,
+            t.lattice_nadir_given_underdeep,
             t.lattice_underdeep
         );
         assert_eq!(
@@ -1365,15 +1860,41 @@ fn did_the_stope_solve_the_oatmeal_problem() {
             t.lattice_underdeep
         );
     }
-    let graph = pooled.reached_nadir as f64 / pooled.reached_underdeep as f64;
+    let graph = pooled.reached_nadir_given_underdeep as f64 / pooled.reached_underdeep as f64;
     assert_eq!(
         classify_nadir_gate(graph),
         NadirGateVerdict::GateNotGating,
         "pooled: the graph-reachability reading of B.7's conditional is {:.2}% \
          ({}/{})",
         graph * 100.0,
-        pooled.reached_nadir,
+        pooled.reached_nadir_given_underdeep,
         pooled.reached_underdeep
+    );
+
+    // --- THE HEADLINE, RATCHETED -------------------------------------------
+    // The unconditional walked-Nadir rate is the number this probe's finding is
+    // actually about, and until review round 1 nothing asserted it. It is
+    // banded, not pinned — see NADIR_WALK_RATE_FLOOR for why, and for what
+    // would legitimately move it.
+    let nadir_walk = pooled.nadir_walk_rate();
+    assert!(
+        (NADIR_WALK_RATE_FLOOR..=NADIR_WALK_RATE_CEILING).contains(&nadir_walk),
+        "the unconditional walked-Nadir rate is {:.4}% ({}/{}), outside the \
+         ratcheted band [{:.4}%, {:.4}%] this campaign measured and reported. THIS \
+         IS THE HEADLINE NUMBER, so read the doc comment before touching the \
+         band. Three changes move it LEGITIMATELY and want a re-baseline with the \
+         new figure written into this module's header: `EXISTENCE_DENSITY` (the \
+         per-address coin — 0.5 -> 0.7 alone moves this 4.4x), `floors_range`'s \
+         frozen per-band ranges (they set how long a run is, and the deep-mouth \
+         account depends on the shallow bands staying long), and `root_floor_of`'s \
+         band pick (uniform over the parent's realized bands today, which is what \
+         puts ~1 side entrance in 5 straight into the Nadir band). A move with \
+         NONE of those three touched is a finding, not a bound to widen.",
+        nadir_walk * 100.0,
+        pooled.reached_nadir_all,
+        pooled.branches,
+        NADIR_WALK_RATE_FLOOR * 100.0,
+        NADIR_WALK_RATE_CEILING * 100.0,
     );
 
     // --- The reachability cross-check --------------------------------------
