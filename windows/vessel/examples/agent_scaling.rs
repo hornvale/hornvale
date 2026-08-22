@@ -96,12 +96,13 @@
 //! ```text
 //! agent_scaling: seed 42 has 221 settlements (the ceiling derive_npcs's k can reach)
 //!   agents    ms/tick   facts/a/tick  search/a/tick      bytes/agent    total_bytes      facts   searches
-//!       10     68.216         2.2150         1.7750         172065.4        1720654        443        355
-//!       50    503.724         2.8250         2.2790          42121.4        2106071       2825       2279
-//!      100   1267.741         2.6780         2.0675          25122.9        2512286       5356       4135
-//!      200   5722.748         2.8960         2.2822          17597.7        3519536      11584       9129
+//!       10    106.491         2.2150         1.7750         172065.4        1720654        443        355
+//!       50    823.136         2.8250         2.2790          42121.4        2106071       2825       2279
+//!      100   1772.469         2.6780         2.0675          25122.9        2512286       5356       4135
+//!      200   7025.152         2.8960         2.2822          17597.7        3519536      11584       9129
 //!
-//! fitted log-log slope, ms/tick vs agent count (1.0 linear, 2.0 quadratic): 1.43
+//! fitted log-log slope, ms/tick vs agent count (1.0 linear, 2.0 quadratic): 1.36
+//! per-segment log-log slopes, ms/tick vs agent count:  10->50: 1.27  50->100: 1.11  100->200: 1.99
 //! marginal bytes/agent (total_bytes[200]-total_bytes[10])/(agents[200]-agents[10]) = 9467.8
 //!
 //! query/plan/commit split at the largest rung run (agents=200, 20 ticks):
@@ -109,8 +110,15 @@
 //!   commit (ledger.len() delta)           = 11584 facts
 //!   query  = RESIDUAL (this driver exposes no query counter --
 //!            see the module doc's "which term is a RESIDUAL" section).
-//!            Total wall for this rung: 114454.968 ms over 20 ticks.
+//!            Total wall for this rung: 140503.038 ms over 20 ticks.
 //! ```
+//!
+//! **A previous run of this exact bench** (also `ambrose`, `--release`,
+//! same code) measured `ms/tick` = 65.201 / 422.324 / 1610.135 / 5455.697,
+//! fitted slope 1.43, per-segment slopes 1.24 / 1.33 / 2.17 — wall time
+//! differs run to run (box load), but every deterministic counter (facts,
+//! searches, bytes) was byte-identical between the two runs, and the last
+//! segment landed close to quadratic both times.
 //!
 //! **Reading `bytes/agent`.** The single-rung `bytes/agent` column falls as
 //! agent count rises (172065 -> 17598) NOT because more agents cost less —
@@ -128,19 +136,56 @@
 //! **Search count and facts committed do not fall toward zero as agent
 //! count grows** — `search/a/tick` holds in a narrow ~1.8-2.3 band and
 //! `facts/a/tick` in a narrow ~2.2-2.9 band across a 20x range of agent
-//! counts (10 -> 200), the same qualitative shape the sibling
-//! `tick_commit_budget.rs` battery found for facts alone (~0.93-0.95, flat,
-//! not falling). Two independent counters now agree: this world's steady
-//! state is genuine sustained churn, not a decaying transient, on both the
-//! commit axis and the plan axis.
+//! counts (10 -> 200), the same QUALITATIVE SHAPE the sibling
+//! `tick_commit_budget.rs` battery found for facts alone (~0.93-0.95, also
+//! flat, not falling). **The two instruments agree on shape and differ
+//! ~3x in magnitude, and that gap is real and currently unexplained by
+//! anything this bench measures** — see "The ~3x facts/agent/tick gap"
+//! below. Earlier drafts of this doc described the two as having "now
+//! agree[d]" without qualification; that overstated it. What is true: both
+//! are flat rather than falling (the shape claim), and both differ by
+//! roughly 3x in absolute rate (the magnitude claim) — two separate claims,
+//! and only the first is established.
+//!
+//! **The ~3x facts/agent/tick gap, and what it is not.** `tick_commit_budget.rs`
+//! measures 0.93-0.95 facts/agent/tick (seed 42, `Session::start` with
+//! `NPC_COUNT` = 3 peopled + `WILD_COUNT` = 4 wild = 7 agents, 40 ticks);
+//! this bench measures 2.2-2.9 (`derive_npcs` alone, k = 10..200, 20
+//! ticks, no wild agents). RULED OUT, with code evidence: identical tick
+//! semantics (both build `DriveMovements` over exactly one `WorldTime` day
+//! with `SUSTENANCE`); the `TURNED_HOSTILE` pass (`Session::wait` commits
+//! at most one such fact per NPC, ever, and only on `tick_commit_budget`'s
+//! side — it cannot make THAT side's rate lower, i.e. it cannot be
+//! manufacturing this gap); `Session::wait`'s double evaluation (only the
+//! second, `tick()`-driven evaluation's facts are ever committed — the
+//! first, `step_with_occupancy` call this bench's own driver is modelled
+//! on, is discarded on `tick_commit_budget`'s side too); `absorb_here`
+//! (never touches the ledger); and tick count (40 vs this bench's 20 — this
+//! bench's SMALLEST rung is already ~2.2, not trending toward 0.94, so a
+//! longer run would not close the gap by itself).
+//!
+//! **The surviving, UNQUANTIFIED hypothesis is roster composition.**
+//! `ordered_for_derivation` (`liveness.rs`) sorts settlements by population
+//! DESCENDING with only the home settlement pinned to the front — so
+//! `tick_commit_budget`'s 3 NPCs are drawn from the world's LARGEST,
+//! best-resourced settlements (plus 4 wild beasts this bench never derives
+//! at all), while this bench's k = 10..200 necessarily reaches deep into
+//! smaller, marginal settlements. Species, body mass, and distance to the
+//! nearest water source all vary by settlement and feed directly into the
+//! action clock's tempo and each drive's trigger frequency (a smaller,
+//! more remote settlement plausibly means more frequent `agent-at`/`drank`
+//! churn per creature, not less). This bench does not run anything further
+//! to confirm that — naming it as the leading, unconfirmed explanation is
+//! the deliverable here, not closing it.
 //!
 //! **The superlinear total is NOT explained by either measured term
 //! alone.** Both `searches_delta` and `facts_delta` grow almost exactly
 //! LINEARLY with agent count (roughly 5x and 2x for 5x/2x agent-count
 //! steps, matching the flat per-agent-per-tick rates above) — so if `plan`
 //! (search count) or `commit` (fact count) were the whole story, the fitted
-//! `ms/tick` slope would land near 1.0. It measures **1.43** instead:
-//! distinctly superlinear. Since the two DIRECTLY MEASURED terms are each
+//! `ms/tick` slope would land near 1.0. It measures **1.36-1.43** instead
+//! (across two runs — see `## Measured`): distinctly superlinear. Since the
+//! two DIRECTLY MEASURED terms are each
 //! linear, the excess above linear lives entirely in the **residual**
 //! (query, in this bench's framing) — the population-wide per-creature
 //! reads `step_with_occupancy` performs once per creature per tick
@@ -153,11 +198,25 @@
 //! precisely why it is reported as a residual rather than a measurement —
 //! but the arithmetic argument (measured terms linear, total superlinear)
 //! is real and does not depend on that attribution being right.
-
-#![allow(
-    clippy::disallowed_types,
-    reason = "std::time::Instant times an out-of-sim profiling EXAMPLE (decision 0001 bans wall-clock IN a world; nothing here builds one) -- the same scoped posture windows/vessel/examples/turn_cost.rs and kernel/examples/query_scaling.rs already use"
-)]
+//!
+//! **The single fitted slope UNDERSTATES the trend at higher agent
+//! counts.** 1.36 (this run's fit) is a least-squares average across the
+//! whole sweep, and the curve is visibly bending rather than sitting on one
+//! exponent: the per-segment (adjacent-rung) slopes measured this run are
+//! 10->50 ≈ 1.27, 50->100 ≈ 1.11, and **100->200 ≈ 1.99** — the segment
+//! covering the largest, most decision-relevant agent counts is close to
+//! quadratic. Wall time (unlike the deterministic fact/search counters
+//! above) is inherently noisy run to run — an earlier run of this same
+//! bench measured segment slopes 1.24 / 1.33 / 2.17, so the MIDDLE segment
+//! moves with box load (1.11 vs 1.33) while the LAST segment lands close to
+//! 2.0 both times (1.99, 2.17). A reader who only reads the single fitted
+//! exponent (1.36-1.43 across these two runs) would underestimate how bad
+//! the scaling looks precisely where it matters most for the metaplan's
+//! extrapolation — the accelerating final segment, not the sweep-wide
+//! average, is the number to extrapolate from. This strengthens, rather
+//! than weakens, the "plan does not swamp query" conclusion above: whatever
+//! the residual's real driver is, it is accelerating, not merely
+//! superlinear-and-flat.
 
 use hornvale_kernel::{EntityId, Fact, Ledger, RoomMeshMemo, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
@@ -166,6 +225,12 @@ use hornvale_vessel::liveness::{
 };
 use hornvale_vessel::mint_flagship;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+// The measurement harness times a single tick loop for a diagnostic (never
+// sim logic, never a fact, never seeded from wall-clock) -- exempt from the
+// wall-clock ban (clippy.toml / decision 0001), same pattern as
+// `kernel/examples/query_scaling.rs` and
+// `windows/vessel/examples/turn_cost.rs`.
+#[allow(clippy::disallowed_types)]
 use std::time::Instant;
 
 /// Agent-count sweep candidates. Filtered at runtime against the seed-42
@@ -296,6 +361,7 @@ fn run_rung(
 
     let facts_before = ledger.len();
     let searches_before = home_nav_cache.searches();
+    #[allow(clippy::disallowed_types)] // benchmark harness
     let t0 = Instant::now();
     for _ in 0..TICKS {
         let from = day;
@@ -409,6 +475,24 @@ fn main() {
         "fitted log-log slope, ms/tick vs agent count (1.0 linear, 2.0 quadratic): {:.2}",
         log_log_slope(&xs, &ys)
     );
+
+    // Per-segment (adjacent-rung) slopes: the single fitted slope above is a
+    // least-squares AVERAGE over the whole sweep, which can hide a curve
+    // that is bending -- a segment-by-segment slope, each computed from
+    // just its own two endpoints, cannot hide that the way a fit spanning
+    // every rung can. Printed as its own line rather than folded into the
+    // table above because it is a property of a PAIR of rows, not of one.
+    if rows.len() >= 2 {
+        print!("per-segment log-log slopes, ms/tick vs agent count:");
+        for pair in rows.windows(2) {
+            let seg_slope = log_log_slope(
+                &[pair[0].agents as f64, pair[1].agents as f64],
+                &[pair[0].ms_per_tick, pair[1].ms_per_tick],
+            );
+            print!("  {}->{}: {:.2}", pair[0].agents, pair[1].agents, seg_slope);
+        }
+        println!();
+    }
 
     // The MARGINAL bytes/agent between the smallest and largest rung run --
     // `bytes_per_agent` at any single rung is dominated by the fixed
