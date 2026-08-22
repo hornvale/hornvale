@@ -80,10 +80,22 @@
 //! unindexed one because it holds agent count fixed, and sweep B does,
 //! landing close to the theoretical 2 (unindexed `scan`) vs 1 (indexed
 //! `facts_of`) split. `facts_of`'s slope runs a little above 1.0 in every
-//! run (0.99, 1.21, 0.94, 1.29 across the two boxes' worth of runs shown
-//! here) — most likely allocation/sort overhead in
+//! run (0.99, 1.21, 0.94, 1.29 across the two runs shown here, both on
+//! `ambrose`) — most likely allocation/sort overhead in
 //! `positions_for_subject_predicate` at millisecond scale, not an
 //! algorithmic issue, since it stays far below `scan`'s slope every time.
+//!
+//! **What `place_scan` is expected to do, under either sweep.** Unlike
+//! `scan`/`facts_of`, it is not part of the sweep-B contrast: its query
+//! count is fixed at 64 rooms (`0..64`, `synthetic`'s own `place` range)
+//! regardless of which dimension is swept, so it is expected to land near
+//! **slope 1 (linear in `n`) under both Sweep A and Sweep B** — an
+//! unindexed scan run a constant number of times, not a variable one. A
+//! printed fitted slope with no stated expectation is the exact failure
+//! this bench exists to prevent, so it is worth being explicit that
+//! `place_scan`'s job here is corroboration, not discrimination: the
+//! measured values (1.10 / 1.51, then 1.35 / 0.98 on the second run)
+//! bracket 1 about as tightly as `facts_of`'s do.
 
 // The measurement harness times derivation calls for a diagnostic (never sim
 // logic, never a fact, never seeded from wall-clock) -- exempt from the

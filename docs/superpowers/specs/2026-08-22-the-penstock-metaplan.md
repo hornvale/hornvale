@@ -128,11 +128,29 @@ baselines. `docs/timings.md` remains the ledger for anything durable.
 Three findings, in descending order of importance.
 
 **The largest available win is a call-site fix, not a subsystem.**
-`windows/vessel/src/liveness.rs:956` and `:1228` run
+`windows/vessel/src/liveness.rs:958` and `:1230` run
 `ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity)` — a scan of every
 agent's entire history, per agent, per tick, which is quadratic in session
 length. The existing SPO-backed `facts_about(e).filter(|f| f.predicate == …)`
 is **1,088× faster at 1M facts** (48,288 ms → 44 ms) and adds no machinery.
+
+**Corrected count: twelve call sites exist, of which two are fixed, ten
+remain.** The plan's own single-line, single-predicate grep found five
+matches and named two as production; completeness is what enumeration gets
+wrong, and a broader scan (every predicate, spanning `.filter(|f| ...)`
+across lines) finds twelve production sites (before the `#[cfg(test)]`
+module): `:127` `latest_committed_position`, `:849` `agent_sightings`,
+`:936` the thirst read in `drive_at`, `:1042` `build_emitter_scan`, `:2257`
+`fatigue_at`, `:2442` the hunger read, `:3710` `affect_of`, `:4154`
+`room_entry_day`, `:4430` `last_fact_day_at_or_before`, and `:4909`/`:4916`/
+`:4923` inside `WalkState::begin` (DRANK/RESTED/EATEN). The two this
+campaign fixed (`:958`, `:1230`, above) are the least hot of the twelve:
+several remaining sites run **once per creature per tick** — the three in
+`WalkState::begin` and `room_entry_day` — and `latest_committed_position`
+runs once per creature **per band member** it is compared against, which is
+worse than either. See §6.2's corrected suspect for the sites this drives
+directly (`shared_believed_water`, `build_emitter_scan`,
+`alarm_field_memo`).
 
 **Against the corrected baseline, a materialized view buys 2.5×** (44 ms →
 17.8 ms), and that figure already includes rebuilding the view from scratch.
@@ -432,7 +450,27 @@ program should stop at stage 1 and say so.
 ### 6.1 MEASURED, 2026-08-22: the stage-7 falsifier fired
 
 Stage 1's counter is in (`windows/vessel/tests/suite/tick_commit_budget.rs`,
-commit `1f0a6465b`). Seed 42, default `PossessOpts`, 7 agents, 40 ticks:
+commit `1f0a6465b`). Seed 42, default `PossessOpts`, 7 agents, 40 ticks.
+
+**Lead with the code trace — it is the load-bearing evidence; the
+measurement below is corroboration, not the argument itself.**
+`agent_at_fact` is pushed unconditionally on every `MoveTo`
+(`liveness.rs:5094`); there is no divergence test, so one fact commits per
+step of every walk. The Quickening's rule — *only the discrete divergence
+commits; the smooth routine stays derived* — was implemented as "the latest
+committed `agent-at`, **else the derived schedule**," and that worked because
+a fixed two-point schedule was the default a divergence could be measured
+against. The Wanting, Foresight and Temperament replaced that schedule with
+drives. **No campaign broke the rule; the ground it stood on was removed**,
+and with no default to diverge from, everything commits. Unboundedness
+follows directly from that trace plus one constitutional fact: the ledger is
+append-only (it never removes a fact), so a non-summable per-tick commit
+rate — one that never trends toward zero — means the log grows without
+bound for as long as agents keep walking. That conclusion does not depend on
+any particular measured number; it depends only on there being no divergence
+test in the commit path, which the trace above establishes directly.
+
+The measurement corroborates rather than carries the argument:
 
 ```
   first-half rate  0.950000 facts/agent/tick
@@ -446,17 +484,6 @@ before query cost ever matters, stage 7 becomes the program and everything
 above it is premature."* At ~0.94 facts/agent/tick and ~200 bytes of real
 `Fact`, a thousand agents over ten thousand ticks is ~9.4M facts — roughly
 1.9 GB — and it never stops growing, because the log is append-only.
-
-**Why the rate is what it is, and it is not a bug anyone introduced.**
-`agent_at_fact` is pushed unconditionally on every `MoveTo`
-(`liveness.rs:5081`); there is no divergence test, so one fact commits per
-step of every walk. The Quickening's rule — *only the discrete divergence
-commits; the smooth routine stays derived* — was implemented as "the latest
-committed `agent-at`, **else the derived schedule**," and that worked because
-a fixed two-point schedule was the default a divergence could be measured
-against. The Wanting, Foresight and Temperament replaced that schedule with
-drives. **No campaign broke the rule; the ground it stood on was removed**,
-and with no default to diverge from, everything commits.
 
 **Consequence: §5.6 is the fix, not merely a caching note.** It already says
 a path anchors to the ledger position of a committed *intention* and
@@ -500,34 +527,112 @@ searches`) and commit (ledger delta) — are **flat per agent**, i.e. linear in
 agent count. Total tick cost is **superlinear**. Neither measured term
 explains the excess, so the unmeasured residual is the plausible driver.
 **That is an argument from elimination, not a measurement of query cost**,
-and no stage should treat it as the latter.
+and no stage should treat it as the latter. It also carries an unstated
+premise: a flat *count* per agent (searches, commits) implies a flat *cost*
+per agent only if per-unit cost is itself constant — and for commit it
+demonstrably is not, since `Ledger::commit`'s idempotency and contradiction
+checks grow with ledger size, so a flat commit *count* need not mean a flat
+commit *cost*. The verdict survives that gap anyway, because §6.2's
+corrected suspect (below) supplies a mechanism for the superlinear residual
+that is independent of both the count-vs-cost premise and the query-cost
+question this argument from elimination could not directly answer.
 
 **The single fitted exponent understates the trend.** The curve accelerates:
 the 100→200 segment is 2.17 and 1.99 on two runs — near-quadratic across the
 range that actually matters — while the fitted 1.43 averages that away. Any
 plan built on "1.43" is planning for a gentler world than the measured one.
 
-**A named suspect, with structural support but not confirmation.**
+**A named suspect, corrected.** An earlier draft of this section claimed
 `hazard_memory_memo` (`liveness.rs:1219`) and `alarm_field_memo` (`:3907`)
-are whole-population reads performed per creature, and `roster: &[Npc]`
-appears at four call sites — the shape that produces an exponent between 1
-and 2. This is a hypothesis. Stage 2 should confirm or kill it before
-building anything, because it names exactly the locality query §4 predicted
-views would serve, and a wrong suspect would send stage 2 at the wrong axis.
+are whole-population reads performed *per creature*. The code contradicts
+that: `alarm_field_memo` is called once per tick, before the per-creature
+loop (`liveness.rs:4670`, the call site's own comment says so in capitals),
+and `hazard_memory_memo`'s whole-population half (`build_emitter_scan`,
+called at `:1249-1252`) is memoized per `t` via `PrimaryAfraidMemo`, so it
+too runs once per tick — neither is quadratic *in invocation count*.
+
+Both functions **are** quadratic in agent count, but for a different reason:
+**unindexed per-member subject scans**, not per-creature invocation.
+
+- `liveness.rs:1042` (`build_emitter_scan`): `ledger.find(AGENT_AT).filter(|f|
+  f.subject == m.entity)` inside `for m in roster` — a full ledger scan per
+  roster member, once per tick.
+- `liveness.rs:3916` (`alarm_field_memo`): `agent_position(frozen, npc, day)`
+  per npc, which reaches `latest_committed_position` (`:127`) — the same
+  unindexed scan, once per npc per tick.
+- **The largest, and previously unnamed: `shared_believed_water`
+  (`liveness.rs:1366`)**, called once per creature per tick from
+  `WalkState::begin` (`:4931`), which loops the *whole band* calling
+  `agent_position` per member (`:1380`) — O(A²·k) per tick, where `k` is
+  band size.
+
+So the superlinear residual is most likely **the same defect Task 2 fixed,
+at sites Task 2 missed** — more `find(pred).filter(subject == e)` call sites
+needing the same `facts_of`/indexed-query swap, no new machinery — rather
+than a locality-query shape that needs a `place`-keyed view. This
+**strengthens** the §11 falsifier-1 verdict (the program continues): it
+supplies a concrete, cheap mechanism for the residual instead of leaving it
+an unexplained shape. Stage 2 must confirm this — not the withdrawn
+per-creature-invocation theory — before building anything, because a wrong
+suspect would send it at the wrong axis (a `place`/`day` view instead of the
+remaining unindexed-scan call sites).
 
 **A discrepancy that stays open, deliberately.** This bench reports 2.2–2.9
 facts/agent/tick where §6.1's instrument reports 0.93–0.95 — the same named
 metric, ~3× apart. Ruled out with code evidence: tick semantics (both build
 `DriveMovements` over one `WorldTime` day), the `TURNED_HOSTILE` pass
 (bounded, and it can only *raise* the lower figure), `Session::wait`'s double
-evaluation (only the second commits), `absorb_here`, and tick count. The
-surviving hypothesis is **roster composition**: `ordered_for_derivation`
-sorts settlements population-descending with only home pinned, so §6.1's
-instrument samples the three largest plus wild fauna while this one reaches
-into small marginal settlements with none — and species, mass and
-distance-to-water all feed the action clock. **Unquantified, and left so.**
-§6.1's conclusion is unaffected because it rests on the *shape* (flat, not
-falling), which both instruments agree on; only the magnitude differs.
+evaluation (only the second commits), `absorb_here`, and tick count.
+
+The **leading** hypothesis is tighter and arithmetic, not compositional:
+**a denominator artifact.** `tick_commit_budget` divides by all 7 agents
+(3 peopled + 4 wild); this bench's `k` sweep divides by `k` real agents only
+and excludes wild fauna from the denominator entirely. 7/3 = **2.333**, and
+the measured ratio 2.2150/0.9486 = **2.335** — the two agree to three
+figures. The mechanism is concrete: `windows/vessel/src/clock.rs:183`
+`cost_ticks` scales action cost by `tempo(mass_kg)`, so heavier wild beasts
+act less often and commit fewer facts per tick while still occupying
+`tick_commit_budget`'s denominator — deflating its rate by roughly the
+peopled-agent share of the roster. This is testable in minutes (partition
+fact deltas by subject and recompute the rate over peopled agents only) and
+should be checked before stage 2 leans on either instrument's magnitude.
+
+**Roster composition remains a secondary, unquantified hypothesis**:
+`ordered_for_derivation` sorts settlements population-descending with only
+home pinned, so §6.1's instrument samples the three largest plus wild fauna
+while this one reaches into small marginal settlements with none — and
+species, mass and distance-to-water all feed the action clock. It may
+compound with the denominator artifact rather than substitute for it.
+
+Either way, **the direction is reassuring**: both hypotheses point at
+§6.1's rate being *understated* relative to a peopled-agent-only accounting,
+which means the memory projection §6.1 draws from that rate is conservative,
+not optimistic — strengthening, not undercutting, §6.1's conclusion.
+§6.1's conclusion is unaffected in shape either way: it rests on the *shape*
+(flat, not falling), which both instruments agree on; only the magnitude
+differs.
+
+**What §11's falsifiers say now.** §11 lists four. Two are answered by the
+measurements above: falsifier 1 (query cost is a minority of tick cost) does
+**not** fire, per §6.2 — the program continues past stage 1. The
+log-bounding falsifier (the unbounded log binds first) **did** fire, per
+§6.1 — not by stopping the program, but by promoting stage 7 to something
+this program should start from rather than defer to. The remaining two are
+still open, untouched by this measurement round: reuse-before-eviction is
+**structurally untestable at stage 1** — nothing here builds a working set
+to measure reuse against — and the row-width win (stage 6) is simply
+unmeasured.
+
+One further arithmetic note, verifiable from figures already in this
+document: §4 gives `size_of::<Fact>() = 104` bytes as the fixed struct cost,
+and §6.2's marginal figures (`~9,468` bytes/agent over `2.896` facts/agent/
+tick × 20 ticks ≈ `57.9` facts/agent) give a marginal cost of
+`9467.8 / 57.9 ≈ 163` bytes/fact. The difference, `163 - 104 ≈ 59` bytes/
+fact, is the heap portion (`predicate` + `provenance` + any `Value::Text`
+object) — roughly a third of the marginal per-fact cost. This document does
+not have a further breakdown of those 59 bytes across the three heap
+sources, so it stops short of translating that into a stage-6 win estimate;
+that split is stage 6's own measurement to make.
 
 ## 7. The standing gate
 

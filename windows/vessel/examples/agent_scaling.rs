@@ -114,11 +114,12 @@
 //! ```
 //!
 //! **A previous run of this exact bench** (also `ambrose`, `--release`,
-//! same code) measured `ms/tick` = 65.201 / 422.324 / 1610.135 / 5455.697,
-//! fitted slope 1.43, per-segment slopes 1.24 / 1.33 / 2.17 — wall time
-//! differs run to run (box load), but every deterministic counter (facts,
-//! searches, bytes) was byte-identical between the two runs, and the last
-//! segment landed close to quadratic both times.
+//! same code, commit `43d851a5e` — the table the metaplan's §6.2 quotes as
+//! its headline) measured `ms/tick` = 68.216 / 503.724 / 1267.741 /
+//! 5722.748, fitted slope 1.43, per-segment slopes 1.24 / 1.33 / 2.17 — wall
+//! time differs run to run (box load), but every deterministic counter
+//! (facts, searches, bytes) was byte-identical between the two runs, and the
+//! last segment landed close to quadratic both times.
 //!
 //! **Reading `bytes/agent`.** The single-rung `bytes/agent` column falls as
 //! agent count rises (172065 -> 17598) NOT because more agents cost less —

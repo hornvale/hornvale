@@ -47,10 +47,14 @@
 use crate::common;
 use hornvale_vessel::{PossessOpts, Session};
 
-/// How many consecutive `wait`s to drive. Long enough to separate a
-/// transient opening burst (every NPC's first tick commits at least one
-/// `agent-at`) from a settled steady state, short enough that the battery
-/// stays a commit-gate-class cost rather than a `graph_cost`-class one.
+/// How many consecutive `wait`s to drive. **Not** separating a transient
+/// opening burst from steady state — the measured series (this module's own
+/// doc) shows no such burst; tick 1 commits only 2 facts, well below several
+/// later ticks. The actual justification is averaging: 40 ticks split into
+/// two 20-tick halves gives each half's rate enough ticks to smooth the
+/// per-tick noise (values range 2-13) into a comparable summary statistic,
+/// while staying short enough that the battery remains a commit-gate-class
+/// cost rather than a `graph_cost`-class one.
 const TICKS: usize = 40;
 
 /// Falsification ceiling on the **steady-state** rate: total facts committed
@@ -131,6 +135,15 @@ fn facts_committed_per_agent_per_tick_stays_bounded() {
          ceiling {STEADY_STATE_CEILING} — the ledger is not settling, which \
          is the metaplan's §11 feasibility question answered no"
     );
+    // WARNING: this non-growth assertion carries a thin margin at seed 42 —
+    // 133 first-half facts vs. 130 last-half facts (per-tick values ranging
+    // 2-13), ~2.3%. It is real signal (the two halves are computed from the
+    // same deterministic run, not sampled), but a benign change to drive
+    // timing or roster composition could flip it red without representing
+    // unbounded growth. The correct response to a flip is to INVESTIGATE
+    // which per-tick values moved and why, never to widen this margin —
+    // slack here would hide the exact regression (a drive re-firing every
+    // tick) this assertion exists to catch.
     assert!(
         last_half_rate <= first_half_rate,
         "commit rate GREW across the run (first half {first_half_rate:.6} -> \

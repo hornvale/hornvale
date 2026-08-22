@@ -276,6 +276,19 @@ against the indexed path production now uses — the same property
 `index_equals_scan_*` exists to preserve. Converting them would make the
 test and the code under test share one mechanism.
 
+**CORRECTED (post-hoc, whole-branch review):** that grep was single-line and
+single-predicate — `find(AGENT_AT).filter` only, on one line, missing
+multi-line filter chains and every predicate other than `AGENT_AT`.
+Completeness is exactly what enumeration by grep gets wrong. A broader scan
+(every predicate, `.filter(|f| f.subject == …)` spanning lines) finds
+**twelve** production `find(pred).filter(subject == e)` call sites before
+the `#[cfg(test)]` module, of which this task fixes two. The other ten,
+several hotter than the two fixed here, are listed at
+`docs/superpowers/specs/2026-08-22-the-penstock-metaplan.md` §4 and §6.2.
+This does not change what Task 2 itself does — the two sites below are
+still correctly identified and still worth fixing first — it only corrects
+what the plan claimed about how many sites exist in total.
+
 Both production sites currently read:
 
 ```rust
