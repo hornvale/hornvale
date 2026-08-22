@@ -1,6 +1,9 @@
 # The Portolan — design
 
-**Status:** DRAFT — awaiting G3 review. **Campaign:** The Portolan.
+**Status:** COMPLETE (part I) — approved at G3, Tasks 1-4 implemented and
+reviewed, landed via `campaign/the-stylus` (2026-08-20); see
+[decision 0159](../decisions/0159-focus-is-the-clients-one-input-mode.md)
+for what superseded this design's look mode. **Campaign:** The Portolan.
 **Branch:** `campaign/the-portolan`.
 
 A cursor in the plate. The map draws terrain and nothing else; a free-roaming

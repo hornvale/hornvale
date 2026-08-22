@@ -1,7 +1,14 @@
 # The Stylus — design
 
-**Status:** DRAFT — awaiting G3 review. **Campaign:** The Stylus.
-**Branch:** `campaign/the-stylus`.
+**Status:** IMPLEMENTED (2026-08-20) — approved at G3, built and gated on
+`campaign/the-stylus`; **the merge is G6 and belongs to Nathan.** Note that
+Stage 1 of this campaign reached `main` early, by accident: a `kind=stage`
+queue request pushed when a stage gate never should (the plumbing was sound;
+the kind was hand-typed at the operator's exec line). That is recorded in the
+retrospective, and it is not the same thing as this campaign having merged.
+**Campaign:** The Stylus. **Branch:** `campaign/the-stylus`. §13 promotes the
+post-G3 decision-ledger entries (the scratch ledger is not the durable
+record).
 
 The terminal client learns to accept typed commands. Focus moves between the
 map and the command line with `Esc`; everything else follows from that.
@@ -64,8 +71,13 @@ Everything falls out of it:
 - **`←`/`→` edit the line for free** when focus is on the CLI, so `Home`/`End`
   and `Ctrl+W` become optional polish rather than compensation for a lost
   affordance.
-- **`↑`/`↓` have no meaning in a single-line field**, so history lands on the
-  shell convention, unmodified, exactly where a user expects it.
+- **`↑`/`↓` have no meaning in a single-line field**, so history lands where a
+  user expects it — `↑`/`↓` recall a previously submitted line, and recall
+  replaces whatever is currently in the buffer. That is a narrower promise
+  than the full shell/readline convention, which also stashes a partially
+  typed line and restores it on the way back down; this implementation does
+  not stash, so a half-typed command is lost to a stray `↑` (see
+  [[CLIENT-history-stashes-the-in-progress-line]]).
 - **Typing a letter on the map returns focus to the CLI and types it**, so the
   common path costs no keypress at all. `Esc` is needed only to go *to* the
   map.
@@ -293,3 +305,101 @@ read as more than it is.
 5. Chronicle, retrospective, registry rows, decision, freshness sweep.
    **Absorb main and regenerate at every stage boundary.** Write the
    retrospective LAST.
+
+---
+
+## 13. Post-G3 decisions
+
+Promoted verbatim in substance from `.superpowers/sdd/2026-08-20-the-stylus/
+decision-ledger.md` (git-ignored, dies with the worktree) — Nathan had not
+seen these; the scratch ledger is not the durable record.
+
+**#6 — What tree does The Stylus build on?** The spec above was written
+against a tree this branch did not have: `git merge-base --is-ancestor
+campaign/the-portolan HEAD` said no, so `clients/game` on this branch had no
+`Mode`, no `Look`, no `Cursor`, no `strip.rs`, and `input.rs` exposed
+`verb_for(key) -> Option<String>` with no mode parameter — §0's quoted
+`action_for(key, driver.mode())`, §4's superseded look mode, and Task 4's
+re-pointed sweep were all unrunnable as written. **Decision:** absorb
+`campaign/the-portolan` into `campaign/the-stylus` as Task 0, before any
+input work, so the spec then runs exactly as written. Alternatives
+discarded: building on `main` and dropping §4 (the map-focus half of the
+routing table would address nothing, and part I would later merge and
+reintroduce `Mode`/`action_for` head-on against the focus layer); merging
+part I to `main` first (it is 4/5 tasks and deliberately paused — merging an
+incomplete campaign violates campaign DoD); cherry-picking part I's client
+commits alone (splits a reviewed branch, strands part II's spec/plan).
+**Consequence for G6:** this merge lands part I's 15 commits as well as The
+Stylus's own — both need their own chronicle entry and retrospective.
+
+**#7 — Is the routing table total?** No, as first drafted: §2's table had
+six columns and said nothing about `Enter`, `Backspace`, digits, or
+punctuation under map focus, and "letters" plausibly meant only the 26
+alphabetic keys. **Decision:** Task 1 produces a *total* routing function —
+every `KeyCode` has a defined destination in both focus states — and the
+H1/H3 tests assert totality rather than sampling; "printable character," not
+"letter," is the bounce-to-CLI trigger.
+
+**#8 — What ends the session once `Q` types a `Q`?** `windows/vessel/src/
+session.rs:1367` accepts `"release"` and `"quit"` as synonyms for the same
+outcome, but `main.rs` decided release on the *sent string*
+(`verb == "release"`) and discarded the driver's own answer. **Decision:**
+Task 3 moves release detection onto `Driver::handle`'s own report of
+`Turn::Released`, so typing either synonym reliably ends the loop regardless
+of which string reached the buffer.
+
+**#9 — What must F1 actually establish?** Not "does `Esc` parse" but "is the
+map reachable at all" — the routing is deliberately asymmetric (any
+printable key on the map bounces to CLI focus automatically, but only `Esc`
+goes the other way), so `Esc` is the *sole* route to map focus. **Decision:**
+F1's Task 1 report states reachability explicitly, and the fallback binding
+(`` ` ``, confirmed free) is specified here rather than designed under
+failure.
+
+**#10 — "The cursor is unconditional" vs. "focus is shown by the cursor":
+not a contradiction.** A terminal has exactly one hardware cursor, already
+spent on the map cursor by part I, and §2.1 forbids a drawn focus marker
+from occupying an informative cell. **Decision:** the map cursor's
+*position* is unconditional — always held, always computable — while what is
+conditional is *which pane* the one hardware cursor is displayed in: the
+caret under CLI focus, the map cursor's cell under map focus. Consequence
+for the core API: `bin` cannot compute the caret's screen position itself,
+so `core`'s `spread`/`entry` are handed the text and caret index and return
+the screen position, exactly as they already do for the map cursor.
+
+**#11 — `Q` stops releasing; what is the way out?** Under the routing
+table, capital `Q` types a `Q`, so the only exit becomes typing `release` or
+`quit` and pressing `Enter` — routed through the buffer, `Enter`, and #8's
+release reporting. `Ctrl+C` does not rescue this and must not be made to:
+§5 refuses modifier keys absolutely, and every non-`Shift` modifier is
+already inert by the existing chord discipline. **Decision:** accepted, and
+Task 3 tests both `release` and `quit` end the loop as the campaign's own
+exit guarantee. Flagged for Nathan at G3 rather than resolved unilaterally —
+a plain-key panic exit remains one binding away (`` ` `` is still free) if
+wanted later.
+
+**#12 — the map cursor loses its diagonals.** Part I drove the cursor with
+arrows, `hjkl`, *and* the diagonals `yubn` (`Action::CursorBy(±1, ±1)`); §3.2
+makes every letter text, leaving no diagonal keys. **Decision:** accepted —
+it is the spec's own explicit choice ("four arrow keys are sufficient to
+drive a cursor"). Part I's diagonal `CursorBy` assertions are deleted with
+the bindings, not left asserting a capability the client no longer has;
+reaching a diagonal cell now costs two keypresses instead of one.
+
+**#13 — What channel does typed text belong to?** `hornvale-game-core`'s
+`Source` enum (`cell.rs`) documented a hard two-category contract — every
+cell is either derived from world state or declared inert (`Chrome`, "and
+nothing else") — and the plan's first draft proposed attributing the typed
+buffer to `Source::Chrome`. Typed text is neither: it is not on the wire and
+it is not inert decoration, it is the player's own live, unsent keystrokes,
+and `Chrome`'s own doc forbids exactly this use ("never a dumping ground for
+a cell whose real channel was merely inconvenient to name"). The precedent
+is `Source::Look`, which part I minted rather than reuse `Chrome` for the
+strip's resolved feature name, for the identical reason. The concrete
+defect: `provenance.rs`'s only assertion proving `Chrome` reachable
+(`Chrome > 0`) would have passed silently while redefining "declared inert"
+to include live player input. **Decision:** add `Source::Typed` (and,
+Task 3, `Source::Echo` for the already-sent echoed line) rather than reuse
+`Chrome`, and amend the enum's category doc to state three categories and
+why. Not a save-format or wire-schema change — `Source` is client-internal,
+outside the cargo workspace and outside determinism (decision 0055).

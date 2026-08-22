@@ -127,10 +127,14 @@ pub struct Cursor {
 /// of the two is ever consulted per call; the other's input is simply
 /// unused for that turn, not merged or overridden.
 ///
-/// `strip`, when `Some`, is drawn as the look-mode strip beneath the plate
+/// `strip`, when `Some`, is drawn as the map strip beneath the plate
 /// (see `strip::draw`); the row it occupies is reserved either way (see
 /// `spread`'s module doc), so a caller that starts passing `Some` never
 /// resizes the plate a second time.
+///
+/// `echo`, when `Some`, is the most recently SUBMITTED line, drawn above the
+/// command row (see `entry::draw`'s doc for the ask-then-answer layout and
+/// the reservation discipline the row it occupies follows).
 ///
 /// **This is the row The Portolan's Task 2 costs the plate.** At exactly
 /// 80×24, the plate's content height was 21 rows before this row was
@@ -141,6 +145,7 @@ pub struct Cursor {
 ///
 /// Fails if `json` does not parse, or if the requested grid is smaller
 /// than the monochrome floor ([`MIN_WIDTH`] by [`MIN_HEIGHT`]).
+#[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 8, mirroring `entry::draw`'s own allow — see that function's doc for why splitting the parameters would hide more than it clarifies
 pub fn render_with(
     json: &str,
     w: u16,
@@ -149,12 +154,13 @@ pub fn render_with(
     map_cursor: Option<Cursor>,
     line: CommandLine<'_>,
     strip: Option<&str>,
+    echo: Option<&str>,
 ) -> Result<(Grid, Option<(u16, u16)>), Error> {
     if w < MIN_WIDTH || h < MIN_HEIGHT {
         return Err(Error::TooSmall { w, h });
     }
     let snapshot = Snapshot::parse(json)?;
-    let (grid, caret) = spread::compose(&snapshot, w, h, strip, focus, line);
+    let (grid, caret) = spread::compose(&snapshot, w, h, strip, focus, line, echo);
     // ONE hardware cursor, so its location IS the focus indicator: the
     // caret in the entry pane, or the map cursor on the plate. Never both,
     // never neither — see `Focus`.
@@ -172,13 +178,23 @@ pub fn render_with(
 /// floor ([`MIN_WIDTH`] by [`MIN_HEIGHT`]).
 ///
 /// Delegates to [`render_with`] with the CLI focused, no map cursor, an
-/// empty command line and no look-mode strip — kept as its own entry point
+/// empty command line and no map strip — kept as its own entry point
 /// because existing callers (`tests/`, the terminal binary) depend on this
 /// exact signature. It drops the returned cursor position entirely, so the
 /// default focus/empty-line choice is unobservable through this function;
 /// it exists only to satisfy `render_with`'s parameters.
 pub fn render(json: &str, w: u16, h: u16) -> Result<Grid, Error> {
-    render_with(json, w, h, Focus::Cli, None, CommandLine::default(), None).map(|(grid, _)| grid)
+    render_with(
+        json,
+        w,
+        h,
+        Focus::Cli,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+    )
+    .map(|(grid, _)| grid)
 }
 
 #[cfg(test)]
@@ -257,6 +273,7 @@ mod tests {
             None,
             CommandLine::default(),
             Some("Vngashngatva"),
+            None,
         )
         .expect("renders at the floor");
         assert_eq!(grid.width(), 80);
@@ -270,6 +287,7 @@ mod tests {
                     Focus::Cli,
                     None,
                     CommandLine::default(),
+                    None,
                     None
                 ),
                 Err(Error::TooSmall { .. })
@@ -296,6 +314,7 @@ mod tests {
             None,
             CommandLine::default(),
             None,
+            None,
         )
         .expect("renders");
         let (with, some_at) = render_with(
@@ -305,6 +324,7 @@ mod tests {
             Focus::Map,
             Some(Cursor { x: 3, y: 4 }),
             CommandLine::default(),
+            None,
             None,
         )
         .expect("renders");
@@ -346,6 +366,7 @@ mod tests {
                 text: "look",
                 caret: 4,
             },
+            None,
             None,
         )
         .expect("renders");
