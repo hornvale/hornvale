@@ -206,6 +206,61 @@ throwaway `RoomMeshMemo` and `HomeNavCache` on every call and documents that
 it cannot do otherwise without a kernel-trait change. The tick contract needs
 a place for a view store or systems will keep paying per call.
 
+### 5.6 Plans are not views, and the two halves land on opposite sides
+
+A* and GOAP results are the obvious next tenants of this store, and half of
+them belong here. The split is not by cost; it is §2's visible/invisible axis
+again.
+
+**A view projects the ledger. A plan projects the ledger *plus a goal*.** That
+is a different key space — `(agent, goal, start, world-slice)` rather than a
+query shape — and, more importantly, a different invalidation semantics. A
+view over an append-only log is monotone: valid until a later fact touches its
+dependency set. A path has **two** failure modes, and only one of them is
+detectable that way. It can become *impassable* (a fact touched the route —
+catchable by watching the dependency set), or it can become *suboptimal* (a
+shortcut opened somewhere the route never goes). Nothing in the path's own
+dependency set witnesses the second; you would have to re-search to find out.
+
+**And that is where the answer inverts, because suboptimality is not a
+defect.** An agent walking the long way because it does not know about the new
+bridge is not a stale cache — it is a *belief*, and this project has an
+epistemic layer for exactly that (`UNI-16`, `UNI-1`, The Surmise). So a plan
+must NOT be silently refreshed the way a view is: a stale plan is observable,
+and it is content.
+
+Consequences, and they are concrete:
+
+- **Spatial paths sit on the visible side, with the working set.** They may
+  not be evicted under a memory budget, and their staleness policy must be a
+  pure function of world state. The unification is The Quickening's rule
+  applied one level up: the discrete divergence — *this agent resolved to go
+  there, on this day* — commits, and the step sequence stays derived and
+  re-derivable from that commitment. So a path uses the **same
+  position-versioning machinery as a view, anchored to the intention's ledger
+  position rather than to "now."** Same mechanism, different anchor.
+  Replanning becomes an in-world event with an in-world trigger (the agent
+  perceived an obstruction — a fact), never a cache miss.
+- **GOAP plans sit on the invisible side and fit the view machinery
+  cleanly.** A GOAP plan's dependency set is a set of *predicates*, and
+  `CapabilitySchema` (`kernel/src/schedule.rs`) already declares which system
+  writes which predicate. The invalidation key a view would need is therefore
+  already authored, for free.
+- **D\* Lite / LPA\* are probably the wrong import**, and this is worth
+  writing down before someone reaches for them. Their entire value is
+  maintaining optimality as the world changes cheaply — which is precisely
+  what an agent who should not know about the change must not do. They are
+  right for the player's own pathing, and for an agent that genuinely
+  perceives the change; they are wrong as a general policy, and adopting them
+  wholesale would quietly delete the belief layer.
+
+Existing machinery to build on rather than replace: `HomeNavCache` already
+keys on `(pos, home, budget, avoid-epoch)` and already counts its searches as
+a deterministic witness; `astar.rs`'s `Solver`/`SearchSpace` seam already
+threads an optional `RoomMeshMemo` and its doc already contemplates widening
+that memo type "when a second domain wants a different memo." This store is
+that second domain.
+
 ## 6. The campaign carve
 
 Strangler-fig; each stage shippable, reversible, and measurement-gated on the
