@@ -84,6 +84,32 @@ hornvale_kernel::stream_labels! {
     /// The `/v1` suffix is the epoch discipline `settlement/name/v2` set:
     /// re-shaping the run key later takes a `/v2`, never a rename.
     RUN_FLOORS = "chamber/run-floors/v1" => "how many floors one run realizes, keyed on (cell, entrance, branch, band)";
+    /// Which [`crate::character::Character`] one branch carries (The Stope,
+    /// Task 3; spec B.4/B.5). Keyed on a **branch** — cell, entrance and
+    /// branch, a place in the fixed lattice and never a generation ordinal
+    /// (decision 0102). A SEPARATE root leg from [`CHAMBER`] for the same
+    /// collision argument [`RUN_FLOORS`]'s doc states: additive, perturbs no
+    /// existing draw, and the `/v1` epoch discipline applies to any later
+    /// re-shaping of the key.
+    BRANCH_CHARACTER = "chamber/branch-character/v1" => "which character one branch carries, keyed on (cell, entrance, branch)";
+    /// How thin the barrier between the underworld and what lies beyond it
+    /// is, on one branch (The Stope, Task 3; spec B.5). Same key shape as
+    /// [`BRANCH_CHARACTER`] — character and barrier are ONE object per B.5:
+    /// same owner, same lattice key — but its own parent leg, so the two
+    /// draws cannot collide even by accident.
+    BRANCH_BARRIER = "chamber/branch-barrier/v1" => "the barrier thinness of one branch, keyed on (cell, entrance, branch)";
+    /// How many of the lattice's four branch columns one cave system
+    /// realizes (The Stope, Task 3; amendment C.1) — the drawn realization
+    /// half of the lattice-ceiling/drawn-realization split, with
+    /// `BRANCHES_PER_SYSTEM` as the ceiling. Keyed on the SYSTEM: cell and
+    /// entrance, no branch.
+    BRANCH_COUNT = "chamber/branch-count/v1" => "how many branches one cave system realizes, keyed on (cell, entrance)";
+    /// Where a non-main-line branch hangs off its parent (The Stope, Task 3;
+    /// amendment C.2) — a floor of the main line, drawn over the floors that
+    /// parent actually realizes. Keyed on the CHILD branch's place: cell,
+    /// entrance, branch (the child names itself; its parent is always the
+    /// main line, whose own root is the surface).
+    BRANCH_ROOT = "chamber/branch-root/v1" => "where a branch roots on its parent, keyed on (cell, entrance, branch)";
     /// The volcano-identity derivation (The Repose). Keyed on the edifice's
     /// **source contact cell** — a place in the fixed geosphere, never a
     /// generation ordinal, and never the query cell a caller happened to ask

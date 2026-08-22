@@ -371,6 +371,10 @@ mod tests {
                 // PARENT and not by the observation that one key is a strict
                 // prefix of the other. See `windows/worldgen/src/streams.rs`'s
                 // `RUN_FLOORS`.
+                "chamber/branch-barrier v1",
+                "chamber/branch-character v1",
+                "chamber/branch-count v1",
+                "chamber/branch-root v1",
                 "chamber/run-floors v1",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label

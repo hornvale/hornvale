@@ -587,6 +587,16 @@ pub fn floors_in_run(seed: Seed, run: RunAddr) -> u8 {
 /// an address outside it names nowhere. Likewise a `band` past the ladder's
 /// end: [`rung_rank`] tops out at `4`.
 ///
+/// **The branch axis carries the same pair** (The Stope, Task 3, spec
+/// amendment C.1): [`BRANCHES_PER_SYSTEM`] sizes the address space — an
+/// out-of-lattice branch is refused above — and
+/// [`crate::character::branch_count_of`] draws how many of those columns
+/// THIS system realizes. A branch at or past its system's drawn count is
+/// refused here rather than merely unqueried, so the count is enforced by
+/// the shipped existence path and not just reported by the accessor: the
+/// identical lattice-ceiling/drawn-realization split the floor gates below
+/// implement for runs.
+///
 /// **There are TWO floor gates now, and the pair is the point** (The Stope,
 /// Task 2). [`FLOORS_PER_RUN_CEILING`] says which floors the address space
 /// admits *at all* — refusing past it is what stops an address outside the
@@ -614,6 +624,13 @@ pub fn chamber_exists(
         return false;
     }
     if addr.floor >= FLOORS_PER_RUN_CEILING {
+        return false;
+    }
+    // C.1's drawn realization: past this system's drawn branch width, no
+    // chamber exists at any band or floor of the column. Branch 0 is always
+    // inside the count (`branch_count_of` draws 1..=BRANCHES_PER_SYSTEM), so
+    // every entrance's mouth survives this gate.
+    if addr.branch >= crate::character::branch_count_of(seed, addr.cell, addr.entrance) {
         return false;
     }
     // `rung_at_depth` never returns `Surface`, so this is always `Some`; the
@@ -934,6 +951,7 @@ pub fn passages_from(
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     /// The chamber key is a **save-format contract**: `StreamLabel::dynamic`
@@ -1251,7 +1269,12 @@ mod tests {
         let mut probed = 0usize;
         let mut disagreed = 0usize;
         for raw_cell in 0u32..12 {
-            for branch in 0..BRANCHES_PER_SYSTEM {
+            // Only the branches this system realizes: past the drawn count
+            // (spec C.1) the branch gate refuses before any draw happens, so
+            // a verdict there would say nothing about which stream was
+            // consulted — the same rule the floor loop below already follows.
+            let realized_branches = crate::character::branch_count_of(seed, CellId(raw_cell), 0);
+            for branch in 0..realized_branches {
                 for band in 0..5u8 {
                     let run = RunAddr {
                         cell: CellId(raw_cell),
@@ -1331,6 +1354,13 @@ mod tests {
     ///
     /// If this fails, every chamber in every world has moved. That is an
     /// **epoch** (`chamber/v4`), not a fix to these numbers.
+    ///
+    /// **The Stope's C.1 gate moved these goldens once already, on purpose**:
+    /// the branch-count draw now refuses branches past their system's drawn
+    /// width, so the slice covers TWO entrances (cell 9's entrance 0 draws 1
+    /// branch, entrance 1 draws 2) and the unrealized branches read as
+    /// literal zeros — a branch gate that stopped gating would fill those
+    /// rows in and redden this pin, which is exactly what it is for.
     #[test]
     fn the_existence_verdict_is_byte_pinned_over_a_known_lattice_slice() {
         assert!(
@@ -1345,42 +1375,51 @@ mod tests {
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
 
-        // Cell 9, entrance 0. Row-major over (branch 0..4, band 0..5), so each
-        // line below is one branch's undercroft / shallows / deeps /
-        // underdeep / nadir. Decimal, matching what `assert_eq!` prints on a
-        // failure, so the two can be compared by eye.
+        // Cell 9, entrances 0 and 1. Row-major over (entrance, branch 0..4,
+        // band 0..5), so each line below is one branch's undercroft /
+        // shallows / deeps / underdeep / nadir. Decimal, matching what
+        // `assert_eq!` prints on a failure, so the two can be compared by eye.
         //
-        // A zero is a legitimate reading, not a hole in the pin: branch 1's
-        // nadir run realizes no floor at all, which is exactly the sparsity
-        // this lattice is supposed to have.
-        let expected: [u32; 20] = [
+        // A zero is a legitimate reading, not a hole in the pin: entrance 0
+        // realizes one branch and entrance 1 two, so every row past those
+        // counts is zero by the C.1 gate, and branch 1's nadir run under
+        // entrance 1 realizes no floor at all — the sparsity this lattice is
+        // supposed to have.
+        let expected: [u32; 40] = [
             1, 29, 1059, 17, 1, //
-            3, 248, 260587, 63, 0, //
-            2, 8, 23178, 42, 10, //
-            12, 6, 12017, 48, 1,
+            0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, //
+            21, 472, 128, 892, 0, //
+            12, 5, 79535, 738, 1, //
+            0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0,
         ];
 
-        let mut got = [0u32; 20];
-        for branch in 0..BRANCHES_PER_SYSTEM {
-            for band in 0..5u8 {
-                let mut mask = 0u32;
-                for floor in 0..FLOORS_PER_RUN_CEILING {
-                    if chamber_exists(
-                        seed,
-                        &cave,
-                        gradient,
-                        ChamberAddr {
-                            cell: CellId(9),
-                            entrance: 0,
-                            branch,
-                            band,
-                            floor,
-                        },
-                    ) {
-                        mask |= 1u32 << u32::from(floor);
+        let mut got = [0u32; 40];
+        for entrance in 0..2u8 {
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for band in 0..5u8 {
+                    let mut mask = 0u32;
+                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                        if chamber_exists(
+                            seed,
+                            &cave,
+                            gradient,
+                            ChamberAddr {
+                                cell: CellId(9),
+                                entrance,
+                                branch,
+                                band,
+                                floor,
+                            },
+                        ) {
+                            mask |= 1u32 << u32::from(floor);
+                        }
                     }
+                    got[usize::from(entrance) * 20 + usize::from(branch) * 5 + usize::from(band)] =
+                        mask;
                 }
-                got[usize::from(branch) * 5 + usize::from(band)] = mask;
             }
         }
         assert_eq!(

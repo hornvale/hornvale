@@ -199,6 +199,16 @@ const GLYPH_REFUSED: char = '.';
 /// the first version of this module could not produce.
 const GLYPH_PAST_RUN: char = '_';
 
+/// The glyph for a floor of a **branch its system never realized** — past
+/// [`crate::character::branch_count_of`]'s drawn count, inside the lattice's
+/// own ceiling, so this readout still asks about it, and refused (spec C.1).
+/// A distinct glyph rather than reusing [`GLYPH_REFUSED`] because the two
+/// refusals have different causes and different gates: a branch gate that
+/// stopped gating turns these into [`GLYPH_EXISTS`], exactly as the run
+/// gate's mutation does to [`GLYPH_PAST_RUN`] — which is why unrealized
+/// branches are still walked rather than skipped.
+const GLYPH_PAST_BRANCH: char = '~';
+
 /// A stratum's spelling **in this readout** — presentation, deliberately not
 /// the save-format table.
 ///
@@ -302,6 +312,11 @@ struct Tallies {
     /// first version of this module, because that version never asked about a
     /// floor past the drawn length at all.
     past_run_length: usize,
+    /// Realized chambers at a **branch past their system's drawn branch
+    /// count** — the direct reading of `chamber_exists`'s branch-count gate
+    /// (spec C.1). 0 in a healthy tree, for the same reason
+    /// [`Tallies::past_run_length`] is.
+    past_branch_count: usize,
     /// Floors drawn across every run of every cave system, whether or not the
     /// band is inside a cave's budget. Separates "the run draw moved" from
     /// "the reach moved": the first moves this, the second does not.
@@ -368,6 +383,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         by_origin: [0; 2],
         off_ladder_rock: 0,
         past_run_length: 0,
+        past_branch_count: 0,
         drawn_floors: 0,
         reachable: 0,
         open_entrances: 0,
@@ -396,6 +412,12 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         let mut rows: Vec<RunRow> = Vec::new();
 
         for entrance in 0..WITNESSED_ENTRANCES {
+            // The system's drawn branch width, read once per entrance and
+            // REPORTED against, never used as a loop bound: every branch the
+            // lattice admits is still walked, so a branch gate that stopped
+            // gating shows up as [`GLYPH_EXISTS`] where [`GLYPH_PAST_BRANCH']
+            // belongs — the same falsifiability rule the floor walk follows.
+            let realized_branches = crate::character::branch_count_of(seed, cell, entrance);
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for band in 0..habitation_bands().len() as u8 {
                     let run = RunAddr {
@@ -431,6 +453,9 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                                 if floor >= drawn {
                                     tallies.past_run_length += 1;
                                 }
+                                if branch >= realized_branches {
+                                    tallies.past_branch_count += 1;
+                                }
                                 match rock_rank(chamber.stratum) {
                                     Some(rank) => tallies.by_rock[rank] += 1,
                                     None => tallies.off_ladder_rock += 1,
@@ -444,6 +469,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
                                 }
                             }
                             None if floor >= drawn => realized.push(GLYPH_PAST_RUN),
+                            None if branch >= realized_branches => realized.push(GLYPH_PAST_BRANCH),
                             None => realized.push(GLYPH_REFUSED),
                         }
                     }
@@ -538,11 +564,16 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         "  past run length {}   (chambers beyond their run's drawn floors)\n",
         tallies.past_run_length
     ));
+    out.push_str(&format!(
+        "  past branch cnt {}   (chambers beyond their system's drawn branches)\n",
+        tallies.past_branch_count
+    ));
 
     out.push_str("\n  the first three cave systems, run by run\n");
     out.push_str(&format!(
         "  (key = the floor-0 derivation key; {GLYPH_EXISTS} exists, \
-         {GLYPH_REFUSED} refused, {GLYPH_PAST_RUN} past the run's drawn floors)\n"
+         {GLYPH_REFUSED} refused, {GLYPH_PAST_RUN} past the run's drawn floors, \
+         {GLYPH_PAST_BRANCH} past the system's drawn branch count)\n"
     ));
     for (cell, head, rows) in &transect {
         out.push_str(&format!("\n  cell {} — {head}\n", cell.0));

@@ -2082,3 +2082,14 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-21T21:58:02Z | sluice:outboard | 35.264 | 21.978 | 34.767 | 1.61 | 0 | 47a864244 |  | lefford | 40 |
 | 2026-08-21T22:03:53Z | sluice:gate | 350.961 | 9834.190 | 334.572 | 28.97 | 0 | f5970ba20 |  | lefford | 40 |
 | 2026-08-21T22:06:59Z | sluice:clients | 185.993 | 971.943 | 25.816 | 5.36 | 0 | fe6880381 |  | lefford | 40 |
+| 2026-08-21T22:54:32Z | rebaseline | 71.941 | 238.575 | 13.668 | 3.51 | 0 | cc3dc3dc | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-21T22:55:10Z | gate-commit | 31.978 | 68.078 | 14.309 | 2.58 | 0 | cc3dc3dc | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-21T22:55:45Z | gate-commit | 34.203 | 53.983 | 12.076 | 1.93 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:34:27Z | gate-commit | 13.270 | 27.188 | 6.903 | 2.57 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:35:32Z | gate-commit | 19.452 | 23.425 | 7.457 | 1.59 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:35:47Z | gate-commit | 11.414 | 11.093 | 0.227 | 0.99 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:36:44Z | gate-commit | 44.184 | 182.333 | 26.012 | 4.72 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:37:24Z | gate-commit | 22.249 | 46.974 | 9.820 | 2.55 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:38:05Z | gate-commit | 22.193 | 46.950 | 9.874 | 2.56 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:39:38Z | gate-commit | 23.586 | 49.807 | 11.486 | 2.60 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |
+| 2026-08-22T01:40:09Z | gate-commit | 22.722 | 48.422 | 10.748 | 2.60 | 0 | ae87d777 | campaign/the-stope | MacBookPro | 10 |

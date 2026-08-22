@@ -23,6 +23,8 @@ mod beholding_probe;
 mod beta_calibration_freeze;
 #[path = "suite/beta_calibration_sweep.rs"]
 mod beta_calibration_sweep;
+#[path = "suite/branch_character.rs"]
+mod branch_character;
 #[path = "suite/capacity_cost_probe.rs"]
 mod capacity_cost_probe;
 #[path = "suite/chorus_params.rs"]
