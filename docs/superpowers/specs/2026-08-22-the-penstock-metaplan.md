@@ -429,6 +429,50 @@ instruments, and it exists to tell us whether stages 2–4 are worth anything.
 If the instruments say locality queries are noise next to GOAP planning, this
 program should stop at stage 1 and say so.
 
+### 6.1 MEASURED, 2026-08-22: the stage-7 falsifier fired
+
+Stage 1's counter is in (`windows/vessel/tests/suite/tick_commit_budget.rs`,
+commit `1f0a6465b`). Seed 42, default `PossessOpts`, 7 agents, 40 ticks:
+
+```
+  first-half rate  0.950000 facts/agent/tick
+  last-half rate   0.928571 facts/agent/tick
+  100-tick run     both halves flat at 0.948571
+```
+
+**It holds flat. It does not fall toward zero.** §11's second falsifier is
+therefore live, in its own words: *"If a realistic session outgrows RAM
+before query cost ever matters, stage 7 becomes the program and everything
+above it is premature."* At ~0.94 facts/agent/tick and ~200 bytes of real
+`Fact`, a thousand agents over ten thousand ticks is ~9.4M facts — roughly
+1.9 GB — and it never stops growing, because the log is append-only.
+
+**Why the rate is what it is, and it is not a bug anyone introduced.**
+`agent_at_fact` is pushed unconditionally on every `MoveTo`
+(`liveness.rs:5081`); there is no divergence test, so one fact commits per
+step of every walk. The Quickening's rule — *only the discrete divergence
+commits; the smooth routine stays derived* — was implemented as "the latest
+committed `agent-at`, **else the derived schedule**," and that worked because
+a fixed two-point schedule was the default a divergence could be measured
+against. The Wanting, Foresight and Temperament replaced that schedule with
+drives. **No campaign broke the rule; the ground it stood on was removed**,
+and with no default to diverge from, everything commits.
+
+**Consequence: §5.6 is the fix, not merely a caching note.** It already says
+a path anchors to the ledger position of a committed *intention* and
+re-derives its step sequence, because the planner is deterministic. Read as a
+log-bounding mechanism rather than a cache mechanism, that is exactly the
+missing default: commit *"resolved to go to the spring on day D"* once, and
+re-derive the N steps between intentions instead of storing them. The saving
+is the mean path length. Stage 7 and §5.6 are the same idea reached from two
+directions — which neither this spec nor its author saw when they were
+written, and which the measurement forced.
+
+**This does not re-order the stages by itself.** Stage 1's remaining
+measurement (the query/plan/commit split) can still say the whole read side
+is noise. But stage 7 is no longer speculative, and any future reading of
+this program should start here rather than at §6's table.
+
 ## 7. The standing gate
 
 **Determinism.** Byte-identity of committed artifacts before and after, every
