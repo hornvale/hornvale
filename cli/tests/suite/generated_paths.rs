@@ -180,7 +180,7 @@ fn the_root_guide_names_the_declared_path_list() {
 
 /// No generated artifact is routed through a **regenerating** merge driver.
 ///
-/// The ratchet for decision 0160. `.gitattributes` once routed six
+/// The ratchet for decision 0166. `.gitattributes` once routed six
 /// fully-re-derived documents through `merge=hv-regenerate`, a driver that
 /// discarded both sides' text and reran the generator. The premise was sound
 /// and the implementation could not deliver it: git invokes a merge driver
@@ -218,7 +218,7 @@ fn no_generated_artifact_is_routed_through_a_regenerating_merge_driver() {
          driver cannot regenerate a merge product, because at the moment git \
          invokes it the merge product does not exist on disk — it will emit \
          whichever side happens to be checked out and silently drop the other. \
-         Read docs/decisions/0160-a-generated-artifact-cannot-be-merged-by-\
+         Read docs/decisions/0166-a-generated-artifact-cannot-be-merged-by-\
          regenerating-it.md before re-adding one; the mechanism that works is \
          scripts/hooks/post-merge's advisory to run `make rebaseline`:\n  {}",
         offenders.join("\n  ")

@@ -123,7 +123,7 @@ if ! out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-
     # nothing.
     #
     # THAT PARTICULAR POLLUTER IS GONE, AND THE SHAPE-BASED READ STAYS. The
-    # `merge=hv-regenerate` driver was retired by decision 0160, so merge-tree
+    # `merge=hv-regenerate` driver was retired by decision 0166, so merge-tree
     # here no longer emits cargo banners. Keeping the positional `tail -n +2`
     # would still be wrong: `2>&1` means ANY future tool that writes to stderr
     # during a merge-tree reintroduces the identical bug, and the observed

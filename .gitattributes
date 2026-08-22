@@ -23,7 +23,7 @@ book/src/frontier/idea-registry.md merge=union
 # to resolve, only two sides' appends to keep. Missed when PROC-12 shipped.
 docs/timings.md merge=union
 
-# TIER B IS RETIRED (decision 0160). Six fully-re-derived documents used to
+# TIER B IS RETIRED (decision 0166). Six fully-re-derived documents used to
 # route through `merge=hv-regenerate` (scripts/merge-regenerate.sh), which
 # discarded both sides' text and reran the generator. The premise was right
 # and the implementation could not deliver it: a merge driver runs BEFORE the
@@ -47,4 +47,4 @@ docs/timings.md merge=union
 # is what caught all three of the 2026-08-20 incidents.
 #
 # `cli/tests/suite/generated_paths.rs` fails if a `merge=hv-regenerate`
-# attribute reappears here. Read decision 0160 before re-adding one.
+# attribute reappears here. Read decision 0166 before re-adding one.

@@ -690,7 +690,7 @@ doctor: ## Print the repo self-map (orientation for a fresh session)
 	@bash scripts/doctor.sh
 
 # The `merge.hv-regenerate` driver registration was removed here by decision
-# 0160, which retired PROC-12's Tier B. NOTE FOR ANYONE WONDERING WHY THEIR
+# 0166, which retired PROC-12's Tier B. NOTE FOR ANYONE WONDERING WHY THEIR
 # CHECKOUT STILL HAS ONE: that line wrote to `.git/config`, which is NOT
 # tracked, so every checkout that ever ran this target keeps a dangling
 # registration pointing at a script that no longer exists. It is inert — an

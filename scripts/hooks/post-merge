@@ -22,7 +22,7 @@
 # paragraph that used to sit here — describing PROC-12's Tier B as "strictly
 # better than this hook" — was wrong in a way worth recording. `.gitattributes`
 # routed six fully-re-derived documents to `scripts/merge-regenerate.sh` (Tier
-# B); decision 0160 RETIRED that driver, because it regenerated over the
+# B); decision 0166 RETIRED that driver, because it regenerated over the
 # working tree, which mid-merge is not the merge product, so every invocation
 # emitted ours' answer and silently dropped theirs. Tier A (`merge=union`, for
 # append-only lists) is a different mechanism and remains.
@@ -34,7 +34,7 @@
 # tree is not the merge product. So:
 #
 #   1. NO GENERATED PATH IS COVERED BY A MERGE DRIVER ANY MORE, and before
-#      0160 most were not either: `docs/generated-paths.txt` lists seven
+#      0166 most were not either: `docs/generated-paths.txt` lists seven
 #      directories while the Tier B list named six individual files. Nothing
 #      ever routed `book/src/laboratory/`, `docs/digest/`,
 #      `book/src/domesday/`, `clients/game/core/tests/fixtures/`,

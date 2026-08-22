@@ -1,4 +1,4 @@
-# 0160. A generated artifact cannot be merged by regenerating it
+# 0166. A generated artifact cannot be merged by regenerating it
 
 **Status:** Accepted (2026-08-22) · **Decider:** Nathan · **Supersedes:** the
 **Tier B** half of PROC-12 (`merge=hv-regenerate`); Tier A (`merge=union`) is
