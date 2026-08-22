@@ -35,6 +35,8 @@ mod lantern_light;
 mod lantern_night;
 #[path = "suite/lantern_seam.rs"]
 mod lantern_seam;
+#[path = "suite/ledger_query_equivalence.rs"]
+mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
 #[path = "suite/possess_target.rs"]
