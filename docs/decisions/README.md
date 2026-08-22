@@ -191,3 +191,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0158](0158-a-trill-is-not-an-exotic-manner.md) | A trill is not an exotic manner | Accepted |
 | [0159](0159-focus-is-the-clients-one-input-mode.md) | Focus is the client's one input mode, and it is shown | Accepted |
 | [0166](0166-a-generated-artifact-cannot-be-merged-by-regenerating-it.md) | A generated artifact cannot be merged by regenerating it | Accepted |
+| [0167](0167-a-driver-is-interchangeable-and-a-possessed-body-is-a-creature.md) | A driver is interchangeable, and a possessed body is a creature | Accepted |
