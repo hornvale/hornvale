@@ -1143,3 +1143,51 @@ fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
         }
     }
 }
+
+/// **The frozen-range minimum the ascending seam subtracts against** (The
+/// Stope): every band's frozen range has a minimum of at least 1, so
+/// `floors_in_run(band - 1) - 1` in the ascending-seam candidate construction
+/// (floor 0's upward neighbour is `floors_in_run - 1` of the run above)
+/// cannot underflow. If any rung's range ever drew 0, that subtraction would
+/// wrap and name a nonsense floor; this pin makes such a change fail here,
+/// at the draw, instead of surfacing only through passage listings.
+///
+/// Asserted on `floors_in_run` itself — the shipped entry point the seam
+/// calls — over every non-Surface rung and a modest sweep of seeds, cells,
+/// entrances, branches, with a non-vacuity control so an accidentally empty
+/// loop cannot read as green.
+///
+/// claim: invariant(floors_in_run(seed, run) >= 1 for every non-Surface rung)
+#[test]
+fn every_non_surface_rungs_frozen_range_draws_at_least_one_floor() {
+    let mut cases = 0usize;
+    for raw_seed in [0u64, 1, 7, 42] {
+        let seed = Seed(raw_seed);
+        for raw_cell in [0u32, 9, 42] {
+            for entrance in 0u8..2 {
+                for branch in 0u8..2 {
+                    for band in 0u8..=4 {
+                        let run = RunAddr {
+                            cell: CellId(raw_cell),
+                            entrance,
+                            branch,
+                            band,
+                        };
+                        let floors = floors_in_run(seed, run);
+                        assert!(
+                            floors >= 1,
+                            "seed {raw_seed} cell {raw_cell} entrance \
+                             {entrance} branch {branch} band {band} drew \
+                             {floors} floors — a frozen range with minimum 0 \
+                             underflows the ascending seam's `floors_in_run - \
+                             1`; chamber.rs states every band's frozen range \
+                             has a minimum of at least 1"
+                        );
+                        cases += 1;
+                    }
+                }
+            }
+        }
+    }
+    assert!(cases > 0, "the sweep must exercise at least one case");
+}
