@@ -61,6 +61,8 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/tick_commit_budget.rs"]
+mod tick_commit_budget;
 #[path = "suite/underworld_level_generation.rs"]
 mod underworld_level_generation;
 #[path = "suite/walker_battery.rs"]
