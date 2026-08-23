@@ -22,7 +22,7 @@ discovered point site is very likely **not drawn at all**, whatever its
 label would say: the worked case is the flagship's own starting
 settlement, undrawable at every zoom rung this client ships, appearing
 only past a resolution more than three times the client's own ceiling. The
-campaign's own ratified rule (decision 0177's second clause) is that a map
+campaign's own ratified rule (decision 0196's second clause) is that a map
 "may disclose its own resolution but may never invent detail below it,"
 and this campaign built exactly that disclosure for the strip — F5's "one
 character stands for roughly N terrain cells at this zoom" — and never

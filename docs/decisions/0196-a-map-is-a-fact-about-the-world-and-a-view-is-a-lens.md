@@ -1,11 +1,11 @@
-# 0177. A map's frame is a fact about the world, and a view of the world is a lens
+# 0196. A map's frame is a fact about the world, and a view of the world is a lens
 
 **Status:** Accepted (2026-08-23) · **Decider:** Nathan · **Relates:**
 [0123](0123-disclose-a-resolution-rather-than-refine-a-field.md) (disclose a
 resolution rather than refine a field — the same discipline applied to a
 lost cell, here applied to a lost sample), [0142](0142-a-channel-carries-one-axis-and-a-lost-axis-is-declared.md)
 (a lost axis is declared — here a lost *area*, the projection's clamp),
-[0178](0178-co-location-is-not-discovery.md) (co-location is not discovery —
+[0197](0197-co-location-is-not-discovery.md) (co-location is not discovery —
 split out at final review; depends on this record's clause 2 for an
 implementation reason, not a logical one — see that record's own "Why
 separate" section)
@@ -45,6 +45,6 @@ campaign's own spec and never in question on their own:
   schema change, no cross-repo consequence, and H7 (the map costs nothing in
   the ledger) is a direct test of clause 2 holding.
 - Clause 2's completeness (the whole map is drawn, truthfully, at every
-  zoom rung) is what [0178](0178-co-location-is-not-discovery.md) depends
+  zoom rung) is what [0197](0197-co-location-is-not-discovery.md) depends
   on for its own consequences to be implementable without suppression
   machinery — see that record.

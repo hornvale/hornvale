@@ -1,7 +1,7 @@
-# 0178. Co-location is not discovery
+# 0197. Co-location is not discovery
 
 **Status:** Accepted (2026-08-23) · **Decider:** Nathan · **Relates:**
-[0177](0177-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md)
+[0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md)
 (a map's frame is a fact about the world, and a view of the world is a lens —
 split from this record at final review, see "Why separate" below)
 
@@ -31,7 +31,7 @@ undiscovered contents.
 ## Why separate
 
 This record was originally clause 3 of
-[0177](0177-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md),
+[0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md),
 bundled on the reasoning that the map's completeness and fixed frame are
 what make "discovery gates the label, never the ground" implementable
 without suppression machinery. Final review overturned the bundling: this
@@ -39,7 +39,7 @@ is a claim about what a possession KNOWS, equally true of hearsay, prose, or
 conversation — none of which have a complete geometry or a derived
 projection frame at all. Nathan's own framing above carries no cartography.
 And the timeline runs the wrong way for a logical dependency: this rule
-arrived by amendment WHILE 0177's clause 2 (map completeness) was still
+arrived by amendment WHILE 0196's clause 2 (map completeness) was still
 under active reassessment, including a serious proposal to replace it
 outright with a dead-reckoned, error-accumulating map — the opposite of one
 clause resting on the other's settled ground. Three registry rows
@@ -47,12 +47,12 @@ clause resting on the other's settled ground. Three registry rows
 `CLIENT-hearsay-placed-features`) already cite this rule independently of
 the map campaign that first stated it.
 
-**The true, narrower relationship kept:** 0177's clause 2 (the map is
+**The true, narrower relationship kept:** 0196's clause 2 (the map is
 geometrically complete and truthful from the first turn) is what makes this
 rule IMPLEMENTABLE without a suppression pass — a discovery layer built
 against an incomplete or world-derived-but-mutable geometry would have had
 nowhere stable to attach the distinction. That is an implementation
-dependency, not a logical one, and does not make this a corollary of 0177.
+dependency, not a logical one, and does not make this a corollary of 0196.
 
 ## Consequences
 
