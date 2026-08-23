@@ -170,6 +170,50 @@ pass on main alone) and then asserted WHY without verifying that half at all.
 A mechanism that fits the timing is more convincing than either half alone,
 which is exactly when it needs evidence, not less."*
 
+## The author of a lesson repeating it, two hours later
+
+The merge queue's best contribution tonight was naming its own error:
+*"I verified WHETHER (a control) and then asserted WHY without verifying that
+half at all."* I agreed, called it the keeper, wrote it into memory, and told
+it the shape generalises past merge queues.
+
+**Then I did exactly the same thing, in a commit message, within two hours.**
+
+Fixing the clients-phase red I mutated `back`'s time charge, ran
+`make vessel-check`, and saw green. I had *already* correctly explained that
+green — the anti-vacuity assertion I had just written was itself vacuous,
+because `go n` alone moves the clock off zero. That was the whole story. But I
+then invented a *second* mechanism for it — "`make vessel-check` drives the
+COMMITTED `book/src/gallery/vessel.wasm`, so the mutation never reached the
+binary" — and committed it as fact.
+
+Both halves are false, and both were one command away:
+
+    git check-ignore -v book/src/gallery/vessel.wasm   ->  .gitignore:52
+    grep 'vessel-check-run' Makefile                   ->  vessel-check-run: wasm-vessel
+
+The wasm is **gitignored, not committed**, and `wasm-vessel` is a `.PHONY`
+prerequisite that rebuilds and re-copies on every run. The mutation reached the
+binary every time. I even recruited timing as corroboration — 29 s versus the
+first run's 43 s, read as "it skipped the build" — when a warm rebuild measures
+~14 s and 29 s is exactly what rebuilding looks like.
+
+**The lesson survives the mechanism being wrong**, which is why it is still in
+the drive's comment: a mutation that produces green needs you to prove the
+mutant was under test before reading the green as evidence. But the mechanism I
+named was fabricated, and a claim about which artifact a gate drives is exactly
+the kind that gets believed for months. Caught only because I passed it to the
+queue as a finding *for its side of the fence*, and it checked.
+
+Two things follow that the earlier sections do not already say:
+
+- **An explanation that arrives after the observation is already explained is
+  the suspicious kind.** I did not need a second mechanism. Inventing one cost
+  nothing at the time and would have cost someone a hunt later.
+- **Handing a finding to someone else is a verification step.** It was not
+  offered as one — I meant it as a courtesy — and it caught a defect three
+  reviews and my own re-reading had not.
+
 ## What this arc did not do
 
 **Seven of the fourteen concepts it minted are inert.** `chart`, `know`,
