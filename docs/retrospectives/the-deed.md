@@ -291,16 +291,44 @@ since every charged act now leaves a fractional day.
 
 - `PLAY-driver-substitutability` — the must-fix above (decision 0167).
 - `KNOW-commit-read-same-instant` — the quantize hazard (F-5).
-- **F-6**: **three fixture directories** move with the sim and are not
-  drift-checked — `cli/tests/fixtures/`, `windows/vessel/tests/fixtures/` and
-  `windows/worldgen/tests/fixtures/`. None is in `docs/generated-paths.txt`,
-  and `regenerate-artifacts.sh` never writes them; only
-  `make rebaseline-goldens` does, and nothing prompts you to run it. The
-  structural remedy is to declare them, with a wrinkle worth inheriting rather
-  than rediscovering: the drift check would then go red and `make rebaseline`
-  would **not** fix it, because the writer is a different command. A red with a
-  known remedy still beats silence, but it is a change to shared machinery and
-  should not arrive on a campaign close.
+- **F-6, RESOLVED THE OTHER WAY — and the recommendation this retrospective
+  originally carried was wrong.** It said `cli/tests/fixtures/`,
+  `windows/vessel/tests/fixtures/` and `windows/worldgen/tests/fixtures/`
+  should be declared in `docs/generated-paths.txt`. **They should not**, and
+  the reason is a distinction this campaign missed: those three are
+  **assertions**, not generated inputs. `regenerate-artifacts.sh` mentions
+  them **zero** times; `kernel/src/golden.rs` compares them and requires a
+  deliberate `REBASELINE=1` to accept drift. By contrast
+  `clients/game/core/tests/fixtures/`, which *is* declared, is written by
+  `regenerate-artifacts.sh` — a cached input.
+
+  Declaring the three would be **inert today** (regeneration never writes
+  them, so the diff is permanently empty) and **harmful the moment anything
+  did**: the artifacts phase *commits* the drift it finds, which would
+  silently rebaseline a determinism golden and land it green. **The gate
+  failing on a stale golden is not the gap — it is the design**, and it is
+  exactly what caught this campaign's first red.
+
+  Sharper still, and worse for the original recommendation:
+  `cli/tests/fixtures/` holds the frozen `pre-<campaign>` historical pins,
+  which `golden.rs`'s own header says are **not goldens at all** — *"their
+  bytes must never track current code, so they are compared directly and have
+  no accept path."* Declaring that directory is not merely inert, it is a
+  category error.
+
+  My stated wrinkle was wrong too, in the same direction: I wrote that the
+  drift check "would go red and `make rebaseline` would not fix it." It would
+  not go red. It would go **permanently, silently green**.
+
+  **The half that stands, and it is the one worth keeping:** nothing prompts
+  `make rebaseline-goldens`, and the golden tests are the only thing standing
+  there. That is what the first red actually demonstrated.
+
+  Fixed on main by the merge queue as an executable criterion rather than a
+  comment — every declared path must appear in `regenerate-artifacts.sh`,
+  derived rather than hardcoded, mutation-checked by declaring one of the
+  goldens and watching it fail.
+
 - **F-3** (inherited): `purview_scene`'s ungated NPC marks — reaching it from
   inside a chamber discloses a creature the chamber band withheld. This arc
   built the gate table where the structural fix would live but did not close it.
