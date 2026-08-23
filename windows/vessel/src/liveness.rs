@@ -5383,14 +5383,115 @@ fn ordered_for_derivation(
     settlements
 }
 
+/// One settlement-derived body: species, activity-cycle, temperature niche,
+/// psychology dials, derived threat niche, mass, and perception — every field
+/// `derive_npcs`'s per-settlement loop used to build inline, now the ONE
+/// derivation it shares with `agent::mint_at`'s flagship mint (The Hand,
+/// Task 2). Proves the possessed body and a derived creature at the same
+/// settlement are the same villager, built once instead of by two parallel
+/// code paths.
+///
+/// Mints and commits nothing: `entity` is an already-minted [`EntityId`] the
+/// caller supplies. `derive_npcs` commits a NAME fact from its own ledger
+/// clone immediately after minting the entity, in the position that commit
+/// has always held; moving that commit in here would change commit order
+/// and therefore artifacts, so the caller keeps it (Task 2's ambiguity
+/// ruling). `agent::mint_at` has no ledger entity at all — an `Agent` is
+/// never committed — so it passes a placeholder that this function never
+/// reads back into anything the caller keeps.
+pub fn body_at(
+    world: &World,
+    ctx: &LocaleContext,
+    village: &hornvale_settlement::VillageInfo,
+    entity: EntityId,
+) -> Npc {
+    let home = settlement_room(world, ctx, village.id);
+    let resource =
+        nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET).unwrap_or_else(|| home.clone());
+    let species =
+        hornvale_species::species_of(world, village.id).unwrap_or_else(|| "goblin".to_string());
+    let activity = species_activity(world, &species);
+    // Authored per-species data: the temperature niche (the thermal drive's
+    // setpoint/tolerance) and the psych vector's two runtime dials —
+    // deliberation latency (the arbitration tuning) and time horizon (the
+    // anticipation lead).
+    let biosphere = hornvale_species::biosphere_registry();
+    let temperature_niche = biosphere
+        .get_by_label(&species)
+        .map(|t| t.condition_niche.temperature)
+        .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
+    let metabolic_class = biosphere
+        .get_by_label(&species)
+        .map(|t| t.metabolic_class)
+        .unwrap_or(MetabolicClass::Endotherm);
+    let niche = biosphere
+        .get_by_label(&species)
+        .map(|t| t.niche.clone())
+        .unwrap_or_else(default_diet_niche);
+    // Body mass (The Action Clock): the allometric driver of every action's
+    // cost. Derived through `clock::mass_for_species` — the ONE derivation
+    // every body shares, creature and possessed alike, which is what makes
+    // the player's tariff the same tariff rather than a parallel one. The
+    // fallback for a species missing from the biosphere registry lives
+    // there.
+    let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
+    let psyche = hornvale_species::psyche_registry();
+    let deliberation_latency = psyche
+        .get_by_label(&species)
+        .map(|p| p.deliberation_latency)
+        .unwrap_or(0.5);
+    let time_horizon = psyche
+        .get_by_label(&species)
+        .map(|p| p.time_horizon)
+        .unwrap_or(0.5);
+    // Boldness (The Mettle): the banked `threat_response` read at creature
+    // scope. Default steady/inert for a species without a psyche entry — the
+    // beasts.
+    let boldness = psyche
+        .get_by_label(&species)
+        .map(|p| p.threat_response)
+        .unwrap_or(BOLDNESS_STEADY);
+    // The threat niche (The Bane): derived from the temperature niche +
+    // metabolic class already on hand — no fresh authoring.
+    let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+    // The same perception vector a possessed body resolves — an unresolved
+    // species falls back to the manikin's neutral perception, the same way
+    // every other per-species trait above falls back rather than
+    // propagating an error (this function is infallible; `mint_at` keeps
+    // its own fail-loud check ahead of calling this).
+    let perception = hornvale_species::perception_registry()
+        .get_by_label(&species)
+        .copied()
+        .unwrap_or(hornvale_species::PerceptionVector::MANIKIN);
+    let label = format!("{species} of {}", village.name);
+    Npc {
+        entity,
+        home,
+        resource,
+        species,
+        activity,
+        temperature_niche,
+        deliberation_latency,
+        time_horizon,
+        metabolic_class,
+        niche,
+        boldness,
+        threat_niche,
+        mass_kg,
+        label,
+        perception,
+        village: Some(village.clone()),
+    }
+}
+
 /// Derive `k` NPCs from the `k` most-populous settlements, GUARANTEEING the
 /// possessed agent's own home settlement (`home_settlement`) is among them —
 /// otherwise no NPC is ever co-located with the player and the observation
 /// payoff (spec: "the herder has gone down to the river") can never fire
 /// (the-quickening T3 review). Each NPC is minted in `ledger` (a
-/// session-owned clone), homed at its settlement's cell room, with its
-/// drive's resource anchor (`nearest_water` over the true terrain, The
-/// Surmise) and species' activity-cycle.
+/// session-owned clone), then built by [`body_at`] — homed at its
+/// settlement's cell room, with its drive's resource anchor (`nearest_water`
+/// over the true terrain, The Surmise) and species' activity-cycle.
 /// type-audit: bare-ok(count: k)
 pub fn derive_npcs(
     world: &World,
@@ -5403,72 +5504,9 @@ pub fn derive_npcs(
     let mut settlements = ordered_for_derivation(settlements, home_settlement);
     settlements.truncate(k);
 
-    // Authored per-species data, read once: the temperature niche (the thermal
-    // drive's setpoint/tolerance) and the psych vector's two runtime dials —
-    // deliberation latency (the arbitration tuning) and time horizon (the
-    // anticipation lead). Threaded onto each NPC the same way `activity` is —
-    // the perception/psych pattern.
-    let biosphere = hornvale_species::biosphere_registry();
-    let psyche = hornvale_species::psyche_registry();
-    // The Hand: the same perception vector a possessed body resolves in
-    // `agent::mint_at`, threaded onto the derived creature the same way the
-    // niche/psyche traits already are. `mint_at` resolves this by hard error
-    // (`VesselError::NoSpecies`) because minting a single agent is fallible;
-    // this derivation is not, so an unresolved species falls back to the
-    // manikin's neutral perception the same way every other per-species trait
-    // above falls back rather than propagating an error.
-    let perception = hornvale_species::perception_registry();
-
     settlements
         .into_iter()
         .map(|village| {
-            let home = settlement_room(world, ctx, village.id);
-            let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
-                .unwrap_or_else(|| home.clone());
-            let species = hornvale_species::species_of(world, village.id)
-                .unwrap_or_else(|| "goblin".to_string());
-            let activity = species_activity(world, &species);
-            let temperature_niche = biosphere
-                .get_by_label(&species)
-                .map(|t| t.condition_niche.temperature)
-                .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
-            let metabolic_class = biosphere
-                .get_by_label(&species)
-                .map(|t| t.metabolic_class)
-                .unwrap_or(MetabolicClass::Endotherm);
-            let niche = biosphere
-                .get_by_label(&species)
-                .map(|t| t.niche.clone())
-                .unwrap_or_else(default_diet_niche);
-            // Body mass (The Action Clock): the allometric driver of every
-            // action's cost. Derived through `clock::mass_for_species` — the
-            // ONE derivation every body shares, creature and possessed alike,
-            // which is what makes the player's tariff the same tariff rather
-            // than a parallel one. The fallback for a species missing from the
-            // biosphere registry lives there.
-            let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
-            let deliberation_latency = psyche
-                .get_by_label(&species)
-                .map(|p| p.deliberation_latency)
-                .unwrap_or(0.5);
-            let time_horizon = psyche
-                .get_by_label(&species)
-                .map(|p| p.time_horizon)
-                .unwrap_or(0.5);
-            // Boldness (The Mettle): the banked `threat_response` read at
-            // creature scope. Default steady/inert for a species without a
-            // psyche entry — the beasts.
-            let boldness = psyche
-                .get_by_label(&species)
-                .map(|p| p.threat_response)
-                .unwrap_or(BOLDNESS_STEADY);
-            // The threat niche (The Bane): derived from the temperature niche +
-            // metabolic class already on hand — no fresh authoring.
-            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
-            let perception = perception
-                .get_by_label(&species)
-                .copied()
-                .unwrap_or(hornvale_species::PerceptionVector::MANIKIN);
             // A settlement NPC belongs to its settlement, and this map yields
             // exactly one per settlement, so ordinal 0. Deriving from
             // `village.id` is what makes an NPC's id independent of how many
@@ -5486,7 +5524,7 @@ pub fn derive_npcs(
                 role: "npc",
                 ordinal: 0,
             });
-            let label = format!("{species} of {}", village.name);
+            let npc = body_at(world, ctx, &village, entity);
             // A NAME fact so the provenance read (`why`, backed by
             // `windows/historiography::recount`) leads with the NPC's own
             // label rather than a bare entity id — NAME is kernel-core, so
@@ -5500,7 +5538,7 @@ pub fn derive_npcs(
                     Fact {
                         subject: entity,
                         predicate: hornvale_kernel::NAME.to_string(),
-                        object: Value::Text(label.clone()),
+                        object: Value::Text(npc.label.clone()),
                         place: None,
                         day: None,
                         provenance: "the-quickening".to_string(),
@@ -5508,24 +5546,7 @@ pub fn derive_npcs(
                     &world.registry,
                 )
                 .expect("a freshly minted NPC entity's first NAME fact always commits");
-            Npc {
-                entity,
-                home,
-                resource,
-                species,
-                activity,
-                temperature_niche,
-                deliberation_latency,
-                time_horizon,
-                metabolic_class,
-                niche,
-                boldness,
-                threat_niche,
-                mass_kg,
-                label,
-                perception,
-                village: Some(village),
-            }
+            npc
         })
         .collect()
 }

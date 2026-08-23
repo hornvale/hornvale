@@ -66,3 +66,51 @@ fn a_derived_creature_carries_its_species_perception_and_its_village() {
         );
     }
 }
+
+/// The Hand's premise: possession mints a body at the most-populous
+/// settlement, and `ordered_for_derivation` hoists that same settlement to
+/// index 0 — so the two are one villager built twice. This test states that
+/// as an equality; Task 3 deletes one of them on the strength of it.
+///
+/// The plan brief that seeded this test called `body_at(&world, &ctx,
+/// &flagship)` — three arguments. Task 2's ambiguity ruling (the entity is
+/// passed in, not minted by `body_at`) adds a fourth: an already-minted
+/// `EntityId`. The equality below never compares `entity` (the brief did
+/// not either), so any value works; `first.entity` is used because it is
+/// the natural one on hand. The brief also compared `first.village.id` to
+/// `minted.village.id` directly — stale against Task 1, which made
+/// `Npc.village` an `Option<VillageInfo>`.
+#[test]
+fn the_flagship_body_and_the_first_derived_creature_are_the_same_body() {
+    let (world, ctx) = seed_42();
+    let mut ledger = world.ledger.clone();
+    let flagship =
+        hornvale_vessel::most_populous_settlement(&world).expect("seed 42 has a settlement");
+
+    let derived = hornvale_vessel::liveness::derive_npcs(&world, &ctx, &mut ledger, 4, flagship.id);
+    let first = derived
+        .first()
+        .expect("precondition: at least one creature");
+    let minted = hornvale_vessel::liveness::body_at(&world, &ctx, &flagship, first.entity);
+
+    assert_eq!(
+        first
+            .village
+            .as_ref()
+            .expect("a settlement-derived creature carries Some(village)")
+            .id,
+        minted
+            .village
+            .as_ref()
+            .expect("body_at derives from a real settlement")
+            .id,
+        "same settlement"
+    );
+    assert_eq!(first.species, minted.species, "same species");
+    assert_eq!(first.home, minted.home, "same home");
+    assert_eq!(first.mass_kg, minted.mass_kg, "same body");
+    assert_eq!(
+        first.perception.activity, minted.perception.activity,
+        "same senses"
+    );
+}

@@ -3,7 +3,7 @@
 
 use crate::VesselError;
 use crate::streams::VESSEL_AGENT;
-use hornvale_kernel::{RoomAddr, Value, World, math};
+use hornvale_kernel::{EntityId, RoomAddr, Value, World, math};
 use hornvale_locale::LocaleContext;
 use hornvale_settlement::{LATITUDE, LONGITUDE, VillageInfo, village_info};
 use hornvale_species::{PerceptionVector, perception_registry, species_of};
@@ -54,16 +54,34 @@ pub fn mint_at(
     // converse — a future non-speaking perceiver stays expressible), so an
     // unknown or plain-fauna label fails here. A dragon label cannot reach
     // this path anyway: `species` is read from a SETTLEMENT.
-    let perception = *perception_registry()
+    //
+    // This check is kept explicit (rather than delegated to `body_at`, which
+    // is infallible and falls back to the manikin's neutral perception on an
+    // unresolved species — the fallback `derive_npcs` always wanted) so
+    // `mint_at`'s fail-loud contract survives The Hand's merge byte-for-byte:
+    // its *value* on the success path is thrown away below in favour of
+    // `body_at`'s own resolution, which is identical whenever this check
+    // passes.
+    perception_registry()
         .iter()
         .find(|(k, _)| k.0 == species.as_str())
-        .map(|(_, p)| p)
         .ok_or_else(|| VesselError::NoSpecies(species.clone()))?;
-    // Same lat/lon → unit-sphere routing as `hornvale locale --at` (kernel
-    // math keeps it platform-exact); shared with `settlement_position` so
-    // derived NPCs (the-quickening) place themselves the same way.
-    let position = settlement_position(world, village.id);
-    let position = RoomAddr::containing(position, walk_depth(ctx));
+    // The Hand: build the shared body — species, perception, home, and every
+    // other per-settlement field — through the ONE derivation
+    // `liveness::derive_npcs` also calls (`liveness::body_at`), so the
+    // flagship's possessed body and a derived creature at the same
+    // settlement provably share it. `body_at` wants an already-minted
+    // `EntityId`; an `Agent` is never committed to the ledger (it never had
+    // one), so the placeholder below is discarded — only the other fields of
+    // the returned `Npc` feed the `Agent` constructed here. Its `home` is the
+    // same lat/lon → unit-sphere → `RoomAddr::containing(_, walk_depth(ctx))`
+    // routing this function used to compute inline (shared via
+    // `settlement_position`/`walk_depth`, still used by `liveness::
+    // settlement_room` under `body_at`), so the resulting `AgentId` stream
+    // draw is unchanged.
+    let placeholder_entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
+    let body = crate::liveness::body_at(world, ctx, &village, placeholder_entity);
+    let position = body.home;
     let id = AgentId(
         position
             .seed(world.seed)
@@ -74,9 +92,11 @@ pub fn mint_at(
     Ok(Agent {
         id,
         species,
-        perception,
+        perception: body.perception,
         position,
-        village,
+        village: body
+            .village
+            .expect("body_at derives from a real settlement: Some(village) always"),
     })
 }
 
