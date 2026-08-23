@@ -1,6 +1,6 @@
 # The Deed — retrospective
 
-*Arc I.c of the possession program. Shipped one action suite in two moods:
+*Arc I.b of The Bridle. Shipped one action suite in two moods:
 bare verbs in-character (gated, charged, committing), `!`-verbs
 out-of-character (ungated, free, committing only when stamped). Eight tasks,
 seven decision records, one honest limit recorded rather than papered over.*
