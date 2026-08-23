@@ -59,16 +59,45 @@ const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
 
 /// Spec §3.2's group D — session control, which is *not an act* and therefore
-/// carries no [`Mood`] at all. These are the only bare verbs the body-state
-/// gate does not stand in front of: a body you cannot let go of is a hang, not
-/// a capability, and `exit`'s coarse-ward refusal is a statement about the
+/// carries no [`Mood`] at all. A body you cannot let go of is a hang, not a
+/// capability, and `exit`'s coarse-ward refusal is a statement about the
 /// world's grain rather than about this body.
 ///
-/// Everything else in the bare namespace IS the in-character namespace (spec
-/// §3.2: group B bare forms are "subjective, gated" and group C is "gated by
-/// body state"), which is why [`Session::refused_by_the_body`] asks the gate
-/// once for the whole match rather than per arm.
+/// Disjoint from [`IN_CHARACTER_VERBS`] by construction, and asserted so:
+/// `session_control_is_never_an_in_character_verb` in this file's own tests.
 const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
+
+/// Spec §3.2's groups B and C, bare — every token [`Session::handle`]'s
+/// in-character match resolves to an act, and therefore exactly the tokens the
+/// body-state gate stands in front of. Bare compass directions belong here too
+/// and are recognised separately, by [`parse_compass`], because they are an
+/// open set rather than a list.
+///
+/// # Why the gate needs a roster at all (fix round 1)
+///
+/// Task 7 asked the gate about *every* bare token, before verb resolution. So
+/// a sleeping body answered "You cannot — you are asleep." to `xyzzy`. A
+/// nonsense token is not an act the body is too asleep to perform, and the
+/// answer LEAKS: it told a player that `whoami` — a **retired** group-A bare
+/// form (Task 5) — is a real in-character verb merely blocked by body state,
+/// which is exactly what spec §3.2 says it must not be ("until [the hint path]
+/// exists, a bare group-A verb is an ordinary unknown-verb refusal"). Awake it
+/// was; asleep it was not.
+///
+/// # The drift this roster could have, and what holds it
+///
+/// A second list beside a match can fall out of step with it, silently, in the
+/// direction that matters most: a new bare verb added to `handle` and not
+/// added here would be UNGATED, and nothing about it would look wrong.
+/// [`HELP`] is the third copy that closes the loop — it is the surface a
+/// player reads, so it is already obliged to be complete — and
+/// `every_bare_verb_help_lists_is_classified` asserts the two agree in **both**
+/// directions: every verb `HELP` lists is in this roster or in
+/// [`SESSION_CONTROL`], and every entry of this roster is listed by `HELP`.
+const IN_CHARACTER_VERBS: [&str; 17] = [
+    "back", "climb", "consult", "delve", "dive", "enter", "examine", "go", "knows", "look", "map",
+    "needs", "out", "sleep", "surface", "wait", "write",
+];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
 ///
@@ -97,6 +126,13 @@ const SLEPT_PROVENANCE: &str = "lay down and slept (fatigue eased)";
 /// spec §3.4 argues out-of-character exists to prevent.
 const SLEEP_REPLY: &str = "You lie down and let go of the day. Time still passes for the world, and \
      '!wait' still passes it for you; the body wakes on its own.";
+
+/// What `sleep <anything>` says. It names the two things a player who typed a
+/// length actually wanted — that `sleep` takes none, and which verb does —
+/// rather than refusing bare, which reads as a parse failure (the standard
+/// `dive`'s own refusal set).
+const SLEEP_ARGUMENT_REFUSAL: &str = "Sleep takes no length: you lie down until your own cycle wakes you. Say 'sleep' \
+     on its own, or 'wait N' to let N days pass while you are awake.";
 
 /// What the body says when the gate refuses. The reason itself comes from
 /// [`crate::gate::verdict`], so a new [`BodyState`] row cannot reach a player
@@ -287,9 +323,10 @@ operator instruments (out-of-character; bypass the body, never the world):
   !soothe [who]    ease a co-located NPC's disposition, your own mark
   !help            this list
 
-the objective halves (out-of-character; the same view with the gate at its
-limit — so where nothing is being withheld, each answers exactly as its bare
-twin does):
+the out-of-character halves (bypass the body, never the world; four take a
+renderer's gate to its limit — so where nothing is being withheld, each
+answers exactly as its bare twin does — and two relax nothing at all, but
+answer while the body cannot):
   !map [out N]     the chart drawn in plain terrain, not through your eyes;
                    indoors it differs only when a lens is on
   !examine <thing> as examine, but indoors a creature standing here in the
@@ -298,6 +335,9 @@ twin does):
                    indoors is anyone unseen
   !wait [N]        as wait, and the clock moves the same; indoors, the comings
                    and goings are narrated whether you could see them or not
+  !look            as look, and identical to it whenever your body can act;
+                   the point is that it still answers when your body cannot
+  !knows           as knows, on the same terms as '!look'
 ";
 
 /// The world-scoped half of starting a possession: everything
@@ -1153,8 +1193,15 @@ impl<'w> Session<'w> {
         self.day
     }
 
-    /// How many `agent-at` facts the session's owned ledger has committed —
-    /// zero until the first `wait` (test accessor: T3's day-zero guard).
+    /// How many `agent-at` facts the session's owned ledger has committed.
+    ///
+    /// Zero at turn 0, and moved by two different things since The Deed's Task
+    /// 7: the NPC layer's own walks on a `wait` tick (which is all it ever
+    /// meant before — "zero until the first `wait`", T3's day-zero guard) and
+    /// now the possession's own walk-band `go`/`back`, which commit through
+    /// the same `liveness::agent_at_fact` constructor a creature's step uses.
+    /// A caller reading this as "how many NPC steps have happened" would be
+    /// wrong by exactly the player's trail, which is the point of spec §3.1.
     /// type-audit: bare-ok(count: return)
     pub fn committed_agent_at_count(&self) -> usize {
         self.ledger.find(AGENT_AT).count()
@@ -1441,20 +1488,50 @@ impl<'w> Session<'w> {
     /// bare namespace *is* the in-character namespace (spec §3.2) — the `!`
     /// namespace is the other one, and [`Self::handle_ooc`] never consults the
     /// gate at all (spec §2.2: an out-of-character act bypasses the body's
-    /// state entirely). [`SESSION_CONTROL`] is the only exemption and its own
-    /// doc says why.
+    /// state entirely).
     ///
     /// A refusal charges nothing and commits nothing: it is not an act. The
     /// gate is therefore consulted BEFORE the match, never inside a handler
     /// that has already moved the clock.
+    ///
+    /// **The gate stands in front of ACTS, not in front of verb RESOLUTION**
+    /// (fix round 1), which is why it consults [`IN_CHARACTER_VERBS`] rather
+    /// than refusing every bare token: a token that resolves to no verb is not
+    /// something a body could be too asleep to do, and answering the body's
+    /// refusal to one told a player that a retired group-A bare form was a real
+    /// in-character verb. That roster's own doc carries the argument and the
+    /// guard against it going stale.
     fn refused_by_the_body(&self, verb: &str) -> Option<String> {
-        if verb.is_empty() || SESSION_CONTROL.contains(&verb) {
+        if !Self::gated_by_the_body(verb) {
             return None;
         }
         match verdict(self.body_state(), Mood::InCharacter) {
             Verdict::Permitted => None,
             Verdict::Refused(reason) => Some(body_refusal(&reason)),
         }
+    }
+
+    /// Whether the body-state gate stands in front of this bare token at all.
+    ///
+    /// Ordered, and the order is the rule rather than an implementation
+    /// detail: [`SESSION_CONTROL`] is never an act whatever else it is (spec
+    /// §3.2 group D — a body you cannot let go of is a hang), and everything
+    /// else is gated iff it RESOLVES to an act. `IN_CHARACTER_VERBS` is the
+    /// closed half of that; a bare compass direction is the open half, and
+    /// [`parse_compass`] is the same recogniser `handle`'s own trailing arms
+    /// use, so the two cannot disagree about which tokens are directions.
+    ///
+    /// The two rosters are disjoint today —
+    /// `session_control_is_never_an_in_character_verb` asserts it — so the
+    /// first branch changes no behaviour now. It states the precedence anyway,
+    /// because the failure it prevents (a group-D verb gated by a sleeping
+    /// body) is a hang, and a rule that only holds while a list happens to be
+    /// right is the shape this whole fix is about.
+    fn gated_by_the_body(verb: &str) -> bool {
+        if SESSION_CONTROL.contains(&verb) {
+            return false;
+        }
+        IN_CHARACTER_VERBS.contains(&verb) || parse_compass(verb).is_some()
     }
 
     /// The planet's rotation period in standard days, as the action clock
@@ -1525,6 +1602,29 @@ impl<'w> Session<'w> {
     /// [`crate::clock::cost_ticks`] nor [`Action::mood`] reads the payload.
     /// Passing a real-looking anchor from another graph would be the worse
     /// lie.
+    ///
+    /// # Three callers, not one (fix round 1)
+    ///
+    /// [`Self::step`] (one cell), [`Self::enter`] (in off the street, and
+    /// through an aperture) and [`Self::leave`]. Task 7 charged only the
+    /// first, on the stated grounds that no authored dial existed for the
+    /// other two — which was wrong on the tree: `Action::MoveWithin` **is**
+    /// that dial, and it was already being read one dispatch arm away for the
+    /// strictly FINER act. The result was that stepping one cell cost time
+    /// while walking through a doorway into a different chamber was free, and
+    /// `out` → `enter` was an unbounded free loop — which the very consequence
+    /// paragraph of 0069 relied on not being true ("cheesing by re-entry is
+    /// not defended against because it does not exist — the only thing spent
+    /// is turns").
+    ///
+    /// **`dive`/`surface`/`delve`/`climb` are deliberately still free**, and
+    /// that is a DIFFERENT case rather than the same one left half-done: those
+    /// four change the vertical band — water column, cave — and no dial in
+    /// [`crate::clock::base_ticks`] prices a descent. `MoveWithin` would be a
+    /// guess dressed as a tariff (a swim down a hundred metres of water column
+    /// is not a tenth of a walk between rooms), and inventing one is a cost
+    /// model, which spec §3.4 forbids this arc from building. See their own
+    /// dispatch arms.
     fn charge_within_room(&mut self) -> Result<(), String> {
         self.charge(&Action::MoveWithin(crate::interior::AnchorId(0)), 1.0)
     }
@@ -1575,7 +1675,18 @@ impl<'w> Session<'w> {
     /// scan step rather than sleeping through to the following night. Naming
     /// a finer rule would be inventing a second sleep model beside the
     /// creature layer's, which this task declines to do.
-    fn sleep(&mut self) -> Turn {
+    ///
+    /// **An argument is refused, not swallowed** (fix round 1). `sleep 5`
+    /// reads as "sleep five days" and cannot be honoured — the body wakes on
+    /// its own cycle, which is the whole point of the verb — so it is refused
+    /// with a sentence naming what `sleep` *does* do and which verb takes a
+    /// length. `map`'s indoor arm states the principle this follows: "an
+    /// ignored argument is how a player comes to believe they asked for
+    /// something and got it."
+    fn sleep(&mut self, arg: &str) -> Turn {
+        if !arg.is_empty() {
+            return Turn::Out(SLEEP_ARGUMENT_REFUSAL.to_string());
+        }
         if let Err(e) = self.charge(&Action::Rest, 1.0) {
             return Turn::Out(e);
         }
@@ -1619,7 +1730,7 @@ impl<'w> Session<'w> {
     /// # THE LIMIT IS INERT IN SOME BANDS, AND EACH ARM SAYS WHERE
     ///
     /// Every one of the four discriminates *somewhere* — that is the STOP rule
-    /// this task applied per verb, and it is why these four shipped and
+    /// Task 6 applied per verb, and it is why these four shipped then and
     /// `!look`/`!knows` did not. It is not a promise that each differs from its
     /// bare twin *everywhere*, and three of them are exact aliases in a
     /// nameable band:
@@ -1636,21 +1747,30 @@ impl<'w> Session<'w> {
     /// be a defect is advertising otherwise, so [`HELP`] states the band each
     /// arm is *for* rather than promising a difference it cannot always make.
     ///
-    /// # Two of spec §3.2's six group-B verbs are NOT here
+    /// # `!look` and `!knows`: shipped in Task 7's fix round, on a DIFFERENT
+    /// discriminator
     ///
-    /// `!look` and `!knows` are absent because neither has a gate to relax,
-    /// and an out-of-character form observationally identical to its
-    /// in-character twin is a no-op that advertises a capability the surface
-    /// does not have. `Session::knows` prints every entry of
-    /// `self.knowledge` — the player's own knowledge is the subject, not
-    /// something withheld from them — and `look`'s three band arms
+    /// The table above does not cover them, and that is exact rather than an
+    /// omission. Neither relaxes anything: `Session::knows` prints every entry
+    /// of `self.knowledge` (perception-filtered upstream at `absorb_here`, not
+    /// by this renderer), and `look`'s three band arms
     /// ([`Self::describe_here`], [`Self::describe_chamber_here`],
     /// [`Self::describe_underground_here`]) consult no sight, eyes, lens or
-    /// knowledge at all: they render the place, and the place is objective
-    /// already. Giving either one a `!` form would mean rendering a DIFFERENT
-    /// object, which is the renderer fork this task exists not to do.
-    /// `tests/suite/ooc_objective.rs` pins both as unknown verbs so a later
-    /// campaign cannot add a silent alias without going red first.
+    /// knowledge at all — they render the place, and the place is objective
+    /// already. Task 6 read that as "no gate to relax, therefore an alias,
+    /// therefore do not ship", and it was right about the renderer.
+    ///
+    /// **Task 7 supplied the gate they were missing, and it is not a
+    /// renderer's.** It is the BODY's, and spec §2.2 has an out-of-character
+    /// act bypass it. So `look`/`knows` now discriminate in the one place spec
+    /// §3.4 says this namespace exists for — "observing a state you cannot act
+    /// in requires a clock you can still advance" — and the most basic
+    /// observational verb there is was unavailable in exactly that state.
+    /// These two arms therefore relax no parameter and fork no renderer: they
+    /// call the same functions their bare twins call, and differ only in that
+    /// the body's state cannot refuse them.
+    /// `tests/suite/ooc_objective.rs` holds both halves — equality awake, and
+    /// divergence asleep.
     fn handle_ooc(&mut self, verb: &str, rest: &str) -> Turn {
         match verb {
             // Group A: the operator instruments (The Deed, spec §3.2).
@@ -1688,6 +1808,18 @@ impl<'w> Session<'w> {
             }
             "examine" => self.examine(rest, &OBJECTIVE_EYES),
             "needs" => Turn::Out(self.needs(Perceiving::Objectively)),
+            // `!look` and `!knows` (Task 7's fix round). BAND-AWARE ARM FOR
+            // ARM with the bare spellings, and deliberately calling the very
+            // same methods: there is no objective variant of either to reach
+            // for, so a second rendering path here would be inventing the
+            // difference rather than exposing one. What this namespace buys is
+            // that a sleeping — later dominated, unconscious — body can still
+            // be looked out of.
+            "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
+            "look" if self.submerged.is_some() => self.out(self.describe_here()),
+            "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
+            "look" => self.out(self.describe_here()),
+            "knows" => Turn::Out(self.knows()),
             // The one out-of-character act that MOVES THE CLOCK (spec §3.4).
             // Its objective half is the departure/arrival narration, not the
             // advance: the day advances identically under both moods, which
@@ -1822,9 +1954,19 @@ impl<'w> Session<'w> {
                 // none of spec §3.2's 26 could produce one. Routed to the
                 // existing `Action::Rest` machinery — no new concept, no new
                 // cost dial, no new predicate.
-                "sleep" => self.sleep(),
+                "sleep" => self.sleep(rest),
                 "write" => Turn::Out(self.write(rest)),
                 "consult" => Turn::Out(self.consult()),
+                // THE FOUR VERTICAL BAND CHANGES, AND THE ONE THING THEY DO
+                // NOT DO (fix round 1). Each is an in-character act — the gate
+                // above stands in front of all four — and each still charges
+                // NOTHING, unlike `enter`/`out`/`step` beside them. The
+                // difference is not band-vs-band: it is that
+                // `clock::base_ticks` prices a within-room step and prices no
+                // descent at all, so charging these would mean minting a cost
+                // dial, which spec §3.4 forbids ("no new cost model"). Deferred
+                // openly rather than folded in with `enter`/`out`, whose dial
+                // already existed. See `Self::charge_within_room`'s own doc.
                 "dive" => self.dive(),
                 "surface" => self.surface(),
                 "delve" => self.delve(),
@@ -2335,6 +2477,13 @@ impl<'w> Session<'w> {
                 // it is; say so rather than panicking in a player's hands.
                 return Turn::Out("error: that chamber has no floor to stand in".to_string());
             };
+            // Charged HERE — after every refusal and after the no-floor check,
+            // before the position moves — exactly where `step` charges, and for
+            // the same reason: a refusal is not an act and must cost nothing,
+            // while an act that happens must cost something.
+            if let Err(e) = self.charge_within_room() {
+                return Turn::Out(e);
+            }
             let seed = self.frame_seed(&structure);
             self.inside = Some(Inside {
                 structure,
@@ -2361,6 +2510,18 @@ impl<'w> Session<'w> {
             .expect("the threshold is one of the chambers");
         // In off the street: no doorway was crossed, so the arrival cell is the
         // threshold chamber's own standing cell.
+        //
+        // Charged before `descend`, which is the one place in this function the
+        // charge does not sit strictly after every failure: `descend`'s only
+        // `None` is the §7 rule 1 no-floor DEFECT, reported as `error:` rather
+        // than refused as a move. Reordering to charge after it would mean
+        // mutating the position and then discovering the clock cannot represent
+        // the result — the inconsistency `go` and `step` both avoid by charging
+        // first — so a tick spent on the way to an internal defect report is the
+        // cheaper of the two wrongs.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
         if self.descend(structure, at).is_none() {
             return Turn::Out("error: that chamber has no floor to stand in".to_string());
         }
@@ -2530,10 +2691,18 @@ impl<'w> Session<'w> {
     /// for it yet, and inventing an unused one would be a second thing to keep
     /// correct.) Already out of doors, it says so rather than erroring.
     fn leave(&mut self) -> Turn {
-        match self.inside.take() {
-            None => Turn::Out("You are already out of doors.".to_string()),
-            Some(_) => self.out(self.describe_here()),
+        if self.inside.is_none() {
+            return Turn::Out("You are already out of doors.".to_string());
         }
+        // Charged, and committing nothing — decision 0069 forbids the commit,
+        // not the charge ("the only thing spent is turns"). Without this,
+        // `out` → `enter` was an unbounded free loop and a doorway crossing
+        // cost less than the single-cell step `step` already priced.
+        if let Err(e) = self.charge_within_room() {
+            return Turn::Out(e);
+        }
+        self.inside = None;
+        self.out(self.describe_here())
     }
 
     /// The world's walk depth, as this session's locale context defines it.
@@ -4446,6 +4615,70 @@ mod tests {
         .ok()
     }
 
+    /// The verbs [`HELP`]'s own `verbs:` block lists, one per line at exactly
+    /// two spaces of indent (a continuation line is indented far deeper, and
+    /// the out-of-character sections come after the first blank line).
+    fn help_verbs() -> Vec<&'static str> {
+        HELP.lines()
+            .take_while(|l| !l.is_empty())
+            .filter(|l| l.starts_with("  ") && !l.starts_with("   "))
+            .filter_map(|l| l.split_whitespace().next())
+            .collect()
+    }
+
+    /// The body-state gate consults [`IN_CHARACTER_VERBS`], which is a second
+    /// copy of what [`Session::handle`]'s bare match resolves — so it can drift
+    /// from that match silently, and in the dangerous direction (a new verb
+    /// nobody gated). [`HELP`] is the third copy and the one a player reads, so
+    /// it is already obliged to be complete; agreement in BOTH directions is
+    /// what makes the drift detectable rather than merely unlikely.
+    ///
+    /// FIRES WHEN: a bare verb is added to the dispatch and to `HELP` but not
+    /// to the roster (it would be ungated), or removed from the dispatch and
+    /// `HELP` but left in the roster (it would gate a token that resolves to
+    /// nothing — the very defect the roster exists to fix).
+    #[test]
+    fn every_bare_verb_help_lists_is_classified() {
+        let listed = help_verbs();
+        assert!(
+            listed.len() > 10,
+            "the HELP parse found only {listed:?} — it has stopped finding the \
+             verb block, and every assertion below would be vacuous"
+        );
+        for verb in &listed {
+            assert!(
+                IN_CHARACTER_VERBS.contains(verb) || SESSION_CONTROL.contains(verb),
+                "`{verb}` is offered to players by HELP but classified by neither \
+                 IN_CHARACTER_VERBS nor SESSION_CONTROL, so the body-state gate \
+                 does not know whether it is an act"
+            );
+        }
+        for verb in IN_CHARACTER_VERBS {
+            assert!(
+                listed.contains(&verb),
+                "`{verb}` is gated as an in-character verb but HELP does not \
+                 list it: either it is not a verb at all (and the gate now \
+                 refuses a token that resolves to nothing) or players cannot \
+                 discover it"
+            );
+        }
+    }
+
+    /// Group D is not an act and carries no [`Mood`] (spec §3.2), so it must
+    /// never appear in the in-character roster: a body you cannot let go of is
+    /// a hang, not a capability.
+    ///
+    /// FIRES WHEN: `release`/`quit`/`exit` is added to [`IN_CHARACTER_VERBS`].
+    #[test]
+    fn session_control_is_never_an_in_character_verb() {
+        for verb in SESSION_CONTROL {
+            assert!(
+                !IN_CHARACTER_VERBS.contains(&verb),
+                "`{verb}` is session control and must never be gated by the body"
+            );
+        }
+    }
+
     /// H2. Every one of the eight compass points moves the possession from a
     /// walk-band cell. This is the campaign's central claim and the whole of
     /// the availability half of the defect.
@@ -5917,6 +6150,45 @@ mod tests {
         )
     }
 
+    /// Commit an `agent-at` putting `who` in `room` as of the session's current
+    /// day, then move the session's clock to the day the LEDGER actually
+    /// stored.
+    ///
+    /// **The second half is the whole reason this helper exists.**
+    /// `Ledger::commit` quantizes a fact's day to 8 significant digits
+    /// (decision 0033), and that rounding can go UP: measured,
+    /// `quantize(1.5117199997382882) == 1.5117200000000000` — strictly LATER
+    /// than the day handed in. `latest_committed_position` selects on
+    /// `f.day <= t`, so a fact committed at `now` and read back at `now` is
+    /// invisible, and the fixture silently describes a creature that never
+    /// moved. Both callers below construct exactly that shape, and both went
+    /// red the moment `enter` began charging time and left the session on a
+    /// day with more than eight significant digits (Task 7 fix round, B1).
+    ///
+    /// Advancing by those few ULP is the honest fixture repair: it puts the
+    /// session at the moment the ledger records, which is what a test
+    /// asserting on that record means. It is **not** a fix for the general
+    /// edge — any caller that commits at `now` and reads at `now` still has
+    /// it, `Session::wait`'s own tick included — and that is recorded as a
+    /// finding rather than papered over here.
+    fn place_agent_now(session: &mut Session<'_>, who: EntityId, room: &RoomAddr) {
+        let fact = crate::liveness::place_agent(who, room, session.day);
+        session
+            .ledger
+            .commit(fact, &session.registry)
+            .expect("agent-at is registered");
+        let stored = session
+            .ledger
+            .find(AGENT_AT)
+            .filter(|f| f.subject == who)
+            .last()
+            .and_then(|f| f.day)
+            .expect("the fact just committed carries the day it was committed at");
+        if stored > session.day {
+            session.day = stored;
+        }
+    }
+
     /// The marks this session's snapshot draws.
     fn marks_of(session: &Session<'_>) -> Vec<crate::plan::PlanMark> {
         match session
@@ -5988,11 +6260,7 @@ mod tests {
             .map(|n| n.entity)
             .find(|&e| e != first)
             .expect("the seed was chosen because a second NPC is derived");
-        let fact = crate::liveness::place_agent(second, &room, session.day);
-        session
-            .ledger
-            .commit(fact, &session.registry)
-            .expect("agent-at is registered");
+        place_agent_now(&mut session, second, &room);
         session.occupancy.place(second, &room, anchor);
 
         assert_eq!(
@@ -6289,11 +6557,7 @@ mod tests {
             .iter()
             .map(|npc| agent_position(&session.ledger, npc, session.day))
             .collect();
-        let fact = crate::liveness::place_agent(who, &elsewhere, session.day);
-        session
-            .ledger
-            .commit(fact, &session.registry)
-            .expect("agent-at is registered");
+        place_agent_now(&mut session, who, &elsewhere);
         assert!(
             !session.colocated_npcs().iter().any(|n| n.entity == who),
             "precondition: the creature really left the room"

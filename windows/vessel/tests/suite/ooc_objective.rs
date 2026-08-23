@@ -11,9 +11,9 @@
 //! fixture where the gate actually withholds something, and only the verbs
 //! that have one are shipped.
 //!
-//! Two of spec §3.2's six group-B verbs are **not** shipped, and
-//! [`neither_look_nor_knows_has_an_objective_half`] records that as a
-//! finding rather than leaving it to be rediscovered:
+//! Two of spec §3.2's six group-B verbs were **not** shipped at Task 6, and
+//! ship in Task 7's fix round on a discriminator Task 6 did not have. The
+//! renderer half of the original finding is unchanged and still true:
 //!
 //! - **`knows`** (`Session::knows`) prints every entry of `self.knowledge`
 //!   with no gate **of its own**. It is not ungated upstream — `absorb_here`
@@ -30,6 +30,13 @@
 //!   or `knowledge`. `look` renders the place, and the place is objective
 //!   already. Making `!look` list creatures would be a *new object*, not a
 //!   permissive limit, which is precisely the fork this task forbids.
+//!
+//! What changed is that a renderer's gate is no longer the only gate. Task 7
+//! built the **body's**, and spec §2.2 has an out-of-character act bypass it,
+//! so the two verbs discriminate while the body is asleep without either one
+//! rendering a different object.
+//! [`look_and_knows_answer_out_of_character_while_the_body_is_asleep`] holds
+//! both halves at once: identical awake, divergent asleep.
 //!
 //! # Why the fixtures are SEARCHED, not pinned
 //!
@@ -648,38 +655,75 @@ fn the_objective_wait_moves_the_clock_exactly_as_the_bare_form_does() {
     );
 }
 
-/// The two verbs of spec §3.2's group B that this task deliberately did
-/// **not** ship, pinned so a later campaign cannot add a silent alias
-/// without this going red first.
+/// The two verbs of spec §3.2's group B that Task 6 deliberately did not
+/// ship, and that fix round 1 ships — because **Task 7 falsified the premise
+/// that excluded them**.
 ///
-/// `knows` has no gate **the renderer could relax**: it prints every entry of
-/// `self.knowledge`, and while that store is itself perception-filtered
-/// (`absorb_here` absorbs `self.projection.project(&v,
-/// &self.agent.perception)`), the filter runs upstream at absorb time rather
-/// than as a parameter of `knows`. The player's knowledge is the subject, so
-/// a permissive limit would have to re-derive what the body never absorbed —
-/// a different object. `look` has no gate either: its three band arms
-/// (`describe_here`, `describe_chamber_here`, `describe_underground_here`)
-/// read the place, and none of them consults sight, eyes, lens or
-/// knowledge. Neither has a permissive limit to take, so an out-of-character
-/// half would have to render a **different object** — which is the renderer
-/// fork this task forbids.
+/// Task 6's STOP rule was that an out-of-character form must DISCRIMINATE
+/// from its bare twin somewhere, and neither `look` nor `knows` carries a
+/// gate a renderer could relax: `Session::knows` prints every entry of
+/// `self.knowledge` (perception-filtered upstream at `absorb_here`, not as a
+/// parameter of the renderer), and `look`'s three band arms
+/// (`describe_here` / `describe_chamber_here` / `describe_underground_here`)
+/// consult no sight, eyes, lens or knowledge at all. **That is still true,
+/// and it is no longer the whole question.** The gate Task 7 built is not the
+/// renderer's — it is the BODY's, and an out-of-character act bypasses it
+/// (spec §2.2). So the discriminator these two lacked now exists: while the
+/// body is asleep the bare form is refused and the `!` form answers, which is
+/// exactly spec §3.4's argument for the namespace ("observing a state you
+/// cannot act in requires a clock you can still advance") applied to the most
+/// basic observational verb there is.
+///
+/// The two are therefore NOT renderer forks: `!look` and `!knows` render the
+/// same object their bare twins do, through the same functions, with no
+/// parameter relaxed. What differs is only whether the body's state may
+/// refuse them.
 #[test]
-fn neither_look_nor_knows_has_an_objective_half() {
+fn look_and_knows_answer_out_of_character_while_the_body_is_asleep() {
     let w = world();
     for verb in ["look", "knows"] {
         let (mut s, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-        let bare = out(&mut s, verb);
-        let (mut s2, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-        let sigilled = out(&mut s2, &format!("!{verb}"));
+
+        // Awake, the two forms agree — that is the honest outcome for a verb
+        // with no renderer gate to relax, and asserting it here is what keeps
+        // the sleeping discrimination below from being read as a fork.
+        let bare_awake = out(&mut s, verb);
+        let sigilled_awake = out(&mut s, &format!("!{verb}"));
         assert!(
-            is_unknown_verb(&sigilled),
-            "`!{verb}` is deliberately unshipped (it has no gate to relax) and must \
-             refuse as an unknown verb rather than alias the bare form; got: {sigilled}"
+            !is_unknown_verb(&sigilled_awake),
+            "`!{verb}` must be a verb now; got the unknown-verb refusal: {sigilled_awake}"
+        );
+        assert_eq!(
+            bare_awake, sigilled_awake,
+            "`!{verb}` relaxes no renderer gate, so awake it must answer exactly \
+             as its bare twin does — anything else is the renderer fork Task 6 \
+             refused to build"
+        );
+
+        // Asleep, they diverge, and that IS the discriminator: the bare form
+        // is an in-character act the body refuses; the `!` form bypasses the
+        // body (spec §2.2) and still answers.
+        let lay_down = out(&mut s, "sleep");
+        assert!(
+            lay_down.contains("You lie down"),
+            "precondition: the body must go under, got: {lay_down}"
+        );
+        let bare_asleep = out(&mut s, verb);
+        let sigilled_asleep = out(&mut s, &format!("!{verb}"));
+        assert!(
+            bare_asleep.contains("asleep"),
+            "bare `{verb}` is in character (spec §3.2 group B) and must be \
+             refused by the sleeping body: {bare_asleep}"
+        );
+        assert!(
+            !sigilled_asleep.contains("asleep") && !is_unknown_verb(&sigilled_asleep),
+            "`!{verb}` bypasses the body's state entirely (spec §2.2) and must \
+             still answer: {sigilled_asleep}"
         );
         assert_ne!(
-            bare, sigilled,
-            "`!{verb}` must not have fallen through to the bare arm's behaviour"
+            bare_asleep, sigilled_asleep,
+            "`!{verb}` must differ from its bare twin where the body's gate \
+             stands — that difference is why it ships at all"
         );
     }
 }

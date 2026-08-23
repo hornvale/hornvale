@@ -11,7 +11,13 @@
 //! `unconscious`/`blind`/`target invisible` rows, must be classified before
 //! they can compile.
 //!
-//! Nothing in this task consults [`verdict`] yet — Task 7 does.
+//! [`verdict`] is consulted by `Session::refused_by_the_body` (The Deed, Task
+//! 7), once for the whole in-character namespace and BEFORE any handler runs,
+//! so a refusal charges no time and commits no fact. It stands in front of
+//! ACTS, not in front of verb resolution: a token that resolves to no verb
+//! never reaches here, or a sleeping body would answer "you are asleep" to
+//! nonsense — and, worse, to the retired bare spelling of an operator
+//! instrument.
 
 use crate::action::Mood;
 

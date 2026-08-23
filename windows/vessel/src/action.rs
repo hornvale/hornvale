@@ -66,21 +66,48 @@ pub enum Action {
     /// §3.4); its objective half is the motion narration, which names a
     /// creature the body could neither see arrive nor see go.
     ObjectiveWait,
+    /// Read the place out of character — `!look` (The Deed, group B; shipped
+    /// in Task 7's fix round). It relaxes NOTHING: `look`'s three band arms
+    /// consult no sight, eyes, lens or knowledge, so this renders the same
+    /// object through the same functions. What it bypasses is the BODY's gate
+    /// (spec §2.2), which is a real difference only because Task 7 built one —
+    /// asleep, the bare form is refused and this still answers.
+    ObjectiveLook,
+    /// Read your own knowledge out of character — `!knows` (The Deed, group B;
+    /// shipped in Task 7's fix round). Same shape as [`Action::ObjectiveLook`]:
+    /// the store is perception-filtered upstream at absorb time rather than by
+    /// this renderer, so nothing here is relaxed — only the body's gate is
+    /// bypassed.
+    ObjectiveKnows,
 }
 
-/// Spec §3.2's group B, whose bare verbs are in character and whose `!`
-/// forms are these — exactly the four that HAVE an objective view to render.
+/// Spec §3.2's group B, whose bare verbs are in character and whose `!` forms
+/// are these — **all six**, one per group-B verb, since Task 7's fix round.
 ///
-/// `look` and `knows` are the two group-B verbs with no variant here, and
-/// their absence is a finding rather than an omission: neither carries a gate
-/// whose permissive limit would render anything different, so an
-/// out-of-character half would have been an alias. See
-/// `Session::handle_ooc`'s doc and `tests/suite/ooc_objective.rs`.
-pub const OBJECTIVE_HALVES: [Action; 4] = [
+/// # The two shipped later, and why the reason changed rather than the verbs
+///
+/// Task 6 shipped four and withheld `!look`/`!knows` under a STOP rule that
+/// an out-of-character form must DISCRIMINATE from its bare twin somewhere.
+/// The four each relax a renderer's own gating parameter to its permissive
+/// limit; neither `look` nor `knows` has such a parameter, so at Task 6 an
+/// out-of-character half of either would have been an exact alias — a no-op
+/// advertising a capability the surface did not have.
+///
+/// **Task 7 falsified the premise, not the rule.** The gate it built is the
+/// BODY's, not a renderer's, and an out-of-character act bypasses it (spec
+/// §2.2). So the two now discriminate exactly where spec §3.4 says the
+/// namespace earns its keep — "observing a state you cannot act in requires a
+/// clock you can still advance" — and withholding the most basic
+/// observational verb from a body that cannot act was the sharpest case
+/// against the exclusion. They are still not renderer forks: they render the
+/// same object, through the same functions, with nothing relaxed.
+pub const OBJECTIVE_HALVES: [Action; 6] = [
     Action::ObjectiveMap,
     Action::ObjectiveExamine,
     Action::ObjectiveNeeds,
     Action::ObjectiveWait,
+    Action::ObjectiveLook,
+    Action::ObjectiveKnows,
 ];
 
 /// Whether an action's effect is position rather than a committed fact.
@@ -135,7 +162,9 @@ pub fn precondition_reads_committed_state(a: &Action) -> bool {
         Action::ObjectiveMap
         | Action::ObjectiveExamine
         | Action::ObjectiveNeeds
-        | Action::ObjectiveWait => false,
+        | Action::ObjectiveWait
+        | Action::ObjectiveLook
+        | Action::ObjectiveKnows => false,
     }
 }
 
@@ -179,6 +208,8 @@ impl Action {
             Action::ObjectiveExamine,
             Action::ObjectiveNeeds,
             Action::ObjectiveWait,
+            Action::ObjectiveLook,
+            Action::ObjectiveKnows,
         ]
     }
 
@@ -226,6 +257,13 @@ impl Action {
             Action::ObjectiveExamine => "look",
             Action::ObjectiveNeeds => "sense",
             Action::ObjectiveWait => "wait",
+            // The two shipped in Task 7's fix round, read from the SAME
+            // cohort-11 comment: `look` -> `look` (the comment spells this
+            // pair out on its own line, beside `examine` -> `look`), and
+            // `knows` -> `know`. Both concepts already exist, so neither
+            // variant mints one and neither reaches the orphan-acts audit.
+            Action::ObjectiveLook => "look",
+            Action::ObjectiveKnows => "know",
         }
     }
 }
@@ -267,7 +305,9 @@ impl Action {
             Action::ObjectiveMap
             | Action::ObjectiveExamine
             | Action::ObjectiveNeeds
-            | Action::ObjectiveWait => Mood::OutOfCharacter,
+            | Action::ObjectiveWait
+            | Action::ObjectiveLook
+            | Action::ObjectiveKnows => Mood::OutOfCharacter,
         }
     }
 }
@@ -295,6 +335,8 @@ fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
         Action::ObjectiveExamine => "look",
         Action::ObjectiveNeeds => "sense",
         Action::ObjectiveWait => "wait",
+        Action::ObjectiveLook => "look",
+        Action::ObjectiveKnows => "know",
     }
 }
 

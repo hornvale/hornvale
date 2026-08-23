@@ -70,7 +70,8 @@ fn every_group_a_instrument_is_out_of_character() {
     }
 }
 
-/// Group B's objective halves (The Deed, Task 6) are out of character too,
+/// Group B's out-of-character halves (The Deed, Task 6 for four of them,
+/// Task 7's fix round for `!look`/`!knows`) are out of character too,
 /// and they are the discriminating half of this file's mood coverage in a way
 /// group A is not: a group-A verb has NO in-character spelling, so classifying
 /// one is barely a choice. `!map`/`!examine`/`!needs`/`!wait` each sit beside a
@@ -86,10 +87,11 @@ fn every_group_a_instrument_is_out_of_character() {
 fn every_group_b_objective_half_is_out_of_character() {
     assert_eq!(
         hornvale_vessel::action::OBJECTIVE_HALVES.len(),
-        4,
-        "four of spec §3.2's six group-B verbs ship an objective half; `look` and \
-         `knows` deliberately do not (they have no gate to relax) — see \
-         tests/suite/ooc_objective.rs"
+        6,
+        "all six of spec §3.2's group-B verbs ship an out-of-character half. \
+         Four relax a renderer's own gate; `!look`/`!knows` relax nothing and \
+         ship because Task 7's BODY gate is a discriminator its renderer is \
+         not — see tests/suite/ooc_objective.rs"
     );
     for action in hornvale_vessel::action::OBJECTIVE_HALVES {
         assert_eq!(

@@ -186,7 +186,9 @@ pub fn base_ticks(action: &Action) -> Ticks {
         Action::ObjectiveMap
         | Action::ObjectiveExamine
         | Action::ObjectiveNeeds
-        | Action::ObjectiveWait => Ticks(0),
+        | Action::ObjectiveWait
+        | Action::ObjectiveLook
+        | Action::ObjectiveKnows => Ticks(0),
     }
 }
 

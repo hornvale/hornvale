@@ -299,3 +299,108 @@ fn the_body_wakes_when_its_own_cycle_says_so() {
         "two days of out-of-character waiting must reach the next waking: {awake}"
     );
 }
+
+#[test]
+fn a_band_change_charges_time_and_commits_nothing() {
+    // Fix round 1, B1. Decision 0069 forbids the COMMIT for a band change, not
+    // the CHARGE — its own consequence paragraph says "the only thing spent is
+    // turns", and `clock::base_ticks` has priced a within-room step at a tenth
+    // of a room-to-room move all along. Before this fix `enter`/`out` spent
+    // nothing at all, so walking through a doorway into a different chamber
+    // was free while stepping ONE CELL inside a chamber cost time, and
+    // `out`→`enter` was an unbounded free loop.
+    //
+    // Both halves are asserted per verb, because they fail independently: a
+    // charge added inside a handler that also commits would satisfy the clock
+    // assertion and violate 0069.
+    let w = world();
+    let (mut s, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
+
+    // Each step names the band line its reply MUST carry, so a refusal ("There
+    // is no way to anywhere from here.", "Nothing here is built") can never be
+    // mistaken for a free act that correctly charged nothing.
+    for (verb, expected) in [
+        ("enter", "[chamber "),
+        ("enter further in", "[chamber "),
+        ("out", "[room "),
+    ] {
+        let facts_before = s.committed_fact_count();
+        let day_before = s.day().day();
+        let reply = out(s.handle(verb));
+        assert!(
+            reply.contains(expected),
+            "`{verb}` must actually change band for this to guard anything — \
+             expected a `{expected}` line, got: {reply}"
+        );
+        assert!(
+            s.day().day() > day_before,
+            "`{verb}` is an in-character act and must charge time \
+             (decision 0069 forbids the commit, not the charge): \
+             day {day_before} -> {}",
+            s.day().day()
+        );
+        assert_eq!(
+            s.committed_fact_count(),
+            facts_before,
+            "`{verb}` must commit nothing: fine position is never serialized \
+             (decision 0069)"
+        );
+    }
+}
+
+#[test]
+fn a_nonsense_token_is_an_unknown_verb_even_while_asleep() {
+    // Fix round 1, B3. The gate stands in front of ACTS, not in front of verb
+    // RESOLUTION. A token that resolves to nothing is not an act the body
+    // could be too asleep to perform, and answering "You cannot — you are
+    // asleep." to `whoami` tells a player that a RETIRED group-A bare form is
+    // a real in-character verb merely blocked by body state (spec §3.2: "a
+    // bare group-A verb is an ordinary unknown-verb refusal").
+    let w = world();
+    let (mut s, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
+    let _ = s.handle("sleep");
+    assert!(
+        out(s.handle("look")).contains("asleep"),
+        "precondition: the body must be asleep, or this proves nothing"
+    );
+    for token in ["xyzzy", "whoami", "npcs", "why", "provoke"] {
+        let reply = out(s.handle(token));
+        assert!(
+            reply.to_lowercase().contains("no verb"),
+            "`{token}` resolves to no verb, so a sleeping body must refuse it \
+             exactly as an awake one does — as unknown, not as gated: {reply}"
+        );
+    }
+}
+
+#[test]
+fn sleep_refuses_an_argument_rather_than_swallowing_it() {
+    // Fix round 1, B4. `session.rs`'s own `map` arm states the principle: "an
+    // ignored argument is how a player comes to believe they asked for
+    // something and got it." `sleep 5` used to lie down for an unrelated
+    // length of time and say nothing about the 5.
+    let w = world();
+    let (mut s, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
+    for arg in ["sleep 5", "sleep forever"] {
+        let reply = out(s.handle(arg));
+        assert!(
+            !reply.contains("You lie down"),
+            "`{arg}` must not silently lie down as if the argument were not \
+             there: {reply}"
+        );
+        assert!(
+            reply.to_lowercase().contains("sleep"),
+            "the refusal must name what `sleep` does instead: {reply}"
+        );
+        assert!(
+            !out(s.handle("look")).contains("asleep"),
+            "a refused `{arg}` must not have put the body under"
+        );
+    }
+    // ...and the bare form still works, so the refusal is about the argument
+    // rather than about the verb.
+    assert!(
+        out(s.handle("sleep")).contains("You lie down"),
+        "bare `sleep` must still lie down"
+    );
+}

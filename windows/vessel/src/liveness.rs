@@ -2072,12 +2072,15 @@ impl<'a> Drive for Thermal<'a> {
             | Action::Whoami
             | Action::Provoke
             | Action::Soothe
-            // Group B's objective halves (The Deed, Task 6) are player-only
-            // in exactly the same way, and answer for the same reason.
+            // Group B's out-of-character halves (The Deed, Task 6; Task 7's
+            // fix round added the last two) are player-only in exactly the
+            // same way, and answer for the same reason.
             | Action::ObjectiveMap
             | Action::ObjectiveExamine
             | Action::ObjectiveNeeds
-            | Action::ObjectiveWait => 0.0,
+            | Action::ObjectiveWait
+            | Action::ObjectiveLook
+            | Action::ObjectiveKnows => 0.0,
         }
     }
 }
@@ -2829,12 +2832,15 @@ impl<'a> Drive for Danger<'a> {
             | Action::Whoami
             | Action::Provoke
             | Action::Soothe
-            // Group B's objective halves (The Deed, Task 6) are player-only
-            // in exactly the same way, and answer for the same reason.
+            // Group B's out-of-character halves (The Deed, Task 6; Task 7's
+            // fix round added the last two) are player-only in exactly the
+            // same way, and answer for the same reason.
             | Action::ObjectiveMap
             | Action::ObjectiveExamine
             | Action::ObjectiveNeeds
-            | Action::ObjectiveWait => 0.0,
+            | Action::ObjectiveWait
+            | Action::ObjectiveLook
+            | Action::ObjectiveKnows => 0.0,
         }
     }
     fn survival_override(&self, urgency: f64) -> bool {
@@ -3586,12 +3592,15 @@ pub fn arbitrate(
             | Action::Whoami
             | Action::Provoke
             | Action::Soothe
-            // Group B's objective halves (The Deed, Task 6): equally
-            // player-only, equally absent from every `candidate_actions`.
+            // Group B's out-of-character halves (The Deed, Task 6 and Task
+            // 7's fix round): equally player-only, equally absent from every
+            // `candidate_actions`.
             | Action::ObjectiveMap
             | Action::ObjectiveExamine
             | Action::ObjectiveNeeds
-            | Action::ObjectiveWait => unreachable!(
+            | Action::ObjectiveWait
+            | Action::ObjectiveLook
+            | Action::ObjectiveKnows => unreachable!(
                 "no creature drive ever proposes a player-only act (The Deed) — neither a \
                  group-A operator instrument nor a group-B objective half"
             ),
@@ -5232,12 +5241,15 @@ impl<'a> DriveMovements<'a> {
                 | Action::Whoami
                 | Action::Provoke
                 | Action::Soothe
-                // Group B's objective halves (The Deed, Task 6): player-only
-                // on the same terms, and never constructed in this file.
+                // Group B's out-of-character halves (The Deed, Task 6 and
+                // Task 7's fix round): player-only on the same terms, and
+                // never constructed in this file.
                 | Action::ObjectiveMap
                 | Action::ObjectiveExamine
                 | Action::ObjectiveNeeds
-                | Action::ObjectiveWait,
+                | Action::ObjectiveWait
+                | Action::ObjectiveLook
+                | Action::ObjectiveKnows,
             ) => unreachable!(
                 "no creature drive ever proposes a player-only act (The Deed) — neither a \
                  group-A operator instrument nor a group-B objective half is reachable \
@@ -8809,7 +8821,9 @@ mod tests {
                 | Action::ObjectiveMap
                 | Action::ObjectiveExamine
                 | Action::ObjectiveNeeds
-                | Action::ObjectiveWait => {
+                | Action::ObjectiveWait
+                | Action::ObjectiveLook
+                | Action::ObjectiveKnows => {
                     unreachable!("plan_to_water never emits a player-only act (The Deed)")
                 }
             }

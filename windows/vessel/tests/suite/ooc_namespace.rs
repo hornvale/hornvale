@@ -117,35 +117,47 @@ fn the_sigil_eyes_still_has_both_its_report_and_set_arms() {
 /// classified out-of-character half must refuse there exactly as an unknown
 /// verb would in the bare namespace.
 ///
-/// **`!look` is now permanently unclassified, not merely pending** (The
-/// Deed, Task 6). When this test was written it read "a verb group B has not
-/// reached yet (Task 6)", which forecast an arm that was then deliberately
-/// not built: `look` has no perceptual gate to take to its permissive limit —
-/// none of its three band arms consults sight, eyes, lens or knowledge — so
-/// an out-of-character half would have been an observational alias. See
-/// `ooc_objective.rs`'s `neither_look_nor_knows_has_an_objective_half`, which
-/// pins the same refusal alongside `!knows` with the finding recorded.
+/// **This test used to probe `!look`, and cannot any more.** Task 6 withheld
+/// `!look`/`!knows` on the grounds that neither has a renderer gate to relax;
+/// Task 7's fix round shipped both, because the gate they discriminate on
+/// turned out to be the BODY's rather than a renderer's (spec §2.2/§3.4 — see
+/// `ooc_objective.rs`). So the probe moved to spec §3.2's **group C**, whose
+/// members have no out-of-character half at all and are not waiting for one:
+/// `consult` and `write` are in-world literacy acts, and an operator reading
+/// the Book over a sleeping body's shoulder is a capability nobody has
+/// specified.
+///
+/// Two verbs rather than one, and both chosen for having no side effect on
+/// the session (a fresh session each way regardless), so the comparison is
+/// about dispatch and nothing else.
 #[test]
 fn an_unclassified_sigil_verb_refuses_rather_than_aliasing_to_the_bare_form() {
     let w = world();
-    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let bare = match s.handle("look") {
-        Turn::Out(t) => t,
-        Turn::Released(_) => panic!("`look` must not end the possession"),
-    };
-    let (mut s2, _opening2) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let sigilled = match s2.handle("!look") {
-        Turn::Out(t) => t,
-        Turn::Released(_) => panic!("`!look` must not end the possession"),
-    };
-    assert!(
-        sigilled.to_lowercase().contains("no verb"),
-        "`!look` is not a classified out-of-character verb (Task 6 decided it has \
-         no gate to relax) and must refuse, not silently reuse `look`'s own \
-         answer; got: {sigilled}"
-    );
-    assert_ne!(
-        bare, sigilled,
-        "the sigil must not have fallen through to the bare arm's behaviour"
-    );
+    for verb in ["consult", "write"] {
+        let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let bare = match s.handle(verb) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("`{verb}` must not end the possession"),
+        };
+        assert!(
+            !bare.to_lowercase().contains("no verb"),
+            "precondition: bare `{verb}` must BE a verb, or the comparison below \
+             is between two identical refusals: {bare}"
+        );
+        let (mut s2, _opening2) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let sigilled = match s2.handle(&format!("!{verb}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("`!{verb}` must not end the possession"),
+        };
+        assert!(
+            sigilled.to_lowercase().contains("no verb"),
+            "`!{verb}` has no classified out-of-character half (spec §3.2 group C) \
+             and must refuse, not silently reuse `{verb}`'s own answer; got: \
+             {sigilled}"
+        );
+        assert_ne!(
+            bare, sigilled,
+            "the sigil must not have fallen through to the bare arm's behaviour"
+        );
+    }
 }
