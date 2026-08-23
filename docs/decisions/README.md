@@ -192,3 +192,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0159](0159-focus-is-the-clients-one-input-mode.md) | Focus is the client's one input mode, and it is shown | Accepted |
 | [0166](0166-a-generated-artifact-cannot-be-merged-by-regenerating-it.md) | A generated artifact cannot be merged by regenerating it | Accepted |
 | [0167](0167-a-driver-is-interchangeable-and-a-possessed-body-is-a-creature.md) | A driver is interchangeable, and a possessed body is a creature | Accepted |
+| [0168](0168-the-effect-of-an-act-belongs-to-the-body-not-the-driver.md) | The effect of an act belongs to the body, not the driver | Accepted |
+| [0169](0169-mood-is-a-property-of-the-action-and-the-sigil-is-a-namespace.md) | In-character is a property of the action, and `!` is a namespace | Accepted |
+| [0170](0170-an-out-of-character-act-bypasses-the-body-never-the-world.md) | An out-of-character act bypasses the body, never the world — and it may commit, stamped | Accepted |
+| [0171](0171-a-players-acts-are-not-filtered-out-of-a-saved-world.md) | A player's acts are not filtered out of a saved played world | Accepted |
+| [0172](0172-a-concept-with-no-possible-referent-is-an-extradiegetic-gap.md) | A concept with no possible referent is lexicalised as an extradiegetic gap | Accepted |

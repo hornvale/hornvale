@@ -1,0 +1,159 @@
+# The Deed — retrospective
+
+*Arc I.c of the possession program. Shipped one action suite in two moods:
+bare verbs in-character (gated, charged, committing), `!`-verbs
+out-of-character (ungated, free, committing only when stamped). Eight tasks,
+seven decision records, one honest limit recorded rather than papered over.*
+
+## The headline: every substantive defect originated in plan text
+
+Not one was introduced by an implementer and caught by a reviewer. Across
+eight tasks the count is **fourteen defects in plan or dispatch text, zero in
+implementer code that survived to review**. The earlier arcs saw the same
+shape; this arc's contribution is the sharper version of it.
+
+**Four of the fourteen were introduced by *corrections* — text written
+specifically to fix an earlier defect.** That is the finding worth keeping,
+because it is not explained by carelessness. Writing a correction feels like
+the careful act, which is exactly when the correction goes unaudited:
+
+| the correction | what it got wrong |
+|---|---|
+| a per-verb table replacing a wrong uniform rule | omitted `back`, the tenth verb — an *absence*, invisible to a diff review |
+| the same table's "charge time" column | gave descriptions (`band change`) where the reader needed yes/no |
+| "adding `day()` moves the type-audit report by one" | false — `day()` returns `WorldTime`, a typed quantity, so no primitive crosses the boundary |
+| Step 4b's remedy, strengthening a weak guard | applied literally it produces a test that **cannot fail**, because `Ledger::commit` dedups an identical envelope |
+
+The last one is the sharpest: a correction whose whole purpose was to close a
+vacuity hole opened a different vacuity hole. The implementer measured it — a
+mutant committing on `out` left the "fixed" guard green — and repaired it by
+moving the baseline inside a scout loop.
+
+**What caught them was always something executable or independent**: a
+compiler, a mutation, a re-derived grep, or a reader who had not written the
+claim. Never re-reading.
+
+## Two practices that did the work, and one new one
+
+1. **Verify the brief against the code immediately before dispatching — one
+   task ahead, never in a batch.** This found `!wait` orphaned between two
+   tasks (Task 6 deferred it to Task 7; Task 7 never mentioned it) and the
+   0069 violation in Task 7's Step 4, both before any code was written.
+2. **Tell implementers to re-derive lists rather than trust them**, including
+   lists in the text making the claim. Every implementer override in this arc
+   came from that instruction.
+3. **New: record a deliberate omission with its reason, not as a
+   conclusion.** Task 6 declined to ship `!look`/`!knows` *because neither
+   renderer had a gate to relax*. Task 7 gave those verbs a gate — which
+   falsified the reason — and the omission was re-opened and reversed. Had the
+   omission been recorded as "these two are out of scope," nothing would have
+   detected the change. **A recorded reason is a tripwire; a recorded
+   conclusion is a wall.**
+
+## Asking the wrong question, and being redirected into a better one
+
+The reviewer found a possessed body's committed provenance strings 100%
+separable from a creature's, and framed it as: is the trail *indistinguishable*?
+I brought that to Nathan as a three-way choice.
+
+**It was the wrong question, and one of the three options could not be built.**
+Nathan's concern was substitutability — Liskov — that keyboard input and a
+planner be interchangeable drivers of one creature. Checking the *types*
+answered it immediately: a creature is an `Npc`, a possessed body is an
+`Agent`, no conversion exists anywhere in the tree, and 21 functions in the
+creature layer take `&Npc`. My middle option — have the player's provenance
+borrow the body's dominant drive — is unimplementable, because an `Agent` has
+no drives to borrow.
+
+Two lessons, and the second is the one that generalises:
+
+- **The provenance difference was a *symptom*.** Fixing the string would have
+  hidden a structural gap and narrowed it not at all.
+- **A question phrased as a menu can be wrong in a way no option reveals.**
+  Three plausible options all shared a false premise. What exposed it was
+  Nathan restating the *goal* in different vocabulary, not choosing among the
+  options — so when an answer feels like a choice among near-equals, the
+  framing is the thing to re-derive.
+
+Recorded as decision 0167 and `PLAY-driver-substitutability`; it promotes The
+Tackle's origin-of-intent finding, which had the same shape and had been
+sitting unminted in a scratch register.
+
+## The merge driver: a ratified safeguard, inverted
+
+Mid-campaign an artifact merged cleanly and wrongly for the third time in a
+day. The cause was PROC-12's `merge=hv-regenerate` driver, which **fires, exits
+0, and writes a confidently wrong file**: it regenerates over the working tree,
+which mid-merge is not the merge product. Git invokes a driver only when both
+sides changed a path — exactly when the two sources differ — so **every
+invocation was wrong**, and the merges that came out right were the ones where
+it never ran.
+
+Two independent sessions merged the *same two commits* in opposite directions
+and got opposite clean results, one dropping six primitives and the other an
+entire crate's row from a default-deny audit. A competing fix (`929620343`) had
+landed 30 hours earlier keying on conflicts; a scratch-repo reproduction of its
+own logic showed a **clean** merge, zero conflicts, still dropping one side.
+Retired in decision 0166.
+
+Three process points fall out:
+
+- **The driver's own test suite had no runner.** Nothing invoked it; the
+  `outboard` set names its eight scripts explicitly and this was not among
+  them. A month of silence followed.
+- **It would not have caught this anyway.** A test that builds its own merge
+  scenario *constructs* the working tree, closing by construction the exact gap
+  the defect lives in.
+- **The first merge conducted after the attribute came out conflicted** on the
+  same file — stopping for a human where the driver had been emitting clean
+  wrong answers. A decision whose evidence includes the first merge run under
+  it is unusually well founded, and it happened by accident.
+
+## Two smaller process findings
+
+**A decision number must come from the allocator, not from main's top.** I took
+`0160`, which sat inside another campaign's reserved block. I had re-derived it
+against `origin/main` *after main moved twice* — the careful-looking version of
+the exact fallback `decision-block-request.sh` forbids. **Main's top says what
+landed; it cannot say what is reserved.** Renumbering also surfaced two
+citation forms invisible to a slug grep: the record's own H1 carries the number
+without the slug, and a Rust line continuation split the path mid-token.
+
+**A searched test fixture can become the straggler that sets a crate's wall
+time.** One discriminator cost 136.5 s and finished last of 582 tests, because
+its predicate first holds at seed 28 and each world build is ~4 s. Pinning the
+seed was wrong — that discipline exists because a pin rotted before. **Ordering
+the search rather than shortening it** (try the last known hit, sweep the full
+range behind it) took it to 6.1 s while conceding nothing: a rotted hint costs
+one wasted build. The control matters, because a faster green is also what a
+*broken* search looks like — deliberately mis-hinting a fixture still passed,
+just slower.
+
+## What this arc did not do
+
+At the body level a possessed body is still not a creature: no drives, no
+affect, no occupancy presence, two committed predicates against a creature's
+five. Decision 0167 records it as a must-fix deferred to its own campaign.
+`KNOW-commit-read-same-instant` records a second: `Ledger::commit` quantizes a
+fact's day upward, so a fact is invisible to a read at the instant it was
+committed — pre-existing, narrow, and made far more reachable by this arc,
+since every charged act now leaves a fractional day.
+
+## Follow-ups
+
+- `PLAY-driver-substitutability` — the must-fix above (decision 0167).
+- `KNOW-commit-read-same-instant` — the quantize hazard (F-5).
+- **F-6**: two byte-goldens under `windows/vessel/tests/fixtures/` move with
+  the sim but are not in `docs/generated-paths.txt`, so the drift check cannot
+  see them.
+- **F-3** (inherited): `purview_scene`'s ungated NPC marks — reaching it from
+  inside a chamber discloses a creature the chamber band withheld. This arc
+  built the gate table where the structural fix would live but did not close it.
+- **F-4**: per-session predicate doc strings are de-facto save-format contracts
+  the moment a played world is saved. True today, undocumented today, and this
+  arc widened the set.
+- The CLI hint path for retired bare forms — a bare group-A verb typed from
+  habit gets an ordinary unknown-verb refusal rather than "did you mean `!why`?"
+- The world REPL (`cli/src/repl.rs`) keeps bare `help`/`why`. A different
+  surface, outside the 26 verbs, so not a defect — but the two surfaces now
+  spell the same word differently.
