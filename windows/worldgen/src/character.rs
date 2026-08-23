@@ -496,6 +496,17 @@ mod tests {
     /// `character_of` and `barrier_of` are ONE object per branch (The Stope
     /// spec B.5): re-keyed at the SAME granularity, so a branch that changes
     /// band changes both, and neither is keyed more coarsely than the other.
+    ///
+    /// **Controller fix round 1 (2026-08-23)**: the brief's own assertion
+    /// used `chars.len() > 1 || barriers.len() > 1`, which is
+    /// one-sided-vacuous — either dial alone varying satisfies an `||`, so a
+    /// mutation that coarsens ONE dial's key back to the pre-Task-5
+    /// per-system shape (dropping `band`) while leaving the other correctly
+    /// re-keyed stayed GREEN. Confirmed: mutating `barrier_of`'s key alone
+    /// to drop `band` left this test passing, because `character_of` alone
+    /// still varied. Split into two independent assertions instead — BOTH
+    /// dials must vary, and a failure now names WHICH one regressed rather
+    /// than reporting "at least one" ambiguously.
     #[test]
     fn character_and_barrier_are_keyed_at_the_same_granularity() {
         let seed = Seed(42);
@@ -508,9 +519,14 @@ mod tests {
             barriers.insert(barrier_of(seed, cell, band, branch, &pins));
         }
         assert!(
-            chars.len() > 1 || barriers.len() > 1,
-            "neither character nor barrier varies across bands at one branch — \
-             at least one is still keyed without the band"
+            chars.len() > 1,
+            "character does not vary across bands at one branch — it is \
+             still keyed without the band"
+        );
+        assert!(
+            barriers.len() > 1,
+            "barrier does not vary across bands at one branch — it is \
+             still keyed without the band"
         );
     }
 
