@@ -245,7 +245,7 @@ pub enum SpatialChannel {
 }
 
 /// One examinable noun and its datum.
-/// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum)
+/// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum), bare-ok(identifier-text: kind)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct NounEntry {
     /// The noun as the prose mentions it.
@@ -255,6 +255,7 @@ pub struct NounEntry {
     /// Coarse kind for completion-capable clients. Optional on the wire:
     /// older mirrors load unchanged (serde default), newer fixtures carry it.
     /// Additive on `vessel/session/v1` per the schema discipline.
+    /// type-audit: bare-ok(identifier-text: kind)
     #[serde(default)]
     pub kind: String,
 }

@@ -55,6 +55,7 @@ pub enum NounKind {
 impl NounKind {
     /// The lowercase wire tag this kind serializes as, for the additive
     /// `kind` field on `snapshot::NounEntry`.
+    /// type-audit: bare-ok(identifier-text: return)
     pub fn tag(self) -> &'static str {
         match self {
             NounKind::Creature => "creature",
