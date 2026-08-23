@@ -453,24 +453,61 @@ The distinction falls out of what is already rendered:
 suppression pass is where a client learns to lie about what it knows, and it
 is also where an omniscient read leaks through a rendering bug.
 
-## A4. The discovery gate is already built
+## A4. Two different questions, and conflating them was the defect
 
-A feature is discovered when the possession has walked a cell it occupies.
-The mechanism is the `room/<id>` knowledge keys, read exactly the way the fog
-already reads them.
+Nathan's F6 and F7 rulings (2026-08-23) share one rule, and this amendment's
+first draft broke it by asserting that "a feature is discovered when the
+possession has walked a cell it occupies."
 
-`windows/vessel/src/purview.rs` promotes walked cells to `state =
-"remembered"`, and **already does so at every zoom rung** — the predicate
-`w.path[..addr.path.len()] == addr.path[..]` marks a coarse cell whenever any
-walked room lies inside it, which is precisely the coarse-rung semantics a
-world map needs. Its module doc states the overlay "WRITES NOTHING", so a
-possession that draws the chart is byte-identical to one that never does.
-Determinism is untouched.
+> **CO-LOCATION IS NOT DISCOVERY.** *"Just being in the area where a thing was
+> buried doesn't imply any knowledge of the buried thing any more than going to
+> Paris means you've visited the Catacombs or going to southwest Colorado means
+> you've visited Mesa Verde."*
+
+So the map answers **two** questions, by two mechanisms, and they must never be
+wired to each other:
+
+### A4a. Where have I been? — a property of CELLS
+
+Nathan, on F6: *"consider the cell visited but not the village. As zoom levels
+increase, you should be able to pick out what you have and have not visited
+accurately."*
+
+Visitedness propagates **upward only**. Walking a room marks that room and
+every coarser cell containing it — you were physically inside all of them — and
+marks **no sibling**, so zooming in resolves the true, fine-grained set of
+ground actually covered rather than blurring it.
+
+**This is exactly the shipped predicate and needs no new code.**
+`windows/vessel/src/purview.rs` promotes a cell to `state = "remembered"` when
+`w.path[..addr.path.len()] == addr.path[..]` for some walked room `w` — an
+ancestor test, upward-only by construction. Its module doc states the overlay
+"WRITES NOTHING", so a possession that draws the chart is byte-identical to one
+that never does; determinism is untouched.
 
 **This corrects a registry row that said otherwise.**
 `CLIENT-remembered-map-asymmetry` claimed `"remembered"` had "no writer ever";
-it has had one, with tests, since before that row was written. The row is
-corrected in the same commit as this amendment.
+it has had one, with tests, since before that row was written.
+
+### A4b. What do I know is there? — a property of FEATURES
+
+A feature is discovered by **encountering the feature**, never by standing on
+ground that contains it. The encounter condition follows from what kind of
+thing the feature is, and the two kinds are the ones §A3 already names:
+
+| kind | the feature is… | encountered by |
+|---|---|---|
+| **extent features** — landmass, sea, river, salt lake, volcano | the ground itself; its extent IS a set of cells | entering any cell of its extent — standing on a volcano *is* meeting it |
+| **point sites** — settlement, cave mouth, ruin | a thing standing *at* a cell, not the cell | encountering the thing: entering the settlement, entering the cave |
+
+**The asymmetry is not a special case, it is the rule applied twice.** For an
+extent feature the ground and the feature are the same object, so co-location
+and encounter coincide. For a point site they are different objects, and
+co-location buys nothing.
+
+**Visitedness never implies discovery.** A cell may be visited with every point
+site in it still unknown, and that is the normal case at coarse zoom where one
+character spans ~9°.
 
 ## A5. Colour (The Chroma drift)
 
@@ -529,6 +566,9 @@ rung (`CLIENT-snapshot-chart-cannot-zoom`), explicitly out of scope here.
 
 - **Nothing is drawn and then hidden** (§A3). Undiscovered point sites are not
   rendered; undiscovered landmarks render as terrain and go unnamed.
+- **Co-location is not discovery** (§A4). Visitedness is a fact about cells and
+  may never be wired to a feature's label. A campaign that "fixes" a sparse map
+  by letting a visited cell disclose its contents has broken this rule.
 - **Colour may not carry the epistemic channel** (§A5).
 - **No new site kinds.** This campaign ships the mechanism against the world
   that exists (§A8) and does not widen the discoverable roster.
@@ -551,23 +591,47 @@ towers and castles do not.
 The discoverable roster, seed 42 (spinning):
 
 ```
-kind                          count   named?   in the terrain render?
-----------------------------  ------  -------  ----------------------
-settlement cells                 221   yes      no (point site)
-distinct ruin cells              170   --       no (point site)
-  under a live settlement        127
-  ABANDONED (no live site)        43
-natural feature classes            5   yes      YES
-  volcano/landmass/sea/
+kind                        count  kind (A4b)  discoverable HERE?
+--------------------------  -----  ----------  --------------------------
+settlement cells              221  point site  YES -- enter the settlement
+natural feature classes         5  extent      YES -- enter any cell of
+  volcano/landmass/sea/                         its extent
   saltlake/river
-caves                             --   no       no; derived from the
-                                                 stratigraphic column
+caves                          --  point site  YES -- enter the cave
+                                                (derived from the
+                                                 stratigraphic column)
+distinct ruin cells           170  point site  NO -- no artifact exists
+  under a live settlement     127                to encounter (below)
+  ABANDONED (no live site)     43
 ```
 
-**The 43 abandoned ruin cells are the best discoverables the world has**, and
-nothing surfaces them today. Each carries a recorded cause (`fled` /
-`migrated` / `famine`), a founding date, a people, and a tech level. They are
-promoted to first-class discoverables by this campaign.
+**RUINS ARE NOT DISCOVERABLE TODAY, and Nathan's own F7 rule is what removes
+them.** An earlier draft of this section promoted the 43 abandoned ruin cells
+to first-class discoverables and called them the best content in the world.
+They remain the best *material* — each carries a recorded cause (`fled` /
+`migrated` / `famine`), a founding date, a people, and a tech level — but under
+§A4b a point site is discovered by encountering the thing, and **there is no
+thing**. Verified, both halves:
+
+- **The 43 abandoned cells have nothing standing on them.** `Brief.built` is
+  `Terrain::is_built`, whose real implementation (`liveness.rs:769`) is
+  membership in the injected **settlement-territory** set — live settlements
+  only. An abandoned ruin cell is unbuilt, so `structure_at` yields no
+  structure and there is nothing to enter.
+- **The 127 buried cells have structures, but none can belong to the dead
+  occupation.** `Brief`'s four occupation fields are each scoped, in their own
+  docs, to "the **alive** occupation"; nothing carries `cause`, `ended_by`, or
+  any occupation layer. So Nathan's own example — *"if a goblin village has a
+  single tower from an ancient hill dwarf settlement, then enter the tower and
+  the ruins are discovered"* — has no tower to enter, because no chamber can be
+  attributed to the earlier settlement.
+
+The gap is already named and already licensed: `CLIENT-ruin-signature` (raw,
+high confidence) describes what each `cause` should leave behind, and
+`brief.rs`'s own doc says "the campaign that first needs `cause` adds one field,
+with no save-format consequence and no epoch." **That campaign is not this
+one.** Ruins leave the discoverable roster here; the residue is recorded as
+`PLAY-ruins-have-no-artifact`.
 
 That the roster is thin is a known and accepted condition, not a finding to
 act on here — Nathan, 2026-08-22: *"we have a metric butt-ton of features to
@@ -590,9 +654,10 @@ recorded as `PLAY-site-kinds-are-constant`.
 4. The strip carries the chain and scrolls; F3.
 
 **Stage 3 — discovery**
-5. The discovery gate over the `room/<id>` keys (§A4), the two visibility
-   classes (§A3), and ruins promoted to first-class discoverables (§A8);
-   F6, F7, H5, H6.
+5. Cell visitedness from the shipped fog predicate (§A4a) and feature discovery
+   by encounter (§A4b), kept as two mechanisms that are never wired together;
+   the two visibility classes (§A3). Ruins are OUT (§A8). F6', F7', F9, H5, H6,
+   H6b.
 
 **Stage 4 — close**
 6. Chronicle, retrospective, registry rows, decision, freshness sweep. Delete
@@ -601,19 +666,28 @@ recorded as `PLAY-site-kinds-are-constant`.
 
 ## A10. What is unverified in this amendment
 
-**F6 — does a coarse rung's discovery read the same way the fog's does?** §A4
-asserts the coarse-rung predicate is the one a world map wants. **Settled by:**
-Task 5 states, against the code, whether a cell at the world rung counts as
-discovered when *any* walked room lies inside it, and whether that reads as
-generous or stingy at the coarsest zoom — at ~9° a character, one visited
-village may light a cell containing dozens of unvisited ones. **If it reads as
-lying, that is a STOP**, not a tuning exercise: the honest fix is a different
-predicate, not a different threshold.
+**F6' — RESOLVED by Nathan, 2026-08-23.** The question was malformed: it asked
+whether *discovery* should propagate upward, when visitedness and discovery are
+different properties (§A4). Visitedness propagates upward and only upward,
+which is the shipped predicate unchanged; discovery does not propagate at all.
+The "one visited village lights a cell containing dozens of unvisited ones"
+worry dissolves — the cell is lit because you were in it, and none of the
+villages inside it are named. **Residual, a rendering question rather than a
+semantic one:** at the coarsest zoom a lit cell says "you have been somewhere
+in here." Task 5 states whether that reads honestly at 40 columns; if it does
+not, the fix is in how visitedness DRAWS, never in what it means.
 
-**F7 — what does an undiscovered ruin cell look like when its site is also a
-live settlement?** 127 of 170 ruin cells sit under a live settlement. **Settled
-by:** Task 5 states whether discovering the settlement discloses the ruin
-beneath it, and defends the answer either way.
+**F7' — RESOLVED by Nathan, 2026-08-23, and it removes ruins from scope.** A
+ruin is discovered only by encountering an artifact of it (§A4b), and no such
+artifact exists in either the abandoned or the buried case (§A8, both verified
+against the code). **Settled — nothing left for a task to decide.**
+
+**F9 — what counts as "entering" a settlement or a cave?** §A4b names the
+encounter but deliberately not its threshold: `structure_at`, `enter` and
+`delve` already define arrival at a built place and at a cave, and the plan
+should adopt whichever the code already treats as arrival rather than minting a
+fourth notion. **Settled by:** Task 5 names the existing predicate it reuses and
+cites it. **Minting a new arrival test is a STOP.**
 
 **F8 — does the strip's chain change under the gate?** §5 has the strip carry
 the whole containment chain. **Settled by:** Task 4, which must state what the
@@ -628,10 +702,17 @@ landmass legible — with **zero** features named. *Falsified if* an unlabelled
 plate is unreadable, which would mean labels were carrying the legibility that
 §A3 assumes terrain carries.
 
-**H6 — discovery is monotonic and never retroactive.** A feature named after a
-visit stays named for the rest of the session, and no feature is named before
-its cell is walked. *Falsified by* either direction; the second is the leak
-that matters, because it is an omniscient read escaping through the renderer.
+**H6 — discovery is monotonic.** A feature named after an encounter stays named
+for the rest of the session, and no feature is named before it is encountered.
+*Falsified by* either direction; the second is the leak that matters, because it
+is an omniscient read escaping through the renderer.
+
+**H6b — co-location does not disclose (§A4).** Walk a cell containing a point
+site *without* meeting the site, at every zoom rung, and the site stays unnamed
+and undrawn while the cell reads as visited. *Falsified by* the site appearing,
+which would mean visitedness and discovery got wired together — **the single
+defect this amendment exists to prevent**, and one a test that only ever walks
+straight into things cannot see. The fixture must walk PAST something.
 
 **H7 — the gate costs nothing in the ledger.** A possession that opens the
 world map and walks is byte-identical to one that never opens it, exactly as
@@ -643,6 +724,12 @@ the map became a writer.
 - **The fidelity ruling is his and is recorded as such** (§A1). It reverses a
   proposal this session made, and the reversal is the reason the body of the
   spec survives.
+- **The roster SHRANK after his F7 ruling, and the size of it is worth his eye**
+  (§A8): ruins are out, because the rule is right and the artifact does not
+  exist. What remains is settlements (221, one kind), five natural feature
+  classes, and caves. Restoring ruins means `CLIENT-ruin-signature` plus one
+  `Brief` field — licensed by `brief.rs`'s own doc, no epoch — and that is a
+  campaign, not a task.
 - **The discoverable roster is thin and he has accepted that** (§A8) —
   `PLAY-site-kinds-are-constant` is the row that unblocks the rest, and it is
   deliberately not this campaign.
