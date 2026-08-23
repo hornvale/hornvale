@@ -388,6 +388,7 @@
 - [The Portolan](./chronicle/the-portolan.md)
 - [The Stylus](./chronicle/the-stylus.md)
 - [The Chroma](./chronicle/the-chroma.md)
+- [The Penstock](./chronicle/the-penstock.md)
 
 # Appendix: The Frontier
 

@@ -49,6 +49,41 @@ a branch that would not survive contact with `main`.
 five `make lane*` targets. If you find yourself reaching for one, the answer
 is `make sluice-stage`.
 
+## Step 0, for a MERGE only: the campaign must already be closed
+
+**A merge submission is the LAST act of a campaign, not the first act of
+finishing one.** `closing-a-campaign` puts the Definition-of-Done artifacts
+**on the branch (its step 3)** and only then submits (its step 6), and that
+order is load-bearing: the chronicle entry, the retrospective, the book
+freshness sweep, the Confidence-Gradient re-score and the registry flips all
+belong to the merge product being gated. Submit before writing them and the
+campaign owes a SECOND merge to carry them — a second queue slot, a second
+~1000 s chamber run, and a window in which `main` holds a campaign the book
+does not describe.
+
+This has happened. The Penstock (2026-08-23) submitted its merge with the
+code complete and reviewed, landed clean at `132854255`, and only then
+discovered it owed a chronicle and a retrospective. Nothing was lost, but
+the close cost a whole second trip through a strictly serial queue that
+every other campaign was also waiting in.
+
+So before `make sluice` — not before `make sluice-stage`, which is exempt
+because it pushes nothing and a campaign mid-flight legitimately has no
+chronicle yet — check:
+
+- [ ] chronicle entry written and wired into `book/src/SUMMARY.md`
+- [ ] retrospective in `docs/retrospectives/`
+- [ ] book freshness sweep done; Gradient re-scored or explicitly N/A
+- [ ] registry rows flipped and repointed
+- [ ] scratch swept (`.superpowers/sdd/` dies with the worktree)
+
+If any box is unticked, you are not ready to merge — you are ready to run
+`closing-a-campaign`, which will bring you back here.
+
+**A stage gate has no such precondition.** That asymmetry is the whole
+reason this section says "for a MERGE only": a stage request is exactly the
+instrument for a campaign that is *not* finished.
+
 ## The three steps, in order
 
 1. **`make gate-commit`.** Must pass. This is the only local, per-commit
