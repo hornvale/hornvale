@@ -421,3 +421,62 @@ address is the seed-derivation key.
 
 This is the campaign's own standard turned on itself: a string presented as a
 derivation key, in a committed artifact, that no longer derives anything.
+
+---
+
+# AMENDMENT B, 2026-08-23: the descent verb loses an outcome, deliberately
+
+Nathan's ruling, after Task 1's measurement exposed a behaviour change the
+spec had not anticipated.
+
+## B.1 What happened
+
+`hornvale-vessel`'s `delve_has_three_distinguishable_outcomes` passed at
+`69d1f5469` and fails after §4.1. Its panic names the loss exactly:
+
+> *no **sealed** cave found in seed 42's terrain — the fixture no longer has
+> one of the three outcomes this campaign's descent verb needs to
+> distinguish*
+
+A cave was **sealed** when its chambers lost their existence coin flips. With
+the coin deleted, every cave in shape realizes chambers. Task 1's own probe
+had already proved this without anyone reading it that way:
+`systems_with_open_mouth == systems` on all three seeds — **874/874,
+1681/1681, 1266/1266**. Sealed is not rare now. It is **impossible**.
+
+## B.2 The ruling
+
+**Accept two outcomes. Sealed passage comes later.**
+
+The descent verb ships with two distinguishable outcomes until a later
+campaign builds restricted passage — locked doors, boss encounters, collapses
+that magic can clear, and the rare chamber that stays lost with something
+worth finding in it. §7 already listed that as a non-goal; B.1 promotes it
+from *nice to have* to **owed**, because this campaign removed something the
+game already had rather than merely declining to add it.
+
+## B.3 What that obliges this campaign to do
+
+1. **Amend the test rather than delete it.** It becomes
+   `delve_has_two_distinguishable_outcomes`, asserting what is true, with a
+   doc comment recording that the third outcome existed, what removed it, and
+   what would restore it. A deleted test is a removed guard; an amended one
+   carries the history.
+2. **Make the loss loud, not silent.** The amended test must fail if a sealed
+   cave ever becomes possible again while the test still claims two — the
+   same STALE-DECL discipline `seam-guard` uses, where a one-directional
+   acknowledgement is a claim that rots.
+3. **Say it in the chronicle.** A campaign that removes a player-facing
+   outcome and does not write that down has misreported itself.
+4. **File the restricted-passage work** as a registry row, carrying B.1's
+   measurement as its motivation.
+
+## B.4 Why this is not a quiet re-baseline
+
+The project's standing rule is that a falsified prediction is a finding and a
+retuned constant needs saying so. This is the same shape one level up: a test
+that stops passing because the world changed is evidence about the world. The
+danger was never the red — it was that the report which surfaced it called it
+*"pre-existing and unrelated"*, which would have made a real behaviour change
+look like background noise. **The measurement was real and the attribution
+was invented**, which is this project's most frequently recurring defect.
