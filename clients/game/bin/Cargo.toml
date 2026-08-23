@@ -30,6 +30,13 @@ hornvale-terrain = { path = "../../../domains/terrain" }
 # in-repo path dependency, not a new external crate, so decision 0004's
 # allowlist (which does not bind `clients/` anyway) is not in play.
 hornvale-language = { path = "../../../domains/language" }
+# The Portolan part II, Task 5 (discovery): `Driver::start` reads every
+# settlement's committed `latitude`/`longitude` off the ledger once, to seed
+# the world plate's point-site roster (`plate::point_site_at`) — the same
+# ledger read the H4 test below used to do dev-only, now needed on the
+# shipped path too, so it moved out of `[dev-dependencies]` rather than
+# being declared twice.
+hornvale-settlement = { path = "../../../domains/settlement" }
 crossterm = "0.29"
 # CONCERN, flagged per the task brief: a third new dependency beyond
 # crossterm. Added only after review found that an external SIGINT/SIGTERM/
@@ -49,10 +56,3 @@ signal-hook = "0.3"
 # dev-dependency so no shipped code path gains it.
 [dev-dependencies]
 serde_json = "1"
-# Task 3b's H4 test (`driver.rs`) builds a `--rotation locked` world
-# directly (bypassing `Driver`, which has no locked-pin entry point) and
-# reads real settlements' `latitude`/`longitude` facts off the ledger to
-# check none fall in the projection's clamp. An in-repo path dependency,
-# not a new external crate (the same category `hornvale-language` above
-# was added under) — dev-only, since no shipped code path needs it.
-hornvale-settlement = { path = "../../../domains/settlement" }

@@ -53,11 +53,15 @@ pub fn resolve_at(
 /// (spec Amendment 1, §A4b: "co-location is not discovery" applies in
 /// both directions along the chain, not just from cell to feature).
 ///
-/// No discovery gate exists yet (Task 5 owns wiring one) — [`resolve_chain_at`]
-/// marks every link `discovered: true` today, so this struct's `false` arm
-/// is exercised only by [`format_chain`]'s own hand-built fixture tests
-/// until Task 5 lands. Task 5 must not change what [`format_chain`] does
-/// with a `false` link — only where the bool comes from.
+/// **Task 5 wired the real gate.** [`resolve_chain_at`] takes a caller-
+/// supplied `is_discovered` predicate and asks it per link, so this field
+/// carries the possession's own true discovery state — never a hardcoded
+/// `true`. `windows/worldgen` still owns no notion of a *session's*
+/// discovery history (that lives in `clients/game/bin`, behind the same
+/// containment `driver.rs`'s module doc states: no `Session`/`Knowledge`
+/// value may cross out of `Driver`), so this crate stays a pure function of
+/// whatever the caller already knows, exactly as it was before Task 5 —
+/// only the caller's answer changed from a constant to a real predicate.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(flag: discovered)
 #[derive(Debug, Clone)]
 pub struct ChainLink {
@@ -151,10 +155,15 @@ pub fn format_chain(links: &[ChainLink]) -> Option<String> {
 /// iff `cell` carries no individuated feature at all (same 0.92% case
 /// [`resolve_at`]'s doc measures).
 ///
-/// **No discovery gate exists yet.** Every link is marked `discovered:
-/// true` — Task 5 wires the real gate; see [`ChainLink`]'s doc for why that
-/// change is confined to where the bool comes from, not to
-/// [`format_chain`]'s own rule for what a `false` link shows.
+/// **The discovery gate (Task 5).** `is_discovered` is asked once per link,
+/// in the SAME most-specific-first order [`CellFeatureIndex::at`] already
+/// sorts them — never inferred from a sibling link, matching [`ChainLink`]'s
+/// own doc on why co-location along the chain never leaks either direction.
+/// This crate holds no session state of its own (the containment
+/// `clients/game/bin/src/driver.rs` states: no `Session`/`Knowledge` value
+/// crosses out of `Driver`), so the caller — `bin`'s own `Discovered` —
+/// supplies the answer; this function stays a pure fold over whatever it is
+/// told.
 ///
 /// `return` is `prose`, not `identifier-text` — see [`format_chain`]'s own
 /// doc (fix round 1, reviewer finding 2) for why: this returns the same
@@ -167,6 +176,7 @@ pub fn resolve_chain_at(
     species: &str,
     ph: &Phonology,
     morph: &MorphOptions,
+    is_discovered: &dyn Fn(FeatureId) -> bool,
 ) -> Option<String> {
     let ids: &[FeatureId] = index.at(cell);
     let links: Vec<ChainLink> = ids
@@ -174,7 +184,7 @@ pub fn resolve_chain_at(
         .map(|id| ChainLink {
             name: crate::feature_name(seed, *id, species, ph, morph).roman,
             class: id.class,
-            discovered: true,
+            discovered: is_discovered(*id),
         })
         .collect();
     format_chain(&links)
@@ -295,7 +305,7 @@ mod tests {
             "sanity: the fixture cell must be multi-feature"
         );
 
-        let text = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph)
+        let text = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|_| true)
             .expect("a multi-feature cell resolves to Some chain");
 
         // Every link's own name and class-noun must appear, in the SAME
@@ -393,5 +403,85 @@ mod tests {
     #[test]
     fn format_chain_of_no_links_is_none() {
         assert_eq!(format_chain(&[]), None);
+    }
+
+    // -- Task 5: the real gate, wired through `resolve_chain_at` itself,
+    //    not only `format_chain`'s hand-built fixture ---------------------
+
+    /// `resolve_chain_at` genuinely asks its `is_discovered` predicate per
+    /// link, against REAL seed-42 data — a predicate that always refuses
+    /// must produce a chain with no real name anywhere in it (every link
+    /// falls back to `describe`'s "an unnamed <class>" placeholder), and a
+    /// predicate that always accepts must produce the exact same text the
+    /// existing `the_chain_names_every_feature_most_specific_first` test
+    /// already pins for `&|_| true`. This is what distinguishes "the gate
+    /// exists" from "the fixture that hand-builds `ChainLink`s exists" —
+    /// the two are not the same claim, and only this test exercises the
+    /// former.
+    #[test]
+    fn resolve_chain_at_genuinely_asks_its_predicate() {
+        let seed = Seed(42);
+        let geo = Geosphere::new(LEVEL);
+        let outcome = hornvale_terrain::generate(seed, &geo, &TerrainPins::default())
+            .expect("default pins generate");
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        let features = crate::gazetteer_features(seed, &geo, &terrain);
+        let index = CellFeatureIndex::build(&features);
+        let (ph, morph) = test_phonology();
+
+        let cell = multi_feature_cell(&index, &geo);
+        let stack = index.at(cell);
+
+        let none_discovered = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|_| false)
+            .expect("a multi-feature cell still resolves to Some chain when undiscovered");
+        for id in stack {
+            let name = crate::feature_name(seed, *id, PEOPLE, &ph, &morph).roman;
+            assert!(
+                !none_discovered.contains(&name),
+                "a real name leaked through an `is_discovered` predicate that always \
+                 refuses: {none_discovered:?} contains {name:?}"
+            );
+        }
+
+        let all_discovered = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|_| true)
+            .expect("a multi-feature cell resolves to Some chain when fully discovered");
+        for id in stack {
+            let name = crate::feature_name(seed, *id, PEOPLE, &ph, &morph).roman;
+            assert!(
+                all_discovered.contains(&name),
+                "a real name failed to appear through an `is_discovered` predicate that \
+                 always accepts: {all_discovered:?} missing {name:?}"
+            );
+        }
+
+        // The two renders must actually differ — otherwise this test could
+        // pass vacuously (e.g. if `stack` were empty, both loops above would
+        // be no-ops and the assertions above would prove nothing).
+        assert_ne!(
+            none_discovered, all_discovered,
+            "sanity: the predicate must actually change the drawn text"
+        );
+
+        // The predicate is asked PER LINK: a predicate that discovers only
+        // the most-specific (first) link must show that link's real name
+        // and no other link's.
+        let first_id = stack[0];
+        let only_first = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|id| {
+            id == first_id
+        })
+        .expect("a multi-feature cell resolves to Some chain");
+        let first_name = crate::feature_name(seed, first_id, PEOPLE, &ph, &morph).roman;
+        assert!(
+            only_first.contains(&first_name),
+            "the discovered link's real name must show: {only_first:?}"
+        );
+        for id in &stack[1..] {
+            let name = crate::feature_name(seed, *id, PEOPLE, &ph, &morph).roman;
+            assert!(
+                !only_first.contains(&name),
+                "an undiscovered link's real name must not leak: {only_first:?} contains \
+                 {name:?}"
+            );
+        }
     }
 }

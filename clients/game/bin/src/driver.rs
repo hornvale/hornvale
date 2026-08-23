@@ -63,6 +63,7 @@
 //! room a bearing-inversion would have, using data both `chart::cell_at`
 //! and `Session::purview` already carry.
 
+use crate::discovery::{Discovered, FeatureId, Visited};
 use crate::history::History;
 use crate::input::Action;
 use crate::line::Line;
@@ -70,7 +71,7 @@ use crate::mercator::{self, Frame};
 use crate::plate::{self, Window};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{Cursor, Focus};
-use hornvale_kernel::{NearestCellIndex, RoomId, Seed, World};
+use hornvale_kernel::{CellId, NearestCellIndex, RoomId, Seed, Value, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
@@ -82,6 +83,7 @@ use hornvale_worldgen::{
     BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
     language_of_in, morph_options, resolve_chain_at, terrain_of,
 };
+use std::collections::BTreeSet;
 
 /// What the strip says, with the map focused, over a band this campaign has
 /// no resolver for (walk and chamber both draw a real plate; only the
@@ -95,6 +97,20 @@ const NOTHING_HERE_YET: &str = "nothing here yet";
 /// class's individuation floor, not "nothing there" (seed 42 measured 377
 /// of 40,962 cells like this; spec §3.4).
 const UNNAMED_TERRAIN: &str = "unnamed terrain";
+
+/// The fixed, sim-authored prefix `windows/vessel/src/session.rs`'s
+/// `delve_at` prints on a SUCCESSFUL delve (`Session::delve`'s own
+/// `Surface -> Undercroft` transition, F9's cited arrival predicate for
+/// caves) — never on any refusal (a sealed cave, no cave at all, already
+/// underground, or already inside a structure each print their own
+/// distinct refusal text). This is the only signal that exists for cave
+/// discovery: the wire's own `band` tag deliberately folds underground
+/// into `"walk"` (see that module's own test,
+/// `the_underground_band_folds_into_walk_as_map_does`), so there is no
+/// typed alternative to reading the turn's own narration — the same
+/// category of read `Driver` already does everywhere else (the strip, the
+/// snapshot text itself), never a fabricated string.
+const DELVE_SUCCESS_PREFIX: &str = "You worm down into the dark.";
 
 /// The plate's content height Driver assumes before the first real
 /// terminal size is known — [`hornvale_game_core::spread::content_height`]
@@ -242,6 +258,24 @@ pub struct Driver {
     world_view: bool,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
+    /// Every terrain cell the world's ledger commits at least one
+    /// settlement nearest to (The Portolan part II, Task 5) — built ONCE
+    /// here at `start`, the same "derive once, never per-turn" discipline
+    /// `index`/`nearest` already follow. Not itself a discovery record:
+    /// this is the plate's own point-site ROSTER (where a settlement
+    /// stands, ground truth, always known to the client that draws the
+    /// map), gated by [`Self::discovered`] at draw time, never here.
+    settlements: BTreeSet<CellId>,
+    /// Every walk-band room the possession has stood in this session
+    /// (spec Amendment 1 §A4a: "where have I been"). Never consulted by
+    /// [`Self::discovered`] and never consults it — see `discovery`'s
+    /// module doc for why that absence is load-bearing.
+    visited: Visited,
+    /// Every feature the possession has DISCOVERED this session (spec
+    /// Amendment 1 §A4b: "what do I know is there"). Updated only by
+    /// [`Self::update_discovery`], and only by encounter — never by mere
+    /// co-location with [`Self::visited`].
+    discovered: Discovered,
     /// The plate's REAL content height, in grid rows — synced from the live
     /// terminal by [`Driver::resize`] (fix round 2: an earlier revision
     /// used a floor-sized constant unconditionally here, which named the
@@ -370,6 +404,35 @@ impl Driver {
         let index = CellFeatureIndex::build(&features);
         let nearest = NearestCellIndex::new(&geo);
 
+        // The Portolan part II, Task 5: the point-site roster — every
+        // terrain cell a live settlement's own committed `(latitude,
+        // longitude)` resolves nearest to. Built once here, the same
+        // ledger read `h4_locked_worlds_settlements_are_never_in_the_clamp`
+        // already exercises dev-only; this is the shipped-path use of it.
+        // Ground truth, never gated — [`plate::draw_with`] is where
+        // `discovered` decides whether a member of this set is ever drawn.
+        let settlements: BTreeSet<CellId> = world_ref
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .filter_map(|fact| {
+                let lat = match world_ref
+                    .ledger
+                    .value_of(fact.subject, hornvale_settlement::LATITUDE)
+                {
+                    Some(Value::Number(n)) => *n,
+                    _ => return None,
+                };
+                let lon = match world_ref
+                    .ledger
+                    .value_of(fact.subject, hornvale_settlement::LONGITUDE)
+                {
+                    Some(Value::Number(n)) => *n,
+                    _ => return None,
+                };
+                Some(nearest.nearest(&geo, lat, lon))
+            })
+            .collect();
+
         // The Portolan part II: the projection's central line is derived
         // from the world's own physics (spec §3.1), not assumed —
         // `TIDALLY_LOCKED` is committed only when the world's rotation
@@ -425,6 +488,9 @@ impl Driver {
             window,
             world_view: false,
             seed: world_ref.seed,
+            settlements,
+            visited: Visited::default(),
+            discovered: Discovered::default(),
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
             term_w: hornvale_game_core::MIN_WIDTH,
             term_h: hornvale_game_core::MIN_HEIGHT,
@@ -551,6 +617,8 @@ impl Driver {
             &self.window,
             plate_width,
             plate_height,
+            &self.settlements,
+            &self.discovered,
         )
     }
 
@@ -1114,7 +1182,9 @@ impl Driver {
     fn resolve_world_view(&self) -> Option<String> {
         let cell_id = self.world_view_cell();
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph)
+        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph, &|id| {
+            self.discovered.contains(FeatureId::Extent(id))
+        })
     }
 
     /// The walk band's own resolution chain, cursor position to the full
@@ -1148,7 +1218,9 @@ impl Driver {
             .nearest
             .nearest(&self.geo, coord.latitude, coord.longitude);
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph)
+        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph, &|id| {
+            self.discovered.contains(FeatureId::Extent(id))
+        })
     }
 
     /// The current turn's `vessel/session/v2` JSON — what `hornvale-game-
@@ -1205,6 +1277,72 @@ impl Driver {
             .snapshot()
             .map(|snap| snapshot_json(&snap))
             .unwrap_or_default();
+        self.update_discovery();
+    }
+
+    /// Update [`Self::visited`] and [`Self::discovered`] from the
+    /// possession's CURRENT state — called from [`Self::refresh`], the one
+    /// choke point that already updates `cached` on `start` and on every
+    /// `handle`. Two independent updates, kept structurally apart per the
+    /// `discovery` module's own doc:
+    ///
+    /// - **Visited (§A4a)**: record the possession's own walk-band room.
+    ///   Reading `session.agent()` here is licensed — `Driver` is
+    ///   documented as "the one place in `hornvale-game` allowed to know
+    ///   `Session`, `Agent`, or `WorldContext` exist" (the module doc); what
+    ///   this method never does is let a `RoomAddr`/`Agent` VALUE escape
+    ///   `Driver` itself — `visited`/`discovered` are plain fields this
+    ///   struct owns, queried only through [`Self::visited`]/
+    ///   [`Self::discovered`]'s own `bool`/reference-returning accessors.
+    /// - **Discovered, extent features (§A4b)**: every feature whose
+    ///   extent contains the possession's CURRENT terrain cell is
+    ///   discovered, by definition ("standing on a volcano IS meeting
+    ///   it"). [`CellFeatureIndex::at`] already returns every such feature
+    ///   at that cell, most-specific-first; ALL of them are recorded, not
+    ///   only the first, so standing on a volcano inside a landmass
+    ///   discovers both in the same step.
+    /// - **Discovered, point sites (§A4b, F9)**: a settlement is
+    ///   discovered when `enter` succeeds — read off the wire's own
+    ///   `band` tag (`hornvale_game_core::Spatial::Chamber`, a PLAIN
+    ///   schema type this crate already depends on, never a
+    ///   `Session`/`Knowledge` value) rather than any private `Session`
+    ///   field, which does not exist to read. A cave is discovered when
+    ///   `delve` succeeds — [`DELVE_SUCCESS_PREFIX`]'s own doc explains why
+    ///   the turn's own narration text is the only signal available for
+    ///   it. Both checks read `self.cached`, the same plain JSON string
+    ///   every other client read already uses.
+    fn update_discovery(&mut self) {
+        let position = self.session.agent().position.clone();
+        self.visited.record(position.clone());
+
+        let coord = position.coord();
+        let cell = self
+            .nearest
+            .nearest(&self.geo, coord.latitude, coord.longitude);
+        for id in self.index.at(cell) {
+            self.discovered.record(FeatureId::Extent(*id));
+        }
+
+        if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
+            if matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }) {
+                self.discovered.record(FeatureId::Settlement(cell));
+            }
+            if snap.narration.prose.starts_with(DELVE_SUCCESS_PREFIX) {
+                self.discovered.record(FeatureId::Cave(cell));
+            }
+        }
+    }
+
+    /// Every walk-band room the possession has stood in this session
+    /// (spec Amendment 1 §A4a). See the `discovery` module's own doc.
+    pub fn visited(&self) -> &Visited {
+        &self.visited
+    }
+
+    /// Every feature the possession has discovered this session (spec
+    /// Amendment 1 §A4b). See the `discovery` module's own doc.
+    pub fn discovered(&self) -> &Discovered {
+        &self.discovered
     }
 }
 
@@ -1471,7 +1609,9 @@ mod portolan_tests {
                 // own H3 claim (window/cursor state agrees with the
                 // resolver) is orthogonal to how many features get named.
                 let expected =
-                    resolve_chain_at(&d.index, expected_cell, d.seed, species, ph, morph);
+                    resolve_chain_at(&d.index, expected_cell, d.seed, species, ph, morph, &|id| {
+                        d.discovered.contains(FeatureId::Extent(id))
+                    });
 
                 let resolved = d.resolve_world_view();
                 assert_eq!(
@@ -1780,6 +1920,19 @@ mod portolan_tests {
             "sanity: the found cell is genuinely multi-feature"
         );
 
+        // Task 5's real discovery gate means MERELY POINTING the cursor at
+        // `cell` (what the search above does) no longer discovers anything
+        // — that is the whole point of the gate (co-location is not
+        // discovery, and even the cursor's own gaze is a form of
+        // co-location, not encounter). This test's own purpose is the
+        // chain's ORDER and CONTENT once every link IS discovered, which is
+        // orthogonal to the gate itself (H6b, elsewhere, is what tests the
+        // gate); simulate that every link has been encountered so the
+        // assertions below exercise what they always meant to.
+        for id in &stack {
+            d.discovered.record(FeatureId::Extent(*id));
+        }
+
         d.refresh_strip();
         let s = d
             .strip_text()
@@ -1988,6 +2141,204 @@ mod portolan_tests {
                 b.strip_offset(),
                 "two drivers given the identical action sequence must report the identical \
                  scroll offset -- a clock in the loop would risk this drifting"
+            );
+        }
+    }
+
+    // -- Task 5: discovery (H5, H6, H6b, H7) --------------------------------
+
+    /// H5 — the map is useful before it is complete: from a cold start,
+    /// before a single verb has been sent, the whole-planet plate still
+    /// draws BOTH a land glyph and an ocean glyph — a legible coastline,
+    /// not a monochrome blob. Task 5 adds POINT-SITE gating on top of the
+    /// terrain glyphs Task 2/3 already draw; this test's own job is only
+    /// to confirm that gating never degrades what was already there. The
+    /// stronger terrain-fidelity claim is Amendment 1's own H8
+    /// (§A10b/§A11, measured independently against a finer probe) — out
+    /// of this task's scope to re-litigate.
+    #[test]
+    fn h5_the_map_is_useful_before_it_is_complete() {
+        let d = test_driver();
+        let g = d.world_plate(40, 20);
+        let text = g.to_plain_text();
+        // `~` ocean, `.` land — plate.rs's own module doc names this
+        // vocabulary; hardcoded here rather than widening that module's
+        // private surface for two already-documented characters.
+        assert!(
+            text.contains('~'),
+            "a cold-start plate must still show ocean: {text:?}"
+        );
+        assert!(
+            text.contains('.'),
+            "a cold-start plate must still show land: {text:?}"
+        );
+    }
+
+    /// H6 — discovery is monotonic: once a feature is discovered, it
+    /// stays discovered for the rest of the session, through further real
+    /// turns. The possession's own starting cell discovers whatever
+    /// extent features it stands on immediately (§A4b: standing on the
+    /// ground IS meeting it) — this test walks several real turns after
+    /// that and confirms nothing already known is ever un-known. The
+    /// OTHER direction ("nothing is named before it is encountered") is
+    /// H6b's own claim, checked there against a feature genuinely never
+    /// encountered.
+    #[test]
+    fn h6_discovery_is_monotonic() {
+        let mut d = test_driver();
+
+        let start_coord = d.session.agent().position.coord();
+        let start_cell = d
+            .nearest
+            .nearest(&d.geo, start_coord.latitude, start_coord.longitude);
+        let stack: Vec<_> = d.index.at(start_cell).to_vec();
+        assert!(
+            !stack.is_empty(),
+            "sanity: seed 42's flagship starts within at least one extent feature"
+        );
+
+        for id in &stack {
+            assert!(
+                d.discovered.contains(FeatureId::Extent(*id)),
+                "the starting cell's own extent features must be discovered from turn one"
+            );
+        }
+
+        for dir in ["go n", "go s", "go e", "go w"] {
+            d.handle(dir);
+            for id in &stack {
+                assert!(
+                    d.discovered.contains(FeatureId::Extent(*id)),
+                    "a feature discovered earlier must stay discovered after {dir:?}"
+                );
+            }
+        }
+    }
+
+    /// H6b — co-location does not disclose. **The test this task exists
+    /// for.** Seed 42's flagship starts at a cell where `enter` succeeds
+    /// immediately (established elsewhere by
+    /// `strip_offset_stays_zero_when_the_text_fits_the_plate`) — i.e. a
+    /// real settlement cell — so this needs no hand-built world. The
+    /// possession walks PAST it (several real `go` turns, in and out)
+    /// without ever issuing `enter`, and the settlement must stay
+    /// undiscovered — checked against the real `Discovered` state AND
+    /// against the actually-rendered plate at EVERY zoom rung, since
+    /// coarse zoom is where the temptation to leak lives. A positive
+    /// control on a fresh, identically-seeded driver proves the mechanism
+    /// can fire at all, so the negative checks above are not vacuous.
+    #[test]
+    fn h6b_co_location_does_not_disclose_a_settlement() {
+        let mut d = test_driver();
+
+        let start = d.session.agent().position.clone();
+        let coord = start.coord();
+        let cell = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
+        assert!(
+            d.settlements.contains(&cell),
+            "sanity: seed 42's flagship starts at a settlement cell"
+        );
+        let site = FeatureId::Settlement(cell);
+
+        // We were there — `Visited` records the starting room the instant
+        // `Driver::start` runs its own initial `refresh`, before any
+        // movement at all.
+        assert!(
+            d.visited.contains_at_rung(&start, start.depth()),
+            "the possession's own starting room must read as visited"
+        );
+        assert!(
+            !d.discovered.contains(site),
+            "merely starting at a settlement cell must not discover it"
+        );
+
+        // Walk PAST it: several real `go` turns, in and out — never
+        // `enter`. Not every bearing has an exit at every room reached,
+        // so several are tried; the assertion holds after each one
+        // regardless of whether that particular bearing moved anything.
+        for dir in ["go n", "go s", "go e", "go w", "go n", "go s"] {
+            d.handle(dir);
+            assert!(
+                !d.discovered.contains(site),
+                "walking without entering must never discover the settlement (after {dir:?})"
+            );
+        }
+
+        // At EVERY zoom rung the plate can draw, the settlement's glyph
+        // must never appear — never drawn, not drawn-then-hidden (§A3/A7).
+        for zoom in 0..=plate::MAX_ZOOM {
+            d.window = Window {
+                zoom,
+                origin_col: 0,
+                origin_row: 0,
+            };
+            let g = d.world_plate(40, 20);
+            assert!(
+                !g.to_plain_text().contains(plate::SETTLEMENT_GLYPH),
+                "co-location leaked at zoom rung {zoom}: the settlement's glyph appeared \
+                 on an undiscovered map"
+            );
+        }
+
+        // Positive control, on a FRESH identically-seeded driver: `enter`
+        // from this exact starting position DOES discover the settlement
+        // — proving the negative checks above are not vacuous.
+        let mut fresh = test_driver();
+        let fresh_coord = fresh.session.agent().position.coord();
+        let fresh_cell =
+            fresh
+                .nearest
+                .nearest(&fresh.geo, fresh_coord.latitude, fresh_coord.longitude);
+        assert_eq!(
+            fresh_cell, cell,
+            "sanity: two seed-42 flagships start at the identical cell"
+        );
+        fresh.handle("enter");
+        assert!(
+            fresh.discovered.contains(FeatureId::Settlement(fresh_cell)),
+            "sanity: `enter` must actually discover the settlement it succeeds at"
+        );
+    }
+
+    /// H7 — the gate costs nothing in the ledger: a possession that opens
+    /// the world map and interacts with it produces a BYTE-IDENTICAL
+    /// sequence of `vessel/session/v2` snapshots to one that takes the
+    /// identical real turns and never touches the map at all.
+    /// `Visited`/`Discovered` never call into `self.session` except
+    /// through accessors the client already reads elsewhere
+    /// (`session.agent()`), so this is expected to hold by construction —
+    /// this test is the preregistered evidence, not a tuning knob. A
+    /// difference here is a STOP (spec Amendment 1's own H7 doc), not
+    /// something to patch.
+    #[test]
+    fn h7_the_map_gate_costs_nothing_in_the_ledger() {
+        let mut plain = test_driver();
+        let mut mapped = test_driver();
+        assert_eq!(
+            plain.cached, mapped.cached,
+            "sanity: two seed-42 flagships start identically"
+        );
+
+        for dir in ["go n", "go s", "go e", "go w", "go n", "go s"] {
+            // Pure client-side map interaction between every real turn —
+            // none of it may touch the session.
+            mapped.enter_map();
+            mapped.apply(Action::Zoom(-1));
+            mapped.apply(Action::CursorBy(5, 3));
+            mapped.apply(Action::Recentre);
+            for _ in 0..plate::MAX_ZOOM {
+                mapped.apply(Action::Zoom(1));
+            }
+            let _ = mapped.world_plate(40, 20);
+            let _ = mapped.resolve_world_view();
+
+            plain.handle(dir);
+            mapped.handle(dir);
+
+            assert_eq!(
+                plain.cached, mapped.cached,
+                "opening and using the world map must never change what the session \
+                 reports for the identical real turn {dir:?}"
             );
         }
     }
