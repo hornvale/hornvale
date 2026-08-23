@@ -33,7 +33,7 @@
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Band, CellId, Seed};
 
-use crate::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, floors_in_run};
+use crate::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, levels_in_branch};
 
 /// Which kind of inhabitant one branch carries, for its whole depth (spec
 /// B.5). Deliberately small: a generic cave plus two named alternatives,
@@ -145,17 +145,17 @@ pub fn parse_barrier_pin(s: &str, pins: &mut BarrierPins) -> Result<(), String> 
     Ok(())
 }
 
-/// Where a non-main-line branch roots on its parent (spec C.2): a floor of
+/// Where a non-main-line branch roots on its parent (spec C.2): a level of
 /// the main line — the parent every side-branch hangs off today — named by
-/// band rank and floor index. Both are coordinates the parent actually
-/// realizes ([`floors_in_run`]); [`root_floor_of`] refuses to name a
+/// band rank and level index. Both are coordinates the parent actually
+/// realizes ([`levels_in_branch`]); [`root_floor_of`] refuses to name a
 /// dangling one.
 /// type-audit: bare-ok(index: band), bare-ok(index: floor)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BranchRoot {
     /// Which delve-ladder rank of the main line this branch descends from.
     pub band: u8,
-    /// Which floor of that run the junction sits at (`0..floors_in_run` of
+    /// Which level of that run the junction sits at (`0..levels_in_branch` of
     /// the parent run).
     pub floor: u8,
 }
@@ -198,13 +198,21 @@ pub fn character_of(seed: Seed, cell: CellId, entrance: u8, branch: u8) -> Chara
 
 /// The branch-level projection of [`character_of`] onto a full chamber
 /// address: the character is a property of the BRANCH, so `band` and
-/// `floor` are dropped here, in one place, rather than ignored by every
+/// `level` are dropped here, in one place, rather than ignored by every
 /// caller. Every address of one branch therefore resolves to the same
 /// character — the coherence guarantee
 /// `one_branch_has_one_character_for_its_whole_depth` holds by watching
 /// this function, which is the only place it could break.
+///
+/// **Passes a literal `0` where `addr.entrance` used to travel** (The Drift,
+/// amendment A.3): `ChamberAddr` no longer carries an entrance, and
+/// `character_of` has not yet gained a band in its place — that re-keying is
+/// Task 5's (see `crate::chamber::chamber_exists`'s own doc for the same
+/// transitional shape). Every address now resolves against entrance 0's
+/// branch-character lattice, which is amendment A's end state: one system,
+/// one shared set of branches.
 pub fn character_at(seed: Seed, addr: ChamberAddr) -> Character {
-    character_of(seed, addr.cell, addr.entrance, addr.branch)
+    character_of(seed, addr.cell, 0, addr.branch)
 }
 
 /// How thin one branch's barrier is — the derived default behind
@@ -322,16 +330,21 @@ pub fn root_floor_of(seed: Seed, cell: CellId, entrance: u8, branch: u8) -> Opti
     if branch == 0 || branch >= BRANCHES_PER_SYSTEM {
         return None;
     }
+    // `entrance` still travels this function's OWN `BRANCH_ROOT` derivation
+    // below (Task 5's re-keying, not this task's), but The Drift dropped it
+    // from `RunAddr` — see `crate::chamber::chamber_exists`'s own doc for the
+    // same transitional shape — so the parent-realization probe just below
+    // no longer takes it.
     let parent_realizes: Vec<(u8, u8)> = habitation_ranks()
         .into_iter()
-        .map(|band| {
+        .map(|rank| {
+            let band = Band::from_rank(rank).expect("habitation_ranks() only yields real ranks");
             (
-                band,
-                floors_in_run(
+                rank,
+                levels_in_branch(
                     seed,
                     RunAddr {
                         cell,
-                        entrance,
                         branch: 0,
                         band,
                     },
@@ -475,7 +488,7 @@ mod tests {
         for (cell, entrance, branch, expected) in [
             (9u32, 0u8, 3u8, Some(BranchRoot { band: 1, floor: 5 })),
             (0, 1, 1, Some(BranchRoot { band: 1, floor: 1 })),
-            (17, 0, 2, Some(BranchRoot { band: 1, floor: 4 })),
+            (17, 0, 2, Some(BranchRoot { band: 1, floor: 0 })),
             (5, 0, 1, Some(BranchRoot { band: 0, floor: 3 })),
         ] {
             assert_eq!(
@@ -609,14 +622,14 @@ mod tests {
                 .derive(StreamLabel::dynamic(&branch_key(cell, e, b)))
                 .stream();
             let parent_counts: Vec<(u8, u8)> = (0..5u8)
-                .map(|band| {
+                .map(|rank| {
+                    let band = Band::from_rank(rank).expect("0..5u8 are all real habitation ranks");
                     (
-                        band,
-                        floors_in_run(
+                        rank,
+                        levels_in_branch(
                             seed,
                             RunAddr {
                                 cell,
-                                entrance: e,
                                 branch: 0,
                                 band,
                             },

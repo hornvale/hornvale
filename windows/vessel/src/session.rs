@@ -2166,10 +2166,9 @@ impl<'w> Session<'w> {
     fn delve_at(&mut self, cell: hornvale_kernel::CellId, cave: hornvale_terrain::Cave) -> Turn {
         let addr = hornvale_worldgen::chamber::ChamberAddr {
             cell,
-            entrance: 0,
-            band: 0,
+            band: hornvale_kernel::Band::Undercroft,
             branch: 0,
-            floor: 0,
+            level: 0,
         };
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
         // The chamber lattice is placed by HEAT since `chamber/v2` (spec
@@ -5806,10 +5805,9 @@ mod tests {
             let cave = terrain.cave_at(cell)?;
             let addr = hornvale_worldgen::chamber::ChamberAddr {
                 cell,
-                entrance: 0,
-                band: 0,
+                band: hornvale_kernel::Band::Undercroft,
                 branch: 0,
-                floor: 0,
+                level: 0,
             };
             let is_open = hornvale_worldgen::chamber::chamber_at(
                 seed,

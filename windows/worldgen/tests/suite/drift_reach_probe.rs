@@ -26,21 +26,15 @@
 //!
 //! **ONE WALK PER SYSTEM, FROM THE UNION OF ITS OPEN MOUTHS — never a sum of
 //! per-entrance walks.** Two mouths into one lattice reach overlapping sets,
-//! and adding them counts a level twice. The Stope's committed witness was
-//! double-count-safe only incidentally: `passages_from` propagates
-//! `addr.entrance` unchanged (`..addr` in every candidate), so a walk seeded
-//! at entrance *e* never leaves entrance *e*'s sublattice, and The Drift makes
-//! entrances vary. The union is written once, in [`reachable_union`], and both
-//! shares read off it.
-//!
-//! **The hazard is INERT in today's tree, and saying so is the point.**
-//! `entrance_mouth` yields exactly one mouth per entrance index, and a walk
-//! cannot leave its entrance's sublattice, so today the union and a naive sum
-//! agree exactly — the union code is written for the world The Drift is about
-//! to build, not for the one it measures. A reader must not take this probe's
-//! green as evidence that the union is currently doing work; it is not, and
-//! the check that would notice a regression (`reachable <= levels`) is
-//! correspondingly weak until §4's entrances address one shared lattice.
+//! and adding them counts a level twice. Before The Drift (Task 4, spec
+//! amendment A.3) the union was written for a hazard this file called
+//! INERT — `passages_from` propagated `addr.entrance` unchanged, so a walk
+//! seeded at entrance *e* could never leave entrance *e*'s own sublattice,
+//! and the union agreed with a naive sum by construction. **That hazard is
+//! now LIVE.** `entrance` left `ChamberAddr` entirely, so every mouth of a
+//! system addresses INTO the same shared lattice, and two mouths' walks
+//! routinely overlap — summing them would double-count. The union is
+//! written once, in [`reachable_union`], and both shares read off it.
 //!
 //! **A mouth is OPEN when the level it names exists.** That is exactly what
 //! `docs/audits/underworld-lattice-seed-panel.md` counts as an "open
@@ -50,24 +44,37 @@
 //! committed artifact's are the same predicate, and the two are comparable
 //! line for line.
 //!
-//! # THE DENOMINATOR IS THE WHOLE DRAWN ENTRANCE POPULATION, NOT ENTRANCE 0
+//! # THE DENOMINATOR IS THE SYSTEM'S ONE SHARED LATTICE, NOT A SUM OVER ENTRANCES
 //!
-//! This is the one definitional choice in the file that could have gone the
-//! other way, so it is stated rather than implied. A system draws
-//! `entrance_count` apertures, and `chamber_exists` gates on
-//! `branch_count_of(seed, cell, addr.entrance)`, `floors_in_run` over an
-//! address carrying `entrance`, and a per-address existence stream that also
-//! carries it. **Each entrance therefore realizes its own sublattice**, and
-//! the committed witness sums existence over `0..drawn_entrances` — which is
-//! how seed 42 reaches 21,328 levels across 874 systems (24.4 per system,
-//! exactly the figure spec §6 reports) from 1,229 drawn entrances.
+//! **This section used to argue the opposite, and the reversal is the whole
+//! story of Task 4.** Before The Drift, `chamber_exists` gated on
+//! `branch_count_of(seed, cell, addr.entrance)` and every per-address stream
+//! carried `entrance`, so each entrance realized its OWN private sublattice —
+//! the committed witness summed existence over `0..drawn_entrances`, which is
+//! how seed 42 reached 21,328 (pre-Task-1) or 42,820 (post-Task-1, pre-Task-4)
+//! levels from 1,229 drawn entrances. Task 0's baseline measured this and
+//! Nathan's ruling (spec amendment A) found it could not express the
+//! campaign's own worked example — two doors into ONE Spider Cave.
 //!
-//! Counting only entrance 0 would give a denominator about 874/1229 of that
-//! and would NOT be comparable to the number that occasioned this campaign.
-//! So this probe walks every drawn entrance. The entrance-0 sublattice is
-//! *also* reported on its own line (`head-lattice only`), because a walk never
-//! crosses the entrance axis, which makes that pair a self-consistent
-//! secondary reading rather than a ratio of mismatched populations.
+//! So `entrance` left `ChamberAddr` and `RunAddr` entirely (amendment A.3).
+//! `levels` below is now the size of the system's ONE shared lattice, walked
+//! ONCE regardless of how many entrances open into it — see [`read_system`].
+//! Entrances survive only as which aperture a mouth resolves through
+//! ([`entrance_count`], [`entrance_mouth`]); they no longer size the
+//! population at all. This is why `levels` FELL from Task 1's 42,820 to
+//! 30,272 on seed 42 even though nothing about the terrain or the existence
+//! gate changed — a sum over per-entrance sublattices became a single
+//! lattice's own size, which is smaller by construction whenever a system
+//! draws more than one entrance. **Report this as a structural consequence
+//! of amendment A.5, never as a regression**: the spec named this move in
+//! advance for exactly this reason.
+//!
+//! **No more "head-lattice only" secondary reading.** It used to report the
+//! entrance-0 sublattice alone, which was a distinct, smaller population than
+//! the whole system's summed reading. With one shared lattice per system that
+//! secondary reading is now definitionally identical to `levels`/`reachable`
+//! themselves, so keeping it would print the same two numbers twice under a
+//! different label — see [`SystemReach`]'s own doc.
 //!
 //! # MEASURED VALUES — BEFORE, 2026-08-23, tree at `campaign/the-drift` prior to Task 1
 //!
@@ -77,21 +84,18 @@
 //!   systems with an open mouth 450
 //!   per-system reachable share   p10 3.70%   median 12.50%   p90 57.14%
 //!   whole-world reachable share  7.01%   (1496 of 21328)
-//!   head-lattice only            7.73%   (1158 of 14976)
 //!   levels per system            mean 24.40   p10 4   median 17   p90 54
 //! seed 7
 //!   systems 1681   levels 42131   reachable 3277   entrances 2382 drawn / 1070 open
 //!   systems with an open mouth 940
 //!   per-system reachable share   p10 3.74%   median 13.04%   p90 50.00%
 //!   whole-world reachable share  7.78%   (3277 of 42131)
-//!   head-lattice only            8.33%   (2462 of 29559)
 //!   levels per system            mean 25.06   p10 4   median 17   p90 57
 //! seed 1234
 //!   systems 1266   levels 36393   reachable 2493   entrances 1813 drawn / 831 open
 //!   systems with an open mouth 715
 //!   per-system reachable share   p10 3.23%   median 11.11%   p90 40.00%
 //!   whole-world reachable share  6.85%   (2493 of 36393)
-//!   head-lattice only            7.57%   (1905 of 25165)
 //!   levels per system            mean 28.75   p10 6   median 20   p90 64
 //! ```
 //!
@@ -103,8 +107,8 @@
 //! every seed's per-system median sat an order of magnitude under §6's 95%
 //! intent. The pre-change world was not marginal on either quantity.
 //!
-//! # MEASURED VALUES — AFTER, 2026-08-23, Task 1 (`chamber_exists`'s existence
-//! # coin deleted, spec §4.1)
+//! # MEASURED VALUES — AFTER TASK 1, 2026-08-23 (`chamber_exists`'s existence
+//! # coin deleted, spec §4.1) — SUPERSEDED BELOW, kept for the movement record
 //!
 //! ```text
 //! seed 42
@@ -112,39 +116,67 @@
 //!   systems with an open mouth 874
 //!   per-system reachable share   p10 83.87%   median 100.00%   p90 100.00%
 //!   whole-world reachable share  91.41%   (39140 of 42820)
-//!   head-lattice only            100.00%   (30100 of 30100)
 //!   levels per system            mean 48.99   p10 9   median 34   p90 105
 //! seed 7
 //!   systems 1681   levels 84424   reachable 78677   entrances 2382 drawn / 2155 open
 //!   systems with an open mouth 1681
 //!   per-system reachable share   p10 85.85%   median 100.00%   p90 100.00%
 //!   whole-world reachable share  93.19%   (78677 of 84424)
-//!   head-lattice only            100.00%   (59056 of 59056)
 //!   levels per system            mean 50.22   p10 9   median 33   p90 112
 //! seed 1234
 //!   systems 1266   levels 72304   reachable 66986   entrances 1813 drawn / 1636 open
 //!   systems with an open mouth 1266
 //!   per-system reachable share   p10 84.27%   median 100.00%   p90 100.00%
 //!   whole-world reachable share  92.64%   (66986 of 72304)
-//!   head-lattice only            100.00%   (49970 of 49970)
 //!   levels per system            mean 57.11   p10 12   median 39   p90 128
 //! ```
 //!
-//! **Seed 42 moved from 1,496 reachable of 21,328 (7.01%) to 39,140 of 42,820
-//! (91.41%) — levels itself roughly doubled (the coin used to also suppress
-//! about half of every drawn floor from EXISTING at all, not only from being
-//! reached) and the reachable count grew 26.2x.** Every seed now clears BOTH
-//! of spec §6's preregistered intents: per-system median is 100.00% on all
-//! three (the intent is a median at or above 95%), and the whole-world share
-//! is 91.41-93.19% (the intent is at or above 90%). `systems with an open
-//! mouth` now equals `systems` exactly on every seed — deleting the coin
-//! means an entrance's own mouth address can no longer be the one floor that
-//! failed to exist. This is the campaign's first measured result and it
-//! lands squarely on the intent, not merely past the 50% floor spec §6 also
-//! names.
+//! Seed 42 moved from 1,496 reachable of 21,328 (7.01%) to 39,140 of 42,820
+//! (91.41%) after Task 1 — levels itself roughly doubled (the coin used to
+//! also suppress about half of every drawn floor from EXISTING at all, not
+//! only from being reached) and the reachable count grew 26.2x. Every seed
+//! cleared both of spec §6's preregistered intents there for the first time.
+//!
+//! # MEASURED VALUES — AFTER TASK 4, 2026-08-23 (`entrance` dropped from the
+//! # address, spec amendment A.3) — THE CURRENT TREE
+//!
+//! ```text
+//! seed 42
+//!   systems 874    levels 30272   reachable 30272   entrances 1229 drawn / 1154 open
+//!   systems with an open mouth 874
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (30272 of 30272)
+//!   levels per system            mean 34.64   p10 8   median 28   p90 68
+//! seed 7
+//!   systems 1681   levels 60119   reachable 60119   entrances 2382 drawn / 2250 open
+//!   systems with an open mouth 1681
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (60119 of 60119)
+//!   levels per system            mean 35.76   p10 8   median 29   p90 75
+//! seed 1234
+//!   systems 1266   levels 49002   reachable 49002   entrances 1813 drawn / 1728 open
+//!   systems with an open mouth 1266
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (49002 of 49002)
+//!   levels per system            mean 38.71   p10 9   median 31   p90 76
+//! ```
+//!
+//! **Seed 42: `levels` FELL from 42,820 (Task 1) to 30,272, and `reachable`
+//! ROSE to meet it exactly — 30,272 of 30,272, 100.00%.** This is the shape
+//! spec amendment A.5 predicted in advance: "the count falls for a reason
+//! that has nothing to do with the deleted coin," because 21,328/42,820 were
+//! sums over private per-entrance sublattices and 30,272 is one shared
+//! lattice's own size. **All three panel seeds now read EXACTLY 100.00% on
+//! both arms** — per-system median and whole-world share both at the
+//! ceiling, not merely past spec §6's 95%/90% intents. `entrances` (the
+//! drawn aperture count) is unchanged from Task 1 on every seed, because
+//! `entrance_count` is untouched by this task; `open entrances` rose
+//! slightly (1101->1154 on seed 42) because a mouth now resolves against the
+//! system's ONE shared lattice rather than its own entrance's private one,
+//! which is strictly more permissive.
 //!
 //! Wall time for the whole probe (three `BuildDepth::Terrain` worlds and
-//! ~1.6M `chamber_exists` calls) is ~1.4 s in the optimized test profile.
+//! ~1.6M `chamber_exists` calls) is ~1.5 s in the optimized test profile.
 //! It is `#[ignore]`d anyway, with the same reason every live-worldgen battery
 //! in this suite carries: the cost that matters is the world build, and the
 //! commit gate does not pay for those (decision 0132).
@@ -163,10 +195,10 @@
 use std::collections::BTreeSet;
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Band, CellId, Seed};
 use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins, rungs};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, FLOORS_PER_RUN_CEILING, chamber_exists, entrance_count,
+    BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
     entrance_mouth, passages_from, rung_rank,
 };
 use hornvale_worldgen::{
@@ -181,24 +213,25 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// triple the committed witness `docs/audits/underworld-lattice-seed-panel.md`
 /// renders, re-baselined once already.
 ///
-/// **Pinned as an equality on purpose, and it has now broken once, exactly as
-/// designed.** Before Task 1 landed this held `(21328, 1496, 511)` — spec
-/// §1's opening figure, reproduced here as a pin so a future run's departure
-/// from it would be caught rather than silently absorbed. The Drift's Task 1
-/// (spec §4.1) then deleted `chamber_exists`'s existence coin, which is
-/// exactly the change this pin exists to be broken by; the module's own
-/// "MEASURED VALUES — AFTER" block above records the new triple and the
-/// movement in full. The pin was updated to `(42820, 39140, 1101)` in the
-/// same commit as the deletion, per this campaign's own rule that a
-/// re-baselining is a deliberate, reported act rather than a quiet number
-/// change. A move from any OTHER cause from here on — a terrain change, a
-/// stream relabelling, a lattice constant — is a determinism finding, and
-/// this equality still catches that.
+/// **Pinned as an equality on purpose, and it has now broken twice, exactly
+/// as designed.** Before Task 1 landed this held `(21328, 1496, 511)` —
+/// spec §1's opening figure. Task 1 (spec §4.1) deleted `chamber_exists`'s
+/// existence coin and moved it to `(42820, 39140, 1101)`. **Task 4 (spec
+/// amendment A.3) moved it a second time, to `(30272, 30272, 1154)`**:
+/// dropping `entrance` from `ChamberAddr` collapses each system's
+/// per-entrance sublattices into ONE shared lattice, so `levels` fell (a
+/// structural consequence of amendment A.5, not a regression — see this
+/// module's header) while `reachable` rose to EXACTLY equal it: every one of
+/// the three panel seeds now reads 100.00% whole-world reachable, not merely
+/// past spec §6's 90% intent but at its ceiling. The module's own "MEASURED
+/// VALUES" block records the movement in full. A move from any OTHER cause
+/// from here on — a terrain change, a stream relabelling, a lattice constant
+/// — is a determinism finding, and this equality still catches that.
 ///
 /// A band was considered and rejected: this is not a noisy statistic but a
 /// deterministic count over a fixed seed, and a band around a deterministic
 /// count only buys room for an undetected change.
-const SEED_42_BASELINE: (usize, usize, usize) = (42820, 39140, 1101);
+const SEED_42_BASELINE: (usize, usize, usize) = (30272, 30272, 1154);
 
 /// The habitation band ranks, ascending — **derived from the delve ladder**
 /// through the shipped [`rung_rank`], never restated as a literal range.
@@ -274,23 +307,26 @@ fn reachable_union(
 }
 
 /// One cave system's reading.
+///
+/// **No more "head-lattice only" secondary reading** (The Drift, amendment
+/// A.3). Before this campaign each entrance realized its own private
+/// sublattice, so "the entrance-0 sublattice alone" was a distinct, smaller
+/// population than the whole system — the pair this struct used to carry as
+/// `levels_head`/`reachable_head`. With `entrance` gone from `ChamberAddr`
+/// there is exactly ONE lattice per system, so that secondary reading is now
+/// definitionally identical to `levels`/`reachable` and carries no
+/// information a reader could not already see; keeping it would print the
+/// same two numbers twice under different labels.
 #[derive(Clone, Copy, Debug, Default)]
 struct SystemReach {
     /// Apertures this system draws, whether or not they open onto anything.
     drawn_mouths: usize,
     /// Apertures whose named level exists — the witness's "open entrances".
     open_mouths: usize,
-    /// Levels that exist, summed over every drawn entrance's sublattice.
+    /// Levels that exist in this system's ONE shared lattice.
     levels: usize,
     /// Levels reached by one walk from the union of the open mouths.
     reachable: usize,
-    /// The same two counts restricted to entrance 0's sublattice — the
-    /// secondary reading described in this module's header.
-    levels_head: usize,
-    /// Levels of entrance 0's sublattice reached by the union walk. A walk
-    /// never crosses the entrance axis, so this equals the walk from the head
-    /// mouth alone whenever that mouth is open, and 0 when it is shut.
-    reachable_head: usize,
 }
 
 /// Read one cave system through the shipped entry points only.
@@ -303,29 +339,26 @@ fn read_system(
 ) -> SystemReach {
     let entrances = entrance_count(seed, cell);
 
-    // EXISTENCE, over the whole drawn entrance population. Bounded by the
-    // LATTICE's own ceilings, never by a run's drawn length: bounding by the
-    // draw would make `chamber_exists`'s floor gate unfalsifiable here, the
-    // same trap `underworld_readout`'s module doc records.
+    // EXISTENCE, over the system's ONE shared lattice — walked once, not once
+    // per drawn entrance (The Drift, amendment A.3: every entrance now
+    // addresses INTO the same lattice, rather than realizing its own).
+    // Bounded by the LATTICE's own ceilings, never by a run's drawn length:
+    // bounding by the draw would make `chamber_exists`'s level gate
+    // unfalsifiable here, the same trap `underworld_readout`'s module doc
+    // records.
     let mut levels = 0usize;
-    let mut levels_head = 0usize;
-    for entrance in 0..entrances {
-        for &band in ranks {
-            for branch in 0..BRANCHES_PER_SYSTEM {
-                for floor in 0..FLOORS_PER_RUN_CEILING {
-                    let addr = ChamberAddr {
-                        cell,
-                        entrance,
-                        branch,
-                        band,
-                        floor,
-                    };
-                    if chamber_exists(seed, cave, gradient, addr) {
-                        levels += 1;
-                        if entrance == 0 {
-                            levels_head += 1;
-                        }
-                    }
+    for &rank in ranks {
+        let band = Band::from_rank(rank).expect("ranks come from habitation_ranks()");
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            for level in 0..LEVELS_PER_BRANCH_CEILING {
+                let addr = ChamberAddr {
+                    cell,
+                    branch,
+                    band,
+                    level,
+                };
+                if chamber_exists(seed, cave, gradient, addr) {
+                    levels += 1;
                 }
             }
         }
@@ -334,31 +367,30 @@ fn read_system(
     // THE MOUTHS. `EntranceMouth` is a plain struct of `branch`/`band`/`floor`
     // with no accessors, so the address is assembled from its fields; the
     // entrance index comes from the loop, because the mouth type does not
-    // carry the aperture it belongs to.
+    // carry the aperture it belongs to. Every mouth now resolves into the
+    // SAME shared lattice `levels` walked above.
     let mouths: Vec<ChamberAddr> = (0..entrances)
         .map(|entrance| {
             let mouth = entrance_mouth(seed, cell, entrance);
+            let band =
+                Band::from_rank(mouth.band).expect("entrance_mouth only names a habitation rank");
             ChamberAddr {
                 cell,
-                entrance,
                 branch: mouth.branch,
-                band: mouth.band,
-                floor: mouth.floor,
+                band,
+                level: mouth.floor,
             }
         })
         .filter(|&addr| chamber_exists(seed, cave, gradient, addr))
         .collect();
 
     let reached = reachable_union(seed, cave, gradient, &mouths);
-    let reachable_head = reached.iter().filter(|a| a.entrance == 0).count();
 
     SystemReach {
         drawn_mouths: usize::from(entrances),
         open_mouths: mouths.len(),
         levels,
         reachable: reached.len(),
-        levels_head,
-        reachable_head,
     }
 }
 
@@ -387,22 +419,12 @@ struct ReachSummary {
     /// Existing levels per system, ascending — §6's REPORTED, never gated,
     /// quantity.
     levels_per_system: Vec<usize>,
-    /// The entrance-0 sublattice's existing levels, world-wide.
-    levels_head: usize,
-    /// The entrance-0 sublattice's reachable levels, world-wide.
-    reachable_head: usize,
 }
 
 impl ReachSummary {
     /// §6's whole-world quantity: the share of all existing levels reachable.
     fn world_share(&self) -> f64 {
         share(self.reachable, self.levels)
-    }
-
-    /// The same restricted to entrance 0's sublattice — a self-consistent
-    /// secondary reading, since a walk never crosses the entrance axis.
-    fn head_share(&self) -> f64 {
-        share(self.reachable_head, self.levels_head)
     }
 
     /// Print the reading. Unconditional: a block read only on failure is a
@@ -435,12 +457,6 @@ impl ReachSummary {
             100.0 * self.world_share(),
             self.reachable,
             self.levels
-        );
-        println!(
-            "  head-lattice only            {:.2}%   ({} of {})",
-            100.0 * self.head_share(),
-            self.reachable_head,
-            self.levels_head
         );
         println!(
             "  levels per system            mean {:.2}   p10 {}   median {}   p90 {}",
@@ -512,8 +528,6 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
         systems_with_open_mouth: 0,
         per_system_share: Vec::new(),
         levels_per_system: Vec::new(),
-        levels_head: 0,
-        reachable_head: 0,
     };
 
     for cell in geo.cells() {
@@ -536,8 +550,6 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
         summary.open_entrances += sys.open_mouths;
         summary.levels += sys.levels;
         summary.reachable += sys.reachable;
-        summary.levels_head += sys.levels_head;
-        summary.reachable_head += sys.reachable_head;
         summary.levels_per_system.push(sys.levels);
         if sys.open_mouths > 0 {
             summary.systems_with_open_mouth += 1;

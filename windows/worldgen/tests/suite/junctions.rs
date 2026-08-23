@@ -44,7 +44,7 @@
 use hornvale_kernel::{Band, CellId, Geosphere, Seed};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, FLOORS_PER_RUN_CEILING, chamber_exists, entrance_count,
+    BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
     junctions_at, rung_rank,
 };
 use hornvale_worldgen::character::{bands_of, character_at};
@@ -55,7 +55,7 @@ use hornvale_worldgen::character::{bands_of, character_at};
 /// globe.
 const LEVEL: u32 = 6;
 
-/// How many systems `the_projection_ignores_entrance_branch_and_floor` walks
+/// How many systems `the_projection_ignores_branch_and_level` walks
 /// in full. A cost bound, not a claim about the population — that test's own
 /// doc says why, and its non-vacuity assertion fails if this is ever set so
 /// low that nothing is checked.
@@ -115,7 +115,7 @@ fn main_line_admits(
     seed: Seed,
     terrain: &GeneratedTerrain,
     cell: CellId,
-    rank: u8,
+    _rank: u8,
     rung: Band,
 ) -> bool {
     let Some(cave) = terrain.cave_at(cell) else {
@@ -123,10 +123,9 @@ fn main_line_admits(
     };
     let main = ChamberAddr {
         cell,
-        entrance: 0,
         branch: 0,
-        band: rank,
-        floor: 0,
+        band: rung,
+        level: 0,
     };
     if !chamber_exists(seed, &cave, terrain.geothermal_gradient_at(cell), main) {
         return false;
@@ -136,13 +135,12 @@ fn main_line_admits(
 
 /// The canonical address of one system at one band — what the whole panel
 /// scan asks from, and the only address shape `junctions_at` projects onto.
-fn canonical(cell: CellId, band: u8) -> ChamberAddr {
+fn canonical(cell: CellId, band: Band) -> ChamberAddr {
     ChamberAddr {
         cell,
-        entrance: 0,
         branch: 0,
         band,
-        floor: 0,
+        level: 0,
     }
 }
 
@@ -158,8 +156,8 @@ fn canonical(cell: CellId, band: u8) -> ChamberAddr {
 fn all_junction_edges(terrain: &GeneratedTerrain) -> Vec<(ChamberAddr, ChamberAddr)> {
     let mut edges = Vec::new();
     for cell in cave_cells(terrain) {
-        for &(rank, _) in &habitation_bands() {
-            let addr = canonical(cell, rank);
+        for &(_, rung) in &habitation_bands() {
+            let addr = canonical(cell, rung);
             for far in junctions_at(Seed(42), terrain, addr) {
                 edges.push((addr, far));
             }
@@ -199,7 +197,7 @@ fn a_junction_is_the_derivation_rule_and_nothing_else() {
             } else {
                 Vec::new()
             };
-            let shipped: Vec<CellId> = junctions_at(Seed(42), &terrain, canonical(cell, rank))
+            let shipped: Vec<CellId> = junctions_at(Seed(42), &terrain, canonical(cell, rung))
                 .iter()
                 .map(|a| a.cell)
                 .collect();
@@ -251,9 +249,8 @@ fn a_junction_never_crosses_a_band() {
     let geo = terrain.geosphere();
     for (a, b) in all_junction_edges(&terrain) {
         assert_eq!(b.band, a.band, "junction {a:?} -> {b:?} changed bands");
-        assert_eq!(b.entrance, 0, "junction endpoint left the main line");
         assert_eq!(b.branch, 0, "junction endpoint left the main line");
-        assert_eq!(b.floor, 0, "junction endpoint named a floor");
+        assert_eq!(b.level, 0, "junction endpoint named a level");
         assert_ne!(b.cell, a.cell, "a system joined itself");
         let neighbours: Vec<CellId> = geo.neighbors(a.cell).to_vec();
         assert!(
@@ -290,7 +287,7 @@ fn nowhere_has_no_junctions() {
             ..live
         },
         ChamberAddr {
-            floor: FLOORS_PER_RUN_CEILING,
+            level: LEVELS_PER_BRANCH_CEILING,
             ..live
         },
     ] {
@@ -301,22 +298,24 @@ fn nowhere_has_no_junctions() {
     }
 }
 
-/// The other half of the address convention: `entrance`, `branch` and
-/// `floor` are ignored by the PROJECTION. Every chamber of one system at one
-/// band stands on the same far side of the same doors, so any *existing*
-/// address of a system at a band gives the canonical address's answer.
+/// The other half of the address convention: `branch` and `level` are
+/// ignored by the PROJECTION (`entrance` left the address entirely — The
+/// Drift, amendment A.3 — so it is no longer one of these fields at all).
+/// Every chamber of one system at one band stands on the same far side of
+/// the same doors, so any *existing* address of a system at a band gives the
+/// canonical address's answer.
 ///
 /// Documented since the function was written and untested until review round
 /// 1 — which is how the existence half above went unnoticed underneath it.
 ///
 /// The scan is capped at [`PROJECTION_SYSTEMS`] systems rather than run over
 /// the whole panel: the address space it walks is
-/// `entrances x branches x floors` per band, which is three orders of
+/// `entrances x branches x levels` per band, which is three orders of
 /// magnitude more `junctions_at` calls than the panel scan the other tests
 /// pay for. The cap is a cost bound, and the assertion below fails if it ever
 /// bounds the sample down to nothing.
 #[test]
-fn the_projection_ignores_entrance_branch_and_floor() {
+fn the_projection_ignores_branch_and_level() {
     let terrain = panel_terrain();
     let mut checked = 0usize;
     for cell in cave_cells(&terrain).into_iter().take(PROJECTION_SYSTEMS) {
@@ -324,18 +323,21 @@ fn the_projection_ignores_entrance_branch_and_floor() {
             continue;
         };
         let gradient = terrain.geothermal_gradient_at(cell);
-        for &(rank, _) in &habitation_bands() {
-            let canon = canonical(cell, rank);
+        for &(_, rung) in &habitation_bands() {
+            let canon = canonical(cell, rung);
             let expected = junctions_at(Seed(42), &terrain, canon);
             // Any other EXISTING address of the same system at the same band,
-            // over all three of the fields the projection drops.
-            for entrance in 0..entrance_count(Seed(42), cell) {
+            // over both of the fields the projection drops. `entrance` is no
+            // longer one of them at all (The Drift, amendment A.3) — it left
+            // `ChamberAddr` entirely, so `entrance_count`'s draw is walked
+            // only to size the sweep the way it always did, not because it
+            // still names an address axis.
+            for _entrance in 0..entrance_count(Seed(42), cell) {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                    for level in 0..LEVELS_PER_BRANCH_CEILING {
                         let other = ChamberAddr {
-                            entrance,
                             branch,
-                            floor,
+                            level,
                             ..canon
                         };
                         if other == canon || !chamber_exists(Seed(42), &cave, gradient, other) {
@@ -363,20 +365,30 @@ fn the_projection_ignores_entrance_branch_and_floor() {
 /// every loop over bands — this file's and the readout's alike — now derives
 /// its bound from the ladder, which is correct and leaves this arm
 /// unexercised. So it is exercised here, deliberately.
+///
+/// **`Band::Surface` is the address to probe now, not a numeral past the
+/// ladder's end** (The Drift, Task 4): with `band` promoted from a bare rank
+/// to a typed [`Band`], there is no value past `Nadir` left to construct —
+/// every `Band` is a real rung. `Surface` is the one value the type still
+/// admits that names no habitation rank, which is exactly the shape this
+/// test needs.
 #[test]
 fn a_junction_past_the_ladder_is_empty() {
     let terrain = panel_terrain();
     let edges = all_junction_edges(&terrain);
     assert!(!edges.is_empty(), "seed 42 produced no junctions at all");
     let (live, _) = edges[0];
-    let past = habitation_bands()
-        .last()
-        .expect("the ladder has habitation rungs")
-        .0
-        + 1;
     assert!(
-        junctions_at(Seed(42), &terrain, ChamberAddr { band: past, ..live }).is_empty(),
-        "band {past} is past the ladder, yet it answered with junctions"
+        junctions_at(
+            Seed(42),
+            &terrain,
+            ChamberAddr {
+                band: Band::Surface,
+                ..live
+            }
+        )
+        .is_empty(),
+        "Band::Surface is not a habitation rung, yet it answered with junctions"
     );
 }
 
@@ -401,7 +413,7 @@ fn the_character_gate_actually_binds() {
         };
         let gradient = terrain.geothermal_gradient_at(cell);
         for &(rank, rung) in &habitation_bands() {
-            let main = canonical(cell, rank);
+            let main = canonical(cell, rung);
             // The chamber is there...
             if !chamber_exists(Seed(42), &cave, gradient, main) {
                 continue;

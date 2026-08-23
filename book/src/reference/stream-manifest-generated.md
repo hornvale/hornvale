@@ -213,8 +213,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
-| `chamber/v3` | the underworld chamber derivation, keyed on a delve-ladder address with a floor |
-| `chamber/run-floors/v1` | how many floors one run realizes, keyed on (cell, entrance, branch, band) |
+| `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
+| `chamber/run-floors/v2` | how many levels one run realizes, keyed on (cell, branch, band) |
 | `chamber/branch-character/v1` | which character one branch carries, keyed on (cell, entrance, branch) |
 | `chamber/branch-barrier/v1` | the barrier thinness of one branch, keyed on (cell, entrance, branch) |
 | `chamber/branch-count/v1` | how many branches one cave system realizes, keyed on (cell, entrance) |

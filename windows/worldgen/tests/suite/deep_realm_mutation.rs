@@ -89,7 +89,7 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 /// baking the ladder's shape into this helper too.
 ///
 /// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
-/// admits `FLOORS_PER_RUN_CEILING` floors per run, so this is 1/20 of the
+/// admits `LEVELS_PER_BRANCH_CEILING` floors per run, so this is 1/20 of the
 /// address space — and since Task 2's per-run floor draw, floor 0 is also the
 /// only floor EVERY run admits (every band's frozen range has a minimum of at
 /// least 1), which is what keeps the two arms below sampling the same
@@ -102,14 +102,13 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 /// do not read it as one.
 fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
-    for band in 0..BAND_LADDER.len() as u8 {
+    for &band in &BAND_LADDER {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
-                entrance: 0,
                 band,
                 branch,
-                floor: 0,
+                level: 0,
             };
             if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
@@ -132,7 +131,7 @@ fn deepest_reached(
     gradient: GeothermalGradient,
     cell: CellId,
 ) -> Option<Band> {
-    (0..BAND_LADDER.len() as u8).rev().find_map(|band| {
+    BAND_LADDER.iter().rev().find_map(|&band| {
         let reached = (0..BRANCHES_PER_SYSTEM).any(|branch| {
             chamber_exists(
                 seed,
@@ -140,14 +139,13 @@ fn deepest_reached(
                 gradient,
                 ChamberAddr {
                     cell,
-                    entrance: 0,
                     band,
                     branch,
-                    floor: 0,
+                    level: 0,
                 },
             )
         });
-        reached.then_some(BAND_LADDER[band as usize])
+        reached.then_some(band)
     })
 }
 

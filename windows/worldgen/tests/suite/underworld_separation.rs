@@ -784,14 +784,13 @@ fn the_separation_readout() {
             };
             caves += 1;
             let gradient = terrain.geothermal_gradient_at(cell);
-            for (rank, _) in ladder.iter().enumerate() {
+            for (rank, &band) in ladder.iter().enumerate() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     let addr = ChamberAddr {
                         cell,
-                        entrance: 0,
-                        band: rank as u8,
+                        band,
                         branch,
-                        floor: 0,
+                        level: 0,
                     };
                     if chamber_exists(seed, &cave, gradient, addr) {
                         *chamber_hist.entry(rank).or_default() += 1;

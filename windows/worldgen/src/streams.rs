@@ -28,19 +28,34 @@ hornvale_kernel::stream_labels! {
     /// [`crate::disposition`] for why that key, and not the settlement's
     /// `EntityId`, its `BakeId`, or its bare current `cell-id`.
     SETTLEMENT_DISPOSITION = "settlement/disposition/v1" => "the per-settlement disposition draw, keyed on the occupation's (site, founded-year)";
-    /// The underworld chamber derivation (The Deep Realm). Keyed on a
-    /// ChamberAddr — a place in a fixed lattice, never a generation
-    /// ordinal. `crate::chamber`'s private `chamber_key` is the one place
-    /// the composed key is spelled.
+    /// The underworld chamber derivation (The Deep Realm). Spelled by
+    /// `crate::chamber`'s private `chamber_key`, but **`chamber_key` is a
+    /// DISPLAY FORMATTER now, not a derivation key** (The Drift, spec
+    /// amendment A.6, correcting an earlier A.4 that got the mechanism
+    /// wrong): Task 1 deleted the chamber existence draw, the only
+    /// production reader of a stream composed under this label, so nothing
+    /// in a shipped world derives from `CHAMBER` any more. What actually
+    /// carries the underworld's seed-derivation key is [`RUN_FLOORS`] and
+    /// the three per-branch labels in `crate::character`
+    /// (`BRANCH_COUNT`/`BRANCH_CHARACTER`/`BRANCH_BARRIER`).
+    ///
+    /// **Stays at v3 through The Drift, deliberately** (amendment A.6): The
+    /// Drift dropped `entrance` from `ChamberAddr` (amendment A.3), which
+    /// does change `chamber_key`'s spelling — but since nothing derives from
+    /// it, bumping this label would record a discontinuity that never
+    /// happened through it, an **empty epoch**. `chamber_key`'s sole
+    /// production caller is `underworld_readout.rs`'s witness, which prints
+    /// it as a `key` column for a human to read.
     ///
     /// **Epoch v3 (The Stope, spec §3.1 and amendment B.3).** The ADDRESS
     /// changed shape, in three ways that each re-key every chamber and which
     /// therefore ride one epoch rather than three:
     ///
-    /// 1. `ChamberAddr` gained a **`floor`**, the rung the lattice was
-    ///    missing — a band used to be one interior-less point per column.
-    ///    A key that did not spell it would derive one stream for every floor
-    ///    of a run, which is to say the floors would all be one chamber.
+    /// 1. `ChamberAddr` gained a **`floor`** (since renamed `level`), the
+    ///    rung the lattice was missing — a band used to be one
+    ///    interior-less point per column. A key that did not spell it would
+    ///    derive one stream for every floor of a run, which is to say the
+    ///    floors would all be one chamber.
     /// 2. `slot` was renamed **`branch`** (spec §3.1: "slot reads as a
     ///    position and it is an identity"), and the key's field order changed
     ///    with it.
@@ -55,35 +70,36 @@ hornvale_kernel::stream_labels! {
     /// the surface datum rather than rock units.
     ///
     /// `chamber/v1` and `chamber/v2` are retired and must never be reused.
-    CHAMBER = "chamber/v3" => "the underworld chamber derivation, keyed on a delve-ladder address with a floor";
-    /// How many floors one **run** realizes — the floors of one `branch`
-    /// within one `band` (The Stope, Task 2; spec §3.1's per-band ranges).
-    /// Keyed on a [`crate::chamber::RunAddr`]: cell, entrance, branch and
-    /// band, a place in the fixed lattice and never a generation ordinal
-    /// (decision 0102).
+    CHAMBER = "chamber/v3" => "a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs";
+    /// How many levels one **run** (a branch's own place within one band)
+    /// realizes (The Stope, Task 2; spec §3.1's per-band ranges). Keyed on a
+    /// [`crate::chamber::RunAddr`]: cell, branch and band, a place in the
+    /// fixed lattice and never a generation ordinal (decision 0102).
+    ///
+    /// **Epoch v2 (The Drift, amendment A.3/A.6).** `entrance` dropped out of
+    /// `RunAddr` — every entrance of a system now addresses INTO the same
+    /// shared lattice rather than realizing its own private sublattice — and
+    /// this label is a LIVE production leg (`levels_in_branch` is
+    /// `chamber_exists`'s own floor gate), so the re-keying rides an epoch
+    /// rather than landing silently under `/v1`. `chamber/run-floors/v1` is
+    /// retired and must never be reused.
     ///
     /// **A SEPARATE ROOT LEG FROM [`CHAMBER`], AND THAT IS THE COLLISION
-    /// ARGUMENT.** A run key (`cell/entrance/branch/band`) is a strict prefix
-    /// of a chamber key (`cell/entrance/branch/band/floor`), so the two
-    /// strings can never be equal — but prefix-inequality is a property of
-    /// today's spelling, and a later campaign that made `floor` optional in
-    /// the key would break it silently. Deriving the run draw under its own
-    /// permanent label instead means the two dynamic legs hang off
-    /// **different parent seeds**, so even a byte-identical key string yields
-    /// a different stream. `the_run_leg_and_the_chamber_leg_cannot_collide`
-    /// in `crate::chamber` asserts exactly that, on the same string.
+    /// ARGUMENT.** A run key (`cell/branch/band`) is a strict prefix of a
+    /// chamber key (`cell/branch/band/level`), so the two strings can never
+    /// be equal — but prefix-inequality is a property of today's spelling,
+    /// and a later campaign that made `level` optional in the key would
+    /// break it silently. Deriving the run draw under its own permanent
+    /// label instead means the two dynamic legs hang off **different parent
+    /// seeds**, so even a byte-identical key string yields a different
+    /// stream. `the_run_leg_and_the_chamber_leg_cannot_collide` in
+    /// `crate::chamber` asserts exactly that, on the same string.
     ///
-    /// **Additive, not an epoch.** A new label derives its own independent
-    /// stream and perturbs no existing one, so `chamber/v3` stays and no
-    /// address relocates. What DOES change is which addresses exist: before
-    /// this leg every in-budget run admitted all
-    /// [`crate::chamber::FLOORS_PER_RUN_CEILING`] floors, and now it admits
-    /// the drawn count. That is a world change, carried by the gate rather
-    /// than by the key.
-    ///
-    /// The `/v1` suffix is the epoch discipline `settlement/name/v2` set:
-    /// re-shaping the run key later takes a `/v2`, never a rename.
-    RUN_FLOORS = "chamber/run-floors/v1" => "how many floors one run realizes, keyed on (cell, entrance, branch, band)";
+    /// What else changes with this leg: before it every in-budget run
+    /// admitted all [`crate::chamber::LEVELS_PER_BRANCH_CEILING`] levels, and
+    /// now it admits the drawn count. That is a world change, carried by the
+    /// gate rather than by the key.
+    RUN_FLOORS = "chamber/run-floors/v2" => "how many levels one run realizes, keyed on (cell, branch, band)";
     /// Which [`crate::character::Character`] one branch carries (The Stope,
     /// Task 3; spec B.4/B.5). Keyed on a **branch** — cell, entrance and
     /// branch, a place in the fixed lattice and never a generation ordinal

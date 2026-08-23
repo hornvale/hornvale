@@ -371,6 +371,17 @@ mod tests {
                 // PARENT and not by the observation that one key is a strict
                 // prefix of the other. See `windows/worldgen/src/streams.rs`'s
                 // `RUN_FLOORS`.
+                //
+                // **The Drift bumps it to v2** (spec amendment A.3/A.6):
+                // `entrance` left `RunAddr` entirely — an entrance is which
+                // aperture a player used, not a coordinate in a system's own
+                // lattice — so the key dropped a whole segment
+                // (`cell/branch/band` instead of `cell/entrance/branch/band`).
+                // Unlike `chamber v3` (a display formatter with no production
+                // reader, per A.6), this IS a live production leg —
+                // `levels_in_branch` is `chamber_exists`'s own drawn-length
+                // gate — so the re-keying rides a real epoch. `chamber/
+                // run-floors/v1` is retired and never reused.
                 "chamber/branch-barrier v1",
                 "chamber/branch-character v1",
                 "chamber/branch-count v1",
@@ -380,10 +391,12 @@ mod tests {
                 // Both additive NEW labels at v1, both keyed on stable
                 // lattice places (cell; cell + entrance index). See
                 // `windows/worldgen/src/streams.rs`'s ENTRANCE_COUNT /
-                // ENTRANCE_MOUTH.
+                // ENTRANCE_MOUTH. **Unaffected by The Drift**: an entrance
+                // survives amendment A.3 as exactly this — which aperture a
+                // player used — so these two legs keep their v1 keys.
                 "chamber/entrance-count v1",
                 "chamber/entrance-mouth v1",
-                "chamber/run-floors v1",
+                "chamber/run-floors v2",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.

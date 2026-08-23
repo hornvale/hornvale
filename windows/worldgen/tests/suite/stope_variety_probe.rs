@@ -65,11 +65,11 @@
 //! shipped access predicate, and its gates are, in order:
 //!
 //! 1. `branch >= BRANCHES_PER_SYSTEM` — the lattice ceiling.
-//! 2. `floor >= FLOORS_PER_RUN_CEILING` — the lattice ceiling.
+//! 2. `floor >= LEVELS_PER_BRANCH_CEILING` — the lattice ceiling.
 //! 3. `branch >= branch_count_of(..)` — C.1's drawn width.
 //! 4. **`band > rung_rank(rung_at_depth(cave.depth_reach_m, gradient))`** —
 //!    the terrain's own depth budget. This is the only depth gate.
-//! 5. `floor >= floors_in_run(..)` — Task 2's drawn run length. Every frozen
+//! 5. `floor >= levels_in_branch(..)` — Task 2's drawn run length. Every frozen
 //!    range bottoms out at 1, so this never empties a band.
 //! 6. `chamber_stream(..).next_f64() < EXISTENCE_DENSITY` — a fixed 0.5 coin
 //!    per address.
@@ -529,7 +529,7 @@
 //!    => OatmealVerdict::Failed, panics on §4.3's assertion. The roster stays
 //!       occupied (FungalGardens 3.76%, DrowTier 1.28%), so the red is the
 //!       oatmeal arm and not the vacuity guard in front of it.
-//! B  floors_in_run: the range_u32 draw -> constant 1
+//! B  levels_in_branch: the range_u32 draw -> constant 1
 //!    median depth 23.0 -> 3.0
 //!    => DepthVerdict::RangesNotProducingDepth, panics on C.5's assertion.
 //! B2 floors_range(Deeps): (5, 20) -> (45, 60)
@@ -574,7 +574,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Band, CellId, Seed};
 use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins, rung_at_depth, rungs};
 use hornvale_worldgen::chamber::{
-    ChamberAddr, RunAddr, chamber_exists, entrance_count, entrance_mouth, floors_in_run,
+    ChamberAddr, RunAddr, chamber_exists, entrance_count, entrance_mouth, levels_in_branch,
     passages_from, rung_rank,
 };
 use hornvale_worldgen::character::{
@@ -932,16 +932,24 @@ fn read_system(
     // is the readout's openness test but needs a stratum column; the
     // existence half of its verdict is `chamber_exists`, which is the gate
     // this probe is about.
-    let all_mouths: Vec<ChamberAddr> = (0..entrances)
+    // Each mouth is paired with the entrance index that produced it —
+    // `entrance` left `ChamberAddr` entirely (The Drift, amendment A.3), so
+    // an address can no longer carry its own aperture index; the pairing
+    // that used to ride inside `ChamberAddr::entrance` is now explicit here.
+    let all_mouths: Vec<(u8, ChamberAddr)> = (0..entrances)
         .map(|e| {
             let m = entrance_mouth(seed, cell, e);
-            ChamberAddr {
-                cell,
-                entrance: e,
-                branch: m.branch,
-                band: m.band,
-                floor: m.floor,
-            }
+            let band =
+                Band::from_rank(m.band).expect("entrance_mouth only names a habitation rank");
+            (
+                e,
+                ChamberAddr {
+                    cell,
+                    branch: m.branch,
+                    band,
+                    level: m.floor,
+                },
+            )
         })
         .collect();
     // THE DEEP-MOUTH CENSUS, taken before adjudication, over the mouths that
@@ -960,25 +968,43 @@ fn read_system(
     // understate the deep share threefold.
     let head_fallbacks = all_mouths
         .iter()
-        .filter(|m| m.entrance > 0 && m.branch == 0)
+        .filter(|(e, m)| *e > 0 && m.branch == 0)
         .count();
     let mouth_bands: Vec<u8> = all_mouths
         .iter()
-        .filter(|m| m.entrance > 0 && m.branch > 0)
-        .map(|m| m.band)
+        .filter(|(e, m)| *e > 0 && m.branch > 0)
+        .map(|(_, m)| {
+            m.band
+                .rank()
+                .expect("a chamber's band is a habitation rank")
+        })
         .collect();
-    let mouths: Vec<ChamberAddr> = all_mouths
+    let mouths_by_entrance: Vec<(u8, ChamberAddr)> = all_mouths
         .into_iter()
-        .filter(|&entry| chamber_exists(seed, cave, gradient, entry))
+        .filter(|&(_, entry)| chamber_exists(seed, cave, gradient, entry))
         .collect();
-    let open_mouth_bands: Vec<u8> = mouths
+    let open_mouth_bands: Vec<u8> = mouths_by_entrance
         .iter()
-        .filter(|m| m.entrance > 0 && m.branch > 0)
-        .map(|m| m.band)
+        .filter(|(e, m)| *e > 0 && m.branch > 0)
+        .map(|(_, m)| {
+            m.band
+                .rank()
+                .expect("a chamber's band is a habitation rank")
+        })
         .collect();
+    let mouths: Vec<ChamberAddr> = mouths_by_entrance.iter().map(|&(_, m)| m).collect();
     let reached = reachable_union(seed, cave, gradient, &mouths);
-    let reached_branch_bands: BTreeSet<(u8, u8)> =
-        reached.iter().map(|a| (a.branch, a.band)).collect();
+    let reached_branch_bands: BTreeSet<(u8, u8)> = reached
+        .iter()
+        .map(|a| {
+            (
+                a.branch,
+                a.band
+                    .rank()
+                    .expect("a chamber's band is a habitation rank"),
+            )
+        })
+        .collect();
 
     // THE ROUTE ABLATION. The same walk seeded from entrance 0's mouth alone
     // — the surface head, `EntranceMouth { branch: 0, band: 0, floor: 0 }` by
@@ -988,11 +1014,23 @@ fn read_system(
     // including the Nadir. Restricting to the head is therefore exactly the
     // "you must descend the whole spine" story, and the gap between the two
     // walks is how much of the deep reach does NOT come from descending.
-    let head_mouths: Vec<ChamberAddr> =
-        mouths.iter().copied().filter(|m| m.entrance == 0).collect();
+    let head_mouths: Vec<ChamberAddr> = mouths_by_entrance
+        .iter()
+        .filter(|(e, _)| *e == 0)
+        .map(|&(_, m)| m)
+        .collect();
     let reached_head = reachable_union(seed, cave, gradient, &head_mouths);
-    let head_branch_bands: BTreeSet<(u8, u8)> =
-        reached_head.iter().map(|a| (a.branch, a.band)).collect();
+    let head_branch_bands: BTreeSet<(u8, u8)> = reached_head
+        .iter()
+        .map(|a| {
+            (
+                a.branch,
+                a.band
+                    .rank()
+                    .expect("a chamber's band is a habitation rank"),
+            )
+        })
+        .collect();
 
     let mut main_line_depth = 0u32;
     let mut total_floors = 0u32;
@@ -1001,32 +1039,30 @@ fn read_system(
     for branch in 0..width {
         let mut terminating: Option<u8> = None;
         let mut realized: BTreeSet<u8> = BTreeSet::new();
-        for &(rank, _) in bands {
+        for &(rank, rung) in bands {
             if rank > deepest {
                 break;
             }
             let run = RunAddr {
                 cell,
-                entrance: 0,
                 branch,
-                band: rank,
+                band: rung,
             };
-            let floors = floors_in_run(seed, run);
-            total_floors += u32::from(floors);
+            let levels = levels_in_branch(seed, run);
+            total_floors += u32::from(levels);
             if branch == 0 {
-                main_line_depth += u32::from(floors);
+                main_line_depth += u32::from(levels);
             }
-            let occupied = (0..floors).any(|floor| {
+            let occupied = (0..levels).any(|level| {
                 chamber_exists(
                     seed,
                     cave,
                     gradient,
                     ChamberAddr {
                         cell,
-                        entrance: 0,
                         branch,
-                        band: rank,
-                        floor,
+                        band: rung,
+                        level,
                     },
                 )
             });

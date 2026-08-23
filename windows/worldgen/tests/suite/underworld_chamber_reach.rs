@@ -74,7 +74,7 @@
 //! move — they did, by a factor of twenty, and an earlier draft of this
 //! paragraph said the opposite.** `chamber_exists` draws independently per
 //! address INCLUDING `floor` (`chamber.rs`), and at Task 1 every in-budget run
-//! admitted all `FLOORS_PER_RUN_CEILING` floors, so the chamber population of
+//! admitted all `LEVELS_PER_BRANCH_CEILING` floors, so the chamber population of
 //! a real world went from ~6.4 per cave to ~128 per cave in the same commit
 //! that took this reading. The three figures above are a **floor-0 slice**,
 //! chosen so they compare like with like against the `chamber/v2` row — which
@@ -130,7 +130,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Band;
 use hornvale_terrain::{Horizon, TerrainPins, rung_at_depth};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, floors_in_run,
+    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, levels_in_branch,
 };
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
@@ -219,7 +219,7 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
             // only the
             // in-budget part is deliberate: it means this loop measures the
             // gate rather than restating it.
-            for band in 0..=4u8 {
+            for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     if chamber_exists(
                         seed,
@@ -227,10 +227,9 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
                         gradient,
                         ChamberAddr {
                             cell,
-                            entrance: 0,
                             band,
                             branch,
-                            floor: 0,
+                            level: 0,
                         },
                     ) {
                         realized += 1;
@@ -414,26 +413,22 @@ fn how_many_floors_does_a_run_realize() {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let mut branch_drawn = 0usize;
                 let (mut lo_bound, mut hi_bound) = (0usize, 0usize);
-                for band in 0..=deepest {
-                    let run = RunAddr {
-                        cell,
-                        entrance: 0,
-                        branch,
-                        band,
-                    };
-                    let drawn = usize::from(floors_in_run(seed, run));
-                    band_floors[band as usize].push(drawn);
+                for band_rank in 0..=deepest {
+                    let band = Band::from_rank(band_rank)
+                        .expect("0..=deepest are all real habitation ranks");
+                    let run = RunAddr { cell, branch, band };
+                    let drawn = usize::from(levels_in_branch(seed, run));
+                    band_floors[band_rank as usize].push(drawn);
                     branch_drawn += drawn;
-                    let (lo, hi) = FROZEN_RANGES[band as usize];
+                    let (lo, hi) = FROZEN_RANGES[band_rank as usize];
                     lo_bound += lo;
                     hi_bound += hi;
-                    for floor in 0..drawn {
+                    for level in 0..drawn {
                         let addr = ChamberAddr {
                             cell,
-                            entrance: 0,
                             branch,
                             band,
-                            floor: floor as u8,
+                            level: level as u8,
                         };
                         if chamber_exists(seed, &cave, gradient, addr) {
                             system_realized += 1;

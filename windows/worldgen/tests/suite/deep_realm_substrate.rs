@@ -456,7 +456,7 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 ///
 /// **`_per_floor` is in the name because this is NOT the lattice's size, and
 /// after The Stope (`chamber/v3`) the two differ by a factor of
-/// `FLOORS_PER_RUN_CEILING`.** Before that campaign a band held one point per
+/// `LEVELS_PER_BRANCH_CEILING`.** Before that campaign a band held one point per
 /// branch and the distinction did not exist. It is a name rather than a
 /// comment because the misreading is inheritable: a later task reaching for
 /// "how big is the address space" would find this function, and the number it
@@ -469,7 +469,7 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 ///
 /// That density used to hold on **any** subset of the lattice, which is what
 /// this doc said. It no longer does: `chamber_exists` now refuses any floor at
-/// or past its run's drawn count (`chamber::floors_in_run`), so the marginal
+/// or past its run's drawn count (`chamber::levels_in_branch`), so the marginal
 /// existence probability of an arbitrary address is `0.5 × P(floor < the run's
 /// drawn count)` — well under 0.5, and varying by band. **Floor 0 is the one
 /// slice where the old reading survives**, because every band's frozen range
@@ -495,7 +495,7 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 /// `(seed, cell)`, gated by `cave`'s own measured depth budget.
 ///
 /// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
-/// admits `FLOORS_PER_RUN_CEILING` floors per run, so this walks 1/20 of the
+/// admits `LEVELS_PER_BRANCH_CEILING` floors per run, so this walks 1/20 of the
 /// address space. That is the right sample for what it feeds — and after Task
 /// 2's per-run draw it is the ONLY floor that still is, because floor 0 is the
 /// one every run admits; see [`addresses_in_budget_per_floor`] for why any
@@ -510,14 +510,13 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 /// aperture per cave cell (see `ChamberAddr::entrance`'s own doc).
 fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
-    for band in 0..RUNG_NAMES.len() as u8 {
+    for &band in Band::habitation() {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
-                entrance: 0,
                 band,
                 branch,
-                floor: 0,
+                level: 0,
             };
             if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
@@ -540,10 +539,9 @@ fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId
         gradient,
         ChamberAddr {
             cell,
-            entrance: 0,
-            band: 0,
+            band: Band::Undercroft,
             branch: 0,
-            floor: 0,
+            level: 0,
         },
     )
 }

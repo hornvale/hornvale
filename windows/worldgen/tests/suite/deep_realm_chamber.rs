@@ -22,36 +22,41 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_kernel::{Band, CellId, Seed};
 use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, Horizon, rung_at_depth};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, RunAddr, chamber_at,
-    chamber_exists, floors_in_run, passages_from,
+    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, LEVELS_PER_BRANCH_CEILING, RunAddr,
+    chamber_at, chamber_exists, levels_in_branch, passages_from,
 };
 
-/// The descent rule under test (The Stope, amendment C.4): floor `f`'s
-/// downward neighbour is floor `f + 1` of the SAME run while the run has
-/// floors left, else floor 0 of the next band down. Spelled once here so the
+/// The descent rule under test (The Stope, amendment C.4): level `f`'s
+/// downward neighbour is level `f + 1` of the SAME run while the run has
+/// levels left, else level 0 of the next band down. Spelled once here so the
 /// rule-pin tests state the rule rather than restating the implementation's
 /// control flow; every assertion below still travels through the shipped
-/// entry points (`passages_from`, `chamber_exists`, `floors_in_run`).
-fn descent_target(seed: Seed, addr: ChamberAddr) -> ChamberAddr {
-    if addr.floor + 1 < floors_in_run(seed, addr.run()) {
-        ChamberAddr {
-            floor: addr.floor + 1,
+/// entry points (`passages_from`, `chamber_exists`, `levels_in_branch`).
+///
+/// `None` at `Band::Nadir` with no levels left — the bottom of the ladder has
+/// no deeper band to descend into (The Drift promoted `band` to a typed
+/// [`Band`], so this is now representable rather than an implicit `+1`
+/// overflow past the old ceiling).
+fn descent_target(seed: Seed, addr: ChamberAddr) -> Option<ChamberAddr> {
+    if addr.level + 1 < levels_in_branch(seed, addr.run()) {
+        Some(ChamberAddr {
+            level: addr.level + 1,
             ..addr
-        }
+        })
     } else {
-        ChamberAddr {
-            band: addr.band + 1,
-            floor: 0,
+        addr.band.deeper().map(|deeper| ChamberAddr {
+            band: deeper,
+            level: 0,
             ..addr
-        }
+        })
     }
 }
 
 /// A neighbour of `addr` is **sideways** when it stays on the caller's band
-/// and floor (the branch axis). Everything else is part of the vertical
+/// and level (the branch axis). Everything else is part of the vertical
 /// descent sequence.
 fn is_sideways(addr: ChamberAddr, neighbour: &ChamberAddr) -> bool {
-    neighbour.band == addr.band && neighbour.floor == addr.floor
+    neighbour.band == addr.band && neighbour.level == addr.level
 }
 
 /// The column every fixture below is built against: 401 m of cover on 35 km
@@ -150,14 +155,13 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     // Cover/Basement when `Roots` became unreachable under a metre budget; the
     // property is identical in all three framings.)
     let no_overrides = BTreeMap::new();
-    for band in 0..=1u8 {
+    for band in [Band::Undercroft, Band::Shallows] {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
-                entrance: 0,
                 band,
                 branch,
-                floor: 0,
+                level: 0,
             };
             assert_eq!(
                 chamber_exists(seed, &shallow, fixture_gradient(), addr),
@@ -185,7 +189,7 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 /// The lattice is a fixed size regardless of what any particular cave
 /// realizes; occupancy within it is sparse and varies by seed. Over a cave
 /// reaching the `Underdeep` rung, the address space checked here is
-/// `BRANCHES_PER_SYSTEM * FLOORS_PER_RUN_CEILING * 3` (bands `0..=2`,
+/// `BRANCHES_PER_SYSTEM * LEVELS_PER_BRANCH_CEILING * 3` (bands `0..=2`,
 /// `Undercroft..=Deeps`) — constant across every seed — while the number of
 /// addresses that EXIST is strictly less than that, and differs seed to seed.
 /// The loop stops one rung short of the fixture's own budget on purpose: every
@@ -215,16 +219,15 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
         let seed = Seed(raw_seed);
         let mut total = 0u32;
         let mut existing = 0u32;
-        for band in 0..=2u8 {
+        for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
             for branch in 0..BRANCHES_PER_SYSTEM {
-                for floor in 0..FLOORS_PER_RUN_CEILING {
+                for level in 0..LEVELS_PER_BRANCH_CEILING {
                     total += 1;
                     let addr = ChamberAddr {
                         cell,
-                        entrance: 0,
                         band,
                         branch,
-                        floor,
+                        level,
                     };
                     if chamber_exists(seed, &cave, fixture_gradient(), addr) {
                         existing += 1;
@@ -234,9 +237,9 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
         }
         assert_eq!(
             total,
-            u32::from(BRANCHES_PER_SYSTEM) * u32::from(FLOORS_PER_RUN_CEILING) * 3,
+            u32::from(BRANCHES_PER_SYSTEM) * u32::from(LEVELS_PER_BRANCH_CEILING) * 3,
             "the address space over an Underdeep-reaching cave must be a constant \
-             BRANCHES_PER_SYSTEM * FLOORS_PER_RUN_CEILING * 3 over the bands probed"
+             BRANCHES_PER_SYSTEM * LEVELS_PER_BRANCH_CEILING * 3 over the bands probed"
         );
         assert!(
             existing < total,
@@ -278,15 +281,14 @@ fn every_passage_is_traversable_in_both_directions() {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 1, 9, 42] {
             let cell = CellId(raw_cell);
-            for band in 0..=2u8 {
+            for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    for floor in [0, 1, 7, FLOORS_PER_RUN_CEILING - 1] {
+                    for level in [0, 1, 7, LEVELS_PER_BRANCH_CEILING - 1] {
                         let addr = ChamberAddr {
                             cell,
-                            entrance: 0,
                             band,
                             branch,
-                            floor,
+                            level,
                         };
                         for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
                             let back = passages_from(seed, &cave, fixture_gradient(), neighbour);
@@ -326,15 +328,14 @@ fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 9, 42] {
             let cell = CellId(raw_cell);
-            for band in 0..=2u8 {
+            for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                    for level in 0..LEVELS_PER_BRANCH_CEILING {
                         let addr = ChamberAddr {
                             cell,
-                            entrance: 0,
                             band,
                             branch,
-                            floor,
+                            level,
                         };
                         for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
                             saw_a_passage = true;
@@ -342,36 +343,41 @@ fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
                                 continue;
                             }
                             // One step of the sequence, in either direction:
-                            // within a band, adjacent floors; across the seam,
-                            // floor 0 below or the run above's last floor.
+                            // within a band, adjacent levels; across the seam,
+                            // level 0 below or the run above's last level.
                             let expected_down = descent_target(seed, addr);
-                            let expected_up = if addr.floor > 0 {
+                            let expected_up = if addr.level > 0 {
                                 Some(ChamberAddr {
-                                    floor: addr.floor - 1,
-                                    ..addr
-                                })
-                            } else if addr.band > 0 {
-                                Some(ChamberAddr {
-                                    band: addr.band - 1,
-                                    floor: floors_in_run(
-                                        seed,
-                                        RunAddr {
-                                            band: addr.band - 1,
-                                            ..addr.run()
-                                        },
-                                    ) - 1,
+                                    level: addr.level - 1,
                                     ..addr
                                 })
                             } else {
-                                None
+                                addr.band.shallower().map(|shallower| ChamberAddr {
+                                    band: shallower,
+                                    level: levels_in_branch(
+                                        seed,
+                                        RunAddr {
+                                            band: shallower,
+                                            ..addr.run()
+                                        },
+                                    )
+                                    .saturating_sub(1),
+                                    ..addr
+                                })
                             };
-                            let is_sequence_step = neighbour == expected_down
+                            let is_sequence_step = Some(neighbour) == expected_down
                                 || expected_up.is_some_and(|up| neighbour == up);
                             // Sideways-in-band steps share the band; seam steps
                             // differ by exactly one rung of the ladder.
+                            let band_rank_diff = neighbour
+                                .band
+                                .rank()
+                                .zip(addr.band.rank())
+                                .map(|(a, b)| a.abs_diff(b))
+                                .unwrap_or(0);
                             assert!(
                                 is_sequence_step
-                                    && neighbour.band.abs_diff(addr.band) <= 1
+                                    && band_rank_diff <= 1
                                     && neighbour.branch == addr.branch,
                                 "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
                                  {neighbour:?} as a passage, which is neither \
@@ -390,20 +396,6 @@ fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
         "no address in the probed lattice had any passage at all, so the \
          floor-preservation assertion above never ran"
     );
-}
-
-/// The delve ladder's rank of the fixture's deepest rung, spelled here because
-/// `hornvale_terrain` does not export one (`Surface` maps to `None`, matching
-/// `chamber::rung_rank`).
-fn rung_rank(rung: Band) -> Option<u8> {
-    match rung {
-        Band::Surface => None,
-        Band::Undercroft => Some(0),
-        Band::Shallows => Some(1),
-        Band::Deeps => Some(2),
-        Band::Underdeep => Some(3),
-        Band::Nadir => Some(4),
-    }
 }
 
 /// **Amendment C.4: descending from a run's LAST realized floor lands on
@@ -430,26 +422,20 @@ fn descending_from_a_runs_last_floor_lands_on_floor_zero_of_the_next_band() {
         for raw_cell in 0u32..10 {
             let cell = CellId(raw_cell);
             for branch in 0..BRANCHES_PER_SYSTEM {
-                for band in 0..=2u8 {
-                    let run = RunAddr {
-                        cell,
-                        entrance: 0,
-                        branch,
-                        band,
-                    };
-                    let floors = floors_in_run(seed, run);
-                    // Control: a last floor that is also floor 0 cannot
+                for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
+                    let run = RunAddr { cell, branch, band };
+                    let levels = levels_in_branch(seed, run);
+                    // Control: a last level that is also level 0 cannot
                     // distinguish the rules — demand a run with somewhere to
                     // have come from.
-                    if floors < 2 {
+                    if levels < 2 {
                         continue;
                     }
                     let addr = ChamberAddr {
                         cell,
-                        entrance: 0,
                         branch,
                         band,
-                        floor: floors - 1,
+                        level: levels - 1,
                     };
                     if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
                         continue;
@@ -460,27 +446,27 @@ fn descending_from_a_runs_last_floor_lands_on_floor_zero_of_the_next_band() {
                             .filter(|n| !is_sideways(addr, n))
                             .collect();
                     // The upward half of the sequence always exists for a
-                    // non-root floor; the downward half may be thinned by the
+                    // non-root level; the downward half may be thinned by the
                     // existence draw, so only assert when it spoke at all.
                     if let Some(down) = deeper
                         .iter()
                         .copied()
-                        .find(|n| n.band > addr.band || n.floor > addr.floor)
+                        .find(|n| n.band > addr.band || n.level > addr.level)
                     {
                         cases += 1;
                         assert_eq!(
-                            down.floor, 0,
+                            down.level, 0,
                             "seed {raw_seed} cell {raw_cell}: descending from \
-                             {addr:?} (its run's last floor) landed on floor {} \
-                             of band {} — the descent did not restart at floor 0 \
+                             {addr:?} (its run's last level) landed on level {} \
+                             of band {:?} — the descent did not restart at level 0 \
                              of the next band (C.4)",
-                            down.floor, down.band
+                            down.level, down.band
                         );
                         assert_eq!(
                             down.band,
-                            addr.band + 1,
+                            addr.band.deeper().expect("Deeps has a deeper band"),
                             "seed {raw_seed} cell {raw_cell}: descending from \
-                             {addr:?} (its run's last floor) stayed in band {}",
+                             {addr:?} (its run's last level) stayed in band {:?}",
                             down.band
                         );
                     }
@@ -499,7 +485,7 @@ fn descending_from_a_runs_last_floor_lands_on_floor_zero_of_the_next_band() {
 
 /// **Amendment C.4: descending from any EARLIER floor stays in the band** —
 /// the run's drawn length IS the sojourn time; the chance lives in the count
-/// draw, one level up, not in a per-step roll. `floors_in_run` is asserted
+/// draw, one level up, not in a per-step roll. `levels_in_branch` is asserted
 /// directly so the pin is against the drawn quantity, not a copy of it.
 /// Under the old same-floor rule the only downward candidate sat in the NEXT
 /// band, so this went red behaviourally before the fix.
@@ -515,26 +501,21 @@ fn descending_from_an_earlier_floor_stays_in_the_band() {
         for raw_cell in 0u32..10 {
             let cell = CellId(raw_cell);
             for branch in 0..BRANCHES_PER_SYSTEM {
-                for band in 0..=2u8 {
-                    let run = RunAddr {
-                        cell,
-                        entrance: 0,
-                        branch,
-                        band,
-                    };
-                    let floors = floors_in_run(seed, run);
-                    for floor in 0..floors.saturating_sub(1) {
+                for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
+                    let run = RunAddr { cell, branch, band };
+                    let levels = levels_in_branch(seed, run);
+                    for level in 0..levels.saturating_sub(1) {
                         let addr = ChamberAddr {
                             cell,
-                            entrance: 0,
                             branch,
                             band,
-                            floor,
+                            level,
                         };
                         if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
                             continue;
                         }
-                        let down = descent_target(seed, addr);
+                        let down = descent_target(seed, addr)
+                            .expect("a level short of its run's drawn length always descends");
                         // Only assert when the forced target cleared the same
                         // existence coin every chamber faces.
                         if !chamber_exists(seed, &cave, fixture_gradient(), down) {
@@ -545,27 +526,27 @@ fn descending_from_an_earlier_floor_stays_in_the_band() {
                             passages_from(seed, &cave, fixture_gradient(), addr)
                                 .into_iter()
                                 // A descent is exactly one step DOWN the
-                                // sequence: the next floor in-band, or the
-                                // next band's floor 0. (Filtering by
-                                // `floor > addr.floor` alone would catch the
+                                // sequence: the next level in-band, or the
+                                // next band's level 0. (Filtering by
+                                // `level > addr.level` alone would catch the
                                 // upward seam neighbour — band-1's last
-                                // floor — which sits ABOVE this address.)
+                                // level — which sits ABOVE this address.)
                                 .filter(|n| {
-                                    (n.band == addr.band && n.floor == addr.floor + 1)
-                                        || (n.band == addr.band + 1 && n.floor == 0)
+                                    (n.band == addr.band && n.level == addr.level + 1)
+                                        || (Some(n.band) == addr.band.deeper() && n.level == 0)
                                 })
                                 .collect();
                         assert!(
                             deeper.contains(&down),
                             "seed {raw_seed} cell {raw_cell}: {addr:?} does not list \
-                             its own run's next floor {down:?} as a passage; got \
-                             {deeper:?} — a floor short of its run's drawn length \
+                             its own run's next level {down:?} as a passage; got \
+                             {deeper:?} — a level short of its run's drawn length \
                              must descend WITHIN the band (C.4)"
                         );
                         assert!(
                             deeper.iter().all(|n| n.band == addr.band),
                             "seed {raw_seed} cell {raw_cell}: {addr:?} is short of \
-                             its run's drawn length ({floors}) yet lists a \
+                             its run's drawn length ({levels}) yet lists a \
                              cross-band descent {deeper:?} — the sojourn is the \
                              COUNT DRAW, not a per-step roll (C.4)"
                         );
@@ -583,19 +564,19 @@ fn descending_from_an_earlier_floor_stays_in_the_band() {
     println!("within-band descent cases observed: {cases}");
 }
 
-/// **The deepest band's last floor has no downward neighbour** — the ladder
+/// **The deepest band's last level has no downward neighbour** — the ladder
 /// ends, and end-of-space is ordinary bounded-lattice behaviour, not a gate.
-/// With [`DEEP_REACH_M`] the cave's deepest realized rank is 3 (`Underdeep`),
+/// With [`DEEP_REACH_M`] the cave's deepest realized band is `Underdeep`,
 /// pinned below rather than assumed.
 /// claim: invariant(forall-seed) — the ladder's end has no descent, over a
 /// hand-built lattice (audit §5: builds no world)
 #[test]
 fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
-    let deepest = rung_rank(rung_at_depth(DEEP_REACH_M, fixture_gradient()))
-        .expect("fixture reach is underground");
+    let deepest = rung_at_depth(DEEP_REACH_M, fixture_gradient());
     assert_eq!(
-        deepest, 3,
+        deepest,
+        Band::Underdeep,
         "fixture premise: DEEP_REACH_M reaches Underdeep"
     );
 
@@ -607,17 +588,15 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let run = RunAddr {
                     cell,
-                    entrance: 0,
                     branch,
                     band: deepest,
                 };
-                let floors = floors_in_run(seed, run);
+                let levels = levels_in_branch(seed, run);
                 let addr = ChamberAddr {
                     cell,
-                    entrance: 0,
                     branch,
                     band: deepest,
-                    floor: floors - 1,
+                    level: levels - 1,
                 };
                 if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
                     continue;
@@ -625,13 +604,13 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
                 cases += 1;
                 for neighbour in passages_from(seed, &cave, fixture_gradient(), addr) {
                     // A descent is exactly one step DOWN the sequence (C.4):
-                    // next band, or next floor in-band. The upward neighbour
-                    // (this band's previous floor) is not a descent.
-                    let descends = neighbour.band == addr.band + 1
-                        || (neighbour.band == addr.band && neighbour.floor == addr.floor + 1);
+                    // next band, or next level in-band. The upward neighbour
+                    // (this band's previous level) is not a descent.
+                    let descends = Some(neighbour.band) == addr.band.deeper()
+                        || (neighbour.band == addr.band && neighbour.level == addr.level + 1);
                     assert!(
                         is_sideways(addr, &neighbour) || !descends,
-                        "seed {raw_seed} cell {raw_cell}: {addr:?} is the last floor \
+                        "seed {raw_seed} cell {raw_cell}: {addr:?} is the last level \
                          of the deepest band yet lists a DOWNWARD neighbour \
                          {neighbour:?} — there is nowhere below the ladder's end"
                     );
@@ -639,7 +618,7 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
             }
         }
     }
-    assert!(cases > 0, "no deepest-band last floor was ever probed");
+    assert!(cases > 0, "no deepest-band last level was ever probed");
 }
 
 /// **THE BROKEN PROPERTY (C.4): every realized floor of every band has a
@@ -652,7 +631,7 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
 /// "Has a downward neighbour" is two halves, and both are asserted:
 ///
 /// 1. **Structural**: the rule's forced target sits inside the lattice AND
-///    inside its own run's drawn length — checked through `floors_in_run`,
+///    inside its own run's drawn length — checked through `levels_in_branch`,
 ///    never through a copied constant. The old rule failed THIS half: from
 ///    Deeps floor 15 it offered Underdeep floor 15, past that run's drawn 10.
 /// 2. **Graph**: when the target clears the same existence coin every
@@ -667,46 +646,51 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
 fn every_realized_floor_descends_unless_it_ends_the_deepest_band() {
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
     let gradient = fixture_gradient();
-    let deepest =
-        rung_rank(rung_at_depth(DEEP_REACH_M, gradient)).expect("fixture reach is underground");
+    let deepest = rung_at_depth(DEEP_REACH_M, gradient);
+    let bands: Vec<Band> = Band::habitation()
+        .iter()
+        .copied()
+        .take_while(|&b| b <= deepest)
+        .collect();
 
     let mut probed = 0u32;
     for raw_seed in [1u64, 2, 3, 4, 5] {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 9, 42] {
             let cell = CellId(raw_cell);
-            for band in 0..=deepest {
+            for &band in &bands {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                    for level in 0..LEVELS_PER_BRANCH_CEILING {
                         let addr = ChamberAddr {
                             cell,
-                            entrance: 0,
                             band,
                             branch,
-                            floor,
+                            level,
                         };
                         if !chamber_exists(seed, &cave, gradient, addr) {
                             continue;
                         }
                         probed += 1;
                         let ends_the_ladder =
-                            band == deepest && floor + 1 >= floors_in_run(seed, addr.run());
+                            band == deepest && level + 1 >= levels_in_branch(seed, addr.run());
                         if ends_the_ladder {
                             continue;
                         }
-                        let target = descent_target(seed, addr);
-                        let target_floors = floors_in_run(seed, target.run());
+                        let target = descent_target(seed, addr).expect(
+                            "not the deepest band's last level, so a descent target exists",
+                        );
+                        let target_levels = levels_in_branch(seed, target.run());
                         assert!(
-                            target_floors > 0,
+                            target_levels > 0,
                             "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
                              target {target:?} is off the habitation ladder — a \
                              structural gate C.4 removed"
                         );
                         assert!(
-                            target.floor < target_floors,
+                            target.level < target_levels,
                             "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
                              target {target:?} sits past its run's drawn length \
-                             ({target_floors}) — the old same-floor gate, still live"
+                             ({target_levels}) — the old same-level gate, still live"
                         );
                         if chamber_exists(seed, &cave, gradient, target) {
                             let passages = passages_from(seed, &cave, gradient, addr);
@@ -728,7 +712,7 @@ fn every_realized_floor_descends_unless_it_ends_the_deepest_band() {
         "only {probed} existing chambers were probed — the sweep is not \
          covering the lattice"
     );
-    println!("realized floors probed for the descent property: {probed}");
+    println!("realized levels probed for the descent property: {probed}");
 }
 
 /// Step 4's connectivity guard (plan Task 3). An entrance you cannot get
@@ -770,10 +754,9 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
             let cell = CellId(raw_cell);
             let entrance = ChamberAddr {
                 cell,
-                entrance: 0,
-                band: 0,
+                band: Band::Undercroft,
                 branch: 0,
-                floor: 0,
+                level: 0,
             };
             probed += 1;
             if chamber_exists(seed, &cave, fixture_gradient(), entrance) {
@@ -850,14 +833,13 @@ fn an_override_wins_over_the_derived_default() {
     // Find two addresses that both exist under this (seed, cave, cell) —
     // one to override, one to leave alone as the "unaffected" witness.
     let mut existing = Vec::new();
-    for band in 0..=2u8 {
+    for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
-                entrance: 0,
                 band,
                 branch,
-                floor: 0,
+                level: 0,
             };
             if chamber_exists(seed, &cave, fixture_gradient(), addr) {
                 existing.push(addr);
@@ -1018,15 +1000,19 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     // test's job is the end-to-end path; that one's is the claim. The
     // assertion below is unchanged from before the epoch.
     let mut seen: Vec<(Band, hornvale_climate::Stratum)> = Vec::new();
-    for band in 0..=3u8 {
+    for band in [
+        Band::Undercroft,
+        Band::Shallows,
+        Band::Deeps,
+        Band::Underdeep,
+    ] {
         for branch in 0..BRANCHES_PER_SYSTEM {
-            for floor in 0..FLOORS_PER_RUN_CEILING {
+            for level in 0..LEVELS_PER_BRANCH_CEILING {
                 let addr = ChamberAddr {
                     cell,
-                    entrance: 0,
                     band,
                     branch,
-                    floor,
+                    level,
                 };
                 if let Some(chamber) =
                     chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)
@@ -1057,10 +1043,9 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     // hot young crust (still cover).
     let deeps = ChamberAddr {
         cell,
-        entrance: 0,
-        band: 2,
+        band: Band::Deeps,
         branch: 0,
-        floor: 0,
+        level: 0,
     };
     let cool = GeothermalGradient::new(15.0);
     let hot = GeothermalGradient::new(30.0);
@@ -1106,16 +1091,21 @@ fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &col);
     let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
 
-    let mut by_band: Vec<(u8, Band)> = Vec::new();
+    let bands = [
+        Band::Undercroft,
+        Band::Shallows,
+        Band::Deeps,
+        Band::Underdeep,
+    ];
+    let mut by_band: Vec<(Band, Band)> = Vec::new();
     for raw_cell in 0u32..40 {
-        for band in 0..=3u8 {
+        for band in bands {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let addr = ChamberAddr {
                     cell: CellId(raw_cell),
-                    entrance: 0,
                     band,
                     branch,
-                    floor: 0,
+                    level: 0,
                 };
                 if let Some(chamber) =
                     chamber_at(seed, &cave, fixture_gradient(), &col, addr, &no_overrides)
@@ -1125,19 +1115,19 @@ fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
             }
         }
     }
-    let bands_seen: BTreeSet<u8> = by_band.iter().map(|&(b, _)| b).collect();
+    let bands_seen: BTreeSet<Band> = by_band.iter().map(|&(b, _)| b).collect();
     assert_eq!(
         bands_seen.len(),
         4,
-        "the sweep must reach every band 0..=3 or the ordering check below is \
-         only partly exercised; saw {bands_seen:?}"
+        "the sweep must reach every band Undercroft..=Underdeep or the ordering \
+         check below is only partly exercised; saw {bands_seen:?}"
     );
     for &(band_a, rung_a) in &by_band {
         for &(band_b, rung_b) in &by_band {
             assert_eq!(
                 band_a.cmp(&band_b),
                 rung_a.cmp(&rung_b),
-                "band {band_a} reports {rung_a:?} and band {band_b} reports \
+                "band {band_a:?} reports {rung_a:?} and band {band_b:?} reports \
                  {rung_b:?} — the index and the ladder disagree on order"
             );
         }
@@ -1146,45 +1136,41 @@ fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
 
 /// **The frozen-range minimum the ascending seam subtracts against** (The
 /// Stope): every band's frozen range has a minimum of at least 1, so
-/// `floors_in_run(band - 1) - 1` in the ascending-seam candidate construction
-/// (floor 0's upward neighbour is `floors_in_run - 1` of the run above)
+/// `levels_in_branch(band - 1) - 1` in the ascending-seam candidate construction
+/// (floor 0's upward neighbour is `levels_in_branch - 1` of the run above)
 /// cannot underflow. If any rung's range ever drew 0, that subtraction would
 /// wrap and name a nonsense floor; this pin makes such a change fail here,
 /// at the draw, instead of surfacing only through passage listings.
 ///
-/// Asserted on `floors_in_run` itself — the shipped entry point the seam
+/// Asserted on `levels_in_branch` itself — the shipped entry point the seam
 /// calls — over every non-Surface rung and a modest sweep of seeds, cells,
 /// entrances, branches, with a non-vacuity control so an accidentally empty
 /// loop cannot read as green.
 ///
-/// claim: invariant(floors_in_run(seed, run) >= 1 for every non-Surface rung)
+/// claim: invariant(levels_in_branch(seed, run) >= 1 for every non-Surface rung)
 #[test]
 fn every_non_surface_rungs_frozen_range_draws_at_least_one_floor() {
     let mut cases = 0usize;
     for raw_seed in [0u64, 1, 7, 42] {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 9, 42] {
-            for entrance in 0u8..2 {
-                for branch in 0u8..2 {
-                    for band in 0u8..=4 {
-                        let run = RunAddr {
-                            cell: CellId(raw_cell),
-                            entrance,
-                            branch,
-                            band,
-                        };
-                        let floors = floors_in_run(seed, run);
-                        assert!(
-                            floors >= 1,
-                            "seed {raw_seed} cell {raw_cell} entrance \
-                             {entrance} branch {branch} band {band} drew \
-                             {floors} floors — a frozen range with minimum 0 \
-                             underflows the ascending seam's `floors_in_run - \
-                             1`; chamber.rs states every band's frozen range \
-                             has a minimum of at least 1"
-                        );
-                        cases += 1;
-                    }
+            for branch in 0u8..2 {
+                for &band in Band::habitation() {
+                    let run = RunAddr {
+                        cell: CellId(raw_cell),
+                        branch,
+                        band,
+                    };
+                    let levels = levels_in_branch(seed, run);
+                    assert!(
+                        levels >= 1,
+                        "seed {raw_seed} cell {raw_cell} branch {branch} \
+                         band {band:?} drew {levels} levels — a frozen range \
+                         with minimum 0 underflows the ascending seam's \
+                         `levels_in_branch - 1`; chamber.rs states every \
+                         band's frozen range has a minimum of at least 1"
+                    );
+                    cases += 1;
                 }
             }
         }

@@ -16,7 +16,7 @@ use std::collections::BTreeSet;
 use hornvale_kernel::Band;
 use hornvale_kernel::{CellId, Seed};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, floors_in_run,
+    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, levels_in_branch,
 };
 use hornvale_worldgen::character::{
     BarrierPins, BarrierState, CHARACTERS, Character, bands_of, barrier_of, branch_count_of,
@@ -149,30 +149,35 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
 /// — every band, every floor — to the same character as the branch-level
 /// accessor. If the projection ever consulted `band` or `floor`, a descent
 /// would change civilizations mid-branch, and this test reddens.
+///
+/// **No `entrance` sweep** (The Drift, Task 4 / Task 5 coupling):
+/// `character_at` passes a transitional literal `0` where `addr.entrance`
+/// used to travel (see its own doc), so it is entrance-invariant by
+/// construction until Task 5 lands — comparing it against
+/// `character_of(seed, cell, entrance, branch)` for `entrance != 0` would
+/// fail for a reason unrelated to this test's own subject, which is the
+/// band/level projection.
 #[test]
 fn one_branch_has_one_character_for_its_whole_depth() {
     let seed = Seed(90210);
     for raw_cell in 0u32..20 {
-        for entrance in 0..2u8 {
-            for branch in 0..BRANCHES_PER_SYSTEM {
-                let expected = character_of(seed, CellId(raw_cell), entrance, branch);
-                for band in 0..5u8 {
-                    for floor in 0..8u8 {
-                        let addr = ChamberAddr {
-                            cell: CellId(raw_cell),
-                            entrance,
-                            branch,
-                            band,
-                            floor,
-                        };
-                        assert_eq!(
-                            character_at(seed, addr),
-                            expected,
-                            "{addr:?} resolved a different character than its own \
-                             branch's — the projection consulted something beyond \
-                             the branch identity"
-                        );
-                    }
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            let expected = character_of(seed, CellId(raw_cell), 0, branch);
+            for &band in Band::habitation() {
+                for level in 0..8u8 {
+                    let addr = ChamberAddr {
+                        cell: CellId(raw_cell),
+                        branch,
+                        band,
+                        level,
+                    };
+                    assert_eq!(
+                        character_at(seed, addr),
+                        expected,
+                        "{addr:?} resolved a different character than its own \
+                         branch's — the projection consulted something beyond \
+                         the branch identity"
+                    );
                 }
             }
         }
@@ -189,6 +194,15 @@ fn one_branch_has_one_character_for_its_whole_depth() {
 /// columns but the world realizes the drawn width (the same
 /// lattice-ceiling/drawn-realization split Task 2 applied to floors). The
 /// positive control is branch 0, which every count admits.
+///
+/// **The enforcement half is checked at entrance 0 only** (The Drift, Task 4
+/// / Task 5 coupling): `chamber_exists` now passes a transitional literal `0`
+/// where `addr.entrance` used to travel (see its own doc), so it enforces
+/// entrance 0's drawn width for every branch query regardless of which
+/// entrance a caller has in mind — there is no longer a per-entrance
+/// enforcement to check. The histogram half, which reads `branch_count_of`
+/// directly rather than through `chamber_exists`, is untouched and still
+/// swept over every entrance: that draw itself did not move.
 /// claim: rate(panel-seeds) — branch-count histogram, mode must be 1
 #[test]
 fn most_systems_have_one_branch_and_none_has_more_than_four() {
@@ -222,6 +236,13 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                 histogram[usize::from(count - 1)] += 1;
                 systems += 1;
 
+                // Enforcement half: `chamber_exists` reads entrance 0's own
+                // drawn count transitionally, so only entrance 0's `count` is
+                // the one the gate can be checked against.
+                if entrance != 0 {
+                    continue;
+                }
+
                 // Realization half: past the count, nothing exists.
                 for branch in count..BRANCHES_PER_SYSTEM {
                     assert!(
@@ -231,10 +252,9 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                             gradient,
                             ChamberAddr {
                                 cell: CellId(raw_cell),
-                                entrance,
                                 branch,
-                                band: 0,
-                                floor: 0,
+                                band: Band::Undercroft,
+                                level: 0,
                             },
                         ),
                         "cell {raw_cell} entrance {entrance} drew {count} branches \
@@ -252,10 +272,9 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                         gradient,
                         ChamberAddr {
                             cell: CellId(raw_cell),
-                            entrance,
                             branch,
-                            band: 0,
-                            floor: 0,
+                            band: Band::Undercroft,
+                            level: 0,
                         },
                     ) {
                         realized_below_count += 1;
@@ -307,13 +326,13 @@ fn a_branch_roots_on_a_floor_that_exists() {
                 for branch in 1..BRANCHES_PER_SYSTEM {
                     let root = root_floor_of(seed, CellId(raw_cell), entrance, branch)
                         .expect("every non-main-line branch hangs off its parent");
-                    let parent_realizes = floors_in_run(
+                    let parent_realizes = levels_in_branch(
                         seed,
                         RunAddr {
                             cell: CellId(raw_cell),
-                            entrance,
                             branch: 0,
-                            band: root.band,
+                            band: Band::from_rank(root.band)
+                                .expect("root_floor_of only names real habitation ranks"),
                         },
                     );
                     assert!(

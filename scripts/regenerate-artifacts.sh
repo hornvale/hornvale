@@ -662,9 +662,19 @@ gen_underworld_lattice() {
     printf 'the descent sequence (a run'"'"'s drawn length is its sojourn; past it, the\n'
     printf 'next band'"'"'s floor 0). That sequence is the number, not a rounding error.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'The `key` column is the real derivation key of that run'"'"'s floor 0 --\n'
+    printf 'The `key` column is a DISPLAY FORMATTER of that run'"'"'s floor 0'"'"'s address,\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'the string `StreamLabel::dynamic` hashes -- not a rendering of the address.\n'
+    printf 'not a derivation key (The Drift, spec amendment A.6): Task 1 deleted the\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'chamber existence draw, chamber_key'"'"'s only production caller, so nothing in a\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'shipped world derives from it any more. The real derivation keys are\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '`levels_in_branch`'"'"'s RUN_FLOORS leg and the three per-branch legs in\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '`crate::character` -- this column still witnesses the address'"'"'s SPELLING (the\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'rung name, the field order), which is what makes it worth printing.\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'Each run shows one glyph per floor the LATTICE admits, never per floor the\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
