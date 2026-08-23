@@ -35,15 +35,35 @@
 //!   graph, not separate lattices. So the branch population is
 //!   `branch_count_of(seed, cell, 0)` columns per system, and every "share of
 //!   branches" has that population as its denominator.
-//! - **Branch count is measured per ENTRANCE and reported per SYSTEM**, and
-//!   these are different distributions. `branch_count_of(seed, cell, entrance)`
-//!   is keyed per entrance, so a system with three entrances each drawing one
-//!   branch has a per-system total of 3 while every draw came out 1. **C.1's
-//!   mode-must-be-1 gate is applied to the per-entrance draw** — the quantity
-//!   C.1 actually froze — and the per-system total is reported beside it,
-//!   never gated, so a bookkeeping choice cannot falsify C.1.
+//! - **Branch count was measured per ENTRANCE and reported per SYSTEM**, and
+//!   these were different distributions. `branch_count_of(seed, cell, entrance)`
+//!   was keyed per entrance, so a system with three entrances each drawing one
+//!   branch had a per-system total of 3 while every draw came out 1. **C.1's
+//!   mode-must-be-1 gate was applied to the per-entrance draw** — the quantity
+//!   C.1 actually froze — and the per-system total was reported beside it,
+//!   never gated, so a bookkeeping choice could not falsify C.1.
 //!
-//! # THE ACCEPTED ASYMMETRY THIS PROBE INHERITS
+//! **CORRECTION (The Drift, Task 5): the paragraph above describes the
+//! pre-Task-5 mechanism and this file's `read_system` no longer matches it
+//! literally.** `branch_count_of` dropped `entrance` from its key entirely
+//! (amendment A.3) — it is now keyed on `(cell, band)`, not `(cell,
+//! entrance)`. The measured-vs-reported distinction survives in spirit (a
+//! per-BAND draw is still gated by C.1, and a per-system total is still
+//! reported beside it, ungated), but "per entrance" below should be read as
+//! "per band" throughout this module's older prose. The rest of this
+//! doc — the asymmetry paragraph, the Nadir-gate walkthrough, the per-branch
+//! character/barrier narration — still describes the pre-Task-5 model in
+//! detail and was not rewritten here: Task 4's report flagged this file as
+//! "Task 5/Task 9 adjacent territory", and Task 5's own interface scope is
+//! three function signatures, not this probe's discourse. `read_system` was
+//! updated only enough to compile and to read a defensible reference band
+//! (`Band::Undercroft`) where the old code read entrance 0 — see its own
+//! inline comments. A full rewrite of this module's prose against the new
+//! band-scoped model is deferred to whichever task next relies on this
+//! probe's live output (most likely Task 9).
+//!
+//! # THE ACCEPTED ASYMMETRY THIS PROBE INHERITS (PRE-TASK-5 PROSE, UNVERIFIED
+//! AGAINST THE CURRENT CODE)
 //!
 //! `chamber_exists` gates `branch` against `branch_count_of(cell,
 //! addr.entrance)` — entrance N's own drawn width — while `entrance_mouth`
@@ -815,7 +835,9 @@ fn classify_nadir_gate(rate: f64) -> NadirGateVerdict {
 
 /// One realized branch column of one system's canonical lattice.
 struct BranchReading {
-    /// The branch's character — `character_of(seed, cell, 0, branch)`.
+    /// The branch's character, read at `Band::Undercroft` (The Drift, Task
+    /// 5 — `character_of(seed, cell, Band::Undercroft, branch)`; see
+    /// `read_system`'s own comment for why that reference band).
     character: Character,
     /// The branch's barrier state — the derived default, unpinned.
     barrier: BarrierState,
@@ -847,8 +869,11 @@ struct BranchReading {
 struct SystemReading {
     /// Drawn aperture count.
     entrances: u8,
-    /// The per-entrance branch draw, one entry per entrance — C.1's GATED
-    /// quantity.
+    /// The per-band branch draw, one entry per habitation band — C.1's GATED
+    /// quantity. **Re-scoped by The Drift, Task 5**: before that change this
+    /// was one entry per ENTRANCE (the pre-Drift model realized a private
+    /// sublattice per entrance); `branch_count_of` no longer varies by
+    /// entrance at all, only by band.
     branch_counts: Vec<u8>,
     /// The per-system total, summed across entrances — REPORTED only.
     branch_total: u32,
@@ -919,14 +944,24 @@ fn read_system(
     let nadir = rank_of(Band::Nadir);
 
     let entrances = entrance_count(seed, cell);
-    let branch_counts: Vec<u8> = (0..entrances)
-        .map(|e| branch_count_of(seed, cell, e))
+    // **The Drift, Task 5**: `branch_count_of` no longer varies by entrance
+    // (that concept is gone — `entrance` dropped out of its key), it varies
+    // by BAND. `branch_counts` reads one entry per habitation band instead
+    // of one per entrance; downstream consumers (`Tallies::absorb`) treat it
+    // as an opaque histogram source, so the field keeps its name but its
+    // population changed shape.
+    let branch_counts: Vec<u8> = bands
+        .iter()
+        .map(|&(_, rung)| branch_count_of(seed, cell, rung))
         .collect();
     let branch_total: u32 = branch_counts.iter().map(|&c| u32::from(c)).sum();
 
-    // The canonical lattice is `(cell, entrance 0)` — `entrance_mouth`'s own
-    // doc. Every mouth addresses into it.
-    let width = branch_count_of(seed, cell, 0);
+    // The reference width for this report's per-branch rows is
+    // `Band::Undercroft`'s own drawn count — the same reference
+    // `entrance_mouth` itself now uses (see its doc) and the closest
+    // available analogue to the pre-Drift "entrance 0's own count", since
+    // there is no longer a single system-wide width to read.
+    let width = branch_count_of(seed, cell, Band::Undercroft);
 
     // Reachability: seed every OPEN mouth into one shared walk. `chamber_at`
     // is the readout's openness test but needs a stratum column; the
@@ -1071,10 +1106,20 @@ fn read_system(
                 realized.insert(rank);
             }
         }
-        let character = character_of(seed, cell, 0, branch);
+        // `Band::Undercroft` reference, same reasoning as `width` above —
+        // character and barrier are now per-`(band, branch)` (The Drift,
+        // Task 5), and a single summary row per branch needs one band to
+        // report against.
+        let character = character_of(seed, cell, Band::Undercroft, branch);
         branches.push(BranchReading {
             character,
-            barrier: barrier_of(seed, cell, 0, branch, &BarrierPins::default()),
+            barrier: barrier_of(
+                seed,
+                cell,
+                Band::Undercroft,
+                branch,
+                &BarrierPins::default(),
+            ),
             terminating_band: terminating,
             lattice_underdeep: realized.contains(&underdeep),
             lattice_nadir: realized.contains(&nadir),

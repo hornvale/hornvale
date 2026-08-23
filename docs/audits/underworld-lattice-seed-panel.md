@@ -49,12 +49,12 @@ seed 42
   entrances       1229 drawn across 874 systems, 252 multi-entrance (chamber/entrance-count/v1)
   cave systems    874  (ocean-cell caves skipped: 0)
   floors drawn    113799
-  chambers        30272
-  reachable       30272 from 1154 open entrances
-  junctions       4179 links across 1456 system pairs; largest network 117 systems at one band (MAP-underworld-shortcut)
-  by band         undercroft:4253  shallows:8190  deeps:13515  underdeep:3284  nadir:1030  
-  by rock         regolith:2038  cover:819  basement:27415  roots:0  underneath:0  off-ladder:0
-  by origin       found:30272  made:0
+  chambers        30537
+  reachable       30537 from 1140 open entrances
+  junctions       4165 links across 1575 system pairs; largest network 119 systems at one band (MAP-underworld-shortcut)
+  by band         undercroft:4148  shallows:7915  deeps:14072  underdeep:3376  nadir:1026  
+  by rock         regolith:1942  cover:715  basement:27880  roots:0  underneath:0  off-ladder:0
+  by origin       found:30537  made:0
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
@@ -67,19 +67,19 @@ seed 42
     30/0/deeps/0                 basement    14 floors  ##############______
     30/0/underdeep/0             basement     6 floors  ######______________
     30/0/nadir/0                 basement     5 floors  #####_______________
-    30/1/undercroft/0            -            4 floors  ~~~~________________
+    30/1/undercroft/0            regolith     4 floors  ####________________
     30/1/shallows/0              -            7 floors  ~~~~~~~_____________
-    30/1/deeps/0                 -           11 floors  ~~~~~~~~~~~_________
+    30/1/deeps/0                 basement    11 floors  ###########_________
     30/1/underdeep/0             -            9 floors  ~~~~~~~~~___________
     30/1/nadir/0                 -            5 floors  ~~~~~_______________
-    30/2/undercroft/0            -            1 floors  ~___________________
+    30/2/undercroft/0            regolith     1 floors  #___________________
     30/2/shallows/0              -            8 floors  ~~~~~~~~____________
-    30/2/deeps/0                 -           18 floors  ~~~~~~~~~~~~~~~~~~__
+    30/2/deeps/0                 basement    18 floors  ##################__
     30/2/underdeep/0             -            6 floors  ~~~~~~______________
     30/2/nadir/0                 -            4 floors  ~~~~________________
     30/3/undercroft/0            -            4 floors  ~~~~________________
     30/3/shallows/0              -            8 floors  ~~~~~~~~____________
-    30/3/deeps/0                 -           18 floors  ~~~~~~~~~~~~~~~~~~__
+    30/3/deeps/0                 basement    18 floors  ##################__
     30/3/underdeep/0             -           10 floors  ~~~~~~~~~~__________
     30/3/nadir/0                 -            5 floors  ~~~~~_______________
 
@@ -89,12 +89,12 @@ seed 42
     111/0/deeps/0                -           13 floors  ............._______
     111/0/underdeep/0            -            7 floors  ......._____________
     111/0/nadir/0                -            4 floors  ....________________
-    111/1/undercroft/0           -            1 floors  ~___________________
+    111/1/undercroft/0           basement     1 floors  #___________________
     111/1/shallows/0             -            6 floors  ~~~~~~______________
     111/1/deeps/0                -           14 floors  ~~~~~~~~~~~~~~______
     111/1/underdeep/0            -            5 floors  ~~~~~_______________
     111/1/nadir/0                -            3 floors  ~~~_________________
-    111/2/undercroft/0           -            5 floors  ~~~~~_______________
+    111/2/undercroft/0           basement     5 floors  #####_______________
     111/2/shallows/0             -            4 floors  ~~~~________________
     111/2/deeps/0                -           16 floors  ~~~~~~~~~~~~~~~~____
     111/2/underdeep/0            -            8 floors  ~~~~~~~~____________
@@ -112,14 +112,14 @@ seed 42
     282/0/underdeep/0            -            8 floors  ........____________
     282/0/nadir/0                -            3 floors  ..._________________
     282/1/undercroft/0           -            2 floors  ~~__________________
-    282/1/shallows/0             -            9 floors  ~~~~~~~~~___________
+    282/1/shallows/0             basement     9 floors  #########___________
     282/1/deeps/0                -           17 floors  ~~~~~~~~~~~~~~~~~___
-    282/1/underdeep/0            -           10 floors  ~~~~~~~~~~__________
+    282/1/underdeep/0            -           10 floors  ..........__________
     282/1/nadir/0                -            5 floors  ~~~~~_______________
     282/2/undercroft/0           -            4 floors  ~~~~________________
     282/2/shallows/0             -            3 floors  ~~~_________________
     282/2/deeps/0                -           20 floors  ~~~~~~~~~~~~~~~~~~~~
-    282/2/underdeep/0            -            5 floors  ~~~~~_______________
+    282/2/underdeep/0            -            5 floors  ....._______________
     282/2/nadir/0                -            3 floors  ~~~_________________
     282/3/undercroft/0           -            1 floors  ~___________________
     282/3/shallows/0             -            8 floors  ~~~~~~~~____________
@@ -133,12 +133,12 @@ seed 7
   entrances       2382 drawn across 1681 systems, 499 multi-entrance (chamber/entrance-count/v1)
   cave systems    1681  (ocean-cell caves skipped: 0)
   floors drawn    219277
-  chambers        60119
-  reachable       60119 from 2250 open entrances
-  junctions       8246 links across 2838 system pairs; largest network 110 systems at one band (MAP-underworld-shortcut)
-  by band         undercroft:8149  shallows:16949  deeps:20634  underdeep:10770  nadir:3617  
-  by rock         regolith:4429  cover:3499  basement:52191  roots:0  underneath:0  off-ladder:0
-  by origin       found:60119  made:0
+  chambers        59227
+  reachable       59227 from 2193 open entrances
+  junctions       8253 links across 3007 system pairs; largest network 118 systems at one band (MAP-underworld-shortcut)
+  by band         undercroft:7923  shallows:16455  deeps:20917  underdeep:10490  nadir:3442  
+  by rock         regolith:4306  cover:3540  basement:51381  roots:0  underneath:0  off-ladder:0
+  by origin       found:59227  made:0
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
@@ -151,21 +151,21 @@ seed 7
     52/0/deeps/0                 -           19 floors  ..................._
     52/0/underdeep/0             -            5 floors  ....._______________
     52/0/nadir/0                 -            3 floors  ..._________________
-    52/1/undercroft/0            -            4 floors  ~~~~________________
-    52/1/shallows/0              -            6 floors  ~~~~~~______________
-    52/1/deeps/0                 -            6 floors  ~~~~~~______________
-    52/1/underdeep/0             -           10 floors  ~~~~~~~~~~__________
-    52/1/nadir/0                 -            2 floors  ~~__________________
-    52/2/undercroft/0            -            4 floors  ~~~~________________
+    52/1/undercroft/0            regolith     4 floors  ####________________
+    52/1/shallows/0              cover        6 floors  ######______________
+    52/1/deeps/0                 -            6 floors  ......______________
+    52/1/underdeep/0             -           10 floors  ..........__________
+    52/1/nadir/0                 -            2 floors  ..__________________
+    52/2/undercroft/0            regolith     4 floors  ####________________
     52/2/shallows/0              -            8 floors  ~~~~~~~~____________
-    52/2/deeps/0                 -           18 floors  ~~~~~~~~~~~~~~~~~~__
+    52/2/deeps/0                 -           18 floors  ..................__
     52/2/underdeep/0             -            7 floors  ~~~~~~~_____________
-    52/2/nadir/0                 -            2 floors  ~~__________________
+    52/2/nadir/0                 -            2 floors  ..__________________
     52/3/undercroft/0            -            1 floors  ~___________________
     52/3/shallows/0              -            6 floors  ~~~~~~______________
     52/3/deeps/0                 -           14 floors  ~~~~~~~~~~~~~~______
     52/3/underdeep/0             -            5 floors  ~~~~~_______________
-    52/3/nadir/0                 -            2 floors  ~~__________________
+    52/3/nadir/0                 -            2 floors  ..__________________
 
   cell 70 — fracture cave, reach 2230.3734 m, gradient 24.795713 K/km
     70/0/undercroft/0            regolith     2 floors  ##__________________
@@ -173,19 +173,19 @@ seed 7
     70/0/deeps/0                 basement     8 floors  ########____________
     70/0/underdeep/0             basement     7 floors  #######_____________
     70/0/nadir/0                 basement     3 floors  ###_________________
-    70/1/undercroft/0            regolith     3 floors  ###_________________
-    70/1/shallows/0              basement     9 floors  #########___________
+    70/1/undercroft/0            -            3 floors  ~~~_________________
+    70/1/shallows/0              -            9 floors  ~~~~~~~~~___________
     70/1/deeps/0                 basement    18 floors  ##################__
-    70/1/underdeep/0             basement     8 floors  ########____________
-    70/1/nadir/0                 basement     2 floors  ##__________________
+    70/1/underdeep/0             -            8 floors  ~~~~~~~~____________
+    70/1/nadir/0                 -            2 floors  ~~__________________
     70/2/undercroft/0            -            3 floors  ~~~_________________
     70/2/shallows/0              -            7 floors  ~~~~~~~_____________
-    70/2/deeps/0                 -            7 floors  ~~~~~~~_____________
+    70/2/deeps/0                 basement     7 floors  #######_____________
     70/2/underdeep/0             -            5 floors  ~~~~~_______________
     70/2/nadir/0                 -            4 floors  ~~~~________________
     70/3/undercroft/0            -            4 floors  ~~~~________________
     70/3/shallows/0              -            5 floors  ~~~~~_______________
-    70/3/deeps/0                 -           19 floors  ~~~~~~~~~~~~~~~~~~~_
+    70/3/deeps/0                 basement    19 floors  ###################_
     70/3/underdeep/0             -            9 floors  ~~~~~~~~~___________
     70/3/nadir/0                 -            3 floors  ~~~_________________
 
@@ -195,11 +195,11 @@ seed 7
     92/0/deeps/0                 basement     5 floors  #####_______________
     92/0/underdeep/0             basement    10 floors  ##########__________
     92/0/nadir/0                 -            4 floors  ....________________
-    92/1/undercroft/0            -            2 floors  ~~__________________
+    92/1/undercroft/0            regolith     2 floors  ##__________________
     92/1/shallows/0              -            5 floors  ~~~~~_______________
     92/1/deeps/0                 -            6 floors  ~~~~~~______________
     92/1/underdeep/0             -           10 floors  ~~~~~~~~~~__________
-    92/1/nadir/0                 -            5 floors  ~~~~~_______________
+    92/1/nadir/0                 -            5 floors  ....._______________
     92/2/undercroft/0            -            2 floors  ~~__________________
     92/2/shallows/0              -            5 floors  ~~~~~_______________
     92/2/deeps/0                 -           17 floors  ~~~~~~~~~~~~~~~~~___
@@ -217,12 +217,12 @@ seed 1234
   entrances       1813 drawn across 1266 systems, 374 multi-entrance (chamber/entrance-count/v1)
   cave systems    1266  (ocean-cell caves skipped: 0)
   floors drawn    164033
-  chambers        49002
-  reachable       49002 from 1728 open entrances
-  junctions       7001 links across 2260 system pairs; largest network 124 systems at one band (MAP-underworld-shortcut)
-  by band         undercroft:5929  shallows:12273  deeps:20406  underdeep:7889  nadir:2505  
-  by rock         regolith:2876  cover:2765  basement:43361  roots:0  underneath:0  off-ladder:0
-  by origin       found:49002  made:0
+  chambers        48294
+  reachable       48294 from 1651 open entrances
+  junctions       6937 links across 2348 system pairs; largest network 128 systems at one band (MAP-underworld-shortcut)
+  by band         undercroft:5910  shallows:12104  deeps:19940  underdeep:7759  nadir:2581  
+  by rock         regolith:2902  cover:2650  basement:42742  roots:0  underneath:0  off-ladder:0
+  by origin       found:48294  made:0
   past run length 0   (chambers beyond their run's drawn floors)
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
@@ -235,11 +235,11 @@ seed 1234
     18/0/deeps/0                 basement     8 floors  ########____________
     18/0/underdeep/0             basement     8 floors  ########____________
     18/0/nadir/0                 basement     4 floors  ####________________
-    18/1/undercroft/0            -            4 floors  ~~~~________________
+    18/1/undercroft/0            regolith     4 floors  ####________________
     18/1/shallows/0              -            9 floors  ~~~~~~~~~___________
     18/1/deeps/0                 -            9 floors  ~~~~~~~~~___________
     18/1/underdeep/0             -            9 floors  ~~~~~~~~~___________
-    18/1/nadir/0                 -            1 floors  ~___________________
+    18/1/nadir/0                 basement     1 floors  #___________________
     18/2/undercroft/0            -            3 floors  ~~~_________________
     18/2/shallows/0              -            3 floors  ~~~_________________
     18/2/deeps/0                 -            7 floors  ~~~~~~~_____________
@@ -257,21 +257,21 @@ seed 1234
     19/0/deeps/0                 cover       16 floors  ################____
     19/0/underdeep/0             basement     6 floors  ######______________
     19/0/nadir/0                 -            3 floors  ..._________________
-    19/1/undercroft/0            regolith     3 floors  ###_________________
-    19/1/shallows/0              cover       10 floors  ##########__________
-    19/1/deeps/0                 cover        6 floors  ######______________
+    19/1/undercroft/0            -            3 floors  ~~~_________________
+    19/1/shallows/0              -           10 floors  ~~~~~~~~~~__________
+    19/1/deeps/0                 -            6 floors  ~~~~~~______________
     19/1/underdeep/0             basement     7 floors  #######_____________
-    19/1/nadir/0                 -            3 floors  ..._________________
-    19/2/undercroft/0            regolith     5 floors  #####_______________
-    19/2/shallows/0              cover        4 floors  ####________________
-    19/2/deeps/0                 cover       20 floors  ####################
-    19/2/underdeep/0             basement     6 floors  ######______________
-    19/2/nadir/0                 -            5 floors  ....._______________
-    19/3/undercroft/0            regolith     1 floors  #___________________
-    19/3/shallows/0              cover        6 floors  ######______________
-    19/3/deeps/0                 cover       12 floors  ############________
-    19/3/underdeep/0             basement     9 floors  #########___________
-    19/3/nadir/0                 -            5 floors  ....._______________
+    19/1/nadir/0                 -            3 floors  ~~~_________________
+    19/2/undercroft/0            -            5 floors  ~~~~~_______________
+    19/2/shallows/0              -            4 floors  ~~~~________________
+    19/2/deeps/0                 -           20 floors  ~~~~~~~~~~~~~~~~~~~~
+    19/2/underdeep/0             -            6 floors  ~~~~~~______________
+    19/2/nadir/0                 -            5 floors  ~~~~~_______________
+    19/3/undercroft/0            -            1 floors  ~___________________
+    19/3/shallows/0              -            6 floors  ~~~~~~______________
+    19/3/deeps/0                 -           12 floors  ~~~~~~~~~~~~________
+    19/3/underdeep/0             -            9 floors  ~~~~~~~~~___________
+    19/3/nadir/0                 -            5 floors  ~~~~~_______________
 
   cell 49 — fracture cave, reach 2039.1218 m, gradient 26.05835 K/km
     49/0/undercroft/0            basement     2 floors  ##__________________
@@ -279,12 +279,12 @@ seed 1234
     49/0/deeps/0                 basement    12 floors  ############________
     49/0/underdeep/0             basement     6 floors  ######______________
     49/0/nadir/0                 basement     2 floors  ##__________________
-    49/1/undercroft/0            -            3 floors  ~~~_________________
+    49/1/undercroft/0            basement     3 floors  ###_________________
     49/1/shallows/0              -            8 floors  ~~~~~~~~____________
     49/1/deeps/0                 -           11 floors  ~~~~~~~~~~~_________
-    49/1/underdeep/0             -            9 floors  ~~~~~~~~~___________
+    49/1/underdeep/0             basement     9 floors  #########___________
     49/1/nadir/0                 -            5 floors  ~~~~~_______________
-    49/2/undercroft/0            -            1 floors  ~___________________
+    49/2/undercroft/0            basement     1 floors  #___________________
     49/2/shallows/0              -            7 floors  ~~~~~~~_____________
     49/2/deeps/0                 -            7 floors  ~~~~~~~_____________
     49/2/underdeep/0             -            9 floors  ~~~~~~~~~___________

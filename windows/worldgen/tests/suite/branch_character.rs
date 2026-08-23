@@ -111,11 +111,10 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
     for raw_seed in PANEL_SEEDS {
         let seed = Seed(raw_seed);
         for raw_cell in 0..PANEL_CELLS {
-            for entrance in 0..2u8 {
+            for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     total += 1;
-                    if character_of(seed, CellId(raw_cell), entrance, branch) == Character::DrowTier
-                    {
+                    if character_of(seed, CellId(raw_cell), band, branch) == Character::DrowTier {
                         drow += 1;
                     }
                 }
@@ -139,31 +138,28 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
     );
 }
 
-/// One branch carries ONE character for its whole depth (spec §3.3's
-/// coherence guarantee).
+/// One branch AT ONE BAND carries ONE character across every floor of that
+/// run (spec B.5's coherence guarantee, **narrowed by The Drift Task 5**).
 ///
-/// CONTROLLER NOTE (per the dispatch): the property as originally worded is
-/// vacuous — `character_of` takes no band parameter, so "same character at
-/// every depth" holds by type. What CAN break is the chamber-addressed
-/// projection: `character_at(addr)` must resolve every address of one branch
-/// — every band, every floor — to the same character as the branch-level
-/// accessor. If the projection ever consulted `band` or `floor`, a descent
-/// would change civilizations mid-branch, and this test reddens.
-///
-/// **No `entrance` sweep** (The Drift, Task 4 / Task 5 coupling):
-/// `character_at` passes a transitional literal `0` where `addr.entrance`
-/// used to travel (see its own doc), so it is entrance-invariant by
-/// construction until Task 5 lands — comparing it against
-/// `character_of(seed, cell, entrance, branch)` for `entrance != 0` would
-/// fail for a reason unrelated to this test's own subject, which is the
-/// band/level projection.
+/// **This is a revision, not merely a rename.** Before Task 5,
+/// `character_of` took no band parameter, so "same character at every
+/// depth" held for a whole branch across every band. Task 5 re-keyed
+/// `character_of` onto `(cell, band, branch)` (amendment A.3), so a branch
+/// can now carry a DIFFERENT character at each band it occupies — see
+/// `character_and_barrier_are_keyed_at_the_same_granularity` in
+/// `hornvale_worldgen::character`'s own tests, which demands exactly that
+/// variation. What survives from the old guarantee is narrower: the LEVEL
+/// axis. `character_at(addr)` must still resolve every FLOOR of one
+/// `(branch, band)` run to the same character as the band-level accessor —
+/// if the projection ever consulted `level`, a descent within one band
+/// would change civilizations mid-run, and this test reddens.
 #[test]
-fn one_branch_has_one_character_for_its_whole_depth() {
+fn one_branch_at_one_band_has_one_character_across_its_floors() {
     let seed = Seed(90210);
     for raw_cell in 0u32..20 {
         for branch in 0..BRANCHES_PER_SYSTEM {
-            let expected = character_of(seed, CellId(raw_cell), 0, branch);
             for &band in Band::habitation() {
+                let expected = character_of(seed, CellId(raw_cell), band, branch);
                 for level in 0..8u8 {
                     let addr = ChamberAddr {
                         cell: CellId(raw_cell),
@@ -175,8 +171,7 @@ fn one_branch_has_one_character_for_its_whole_depth() {
                         character_at(seed, addr),
                         expected,
                         "{addr:?} resolved a different character than its own \
-                         branch's — the projection consulted something beyond \
-                         the branch identity"
+                         branch-and-band's — the projection consulted `level`"
                     );
                 }
             }
@@ -195,14 +190,13 @@ fn one_branch_has_one_character_for_its_whole_depth() {
 /// lattice-ceiling/drawn-realization split Task 2 applied to floors). The
 /// positive control is branch 0, which every count admits.
 ///
-/// **The enforcement half is checked at entrance 0 only** (The Drift, Task 4
-/// / Task 5 coupling): `chamber_exists` now passes a transitional literal `0`
-/// where `addr.entrance` used to travel (see its own doc), so it enforces
-/// entrance 0's drawn width for every branch query regardless of which
-/// entrance a caller has in mind — there is no longer a per-entrance
-/// enforcement to check. The histogram half, which reads `branch_count_of`
-/// directly rather than through `chamber_exists`, is untouched and still
-/// swept over every entrance: that draw itself did not move.
+/// **The enforcement half is checked at each BAND** (The Drift, Task 5):
+/// `chamber_exists` now reads `branch_count_of(seed, addr.cell, addr.band)`
+/// directly, so the gate enforces THAT band's own drawn width — there is no
+/// longer a single system-wide width to enforce. The histogram and
+/// enforcement halves both sweep every habitation band now, in lockstep, so
+/// each `count` is checked against the gate at the same band it was drawn
+/// from.
 /// claim: rate(panel-seeds) — branch-count histogram, mode must be 1
 #[test]
 fn most_systems_have_one_branch_and_none_has_more_than_four() {
@@ -226,23 +220,20 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
     for raw_seed in PANEL_SEEDS {
         let seed = Seed(raw_seed);
         for raw_cell in 0..PANEL_CELLS {
-            for entrance in 0..2u8 {
-                let count = branch_count_of(seed, CellId(raw_cell), entrance);
+            for &band in Band::habitation() {
+                let count = branch_count_of(seed, CellId(raw_cell), band);
                 assert!(
                     (1..=BRANCHES_PER_SYSTEM).contains(&count),
-                    "cell {raw_cell} entrance {entrance} under seed {raw_seed} \
+                    "cell {raw_cell} band {band:?} under seed {raw_seed} \
                      drew {count} branches, outside 1..={BRANCHES_PER_SYSTEM}"
                 );
                 histogram[usize::from(count - 1)] += 1;
                 systems += 1;
 
-                // Enforcement half: `chamber_exists` reads entrance 0's own
-                // drawn count transitionally, so only entrance 0's `count` is
-                // the one the gate can be checked against.
-                if entrance != 0 {
-                    continue;
-                }
-
+                // Enforcement half: `chamber_exists` now reads THIS band's
+                // own drawn count (The Drift, Task 5), so the gate is checked
+                // at the SAME band the count above was drawn from.
+                //
                 // Realization half: past the count, nothing exists.
                 for branch in count..BRANCHES_PER_SYSTEM {
                     assert!(
@@ -253,11 +244,11 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                             ChamberAddr {
                                 cell: CellId(raw_cell),
                                 branch,
-                                band: Band::Undercroft,
+                                band,
                                 level: 0,
                             },
                         ),
-                        "cell {raw_cell} entrance {entrance} drew {count} branches \
+                        "cell {raw_cell} band {band:?} drew {count} branches \
                          yet branch {branch} still exists under seed {raw_seed} — \
                          the count is reported but not enforced"
                     );
@@ -273,7 +264,7 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                         ChamberAddr {
                             cell: CellId(raw_cell),
                             branch,
-                            band: Band::Undercroft,
+                            band,
                             level: 0,
                         },
                     ) {
@@ -360,14 +351,20 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
     let seed = Seed(90210);
     let cell = CellId(9);
 
-    let first = barrier_of(seed, cell, 0, 2, &BarrierPins::default());
+    let first = barrier_of(seed, cell, Band::Undercroft, 2, &BarrierPins::default());
     for raw_cell in 0u32..30 {
         for branch in 0..BRANCHES_PER_SYSTEM {
-            let _ = barrier_of(seed, CellId(raw_cell), 1, branch, &BarrierPins::default());
+            let _ = barrier_of(
+                seed,
+                CellId(raw_cell),
+                Band::Shallows,
+                branch,
+                &BarrierPins::default(),
+            );
         }
     }
     assert_eq!(
-        barrier_of(seed, cell, 0, 2, &BarrierPins::default()),
+        barrier_of(seed, cell, Band::Undercroft, 2, &BarrierPins::default()),
         first,
         "the same branch answered a different barrier after unrelated queries — \
          the draw advanced a stream instead of keying on a place"
@@ -377,7 +374,15 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
     let mut differing_systems = 0usize;
     for raw_cell in 0..PANEL_CELLS {
         let states: BTreeSet<BarrierState> = (0..BRANCHES_PER_SYSTEM)
-            .map(|b| barrier_of(seed, CellId(raw_cell), 0, b, &BarrierPins::default()))
+            .map(|b| {
+                barrier_of(
+                    seed,
+                    CellId(raw_cell),
+                    Band::Undercroft,
+                    b,
+                    &BarrierPins::default(),
+                )
+            })
             .collect();
         if states.len() > 1 {
             differing_systems += 1;
@@ -400,7 +405,7 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
         for raw_cell in 0u32..10 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 assert_eq!(
-                    barrier_of(seed, CellId(raw_cell), 0, branch, &pins),
+                    barrier_of(seed, CellId(raw_cell), Band::Undercroft, branch, &pins),
                     state,
                     "pin {:?} did not hold at cell {raw_cell} branch {branch}",
                     state

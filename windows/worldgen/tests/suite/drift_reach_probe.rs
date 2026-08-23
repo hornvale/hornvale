@@ -175,6 +175,53 @@
 //! system's ONE shared lattice rather than its own entrance's private one,
 //! which is strictly more permissive.
 //!
+//! # MEASURED VALUES — AFTER TASK 5, 2026-08-23 (`branch_count_of`,
+//! # `character_of` and `barrier_of` re-keyed onto `(cell, band, ...)`, spec
+//! # amendment A.3) — THE CURRENT TREE
+//!
+//! ```text
+//! seed 42
+//!   systems 874    levels 30537   reachable 30537   entrances 1229 drawn / 1140 open
+//!   systems with an open mouth 874
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (30537 of 30537)
+//!   levels per system            mean 34.94   p10 8   median 34   p90 60
+//! seed 7
+//!   systems 1681   levels 59227   reachable 59227   entrances 2382 drawn / 2193 open
+//!   systems with an open mouth 1681
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (59227 of 59227)
+//!   levels per system            mean 35.23   p10 9   median 35   p90 65
+//! seed 1234
+//!   systems 1266   levels 48294   reachable 48294   entrances 1813 drawn / 1651 open
+//!   systems with an open mouth 1266
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (48294 of 48294)
+//!   levels per system            mean 38.15   p10 10   median 38   p90 65
+//! ```
+//!
+//! **`levels` moved by a small amount on every seed (30272->30537 seed 42,
+//! 60119->59227 seed 7, 49002->48294 seed 1234) — a few tenths of a percent,
+//! not the multi-thousand-level structural jump Task 1 and Task 4 each
+//! produced.** The mechanism is different from both of those: nothing about
+//! the LATTICE'S SHAPE changed (still one shared lattice per system,
+//! `entrance` still carries no address weight); what changed is that
+//! `branch_count_of` — the C.1 gate `chamber_exists` reads before admitting a
+//! branch — now answers PER BAND instead of once per system. A branch that
+//! was globally admitted or globally refused before Task 5 can now be
+//! admitted at some bands and refused at others, so individual (branch,
+//! band) cells flip in both directions; the small net movement is the sum
+//! of many small, band-local flips rather than one directional shift. `open
+//! entrances` fell slightly on every seed too (1154->1140 seed 42,
+//! 2250->2193 seed 7, 1728->1651 seed 1234) for the same reason —
+//! `entrance_mouth`'s own `branch_count_of` reference query (`Band::
+//! Undercroft`, see its doc) no longer always agrees with the branch's
+//! actual landing-band width, so a mouth that used to resolve now
+//! occasionally names a branch its landing band does not realize. **All
+//! three panel seeds still read EXACTLY 100.00% on both reachability arms**
+//! — the movement is entirely in the denominator (which chambers exist),
+//! not in the reachability property Task 4 established.
+//!
 //! Wall time for the whole probe (three `BuildDepth::Terrain` worlds and
 //! ~1.6M `chamber_exists` calls) is ~1.5 s in the optimized test profile.
 //! It is `#[ignore]`d anyway, with the same reason every live-worldgen battery
@@ -213,25 +260,33 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// triple the committed witness `docs/audits/underworld-lattice-seed-panel.md`
 /// renders, re-baselined once already.
 ///
-/// **Pinned as an equality on purpose, and it has now broken twice, exactly
-/// as designed.** Before Task 1 landed this held `(21328, 1496, 511)` —
-/// spec §1's opening figure. Task 1 (spec §4.1) deleted `chamber_exists`'s
-/// existence coin and moved it to `(42820, 39140, 1101)`. **Task 4 (spec
-/// amendment A.3) moved it a second time, to `(30272, 30272, 1154)`**:
-/// dropping `entrance` from `ChamberAddr` collapses each system's
+/// **Pinned as an equality on purpose, and it has now broken three times,
+/// exactly as designed.** Before Task 1 landed this held `(21328, 1496,
+/// 511)` — spec §1's opening figure. Task 1 (spec §4.1) deleted
+/// `chamber_exists`'s existence coin and moved it to `(42820, 39140, 1101)`.
+/// Task 4 (spec amendment A.3) moved it a second time, to `(30272, 30272,
+/// 1154)`: dropping `entrance` from `ChamberAddr` collapses each system's
 /// per-entrance sublattices into ONE shared lattice, so `levels` fell (a
 /// structural consequence of amendment A.5, not a regression — see this
 /// module's header) while `reachable` rose to EXACTLY equal it: every one of
 /// the three panel seeds now reads 100.00% whole-world reachable, not merely
-/// past spec §6's 90% intent but at its ceiling. The module's own "MEASURED
-/// VALUES" block records the movement in full. A move from any OTHER cause
-/// from here on — a terrain change, a stream relabelling, a lattice constant
-/// — is a determinism finding, and this equality still catches that.
+/// past spec §6's 90% intent but at its ceiling. **Task 5 (re-keying
+/// `branch_count_of` onto `(cell, band)`, spec amendment A.3) moved it a
+/// third time, to `(30537, 30537, 1140)`**: this movement is far smaller
+/// than either of the first two (a few tenths of a percent, not a
+/// multi-thousand-level jump) and comes from a different mechanism — no
+/// lattice shape changed, but individual `(branch, band)` cells that were
+/// globally admitted or refused before Task 5 now flip independently per
+/// band, so the net change is the sum of many small band-local flips. The
+/// module's own "MEASURED VALUES" block records the movement in full. A
+/// move from any OTHER cause from here on — a terrain change, a stream
+/// relabelling, a lattice constant — is a determinism finding, and this
+/// equality still catches that.
 ///
 /// A band was considered and rejected: this is not a noisy statistic but a
 /// deterministic count over a fixed seed, and a band around a deterministic
 /// count only buys room for an undetected change.
-const SEED_42_BASELINE: (usize, usize, usize) = (30272, 30272, 1154);
+const SEED_42_BASELINE: (usize, usize, usize) = (30537, 30537, 1140);
 
 /// The habitation band ranks, ascending — **derived from the delve ladder**
 /// through the shipped [`rung_rank`], never restated as a literal range.

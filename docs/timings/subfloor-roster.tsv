@@ -2708,7 +2708,7 @@ hornvale-worldgen::hornvale_worldgen$chamber::tests::the_run_leg_and_the_chamber
 hornvale-worldgen::hornvale_worldgen$chamber::tests::the_rung_to_stratum_map_is_many_to_one_and_gradient_dependent
 hornvale-worldgen::hornvale_worldgen$chamber::tests::two_entrances_of_one_system_may_open_on_different_floors
 hornvale-worldgen::hornvale_worldgen$character::tests::each_draw_travels_its_own_leg_and_not_a_siblings
-hornvale-worldgen::hornvale_worldgen$character::tests::every_new_label_is_v1
+hornvale-worldgen::hornvale_worldgen$character::tests::every_new_label_is_v2_except_branch_root
 hornvale-worldgen::hornvale_worldgen$character::tests::the_barrier_draw_is_byte_pinned_for_known_keys
 hornvale-worldgen::hornvale_worldgen$character::tests::the_branch_count_draw_is_byte_pinned_for_known_keys
 hornvale-worldgen::hornvale_worldgen$character::tests::the_character_draw_is_byte_pinned_for_known_keys
@@ -2911,7 +2911,7 @@ hornvale-worldgen::suite$branch_character::a_branch_roots_on_a_floor_that_exists
 hornvale-worldgen::suite$branch_character::a_character_only_occupies_its_declared_bands
 hornvale-worldgen::suite$branch_character::a_drow_tier_civilization_is_a_character_draw_not_a_band
 hornvale-worldgen::suite$branch_character::most_systems_have_one_branch_and_none_has_more_than_four
-hornvale-worldgen::suite$branch_character::one_branch_has_one_character_for_its_whole_depth
+hornvale-worldgen::suite$branch_character::one_branch_at_one_band_has_one_character_across_its_floors
 hornvale-worldgen::suite$branch_character::the_barrier_is_deterministic_and_keyed_on_the_branch
 hornvale-worldgen::suite$chorus_params::sky_capability_matches_the_authored_roster
 hornvale-worldgen::suite$color_naming::a_speaker_never_reaches_past_its_ladder_depth

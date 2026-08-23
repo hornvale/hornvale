@@ -215,9 +215,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
 | `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
 | `chamber/run-floors/v2` | how many levels one run realizes, keyed on (cell, branch, band) |
-| `chamber/branch-character/v1` | which character one branch carries, keyed on (cell, entrance, branch) |
-| `chamber/branch-barrier/v1` | the barrier thinness of one branch, keyed on (cell, entrance, branch) |
-| `chamber/branch-count/v1` | how many branches one cave system realizes, keyed on (cell, entrance) |
+| `chamber/branch-character/v2` | which character one branch carries, keyed on (cell, branch, band) |
+| `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (cell, branch, band) |
+| `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (cell, band) |
 | `chamber/entrance-count/v1` | how many surface apertures one cave system opens, keyed on cell |
 | `chamber/entrance-mouth/v1` | which floor of the lattice one entrance opens into, keyed on (cell, entrance) |
 | `chamber/branch-root/v1` | where a branch roots on its parent, keyed on (cell, entrance, branch) |

@@ -352,7 +352,13 @@ pub fn rung_rank(rung: Band) -> Option<u8> {
 /// survive**, and it did: re-pointing the axis at a different ladder changed
 /// *which table* is consulted, in one place, visibly — instead of silently
 /// changing what a `Debug` impl happened to print.
-fn rung_name(rung: Band) -> &'static str {
+///
+/// **`pub(crate)` since The Drift Task 5**, so `crate::character`'s
+/// per-branch keys can spell `band` by the same name table `run_key` and
+/// `chamber_key` use, rather than growing a second copy of it — the same
+/// "one explicit mapping, in one place" argument [`rung_rank`]'s own doc
+/// makes for widening it to `pub`.
+pub(crate) fn rung_name(rung: Band) -> &'static str {
     match rung {
         Band::Surface => "surface",
         Band::Undercroft => "undercroft",
@@ -672,16 +678,33 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
 /// **The mouth/gate asymmetry this doc used to accept is DISSOLVED, not
 /// merely narrowed** (The Drift, amendment A.3, which names this exact
 /// passage: "this also dissolves the asymmetry `entrance_mouth`'s doc
-/// records as accepted"). The side branch was always drawn from entrance 0's
-/// `branch_count_of` lattice; what changed is that [`chamber_exists`] now
-/// adjudicates every branch against that SAME entrance-0 lattice too
-/// (transitionally, via a literal `0` — see its own doc), rather than against
-/// the asking entrance's own. So a mouth and the gate it is checked against
-/// read the same drawn width by construction, and a mouth can no longer name
-/// a branch that lattice never realized. Task 5's re-keying of
-/// `branch_count_of` onto `(cell, band)` keeps this true rather than
-/// reopening it: every entrance still addresses into the one system-wide
-/// lattice `chamber_exists` gates against.
+/// records as accepted"). Before Task 5, the side branch was always drawn
+/// from entrance 0's `branch_count_of` lattice, and [`chamber_exists`]
+/// adjudicated every branch against that same entrance-0 lattice too
+/// (transitionally, via a literal `0`), so a mouth and the gate it was
+/// checked against read the same drawn width by construction.
+///
+/// **Task 5 re-keyed `branch_count_of` onto `(cell, band)`, and that
+/// construction no longer holds in general — this doc corrects its own
+/// prior claim rather than repeat it.** A branch's width is now a fact
+/// about `(system, band)`, but a door has not yet resolved a band when it
+/// picks a branch: the pick below queries [`Band::Undercroft`]'s width as a
+/// stand-in reference for "how many branches this system has", **not**
+/// necessarily the width of the band [`crate::character::root_floor_of`]
+/// ultimately lands the door on. So a mouth CAN now name a branch that is
+/// absent at its own landing band — which [`chamber_exists`] then correctly
+/// refuses, exactly like any other closed mouth (a landing past the cave's
+/// depth budget already did this before Task 5; this is the same "drawn but
+/// not realized" outcome, one cause wider). Every caller of this function
+/// already filters mouths through `chamber_exists` rather than assuming one
+/// always opens (see `drift_reach_probe.rs`'s `open_mouths` vs
+/// `drawn_mouths`), so this does not break an invariant anything relies on —
+/// it does mean "open entrances" can move for a new reason as of this task.
+/// A principled fix (querying the branch's OWN landing-band width) would
+/// need to pick the band before picking the branch, which is a real
+/// restructuring outside Task 5's three-signature scope (see the Task 5
+/// report); left for whichever later task rebuilds entrance resolution
+/// around Task 6/7's band-transition edges.
 /// type-audit: bare-ok(index: entrance)
 pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
     const HEAD: EntranceMouth = EntranceMouth {
@@ -692,7 +715,10 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
     if entrance == 0 {
         return HEAD;
     }
-    let branches = crate::character::branch_count_of(seed, cell, 0);
+    // `Band::Undercroft` is a stand-in reference width, not necessarily the
+    // width of whatever band the door ends up landing on — see this
+    // function's own doc.
+    let branches = crate::character::branch_count_of(seed, cell, Band::Undercroft);
     if branches <= 1 {
         // No side branch exists to open into: this door joins the head.
         return HEAD;
@@ -754,14 +780,14 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
 /// identical lattice-ceiling/drawn-realization split the level gates below
 /// implement for runs.
 ///
-/// **The Drift passes a LITERAL `0` here where `addr.entrance` used to
-/// travel** (amendment A.3 — Task 4/5 coupling): `branch_count_of` still
-/// takes an entrance argument (Task 5's re-keying to `(cell, band)` has not
-/// landed in this commit), and with `entrance` gone from `ChamberAddr` there
-/// is nothing else to pass. This is an increment, not a hack — entrance 0's
-/// branch count now gates every address in the system's ONE shared lattice,
-/// which **is** amendment A's end state; Task 5 is what makes the count vary
-/// by band. **Task 5 removes this literal.**
+/// **Task 5 removed the transitional literal `0` this doc used to describe**
+/// (amendment A.3 — Task 4/5 coupling). `branch_count_of` is now keyed on
+/// `(cell, band)`, so this gate reads `addr.band` directly: a branch is
+/// admitted only up to however many that SPECIFIC band's own draw realized,
+/// not a single system-wide width. This is what lets one system be two
+/// branches wide in the Undercroft and one wide in the Shallows — the same
+/// address, checked at two different bands, can now disagree about whether
+/// a given branch exists at all.
 ///
 /// **There are TWO level gates now, and the pair is the point** (The Stope,
 /// Task 2). [`LEVELS_PER_BRANCH_CEILING`] says which levels the address space
@@ -798,14 +824,13 @@ pub fn chamber_exists(
     if addr.band == Band::Surface {
         return false;
     }
-    // C.1's drawn realization: past this system's drawn branch width, no
-    // chamber exists at any band or level of the column. Branch 0 is always
-    // inside the count (`branch_count_of` draws 1..=BRANCHES_PER_SYSTEM), so
-    // every entrance's mouth survives this gate.
-    //
-    // Transitional `0` — see this function's own doc: Task 5 re-keys
-    // `branch_count_of` off `(cell, band)` and removes it.
-    if addr.branch >= crate::character::branch_count_of(seed, addr.cell, 0) {
+    // C.1's drawn realization: past THIS BAND's drawn branch width, no
+    // chamber exists at this band/level of the column (The Drift, Task 5 —
+    // the count is now a fact about `(system, band)`, not the system alone).
+    // Branch 0 is always inside the count at every band
+    // (`branch_count_of` draws 1..=BRANCHES_PER_SYSTEM), so the main line
+    // survives this gate everywhere.
+    if addr.branch >= crate::character::branch_count_of(seed, addr.cell, addr.band) {
         return false;
     }
     // `Band`'s derived `Ord` orders shallow -> deep (see its own doc), so
@@ -1651,13 +1676,18 @@ mod tests {
         // deeps / underdeep / nadir. Decimal, matching what `assert_eq!`
         // prints on a failure, so the two can be compared by eye.
         //
-        // A zero is a legitimate reading, not a hole in the pin: this system
-        // realizes exactly one branch (the old `entrance 0` width), so every
-        // row past branch 0 is zero by the C.1 gate.
+        // A zero is a legitimate reading, not a hole in the pin. **Re-baselined
+        // by The Drift, Task 5**: `branch_count_of` is now keyed on
+        // `(cell, band)`, and this cell is the demonstration that the width
+        // genuinely varies by band — cell 9 draws width 1 at Undercroft
+        // (branch 1's Undercroft column is 0) but a wider count at Deeps and
+        // at Underdeep (branch 1's Deeps column is nonzero, and branch 2's
+        // Underdeep column is nonzero too), so the SAME system is narrower
+        // at one band and wider at another.
         let expected: [u32; 20] = [
             3, 63, 262143, 255, 31, //
-            0, 0, 0, 0, 0, //
-            0, 0, 0, 0, 0, //
+            0, 0, 16383, 127, 0, //
+            0, 0, 524287, 0, 0, //
             0, 0, 0, 0, 0,
         ];
 
@@ -2530,6 +2560,12 @@ mod tests {
     /// The two new legs are byte-pinned for known keys — literal counts and
     /// literal mouths, the cheapest witness that any part of either
     /// derivation moved.
+    ///
+    /// **Re-baselined by The Drift, Task 5**: `entrance_mouth`'s own
+    /// `branch_count_of` query moved from a literal entrance index to
+    /// `Band::Undercroft` (see its own doc), which changes the actual
+    /// derived stream even where the numeral was textually the same, so
+    /// some mouths moved. `entrance_count` is untouched.
     #[test]
     fn the_entrance_draws_are_byte_pinned_for_known_keys() {
         let seed = Seed(42);
@@ -2563,8 +2599,8 @@ mod tests {
                 31,
                 1,
                 EntranceMouth {
-                    branch: 3,
-                    band: 3,
+                    branch: 0,
+                    band: 0,
                     floor: 0,
                 },
             ),
@@ -2572,9 +2608,9 @@ mod tests {
                 5,
                 1,
                 EntranceMouth {
-                    branch: 0,
+                    branch: 1,
                     band: 0,
-                    floor: 0,
+                    floor: 3,
                 },
             ),
         ] {
@@ -2630,7 +2666,7 @@ mod tests {
             // A width-two system cannot disagree: its single side branch is
             // the only thing either leg could pick. Only a wider system
             // discriminates the legs.
-            if crate::character::branch_count_of(seed, CellId(c), 0) < 3 {
+            if crate::character::branch_count_of(seed, CellId(c), Band::Undercroft) < 3 {
                 continue;
             }
             let shipped = entrance_mouth(seed, CellId(c), 1);
@@ -2677,7 +2713,8 @@ mod tests {
         cell: CellId,
         mut stream: hornvale_kernel::Stream,
     ) -> Option<EntranceMouth> {
-        let branches = crate::character::branch_count_of(seed, cell, 0);
+        // Same `Band::Undercroft` reference `entrance_mouth` itself uses.
+        let branches = crate::character::branch_count_of(seed, cell, Band::Undercroft);
         if branches <= 1 {
             return Some(EntranceMouth {
                 branch: 0,

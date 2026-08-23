@@ -101,25 +101,49 @@ hornvale_kernel::stream_labels! {
     /// gate rather than by the key.
     RUN_FLOORS = "chamber/run-floors/v2" => "how many levels one run realizes, keyed on (cell, branch, band)";
     /// Which [`crate::character::Character`] one branch carries (The Stope,
-    /// Task 3; spec B.4/B.5). Keyed on a **branch** — cell, entrance and
-    /// branch, a place in the fixed lattice and never a generation ordinal
+    /// Task 3; spec B.4/B.5). Keyed on a **branch at a band** — cell, branch
+    /// and band, a place in the fixed lattice and never a generation ordinal
     /// (decision 0102). A SEPARATE root leg from [`CHAMBER`] for the same
     /// collision argument [`RUN_FLOORS`]'s doc states: additive, perturbs no
-    /// existing draw, and the `/v1` epoch discipline applies to any later
-    /// re-shaping of the key.
-    BRANCH_CHARACTER = "chamber/branch-character/v1" => "which character one branch carries, keyed on (cell, entrance, branch)";
+    /// existing draw.
+    ///
+    /// **Epoch v2 (The Drift, amendment A.3, Task 5).** `entrance` dropped
+    /// out of the key and `band` moved in: before this change a branch's
+    /// character was a per-SYSTEM fact (one answer for the whole depth),
+    /// after it a per-`(system, band)` fact — a branch can carry a different
+    /// character at each band it occupies. This is a LIVE production leg
+    /// (`character_at` is `chamber_at`'s own character read), so the
+    /// re-keying rides an epoch. `chamber/branch-character/v1` is retired
+    /// and must never be reused.
+    BRANCH_CHARACTER = "chamber/branch-character/v2" => "which character one branch carries, keyed on (cell, branch, band)";
     /// How thin the barrier between the underworld and what lies beyond it
     /// is, on one branch (The Stope, Task 3; spec B.5). Same key shape as
     /// [`BRANCH_CHARACTER`] — character and barrier are ONE object per B.5:
     /// same owner, same lattice key — but its own parent leg, so the two
     /// draws cannot collide even by accident.
-    BRANCH_BARRIER = "chamber/branch-barrier/v1" => "the barrier thinness of one branch, keyed on (cell, entrance, branch)";
+    ///
+    /// **Epoch v2 (The Drift, amendment A.3, Task 5)**, same shape and same
+    /// reason as [`BRANCH_CHARACTER`]'s own v2 note: `entrance` out, `band`
+    /// in, re-keyed at the identical granularity so character and barrier
+    /// stay one object (B.5) rather than splitting across two. `chamber/
+    /// branch-barrier/v1` is retired and must never be reused.
+    BRANCH_BARRIER = "chamber/branch-barrier/v2" => "the barrier thinness of one branch, keyed on (cell, branch, band)";
     /// How many of the lattice's four branch columns one cave system
     /// realizes (The Stope, Task 3; amendment C.1) — the drawn realization
     /// half of the lattice-ceiling/drawn-realization split, with
-    /// `BRANCHES_PER_SYSTEM` as the ceiling. Keyed on the SYSTEM: cell and
-    /// entrance, no branch.
-    BRANCH_COUNT = "chamber/branch-count/v1" => "how many branches one cave system realizes, keyed on (cell, entrance)";
+    /// `BRANCHES_PER_SYSTEM` as the ceiling. Keyed on the SYSTEM **at a
+    /// band**: cell and band, no branch.
+    ///
+    /// **Epoch v2 (The Drift, amendment A.3, Task 5).** `entrance` dropped
+    /// out and `band` moved in: before this change a system had ONE branch
+    /// width for its whole depth; after it, a system may realize a
+    /// different width at each band — a system can be two branches wide in
+    /// the Undercroft and one wide in the Shallows. `chamber_exists` reads
+    /// this leg directly (`addr.branch >= branch_count_of(seed, addr.cell,
+    /// addr.band)`), so it is a LIVE production leg and the re-keying rides
+    /// an epoch. `chamber/branch-count/v1` is retired and must never be
+    /// reused.
+    BRANCH_COUNT = "chamber/branch-count/v2" => "how many branches one cave system realizes, keyed on (cell, band)";
     /// How many apertures one cave system opens to the surface (The Stope,
     /// Task 5; amendment C.3). Keyed on the SYSTEM's cell alone — no
     /// entrance index, because the count is a fact about the system as a

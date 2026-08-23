@@ -382,9 +382,24 @@ mod tests {
                 // `levels_in_branch` is `chamber_exists`'s own drawn-length
                 // gate — so the re-keying rides a real epoch. `chamber/
                 // run-floors/v1` is retired and never reused.
-                "chamber/branch-barrier v1",
-                "chamber/branch-character v1",
-                "chamber/branch-count v1",
+                // **The Drift Task 5 bumps these three to v2** (spec
+                // amendment A.3): `entrance` left each key entirely and
+                // `band` moved in — a branch's character, barrier and count
+                // are now facts about `(system, band)` rather than the
+                // system as a whole, which is what lets one system be two
+                // branches wide in the Undercroft and one wide in the
+                // Shallows. All three are live production legs
+                // (`chamber_exists`'s own branch gate reads `BRANCH_COUNT`
+                // directly), so the re-keying rides a real epoch, same
+                // discipline as `RUN_FLOORS`'s own v2 bump above.
+                // `chamber/branch-barrier/v1`, `chamber/branch-character/v1`
+                // and `chamber/branch-count/v1` are retired and never
+                // reused. `chamber/branch-root/v1` is UNCHANGED — it
+                // retires with `root_floor_of` itself in a later task
+                // (spec §4.6), not this one.
+                "chamber/branch-barrier v2",
+                "chamber/branch-character v2",
+                "chamber/branch-count v2",
                 "chamber/branch-root v1",
                 // The two Task 5 entrance legs (amendment C.3): how many
                 // apertures a system opens, and which floor each opens into.

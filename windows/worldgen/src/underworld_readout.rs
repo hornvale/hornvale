@@ -605,13 +605,16 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         // [`GLYPH_PAST_BRANCH`] belongs — the same falsifiability rule the
         // level walk follows.
         //
-        // Transitional `0`, matching `chamber_exists`'s own doc: Task 5
-        // re-keys `branch_count_of` off `(cell, band)` and removes it.
-        let realized_branches = crate::character::branch_count_of(seed, cell, 0);
+        // **Read per BAND, not once per system** (The Drift, Task 5):
+        // `branch_count_of` is now keyed on `(cell, band)`, so a system can
+        // realize a different branch width at each band — the width used
+        // below must match the band the gate below is actually reporting
+        // against, exactly as `chamber_exists` itself reads `addr.band`.
         for branch in 0..BRANCHES_PER_SYSTEM {
             for (rank, _) in habitation_bands() {
                 let band = hornvale_kernel::Band::from_rank(rank)
                     .expect("habitation_bands() yields real ranks");
+                let realized_branches = crate::character::branch_count_of(seed, cell, band);
                 let run = RunAddr { cell, branch, band };
                 let drawn = levels_in_branch(seed, run);
                 tallies.drawn_floors += usize::from(drawn);

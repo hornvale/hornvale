@@ -6,24 +6,41 @@
 //! 0102), and never of any other draw:
 //!
 //! - [`character_of`] / [`character_at`] — which [`Character`] one branch
-//!   carries for its whole depth (B.5: character and barrier are one object,
-//!   same owner);
-//! - [`barrier_of`] — how thin the barrier on one branch is, one scalar read
-//!   differently by band later; four named states ([`BarrierState`]);
-//!   pinnable through [`BarrierPins`] in the `--sky` pin idiom;
+//!   carries **per band** (B.5: character and barrier are one object, same
+//!   owner; re-keyed onto `(cell, band, branch)` by The Drift Task 5 — see
+//!   below);
+//! - [`barrier_of`] — how thin the barrier on one branch is, per band; four
+//!   named states ([`BarrierState`]); pinnable through [`BarrierPins`] in
+//!   the `--sky` pin idiom;
 //! - [`branch_count_of`] — how many of the lattice's
 //!   [`BRANCHES_PER_SYSTEM`]
-//!   columns one cave system realizes (C.1's drawn-realization half;
-//!   weighted hard toward 1, and NOT tuned to hit a target — see the test
-//!   that measures it);
+//!   columns one cave system realizes **at a given band** (C.1's
+//!   drawn-realization half; weighted hard toward 1, and NOT tuned to hit a
+//!   target — see the test that measures it);
 //! - [`root_floor_of`] — where a non-main-line branch hangs off its parent
 //!   (C.2): a floor the parent actually realizes, or `None` for the main
-//!   line, whose root IS the surface.
+//!   line, whose root IS the surface. **Not re-keyed by Task 5** — it
+//!   retires with `BRANCH_ROOT` in Task 7 (spec §4.6) and keeps its
+//!   pre-Drift `entrance` parameter until then.
+//!
+//! **The Drift, amendment A.3 (Task 5): `entrance` is out of the first
+//! three draws' keys and `band` is in, all three at once.** Before this
+//! change a branch's character, barrier and count were per-SYSTEM facts (one
+//! answer for the whole depth); after it they are per-`(system, band)`
+//! facts, which is what lets one system be two branches wide in the
+//! Undercroft and one wide in the Shallows —
+//! `branch_count_varies_by_band_somewhere_on_the_panel` is the test that
+//! demands this actually happens somewhere on the panel, not merely that it
+//! compiles. Character and barrier move together at the same granularity
+//! (B.5: one object, two faces) — see
+//! `character_and_barrier_are_keyed_at_the_same_granularity`.
 //!
 //! **This module ships dials only, no effects** (spec B.5): nothing here
 //! changes what exists, what renders, or what a world commits. The draws
-//! travel their own legs (`chamber/branch-*/v1`), so a later task can begin
-//! reading them without relocating anything.
+//! travel their own legs (`chamber/branch-count/v2`,
+//! `chamber/branch-character/v2`, `chamber/branch-barrier/v2`,
+//! `chamber/branch-root/v1`), so a later task can begin reading them without
+//! relocating anything.
 //!
 //! **`thaumic` is untouched and this module never reaches for it**: it is a
 //! rock property (`domains/terrain/src/lithology.rs`), pinned by terrain's
@@ -35,8 +52,10 @@ use hornvale_kernel::{Band, CellId, Seed};
 
 use crate::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, levels_in_branch};
 
-/// Which kind of inhabitant one branch carries, for its whole depth (spec
-/// B.5). Deliberately small: a generic cave plus two named alternatives,
+/// Which kind of inhabitant one branch carries, per band (spec B.5; The
+/// Drift Task 5 moved this from "for its whole depth" — see
+/// [`character_of`]'s own doc). Deliberately small: a generic cave plus two
+/// named alternatives,
 /// because Task 3 ships the DIAL — the per-branch draw keyed on a place —
 /// and a roster grows by adding table entries, not by re-cutting the draw.
 /// Each member carries its own eligibility table via [`bands_of`]; the
@@ -160,12 +179,36 @@ pub struct BranchRoot {
     pub floor: u8,
 }
 
-/// The decimal key shared by the three PER-BRANCH legs — cell, entrance,
-/// branch, all places, no band and no floor, because a character, a barrier
-/// and a root belong to the BRANCH as a whole (spec B.5: same owner, same
-/// lattice key).
+/// The decimal key for [`root_floor_of`]'s own leg — cell, entrance, branch,
+/// a place, no band and no floor, because a root belongs to the BRANCH as a
+/// whole (spec B.5). **Not re-keyed by The Drift Task 5**: `BRANCH_ROOT`
+/// retires with `root_floor_of` itself (Task 7, spec §4.6), so it keeps the
+/// pre-Drift shape until then.
 fn branch_key(cell: CellId, entrance: u8, branch: u8) -> String {
     format!("{}/{}/{branch}", cell.0, entrance)
+}
+
+/// The decimal key shared by [`character_of`] and [`barrier_of`] (The Drift,
+/// amendment A.3, Task 5) — cell, branch, band, no floor, because a
+/// character and a barrier belong to the BRANCH **at that band** as a whole
+/// (spec B.5: same owner, same lattice key; the band moved into the key so a
+/// system can carry a different branch width per band — see
+/// [`branch_count_of`]). Field order follows [`RunAddr`]'s own shape (cell,
+/// branch, band), the spelling every re-keyed leg in this crate now agrees
+/// on. `band` is spelled by its [`crate::chamber::rung_name`] NAME, never its
+/// numeric rank, for the same reason `chamber_key`/`run_key` do: a rank is a
+/// declaration position that shifts if the delve ladder ever gains a rung in
+/// the middle, and a name only moves if the name itself does.
+fn band_branch_key(cell: CellId, branch: u8, band: Band) -> String {
+    format!("{}/{branch}/{}", cell.0, crate::chamber::rung_name(band))
+}
+
+/// The decimal key for [`branch_count_of`] (The Drift, amendment A.3, Task
+/// 5) — cell, band, no branch, because the count is a fact about the SYSTEM
+/// at that band, not about any one branch. Same name-not-rank discipline as
+/// [`band_branch_key`].
+fn band_system_key(cell: CellId, band: Band) -> String {
+    format!("{}/{}", cell.0, crate::chamber::rung_name(band))
 }
 
 /// Which [`Character`] one branch carries, for its whole depth.
@@ -178,13 +221,20 @@ fn branch_key(cell: CellId, entrance: u8, branch: u8) -> String {
 /// edges of that open interval).
 ///
 /// Keyed on the branch's PLACE under [`crate::streams::BRANCH_CHARACTER`] —
-/// no band, no floor: a descent cannot change civilizations mid-branch (see
-/// [`character_at`], whose projection drops those axes on purpose).
-/// type-audit: bare-ok(index: entrance), bare-ok(index: branch)
-pub fn character_of(seed: Seed, cell: CellId, entrance: u8, branch: u8) -> Character {
+/// **now including `band`** (The Drift, amendment A.3, Task 5): `entrance`
+/// dropped out of the key and `band` moved in, so a branch's character can
+/// differ from one band to the next. This REVISES the coherence promise the
+/// pre-Drift doc made here ("a descent cannot change civilizations
+/// mid-branch") — see [`character_at`], whose projection now reads
+/// `addr.band` rather than dropping it, and
+/// `character_and_barrier_are_keyed_at_the_same_granularity` in this
+/// module's tests, which asserts the new granularity rather than the old
+/// one.
+/// type-audit: bare-ok(index: branch)
+pub fn character_of(seed: Seed, cell: CellId, band: Band, branch: u8) -> Character {
     let r = seed
         .derive(crate::streams::BRANCH_CHARACTER)
-        .derive(StreamLabel::dynamic(&branch_key(cell, entrance, branch)))
+        .derive(StreamLabel::dynamic(&band_branch_key(cell, branch, band)))
         .stream()
         .next_f64();
     if r < 0.05 {
@@ -196,23 +246,18 @@ pub fn character_of(seed: Seed, cell: CellId, entrance: u8, branch: u8) -> Chara
     }
 }
 
-/// The branch-level projection of [`character_of`] onto a full chamber
-/// address: the character is a property of the BRANCH, so `band` and
-/// `level` are dropped here, in one place, rather than ignored by every
-/// caller. Every address of one branch therefore resolves to the same
-/// character — the coherence guarantee
-/// `one_branch_has_one_character_for_its_whole_depth` holds by watching
-/// this function, which is the only place it could break.
+/// The chamber-addressed form of [`character_of`]: reads `addr.band` and
+/// `addr.branch`, dropping only `level` (a character is one object per
+/// branch-in-band, spec B.5, not per floor).
 ///
-/// **Passes a literal `0` where `addr.entrance` used to travel** (The Drift,
-/// amendment A.3): `ChamberAddr` no longer carries an entrance, and
-/// `character_of` has not yet gained a band in its place — that re-keying is
-/// Task 5's (see `crate::chamber::chamber_exists`'s own doc for the same
-/// transitional shape). Every address now resolves against entrance 0's
-/// branch-character lattice, which is amendment A's end state: one system,
-/// one shared set of branches.
+/// **Before The Drift Task 5**, this function dropped `band` too (a branch's
+/// character held for its whole depth) and, transitionally through Task 4,
+/// passed a literal `0` for the entrance argument `character_of` no longer
+/// takes. Both are gone: `character_of` is now keyed on `(cell, band,
+/// branch)`, so this projection reads the address's real band rather than
+/// discarding it or standing a placeholder in for it.
 pub fn character_at(seed: Seed, addr: ChamberAddr) -> Character {
-    character_of(seed, addr.cell, 0, addr.branch)
+    character_of(seed, addr.cell, addr.band, addr.branch)
 }
 
 /// How thin one branch's barrier is — the derived default behind
@@ -220,15 +265,16 @@ pub fn character_at(seed: Seed, addr: ChamberAddr) -> Character {
 /// reported by the tests, not tuned toward one (spec C.1's instruction
 /// applies to the barrier too — ship the dial, measure what it produces).
 ///
-/// Same key shape as [`character_of`] but a DIFFERENT parent leg
-/// ([`crate::streams::BRANCH_BARRIER`]), per B.5: one object, two faces,
+/// Same key shape as [`character_of`] (The Drift, amendment A.3, Task 5:
+/// `entrance` out, `band` in, same granularity move) but a DIFFERENT parent
+/// leg ([`crate::streams::BRANCH_BARRIER`]), per B.5: one object, two faces,
 /// each face's draw isolated so neither can collide with the other or with
 /// any sibling leg.
-/// type-audit: bare-ok(index: entrance), bare-ok(index: branch)
+/// type-audit: bare-ok(index: branch)
 pub fn barrier_of(
     seed: Seed,
     cell: CellId,
-    entrance: u8,
+    band: Band,
     branch: u8,
     pins: &BarrierPins,
 ) -> BarrierState {
@@ -237,7 +283,7 @@ pub fn barrier_of(
     }
     let picked = seed
         .derive(crate::streams::BRANCH_BARRIER)
-        .derive(StreamLabel::dynamic(&branch_key(cell, entrance, branch)))
+        .derive(StreamLabel::dynamic(&band_branch_key(cell, branch, band)))
         .stream()
         .range_u32(0, 3);
     // range_u32(0, 3) always answers 0..=3 and the table has 4 entries.
@@ -257,13 +303,19 @@ pub fn barrier_of(
 /// `most_systems_have_one_branch_and_none_has_more_than_four` — they were
 /// not fitted to land the mode, and must not be retuned to move a metric.
 ///
-/// Keyed on the SYSTEM — cell and entrance only, no branch — because the
-/// count is a fact about the system as a whole.
-/// type-audit: bare-ok(index: entrance), bare-ok(count: return)
-pub fn branch_count_of(seed: Seed, cell: CellId, entrance: u8) -> u8 {
+/// Keyed on the SYSTEM at a BAND — cell and band, no branch (The Drift,
+/// amendment A.3, Task 5: `entrance` out, `band` in) — because the count is
+/// a fact about the system **at that band**, not the system as a whole: two
+/// bands of one system now draw their own widths, so a system may be two
+/// branches wide in the Undercroft and one wide in the Shallows. That is the
+/// entire point of the re-key — see
+/// `branch_count_varies_by_band_somewhere_on_the_panel` in this module's
+/// tests.
+/// type-audit: bare-ok(count: return)
+pub fn branch_count_of(seed: Seed, cell: CellId, band: Band) -> u8 {
     let r = seed
         .derive(crate::streams::BRANCH_COUNT)
-        .derive(StreamLabel::dynamic(&format!("{}/{}", cell.0, entrance)))
+        .derive(StreamLabel::dynamic(&band_system_key(cell, band)))
         .stream()
         .next_f64();
     if r < 0.60 {
@@ -394,25 +446,71 @@ mod tests {
         assert_eq!(set.len(), 4, "two of the four branch legs share a label");
     }
 
-    /// Each leg spells its epoch `/v1`, and none reuses a retired or
-    /// existing label.
+    /// Each re-keyed leg spells its epoch `/v2` (The Drift, Task 5);
+    /// `BRANCH_ROOT` is untouched and stays `/v1` until Task 7 retires it.
+    /// None reuses a retired or existing label.
     #[test]
-    fn every_new_label_is_v1() {
+    fn every_new_label_is_v2_except_branch_root() {
         assert_eq!(
             crate::streams::BRANCH_CHARACTER.as_str(),
-            "chamber/branch-character/v1"
+            "chamber/branch-character/v2"
         );
         assert_eq!(
             crate::streams::BRANCH_BARRIER.as_str(),
-            "chamber/branch-barrier/v1"
+            "chamber/branch-barrier/v2"
         );
         assert_eq!(
             crate::streams::BRANCH_COUNT.as_str(),
-            "chamber/branch-count/v1"
+            "chamber/branch-count/v2"
         );
         assert_eq!(
             crate::streams::BRANCH_ROOT.as_str(),
             "chamber/branch-root/v1"
+        );
+    }
+
+    /// A branch belongs to ONE band. Two bands of the same system draw their
+    /// own branch counts, so a system may be two branches wide in the
+    /// Undercroft and one wide in the Shallows — which is the whole point of
+    /// the change (The Drift, Task 5, spec amendment A.3).
+    #[test]
+    fn branch_count_varies_by_band_somewhere_on_the_panel() {
+        let seed = Seed(42);
+        let mut varied = false;
+        for c in 0u32..400 {
+            let counts: Vec<u8> = Band::habitation()
+                .iter()
+                .map(|&band| branch_count_of(seed, CellId(c), band))
+                .collect();
+            if counts.windows(2).any(|w| w[0] != w[1]) {
+                varied = true;
+                break;
+            }
+        }
+        assert!(
+            varied,
+            "no system varies its branch count by band — the band is not in the key"
+        );
+    }
+
+    /// `character_of` and `barrier_of` are ONE object per branch (The Stope
+    /// spec B.5): re-keyed at the SAME granularity, so a branch that changes
+    /// band changes both, and neither is keyed more coarsely than the other.
+    #[test]
+    fn character_and_barrier_are_keyed_at_the_same_granularity() {
+        let seed = Seed(42);
+        let (cell, branch) = (CellId(31942), 0u8);
+        let pins = BarrierPins::default();
+        let mut chars = BTreeSet::new();
+        let mut barriers = BTreeSet::new();
+        for &band in Band::habitation() {
+            chars.insert(character_of(seed, cell, band, branch));
+            barriers.insert(barrier_of(seed, cell, band, branch, &pins));
+        }
+        assert!(
+            chars.len() > 1 || barriers.len() > 1,
+            "neither character nor barrier varies across bands at one branch — \
+             at least one is still keyed without the band"
         );
     }
 
@@ -422,22 +520,16 @@ mod tests {
     #[test]
     fn the_barrier_draw_is_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, entrance, branch, expected) in [
-            (9u32, 0u8, 3u8, BarrierState::Warded),
-            (0, 1, 0, BarrierState::Open),
-            (17, 0, 2, BarrierState::Warded),
-            (5, 0, 1, BarrierState::Open),
+        for (cell, band, branch, expected) in [
+            (9u32, Band::Undercroft, 3u8, BarrierState::Warded),
+            (0, Band::Shallows, 0, BarrierState::Thin),
+            (17, Band::Undercroft, 2, BarrierState::Thin),
+            (5, Band::Undercroft, 1, BarrierState::Warded),
         ] {
             assert_eq!(
-                barrier_of(
-                    seed,
-                    CellId(cell),
-                    entrance,
-                    branch,
-                    &BarrierPins::default()
-                ),
+                barrier_of(seed, CellId(cell), band, branch, &BarrierPins::default()),
                 expected,
-                "cell {cell} entrance {entrance} branch {branch} moved off its \
+                "cell {cell} band {band:?} branch {branch} moved off its \
                  barrier pin"
             );
         }
@@ -447,16 +539,16 @@ mod tests {
     #[test]
     fn the_character_draw_is_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, entrance, branch, expected) in [
-            (9u32, 0u8, 3u8, Character::WildCave),
-            (0, 1, 0, Character::WildCave),
-            (17, 0, 2, Character::WildCave),
-            (5, 0, 1, Character::FungalGardens),
+        for (cell, band, branch, expected) in [
+            (9u32, Band::Undercroft, 3u8, Character::FungalGardens),
+            (0, Band::Shallows, 0, Character::WildCave),
+            (17, Band::Undercroft, 2, Character::FungalGardens),
+            (5, Band::Undercroft, 1, Character::WildCave),
         ] {
             assert_eq!(
-                character_of(seed, CellId(cell), entrance, branch),
+                character_of(seed, CellId(cell), band, branch),
                 expected,
-                "cell {cell} entrance {entrance} branch {branch} moved off its \
+                "cell {cell} band {band:?} branch {branch} moved off its \
                  character pin"
             );
         }
@@ -466,11 +558,16 @@ mod tests {
     #[test]
     fn the_branch_count_draw_is_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, entrance, expected) in [(9u32, 0u8, 1u8), (0, 1, 1), (17, 0, 1), (5, 0, 1)] {
+        for (cell, band, expected) in [
+            (9u32, Band::Undercroft, 1u8),
+            (0, Band::Shallows, 1),
+            (17, Band::Undercroft, 1),
+            (5, Band::Undercroft, 2),
+        ] {
             assert_eq!(
-                branch_count_of(seed, CellId(cell), entrance),
+                branch_count_of(seed, CellId(cell), band),
                 expected,
-                "cell {cell} entrance {entrance} moved off its branch-count pin"
+                "cell {cell} band {band:?} moved off its branch-count pin"
             );
         }
     }
@@ -514,7 +611,17 @@ mod tests {
     #[test]
     fn each_draw_travels_its_own_leg_and_not_a_siblings() {
         let seed = Seed(90210);
-        let places: Vec<(CellId, u8, u8)> = (0u32..12)
+        // The three re-keyed draws (character, barrier, count) sweep every
+        // habitation band; `root_floor_of` is untouched by Task 5 and keeps
+        // its own entrance-keyed place list.
+        let band_places: Vec<(CellId, Band, u8)> = (0u32..12)
+            .flat_map(|c| {
+                Band::habitation().iter().flat_map(move |&band| {
+                    (0u8..BRANCHES_PER_SYSTEM).map(move |b| (CellId(c), band, b))
+                })
+            })
+            .collect();
+        let entrance_places: Vec<(CellId, u8, u8)> = (0u32..12)
             .flat_map(|c| {
                 (0u8..2)
                     .flat_map(move |e| (0u8..BRANCHES_PER_SYSTEM).map(move |b| (CellId(c), e, b)))
@@ -523,21 +630,21 @@ mod tests {
 
         // --- character ---
         let mut char_disagreed = false;
-        for &(cell, e, b) in &places {
-            let shipped = character_of(seed, cell, e, b);
+        for &(cell, band, b) in &band_places {
+            let shipped = character_of(seed, cell, band, b);
             let own = seed
                 .derive(crate::streams::BRANCH_CHARACTER)
-                .derive(StreamLabel::dynamic(&branch_key(cell, e, b)))
+                .derive(StreamLabel::dynamic(&band_branch_key(cell, b, band)))
                 .stream()
                 .next_f64();
             assert_eq!(
                 shipped,
                 from_character_raw(own),
-                "character_of does not travel the BRANCH_CHARACTER leg at {cell:?}/{e}/{b}"
+                "character_of does not travel the BRANCH_CHARACTER leg at {cell:?}/{band:?}/{b}"
             );
             let sibling = seed
                 .derive(crate::streams::BRANCH_BARRIER)
-                .derive(StreamLabel::dynamic(&branch_key(cell, e, b)))
+                .derive(StreamLabel::dynamic(&band_branch_key(cell, b, band)))
                 .stream()
                 .next_f64();
             if from_character_raw(sibling) != shipped {
@@ -552,21 +659,21 @@ mod tests {
 
         // --- barrier ---
         let mut barrier_disagreed = false;
-        for &(cell, e, b) in &places {
-            let shipped = barrier_of(seed, cell, e, b, &BarrierPins::default());
+        for &(cell, band, b) in &band_places {
+            let shipped = barrier_of(seed, cell, band, b, &BarrierPins::default());
             let own = seed
                 .derive(crate::streams::BRANCH_BARRIER)
-                .derive(StreamLabel::dynamic(&branch_key(cell, e, b)))
+                .derive(StreamLabel::dynamic(&band_branch_key(cell, b, band)))
                 .stream()
                 .range_u32(0, 3);
             assert_eq!(
                 shipped,
                 BARRIER_STATES[usize::try_from(own).unwrap()],
-                "barrier_of does not travel the BRANCH_BARRIER leg at {cell:?}/{e}/{b}"
+                "barrier_of does not travel the BRANCH_BARRIER leg at {cell:?}/{band:?}/{b}"
             );
             let sibling = seed
                 .derive(crate::streams::BRANCH_CHARACTER)
-                .derive(StreamLabel::dynamic(&branch_key(cell, e, b)))
+                .derive(StreamLabel::dynamic(&band_branch_key(cell, b, band)))
                 .stream()
                 .range_u32(0, 3);
             if BARRIER_STATES[usize::try_from(sibling).unwrap()] != shipped {
@@ -579,25 +686,29 @@ mod tests {
         );
 
         // --- branch count ---
-        let systems: Vec<(CellId, u8)> = (0u32..40)
-            .flat_map(|c| (0u8..2).map(move |e| (CellId(c), e)))
+        let systems: Vec<(CellId, Band)> = (0u32..40)
+            .flat_map(|c| {
+                Band::habitation()
+                    .iter()
+                    .map(move |&band| (CellId(c), band))
+            })
             .collect();
         let mut count_disagreed = false;
-        for &(cell, e) in &systems {
-            let shipped = branch_count_of(seed, cell, e);
+        for &(cell, band) in &systems {
+            let shipped = branch_count_of(seed, cell, band);
             let own = seed
                 .derive(crate::streams::BRANCH_COUNT)
-                .derive(StreamLabel::dynamic(&format!("{}/{}", cell.0, e)))
+                .derive(StreamLabel::dynamic(&band_system_key(cell, band)))
                 .stream()
                 .next_f64();
             assert_eq!(
                 shipped,
                 count_from(own),
-                "branch_count_of does not travel the BRANCH_COUNT leg at {cell:?}/{e}"
+                "branch_count_of does not travel the BRANCH_COUNT leg at {cell:?}/{band:?}"
             );
             let sibling = seed
                 .derive(crate::streams::BRANCH_CHARACTER)
-                .derive(StreamLabel::dynamic(&format!("{}/{}", cell.0, e)))
+                .derive(StreamLabel::dynamic(&band_system_key(cell, band)))
                 .stream()
                 .next_f64();
             if count_from(sibling) != shipped {
@@ -611,7 +722,7 @@ mod tests {
 
         // --- root floor ---
         let mut root_disagreed = false;
-        for &(cell, e, b) in &places {
+        for &(cell, e, b) in &entrance_places {
             if b == 0 {
                 continue;
             }
