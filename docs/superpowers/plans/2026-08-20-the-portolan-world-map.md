@@ -2,6 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **SUPERSEDED (2026-08-23)** by
+> `docs/superpowers/plans/2026-08-23-the-portolan-world-map.md`.
+>
+> This plan was written before the discovery layer existed. Its five tasks
+> are substantially correct and are carried forward as Tasks 1-4 and 6 of the
+> replacement; what it cannot know is Amendment 1 — the discovery layer
+> (a new Task 5), colour (The Chroma landed the day after it was written),
+> the `Focus`/zoom-key restatement, and H1's restatement as H1'.
+> **Execute the replacement, not this file.**
+
 **Goal:** A Mercator chart of the whole planet in the terminal client's plate — scrolled, zoomed, and pointed at by the cursor the campaign already built.
 
 **Architecture:** `clients/game/bin` renders the world plate into a `Grid` and hands it to `core`, which composes it exactly as it composes the chart. `core` keeps its no-hornvale-crate purity and the session schema gains nothing — a world view is a **lens**, not a band. The projection is **oblique**: its central line is derived from the world's own physics, so a tidally locked world holds its terminator true instead of an equator nobody lives on.
