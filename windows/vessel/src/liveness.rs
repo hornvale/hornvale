@@ -955,7 +955,7 @@ pub fn believed_water(
     budget: usize,
 ) -> Option<RoomAddr> {
     let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
-    for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
+    for f in ledger.facts_of(npc.entity, AGENT_AT) {
         let sighted = f.day.map(|d| d <= t).unwrap_or(false);
         if sighted && let Value::Text(s) = &f.object {
             let room = room_from_text(s);
@@ -1227,7 +1227,7 @@ pub fn hazard_memory_memo(
     // Most-recent visit per cell (day ≤ t): the cell is judged at its LATEST
     // visit, so a later safe visit clears an earlier phantom (the staleness rule).
     let mut latest: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
-    for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
+    for f in ledger.facts_of(npc.entity, AGENT_AT) {
         if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::day)
             && let Value::Text(s) = &f.object
         {
@@ -3024,6 +3024,19 @@ impl HomeNavCache {
     /// An empty cache — one per session-lived scope (see the type doc).
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// How many real `plan_to_room` searches this cache has run, ever.
+    ///
+    /// The field stays `pub(crate)` — nothing outside this crate may WRITE
+    /// or reset it. This read-only accessor exists because The Penstock's
+    /// stage-1 instrument set needs the plan half of the query/plan/commit
+    /// split, and that bench lives in `examples/`, which is a separate
+    /// crate. A deterministic search count is exactly the witness the
+    /// metaplan asks for in preference to a wall-clock proxy.
+    /// type-audit: bare-ok(count: return)
+    pub fn searches(&self) -> u64 {
+        self.searches
     }
 
     /// `home_nav(entity) → (distance, first_step)`: the seam [`decide_step`]

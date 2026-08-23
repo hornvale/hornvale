@@ -35,6 +35,8 @@ mod lantern_light;
 mod lantern_night;
 #[path = "suite/lantern_seam.rs"]
 mod lantern_seam;
+#[path = "suite/ledger_query_equivalence.rs"]
+mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
 #[path = "suite/possess_target.rs"]
@@ -59,6 +61,8 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/tick_commit_budget.rs"]
+mod tick_commit_budget;
 #[path = "suite/underworld_level_generation.rs"]
 mod underworld_level_generation;
 #[path = "suite/walker_battery.rs"]

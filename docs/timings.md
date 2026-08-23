@@ -2183,3 +2183,28 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T01:27:36Z | sluice:outboard | 36.724 | 22.929 | 37.083 | 1.63 | 0 | abc9594e3 |  | lefford | 40 |
 | 2026-08-23T01:34:25Z | sluice:gate | 408.941 | 11018.493 | 443.934 | 28.03 | 0 | d91cda826 |  | lefford | 40 |
 | 2026-08-23T01:41:31Z | sluice:clients | 425.411 | 1474.550 | 40.641 | 3.56 | 0 | 408ed813c |  | lefford | 40 |
+| 2026-08-22T14:57:16Z | gate-commit | 53.455 | 87.693 | 37.481 | 2.34 | 0 | cca1560e2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T16:46:41Z | gate-commit | 529.304 | 1440.309 | 151.255 | 3.01 | 0 | cca1560e2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T18:36:30Z | gate-commit | 70.935 | 34.895 | 12.623 | 0.67 | 0 | 716506630 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:10:48Z | gate-commit | 149.907 | 145.010 | 52.045 | 1.31 | 0 | dae4be7e1 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:13:28Z | gate-commit | 92.738 | 60.633 | 35.693 | 1.04 | 0 | dae4be7e1 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:22:34Z | gate-commit | 6.601 | 2.362 | 0.988 | 0.51 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:24:49Z | gate-commit | 93.643 | 61.076 | 35.205 | 1.03 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:26:54Z | gate-commit | 96.982 | 60.209 | 34.467 | 0.98 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:33:52Z | gate-commit | 95.860 | 61.003 | 35.446 | 1.01 | 0 | 917c13e45 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:35:46Z | gate-commit | 90.502 | 59.674 | 34.664 | 1.04 | 0 | 917c13e45 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:50:13Z | gate-commit | 107.851 | 65.203 | 39.178 | 0.97 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:50:47Z | gate-commit | 23.993 | 14.405 | 3.543 | 0.75 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:52:45Z | gate-commit | 98.718 | 64.611 | 40.077 | 1.06 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T20:29:26Z | gate-commit | 30.882 | 22.434 | 7.267 | 0.96 | 0 | 2bf2eed82 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T20:32:25Z | gate-commit | 152.779 | 183.873 | 54.435 | 1.56 | 0 | 2bf2eed82 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T20:35:38Z | gate-commit | 100.779 | 65.593 | 39.919 | 1.05 | 0 | 2bf2eed82 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:03:49Z | gate-commit | 143.480 | 70.227 | 42.243 | 0.78 | 0 | 49452b027 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:06:21Z | gate-commit | 120.607 | 70.897 | 42.403 | 0.94 | 0 | 49452b027 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:23:41Z | gate-commit | 105.888 | 67.369 | 39.706 | 1.01 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:48:17Z | gate-commit | 113.111 | 72.889 | 42.088 | 1.02 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:49:56Z | gate-commit | 91.269 | 65.344 | 36.917 | 1.12 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:52:50Z | gate-commit | 92.863 | 65.154 | 37.787 | 1.11 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T23:15:25Z | gate-commit | 105.325 | 67.058 | 38.915 | 1.01 | 0 | 307e85bf7 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-23T01:25:45Z | gate-commit | 98.027 | 66.183 | 38.848 | 1.07 | 0 | 7eb8fa633 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-23T01:28:58Z | gate-commit | 94.056 | 66.140 | 38.817 | 1.12 | 0 | f5e72719d | campaign/the-penstock | ambrose | 12 |
