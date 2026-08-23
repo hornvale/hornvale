@@ -91,6 +91,7 @@ mod descent;
 pub mod disposition;
 pub mod gazetteer;
 pub mod graph_derive;
+pub mod harvest;
 pub mod hazard;
 pub mod history_bake;
 pub mod history_emit;
