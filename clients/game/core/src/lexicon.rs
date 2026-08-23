@@ -1,4 +1,5 @@
-//! The completion vocabulary: candidates, scopes, and their fold.
+//! The completion vocabulary: candidates, scopes, their fold, and the
+//! prefix-matching completion engine.
 
 use crate::schema::Narration;
 
@@ -66,6 +67,61 @@ fn category_of(kind: &str) -> Category {
 impl CandidateSource for CurrentTurnNouns {
     fn candidates(&self) -> Vec<Candidate> {
         self.nouns.clone()
+    }
+}
+
+/// The result of one completion attempt against a candidate list.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Completion {
+    /// Nothing matched (or the prefix was empty): a no-op.
+    None,
+    /// Exactly one candidate matched: fill it whole. Note that a single match
+    /// equal to the prefix exactly is still `Unique` — the engine never
+    /// suppresses it; the caller treats that case as a no-op.
+    Unique(String),
+    /// Several matched: extend to the shared stem and offer the rest.
+    Prefix {
+        /// The longest common prefix of ALL matches, in the candidates' own
+        /// casing, computed char-wise.
+        stem: String,
+        /// Every matching name, input order preserved.
+        matches: Vec<String>,
+    },
+}
+
+/// Attempt one completion of `prefix` against `candidates`.
+///
+/// Matching is case-insensitive (`starts_with` on lowercased forms), but
+/// every returned name and stem preserves the candidate's own casing. An
+/// empty prefix or zero matches yields [`Completion::None`].
+pub fn complete(prefix: &str, candidates: &[Candidate]) -> Completion {
+    if prefix.is_empty() {
+        return Completion::None;
+    }
+    let lower = prefix.to_lowercase();
+    let matches: Vec<&str> = candidates
+        .iter()
+        .filter(|c| c.name.to_lowercase().starts_with(&lower))
+        .map(|c| c.name.as_str())
+        .collect();
+    match matches.len() {
+        0 => Completion::None,
+        1 => Completion::Unique(matches[0].to_string()),
+        _ => {
+            let mut stem: Vec<char> = matches[0].chars().collect();
+            for name in &matches[1..] {
+                stem = stem
+                    .into_iter()
+                    .zip(name.chars())
+                    .take_while(|(a, b)| a.to_lowercase().eq(b.to_lowercase()))
+                    .map(|(a, _)| a)
+                    .collect();
+            }
+            Completion::Prefix {
+                stem: stem.into_iter().collect(),
+                matches: matches.into_iter().map(str::to_string).collect(),
+            }
+        }
     }
 }
 
@@ -192,6 +248,84 @@ mod tests {
         assert_eq!(
             scope.candidates(),
             vec![candidate("ore", Category::Unknown)]
+        );
+    }
+
+    #[test]
+    fn unique_prefix_completes() {
+        let candidates = vec![candidate("goblin", Category::Creature)];
+        assert_eq!(
+            complete("gob", &candidates),
+            Completion::Unique("goblin".to_string())
+        );
+    }
+
+    #[test]
+    fn ambiguous_prefix_yields_stem_and_matches() {
+        let candidates = vec![
+            candidate("Vngashngatva", Category::Creature),
+            candidate("Vngashngakelm", Category::Creature),
+        ];
+        assert_eq!(
+            complete("vng", &candidates),
+            Completion::Prefix {
+                stem: "Vngashnga".to_string(),
+                matches: vec!["Vngashngatva".to_string(), "Vngashngakelm".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn case_insensitive_match_preserves_candidate_casing() {
+        let candidates = vec![candidate("Goblin", Category::Creature)];
+        assert_eq!(
+            complete("GOB", &candidates),
+            Completion::Unique("Goblin".to_string())
+        );
+        let two = vec![
+            candidate("Hearth", Category::Place),
+            candidate("hearthstone", Category::Thing),
+        ];
+        assert_eq!(
+            complete("HEA", &two),
+            Completion::Prefix {
+                stem: "Hearth".to_string(),
+                matches: vec!["Hearth".to_string(), "hearthstone".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn no_match_is_none_and_empty_prefix_is_none() {
+        let candidates = vec![candidate("goblin", Category::Creature)];
+        assert_eq!(complete("zzz", &candidates), Completion::None);
+        assert_eq!(complete("", &candidates), Completion::None);
+        assert_eq!(complete("gob", &[]), Completion::None);
+    }
+
+    #[test]
+    fn stem_is_computed_char_wise_not_byte_wise() {
+        let candidates = vec![
+            candidate("élan", Category::Thing),
+            candidate("éclat", Category::Thing),
+        ];
+        assert_eq!(
+            complete("é", &candidates),
+            Completion::Prefix {
+                stem: "é".to_string(),
+                matches: vec!["élan".to_string(), "éclat".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn exact_single_match_still_reports_unique() {
+        // A single match equal to the prefix is still Unique; the CALLER
+        // treats it as a no-op — the engine itself never suppresses it.
+        let candidates = vec![candidate("goblin", Category::Creature)];
+        assert_eq!(
+            complete("goblin", &candidates),
+            Completion::Unique("goblin".to_string())
         );
     }
 }
