@@ -703,7 +703,63 @@ the whole containment chain. **Settled by:** Task 4, which must state what the
 strip shows when an *outer* member of the chain is undiscovered and an inner
 one is not (standing in a named valley inside an unnamed landmass).
 
+## A10b. H1 is RETIRED as mis-specified (Nathan, 2026-08-23)
+
+**H1 and all three of its framings are withdrawn, not re-framed.** The
+hypothesis asked whether the whole-planet plate shows *one coherent largest
+landmass*. Seed 42 does not have one, and that was established by instruments
+independent of the plate:
+
+```
+                                          largest   2nd largest
+shipped plate, 104x52, Mercator,
+  area-majority                             27.6%       25.0%   (14 components)
+independent probe, 300x150,
+  equirectangular, plain sampling           27.3%       22.4%   (86 components)
+Gazetteer elevation_ascii, 72x24,
+  nearest-cell (H1's own reference)         49.9%       13.9%
+```
+
+The probe is five times finer than the plate, uses a **different projection**
+and a **different sampling strategy**, and agrees with the plate rather than
+with the reference. **The reference H1 benchmarked against was itself
+under-resolved on the exact property H1 tested**, merging two genuinely
+separate landmasses into one.
+
+**The sequence, recorded in full because the sequence is the lesson:**
+
+| framing | method | result |
+|---|---|---|
+| H1' | nearest-cell, 40x20 | falsified |
+| H1'' | area-majority, 40x20 | non-decisive (~10% fewer speckles; the two largest components identical in size under both samplings) |
+| H1''' | area-majority, expanded plate 104x52 | falsified — and diagnosed |
+
+Each re-framing followed seeing the previous result, and each was defensible on
+its own. Three of them in a row is what retuning-to-pass looks like from the
+outside, which is why the campaign set a stop at three and honoured it: the
+question went back to the owner rather than being framed a fourth time.
+
+**Retiring is not a fourth framing.** A fourth framing would keep asking whether
+the map shows one continent until some configuration said yes. This abandons the
+claim as unanswerable-as-posed — the world has no such property to render — and
+reports instead a *different* property the same data already measured (§A11's
+H8). The distinction is the whole point, and the chronicle must make it.
+
+**Residue, not acted on here:** `elevation_ascii` is a committed artifact that
+misrepresents the world's landmass structure at its current resolution, and has
+presumably been read that way. Recorded as `MAP-elevation-ascii-merges-landmasses`.
+
 ## A11. Preregistered measurement added
+
+**H8 — the plate is faithful to the world's own structure** (replaces H1, §A10b).
+At the design size, the rendered plate's connected-component structure matches a
+finer, independently-projected probe of the same terrain. *Measured 2026-08-23:*
+the two largest land components are 27.6% / 25.0% of land on the shipped 104x52
+Mercator plate against 27.3% / 22.4% on a 300x150 equirectangular probe using
+plain sampling — agreement within 2.6 percentage points, across a 5x resolution
+change, a different projection and a different sampling strategy. **CONFIRMED.**
+*Falsified by* a render whose component structure departs from a finer probe's,
+which would mean the plate is inventing or destroying coastline connectivity.
 
 **H5 — the map is useful before it is complete.** From a cold start on seed 42,
 the world plate at minimum zoom is navigable — coastlines and the largest
