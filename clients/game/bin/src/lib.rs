@@ -8,4 +8,5 @@ pub mod history;
 pub mod input;
 pub mod line;
 pub mod mercator;
+pub mod plate;
 pub mod term;

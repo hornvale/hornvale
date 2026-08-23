@@ -105,6 +105,14 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         cmd_line,
         driver.strip_text(),
         driver.echo(),
+        // The Portolan part II, Task 2: the whole-world plate is drawn and
+        // threaded through `render_with`/`compose`, but nothing in this
+        // task gives the player a way to ask for it -- Task 3 (zoom/scroll,
+        // a paused follow-on) is what wires a toggle that ever passes
+        // `Some` here. Always `None` keeps this task's plumbing inert
+        // rather than half-wiring a feature with no input path to reach
+        // it.
+        None,
     ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),

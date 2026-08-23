@@ -1,6 +1,68 @@
-use hornvale_game_core::render;
+use hornvale_game_core::{Cell, CommandLine, Focus, Grid, Source, Weight, render, render_with};
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
+
+/// The world plate is composed here, not in `chart.rs`/`plan.rs`'s own
+/// tests, because `compose` lives in `spread.rs` — this crate has no
+/// `tests/suite.rs` (the workspace's test-binary consolidation does not
+/// reach `clients/game`, which is outside the cargo workspace), so this
+/// file is that home.
+///
+/// **Deviates from the task brief's own draft of this test at one point,
+/// found by running it, not by reasoning about it.** The brief's version
+/// checked cell `(0, 0)` for `Source::Chart` in the `without` render; for
+/// this fixture that cell is `Unattributed` — `chart::draw`'s own module
+/// doc states the observer's box is anchored to the plate's CENTRE, not
+/// its corner ("lands on (0, 0) [relative to the observer] ... anchors it
+/// to the grid centre directly"), and which relative boxes are non-blank
+/// around it depends on the fixture's own chart cells, which the corner
+/// is not guaranteed to be among. `(20, 10)` — the plate's own centre at
+/// 40x20, where the observer's `@` always lands by construction — is used
+/// instead, so this test does not depend on incidental fixture content.
+#[test]
+fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
+    let plate = {
+        let mut g = Grid::new(40, 20);
+        g.set(20, 10, Cell::glyph('#', Weight::Normal, Source::World));
+        g
+    };
+    let (with, _) = render_with(
+        FIXTURE,
+        80,
+        24,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+    )
+    .unwrap();
+    let (without, _) = render_with(
+        FIXTURE,
+        80,
+        24,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+    assert_eq!(with.get(20, 10).unwrap().source, Source::World);
+    assert_eq!(without.get(20, 10).unwrap().source, Source::Chart);
+    // The entry pane is untouched by the lens.
+    for y in 0..24 {
+        for x in 40..80 {
+            assert_eq!(
+                with.get(x, y),
+                without.get(x, y),
+                "the lens must not reach past the plate at ({x},{y})"
+            );
+        }
+    }
+}
 
 /// ACCEPTANCE TEST 1: the complete spread in monochrome characters at
 /// 80x24, still usable.

@@ -88,6 +88,16 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// whether its text is drawn (see `entry::draw`'s doc). `echo` is the most
 /// recently SUBMITTED line, drawn above the command row (see `entry::draw`'s
 /// doc for the ask-then-answer layout and why that row is reserved).
+///
+/// `world_plate`, when `Some`, is an already-rendered whole-world Mercator
+/// plate (The Portolan part II, `bin`'s own `plate::draw` -- `core` carries
+/// no hornvale crate, so it cannot draw the plate itself) drawn into the
+/// plate region INSTEAD OF the walk-band chart or the chamber-band floor
+/// plan: the world view is a lens over whichever band the character
+/// occupies, not a new band, so the character's own position in the
+/// snapshot is untouched either way. `None` draws the band's own plate
+/// exactly as before this parameter existed.
+#[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 7, `world_plate` (The Portolan part II, Task 2) to 8 — mirroring `render_with`'s own allow, which this function's own parameter list mirrors one-for-one plus `snapshot`
 pub fn compose(
     snapshot: &crate::Snapshot,
     w: u16,
@@ -96,6 +106,7 @@ pub fn compose(
     focus: crate::Focus,
     line: crate::CommandLine<'_>,
     echo: Option<&str>,
+    world_plate: Option<&Grid>,
 ) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
@@ -103,9 +114,12 @@ pub fn compose(
     let entry_width = w.saturating_sub(plate_width);
 
     let mut plate = Grid::new(plate_width, content_height);
-    match &snapshot.spatial {
-        Spatial::Walk { chart } => crate::chart::draw(chart, &mut plate, (0, 0)),
-        Spatial::Chamber { plan } => crate::plan::draw(plan, &mut plate, (0, 0)),
+    match world_plate {
+        Some(world) => blit(world, &mut plate, (0, 0)),
+        None => match &snapshot.spatial {
+            Spatial::Walk { chart } => crate::chart::draw(chart, &mut plate, (0, 0)),
+            Spatial::Chamber { plan } => crate::plan::draw(plan, &mut plate, (0, 0)),
+        },
     }
     blit(&plate, &mut page, (0, 0));
 
@@ -154,6 +168,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             None,
+            None,
         );
         assert_eq!(g.width(), 80);
         assert_eq!(g.height(), 24);
@@ -181,6 +196,7 @@ mod tests {
                 crate::Focus::Cli,
                 crate::CommandLine::default(),
                 None,
+                None,
             );
             let text = g.to_plain_text();
             let plate_has_ink = text
@@ -204,6 +220,7 @@ mod tests {
             Some("a cairn"),
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
             None,
         );
         let text = g.to_plain_text();
