@@ -66,16 +66,20 @@ impl From<serde_json::Error> for Error {
 
 /// Which pane a key press is addressed to.
 ///
-/// This is the client's one input mode, and it replaces The Portolan part
-/// I's `Mode { Normal, Look }`: there is no longer a mode to enter in order
-/// to point at something, only a question of which pane is listening.
-/// Toggled by `Esc`; a printable key pressed while the map is focused
-/// returns focus here and types itself, so the common path costs no
-/// keypress at all (spec §2).
+/// Three modes. [`Focus::Walk`] is the default and the player's primary:
+/// arrows and `<`/`>` are movement commands sent to the session, any other
+/// printable key bounces to the CLI and types itself — that routing will
+/// live in the binary's driver (Tasks 2–3); this enum only names the
+/// states. [`Focus::Cli`] is the command line; [`Focus::Map`] drives the
+/// map cursor. `Esc` cycles Walk↔Cli and returns Map→Walk (the transition
+/// also lives in the binary's driver).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Focus {
-    /// The command line is listening. Text is the default destination.
+    /// Movement commands go straight to the session; printable keys bounce
+    /// to the CLI and type themselves.
     #[default]
+    Walk,
+    /// The command line is listening. Text is the default destination.
     Cli,
     /// The map is listening: arrows drive the map cursor, `-`/`+`/`=` zoom.
     Map,
@@ -123,9 +127,11 @@ pub struct Cursor {
 /// the returned position is the command line's own caret, computed by
 /// [`entry::draw`] from `line`; with [`Focus::Map`], it is `map_cursor`
 /// verbatim, reported back exactly as `render_with`'s old `cursor`
-/// parameter used to be — never drawn onto the grid either way. Exactly one
-/// of the two is ever consulted per call; the other's input is simply
-/// unused for that turn, not merged or overridden.
+/// parameter used to be — never drawn onto the grid either way. With
+/// [`Focus::Walk`], neither is consulted — it claims no cursor at all, so
+/// `None` comes back; otherwise exactly one of the two is consulted per
+/// call, the other's input simply unused for that turn, not merged or
+/// overridden.
 ///
 /// `strip`, when `Some`, is drawn as the map strip beneath the plate
 /// (see `strip::draw`); the row it occupies is reserved either way (see
@@ -161,12 +167,20 @@ pub fn render_with(
     }
     let snapshot = Snapshot::parse(json)?;
     let (grid, caret) = spread::compose(&snapshot, w, h, strip, focus, line, echo);
-    // ONE hardware cursor, so its location IS the focus indicator: the
-    // caret in the entry pane, or the map cursor on the plate. Never both,
-    // never neither — see `Focus`.
+    // ONE hardware cursor, so its location IS the focus indicator: with
+    // `Focus::Cli` it is the caret in the entry pane; with `Focus::Map`,
+    // the map cursor on the plate — never both, though a mode may claim no
+    // cursor at all (`Focus::Map` without a map cursor, or `Focus::Walk`,
+    // reports none). See `Focus`.
     let cursor = match focus {
         Focus::Cli => caret,
         Focus::Map => map_cursor.map(|c| (c.x, c.y)),
+        // Walk drives neither pane's cursor: the buffer is not being edited
+        // (printable keys bounce to the CLI), so the caret is not reported;
+        // the map cursor is not moving either. Deliberately NEITHER — the
+        // "never both" rule above is about ambiguity between the two pane
+        // cursors, and Walk claims no cursor at all.
+        Focus::Walk => None,
     };
     Ok((grid, cursor))
 }
@@ -200,6 +214,13 @@ pub fn render(json: &str, w: u16, h: u16) -> Result<Grid, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Walk is the DEFAULT focus — the game starts walking, not typing
+    /// (The Stride design, "Mode model").
+    #[test]
+    fn walk_is_the_default_focus() {
+        assert_eq!(Focus::default(), Focus::Walk);
+    }
 
     /// `render` of a document that is not even valid JSON must surface
     /// `Error::Parse`, not panic and not `Error::TooSmall`.
@@ -375,6 +396,35 @@ mod tests {
             Some((3, 4)),
             "with the map focused, render_with must report the MAP cursor, \
              never the entry pane's caret"
+        );
+    }
+
+    /// Walk claims NO cursor: even with a populated command line and a set
+    /// map cursor both present in the arguments, `render_with` must return
+    /// `None` for the cursor position — neither pane's cursor is reported
+    /// while the player is walking. Pins against a later regression that
+    /// leaks the entry caret (or the map cursor) under the default focus.
+    #[test]
+    fn walk_reports_no_cursor_at_all() {
+        let json = fixture_json();
+        let (_, at) = render_with(
+            &json,
+            80,
+            24,
+            Focus::Walk,
+            Some(Cursor { x: 3, y: 4 }),
+            CommandLine {
+                text: "look",
+                caret: 4,
+            },
+            None,
+            None,
+        )
+        .expect("renders");
+        assert_eq!(
+            at, None,
+            "Walk claims no cursor; render_with must report None, never \
+             either pane's cursor"
         );
     }
 }

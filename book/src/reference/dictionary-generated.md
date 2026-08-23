@@ -140,7 +140,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): black-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): black-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): black-dragon has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): black-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): black-dragon has no exposure to 'read' |
@@ -175,7 +175,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): black-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): black-dragon has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Goaddood | /goaddood/ | Géánbeém | Géánbeém → no change → Goaddood |
 | `south-east` | between south and east | Goddadgoaddood | /goddadgoaddood/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Goggoggaodgoaddood | /goggoggaodgoaddood/ | — | compound: `south` + `west` |
@@ -366,7 +366,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): bugbear has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): bugbear has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): bugbear has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): bugbear has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): bugbear has no exposure to 'read' |
@@ -401,7 +401,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Godoo | /godoo/ | Gedee | Gedee → no change → Godoo |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): bugbear has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Doogoa | /doogoa/ | Deogea | Deogea → no change → Doogoa |
 | `south-east` | between south and east | Doogoabaodao | /doogoabaodao/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Doogoadoogoo | /doogoadoogoo/ | — | compound: `south` + `west` |
@@ -592,7 +592,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): desert-dwarf has no exposure to 'read' |
@@ -627,7 +627,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): desert-dwarf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Shashad | /ʃaʃad/ | Shashad | Shashad → no change → Shashad |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Dajaj | /dajaj/ | Tajaj | Tajaj → lenition → Dajaj |
 | `south-east` | between south and east | Gashagavdajaj | /gaʃagavdajaj/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Vashajdajaj | /vaʃajdajaj/ | — | compound: `south` + `west` |
@@ -818,7 +818,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): desert-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): desert-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): desert-elf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): desert-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): desert-elf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): desert-elf has no exposure to 'read' |
@@ -853,7 +853,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): desert-elf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Zzeṅṅuṅ | /zzeŋŋuŋ/ | Zrengngung | Zrengngung → no change → Zzeṅṅuṅ |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): desert-elf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Ṅeṅṅuoṅ | /ŋeŋŋuoŋ/ | Ngengnguong | Ngengnguong → no change → Ṅeṅṅuoṅ |
 | `south-east` | between south and east | Ṅeṅṅuoṅpeuṅ | /ŋeŋŋuoŋpeuŋ/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Ṅeṅṅuoṅṅeuṅpouṅ | /ŋeŋŋuoŋŋeuŋpouŋ/ | — | compound: `south` + `west` |
@@ -1044,7 +1044,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): drow has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): drow has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): drow has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): drow has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): drow has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): drow has no exposure to 'read' |
@@ -1079,7 +1079,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): drow has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Roggo | /roggo/ | Zrengngung | Zrengngung → clustersimplify → finalloss → Roggo |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): drow has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Goggoo | /goggoo/ | Ngengnguong | Ngengnguong → finalloss → Goggoo |
 | `south-east` | between south and east | Goggoopoo | /goggoopoo/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Goggoogoogboo | /goggoogoogboo/ | — | compound: `south` + `west` |
@@ -1270,7 +1270,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): gnoll has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): gnoll has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): gnoll has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): gnoll has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): gnoll has no exposure to 'read' |
@@ -1305,7 +1305,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Zngaopzhmaox | /zŋaopʒmaox/ | Zngaofzhmaox | Zngaofzhmaox → fortition → Zngaopzhmaox |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gnoll has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Zhmovsmaap | /ʒmovsmaap/ | Zhmovsmaaf | Zhmovsmaaf → fortition → Zhmovsmaap |
 | `south-east` | between south and east | Shmaaxgzaavzhmovsmaap | /ʃmaaxgzaavʒmovsmaap/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Smaxgsavzhmovsmaap | /smaxgsavʒmovsmaap/ | — | compound: `south` + `west` |
@@ -1496,7 +1496,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): goblin has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): goblin has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): goblin has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): goblin has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): goblin has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): goblin has no exposure to 'read' |
@@ -1531,7 +1531,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Bedee | /bedee/ | Gedee | Gedee → no change → Bedee |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): goblin has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Deobea | /deobea/ | Deogea | Deogea → no change → Deobea |
 | `south-east` | between south and east | Deobeabaenao | /deobeabaenao/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Deobeadeokeo | /deobeadeokeo/ | — | compound: `south` + `west` |
@@ -1722,7 +1722,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): gully-dwarf has no exposure to 'read' |
@@ -1757,7 +1757,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): gully-dwarf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Shashab | /ʃaʃab/ | Shashad | Shashad → no change → Shashab |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Tajaj | /tajaj/ | Tajaj | Tajaj → no change → Tajaj |
 | `south-east` | between south and east | Gashagabtajaj | /gaʃagabtajaj/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Bashajtajaj | /baʃajtajaj/ | — | compound: `south` + `west` |
@@ -1948,7 +1948,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): high-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): high-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): high-elf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): high-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): high-elf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): high-elf has no exposure to 'read' |
@@ -1983,7 +1983,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): high-elf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Zremmom | /zremmom/ | Zrengngung | Zrengngung → no change → Zremmom |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): high-elf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Memmoom | /memmoom/ | Ngengnguong | Ngengnguong → no change → Memmoom |
 | `south-east` | between south and east | Beommemmoom | /beommemmoom/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Meomboommemmoom | /meomboommemmoom/ | — | compound: `south` + `west` |
@@ -2174,7 +2174,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): hill-dwarf has no exposure to 'read' |
@@ -2209,7 +2209,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): hill-dwarf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Shashab | /ʃaʃab/ | Shashad | Shashad → no change → Shashab |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Tajaj | /tajaj/ | Tajaj | Tajaj → no change → Tajaj |
 | `south-east` | between south and east | Gashagavtajaj | /gaʃagavtajaj/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Vashajtajaj | /vaʃajtajaj/ | — | compound: `south` + `west` |
@@ -2400,7 +2400,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | Notee | /notee/ | Notee | Notee → no change → Notee |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): hobgoblin has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): hobgoblin has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): hobgoblin has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): hobgoblin has no exposure to 'read' |
@@ -2435,7 +2435,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Gebee | /gebee/ | Gedee | Gedee → no change → Gebee |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): hobgoblin has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Beogea | /beogea/ | Deogea | Deogea → no change → Beogea |
 | `south-east` | between south and east | Beogeabaenao | /beogeabaenao/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Beogeabeokeo | /beogeabeokeo/ | — | compound: `south` + `west` |
@@ -2626,7 +2626,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): human has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): human has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): human has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): human has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): human has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): human has no exposure to 'read' |
@@ -2661,7 +2661,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): human has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Getveo | /getveo/ | Getveo | Getveo → no change → Getveo |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): human has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Xagoe | /xagoe/ | Txagoe | Txagoe → clustersimplify → Xagoe |
 | `south-east` | between south and east | Keraxagoe | /keraxagoe/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Reeroxagoe | /reeroxagoe/ | — | compound: `south` + `west` |
@@ -2852,7 +2852,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): kobold has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): kobold has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): kobold has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): kobold has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): kobold has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): kobold has no exposure to 'read' |
@@ -2887,7 +2887,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Xooxoo | /xooxoo/ | Xooxoo | Xooxoo → no change → Xooxoo |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): kobold has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Xoorooxa | /xoorooxa/ | Xoorooxa | Xoorooxa → no change → Xoorooxa |
 | `south-east` | between south and east | Raaroraxoorooxa | /raaroraxoorooxa/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Xoaxorooxoorooxa | /xoaxorooxoorooxa/ | — | compound: `south` + `west` |
@@ -3078,7 +3078,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): red-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): red-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): red-dragon has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): red-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): red-dragon has no exposure to 'read' |
@@ -3113,7 +3113,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): red-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): red-dragon has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Doaddood | /doaddood/ | Géánbeém | Géánbeém → no change → Doaddood |
 | `south-east` | between south and east | Doddaddoaddood | /doddaddoaddood/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Doddoddaoddoaddood | /doddoddaoddoaddood/ | — | compound: `south` + `west` |
@@ -3304,7 +3304,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | Sraun | /sraun/ | Sraung | Sraung → no change → Sraun |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): sea-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): sea-elf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): sea-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): sea-elf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): sea-elf has no exposure to 'read' |
@@ -3339,7 +3339,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): sea-elf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Drennun | /drennun/ | Zrengngung | Zrengngung → no change → Drennun |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): sea-elf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Nennuun | /nennuun/ | Ngengnguong | Ngengnguong → vowelshift → Nennuun |
 | `south-east` | between south and east | Nennuunpeun | /nennuunpeun/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Nennuunneunbuun | /nennuunneunbuun/ | — | compound: `south` + `west` |
@@ -3530,7 +3530,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): snow-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): snow-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): snow-elf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): snow-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): snow-elf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): snow-elf has no exposure to 'read' |
@@ -3565,7 +3565,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): snow-elf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Zroṅṅoṅ | /zroŋŋoŋ/ | Zrengngung | Zrengngung → no change → Zroṅṅoṅ |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): snow-elf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Ṅoṅṅooṅ | /ŋoŋŋooŋ/ | Ngengnguong | Ngengnguong → no change → Ṅoṅṅooṅ |
 | `south-east` | between south and east | Ṅoṅṅooṅbooṅ | /ŋoŋŋooŋbooŋ/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Ṅoṅṅooṅṅooṅbooṅ | /ŋoŋŋooŋŋooŋbooŋ/ | — | compound: `south` + `west` |
@@ -3756,7 +3756,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): white-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): white-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): white-dragon has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): white-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): white-dragon has no exposure to 'read' |
@@ -3791,7 +3791,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): white-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): white-dragon has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Doandoon | /doandoon/ | Géánbeém | Géánbeém → no change → Doandoon |
 | `south-east` | between south and east | Doandoonngondan | /doandoonŋondan/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Doandoondongdongngaon | /doandoondoŋdoŋŋaon/ | — | compound: `south` + `west` |
@@ -3982,7 +3982,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): wood-elf has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): wood-elf has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): wood-elf has no exposure to 'pressure-ridge' |
-| `provoke` | to make someone hostile by an act the simulation itself did not choose — `provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
+| `provoke` | to make someone hostile by an act the simulation itself did not choose — `!provoke` | — | — | — | gap (extradiegetic): provoke is an operator instrument; it has no referent in the world |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): wood-elf has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): wood-elf has no exposure to 'rain' |
 | `read` | to take meaning from written words — `consult` | — | — | — | gap (experiential): wood-elf has no exposure to 'read' |
@@ -4017,7 +4017,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snow` | frozen precipitation | — | — | — | gap (experiential): wood-elf has no exposure to 'snow' |
 | `snow-elf-kind` | a snow elf | Zdeṅṅu | /zdeŋŋu/ | Zrengngung | Zrengngung → finalloss → Zdeṅṅu |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): wood-elf has no exposure to 'snowfield' |
-| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
+| `soothe` | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` | — | — | — | gap (extradiegetic): soothe is an operator instrument; it has no referent in the world |
 | `south` | toward the pole of decreasing latitude | Ṅeṅṅuu | /ŋeŋŋuu/ | Ngengnguong | Ngengnguong → finalloss → vowelshift → Ṅeṅṅuu |
 | `south-east` | between south and east | Teuṅeṅṅuu | /teuŋeŋŋuu/ | — | compound: `south` + `east` |
 | `south-west` | between south and west | Ṅeuṅduuṅeṅṅuu | /ŋeuŋduuŋeŋŋuu/ | — | compound: `south` + `west` |

@@ -288,7 +288,7 @@
 | `plankton-bloom` | climate | substance | Water thick with plankton. |
 | `playa` | climate | substance | A dry lake bed of salt and cracked clay. |
 | `pressure-ridge` | climate | substance | Sea ice buckled into a ridge. |
-| `provoke` | language | act | to make someone hostile by an act the simulation itself did not choose — `provoke` |
+| `provoke` | language | act | to make someone hostile by an act the simulation itself did not choose — `!provoke` |
 | `rafted-floe` | climate | substance | Ice floes driven over one another. |
 | `rain` | climate | substance | liquid precipitation |
 | `read` | language | act | to take meaning from written words — `consult` |
@@ -323,7 +323,7 @@
 | `snow` | climate | substance | frozen precipitation |
 | `snow-elf-kind` | species | living | a snow elf |
 | `snowfield` | climate | substance | An unbroken field of snow. |
-| `soothe` | language | act | to ease someone's hostility by an act the simulation itself did not choose — `soothe` |
+| `soothe` | language | act | to ease someone's hostility by an act the simulation itself did not choose — `!soothe` |
 | `south` | language | quality | toward the pole of decreasing latitude |
 | `south-east` | language | quality | between south and east |
 | `south-west` | language | quality | between south and west |

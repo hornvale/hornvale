@@ -82,6 +82,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 pub mod ablation;
 pub mod alchemy;
 pub mod chamber;
+pub mod character;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
@@ -102,9 +103,14 @@ pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
+pub mod underworld_readout;
 pub mod vestige;
 pub mod volcano;
 pub use ablation::ChannelMask;
+pub use character::{
+    BarrierPins, BarrierState, BranchRoot, CHARACTERS, Character, bands_of, barrier_of,
+    branch_count_of, character_at, character_of, parse_barrier_pin, root_floor_of,
+};
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_from,
     accounts_from, beta_of, chorus_ground, crisis_from, cyclic_beliefs_from, day_schema_from,

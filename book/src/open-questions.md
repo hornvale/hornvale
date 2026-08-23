@@ -1902,6 +1902,57 @@ the world only if something independent establishes the column can move —
 generalises here to a stricter form: **a join is evidence only if something
 establishes that it discriminates**, and a fit that always exists is not that.
 
+*Re-scored again by [The Stope](./chronicle/the-stope.md) (2026-08-22), which
+gave the underworld the extent every paragraph above assumed it would need and
+moved the bet's own quantity by nothing.*
+
+**The route this chapter has been implicitly recommending does not go where it
+looks like it goes.** The paragraph above leaves the bet at *asked, answered,
+and answered about the wrong factor*: whether two kinds can be separated by
+depth is now a question about **resolution** — how many distinct values a
+depth-derived multiplier can take before a quartile boundary means anything.
+The obvious way to buy resolution is to give the underworld more underworld,
+and The Stope did exactly that. A depth band stopped being one interior-less
+point per column and became a drawn run of floors; a column became a branch
+with its own character, its own barrier and its own root floor on its parent;
+entrances became plural and map to floors rather than to columns. On seed 42
+the realized chamber population went from 14,976 to 21,328 and the reachable
+count from 1,158 to 1,496.
+
+**None of it reached the seating multiplier, and the demonstration is exact.**
+The campaign's address change was an epoch — every chamber in every world
+relocated — and every drow-seating figure came back byte-identical, because
+seating reads the rung and the column and never asks whether a chamber exists.
+So the axis that would separate two underground peoples still takes the four or
+five distinct values The Underworld measured, and the campaign that multiplied
+the underworld's addressable places contributed nothing to it. **Adding places
+underground does not add resolution to the quantity that places peoples,
+because the two are disjoint derivations.** A campaign that wants depth to
+discriminate has to widen the *seating* derivation; widening the lattice
+beneath it is a different piece of work that looks like the same one.
+
+**One half does move toward the bet.** The underworld now carries a per-branch
+**character** — the first discrete, world-scale axis that varies *within* a
+single cave system rather than between cells — measured at 65.25 / 29.86 /
+4.89% over 6,136 realized branches, no value near the 80% failure ceiling
+frozen before the code. It is not a people, and nothing that places a people
+consults it. But the standing precondition since The Delvers has been the
+underworld *being declared as places*, and a branch that owns a character and a
+run of floors is nearer to a place than a bucket was.
+
+**And a caution that belongs to this chapter's own genre.** The character
+shares reproduce the draw's authored weights to within a point, which is the
+correct outcome and also means the variety is a **setting** rather than
+something the structure produced. A later campaign reading "the underworld
+varies now" off that number should establish which of the two it needs. The
+same campaign produced the sharper instance: a declared band-eligibility table
+per character, which the shipped existence predicate never consults, so 47% of
+one character's branches terminate in bands it declares itself ineligible for.
+The chapter's series continues one term — a column's value is evidence only if
+something establishes the column can move; a join is evidence only if something
+establishes it discriminates; **a declaration is evidence about the world only
+if something reads it.**
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,
