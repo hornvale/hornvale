@@ -100,9 +100,11 @@ Equirectangular would bend the very courses the sim computes. That is the
 reason, and it is not decorative.
 
 The spike's renderer already exists at
-`windows/worldgen/examples/portolan_spike.rs` and routes through the kernel's
-`math::ln`/`math::tan` — the libm-backed path, so it is cross-platform
-deterministic. **Reuse its projection; do not write a second one.**
+`windows/worldgen/examples/portolan_spike.rs` (deleted at this campaign's
+close, once ported; see git history at `0292de87f^`) and routes through the
+kernel's `math::ln`/`math::tan` — the libm-backed path, so it is
+cross-platform deterministic. **Reuse its projection; do not write a second
+one.**
 
 ### 3.1 The projection's central line is derived from the world's physics
 
@@ -748,6 +750,38 @@ H8). The distinction is the whole point, and the chronicle must make it.
 **Residue, not acted on here:** `elevation_ascii` is a committed artifact that
 misrepresents the world's landmass structure at its current resolution, and has
 presumably been read that way. Recorded as `MAP-elevation-ascii-merges-landmasses`.
+
+## A10c. H2 — undisposed at G6, disposed at final review (2026-08-23)
+
+**H2 — "the cursor resolves consistently across zoom" — was never measured,
+tested, documented, or retired anywhere on this branch, despite appearing
+three times in this spec (§8, §12, §A9) and being mapped by the plan's own
+self-review table to "Task 3 Step 5" beside H3.** H3 got a real test; H2 got
+none. This is the *second* loss from that same table — the retrospective
+records the first (§3.3) — and it was found the same way the first one was:
+by a reviewer re-auditing the table against the spec rather than trusting the
+mapping.
+
+**Disposition: not measured, and here is what is known instead of a
+measurement.** The final review computed, rather than guessed, a datum that
+bears directly on H2's likely answer: at zoom 0 (the coarsest rung, the whole
+planet in the design plate's width), only **10.9%** of terrain cells are ever
+an `area_majority` representative — the same undersampling
+`MAP-vertical-axis-undersamples-the-mesh` measures at other rungs. Since a
+cell that is never a representative at one zoom cannot be "the same cell" the
+cursor resolved to at another, **H2 is likely FALSE at the cell level** for
+the large majority of cells, purely as a consequence of that undersampling,
+independent of whether the resolver's own logic is otherwise consistent.
+H2 is more plausible at the *feature* level — a landmass or sea is usually
+large enough that pointing "at it" survives a change of representative cell
+even when the specific cell does not — but that is also unmeasured.
+
+**Owner: the next campaign that revisits `plate.rs`'s vertical resolution**
+(the same one `MAP-vertical-axis-undersamples-the-mesh` and
+`MAP-settlement-glyph-may-be-unreachable-at-any-shipped-zoom` are deferred
+to). H2 should be measured after that fix, not before it, since the current
+number is dominated by an already-known and already-registered defect rather
+than by anything specific to cursor resolution.
 
 ## A11. Preregistered measurement added
 

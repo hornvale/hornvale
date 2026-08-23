@@ -17,7 +17,8 @@
 //!
 //! The glyph vocabulary (`~` ocean, `.` land) is the spike's own
 //! (`windows/worldgen/examples/portolan_spike.rs`, `glyph_for`, line
-//! 171) — reused rather than invented — even though the cell-lookup
+//! 171 -- deleted at this campaign's close, git history at `0292de87f^`)
+//! — reused rather than invented — even though the cell-lookup
 //! mechanism underneath it is not: `glyph_for` asked
 //! [`hornvale_terrain::GeneratedTerrain::nearest_cell`], an O(cell count)
 //! brute-force scan the spike didn't have to care about (it renders three
@@ -83,15 +84,29 @@ pub struct Window {
     pub origin_row: u32,
 }
 
-/// Task 1's own measurement (its task report, Step 10): walking the
-/// equator at `GLOBE_LEVEL` (seed 42) crosses 385 distinct terrain cells
-/// — not spec §4.3's ~364 estimate. This is the zoom ladder's ceiling:
-/// beyond a virtual chart this wide, a character would be drawing detail
-/// the mesh does not have (decision 0123: disclose a resolution, never
-/// invent detail below it). The report notes this is believed to be a
-/// level-6-TOPOLOGY constant (the icosphere subdivision, not the terrain
-/// outcome) rather than a seed-42 fact, but flags that belief as
-/// unconfirmed against a second seed.
+/// Task 1's own measurement: walking the equator at `GLOBE_LEVEL` (seed
+/// 42) crosses 385 distinct terrain cells — not spec §4.3's ~364 estimate.
+/// This is the zoom ladder's ceiling: beyond a virtual chart this wide, a
+/// character would be drawing detail the mesh does not have (decision
+/// 0123: disclose a resolution, never invent detail below it). Believed
+/// to be a level-6-TOPOLOGY constant (the icosphere subdivision, not the
+/// terrain outcome) rather than a seed-42 fact, but unconfirmed against a
+/// second seed.
+///
+/// **This is true of the HORIZONTAL axis only, and the doc used to claim
+/// it for both.** `virtual_h = virtual_w / GLYPH_ASPECT`, and Mercator
+/// clamped at ±85° is nearly SQUARE in projected coordinates — so the
+/// vertical axis samples roughly twice as coarsely as this ceiling
+/// implies and never reaches the mesh's real detail on that axis at all.
+/// Measured on seed 42: only 70.5% of the planet's 40,962 terrain cells
+/// are ever an `area_majority` representative at the finest zoom over the
+/// WHOLE virtual chart, so 330 of 874 cave cells (37.8%) are undrawable by
+/// construction on this axis alone — 5.7% at the design plate's coarsest
+/// rung, 1.1% at the 80x24 floor. Recorded, not fixed here (registry row
+/// `MAP-vertical-axis-undersamples-the-mesh`): a genuine fix widens
+/// `virtual_h` independently of `GLYPH_ASPECT`'s horizontal role, which is
+/// a real signature change to every function in this module that takes
+/// `virtual_h`.
 pub const MAX_VIRTUAL_WIDTH: u16 = 385;
 
 /// How many zoom steps [`Window::zoom`] carries. Each step DOUBLES the
@@ -474,9 +489,10 @@ mod tests {
     use hornvale_terrain::TerrainPins;
 
     /// A committed-seed world, built the same way the spike builds one
-    /// (`windows/worldgen/examples/portolan_spike.rs`'s own `main`) — no
-    /// `test_world()` helper exists anywhere in `clients/game` (T2-d), so
-    /// this is the one this module owns.
+    /// (`windows/worldgen/examples/portolan_spike.rs`'s own `main`,
+    /// deleted at this campaign's close -- git history at `0292de87f^`)
+    /// — no `test_world()` helper exists anywhere in `clients/game`
+    /// (T2-d), so this is the one this module owns.
     fn test_world() -> (GeneratedTerrain, Geosphere) {
         let geo = Geosphere::new(hornvale_terrain::GLOBE_LEVEL);
         let outcome = hornvale_terrain::generate(Seed(42), &geo, &TerrainPins::default())
@@ -748,9 +764,10 @@ mod tests {
     }
 
     /// **`draw_with` never draws an undiscovered point site, and always
-    /// draws a discovered one** — the real test this task's ruling F-b
-    /// exists for: the gate lives inside the paint loop, not a filter
-    /// pass afterward. Uses a real cave cell (real terrain, not a
+    /// draws a discovered one** — the real test the discovery gate exists
+    /// for (spec Amendment 1 §A3/§A7, "nothing is drawn and then hidden"):
+    /// the gate lives inside the paint loop, not a filter pass afterward.
+    /// Uses a real cave cell (real terrain, not a
     /// fixture) at a window fine enough that `area_majority`'s vote
     /// collapses to point sampling (the same technique
     /// `at_a_fine_enough_window_area_majority_agrees_with_point_sampling`

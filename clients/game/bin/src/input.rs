@@ -70,8 +70,8 @@ pub enum Action {
     Submit,
     /// Move the map cursor by `(dx, dy)` grid cells.
     CursorBy(i16, i16),
-    /// Zoom the map in (`1`) or out (`-1`). **Ruling T3-f (2026-08-23):**
-    /// one continuous ladder — `-` from the walk-band chart turns the
+    /// Zoom the map in (`1`) or out (`-1`): one continuous ladder — `-`
+    /// from the walk-band chart turns the
     /// world view on at its coarsest rung; `+` at the world view's finest
     /// rung turns it back off; between those, the two keys move the world
     /// map's own zoom. See [`crate::driver::Driver::apply`]'s doc for the
@@ -80,7 +80,7 @@ pub enum Action {
     /// Roll the projection so the point under the cursor sits on the
     /// central line (spec §3.2). Bound to `.` in [`Focus::Map`] — a
     /// punctuation key, joining `-`/`+`/`=` as the established exception
-    /// to the total routing table (T3-a: letters stay unavailable so the
+    /// to the total routing table (letters stay unavailable so the
     /// table stays predictable, decision 0159). A no-op unless the world
     /// view is active.
     Recentre,

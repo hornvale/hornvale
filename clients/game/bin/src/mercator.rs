@@ -1,13 +1,15 @@
 //! Oblique Mercator projection between geographic coordinates and the
 //! terminal map plate.
 //!
-//! Ported from `windows/worldgen/examples/portolan_spike.rs` (decision
-//! 0022 puts rendering in the client, not the sim, so this lives in
-//! `bin` rather than a domain crate). The spike's own math is kept
-//! byte-for-byte identical -- it routes through `hornvale_kernel::math`'s
-//! libm-backed transcendentals, which is what keeps the projection
-//! cross-platform deterministic -- but its CLAMP POLICY is not: the spike
-//! always returns a cell (right for placing a label), while this module
+//! Ported from `windows/worldgen/examples/portolan_spike.rs` (deleted at
+//! this campaign's close; see git history at `0292de87f^` for the file
+//! itself -- decision 0022 puts rendering in the client, not the sim, so
+//! this lives in `bin` rather than a domain crate). The spike's own math
+//! is kept byte-for-byte identical -- it routes through
+//! `hornvale_kernel::math`'s libm-backed transcendentals, which is what
+//! keeps the projection cross-platform deterministic -- but its CLAMP
+//! POLICY is not: the spike always returns a cell (right for placing a
+//! label), while this module
 //! returns `None` above the clamp (right for drawing terrain, since spec
 //! §6 refuses polar fabrication).
 
@@ -55,6 +57,21 @@ pub const LAT_CLAMP_DEG: f64 = 85.0;
 /// accident — and if a re-centre coincidentally lands exactly back on a
 /// pole, that IS the same physical central line, so treating it as such is
 /// correct, not merely convenient.
+///
+/// **The one collision this doc used to leave undefended (final review):
+/// a SPINNING world producing the LOCKED caption is structurally
+/// impossible, not merely unobserved.** For that to happen `centre_on`
+/// would need to return a `Frame` exactly equal to `frame_for(true)`
+/// (`pole_lat_deg == 0.0`) on a spinning world. `centre_on`'s own formula
+/// is `pole_lat_deg = 90.0 - lat_deg.abs()`, so that requires
+/// `lat_deg.abs() == 90.0` exactly — but every `lat_deg` `centre_on` is
+/// ever called with comes from `unproject`, whose frame latitude is bounded
+/// to `±LAT_CLAMP_DEG` (85°) by construction on a spinning world (`to_frame`
+/// takes the identity branch there, per the invariant above `to_frame`
+/// itself now asserts). So `pole_lat_deg >= 90.0 - 85.0 == 5.0` always, on
+/// a spinning world, and the locked-caption collision cannot occur. The
+/// converse (a locked world producing the SPINNING caption) is bounded the
+/// same way and is the one this doc already defended above.
 pub fn clamp_caption(f: &Frame) -> String {
     if *f == frame_for(false) {
         format!(
@@ -159,9 +176,24 @@ fn mercator_y_max() -> f64 {
 /// general spherical-rotation formula below is exact everywhere.)
 fn to_frame(f: &Frame, lat_deg: f64, lon_deg: f64) -> (f64, f64) {
     if f.pole_lat_deg.abs() >= 90.0 - f64::EPSILON {
-        // Identity (up to sign): the frame's pole IS a geographic pole.
-        let sign = f.pole_lat_deg.signum();
-        (sign * lat_deg, wrap_deg_signed(lon_deg - f.pole_lon_deg))
+        // Identity: the frame's pole IS a geographic pole. This branch is
+        // reachable only with `pole_lat_deg == +90.0` (`frame_for(false)`)
+        // -- `frame_for` never yields `-90.0` and `centre_on` always
+        // yields `90.0 - |lat_deg| >= 0.0` -- so a `-90.0` pole, and the
+        // reflected (`sign == -1.0`) case a prior version of this branch
+        // handled, is unreachable by construction. A version of this
+        // function that special-cased it accordingly (`sign *
+        // lat_deg`) was a REFLECTION for that case, not a rotation, and
+        // there is no test that could distinguish the two without first
+        // reaching a pole this crate never produces. Asserted, not
+        // silently trusted:
+        debug_assert!(
+            f.pole_lat_deg >= 0.0,
+            "Frame::pole_lat_deg is never negative in any frame this crate constructs \
+             (frame_for, centre_on) -- if this fires, to_frame's identity branch needs \
+             its sign handling back, correctly, not merely restored"
+        );
+        (lat_deg, wrap_deg_signed(lon_deg - f.pole_lon_deg))
     } else {
         let lat = lat_deg.to_radians();
         let lon = lon_deg.to_radians();
@@ -192,9 +224,11 @@ fn to_frame(f: &Frame, lat_deg: f64, lon_deg: f64) -> (f64, f64) {
 /// orthogonal).
 fn from_frame(f: &Frame, frame_lat_deg: f64, frame_lon_deg: f64) -> (f64, f64) {
     if f.pole_lat_deg.abs() >= 90.0 - f64::EPSILON {
-        let sign = f.pole_lat_deg.signum();
+        // See `to_frame`'s identical invariant and its own comment: this
+        // branch is reachable only at `pole_lat_deg == +90.0`.
+        debug_assert!(f.pole_lat_deg >= 0.0);
         (
-            sign * frame_lat_deg,
+            frame_lat_deg,
             wrap_deg_signed(frame_lon_deg + f.pole_lon_deg),
         )
     } else {

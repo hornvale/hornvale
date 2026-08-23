@@ -45,8 +45,8 @@ pub fn resolve_at(
     Some(crate::feature_name(seed, id, species, ph, morph).roman)
 }
 
-/// One resolved link in a containment chain (Task 4, F8/controller ruling
-/// F-d): a feature's real drawn name and class, plus whether the
+/// One resolved link in a containment chain (Task 4, F8): a feature's
+/// real drawn name and class, plus whether the
 /// possession has discovered it. `discovered` is decided per-link, never
 /// inferred from a sibling link's own state — see [`format_chain`]'s doc
 /// for why an outer link's discovery says nothing about an inner one's
@@ -112,7 +112,7 @@ fn describe(link: &ChainLink) -> String {
 /// rather than either fabricating one or dropping the link from the chain
 /// entirely.
 ///
-/// **F8, controller ruling F-d — the semantics this function pins, ahead of
+/// **F8 — the semantics this function pins, ahead of
 /// Task 5's real discovery gate:** an outer link being undiscovered never
 /// hides an inner, more specific link's own name, and vice versa.
 /// Discovery is a per-FEATURE fact (§A4b), not a property of the chain as a
@@ -330,7 +330,7 @@ mod tests {
     // -- Task 4, Step 5 / F8: an outer undiscovered link never hides an
     //    inner discovered one's name, and never fabricates its own -------
 
-    /// F8, controller ruling F-d — the hand-built fixture: standing on a
+    /// F8 — the hand-built fixture: standing on a
     /// named, discovered volcano inside an unnamed, undiscovered landmass.
     /// The volcano's real name must appear; the landmass's must not, and
     /// its class must still be named honestly (spec Amendment 1 §A3: the

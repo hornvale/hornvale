@@ -30,6 +30,18 @@
 //! other's methods. Grep this file: there is no `Visited` in `Discovered`'s
 //! `impl` block or vice versa. That absence is the whole enforcement
 //! mechanism spec Amendment 1 asks for.
+//!
+//! **[`Visited`] is currently WRITTEN, never READ, by anything but a
+//! test.** `Driver::update_discovery` calls [`Visited::record`] every
+//! turn (real, if small, cost), and [`Driver::visited`] is a public
+//! accessor -- but nothing in `plate.rs` consults it, so the world map
+//! does not currently draw visited and unvisited cells any differently.
+//! This is deliberately unwired pending a future campaign, not dead code
+//! by oversight: F6' (design spec §A10) leaves open whether a coarse-zoom
+//! "you have been somewhere in here" reading needs its own visual
+//! treatment at all, and this type exists so that campaign has the data
+//! already flowing rather than needing to add the write path too.
+//! Recorded as `CLIENT-world-map-visitedness-is-unwired`.
 
 use hornvale_kernel::{CellId, RoomAddr};
 use std::collections::BTreeSet;

@@ -65,7 +65,9 @@ pub const fn content_height(h: u16) -> u16 {
 /// square in its own coordinate space (The Portolan part II spec §4.1) needs
 /// twice as many columns as rows to read as square on screen. Matches
 /// `windows/worldgen/examples/portolan_spike.rs`'s own `GLYPH_ASPECT`
-/// (`2.0`) — `pub` so `bin` derives the plate's HEIGHT from this SAME ratio
+/// (`2.0`, deleted at this campaign's close -- git history at
+/// `0292de87f^`) — `pub` so `bin` derives the plate's HEIGHT from this
+/// SAME ratio
 /// (`world_plate_width(w, h) / GLYPH_ASPECT`) rather than hardcoding a
 /// second `2`, the same one-source-of-truth reason [`world_plate_width`]
 /// itself is exposed rather than recomputed.

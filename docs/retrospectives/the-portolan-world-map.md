@@ -42,6 +42,23 @@ real anyway: each is a fix round, a re-review, or (in §3.3's case) an entire
 task's worth of scope discovered four tasks later than it should have been
 assigned.
 
+**One defect in this campaign was not plan text, and "essentially every"
+rather than "every" is there for it.** Choosing `Focus::Map` alone as the
+world-view trigger silently regressed a shipped, chronicled feature: map
+focus previously meant a cursor over the walk-band chart with the strip
+naming whatever it pointed at (The Stylus, The Portolan part I), and the new
+code replaced that view unconditionally the moment `Focus::Map` was entered,
+with no way back to it. This was not a plan specifying something that did
+not exist — it was correct code doing exactly what its own task asked,
+quietly deleting a feature the task's own brief never mentioned because
+nobody writing that brief re-checked what `Focus::Map` already did. It was
+caught only because the reviewer happened to know the earlier campaign,
+which is not a repeatable safeguard — a differently-staffed review could
+have let it through clean. Fixed the same task cycle: the world view became
+explicit state (`world_view: bool`, default off), with a regression test
+pinning the byte-identical old behaviour by reintroducing the bug and
+watching it fail.
+
 ## A self-review table that maps a requirement to a task does not verify the task did it
 
 This is the general form of the §3.3 loss above, and it is worth stating on
@@ -53,10 +70,30 @@ intention survived contact with the task that was supposed to carry it. The
 gap was only found because a reviewer, working from the spec rather than the
 table, asked "who owns this?" and got no answer.
 
-## Four instances of a check that reads as protection while not being pointed at what it claims
+**The same table lost a second requirement the same way, and the loss stood
+through this retrospective's own first draft.** H2 — "the cursor resolves
+consistently across zoom" — appears three times in the spec (§8, §12, §A9)
+and the table mapped it to "Task 3 Step 5," beside H3. H3 got a real test.
+**H2 got no test, no measurement, no doc, no retirement, and no deferral
+anywhere on the branch** — not falsified, not confirmed, simply never
+looked at again after the table recorded where it was supposed to go, and
+this retrospective's own author did not catch it either; the campaign's
+final review did, by re-auditing the table against the spec rather than
+trusting it a second time. The lesson from the first loss was written down
+in this very section and the table that caused it was never re-checked
+against what it claimed to cover. Disposed at final review: not measured,
+but a datum computed instead of a guess — only 10.9% of terrain cells are
+ever an `area_majority` representative at zoom 0, which is consistent with
+H2 being **false at the cell level** for most cells, as a straightforward
+consequence of an already-known undersampling defect rather than anything
+specific to the cursor. Recorded in the spec beside H1's retirement (§A10c);
+owned by whichever future campaign fixes that undersampling first.
 
-The same defect shape recurred four times, and in three of the four only
-mutation testing revealed it — reading the test never would have:
+## Five instances of a check that reads as protection while not being pointed at what it claims
+
+The same defect shape recurred five times, and in four of the five only
+mutation testing or a final-review re-derivation revealed it — reading the
+test never would have:
 
 1. **The compose test.** `a_supplied_world_plate_replaces_the_band_view_and_
    nothing_else` used a synthetic plate with exactly one non-blank cell, and
@@ -88,13 +125,33 @@ mutation testing revealed it — reading the test never would have:
    stayed green. This instance predated the campaign; the campaign found it
    while building the first thing that actually depended on the exact
    string.
+5. **H6b's own plate-rendered negative check, inside the test written to
+   prove this campaign's central rule.** `h6b_co_location_does_not_disclose_
+   a_settlement` walks past a real settlement and asserts its glyph never
+   appears on the rendered plate, at the design plate size, at every zoom
+   rung. It genuinely never appears — but the final review found, by
+   rendering at successively finer resolutions until the mechanism-level
+   question could even be asked, that this specific settlement's glyph is
+   absent at the design plate (any rung, any window offset) and at 400×200
+   (the resolution an existing, working precedent test uses for a cave
+   cell), appearing only past 1200×600 — more than three times the client's
+   own zoom ceiling. So the glyph's absence at every rung the test covers is
+   not evidence the discovery gate is doing anything: nothing this client's
+   zoom ladder can ever reach would draw that settlement whether or not it
+   were discovered. The check is real, and it is checking the wrong thing —
+   not "does the gate withhold this," but "is this resolution too coarse to
+   draw it regardless," which was already true before Task 5 ever wrote a
+   line of discovery code.
 
-Each of the four passed a normal read. What exposed them was, respectively:
+Each of the five passed a normal read. What exposed them was, respectively:
 a deliberately strengthened fixture with a mutation proof, an adversarial
 mutation on a field the implementer had not thought to vary, comparison
 against a sibling call site's tag rather than the letter of the tag's own
-grammar, and building the first real consumer of a string that had only ever
-been a docstring's example before.
+grammar, building the first real consumer of a string that had only ever
+been a docstring's example before, and — the one instance mutation could
+not have found, since nothing about the code was wrong — rendering the same
+scene at ten times the resolution until the picture itself contradicted
+what the coarse version implied.
 
 ## A measurement's instrument was never checked because its output was the answer already expected
 
@@ -175,11 +232,22 @@ until zoom existed to move the two apart.
 
 ## Deferred minors, with homes
 
-- `mercator::Frame` supports `pole_lat_deg = -90` through a sign factor in
+- ~~`mercator::Frame` supports `pole_lat_deg = -90` through a sign factor in
   `to_frame`/`from_frame`, but `frame_for` never produces that value, so the
   branch is dead code, untested, and reviewer-verified correct by hand
   rather than by a test. Left as documented dead code rather than deleted or
-  tested — YAGNI, at the final review's discretion.
+  tested — YAGNI, at the final review's discretion.~~ — **RESOLVED at final
+  review.** Correcting "YAGNI, keep it documented" was itself wrong: the
+  sign factor was not merely unused, it was a REFLECTION for the case it
+  handled, not a rotation — `sign * lat_deg` with no corresponding sign on
+  longitude — so a future campaign that found a way to reach it would have
+  gotten a wrong answer, not a dead one. Deleted, with a `debug_assert!`
+  standing in place of the invariant it relied on (`pole_lat_deg >= 0.0`,
+  true of every `Frame` this crate constructs). Choosing "document and defer"
+  for something later found to be actively wrong rather than merely unused
+  is itself worth keeping as a lesson: unreachable-and-correct and
+  unreachable-and-wrong look identical from the outside of a `#[cfg(test)]`
+  boundary, and only reading the branch's own arithmetic tells them apart.
 - The H1‴ component-size figures (27.6%/25.0% for the shipped plate) are
   unverifiable from the repository: the measurement script was deleted
   before commit, per its own brief. The reviewer's independent check —
@@ -193,6 +261,10 @@ until zoom existed to move the two apart.
   world's actual rotation regime, which would emit the locked-world caption
   on a spinning world through this one narrow trigger. Judged unreachable in
   play — `unproject`'s frame latitude is bounded to ±85°, so landing on
-  geographic lat exactly ±90.0° through the projection chain is measure-zero
-  — and left as a documentation gap rather than a fix or a test, at the
-  final review's discretion.
+  geographic lat exactly ±90.0° through the projection chain is measure-zero.
+  **The documentation gap this bullet flagged is closed at final review**:
+  `clamp_caption`'s own doc now states the ±85° argument directly (it
+  previously defended only the same-regime coincidence), so a reader no
+  longer has to reconstruct the bound from `unproject`'s doc to trust the
+  claim. Still no test, by the same measure-zero reasoning — a test would be
+  asserting behaviour at an input the function can never receive.

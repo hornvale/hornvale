@@ -61,6 +61,38 @@ height, a value computed once per redraw from the terminal's own size while
 the world view is active — the same discipline the height axis already
 followed, applied to the axis that had been silently exempted from it.
 
+## Entering the map, and holding it still
+
+Two gestures reach the map, and neither is a new keybinding — both reuse
+keys the client already routed for a different purpose, on the reasoning
+that a letter key would break `Focus::Map`'s deliberately total routing
+table (every unclaimed letter already types itself into the command line),
+so the only room left for a new verb was in the punctuation this campaign
+had already claimed for zoom.
+
+**Zooming out past the walk band's own finest rung enters the world view,
+at its coarsest rung; zooming in past the world view's own finest rung
+leaves it, back to the walk-band chart.** The `-`/`+`/`=` keys were already
+bound to zoom before this campaign — part I reserved them and did nothing
+with them — so the world map's entry and exit are simply what happens when
+that one ladder is walked past either of its old ends, rather than a
+separate mode switch. A typed `world` command was considered and rejected:
+the client's entry pane has no reply channel of its own, since its prose is
+carried on the wire from the sim, and a client-only command would have
+nowhere to answer from.
+
+**Re-centring — rolling the projection so the cursor's own position becomes
+the new central line — is bound to `.`, a punctuation key alongside those
+same three.** The same reasoning applies twice over: `.` joins an already-
+established pattern (punctuation as map verb) instead of starting a new one,
+and a typed `recentre` command would have had the identical no-reply-channel
+problem. The gesture costs no reply either way — the map simply redraws
+around the new centre, which is the whole acknowledgement a keypress needs.
+
+Both bindings are gestures chosen on Nathan's behalf rather than specified
+by him directly, and both are cheap to move if they read wrong in play: one
+line in the input router, one in the test that pins it.
+
 ## H1 asked a question this world does not have an answer to
 
 The original hypothesis was simple: does the whole-planet plate show one
@@ -83,9 +115,9 @@ had set a stop at three in advance and honoured it: at H1‴, the question
 went back to the owner instead of being reframed a fourth time.
 
 H1‴'s diagnosis is what made the retirement possible rather than just
-convenient. Two instruments independent of the shipped plate — a five-times
-finer 300×150 equirectangular probe using plain sampling, and the shipped
-104×52 Mercator plate itself — agreed with each other (largest landmasses
+convenient. Two instruments — the shipped 104×52 Mercator plate itself, and
+a five-times finer 300×150 equirectangular probe using plain sampling,
+sharing no machinery with it — agreed with each other (largest landmasses
 27.6%/25.0% and 27.3%/22.4% of land, respectively) and disagreed with the
 one thing H1 had been benchmarked against the whole time: the Gazetteer's
 committed `elevation_ascii` rendering, at 72×24 nearest-cell sampling, which
@@ -122,9 +154,13 @@ discipline is keeping them answered by two mechanisms that are never wired
 to each other. **Where have I been** is a property of *cells*: walking a
 room marks that room and every coarser cell containing it, upward only, so
 zooming in always resolves the true, fine-grained shape of what was actually
-covered. This is not new code — it is the fog predicate `windows/vessel`
-already shipped for the walk band, reused unchanged. **What do I know is
-there** is a property of *features*, and it is earned only by encounter, not
+covered. The walk band's own chart has drawn exactly this, unchanged, since
+before this campaign — `windows/vessel`'s fog predicate. The world map's
+own bookkeeping is new code that reuses that predicate's *shape* rather
+than a second invention of visitedness, and it is currently write-only:
+nothing yet renders a cell differently for having been visited, an open
+item for a future campaign rather than this one's to draw. **What do I know
+is there** is a property of *features*, and it is earned only by encounter, not
 by proximity: a terrain-borne landmark (a volcano's cone, a river's course,
 a coastline) is visible on the map from the first turn because it *is* the
 ground, but it draws unnamed until the possession has entered its extent; a
@@ -145,10 +181,11 @@ under "discovered by encountering the thing," there has to be a *thing*, and
 today there is not one: an abandoned ruin cell has nothing built on it to
 enter, and a buried ruin's chamber belongs entirely to whatever settlement
 lives there now, with no field anywhere recording that an earlier occupation
-ever stood in the same place. The gap already has a name
-(`CLIENT-ruin-signature`) and a documented, no-epoch way to close it; closing
-it is a future campaign's work, not a quiet exception carved into this one's
-discovery rule.
+ever stood in the same place. A committed field already carries each ruin's
+own cause of death — fled, migrated, burned, plague, famine — and the
+project's own notes on it describe exactly what closing this gap would take
+and at no cost to a saved world; closing it is a future campaign's work, not
+a quiet exception carved into this one's discovery rule.
 
 ## The strip discloses what it does not know
 

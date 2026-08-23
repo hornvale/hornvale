@@ -258,9 +258,9 @@ pub struct Driver {
     /// agreed at all. This field makes the world view its own explicit
     /// state, defaulting OFF ([`Driver::start`] never sets it).
     ///
-    /// **Task 3b's own gesture (ruling T3-f): zooming OUT past the walk
-    /// band turns this on, at the coarsest rung; zooming IN past the
-    /// world view's finest rung turns it back off.** See
+    /// **Task 3b's own gesture: zooming OUT past the walk band turns
+    /// this on, at the coarsest rung; zooming IN past the world view's
+    /// finest rung turns it back off.** See
     /// [`Driver::apply_zoom`]. `Focus::Map` alone still reproduces the
     /// pre-Task-3a behaviour byte-identically — this field is untouched by
     /// focus changes on their own, only by `Action::Zoom`; see
@@ -652,8 +652,8 @@ impl Driver {
     /// reimplementing the check a third time.
     ///
     /// `self.world_view` defaults to `false` and, since Task 3b, [`Self::
-    /// apply_zoom`] is the gesture that sets it `true` — zooming out past
-    /// the walk band (ruling T3-f, `-` on [`Focus::Map`]).
+    /// apply_zoom`] is the gesture that sets it `true` — zooming out
+    /// (`-` on [`Focus::Map`]) past the walk band.
     pub fn world_plate_for_redraw(&self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
         (self.world_view && self.focus == Focus::Map).then(|| self.world_plate(w, h))
     }
@@ -682,8 +682,11 @@ impl Driver {
     /// (echo + history + `handle`), minus any buffer involvement.
     /// `CursorBy`/`ToggleFocus` are unchanged from part I.
     ///
-    /// **`Zoom` is now implemented (Task 3b): one continuous ladder, per
-    /// ruling T3-f.** With the world view off, zooming out (`-`) turns it
+    /// **`Zoom` is now implemented (Task 3b): one continuous ladder built
+    /// from already-routed keys, chosen over a typed `world` verb (no
+    /// reply channel — the entry pane's prose is wire-carried) and over a
+    /// new letter key (would break `Focus::Map`'s deliberately total
+    /// routing table).** With the world view off, zooming out (`-`) turns it
     /// on at the coarsest rung; with the world view on at its finest rung,
     /// zooming in (`+`/`=`) turns it back off; between those, the keys move
     /// the world map's own zoom, clamped to `0..=`[`plate::MAX_ZOOM`]. See
@@ -905,9 +908,11 @@ impl Driver {
         }
     }
 
-    /// Zoom the map view — ruling T3-f (2026-08-23, `task-3b-brief.md`):
-    /// one continuous ladder out of already-routed keys, rather than a new
-    /// binding or a fourth focus state.
+    /// Zoom the map view: one continuous ladder built from already-routed
+    /// keys (`-`/`+`/`=`), rather than a new binding or a fourth focus
+    /// state — chosen over a typed `world` verb (no reply channel exists;
+    /// the entry pane's prose is wire-carried) and over a new letter key
+    /// (would break `Focus::Map`'s deliberately total routing table).
     ///
     /// - `delta < 0` (zoom OUT): with the world view off, turn it ON at
     ///   its coarsest rung (`Window { zoom: 0, .. }` — the whole planet,
@@ -961,7 +966,12 @@ impl Driver {
 
     /// Roll the projection so the point currently under the cursor sits on
     /// the projection's own central line — spec §3.2's explicit re-centre
-    /// command, bound to `.` in [`Focus::Map`] (ruling T3-a). A no-op
+    /// command, bound to `.` in [`Focus::Map`] — chosen over a typed
+    /// `recentre` command because `Focus::Map` routes every other
+    /// `Char(c)` to `FocusAndType(c)` (a deliberately total table decision
+    /// 0159's predictability rule rests on), `-`/`+`/`=` already establish
+    /// punctuation as a map verb, and a typed client-only command has no
+    /// reply channel (the entry pane's prose is wire-carried). A no-op
     /// unless the world view is active: the walk-band chart is not a
     /// Mercator projection and has no central line to roll onto.
     ///
@@ -1156,11 +1166,16 @@ impl Driver {
     /// improved on this task's first pass): the earlier single-centre-
     /// point resolver was not a contract violation — it named a genuinely
     /// resolved feature — but it let the strip contradict the picture.**
-    /// F5 measured 52.5% agreement between that resolver and the drawn
-    /// glyph at the coarsest zoom (see the task report): a player could
-    /// point at a character drawn `~` and have the strip name a real
-    /// feature on a LAND cell nearest that character's exact centre. This
-    /// method closes that: it can never return a cell whose class
+    /// F5's original measurement (52.5% agreement, 420/800, between that
+    /// resolver and the drawn glyph at the coarsest zoom) is **RETRACTED
+    /// AS MEASURED**: it was taken on a grid rendered at 32x16 against
+    /// coordinates computed for 40x20, a double-fit bug in the test
+    /// harness, not a property of the resolver — the magnitude is
+    /// UNMEASURED, not smaller. The kind of disagreement it pointed at is
+    /// still real: a player could point at a character drawn `~` and have
+    /// the strip name a real feature on a LAND cell nearest that
+    /// character's exact centre. This method closes that: it can never
+    /// return a cell whose class
     /// disagrees with what [`plate::draw_with`] would paint at the same
     /// screen position, because it asks the identical vote for the
     /// identical answer, and picks a REPRESENTATIVE of the winning class
@@ -1344,7 +1359,9 @@ impl Driver {
     }
 
     /// Every walk-band room the possession has stood in this session
-    /// (spec Amendment 1 §A4a). See the `discovery` module's own doc.
+    /// (spec Amendment 1 §A4a). See the `discovery` module's own doc --
+    /// **this accessor currently has no caller**: the world map does not
+    /// yet draw visitedness. `pub` for a future campaign and for tests.
     pub fn visited(&self) -> &Visited {
         &self.visited
     }
@@ -1397,7 +1414,7 @@ mod portolan_tests {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
     }
 
-    /// Enter the map and zoom out once — the T3-f gesture that turns the
+    /// Enter the map and zoom out once — the gesture that turns the
     /// world view on, at its coarsest rung.
     fn enter_world_view(d: &mut Driver) {
         d.enter_map();
@@ -1408,7 +1425,8 @@ mod portolan_tests {
         );
     }
 
-    // -- Step 1: the zoom ladder, per ruling T3-f -----------------------
+    // -- Step 1: the zoom ladder (zoom out past the walk band enters the
+    //    world view; zoom in past its finest rung leaves it) -----------
 
     #[test]
     fn zoom_out_from_the_walk_band_enters_the_world_view_at_the_coarsest_rung() {
@@ -1460,7 +1478,7 @@ mod portolan_tests {
         d.apply(Action::Zoom(1));
         assert!(
             !d.world_view,
-            "one more zoom-in at the finest rung must leave the world view (ruling T3-f)"
+            "one more zoom-in at the finest rung must leave the world view"
         );
     }
 
@@ -1816,10 +1834,16 @@ mod portolan_tests {
     //    drawn glyph (Finding 2) -----------------------------------------
 
     /// F5, RE-MEASURED after the Finding 2 fix (task report fix round 1).
-    /// Before the fix, this test measured 52.5% agreement (420/800) between
-    /// the drawn 49-vote-majority glyph and a single-centre-point resolver
-    /// at the coarsest zoom — a real, substantial disagreement, reported
-    /// plainly rather than smoothed over (the task report's own words).
+    /// **The pre-fix "52.5% agreement (420/800)" figure this doc used to
+    /// state here is RETRACTED AS MEASURED**: it was produced by a test
+    /// harness bug (both the measurement and this test's own earlier
+    /// version called `Driver::world_plate(w, h)` with an already-fitted
+    /// plate size, double-applying the fit and rendering a misaligned
+    /// 32x16 grid against coordinates computed for 40x20) rather than by
+    /// a property of the pre-fix resolver. The pre-fix disagreement rate
+    /// is UNMEASURED, not smaller; the disagreement in KIND — a 49-vote
+    /// majority and a single centre-point answer can disagree at a
+    /// coastline — was and remains real.
     ///
     /// The fix ([`Self::world_view_cell`], `plate::area_majority`) makes
     /// the resolver ask the SAME 49-point vote the plate draws from, and
@@ -1872,7 +1896,9 @@ mod portolan_tests {
         println!(
             "F5 (fix round 1): the resolved cell's class agrees with the drawn 49-vote \
              majority glyph on {agree}/{total} = {ratio:.4} of the {plate_w}x{plate_h} \
-             floor plate at the coarsest zoom (was 420/800 = 0.5250 before the fix)"
+             floor plate at the coarsest zoom (the pre-fix figure once printed here, \
+             420/800 = 0.5250, is RETRACTED as measured on a misaligned 32x16-vs-40x20 \
+             harness bug; the pre-fix rate is unmeasured, not smaller)"
         );
         assert_eq!(
             agree, total,
@@ -2233,10 +2259,22 @@ mod portolan_tests {
     /// possession walks PAST it (several real `go` turns, in and out)
     /// without ever issuing `enter`, and the settlement must stay
     /// undiscovered — checked against the real `Discovered` state AND
-    /// against the actually-rendered plate at EVERY zoom rung, since
-    /// coarse zoom is where the temptation to leak lives. A positive
-    /// control on a fresh, identically-seeded driver proves the mechanism
-    /// can fire at all, so the negative checks above are not vacuous.
+    /// against the actually-rendered plate at EVERY zoom rung. A positive
+    /// control on a fresh, identically-seeded driver proves the
+    /// DISCOVERY-RECORDING mechanism can fire at all.
+    ///
+    /// **What the plate-rendered checks below do NOT prove, verified by
+    /// final review (finding 8):** that this settlement's glyph is ever
+    /// REACHABLE at any resolution this client's zoom ladder ships. It is
+    /// not — see the comment above the (deliberately not asserted, ~180s)
+    /// high-resolution positive control at the end of this test. So the
+    /// plate-rendered loop below is a real, honest negative check (the
+    /// glyph genuinely never appears), but it is VACUOUS as evidence for
+    /// the discovery gate specifically: nothing this client can zoom to
+    /// would draw this settlement's glyph whether or not it were
+    /// discovered. It stays in the suite because it is still correct
+    /// behaviour to pin (the glyph really must not appear), just not
+    /// proof of what its own doc used to claim.
     #[test]
     fn h6b_co_location_does_not_disclose_a_settlement() {
         let mut d = test_driver();
@@ -2308,6 +2346,43 @@ mod portolan_tests {
             fresh.discovered.contains(FeatureId::Settlement(fresh_cell)),
             "sanity: `enter` must actually discover the settlement it succeeds at"
         );
+
+        // **Second control attempted, and downgraded to a documented
+        // finding rather than a shipped assertion (final-review finding
+        // 8).** The mechanism-only control above proves `Discovered::
+        // record` fires; it says nothing about whether the plate can
+        // ever DRAW the glyph, which finding 8 asked to check. It was
+        // checked, empirically, by hand rather than in the shipped
+        // suite, because the honest answer costs real wall-clock time to
+        // reach:
+        //
+        //   - at the design plate (40x20), origin (0,0), EVERY rung
+        //     0..=MAX_ZOOM: glyph absent.
+        //   - at the design plate, window CENTRED on this settlement's
+        //     own projected position, EVERY rung: still absent.
+        //   - at 400x200 (the resolution `plate.rs`'s own
+        //     `draw_with_gates_a_point_site_on_discovery` uses, and which
+        //     is enough for a real CAVE cell): still absent.
+        //   - at 1200x600 -- more than 3x [`plate::MAX_VIRTUAL_WIDTH`],
+        //     i.e. finer than any rung this client's zoom ladder ever
+        //     reaches: present. ~180s to render, which is why this is a
+        //     comment and not a test.
+        //
+        // So THIS settlement -- the seed-42 flagship's own starting
+        // site -- is drawable in principle (the paint mechanism is not
+        // broken; `point_site_at`'s gate genuinely fires once
+        // `area_majority` ever lands its vote on the exact cell) and
+        // undrawable in practice, at every resolution this client's own
+        // zoom ladder ever reaches. The negative checks earlier in this
+        // test are therefore VACUOUS at every rung they cover, for this
+        // specific settlement: the glyph's absence there is not evidence
+        // the discovery gate is doing anything, because nothing this
+        // client can zoom to would draw it whether or not it were
+        // discovered. Recorded as `MAP-settlement-glyph-may-be-
+        // unreachable-at-any-shipped-zoom`; not fixed here, since the fix
+        // is the same one `MAP-vertical-axis-undersamples-the-mesh`
+        // already defers (widening `virtual_h` independently of
+        // `GLYPH_ASPECT`'s horizontal role).
     }
 
     /// H7 — the gate costs nothing in the ledger: a possession that opens
