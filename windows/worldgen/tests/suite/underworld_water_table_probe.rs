@@ -51,7 +51,7 @@
 //! Shallows      39.5/20.9/23.1      41.8 / 24.9/ 26.1
 //! Deeps         13.5/ 0.0/ 4.7      29.9 /  1.7/ 14.4
 //! Underdeep      0.0/ 0.0/ 0.0       0.0 /  0.0/  0.0
-//! Sunless        0.0/ 0.0/ 0.0       0.0 /  0.0/  0.0
+//! Nadir          0.0/ 0.0/ 0.0       0.0 /  0.0/  0.0
 //! ```
 //!
 //! **THE `Undercroft` ROW IS AN IDENTITY, NOT A MEASUREMENT, AND IT CANNOT
@@ -74,16 +74,16 @@
 //! consequence for consumers: a works count over a seating is a count over
 //! ranks 1–4 only.
 //!
-//! `Deeps` opened; **`Underdeep` and `Sunless` did not, and no scale constant
+//! `Deeps` opened; **`Underdeep` and `Nadir` did not, and no scale constant
 //! can open them** — see `UNDERWORLD_DRYNESS_GAIN`'s doc for the 1×–16× sweep
 //! and the reason. The reason is in this readout: the columns reaching
-//! `Sunless` have a median porosity of **0.056** against population medians of
+//! `Nadir` have a median porosity of **0.056** against population medians of
 //! 0.781 / 0.374 / 0.379, because reach rises with `induration` and porosity
 //! falls with it. Deep caves are in rock that cannot shed water.
 //!
 //! **What does open them is the drainage rule** (clause 2), exercised here
 //! through the shipped `is_sump`: a `Made` chamber is dry regardless of the
-//! table, recovering **100% of every reached `Underdeep` and `Sunless`
+//! table, recovering **100% of every reached `Underdeep` and `Nadir`
 //! column**. `Made` now HAS a writer — Task 8's
 //! `delve_seating::made_chambers` — but no shipped path constructs the
 //! override map it writes into, so no world a player can reach carries the
@@ -106,13 +106,13 @@
 //!   input atom: height_asl_m == 0.0 on 163 columns (18.6%)
 //!   inputs: height p10=0 p50=597 p90=2123 | drainage p10=1 p50=2 p90=11 | porosity min=0.055 p10=0.056 p50=0.781 p90=0.819 max=0.819
 //!   reach m   p10=200 p50=483 p90=2272
-//!   porosity of Sunless-reaching columns (n=214) p10=0.055 p50=0.056 p90=0.381  vs ALL p50=0.781
+//!   porosity of Nadir-reaching columns (n=214) p10=0.055 p50=0.056 p90=0.381  vs ALL p50=0.781
 //!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.041 p75=1.000 p90=1.000
 //!   rung Undercroft: reached by 874 columns, dry at 874 (100.0%), dry-if-made 874 (+0 the drainage rule can recover)
 //!   rung Shallows: reached by 797 columns, dry at 333 (41.8%), dry-if-made 797 (+464 the drainage rule can recover)
 //!   rung Deeps: reached by 666 columns, dry at 199 (29.9%), dry-if-made 666 (+467 the drainage rule can recover)
 //!   rung Underdeep: reached by 267 columns, dry at 0 (0.0%), dry-if-made 267 (+267 the drainage rule can recover)
-//!   rung Sunless: reached by 214 columns, dry at 0 (0.0%), dry-if-made 214 (+214 the drainage rule can recover)
+//!   rung Nadir: reached by 214 columns, dry at 0 (0.0%), dry-if-made 214 (+214 the drainage rule can recover)
 //! seed 7: cave columns=1681
 //!   H3 wholly phreatic: 733/1681 = 43.6%
 //!   sumped (cave bottom below the table)=1390 (82.7%)  wholly vadose=291 (17.3%)
@@ -123,13 +123,13 @@
 //!   input atom: height_asl_m == 0.0 on 277 columns (16.5%)
 //!   inputs: height p10=0 p50=708 p90=2727 | drainage p10=1 p50=2 p90=15 | porosity min=0.052 p10=0.054 p50=0.374 p90=0.791 max=0.805
 //!   reach m   p10=215 p50=1409 p90=2474
-//!   porosity of Sunless-reaching columns (n=727) p10=0.054 p50=0.056 p90=0.056  vs ALL p50=0.374
+//!   porosity of Nadir-reaching columns (n=727) p10=0.054 p50=0.056 p90=0.056  vs ALL p50=0.374
 //!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.009 p75=0.172 p90=1.000
 //!   rung Undercroft: reached by 1681 columns, dry at 1681 (100.0%), dry-if-made 1681 (+0 the drainage rule can recover)
 //!   rung Shallows: reached by 1597 columns, dry at 398 (24.9%), dry-if-made 1597 (+1199 the drainage rule can recover)
 //!   rung Deeps: reached by 998 columns, dry at 17 (1.7%), dry-if-made 998 (+981 the drainage rule can recover)
 //!   rung Underdeep: reached by 877 columns, dry at 0 (0.0%), dry-if-made 877 (+877 the drainage rule can recover)
-//!   rung Sunless: reached by 727 columns, dry at 0 (0.0%), dry-if-made 727 (+727 the drainage rule can recover)
+//!   rung Nadir: reached by 727 columns, dry at 0 (0.0%), dry-if-made 727 (+727 the drainage rule can recover)
 //! seed 1234: cave columns=1266
 //!   H3 wholly phreatic: 525/1266 = 41.5%
 //!   sumped (cave bottom below the table)=1057 (83.5%)  wholly vadose=209 (16.5%)
@@ -140,13 +140,13 @@
 //!   input atom: height_asl_m == 0.0 on 207 columns (16.4%)
 //!   inputs: height p10=0 p50=722 p90=2298 | drainage p10=1 p50=2 p90=13 | porosity min=0.051 p10=0.051 p50=0.379 p90=0.817 max=0.818
 //!   reach m   p10=202 p50=1201 p90=2694
-//!   porosity of Sunless-reaching columns (n=536) p10=0.051 p50=0.056 p90=0.377  vs ALL p50=0.379
+//!   porosity of Nadir-reaching columns (n=536) p10=0.051 p50=0.056 p90=0.377  vs ALL p50=0.379
 //!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.011 p75=0.338 p90=1.000
 //!   rung Undercroft: reached by 1266 columns, dry at 1266 (100.0%), dry-if-made 1266 (+0 the drainage rule can recover)
 //!   rung Shallows: reached by 1175 columns, dry at 307 (26.1%), dry-if-made 1175 (+868 the drainage rule can recover)
 //!   rung Deeps: reached by 1031 columns, dry at 148 (14.4%), dry-if-made 1031 (+883 the drainage rule can recover)
 //!   rung Underdeep: reached by 665 columns, dry at 0 (0.0%), dry-if-made 665 (+665 the drainage rule can recover)
-//!   rung Sunless: reached by 536 columns, dry at 0 (0.0%), dry-if-made 536 (+536 the drainage rule can recover)
+//!   rung Nadir: reached by 536 columns, dry at 0 (0.0%), dry-if-made 536 (+536 the drainage rule can recover)
 //! ```
 //!
 //! ## The before-arm: measured 2026-08-17, BEFORE spec §4.2.1
@@ -316,7 +316,7 @@ fn the_water_table_is_not_degenerate() {
                 if !is_sump(ChamberOrigin::Found, top_m, table) {
                     rung_vadose[index] += 1;
                 }
-                // Index 4 is `Sunless`, the deepest rung. A column that reaches
+                // Index 4 is `Nadir`, the deepest rung. A column that reaches
                 // it is a deep-reaching cave; its porosity is the quantity the
                 // anti-correlation claim is about.
                 if index == 4 {
@@ -417,7 +417,7 @@ fn the_water_table_is_not_degenerate() {
             pct(&reaches, 0.90)
         );
         println!(
-            "  porosity of Sunless-reaching columns (n={}) p10={:.3} p50={:.3} p90={:.3}  vs ALL p50={:.3}",
+            "  porosity of Nadir-reaching columns (n={}) p10={:.3} p50={:.3} p90={:.3}  vs ALL p50={:.3}",
             porosity_deep.len(),
             pct(&porosity_deep, 0.10),
             pct(&porosity_deep, 0.50),
@@ -497,11 +497,11 @@ const POROSITY_CEILING_TOLERANCE: f64 = 0.03;
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn how_far_does_the_dryness_gain_reach() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-    println!("gain    Deeps            Underdeep      Sunless        H3");
+    println!("gain    Deeps            Underdeep      Nadir          H3");
     // [gain][seed] for each reported statistic.
     let mut deeps = vec![vec![]; SWEPT_GAINS.len()];
     let mut underdeep = vec![vec![]; SWEPT_GAINS.len()];
-    let mut sunless = vec![vec![]; SWEPT_GAINS.len()];
+    let mut nadir = vec![vec![]; SWEPT_GAINS.len()];
     let mut h3 = vec![vec![]; SWEPT_GAINS.len()];
 
     for seed_value in SEEDS {
@@ -552,7 +552,7 @@ fn how_far_does_the_dryness_gain_reach() {
 
         for (gi, gain) in SWEPT_GAINS.iter().enumerate() {
             let mut drowned = 0usize;
-            // Rung floors in ΔT: Deeps, Underdeep, Sunless.
+            // Rung floors in ΔT: Deeps, Underdeep, Nadir.
             let mut dry = [0usize; 3];
             let mut reached = [0usize; 3];
             for &(q, p, h, m_per_k, reach) in columns.iter() {
@@ -567,7 +567,7 @@ fn how_far_does_the_dryness_gain_reach() {
                 if table == 0.0 {
                     drowned += 1;
                 }
-                for (ri, rung) in [DelveRung::Deeps, DelveRung::Underdeep, DelveRung::Sunless]
+                for (ri, rung) in [DelveRung::Deeps, DelveRung::Underdeep, DelveRung::Nadir]
                     .iter()
                     .enumerate()
                 {
@@ -590,7 +590,7 @@ fn how_far_does_the_dryness_gain_reach() {
             };
             deeps[gi].push(share(dry[0], reached[0]));
             underdeep[gi].push(share(dry[1], reached[1]));
-            sunless[gi].push(share(dry[2], reached[2]));
+            nadir[gi].push(share(dry[2], reached[2]));
             h3[gi].push(100.0 * drowned as f64 / columns.len() as f64);
         }
 
@@ -617,7 +617,7 @@ fn how_far_does_the_dryness_gain_reach() {
             "{gain:>4.1}    {:<16} {:<14} {:<14} {}",
             row(&deeps[gi]),
             row(&underdeep[gi]),
-            row(&sunless[gi]),
+            row(&nadir[gi]),
             row(&h3[gi])
         );
     }

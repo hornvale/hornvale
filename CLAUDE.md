@@ -538,8 +538,10 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render delta      > docs/di
 # file gets no tracked-ness check on it — and `git diff --exit-code` against an
 # untracked path is silently vacuous, so the check would pass forever. Add a
 # generated directory HERE, in docs/generated-paths.txt, and `git add` its
-# contents in the same commit. `cli/tests/generated_paths.rs` enforces both
-# that every declared path is tracked and that this block still names the file.
+# contents in the same commit. `cli/tests/suite/generated_paths.rs` enforces
+# both that every declared path is tracked and that this block still names the
+# file. A single FILE may be declared too, and sometimes must be — see the
+# already-declared-directory hazard below.
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
 # The drift check, reading its path list from the one file that declares it:
@@ -565,6 +567,14 @@ git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can
 # ever fail. Nothing in regenerate-artifacts.sh guards that.
+# AND THE HAZARD IS NOT LIMITED TO A NEW DIRECTORY — a NEW FILE dropped into
+# an ALREADY-DECLARED one inherits it in full (The Stope, Task 2b). The
+# directory's other tracked files keep the tracked-ness check green, so
+# nothing objects, while `git diff` cannot see the new file at all and the
+# artifact it was added to witness is invisible for as long as it stays out of
+# the index. The remedy is to declare the FILE by name as well as the
+# directory: the tracked-ness check then refuses until the file is `git
+# add`-ed, which is a real, observed refusal rather than a hoped-for one.
 # **THERE IS NO CI** (decision 0125). `.github/workflows/` is deleted — the
 # repo is private, so runner minutes are metered and Pages is gone. The LOCAL
 # gates are the ONLY gate, and this `git diff --exit-code` list is the only

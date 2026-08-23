@@ -325,7 +325,7 @@ mod tests {
                 // The Deep Realm: the underworld chamber derivation. Born at
                 // v1, versioned from birth like `settlement/disposition v1`
                 // below, because its key (a ChamberAddr's cell, entrance,
-                // band NAME and slot — see `windows/worldgen/src/
+                // branch, band NAME and floor — see `windows/worldgen/src/
                 // chamber.rs`'s `chamber_key`) is a save-format contract
                 // the moment anything commits a chamber fact, which that
                 // campaign deliberately did not do (spec §3.1/§3.3).
@@ -340,7 +340,50 @@ mod tests {
                 // re-derives — the exact case `chamber_key`'s own doc named
                 // as "an epoch, not a fix to that assertion". `chamber/v1` is
                 // retired and never reused.
-                "chamber v2",
+                //
+                // **The Stope bumps it to v3**, for three changes that each
+                // re-key every chamber and therefore ride one epoch: the
+                // address gained a `floor` (a band used to be one
+                // interior-less point per column), `slot` was renamed
+                // `branch`, and the deepest delve rung was renamed
+                // `Sunless` -> `Nadir` — which matters here because the key
+                // spells the rung's NAME. `chamber/v2` joins `chamber/v1` in
+                // retirement; neither is ever reused.
+                "chamber v3",
+                // The Stope, Task 2: how many floors one RUN — the floors of
+                // one branch within one band — realizes. A NEW label,
+                // ADDITIVE at v1: it derives its own independent stream and
+                // perturbs none of the ones above it, so `chamber/v3` stays
+                // and no chamber address relocates. What it changes is which
+                // addresses EXIST — before it, every in-budget run admitted
+                // all `FLOORS_PER_RUN_CEILING` floors, and the lattice
+                // ceiling was standing in for a distribution.
+                //
+                // Versioned from birth for the same reason `chamber` and
+                // `entity/identity` are: its KEY is a save-format contract
+                // (a RunAddr's cell, entrance, branch and band NAME — see
+                // `windows/worldgen/src/chamber.rs`'s `run_key`), and
+                // re-shaping it re-decides how long every run in every world
+                // is.
+                //
+                // **Its own leg, rather than a key shape under `chamber`,**
+                // so a run draw and a chamber draw are separated by their
+                // PARENT and not by the observation that one key is a strict
+                // prefix of the other. See `windows/worldgen/src/streams.rs`'s
+                // `RUN_FLOORS`.
+                "chamber/branch-barrier v1",
+                "chamber/branch-character v1",
+                "chamber/branch-count v1",
+                "chamber/branch-root v1",
+                // The two Task 5 entrance legs (amendment C.3): how many
+                // apertures a system opens, and which floor each opens into.
+                // Both additive NEW labels at v1, both keyed on stable
+                // lattice places (cell; cell + entrance index). See
+                // `windows/worldgen/src/streams.rs`'s ENTRANCE_COUNT /
+                // ENTRANCE_MOUTH.
+                "chamber/entrance-count v1",
+                "chamber/entrance-mouth v1",
+                "chamber/run-floors v1",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.
