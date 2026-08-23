@@ -19,12 +19,16 @@ mod common;
 
 #[path = "suite/action_module.rs"]
 mod action_module;
+#[path = "suite/action_mood.rs"]
+mod action_mood;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
 #[path = "suite/course_properties.rs"]
 mod course_properties;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
+#[path = "suite/gate_table.rs"]
+mod gate_table;
 #[path = "suite/lantern_fabric.rs"]
 mod lantern_fabric;
 #[path = "suite/lantern_lens.rs"]
@@ -39,6 +43,12 @@ mod lantern_seam;
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/ooc_namespace.rs"]
+mod ooc_namespace;
+#[path = "suite/ooc_objective.rs"]
+mod ooc_objective;
+#[path = "suite/player_acts_commit.rs"]
+mod player_acts_commit;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
 #[path = "suite/possession_moves.rs"]

@@ -2054,6 +2054,33 @@ impl<'a> Drive for Thermal<'a> {
             },
             // No consume — none of `Drink`/`Rest`/`Eat` serves comfort.
             Action::Drink | Action::Rest | Action::Eat => 0.0,
+            // Group A operator instruments (The Deed) are player-only;
+            // `candidate_actions` never proposes one to a drive. But unlike
+            // `DriveMovements::apply` (below), this is a `pub trait` method
+            // over a `pub` `Action::all()` roster that a FUTURE reverse
+            // audit could walk directly (this crate's own
+            // `tests/suite/action_module.rs:25` already does exactly that
+            // shape against a different public `Action` function) — so a
+            // panic here would fail such an audit outright. `0.0` is the
+            // same defined answer the arm above already gives for "this
+            // action serves this drive not at all", and buys total
+            // coverage for free (fix round 1, Finding 1).
+            Action::Why
+            | Action::Npcs
+            | Action::Help
+            | Action::Eyes
+            | Action::Whoami
+            | Action::Provoke
+            | Action::Soothe
+            // Group B's out-of-character halves (The Deed, Task 6; Task 7's
+            // fix round added the last two) are player-only in exactly the
+            // same way, and answer for the same reason.
+            | Action::ObjectiveMap
+            | Action::ObjectiveExamine
+            | Action::ObjectiveNeeds
+            | Action::ObjectiveWait
+            | Action::ObjectiveLook
+            | Action::ObjectiveKnows => 0.0,
         }
     }
 }
@@ -2203,7 +2230,7 @@ pub fn waking_offset(activity: ActivityCycle) -> f64 {
 /// sleeping creature JUMPS through its off-phase in one `Rest` rather than
 /// spinning (The Slumber, spec §4). A bounded scan (at most ~1.5 days, one full
 /// cycle plus margin) at [`WAKE_SCAN_STEP`]; deterministic (compute-path only).
-fn next_awake_day(
+pub(crate) fn next_awake_day(
     activity: ActivityCycle,
     terrain: &dyn Terrain,
     room: &RoomAddr,
@@ -2791,6 +2818,29 @@ impl<'a> Drive for Danger<'a> {
             // Fine movement is not yet wired into any drive's plan (The
             // Threshold task 6+), so it eases no fear today either.
             Action::Drink | Action::Rest | Action::Eat | Action::MoveWithin(_) => 0.0,
+            // Group A operator instruments (The Deed) are player-only;
+            // `candidate_actions` never proposes one to a drive. `0.0`
+            // rather than `unreachable!`, same reasoning as `Thermal`'s own
+            // `serviceability` above: this is a `pub trait` method over a
+            // `pub` `Action::all()` roster a future reverse audit could
+            // walk directly, and the arm above already returns `0.0` for
+            // the identical meaning (fix round 1, Finding 1).
+            Action::Why
+            | Action::Npcs
+            | Action::Help
+            | Action::Eyes
+            | Action::Whoami
+            | Action::Provoke
+            | Action::Soothe
+            // Group B's out-of-character halves (The Deed, Task 6; Task 7's
+            // fix round added the last two) are player-only in exactly the
+            // same way, and answer for the same reason.
+            | Action::ObjectiveMap
+            | Action::ObjectiveExamine
+            | Action::ObjectiveNeeds
+            | Action::ObjectiveWait
+            | Action::ObjectiveLook
+            | Action::ObjectiveKnows => 0.0,
         }
     }
     fn survival_override(&self, urgency: f64) -> bool {
@@ -3544,6 +3594,29 @@ pub fn arbitrate(
             // `Searching` is reserved for gradient-following toward an
             // UNKNOWN target, which this branch structurally cannot be.
             Action::MoveWithin(_) => (AffectLabel::Eager, 0.5),
+            // Group A operator instruments (The Deed) are player-only; a
+            // drive's candidate list never contains one, so `chosen` (drawn
+            // from `candidates`, itself built by `candidate_actions`) can
+            // never be one either.
+            Action::Why
+            | Action::Npcs
+            | Action::Help
+            | Action::Eyes
+            | Action::Whoami
+            | Action::Provoke
+            | Action::Soothe
+            // Group B's out-of-character halves (The Deed, Task 6 and Task
+            // 7's fix round): equally player-only, equally absent from every
+            // `candidate_actions`.
+            | Action::ObjectiveMap
+            | Action::ObjectiveExamine
+            | Action::ObjectiveNeeds
+            | Action::ObjectiveWait
+            | Action::ObjectiveLook
+            | Action::ObjectiveKnows => unreachable!(
+                "no creature drive ever proposes a player-only act (The Deed) — neither a \
+                 group-A operator instrument nor a group-B objective half"
+            ),
         };
         Resolution {
             intent: Intent::Do(chosen),
@@ -4051,7 +4124,12 @@ fn landing_interior(pos: &RoomAddr, terrain: &dyn Terrain) -> Option<(Interior, 
 
 /// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
 /// `provenance` naming why.
-fn agent_at_fact(entity: EntityId, target: &RoomAddr, day: f64, provenance: &str) -> Fact {
+pub(crate) fn agent_at_fact(
+    entity: EntityId,
+    target: &RoomAddr,
+    day: f64,
+    provenance: &str,
+) -> Fact {
     Fact {
         subject: entity,
         predicate: AGENT_AT.to_string(),
@@ -4088,7 +4166,7 @@ fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 
 /// A committed `rested` fact: `entity` slept (reset its fatigue) on `day` — The
 /// Slumber's discharge, the fatigue twin of [`drank_fact`].
-fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+pub(crate) fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: RESTED.to_string(),
@@ -5153,6 +5231,43 @@ impl<'a> DriveMovements<'a> {
                 // different in kind from a room-scale `Hold`.
                 occupancy.walk(npc.entity, &st.interior, next);
             }
+            // KEPT as `unreachable!` (fix round 1, Finding 1) — unlike the
+            // two `Drive::serviceability` sites this task also touches,
+            // this arm sits DOWNSTREAM of a charge this same function
+            // already took: `st.day += days_of(cost_ticks(action, ...))`
+            // above (before this match) reads `base_ticks(action)`, which
+            // is `Ticks(0)` for every group-A instrument. `cost_ticks`'s
+            // own `.max(1)` floor happens to keep today's actual charge
+            // non-zero, but that floor is documented for an unrelated
+            // reason (a free action executing unboundedly at one instant)
+            // — this loop's own strict-progress guarantee is not entitled
+            // to lean on it. A `0.0`-returning arm here would trade a
+            // compile-time-verified panic for a silent dependency on an
+            // incidental floor elsewhere; if that floor ever changed, a
+            // zero-progress `Intent::Do` would hang this walk instead of
+            // failing loudly. A panic is strictly better than a hang.
+            Intent::Do(
+                Action::Why
+                | Action::Npcs
+                | Action::Help
+                | Action::Eyes
+                | Action::Whoami
+                | Action::Provoke
+                | Action::Soothe
+                // Group B's out-of-character halves (The Deed, Task 6 and
+                // Task 7's fix round): player-only on the same terms, and
+                // never constructed in this file.
+                | Action::ObjectiveMap
+                | Action::ObjectiveExamine
+                | Action::ObjectiveNeeds
+                | Action::ObjectiveWait
+                | Action::ObjectiveLook
+                | Action::ObjectiveKnows,
+            ) => unreachable!(
+                "no creature drive ever proposes a player-only act (The Deed) — neither a \
+                 group-A operator instrument nor a group-B objective half is reachable \
+                 here, and no `candidate_actions`/`proposal` in this file constructs one"
+            ),
             Intent::Hold => {
                 // Idle (or unreachable): jump to the next act-crossing in
                 // closed form rather than spinning day-by-day (`hold_step`,
@@ -5559,7 +5674,7 @@ pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTre
 /// The species' activity-cycle, from its committed `SPECIES_ACTIVITY_CYCLE`
 /// fact on the species' own entity (resolved by name via `species_entity`).
 /// Defaults to `Diurnal` if the species or the fact is missing.
-fn species_activity(world: &World, species: &str) -> ActivityCycle {
+pub(crate) fn species_activity(world: &World, species: &str) -> ActivityCycle {
     hornvale_species::species_entity(world, species)
         .and_then(|e| {
             match world
@@ -8708,6 +8823,21 @@ mod tests {
                 }
                 Action::MoveWithin(_) => {
                     unreachable!("plan_to_water never emits MoveWithin (The Threshold task 6+)")
+                }
+                Action::Why
+                | Action::Npcs
+                | Action::Help
+                | Action::Eyes
+                | Action::Whoami
+                | Action::Provoke
+                | Action::Soothe
+                | Action::ObjectiveMap
+                | Action::ObjectiveExamine
+                | Action::ObjectiveNeeds
+                | Action::ObjectiveWait
+                | Action::ObjectiveLook
+                | Action::ObjectiveKnows => {
+                    unreachable!("plan_to_water never emits a player-only act (The Deed)")
                 }
             }
         }

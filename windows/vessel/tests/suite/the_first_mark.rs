@@ -158,11 +158,11 @@ fn provoked_npc_turns_hostile_on_the_next_wait_but_an_unprovoked_one_does_not() 
     // hostile. Same-day dedup (Task 1) means each provoke must be separated
     // by a wait to land as a distinct day's grievance.
     let (mut treat, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    treat.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
+    treat.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
     treat.handle("wait");
-    treat.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
+    treat.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
     treat.handle("wait");
-    treat.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
+    treat.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
     out_text(treat.handle("wait")); // grievance 3 crosses threshold; the tick fires the consequence
     assert_eq!(
         treat.committed_hostility_count(),
@@ -178,11 +178,11 @@ fn a_second_wait_past_the_threshold_does_not_double_fire() {
     // with the NPC still past threshold.
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
     assert_eq!(s.committed_hostility_count(), 1, "fires exactly once");
     s.handle("wait");
@@ -224,11 +224,11 @@ fn same_action_trace_is_byte_identical() {
 fn played_world_persists_the_mark_across_reload() {
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait"); // grievance 3 crosses the threshold; the tick fires the consequence
     let played = s.into_played_world(w.seed);
 
@@ -279,7 +279,7 @@ fn into_played_world_never_mutates_the_input_world() {
     let w = world();
     let before = serde_json::to_string(&w).unwrap();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
     let _played = s.into_played_world(w.seed);
     let after = serde_json::to_string(&w).unwrap();
@@ -307,11 +307,11 @@ fn into_played_world_never_mutates_the_input_world() {
 fn a_reloaded_played_world_does_not_re_fire_the_consequence_on_a_fresh_wait() {
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait"); // grievance 3 crosses the threshold; the consequence fires
     let played = s.into_played_world(w.seed);
 
@@ -348,14 +348,14 @@ fn a_reloaded_played_world_does_not_re_fire_the_consequence_on_a_fresh_wait() {
 fn why_traces_the_fired_consequence_back_to_the_players_hand() {
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    s.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
     s.handle("wait");
-    s.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
+    s.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
     s.handle("wait"); // grievance 3 crosses the threshold; the tick fires the consequence
 
-    let text = out_text(s.handle(&format!("why {GRIEVANCE_NPC}")));
+    let text = out_text(s.handle(&format!("!why {GRIEVANCE_NPC}")));
     assert!(
         text.contains("player: provoke"),
         "the recount names the player's own act; got: {text}"
@@ -375,7 +375,7 @@ fn why_over_an_unprovoked_npc_names_no_player_hand() {
     s.handle("wait");
     s.handle("wait");
 
-    let text = out_text(s.handle(&format!("why {GRIEVANCE_NPC}")));
+    let text = out_text(s.handle(&format!("!why {GRIEVANCE_NPC}")));
     assert!(
         !text.contains("player: provoke"),
         "no provocation was played; got: {text}"

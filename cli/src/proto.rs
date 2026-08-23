@@ -159,11 +159,20 @@ pub fn render_proto(family: &str) -> Result<String, String> {
     // `windows/worldgen`'s exposure classifier applies via
     // `GapReason::Unnameable`. Otherwise this page would keep asserting the
     // ancestor had a word for a referent no culture here can name at all.
+    //
+    // Also exclude every `hornvale_language::extradiegetic_pack` concept
+    // (The Deed, Task 2) via `hornvale_language::is_extradiegetic`: an
+    // operator instrument (`!why`, `!provoke`, ...) has no referent in the
+    // world AT ALL, a stronger claim than `is_unnameable`'s ("real, but no
+    // culture has met it"), so it must never reach this table either. This
+    // is a plain membership check, not a registry `Void` reading — see
+    // `is_extradiegetic`'s own doc for why no `Void` variant could answer
+    // this on its own.
     let universe: Vec<&str> = world
         .registry
         .concepts()
         .map(|c| c.name.as_str())
-        .filter(|name| !is_unnameable(&world, name))
+        .filter(|name| !is_unnameable(&world, name) && !hornvale_language::is_extradiegetic(name))
         .collect();
     // The merger-aware assignment (epoch root/v4): the same daughters the
     // composition root feeds `build_lexicon`, so this page's proto-roots are
@@ -173,7 +182,9 @@ pub fn render_proto(family: &str) -> Result<String, String> {
     let assignment =
         assign_proto_roots(&world.seed, family, &phonology, &typ, &universe, &daughters);
     for concept in world.registry.concepts() {
-        if is_unnameable(&world, &concept.name) {
+        if is_unnameable(&world, &concept.name)
+            || hornvale_language::is_extradiegetic(&concept.name)
+        {
             continue;
         }
         let proto = &assignment[&concept.name];

@@ -150,7 +150,11 @@ just move — it *remembers* having moved. This campaign gives the possess
 session two verbs to ask it: `npcs` lists who shares the world with you and
 their entity ids, and `why <who>` (by label or id) recounts everything
 committed about that entity, in order, each dated line naming the day it
-was asserted:
+was asserted. (Both are spelled with a leading `!` today — `!npcs`, `!why`.
+[The Deed](./the-deed.md) made the sigil an out-of-character namespace and
+retired the bare form of every operator instrument, so this chapter — its
+transcripts included — records the surface as it stood, not as it is typed
+now.)
 
 ```
 > why hobgoblin

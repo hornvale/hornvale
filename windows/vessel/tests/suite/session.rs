@@ -819,9 +819,9 @@ fn the_flagships_own_starting_cell_refuses_a_delve_and_names_why() {
 fn the_eyes_verb_reports_whose_eyes_and_what_the_projection_drops() {
     let w = seam_world();
     let (mut s, _) = Session::start(&w, &opts()).unwrap();
-    let out = match s.handle("eyes") {
+    let out = match s.handle("!eyes") {
         Turn::Out(t) => t,
-        Turn::Released(_) => panic!("eyes must not release"),
+        Turn::Released(_) => panic!("!eyes must not release"),
     };
     let species = s.agent().species.clone();
     assert!(
@@ -839,7 +839,7 @@ fn eyes_switches_the_chart_and_an_unknown_name_lists_the_roster() {
     let w = seam_world();
     let (mut s, _) = Session::start(&w, &opts()).unwrap();
     let before = s.purview(0).unwrap();
-    s.handle("eyes kobold");
+    s.handle("!eyes kobold");
     let after = s.purview(0).unwrap();
     if s.agent().species != "kobold" {
         assert_ne!(
@@ -848,9 +848,9 @@ fn eyes_switches_the_chart_and_an_unknown_name_lists_the_roster() {
             "switching eyes must change the chart"
         );
     }
-    let refusal = match s.handle("eyes wyvern") {
+    let refusal = match s.handle("!eyes wyvern") {
         Turn::Out(t) => t,
-        Turn::Released(_) => panic!("eyes must not release"),
+        Turn::Released(_) => panic!("!eyes must not release"),
     };
     assert!(
         refusal.contains("wyvern"),
@@ -878,7 +878,7 @@ fn map_renders_the_colour_lens_unless_the_eyes_are_off() {
         lit.contains("[lens: colour"),
         "possession draws the colour lens: {lit}"
     );
-    s.handle("eyes off");
+    s.handle("!eyes off");
     let bare = match s.handle("map") {
         Turn::Out(t) => t,
         Turn::Released(_) => panic!("map must not release"),

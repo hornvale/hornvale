@@ -1,5 +1,5 @@
 look
-npcs
+!npcs
 needs
 wait 5
 look
@@ -10,7 +10,7 @@ needs
 wait 1
 look
 needs
-why hobgoblin
+!why hobgoblin
 wait 90
 look
 needs
