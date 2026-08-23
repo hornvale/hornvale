@@ -33,16 +33,103 @@ hornvale_kernel::stream_labels! {
     /// ordinal. `crate::chamber`'s private `chamber_key` is the one place
     /// the composed key is spelled.
     ///
-    /// **Epoch v2 (The Underworld, spec §4.1).** `ChamberAddr.band` used to
-    /// index the stratigraphic ladder (`BandKind`/`Stratum`) and now indexes
-    /// the **delve ladder** (`hornvale_terrain::DelveRung`), whose rungs are
-    /// ΔT thresholds above the surface datum rather than rock units. The
-    /// composed key therefore spells a different set of names for the same
-    /// `(cell, entrance, slot)`, which re-derives every chamber in every
-    /// world — exactly the case `chamber_key`'s own doc said would be "an
-    /// epoch, not a fix to that assertion". `chamber/v1` is retired and must
-    /// never be reused.
-    CHAMBER = "chamber/v2" => "the underworld chamber derivation, keyed on a delve-ladder address";
+    /// **Epoch v3 (The Stope, spec §3.1 and amendment B.3).** The ADDRESS
+    /// changed shape, in three ways that each re-key every chamber and which
+    /// therefore ride one epoch rather than three:
+    ///
+    /// 1. `ChamberAddr` gained a **`floor`**, the rung the lattice was
+    ///    missing — a band used to be one interior-less point per column.
+    ///    A key that did not spell it would derive one stream for every floor
+    ///    of a run, which is to say the floors would all be one chamber.
+    /// 2. `slot` was renamed **`branch`** (spec §3.1: "slot reads as a
+    ///    position and it is an identity"), and the key's field order changed
+    ///    with it.
+    /// 3. The deepest rung was renamed **`Sunless` -> `Nadir`** (amendment
+    ///    B.3), and `chamber_key` spells the rung's NAME, so the rename alone
+    ///    relocates every chamber that sits at rank 4.
+    ///
+    /// **Epoch v2 (The Underworld, spec §4.1)** was the previous one:
+    /// `ChamberAddr.band` stopped indexing the stratigraphic ladder
+    /// (`BandKind`/`Stratum`) and started indexing the **delve ladder**
+    /// (`hornvale_terrain::DelveRung`), whose rungs are ΔT thresholds above
+    /// the surface datum rather than rock units.
+    ///
+    /// `chamber/v1` and `chamber/v2` are retired and must never be reused.
+    CHAMBER = "chamber/v3" => "the underworld chamber derivation, keyed on a delve-ladder address with a floor";
+    /// How many floors one **run** realizes — the floors of one `branch`
+    /// within one `band` (The Stope, Task 2; spec §3.1's per-band ranges).
+    /// Keyed on a [`crate::chamber::RunAddr`]: cell, entrance, branch and
+    /// band, a place in the fixed lattice and never a generation ordinal
+    /// (decision 0102).
+    ///
+    /// **A SEPARATE ROOT LEG FROM [`CHAMBER`], AND THAT IS THE COLLISION
+    /// ARGUMENT.** A run key (`cell/entrance/branch/band`) is a strict prefix
+    /// of a chamber key (`cell/entrance/branch/band/floor`), so the two
+    /// strings can never be equal — but prefix-inequality is a property of
+    /// today's spelling, and a later campaign that made `floor` optional in
+    /// the key would break it silently. Deriving the run draw under its own
+    /// permanent label instead means the two dynamic legs hang off
+    /// **different parent seeds**, so even a byte-identical key string yields
+    /// a different stream. `the_run_leg_and_the_chamber_leg_cannot_collide`
+    /// in `crate::chamber` asserts exactly that, on the same string.
+    ///
+    /// **Additive, not an epoch.** A new label derives its own independent
+    /// stream and perturbs no existing one, so `chamber/v3` stays and no
+    /// address relocates. What DOES change is which addresses exist: before
+    /// this leg every in-budget run admitted all
+    /// [`crate::chamber::FLOORS_PER_RUN_CEILING`] floors, and now it admits
+    /// the drawn count. That is a world change, carried by the gate rather
+    /// than by the key.
+    ///
+    /// The `/v1` suffix is the epoch discipline `settlement/name/v2` set:
+    /// re-shaping the run key later takes a `/v2`, never a rename.
+    RUN_FLOORS = "chamber/run-floors/v1" => "how many floors one run realizes, keyed on (cell, entrance, branch, band)";
+    /// Which [`crate::character::Character`] one branch carries (The Stope,
+    /// Task 3; spec B.4/B.5). Keyed on a **branch** — cell, entrance and
+    /// branch, a place in the fixed lattice and never a generation ordinal
+    /// (decision 0102). A SEPARATE root leg from [`CHAMBER`] for the same
+    /// collision argument [`RUN_FLOORS`]'s doc states: additive, perturbs no
+    /// existing draw, and the `/v1` epoch discipline applies to any later
+    /// re-shaping of the key.
+    BRANCH_CHARACTER = "chamber/branch-character/v1" => "which character one branch carries, keyed on (cell, entrance, branch)";
+    /// How thin the barrier between the underworld and what lies beyond it
+    /// is, on one branch (The Stope, Task 3; spec B.5). Same key shape as
+    /// [`BRANCH_CHARACTER`] — character and barrier are ONE object per B.5:
+    /// same owner, same lattice key — but its own parent leg, so the two
+    /// draws cannot collide even by accident.
+    BRANCH_BARRIER = "chamber/branch-barrier/v1" => "the barrier thinness of one branch, keyed on (cell, entrance, branch)";
+    /// How many of the lattice's four branch columns one cave system
+    /// realizes (The Stope, Task 3; amendment C.1) — the drawn realization
+    /// half of the lattice-ceiling/drawn-realization split, with
+    /// `BRANCHES_PER_SYSTEM` as the ceiling. Keyed on the SYSTEM: cell and
+    /// entrance, no branch.
+    BRANCH_COUNT = "chamber/branch-count/v1" => "how many branches one cave system realizes, keyed on (cell, entrance)";
+    /// How many apertures one cave system opens to the surface (The Stope,
+    /// Task 5; amendment C.3). Keyed on the SYSTEM's cell alone — no
+    /// entrance index, because the count is a fact about the system as a
+    /// whole and an entrance index could not be defined before this draw
+    /// answered. Terrain reports one cave per cell with no aperture count,
+    /// so the plural is derived here at the composition root rather than
+    /// read off the cave.
+    ///
+    /// A separate root leg from [`CHAMBER`] for the same collision argument
+    /// [`RUN_FLOORS`]'s doc states: additive, perturbs no existing draw,
+    /// and the `/v1` epoch discipline applies to any later re-shaping of
+    /// the key.
+    ENTRANCE_COUNT = "chamber/entrance-count/v1" => "how many surface apertures one cave system opens, keyed on cell";
+    /// Which floor of the system's lattice one entrance opens into (The
+    /// Stope, Task 5; amendment C.3) — main-line floor 0, or a branch's
+    /// root floor (C.2). Keyed on the ENTRANCE's place: cell and entrance
+    /// index, a place in the fixed lattice and never a generation ordinal
+    /// (decision 0102). Same separate-root-leg and `/v1` discipline as
+    /// [`ENTRANCE_COUNT`].
+    ENTRANCE_MOUTH = "chamber/entrance-mouth/v1" => "which floor of the lattice one entrance opens into, keyed on (cell, entrance)";
+    /// Where a non-main-line branch hangs off its parent (The Stope, Task 3;
+    /// amendment C.2) — a floor of the main line, drawn over the floors that
+    /// parent actually realizes. Keyed on the CHILD branch's place: cell,
+    /// entrance, branch (the child names itself; its parent is always the
+    /// main line, whose own root is the surface).
+    BRANCH_ROOT = "chamber/branch-root/v1" => "where a branch roots on its parent, keyed on (cell, entrance, branch)";
     /// The volcano-identity derivation (The Repose). Keyed on the edifice's
     /// **source contact cell** — a place in the fixed geosphere, never a
     /// generation ordinal, and never the query cell a caller happened to ask
@@ -61,7 +148,7 @@ hornvale_kernel::stream_labels! {
     /// who asks, so a narrower query filters the same sequence rather than
     /// drawing an unrelated one. A block index is a coordinate on a lattice
     /// that tiles the timeline before anything is generated into it, exactly
-    /// as `ChamberAddr`'s `band`/`slot` are — not a generation ordinal
+    /// as `ChamberAddr`'s `band`/`branch`/`floor` are — not a generation ordinal
     /// (decision 0102, The Salt, The Tolerance). `crate::hazard`'s private
     /// `event_key` is the one place the composed key is spelled.
     HAZARD_EVENT = "hazard/event/v1" => "the per-cell hazard-event draw, keyed on (cell, process, world-time block)";

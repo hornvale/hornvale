@@ -1902,6 +1902,57 @@ the world only if something independent establishes the column can move —
 generalises here to a stricter form: **a join is evidence only if something
 establishes that it discriminates**, and a fit that always exists is not that.
 
+*Re-scored again by [The Stope](./chronicle/the-stope.md) (2026-08-22), which
+gave the underworld the extent every paragraph above assumed it would need and
+moved the bet's own quantity by nothing.*
+
+**The route this chapter has been implicitly recommending does not go where it
+looks like it goes.** The paragraph above leaves the bet at *asked, answered,
+and answered about the wrong factor*: whether two kinds can be separated by
+depth is now a question about **resolution** — how many distinct values a
+depth-derived multiplier can take before a quartile boundary means anything.
+The obvious way to buy resolution is to give the underworld more underworld,
+and The Stope did exactly that. A depth band stopped being one interior-less
+point per column and became a drawn run of floors; a column became a branch
+with its own character, its own barrier and its own root floor on its parent;
+entrances became plural and map to floors rather than to columns. On seed 42
+the realized chamber population went from 14,976 to 21,328 and the reachable
+count from 1,158 to 1,496.
+
+**None of it reached the seating multiplier, and the demonstration is exact.**
+The campaign's address change was an epoch — every chamber in every world
+relocated — and every drow-seating figure came back byte-identical, because
+seating reads the rung and the column and never asks whether a chamber exists.
+So the axis that would separate two underground peoples still takes the four or
+five distinct values The Underworld measured, and the campaign that multiplied
+the underworld's addressable places contributed nothing to it. **Adding places
+underground does not add resolution to the quantity that places peoples,
+because the two are disjoint derivations.** A campaign that wants depth to
+discriminate has to widen the *seating* derivation; widening the lattice
+beneath it is a different piece of work that looks like the same one.
+
+**One half does move toward the bet.** The underworld now carries a per-branch
+**character** — the first discrete, world-scale axis that varies *within* a
+single cave system rather than between cells — measured at 65.25 / 29.86 /
+4.89% over 6,136 realized branches, no value near the 80% failure ceiling
+frozen before the code. It is not a people, and nothing that places a people
+consults it. But the standing precondition since The Delvers has been the
+underworld *being declared as places*, and a branch that owns a character and a
+run of floors is nearer to a place than a bucket was.
+
+**And a caution that belongs to this chapter's own genre.** The character
+shares reproduce the draw's authored weights to within a point, which is the
+correct outcome and also means the variety is a **setting** rather than
+something the structure produced. A later campaign reading "the underworld
+varies now" off that number should establish which of the two it needs. The
+same campaign produced the sharper instance: a declared band-eligibility table
+per character, which the shipped existence predicate never consults, so 47% of
+one character's branches terminate in bands it declares itself ineligible for.
+The chapter's series continues one term — a column's value is evidence only if
+something establishes the column can move; a join is evidence only if something
+establishes it discriminates; **a declaration is evidence about the world only
+if something reads it.**
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,
@@ -1927,6 +1978,25 @@ establishes that it discriminates**, and a fit that always exists is not that.
   are where a lazily generated world can begin to contradict its own prior. So
   the bet's confidence in *derivation* is materially higher than it was, and its
   confidence in the *loop* is unchanged.
+  **A supporting claim in that entry is corrected by [The
+  Deed](./chronicle/the-deed.md) (2026-08-22), and the score is not.** The
+  sentence above rests The Lintel's byte-identity on the player's position
+  never having been a committed datum, and that half is now false: a possessed
+  body's in-character acts charge time against its own mass and post `agent-at`
+  through the same constructor a creature's step uses, so a walk-band step is
+  persistent world state and the published possession transcript's day-stamps
+  moved with it. The half The Lintel actually turned on survives intact and for
+  the reason the two-tier law states: entering a chamber, moving within it and
+  leaving still commit nothing. What separates them is that the committed tier
+  is the *room*, so the correction is a boundary rather than a reversal. **The
+  bet itself does not move in either direction.** Committing on *action* is not
+  committing on *observation*; promotion-on-touch — where an observed detail is
+  kept — and the delta store it implies are exactly as unbuilt as they were,
+  and nothing here brings a lazily generated world any nearer to contradicting
+  its own prior. Recorded rather than passed over, because a campaign whose
+  headline is *the player now writes to the ledger* looks from outside like it
+  should have moved this row, and decision 0030's sweep is answered by a
+  statement either way.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's
@@ -3300,3 +3370,87 @@ another are both true at once (the campaign's own §6 caution, measured). So the
 floor gains a clean exemplar rather than a new question: a bet whose
 Laboratory-scorable half can rise handsomely while its *sufficient* half stays
 taste-gated, and the honest report names which half the number was about.
+
+### The missing measure exists now, and it separates what the aggregate could not (2026-08-19)
+
+The entry immediately above — *Two candidate causes were eliminated, and the
+measure went blind* — closed on a specific sentence: **the blocker on the myth thread's
+corroboration half is no longer a missing mechanism but a missing measure**,
+and *for the first time its obstacle is an instrument rather than a world*.
+[The Touchstone](./chronicle/the-touchstone.md) (2026-08-19) built the
+instrument, so that obstacle is discharged.
+
+It is a per-holder belief-delta (`hornvale_hearsay::touchstone`): it promotes
+the route- and width-carrying walk out of a test-file copy into the library,
+diffs two transmission arms into a component-change vector over every holder —
+`{route, day, rung, hops, width}` — and reports a distribution with a
+people-pair cut, where the divergence aggregate reported one scalar. And it was
+held to a preregistered discrimination frozen before the measurement code
+existed: it is valid only if it separates a change that rewrites beliefs from
+one that provably does not, on the same panel where the aggregate reads
+near-zero for both. It does. Over the selection-rule swap — a working mechanism
+the aggregate misses — it fires for **63.77%** of holders while the aggregate
+moves +4 of about a hundred; over a people-homogeneous population under an
+inert crossing-arm swap, provably zero by the `crossing_penalty` theorem, it
+fires for **0.00%** while the aggregate moves +0. Sixty percentage points of
+separation where the aggregate separates the two by roughly nothing — which is
+exactly what an instrument that can tell a working mechanism from a decorative
+one has to do.
+
+**What this does and does not move.** It does not score the corroboration bet
+itself — that still waits on a mechanism campaign — but it changes the bet's
+*position*: the thread now has an instrument its next mechanism can be believed
+through, where three campaigns running had built mechanisms their own headline
+number could not see. **Two honesties came with it, because this thread has
+paid for their absence.** The instrument reads 63.77% against a route-blind
+`Claim`-diff of 62.64% over the same population; the surplus is not
+over-counting but the route and width channels living *outside* the `Claim`,
+confirmed by the day and hops channels reproducing the `Claim`-diff to the
+digit. And the Undertow's 41.9% selection-swap value-churn did not reproduce on
+this tree (38.37% now); it was recorded as substrate drift, not rescued, and
+the frozen 0.20 success floor was not lowered — the discrimination clears the
+unlowered floor more than threefold. The next question is the one the touchstone
+is a *precondition* for and does not answer: whether a penalty magnitude read
+from contact history does anything a well-chosen constant would not.
+
+### The lean can be derived, but the derivable axes cannot like (2026-08-20)
+
+[The Cant](./chronicle/the-cant.md) takes the thread's other half — not how a
+belief *travels* but what an evaluative belief *is* — and asks whether a
+believable snap-judgment predisposition between peoples can be **derived** from
+authored attributes rather than authored directly. It ships the mechanism the
+"situated error" target needs: `v(A→B)` over eight attribute-distance axes,
+weighted by the judging people's own psychology, projected onto a
+warmth × competence plane, 0021-clean because the only thing that ranks is the
+judge's own derived weight-vector. Four of five structural floors hold — the
+matrix is asymmetric (all 105 unordered pairs differ by direction), similar
+peoples land warm (`r = −0.896`), the fifteen personalities are distinct.
+
+**The mechanism half of the bet advances; a new gap opens beneath it.** The
+fifth floor — *it likes* — is falsified: of 210 cross-people judgments, zero
+reach admiration (124 contempt, 80 envy, 6 pity). The derivable axes produce a
+predisposition that is relational, asymmetric, and derived — exactly what the
+prohibition wanted — and that predisposition is *only ever cold*. This is not a
+retune artefact: every axis's signature pushes warmth down from its maximum, so
+warmth has nowhere to go but down, and there is no positive-warmth channel in
+what the current substrate can express. The null was reported, not rescued; no
+constant was moved to reach or dodge it.
+
+**The re-score, and the constraint it exposes.** What advances is the demonstration
+that situated error is *constructible* — a world's peoples can hold strong,
+relational, mutually-inconsistent views arrived at from what they materially are,
+with no authored ranking. What is newly owed, and newly scorable, is a
+constraint the null makes concrete: a world whose derived prejudice makes every
+people a xenophobe toward every other does not *function* — an elven merchant
+who can only sneer does not trade — and a simulation of that is worse, not truer,
+than one where views are held, are wrong, and still leave room for commerce and
+exchange. So the target is sharpened from "derive prejudice" to "derive prejudice
+that leaves the world livable," and the levers are named: a positive-warmth
+substrate (appearance, kinship), a baseline consideration between sapients, and a
+perturbation that recentres sentiment on the neutral point rather than the
+negative. **One thing that must not be read into it:** the null is
+*near-boundary* — the warmest pair misses admiration by 0.048, and the neutral
+point it misses against was a free parameter frozen before the measurement, not a
+substrate fact. So "zero admiration" scores the current axes and the current
+neutral point together; it is a floor beneath the thread, not a wall.
+

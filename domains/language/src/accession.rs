@@ -414,6 +414,34 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "snow-elf-kind",
         "wood-elf-kind",
     ],
+    // Epoch 11 — The Deed (2026-08-20), Task 2: the action suite's concept
+    // roster. Seven in-character concepts
+    // (`hornvale_language::action_suite_pack`), one pair per spec §3.2 verb
+    // that named an unnamed act — written explicitly because a positional
+    // "these eight verbs onto these seven concepts" reading is exactly the
+    // kind of silent mispairing this table cannot afford: `map` -> `chart`,
+    // `examine` -> `look`, `look` -> `look` (examine and look fold onto one
+    // concept — a focused look at a named thing vs. a survey of
+    // surroundings differ only by SCOPE, the same shape as `MoveTo`/
+    // `MoveWithin` folding onto `move` by SCALE), `needs` -> `sense`,
+    // `knows` -> `know`, `wait` -> `wait`, `write` -> `write`,
+    // `consult` -> `read`. Every OTHER world-act verb in spec §3.2
+    // (`go`/`back`/`enter`/`out`/`dive`/`surface`/`delve`/`climb`) is a kind
+    // of *going* and reuses the existing `move` (epoch 1), minting nothing.
+    // Seven out-of-character
+    // concepts (`hornvale_language::extradiegetic_pack`) for the operator
+    // instruments with no referent in the world —
+    // `recount`/`survey`/`help`/`lens`/`identify`/`provoke`/`soothe` — each
+    // classified `Unknown { reason: GapReason::Extradiegetic }`
+    // unconditionally by `windows/worldgen`'s `exposure_of_impl`, which is
+    // what keeps `hornvale_language::lexicon::proto_root_universe` from
+    // ever drawing a proto-root for one (Task 1's filter, closed here).
+    // Appended, never merged into an earlier cohort, per this module's
+    // absolute rule.
+    &[
+        "chart", "help", "identify", "know", "lens", "look", "provoke", "read", "recount", "sense",
+        "soothe", "survey", "wait", "write",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

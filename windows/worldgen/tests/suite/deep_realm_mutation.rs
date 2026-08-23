@@ -22,7 +22,7 @@ use hornvale_kernel::{CellId, Seed};
 use hornvale_terrain::{
     BandKind, Cave, CaveKind, DelveRung, GeothermalGradient, TerrainPins, rung_at_depth,
 };
-use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -43,7 +43,7 @@ const BAND_LADDER: [DelveRung; 5] = [
     DelveRung::Shallows,
     DelveRung::Deeps,
     DelveRung::Underdeep,
-    DelveRung::Sunless,
+    DelveRung::Nadir,
 ];
 
 /// The geothermal gradient every hand-built fixture below is placed under,
@@ -84,20 +84,34 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
     Cave::from_reach(CaveKind::Fracture, reach_m, &fixture_column())
 }
 
-/// Every chamber address that exists over the whole five-band lattice at
+/// Every chamber address that exists over all five bands **of floor 0** at
 /// `(seed, cell)`, under `cave`'s budget. Walks all five bands regardless of
 /// `cave.deepest_band` — `chamber_exists` itself gates on the budget, so a
 /// full walk measures exactly what the budget lets through rather than
 /// baking the ladder's shape into this helper too.
+///
+/// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
+/// admits `FLOORS_PER_RUN_CEILING` floors per run, so this is 1/20 of the
+/// address space — and since Task 2's per-run floor draw, floor 0 is also the
+/// only floor EVERY run admits (every band's frozen range has a minimum of at
+/// least 1), which is what keeps the two arms below sampling the same
+/// population rather than two differently-truncated ones.
+/// Every caller here uses this helper COMPARATIVELY — a deep
+/// cave's count against a shallow one's, an authored budget's against a
+/// fabricated one's — and both arms sample the identical slice under the
+/// identical density, so the comparison is sound and the slice is not a
+/// confound. What this number is NOT is the count of chambers under a cell;
+/// do not read it as one.
 fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
     for band in 0..BAND_LADDER.len() as u8 {
-        for slot in 0..SLOTS_PER_BAND {
+        for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
                 entrance: 0,
                 band,
-                slot,
+                branch,
+                floor: 0,
             };
             if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
@@ -108,7 +122,9 @@ fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: Ce
 }
 
 /// The deepest band with at least one existing chamber at `(seed, cell)`
-/// under `cave`'s budget — `None` if no chamber exists at all. Existence is
+/// under `cave`'s budget, searching **floor 0** for the same reason
+/// [`chamber_count`] does — its callers compare two arms over the identical
+/// slice. `None` if no chamber exists at all. Existence is
 /// sparse (a coin-flip density per address), so an arbitrary probe cell can
 /// legitimately come back empty; callers that need a guaranteed nonempty
 /// result pick a `(seed, cell)` this is known to return `Some` for.
@@ -119,7 +135,7 @@ fn deepest_reached(
     cell: CellId,
 ) -> Option<DelveRung> {
     (0..BAND_LADDER.len() as u8).rev().find_map(|band| {
-        let reached = (0..SLOTS_PER_BAND).any(|slot| {
+        let reached = (0..BRANCHES_PER_SYSTEM).any(|branch| {
             chamber_exists(
                 seed,
                 cave,
@@ -128,7 +144,8 @@ fn deepest_reached(
                     cell,
                     entrance: 0,
                     band,
-                    slot,
+                    branch,
+                    floor: 0,
                 },
             )
         });

@@ -242,6 +242,11 @@ impl Ledger {
             .filter(|&p| self.facts[p].subject == subject)
             .collect()
     }
+    pub(crate) fn naive_facts_of(&self, subject: EntityId, predicate: &str) -> Vec<usize> {
+        (0..self.facts.len())
+            .filter(|&p| self.facts[p].subject == subject && self.facts[p].predicate == predicate)
+            .collect()
+    }
     /// Position accessor for tests/benches (the naive refs return positions).
     #[cfg(test)]
     pub(crate) fn fact_at(&self, pos: usize) -> &Fact {
@@ -341,6 +346,32 @@ impl Ledger {
         let positions = match &self.index {
             Some(idx) => idx.positions_for_subject(subject),
             None => self.naive_facts_about(subject),
+        };
+        positions.into_iter().map(move |p| &self.facts[p])
+    }
+
+    /// Every fact for (`subject`, `predicate`), in commit order.
+    ///
+    /// The multi-fact query the public surface lacked: [`Self::value_of`]
+    /// returns the FIRST and [`Self::latest_value_of`] the LAST, so a caller
+    /// wanting all of them had to `find(predicate).filter(|f| f.subject ==
+    /// e)` — O(every fact with that predicate), and therefore QUADRATIC when
+    /// run once per subject per tick. O(log n + k) via the SPO index.
+    ///
+    /// `positions_for_subject_predicate` yields object-key order, not
+    /// position order, so the sort is load-bearing: commit order is the
+    /// contract every caller of `facts_about`/`find` already relies on.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn facts_of(&self, subject: EntityId, predicate: &str) -> impl Iterator<Item = &Fact> {
+        let positions = match &self.index {
+            Some(idx) => {
+                let mut v: Vec<usize> = idx
+                    .positions_for_subject_predicate(subject, predicate)
+                    .collect();
+                v.sort_unstable();
+                v
+            }
+            None => self.naive_facts_of(subject, predicate),
         };
         positions.into_iter().map(move |p| &self.facts[p])
     }
@@ -1358,6 +1389,97 @@ mod tests {
                 "query_by_object({probe:?}) must equal the naive scan"
             );
         }
+    }
+
+    /// claim: invariant(forall-seed) — indexed `facts_of` agrees with a naive
+    /// scan on BOTH contents and ORDER. Order is the half a count-only
+    /// assertion misses, and Task 2 repoints two folds onto this method.
+    #[test]
+    fn facts_of_equals_scan_in_commit_order() {
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("p", false, "").unwrap();
+        r.register_predicate("q", false, "").unwrap();
+        let mut l = Ledger::default();
+        let a = l.mint_entity(test_lineage(0));
+        let b = l.mint_entity(test_lineage(1));
+
+        // Interleave subjects, predicates, and DESCENDING objects, so index-key
+        // order and commit order genuinely differ (the SPO index orders by object
+        // within a (subject, predicate) pair).
+        for (subj, pred, obj) in [
+            (a, "p", 3.0),
+            (b, "p", 9.0),
+            (a, "q", 8.0),
+            (a, "p", 2.0),
+            (b, "q", 1.0),
+            (a, "p", 1.0),
+        ] {
+            l.commit(
+                Fact {
+                    subject: subj,
+                    predicate: pred.to_string(),
+                    object: Value::Number(obj),
+                    place: None,
+                    day: None,
+                    provenance: "t".to_string(),
+                },
+                &r,
+            )
+            .unwrap();
+        }
+
+        for (subj, pred) in [(a, "p"), (a, "q"), (b, "p"), (b, "q"), (a, "absent")] {
+            let indexed: Vec<&Fact> = l.facts_of(subj, pred).collect();
+            let scanned: Vec<&Fact> = l
+                .iter()
+                .filter(|f| f.subject == subj && f.predicate == pred)
+                .collect();
+            assert_eq!(
+                indexed, scanned,
+                "facts_of({subj:?}, {pred}) must equal the scan, in commit order"
+            );
+        }
+        // The discriminating case: (a, "p") holds objects 3, 2, 1 committed in
+        // that order, so a result sorted by object would read 1, 2, 3.
+        let objs: Vec<f64> = l
+            .facts_of(a, "p")
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(objs, vec![3.0, 2.0, 1.0], "commit order, not object order");
+    }
+
+    /// claim: invariant — `facts_of` agrees with the scan on a ledger whose
+    /// index has never been built (the absent-index path is a separate branch).
+    #[test]
+    fn facts_of_agrees_before_the_index_exists() {
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("p", false, "").unwrap();
+        let mut l = Ledger::default();
+        let a = l.mint_entity(test_lineage(0));
+        l.commit(
+            Fact {
+                subject: a,
+                predicate: "p".to_string(),
+                object: Value::Flag(true),
+                place: None,
+                day: None,
+                provenance: "t".to_string(),
+            },
+            &r,
+        )
+        .unwrap();
+        // Round-trip through JSON: `index` is #[serde(skip)], so the reloaded
+        // ledger has none until something calls `ensure_index`.
+        let reloaded: Ledger = serde_json::from_str(&serde_json::to_string(&l).unwrap()).unwrap();
+        let indexed: Vec<&Fact> = reloaded.facts_of(a, "p").collect();
+        let scanned: Vec<&Fact> = reloaded
+            .iter()
+            .filter(|f| f.subject == a && f.predicate == "p")
+            .collect();
+        assert_eq!(indexed, scanned);
     }
 
     #[test]

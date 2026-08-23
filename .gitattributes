@@ -23,12 +23,28 @@ book/src/frontier/idea-registry.md merge=union
 # to resolve, only two sides' appends to keep. Missed when PROC-12 shipped.
 docs/timings.md merge=union
 
-# Tier B — fully re-derived documents (scripts/merge-regenerate.sh,
-# registered via `make install-hooks`; safely falls back to a normal
-# 3-way merge on any clone that hasn't run that target).
-docs/audits/type-audit-report.md merge=hv-regenerate
-book/src/reference/concept-registry-generated.md merge=hv-regenerate
-book/src/reference/concept-manifest-generated.md merge=hv-regenerate
-book/src/reference/stream-manifest-generated.md merge=hv-regenerate
-book/src/reference/phonology.md merge=hv-regenerate
-book/src/reference/proto-goblinoid-generated.md merge=hv-regenerate
+# TIER B IS RETIRED (decision 0166). Six fully-re-derived documents used to
+# route through `merge=hv-regenerate` (scripts/merge-regenerate.sh), which
+# discarded both sides' text and reran the generator. The premise was right
+# and the implementation could not deliver it: a merge driver runs BEFORE the
+# merge product exists on disk — git's `ort` has not yet written the incoming
+# files — so regeneration at that moment measures the wrong tree and emits
+# ours' answer, missing theirs.
+#
+# It is not that the driver sometimes failed. Git invokes a driver only when
+# BOTH sides changed the path, which is exactly when the two sources differ,
+# which is exactly when the working tree is not the merge product. Every
+# invocation was wrong; merges where these files came out right are merges
+# where the driver never ran. Measured: the same two commits merged in
+# opposite directions produced two clean, conflict-free, DIFFERENT results,
+# one dropping six primitives and the other dropping an entire crate's row
+# from a default-deny audit.
+#
+# These six paths now take an ordinary three-way merge, which is strictly
+# better: it can at least conflict and make a human look. The mechanism that
+# actually works is scripts/hooks/post-merge's advisory — run `make
+# rebaseline` and diff the paths docs/generated-paths.txt declares — and it
+# is what caught all three of the 2026-08-20 incidents.
+#
+# `cli/tests/suite/generated_paths.rs` fails if a `merge=hv-regenerate`
+# attribute reappears here. Read decision 0166 before re-adding one.

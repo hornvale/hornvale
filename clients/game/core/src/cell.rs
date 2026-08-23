@@ -20,29 +20,66 @@ pub enum Weight {
     Bold,
 }
 
-/// What a thing IS. Monochrome for this campaign; colour is deferred.
+/// What a thing IS. `Plain` is the floor; `Rgb` carries substance off the
+/// wire. **Foreground = cover, background = substrate**: if a future
+/// campaign adds background colour (`Ink::Duo { fg, bg }`), fg carries what
+/// grows/sits on a cell and bg the material under it — both claims of
+/// substance per CLIENT-four-channels, never identity or attention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Ink {
     /// The default ink.
     #[default]
     Plain,
+    /// A truecolor foreground claim carried off the wire.
+    Rgb([u8; 3]),
+}
+
+impl Ink {
+    /// The pure decision behind [`Ink::from_wire`]: with colour disallowed,
+    /// or with no colour claimed, the ink is [`Ink::Plain`] — absence is
+    /// legible, never faked as black. Tests that need the coloured path to
+    /// be hermetic call this directly instead of touching the environment.
+    pub fn resolve(color: Option<[u8; 3]>, colour_allowed: bool) -> Ink {
+        if !colour_allowed {
+            return Ink::Plain;
+        }
+        // A `None` claim is also plain (absence is legible, never faked as
+        // black); only a real claim under allowed colour yields an ink.
+        color.map_or(Ink::Plain, Ink::Rgb)
+    }
+
+    /// Resolve a wire colour claim to ink. A non-empty `NO_COLOR` (the
+    /// reader declined colour) and a `None` claim both yield
+    /// [`Ink::Plain`]; see [`Ink::resolve`] for the pure decision.
+    pub fn from_wire(color: Option<[u8; 3]>) -> Ink {
+        Self::resolve(
+            color,
+            std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty()),
+        )
+    }
 }
 
 /// The snapshot channel a drawn cell traces back to — the executable form of
 /// the brief's "trace listing: every visible datum on the composed screen,
 /// and which channel from the inventory it came from." For every variant
-/// except [`Source::Look`], "traces back to" is true *by construction*:
-/// this crate parsed the value off a `Snapshot` field before ever drawing
-/// it, so the provenance claim is one the crate can verify against its own
-/// parse.
+/// except [`Source::Look`], [`Source::Typed`], and [`Source::Echo`],
+/// "traces back to" is true *by construction*: this crate parsed the value
+/// off a `Snapshot` field before ever drawing it, so the provenance claim is
+/// one the crate can verify against its own parse.
 ///
-/// Every drawn cell must name one of these. The brief allows exactly two
-/// categories and no third: a mark is either **derived from world state**
-/// (every variant below except [`Source::Chrome`]) or **declared inert**
-/// ([`Source::Chrome`], and nothing else). [`Source::Look`] sits in the
-/// world-derived category by claim, not by construction — it is the one
-/// variant whose provenance this crate cannot itself check; see its doc
-/// for what that means and the caller discipline it rests on.
+/// Every drawn cell must name one of these. The brief's original two
+/// categories were **derived from world state** (every variant below except
+/// [`Source::Chrome`]) and **declared inert** ([`Source::Chrome`], and
+/// nothing else) — that was a complete accounting when the client only ever
+/// showed prose sent back from the sim. Task 2 (The Stylus) gave the client
+/// a THIRD category, because the client became typeable: text authored at
+/// this terminal, never on the wire — `bin` owns it and this crate cannot
+/// verify it. [`Source::Typed`] (the live, unsent buffer) and
+/// [`Source::Echo`] (the most recently submitted line) are its two members;
+/// see each variant's own doc for what distinguishes them. [`Source::Look`]
+/// sits in the world-derived category by claim, not by construction — it is
+/// a third variant whose provenance this crate cannot itself check; see its
+/// doc for what that means and the caller discipline it rests on.
 ///
 /// There is deliberately **no `Social` variant**. `hornvale-game-core`'s own
 /// schema mirror omits the `social` channel entirely (see `schema.rs`'s
@@ -98,8 +135,8 @@ pub enum Source {
     /// that need should be met by parsing the sim's authoritative sentence,
     /// not by re-deriving it from lower-level fields a second time.
     Chrome,
-    /// The look-mode strip beneath the plate (`strip.rs`): the resolved
-    /// feature name under the free-roaming cursor. Deliberately **not**
+    /// The map strip beneath the plate (`strip.rs`): the resolved feature
+    /// name under the free-roaming cursor. Deliberately **not**
     /// [`Source::Chrome`] — the strip's content, once a name is resolved
     /// (The Portolan's Task 3), is drawn from world state the same as the
     /// chart or the floor plan is, so lumping it into `Chrome` would be the
@@ -108,11 +145,12 @@ pub enum Source {
     /// gutters, margins, the entry's own prompt), never a catch-all for
     /// content whose real channel was merely inconvenient to name.
     ///
-    /// **This is not a snapshot channel, and unlike every sibling variant
-    /// its provenance is not verifiable by construction.** `Chart`, `Plan`,
-    /// `Prose`, and `Identity` each trace to a field this crate itself
-    /// parsed off `Snapshot` — the crate can point at the exact struct
-    /// field that justifies the label. `Look`'s text does not: it traces to
+    /// **This is not a snapshot channel, and — like [`Source::Typed`] and
+    /// [`Source::Echo`], its two siblings in that respect — its provenance
+    /// is not verifiable by construction.** `Chart`, `Plan`, `Prose`, and
+    /// `Identity` each trace to a field this crate itself parsed off
+    /// `Snapshot` — the crate can point at the exact struct field that
+    /// justifies the label. `Look`'s text does not: it traces to
     /// `resolve_at` in `windows/worldgen`, answered by a `CellFeatureIndex`
     /// over `domains/terrain` and queried live by `bin` (Task 3) — it is
     /// not carried on `vessel/session/v2` at all, so there is no `Snapshot`
@@ -125,6 +163,33 @@ pub enum Source {
     /// hint or placeholder, or the label becomes exactly the false claim
     /// `Chrome` is reserved to avoid.
     Look,
+    /// The player's own unsent keystrokes: the command line's buffer text,
+    /// drawn by `entry.rs` after the `>` prompt. **Deliberately not
+    /// [`Source::Chrome`]**, even though both live on the same command row
+    /// — `Chrome` is reserved for genuinely inert decoration, and this text
+    /// is neither inert (it changes on every keystroke the player types)
+    /// nor a hardcoded constant the way `PROMPT_GLYPH` is. **Also
+    /// deliberately not [`Source::Prose`]**: the buffer has not been sent to
+    /// `Session::handle` yet, so it is not narration the sim produced —
+    /// attributing it to `Prose` would claim a wire provenance nothing on
+    /// `vessel/session/v2` backs. It is one of the two members of the third
+    /// category the enum's own doc now names — text authored at this
+    /// terminal, never on the wire — and is distinguished from its sibling
+    /// [`Source::Echo`] by not yet having been sent: the buffer is live,
+    /// unsent, and mutates on every keystroke, where `Echo` is a fixed
+    /// record of a line already submitted.
+    Typed,
+    /// The most recently SUBMITTED line, echoed above the command row so
+    /// the page reads ask-then-answer (spec §6, The Stylus Task 3).
+    /// **Deliberately not [`Source::Typed`]**: unlike the live buffer, this
+    /// text HAS already been sent to `Session::handle`, so `Typed`'s own
+    /// "not sent yet" reasoning no longer holds once a line is echoed.
+    /// **Also deliberately not [`Source::Prose`]**: it is the player's own
+    /// composed line, not narration the sim produced — attributing it to
+    /// `Prose` would claim a wire provenance nothing on `vessel/session/v2`
+    /// backs (the echo is `bin`'s own record of what it sent, held
+    /// alongside `Driver`, never a field read off a `Snapshot`).
+    Echo,
 }
 
 /// One character cell. A tile is a drop-in replacement for exactly one of
@@ -159,6 +224,16 @@ impl Cell {
             glyph: Some(glyph),
             weight,
             ink: Ink::Plain,
+            source,
+        }
+    }
+
+    /// A cell with a colour claim resolved through [`Ink::from_wire`].
+    pub fn inked(glyph: char, weight: Weight, source: Source, color: Option<[u8; 3]>) -> Cell {
+        Cell {
+            glyph: Some(glyph),
+            weight,
+            ink: Ink::from_wire(color),
             source,
         }
     }
@@ -280,5 +355,83 @@ impl Grid {
             }
         }
         counts
+    }
+}
+
+/// Test-only home for the crate's `NO_COLOR` save/restore helpers and the
+/// mutex serialising them. `NO_COLOR` is process-global state, and the lib
+/// unit tests all run as threads of ONE binary under plain `cargo test`
+/// (nextest's process-per-test isolation does NOT apply to `game-check`),
+/// so every test that mutates it — and every test that asserts resolved
+/// ink through the draw path — must hold [`ENV_LOCK`] for its body.
+#[cfg(test)]
+pub(crate) mod test_env {
+    /// Serialises every `NO_COLOR` mutation and every colour-resolution
+    /// assertion across the threaded lib test binary.
+    pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
+    /// Takes [`ENV_LOCK`] itself; do NOT call while already holding it.
+    /// The env ops are `unsafe` because they are UB under concurrency;
+    /// SAFETY here rests on the lock, not on nextest isolation.
+    pub(crate) fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(None, f)
+    }
+
+    /// Run `f` with `NO_COLOR` set to a non-empty value, restoring the
+    /// prior state after. Takes [`ENV_LOCK`] itself; do NOT call while
+    /// already holding it.
+    pub(crate) fn with_no_color_set<R>(value: &str, f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(Some(value), f)
+    }
+
+    fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let _env = ENV_LOCK.lock().unwrap();
+        let saved = std::env::var_os("NO_COLOR");
+        // SAFETY: the caller holds ENV_LOCK, so no other test in this
+        // threaded binary touches the environment concurrently.
+        unsafe { std::env::remove_var("NO_COLOR") };
+        if let Some(v) = value {
+            // SAFETY: as above.
+            unsafe { std::env::set_var("NO_COLOR", v) };
+        }
+        let out = f();
+        match saved {
+            Some(v) => {
+                // SAFETY: as above.
+                unsafe { std::env::set_var("NO_COLOR", v) };
+            }
+            None => {
+                // SAFETY: as above.
+                unsafe { std::env::remove_var("NO_COLOR") };
+            }
+        }
+        out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_env::ENV_LOCK;
+    use super::*;
+
+    /// Absent colour means "no colour claimed here", never black — the
+    /// producer's own rule (windows/vessel/src/session.rs `tint`).
+    #[test]
+    fn absent_wire_colour_is_plain_ink() {
+        assert_eq!(Ink::from_wire(None), Ink::Plain);
+    }
+
+    /// NO_COLOR maps every Rgb to Plain at cell-build time, so the buffer
+    /// itself is monochrome and degradation is observable, not silent.
+    #[test]
+    fn no_color_env_forces_plain_ink() {
+        // SAFETY: NO_COLOR is process-global env state; ENV_LOCK serialises
+        // this mutation against every sibling thread in the test binary.
+        let _env = ENV_LOCK.lock().unwrap();
+        unsafe { std::env::set_var("NO_COLOR", "1") };
+        assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Plain);
+        unsafe { std::env::remove_var("NO_COLOR") };
+        assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Rgb([36, 36, 1]));
     }
 }

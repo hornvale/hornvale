@@ -689,11 +689,18 @@ preflight:
 doctor: ## Print the repo self-map (orientation for a fresh session)
 	@bash scripts/doctor.sh
 
-install-hooks: ## Point git at scripts/hooks + register the regenerate-on-conflict merge driver (PROC-12)
+# The `merge.hv-regenerate` driver registration was removed here by decision
+# 0166, which retired PROC-12's Tier B. NOTE FOR ANYONE WONDERING WHY THEIR
+# CHECKOUT STILL HAS ONE: that line wrote to `.git/config`, which is NOT
+# tracked, so every checkout that ever ran this target keeps a dangling
+# registration pointing at a script that no longer exists. It is inert — an
+# ATTRIBUTE is what triggers a driver, and the attributes are gone from
+# `.gitattributes` — so removing the stale config line is optional cleanup,
+# never required for correctness:
+#     git config --unset merge.hv-regenerate.driver
+install-hooks: ## Point git at scripts/hooks (opt-in; edits local config)
 	git config core.hooksPath scripts/hooks
-	git config merge.hv-regenerate.driver 'scripts/merge-regenerate.sh %O %A %B %P'
 	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
-	@echo "merge.hv-regenerate driver registered for generated-artifact conflicts."
 
 gate-remote: ## ABANDONED (decision 0063) — the AWS spot box is unused; kept only as history
 	@scripts/aws-gate/gate-remote.sh

@@ -49,22 +49,20 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// `(crate, reason)` for a workspace crate this guard already knows has no
-/// roster entry, and why that is not a defect for THIS guard to raise.
+/// roster entry, and why that is not a defect for THIS guard to raise. A row
+/// here is a temporary acknowledgement for a gap being closed by an in-flight
+/// campaign elsewhere; the third verdict below turns it RED the moment the
+/// roster catches up, which is the signal to delete it.
 ///
-/// `docs/timings/subfloor-roster.tsv` itself is off limits to this campaign
-/// (The Ballast) — see this file's header and the module doc. `campaign/the-
-/// retelling` carries a committed 96-row fix restoring `hornvale-hearsay`'s
-/// coverage; this declaration exists only so this guard does not go red
-/// while that fix is in flight elsewhere, and it must be DELETED the moment
-/// that campaign merges — the `roster_now_covers_every_declared_absent_crate`
-/// direction below will turn red on its own once it does, which is the
-/// signal to delete it, not a reason to pre-empt it.
-// EMPTY, and that is the guard working exactly as designed. The Ballast
-// declared `hornvale-hearsay` absent and instructed that the row be deleted
-// once The Retelling's roster fix landed. It has: the crate now carries 32
-// entries, harvested from a green stage gate. The third verdict — a declared
-// crate that is now PRESENT is RED — is what forced this deletion rather than
-// leaving a false acknowledgement standing.
+/// EMPTY, and that is the guard working exactly as designed. Two declarations
+/// have lived here and both were deleted the moment the roster caught up:
+/// `hornvale-hearsay` (The Ballast, restored by The Retelling), and
+/// `hornvale-sentiment` (campaign/the-cant), whose 27 roster rows were
+/// harvested by the chamber's own `gate` phase at merge — landing in the SAME
+/// commit as the declaration that acknowledged its absence, which made the
+/// row stale the instant it was written. The safe shape is to add a new
+/// crate WITHOUT a declaration and let the first chamber run populate the
+/// roster; a declaration is only for a gap whose fix is genuinely elsewhere.
 const DECLARED_ABSENT: &[(&str, &str)] = &[];
 
 /// The repository root, resolved from this crate's manifest directory.

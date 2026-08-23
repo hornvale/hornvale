@@ -372,13 +372,13 @@ const DRAINAGE_HALF: f64 = RIVER_MIN_DRAINAGE;
 ///
 /// ## Why it ships at 1.0: the lever does not reach
 ///
-/// It was raised to open `Underdeep` and `Sunless`, which clause 1's physical
+/// It was raised to open `Underdeep` and `Nadir`, which clause 1's physical
 /// correction left dry on 0.0% of the columns reaching them. Swept on the three
 /// preregistered seeds — share of columns reaching each rung that are naturally
 /// dry there, seed 42 / 7 / 1234:
 ///
 /// ```text
-/// gain    Deeps              Underdeep         Sunless          H3
+/// gain    Deeps              Underdeep         Nadir            H3
 ///  1.0    29.9/ 1.7/14.4     0.0/0.0/0.0       0.0/0.0/0.0      31.9/43.6/41.5
 ///  2.0    38.4/ 6.3/21.4     0.0/0.0/0.0       0.0/0.0/0.0      31.9/43.6/41.5
 ///  3.0    40.1/ 9.0/24.2     0.4/0.0/0.3       0.0/0.0/0.0      31.9/43.6/41.5
@@ -387,7 +387,7 @@ const DRAINAGE_HALF: f64 = RIVER_MIN_DRAINAGE;
 /// 16.0    54.2/36.1/45.2     8.2/8.2/10.2      0.5/0.0/0.7      31.9/43.6/41.5
 /// ```
 ///
-/// **A sixteenfold departure from Earth still leaves `Sunless` at 0.0–0.7% and
+/// **A sixteenfold departure from Earth still leaves `Nadir` at 0.0–0.7% and
 /// `Underdeep` under 11%.** The lever saturates, so the deep rungs are not
 /// dry-inaccessible because the table is calibrated too shallow. Shipping a
 /// large authored departure that fails at the one thing it was authored for
@@ -397,7 +397,7 @@ const DRAINAGE_HALF: f64 = RIVER_MIN_DRAINAGE;
 /// ## What the real obstacle is, measured rather than reasoned
 ///
 /// **Deep-reaching caves sit in rock that cannot shed water, by construction.**
-/// The columns whose caves reach `Sunless` have a median `porosity` of **0.056
+/// The columns whose caves reach `Nadir` have a median `porosity` of **0.056
 /// on all three seeds**, against population medians of 0.781 / 0.374 / 0.379 —
 /// essentially the aquitard floor (`crate::lithology`'s
 /// `AQUITARD_MAX_POROSITY` is 0.15). So the term this constant multiplies is
@@ -416,7 +416,7 @@ const DRAINAGE_HALF: f64 = RIVER_MIN_DRAINAGE;
 ///
 /// **What does open them is spec §4.2.1's clause 2**, the drainage rule: a
 /// `ChamberOrigin::Made` chamber is dry regardless of the table, and the probe
-/// measures that it recovers **100% of every reached `Underdeep` and `Sunless`
+/// measures that it recovers **100% of every reached `Underdeep` and `Nadir`
 /// column** (267/877/665 and 214/727/536). The deep is reached by making, not
 /// by finding — which is the reading clause 2 states, arrived at here from the
 /// other direction.

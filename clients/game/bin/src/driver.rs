@@ -58,23 +58,25 @@
 //! room a bearing-inversion would have, using data both `chart::cell_at`
 //! and `Session::purview` already carry.
 
-use crate::input::{Action, Mode};
+use crate::history::History;
+use crate::input::Action;
+use crate::line::Line;
 use hornvale_astronomy::SkyPins;
-use hornvale_game_core::Cursor;
+use hornvale_game_core::{Cursor, Focus};
 use hornvale_kernel::{NearestCellIndex, RoomId, Seed, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::TerrainPins;
 use hornvale_terrain::landscape::CellFeatureIndex;
 use hornvale_vessel::{
-    PossessOpts, PossessTarget, Session, VesselError, WorldContext, snapshot_json,
+    PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
 use hornvale_worldgen::{
     BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
     language_of_in, morph_options, resolve_at, terrain_of,
 };
 
-/// What the strip says in look mode over a band this campaign has no
-/// resolver for (walk and chamber both draw a real plate; only the
+/// What the strip says, with the map focused, over a band this campaign has
+/// no resolver for (walk and chamber both draw a real plate; only the
 /// terrain-feature index answers a query — spec §3.1/§9). Faking a
 /// resolution would be worse than refusing: a wrong name is
 /// indistinguishable from a right one, and this string never is one.
@@ -152,17 +154,21 @@ pub struct Driver {
     /// and by every `handle`, so `snapshot()` never needs to touch the
     /// session again.
     cached: String,
-    /// Which thing keys drive — the character, or the look-mode cursor.
-    mode: Mode,
-    /// The look-mode cursor's screen position, in plate grid cells. Held
-    /// regardless of `mode` (so leaving and re-entering look mode does not
-    /// reset it); [`Driver::cursor`] reports it only in [`Mode::Look`].
+    /// Which pane keys currently drive — the walk view's movement keys, the
+    /// command line, or the map cursor. Startup is [`Focus::Walk`] (arrow
+    /// keys move immediately); replaces The Portolan part I's `Mode {
+    /// Normal, Look }`.
+    focus: Focus,
+    /// The map cursor's screen position, in plate grid cells. Held
+    /// regardless of `focus` (so leaving and re-entering the map does not
+    /// reset it); [`Driver::cursor`] reports it only in [`Focus::Map`].
     cursor: Cursor,
-    /// The look-mode strip's cached text — recomputed on `EnterLook` and
-    /// `CursorBy`, since fix round 1 the resolved name genuinely depends on
-    /// the cursor's screen position (see the module doc for the chain);
-    /// F2 measures the real per-call cost, which is why recomputing on
-    /// every `CursorBy` rather than something more elaborate is fine.
+    /// The map strip's cached text — recomputed by [`Driver::enter_map`]
+    /// (the map's one door) and on `CursorBy`, since fix round 1 the resolved name
+    /// genuinely depends on the cursor's screen position (see the module
+    /// doc for the chain); F2 measures the real per-call cost, which is why
+    /// recomputing on every `CursorBy` rather than something more
+    /// elaborate is fine.
     strip: Option<String>,
     /// The world's landscape features, indexed by cell, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
@@ -189,6 +195,42 @@ pub struct Driver {
     /// resolved once at `start` (an agent's species does not change during
     /// a session) — the same triple [`resolve_at`] needs on every call.
     namer: (String, Phonology, MorphOptions),
+    /// The command line's editable buffer — the one reversible thing this
+    /// struct owns (The Stylus, Task 3).
+    line: Line,
+    /// Recalled command lines, walked by `Action::HistoryPrev`/
+    /// `HistoryNext`.
+    history: History,
+    /// The most recently submitted line, echoed for the record so the
+    /// display can read ask-then-answer (spec §6) — `None` before the first
+    /// submission this session. Not reset on later turns other than being
+    /// overwritten by the next submission: it names "what was asked most
+    /// recently", not "what was asked this exact turn".
+    echo: Option<String>,
+}
+
+/// Append the sight-disclosure caption to a resolved strip text — the
+/// honesty line that says whose eyes the coloured chart was drawn through.
+/// The colour probe is the same one the drawing path uses
+/// ([`hornvale_game_core::Ink::from_wire`]): a non-empty `NO_COLOR` means
+/// the reader declined colour, and the caption goes with it — the picture
+/// and its honesty line are one channel, suppressed together. Pure apart
+/// from that one environment read, so tests can drive it hermetically.
+fn colour_allowed() -> bool {
+    hornvale_game_core::Ink::from_wire(Some([0, 0, 0])) != hornvale_game_core::Ink::Plain
+}
+
+fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> String {
+    let coloured = colour_allowed();
+    match (sight, coloured) {
+        (Some(sight), true) => {
+            let mut text = base;
+            text.push_str(" — ");
+            text.push_str(&hornvale_game_core::chart::disclosure(sight));
+            text
+        }
+        _ => base,
+    }
 }
 
 impl Driver {
@@ -281,7 +323,7 @@ impl Driver {
             ctx,
             session,
             cached: String::new(),
-            mode: Mode::Normal,
+            focus: Focus::Walk,
             cursor: Cursor {
                 x: hornvale_game_core::spread::PLATE_WIDTH / 2,
                 y: FLOOR_PLATE_CONTENT_HEIGHT / 2,
@@ -293,6 +335,9 @@ impl Driver {
             seed: world_ref.seed,
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
             namer: (species, ph, morph),
+            line: Line::new(),
+            history: History::new(),
+            echo: None,
         };
         driver.refresh();
         Ok(driver)
@@ -310,68 +355,207 @@ impl Driver {
     ///
     /// Re-clamps the cursor into the new bounds: a terminal shrinking after
     /// the cursor moved into rows a taller plate offered must not leave it
-    /// parked outside the plate that is about to be drawn. In look mode,
-    /// also re-resolves the strip: the cursor's SCREEN position is
+    /// parked outside the plate that is about to be drawn. With the map
+    /// focused, also re-resolves the strip: the cursor's SCREEN position is
     /// unchanged by a resize, but which real cell that screen position
     /// names can change (the plate's centre moves), so the displayed text
     /// must not go on describing whatever the old height resolved.
     pub fn resize(&mut self, h: u16) {
         self.plate_height = hornvale_game_core::spread::content_height(h);
         self.move_cursor(0, 0);
-        if self.mode == Mode::Look {
+        if self.focus == Focus::Map {
             self.refresh_strip();
         }
     }
 
-    /// Which thing keys currently drive — the character, or the look-mode
-    /// cursor. `main`'s input loop reads this every keypress to choose
-    /// between [`crate::input::verb_for`]'s normal-mode dispatch and
-    /// [`crate::input::action_for`]'s mode-aware one.
-    pub fn mode(&self) -> Mode {
-        self.mode
+    /// Which of the three modes keys currently drive — the walk view, the
+    /// command line, or the map cursor. `main`'s input loop reads this
+    /// every keypress to choose how [`crate::input::action_for`] routes the
+    /// key.
+    pub fn focus(&self) -> Focus {
+        self.focus
     }
 
-    /// The look-mode cursor's screen position, or `None` outside look mode
-    /// — matching `render_with`'s `cursor` parameter, which hides the
-    /// terminal's hardware cursor on `None`.
+    /// Move focus to the other pane — Walk→Cli, Cli→Walk, Map→Walk (Esc
+    /// always leaves the map for the walk view).
+    ///
+    /// This is Esc's transition and Esc's ONLY. It can never ARRIVE at the
+    /// map: every arm below lands on Cli or Walk, so the map has exactly
+    /// one door ([`Self::enter_map`], from a bare `map` submission) and
+    /// this function is always a departure from it. The strip is therefore
+    /// unconditionally cleared here — an earlier revision carried a
+    /// `focus == Focus::Map` branch that refreshed it, which was dead the
+    /// moment `map` entry moved to its own function, and read as though Esc
+    /// could still open the map.
+    pub fn toggle_focus(&mut self) {
+        self.focus = match self.focus {
+            Focus::Cli => Focus::Walk,
+            Focus::Map => Focus::Walk,
+            Focus::Walk => Focus::Cli,
+        };
+        self.strip = None;
+    }
+
+    /// The map cursor's screen position, or `None` unless the map is
+    /// focused — matching `render_with`'s `map_cursor` parameter, which
+    /// hides the terminal's hardware cursor on `None` (only consulted at
+    /// all under `Focus::Map`; see `render_with`'s own doc).
     pub fn cursor(&self) -> Option<Cursor> {
-        (self.mode == Mode::Look).then_some(self.cursor)
+        (self.focus == Focus::Map).then_some(self.cursor)
     }
 
-    /// The look-mode strip's current text, or `None` outside look mode —
+    /// The map strip's current text, or `None` unless the map is focused —
     /// matching `render_with`'s `strip` parameter.
     pub fn strip_text(&self) -> Option<&str> {
-        if self.mode == Mode::Look {
+        if self.focus == Focus::Map {
             self.strip.as_deref()
         } else {
             None
         }
     }
 
-    /// Apply one input [`Action`]: send a verb line exactly as before this
-    /// campaign, move the cursor, or toggle look mode. Costs a turn only
-    /// for [`Action::Verb`] — cursor motion and mode toggles are free,
-    /// matching `input`'s own "costs no turn" contract for everything it
-    /// does not map to a verb.
-    pub fn apply(&mut self, action: Action) {
+    /// Apply one input [`Action`], returning whether the session RELEASED.
+    ///
+    /// This is now the loop's own answer to "was that the last keypress" —
+    /// replacing `main.rs`'s old check on the literal verb line it had just
+    /// sent, which could only ever see the `"release"` spelling (ledger #8:
+    /// the sim honours `"quit"` too, and once free text reaches the buffer
+    /// the caller cannot tell which synonym a player typed without asking
+    /// the driver). Only [`Action::Submit`] can ever return `true`.
+    ///
+    /// `Type`/`FocusAndType` insert into the buffer (`FocusAndType` also
+    /// returns focus to the CLI — spec §2's one-keypress bounce);
+    /// `DeleteBack`/`CaretBy` edit it; `HistoryPrev`/`HistoryNext` recall a
+    /// remembered line (past the newest empties the buffer, matching
+    /// [`crate::history::History::next`]'s own contract); `Submit` sends
+    /// the buffer — or, on an empty buffer, does nothing at all and returns
+    /// `false` (spec §6: the buffer is the last reversible thing before an
+    /// irreversible act, so a stray `Enter` must not cost a turn). A
+    /// submitted line whose first token is exactly `map` additionally
+    /// enters the map focus (exact-after-trim, mirroring `Session::handle`'s
+    /// first-token convention).
+    /// `Move` executes a walk-mode direction exactly like a submitted line
+    /// (echo + history + `handle`), minus any buffer involvement.
+    /// `CursorBy`/`ToggleFocus` are unchanged from part I. `Zoom` is
+    /// accepted and ignored — zoom itself belongs to The Portolan part II,
+    /// a paused follow-on campaign; this arm is where it will be
+    /// implemented. What matters now is only that a zoom key never falls
+    /// through to the buffer and types itself.
+    pub fn apply(&mut self, action: Action) -> bool {
         match action {
-            Action::Verb(line) => {
-                self.handle(&line);
-            }
-            Action::EnterLook => {
-                self.mode = Mode::Look;
-                self.refresh_strip();
-            }
-            Action::LeaveLook => {
-                self.mode = Mode::Normal;
-                self.strip = None;
+            Action::ToggleFocus => {
+                self.toggle_focus();
+                false
             }
             Action::CursorBy(dx, dy) => {
                 self.move_cursor(dx, dy);
                 self.refresh_strip();
+                false
             }
-            Action::None => {}
+            Action::Type(c) => {
+                self.line.insert(c);
+                false
+            }
+            Action::FocusAndType(c) => {
+                // Land on `Focus::Cli` EXPLICITLY rather than routing
+                // through `toggle_focus()`: `toggle_focus` now maps BOTH
+                // Map and Walk to Walk (Esc's contract), so a toggle from
+                // either producing focus would leave the player on the walk
+                // view instead of the command line — and never on Cli at
+                // all. `FocusAndType` is produced under both Map and Walk
+                // (`input::action_for`) and means "I want to type": one
+                // keypress lands on the CLI and types (spec §2). The strip
+                // is still cleared here by hand, keeping the invariant
+                // `toggle_focus`'s own doc states ("leaving it clears the
+                // strip") with this arm named as its second owner; an
+                // earlier revision left that invariant with two owners and
+                // one violator, masked only because `strip_text()`
+                // re-checks focus before returning.
+                self.focus = Focus::Cli;
+                self.strip = None;
+                self.line.insert(c);
+                false
+            }
+            Action::DeleteBack => {
+                self.line.backspace();
+                false
+            }
+            Action::CaretBy(dx) => {
+                match dx.cmp(&0) {
+                    std::cmp::Ordering::Less => self.line.caret_left(),
+                    std::cmp::Ordering::Greater => self.line.caret_right(),
+                    std::cmp::Ordering::Equal => {}
+                }
+                false
+            }
+            Action::HistoryPrev => {
+                if let Some(text) = self.history.prev() {
+                    self.line.set(text.to_string());
+                }
+                false
+            }
+            Action::HistoryNext => {
+                match self.history.next() {
+                    Some(text) => self.line.set(text.to_string()),
+                    None => self.line.set(String::new()),
+                }
+                false
+            }
+            Action::Submit => {
+                if self.line.is_empty() {
+                    return false;
+                }
+                let taken = self.line.take();
+                self.history.push(taken.clone());
+                self.echo = Some(taken.clone());
+                let released = self.handle(&taken);
+                // BARE `map` — and only bare `map` — enters the map focus.
+                // This mirrors a convention the sim already keeps rather
+                // than inventing one: `Session::handle` splits its own
+                // bare-from-argument forms on `rest.is_empty()` (see the
+                // `"map" if self.inside.is_some() && rest.is_empty()` and
+                // `"eyes" if rest.is_empty()` arms), because the two mean
+                // different things. So `" map "` triggers; `"map x"`,
+                // `"map out 2"` and `"examine map"` do not.
+                //
+                // `map out N` is the case worth stating, because "it drew a
+                // chart, so focus it" is the plausible wrong answer:
+                // `Session::map` takes `&self` and returns prose, so NO
+                // argument form can move the plate. The plate is redrawn
+                // from `Spatial` every turn regardless (`spread::compose`),
+                // which is why submitting `map` is a MODE GESTURE and not a
+                // fetch. Focusing after `map out 2` would hand the player a
+                // cursor on an unzoomed plate they did not ask about.
+                //
+                // Guarded on not already being focused so re-submitting
+                // `map` from the map does not pay a strip refresh for an
+                // identical answer.
+                if taken.trim() == "map" && self.focus != Focus::Map {
+                    self.enter_map();
+                }
+                released
+            }
+            Action::Move(word) => {
+                // A walk-mode arrow key acts like a submitted line — same
+                // echo, same history recall — but never touches the buffer:
+                // the keystroke never entered it, so nothing is left behind
+                // or cleared by moving.
+                let taken = word.to_string();
+                self.history.push(taken.clone());
+                self.echo = Some(taken.clone());
+                self.handle(&taken)
+            }
+            Action::Zoom(_) => false,
+            Action::None => false,
         }
+    }
+
+    /// Enter the map focus and resolve its strip. Also called by `apply`'s
+    /// `Submit` arm when a submitted line's first token is exactly `map`
+    /// (see there).
+    fn enter_map(&mut self) {
+        self.focus = Focus::Map;
+        self.refresh_strip();
     }
 
     /// Move the cursor by `(dx, dy)` grid cells, clamped to the plate's
@@ -388,10 +572,10 @@ impl Driver {
         self.cursor.y = ny as u16;
     }
 
-    /// Recompute `self.strip` for the current band, mode and cursor
-    /// position. See the module doc: only the walk band resolves, and it
-    /// resolves the cell the CURSOR points at, not the observer's own —
-    /// every other band answers [`NOTHING_HERE_YET`] honestly.
+    /// Recompute `self.strip` for the current band and cursor position. See
+    /// the module doc: only the walk band resolves, and it resolves the
+    /// cell the CURSOR points at, not the observer's own — every other band
+    /// answers [`NOTHING_HERE_YET`] honestly.
     fn refresh_strip(&mut self) {
         self.strip = Some(self.resolve());
     }
@@ -409,8 +593,10 @@ impl Driver {
         let hornvale_game_core::Spatial::Walk { chart } = snap.spatial else {
             return NOTHING_HERE_YET.to_string();
         };
-        self.resolve_walk_band(&chart)
-            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string())
+        let base = self
+            .resolve_walk_band(&chart)
+            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
+        caption(base, chart.sight.as_ref())
     }
 
     /// The walk band's own resolution chain, cursor position to name.
@@ -451,19 +637,41 @@ impl Driver {
         self.cached.clone()
     }
 
-    /// Hand one line to the session and return the resulting snapshot JSON.
+    /// Hand one line to the session, refresh the cached snapshot, and
+    /// report whether the possession RELEASED.
     ///
     /// The client never validates a move before sending it: `Session::
     /// handle` tokenizes and parses, and an illegal or unrecognised verb
     /// comes back as the sim's own prose (e.g. "No way n from here."),
-    /// already folded into the returned snapshot's `narration.prose` — this
-    /// function has no need to branch on `Turn::Out` vs `Turn::Released` to
-    /// report that back, because both carry the same text the snapshot
-    /// already carries.
-    pub fn handle(&mut self, line: &str) -> String {
-        let _turn = self.session.handle(line);
+    /// already folded into the returned snapshot's `narration.prose` — a
+    /// caller that only wants to display the reply can read [`Self::
+    /// snapshot`] afterward and never needs the bool. What it cannot get
+    /// from the snapshot is whether the possession is OVER: `Turn::Out` and
+    /// `Turn::Released` both carry ordinary prose, so this is the one place
+    /// that still inspects the [`Turn`] itself, and it does so to answer
+    /// exactly that question (ledger #8 — see [`Self::apply`]'s doc).
+    pub fn handle(&mut self, line: &str) -> bool {
+        let turn = self.session.handle(line);
         self.refresh();
-        self.cached.clone()
+        matches!(turn, Turn::Released(_))
+    }
+
+    /// The command buffer's current text — what has been typed but not yet
+    /// submitted.
+    pub fn line_text(&self) -> String {
+        self.line.text()
+    }
+
+    /// The command buffer's caret, as a character offset — see
+    /// [`crate::line::Line::caret`].
+    pub fn caret(&self) -> usize {
+        self.line.caret()
+    }
+
+    /// The most recently submitted line, echoed for the record (see the
+    /// `echo` field's own doc for what "most recent" means across turns).
+    pub fn echo(&self) -> Option<&str> {
+        self.echo.as_deref()
     }
 
     /// Re-derive `cached` from the live session. A snapshot read can fail
@@ -495,5 +703,100 @@ impl Drop for Driver {
             drop(Box::from_raw(self.ctx));
             drop(Box::from_raw(self.world));
         }
+    }
+}
+
+#[cfg(test)]
+mod caption_tests {
+    use super::caption;
+    use hornvale_game_core::schema::Sight;
+
+    /// The seed-42 turn-0 fixture's sight values, as a literal.
+    fn fixture_sight() -> Sight {
+        Sight {
+            observer: "bugbear".into(),
+            channels: 3,
+            chromatic: 2,
+            projection: "yellow-blue".into(),
+            preserves: "the short-to-long opposition; the red-green axis is not carried".into(),
+            sun_altitude_deg: -56.010669,
+            channel_roles: vec!["chromatic".into(), "chromatic".into(), "achromatic".into()],
+            projection_slots: Some([1, 1, 0]),
+            projection_norms: Some([3.862, 3.862, 1.98]),
+        }
+    }
+
+    /// Serialises this binary's `NO_COLOR` regime flips. This bin's unit
+    /// tests run as threads of one process under plain `cargo test`, and
+    /// `NO_COLOR` is process-global state, so every mutation — and every
+    /// caption assertion that reads it through the draw path — must hold
+    /// this lock.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Run `f` with `NO_COLOR` removed, restoring whatever it was after.
+    fn with_no_color_removed<R>(f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(None, f)
+    }
+
+    /// Run `f` with `NO_COLOR` set to a non-empty value, restoring
+    /// whatever it was after.
+    fn with_no_color_set<R>(value: &str, f: impl FnOnce() -> R) -> R {
+        with_no_color_set_inner(Some(value), f)
+    }
+
+    fn with_no_color_set_inner<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let _env = ENV_LOCK.lock().unwrap();
+        let saved = std::env::var_os("NO_COLOR");
+        // SAFETY: the caller holds ENV_LOCK, so no sibling thread in this
+        // test binary touches the environment concurrently.
+        unsafe {
+            match value {
+                Some(w) => std::env::set_var("NO_COLOR", w),
+                None => std::env::remove_var("NO_COLOR"),
+            }
+        }
+        let out = f();
+        // SAFETY: as above — ENV_LOCK is held for the whole body.
+        unsafe {
+            match saved {
+                Some(v) => std::env::set_var("NO_COLOR", v),
+                None => std::env::remove_var("NO_COLOR"),
+            }
+        }
+        out
+    }
+
+    /// Colour allowed and a sight declaration present: the disclosure is
+    /// APPENDED to the resolver's text, never replacing it.
+    #[test]
+    fn colour_allowed_appends_the_disclosure() {
+        with_no_color_removed(|| {
+            let out = caption("googo ridge".to_string(), Some(&fixture_sight()));
+            assert!(out.starts_with("googo ridge"), "{out}");
+            assert!(out.contains("bugbear"), "{out}");
+            assert!(out.contains("yellow-blue"), "{out}");
+            assert!(out.contains("red-green"), "{out}");
+        });
+    }
+
+    /// A non-empty `NO_COLOR` is the reader declining colour, and the
+    /// caption goes with it — the picture and its honesty line are one
+    /// channel, suppressed together.
+    #[test]
+    fn no_color_suppresses_the_caption() {
+        with_no_color_set("1", || {
+            let out = caption("googo ridge".to_string(), Some(&fixture_sight()));
+            assert_eq!(out, "googo ridge");
+        });
+    }
+
+    /// No sight declaration (an uncoloured scene omits the key entirely):
+    /// the strip text passes through untouched.
+    #[test]
+    fn no_sight_no_caption() {
+        with_no_color_removed(|| {
+            let out = caption("googo ridge".to_string(), None);
+            assert_eq!(out, "googo ridge");
+        });
     }
 }

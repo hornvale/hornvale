@@ -5,7 +5,10 @@
 //! ordering is a total order with exact arithmetic, the same reason
 //! `kernel/src/astar.rs` uses `u64` costs.
 
-use crate::liveness::Action;
+use crate::action::Action;
+use hornvale_kernel::KindId;
+use hornvale_kernel::component::ComponentStore;
+use hornvale_species::BiosphereTraits;
 
 /// An exact count of scheduler ticks. Internal; never serialized.
 /// type-audit: bare-ok(count)
@@ -42,6 +45,33 @@ pub fn ticks_per_local_day(day_length_std: Option<f64>) -> u64 {
 /// Authored.
 /// type-audit: bare-ok(ratio)
 pub const REFERENCE_MASS_KG: f64 = 70.0;
+
+/// The authored biosphere roster's shape, as `liveness.rs` already holds it:
+/// `hornvale_species::biosphere_registry()` returns exactly this. Named here so
+/// [`mass_for_species`] can borrow one without this module learning how to
+/// build one — the registry is a free function over authored data, so nothing
+/// about it requires a world and `clock` stays unit-testable.
+pub type Biosphere = ComponentStore<KindId, BiosphereTraits>;
+
+/// A body's mass in kilograms — THE ONE DERIVATION, shared by every body.
+///
+/// [`cost_ticks`] already charges time as a function of the body with no driver
+/// parameter, so a possessed body and a creature pay the same tariff exactly
+/// when they read their mass the same way. That was previously two byte-
+/// identical inline lookups in `liveness.rs` and nothing at all for the
+/// player; it is this function now.
+///
+/// Falls back to [`REFERENCE_MASS_KG`] when the biosphere is absent **or** the
+/// species is not in it. [`tempo`] clamps a nonsense value anyway, but the
+/// fallback is stated rather than left implicit, so a defaulted body reads at
+/// exactly tempo `1.0`.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(ratio: return)
+pub fn mass_for_species(species: &str, biosphere: Option<&Biosphere>) -> f64 {
+    biosphere
+        .and_then(|b| b.get_by_label(species))
+        .map(|t| t.mass.kilograms())
+        .unwrap_or(REFERENCE_MASS_KG)
+}
 
 /// The allometric exponent for biological TIMES (stride period, heart interval,
 /// lifespan): roughly the quarter power of mass. Authored, and the same
@@ -96,12 +126,20 @@ pub fn tempo(mass_kg: f64) -> f64 {
 }
 
 /// The authored base cost of each action, before the creature's tempo. Five
-/// dials replacing the single historical `MOVE_DURATION`; none is zero, so the
-/// cost model is TOTAL (spec §2 rung 1). `Rest` keeps its jump-to-waking
-/// elsewhere — this is only the cost of the act of lying down.
+/// creature dials replacing the single historical `MOVE_DURATION`; none of
+/// those five is zero, so the cost model is TOTAL for every act a creature
+/// can plan (spec §2 rung 1). `Rest` keeps its jump-to-waking elsewhere —
+/// this is only the cost of the act of lying down.
+///
+/// Group A's seven operator instruments (The Deed) are the deliberate
+/// exception: an out-of-character act "charges nothing by default" (spec
+/// Arc I.b §3.4), so their dial is `Ticks(0)`. This is inert today — nothing
+/// routes a group-A `Action` through [`cost_ticks`], dispatch stays
+/// string-based for them — but the match must still be exhaustive, and
+/// `0` is the honest answer for what they *would* cost if ever charged.
 ///
 /// The match is exhaustive by variant deliberately, the same discipline
-/// `liveness::precondition_reads_committed_state` keeps: a new `Action` must
+/// `action::precondition_reads_committed_state` keeps: a new `Action` must
 /// fail to compile here rather than silently become free.
 pub fn base_ticks(action: &Action) -> Ticks {
     match action {
@@ -123,6 +161,34 @@ pub fn base_ticks(action: &Action) -> Ticks {
         Action::Eat => Ticks(3_000),
         // Lying DOWN is quick; the sleep itself is the jump-to-waking, not this.
         Action::Rest => Ticks(150),
+        // Group A: operator instruments charge nothing by default (spec
+        // §3.4) — see the doc above.
+        Action::Why
+        | Action::Npcs
+        | Action::Help
+        | Action::Eyes
+        | Action::Whoami
+        | Action::Provoke
+        | Action::Soothe => Ticks(0),
+        // Group B's objective halves (The Deed, Task 6) charge nothing for
+        // the same reason, `!wait` INCLUDED — and that last one is worth a
+        // sentence, because spec §3.4 calls `!wait` "the exception that moves
+        // the clock" and this arm looks like it contradicts that.
+        //
+        // It does not. `Session::wait` advances the day by the SPAN THE
+        // PLAYER ASKED FOR (`wait 3` is three days, under either mood), which
+        // is the act's effect and is parameterised by its argument.
+        // `base_ticks` answers a different question — what an act costs the
+        // body that performs it, keyed on `Action` alone with nowhere to put
+        // a span — and the honest answer for an out-of-character act is
+        // still zero. Charging a constant here would add a second, silent
+        // clock movement on top of the one the player named.
+        Action::ObjectiveMap
+        | Action::ObjectiveExamine
+        | Action::ObjectiveNeeds
+        | Action::ObjectiveWait
+        | Action::ObjectiveLook
+        | Action::ObjectiveKnows => Ticks(0),
     }
 }
 
@@ -163,7 +229,7 @@ pub fn cost_ticks(action: &Action, mass_kg: f64, terrain_factor: f64) -> Ticks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::liveness::Action;
+    use crate::action::Action;
     use hornvale_kernel::room::RoomAddr;
 
     #[test]
@@ -228,8 +294,16 @@ mod tests {
 
     #[test]
     fn no_action_is_free() {
-        // THE TOTALITY PROPERTY (spec §2 rung 1). Every action costs something,
-        // so a future action cannot silently be added for free.
+        // THE TOTALITY PROPERTY (spec §2 rung 1) — for CREATURE acts. Every
+        // creature action costs something, so a future creature action
+        // cannot silently be added for free. Narrowed from "every action"
+        // (fix round 1, Finding 3): group A's seven operator instruments
+        // (The Deed) are the deliberate exception — `base_ticks`'s own doc
+        // states it plainly, "an out-of-character act charges nothing by
+        // default" (spec §3.4) — so this property was never meant to hold
+        // for them, and this list stays the hand-picked creature roster
+        // rather than `Action::all()` so it cannot silently start failing
+        // on an instrument this test was never about.
         let every = [
             Action::MoveTo(RoomAddr {
                 face: 0,

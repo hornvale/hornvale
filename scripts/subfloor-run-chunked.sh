@@ -74,11 +74,48 @@
 # Homebrew bash on PATH. Both bugs were masked the same way: neither was
 # exercised on the platform that would have shown it, because this was
 # authored and tested only on lefford (Linux, a Homebrew-adjacent-but-
-# irrelevant bash 5). The fix below uses only `${var//search/replace}`
-# (bash's own string substitution, not delegated to any external `sed`/
-# `tr`/`awk` — identical behaviour on every bash build) and a
-# `while read` loop over a here-string (`<<<`, available since bash 2.05b),
-# both well inside what bash 3.2 supports. No `mapfile`, no `sed`, no `awk`.
+# irrelevant bash 5). That round's fix used only `${var//search/replace}`
+# (bash's own string substitution) and a `while read` loop over a here-string
+# (`<<<`, since bash 2.05b), both well inside what bash 3.2 supports.
+#
+# **PORTABILITY AND COST (fix round 2): `${var//search/replace}` WAS PORTABLE
+# AND WAS ALSO UNUSABLE, and only one of those was checked.** Round 1 reasoned
+# correctly about which constructs bash 3.2 *supports* and never measured what
+# one of them *costs*. On macOS's stock bash 3.2, substituting over the
+# roster's flat filterset is roughly O(n^3). Measured on `ambrose`, this very
+# filter truncated: 5,000 B -> 0 s, 10,000 B -> 1 s, 20,000 B -> 8 s,
+# 40,000 B -> 59 s, about 7.5x per doubling. It is ALSO locale-sensitive,
+# because bash 3.2 pattern-matches multibyte-aware under a UTF-8 locale: at
+# 40,000 bytes, `LC_ALL=C` takes 5 s and `LC_ALL=en_US.UTF-8` takes 62 s. At
+# the real 229,189-byte size that is ~13 min under C and HOURS under UTF-8 —
+# so `git commit` on a Mac hung in the pre-commit hook, in bash, with no
+# compiler running and nothing for `ps` to show. It looked exactly like a
+# wedged agent, which is how it cost an hour before anyone looked here.
+#
+# **`awk` IS SAFE HERE AND `sed` WAS NOT, and the difference is not a matter
+# of taste.** Round 1 rejected `sed 's/ | /\n/g'` because `\n` in a
+# REPLACEMENT is a GNU extension that BSD/macOS sed emits as two literal
+# characters. `awk` has no such divergence: `"\n"` in `gsub`'s replacement is
+# an ordinary string literal resolved by awk's own lexer, identical under
+# POSIX awk, BSD awk (macOS ships `awk version 20200816`) and gawk. Verified
+# rather than assumed, on macOS BSD awk: byte-for-byte identical output to
+# the bash substitution over the same input (`cmp` clean, 19,432 bytes), and
+# **0.030 s on the full 229,189-byte filter instead of hours** — and
+# unchanged at 0.032 s under a UTF-8 locale, so the pathology is gone rather
+# than merely narrowed.
+#
+# `mapfile` is still out (bash 4+; macOS ships `/bin/bash` 3.2, its last
+# GPLv2 release, and `Makefile:subfloor-run` invokes plain `bash`). The
+# `while read` loop over `<<<` below is unchanged and still 3.2-safe.
+#
+# THE STANDING LESSON, since this is now the second defect in this one file
+# and the second bash-3.2 defect found in a single session (the other:
+# `scripts/test-worktree-freshness.sh` does not even PARSE under 3.2, while
+# passing shellcheck clean): "bash 3.2 supports this construct" is a
+# different claim from "this construct is usable at our input sizes on bash
+# 3.2", and only the first one is cheap to check. When a script here touches
+# a string measured in hundreds of kilobytes, time it on the Mac before
+# believing it.
 set -euo pipefail
 
 filter_file="${1:?usage: subfloor-run-chunked.sh <filterset-file>}"
@@ -95,35 +132,60 @@ fi
 
 echo "subfloor-run-chunked: filter is ${#filter} bytes, over the ${SAFE_BYTES}-byte safe threshold (Linux's MAX_ARG_STRLEN is 131072) — splitting into argv-safe chunks." >&2
 
-# Replace the roster's own separator with a real newline using bash's own
-# parameter expansion (`${var//pattern/replacement}`) — no subprocess, so no
-# GNU-vs-BSD divergence is possible. `$'\n'` is ANSI-C quoting, supported
-# since bash 2.0.
-term_lines="${filter// | /$'\n'}"
+# THE SPLIT HAPPENS ENTIRELY IN awk, AND THAT IS THE WHOLE POINT — no chunk
+# text is ever held in a shell variable. See the PORTABILITY-AND-COST note in
+# the header: bash 3.2 is not merely slow at this, it is superlinear at it,
+# and the cost is in the ACCUMULATION as much as in the separator rewrite.
+# Building `candidate="$batch | $term"` once per term and asking `${#candidate}`
+# each time re-copies and re-measures a string that grows to SAFE_BYTES, ~3,200
+# times; under a UTF-8 locale `${#var}` counts CHARACTERS, so each measurement
+# walks the whole buffer multibyte-aware. Rewriting only the separator step in
+# awk and leaving this loop in bash still took **8m24s** on `ambrose` with
+# `LC_ALL=C` (and did not finish at all without it) — measured, not assumed,
+# after that exact half-fix was tried.
+#
+# awk does the same arithmetic in one linear pass and writes each chunk
+# straight to its own file, so bash only ever handles a handful of short
+# paths. `LC_ALL=C`: the separator is pure ASCII, so a byte-wise match is both
+# correct and immune to the multibyte cost above.
+chunk_dir="$(mktemp -d)"
+trap 'rm -rf "$chunk_dir"' EXIT
 
-batch=""
-chunk_num=0
-run_batch() {
-    chunk_num=$((chunk_num + 1))
-    echo "subfloor-run-chunked: chunk $chunk_num (${#batch} bytes) …" >&2
-    cargo nextest run --workspace -E "$batch"
+chunk_total="$(LC_ALL=C awk -v dir="$chunk_dir" -v safe="$SAFE_BYTES" '
+{
+    n = split($0, terms, / \| /)
+    for (i = 1; i <= n; i++) {
+        t = terms[i]
+        if (t == "") continue
+        tl = length(t)
+        # Start a new chunk when appending " | " + this term would cross the
+        # threshold — the same boundary the bash loop computed on `candidate`.
+        if (len == 0 || len + 3 + tl > safe) {
+            if (len > 0) close(f)
+            chunk++
+            f = sprintf("%s/chunk-%04d", dir, chunk)
+            printf "%s", t > f
+            len = tl
+        } else {
+            printf " | %s", t > f
+            len += 3 + tl
+        }
+    }
 }
+END { if (chunk > 0) close(f); print chunk + 0 }
+' "$filter_file")"
 
-# A `while read` loop over a here-string, not an array: `mapfile`/`readarray`
-# are bash 4+ and unavailable on macOS's stock `/bin/bash` 3.2. `<<<` appends
-# a trailing newline for us, so the final term is read like any other — no
-# terms are dropped.
-while IFS= read -r term; do
-    [ -n "$term" ] || continue
-    candidate="${batch:+$batch | }$term"
-    if [ -n "$batch" ] && [ "${#candidate}" -gt "$SAFE_BYTES" ]; then
-        run_batch
-        batch="$term"
-    else
-        batch="$candidate"
-    fi
-done <<< "$term_lines"
-if [ -n "$batch" ]; then
-    run_batch
+if [ "$chunk_total" -eq 0 ]; then
+    echo "subfloor-run-chunked: refusing to run nothing — the splitter produced 0 chunks from a ${#filter}-byte filter." >&2
+    exit 3
 fi
+
+# `chunk-%04d` zero-pads so the glob's lexicographic order IS numeric order.
+chunk_num=0
+for chunk_file in "$chunk_dir"/chunk-*; do
+    chunk_num=$((chunk_num + 1))
+    chunk_bytes="$(wc -c < "$chunk_file" | tr -d ' ')"
+    echo "subfloor-run-chunked: chunk $chunk_num/$chunk_total ($chunk_bytes bytes) …" >&2
+    cargo nextest run --workspace -E "$(cat "$chunk_file")"
+done
 echo "subfloor-run-chunked: all $chunk_num chunk(s) passed." >&2

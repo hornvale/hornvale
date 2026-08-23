@@ -26,6 +26,13 @@ provocation and the hostility it grew into. Presence, consequence,
 persistence, and the traceable wake — the whole thesis of the game, at its
 smallest honest scale.
 
+(All three verbs are spelled with a leading `!` today. [The Deed](./the-deed.md)
+read `provoke` and `soothe` as *operator instruments* — the player imposing a
+disposition the simulation's own process did not choose, the same category as a
+worldgen pin — and moved every instrument into an out-of-character namespace
+where the provenance stamp this campaign invented is what marks the
+intervention. The stamping is unchanged; only the spelling is.)
+
 ## The world at rest has no latent tension, so the mark had to *be* the tension
 
 The design began elsewhere. The founding brainstorm framed the mark as a

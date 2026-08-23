@@ -9,16 +9,16 @@
 //!   floor plan indoors) occupies columns `0..PLATE_WIDTH`;
 //! - the **entry** (the narration prose, wrapped, plus the command line)
 //!   occupies columns `PLATE_WIDTH..w`;
-//! - both share rows `0..(h - 4)`, leaving the **look-mode strip** (plate
+//! - both share rows `0..(h - 4)`, leaving the **map strip** (plate
 //!   width only, see `strip.rs`) at row `h - 4`, a blank gutter row at
 //!   `h - 3`, the **endpaper** strip at row `h - 2`, and a blank margin row
 //!   at `h - 1`. Rules and gutters carry no ink of their own — "ornament may
 //!   never occupy a cell that carries information" — so reserving them is
 //!   simply *not drawing there*, never a drawn border.
 //!
-//! **The look-mode strip's row is reserved unconditionally**, whether or
-//! not [`compose`] is given anything to put there — a player entering and
-//! leaving look mode must never see the plate resize under them, so the
+//! **The map strip's row is reserved unconditionally**, whether or not
+//! [`compose`] is given anything to put there — a player toggling focus
+//! onto and off the map must never see the plate resize under them, so the
 //! row's presence cannot be conditional on the strip actually having text.
 //! This is the row The Portolan costs the plate: it held content up through
 //! Task 1, and Task 2 claims it (see `lib.rs`'s `render_with` doc for the
@@ -42,9 +42,9 @@ use crate::{Grid, Spatial};
 /// The column where the entry begins; the plate occupies `0..PLATE_WIDTH`.
 pub const PLATE_WIDTH: u16 = 40;
 
-/// Rows reserved below the shared plate/entry region: the look-mode strip's
-/// own row, one blank gutter row, the endpaper's own row, and one blank
-/// margin row beneath it.
+/// Rows reserved below the shared plate/entry region: the map strip's own
+/// row, one blank gutter row, the endpaper's own row, and one blank margin
+/// row beneath it.
 const RESERVED_ROWS: u16 = 4;
 
 /// The plate's content height for a `w`-by-`h` grid — `h` minus
@@ -75,13 +75,28 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
     }
 }
 
-/// Compose `snapshot` into a `w`-by-`h` grid. See the module doc for the
-/// column and row layout. The plate dispatches on [`Spatial`]: the
-/// walk-band chart outdoors, the chamber-band floor plan indoors — the
-/// register switches picture, never prose. `strip` is the look-mode strip's
-/// text (see `strip.rs`), or `None` when nothing is resolved this turn —
-/// either way the row beneath the plate is reserved (see the module doc).
-pub fn compose(snapshot: &crate::Snapshot, w: u16, h: u16, strip: Option<&str>) -> Grid {
+/// Compose `snapshot` into a `w`-by-`h` grid, plus the caret's screen
+/// position (see [`crate::entry::draw`]), `Some` only when `focus` is
+/// [`crate::Focus::Cli`]. See the module doc for the column and row
+/// layout. The plate dispatches on [`Spatial`]: the walk-band chart
+/// outdoors, the chamber-band floor plan indoors — the register switches
+/// picture, never prose. `strip` is the map strip's text (see `strip.rs`),
+/// `None` unless the map is focused — either way the row beneath the plate
+/// is reserved (see the module doc). `line` is
+/// the command line's contents, drawn into the entry pane regardless of
+/// `focus` — only whether its caret is *reported* depends on focus, never
+/// whether its text is drawn (see `entry::draw`'s doc). `echo` is the most
+/// recently SUBMITTED line, drawn above the command row (see `entry::draw`'s
+/// doc for the ask-then-answer layout and why that row is reserved).
+pub fn compose(
+    snapshot: &crate::Snapshot,
+    w: u16,
+    h: u16,
+    strip: Option<&str>,
+    focus: crate::Focus,
+    line: crate::CommandLine<'_>,
+    echo: Option<&str>,
+) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
     let plate_width = PLATE_WIDTH.min(w);
@@ -94,12 +109,15 @@ pub fn compose(snapshot: &crate::Snapshot, w: u16, h: u16, strip: Option<&str>) 
     }
     blit(&plate, &mut page, (0, 0));
 
-    crate::entry::draw(
+    let caret = crate::entry::draw(
         &snapshot.narration,
         &mut page,
         (plate_width, 0),
         entry_width,
         content_height,
+        focus,
+        line,
+        echo,
     );
 
     if let Some(text) = strip {
@@ -115,7 +133,7 @@ pub fn compose(snapshot: &crate::Snapshot, w: u16, h: u16, strip: Option<&str>) 
         (0, endpaper_row),
     );
 
-    page
+    (page, caret)
 }
 
 #[cfg(test)]
@@ -128,7 +146,15 @@ mod tests {
     #[test]
     fn compose_fills_the_requested_dimensions() {
         let s = crate::Snapshot::parse(WALK_FIXTURE).unwrap();
-        let g = compose(&s, 80, 24, None);
+        let (g, _) = compose(
+            &s,
+            80,
+            24,
+            None,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+        );
         assert_eq!(g.width(), 80);
         assert_eq!(g.height(), 24);
     }
@@ -147,7 +173,15 @@ mod tests {
         // walks two Snapshots. Tagging it `/// claim:` instead would declare
         // a quantified claim over seeds that this test does not make.
         for snap in [walk, chamber] {
-            let g = compose(&snap, 80, 24, None);
+            let (g, _) = compose(
+                &snap,
+                80,
+                24,
+                None,
+                crate::Focus::Cli,
+                crate::CommandLine::default(),
+                None,
+            );
             let text = g.to_plain_text();
             let plate_has_ink = text
                 .lines()
@@ -157,13 +191,21 @@ mod tests {
         }
     }
 
-    /// The look-mode strip draws beneath the plate's own content, still
-    /// clipped to the plate's width — `compose` must hand `strip::draw` the
-    /// right row and the right width, not just delegate blindly.
+    /// The map strip draws beneath the plate's own content, still clipped
+    /// to the plate's width — `compose` must hand `strip::draw` the right
+    /// row and the right width, not just delegate blindly.
     #[test]
     fn compose_draws_the_strip_beneath_the_plate() {
         let s = crate::Snapshot::parse(WALK_FIXTURE).unwrap();
-        let g = compose(&s, 80, 24, Some("a cairn"));
+        let (g, _) = compose(
+            &s,
+            80,
+            24,
+            Some("a cairn"),
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+        );
         let text = g.to_plain_text();
         let strip_row = text.lines().nth(20).unwrap();
         assert!(

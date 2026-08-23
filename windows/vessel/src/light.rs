@@ -58,6 +58,15 @@ pub const TORCH_KELVIN: f64 = 1900.0;
 /// type-audit: bare-ok(ratio)
 pub const HEARTH_KELVIN: f64 = 1200.0;
 
+/// How much of the sky's daylight reaches even where no source does (The
+/// Wick, spec §2.2) — chosen empirically, not by theory: seed 42's chamber
+/// wall fabric renders `[29, 28, 23]` under `0.02 × noon daylight`, clearly
+/// visible but clearly darker than the dimmest flame-lit neighbour
+/// (`[64, 50, 13]` at distance 4 of the ×4 torch). `0.05` was already too
+/// close (`[49, 48, 41]`); `0.01` read as near-black next to the glyph.
+/// type-audit: bare-ok(ratio)
+pub const SKYGLOW_SCALE: f64 = 0.02;
+
 /// Something that emits light, at a cell.
 ///
 /// A source is **placed**, never drawn: a hearth is at its chamber's wall, a
@@ -97,6 +106,20 @@ fn chebyshev(a: Cell, b: Cell) -> f64 {
 /// **Authored at 1, and not a free parameter.** See [`attenuate`].
 /// type-audit: bare-ok(ratio)
 pub const ATTENUATION: f64 = 1.0;
+
+/// A source's emitted spectrum scaled by `k`, band-wise. Vessel-local on
+/// purpose (The Wick, spec §2.1): intensity is a property of the *source
+/// composition* in `session.rs::chamber_sources`, not of the colour model,
+/// so the kernel gains no API for it.
+/// type-audit: bare-ok(ratio: k)
+pub fn scaled(illuminant: &Illuminant, k: f64) -> Illuminant {
+    let mut bands = [0.0f64; BANDS];
+    for (out, value) in bands.iter_mut().zip(illuminant.get()) {
+        *out = value * k;
+    }
+    Illuminant::new(bands)
+        .expect("scaling a valid illuminant by a positive factor keeps every band valid")
+}
 
 /// A source's light after travelling `distance` cells: every band scaled by
 /// `1 / (1 + ATTENUATION * distance²)`.

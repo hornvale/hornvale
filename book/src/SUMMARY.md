@@ -381,6 +381,17 @@
 - [The Undertow](./chronicle/the-undertow.md)
 - [The Adit](./chronicle/the-adit.md)
 - [The Burr](./chronicle/the-burr.md)
+- [The Touchstone](./chronicle/the-touchstone.md)
+- [The Cupel](./chronicle/the-cupel.md)
+- [The Tackle](./chronicle/the-tackle.md)
+- [The Cant](./chronicle/the-cant.md)
+- [The Portolan](./chronicle/the-portolan.md)
+- [The Stylus](./chronicle/the-stylus.md)
+- [The Chroma](./chronicle/the-chroma.md)
+- [The Wick](./chronicle/the-wick.md)
+- [The Deed](./chronicle/the-deed.md)
+- [The Stope](./chronicle/the-stope.md)
+- [The Stride](./chronicle/the-stride.md)
 
 # Appendix: The Frontier
 

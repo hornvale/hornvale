@@ -280,7 +280,7 @@ fn energy_is_not_monotone_in_depth() {
         DelveZone::Shallows,
         DelveZone::Deeps,
         DelveZone::Underdeep,
-        DelveZone::Sunless,
+        DelveZone::Nadir,
     ];
     let mut means: Vec<(DelveZone, f64, usize)> = Vec::new();
     for zone in ladder {
@@ -327,10 +327,10 @@ fn energy_is_not_monotone_in_depth() {
     //    geothermal gradient has not yet paid.
     let shallow: f64 = zone_mean(&names, &[DelveZone::Undercroft, DelveZone::Shallows]);
     let trough: f64 = zone_mean(&names, &[DelveZone::Deeps]);
-    let deep: f64 = zone_mean(&names, &[DelveZone::Underdeep, DelveZone::Sunless]);
+    let deep: f64 = zone_mean(&names, &[DelveZone::Underdeep, DelveZone::Nadir]);
     println!(
         "the inversion: shallow(Undercroft+Shallows) {shallow:.3} > trough(Deeps) \
-         {trough:.3} < deep(Underdeep+Sunless) {deep:.3}"
+         {trough:.3} < deep(Underdeep+Nadir) {deep:.3}"
     );
     assert!(
         shallow > trough,
@@ -361,7 +361,7 @@ fn energy_is_not_monotone_in_depth() {
 
 /// The inversion's sharpest single statement, asserted rather than narrated.
 ///
-/// `sump-gallery` (Deeps) and `deep-karst-void` (Sunless) are the same void in
+/// `sump-gallery` (Deeps) and `deep-karst-void` (Nadir) are the same void in
 /// the same rock at two depths: identical on PHYSIOGNOMY, WATER, SUBSTRATE and
 /// LIGHT, and **differing only on ENERGY**, with the deeper one strictly
 /// richer. That is spec §4.4's sentence — *the deep is not poorer, it is

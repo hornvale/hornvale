@@ -1150,7 +1150,8 @@ fn every_unknown_entrys_reason_is_non_empty() {
                 let text = match reason {
                     GapReason::Experiential(s)
                     | GapReason::Perceptual(s)
-                    | GapReason::Unnameable(s) => s,
+                    | GapReason::Unnameable(s)
+                    | GapReason::Extradiegetic(s) => s,
                 };
                 assert!(
                     !text.trim().is_empty(),
@@ -1212,6 +1213,7 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
                 hornvale_language::GapReason::Experiential(s) => s,
                 hornvale_language::GapReason::Perceptual(s) => s,
                 hornvale_language::GapReason::Unnameable(s) => s,
+                hornvale_language::GapReason::Extradiegetic(s) => s,
             };
             assert!(
                 !text.is_empty(),
@@ -1498,4 +1500,104 @@ fn human_is_the_hue_ladders_deepest_witness() {
         "human's poor night vision buys the deepest hue ladder"
     );
     assert_eq!(d.luminance, 1, "and the shallowest luminance ladder");
+}
+
+/// The Deed, Task 2: the silent-failure proof this task exists to avoid.
+/// `packs.rs` is a Swadesh-style core-vocabulary roster and
+/// `exposure_of_impl` maps pack membership straight to
+/// `ExposureClass::Steeped`, and a `Steeped` concept is never `Unknown` —
+/// so Task 1's `GapReason::Extradiegetic` filter in
+/// `hornvale_language::proto_root_universe` would never be consulted if an
+/// out-of-character concept (an operator instrument like `!why`) ended up
+/// registered the same way `move`/`drink`/`eat`/`rest` are. This asserts
+/// the real behaviour over a real generated world, not the reasoning that
+/// it "should" hold: every `hornvale_language::extradiegetic_pack` concept
+/// classifies `Unknown { reason: Extradiegetic }` for a real settled
+/// species, and none of them appears in `proto_root_universe`'s output —
+/// the exact set `assign_proto_roots` draws proto-roots for, and therefore
+/// the exact set a `LexEntry::Root` could ever come from.
+#[test]
+fn extradiegetic_concepts_never_reach_the_proto_root_universe() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let exposures = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
+
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        assert!(
+            matches!(
+                exposures.get(*name),
+                Some(ExposureClass::Unknown {
+                    reason: GapReason::Extradiegetic(_)
+                })
+            ),
+            "'{name}' must classify Unknown/Extradiegetic for goblin, got {:?}",
+            exposures.get(*name)
+        );
+    }
+
+    let universe = hornvale_language::proto_root_universe(&exposures);
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        assert!(
+            !universe.contains(name),
+            "'{name}' is an out-of-character operator instrument and must \
+             never enter the proto-root universe — if it does, Task 1's \
+             Extradiegetic filter is not being consulted and every culture \
+             is one build away from silently drawing it a word"
+        );
+    }
+
+    // The lexicon itself never roots one either — the end-to-end guarantee
+    // the universe check above is a proxy for.
+    let lex = lexicon_from(&w, "goblin", &terrain, &climate).unwrap();
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        match lex.entry(name) {
+            Some(LexEntry::Root { .. }) => {
+                panic!("'{name}' must never resolve to a lexicon Root entry")
+            }
+            Some(LexEntry::Gap {
+                reason: GapReason::Extradiegetic(_),
+            }) => {}
+            other => panic!("'{name}' expected an Extradiegetic Gap entry, got {other:?}"),
+        }
+    }
+}
+
+/// The Deed, Task 2, fix round 1 (Finding 5): a latent name-collision
+/// hazard between `hornvale_language::extradiegetic_pack` and any other
+/// domain. `register_concepts`'s pack loop skips a name another domain
+/// already registered (`if registry.concept(concept).is_some() { continue; }`
+/// — decision 0025, one concept name one owner), so if some other domain
+/// ever registers an in-world `provoke`, `soothe`, `survey`, `help`, or
+/// `identify` (all plausible names for a real act or instrument),
+/// `extradiegetic_pack`'s own registration would silently be skipped —
+/// **and** `windows/worldgen`'s `exposure_of_impl` would still overwrite
+/// that concept's exposure to `Unknown/Extradiegetic` unconditionally for
+/// every species in every world (its final block is membership-driven, not
+/// gated on which domain actually owns the name), silently blanking a real
+/// in-world concept's lexeme with no compile error and no other test
+/// noticing. This is a tripwire, not a `domain == "language"` guard inside
+/// production code: it fails loudly at the moment of collision, over the
+/// real composition `register_all` builds, rather than trying to prevent
+/// the collision structurally.
+#[test]
+fn no_other_domain_claims_an_extradiegetic_concept_name() {
+    let mut registry = hornvale_kernel::ConceptRegistry::default();
+    hornvale_worldgen::register_all(&mut registry)
+        .expect("register_all registers every domain's concepts");
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        let concept = registry
+            .concept(name)
+            .unwrap_or_else(|| panic!("'{name}' must be registered once register_all completes"));
+        assert_eq!(
+            concept.domain, "language",
+            "'{name}' is owned by domain {:?}, not \"language\" — some other domain \
+             registered it first, so `extradiegetic_pack`'s registration in packs.rs \
+             was silently skipped while `windows/worldgen`'s exposure derivation still \
+             unconditionally overwrites '{name}' to Unknown/Extradiegetic for every \
+             species — mint a different extradiegetic-pack name instead of colliding \
+             with a real in-world concept",
+            concept.domain
+        );
+    }
 }

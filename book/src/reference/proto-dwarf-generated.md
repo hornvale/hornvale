@@ -49,6 +49,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `bugbear-kind` | a bugbear | *Xaqad | /xaqad/ |
 | `burn` | Ground recovering from fire. | *Tavan | /tavan/ |
 | `carrion-crawler-kind` | a carrion crawler | *Nangat | /naŋat/ |
+| `chart` | to form a picture of the space around oneself — `map` | *Navag | /navag/ |
 | `child` | one's son or daughter | *Sabaj | /sabaj/ |
 | `closed-canopy` | Tall closed-canopy tropical forest. | *Bazag | /bazag/ |
 | `coast` | where the land meets the sea | *Sasaz | /sasaz/ |
@@ -119,12 +120,14 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Sasax | /sasax/ |
 | `kelp-forest` | a biome class | *Qaqas | /qaqas/ |
 | `killer-whale-kind` | a killer whale | *Naqash | /naqaʃ/ |
+| `know` | to hold something in memory or understanding — `knows` | *Vavash | /vavaʃ/ |
 | `kobold-kind` | a kobold | *Satag | /satag/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Dangas | /daŋas/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Saxaz | /saxaz/ |
 | `light` | the color term for white/light hues | *Bangas | /baŋas/ |
 | `lightless-water` | Water below all light. | *Xavab | /xavab/ |
 | `little` | small in size or extent | *Danag | /danag/ |
+| `look` | to visually attend to something, near or far — `look`, `examine` | *Qashad | /qaʃad/ |
 | `low` | near the ground | *Xasash | /xasaʃ/ |
 | `many` | an indefinitely large count | *Dangang | /daŋaŋ/ |
 | `marine-snow` | Organic debris drifting endlessly down. | *Zadas | /zadas/ |
@@ -159,6 +162,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Nanat | /nanat/ |
 | `rafted-floe` | Ice floes driven over one another. | *Xaxab | /xaxab/ |
 | `rain` | liquid precipitation | *Xangag | /xaŋag/ |
+| `read` | to take meaning from written words — `consult` | *Dataz | /dataz/ |
 | `red` | the color term for red | *Zatat | /zatat/ |
 | `red-dragon-kind` | a red dragon | *Shanaq | /ʃanaq/ |
 | `reef-rubble` | Broken coral debris behind a reef. | *Shangav | /ʃaŋav/ |
@@ -177,6 +181,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `sea` | a body of salt water | *Shaqash | /ʃaqaʃ/ |
 | `sea-elf-kind` | a sea elf | *Ngatax | /ŋatax/ |
 | `sea-ice` | a biome class | *Vangang | /vaŋaŋ/ |
+| `sense` | to perceive another's felt bodily state — `needs` | *Xashax | /xaʃax/ |
 | `shadow` | cast dark, distinct from open gloom | *Naxav | /naxav/ |
 | `shrieker-kind` | a shrieker | *Vaxas | /vaxas/ |
 | `shrubland` | a biome class | *Sadad | /sadad/ |
@@ -221,6 +226,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `valley` | low ground between heights | *Shavax | /ʃavax/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Bavad | /bavad/ |
 | `vine` | a staple crop | *Banang | /banaŋ/ |
+| `wait` | to let time pass without acting — `wait` | *Dashaz | /daʃaz/ |
 | `water` | the drinkable liquid | *Xanab | /xanab/ |
 | `west` | the direction of decreasing longitude | *Vashaj | /vaʃaj/ |
 | `wheat` | a staple crop | *Xaxaj | /xaxaj/ |
@@ -230,5 +236,6 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `wood-elf-kind` | a wood elf | *Vaxad | /vaxad/ |
 | `wooded-grassland` | Grassland with scattered trees. | *Dazag | /dazag/ |
 | `woolly-mammoth-kind` | a woolly mammoth | *Vabash | /vabaʃ/ |
+| `write` | to set words down in writing — `write` | *Vazad | /vazad/ |
 | `xorn-kind` | a xorn | *Qaxash | /qaxaʃ/ |
 | `yellow` | the color term for yellow | *Qadan | /qadan/ |

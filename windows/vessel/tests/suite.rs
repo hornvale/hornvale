@@ -17,10 +17,18 @@
 
 mod common;
 
+#[path = "suite/action_module.rs"]
+mod action_module;
+#[path = "suite/action_mood.rs"]
+mod action_mood;
+#[path = "suite/body_mass.rs"]
+mod body_mass;
 #[path = "suite/course_properties.rs"]
 mod course_properties;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
+#[path = "suite/gate_table.rs"]
+mod gate_table;
 #[path = "suite/lantern_fabric.rs"]
 mod lantern_fabric;
 #[path = "suite/lantern_lens.rs"]
@@ -31,8 +39,16 @@ mod lantern_light;
 mod lantern_night;
 #[path = "suite/lantern_seam.rs"]
 mod lantern_seam;
+#[path = "suite/ledger_query_equivalence.rs"]
+mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/ooc_namespace.rs"]
+mod ooc_namespace;
+#[path = "suite/ooc_objective.rs"]
+mod ooc_objective;
+#[path = "suite/player_acts_commit.rs"]
+mod player_acts_commit;
 #[path = "suite/possess_target.rs"]
 mod possess_target;
 #[path = "suite/possession_moves.rs"]
@@ -55,6 +71,8 @@ mod the_handle;
 mod the_lintel;
 #[path = "suite/the_purview.rs"]
 mod the_purview;
+#[path = "suite/tick_commit_budget.rs"]
+mod tick_commit_budget;
 #[path = "suite/underworld_level_generation.rs"]
 mod underworld_level_generation;
 #[path = "suite/walker_battery.rs"]

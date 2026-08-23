@@ -9,7 +9,7 @@
 
 use hornvale_game::driver::Driver;
 use hornvale_game::{input, term};
-use hornvale_game_core::{MIN_HEIGHT, MIN_WIDTH};
+use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_vessel::PossessTarget;
 
 const USAGE: &str = "usage: hornvale-game --seed <N> [--target flagship|most-populous-settlement]";
@@ -77,14 +77,35 @@ fn terminal_size() -> std::io::Result<(u16, u16)> {
 
 /// Draw the driver's current state at the terminal's current size.
 ///
-/// Reads `driver.snapshot()`/`cursor()`/`strip_text()` fresh each call
-/// rather than being handed them, so every call site redraws the driver's
-/// true current state rather than whatever it happened to return from the
-/// action that triggered the redraw (`Event::Resize` has no action at all).
+/// Reads `driver.snapshot()`/`focus()`/`cursor()`/`strip_text()`/
+/// `line_text()`/`caret()`/`echo()` fresh each call rather than being
+/// handed them, so every call site redraws the driver's true current state
+/// rather than whatever it happened to return from the action that
+/// triggered the redraw (`Event::Resize` has no action at all). The command
+/// buffer moved into `Driver` itself with Task 3 (The Stylus) — it used to
+/// be a separate `bin::line::Line` this loop owned alongside the driver,
+/// but `Driver::apply` now needs to mutate it directly to answer `Submit`,
+/// so `Driver` owns it and this function reads it back through the small
+/// accessors rather than threading a second mutable buffer through the
+/// loop.
 fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
     let (w, h) = terminal_size()?;
     let json = driver.snapshot();
-    match hornvale_game_core::render_with(&json, w, h, driver.cursor(), driver.strip_text()) {
+    let text = driver.line_text();
+    let cmd_line = CommandLine {
+        text: &text,
+        caret: driver.caret(),
+    };
+    match hornvale_game_core::render_with(
+        &json,
+        w,
+        h,
+        driver.focus(),
+        driver.cursor(),
+        cmd_line,
+        driver.strip_text(),
+        driver.echo(),
+    ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
     }
@@ -92,11 +113,20 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
 
 /// The main loop: sync the driver's plate height, draw the opening, then
 /// read one key at a time. Each key is mapped to an [`input::Action`] under
-/// the driver's current [`input::Mode`] — `Action::None` does nothing at
-/// all, costing no turn and no redraw; every other action is applied and
-/// its reply redrawn. `release` (bound to capital `Q`, normal mode only)
-/// ends the loop after its own reply is drawn, so the user sees the sim's
-/// own parting line before the terminal is restored.
+/// the driver's current [`hornvale_game_core::Focus`] — `Action::None` does
+/// nothing at all, costing no turn and no redraw; every other action is
+/// applied and its reply redrawn.
+///
+/// **Release now reads the driver's own answer.** Before this campaign,
+/// `release` was detected by matching the sent verb line
+/// (`Action::Verb("release")`) — a check that could only ever see the
+/// `"release"` spelling, even though the sim also honours `"quit"` (ledger
+/// #8). `Driver::apply` now returns whether the possession RELEASED, so
+/// this loop asks the driver directly rather than re-deriving the answer
+/// from what it happened to send. The final `redraw` still runs before the
+/// loop returns, so the player sees the sim's own parting line before the
+/// terminal is restored (`main`'s `run` explicitly drops the terminal only
+/// after `play` returns).
 ///
 /// `driver.resize` is called here (startup) and on every `Event::Resize` —
 /// never on a plain key press, since a terminal's size does not change
@@ -111,20 +141,11 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     loop {
         match read()? {
             Event::Key(key) => {
-                let action = input::action_for(key, driver.mode());
+                let action = input::action_for(key, driver.focus());
                 if matches!(action, input::Action::None) {
                     continue;
                 }
-                // Detected by matching the SENT verb, not the sim's answer —
-                // correct today only because `input::verb_for` is the sole
-                // source of outgoing verbs and its only release-shaped line
-                // is the literal string `"release"` (it never emits
-                // `"quit"`, the sim's other synonym for the same thing). If
-                // a future free-text input mode lets a player type `quit`
-                // directly, this check needs to grow with it or move to
-                // reading the driver's answer instead.
-                let released = matches!(&action, input::Action::Verb(v) if v == "release");
-                driver.apply(action);
+                let released = driver.apply(action);
                 redraw(term, driver)?;
                 if released {
                     return Ok(());

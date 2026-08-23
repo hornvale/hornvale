@@ -61,20 +61,26 @@ pub enum GapReason {
     /// [`GapReason::Experiential`], which says a particular culture never met
     /// a referent others do name.
     Unnameable(String),
+    /// A gap rooted in the world's *absence* of a referent: the concept names
+    /// an out-of-character act, so no culture can ever encounter it and no
+    /// tongue can ever have a word for it. Unlike the other three, this gap
+    /// can never close.
+    Extradiegetic(String),
 }
 
 impl std::fmt::Display for GapReason {
     /// The canonical recountable rendering of a gap's reason, tagged with
     /// its provenance kind: `gap (experiential): <text>` /
-    /// `gap (perceptual): <text>` / `gap (unnameable): <text>`. Every surface
-    /// that recounts a gap (the tongue realizer's
-    /// [`crate::grammar::TongueGap`]; the CLI's dictionary dump) should
-    /// render through this, never `{:?}`.
+    /// `gap (perceptual): <text>` / `gap (unnameable): <text>` /
+    /// `gap (extradiegetic): <text>`. Every surface that recounts a gap (the
+    /// tongue realizer's [`crate::grammar::TongueGap`]; the CLI's dictionary
+    /// dump) should render through this, never `{:?}`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GapReason::Experiential(text) => write!(f, "gap (experiential): {text}"),
             GapReason::Perceptual(text) => write!(f, "gap (perceptual): {text}"),
             GapReason::Unnameable(text) => write!(f, "gap (unnameable): {text}"),
+            GapReason::Extradiegetic(text) => write!(f, "gap (extradiegetic): {text}"),
         }
     }
 }
@@ -251,15 +257,17 @@ fn compound_entry(
 }
 
 /// The family-level proto-root universe: every concept in `exposures`
-/// EXCEPT one gapped [`GapReason::Unnameable`]. The universe is otherwise
-/// the WHOLE `exposures` key set, Steeped/KnowsOf/Unknown alike, so a
-/// Steeped concept reserves the same distinct proto-root regardless of
-/// which other concepts a given world exposed — keeping the assignment
-/// world-independent and cognate-safe. `Unnameable` is the one carve-out:
-/// the referent is real but no culture here has the concept to name it at
-/// all, so no proto-root is reserved for it — a reconstructed ancestor must
-/// not be handed a word for something none of its daughters could ever have
-/// spoken of.
+/// EXCEPT one gapped [`GapReason::Unnameable`] or [`GapReason::Extradiegetic`].
+/// The universe is otherwise the WHOLE `exposures` key set, Steeped/KnowsOf/
+/// Unknown alike, so a Steeped concept reserves the same distinct proto-root
+/// regardless of which other concepts a given world exposed — keeping the
+/// assignment world-independent and cognate-safe. The two carve-outs exclude
+/// for different reasons: `Unnameable` says the referent is real but no
+/// culture here has the concept to name it at all; `Extradiegetic` says
+/// there is no referent in the world for ANY culture to ever meet. Either
+/// way no proto-root is reserved — a reconstructed ancestor must not be
+/// handed a word for something none of its daughters could ever have spoken
+/// of.
 ///
 /// **`pub` since The Salt's follow-up, and the reason is a defect the
 /// duplication of this rule caused.** `windows/lab`'s `monophyly-goblinoid`
@@ -282,7 +290,7 @@ pub fn proto_root_universe(exposures: &BTreeMap<String, ExposureClass>) -> Vec<&
             !matches!(
                 class,
                 ExposureClass::Unknown {
-                    reason: GapReason::Unnameable(_)
+                    reason: GapReason::Unnameable(_) | GapReason::Extradiegetic(_)
                 }
             )
         })
@@ -916,6 +924,34 @@ mod tests {
             universe.len(),
             1,
             "exactly the non-Unnameable concept should survive the filter"
+        );
+    }
+
+    #[test]
+    fn proto_root_universe_excludes_extradiegetic_concepts() {
+        let mut exposures = one_steeped("water");
+        exposures.insert(
+            "operator-explain".to_string(),
+            ExposureClass::Unknown {
+                reason: GapReason::Extradiegetic(
+                    "an out-of-character act has no referent in the world".to_string(),
+                ),
+            },
+        );
+
+        let universe = proto_root_universe(&exposures);
+        assert!(
+            !universe.contains(&"operator-explain"),
+            "an Extradiegetic concept must not enter the proto-root universe"
+        );
+        assert!(
+            universe.contains(&"water"),
+            "a Steeped concept must still enter"
+        );
+        assert_eq!(
+            universe.len(),
+            1,
+            "exactly the non-excluded concept survives"
         );
     }
 

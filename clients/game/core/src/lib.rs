@@ -64,6 +64,43 @@ impl From<serde_json::Error> for Error {
     }
 }
 
+/// Which pane a key press is addressed to.
+///
+/// Three modes. [`Focus::Walk`] is the default and the player's primary:
+/// arrows and `<`/`>` are movement commands sent to the session, any other
+/// printable key bounces to the CLI and types itself — that routing will
+/// live in the binary's driver (Tasks 2–3); this enum only names the
+/// states. [`Focus::Cli`] is the command line; [`Focus::Map`] drives the
+/// map cursor. `Esc` cycles Walk↔Cli and returns Map→Walk (the transition
+/// also lives in the binary's driver).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Focus {
+    /// Movement commands go straight to the session; printable keys bounce
+    /// to the CLI and type themselves.
+    #[default]
+    Walk,
+    /// The command line is listening. Text is the default destination.
+    Cli,
+    /// The map is listening: arrows drive the map cursor, `-`/`+`/`=` zoom.
+    Map,
+}
+
+/// The command line's contents, as the renderer sees them.
+///
+/// A borrowed view, never ownership: the buffer lives in the binary
+/// (`hornvale_game::line::Line`) and is handed over for drawing, the same
+/// way [`render_with`]'s `strip` already is. This crate has no dependency
+/// on any hornvale crate and gains none here — a `&str` and an index are
+/// the whole contract.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CommandLine<'a> {
+    /// What has been typed so far.
+    pub text: &'a str,
+    /// The insertion point, as a CHARACTER offset into `text` — never a
+    /// byte offset, so a multi-byte glyph cannot split it.
+    pub caret: usize,
+}
+
 /// A free-roaming cursor's screen position, in grid cells.
 ///
 /// **The cursor is not ink.** It is the terminal's own hardware cursor,
@@ -84,12 +121,26 @@ pub struct Cursor {
 /// Render `json` into a `w`-by-`h` character grid, plus the **screen**
 /// position the terminal cursor should sit at (see [`Cursor`]).
 ///
-/// `cursor`, when `Some`, is reported back verbatim as the second element
-/// of the returned tuple — never drawn onto the [`Grid`]. `strip`, when
-/// `Some`, is drawn as the look-mode strip beneath the plate (see
-/// `strip::draw`); the row it occupies is reserved either way (see
+/// A terminal has exactly one hardware cursor, so its position is where
+/// [`Focus`] becomes visible rather than any ink on the [`Grid`] (§2.1
+/// forbids ornament occupying an informative cell): with [`Focus::Cli`],
+/// the returned position is the command line's own caret, computed by
+/// [`entry::draw`] from `line`; with [`Focus::Map`], it is `map_cursor`
+/// verbatim, reported back exactly as `render_with`'s old `cursor`
+/// parameter used to be — never drawn onto the grid either way. With
+/// [`Focus::Walk`], neither is consulted — it claims no cursor at all, so
+/// `None` comes back; otherwise exactly one of the two is consulted per
+/// call, the other's input simply unused for that turn, not merged or
+/// overridden.
+///
+/// `strip`, when `Some`, is drawn as the map strip beneath the plate
+/// (see `strip::draw`); the row it occupies is reserved either way (see
 /// `spread`'s module doc), so a caller that starts passing `Some` never
 /// resizes the plate a second time.
+///
+/// `echo`, when `Some`, is the most recently SUBMITTED line, drawn above the
+/// command row (see `entry::draw`'s doc for the ask-then-answer layout and
+/// the reservation discipline the row it occupies follows).
 ///
 /// **This is the row The Portolan's Task 2 costs the plate.** At exactly
 /// 80×24, the plate's content height was 21 rows before this row was
@@ -100,19 +151,38 @@ pub struct Cursor {
 ///
 /// Fails if `json` does not parse, or if the requested grid is smaller
 /// than the monochrome floor ([`MIN_WIDTH`] by [`MIN_HEIGHT`]).
+#[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 8, mirroring `entry::draw`'s own allow — see that function's doc for why splitting the parameters would hide more than it clarifies
 pub fn render_with(
     json: &str,
     w: u16,
     h: u16,
-    cursor: Option<Cursor>,
+    focus: Focus,
+    map_cursor: Option<Cursor>,
+    line: CommandLine<'_>,
     strip: Option<&str>,
+    echo: Option<&str>,
 ) -> Result<(Grid, Option<(u16, u16)>), Error> {
     if w < MIN_WIDTH || h < MIN_HEIGHT {
         return Err(Error::TooSmall { w, h });
     }
     let snapshot = Snapshot::parse(json)?;
-    let grid = spread::compose(&snapshot, w, h, strip);
-    Ok((grid, cursor.map(|c| (c.x, c.y))))
+    let (grid, caret) = spread::compose(&snapshot, w, h, strip, focus, line, echo);
+    // ONE hardware cursor, so its location IS the focus indicator: with
+    // `Focus::Cli` it is the caret in the entry pane; with `Focus::Map`,
+    // the map cursor on the plate — never both, though a mode may claim no
+    // cursor at all (`Focus::Map` without a map cursor, or `Focus::Walk`,
+    // reports none). See `Focus`.
+    let cursor = match focus {
+        Focus::Cli => caret,
+        Focus::Map => map_cursor.map(|c| (c.x, c.y)),
+        // Walk drives neither pane's cursor: the buffer is not being edited
+        // (printable keys bounce to the CLI), so the caret is not reported;
+        // the map cursor is not moving either. Deliberately NEITHER — the
+        // "never both" rule above is about ambiguity between the two pane
+        // cursors, and Walk claims no cursor at all.
+        Focus::Walk => None,
+    };
+    Ok((grid, cursor))
 }
 
 /// Render `json` — an emitted `vessel/session/v2` document — into a
@@ -121,16 +191,36 @@ pub fn render_with(
 /// not parse, or if the requested grid is smaller than the monochrome
 /// floor ([`MIN_WIDTH`] by [`MIN_HEIGHT`]).
 ///
-/// Delegates to [`render_with`] with no cursor and no look-mode strip —
-/// kept as its own entry point because existing callers (`tests/`, the
-/// terminal binary) depend on this exact signature.
+/// Delegates to [`render_with`] with the CLI focused, no map cursor, an
+/// empty command line and no map strip — kept as its own entry point
+/// because existing callers (`tests/`, the terminal binary) depend on this
+/// exact signature. It drops the returned cursor position entirely, so the
+/// default focus/empty-line choice is unobservable through this function;
+/// it exists only to satisfy `render_with`'s parameters.
 pub fn render(json: &str, w: u16, h: u16) -> Result<Grid, Error> {
-    render_with(json, w, h, None, None).map(|(grid, _)| grid)
+    render_with(
+        json,
+        w,
+        h,
+        Focus::Cli,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+    )
+    .map(|(grid, _)| grid)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Walk is the DEFAULT focus — the game starts walking, not typing
+    /// (The Stride design, "Mode model").
+    #[test]
+    fn walk_is_the_default_focus() {
+        assert_eq!(Focus::default(), Focus::Walk);
+    }
 
     /// `render` of a document that is not even valid JSON must surface
     /// `Error::Parse`, not panic and not `Error::TooSmall`.
@@ -196,28 +286,69 @@ mod tests {
     #[test]
     fn the_eighty_by_twentyfour_floor_survives_the_strip() {
         let json = fixture_json();
-        let (grid, _) =
-            render_with(&json, 80, 24, None, Some("Vngashngatva")).expect("renders at the floor");
+        let (grid, _) = render_with(
+            &json,
+            80,
+            24,
+            Focus::Cli,
+            None,
+            CommandLine::default(),
+            Some("Vngashngatva"),
+            None,
+        )
+        .expect("renders at the floor");
         assert_eq!(grid.width(), 80);
         assert_eq!(grid.height(), 24);
         assert!(
             matches!(
-                render_with(&json, 79, 24, None, None),
+                render_with(
+                    &json,
+                    79,
+                    24,
+                    Focus::Cli,
+                    None,
+                    CommandLine::default(),
+                    None,
+                    None
+                ),
                 Err(Error::TooSmall { .. })
             ),
             "79 columns must still be refused, not degraded"
         );
     }
 
-    /// The cursor is NOT ink. It must occupy no grid cell — `render_with`
-    /// reports a position for the terminal to place its own cursor at, and
-    /// the grid is byte-identical with and without one.
+    /// The map cursor is NOT ink. It must occupy no grid cell —
+    /// `render_with` reports a position for the terminal to place its own
+    /// cursor at, and the grid is byte-identical with and without one.
+    /// Exercised with the map focused, since a map cursor is only ever
+    /// reported in [`Focus::Map`] (see
+    /// `the_caret_is_not_reported_when_the_map_is_focused` below for the
+    /// entry pane's own half of this same dispatch).
     #[test]
     fn the_cursor_occupies_no_cell() {
         let json = fixture_json();
-        let (plain, none_at) = render_with(&json, 80, 24, None, None).expect("renders");
-        let (with, some_at) =
-            render_with(&json, 80, 24, Some(Cursor { x: 3, y: 4 }), None).expect("renders");
+        let (plain, none_at) = render_with(
+            &json,
+            80,
+            24,
+            Focus::Map,
+            None,
+            CommandLine::default(),
+            None,
+            None,
+        )
+        .expect("renders");
+        let (with, some_at) = render_with(
+            &json,
+            80,
+            24,
+            Focus::Map,
+            Some(Cursor { x: 3, y: 4 }),
+            CommandLine::default(),
+            None,
+            None,
+        )
+        .expect("renders");
         assert!(none_at.is_none());
         assert_eq!(
             some_at,
@@ -233,5 +364,67 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// `render_with`'s OWN version of `entry`'s same-named test: this one
+    /// exercises the dispatch in `render_with` itself (`match focus { Cli
+    /// => caret, Map => map_cursor }`), not `entry::draw` in isolation. A
+    /// populated command line and a set map cursor both go in; with the map
+    /// focused, only the map cursor may come back out. Step 8's mutation
+    /// (neutralising that match to always return `caret`) is caught here,
+    /// not by `entry`'s test of the same name, which never calls
+    /// `render_with` at all.
+    #[test]
+    fn the_caret_is_not_reported_when_the_map_is_focused() {
+        let json = fixture_json();
+        let (_, at) = render_with(
+            &json,
+            80,
+            24,
+            Focus::Map,
+            Some(Cursor { x: 3, y: 4 }),
+            CommandLine {
+                text: "look",
+                caret: 4,
+            },
+            None,
+            None,
+        )
+        .expect("renders");
+        assert_eq!(
+            at,
+            Some((3, 4)),
+            "with the map focused, render_with must report the MAP cursor, \
+             never the entry pane's caret"
+        );
+    }
+
+    /// Walk claims NO cursor: even with a populated command line and a set
+    /// map cursor both present in the arguments, `render_with` must return
+    /// `None` for the cursor position — neither pane's cursor is reported
+    /// while the player is walking. Pins against a later regression that
+    /// leaks the entry caret (or the map cursor) under the default focus.
+    #[test]
+    fn walk_reports_no_cursor_at_all() {
+        let json = fixture_json();
+        let (_, at) = render_with(
+            &json,
+            80,
+            24,
+            Focus::Walk,
+            Some(Cursor { x: 3, y: 4 }),
+            CommandLine {
+                text: "look",
+                caret: 4,
+            },
+            None,
+            None,
+        )
+        .expect("renders");
+        assert_eq!(
+            at, None,
+            "Walk claims no cursor; render_with must report None, never \
+             either pane's cursor"
+        );
     }
 }
