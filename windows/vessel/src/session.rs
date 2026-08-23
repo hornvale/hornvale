@@ -4,12 +4,14 @@
 use crate::action::{Action, Mood};
 use crate::agent::check_species_known;
 use crate::clock::{climb_factor, cost_ticks, days_of, mass_for_species};
+use crate::controller::{Controller, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Npc, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain,
-    affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_npcs, next_awake_day, rested_fact, species_activity, village_or_fallback,
+    LocaleTerrain, Mode, Npc, Occupancy, PLAN_BUDGET, Perceived, PrimaryAfraidMemo, RESTED,
+    SUSTENANCE, Terrain, affect_of_memo_occupied, agent_at_fact, agent_position, believed_water,
+    built_rooms, derive_npcs, derive_wild_npcs, drive_at, lowest_unvisited_neighbor_memo,
+    next_awake_day, rested_fact, species_activity, stage0_resolve, village_or_fallback,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -1063,6 +1065,75 @@ impl<'w> Session<'w> {
     /// reads through here now.
     pub fn position(&self) -> RoomAddr {
         agent_position(&self.ledger, self.driven_body(), self.day)
+    }
+
+    /// The driven body's own commitment mode, as of right now — arbitration
+    /// run for the possessed body itself (The Hand, Task 5, spec §2.3: the
+    /// co-present decision made mechanical). A possession is not displacement;
+    /// the host has its own drives and its own felt state while you ride it,
+    /// and this is that computation's route out, alongside
+    /// [`Self::committed_agent_at_count_for`] for what actually happened.
+    ///
+    /// Purely re-derived from the frozen ledger every call (the belief == fold
+    /// discipline `believed_water`/`drive_at` already carry), never a stored
+    /// field — a possessed body's `agent-at` history is exactly what a
+    /// creature's own is, so there is nothing session-persistent to keep in
+    /// step. `None` only if the roster is somehow empty, which `Session::start`
+    /// never produces.
+    ///
+    /// **Scope, honestly stated**: this reads the Stage-0 single-drive
+    /// (thirst-only) arbitration — the same one [`crate::controller::
+    /// DefaultController`] wraps — not the full species drive stack
+    /// [`DriveMovements`]'s own walk gives every other body (thermal, fatigue,
+    /// hunger, danger, social). Giving the driven body that full richness
+    /// needs the same per-tick hysteresis state (`WalkState`'s `believed`,
+    /// `visited`, carried `mode`) every other body's walk keeps between ticks,
+    /// which this task does not add — see the Task 5 report.
+    pub fn driven_mode(&self) -> Option<Mode> {
+        let npc = self.driven_body();
+        let terrain = LocaleTerrain::with_fields(
+            &self.wctx.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+            Some(&self.built),
+            Some(&self.mesh_memo),
+        );
+        let position = self.position();
+        let drive = drive_at(
+            &self.ledger,
+            npc.entity,
+            &npc.home,
+            self.day,
+            &SUSTENANCE,
+            &terrain,
+            npc.metabolic_class,
+        );
+        let believed = believed_water(&self.ledger, npc, self.day, &terrain, PLAN_BUDGET);
+        let mut visited = std::collections::BTreeSet::new();
+        visited.insert(position.clone());
+        let mut scratch_memo = hornvale_kernel::RoomMeshMemo::new();
+        let explore_step =
+            lowest_unvisited_neighbor_memo(&position, &visited, &terrain, &mut scratch_memo);
+        let view = Perceived {
+            position,
+            drive,
+            fatigue: 0.0,
+            believed_water: believed,
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step,
+        };
+        // "The loop arbitrates first, unconditionally" (spec §3.3): the mode
+        // and affect are the host's own, regardless of who ends up deciding
+        // what the body does. `intent` is discarded here — the driven body's
+        // committed acts still come from the verb loop (`go`, `drink`, …),
+        // never from this observation — but the controller is still asked,
+        // exactly as every other body's tick asks its own, so nothing about
+        // this read learns who chose either.
+        let resolution = stage0_resolve(&view, &npc.home, &SUSTENANCE, PLAN_BUDGET, npc.entity);
+        let mut controller = PlayerController::new();
+        let _ = controller.intend(npc, &view, resolution.mode);
+        Some(resolution.mode)
     }
 
     /// The accumulated knowledge (read-only).

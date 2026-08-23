@@ -25,6 +25,8 @@ mod action_mood;
 mod body_fields;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
+#[path = "suite/controller_swap.rs"]
+mod controller_swap;
 #[path = "suite/course_properties.rs"]
 mod course_properties;
 #[path = "suite/display_handle.rs"]

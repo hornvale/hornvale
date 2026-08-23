@@ -3209,6 +3209,33 @@ impl HomeNavCache {
 /// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
+    stage0_resolve(
+        view,
+        home,
+        p,
+        budget,
+        EntityId::new(1).expect("1 is a valid nonzero entity id"),
+    )
+    .intent
+}
+
+/// [`decide`]'s own computation, minus the placeholder entity and the
+/// `.intent` projection — extracted (The Hand, Task 5) so a caller that also
+/// needs the [`Mode`]/[`Affect`] half of the [`Resolution`] (the driven
+/// body's own co-present arbitration, spec §2.3) can share the identical
+/// Stage-0 setup rather than duplicating it. `decide` is unchanged in VALUE
+/// by this extraction — same drive set, same disposition, same fresh
+/// per-call caches — it only now takes a real `entity` (used solely as the
+/// `HomeNavCache` key, and each call still builds a throwaway single-call
+/// cache, so a different entity id changes nothing about the result).
+/// type-audit: bare-ok(count: budget)
+pub(crate) fn stage0_resolve(
+    view: &Perceived,
+    home: &RoomAddr,
+    p: &DriveParams,
+    budget: usize,
+    entity: EntityId,
+) -> Resolution {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
     // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
@@ -3228,11 +3255,10 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
         &disposition,
         Mode::Idle,
         budget,
-        EntityId::new(1).expect("1 is a valid nonzero entity id"),
+        entity,
         &mut home_nav_cache,
         &mut mesh_memo,
     )
-    .intent
 }
 
 /// How a creature is disposed to decide right now — the psychology dials that
@@ -4084,7 +4110,7 @@ pub fn alarm_field_memo(
 /// pathological distance genuinely gives up (`Intent::Hold`) rather than
 /// paying for a global search — the one search-budget judgment call
 /// (spec §8).
-const PLAN_BUDGET: usize = 1_000;
+pub(crate) const PLAN_BUDGET: usize = 1_000;
 
 /// Catch-up's own step cap (The Threshold task 7, spec §5.3): the most
 /// replay iterations — each either a replayed [`Action::MoveWithin`] hop or
@@ -5380,7 +5406,7 @@ fn nearer_to_home(
 /// fix round, Finding 2) and the stateless health-sampler read
 /// [`affect_of_memo_occupied`] (rider (b)) — both thread whatever memo THEIR
 /// own caller supplies, never build one silently inline.
-fn lowest_unvisited_neighbor_memo(
+pub(crate) fn lowest_unvisited_neighbor_memo(
     from: &RoomAddr,
     visited: &std::collections::BTreeSet<RoomAddr>,
     terrain: &dyn Terrain,
