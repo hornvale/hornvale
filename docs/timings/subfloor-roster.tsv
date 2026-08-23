@@ -910,6 +910,8 @@ hornvale-kernel::hornvale_kernel$ledger::tests::commit_and_query_roundtrip
 hornvale-kernel::hornvale_kernel$ledger::tests::committed_numbers_and_days_are_quantized
 hornvale-kernel::hornvale_kernel$ledger::tests::entity_id_zero_is_unrepresentable
 hornvale-kernel::hornvale_kernel$ledger::tests::facts_about_yields_commit_order_not_index_key_order
+hornvale-kernel::hornvale_kernel$ledger::tests::facts_of_agrees_before_the_index_exists
+hornvale-kernel::hornvale_kernel$ledger::tests::facts_of_equals_scan_in_commit_order
 hornvale-kernel::hornvale_kernel$ledger::tests::finite_numbers_still_commit
 hornvale-kernel::hornvale_kernel$ledger::tests::functional_contradiction_is_rejected
 hornvale-kernel::hornvale_kernel$ledger::tests::identical_recommit_is_idempotent
@@ -1174,7 +1176,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1232,7 +1233,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
@@ -2621,6 +2621,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2642,6 +2643,7 @@ hornvale-vessel::suite$lantern_lens::the_two_segments_of_the_curve_meet_with_mat
 hornvale-vessel::suite$lantern_light::a_real_chamber_is_not_uniformly_lit
 hornvale-vessel::suite$lantern_light::light_reaches_exactly_what_sight_reaches
 hornvale-vessel::suite$lantern_light::the_falloff_ratio_between_two_cells_is_inverse_square
+hornvale-vessel::suite$ledger_query_equivalence::facts_of_selects_what_find_and_filter_selected
 hornvale-vessel::suite$possess_target::the_default_target_is_the_flagship
 hornvale-vessel::suite$session_snapshot::the_fixture_is_taken_at_the_transcript_s_own_day
 hornvale-vessel::suite$submerged::a_rock_stratum_is_not_submerged
