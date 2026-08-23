@@ -213,7 +213,14 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
-| `chamber/v2` | the underworld chamber derivation, keyed on a delve-ladder address |
+| `chamber/v3` | the underworld chamber derivation, keyed on a delve-ladder address with a floor |
+| `chamber/run-floors/v1` | how many floors one run realizes, keyed on (cell, entrance, branch, band) |
+| `chamber/branch-character/v1` | which character one branch carries, keyed on (cell, entrance, branch) |
+| `chamber/branch-barrier/v1` | the barrier thinness of one branch, keyed on (cell, entrance, branch) |
+| `chamber/branch-count/v1` | how many branches one cave system realizes, keyed on (cell, entrance) |
+| `chamber/entrance-count/v1` | how many surface apertures one cave system opens, keyed on cell |
+| `chamber/entrance-mouth/v1` | which floor of the lattice one entrance opens into, keyed on (cell, entrance) |
+| `chamber/branch-root/v1` | where a branch roots on its parent, keyed on (cell, entrance, branch) |
 | `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact cell |
 | `hazard/event/v1` | the per-cell hazard-event draw, keyed on (cell, process, world-time block) |
 

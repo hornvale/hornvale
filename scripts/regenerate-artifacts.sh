@@ -627,6 +627,76 @@ gen_strange_sites() {
     run -p hornvale -- locale --world "$wsky" --strange
 }
 
+# THE UNDERWORLD WITNESS (The Stope, Task 2b). Until this line existed, no
+# committed artifact carried one byte of chamber-lattice content: you could
+# have deleted every chamber from every world and this whole script would have
+# produced a byte-identical tree, so every later "regenerate and see what
+# moved" would have said "nothing moved" and meant nothing.
+#
+# World-free (Group C): each `underworld` call builds its own world internally
+# to BuildDepth::Terrain -- the shallowest rung a chamber needs -- and reads
+# none of $w42/$wsky/$wlocked. Measured 0.37 s per seed against a warm binary,
+# so the three-seed panel is ~1 s inside a ~50-60 s rebaseline.
+#
+# THREE SEEDS, not one: the campaign's own preregistered panel (spec S5). One
+# seed's chamber counts are an anecdote, and a witness that moves on one world
+# and not the other two is telling you something a single-seed readout cannot.
+#
+# Framing lines are hand-authored (the redirect replaces the whole file body,
+# so re-emit them here); the fenced blocks are the `underworld` verb's exact,
+# drift-checked output.
+gen_underworld_lattice() {
+    printf '# The Underworld of Seeds 42, 7 and 1234\n\n'
+    printf 'The chamber lattice as three worlds actually realize it: how many cave\n'
+    printf 'systems each has, how many chambers exist beneath them, how those chambers\n'
+    printf 'distribute over the delve ladder and over the rock they sit in, and then --\n'
+    printf 'run by run -- the first three cave systems of each world.\n\n'
+    printf 'A chamber is never stored. Existence and content are pure functions of an\n'
+    printf 'address, so this page is a *witness*, not a record: every line is re-derived\n'
+    printf 'from the seed on each regeneration, and a change to the derivation key, to\n'
+    printf 'the existence draw, to a run'"'"'s drawn length, to a chamber'"'"'s content or\n'
+    printf 'to the depth the rock grants a cave moves bytes here.\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '`reachable` is the count a player would actually experience: chambers\n'
+    printf 'reachable from an entrance by the passage graph, whose vertical axis is\n'
+    printf 'the descent sequence (a run'"'"'s drawn length is its sojourn; past it, the\n'
+    printf 'next band'"'"'s floor 0). That sequence is the number, not a rounding error.\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'The `key` column is the real derivation key of that run'"'"'s floor 0 --\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'the string `StreamLabel::dynamic` hashes -- not a rendering of the address.\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'Each run shows one glyph per floor the LATTICE admits, never per floor the\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'run drew: a `#` exists, a `.` was refused by the existence draw (or sits\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'deeper than the cave'"'"'s budget reaches), and a `_` is past that run'"'"'s\n'
+    printf 'own drawn length. Bounding the row by the drawn length instead is what made\n'
+    printf 'an earlier version of this page unable to see either floor gate at all.\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'The `junctions` line counts the links between DIFFERENT cave systems that\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '`junctions_at` derives at each shared delve band -- derived, not drawn: it\n'
+    printf 'consumes no stream leg OF ITS OWN, so a shortcut is a fact about the geology\n'
+    printf 'rather than a die roll on top of an epoch. (It does travel the legs the facts\n'
+    printf 'it reads already have -- an existence draw here, a branch character there --\n'
+    printf 'and an earlier version of this page dropped that qualifier and asserted the\n'
+    printf 'falsehood that it consumes no stream at all.) A link is an EDGE, counted once\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'rather than once per endpoint; `largest network` is the largest component\n'
+    printf 'within a SINGLE band, because a junction never crosses one -- so systems\n'
+    printf 'joined only at the Undercroft and systems joined only at the Nadir are two\n'
+    printf 'networks, not one, and unioning them would name a component nothing can\n'
+    printf 'walk.\n\n'
+    printf '```text\n'
+    run -p hornvale -- underworld --seed 42
+    printf '\n'
+    run -p hornvale -- underworld --seed 7
+    printf '\n'
+    run -p hornvale -- underworld --seed 1234
+    printf '```\n'
+}
+
 # The atlas bundle. Without this line book/src/gallery/ is in the drift-check
 # list but atlas.js is never rebuilt, so `git diff --exit-code` compares the
 # committed file against itself and reports clean forever (The Staff, Task
@@ -720,6 +790,7 @@ spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-
 spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
+spawn gen_underworld_lattice > docs/audits/underworld-lattice-seed-panel.md
 spawn build_atlas
 
 # Group B: readers of $w42/$wsky/$wlocked.

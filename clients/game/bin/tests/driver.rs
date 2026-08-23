@@ -115,7 +115,7 @@ fn map_focus_at_an_unresolved_band_refuses_rather_than_resolving() {
         "seed 42's flagship must land in the chamber band after one `enter`"
     );
 
-    driver.apply(Action::ToggleFocus);
+    submit_line(&mut driver, "map");
     driver.apply(Action::CursorBy(1, 0));
     assert!(
         driver.cursor().is_some(),
@@ -140,7 +140,7 @@ fn map_focus_at_the_walk_band_resolves_a_real_name() {
         hornvale_game_core::Spatial::Walk { .. }
     ));
 
-    driver.apply(Action::ToggleFocus);
+    submit_line(&mut driver, "map");
     let strip = driver.strip_text();
     assert!(strip.is_some(), "the walk band must resolve to something");
     assert_ne!(
@@ -178,7 +178,7 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
     // exported `NO_COLOR` — and the prior state is restored after.
     with_no_color_removed(|| {
         let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-        driver.apply(Action::ToggleFocus);
+        submit_line(&mut driver, "map");
         let at_observer = driver.strip_text().map(str::to_string);
         // The strip now carries the sight-disclosure caption after the name
         // (Task 5): the name first, then the honesty line.
@@ -231,7 +231,7 @@ fn moving_the_cursor_off_the_observers_box_changes_the_strip() {
 #[test]
 fn resize_re_resolves_against_the_real_plate_height() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-    driver.apply(Action::ToggleFocus);
+    submit_line(&mut driver, "map");
     let at_floor_height = driver.strip_text().map(str::to_string);
     assert!(
         at_floor_height
@@ -276,7 +276,7 @@ fn resize_re_resolves_against_the_real_plate_height() {
 fn the_cursor_clamp_tracks_the_real_plate_height_too() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
     driver.resize(40);
-    driver.apply(Action::ToggleFocus);
+    submit_line(&mut driver, "map");
     driver.apply(Action::CursorBy(0, 1000)); // drive it hard into the bottom clamp
     let cursor = driver
         .cursor()
@@ -414,13 +414,96 @@ fn submitting_empties_the_buffer() {
 }
 
 /// A printable key pressed while the map is focused returns focus to the
-/// CLI *and* types — one keypress, not two (spec §2).
+/// CLI *and* types — one keypress, not two (spec §2). Reaching the map now
+/// takes an explicit route — submitting exactly `map` — because startup
+/// focus is Walk and Esc toggles between Walk and Cli, never onto Map.
 #[test]
 fn a_printable_key_on_the_map_bounces_focus_and_types() {
     let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");
-    d.apply(Action::ToggleFocus);
+    submit_line(&mut d, "map");
     assert_eq!(d.focus(), Focus::Map);
     d.apply(Action::FocusAndType('l'));
     assert_eq!(d.focus(), Focus::Cli);
     assert_eq!(d.line_text(), "l");
+}
+
+/// Type `line` into the buffer and submit it through [`Action::Submit`] —
+/// the same route a player's keystrokes take, never reaching into private
+/// state.
+fn submit_line(d: &mut Driver, line: &str) -> bool {
+    for c in line.chars() {
+        d.apply(Action::Type(c));
+    }
+    d.apply(Action::Submit)
+}
+
+/// Startup focus is the walk mode: arrow keys move immediately.
+#[test]
+fn startup_focus_is_walk() {
+    let d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    assert_eq!(d.focus(), Focus::Walk);
+}
+
+/// The Esc ladder: Walk→Cli→Walk by toggling; submitting exactly `map`
+/// enters the map; Esc from the map lands back on Walk (never Cli).
+#[test]
+fn esc_and_map_submissions_walk_the_three_focuses() {
+    let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");
+    d.apply(Action::ToggleFocus);
+    assert_eq!(d.focus(), Focus::Cli);
+    d.apply(Action::ToggleFocus);
+    assert_eq!(d.focus(), Focus::Walk);
+
+    assert!(
+        !submit_line(&mut d, "map"),
+        "an ordinary submit must not release"
+    );
+    assert_eq!(d.focus(), Focus::Map);
+    d.apply(Action::ToggleFocus);
+    assert_eq!(d.focus(), Focus::Walk, "Esc from the map must land on Walk");
+}
+
+/// An arrow-key movement under Walk executes like a submitted line: echoed,
+/// pushed onto history (so it recalls), buffer untouched, and `apply`
+/// reports `handle`'s release bool (false for an ordinary move).
+#[test]
+fn a_move_action_echoes_historys_and_leaves_the_buffer_alone() {
+    let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");
+    let released = d.apply(Action::Move("north"));
+    assert!(!released, "an ordinary move must not release");
+    assert_eq!(d.echo(), Some("north"));
+    assert_eq!(d.line_text(), "", "a move must not involve the buffer");
+    d.apply(Action::HistoryPrev);
+    assert_eq!(d.line_text(), "north", "the move must be recallable");
+}
+
+/// Only BARE `map` enters the map focus: surrounding whitespace is
+/// tolerated, arguments are not. The rule mirrors the sim's own
+/// bare-from-argument split (`Session::handle`'s `rest.is_empty()` guards
+/// on `map` and `eyes`), not a first-token rule — `map out 2` has `map` as
+/// its first token and must NOT focus.
+///
+/// `map out 2` is the case that pins the decision, because the plausible
+/// wrong answer ("it drew a chart, focus it") is wrong twice over:
+/// `Session::map` takes `&self`, so no argument form moves the plate at
+/// all, and the plate is redrawn from `Spatial` every turn regardless. See
+/// the driver's Submit arm for the full reasoning.
+#[test]
+fn only_bare_map_enters_the_map() {
+    for (line, want_map) in [
+        ("map", true),
+        (" map ", true),
+        ("map x", false),
+        ("map out", false),
+        ("map out 2", false),
+        ("examine map", false),
+    ] {
+        let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");
+        submit_line(&mut d, line);
+        assert_eq!(
+            d.focus(),
+            if want_map { Focus::Map } else { Focus::Walk },
+            "submitting {line:?}"
+        );
+    }
 }

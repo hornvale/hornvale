@@ -538,8 +538,10 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render delta      > docs/di
 # file gets no tracked-ness check on it — and `git diff --exit-code` against an
 # untracked path is silently vacuous, so the check would pass forever. Add a
 # generated directory HERE, in docs/generated-paths.txt, and `git add` its
-# contents in the same commit. `cli/tests/generated_paths.rs` enforces both
-# that every declared path is tracked and that this block still names the file.
+# contents in the same commit. `cli/tests/suite/generated_paths.rs` enforces
+# both that every declared path is tracked and that this block still names the
+# file. A single FILE may be declared too, and sometimes must be — see the
+# already-declared-directory hazard below.
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
 # The drift check, reading its path list from the one file that declares it:
@@ -565,6 +567,14 @@ git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can
 # ever fail. Nothing in regenerate-artifacts.sh guards that.
+# AND THE HAZARD IS NOT LIMITED TO A NEW DIRECTORY — a NEW FILE dropped into
+# an ALREADY-DECLARED one inherits it in full (The Stope, Task 2b). The
+# directory's other tracked files keep the tracked-ness check green, so
+# nothing objects, while `git diff` cannot see the new file at all and the
+# artifact it was added to witness is invisible for as long as it stays out of
+# the index. The remedy is to declare the FILE by name as well as the
+# directory: the tracked-ness check then refuses until the file is `git
+# add`-ed, which is a real, observed refusal rather than a hoped-for one.
 # **THERE IS NO CI** (decision 0125). `.github/workflows/` is deleted — the
 # repo is private, so runner minutes are metered and Pages is gone. The LOCAL
 # gates are the ONLY gate, and this `git diff --exit-code` list is the only
@@ -779,6 +789,24 @@ close: submit `make sluice-stage BRANCH=<branch> REF=<full-sha>`, which
 merges main into the branch IN THE CHAMBER and gates that product without
 pushing it. A conflict is refused at the mouth in milliseconds, before the
 box is ever taken — that is the signal to absorb main locally and resubmit.
+**That sentence was aspirational until 2026-08-23 and is now mechanical.**
+`sluice-run.sh` did not reference `sluice-mouth.sh` at all, and neither did
+`sluice-request.sh` or `sluice-queue.sh` — the only mention anywhere outside
+the mouth itself was a COMMENT in `sluice-request.sh` citing its SHA-validation
+pattern. The mouth was an operator tool: it refused before the box only if a
+human happened to run it. So a candidate that could not merge still took the
+staff, built a worktree, died at the `<merge>` step and exited 10, and
+`campaign/the-deed` did exactly that. The chamber now asks the mouth itself
+before the `flock`, and refuses with 21/23/24 (mouth 1/3/4 offset by 20, since
+the mouth's own 2 collides with the chamber's).
+**It is a fast-fail, not a guarantee, and the difference is the whole design.**
+The check runs outside the claim, so main can move between the verdict and the
+lock — which is exactly what happened to the-deed, whose submission passed the
+mouth and whose LAUNCH did not, twenty minutes later. A stale ADMIT proves
+nothing, so the `<merge>` step stays authoritative and its rc=10 path is
+untouched. For the same reason only a verdict ABOUT THE CANDIDATE is fatal:
+the mouth's exit 2 means "I could not evaluate this", and turning that into a
+refusal would invent a new way to fail closed on a path that used to work.
 Two exceptions: never
 absorb mid-measurement (a preregistered study's baseline and readout must
 see the same physics — finish the readout first), and never while main's

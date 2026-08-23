@@ -55,7 +55,7 @@
 //! Shallows    [ 2,  8)    131  (15.0%)    599  (35.6%)    144  (11.4%)
 //! Deeps       [ 8, 25)    399  (45.7%)    121  ( 7.2%)    366  (28.9%)
 //! Underdeep   [25, 50)     53  ( 6.1%)    150  ( 8.9%)    129  (10.2%)
-//! Sunless     [50,  ∞)    214  (24.5%)    727  (43.2%)    536  (42.3%)
+//! Nadir       [50,  ∞)    214  (24.5%)    727  (43.2%)    536  (42.3%)
 //! ```
 //!
 //! Every rung is occupied on every seed; the thinnest class holds 5.0% and the
@@ -115,6 +115,22 @@ pub enum DelveRung {
     /// Past the habitable ceiling: hot, and the deepest class the measured
     /// cave population reaches.
     ///
+    /// **Named `Sunless` until The Stope renamed it** (spec amendment B.3),
+    /// and the rename is a correction rather than a redecoration. "Sunless"
+    /// read as the eldritch deep — a promise this ladder does not make — while
+    /// the rung means only "past the ΔT at which the ladder stopped modelling
+    /// habitability". It is the open-ended leftover bin, and leftover bins are
+    /// large by construction: 38.65% of cave-bearing land cells terminate here
+    /// (24.49 / 43.25 / 42.34% on seeds 42 / 7 / 1234), which falsified the
+    /// campaign's own prediction that reaching it would be uncommon. `Nadir`
+    /// is astronomical vocabulary — the project's native idiom — and this
+    /// ladder measures ΔT **above the surface datum**, so "the lowest point
+    /// relative to the datum" is coherent with the ladder's own coordinate.
+    ///
+    /// A sixth rung splitting this one was measured and **refused**: 99% of
+    /// the whole super-50 K population lives in `[50, 61)` K, so there is
+    /// nowhere stable to cut (amendment B.2).
+    ///
     /// **Open-ended formally, bounded empirically.** No upper threshold exists
     /// here and none should — a ladder needs a class that cannot overflow. But
     /// no *cave* can reach far into it: reach is capped at
@@ -122,11 +138,11 @@ pub enum DelveRung {
     /// 15–30 K/km, so a cave's ΔT cannot exceed 90 K and measures ~[50, 68] K
     /// in practice, unreachable at all below 16.7 K/km. Read "open-ended" as a
     /// property of the ladder, not as a claim about how hot a chamber gets.
-    Sunless,
+    Nadir,
 }
 
 /// The ΔT (K above the surface datum) beyond which this campaign declares a
-/// chamber uninhabitable, and therefore the ΔT at which [`DelveRung::Sunless`]
+/// chamber uninhabitable, and therefore the ΔT at which [`DelveRung::Nadir`]
 /// begins.
 ///
 /// **Authored, not derived.** Spec §4.1 fixes this value in the spec *before*
@@ -226,7 +242,7 @@ const LADDER: [(DelveRung, f64); 5] = [
     (DelveRung::Shallows, SHALLOWS_TOP_K),
     (DelveRung::Deeps, DEEPS_TOP_K),
     (DelveRung::Underdeep, UNDERDEEP_TOP_K),
-    (DelveRung::Sunless, HABITABLE_CEILING_K),
+    (DelveRung::Nadir, HABITABLE_CEILING_K),
 ];
 
 /// Every rung, `Surface` first and then the habitation rungs shallowest to

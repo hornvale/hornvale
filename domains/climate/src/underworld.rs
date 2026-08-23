@@ -182,7 +182,12 @@ pub enum DelveZone {
     /// Deep habitation, warm enough that living here is a choice with a cost.
     Underdeep,
     /// Past the habitable ceiling: hot, and the deepest a cave reaches.
-    Sunless,
+    ///
+    /// **Named `Sunless` until The Stope** (spec amendment B.3). The mirror
+    /// rule (decision 0094) is what makes the rename land in both crates at
+    /// once: `hornvale_terrain::DelveRung::Nadir` moved and this roster moves
+    /// with it, or `cli/tests/delve_roster_mirror.rs` reddens.
+    Nadir,
 }
 
 /// One underworld community and the vector assigned to it.
@@ -397,7 +402,7 @@ fn build() -> Vec<UnderworldName> {
         c(
             "deep-karst-void",
             KARST,
-            Sunless,
+            Nadir,
             P_CRUST,
             E_TEEMING,
             W_SAT,
@@ -594,13 +599,13 @@ fn build() -> Vec<UnderworldName> {
         ),
         // PHYSIOGNOMY: smooth and thin — the aperture is closing.
         // ENERGY: radiolytic and water-rock chemistry only. Real but meagre;
-        //   this row is why `Sunless` does not simply out-score `Underdeep`.
+        //   this row is why `Nadir` does not simply out-score `Underdeep`.
         // WATER: fractures close under lithostatic load and squeeze fluid out.
         // SUBSTRATE: rock.
         c(
             "deep-fracture-void",
             FRACTURE,
-            Sunless,
+            Nadir,
             P_SMOOTH,
             E_FED,
             W_ARID,
@@ -617,7 +622,7 @@ fn build() -> Vec<UnderworldName> {
         c(
             "basalt-fissure-void",
             FRACTURE,
-            Sunless,
+            Nadir,
             P_SMOOTH,
             E_RICH,
             W_SEMI,

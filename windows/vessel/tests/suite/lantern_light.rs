@@ -22,9 +22,16 @@
 use hornvale_kernel::color::blackbody;
 use hornvale_kernel::{RoomAddr, Seed};
 use hornvale_vessel::lattice::shadowcast;
-use hornvale_vessel::light::{Source, TORCH_KELVIN, light_field};
+use hornvale_vessel::light::{ATTENUATION, Source, TORCH_KELVIN, light_field};
+
+/// The calibrated brightness floor of the ×4 torch at distance 4 (see the
+/// distance-4 test below): strictly above the pre-change reading, well under
+/// what a nearer cell renders.
+const BRIGHT_SUM: u32 = 172;
 use hornvale_vessel::structure::{Structure, structure_at};
-use hornvale_vessel::{Brief, Cell, Lattice, embed_with, extent_for};
+use hornvale_vessel::{
+    Brief, Cell, Lattice, PossessOpts, Session, SpatialChannel, embed_with, extent_for,
+};
 use std::collections::BTreeSet;
 
 /// The walk depth the vessel's own lattice fixtures use.
@@ -172,4 +179,119 @@ fn a_real_chamber_is_not_uniformly_lit() {
             levels.len()
         );
     }
+}
+
+/// Chebyshev distance, the metric `light_field` attenuates by.
+fn cheb(a: Cell, b: Cell) -> i32 {
+    (a.0 - b.0).abs().max((a.1 - b.1).abs())
+}
+
+/// **The H4a fence, executable:** the inverse-square gradient SHAPE may not
+/// move, whatever happens to the torch's intensity (spec §4.2, §11 risk 2).
+/// Scaling the source multiplies every cell's light by the same factor, so
+/// the ratio of lights at Chebyshev distances 1 and 2 stays exactly
+/// `(1 + 4·ATTENUATION) / (1 + ATTENUATION)` = 2.5 — before and after any
+/// intensity change. This pins the shape, never the level.
+///
+/// FIRES WHEN: the falloff shape is retuned (a different `ATTENUATION`, a
+/// linear or clipped falloff, a per-band gradient) — anything that changes
+/// relative brightness between neighbours rather than overall brightness.
+#[test]
+fn the_falloff_ratio_between_two_cells_is_inverse_square() {
+    for (label, lattice) in fixtures() {
+        let origin = *floors(&lattice).first().expect("a lattice holds floor");
+        let field = light_field(
+            &lattice,
+            &[Source {
+                at: origin,
+                illuminant: blackbody(TORCH_KELVIN),
+                radius: 8,
+            }],
+        );
+        let near = field.keys().find(|&&c| cheb(origin, c) == 1).copied();
+        let far = field.keys().find(|&&c| cheb(origin, c) == 2).copied();
+        let (Some(near), Some(far)) = (near, far) else {
+            panic!(
+                "{label}: no cell pair at Chebyshev distances 1 and 2 — \
+                 fixture too small to state the fence"
+            );
+        };
+        let (lnear, lfar) = (field[&near].get()[5], field[&far].get()[5]);
+        let want = (1.0 + ATTENUATION * 4.0) / (1.0 + ATTENUATION * 1.0);
+        let got = lnear / lfar;
+        assert_eq!(
+            got, want,
+            "{label}: falloff ratio {origin:?}->{near:?}/{far:?} is {got}, \
+             the fence pins {want}"
+        );
+    }
+}
+
+/// The row-major index of `(x, y)` in a plan whose extent starts at
+/// `(e.x, e.y)` and is `e.w` wide.
+fn plan_index(plan: &hornvale_vessel::plan::SessionPlan, x: i32, y: i32) -> usize {
+    let e = &plan.extent;
+    (((y - e.y) * e.w) + (x - e.x)) as usize
+}
+
+/// **The Wick's product claim, through the public seam:** a floor cell four
+/// cells from the standing cell renders ~4× brighter once the implicit torch
+/// burns at ×4 (spec §2.1).
+///
+/// `session.rs::chamber_sources` is private by design — source composition is
+/// not API — so the only honest read of the change is the palette the game
+/// actually emits. sRGB bytes are tone-mapped, not linear in illuminant, so
+/// the assertion is the calibrated band between the two models rather than an
+/// exact ×4 on bytes: pre-change, the distance-4 floor colour on seed 42's
+/// entered chamber measured `[r, g, b]` summing to OLD_SUM (recorded at the
+/// calibration run); post-change it must exceed BRIGHT_SUM. The fence test
+/// above carries the exactness this test deliberately trades for seam reach.
+///
+/// FIRES WHEN: the ×4 scale is dropped from `chamber_sources` (the far cell
+/// falls back to its dim pre-change triple) or the torch stops reaching
+/// distance 4 at all.
+#[test]
+fn a_floor_cell_four_cells_out_renders_brighter_under_the_wick_torch() {
+    let world = hornvale_worldgen::build_world(
+        Seed(42),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("seed 42 builds");
+    let (mut session, _) =
+        Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+    session.handle("enter");
+    let snap = session.snapshot().expect("a live session snapshots");
+    let SpatialChannel::Chamber { plan } = snap.spatial else {
+        panic!("seed 42: `enter` did not put the possession inside a building");
+    };
+
+    // A coloured FLOOR cell at Chebyshev distance 4 from the standing cell:
+    // far enough that attenuation has eaten most of the torch, near enough
+    // that SIGHT_RADIUS still lights it.
+    let e = &plan.extent;
+    let mut probe = None;
+    'outer: for y in e.y..e.y + e.h {
+        for x in e.x..e.x + e.w {
+            let entry = &plan.palette[plan.cells[plan_index(&plan, x, y)] as usize];
+            if entry.kind == "floor"
+                && let Some(color) = entry.color
+                && cheb(hornvale_vessel::Cell(x, y), Cell(plan.you.x, plan.you.y)) == 4
+            {
+                probe = Some((x, y, color));
+                break 'outer;
+            }
+        }
+    }
+    let (x, y, color) =
+        probe.unwrap_or_else(|| panic!("seed 42: no lit floor cell at Chebyshev distance 4"));
+    let sum: u32 = color.iter().map(|&c| c as u32).sum();
+    eprintln!("wick probe: floor ({x},{y}) renders {color:?}, channel sum {sum}");
+    assert!(
+        sum > BRIGHT_SUM,
+        "floor cell at distance 4 renders {color:?} (sum {sum}); under the \
+         ×4 torch it must exceed channel-sum {BRIGHT_SUM}"
+    );
 }

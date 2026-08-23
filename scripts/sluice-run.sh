@@ -424,6 +424,70 @@ cmd_for() { roster_col "$1" 5; }
 # committed.
 authors() { [ "$(roster_col "$1" 4)" = "yes" ]; }
 
+# ASK THE MOUTH BEFORE TAKING THE BOX.
+#
+# The mouth is the queue's admission check and it is READ-ONLY: it takes no
+# lock, writes nothing, and answers in milliseconds. Until now nothing in the
+# chamber consulted it — sluice-run.sh never called sluice-mouth.sh at all —
+# so a candidate that could not merge still took the staff, failed at the
+# `<merge>` step, and exited 10 having held the box for the length of a
+# worktree checkout. Cheap in wall time; wrong in kind. A lock held on work
+# that was never going to run is a lock a runnable job is queued behind.
+#
+# THIS IS A FAST-FAIL, NOT A GUARANTEE, AND THE DISTINCTION IS LOAD-BEARING.
+# The check runs OUTSIDE the claim, so `$base` can move between this verdict
+# and the `flock` below — another chamber run landing is exactly the case the
+# queue is built to allow. A stale ADMIT proves nothing by the time the merge
+# actually runs, which is why the `<merge>` step and its rc=10 path below are
+# UNTOUCHED and must stay that way. Deleting them on the strength of this
+# check would trade a cheap refusal for a silent corruption.
+#
+# ONLY A VERDICT ABOUT THE CANDIDATE IS FATAL. The mouth's exit 2 means "I
+# could not evaluate this" — it says so itself: "this is an infrastructure
+# fault, not a conflict in $sha". An optimisation that converts *inability to
+# check* into *refusal to run* is strictly worse than no optimisation: it
+# invents a new way to fail closed, on a path that used to work. So 1/3/4
+# (conflict, already-merged, out-of-band — all statements ABOUT the candidate)
+# refuse, and everything else WARNS AND PROCEEDS to the box, where the
+# `<merge>` step is still authoritative.
+#
+# That is not hypothetical. The first cut of this block resolved the mouth as
+# a path relative to `$repo_root`, which `HV_SLUICE_REPO_ROOT` legitimately
+# points at a scratch repository holding no scripts; the mouth exited 127 and
+# the chamber refused every run in scripts/test-sluice.sh. Hence both halves
+# of the fix: locate the script next to THIS one (it is a sibling, and must be
+# the matching version), and never let a non-verdict stop the chamber.
+if [ -z "${HV_SLUICE_SKIP_MOUTH:-}" ]; then
+    # Sibling of this script, not of $repo_root — see above. Executed with cwd
+    # = $repo_root because the mouth's git calls are cwd-relative by design.
+    mouth_script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sluice-mouth.sh"
+    # Not `if ! cmd; then rc=$?` — inside the body of an `if !`, `$?` is the
+    # NEGATED status (always 0) and every verdict would report as success.
+    mouth_rc=0
+    mouth_out="$(cd "$repo_root" && bash "$mouth_script" "$branch" "$sha" 2>&1)" || mouth_rc=$?
+    case "$mouth_rc" in
+        0)
+            printf '%s\n' "$mouth_out"
+            ;;
+        1|3|4)
+            printf '%s\n' "$mouth_out" >&2
+            echo "sluice-run: REFUSED BEFORE THE BOX WAS TAKEN (mouth exit $mouth_rc)." >&2
+            echo "sluice-run:   no claim written, no flock waited on, no worktree built; main is untouched." >&2
+            case "$mouth_rc" in
+                1) echo "sluice-run:   CONFLICT — absorb main locally, resolve, and resubmit." >&2 ;;
+                3) echo "sluice-run:   ALREADY MERGED — nothing to do; retire the queue row." >&2 ;;
+                4) echo "sluice-run:   OUT-OF-BAND LANDING — adjudicate with 'make sluice-ack REASON=...' before the queue resumes." >&2 ;;
+            esac
+            exit $((20 + mouth_rc))
+            ;;
+        *)
+            printf '%s\n' "$mouth_out" >&2
+            echo "sluice-run: the mouth could not evaluate this candidate (exit $mouth_rc) — PROCEEDING to the box." >&2
+            echo "sluice-run:   this is not a verdict about $sha, so it is not a reason to refuse; the <merge> step remains authoritative." >&2
+            ;;
+    esac
+fi
+
 LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
 claim_path="${HV_CENSUS_CLAIM_PATH:-/tmp/hv-census.claim}"
 exec 9>"$LOCK"
