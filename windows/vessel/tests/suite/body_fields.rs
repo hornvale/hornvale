@@ -31,19 +31,37 @@ fn a_derived_creature_carries_its_species_perception_and_its_village() {
     let npcs = hornvale_vessel::liveness::derive_npcs(&world, &ctx, &mut ledger, 4, home);
 
     assert!(!npcs.is_empty(), "precondition: seed 42 derives creatures");
+    let registry = hornvale_species::perception_registry();
     for npc in &npcs {
+        let village = npc
+            .village
+            .as_ref()
+            .expect("a settlement-derived creature carries Some(village)");
         assert!(
-            npc.village.population > 0,
+            village.population > 0,
             "{}: a derived creature's village is real, not a placeholder",
             npc.label
         );
-        // The perception vector is the species', so its activity cycle must
-        // agree with the activity the creature was already derived with —
-        // two reads of one authored fact, which is what makes this a
-        // coherence check rather than a restatement.
+        // Fix round 1, Finding 1: the original assertion here compared
+        // `npc.perception.activity` to `npc.activity` — two fields written
+        // by the SAME call site in `derive_npcs`, so a mutant that replaced
+        // the whole perception resolution with `PerceptionVector::MANIKIN`
+        // unconditionally still passed (seed 42's hobgoblins are `Diurnal`,
+        // which coincides with the manikin's default), and `night_vision`/
+        // `sky_attention` were unguarded entirely. Assert against the
+        // authored source directly instead — the species' own registry
+        // entry, on all three fields — so a constant cannot satisfy it: the
+        // registry's `hobgoblin` row carries `night_vision: 0.6`, which
+        // `MANIKIN` does not.
+        let expected = registry.get_by_label(&npc.species).unwrap_or_else(|| {
+            panic!(
+                "{}: species '{}' has no authored perception entry",
+                npc.label, npc.species
+            )
+        });
         assert_eq!(
-            npc.perception.activity, npc.activity,
-            "{}: perception and activity are both the species' own",
+            npc.perception, *expected,
+            "{}: perception must be the species' own authored vector, not a constant",
             npc.label
         );
     }

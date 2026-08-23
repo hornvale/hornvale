@@ -99,9 +99,11 @@ pub struct Npc {
     /// The species' authored perception vector (the dragon-test slot) — the
     /// same value a possessed body carried before The Hand merged the types.
     pub perception: hornvale_species::PerceptionVector,
-    /// The settlement this body was derived from. Session prose reads its
-    /// name and population; the creature layer does not.
-    pub village: hornvale_settlement::VillageInfo,
+    /// The settlement this body was derived from, or `None` for a body not
+    /// derived from a settlement — a wild creature (`derive_wild_npcs`), or a
+    /// harness fabrication in a test/lab fixture. Session prose reads its
+    /// name and population when present; the creature layer does not.
+    pub village: Option<hornvale_settlement::VillageInfo>,
 }
 
 /// A game-layer predicate: an agent's room position on a day. Non-functional
@@ -5522,7 +5524,7 @@ pub fn derive_npcs(
                 mass_kg,
                 label,
                 perception,
-                village,
+                village: Some(village),
             }
         })
         .collect()
@@ -5642,20 +5644,14 @@ pub fn derive_wild_npcs(
                 mass_kg,
                 label,
                 perception,
-                // The Hand: a wild NPC has no settlement — `derive_wild_npcs`
-                // iterates beast concentrations (herds, lairs), not
-                // settlements, so there is no `VillageInfo` to carry forward
-                // the way `derive_npcs` does. This is a placeholder for this
-                // path only (its own entity, a descriptive name, no
-                // population), the same fabrication spirit as
-                // `windows/lab/src/synthetic.rs`'s harness village. Session
-                // prose reads `village.name`/`population`; nothing currently
-                // reads either for a wild NPC.
-                village: hornvale_settlement::VillageInfo {
-                    id: entity,
-                    name: "the wild".to_string(),
-                    population: 0,
-                },
+                // The Hand ruling: a wild NPC has no settlement —
+                // `derive_wild_npcs` iterates beast concentrations (herds,
+                // lairs), not settlements, so there is genuinely no
+                // `VillageInfo` here. `None`, not a fabricated placeholder:
+                // a placeholder `population`/`id` would be indistinguishable
+                // from a real measurement to any later consumer (a future
+                // possessed-beast session's prose, in particular).
+                village: None,
             }
         })
         .collect()
@@ -5976,19 +5972,6 @@ mod tests {
         }
     }
 
-    /// The Hand: a placeholder `VillageInfo` for the many hand-built `Npc`
-    /// fixtures in this test module, which plant no world and so have no real
-    /// settlement to carry forward. A fabrication, not a derived value — the
-    /// same spirit as `windows/lab/src/synthetic.rs`'s harness placeholder;
-    /// these tests read `resource`/`activity`/etc., never `village`.
-    fn test_village(id: EntityId) -> hornvale_settlement::VillageInfo {
-        hornvale_settlement::VillageInfo {
-            id,
-            name: "test village".to_string(),
-            population: 1,
-        }
-    }
-
     /// A registry with just `AGENT_AT` registered, for the belief-fold tests.
     fn agent_at_reg() -> ConceptRegistry {
         let mut reg = ConceptRegistry::default();
@@ -6006,7 +5989,7 @@ mod tests {
         let t = PlantedTerrain::fresh_only([water.clone()]);
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
@@ -6059,7 +6042,7 @@ mod tests {
         let t = PlantedTerrain::fresh_only(std::iter::empty()); // `dry` is never fresh
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
@@ -6108,7 +6091,7 @@ mod tests {
         let t = PlantedTerrain::fresh_only([near.clone(), far.clone()]);
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: near.clone(),
@@ -6161,7 +6144,7 @@ mod tests {
         let t = PlantedTerrain::fresh_only([water.clone()]);
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
@@ -6205,7 +6188,7 @@ mod tests {
         let t = PlantedTerrain::fresh_only([water.clone()]);
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
@@ -6277,7 +6260,7 @@ mod tests {
         let t = PlantedTerrain::fresh_only([first.clone(), second.clone()]);
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: first.clone(),
@@ -6332,7 +6315,7 @@ mod tests {
     fn haunt_npc(entity: EntityId, home: RoomAddr) -> Npc {
         Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home,
@@ -6360,7 +6343,7 @@ mod tests {
     fn shared_belief_npc(entity: EntityId, home: RoomAddr, resource: RoomAddr, label: &str) -> Npc {
         Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home,
             resource,
@@ -7875,7 +7858,7 @@ mod tests {
         let home = settlement_room(&world, &ctx, home_id);
         let npc = Npc {
             entity: EntityId::new(1).unwrap(),
-            village: test_village(EntityId::new(1).unwrap()),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
@@ -8452,7 +8435,7 @@ mod tests {
         let water = home.neighbors()[0].clone();
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
@@ -8565,7 +8548,7 @@ mod tests {
         let water = home.neighbors()[0].clone();
         let npc = Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
@@ -8647,7 +8630,7 @@ mod tests {
         let water = RoomAddr::containing([-1.0, 0.0, 0.0], 6); // irrelevant now: no water exists anywhere
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water,
@@ -8738,7 +8721,7 @@ mod tests {
         let water = home.neighbors()[0].clone();
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water,
@@ -8814,7 +8797,7 @@ mod tests {
         let resource = home.neighbors()[0].clone();
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: resource.clone(),
@@ -9085,7 +9068,7 @@ mod tests {
         // A steady mortal creature; home == start so homing does not pull it off X.
         let npc_at = |entity: EntityId| Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: start.clone(),
             resource: water.clone(),
@@ -9274,7 +9257,7 @@ mod tests {
         // A steady mortal; home == start so homing does not pull it off course.
         let npc_at = |entity: EntityId| Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: start.clone(),
             resource: water.clone(),
@@ -9296,7 +9279,7 @@ mod tests {
         // is the transient alarm source when standing at D.
         let emitter_npc = |entity: EntityId| Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: far.clone(),
             resource: water.clone(),
@@ -9546,7 +9529,7 @@ mod tests {
 
         let npc_at = |entity: EntityId, home: RoomAddr, label: &str| Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home,
             resource: water.clone(),
@@ -10460,7 +10443,7 @@ mod tests {
         commit_agent_at(ledger, reg, e, pos, 0.0);
         Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: pos.clone(),
             resource: pos.clone(),
@@ -10637,7 +10620,7 @@ mod tests {
             commit_agent_at(ledger, &reg, e, &x, 0.0);
             Npc {
                 entity: e,
-                village: test_village(e),
+                village: None,
                 perception: hornvale_species::PerceptionVector::MANIKIN,
                 home: x.clone(),
                 resource: x.clone(),
@@ -10664,7 +10647,7 @@ mod tests {
             commit_agent_at(ledger, &reg, e, &b_start, 0.0);
             Npc {
                 entity: e,
-                village: test_village(e),
+                village: None,
                 perception: hornvale_species::PerceptionVector::MANIKIN,
                 home: b_home.clone(),
                 resource: b_home.clone(),
@@ -11112,7 +11095,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &away, 0.0);
         let base = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
@@ -11231,7 +11214,7 @@ mod tests {
             commit_agent_at(&mut ledger, &reg, e, &home, 0.5);
             let npc = Npc {
                 entity: e,
-                village: test_village(e),
+                village: None,
                 perception: hornvale_species::PerceptionVector::MANIKIN,
                 home: home.clone(),
                 resource: w1.clone(),
@@ -11323,7 +11306,7 @@ mod tests {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
@@ -12288,7 +12271,7 @@ mod tests {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let base = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
@@ -12355,7 +12338,7 @@ mod tests {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let base = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
@@ -12964,7 +12947,7 @@ mod tests {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let npc = Npc {
             entity: e,
-            village: test_village(e),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
@@ -13348,7 +13331,7 @@ mod tests {
         ]);
         let build_npc = |entity: EntityId| Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
@@ -13751,7 +13734,7 @@ mod tests {
     fn cold_thermal_npc(entity: EntityId, home: RoomAddr, niche: ConditionResponse) -> Npc {
         Npc {
             entity,
-            village: test_village(entity),
+            village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home,
