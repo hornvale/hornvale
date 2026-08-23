@@ -7291,9 +7291,16 @@ fn bake_history_from(
         .collect();
     let seating_rungs: Vec<hornvale_kernel::CellMap<hornvale_terrain::DelveRung>> =
         seatings.into_iter().map(|s| s.rung).collect();
+    // The Granary T2: the coarse biome class of every cell, built once here
+    // (the composition root's own `biome_class` mapping over the climate's
+    // biome map) and handed to the bake so each community's harvest curve can
+    // key its amplitude on the biome it actually stands in at open.
+    let climate_biomes = climate.biome_map();
+    let biomes = hornvale_kernel::CellMap::from_fn(geo, |c| biome_class(*climate_biomes.get(c)));
     Ok(history_bake::bake(
         seed,
         geo,
+        &biomes,
         &caps_by_era,
         &river_prox,
         &eras,

@@ -2317,3 +2317,13 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T17:39:53Z | sluice:outboard | 38.199 | 23.637 | 37.067 | 1.59 | 0 | aa2817100 |  | lefford | 40 |
 | 2026-08-23T17:45:57Z | sluice:gate | 364.686 | 10246.247 | 350.239 | 29.06 | 0 | 67f23ca91 |  | lefford | 40 |
 | 2026-08-23T17:50:10Z | sluice:clients | 251.925 | 1441.846 | 17.245 | 5.79 | 0 | 7775d62e7 |  | lefford | 40 |
+| 2026-08-23T19:19:56Z | quick | 1.914 | 1.622 | 0.097 | 0.90 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:20:15Z | quick | 12.704 | 22.705 | 12.299 | 2.76 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:21:25Z | quick | 19.265 | 36.785 | 16.498 | 2.77 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:22:18Z | quick | 17.271 | 23.812 | 12.534 | 2.10 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:22:46Z | quick | 13.:00 | 10.530 | 0.305 | 0.83 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:26:37Z | quick | 20.765 | 11.273 | 0.367 | 0.56 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:28:08Z | gate-commit | 78.271 | 334.468 | 24.713 | 4.59 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:34:35Z | quick | 56.291 | 41.639 | 20.636 | 1.11 | 0 | a243e8e40 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:35:46Z | gate-commit | 66.412 | 70.541 | 31.264 | 1.53 | 0 | a243e8e40 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:53:52Z | quick | 50.382 | 27.487 | 11.954 | 0.78 | 0 | 43f4ac4f8 | campaign/the-granary | MacBookPro | 10 |

@@ -15,6 +15,14 @@ fn e(m: f64) -> ReferenceElevation {
     ReferenceElevation::new(m).unwrap()
 }
 
+/// The biome-class map every bake fixture is handed (The Granary T2): all
+/// `Grassland`, so each community's harvest curve carries the grassland
+/// amplitude and no pre-campaign expectation moves. The bake reads this map
+/// only at community open; none of these tests assert on curves.
+fn biome_map(geo: &Geosphere) -> CellMap<hornvale_culture::BiomeClass> {
+    CellMap::from_fn(geo, |_| hornvale_culture::BiomeClass::Grassland)
+}
+
 /// A pure-land connection graph over `geo` (unit-conductance adjacency, no water
 /// routes). `traversable_neighbors` over this equals `geo.neighbors`, so on an
 /// all-land world the bake is byte-identical to the pre-Sundering raw-adjacency
@@ -215,6 +223,7 @@ fn same_seed_bakes_byte_identical_history() {
     let a = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -227,6 +236,7 @@ fn same_seed_bakes_byte_identical_history() {
     let b = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -248,6 +258,7 @@ fn different_seeds_diverge() {
     let a = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -260,6 +271,7 @@ fn different_seeds_diverge() {
     let b = bake(
         Seed(43),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -287,6 +299,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -364,6 +377,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
@@ -492,6 +506,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
@@ -599,6 +614,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -628,6 +644,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h2 = bake(
         Seed(42),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&cap, &people),
         &river,
         &eras,
@@ -785,6 +802,7 @@ fn value_flat_history_seeded_with(
     bake(
         Seed(seed),
         &geo,
+        &biome_map(&geo),
         &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
@@ -1125,6 +1143,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let no_lane = bake(
         Seed(7),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&capacity, &people),
         &river,
         &eras,
@@ -1144,6 +1163,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let lane = bake(
         Seed(7),
         &geo,
+        &biome_map(&geo),
         &caps_per_era(&capacity, &people),
         &river,
         &eras,

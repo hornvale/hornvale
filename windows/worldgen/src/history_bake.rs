@@ -31,6 +31,7 @@
 //! neighbour candidates sort by `f64::total_cmp`. Same seed ⇒ byte-identical
 //! `records`.
 
+use crate::harvest::{Curve, LatDeg};
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
@@ -969,6 +970,21 @@ struct Community {
     /// successful extractor does not starve itself on its own tribute (spec
     /// §4.2a). Lost with the community when it closes.
     stores: f64,
+    /// The community's seasonal harvest curve (The Granary T2): a pure
+    /// multiplier over day-of-year keyed on its SITE's latitude and biome
+    /// class, computed once at [`Bake::open`] and never recomputed — a
+    /// record's site is immutable once opened, so the curve derived from it
+    /// is too (the same caching argument `disposition` carries).
+    ///
+    /// Live bake state only: like `rung` and `disposition` it is a pure
+    /// function of committed inputs (`site` → latitude through the globe,
+    /// cell → biome class through the composition root's map), so committing
+    /// it would add a save-format surface for a value that can be re-derived
+    /// exactly. No draws feed it; determinism is untouched.
+    /// Read today only by the curve tests; the seasonal production dynamics
+    /// consume it in the next task.
+    #[allow(dead_code)]
+    curve: Curve,
 }
 
 /// A standing tribute relation: who a community pays, and how much its patron
@@ -1092,6 +1108,15 @@ impl Spoil {
 /// index, the id counter, the dynamics stream, the standing tribute relations,
 /// and the running tally.
 struct Bake<'a> {
+    /// The globe itself, borrowed off the caller like every other world input.
+    /// Held so [`Bake::open`] can read a new community's site latitude for its
+    /// harvest curve (The Granary T2) — `geo.coord(site).latitude`, the same
+    /// path every other latitude reader uses.
+    geo: &'a Geosphere,
+    /// The coarse biome class of every cell ([`crate::biome_class`] applied to
+    /// the climate's biome map), built once by the composition root and
+    /// borrowed here. The other half of a community's curve key at open.
+    biomes: &'a CellMap<hornvale_culture::BiomeClass>,
     /// One era-aware connection graph per era (`graphs.len() == eras.len()`).
     /// Each graph's traversable neighbours (`conductance > 0.0`) are that era's
     /// passable geography: the glacial low-stand exposes shelf land bridges, the
@@ -2277,6 +2302,16 @@ impl<'a> Bake<'a> {
         // for its whole life and a relocation — which is a `close` and a fresh
         // `open` — re-derives it at the seat it actually moved to.
         let rung = self.rung_for(people_idx, site);
+        // The Granary T2: this community's seasonal production curve, keyed on
+        // the place it actually stands. Both inputs are genuinely reachable
+        // here — the globe gives the cell's latitude directly, and the
+        // composition root hands in the coarse biome class of every cell (its
+        // own `biome_class` mapping, total by construction) — so the curve is
+        // the real key, not a nearest-match approximation.
+        let coord = self.geo.coord(site);
+        let latitude =
+            LatDeg::new(coord.latitude).expect("a geosphere cell's latitude lies in [-90, 90]");
+        let curve = Curve::new(latitude, *self.biomes.get(site));
         self.communities.push(Community {
             record: record_idx,
             people_idx,
@@ -2290,6 +2325,7 @@ impl<'a> Bake<'a> {
             tech_offset,
             disposition: self.drawn_disposition(people, site, year),
             stores: 0.0,
+            curve,
         });
         // Keep the growth buffer exactly parallel to `communities`: a community
         // opened mid-epoch has grown nothing yet this epoch, and so owes
@@ -3519,6 +3555,7 @@ impl<'a> Bake<'a> {
 pub fn bake(
     seed: Seed,
     geo: &Geosphere,
+    biomes: &CellMap<hornvale_culture::BiomeClass>,
     caps_by_era: &[Vec<hornvale_kernel::ecology::CapacityMap>],
     river_prox: &CellMap<f64>,
     eras: &[EraClimate],
@@ -3554,6 +3591,8 @@ pub fn bake(
         );
     }
     let mut bake = Bake {
+        geo,
+        biomes,
         graphs,
         cur_graph: 0,
         caps_by_era,
@@ -3886,6 +3925,8 @@ mod tests {
         let caps = caps_from_fn(&geo, |_| 100.0);
 
         let mut bake = Bake {
+            geo: fixture_geo(),
+            biomes: grassland_biomes(),
             graphs: &graphs,
             cur_graph: 0,
             caps_by_era: &caps,
@@ -4210,6 +4251,8 @@ mod tests {
         disposition_spread: &'a BTreeMap<KindId, f64>,
     ) -> Bake<'a> {
         Bake {
+            geo: fixture_geo(),
+            biomes: grassland_biomes(),
             graphs,
             cur_graph: 0,
             caps_by_era: caps,
@@ -4245,6 +4288,161 @@ mod tests {
             sea_level: ReferenceElevation::new(0.0).unwrap(),
             ice_fraction: 0.0,
         }
+    }
+
+    /// The fixture globe every hand-built [`Bake`]'s curve reads. Held at
+    /// `'static` so the fixture helpers can borrow it — and so a hand-built
+    /// bake's `geo` field can point at it even where the test owns its own
+    /// local globe for graphs/capacity (the mesh is deterministic, so the cell
+    /// latitudes are identical; the bake reads only coordinates off this
+    /// reference, never adjacency).
+    fn fixture_geo() -> &'static Geosphere {
+        static G: std::sync::OnceLock<Geosphere> = std::sync::OnceLock::new();
+        G.get_or_init(|| Geosphere::new(1))
+    }
+
+    /// The default biome-class map a hand-built [`Bake`] is given: every cell
+    /// at [`hornvale_culture::BiomeClass::Grassland`], so every community's
+    /// curve carries the grassland amplitude and the pre-campaign tests that
+    /// never read a curve see nothing change.
+    fn grassland_biomes() -> &'static CellMap<hornvale_culture::BiomeClass> {
+        static B: std::sync::OnceLock<CellMap<hornvale_culture::BiomeClass>> =
+            std::sync::OnceLock::new();
+        B.get_or_init(|| {
+            let geo = Geosphere::new(1);
+            CellMap::from_fn(&geo, |_| hornvale_culture::BiomeClass::Grassland)
+        })
+    }
+
+    /// The northernmost and southernmost cells of the fixture globe — the pair
+    /// the hemisphere-phase and amplitude tests open their communities on.
+    fn extreme_latitude_cells() -> (CellId, CellId) {
+        let geo = Geosphere::new(1);
+        geo.cells().fold((CellId(0), CellId(0)), |(n, s), c| {
+            let lat = geo.coord(c).latitude;
+            let n = if lat > geo.coord(n).latitude { c } else { n };
+            let s = if lat < geo.coord(s).latitude { c } else { s };
+            (n, s)
+        })
+    }
+
+    #[test]
+    fn communities_at_opposite_hemispheres_carry_curves_half_a_year_out_of_phase() {
+        // The Granary T2: each community derives its harvest curve from its own
+        // site's latitude at open. Two sites in opposite hemispheres must carry
+        // curves exactly half a year out of phase — T1's property, now reached
+        // through the bake's own site resolution rather than hand-built
+        // latitudes.
+        let graphs = vec![full_land_graph(fixture_geo())];
+        let capacity = caps_from_fn(fixture_geo(), |_| 100.0);
+        let river_prox = CellMap::from_fn(fixture_geo(), |_| 0.0);
+        let refugia = CellMap::from_fn(fixture_geo(), |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+        let (north_cell, south_cell) = extreme_latitude_cells();
+        let north_lat = fixture_geo().coord(north_cell).latitude;
+        let south_lat = fixture_geo().coord(south_cell).latitude;
+        assert!(
+            north_lat > 0.0 && south_lat < 0.0,
+            "the fixture globe must straddle the equator ({north_lat}, {south_lat})"
+        );
+
+        let north_idx = bake.open(
+            KindId("goblin"),
+            north_cell,
+            0.0,
+            10.0,
+            Founding::Genesis(north_cell),
+            None,
+            0.0,
+        );
+        // A second, independent community opened directly at the southern site
+        // — a distinct cell, so the one-alive-per-site index takes both.
+        let south_idx = bake.open(
+            KindId("goblin"),
+            south_cell,
+            0.0,
+            10.0,
+            Founding::Genesis(south_cell),
+            None,
+            0.0,
+        );
+
+        let north_peak = bake.communities[north_idx].curve.peak_day_of_year();
+        let south_peak = bake.communities[south_idx].curve.peak_day_of_year();
+        let year = hornvale_kernel::units::Years::DAYS_PER_YEAR;
+        let expected_south = (north_peak + year * 0.5) % year;
+        assert_eq!(south_peak, expected_south);
+    }
+
+    #[test]
+    fn a_community_curve_amplitude_is_its_biome_class_amplitude() {
+        // The Granary T2: the amplitude half of the curve key comes from the
+        // SITE's biome class, through the map the composition root hands in.
+        // Paint Forest at the northern extreme and Arid at the southern one,
+        // then pin each community against T1's authored table directly.
+        let graphs = vec![full_land_graph(fixture_geo())];
+        let capacity = caps_from_fn(fixture_geo(), |_| 100.0);
+        let river_prox = CellMap::from_fn(fixture_geo(), |_| 0.0);
+        let refugia = CellMap::from_fn(fixture_geo(), |_| false);
+        let (north_cell, south_cell) = extreme_latitude_cells();
+        let biomes = CellMap::from_fn(fixture_geo(), |c| {
+            if c == north_cell {
+                hornvale_culture::BiomeClass::Forest
+            } else if c == south_cell {
+                hornvale_culture::BiomeClass::Arid
+            } else {
+                hornvale_culture::BiomeClass::Grassland
+            }
+        });
+        let mut bake = Bake {
+            geo: fixture_geo(),
+            biomes: &biomes,
+            graphs: &graphs,
+            cur_graph: 0,
+            caps_by_era: &capacity,
+            peoples: all_settlers(),
+            river_prox: &river_prox,
+            refugia: &refugia,
+            seed: Seed(1),
+            disposition: no_disposition(),
+            disposition_spread: no_spread(),
+            in_group_radius: no_radius(),
+            time_horizon: strips_to_the_floor(),
+            seating: surface_seating(),
+            records: Vec::new(),
+            communities: Vec::new(),
+            node_index: BTreeMap::new(),
+            next_id: 1,
+            stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+            tribute: BTreeMap::new(),
+            epoch_growth: Vec::new(),
+            tally: BakeCensus::default(),
+        };
+
+        let north_idx = bake.open(
+            KindId("goblin"),
+            north_cell,
+            0.0,
+            10.0,
+            Founding::Genesis(north_cell),
+            None,
+            0.0,
+        );
+        let south_idx = bake.open(
+            KindId("goblin"),
+            south_cell,
+            0.0,
+            10.0,
+            Founding::Genesis(south_cell),
+            None,
+            0.0,
+        );
+
+        // T1's authored table, stated here rather than read back through the
+        // same code path — so this pins the wiring, not an identity.
+        assert_eq!(bake.communities[north_idx].curve.amplitude(), 0.55); // Forest
+        assert_eq!(bake.communities[south_idx].curve.amplitude(), 0.25); // Arid
     }
 
     #[test]
