@@ -3097,6 +3097,63 @@ mod tests {
         }
     }
 
+    /// **The edge list itself is byte-pinned for known calls** — the half
+    /// [`the_band_descent_key_spelling_is_pinned`] cannot reach.
+    ///
+    /// That test pins what [`descent_key`] *returns*. It says nothing about
+    /// what [`descent_edges`] *passes it*, and review round 1 found both of
+    /// the arguments it chooses to be unguarded: the parent draw's `below`
+    /// could become `band`, and the child draw's [`DescentRole::Child`] could
+    /// become `Parent`, with all 47 tests still green. **The second is the
+    /// serious one**, and it is exactly what the role word exists to prevent:
+    /// under it the child draws for the pair `(B, B.deeper())` land in
+    /// `{cell}/{i}/{B}/parent`, the key space the parent draws for the pair
+    /// `(B.shallower(), B)` already occupy — one key answering two different
+    /// questions at two different widths.
+    ///
+    /// The widths were already pinned (swapping them reddens the guarantee
+    /// tests); the band and the role now are too. Same instrument
+    /// `the_entrance_draws_are_byte_pinned_for_known_keys` uses one section
+    /// up: freeze the shipped answer for a handful of named calls, so any
+    /// change to the derivation — key, band, role, parent leg or draw order —
+    /// has to come here and be admitted deliberately.
+    ///
+    /// If this fails you have re-drawn every band transition in every world.
+    /// That is an epoch (`chamber/band-descent/v2`), not a fix to these
+    /// literals.
+    ///
+    /// The four calls span both roles, three different `(band, band.deeper())`
+    /// pairs, asymmetric widths in both directions, and the saturated `4x4`
+    /// case, so no single coincidence can carry them all.
+    #[test]
+    fn the_descent_edges_are_byte_pinned_for_known_calls() {
+        assert_eq!(
+            descent_edges(Seed(42), CellId(9), Band::Deeps, 2, 3),
+            vec![(0, 0), (1, 0), (1, 1), (1, 2)]
+        );
+        assert_eq!(
+            descent_edges(Seed(42), CellId(9), Band::Shallows, 3, 2),
+            vec![(0, 0), (0, 1), (1, 0), (2, 0)]
+        );
+        assert_eq!(
+            descent_edges(Seed(42), CellId(0), Band::Undercroft, 4, 4),
+            vec![
+                (0, 3),
+                (1, 2),
+                (1, 3),
+                (2, 0),
+                (2, 1),
+                (2, 2),
+                (3, 1),
+                (3, 2)
+            ]
+        );
+        assert_eq!(
+            descent_edges(Seed(90210), CellId(7), Band::Underdeep, 2, 4),
+            vec![(0, 0), (0, 2), (1, 0), (1, 1), (1, 3)]
+        );
+    }
+
     /// The descent draw travels the `BAND_DESCENT` leg and **not** a
     /// sibling's, even where the key string would be identical. The
     /// separation lives in the parent label, so a byte-identical key under a
@@ -3338,6 +3395,15 @@ mod tests {
         let mut edges_total = 0usize;
         let mut upper_branches_total = 0usize;
         let mut pairs_total = 0usize;
+        // The headline share: how often the union collapses to the fewest
+        // edges its construction permits, `max(upper, lower)` — a spanning
+        // shape with no redundancy at all. COUNTED HERE rather than added up
+        // by hand from the table below, because review round 1 caught the
+        // hand-computed version off by 18 pairs (87.0% for 86.8%): it read
+        // each row's smallest OBSERVED count as the minimum, when the
+        // minimum is `max(upper, lower)` and four of the square-ish rows
+        // never reach it at all.
+        let mut at_minimum_total = 0usize;
         for seed in [Seed(42), Seed(7), Seed(90210)] {
             for cell in 0u32..512 {
                 for &band in Band::habitation() {
@@ -3357,6 +3423,9 @@ mod tests {
                     edges_total += n;
                     upper_branches_total += usize::from(upper);
                     pairs_total += 1;
+                    if n == usize::from(upper.max(lower)) {
+                        at_minimum_total += 1;
+                    }
                 }
             }
         }
@@ -3372,6 +3441,11 @@ mod tests {
         println!(
             "  mean edges per band pair   {:.4}",
             edges_total as f64 / pairs_total as f64
+        );
+        println!(
+            "  at the minimum max(u,l)    {at_minimum_total} of {pairs_total} = {:.4}% \
+             (a spanning shape, no redundancy)",
+            100.0 * at_minimum_total as f64 / pairs_total as f64
         );
         for ((upper, lower), counts) in &by_pair {
             let total: usize = counts.values().sum();

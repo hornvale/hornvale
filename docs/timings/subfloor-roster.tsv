@@ -2697,6 +2697,7 @@ hornvale-worldgen::hornvale_worldgen$chamber::tests::the_band_descent_label_is_v
 hornvale-worldgen::hornvale_worldgen$chamber::tests::the_chamber_key_drops_the_entrance_and_names_the_band
 hornvale-worldgen::hornvale_worldgen$chamber::tests::the_chamber_key_spelling_is_pinned
 hornvale-worldgen::hornvale_worldgen$chamber::tests::the_descent_draw_travels_the_band_descent_leg_and_not_a_siblings
+hornvale-worldgen::hornvale_worldgen$chamber::tests::the_descent_edges_are_byte_pinned_for_known_calls
 hornvale-worldgen::hornvale_worldgen$chamber::tests::the_descent_edges_are_the_same_however_the_lattice_is_queried
 hornvale-worldgen::hornvale_worldgen$chamber::tests::the_drainage_exemption_is_unconditional_in_depth
 hornvale-worldgen::hornvale_worldgen$chamber::tests::the_edge_count_distribution_over_a_panel_is_reported
