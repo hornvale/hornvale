@@ -4,12 +4,15 @@
 //! coarse biome class.
 //!
 //! PHASE PRECEDENT — this module authors no independent latitude or season
-//! physics. The annual phase convention is the one
-//! `domains/climate/src/temperature.rs` already fixed for spinning worlds:
+//! physics. It follows the annual phase convention of
+//! `domains/climate/src/temperature.rs` for spinning worlds:
 //! `year_phase = day / DAYS_PER_YEAR` with
 //! `sub_lat = obliquity * sin(TAU * year_phase)`, so phase 0 is the
 //! northern spring equinox (declination rising through zero) and phase
-//! 0.25 is the northern summer solstice. The hemisphere sign comes from
+//! 0.25 is the northern summer solstice. NOTE this assumes the climate
+//! module's per-world `year_phase_offset` is zero; at a non-zero offset
+//! temperature.rs's phase 0 is not the spring equinox, so consuming that
+//! offset here is deferred to bake wiring. The hemisphere sign comes from
 //! the latitude's signum, exactly as temperature.rs's hemispheric
 //! asymmetry term does. The curve peaks a fixed fraction of a year after
 //! that hemisphere's solstice (`PEAK_AFTER_SOLSTICE`), i.e. at harvest.
@@ -30,8 +33,13 @@ pub const AMPLITUDE_MAX: f64 = 1.0;
 
 /// The fraction of a year after a hemisphere's summer solstice at which the
 /// curve peaks — harvest, roughly 6 weeks past peak sun, when stores ripen.
-/// Phase 0.25 is the solstice (see the module doc), so this puts the peak
-/// at phase 0.35 in the north and 0.85 in the south.
+/// The solstice as an annual phase (see the module doc): the northern
+/// summer / southern winter turning point.
+const SOLSTICE_PHASE: f64 = 0.25;
+
+/// The fraction of a year after a hemisphere's summer solstice at which the
+/// curve peaks — harvest, roughly 6 weeks past peak sun, when stores ripen.
+/// This puts the peak at phase 0.35 in the north and 0.85 in the south.
 const PEAK_AFTER_SOLSTICE: f64 = 0.10;
 
 /// Half the year the curve spends above zero (the growing half); the other
@@ -43,7 +51,7 @@ const GROWING_HALF: f64 = 0.5;
 pub struct LatDeg(f64);
 
 impl LatDeg {
-    /// Validating constructor: rejects non-finite values outside
+    /// Validating constructor: rejects non-finite values and values outside
     /// `[-90, 90]`.
     /// type-audit: bare-ok(diagnostic-value: value)
     pub fn new(value: f64) -> Result<Self, LatError> {
@@ -86,8 +94,11 @@ impl Curve {
     /// The production multiplier at a day of year (any finite `f64`; the
     /// curve is periodic with period [`DAYS_PER_YEAR`]). Day 0 shares the
     /// climate module's annual-phase epoch: the northern spring equinox.
+    /// Latitude 0 takes the northern convention (the hemispheres are
+    /// distinguished only by the latitude's sign).
     /// type-audit: bare-ok(diagnostic-value: day_of_year), bare-ok(ratio: return)
     pub fn at(&self, day_of_year: f64) -> f64 {
+        debug_assert!(day_of_year.is_finite());
         let amp = self.amplitude();
         let rel = (day_of_year.rem_euclid(DAYS_PER_YEAR) - self.peak_phase() * DAYS_PER_YEAR)
             .rem_euclid(DAYS_PER_YEAR)
@@ -120,10 +131,10 @@ impl Curve {
     }
 
     /// This hemisphere's peak as an annual phase in `[0, 1)` — the
-    /// climate-module solstice phase plus the post-solstice lag, offset by
-    /// half a year in the southern hemisphere.
+    /// solstice phase plus the post-solstice lag, offset by half a year in
+    /// the southern hemisphere. Latitude 0 takes the northern convention.
     fn peak_phase(&self) -> f64 {
-        let base = 0.25 + PEAK_AFTER_SOLSTICE;
+        let base = SOLSTICE_PHASE + PEAK_AFTER_SOLSTICE;
         if self.latitude.degrees() < 0.0 {
             (base + 0.5).rem_euclid(1.0)
         } else {
@@ -158,30 +169,32 @@ mod tests {
         // Winter: half a year after the peak the curve is exactly off.
         let winter = c.at(c.peak_day_of_year() + DAYS_PER_YEAR * 0.5);
         assert_eq!(winter, 0.0);
-        // Single peak: the sampled maximum lands on peak_day_of_year, and
-        // the neighbourhood around it is unimodal.
+        // Single peak: sweep two full years with a non-dividing step count
+        // (4000 steps over 2×DAYS_PER_YEAR never lands exactly on the
+        // solstice/peak boundary, unlike a 3650-step year grid) and count
+        // STRICT local maxima — one per full period swept.
         let peak = c.peak_day_of_year();
+        const PERIODS: f64 = 2.0;
+        let steps = 4000_usize;
+        let span = PERIODS * DAYS_PER_YEAR;
         let mut best = (f64::NEG_INFINITY, 0.0_f64);
         let mut maxima = 0_usize;
-        let mut prev = f64::NEG_INFINITY;
-        let mut rising = true;
-        for step in 0..=3650 {
-            let d = step as f64 * DAYS_PER_YEAR / 3650.0;
-            let v = c.at(d);
-            if v > best.0 {
-                best = (v, d);
-            }
-            if v < prev && rising {
-                rising = false;
+        let values: Vec<f64> = (0..=steps)
+            .map(|step| c.at(step as f64 * span / steps as f64))
+            .collect();
+        for i in 1..values.len().saturating_sub(1) {
+            if values[i] > values[i - 1] && values[i] > values[i + 1] {
                 maxima += 1;
-            } else if v > prev && !rising {
-                panic!("curve rises again after falling: more than one peak");
             }
-            prev = v;
+            if values[i] > best.0 {
+                best = (values[i], i as f64 * span / steps as f64);
+            }
         }
-        assert_eq!(maxima, 1);
+        // A periodic curve has one peak per period; two periods must
+        // therefore carry exactly two strict maxima and no more.
+        assert_eq!(maxima, PERIODS as usize, "one strict maximum per period");
         assert!(
-            (best.1 - peak).abs() < DAYS_PER_YEAR / 3650.0,
+            (best.1.rem_euclid(DAYS_PER_YEAR) - peak).abs() < DAYS_PER_YEAR * 0.5 / steps as f64,
             "sampled peak {best:?} vs authored {peak}"
         );
         assert!(
@@ -200,8 +213,18 @@ mod tests {
         let s = south.peak_day_of_year();
         let expected_south = (n + DAYS_PER_YEAR * 0.5) % DAYS_PER_YEAR;
         assert_eq!(s, expected_south);
-        // And the waveforms mirror: north at n equals south at s.
-        assert_eq!(north.at(n), south.at(s));
+        // And the waveforms mirror fully: south at d is north at d shifted
+        // half a year, pointwise across a sweep.
+        for step in 0..=1000 {
+            let d = step as f64 * DAYS_PER_YEAR / 1000.0;
+            let mirrored = (d + DAYS_PER_YEAR * 0.5) % DAYS_PER_YEAR;
+            assert!(
+                (north.at(d) - south.at(mirrored)).abs() < 1e-12,
+                "at day {d}: {} vs {}",
+                north.at(d),
+                south.at(mirrored)
+            );
+        }
     }
 
     #[test]
