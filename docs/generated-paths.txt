@@ -13,3 +13,12 @@ docs/audits/
 docs/digest/
 book/src/domesday/
 clients/game/core/tests/fixtures/
+
+# Declared as a FILE as well as inside docs/audits/ above, and the redundancy
+# is the point (The Stope, Task 2b). `git diff --exit-code` is vacuous against
+# a path with no index entry -- and a NEW file dropped into an
+# already-declared directory inherits that vacuity in full, because the
+# directory's other tracked files keep the tracked-ness check green while the
+# new one is invisible. Naming the file directly is what makes
+# cli/tests/suite/generated_paths.rs refuse until it is `git add`-ed.
+docs/audits/underworld-lattice-seed-panel.md

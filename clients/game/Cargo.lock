@@ -175,9 +175,11 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-game-core",
  "hornvale-kernel",
+ "hornvale-language",
  "hornvale-terrain",
  "hornvale-vessel",
  "hornvale-worldgen",
+ "serde_json",
  "signal-hook",
 ]
 

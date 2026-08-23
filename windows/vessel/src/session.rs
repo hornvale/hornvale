@@ -491,7 +491,7 @@ pub struct Session<'w> {
     /// is already in hand). This campaign's lattice has only the entrance
     /// address reachable from the vessel seam — no deeper descent verb
     /// exists yet — so this is always the entrance chamber (`band = 0,
-    /// slot = 0`) when `Some`.
+    /// branch = 0, floor = 0`) when `Some`.
     underground: Option<hornvale_worldgen::chamber::Chamber>,
     /// The session-lived geometry memo (the-waymark fix round, Finding 2):
     /// `RoomMeshMemo` is fixed for this session's whole lifetime (`neighbors`
@@ -1492,7 +1492,7 @@ impl<'w> Session<'w> {
     ///
     /// Mirrors `dive`, but the chamber lattice has a THIRD outcome `dive`
     /// never needed. Task 3 measured that even where a cave exists, its own
-    /// entrance address (`band = 0, slot = 0`) resolves to an actual chamber
+    /// entrance address (`branch = 0, band = 0, floor = 0`) resolves to an actual chamber
     /// only 51.5% of the time — spec §3.4 rung 0, `Sealed`: "the void exists
     /// and is unreachable," a real chamber a later dig could find, not a
     /// defect. `dive`'s own doc warns what happens when a refusal doesn't
@@ -1549,7 +1549,8 @@ impl<'w> Session<'w> {
             cell,
             entrance: 0,
             band: 0,
-            slot: 0,
+            branch: 0,
+            floor: 0,
         };
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
         // The chamber lattice is placed by HEAT since `chamber/v2` (spec
@@ -2312,7 +2313,14 @@ impl<'w> Session<'w> {
     fn chamber_sources(&self, inside: &Inside) -> Vec<crate::light::Source> {
         let mut sources = vec![crate::light::Source {
             at: inside.cell,
-            illuminant: hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+            // The Wick (spec §2.1): the implicit torch burns four times
+            // brighter — "carry more candles". The falloff shape is
+            // untouched and pinned by the fence test; hearth and doorway
+            // sources keep their own levels.
+            illuminant: crate::light::scaled(
+                &hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+                4.0, // The Wick, spec §2.1
+            ),
             radius: SIGHT_RADIUS,
         }];
 
@@ -2337,20 +2345,27 @@ impl<'w> Session<'w> {
             });
         }
 
+        for &(_, _, at) in &inside.lattice.doorways {
+            sources.push(crate::light::Source {
+                at,
+                illuminant: self.daylight(),
+                radius: SIGHT_RADIUS,
+            });
+        }
+        sources
+    }
+
+    /// The world's daylight at the possession's position and day — one call,
+    /// shared by the doorway sources and the skyglow ambient so the two can
+    /// never disagree about which sky they are under.
+    fn daylight(&self) -> hornvale_kernel::color::Illuminant {
         let (day, _altitude) = crate::eyes::daylight_at(
             self.world,
             self.calendar.as_ref(),
             self.day,
             self.agent.position.coord().latitude,
         );
-        for &(_, _, at) in &inside.lattice.doorways {
-            sources.push(crate::light::Source {
-                at,
-                illuminant: day,
-                radius: SIGHT_RADIUS,
-            });
-        }
-        sources
+        day
     }
 
     /// The chamber plan for the room stood in — **the one derivation of the
@@ -2383,6 +2398,7 @@ impl<'w> Session<'w> {
                 observer,
                 fabric,
                 light: &light,
+                ambient: crate::light::scaled(&self.daylight(), crate::light::SKYGLOW_SCALE),
             }),
             _ => None,
         };
@@ -4932,7 +4948,7 @@ mod tests {
     }
 
     /// The first cave-bearing cell this seed's terrain places whose entrance
-    /// address (`band = 0, slot = 0`) resolves to `want_open`. Scans the
+    /// address (`branch = 0, band = 0, floor = 0`) resolves to `want_open`. Scans the
     /// terrain directly (`GeneratedTerrain::cave_at`) rather than steering a
     /// walk there: a terrain cell spans many walk-band rooms (measured while
     /// developing this campaign — dozens to low hundreds of `go` steps per
@@ -4959,7 +4975,8 @@ mod tests {
                 cell,
                 entrance: 0,
                 band: 0,
-                slot: 0,
+                branch: 0,
+                floor: 0,
             };
             let is_open = hornvale_worldgen::chamber::chamber_at(
                 seed,

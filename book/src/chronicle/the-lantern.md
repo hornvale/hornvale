@@ -5,7 +5,7 @@ species' eyes, and left one slot in its own output deliberately empty:
 
 ```rust
 pub struct PaletteEntry {
-    pub color: Option<[u8; 3]>,   // always None
+    pub color: Option<[u8; 3]>,   // always None (until The Wick)
 }
 ```
 

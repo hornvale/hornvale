@@ -152,7 +152,7 @@ const PER_RUNG_CEILING_SECS: f64 = 600.0;
 const MEM_CEILING_FRACTION: f64 = 0.80;
 
 /// A from-scratch, deliberately faithful stand-in for `windows/vessel::
-/// liveness::NavSpace` (private to that crate — see the module doc for
+/// action::NavSpace` (private to that crate — see the module doc for
 /// why this bench cannot use the real one). Goal is arrival at `dest`;
 /// every move costs 1 (the real `NavSpace`'s cost with an always-empty
 /// avoid set, which is all this bench ever exercises).

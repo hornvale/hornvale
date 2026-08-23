@@ -359,3 +359,359 @@ Three seams, not a rewrite:
 ```
 
 Everything else in §3 stands, and §4's preregistration is unaffected.
+
+---
+
+# AMENDMENT B, 2026-08-20: Task 0's null, a refused sixth rung, and the barrier
+
+Task 0 ran before any production code, as §4.1 required, and it falsified
+§3.1's prediction. What follows is Nathan's ruling on the consequences, taken
+in conversation after two measurements. **The design is not rescued by
+retuning** — the falsified prediction stands as the campaign's first
+publishable null, and the response is a change of *mechanism*, not of
+threshold.
+
+## B.1 The null: Sunless is the modal terminating rung, not a rare one
+
+§3.1 said *"A system reaching Sunless should be uncommon. That is a
+prediction, not a setting."* It is now measured, and it is wrong.
+
+| seed | systems | terminate Sunless | share |
+|---|---|---|---|
+| 42 | 874 | 214 | 24.49% |
+| 7 | 1681 | 727 | 43.25% |
+| 1234 | 1266 | 536 | 42.34% |
+| **pooled** | **3821** | **1477** | **38.65%** |
+
+Denominator: cave-bearing **land** cells (terrain reports at most one `Cave`
+per cell; ocean cells carrying a cave = 0 on all three seeds).
+
+**Two things make this a design finding rather than a calibration bug.**
+
+1. **The number was already in the tree.** `domains/terrain/src/delve.rs`'s
+   module doc has published 24.5 / 43.2 / 42.3% since The Underworld, to the
+   unit. §3.1 called the rate "measurable before anything is built" while it
+   was already *measured*, and readable. The prediction was falsifiable by
+   grepping, and the campaign wrote it anyway.
+2. **`Sunless` is the ladder's open-ended bottom bin `[50 K, inf)`, and
+   `HABITABLE_CEILING_K = 50` is an authored fidelity choice, not a fitted
+   one.** `delve.rs:79-85` says so in terms: *"50 K is the least well-placed
+   edge in the table and cannot be moved … an accepted cost of the ceiling
+   being a fidelity choice rather than a measured one."* So the rung does not
+   mean "extraordinarily deep". It means "past the depth at which the ladder
+   stopped modelling habitability" — the leftover bucket, and leftover buckets
+   are large by construction.
+
+## B.2 A sixth rung was considered, measured, and REFUSED
+
+The obvious repair — split `[50, inf)` at some X and put the eldritch below it
+— was measured rather than argued. It does not work, and the measurement is
+committed (`085f3239`).
+
+**There is nowhere to cut. 99% of the entire super-50 K population lives in
+`[50, 61)`** — an 11 K-wide lump (99.1 / 99.7 / 98.9% by seed). Observed max
+ΔT is **68.086 K** against a possible 87.7 K.
+
+| X (K) | P(reach X \| reached Underdeep) | share within ±0.5 K | verdict |
+|---|---|---|---|
+| 58 | 3.4 / 7.4 / 28.0% | 2.2-3.5% | outside the target band on seed 1234 |
+| **60** | 0.8 / 0.6 / 5.4% | **4.11%** worst | in band, but the rate swings **9.5x** across the panel and the edge is **2.7x less stable than the worst edge already in the ladder** — worse than the 10 K edge that was condemned and moved |
+| 61 | 0.8 / 0.2 / 0.9% | 0.1-1.0% | holds **2 / 2 / 6 systems**. The good stability and the empty rung are the same fact: an edge in a desert always looks stable |
+| >= 62 | 0 on seed 42 | — | §4.1's own stop condition, one rung down |
+
+A sixth rung would be within budget — the ladder's own test allows `4..=6`
+habitation rungs — so this is refused on evidence, not on permission.
+
+**A wrong mechanism was proposed and then refuted by the same measurement, and
+that is recorded because the campaign would otherwise carry it.** The
+controller predicted the super-50 K population was pinned against
+`CAVE_REACH_CEILING_M = 3000.0`. **Only 3 of 3821 caves (0.08%) sit at that
+clamp, and zero on two of three seeds; no clamp binds on this population at
+all** — not the reach ceiling, not `LAVATUBE_CEILING_M`, not the gradient
+band `[15, 30]` (realized span 20.7-29.2, 1.41x). The concentration is instead
+that ΔT = gradient x reach and the two do not attain their maxima together, so
+the product concentrates without either factor clipping. Had the prior been
+confirmed rather than tested, this spec would now assert that raising
+`CAVE_REACH_CEILING_M` spreads the deep class — which the data does not
+support. Right answer, wrong *because*.
+
+## B.3 `Sunless` is renamed to `Nadir`, inside the `chamber/v3` epoch
+
+Two reasons, and the second one has a deadline.
+
+**The word was carrying a promise the ladder does not make.** "Sunless" reads
+as the eldritch deep; the rung means "past the modelled habitable ceiling".
+`Nadir` is an *astronomical* term — this project's native idiom — and the
+delve ladder is measured as ΔT **above the surface datum**, so "the lowest
+point relative to the datum" is coherent with the ladder's own coordinate
+rather than decoration. It also owes nothing to another world's vocabulary.
+
+**It must happen now or cost a second epoch.** `chamber_key` spells the rung's
+**name** into the seed-derivation key, through the explicit `rung_name` match
+table at `windows/worldgen/src/chamber.rs:274` (deliberately not a `Debug`
+impl). So renaming a rung relocates every chamber in every world — a label
+epoch. Task 1 already mints `chamber/v3`; the rename rides it for free, and
+lands at any later date at full price.
+
+## B.4 The keystone amendment: depth is physics, access is content
+
+The campaign's scarcity was on the wrong axis. §3.1 tried to make the deep
+**rarer**; what it wanted was for the deep to be **harder**.
+
+> **The ladder says how far the rock lets you go. The branch says what is in
+> the way. Neither is a source of truth for the other.**
+
+This is not two sources of truth for one quantity — it is one source each for
+two different quantities, and conflating them is what made the 38.65% read as
+a defect. It also prices correctly: moving a ΔT threshold relocates chamber
+existence in every world and re-pins every witness, while changing a gating
+draw edits a constant.
+
+Measured, the ladder already agrees with the intended reading at three of five
+rungs (reach probabilities, seeds 42 / 7 / 1234):
+
+| rung | intended | reaches it today | |
+|---|---|---|---|
+| Undercroft | cellars, cave mouths, dungeon entrances; too many to count | 100% | agrees |
+| Shallows | familiar, less hostile, commerce with the surface, freely scattered | 91 / 95 / 93% | agrees |
+| Deeps | the frontier: towns, ecosystems, a Wild West between Shallows and Underdeep; common, and where oatmeal must be fought | 76 / 59 / 81% | agrees |
+| Underdeep | organized, powerful, self-sufficient; Drow / Duergar / Svirfneblin are typical but **not exclusive**; rare | 31 / 52 / 53% | too common **as a band** |
+| Nadir | endgame; reachable only past everything above it | 80 / 83 / 81% given Underdeep | far too common |
+
+Both mismatches are the same error and take the same fix: **reaching a band is
+not the same as meeting what lives there.** A drow-tier civilization is a
+*character drawn on a branch*, at whatever rate the design wants; the band
+merely says the rock is cold enough. Note the step-conditional
+`P(Nadir | Underdeep)` is 80-83% on all three seeds while every step above it
+swings (40-88% for one step) — that stability is structural, and it means
+essentially no rock separates the Underdeep from the Nadir. **The endgame gate
+is content, and it could never have been geology.**
+
+## B.5 The barrier: one dial, per branch, whose meaning varies with depth
+
+Nathan's design, and it replaces §3.3's "the eldritch is Sunless" outright.
+
+**A branch draws a barrier thinness.** The `Nadir` is not a deeper cave; it is
+a borderland where the barrier between the underworld and whatever lies beyond
+it is thin. What is common is the *region*. What is rare is the *thinness*.
+
+```
+sealed   the barrier holds            moderate effects
+warded   a rupture, sealed by someone <- implies a warder, therefore a
+                                        society that survived doing it
+thin     the barrier is failing
+open     a portal into Chaos          civilization-ending
+```
+
+**One scalar, read differently by band** — which is what makes it one source of
+truth rather than two:
+
+- In the **Deeps**, a thin barrier is the semi-eldritch frontier: a cursed but
+  coherent society, commerce with the surface, portals. Accessible on purpose;
+  59-81% of systems reach the Deeps, and a weird trading city has to be
+  findable.
+- At the **Underdeep**, it is part of why anything down there is powerful and
+  self-sufficient enough to hold territory.
+- At the **Nadir**, a thin barrier is **what lets you through at all**. So
+  reaching the Nadir *is* the metaphysical event, not merely a deeper cave, and
+  "you got past the Drow and found a way further down" is not a die roll — it
+  is *the barrier was thin here*, a fact about that branch other systems can
+  also read.
+
+**The scalar is pinnable**, in the idiom `--sky` / `--plates` /
+`--ocean-fraction` already establish, so the whole curve is tuneable without
+regenerating or retuning the ladder.
+
+## B.6 §6's "nothing named" non-goal is LIFTED; the metaphysics ban is not
+
+§6 said: *"No metaphysics. The Sunless band gets a character slot and no
+content: `thaumic` stays 0.0, UNI-2 unratified, nothing named."* Nathan lifted
+the **"nothing named"** clause: the barrier's four states are named here.
+
+**The rest of that non-goal stands, and it costs less than it appears to.**
+`thaumic` is a reserved axis on `MaterialBuffer`
+(`domains/terrain/src/lithology.rs:105`), pinned to identically zero by
+`buffer_axes_are_bounded_and_thaumic_is_zero`. But `thaumic` is a property of
+**rock** — a lithology axis — and barrier thinness is a property of a **place
+in the underworld**, a branch. Different objects. So the barrier ships as its
+own quantity: **`thaumic` stays 0.0, that test stays green, and UNI-2 stays
+unratified.**
+
+**What a thin barrier DOES remains out of scope.** The cursed society, the
+incursion, the civilization-ending open portal: a later campaign. This one
+ships the dial, not the noise it makes.
+
+## B.7 Preregistration, amended
+
+§4.3's oatmeal criterion stands unchanged. Two additions, frozen here, before
+the code:
+
+```
+P(Nadir access | branch reached Underdeep)
+    0-10%    -> the intent. Report the exact rate.
+    >10%     -> the gate is not gating. Report; do NOT retune to rescue it
+                without saying so in the chronicle.
+    ~0%      -> the endgame is unreachable, which is the same defect as an
+                ungated one. Report and stop.
+
+share of branches by barrier state
+    reported as a distribution, not gated. A world that is >90% `sealed` has
+    a dial nobody can feel; a world with no `sealed` branches has no baseline
+    to contrast against. Both are findings for the controller.
+```
+
+## B.8 A preregistration defect, recorded rather than repaired
+
+§4.1's branch table has a **hole between 15% and 25%**, and seed 42 (24.49%)
+fell in it. The verdict was unaffected — pooled and two of three seeds cleared
+25% outright — but the table must be repaired before reuse, and repairing it
+*now*, knowing the answer, is precisely what preregistration exists to
+prevent. Left as written; carried to the retrospective.
+
+## B.9 What this changes about the task shape
+
+```
+0  DONE. Terminates measured; §3.1 falsified; the sixth rung refused
+1  the address: floor added, slot -> branch, Sunless -> NADIR, chamber/v3
+2  floors per run (unchanged)
+3  character per branch AND barrier thinness per branch --- one object, one
+   lattice key, one test shape. Drow-tier civilizations are a rare CHARACTER
+   draw, never a band property
+4  engine sets: f(character, band); the barrier read here (unchanged otherwise)
+5  entrances (unchanged)
+6  junctions (unchanged)
+7  MEASURE 4.2, 4.3, and B.7's two additions
+8  DoD, plus a decision record for chamber/v3 AND the rename
+```
+
+---
+
+# AMENDMENT C, 2026-08-20: the tree, the descent, and what §4.2 actually meant
+
+Nathan's rulings, in conversation, after Task 2's measurement exposed two
+things §3 had assumed without stating. Both corrections make the underworld
+**smaller and more shaped**, not larger.
+
+## C.1 A system has ONE to FOUR branches, drawn, and MOSTLY ONE
+
+**What ships today is always exactly four.** `chamber_exists` admits
+`branch` 0..3 unconditionally, there is no branch-count draw anywhere, and at
+`EXISTENCE_DENSITY = 0.5` over ~22 floors the chance a branch comes out empty
+is effectively zero. So every cave system in every world currently has four
+full columns. That was never designed; it is `BRANCHES_PER_SYSTEM` being read
+as a population instead of as a lattice size.
+
+**The intent is a tree of maximum width four, minimum width one, and most of
+the time width one.** The branch *count* becomes its own draw, keyed on the
+lattice like every other (decision 0102), weighted hard toward 1.
+
+`BRANCHES_PER_SYSTEM = 4` stays exactly as it is — it is the lattice's own
+size, and the draw decides realization within it. This is the same
+lattice-ceiling/drawn-realization split Task 2 applied to floors, and the same
+reason 0102 requires it.
+
+## C.2 A branch is a SUBTREE WITH A ROOT FLOOR, not a parallel shaft
+
+§3.4 pictured branches as parallel columns from the surface. Nathan's ruling
+is the NetHack relation instead — the Gnomish Mines hanging off the main
+dungeon:
+
+```
+main line          branch
+  floor 0
+  floor 1
+  floor 2  ------>  root floor       <- the branch's own descent starts HERE
+  floor 3            floor 1
+  ...                floor 2
+```
+
+**A branch has a root floor on its parent.** The main line is the branch
+whose root is the surface. Everything else hangs off something.
+
+This is what makes "mostly width one" a shape rather than a weighting: a
+system is a spine with occasional side-descents, which is the roguelike
+structure the campaign is trying to reach, and it is why the Deeps is where
+the creative work belongs (§B.4's table, and Nathan's "the Wild West").
+
+## C.3 An entrance maps to a FLOOR, and §3.4's two-door case falls out for free
+
+**This supersedes §3.4's "entrance → branch is a mapping."** An entrance maps
+to a **floor** — main-line floor 0, or any branch's root floor.
+
+§3.4's motivating case survives unchanged and needs no separate mechanism:
+*the well in the town square drops into the natural cave; the blacksmith's
+cellar drops into the dwarven works* is simply two entrances whose mapped
+floors are the main line's head and a branch's root. One mechanism, both
+readings, and the more general one is the cheaper one.
+
+## C.4 THE DESCENT IS A SEQUENCE. "Same floor number connects" was a BUG
+
+The rule `passages_from` implements — floor *N* of band *k* joins floor *N* of
+band *k±1* — is not a design decision anyone defended. It is what the function
+did when a band held one interior-less point, where it was correct by
+vacuity, and it survived Task 1 unexamined. Task 2's draw then made it
+actively wrong: with `Deeps` 5-20 over `Underdeep` 5-10, a Deeps chamber at
+floor >= 10 could never descend at all, and only `Underdeep` floors 0-4 could
+ever reach the `Nadir` — an undesigned structural gate sitting on top of the
+barrier gate B.5 specifies.
+
+**The rule is Nathan's, and the existing draws already implement it:**
+
+> Floor 3 exits downward onto Floor 4. Floor 4 is in the same band as Floor 3
+> if that band has floors left, or the next band down if it does not.
+
+**`floors_in_run` IS the sojourn time in that chain.** The chance Nathan asked
+about ("a Markov thing") already lives in the count draw, one level up, rather
+than being rolled again at each step — so this needs no new randomness and no
+new stream.
+
+What changes is one function: descending past a band's last floor lands on
+**floor 0 of the next band**. **The address does not change** — `floor` stays a
+lattice coordinate within a band, and a descent's running depth is a
+presentational count, not an address. `chamber/v3` survives; no epoch.
+
+## C.5 §4.2's real denominator is DEPTH, not COUNT — and neither reading offered was right
+
+The controller ruled per-branch over per-system after unblinding (recorded as
+a defect in its own right, B.8's family). **Nathan's ruling is a third
+reading neither of us proposed, and it is the correct one:**
+
+> Declare a maximum **depth**, and let branches and alternate floors increase
+> the **count** beyond it.
+
+So the two quantities are different questions and only one of them is gated:
+
+```
+MAIN-LINE DEPTH   the spine, surface to termination.   GATED. ~50 max.
+                  §3.1's frozen ranges sum to 15-50 ONCE, which is exactly
+                  this quantity --- the ranges were right all along and the
+                  sentence describing them was wrong.
+
+TOTAL FLOORS      main line plus every branch.         REPORTED, not gated.
+                  Theoretical maximum 4 x 50 = 200, reached only by a
+                  system running the full ladder at maximum width --- which
+                  C.1 makes vanishingly rare and which Nathan independently
+                  called "probably structurally impossible" (three alternate
+                  staircases in a row, forty-nine times).
+```
+
+**Two independent derivations of 200 agree**, which is the reason to trust the
+frozen ranges rather than retune them: Nathan reached it from "three alternate
+floors for each of fifty levels"; the ranges reach it by summing per-band
+maxima and multiplying by the lattice width. Nobody fitted one to the other.
+
+Measured main-line depth today is 22 / 24 / 27 (median, seeds 42 / 7 / 1234)
+and 32-33 for a full-ladder descent — inside the intent, with headroom to 50.
+
+## C.6 What this changes about the task shape
+
+```
+3   character AND barrier per branch, PLUS the branch-count draw (C.1) and
+    the branch's root floor (C.2)
+3b  NEW. the descent is a sequence: band transition is forced by the drawn
+    sojourn, not by matching floor numbers (C.4). Lands BEFORE Task 4,
+    which builds descents out of runs and must inherit the corrected rule
+    rather than the accident
+5   entrances map to FLOORS, not branches (C.3)
+7   prereg amended: GATE main-line depth, REPORT total floors (C.5)
+```

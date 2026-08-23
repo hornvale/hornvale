@@ -23,6 +23,8 @@ mod beholding_probe;
 mod beta_calibration_freeze;
 #[path = "suite/beta_calibration_sweep.rs"]
 mod beta_calibration_sweep;
+#[path = "suite/branch_character.rs"]
+mod branch_character;
 #[path = "suite/capacity_cost_probe.rs"]
 mod capacity_cost_probe;
 #[path = "suite/chorus_params.rs"]
@@ -109,6 +111,8 @@ mod history_units;
 mod hollow_readout;
 #[path = "suite/insolation_probe.rs"]
 mod insolation_probe;
+#[path = "suite/junctions.rs"]
+mod junctions;
 #[path = "suite/keeping_probe.rs"]
 mod keeping_probe;
 #[path = "suite/lantern_probe.rs"]
@@ -131,6 +135,8 @@ mod ore_viability_probe;
 mod person_promotion;
 #[path = "suite/pin_enumeration.rs"]
 mod pin_enumeration;
+#[path = "suite/portolan_resolution.rs"]
+mod portolan_resolution;
 #[path = "suite/profile.rs"]
 mod profile;
 #[path = "suite/proto_goblinoid_golden.rs"]
@@ -161,8 +167,12 @@ mod soil_attribution_probe;
 mod solitary_tongue;
 #[path = "suite/species_worlds.rs"]
 mod species_worlds;
+#[path = "suite/stope_variety_probe.rs"]
+mod stope_variety_probe;
 #[path = "suite/tense_shadow.rs"]
 mod tense_shadow;
+#[path = "suite/termination_probe.rs"]
+mod termination_probe;
 #[path = "suite/threading_equivalence.rs"]
 mod threading_equivalence;
 #[path = "suite/tilth_phase_diagram.rs"]

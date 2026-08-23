@@ -105,17 +105,17 @@ pub struct PaletteEntry {
     /// actually reaching the cell, and `Observer::sense` + `to_srgb` make the
     /// triple. [`Shading`] is the whole of it.
     ///
-    /// **Still `None` for three distinct reasons, all legitimate**, and a
+    /// **Still `None` for two distinct reasons, both legitimate**, and a
     /// consumer may not tell them apart from the wire — absence means "no
     /// colour is claimed here", never "black":
     ///
     /// - the cell type has no fabric (a `Threshold`: an opening is not a
     ///   material);
-    /// - no light reaches the cell (unlit is ABSENT from the light field, not
-    ///   present at zero — `light_field`'s own doc explains why that
-    ///   distinction is load-bearing);
     /// - the observer step was declined (`Eyes::Off`) or the observer declares
     ///   no projection, so no honest triple exists to emit.
+    ///
+    /// (A third reason existed before The Wick — "no light reaches the cell"
+    /// — but unlit fabric now claims the skyglow ambient instead; spec §2.2.)
     ///
     /// type-audit: bare-ok(artifact: color)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -137,9 +137,13 @@ pub struct Shading<'a> {
     /// from. One context for the whole structure: a building is on one cell of
     /// the geosphere.
     pub fabric: &'a FabricContext,
-    /// What light reaches each cell. **Absent means unlit**, and a cell absent
-    /// here gets no colour at all rather than a black one.
+    /// What light reaches each cell. A cell absent here is unlit, and falls
+    /// back to [`Shading::ambient`] rather than to black or to absence (The
+    /// Wick, spec §2.2).
     pub light: &'a BTreeMap<Cell, Illuminant>,
+    /// The dim skyglow every fabric is bathed in even where no source reaches
+    /// (The Wick, spec §2.2) — `eyes::daylight_at`'s spectrum scaled far down.
+    pub ambient: Illuminant,
 }
 
 /// The screen triple one cell wears, or `None` where no colour can honestly be
@@ -150,7 +154,12 @@ pub struct Shading<'a> {
 /// to bytes.
 fn colour_of(kind: CellKind, cell: Cell, shading: &Shading<'_>) -> Option<[u8; 3]> {
     let fabric = fabric_of(kind, shading.fabric)?;
-    let light = shading.light.get(&cell)?;
+    // The skyglow floor (The Wick, spec §2.2): a cell absent from the light
+    // map is not colourless — it claims its fabric under the ambient. The
+    // lookup-or-ambient is one line so the fallback cannot be applied
+    // selectively; the other two withholdings (no fabric above, no observer
+    // below) are untouched.
+    let light = shading.light.get(&cell).unwrap_or(&shading.ambient);
     let reflectance = reflectance_of(fabric, shading.fabric);
     let signal = shading.observer.sense(&reflectance, light);
     shading.observer.to_srgb(&signal)
@@ -642,6 +651,7 @@ mod tests {
                 observer: &observer,
                 fabric: &ground,
                 light: &light,
+                ambient: flat_ambient(),
             }),
         );
         let wall_colours: std::collections::BTreeSet<Option<[u8; 3]>> = plan
@@ -654,25 +664,25 @@ mod tests {
             wall_colours.len(),
             3,
             "the eight wall cells hold three distinct lightings (bright, dim, \
-             unlit) and must intern to three entries, not {:?}",
+             skyglow) and must intern to three entries, not {:?}",
             plan.palette
         );
+        // The Wick (spec §2.2): the six unlit wall cells claim the ambient,
+        // not absence — three SOME colours now, never a None.
         assert!(
-            wall_colours.contains(&None),
-            "the six unlit wall cells must stay colourless: {wall_colours:?}"
+            !wall_colours.contains(&None),
+            "unlit wall cells must claim the skyglow ambient, not absence: {wall_colours:?}"
         );
     }
 
-    /// An unlit cell gets NO colour, not a black one — the palette's half of
-    /// the distinction `light_field` draws by leaving unreached cells out of
-    /// its map entirely. `[0, 0, 0]` and absence render alike and are different
-    /// models, and only absence lets a client decide for itself what unseen
-    /// looks like.
+    /// An unlit cell claims the SKYGLOW AMBIENT (The Wick, spec §2.2), and
+    /// that claim is neither black nor absent — every identical unlit wall
+    /// interning to one visible, non-zero triple.
     ///
-    /// FIRES WHEN: a missing light is defaulted to a zero illuminant somewhere
-    /// on the path, which would give every dark cell a black triple.
+    /// FIRES WHEN: the fallback emits `[0, 0, 0]` (a defaulted zero illuminant
+    /// somewhere on the path) or drops back to `None` again.
     #[test]
-    fn a_cell_no_light_reaches_gets_no_colour_rather_than_black() {
+    fn an_unlit_wall_claims_a_visible_ambient_triple_rather_than_black_or_absence() {
         let ground = synthetic_ground();
         let observer = hornvale_kernel::color::standard_observer();
         // The floor cell is lit; every wall cell is outside the field.
@@ -692,6 +702,7 @@ mod tests {
                 observer: &observer,
                 fabric: &ground,
                 light: &light,
+                ambient: flat_ambient(),
             }),
         );
         let floor = plan
@@ -705,10 +716,171 @@ mod tests {
              nothing about darkness"
         );
         for wall in plan.palette.iter().filter(|e| e.kind == "wall") {
-            assert_eq!(
-                wall.color, None,
-                "an unlit wall was given a colour: unlit must be ABSENT, not black"
+            let color = wall.color.expect(
+                "an unlit wall claimed no colour: unlit fabric falls back to \
+                 the ambient, not absence",
+            );
+            assert_ne!(
+                color,
+                [0, 0, 0],
+                "an unlit wall rendered BLACK: the ambient floor is a dim \
+                 skyglow, not a zero illuminant"
             );
         }
+    }
+
+    /// A unit spectrum scaled to the shipped skyglow level — the same
+    /// construction `session.rs` performs on the day's real daylight.
+    fn flat_ambient() -> Illuminant {
+        crate::light::scaled(
+            &hornvale_kernel::color::Illuminant::new([1.0; hornvale_kernel::color::BANDS]).unwrap(),
+            crate::light::SKYGLOW_SCALE,
+        )
+    }
+
+    /// The skyglow floor (The Wick, spec §2.2): a wall cell no source reaches
+    /// claims its fabric's colour under [`Shading::ambient`] rather than
+    /// withholding colour entirely. The other two withholdings are separate
+    /// tests; this one is only about unlit-but-fabric'd.
+    ///
+    /// FIRES WHEN: `colour_of`'s light lookup stops falling back to the
+    /// ambient, or the ambient is dropped from `Shading` altogether.
+    #[test]
+    fn an_unlit_wall_claims_the_skyglow_ambient() {
+        let ground = synthetic_ground();
+        let observer = hornvale_kernel::color::standard_observer();
+        // The floor cell is lit; every wall cell is outside the field.
+        let mut light = BTreeMap::new();
+        light.insert(
+            Cell(1, 1),
+            hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+        );
+        let plan = plan_of(
+            &tiny(),
+            0,
+            1,
+            7,
+            Cell(1, 1),
+            Vec::new(),
+            Some(&Shading {
+                observer: &observer,
+                fabric: &ground,
+                light: &light,
+                ambient: flat_ambient(),
+            }),
+        );
+        for wall in plan.palette.iter().filter(|e| e.kind == "wall") {
+            assert!(
+                wall.color.is_some(),
+                "an unlit wall claimed no colour: unlit fabric must fall back \
+                 to the skyglow ambient, not absence"
+            );
+        }
+    }
+
+    /// The ambient must stay a *floor*, not a second sun: at the same
+    /// lattice distance from the observer, an ambient-lit wall renders
+    /// strictly darker than a torch-lit one (The Wick spec §2.2's
+    /// "visible-but-clearly-darker").
+    ///
+    /// FIRES WHEN: the ambient scale is raised past the torch falloff, or the
+    /// fallback is applied even where the light map HAS an entry.
+    #[test]
+    fn the_ambient_is_dimmer_than_torch_light_at_the_same_distance() {
+        let ground = synthetic_ground();
+        let observer = hornvale_kernel::color::standard_observer();
+        let torch = hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN);
+        let mut light = BTreeMap::new();
+        // Two walls, both at Chebyshev distance 1 from the observer at
+        // (1,1): (0,1) flame-lit, (0,0) ambient-only.
+        light.insert(Cell(0, 1), crate::light::attenuate(&torch, 1.0));
+        let plan = plan_of(
+            &tiny(),
+            0,
+            1,
+            7,
+            Cell(1, 1),
+            Vec::new(),
+            Some(&Shading {
+                observer: &observer,
+                fabric: &ground,
+                light: &light,
+                ambient: flat_ambient(),
+            }),
+        );
+        let rgb = |kind: &str, x: i32| {
+            plan.palette[plan.cells[(x * plan.extent.w) as usize] as usize]
+                .color
+                .unwrap_or_else(|| panic!("{kind} carried no colour"))
+        };
+        let lit = rgb("wall", 1);
+        let dim = rgb("wall", 0);
+        let sum = |c: [u8; 3]| u32::from(c[0]) + u32::from(c[1]) + u32::from(c[2]);
+        assert!(
+            sum(dim) < sum(lit),
+            "the skyglow ambient ({dim:?}) must render darker than torch light              at the same distance ({lit:?})"
+        );
+    }
+
+    /// A cell with no derivable fabric still withholds — the skyglow floor is
+    /// a fallback for LIGHT, never an invention of FABRIC (The Wick spec
+    /// §2.2's kept withholdings).
+    ///
+    /// FIRES WHEN: the ambient fallback starts manufacturing a material for
+    /// cells that have none.
+    #[test]
+    fn a_cell_with_no_fabric_still_claims_nothing_under_the_ambient() {
+        let ground = synthetic_ground();
+        let observer = hornvale_kernel::color::standard_observer();
+        let mut cells = BTreeMap::new();
+        for y in 0..3 {
+            for x in 0..3 {
+                cells.insert(
+                    Cell(x, y),
+                    if x == 1 && y == 1 {
+                        CellKind::Floor(0)
+                    } else if x == 0 && y == 0 {
+                        CellKind::Threshold(0, 1)
+                    } else {
+                        CellKind::Wall
+                    },
+                );
+            }
+        }
+        let lattice = Lattice {
+            extent: Rect {
+                x: 0,
+                y: 0,
+                w: 3,
+                h: 3,
+            },
+            cells,
+            doorways: Vec::new(),
+            dof: 0,
+        };
+        let plan = plan_of(
+            &lattice,
+            0,
+            1,
+            7,
+            Cell(1, 1),
+            Vec::new(),
+            Some(&Shading {
+                observer: &observer,
+                fabric: &ground,
+                light: &BTreeMap::new(),
+                ambient: flat_ambient(),
+            }),
+        );
+        let threshold = plan
+            .palette
+            .iter()
+            .find(|e| e.kind == "threshold")
+            .expect("the threshold reached the palette");
+        assert_eq!(
+            threshold.color, None,
+            "a threshold was given a colour under the ambient: no fabric means \
+             nothing to claim, ambient or not"
+        );
     }
 }

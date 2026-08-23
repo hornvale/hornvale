@@ -9,7 +9,7 @@
 
 use hornvale_game::driver::Driver;
 use hornvale_game::{input, term};
-use hornvale_game_core::{MIN_HEIGHT, MIN_WIDTH};
+use hornvale_game_core::{CommandLine, MIN_HEIGHT, MIN_WIDTH};
 use hornvale_vessel::PossessTarget;
 
 const USAGE: &str = "usage: hornvale-game --seed <N> [--target flagship|most-populous-settlement]";
@@ -62,50 +62,100 @@ fn run(args: &[String]) -> Result<(), String> {
     outcome.map_err(|e| e.to_string())
 }
 
-/// Draw `json` at the terminal's current size, clamped up to the monochrome
-/// floor `hornvale-game-core` refuses to render below.
-fn redraw(term: &term::Term, json: &str) -> std::io::Result<()> {
+/// The terminal's current size, clamped up to the monochrome floor
+/// `hornvale-game-core` refuses to render below. The single place both
+/// `redraw` and `play`'s driver-resize calls read this from, so the height
+/// the driver resolves cursor positions against is always the SAME height
+/// `render_with`/`compose` draw the plate at — never a second, possibly
+/// stale copy of "what size is the terminal" (fix round 2: a fixed
+/// floor-height constant used to stand in for this and silently diverged
+/// from the real plate on any terminal taller than 24 rows).
+fn terminal_size() -> std::io::Result<(u16, u16)> {
     let (cols, rows) = crossterm::terminal::size()?;
-    let w = cols.max(MIN_WIDTH);
-    let h = rows.max(MIN_HEIGHT);
-    match hornvale_game_core::render(json, w, h) {
-        Ok(grid) => term.draw(&grid),
+    Ok((cols.max(MIN_WIDTH), rows.max(MIN_HEIGHT)))
+}
+
+/// Draw the driver's current state at the terminal's current size.
+///
+/// Reads `driver.snapshot()`/`focus()`/`cursor()`/`strip_text()`/
+/// `line_text()`/`caret()`/`echo()` fresh each call rather than being
+/// handed them, so every call site redraws the driver's true current state
+/// rather than whatever it happened to return from the action that
+/// triggered the redraw (`Event::Resize` has no action at all). The command
+/// buffer moved into `Driver` itself with Task 3 (The Stylus) — it used to
+/// be a separate `bin::line::Line` this loop owned alongside the driver,
+/// but `Driver::apply` now needs to mutate it directly to answer `Submit`,
+/// so `Driver` owns it and this function reads it back through the small
+/// accessors rather than threading a second mutable buffer through the
+/// loop.
+fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
+    let (w, h) = terminal_size()?;
+    let json = driver.snapshot();
+    let text = driver.line_text();
+    let cmd_line = CommandLine {
+        text: &text,
+        caret: driver.caret(),
+    };
+    match hornvale_game_core::render_with(
+        &json,
+        w,
+        h,
+        driver.focus(),
+        driver.cursor(),
+        cmd_line,
+        driver.strip_text(),
+        driver.echo(),
+    ) {
+        Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
     }
 }
 
-/// The main loop: draw the opening, then read one key at a time. A mapped
-/// key is sent to the driver unconditionally (the client never validates —
-/// see `input`'s module doc) and the reply is redrawn; an unmapped key does
-/// nothing at all, costing no turn and no redraw. `release` (bound to
-/// capital `Q`) ends the loop after its own reply is drawn, so the user sees
-/// the sim's own parting line before the terminal is restored.
+/// The main loop: sync the driver's plate height, draw the opening, then
+/// read one key at a time. Each key is mapped to an [`input::Action`] under
+/// the driver's current [`hornvale_game_core::Focus`] — `Action::None` does
+/// nothing at all, costing no turn and no redraw; every other action is
+/// applied and its reply redrawn.
+///
+/// **Release now reads the driver's own answer.** Before this campaign,
+/// `release` was detected by matching the sent verb line
+/// (`Action::Verb("release")`) — a check that could only ever see the
+/// `"release"` spelling, even though the sim also honours `"quit"` (ledger
+/// #8). `Driver::apply` now returns whether the possession RELEASED, so
+/// this loop asks the driver directly rather than re-deriving the answer
+/// from what it happened to send. The final `redraw` still runs before the
+/// loop returns, so the player sees the sim's own parting line before the
+/// terminal is restored (`main`'s `run` explicitly drops the terminal only
+/// after `play` returns).
+///
+/// `driver.resize` is called here (startup) and on every `Event::Resize` —
+/// never on a plain key press, since a terminal's size does not change
+/// between resize events, and `resize` itself is cheap (one subtraction
+/// plus a cursor re-clamp).
 fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     use crossterm::event::{Event, read};
 
-    redraw(term, &driver.snapshot())?;
+    let (_, h) = terminal_size()?;
+    driver.resize(h);
+    redraw(term, driver)?;
     loop {
         match read()? {
             Event::Key(key) => {
-                let Some(verb) = input::verb_for(key) else {
+                let action = input::action_for(key, driver.focus());
+                if matches!(action, input::Action::None) {
                     continue;
-                };
-                // Detected by matching the SENT verb, not the sim's answer —
-                // correct today only because `input::verb_for` is the sole
-                // source of outgoing verbs and its only release-shaped line
-                // is the literal string `"release"` (it never emits
-                // `"quit"`, the sim's other synonym for the same thing). If
-                // a future free-text input mode lets a player type `quit`
-                // directly, this check needs to grow with it or move to
-                // reading the driver's answer instead.
-                let released = verb == "release";
-                let json = driver.handle(&verb);
-                redraw(term, &json)?;
+                }
+                let released = driver.apply(action);
+                redraw(term, driver)?;
                 if released {
                     return Ok(());
                 }
             }
-            Event::Resize(_, _) => redraw(term, &driver.snapshot())?,
+            Event::Resize(_, _) => {
+                let (_, h) = terminal_size()?;
+                driver.resize(h);
+                redraw(term, driver)?;
+            }
             _ => {}
         }
     }

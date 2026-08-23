@@ -9363,7 +9363,7 @@ mod tests {
         let refugia = CellMap::from_fn(&geo, |_| false);
         let seating = seating_with(&[
             (KindId("kobold"), DelveRung::Deeps),
-            (KindId("goblin"), DelveRung::Sunless),
+            (KindId("goblin"), DelveRung::Nadir),
             (KindId("bugbear"), DelveRung::Deeps),
         ]);
         let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
@@ -9394,7 +9394,7 @@ mod tests {
         );
         assert_eq!(
             held_in_column(&bake, COLUMN),
-            vec![(DelveRung::Deeps, deep), (DelveRung::Sunless, deeper)],
+            vec![(DelveRung::Deeps, deep), (DelveRung::Nadir, deeper)],
             "two underworld communities, two rungs, one column"
         );
 

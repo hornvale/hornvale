@@ -10,6 +10,32 @@
 //! oxidation`/metamorphic grade, `methanogenesis`/carbonate+porosity, `iron
 //! reduction`/mafic, `geothermal`/gradient×depth).
 //!
+//! # STALE AFTER THE STOPE'S EPOCH — `chamber_count` NO LONGER MEANS WHAT IT
+//! # MEANT WHEN THESE FIGURES WERE TAKEN
+//!
+//! This probe was written against the pre-`chamber/v3` lattice, where one
+//! `(cell, entrance, band, slot)` **was** one chamber. The Stope added a
+//! `floor` rung: a band-branch now holds a drawn run of up to
+//! `FLOORS_PER_RUN_CEILING` floors. The loop below was mechanically updated
+//! to the new address (`slot` -> `branch`, `floor: 0`) so the crate compiles,
+//! and it therefore still counts **band-branches, not chambers** — deliberately,
+//! because silently changing a committed measurement inside a merge commit is
+//! worse than leaving it stale and saying so.
+//!
+//! The gap is more than an order of magnitude: The Stope's own witness
+//! measures seed 42 at **21,328 chambers**, where this loop counts roughly
+//! 1,700. **Every M2/M3 figure denominated in `chamber_count` — the energy
+//! total at `SURVIVE_K`, the per-place parity, the land-cells-per-chamber
+//! ratio — therefore understates the underworld it is trying to feed**, and
+//! the M4 branch-pinning assertions below pin the OLD population.
+//!
+//! Re-running it is campaign work under preregistration discipline, not a
+//! merge-time fixup: the decision is whether "the Underworld to be fed" is
+//! every existing chamber, every *reachable* chamber (The Stope measured
+//! 0.359% of branches reaching the Nadir at all), or the band-branch count
+//! this still reports. Those are three different denominators and they give
+//! three different designs.
+//!
 //! Five measurements, M4 first because it is the stop condition: the whole
 //! point of plural sources is that they are distributed *differently*, and
 //! Task 1 (`ore_separation_probe.rs`) already found `prospectivity` —
@@ -55,7 +81,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Seed};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists, rung_rank};
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, carrying_inputs_of, climate_of, forage_supply_field,
     terrain_of,
@@ -125,6 +151,19 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
         return f64::NAN;
     }
     cov / (vx.sqrt() * vy.sqrt())
+}
+
+/// The habitation band ranks, ascending — derived from the delve ladder rather
+/// than restated, the discipline The Stope's retrospective records eight
+/// violations of. `chamber::rung_of_rank` is private, so the route from a test
+/// crate is `hornvale_terrain::rungs()` filtered through [`rung_rank`].
+fn habitation_ranks() -> Vec<u8> {
+    let mut ranks: Vec<u8> = hornvale_terrain::rungs()
+        .iter()
+        .filter_map(|&rung| rung_rank(rung))
+        .collect();
+    ranks.sort_unstable();
+    ranks
 }
 
 /// One seed's full measurement: the six field vectors over cave-bearing
@@ -229,13 +268,14 @@ fn measure(seed_value: u64) -> SeedMeasurement {
             .cave_at(cell)
             .expect("cave_cells only holds cave-bearing cells");
         let gradient = terrain.geothermal_gradient_at(cell);
-        for band in 0u8..5 {
-            for slot in 0..SLOTS_PER_BAND {
+        for &band in &habitation_ranks() {
+            for branch in 0..BRANCHES_PER_SYSTEM {
                 let addr = ChamberAddr {
                     cell,
                     entrance: 0,
                     band,
-                    slot,
+                    branch,
+                    floor: 0,
                 };
                 if chamber_exists(seed, &cave, gradient, addr) {
                     chamber_count += 1;

@@ -7,7 +7,7 @@
 //! paths, and a provenance bug confined to one band would be invisible to a
 //! suite that only ever rendered the other.
 
-use hornvale_game_core::{Grid, Source, render};
+use hornvale_game_core::{CommandLine, Focus, Grid, Source, render, render_with};
 
 const WALK_FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 const CHAMBER_FIXTURE: &str = include_str!("fixtures/session-seed-42-chamber.json");
@@ -99,6 +99,61 @@ fn no_cell_claims_the_social_channel_in_the_chamber_band() {
     assert!(
         !names.contains("Social"),
         "social is not renderable in this client"
+    );
+}
+
+/// Mirrors the assertion above for `Source::Chrome`: proves `Source::Typed`
+/// (the player's own unsent keystrokes) is reachable from a real render,
+/// not merely declared in the enum. `render` alone never exercises it — its
+/// default `CommandLine` is empty, so no glyph is ever drawn for it — so
+/// this calls `render_with` directly with a populated line, the same way a
+/// live `bin` session would.
+#[test]
+fn the_typed_buffer_is_reachable_from_a_real_render() {
+    let (grid, _) = render_with(
+        WALK_FIXTURE,
+        80,
+        24,
+        Focus::Cli,
+        None,
+        CommandLine {
+            text: "look",
+            caret: 4,
+        },
+        None,
+        None,
+    )
+    .unwrap();
+    let p = grid.provenance();
+    assert!(
+        p.get(&Source::Typed).copied().unwrap_or(0) > 0,
+        "the typed command-line buffer must be drawn and attributed: {p:?}"
+    );
+}
+
+/// Mirrors the assertion above for the SUBMITTED line: proves
+/// `Source::Echo` (The Stylus Task 3) is reachable from a real render, not
+/// merely declared in the enum. Neither `render` nor the test above
+/// exercises it — both pass no `echo` — so this calls `render_with` with
+/// one populated, the same way a live `bin` session does immediately after
+/// `Action::Submit`.
+#[test]
+fn the_echoed_line_is_reachable_from_a_real_render() {
+    let (grid, _) = render_with(
+        WALK_FIXTURE,
+        80,
+        24,
+        Focus::Cli,
+        None,
+        CommandLine::default(),
+        None,
+        Some("look"),
+    )
+    .unwrap();
+    let p = grid.provenance();
+    assert!(
+        p.get(&Source::Echo).copied().unwrap_or(0) > 0,
+        "the echoed submitted line must be drawn and attributed: {p:?}"
     );
 }
 

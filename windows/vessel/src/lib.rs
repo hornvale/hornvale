@@ -3,6 +3,7 @@
 //! frozen locale mesh through a read-only verb loop (The Seam, Chunk 0 of
 //! The Walk).
 
+pub mod action;
 mod agent;
 pub mod band;
 pub mod brief;
@@ -45,8 +46,8 @@ pub use snapshot::{
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
 pub use underworld_level::{
-    Level, LevelCellKind, generate_descent, generate_level, generate_level_extent,
-    generate_level_with_origin, generate_level_with_water,
+    Level, LevelCellKind, generate_descent, generate_descent_for_character, generate_level,
+    generate_level_extent, generate_level_with_origin, generate_level_with_water,
 };
 pub use vantage::*;
 

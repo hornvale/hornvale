@@ -18,14 +18,14 @@
 //! controlling terminal simply closes (SIGHUP). Confirmed with a pty
 //! harness sending a real `SIGINT` from outside — see the task report.
 
-use crossterm::cursor::{Hide, MoveTo, Show};
+use crossterm::cursor::{Hide, MoveTo, SetCursorStyle, Show};
 use crossterm::execute;
 use crossterm::queue;
-use crossterm::style::{Attribute, Print, SetAttribute};
+use crossterm::style::{Attribute, Color, Print, SetAttribute, SetForegroundColor};
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
-use hornvale_game_core::{Grid, Weight};
+use hornvale_game_core::{Grid, Ink, Weight};
 use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -47,10 +47,18 @@ static OPEN: AtomicBool = AtomicBool::new(false);
 pub struct Term;
 
 impl Term {
-    /// Enter raw mode and the alternate screen, hide the cursor, install a
-    /// panic hook that restores the terminal before the previous hook
-    /// (Rust's default backtrace printer, ordinarily) runs, and start
-    /// [`watch_signals`]. Fails if a [`Term`] is already open.
+    /// Enter raw mode and the alternate screen, show the cursor styled as a
+    /// blinking underscore, install a panic hook that restores the terminal
+    /// before the previous hook (Rust's default backtrace printer,
+    /// ordinarily) runs, and start [`watch_signals`]. Fails if a [`Term`]
+    /// is already open.
+    ///
+    /// **The cursor is shown, not hidden, at setup.** The Portolan gives the
+    /// terminal's own hardware cursor a job: it reports the free-roaming
+    /// map cursor's position (see [`Grid`]'s crate,
+    /// `hornvale_game_core::Cursor`) by moving the *real* cursor there
+    /// rather than drawing ink onto the grid. [`Term::draw`] hides it again
+    /// on any redraw that has no position to report.
     pub fn open() -> io::Result<Term> {
         if OPEN.swap(true, Ordering::SeqCst) {
             return Err(io::Error::other(
@@ -58,7 +66,12 @@ impl Term {
             ));
         }
         enable_raw_mode()?;
-        execute!(io::stdout(), EnterAlternateScreen, Hide)?;
+        execute!(
+            io::stdout(),
+            EnterAlternateScreen,
+            Show,
+            SetCursorStyle::BlinkingUnderScore
+        )?;
         let previous = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |info| {
             let _ = Term::restore();
@@ -81,12 +94,23 @@ impl Term {
     }
 
     /// Draw `grid` to the alternate screen from the top-left, honouring
-    /// [`Weight`]: `Bold` sets the bold attribute, `Dim` sets dim, `Normal`
-    /// resets — a single buffered write per redraw, flushed once at the end.
-    pub fn draw(&self, grid: &Grid) -> io::Result<()> {
+    /// [`Weight`] and [`Ink`]: `Bold` sets the bold attribute, `Dim` sets
+    /// dim, `Normal` resets; `Ink::Rgb` sets the truecolor foreground,
+    /// `Ink::Plain` resets to the terminal's default foreground — both
+    /// emitted only on change, one buffered write per redraw, flushed once
+    /// at the end. Truecolor is unconditional: a terminal that does not
+    /// understand it degrades to an uncoloured glyph, never a wrong one.
+    ///
+    /// `cursor` is the screen position `hornvale_game_core::render_with`
+    /// reported (never a grid cell's ink — see [`Term::open`]'s doc): when
+    /// `Some`, the real terminal cursor is shown and moved there after
+    /// painting; when `None`, it is hidden, parked out of the way of the
+    /// freshly painted page.
+    pub fn draw(&self, grid: &Grid, cursor: Option<(u16, u16)>) -> io::Result<()> {
         let mut out = io::stdout();
         queue!(out, MoveTo(0, 0), SetAttribute(Attribute::Reset))?;
         let mut current = Weight::Normal;
+        let mut current_ink = Ink::Plain;
         for y in 0..grid.height() {
             queue!(out, MoveTo(0, y))?;
             for x in 0..grid.width() {
@@ -101,11 +125,29 @@ impl Term {
                     queue!(out, SetAttribute(attr))?;
                     current = weight;
                 }
+                let ink = cell.map(|c| c.ink).unwrap_or_default();
+                if ink != current_ink {
+                    match ink {
+                        Ink::Plain => queue!(out, SetForegroundColor(Color::Reset))?,
+                        Ink::Rgb([r, g, b]) => {
+                            queue!(out, SetForegroundColor(Color::Rgb { r, g, b }))?
+                        }
+                    }
+                    current_ink = ink;
+                }
                 let ch = cell.and_then(|c| c.glyph).unwrap_or(' ');
                 queue!(out, Print(ch))?;
             }
         }
-        queue!(out, SetAttribute(Attribute::Reset))?;
+        queue!(
+            out,
+            SetAttribute(Attribute::Reset),
+            SetForegroundColor(Color::Reset)
+        )?;
+        match cursor {
+            Some((x, y)) => queue!(out, Show, MoveTo(x, y))?,
+            None => queue!(out, Hide)?,
+        }
         out.flush()
     }
 

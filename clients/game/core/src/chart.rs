@@ -186,25 +186,14 @@ fn box_rank(cell: &ChartCell, index: usize) -> BoxRank {
     )
 }
 
-/// Draw `chart` into `into`, anchored so the observer lands at `origin`
-/// plus half of `into`'s own width and height — "relative to origin plus a
-/// centre offset" per the brief. The observer is at distance zero from
-/// itself, so [`project`] puts it at `(0, 0)` and no per-chart offset is
-/// needed.
-///
-/// **Every cell is drawn, seam cells included.** They used to be skipped
-/// because their lattice offsets were `null`; they carry a bearing and a
-/// distance like any other cell, so there is nothing left to skip them for.
-///
-/// Where two cells round into one box, [`box_rank`] decides who keeps it —
-/// one pass over a rank-ordered map rather than the two overdraw passes
-/// this replaced, so the winner is a stated rule and not a consequence of
-/// which cell the loop happened to write last. Cells that land outside
-/// `into`'s bounds are silently skipped, matching `Grid::set`'s own
-/// discipline of refusing rather than wrapping an out-of-range write.
-pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
-    let centre_x = origin.0 as i64 + into.width() as i64 / 2;
-    let centre_y = origin.1 as i64 + into.height() as i64 / 2;
+/// Every occupied box in `chart`, keyed by its `(row, col)` offset from the
+/// observer's own box (before `draw`'s `origin`/centre translation is
+/// applied) — the one place [`project`] and [`box_rank`] run. Shared by
+/// [`draw`] (which paints the winner of each box) and [`cell_at`] (which
+/// looks one up for the cursor), so the two can never disagree about which
+/// cell a box belongs to — see this module's doc on why that agreement is
+/// exactly the thing this file has gotten wrong before.
+fn boxes_of(chart: &Chart) -> BTreeMap<(i64, i64), (BoxRank, &ChartCell)> {
     let farthest = chart
         .cells
         .iter()
@@ -223,8 +212,72 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
             }
         }
     }
+    boxes
+}
 
-    for ((row, col), (_, cell)) in boxes {
+/// The chart cell whose box lands on screen position `(x, y)`, for a chart
+/// drawn at `origin` into a `width`-by-`height` plate — exactly the box
+/// [`draw`] would have painted there, via the SAME [`boxes_of`] rather than
+/// a second copy of the projection (see this module's doc: two copies of
+/// this geometry is how a chart and a cursor come to disagree about which
+/// cell is where, and that has already bitten this file once).
+///
+/// Returns the winning [`ChartCell`] together with its index into
+/// `chart.cells` — the caller (`bin`, which cannot depend on
+/// `hornvale-scene` any more than this crate can) needs the index to relate
+/// the wire cell back to the SAME position in a freshly-drawn
+/// `hornvale_scene::SurroundsScene::cells`: `chart.cells` is a
+/// field-for-field, order-preserving wire mirror of that real list (nothing
+/// in the snapshot pipeline reorders or filters it — `Session::snapshot`
+/// embeds the real `SurroundsScene` directly and this crate's `Chart`
+/// independently mirrors its wire shape), so `chart.cells[i]` and
+/// `scene.cells[i]` name the identical cell. Bearing/distance alone would
+/// need a float-equality match against a value that has round-tripped
+/// through quantized JSON; the index does not.
+///
+/// `None` when no cell's box lands on `(x, y)` — a real position (inside
+/// the plate) that simply has nothing projected onto it, distinct from a
+/// resolver-absent band.
+pub fn cell_at(
+    chart: &Chart,
+    origin: (u16, u16),
+    width: u16,
+    height: u16,
+    x: u16,
+    y: u16,
+) -> Option<(usize, &ChartCell)> {
+    let centre_x = origin.0 as i64 + width as i64 / 2;
+    let centre_y = origin.1 as i64 + height as i64 / 2;
+    let row = y as i64 - centre_y;
+    let col = x as i64 - centre_x;
+    boxes_of(chart)
+        .get(&(row, col))
+        .map(|(rank, cell)| (rank.3, *cell))
+}
+
+/// Draw `chart` into `into`, anchored so the observer lands at `origin`
+/// plus half of `into`'s own width and height — "relative to origin plus a
+/// centre offset" per the brief. The observer is at distance zero from
+/// itself, so [`project`] puts it at `(0, 0)` and no per-chart offset is
+/// needed.
+///
+/// **Every cell is drawn, seam cells included.** They used to be skipped
+/// because their lattice offsets were `null`; they carry a bearing and a
+/// distance like any other cell, so there is nothing left to skip them for.
+///
+/// Where two cells round into one box, [`box_rank`] decides who keeps it —
+/// one pass over a rank-ordered map rather than the two overdraw passes
+/// this replaced, so the winner is a stated rule and not a consequence of
+/// which cell the loop happened to write last. Cells that land outside
+/// `into`'s bounds are silently skipped, matching `Grid::set`'s own
+/// discipline of refusing rather than wrapping an out-of-range write.
+pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
+    // Tinting honours NO_COLOR: `Cell::inked` resolves the colour through
+    // `Ink::from_wire`, which yields Plain when the reader declined colour.
+    let centre_x = origin.0 as i64 + into.width() as i64 / 2;
+    let centre_y = origin.1 as i64 + into.height() as i64 / 2;
+
+    for ((row, col), (_, cell)) in boxes_of(chart) {
         let x = centre_x + col;
         let y = centre_y + row;
         if x < 0 || y < 0 || x >= into.width() as i64 || y >= into.height() as i64 {
@@ -233,14 +286,65 @@ pub fn draw(chart: &Chart, into: &mut crate::Grid, origin: (u16, u16)) {
         into.set(
             x as u16,
             y as u16,
-            Cell::glyph(glyph_of(&cell.state), weight_of(&cell.state), Source::Chart),
+            Cell::inked(
+                glyph_of(&cell.state),
+                weight_of(&cell.state),
+                Source::Chart,
+                cell.color,
+            ),
         );
     }
+}
+
+/// The honesty caption for a coloured chart: whose eyes the reader is
+/// seeing through, which projection, and what that projection does NOT
+/// carry. Pure — the caller decides whether colour (and therefore this
+/// caption) is allowed at all, so suppression lives in exactly one place
+/// per caller and this function never touches the environment.
+///
+/// The wording names the observer, the projection, and the lost axis by
+/// SUBSTRING contract: tests assert those three appear, not the exact
+/// sentence (wording reviewed at the visual pass).
+pub fn disclosure(sight: &crate::Sight) -> String {
+    format!(
+        "seen through {}'s eyes — {} sight; {}",
+        sight.observer, sight.projection, sight.preserves
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Ink;
+    use crate::cell::test_env::{with_no_color_removed, with_no_color_set};
+
+    /// The seed-42 turn-0 fixture's own sight declaration, as a literal —
+    /// the values the committed fixture carries (`spatial.chart.sight`),
+    /// so the caption is asserted against what the sim actually emits.
+    fn fixture_sight() -> crate::Sight {
+        crate::Sight {
+            observer: "bugbear".into(),
+            channels: 3,
+            chromatic: 2,
+            projection: "yellow-blue".into(),
+            preserves: "the short-to-long opposition; the red-green axis is not carried".into(),
+            sun_altitude_deg: -56.010669,
+            channel_roles: vec!["chromatic".into(), "chromatic".into(), "achromatic".into()],
+            projection_slots: Some([1, 1, 0]),
+            projection_norms: Some([3.862, 3.862, 1.98]),
+        }
+    }
+
+    /// The caption names whose eyes, the projection, and what is NOT
+    /// carried — by SUBSTRING, not exact sentence (wording reviewed at the
+    /// visual pass).
+    #[test]
+    fn disclosure_names_observer_projection_and_lost_axis() {
+        let d = disclosure(&fixture_sight());
+        assert!(d.contains("bugbear"), "names the observer species: {d}");
+        assert!(d.contains("yellow-blue"), "names the projection: {d}");
+        assert!(d.contains("red-green"), "names the lost axis: {d}");
+    }
 
     fn mark(salience: u32) -> Mark {
         Mark {
@@ -304,6 +408,7 @@ mod tests {
             relief_legend: vec![],
             cells,
             legend: vec![],
+            sight: None,
         }
     }
 
@@ -323,6 +428,7 @@ mod tests {
             biome: 0,
             water: 0,
             relief: 0,
+            color: None,
             marks: vec![],
             bearing_deg,
             distance_rad,
@@ -448,5 +554,104 @@ mod tests {
             Weight::Normal,
             "the unknown arm falls back to Normal and the cell is still drawn"
         );
+    }
+
+    /// `cell_at` finds exactly the box `draw` paints there — checked by
+    /// screen position, on the identical chart
+    /// `a_seam_cell_is_drawn_under_north_up` draws: the seam cell (index 1,
+    /// bearing 90, distance 1.0) lands two columns right of centre
+    /// `(4, 2)` -> `(6, 2)`; the observer's own box (index 0) is centre
+    /// itself. This is the guard the cursor's resolution now depends on —
+    /// `cell_at` and `draw` sharing `boxes_of` is what keeps them from
+    /// disagreeing about which cell a box belongs to.
+    #[test]
+    fn cell_at_finds_the_same_box_draw_paints() {
+        let mut seam = chart_cell(90.0, 1.0, "sensed");
+        seam.seam = true;
+        seam.u = None;
+        seam.v = None;
+        seam.w = None;
+        seam.up = None;
+        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), seam]);
+
+        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 4, 2).expect("the observer's own box");
+        assert_eq!(idx, 0);
+        assert_eq!(cell.state, "here");
+
+        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 6, 2).expect("the seam cell's box");
+        assert_eq!(idx, 1);
+        assert_eq!(cell.state, "sensed");
+    }
+
+    /// A screen position no cell projects onto resolves to `None`, not a
+    /// panic and not the nearest cell — the caller (`Driver::resolve`)
+    /// depends on this to report an honest absence rather than a wrong
+    /// name.
+    #[test]
+    fn cell_at_of_an_unoccupied_box_is_none() {
+        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here")]);
+        assert!(cell_at(&chart, (0, 0), 9, 5, 0, 0).is_none());
+    }
+
+    /// `cell_at` obeys the same collision rule `draw` does: the more
+    /// salient of two cells sharing a box is the one `cell_at` reports —
+    /// mirroring `the_more_salient_of_two_colliding_cells_keeps_the_box`,
+    /// from the query side instead of the paint side.
+    #[test]
+    fn cell_at_obeys_box_rank_on_a_collision() {
+        let mut low = chart_cell(90.0, 1.0, "sensed");
+        low.marks = vec![mark(20)];
+        let mut high = chart_cell(90.0, 1.0, "remembered");
+        high.marks = vec![mark(5)];
+        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), low, high]);
+        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 6, 2).expect("the collided box");
+        assert_eq!(
+            idx, 2,
+            "the more salient cell (index 2) must win, not document order"
+        );
+        assert_eq!(cell.state, "remembered");
+    }
+
+    /// A cell that claims a colour draws [`Ink::Rgb`] — the chart pane
+    /// tints from the scene, mirroring the plan pane. Hermetic against a
+    /// developer's exported `NO_COLOR`: saved, removed, restored.
+    #[test]
+    fn a_coloured_cell_draws_rgb_ink() {
+        with_no_color_removed(|| {
+            let mut tinted = chart_cell(90.0, 1.0, "sensed");
+            tinted.color = Some([36, 36, 1]);
+            let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
+            let mut g = crate::Grid::new(9, 5);
+            draw(&chart, &mut g, (0, 0));
+            assert_eq!(g.get(6, 2).unwrap().ink, Ink::Rgb([36, 36, 1]));
+        });
+    }
+
+    /// The suppression end-to-end through [`draw`]: with `NO_COLOR` set
+    /// non-empty, a coloured cell draws [`Ink::Plain`] — the reader
+    /// declined colour, and the chart honours it.
+    #[test]
+    fn no_color_suppresses_tint_through_draw() {
+        with_no_color_set("1", || {
+            let mut tinted = chart_cell(90.0, 1.0, "sensed");
+            tinted.color = Some([36, 36, 1]);
+            let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), tinted]);
+            let mut g = crate::Grid::new(9, 5);
+            draw(&chart, &mut g, (0, 0));
+            assert_eq!(g.get(6, 2).unwrap().ink, Ink::Plain);
+        });
+    }
+
+    /// Absence of a colour claim is Plain ink — "no colour claimed here",
+    /// never black.
+    #[test]
+    fn an_uncoloured_cell_draws_plain_ink() {
+        let chart = minimal_chart(vec![
+            chart_cell(0.0, 0.0, "here"),
+            chart_cell(90.0, 1.0, "sensed"),
+        ]);
+        let mut g = crate::Grid::new(9, 5);
+        draw(&chart, &mut g, (0, 0));
+        assert_eq!(g.get(6, 2).unwrap().ink, Ink::Plain);
     }
 }

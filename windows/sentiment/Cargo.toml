@@ -1,0 +1,12 @@
+[package]
+name = "hornvale-sentiment"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale sentiment window: world-invariant snap-judgment attribute distances between peoples, read from the species/demography/language catalogs (no world built)."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+hornvale-species = { path = "../../domains/species" }
+hornvale-demography = { path = "../../domains/demography" }
+hornvale-language = { path = "../../domains/language" }
