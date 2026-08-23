@@ -2323,3 +2323,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T20:19:10Z | gate-commit | 52.320 | 50.974 | 12.543 | 1.21 | 0 | 841a6861b | campaign/the-drift | MacBookPro | 10 |
 | 2026-08-23T20:32:58Z | gate-commit | 27.902 | 60.547 | 31.640 | 3.30 | 0 | 52ce24efa | campaign/the-drift | MacBookPro | 10 |
 | 2026-08-23T20:33:41Z | gate-commit | 18.889 | 46.522 | 11.642 | 3.08 | 0 | 52ce24efa | campaign/the-drift | MacBookPro | 10 |
+| 2026-08-23T20:47:25Z | rebaseline | 86.664 | 237.247 | 11.019 | 2.86 | 0 | 91df59ce6 | campaign/the-drift | MacBookPro | 10 |
+| 2026-08-23T20:50:18Z | gate-commit | 54.181 | 229.985 | 44.646 | 5.07 | 0 | 91df59ce6 | campaign/the-drift | MacBookPro | 10 |
+| 2026-08-23T20:51:12Z | gate-commit | 22.356 | 53.873 | 13.378 | 3.01 | 0 | 91df59ce6 | campaign/the-drift | MacBookPro | 10 |
+| 2026-08-23T20:52:44Z | gate-commit | 41.586 | 105.158 | 51.238 | 3.76 | 0 | 91df59ce6 | campaign/the-drift | MacBookPro | 10 |
+| 2026-08-23T20:55:30Z | gate-commit | 19.153 | 46.703 | 11.663 | 3.05 | 0 | 91df59ce6 | campaign/the-drift | MacBookPro | 10 |
