@@ -517,13 +517,17 @@ pub struct Session<'w> {
     /// into "the possessed one" and "the others" is now one list plus an
     /// index.
     bodies: Vec<Npc>,
-    /// Which element of `bodies` is being driven. Always `0` for the whole of
-    /// The Hand's scope: `derive_npcs`'s `ordered_for_derivation` step always
-    /// hoists the selected settlement's own body to the roster's front, and
-    /// there is no `PossessTarget` variant yet that selects anything else. A
-    /// real field rather than a hardcoded `0` because `committed_agent_at_
-    /// count_for` and a future free-possession target need to name a
-    /// specific body, not just "the first one".
+    /// Which element of `bodies` is being driven. Still always `0`, even
+    /// after Task 4's `PossessTarget::Creature`: `derive_npcs`'s
+    /// `ordered_for_derivation` step hoists the selected settlement's own
+    /// body to the roster's front, and `PossessTarget::Creature` resolution
+    /// (`Session::start_held`) SWAPS its named entity into that same front
+    /// slot rather than widening this field past `0` — so every invariant
+    /// downstream that reads `driven == 0` (`other_bodies`'s `bodies[1..]`
+    /// chief among them) stays intact; only WHICH body occupies slot `0`
+    /// changes. A real field rather than a hardcoded `0` because
+    /// `committed_agent_at_count_for` needs to name a specific body, not
+    /// just "the first one".
     driven: usize,
     knowledge: Knowledge,
     trail: Vec<RoomAddr>,
@@ -778,12 +782,14 @@ enum Perceiving {
 ///
 /// A slice, not a fresh `Vec`: `derive_npcs` always places the driven
 /// settlement's own body at index 0 (`ordered_for_derivation` hoists the
-/// home settlement to the front before truncation) and `driven` is always
-/// `0` for the whole of The Hand's scope (there is no `PossessTarget`
-/// variant yet that drives anything else), so "every OTHER body" is exactly
-/// `bodies[1..]`. Guarded with a `debug_assert!` rather than assumed: a
-/// future `driven != 0` must widen this to an owned, filtered `Vec` before
-/// it silently truncates the wrong body out of the answer.
+/// home settlement to the front before truncation), and `driven` stays `0`
+/// even after Task 4's `PossessTarget::Creature` — that variant SWAPS its
+/// named entity into slot 0 rather than driving a different index (see
+/// `Session::start_held` and the `driven` field's own doc) — so "every
+/// OTHER body" is exactly `bodies[1..]`, unconditionally. Guarded with a
+/// `debug_assert!` rather than assumed: a future `driven != 0` must widen
+/// this to an owned, filtered `Vec` before it silently truncates the wrong
+/// body out of the answer.
 fn other_bodies(bodies: &[Npc], driven: usize) -> &[Npc] {
     debug_assert_eq!(
         driven, 0,
@@ -847,9 +853,13 @@ impl<'w> Session<'w> {
         // any more (The Hand, Task 3)**: both SELECT the roster entry
         // `derive_npcs` below always hoists to index 0 for this settlement.
         // `Flagship` stays the exact lookup that predates the target, so
-        // that path is byte-identical.
+        // that path is byte-identical. `Creature` (The Hand, Task 4) picks
+        // its driven body out of the roster by entity, below, once the
+        // roster is fully derived — it does not change WHICH settlement
+        // anchors that roster's derivation, so it shares `Flagship`'s
+        // lookup here.
         let village = match opts.target {
-            PossessTarget::Flagship => {
+            PossessTarget::Flagship | PossessTarget::Creature(_) => {
                 hornvale_settlement::village_info(world).ok_or(VesselError::NoSettlement)?
             }
             PossessTarget::MostPopulousSettlement => {
@@ -931,6 +941,24 @@ impl<'w> Session<'w> {
                 _ => Vec::new(),
             };
             bodies.extend(derive_wild_npcs(world, ctx, &mut ledger, concentrations));
+        }
+        // The Hand, Task 4: `PossessTarget::Creature` selects any already-
+        // derived roster member — settled OR wild (a wild creature's
+        // `village` is `None`, and it is still a legitimate target) — by
+        // SWAPPING it into the roster's front slot rather than widening
+        // `driven` past `0`. Every existing invariant this scope depends on
+        // (`other_bodies`'s `bodies[1..]`, `ordered_for_derivation`'s
+        // co-location guarantee) stays intact this way: `driven` is still
+        // always `0`, only WHICH body occupies slot `0` changes. An entity
+        // outside the full roster (settled + wild) fails loudly rather than
+        // silently falling back to the flagship — generation never guesses
+        // (spec §4.6).
+        if let PossessTarget::Creature(entity) = opts.target {
+            let idx = bodies
+                .iter()
+                .position(|npc| npc.entity == entity)
+                .ok_or(VesselError::NoSuchCreature(entity))?;
+            bodies.swap(0, idx);
         }
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.

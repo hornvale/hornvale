@@ -68,6 +68,11 @@ pub enum VesselError {
     Locale(hornvale_locale::LocaleError),
     /// Building a coarse-world view failed (worldgen).
     Build(String),
+    /// [`PossessTarget::Creature`] named an entity this session's derived
+    /// roster does not contain (The Hand, Task 4). Generation never
+    /// guesses: an absent id fails loudly here rather than silently
+    /// falling back to the flagship.
+    NoSuchCreature(hornvale_kernel::EntityId),
 }
 
 impl std::fmt::Display for VesselError {
@@ -78,6 +83,11 @@ impl std::fmt::Display for VesselError {
             VesselError::NoPosition(m) => write!(f, "no position: {m}"),
             VesselError::Locale(e) => write!(f, "locale: {e}"),
             VesselError::Build(m) => write!(f, "building the coarse world: {m}"),
+            VesselError::NoSuchCreature(id) => write!(
+                f,
+                "no creature with entity {} in the derived roster",
+                id.get()
+            ),
         }
     }
 }
@@ -124,6 +134,17 @@ pub enum PossessTarget {
     /// An agent minted at the world's most-populous settlement, ranked
     /// population-descending then id-ascending.
     MostPopulousSettlement,
+    /// A specific, already-derived roster member, named by its ledger
+    /// entity (The Hand, Task 4: "a creature on player-input" needs no
+    /// new mechanism beyond naming which one). The roster itself is still
+    /// seeded exactly as [`PossessTarget::Flagship`] seeds it — this variant
+    /// only SELECTS which already-derived body [`crate::Session::driven_body`]
+    /// names, the same "select, never mint" discipline Task 3 established
+    /// for the other two variants. An entity outside the derived roster
+    /// (including a wild creature's, when [`PossessOpts::wild_agents`] is
+    /// on) fails loudly with [`VesselError::NoSuchCreature`] rather than
+    /// falling back to the flagship.
+    Creature(hornvale_kernel::EntityId),
 }
 
 /// Options for a possession.
