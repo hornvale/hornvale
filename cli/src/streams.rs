@@ -350,6 +350,23 @@ mod tests {
                 // spells the rung's NAME. `chamber/v2` joins `chamber/v1` in
                 // retirement; neither is ever reused.
                 "chamber v3",
+                // The Drift, Task 6 (spec §4.5): which branches of an
+                // adjacent band a branch connects to — the edges descent
+                // actually travels, which nothing drew before this campaign.
+                // A NEW label, ADDITIVE at v1: it derives its own independent
+                // stream and perturbs none of the ones around it, so no
+                // existing key moves and no world's existing draws change.
+                //
+                // Versioned from birth like every sibling here, because its
+                // KEY is a save-format contract: cell, branch, band NAME and
+                // the ROLE word (`child`/`parent`) — see
+                // `windows/worldgen/src/chamber.rs`'s `descent_key`. The role
+                // is in the key because one place in the lattice answers two
+                // independent questions ("who is below me", "who am I below"),
+                // and giving each its own stream is what keeps the two
+                // surjections whose union guarantees connectivity from
+                // sharing draws in a fixed order.
+                "chamber/band-descent v1",
                 // The Stope, Task 2: how many floors one RUN — the floors of
                 // one branch within one band — realizes. A NEW label,
                 // ADDITIVE at v1: it derives its own independent stream and

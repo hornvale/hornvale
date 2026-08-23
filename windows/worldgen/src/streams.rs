@@ -170,6 +170,32 @@ hornvale_kernel::stream_labels! {
     /// entrance, branch (the child names itself; its parent is always the
     /// main line, whose own root is the surface).
     BRANCH_ROOT = "chamber/branch-root/v1" => "where a branch roots on its parent, keyed on (cell, entrance, branch)";
+    /// Which branches of an adjacent band a branch connects to (The Drift,
+    /// Task 6; spec §4.5) — the edges descent actually travels, drawn so
+    /// that "every branch above has a child" and "every branch below has a
+    /// parent" hold **by construction** rather than by a repair pass.
+    ///
+    /// Keyed on the branch's own place **plus which of the two questions is
+    /// being asked**: cell, branch, band, role — where role is `child`
+    /// (which branch of the band BELOW this one does this branch descend
+    /// into?) or `parent` (which branch of the band ABOVE does this one hang
+    /// from?). Cell/branch/band is [`RUN_FLOORS`]'s own field order and
+    /// spelling, so every re-keyed leg in this crate agrees; the band is
+    /// spelled by its `Band` NAME for the same reason the others are.
+    ///
+    /// **The role is a question, not an ordinal** (decision 0102). One place
+    /// in the lattice answers two independent questions, and giving each its
+    /// own key is what keeps them from sharing a stream — the same shape
+    /// [`HAZARD_EVENT`] uses when it puts the *process* in the key beside the
+    /// cell and the time block. The alternative — one stream per place, two
+    /// draws taken in a fixed order — would make the parent answer depend on
+    /// whether a child draw was taken first, which is exactly the
+    /// order-dependence spec §4.5 rejects a repair pass for.
+    ///
+    /// A separate root leg from [`CHAMBER`] for the collision argument
+    /// [`RUN_FLOORS`]'s doc states, and additive: it perturbs no existing
+    /// draw, so worlds move only through the new edges themselves.
+    BAND_DESCENT = "chamber/band-descent/v1" => "which branches of an adjacent band one branch connects to, keyed on (cell, branch, band, role)";
     /// The volcano-identity derivation (The Repose). Keyed on the edifice's
     /// **source contact cell** — a place in the fixed geosphere, never a
     /// generation ordinal, and never the query cell a caller happened to ask

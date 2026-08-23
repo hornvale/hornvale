@@ -585,6 +585,195 @@ pub fn levels_in_branch(seed: Seed, run: RunAddr) -> u8 {
     u8::try_from(drawn).expect("range_u32(lo, hi) never exceeds hi, which is a u8")
 }
 
+// --- Band-transition edges (The Drift, Task 6; spec §4.5) ---
+//
+// Descent happens at a branch's bottom level, into the top level of a branch
+// in the NEXT band down. Which branches those are was, until this task, not
+// drawn at all: the shipped rule descended within the same branch column, so
+// a system's bands were connected only by coincidence of numbering.
+//
+// The edge set for one adjacent band pair is the UNION OF TWO SURJECTIONS:
+//
+//   * every branch in the upper band draws one child below, so nothing
+//     descends into a dead end;
+//   * every branch in the lower band draws one parent above, so nothing is
+//     unreachable.
+//
+// Both of §4.5's guarantees are therefore true BY CONSTRUCTION — the upper
+// loop is total on the upper band's branches and the lower loop is total on
+// the lower band's, so neither property can fail for any pair of widths, at
+// any seed, in any world. **There is no repair pass, and its absence is the
+// design**: draw-then-patch is order-dependent, and an order-dependent
+// repair is a determinism hazard as well as a correctness one (§4.5).
+//
+// HOW MANY EDGES THIS PRODUCES IS NOT TUNED HERE. Spec §8 leaves "how many
+// edges beyond the guaranteed union" open on purpose — zero extra makes the
+// underworld a tree, many makes it a mesh — so this draws the union and
+// nothing more, and the shape it produces is REPORTED rather than fitted.
+// The union alone is already not a tree: an upper branch whose child draw
+// disagrees with some lower branch's parent draw contributes both edges.
+// The count is bounded by construction at `max(upper, lower) <= edges <=
+// upper + lower`, and `the_edge_count_sits_between_its_construction_bounds`
+// asserts exactly that rather than a fitted distribution.
+
+/// Which of the two questions a [`crate::streams::BAND_DESCENT`] draw is
+/// answering about one branch. It is spelled into the key, so these two
+/// words are a save-format contract like every other component of one.
+///
+/// **A role is a question, not an ordinal** (decision 0102): one place in
+/// the lattice is asked two independent things, and each gets its own
+/// stream. Folding them into a single stream and drawing twice in a fixed
+/// order would make the parent answer depend on whether the child draw was
+/// taken first — the order-dependence §4.5 rejects.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DescentRole {
+    /// Which branch of the band BELOW this branch descends into.
+    Child,
+    /// Which branch of the band ABOVE this branch hangs from.
+    Parent,
+}
+
+impl DescentRole {
+    /// The word this role is spelled by in a band-descent key.
+    fn word(self) -> &'static str {
+        match self {
+            DescentRole::Child => "child",
+            DescentRole::Parent => "parent",
+        }
+    }
+}
+
+/// The one place the `chamber/band-descent/v1` key is spelled — [`run_key`]'s
+/// discipline with a role appended, and its own save-format contract.
+///
+/// `cell` and `branch` are integers naming a place and are decimal; `band` is
+/// spelled by its [`Band`] **name** through [`rung_name`], never its rank,
+/// for the reason `chamber_key`/`run_key` both state: a rank is a
+/// declaration position, and a mid-ladder insertion would silently re-key
+/// every band below it. Field order is `RunAddr`'s own (cell, branch, band),
+/// the spelling every re-keyed leg in this crate agrees on, with
+/// [`DescentRole`]'s word last.
+///
+/// **The band is the branch's OWN band**, never the pair's upper one. A
+/// branch at the Deeps asks "who is my child" keyed at the Deeps and "who is
+/// my parent" keyed at the Deeps; the Shallows↔Deeps pair therefore reads
+/// one key at each end rather than two keys at the same end. That keeps a
+/// key naming a band the branch actually occupies.
+fn descent_key(cell: CellId, branch: u8, band: Band, role: DescentRole) -> String {
+    format!("{}/{branch}/{}/{}", cell.0, rung_name(band), role.word())
+}
+
+/// One band-descent draw: which of `width` branches in the adjacent band
+/// this branch connects to, uniform over `0..width`.
+///
+/// `width` is the ADJACENT band's drawn branch count, so this is a draw over
+/// a real population rather than over the lattice ceiling — the same
+/// drawn-realization discipline [`levels_in_branch`] applies to levels.
+/// Callers guarantee `width >= 1`; [`descent_edges`] refuses a zero-width
+/// pair before reaching here, so no draw is ever taken over an empty range.
+fn descent_pick(
+    seed: Seed,
+    cell: CellId,
+    branch: u8,
+    band: Band,
+    role: DescentRole,
+    width: u8,
+) -> u8 {
+    debug_assert!(width >= 1, "descent_pick needs a non-empty target band");
+    let drawn = seed
+        .derive(crate::streams::BAND_DESCENT)
+        .derive(StreamLabel::dynamic(&descent_key(cell, branch, band, role)))
+        .stream()
+        .range_u32(0, u32::from(width - 1));
+    // `range_u32` is inclusive and `width - 1` came from a `u8`, so this
+    // cannot truncate; `expect` states that rather than masking it.
+    u8::try_from(drawn).expect("range_u32(0, width - 1) never exceeds a u8")
+}
+
+/// **Every edge between one band and the next**, as `(upper branch, lower
+/// branch)` pairs, sorted and deduplicated (spec §4.5).
+///
+/// `band` is the UPPER band of the pair and `upper`/`lower` are the two
+/// bands' branch widths. **The widths are parameters, not reads**, and that
+/// is deliberate: it is what lets the guarantee tests construct all sixteen
+/// `(upper, lower)` pairs directly instead of sampling whichever widths a
+/// few seeds happen to draw. A guarantee is asserted, never measured into
+/// existence (spec §6). [`descents_from`] is the shipped caller and reads
+/// both widths from [`crate::character::branch_count_of`].
+///
+/// Empty for [`Band::Surface`] (not a habitation band, so it has no branches
+/// to connect), for [`Band::Nadir`] (nothing below it on the ladder), and
+/// for a zero width on either side (no pair of branches to join).
+fn descent_edges(seed: Seed, cell: CellId, band: Band, upper: u8, lower: u8) -> Vec<(u8, u8)> {
+    if band == Band::Surface || upper == 0 || lower == 0 {
+        return Vec::new();
+    }
+    let Some(below) = band.deeper() else {
+        return Vec::new();
+    };
+    let mut edges: Vec<(u8, u8)> = Vec::with_capacity(usize::from(upper) + usize::from(lower));
+    // Every branch above draws one child below, so nothing dead-ends.
+    for from in 0..upper {
+        let to = descent_pick(seed, cell, from, band, DescentRole::Child, lower);
+        edges.push((from, to));
+    }
+    // Every branch below draws one parent above, so nothing is orphaned.
+    for to in 0..lower {
+        let from = descent_pick(seed, cell, to, below, DescentRole::Parent, upper);
+        edges.push((from, to));
+    }
+    // Deterministic answer order, and the dedup is what makes the union a
+    // union: an upper branch and a lower branch that picked each other
+    // contribute the same edge twice. `(u8, u8)` is totally ordered, so
+    // `sort_unstable` is total and the result is independent of draw order.
+    edges.sort_unstable();
+    edges.dedup();
+    edges
+}
+
+/// **Which branches of the next band down this branch descends into** (spec
+/// §4.5) — the edge set [`passages_from`]'s vertical rule is rewritten
+/// against in Task 7. Ascending, deduplicated, and never empty for a branch
+/// this band realizes above [`Band::Nadir`].
+///
+/// Empty in exactly four cases, all of them "there is nowhere below to go":
+/// [`Band::Surface`] (not a habitation band), [`Band::Nadir`] (the bottom of
+/// the ladder), a `branch` outside the fixed lattice
+/// ([`BRANCHES_PER_SYSTEM`]), and a `branch` this band's own drawn width
+/// does not realize.
+///
+/// **It knows the LADDER, not the ROCK.** Whether a cave actually reaches
+/// the band below is a question about a place's geothermal gradient and its
+/// cave's depth budget, and it is [`chamber_exists`]'s — asked with the
+/// terrain this function is deliberately not given, exactly as
+/// [`levels_in_branch`] is not given a `Cave`. So "empty at the deepest band
+/// the rock allows" is a property of the composition, not of this function:
+/// the rock's floor shows up when a caller tests the returned addresses for
+/// existence.
+///
+/// **A place, never an ordinal** (decision 0102): the answer for one branch
+/// is a fact about `(cell, band, branch)` alone, independent of what has
+/// been asked before it.
+/// type-audit: bare-ok(index: branch), bare-ok(index: return)
+pub fn descents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
+    if band == Band::Surface || branch >= BRANCHES_PER_SYSTEM {
+        return Vec::new();
+    }
+    let Some(below) = band.deeper() else {
+        return Vec::new();
+    };
+    let upper = crate::character::branch_count_of(seed, cell, band);
+    if branch >= upper {
+        return Vec::new();
+    }
+    let lower = crate::character::branch_count_of(seed, cell, below);
+    descent_edges(seed, cell, band, upper, lower)
+        .into_iter()
+        .filter(|&(from, _)| from == branch)
+        .map(|(_, to)| to)
+        .collect()
+}
+
 // --- Entrances are plural (The Stope, Task 5; spec amendment C.3) ---
 //
 // Amendment C.3 supersedes §3.4's "entrance → branch": **an entrance maps
@@ -2729,5 +2918,470 @@ mod tests {
             band: root.band,
             floor: root.floor,
         })
+    }
+
+    // --- Band-transition edges (The Drift, Task 6; spec §4.5) ---
+
+    /// The edge set for one adjacent band pair at **explicitly given
+    /// widths** — the seam §4.5's two guarantees are asserted through.
+    ///
+    /// It is a one-line forward to [`descent_edges`], which already takes
+    /// the widths as parameters, because the shipped path must be the
+    /// probed path: a test-only reimplementation would assert a guarantee
+    /// about code no world runs. The name is the one the plan's brief uses,
+    /// kept so a reader following the brief finds it here. **The brief's
+    /// signature carried an `entrance` argument**; amendment A.3 took
+    /// `entrance` out of the lattice entirely, so it is gone here too.
+    fn descent_edges_for(
+        seed: Seed,
+        cell: CellId,
+        band: Band,
+        upper: u8,
+        lower: u8,
+    ) -> Vec<(u8, u8)> {
+        descent_edges(seed, cell, band, upper, lower)
+    }
+
+    /// GUARANTEE 1 (spec §4.5): **every branch descends.** Nothing dead-ends
+    /// except at the bottom of the ladder.
+    ///
+    /// **This constructs the situation rather than scanning for it.** All
+    /// sixteen `(upper, lower)` width pairs are exercised directly, because a
+    /// panel scan would only ever exercise the widths a few seeds happen to
+    /// draw — `branch_count_of` is weighted 60% toward width 1, so a scan
+    /// would spend most of its evidence on the one pair where the guarantee
+    /// is trivial. A guarantee is asserted, never measured into existence
+    /// (spec §6).
+    #[test]
+    fn every_branch_has_at_least_one_descent() {
+        let seed = Seed(42);
+        for upper in 1..=BRANCHES_PER_SYSTEM {
+            for lower in 1..=BRANCHES_PER_SYSTEM {
+                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                for b in 0..upper {
+                    assert!(
+                        edges.iter().any(|&(from, _)| from == b),
+                        "branch {b} of {upper} descends nowhere ({upper} above, {lower} below)"
+                    );
+                }
+            }
+        }
+    }
+
+    /// GUARANTEE 2 (spec §4.5): **every branch is reachable.** Nothing is
+    /// orphaned below a band it cannot be entered from.
+    ///
+    /// Constructed over all sixteen width pairs for the same reason
+    /// [`every_branch_has_at_least_one_descent`] is.
+    #[test]
+    fn every_branch_has_at_least_one_parent() {
+        let seed = Seed(42);
+        for upper in 1..=BRANCHES_PER_SYSTEM {
+            for lower in 1..=BRANCHES_PER_SYSTEM {
+                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                for b in 0..lower {
+                    assert!(
+                        edges.iter().any(|&(_, to)| to == b),
+                        "branch {b} of {lower} has no parent ({upper} above, {lower} below)"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The union of two surjections is bounded on both sides **by
+    /// construction**, and this asserts the bounds rather than a fitted
+    /// distribution (spec §8 leaves the extra-edge count open on purpose).
+    ///
+    /// Lower bound `max(upper, lower)`: the child loop alone contributes an
+    /// edge from each of `upper` distinct sources and the parent loop an edge
+    /// into each of `lower` distinct targets, so neither can be collapsed
+    /// below its own arity. Upper bound `upper + lower`: exactly that many
+    /// edges are pushed before the dedup, which can only remove.
+    ///
+    /// Swept over several cells and every adjacent band pair, so a
+    /// coincidence at one place cannot carry it.
+    #[test]
+    fn the_edge_count_sits_between_its_construction_bounds() {
+        let seed = Seed(42);
+        for cell in [0u32, 7, 9, 4096] {
+            for &band in Band::habitation() {
+                let Some(_) = band.deeper() else { continue };
+                for upper in 1..=BRANCHES_PER_SYSTEM {
+                    for lower in 1..=BRANCHES_PER_SYSTEM {
+                        let edges = descent_edges_for(seed, CellId(cell), band, upper, lower);
+                        let n = u8::try_from(edges.len()).expect("at most 8 edges");
+                        assert!(
+                            n >= upper.max(lower) && n <= upper + lower,
+                            "cell {cell} {band:?} {upper}x{lower}: {n} edges is outside \
+                             [{}, {}]",
+                            upper.max(lower),
+                            upper + lower
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// The band-descent key is a **save-format contract**:
+    /// `StreamLabel::dynamic` hashes this string, so its spelling decides
+    /// every band-transition edge in every world forever.
+    ///
+    /// If this test fails, you have re-drawn the whole underworld's
+    /// connectivity. That is an epoch (`chamber/band-descent/v2` next), not a
+    /// fix to this assertion.
+    #[test]
+    fn the_band_descent_key_spelling_is_pinned() {
+        assert_eq!(
+            descent_key(CellId(9), 3, Band::Deeps, DescentRole::Child),
+            "9/3/deeps/child"
+        );
+        assert_eq!(
+            descent_key(CellId(0), 0, Band::Undercroft, DescentRole::Parent),
+            "0/0/undercroft/parent"
+        );
+        assert_eq!(
+            descent_key(CellId(12), 1, Band::Nadir, DescentRole::Parent),
+            "12/1/nadir/parent"
+        );
+    }
+
+    /// Every component of the band-descent key changes the key — including
+    /// the **role**, which is the one a reader is most likely to assume is
+    /// decorative. If the role did not separate the two draws, a branch's
+    /// child pick and its parent pick would share a stream and the two
+    /// surjections would stop being independent.
+    ///
+    /// The band is checked by NAME, not by rank: `rung_name` is what the key
+    /// spells, so this also pins that a mid-ladder insertion cannot silently
+    /// re-key an existing band.
+    #[test]
+    fn every_component_of_the_band_descent_key_is_load_bearing() {
+        let base = descent_key(CellId(9), 1, Band::Deeps, DescentRole::Child);
+        for other in [
+            descent_key(CellId(8), 1, Band::Deeps, DescentRole::Child),
+            descent_key(CellId(9), 2, Band::Deeps, DescentRole::Child),
+            descent_key(CellId(9), 1, Band::Shallows, DescentRole::Child),
+            descent_key(CellId(9), 1, Band::Deeps, DescentRole::Parent),
+        ] {
+            assert_ne!(base, other, "a key component is not load-bearing");
+        }
+        // And the whole role vocabulary is distinct, so no two roles could
+        // ever collapse onto one stream.
+        assert_ne!(DescentRole::Child.word(), DescentRole::Parent.word());
+    }
+
+    /// The band-descent label is `/v1` — this campaign draws something that
+    /// did not exist, so there is no earlier epoch to retire — and it is its
+    /// own root leg, never shared with a sibling draw.
+    #[test]
+    fn the_band_descent_label_is_v1() {
+        assert_eq!(
+            crate::streams::BAND_DESCENT.as_str(),
+            "chamber/band-descent/v1"
+        );
+        for sibling in [
+            crate::streams::CHAMBER.as_str(),
+            crate::streams::RUN_FLOORS.as_str(),
+            crate::streams::BRANCH_COUNT.as_str(),
+            crate::streams::BRANCH_CHARACTER.as_str(),
+            crate::streams::BRANCH_BARRIER.as_str(),
+            crate::streams::BRANCH_ROOT.as_str(),
+        ] {
+            assert_ne!(
+                crate::streams::BAND_DESCENT.as_str(),
+                sibling,
+                "the band-descent draw must not share a sibling's label"
+            );
+        }
+    }
+
+    /// The descent draw travels the `BAND_DESCENT` leg and **not** a
+    /// sibling's, even where the key string would be identical. The
+    /// separation lives in the parent label, so a byte-identical key under a
+    /// different parent yields a different stream — the argument
+    /// `RUN_FLOORS`'s own doc makes, checked here for this leg.
+    ///
+    /// Two arms: the shipped pick agrees with a re-derivation through
+    /// `BAND_DESCENT`, and disagrees *somewhere* with the same key under
+    /// `RUN_FLOORS`. The second arm is the positive control — without it the
+    /// first would pass for a draw that ignored its parent entirely.
+    #[test]
+    fn the_descent_draw_travels_the_band_descent_leg_and_not_a_siblings() {
+        let seed = Seed(42);
+        let width = BRANCHES_PER_SYSTEM;
+        let mut sibling_disagreed = false;
+        for cell in 0u32..64 {
+            for &band in Band::habitation() {
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let key = descent_key(CellId(cell), branch, band, DescentRole::Child);
+                    let shipped =
+                        descent_pick(seed, CellId(cell), branch, band, DescentRole::Child, width);
+                    let own = seed
+                        .derive(crate::streams::BAND_DESCENT)
+                        .derive(StreamLabel::dynamic(&key))
+                        .stream()
+                        .range_u32(0, u32::from(width - 1));
+                    assert_eq!(
+                        u32::from(shipped),
+                        own,
+                        "the descent pick does not travel the BAND_DESCENT leg at {key}"
+                    );
+                    let sib = seed
+                        .derive(crate::streams::RUN_FLOORS)
+                        .derive(StreamLabel::dynamic(&key))
+                        .stream()
+                        .range_u32(0, u32::from(width - 1));
+                    if sib != own {
+                        sibling_disagreed = true;
+                    }
+                }
+            }
+        }
+        assert!(
+            sibling_disagreed,
+            "the band-descent leg agreed with the run-floors leg everywhere"
+        );
+    }
+
+    /// Nothing descends from the bottom of the ladder, and nothing descends
+    /// from the overworld. [`Band::Nadir`] has no band below it and
+    /// [`Band::Surface`] is not a habitation band at all — both answer empty,
+    /// and neither is spelled as a numeric bound.
+    #[test]
+    fn nothing_descends_from_the_bottom_or_the_top_of_the_ladder() {
+        let seed = Seed(42);
+        assert_eq!(Band::Nadir.deeper(), None, "Nadir is the bottom rung");
+        for cell in 0u32..64 {
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                assert!(
+                    descents_from(seed, CellId(cell), Band::Nadir, branch).is_empty(),
+                    "cell {cell} branch {branch} descends below the Nadir"
+                );
+                assert!(
+                    descents_from(seed, CellId(cell), Band::Surface, branch).is_empty(),
+                    "cell {cell} branch {branch} descends out of the overworld"
+                );
+            }
+        }
+    }
+
+    /// A branch the band's own drawn width does not realize descends
+    /// nowhere — the drawn-realization half of decision 0102's split, applied
+    /// to the edge set, so a caller cannot walk into a column this band never
+    /// filled in.
+    ///
+    /// Two arms again: past the width, empty; inside it, non-empty. Without
+    /// the second, a `descents_from` that returned empty for everything would
+    /// pass.
+    #[test]
+    fn a_branch_its_band_does_not_realize_descends_nowhere() {
+        let seed = Seed(42);
+        let mut saw_a_realized_branch = false;
+        for cell in 0u32..256 {
+            for &band in Band::habitation() {
+                if band.deeper().is_none() {
+                    continue;
+                }
+                let width = crate::character::branch_count_of(seed, CellId(cell), band);
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let d = descents_from(seed, CellId(cell), band, branch);
+                    if branch >= width {
+                        assert!(
+                            d.is_empty(),
+                            "cell {cell} {band:?} branch {branch} is past width {width} \
+                             and still descends"
+                        );
+                    } else {
+                        assert!(
+                            !d.is_empty(),
+                            "cell {cell} {band:?} branch {branch} is inside width {width} \
+                             and descends nowhere"
+                        );
+                        saw_a_realized_branch = true;
+                    }
+                }
+                // And an out-of-lattice branch is refused outright.
+                assert!(descents_from(seed, CellId(cell), band, BRANCHES_PER_SYSTEM).is_empty());
+            }
+        }
+        assert!(saw_a_realized_branch, "the sweep realized no branch at all");
+    }
+
+    /// Every answer is ascending, deduplicated, and inside the **lower**
+    /// band's drawn width — never the upper band's, and never the lattice
+    /// ceiling. Reading the wrong width into the child draw is the exact
+    /// mistake this composition could make silently, so it is asserted
+    /// rather than assumed.
+    #[test]
+    fn descents_from_answers_inside_the_lower_bands_drawn_width() {
+        let seed = Seed(42);
+        for cell in 0u32..256 {
+            for &band in Band::habitation() {
+                let Some(below) = band.deeper() else { continue };
+                let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let d = descents_from(seed, CellId(cell), band, branch);
+                    let mut sorted = d.clone();
+                    sorted.sort_unstable();
+                    sorted.dedup();
+                    assert_eq!(
+                        d, sorted,
+                        "cell {cell} {band:?} branch {branch} is not a set"
+                    );
+                    for to in d {
+                        assert!(
+                            to < lower,
+                            "cell {cell} {band:?} branch {branch} descends into branch {to}, \
+                             past the lower band's width {lower}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// **The shipped composition keeps both guarantees.**
+    /// [`every_branch_has_at_least_one_descent`] and its sibling assert the
+    /// property of [`descent_edges`] at constructed widths; this asserts that
+    /// [`descents_from`] hands that function the *right* widths — the upper
+    /// band's for the upper side and the lower band's for the lower — which
+    /// no amount of constructed-width evidence can establish.
+    ///
+    /// Read as a scan it would be weak evidence; read as what it is — a wiring
+    /// check on a composition whose underlying property is already proved by
+    /// construction — it is the half the constructed tests cannot reach.
+    ///
+    /// claim: structural(3 seeds x 256 cells x every adjacent band pair) —
+    /// the composition hands `descent_edges` the two bands' own widths, so
+    /// the union it returns spans exactly the branches those bands realize.
+    /// The seeds are a wiring witness, not a population estimate: the
+    /// property itself is proved by construction at all sixteen width pairs.
+    #[test]
+    fn the_shipped_composition_keeps_both_guarantees_over_a_panel() {
+        for seed in [Seed(42), Seed(7), Seed(90210)] {
+            for cell in 0u32..256 {
+                for &band in Band::habitation() {
+                    let Some(below) = band.deeper() else { continue };
+                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
+                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                    let mut parented: Vec<u8> = Vec::new();
+                    for branch in 0..upper {
+                        let d = descents_from(seed, CellId(cell), band, branch);
+                        assert!(
+                            !d.is_empty(),
+                            "seed {seed:?} cell {cell} {band:?} branch {branch} dead-ends"
+                        );
+                        parented.extend(d);
+                    }
+                    parented.sort_unstable();
+                    parented.dedup();
+                    let want: Vec<u8> = (0..lower).collect();
+                    assert_eq!(
+                        parented, want,
+                        "seed {seed:?} cell {cell} {band:?}: branches below are not all reached"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The edge set is a fact about a **place**, not about the order the
+    /// lattice was walked in (decision 0102). Interleaving unrelated queries
+    /// between two reads of the same place must not move the answer — the
+    /// failure this catches is a draw that advanced a shared stream, which is
+    /// exactly what a single-stream-per-place design with two ordered draws
+    /// would have produced.
+    #[test]
+    fn the_descent_edges_are_the_same_however_the_lattice_is_queried() {
+        let seed = Seed(42);
+        let subject = descents_from(seed, CellId(9), Band::Deeps, 0);
+        for cell in 0u32..64 {
+            for &band in Band::habitation() {
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let _ = descents_from(seed, CellId(cell), band, branch);
+                    let _ = levels_in_branch(
+                        seed,
+                        RunAddr {
+                            cell: CellId(cell),
+                            branch,
+                            band,
+                        },
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            subject,
+            descents_from(seed, CellId(9), Band::Deeps, 0),
+            "the descent edges moved when unrelated places were queried"
+        );
+    }
+
+    /// **The one dial spec §8 leaves open, MEASURED and printed rather than
+    /// tuned.** How many edges the union produces beyond the bare minimum
+    /// decides whether the underworld is a tree or a mesh, and this campaign
+    /// draws the union and nothing more. The distribution is reported here —
+    /// `cargo test -p hornvale-worldgen descent -- --nocapture` prints it —
+    /// and the only assertion is the by-construction bound, so nothing in
+    /// this test can be satisfied by fitting the draw.
+    ///
+    /// claim: readout(3 seeds x 512 cells x every adjacent band pair) — the
+    /// edge-count distribution and mean out-degree are REPORTED, and the only
+    /// gate is the by-construction bound `max(upper, lower) <= n <= upper +
+    /// lower`. Spec §8 leaves the extra-edge count open; a test that gated it
+    /// would be this campaign tuning the one dial it was told not to tune.
+    #[test]
+    fn the_edge_count_distribution_over_a_panel_is_reported() {
+        let mut by_pair: BTreeMap<(u8, u8), BTreeMap<usize, usize>> = BTreeMap::new();
+        let mut edges_total = 0usize;
+        let mut upper_branches_total = 0usize;
+        let mut pairs_total = 0usize;
+        for seed in [Seed(42), Seed(7), Seed(90210)] {
+            for cell in 0u32..512 {
+                for &band in Band::habitation() {
+                    let Some(below) = band.deeper() else { continue };
+                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
+                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                    let n = descent_edges(seed, CellId(cell), band, upper, lower).len();
+                    assert!(
+                        n >= usize::from(upper.max(lower)) && n <= usize::from(upper + lower),
+                        "edge count {n} outside its construction bounds at {upper}x{lower}"
+                    );
+                    *by_pair
+                        .entry((upper, lower))
+                        .or_default()
+                        .entry(n)
+                        .or_insert(0) += 1;
+                    edges_total += n;
+                    upper_branches_total += usize::from(upper);
+                    pairs_total += 1;
+                }
+            }
+        }
+        // Reported, never gated (spec §6's "REPORTED, NEVER GATED" clause
+        // applies to a shape the design deliberately left open).
+        println!("band-descent edge shape over 3 seeds x 512 cells x 4 band pairs");
+        println!("  band pairs measured        {pairs_total}");
+        println!("  edges drawn                {edges_total}");
+        println!(
+            "  mean out-degree            {:.4} edges per upper branch",
+            edges_total as f64 / upper_branches_total as f64
+        );
+        println!(
+            "  mean edges per band pair   {:.4}",
+            edges_total as f64 / pairs_total as f64
+        );
+        for ((upper, lower), counts) in &by_pair {
+            let total: usize = counts.values().sum();
+            let sum: usize = counts.iter().map(|(n, c)| n * c).sum();
+            let shape: Vec<String> = counts.iter().map(|(n, c)| format!("{n}:{c}")).collect();
+            println!(
+                "  {upper}x{lower}  n={total:<6} mean={:.4}  {}",
+                sum as f64 / total as f64,
+                shape.join(" ")
+            );
+        }
     }
 }
