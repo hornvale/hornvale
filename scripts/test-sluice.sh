@@ -1079,9 +1079,20 @@ chamber_host_file="$tmp/chamber-host.txt"
 printf '%s\n' "$(hostname -s)" > "$chamber_host_file"
 
 # $1 = branch name, $2 = filename to add. Each topic branch touches its own
-# new file so every merge in every scenario below is trivially conflict-free
-# — conflict handling is sluice-mouth.sh's job (Task 3), not the chamber's;
-# the chamber assumes admission already happened.
+# new file so every merge in every scenario below is trivially conflict-free.
+# THIS COMMENT USED TO SAY conflict handling is sluice-mouth.sh's job "not the
+# chamber's; the chamber assumes admission already happened". That stopped
+# being true when sluice-run.sh grew its pre-lock mouth check: the chamber now
+# ASKS the mouth before taking the box. The scenarios below are still
+# conflict-free, and they still exercise the chamber rather than admission —
+# but they no longer do so because the chamber is blind to conflicts. The
+# mouth-check section at the end of this file covers that seam directly.
+#
+# Note also that sluice-run.sh EXECUTES the mouth rather than sourcing it, and
+# resolves it as a sibling of its own file (BASH_SOURCE) rather than under
+# $repo_root — so it does NOT need a copy in the "every helper must be on this
+# list" block above. The first cut resolved it under $repo_root, found nothing
+# in this scratch repo, and refused every chamber run in this file.
 new_topic_branch() {
     g -C "$chamber_repo" checkout -q -b "$1" main
     printf 'x\n' > "$chamber_repo/$2"
@@ -2655,6 +2666,163 @@ if printf '%s' "$mutant_status_out" | grep -q 'LOCAL-SENTINEL-SHOULD-NOT-APPEAR'
 else
     bad "the pre-fix sluice-status mutant unexpectedly did not show the local sentinel — mutation did not take"
 fi
+
+echo "== chamber: the mouth is asked BEFORE the box is taken =="
+# The defect this pins, observed 2026-08-23: a candidate that could not merge
+# still took the staff, built a worktree, failed at the <merge> step and
+# exited 10. The mouth could have said so for free, and nothing asked it —
+# sluice-run.sh did not reference sluice-mouth.sh at all.
+#
+# A CONFLICTING candidate needs both sides to touch the SAME path, which
+# new_topic_branch() deliberately never does; build one by hand.
+# Earlier chamber scenarios have already advanced origin/main by pushing, so
+# the local `main` here is behind it. Re-point at the remote before building a
+# conflict on top, or the fixture's own push is rejected non-fast-forward and
+# every assertion below reports on a fixture that was never created.
+# Earlier phases leave docs/timings.md dirty (scripts/timed.sh appends a row on
+# every phase), which blocks a checkout. This is a throwaway fixture repo under
+# $tmp — never this repository — so resetting it is safe and is not the
+# restore-from-a-copy case.
+# NOT `clean -fd`: the helper scripts this chamber needs (census-canonical-host.sh,
+# timed.sh, sluice-headline.sh, sluice-phases.sh) are copied in UNTRACKED, so a
+# clean deletes them and every later scenario dies on a missing source file.
+# reset --hard alone handles the tracked drift, which is all there is.
+g -C "$chamber_repo" reset -q --hard
+g -C "$chamber_repo" fetch -q origin
+g -C "$chamber_repo" checkout -q -B main origin/main
+g -C "$chamber_repo" checkout -q -B campaign/tconf main
+printf 'branch side\n' > "$chamber_repo/tracked.txt"
+g -C "$chamber_repo" commit -qam "conflict: branch side"
+conf_sha="$(g -C "$chamber_repo" rev-parse campaign/tconf)"
+g -C "$chamber_repo" push -q origin campaign/tconf
+g -C "$chamber_repo" checkout -q main
+printf 'main side\n' > "$chamber_repo/tracked.txt"
+g -C "$chamber_repo" commit -qam "conflict: main side"
+g -C "$chamber_repo" push -q origin main
+g -C "$chamber_repo" fetch -q origin
+
+# Our own fixture push moved origin/main, so `last-pushed` now disagrees with
+# it and the mouth reports an OUT-OF-BAND LANDING (exit 4) — correctly, and
+# BEFORE it ever reaches the conflict check, since 4 is tested ahead of 1.
+# Re-point it so the verdict under test here is the conflict, not the drift.
+g -C "$chamber_repo" rev-parse origin/main > "$HV_SLUICE_DIR/last-pushed"
+
+# sluice-run.sh does `exec >>"$run_log" 2>&1` (line ~301) before any of the
+# code under test, so NOTHING it prints reaches the file we redirect into.
+# Greps against that file are vacuously true — which is exactly how the
+# HV_SLUICE_SKIP_MOUTH assertion below first "passed" while reading an empty
+# file. Read the run log instead.
+# Each sub-test below gets its OWN state dir, so exactly one run log exists in
+# it and there is nothing to disambiguate. `ls -t` over a shared dir is not
+# good enough: several of these runs share a SHA and land in the same second,
+# so the newest-first pick is a coin flip — which is how the SKIP_MOUTH
+# assertion read the PREVIOUS run's log and reported a failure that was really
+# an ambiguous selection.
+only_run_log() {
+    local f
+    for f in "$1"/sluice-*.log; do
+        [ -e "$f" ] && { printf '%s\n' "$f"; return 0; }
+    done
+    return 1
+}
+
+export HV_SLUICE_PHASES="a b c"
+export HV_SLUICE_WORKTREE="$tmp/wt-mouth"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim-mouth"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+rm -rf "$HV_SLUICE_WORKTREE"
+
+mrc=0
+mouth1_dir="$tmp/state-mouth1"; mkdir -p "$mouth1_dir"
+g -C "$chamber_repo" rev-parse origin/main > "$mouth1_dir/last-pushed"
+HV_SLUICE_DIR="$mouth1_dir" \
+  bash "$repo_root/scripts/sluice-run.sh" campaign/tconf "$conf_sha" > "$tmp/mouth1.out" 2>&1 || mrc=$?
+mlog="$(only_run_log "$mouth1_dir")"
+if [ "$mrc" -eq 21 ]; then
+    ok "a conflicting candidate exits 21 (mouth verdict 1), not 10 (the <merge> step)"
+else
+    bad "expected rc 21 from the pre-lock mouth check, got $mrc (log ${mlog:-none})"
+fi
+# THE HEADLINE CLAIM: the box was never taken.
+#
+# NOT "the claim file does not exist afterwards" — that assertion is VACUOUS.
+# The chamber removes its claim on exit (this suite asserts exactly that a few
+# sections up: "the claim is removed after a normal (rc=0) exit"), so the file
+# is absent after every run whether the box was taken or not, and the check
+# would pass even with the whole refusal deleted. Read the run log for the
+# moment of acquisition instead — that line is written once, when the staff is
+# actually held, and nothing erases it.
+if [ -z "$mlog" ]; then
+    bad "no run log for the refused candidate — cannot tell whether the box was taken"
+elif grep -q 'holds the staff' "$mlog"; then
+    bad "the run log says it HELD THE STAFF — the chamber took the box before refusing, which is the whole defect"
+elif grep -q 'queued for the staff' "$mlog"; then
+    bad "the run log says it QUEUED for the staff — it reached the flock wait it was supposed to skip"
+else
+    ok "the run log shows the staff was never queued for or held — the box was never taken"
+fi
+
+# MUTATION: neutralise the refusal and confirm these assertions redden. Without
+# this, a test asserting rc=21 could be satisfied by any early exit at all.
+mut="$tmp/sluice-run.mut.sh"
+# shellcheck disable=SC2016  # the single quotes are the point: this must match
+# the LITERAL text `exit $((20 + mouth_rc))` in the script under test, not the
+# value of that arithmetic expression.
+sed 's|exit \$((20 + mouth_rc))|: ;|' "$repo_root/scripts/sluice-run.sh" > "$mut"
+if ! cmp -s "$mut" "$repo_root/scripts/sluice-run.sh"; then
+    rm -f "$HV_CENSUS_CLAIM_PATH"; rm -rf "$HV_SLUICE_WORKTREE"
+    mutrc=0
+    mut_dir="$tmp/state-mut"; mkdir -p "$mut_dir"
+    g -C "$chamber_repo" rev-parse origin/main > "$mut_dir/last-pushed"
+    HV_SLUICE_DIR="$mut_dir" bash "$mut" campaign/tconf "$conf_sha" > "$tmp/mouth1mut.out" 2>&1 || mutrc=$?
+    mutlog="$(only_run_log "$mut_dir")"
+    if [ "$mutrc" -eq 21 ]; then
+        bad "MUTATION DID NOT TAKE: the mutant still exited 21 with the refusal removed"
+    elif [ -n "$mutlog" ] && grep -q 'holds the staff' "$mutlog"; then
+        ok "MUTATION CONFIRMED: with the refusal removed the mutant HELD THE STAFF and exited $mutrc — so the assertion above is testing the refusal, not some unrelated early exit"
+    else
+        bad "MUTATION INCONCLUSIVE: the mutant exited $mutrc but its log never shows it holding the staff — the 'box was never taken' assertion above is not proven non-vacuous"
+    fi
+else
+    bad "MUTATION NOT APPLIED: the 'exit \$((20 + mouth_rc))' line was not found — this test proves nothing"
+fi
+
+# A NON-VERDICT MUST NOT REFUSE. The mouth's exit 2 means "I could not
+# evaluate this", which is a statement about the environment, not the
+# candidate. Turning that into a refusal would invent a new way to fail closed
+# — and did: the first cut resolved the mouth under $repo_root, got 127 here,
+# and refused every chamber run in this file.
+rm -f "$HV_CENSUS_CLAIM_PATH"; rm -rf "$HV_SLUICE_WORKTREE"
+nrc=0
+mouth2_dir="$tmp/state-mouth2"; mkdir -p "$mouth2_dir"
+HV_SLUICE_BASE=no-such-ref-at-all HV_SLUICE_DIR="$mouth2_dir" \
+  bash "$repo_root/scripts/sluice-run.sh" campaign/tconf "$conf_sha" > "$tmp/mouth2.out" 2>&1 || nrc=$?
+nlog="$(only_run_log "$mouth2_dir")"
+if [ "$nrc" -eq 22 ]; then
+    bad "an unevaluable base exited 22 — a non-verdict was treated as a refusal"
+elif [ -n "$nlog" ] && grep -q 'PROCEEDING to the box' "$nlog"; then
+    ok "an unevaluable base warns and PROCEEDS rather than refusing (rc=$nrc)"
+else
+    bad "expected a 'PROCEEDING to the box' warning in the run log for an unevaluable base; got rc=$nrc, log=${nlog:-none}"
+fi
+
+# The override exists and actually skips the check.
+rm -f "$HV_CENSUS_CLAIM_PATH"; rm -rf "$HV_SLUICE_WORKTREE"
+src=0
+mouth3_dir="$tmp/state-mouth3"; mkdir -p "$mouth3_dir"
+HV_SLUICE_SKIP_MOUTH=1 HV_SLUICE_DIR="$mouth3_dir" \
+  bash "$repo_root/scripts/sluice-run.sh" campaign/tconf "$conf_sha" > "$tmp/mouth3.out" 2>&1 || src=$?
+slog="$(only_run_log "$mouth3_dir")"
+if [ "$src" -eq 21 ]; then
+    bad "HV_SLUICE_SKIP_MOUTH=1 did not skip the mouth — still exited 21"
+elif [ -z "$slog" ]; then
+    bad "HV_SLUICE_SKIP_MOUTH=1: no run log found — cannot tell whether the mouth was consulted"
+elif grep -qE 'sluice-mouth:|REFUSED BEFORE THE BOX' "$slog"; then
+    bad "HV_SLUICE_SKIP_MOUTH=1 still consulted the mouth (run log names it)"
+else
+    ok "HV_SLUICE_SKIP_MOUTH=1 skips the check entirely — the run log shows no mouth verdict (rc=$src)"
+fi
+unset HV_SLUICE_PHASES HV_SLUICE_WORKTREE
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
