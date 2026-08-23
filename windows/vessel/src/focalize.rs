@@ -52,6 +52,19 @@ pub enum NounKind {
     Unknown,
 }
 
+impl NounKind {
+    /// The lowercase wire tag this kind serializes as, for the additive
+    /// `kind` field on `snapshot::NounEntry`.
+    pub fn tag(self) -> &'static str {
+        match self {
+            NounKind::Creature => "creature",
+            NounKind::Place => "place",
+            NounKind::Thing => "thing",
+            NounKind::Unknown => "unknown",
+        }
+    }
+}
+
 /// One examinable thing: what the prose called it, what `examine` prints, and
 /// the words a player may type to reach it.
 ///

@@ -252,6 +252,11 @@ pub struct NounEntry {
     pub noun: String,
     /// What `examine` prints for it.
     pub datum: String,
+    /// Coarse kind for completion-capable clients. Optional on the wire:
+    /// older mirrors load unchanged (serde default), newer fixtures carry it.
+    /// Additive on `vessel/session/v1` per the schema discipline.
+    #[serde(default)]
+    pub kind: String,
 }
 
 /// Serialize a snapshot. Floats quantize at this boundary and nowhere else.
@@ -385,6 +390,7 @@ mod tests {
                 nouns: vec![NounEntry {
                     noun: "sky".to_string(),
                     datum: "Night.".to_string(),
+                    kind: "thing".to_string(),
                 }],
             },
             spatial: SpatialChannel::Chamber {
