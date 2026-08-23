@@ -613,12 +613,14 @@ impl Driver {
                     std::cmp::Ordering::Greater => self.line.caret_right(),
                     std::cmp::Ordering::Equal => {}
                 }
+                self.clear_completion();
                 false
             }
             Action::HistoryPrev => {
                 if let Some(text) = self.history.prev() {
                     self.line.set(text.to_string());
                 }
+                self.clear_completion();
                 false
             }
             Action::HistoryNext => {
@@ -626,6 +628,7 @@ impl Driver {
                     Some(text) => self.line.set(text.to_string()),
                     None => self.line.set(String::new()),
                 }
+                self.clear_completion();
                 false
             }
             Action::Submit => {
@@ -674,20 +677,15 @@ impl Driver {
                 self.handle(&taken)
             }
             Action::Zoom(_) => false,
-            // Completion (spec §4.2). Under [`TabStyle::Hint`] the token at
-            // the caret is completed against the lexicon: a unique match is
-            // filled whole, an ambiguous one extends to the shared stem and
-            // parks the alternatives in `self.hint` for the strip to show,
-            // and a no-match changes nothing. Never advances the turn.
+            // Completion (spec §4.2). Under [`TabStyle::Hint`] the token
+            // at the caret is completed against the lexicon: a unique match
+            // is filled whole, an ambiguous one extends to the shared stem
+            // and parks the alternatives in `self.hint` for the strip to
+            // show, and a no-match changes nothing. Under [`TabStyle::Cycle`]
+            // an open rotation steps BEFORE the engine is consulted — the
+            // filled name alone would only ever complete to itself. Never
+            // advances the turn.
             Action::Complete => {
-                // Completion (spec §4.2). Under [`TabStyle::Hint`] the token
-                // at the caret is completed against the lexicon: a unique
-                // match is filled whole, an ambiguous one extends to the
-                // shared stem and parks the alternatives in `self.hint` for
-                // the strip to show, and a no-match changes nothing. Under
-                // [`TabStyle::Cycle`] an open rotation steps BEFORE the
-                // engine is consulted — the filled name alone would only
-                // ever complete to itself. Never advances the turn.
                 if self.tab_style == TabStyle::Cycle {
                     self.cycle_step();
                 } else {
@@ -732,7 +730,7 @@ impl Driver {
         let caret = self.line.caret();
         let here = word_start_at_caret(&text, caret);
         if let Some(state) = &mut self.cycle
-            && state.start == here.unwrap_or(usize::MAX)
+            && matches!(here, Some(s) if s == state.start)
         {
             state.index = (state.index + 1) % state.matches.len();
             let name = state.matches[state.index].clone();
@@ -745,10 +743,11 @@ impl Driver {
                 let name = matches[0].clone();
                 let start = word_start_at_caret(&self.line.text(), self.line.caret()).unwrap_or(0);
                 self.line.replace_word_at_caret(&name);
-                self.hint = Some(Hint {
-                    stem: name,
-                    matches: matches.clone(),
-                });
+                // No hint here by choice (the strip stays quiet under a
+                // rotation): `Hint.stem` is documented as the longest
+                // common prefix, and the only thing this path could store
+                // is a full match — so it stores nothing instead. The
+                // cycle presents via token rotation, not a hint line.
                 self.cycle = Some(CycleState {
                     start,
                     matches,
@@ -1145,6 +1144,26 @@ mod completion_tests {
         assert_eq!(d.line.text(), "examine Gnarlwood");
         d.apply(Action::Complete); // wraps to matches[0]
         assert_eq!(d.line.text(), "examine Gnarlash");
+    }
+
+    /// A history recall must close an open rotation: otherwise the stale
+    /// state survives at the same caret offset and the next Tab rewrites
+    /// the RECALLED line with a rotation match instead of completing it.
+    #[test]
+    fn history_recall_closes_an_open_cycle_rotation() {
+        let mut d = seeded_driver();
+        d.tab_style = TabStyle::Cycle;
+        d.history.push("examine bramble".to_string());
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete); // opens a rotation at offset 8
+        assert_eq!(d.line.text(), "examine Gnarlash");
+        d.apply(Action::HistoryPrev); // recall overwrites the buffer
+        assert_eq!(d.line.text(), "examine bramble");
+        // The stale rotation (same start offset) must not step here and
+        // rewrite "bramble" to "Gnarlwood"; a fresh completion of the
+        // unique token is a no-op fill.
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine bramble");
     }
 
     #[test]
