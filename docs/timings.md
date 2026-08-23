@@ -2267,7 +2267,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T02:18:15Z | vessel-check | 29.140 | 29.655 | 0.859 | 1.05 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-23T02:21:21Z | vessel-check | 14.767 | 15.707 | 0.580 | 1.10 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-23T02:45:16Z | gate-commit | 36.539 | 63.878 | 21.368 | 2.33 | 0 | 88de455bc | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T03:05:02Z | gate-commit | 23.390 | 51.335 | 11.410 | 2.68 | 0 | 768b74fd9 | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-23T02:49:18Z | sluice:artifacts | 94.941 | 752.210 | 34.847 | 8.29 | 0 | 8ab4d38bf |  | lefford | 40 |
 | 2026-08-23T02:49:55Z | sluice:outboard | 37.454 | 23.240 | 38.057 | 1.64 | 0 | 90b3bccf3 |  | lefford | 40 |
 | 2026-08-23T02:56:14Z | sluice:gate | 378.924 | 10388.836 | 412.945 | 28.51 | 0 | 9a0cad4bf |  | lefford | 40 |
 | 2026-08-23T03:03:26Z | sluice:clients | 431.258 | 1500.872 | 39.941 | 3.57 | 0 | 32c1ea555 |  | lefford | 40 |
+| 2026-08-23T03:07:27Z | gate-commit | 90.119 | 497.484 | 62.019 | 6.21 | 0 | 162db1bbe | campaign/the-deed | MacBookPro | 10 |
