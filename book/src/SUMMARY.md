@@ -388,6 +388,7 @@
 - [The Portolan](./chronicle/the-portolan.md)
 - [The Stylus](./chronicle/the-stylus.md)
 - [The Chroma](./chronicle/the-chroma.md)
+- [The Penstock](./chronicle/the-penstock.md)
 - [The Wick](./chronicle/the-wick.md)
 - [The Deed](./chronicle/the-deed.md)
 - [The Stope](./chronicle/the-stope.md)

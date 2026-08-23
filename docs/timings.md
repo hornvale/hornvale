@@ -2256,6 +2256,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-22T23:15:25Z | gate-commit | 105.325 | 67.058 | 38.915 | 1.01 | 0 | 307e85bf7 | campaign/the-penstock | ambrose | 12 |
 | 2026-08-23T01:25:45Z | gate-commit | 98.027 | 66.183 | 38.848 | 1.07 | 0 | 7eb8fa633 | campaign/the-penstock | ambrose | 12 |
 | 2026-08-23T01:28:58Z | gate-commit | 94.056 | 66.140 | 38.817 | 1.12 | 0 | f5e72719d | campaign/the-penstock | ambrose | 12 |
+| 2026-08-23T12:17:44Z | gate-commit | 117.486 | 66.574 | 39.951 | 0.91 | 0 | 562979f85 | campaign/the-penstock | ambrose | 12 |
 | 2026-08-23T01:44:13Z | sluice:artifacts | 117.904 | 1081.744 | 52.429 | 9.62 | 0 | 132854255 |  | lefford | 40 |
 | 2026-08-23T01:44:52Z | sluice:outboard | 38.234 | 25.159 | 38.174 | 1.66 | 0 | 63d276d35 |  | lefford | 40 |
 | 2026-08-23T01:51:35Z | sluice:gate | 402.308 | 10964.708 | 447.335 | 28.37 | 0 | 003b5e200 |  | lefford | 40 |
