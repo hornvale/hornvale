@@ -2718,7 +2718,13 @@ g -C "$chamber_repo" rev-parse origin/main > "$HV_SLUICE_DIR/last-pushed"
 # so the newest-first pick is a coin flip — which is how the SKIP_MOUTH
 # assertion read the PREVIOUS run's log and reported a failure that was really
 # an ambiguous selection.
-only_run_log() { ls "$1"/sluice-*.log 2>/dev/null | head -1; }
+only_run_log() {
+    local f
+    for f in "$1"/sluice-*.log; do
+        [ -e "$f" ] && { printf '%s\n' "$f"; return 0; }
+    done
+    return 1
+}
 
 export HV_SLUICE_PHASES="a b c"
 export HV_SLUICE_WORKTREE="$tmp/wt-mouth"
@@ -2759,6 +2765,9 @@ fi
 # MUTATION: neutralise the refusal and confirm these assertions redden. Without
 # this, a test asserting rc=21 could be satisfied by any early exit at all.
 mut="$tmp/sluice-run.mut.sh"
+# shellcheck disable=SC2016  # the single quotes are the point: this must match
+# the LITERAL text `exit $((20 + mouth_rc))` in the script under test, not the
+# value of that arithmetic expression.
 sed 's|exit \$((20 + mouth_rc))|: ;|' "$repo_root/scripts/sluice-run.sh" > "$mut"
 if ! cmp -s "$mut" "$repo_root/scripts/sluice-run.sh"; then
     rm -f "$HV_CENSUS_CLAIM_PATH"; rm -rf "$HV_SLUICE_WORKTREE"
