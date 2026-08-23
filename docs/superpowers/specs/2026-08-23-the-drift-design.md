@@ -480,3 +480,62 @@ danger was never the red — it was that the report which surfaced it called it
 *"pre-existing and unrelated"*, which would have made a real behaviour change
 look like background noise. **The measurement was real and the attribution
 was invented**, which is this project's most frequently recurring defect.
+
+---
+
+# AMENDMENT C, 2026-08-23: §6's per-system gate is blind, and is replaced
+
+Found by Task 4's review, by mutation rather than by argument.
+
+## C.1 The gated statistic cannot fail
+
+§6 gates the **per-system median** share of levels reachable, at `>= 95%`.
+Task 4's reviewer severed lateral movement between branches — a real
+connectivity break — and measured:
+
+```
+                     whole-world      per-system p10    per-system MEDIAN
+unmutated               100.00%            100.00%            100.00%
+lateral moves refused    67.82%             35.14%            100.00%
+```
+
+**The median held at exactly 100.00% on all three seeds while connectivity was
+broken.** The reason is structural and §6 could have predicted it: C.1 of The
+Stope makes the branch-count mode **1**, so most systems have a single branch,
+so most systems are unaffected by anything that severs *between* branches. A
+median over a population dominated by one-branch systems cannot see a
+branch-severing defect at all.
+
+## C.2 The replacement
+
+The gated per-system statistic becomes the **p10** share, at the same `>= 95%`
+intent, reported alongside the **share of systems below 100%**. Both moved
+sharply under the same mutation (p10 100% → 35.14%), so both can fail.
+
+The **whole-world** arm is unchanged: it moved 32 points under the same
+mutation and discriminates as written.
+
+## C.3 Why this is not metric-chasing, and the distinction is the point
+
+This project's standing rule is that you do not retune a criterion after
+unblinding to rescue a result. **This amendment does the opposite of that**,
+and the difference is worth stating precisely so a later reader can check it:
+
+- Metric-chasing moves a threshold because the measured value fell on the
+  wrong side of it. Here the measured value is at **ceiling** — 100.00%, the
+  most comfortable possible reading. Nothing is being rescued.
+- What is being replaced is a statistic **proved unable to fail**, by a
+  mutation that broke the property the gate exists to protect and left the
+  gate reading perfect.
+
+A gate that cannot fail is not a lenient gate; it is not a gate. Leaving it in
+place while reporting "both arms cleared" would have been the campaign
+misreporting itself — and §6's own closing line already binds us: *a guarantee
+is asserted, never measured into existence.*
+
+## C.4 What Task 8 must do with this
+
+Apply the p10 arm and the below-100% share, report the median as context
+rather than as a gate, and **state in the readout that the median was replaced
+and why** — including the mutation numbers above. A future reader who sees a
+median in the output must not mistake it for the thing that was checked.
