@@ -122,7 +122,17 @@ fn describe(link: &ChainLink) -> String {
 ///
 /// `None` iff `links` is empty (mirrors [`resolve_at`]'s `None` for a cell
 /// with no individuated feature at all).
-/// type-audit: bare-ok(identifier-text: return)
+///
+/// **`prose`, not `identifier-text`: this returns composed, punctuated,
+/// multi-clause text** ("Vngashngatva (a volcano), on Kxsokxkxzhakx (a
+/// landmass)"), not a bare name — the same class this crate's own
+/// `sky_phrase`/`biome_lines`/`settlement_lines`/`culture_lines` already
+/// carry `bare-ok(prose: return)` for. `resolve_at`'s `identifier-text`
+/// tag is correct where it sits (it returns one bare drawn name); copying
+/// it here named the wrong class (fix round 1, reviewer finding 2) —
+/// `type-audit check` is syntax-only and cannot catch a well-formed tag
+/// naming the wrong class, so this was reclassified by hand.
+/// type-audit: bare-ok(prose: return)
 pub fn format_chain(links: &[ChainLink]) -> Option<String> {
     let (first, rest) = links.split_first()?;
     let mut text = describe(first);
@@ -145,7 +155,11 @@ pub fn format_chain(links: &[ChainLink]) -> Option<String> {
 /// true` — Task 5 wires the real gate; see [`ChainLink`]'s doc for why that
 /// change is confined to where the bool comes from, not to
 /// [`format_chain`]'s own rule for what a `false` link shows.
-/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: return)
+///
+/// `return` is `prose`, not `identifier-text` — see [`format_chain`]'s own
+/// doc (fix round 1, reviewer finding 2) for why: this returns the same
+/// composed, punctuated chain text, not a bare name.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(prose: return)
 pub fn resolve_chain_at(
     index: &CellFeatureIndex,
     cell: CellId,

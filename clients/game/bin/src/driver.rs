@@ -1833,6 +1833,46 @@ mod portolan_tests {
         );
     }
 
+    /// Fix round 1 (reviewer finding 1, CRITICAL): the reviewer's own
+    /// repro — the seed-42 SPINNING default world, cursor moved off the
+    /// equator, then one ordinary `.` (`Action::Recentre`, a spec-
+    /// mandated §3.2 gesture) — used to make the strip state "clamped ...
+    /// from the terminator — the substellar desert and antistellar ice
+    /// are off the map" on a world with none of those things. This pins
+    /// the fix end-to-end, through the real `Driver::recentre` path, not
+    /// only against `mercator::clamp_caption` called directly (that half
+    /// lives in `mercator.rs`'s own
+    /// `a_recentred_spinning_frame_claims_neither_the_equator_nor_the_
+    /// terminator`).
+    #[test]
+    fn recentring_a_spinning_world_off_the_equator_never_claims_the_terminator() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        // The default cursor position at zoom 0 sits near the plate's own
+        // vertical centre, which projects near the equator itself
+        // (`mercator::centre_on_the_equator_itself_is_well_defined`'s own
+        // finding) — recentring there would be close to a no-op, so this
+        // moves the cursor off it first, the same way the reviewer's own
+        // repro did.
+        d.apply(Action::CursorBy(0, 5));
+        d.apply(Action::Recentre);
+        let s = d
+            .strip_text()
+            .expect("the world view always resolves once active");
+        assert!(
+            !s.contains("terminator"),
+            "a spinning world has no terminator, recentred or not, got {s:?}"
+        );
+        assert!(
+            !s.contains("substellar") && !s.contains("antistellar"),
+            "no locked-world claim may leak into a recentred spinning world's strip, got {s:?}"
+        );
+        assert!(
+            !s.contains("desert"),
+            "a spinning world has no substellar desert, got {s:?}"
+        );
+    }
+
     // -- Task 4, Step 4 / F5: the resolution disclosure -------------------
 
     /// F5: at the coarsest zoom (~51 real terrain cells behind every

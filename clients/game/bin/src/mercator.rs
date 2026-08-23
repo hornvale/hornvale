@@ -28,24 +28,48 @@ pub const LAT_CLAMP_DEG: f64 = 85.0;
 /// **Derived from `f` itself, never from a `locked: bool` threaded a
 /// second time past [`frame_for`]** — the frame already knows which line
 /// it holds: a spinning world's frame puts its pole at the geographic pole
-/// (`pole_lat_deg == 90.0`, exactly, by construction in `frame_for`); a
-/// locked world's puts it at the substellar point (`pole_lat_deg == 0.0`).
-/// A `Frame` whose pole sits anywhere else (after [`centre_on`] rolls the
-/// projection under §3.2's re-centre command) is treated as the locked
-/// arm's own "not the geographic pole" case — the recentred line is real
-/// terrain either way, never the geographic pole by definition, so the
-/// safer of the two captions to default to is the one that does not
-/// promise "the equator" for a line that has moved off it.
+/// (`pole_lat_deg == 90.0`, `pole_lon_deg == 0.0`, exactly, by construction
+/// in `frame_for`); a locked world's puts it at the substellar point
+/// (`pole_lat_deg == 0.0`, `pole_lon_deg == 0.0`).
+///
+/// **A THIRD case, found on review: [`centre_on`] (§3.2's re-centre
+/// command, a shipped gesture — `.` on the map) rolls the projection to
+/// wherever the cursor points, which is neither of those two poles in
+/// general.** A first version of this function fell through to the locked
+/// arm for anything that was not exactly the spinning pole — which meant
+/// one ordinary `.` press on a SPINNING world, off the equator, made the
+/// strip state "clamped ... from the terminator — the substellar desert
+/// and antistellar ice are off the map" on a world with no terminator, no
+/// substellar desert and no antistellar ice: a confidently wrong claim on
+/// the one surface §3.3 exists to keep honest. There is no third named
+/// line to fall back on — a re-centred frame's own central line is an
+/// oblique great circle through wherever the player last centred, and it
+/// is neither "the equator" nor "the terminator" in either rotation
+/// regime — so the fix is a third, generic wording that names NEITHER,
+/// rather than guessing which of the two is closer.
+///
+/// Exact float equality against `frame_for`'s own two literals is safe
+/// here: both are constructed from bare constants with no transcendental
+/// computation, so a `Frame` that did not come from one of them (including
+/// one `centre_on` produced) essentially never collides with either by
+/// accident — and if a re-centre coincidentally lands exactly back on a
+/// pole, that IS the same physical central line, so treating it as such is
+/// correct, not merely convenient.
 pub fn clamp_caption(f: &Frame) -> String {
-    if (f.pole_lat_deg - 90.0).abs() < 1e-9 {
+    if *f == frame_for(false) {
         format!(
             "clamped at ±{LAT_CLAMP_DEG:.0}° from the equator — the polar ice caps are off \
              the map"
         )
-    } else {
+    } else if *f == frame_for(true) {
         format!(
             "clamped at ±{LAT_CLAMP_DEG:.0}° from the terminator — the substellar desert and \
              antistellar ice are off the map"
+        )
+    } else {
+        format!(
+            "clamped at ±{LAT_CLAMP_DEG:.0}° from the re-centred line — what falls outside \
+             the map depends on where you last centred it"
         )
     }
 }
@@ -322,6 +346,61 @@ mod tests {
         assert!(!text.contains("equator"), "got {text:?}");
         assert!(text.contains("desert"), "got {text:?}");
         assert!(text.contains("ice"), "got {text:?}");
+    }
+
+    /// **Fix round 1 (reviewer finding 1): a RE-CENTRED frame must never
+    /// be mistaken for the locked regime's own terminator wording.**
+    /// `centre_on` (§3.2's `.` gesture) rolls the projection to an
+    /// arbitrary point, starting from the SPINNING default -- this
+    /// reproduces the reviewer's own repro at the pure-function level
+    /// (the end-to-end version lives in `driver.rs`'s
+    /// `recentring_a_spinning_world_off_the_equator_never_claims_the_
+    /// terminator`): the recentred frame's own pole is neither the
+    /// geographic pole nor the substellar point, so the caption must name
+    /// NEITHER "equator" nor "terminator" -- guessing the nearer of the
+    /// two would still be a false claim.
+    #[test]
+    fn a_recentred_spinning_frame_claims_neither_the_equator_nor_the_terminator() {
+        let recentred = centre_on(30.0, 40.0); // off both the equator and either pole
+        assert_ne!(
+            recentred,
+            frame_for(false),
+            "sanity: this must not collide with the default"
+        );
+        assert_ne!(
+            recentred,
+            frame_for(true),
+            "sanity: this must not collide with the default"
+        );
+        let text = clamp_caption(&recentred);
+        assert!(
+            !text.contains("terminator"),
+            "a recentred SPINNING world has no terminator, got {text:?}"
+        );
+        assert!(
+            !text.contains("equator"),
+            "the recentred line is not the equator either, got {text:?}"
+        );
+        assert!(
+            !text.contains("desert")
+                && !text.contains("substellar")
+                && !text.contains("antistellar"),
+            "no locked-world claim may leak into a spinning world's caption, got {text:?}"
+        );
+    }
+
+    /// The symmetric case starting from the LOCKED default: recentring
+    /// away from the substellar point must not keep claiming "terminator"
+    /// either -- the fix must generalise to both regimes, not just repair
+    /// the spinning one the reviewer happened to reproduce.
+    #[test]
+    fn a_recentred_locked_frame_claims_neither_the_equator_nor_the_terminator() {
+        let recentred = centre_on(-15.0, 100.0);
+        assert_ne!(recentred, frame_for(false), "sanity");
+        assert_ne!(recentred, frame_for(true), "sanity");
+        let text = clamp_caption(&recentred);
+        assert!(!text.contains("terminator"), "got {text:?}");
+        assert!(!text.contains("equator"), "got {text:?}");
     }
 
     #[test]
