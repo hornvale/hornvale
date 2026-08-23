@@ -2209,3 +2209,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T01:25:45Z | gate-commit | 98.027 | 66.183 | 38.848 | 1.07 | 0 | 7eb8fa633 | campaign/the-penstock | ambrose | 12 |
 | 2026-08-23T01:28:58Z | gate-commit | 94.056 | 66.140 | 38.817 | 1.12 | 0 | f5e72719d | campaign/the-penstock | ambrose | 12 |
 | 2026-08-23T01:44:13Z | sluice:artifacts | 117.904 | 1081.744 | 52.429 | 9.62 | 0 | 132854255 |  | lefford | 40 |
+| 2026-08-23T01:44:52Z | sluice:outboard | 38.234 | 25.159 | 38.174 | 1.66 | 0 | 63d276d35 |  | lefford | 40 |
