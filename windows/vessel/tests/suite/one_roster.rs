@@ -79,6 +79,48 @@ fn any_creature_in_the_roster_can_be_driven() {
 }
 
 #[test]
+fn possessing_a_creature_does_not_renumber_other_bodies_handles() {
+    let (world, _ctx) = seed_42();
+    let (flagship, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    assert!(
+        flagship.bodies().len() >= 4,
+        "precondition: need a FOURTH body. Driving the second body (as the \
+         sibling test above does) cannot distinguish an index-preserving \
+         exclude from a two-slot swap — swapping adjacent slots 0 and 1 \
+         happens to produce the same visible order as excluding index 1."
+    );
+    let flagship_label = flagship.driven_body().label.clone();
+    let fourth = flagship.bodies()[3].entity;
+    drop(flagship);
+
+    let (b, _) = Session::start(
+        &world,
+        &PossessOpts {
+            target: PossessTarget::Creature(fourth),
+            ..Default::default()
+        },
+    )
+    .expect("possessing the fourth roster member starts");
+
+    // The flagship was never part of this choice, and `ordered_for_derivation`
+    // hoisted it to the roster's own first slot before anyone was ever driven.
+    // Its handle among "other bodies" (`!npcs`/`why`/`provoke`'s 1-based
+    // numbering) must still be #1. A front-slot SWAP (the mechanism spec
+    // review rejected) would instead move whichever body the fourth one
+    // displaced there, silently renumbering the flagship's own handle
+    // depending on which creature the player happened to choose — a
+    // regression `any_creature_in_the_roster_can_be_driven` cannot see, since
+    // it drives the SECOND body, where a swap and an exclude agree by
+    // coincidence.
+    let labels = b.npc_labels();
+    assert_eq!(
+        labels[0], flagship_label,
+        "the flagship keeps handle #1 among the other bodies when a LATER \
+         roster member is driven instead of it"
+    );
+}
+
+#[test]
 fn possessing_an_entity_absent_from_the_roster_fails_loudly() {
     let (world, _ctx) = seed_42();
     // An id no derivation in this session could ever mint (the ledger's ids

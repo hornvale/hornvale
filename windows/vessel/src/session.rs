@@ -517,17 +517,17 @@ pub struct Session<'w> {
     /// into "the possessed one" and "the others" is now one list plus an
     /// index.
     bodies: Vec<Npc>,
-    /// Which element of `bodies` is being driven. Still always `0`, even
-    /// after Task 4's `PossessTarget::Creature`: `derive_npcs`'s
-    /// `ordered_for_derivation` step hoists the selected settlement's own
-    /// body to the roster's front, and `PossessTarget::Creature` resolution
-    /// (`Session::start_held`) SWAPS its named entity into that same front
-    /// slot rather than widening this field past `0` — so every invariant
-    /// downstream that reads `driven == 0` (`other_bodies`'s `bodies[1..]`
-    /// chief among them) stays intact; only WHICH body occupies slot `0`
-    /// changes. A real field rather than a hardcoded `0` because
-    /// `committed_agent_at_count_for` needs to name a specific body, not
-    /// just "the first one".
+    /// Which element of `bodies` is being driven. `derive_npcs`'s
+    /// `ordered_for_derivation` step hoists the settlement-anchored roster's
+    /// own body to index `0`, and every `PossessTarget` before Task 4 drove
+    /// exactly that element, so this was `0` for the whole of Tasks 1-3.
+    /// `PossessTarget::Creature` (The Hand, Task 4) generalises it: the
+    /// resolved roster index of the named entity, whatever it is — spec
+    /// §3.2's own phrase for this is `driven = i`, naming a controller MAP
+    /// (Arc III) as the reason this is a real field rather than a hardcoded
+    /// `0`. `other_bodies` reads this field, not an assumption that it is
+    /// `0`, so a non-zero `driven` narrates correctly everywhere that
+    /// function is the single source of "every other body".
     driven: usize,
     knowledge: Knowledge,
     trail: Vec<RoomAddr>,
@@ -780,24 +780,27 @@ enum Perceiving {
 /// particular) iterate this result while mutably borrowing `self.ledger` in
 /// the same loop body, exactly as they iterated `self.npcs.iter()` before.
 ///
-/// A slice, not a fresh `Vec`: `derive_npcs` always places the driven
-/// settlement's own body at index 0 (`ordered_for_derivation` hoists the
-/// home settlement to the front before truncation), and `driven` stays `0`
-/// even after Task 4's `PossessTarget::Creature` — that variant SWAPS its
-/// named entity into slot 0 rather than driving a different index (see
-/// `Session::start_held` and the `driven` field's own doc) — so "every
-/// OTHER body" is exactly `bodies[1..]`, unconditionally. Guarded with a
-/// `debug_assert!` rather than assumed: a future `driven != 0` must widen
-/// this to an owned, filtered `Vec` before it silently truncates the wrong
-/// body out of the answer.
-fn other_bodies(bodies: &[Npc], driven: usize) -> &[Npc] {
-    debug_assert_eq!(
-        driven, 0,
-        "other_bodies assumes the driven body is always the roster's first \
-         element (see the field's own doc); a PossessTarget that drives a \
-         different index must widen this to a filtered Vec first"
-    );
-    &bodies[1..]
+/// An owned `Vec` of borrows, not a slice (The Hand, Task 4 fix round 1):
+/// `driven` can now name ANY roster index, not only `0`
+/// (`PossessTarget::Creature`), so "every OTHER body" can no longer be the
+/// contiguous `bodies[1..]` this used to slice — it is `bodies` with
+/// exactly the `driven`'th element removed, ORDER PRESERVED. Order
+/// preservation is load-bearing, not cosmetic: `list_npcs`/`why`/
+/// `colocated_npc` number every other body by its 1-based POSITION in this
+/// list, and a body uninvolved in the possession choice must keep the same
+/// handle number regardless of which OTHER body is driven — an earlier
+/// version of this fix swapped the driven body into slot `0` instead of
+/// filtering, which kept `driven == 0` true but silently renumbered every
+/// handle between the old and new driven slots, a user-visible regression
+/// no test caught until spec review measured it directly
+/// (`possessing_a_creature_does_not_renumber_other_bodies_handles`).
+fn other_bodies(bodies: &[Npc], driven: usize) -> Vec<&Npc> {
+    bodies
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != driven)
+        .map(|(_, npc)| npc)
+        .collect()
 }
 
 impl<'w> Session<'w> {
@@ -923,10 +926,12 @@ impl<'w> Session<'w> {
         // co-located with itself is what the old comment here — "otherwise
         // no NPC is ever co-located with the player" — used to guard;
         // driving that same element makes the guarantee trivial rather than
-        // merely satisfied), so `driven` is always `0` — see the field's own
-        // doc for why it is a real field rather than a bare constant.
+        // merely satisfied), so `driven` resolves to `0` for `Flagship`/
+        // `MostPopulousSettlement` — see the field's own doc for why it is a
+        // real field rather than a bare constant. `driven`'s actual value is
+        // computed below, once the roster (settled + wild) is complete,
+        // since `PossessTarget::Creature` (Task 4) may name a wild member.
         let mut bodies = derive_npcs(world, ctx, &mut ledger, NPC_COUNT, village.id);
-        let driven = 0;
         // The Wilding: append a few wild beast agents (a herd, a lair) so the
         // world's fauna walks alongside its peoples — and a herbivore beast
         // finally fears predator ground (The Quarry, live). Off only for the
@@ -945,21 +950,25 @@ impl<'w> Session<'w> {
         // The Hand, Task 4: `PossessTarget::Creature` selects any already-
         // derived roster member — settled OR wild (a wild creature's
         // `village` is `None`, and it is still a legitimate target) — by
-        // SWAPPING it into the roster's front slot rather than widening
-        // `driven` past `0`. Every existing invariant this scope depends on
-        // (`other_bodies`'s `bodies[1..]`, `ordered_for_derivation`'s
-        // co-location guarantee) stays intact this way: `driven` is still
-        // always `0`, only WHICH body occupies slot `0` changes. An entity
-        // outside the full roster (settled + wild) fails loudly rather than
-        // silently falling back to the flagship — generation never guesses
-        // (spec §4.6).
-        if let PossessTarget::Creature(entity) = opts.target {
-            let idx = bodies
+        // resolving `driven` to its roster INDEX, exactly spec §3.2's own
+        // phrase for this ("possessing any creature is `driven = i`"). Fix
+        // round 1 replaced an earlier `bodies.swap(0, idx)` that kept
+        // `driven == 0` by construction: the swap permanently exchanged two
+        // roster slots, so `other_bodies`'s 1-based handles (`list_npcs`/
+        // `why`/`colocated_npc`) silently renumbered every body between the
+        // old and new front slots — a user-visible regression an index
+        // assignment does not produce, since `other_bodies` now filters by
+        // index rather than slicing from a fixed front (see its own doc).
+        // An entity outside the full roster (settled + wild) fails loudly
+        // rather than silently falling back to the flagship — generation
+        // never guesses (spec §4.6).
+        let driven = match opts.target {
+            PossessTarget::Creature(entity) => bodies
                 .iter()
                 .position(|npc| npc.entity == entity)
-                .ok_or(VesselError::NoSuchCreature(entity))?;
-            bodies.swap(0, idx);
-        }
+                .ok_or(VesselError::NoSuchCreature(entity))?,
+            PossessTarget::Flagship | PossessTarget::MostPopulousSettlement => 0,
+        };
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
         let calendar = hornvale_worldgen::sky_of(world)
@@ -1149,6 +1158,17 @@ impl<'w> Session<'w> {
         // The species rides along beside the `PresentEntry` because a creature's
         // MARK datum is an identity line (`purview::creature_datum`), not the
         // felt state `present` carries — and `PresentEntry` has no species field.
+        //
+        // `band` is cloned ONCE here, outside the `.map()` below, rather than
+        // re-derived per creature: `other_bodies` (The Hand, Task 4 fix round
+        // 1) now filters and allocates rather than slicing a fixed front, and
+        // `affect_of_memo_occupied`'s `band: &[Npc]` — shared with
+        // `windows/lab`'s health metric, so not a signature this scope can
+        // narrow to `&[&Npc]` alone — needs owned data to borrow from.
+        let band: Vec<Npc> = other_bodies(&self.bodies, self.driven)
+            .into_iter()
+            .cloned()
+            .collect();
         let here: Vec<(EntityId, String, PresentEntry)> = self
             .sensed_npcs(sighting.as_ref())
             .iter()
@@ -1156,7 +1176,7 @@ impl<'w> Session<'w> {
                 let affect = affect_of_memo_occupied(
                     &self.ledger,
                     npc,
-                    other_bodies(&self.bodies, self.driven),
+                    &band,
                     self.day,
                     &terrain,
                     &mut afraid_memo,
@@ -1723,7 +1743,7 @@ impl<'w> Session<'w> {
             &self.wctx.ctx,
             &self.position(),
             &self.knowledge,
-            other_bodies(&self.bodies, self.driven),
+            &other_bodies(&self.bodies, self.driven),
             &self.ledger,
             self.day,
             zoom_out,
@@ -3835,7 +3855,14 @@ impl<'w> Session<'w> {
             Some(&mesh_snapshot),
         );
         let sys = DriveMovements {
-            npcs: other_bodies(&self.bodies, self.driven).to_vec(),
+            // `DriveMovements.npcs: Vec<Npc>` is a widely-shared field
+            // (28+ construction sites across `windows/vessel`/`windows/lab`),
+            // so this clones out of `other_bodies`'s borrows rather than
+            // widening that struct.
+            npcs: other_bodies(&self.bodies, self.driven)
+                .into_iter()
+                .cloned()
+                .collect(),
             from,
             to: self.day,
             params: SUSTENANCE,
@@ -4336,8 +4363,12 @@ impl<'w> Session<'w> {
     /// Every derived NPC sharing the possessed agent's current room — the
     /// co-located lookup `needs` and `provoke`/`soothe` both build on.
     fn colocated_npcs(&self) -> Vec<&Npc> {
+        // `.into_iter()`, not `.iter()`: `other_bodies` returns an owned
+        // `Vec<&Npc>` now (The Hand, Task 4 fix round 1), so `.into_iter()`
+        // yields `&Npc` directly — `.iter()` would yield `&&Npc` and this
+        // could no longer collect into `Vec<&Npc>`.
         other_bodies(&self.bodies, self.driven)
-            .iter()
+            .into_iter()
             .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.position())
             .collect()
     }
@@ -4452,7 +4483,12 @@ impl<'w> Session<'w> {
         who.parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
-            .and_then(|n| other_bodies(&self.bodies, self.driven).get(n - 1))
+            // `.copied()`: `other_bodies` (now an owned `Vec<&Npc>`, The Hand,
+            // Task 4 fix round 1) is a temporary here, and `.get()` on it
+            // borrows from that temporary — `.copied()` copies the `&Npc` it
+            // holds out before the temporary Vec drops, rather than trying to
+            // return a reference into it.
+            .and_then(|n| other_bodies(&self.bodies, self.driven).get(n - 1).copied())
             .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
             .or_else(|| {
                 let needle = who.to_lowercase();
@@ -4559,12 +4595,20 @@ impl<'w> Session<'w> {
         // A throwaway `HomeNavCache` (the-waymark, Task 4) — see `snapshot`'s
         // identical comment.
         let mut home_nav_cache = HomeNavCache::new();
+        // Cloned once, outside the `.map()` below — see `snapshot`'s
+        // identical comment on why (`other_bodies` now allocates, and
+        // `affect_of_memo_occupied`'s shared `band: &[Npc]` needs owned data
+        // to borrow from).
+        let band: Vec<Npc> = other_bodies(&self.bodies, self.driven)
+            .into_iter()
+            .cloned()
+            .collect();
         here.iter()
             .map(|npc| {
                 let affect = affect_of_memo_occupied(
                     &self.ledger,
                     npc,
-                    other_bodies(&self.bodies, self.driven),
+                    &band,
                     self.day,
                     &terrain,
                     &mut afraid_memo,

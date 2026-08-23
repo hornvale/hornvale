@@ -81,7 +81,13 @@ pub fn purview_scene(
     ctx: &LocaleContext,
     position: &RoomAddr,
     knowledge: &Knowledge,
-    npcs: &[liveness::Npc],
+    // `&[&Npc]`, not `&[Npc]` (The Hand, Task 4 fix round 1): this
+    // function's only caller (`Session::purview_through`) now sources this
+    // from `other_bodies`, which returns borrows into the session's own
+    // roster rather than a contiguous owned slice, since `driven` can name
+    // any index. This is the function's only call site in the workspace,
+    // so widening it costs nothing elsewhere.
+    npcs: &[&liveness::Npc],
     ledger: &Ledger,
     at: WorldTime,
     zoom_out: u32,

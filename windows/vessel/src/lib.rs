@@ -140,10 +140,15 @@ pub enum PossessTarget {
     /// seeded exactly as [`PossessTarget::Flagship`] seeds it — this variant
     /// only SELECTS which already-derived body [`crate::Session::driven_body`]
     /// names, the same "select, never mint" discipline Task 3 established
-    /// for the other two variants. An entity outside the derived roster
-    /// (including a wild creature's, when [`PossessOpts::wild_agents`] is
-    /// on) fails loudly with [`VesselError::NoSuchCreature`] rather than
-    /// falling back to the flagship.
+    /// for the other two variants: resolution sets the session's `driven`
+    /// index to the named entity's roster position (spec §3.2: "possessing
+    /// any creature is `driven = i`"), a real index rather than a
+    /// front-slot swap, so no OTHER body's `!npcs`/`!why` handle number
+    /// moves depending on which creature is chosen. An entity outside the
+    /// derived roster (including a wild creature's, when
+    /// [`PossessOpts::wild_agents`] is on) fails loudly with
+    /// [`VesselError::NoSuchCreature`] rather than falling back to the
+    /// flagship.
     Creature(hornvale_kernel::EntityId),
 }
 
