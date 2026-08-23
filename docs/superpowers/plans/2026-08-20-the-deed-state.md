@@ -12,7 +12,7 @@ move it into scratch.*
 
 ---
 
-## Status: Tasks 1-6 complete, 7-8 remain
+## Status: Tasks 1-7 complete, 8 remains
 
 | Task | Ships | State |
 |---|---|---|
@@ -22,14 +22,20 @@ move it into scratch.*
 | 4 | The body-state gate table + roster tripwire | complete, clean after 1 fix round |
 | 5 | The `!` namespace; group A's bare forms retired | complete, clean after 1 fix round |
 | 6 | Group B's out-of-character halves — **four** arms, not six | complete, clean after 1 fix round |
-| **7** | **In-character acts charge time and post facts** | **next** — the acceptance test |
-| 8 | Close the campaign | not started |
+| 7 | In-character acts charge time and post facts | complete, clean after 1 fix round |
+| **8** | **Close the campaign** | **next** |
 
-Main absorbed at `c45d3120`. `gate-commit` green throughout.
+Main absorbed at `1ac8e89fb` (Task 6/7 boundary). `gate-commit` green throughout;
+Task 6 stage-gated green on merge product `ab77c0d5a`, and the branch again on
+`a5356c254`.
 
-**The invariant that has held at every step:** no day-stamp has moved in any
-committed artifact. Time-charging belongs to Task 7 alone, so a moved
-timestamp before then means something is charging time that should not.
+**THE STANDING INVARIANT IS NOW DELIBERATELY BROKEN, and that was its job.**
+Through Tasks 1-6 no day-stamp moved in any committed artifact; Task 7 is the
+one task allowed to move them, and it did. `book/src/gallery/possession-seed-42.md`
+and `clients/game/core/tests/fixtures/session-seed-42-chamber.json` both carry
+moved day-stamps, every one traceable to a charged verb. `session-seed-42-turn-0.json`
+did NOT move, because no verb runs before it — that is the row that still
+guards something, and it is the one to keep watching in Task 8.
 
 ---
 
@@ -47,7 +53,17 @@ STOP if no discriminating fixture can be built. An out-of-character form that
 is observationally identical to its in-character twin is a no-op, and shipping
 it would be worse than not shipping it.
 
-**Task 6 shipped FOUR arms, and the two missing ones are the finding.**
+**Task 7 SHIPPED `!look` AND `!knows` AFTER ALL — Task 6's omission was
+correct when made and was falsified by Task 7.** Task 6 left them out because
+neither had a gate to relax, so an out-of-character form would have been a
+no-op. Task 7 gave bare `look`/`knows` a body-state gate, so they now
+discriminate (asleep, `look` refuses and `!look` answers) and the STOP rule
+that excluded them is satisfied. `OBJECTIVE_HALVES` is 6. **This is worth
+carrying as a pattern, not just a fact:** a deliberate omission recorded with
+its reason became re-checkable the moment its reason changed, and a later task
+found it by re-reading the reason rather than the conclusion.
+
+**Task 6 originally shipped FOUR arms, and the two missing ones were the finding.**
 `!map`, `!examine`, `!needs` and `!wait` render the objective view — the
 existing renderer's own gating parameter at its permissive limit, never a
 second rendering path. `!look` and `!knows` are deliberately **not** shipped,
