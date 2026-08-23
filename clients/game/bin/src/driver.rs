@@ -110,6 +110,16 @@ const UNNAMED_TERRAIN: &str = "unnamed terrain";
 /// typed alternative to reading the turn's own narration — the same
 /// category of read `Driver` already does everywhere else (the strip, the
 /// snapshot text itself), never a fabricated string.
+///
+/// **Guarded on the sim's own side, not just here.**
+/// `windows/vessel/src/session.rs`'s
+/// `delve_success_narration_matches_the_clients_own_literal` pins this
+/// EXACT literal (via `str::starts_with`, the same method used below) as
+/// `delve_at`'s own committed output — no shared constant is possible
+/// (`windows/vessel` cannot depend on `clients/game`, and `clients/` sits
+/// outside the workspace), so that test is the one thing that goes red if
+/// this string ever drifts out from under this constant. If this literal
+/// ever needs to change, update that test in the SAME commit.
 const DELVE_SUCCESS_PREFIX: &str = "You worm down into the dark.";
 
 /// The plate's content height Driver assumes before the first real
