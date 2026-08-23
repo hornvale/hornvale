@@ -175,9 +175,16 @@ Kuo-Toa City for five levels, and it is not "continued" in the Underdeep.
 
 ### 4.4 Branches are per-band, and so is character
 
-`branch_count_of` and `character_of` both gain a band. A system may have two
-branches in the Undercroft, one in the Shallows and two in the Deeps; each
-branch carries its own character. Both labels take an epoch suffix.
+`branch_count_of`, `character_of` **and `barrier_of`** all gain a band. A
+system may have two branches in the Undercroft, one in the Shallows and two in
+the Deeps; each branch carries its own character and its own barrier. All three
+labels take an epoch suffix.
+
+**The barrier was missed in this spec's first draft** and found while checking
+signatures for the plan: `BRANCH_BARRIER` is keyed `(cell, entrance, branch)`
+exactly as the other two are, and B.5 of The Stope's spec makes character and
+barrier *one object per branch*. Re-keying one without the other would split
+that object across two granularities.
 
 ### 4.5 Connections between bands are drawn, and connectivity holds by construction
 
@@ -215,11 +222,13 @@ unchanged, so **`chamber/v3` survives**. Renaming `floor` to `level` and
 
 What does change:
 
-| label | why |
-|---|---|
-| branch count | re-keyed to include the band (§4.4) |
-| branch character | re-keyed to include the band (§4.4) |
-| *(new)* band-transition edges | §4.5 draws something that did not exist |
+| label | today | why |
+|---|---|---|
+| `chamber/branch-count/v1` | keyed `(cell, entrance)` | re-keyed to include the band (§4.4) |
+| `chamber/branch-character/v1` | keyed `(cell, entrance, branch)` | re-keyed to include the band (§4.4) |
+| `chamber/branch-barrier/v1` | keyed `(cell, entrance, branch)` | re-keyed to include the band (§4.4) |
+| `chamber/branch-root/v1` | keyed `(cell, entrance, branch)` | **retires** with `root_floor_of` (§4.6) |
+| *(new)* band-transition edges | — | §4.5 draws something that did not exist |
 
 Every world's underworld changes — it becomes contiguous, and roughly doubles
 in realized levels — but the address space does not move. This is a
