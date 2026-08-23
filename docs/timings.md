@@ -2278,3 +2278,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T03:03:26Z | sluice:clients | 431.258 | 1500.872 | 39.941 | 3.57 | 0 | 32c1ea555 |  | lefford | 40 |
 | 2026-08-23T11:18:21Z | rebaseline | 78.808 | 237.968 | 12.758 | 3.18 | 0 | 1f8e96224 | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-23T11:19:50Z | gate-commit | 82.260 | 511.614 | 44.604 | 6.76 | 0 | 1f8e96224 | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T11:37:58Z | gate-commit | 27.040 | 69.023 | 28.528 | 3.61 | 0 | ec57272f9 | campaign/the-winze | MacBookPro | 10 |

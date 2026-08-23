@@ -213,3 +213,5 @@ mod waterline_probe;
 mod watershed_measure;
 #[path = "suite/winze_energy_probe.rs"]
 mod winze_energy_probe;
+#[path = "suite/winze_scale_probe.rs"]
+mod winze_scale_probe;
