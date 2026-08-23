@@ -19,6 +19,24 @@ const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
 /// is not guaranteed to be among. `(20, 10)` — the plate's own centre at
 /// 40x20, where the observer's `@` always lands by construction — is used
 /// instead, so this test does not depend on incidental fixture content.
+///
+/// **Fix round 1: this test did not discriminate the behaviour it
+/// claimed.** The synthetic plate below has exactly one non-blank cell,
+/// and `blit` skips blank source cells — so a hypothetical MERGE bug
+/// (`compose` drawing the band's chart/plan first and then blitting the
+/// world plate on top, rather than choosing one or the other) would leave
+/// the chart drawn everywhere the synthetic plate is blank, and `(20,
+/// 10)` alone would read `World` either way: the original two assertions
+/// passed under both the correct either/or and the merge bug. The fix
+/// adds a SECOND probe cell, `(20, 6)`, which the synthetic plate leaves
+/// blank and which the real `without` render draws as `Source::Chart`
+/// (found by probing the real render — not guessed): under the correct
+/// either/or, `(20, 6)` is `Unattributed` in `with` (the chart was never
+/// drawn at all, so there is nothing there for `blit` to skip past);
+/// under the merge bug, `(20, 6)` stays `Chart` in `with` (drawn first,
+/// then not overwritten because the synthetic plate is blank there). This
+/// was verified to actually discriminate — see the task report's "fix
+/// round 1" section for the red/green mutation proof.
 #[test]
 fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
     let plate = {
@@ -52,6 +70,20 @@ fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
     .unwrap();
     assert_eq!(with.get(20, 10).unwrap().source, Source::World);
     assert_eq!(without.get(20, 10).unwrap().source, Source::Chart);
+    // The discriminating probe: (20, 6) is Chart in `without` (confirmed
+    // by probing the real render) and blank in the synthetic plate, so a
+    // merge bug (draw chart, then blit world on top) would leave it
+    // `Chart` in `with` too. The correct either/or leaves it
+    // `Unattributed`: the chart was never drawn into `with`'s plate at
+    // all.
+    assert_eq!(without.get(20, 6).unwrap().source, Source::Chart);
+    assert_eq!(
+        with.get(20, 6).unwrap().source,
+        Source::Unattributed,
+        "the band's chart must not be drawn at all when a world plate is \
+         supplied — a cell the synthetic plate leaves blank must stay \
+         blank in `with`, not fall through to the chart underneath"
+    );
     // The entry pane is untouched by the lens.
     for y in 0..24 {
         for x in 40..80 {
