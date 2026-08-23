@@ -86,16 +86,6 @@ pub const BRANCHES_PER_SYSTEM: u8 = 4;
 /// type-audit: bare-ok(count)
 pub const FLOORS_PER_RUN_CEILING: u8 = 20;
 
-/// The fraction of in-budget addresses that exist, in expectation. A
-/// coin-flip midpoint, not a tuned density curve: this task ships the
-/// address lattice and its existence gate, and Task 8's H2 readout is
-/// where the shape of chamber density is measured against the spec's
-/// falsification. Kept private — not a save-format contract by itself,
-/// only [`chamber_key`]'s string and [`crate::streams::CHAMBER`] are; this
-/// constant may move without relocating any address, because it only
-/// changes which draws cross a threshold, not what the draws are keyed on.
-const EXISTENCE_DENSITY: f64 = 0.5;
-
 /// An address in the chamber lattice — a **place**, never a construction
 /// step (spec §3.1). Five small integers name: which cell, which entrance of
 /// that cell, which branch (a column persisting downward), which depth band,
@@ -431,7 +421,10 @@ fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
 /// The one place the `chamber/v3` stream key is spelled — mirrors
 /// `deity_base_seed`'s discipline (`windows/worldgen/src/lib.rs`): "the one
 /// place the stream label is spelled, so [every caller] can never diverge."
-/// [`chamber_stream`] is the only caller.
+/// The Drift (spec §4.1) removed this key's only stream-deriving caller
+/// (`chamber_stream`, the existence draw) along with the draw itself; the
+/// key survives because `chamber_at`'s test fixtures and the key-pinning
+/// tests below still spell chamber addresses through it.
 ///
 /// **The key spells the WHOLE address, so every field here is a save-format
 /// contract.** The Stope added `floor` and renamed `slot` to `branch`; a key
@@ -464,20 +457,14 @@ pub(crate) fn chamber_key(addr: ChamberAddr) -> String {
     )
 }
 
-/// The stream a chamber's own derivations draw from — [`chamber_key`]
-/// composed under [`crate::streams::CHAMBER`], following the composed-label
-/// pattern at `windows/worldgen/src/lib.rs`'s `deity_name_seed`.
-///
-/// **Precondition:** `addr.band` must be `< 5` (a valid habitation-rung
-/// index). Both callers ([`chamber_exists`] and [`chamber_at`]) only reach
-/// this after `addr.band` has already been checked against a cave's budget via
-/// [`rung_rank`], whose maximum return value is `4`, so an out-of-range `band`
-/// can never survive to here.
-fn chamber_stream(seed: Seed, addr: ChamberAddr) -> Stream {
-    seed.derive(crate::streams::CHAMBER)
-        .derive(StreamLabel::dynamic(&chamber_key(addr)))
-        .stream()
-}
+// `chamber_stream` (`chamber_key` composed under `crate::streams::CHAMBER`)
+// was the existence draw's only reader. The Drift (spec §4.1) deleted that
+// draw, and with it the function's last caller — an unused private helper is
+// a value with no reader, so it is deleted rather than kept around. Nothing
+// else consumed `crate::streams::CHAMBER` directly; `chamber_key` itself
+// stays (it is still spelled by `chamber_at`'s tests and the key-pinning
+// tests below), and the label constant `crate::streams::CHAMBER` stays too —
+// it is a save-format contract already shipped, not a value this task owns.
 
 /// Spec §3.1's floors-per-run range for a band, inclusive on both ends —
 /// **frozen preregistration, not a tunable**. `Undercroft` 1–5, `Shallows`
@@ -516,8 +503,9 @@ fn run_key(run: RunAddr) -> String {
 
 /// The stream a run's floor count is drawn from — [`run_key`] composed under
 /// [`crate::streams::RUN_FLOORS`], deliberately a **different parent** from
-/// [`chamber_stream`]'s. See `RUN_FLOORS`'s own doc for why the separation
-/// lives in the parent rather than in the key's shape.
+/// the (now-deleted, spec §4.1) existence draw's own — see `RUN_FLOORS`'s
+/// own doc for why the separation lives in the parent rather than in the
+/// key's shape.
 fn run_stream(seed: Seed, run: RunAddr) -> Stream {
     seed.derive(crate::streams::RUN_FLOORS)
         .derive(StreamLabel::dynamic(&run_key(run)))
@@ -703,9 +691,18 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
 
 /// Whether a chamber exists at `addr`, under `cave`'s measured depth
 /// budget in this cell. Sparse and derived: no chamber is ever stored, so
-/// "exists" is a per-address predicate — a fixed-density draw, gated so
-/// `addr.band` reaches no deeper on the delve ladder than the cave's budget
-/// does (spec §4.0's metre budget, classified by spec §4.1's ladder).
+/// "exists" is a per-address predicate — **true for every address the
+/// lattice's own shape admits** (spec §4.1's keystone: "there is no level 7
+/// that does not exist"), gated so `addr.band` reaches no deeper on the delve
+/// ladder than the cave's budget does (spec §4.0's metre budget, classified
+/// by spec §4.1's ladder).
+///
+/// **The Drift (spec §4.1) deleted the existence coin this used to end
+/// with.** Steps 1-5 below already specified a fully contiguous shape —
+/// branches `0..drawn`, bands `0..deepest`, floors `0..drawn length` — and a
+/// sixth, fixed-probability draw punched random holes through it. There was
+/// nothing left to tune in the passage graph (spec §3.2: connectivity was
+/// never randomized), only a spurious draw to remove.
 ///
 /// **`gradient` is the cell's own geothermal gradient**, and it is what makes
 /// this a question about a *place* rather than about a length. A 480 m budget
@@ -778,7 +775,8 @@ pub fn chamber_exists(
     if addr.floor >= floors_in_run(seed, addr.run()) {
         return false;
     }
-    chamber_stream(seed, addr).next_f64() < EXISTENCE_DENSITY
+    // was: chamber_stream(seed, addr).next_f64() < EXISTENCE_DENSITY
+    true
 }
 
 /// The override source for a chamber's `origin` — spec §3.3's seam: "a
@@ -1505,124 +1503,39 @@ mod tests {
         assert_ne!(crate::streams::CHAMBER.as_str(), "chamber/v1");
     }
 
-    /// **The SHIPPED existence draw travels [`crate::streams::CHAMBER`],
-    /// keyed on the WHOLE address.** This starts from [`chamber_exists`] —
-    /// the function every world actually calls — and compares it against the
-    /// derivation spelled out here, so re-parenting [`chamber_stream`], or
-    /// handing it anything other than `chamber_key(addr)`, reddens it.
-    ///
-    /// **The hole this closes had been open across two epochs.** Task 2's own
-    /// [`the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg`]
-    /// says so in its closing paragraph: `chamber_stream`'s parent was
-    /// unpinned, an accidental `derive(RUN_FLOORS)` there would relocate every
-    /// chamber in every world, and the only thing that could have objected —
-    /// the artifact drift check — was structurally blind to the chamber
-    /// lattice (Task 2's §6). Both halves are fixed together in Task 2b: this
-    /// is the unit half.
-    ///
-    /// Two arms, and the second is what makes the first non-vacuous:
-    ///
-    /// 1. the shipped verdict equals the `CHAMBER`-parented, whole-address
-    ///    derivation at every probed address;
-    /// 2. it DIFFERS from the `RUN_FLOORS`-parented derivation of the same
-    ///    key at at least one of them. Arm 1 alone would survive a re-parented
-    ///    `chamber_stream` if the two legs happened to agree everywhere — each
-    ///    address is an independent coin flip, so agreement everywhere is
-    ///    merely unlikely rather than impossible, and it is asserted rather
-    ///    than assumed.
-    ///
-    /// **What this test cannot see, stated because the sibling test's own
-    /// lesson is that a re-implementation is not a witness:** arm 1 calls
-    /// [`chamber_key`], so a change to `chamber_key`'s *format string* moves
-    /// both sides together and passes here. That direction is held by
-    /// [`the_chamber_key_spelling_is_pinned`] and by
-    /// [`the_existence_verdict_is_byte_pinned_over_a_known_lattice_slice`],
-    /// whose goldens are literal integers.
-    #[test]
-    fn the_existence_draw_travels_the_chamber_leg_and_is_keyed_on_the_whole_address() {
-        let seed = Seed(90210);
-        let column = fixture_column();
-        // At the reach ceiling under a 24 K/km cell: ΔT = 72 K, which is the
-        // Nadir, so every band 0..=4 is inside the budget and none of
-        // `chamber_exists`'s earlier gates can be what decides a verdict here.
-        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
-        let gradient = GeothermalGradient::new(24.0);
-
-        let mut probed = 0usize;
-        let mut disagreed = 0usize;
-        for raw_cell in 0u32..12 {
-            // Only the branches this system realizes: past the drawn count
-            // (spec C.1) the branch gate refuses before any draw happens, so
-            // a verdict there would say nothing about which stream was
-            // consulted — the same rule the floor loop below already follows.
-            let realized_branches = crate::character::branch_count_of(seed, CellId(raw_cell), 0);
-            for branch in 0..realized_branches {
-                for band in 0..5u8 {
-                    let run = RunAddr {
-                        cell: CellId(raw_cell),
-                        entrance: 0,
-                        branch,
-                        band,
-                    };
-                    // Only the floors this run realizes: past them the floor
-                    // gate refuses before any draw happens, so a verdict there
-                    // would say nothing about which stream was consulted.
-                    for floor in 0..floors_in_run(seed, run) {
-                        let addr = ChamberAddr {
-                            cell: CellId(raw_cell),
-                            entrance: 0,
-                            branch,
-                            band,
-                            floor,
-                        };
-                        let via_chamber_leg = seed
-                            .derive(crate::streams::CHAMBER)
-                            .derive(StreamLabel::dynamic(&chamber_key(addr)))
-                            .stream()
-                            .next_f64()
-                            < EXISTENCE_DENSITY;
-                        let via_run_leg = seed
-                            .derive(crate::streams::RUN_FLOORS)
-                            .derive(StreamLabel::dynamic(&chamber_key(addr)))
-                            .stream()
-                            .next_f64()
-                            < EXISTENCE_DENSITY;
-
-                        let shipped = chamber_exists(seed, &cave, gradient, addr);
-                        assert_eq!(
-                            shipped,
-                            via_chamber_leg,
-                            "{}: chamber_exists answered {shipped}, but the CHAMBER \
-                             leg keyed on the whole address derives {via_chamber_leg} \
-                             — the shipped existence draw is not travelling the \
-                             derivation it declares",
-                            chamber_key(addr)
-                        );
-                        probed += 1;
-                        if via_chamber_leg != via_run_leg {
-                            disagreed += 1;
-                        }
-                    }
-                }
-            }
-        }
-        assert!(probed > 0, "the sweep probed no realized address at all");
-        assert!(
-            disagreed > 0,
-            "the two legs agreed on all {probed} probed addresses, so arm 1 \
-             would pass under a re-parented chamber_stream — this test is \
-             vacuous as written and needs a wider or different sample"
-        );
-    }
+    // `the_existence_draw_travels_the_chamber_leg_and_is_keyed_on_the_whole_
+    // address` (formerly here) asserted that the SHIPPED existence draw
+    // travelled `crate::streams::CHAMBER`, keyed on the whole address, by
+    // re-deriving `chamber_stream`'s own computation inline and comparing it
+    // against `chamber_exists`'s verdict. The Drift (spec §4.1) deleted that
+    // draw and `chamber_stream` with it, so there is no shipped derivation
+    // left for this test to witness — it tested the mechanics of a coin flip
+    // that no longer exists, not a level's existence, so re-baselining it
+    // would have meant reintroducing dead machinery just to keep an assertion
+    // green. Deleted rather than adapted. `the_chamber_key_spelling_is_pinned`
+    // still pins `chamber_key`'s format, and `the_epoch_label_is_v3_and_v2_is_
+    // not_reused` still pins the `CHAMBER` label itself — both survive
+    // unchanged, because `chamber_key` and the label are unrelated to the
+    // deleted draw.
 
     /// The existence verdict is **byte-pinned over a known slice of the
     /// lattice** — one literal `u32` per `(branch, band)`, bit `f` set when
     /// floor `f` exists. The same discipline
     /// [`the_run_draw_is_byte_pinned_for_known_keys`] carries, and the
     /// cheapest possible witness that ANY part of the existence derivation
-    /// moved: the parent leg, the key's spelling, `next_f64`'s draw
-    /// semantics, [`EXISTENCE_DENSITY`], the floor ceiling, or the run draw
-    /// the floor gate reads.
+    /// moved: the key's spelling, the floor ceiling, or the run draw the
+    /// floor gate reads.
+    ///
+    /// **Re-baselined by The Drift (spec §4.1).** Before this campaign each
+    /// mask was sparse — a per-address coin decided which floors below a
+    /// run's drawn count actually existed. The coin is gone: every floor
+    /// `0..floors_in_run(seed, run)` now exists unconditionally, so every
+    /// nonzero mask below is dense — `(1 << floors_in_run) - 1` — and a zero
+    /// mask still means the branch itself is unrealized (the C.1 gate,
+    /// unaffected by this campaign). This is the keystone (spec §2) made
+    /// literal: a run's levels are contiguous, and these are the specific
+    /// masks that prove it for cell 9 at seed 42. A test that still showed a
+    /// gap here would mean this campaign's own change had not landed.
     ///
     /// **The goldens are literal integers, not values re-derived through the
     /// path they claim to pin.** That is the whole difference between a pin
@@ -1668,12 +1581,12 @@ mod tests {
         // entrance 1 realizes no floor at all — the sparsity this lattice is
         // supposed to have.
         let expected: [u32; 40] = [
-            1, 29, 1059, 17, 1, //
+            15, 63, 32767, 31, 3, //
             0, 0, 0, 0, 0, //
             0, 0, 0, 0, 0, //
             0, 0, 0, 0, 0, //
-            21, 472, 128, 892, 0, //
-            12, 5, 79535, 738, 1, //
+            31, 511, 8191, 1023, 15, //
+            15, 7, 262143, 1023, 31, //
             0, 0, 0, 0, 0, //
             0, 0, 0, 0, 0,
         ];
@@ -1755,6 +1668,55 @@ mod tests {
             )),
             "no in-range floor exists either, so the refusal above proves \
              nothing about the floor gate"
+        );
+    }
+
+    /// A branch's levels are CONTIGUOUS: within a run's drawn length there is
+    /// no gap. This is the campaign's keystone (spec §2), and before The
+    /// Drift it was false for about half of every run — a 50% existence coin
+    /// punched random holes through a shape steps 1-5 of `chamber_exists`
+    /// already made contiguous (spec §3.1).
+    #[test]
+    fn a_runs_levels_are_contiguous() {
+        let seed = Seed(42);
+        let column = fixture_column();
+        // At the reach ceiling under a 24 K/km cell, every band 0..=4 is
+        // inside budget, so the BAND gate can never be what truncates the
+        // run below — only the drawn floor count can.
+        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
+        let gradient = GeothermalGradient::new(24.0);
+        let base = ChamberAddr {
+            cell: CellId(31942),
+            entrance: 0,
+            branch: 0,
+            band: 0,
+            floor: 0,
+        };
+
+        let drawn = floors_in_run(seed, base.run());
+        assert!(
+            drawn > 1,
+            "a one-level run cannot exhibit a gap; pick a longer run"
+        );
+
+        for floor in 0..drawn {
+            assert!(
+                chamber_exists(seed, &cave, gradient, ChamberAddr { floor, ..base }),
+                "level {floor} of a {drawn}-level run does not exist — the run \
+                 has a hole"
+            );
+        }
+        assert!(
+            !chamber_exists(
+                seed,
+                &cave,
+                gradient,
+                ChamberAddr {
+                    floor: drawn,
+                    ..base
+                }
+            ),
+            "level {drawn} is past the drawn length and must not exist"
         );
     }
 
@@ -2170,14 +2132,14 @@ mod tests {
     ///    1-in-16 chance of agreeing per run, a small sample could be
     ///    unlucky, so the disagreement is asserted rather than assumed.
     ///
-    /// **`chamber_stream`'s parent is unpinned in exactly this way**, and
-    /// that is a pre-existing gap rather than a regression this campaign
-    /// introduced: re-parenting it would relocate every chamber, and what
-    /// would object is the artifact drift check — which §6 of this campaign's
-    /// Task 2 report establishes is structurally blind to the chamber
-    /// lattice. Worth a follow-up; not fixed here, because a chamber-leg
-    /// assertion is not this task's subject and inventing one silently would
-    /// hide that the artifact-level witness is missing.
+    /// **The `chamber_stream` counterpart this paragraph used to warn about
+    /// no longer exists.** It was the existence draw's own stream, parented
+    /// on `crate::streams::CHAMBER` and unpinned in exactly this way; The
+    /// Drift (spec §4.1) deleted the draw and the function together, which
+    /// closes the gap by removing what it was a gap in, rather than by
+    /// pinning it. The lesson stated above (a re-implementing test is not a
+    /// witness) still applies to whatever next derivation is parented on
+    /// `CHAMBER`.
     #[test]
     fn the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg() {
         let seed = Seed(90210);

@@ -69,7 +69,7 @@
 //! crosses the entrance axis, which makes that pair a self-consistent
 //! secondary reading rather than a ratio of mismatched populations.
 //!
-//! # MEASURED VALUES — 2026-08-23, tree at `campaign/the-drift`
+//! # MEASURED VALUES — BEFORE, 2026-08-23, tree at `campaign/the-drift` prior to Task 1
 //!
 //! ```text
 //! seed 42
@@ -95,15 +95,53 @@
 //!   levels per system            mean 28.75   p10 6   median 20   p90 64
 //! ```
 //!
-//! Seed 42's three headline integers reproduce spec §1 and the committed
-//! witness exactly: **1,496 reachable of 21,328 existing (7.01%) from 511 open
-//! entrances**, across 874 systems. They are pinned below as an equality, not
-//! a band, and the pin's job is to be broken by Task 8 — see
-//! [`SEED_42_BASELINE`].
+//! Seed 42's three pre-change headline integers reproduce spec §1 and the
+//! pre-Task-1 committed witness exactly: **1,496 reachable of 21,328 existing
+//! (7.01%) from 511 open entrances**, across 874 systems.
 //!
-//! **The whole-world share is stable across the panel at 6.85-7.78%**, and
-//! every seed's per-system median sits an order of magnitude under §6's 95%
-//! intent. The pre-change world is not marginal on either quantity.
+//! **The whole-world share was stable across the panel at 6.85-7.78%**, and
+//! every seed's per-system median sat an order of magnitude under §6's 95%
+//! intent. The pre-change world was not marginal on either quantity.
+//!
+//! # MEASURED VALUES — AFTER, 2026-08-23, Task 1 (`chamber_exists`'s existence
+//! # coin deleted, spec §4.1)
+//!
+//! ```text
+//! seed 42
+//!   systems 874    levels 42820   reachable 39140   entrances 1229 drawn / 1101 open
+//!   systems with an open mouth 874
+//!   per-system reachable share   p10 83.87%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  91.41%   (39140 of 42820)
+//!   head-lattice only            100.00%   (30100 of 30100)
+//!   levels per system            mean 48.99   p10 9   median 34   p90 105
+//! seed 7
+//!   systems 1681   levels 84424   reachable 78677   entrances 2382 drawn / 2155 open
+//!   systems with an open mouth 1681
+//!   per-system reachable share   p10 85.85%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  93.19%   (78677 of 84424)
+//!   head-lattice only            100.00%   (59056 of 59056)
+//!   levels per system            mean 50.22   p10 9   median 33   p90 112
+//! seed 1234
+//!   systems 1266   levels 72304   reachable 66986   entrances 1813 drawn / 1636 open
+//!   systems with an open mouth 1266
+//!   per-system reachable share   p10 84.27%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  92.64%   (66986 of 72304)
+//!   head-lattice only            100.00%   (49970 of 49970)
+//!   levels per system            mean 57.11   p10 12   median 39   p90 128
+//! ```
+//!
+//! **Seed 42 moved from 1,496 reachable of 21,328 (7.01%) to 39,140 of 42,820
+//! (91.41%) — levels itself roughly doubled (the coin used to also suppress
+//! about half of every drawn floor from EXISTING at all, not only from being
+//! reached) and the reachable count grew 26.2x.** Every seed now clears BOTH
+//! of spec §6's preregistered intents: per-system median is 100.00% on all
+//! three (the intent is a median at or above 95%), and the whole-world share
+//! is 91.41-93.19% (the intent is at or above 90%). `systems with an open
+//! mouth` now equals `systems` exactly on every seed — deleting the coin
+//! means an entrance's own mouth address can no longer be the one floor that
+//! failed to exist. This is the campaign's first measured result and it
+//! lands squarely on the intent, not merely past the 50% floor spec §6 also
+//! names.
 //!
 //! Wall time for the whole probe (three `BuildDepth::Terrain` worlds and
 //! ~1.6M `chamber_exists` calls) is ~1.4 s in the optimized test profile.
@@ -140,21 +178,27 @@ use hornvale_worldgen::{
 const SEEDS: [u64; 3] = [42, 7, 1234];
 
 /// Seed 42's baseline, as `(levels, reachable, open_entrances)` — the exact
-/// triple spec §1 opens with and the committed witness
-/// `docs/audits/underworld-lattice-seed-panel.md` renders.
+/// triple the committed witness `docs/audits/underworld-lattice-seed-panel.md`
+/// renders, re-baselined once already.
 ///
-/// **Pinned as an equality on purpose, and expected to break.** Task 8 re-runs
-/// this probe against a tree where `chamber_exists`'s existence coin is gone;
-/// these numbers must move then, and the pin is what makes the campaign state
-/// its new baseline deliberately instead of reading a printed block that
-/// silently changed. A move from any OTHER cause — a terrain change, a stream
-/// relabelling, a lattice constant — is a determinism finding, and the same
-/// equality catches that too.
+/// **Pinned as an equality on purpose, and it has now broken once, exactly as
+/// designed.** Before Task 1 landed this held `(21328, 1496, 511)` — spec
+/// §1's opening figure, reproduced here as a pin so a future run's departure
+/// from it would be caught rather than silently absorbed. The Drift's Task 1
+/// (spec §4.1) then deleted `chamber_exists`'s existence coin, which is
+/// exactly the change this pin exists to be broken by; the module's own
+/// "MEASURED VALUES — AFTER" block above records the new triple and the
+/// movement in full. The pin was updated to `(42820, 39140, 1101)` in the
+/// same commit as the deletion, per this campaign's own rule that a
+/// re-baselining is a deliberate, reported act rather than a quiet number
+/// change. A move from any OTHER cause from here on — a terrain change, a
+/// stream relabelling, a lattice constant — is a determinism finding, and
+/// this equality still catches that.
 ///
 /// A band was considered and rejected: this is not a noisy statistic but a
 /// deterministic count over a fixed seed, and a band around a deterministic
 /// count only buys room for an undetected change.
-const SEED_42_BASELINE: (usize, usize, usize) = (21328, 1496, 511);
+const SEED_42_BASELINE: (usize, usize, usize) = (42820, 39140, 1101);
 
 /// The habitation band ranks, ascending — **derived from the delve ladder**
 /// through the shipped [`rung_rank`], never restated as a literal range.
@@ -318,7 +362,7 @@ fn read_system(
     }
 }
 
-/// One seed's whole-world reading — the object Task 8 re-runs unchanged.
+/// One seed's whole-world reading — the object Task 1's re-run reused unchanged.
 #[derive(Clone, Debug)]
 struct ReachSummary {
     /// The seed this reading is of.
@@ -436,7 +480,7 @@ fn world_arm(world: f64) -> &'static str {
     }
 }
 
-/// Measure one seed, end to end. **Task 8 re-runs this unchanged.**
+/// Measure one seed, end to end. **Task 1's re-run reused this unchanged.**
 fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
     let artifacts = build_world_to_with_artifacts(
         seed,
@@ -531,8 +575,9 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
 ///
 /// claim: readout(seed: the fixed 3-seed panel 42/7/1234) — a BASELINE, not a
 /// quantified claim over seeds. Nothing here is asserted "for all seeds": the
-/// panel's job is to say what the world is today so Task 8 can say what it
-/// became, and the only equality is against seed 42's committed witness
+/// panel's job is to say what the world is today so Task 1's deletion can be
+/// judged by what it became — see the module header's "MEASURED VALUES —
+/// AFTER" block, and the only equality is against seed 42's committed witness
 /// (decision 0093).
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
