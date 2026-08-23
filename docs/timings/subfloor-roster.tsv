@@ -42,6 +42,9 @@ hornvale-almanac::hornvale_almanac$gazetteer::tests::render_never_shows_a_bare_c
 hornvale-almanac::hornvale_almanac$gazetteer::tests::render_prints_shown_count_not_the_nominal_cap_when_fewer_exist
 hornvale-almanac::hornvale_almanac$gazetteer::tests::render_states_the_true_total_when_capped
 hornvale-almanac::hornvale_almanac$history::tests::a_remembered_founder_is_named_and_an_unremembered_one_is_silent
+hornvale-almanac::hornvale_almanac$history::tests::the_mirror_decoder_agrees_with_the_composition_roots
+hornvale-almanac::hornvale_almanac$history::tests::the_mirror_reads_a_bake_year_not_a_ledger_day
+hornvale-almanac::hornvale_almanac$history::tests::the_present_year_mirror_matches_the_composition_roots
 hornvale-almanac::hornvale_almanac$phenomenon_line::tests::a_circumlocuted_head_is_never_class_marked
 hornvale-almanac::hornvale_almanac$phenomenon_line::tests::a_declared_common_word_reaches_the_line
 hornvale-almanac::hornvale_almanac$phenomenon_line::tests::a_gap_circumlocutes_instead_of_going_silent
@@ -889,7 +892,6 @@ hornvale-kernel::hornvale_kernel$field::tests::noise_field_is_deterministic_and_
 hornvale-kernel::hornvale_kernel$field::tests::noise_field_scale_stretches_space
 hornvale-kernel::hornvale_kernel$field::tests::position_and_time_serialize_roundtrip
 hornvale-kernel::hornvale_kernel$field::tests::world_time_serializes_as_a_bare_scalar_not_an_object
-hornvale-kernel::hornvale_kernel$geosphere::tests::a1_grid_matches_the_full_band_scan_over_a_dense_sweep
 hornvale-kernel::hornvale_kernel$geosphere::tests::adjacency_is_mutual_and_has_the_right_valence
 hornvale-kernel::hornvale_kernel$geosphere::tests::base_icosahedron_has_twelve_unit_cells
 hornvale-kernel::hornvale_kernel$geosphere::tests::cellmap_covers_every_cell_and_indexes_by_id
@@ -1175,7 +1177,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1236,6 +1238,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exac
 hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
+hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
