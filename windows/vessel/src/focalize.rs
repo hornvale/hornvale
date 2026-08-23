@@ -40,7 +40,9 @@ const MIN_WORD: usize = 4;
 /// `Unknown` is the honest default where the sim claims nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NounKind {
-    /// A living or animate being.
+    /// A living or animate being. No render-site noun carries this yet —
+    /// creatures are tagged at later call sites (the session's present and
+    /// underground nouns).
     Creature,
     /// A location: biome, regime descriptor, village.
     Place,
@@ -67,7 +69,8 @@ pub struct Noun {
     pub datum: String,
     /// Lowercased words that resolve to this entry. Never serialized.
     pub words: Vec<String>,
-    /// The coarse kind claimed for this entry, if any.
+    /// The coarse kind claimed for this entry. Defaults to `Unknown`; see
+    /// `with_kind` for the construction sites that can claim one.
     pub kind: NounKind,
 }
 
@@ -100,7 +103,6 @@ impl Noun {
     }
 
     /// Attach a coarse kind, for construction sites that can claim one.
-    /// type-audit: bare-ok(identifier-text: self)
     pub fn with_kind(mut self, kind: NounKind) -> Noun {
         self.kind = kind;
         self
@@ -337,6 +339,34 @@ mod tests {
         let b = TemplateFocalizer.render(&vantage_at(0.0));
         assert_eq!(a.prose, b.prose);
         assert_eq!(a.nouns, b.nouns);
+    }
+
+    #[test]
+    fn rendered_noun_kinds_match_each_entrys_role() {
+        // Pins the four `.with_kind(...)` sites in `render()`: places are
+        // Place, everything the sky contributes is Thing. Swapping any tag
+        // must fail here.
+        let v = vantage_at(0.0);
+        let f = TemplateFocalizer.render(&v);
+        let kind_of = |display: &str| {
+            f.nouns
+                .iter()
+                .find(|n| n.display == *display)
+                .unwrap_or_else(|| panic!("no noun named {display:?}"))
+                .kind
+        };
+        assert_eq!(kind_of(&v.locale.biome), NounKind::Place);
+        assert_eq!(kind_of(&v.locale.regime.descriptor), NounKind::Place);
+        assert_eq!(kind_of(&v.village.name), NounKind::Place);
+        assert_eq!(kind_of("sky"), NounKind::Thing);
+        for (noun, _) in &v.sky_bodies {
+            assert_eq!(
+                kind_of(noun),
+                NounKind::Thing,
+                "sky body {noun:?} must be a Thing"
+            );
+        }
+        assert!(!f.nouns.iter().any(|n| n.kind == NounKind::Creature));
     }
 
     #[test]
