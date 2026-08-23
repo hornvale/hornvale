@@ -2311,3 +2311,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T22:42:20Z | rebaseline | 50.665 | 232.917 | 11.645 | 4.83 | 0 | 2f0fdc339 | campaign/the-hand | MacBookPro | 10 |
 | 2026-08-23T22:43:22Z | gate-commit | 24.148 | 50.906 | 13.152 | 2.65 | 0 | 2f0fdc339 | campaign/the-hand | MacBookPro | 10 |
 | 2026-08-23T22:44:14Z | gate-commit | 19.783 | 47.613 | 11.906 | 3.01 | 0 | 2f0fdc339 | campaign/the-hand | MacBookPro | 10 |
+| 2026-08-23T23:13:18Z | rebaseline | 53.580 | 234.874 | 11.078 | 4.59 | 0 | d9eaf809b | campaign/the-hand | MacBookPro | 10 |
+| 2026-08-23T23:15:04Z | gate-commit | 24.300 | 54.799 | 15.788 | 2.90 | 0 | d9eaf809b | campaign/the-hand | MacBookPro | 10 |
+| 2026-08-23T23:16:04Z | rebaseline | 38.261 | 234.978 | 10.757 | 6.42 | 0 | d9eaf809b | campaign/the-hand | MacBookPro | 10 |
+| 2026-08-23T23:17:05Z | gate-commit | 18.908 | 46.934 | 11.631 | 3.10 | 0 | d9eaf809b | campaign/the-hand | MacBookPro | 10 |
+| 2026-08-23T23:23:21Z | gate-commit | 18.966 | 46.893 | 11.603 | 3.08 | 0 | d9eaf809b | campaign/the-hand | MacBookPro | 10 |
