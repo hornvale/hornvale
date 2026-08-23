@@ -289,6 +289,25 @@ since every charged act now leaves a fractional day.
 
 ## Follow-ups
 
+**Read this list as hypotheses, not findings — including the remedies.** One
+of the items below (F-6) was written carefully, reviewed, promoted out of
+scratch, and **wrong in its recommendation**; it was caught only when the
+merge queue picked it up to *implement*, and the file refused before the
+person did. Nothing about writing it more carefully would have found that.
+
+The generalisation is worth more than the instance: **a followup register full
+of well-written, unimplemented items is a register of unverified claims.**
+Handing someone a *claim* invites agreement; handing them a *task* forces
+contact with the thing, and the thing can refuse.
+
+So the two halves of a followup have very different standing, and are worth
+writing apart: the **observation** is usually the measured half, and the
+**remedy** is usually the unverified one. F-6's observation (nothing prompts a
+golden rebaseline) was true and survives. Its remedy (declare the directories)
+was false and would have been harmful. A later reader should be able to keep
+one without the other.
+
+
 - `PLAY-driver-substitutability` — the must-fix above (decision 0167).
 - `KNOW-commit-read-same-instant` — the quantize hazard (F-5).
 - **F-6, RESOLVED THE OTHER WAY — and the recommendation this retrospective
