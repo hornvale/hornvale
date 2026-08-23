@@ -1460,7 +1460,7 @@
         "name": "provoke",
         "domain": "language",
         "kind": "Act",
-        "doc": "to make someone hostile by an act the simulation itself did not choose — `provoke`"
+        "doc": "to make someone hostile by an act the simulation itself did not choose — `!provoke`"
       },
       "rafted-floe": {
         "name": "rafted-floe",
@@ -1670,7 +1670,7 @@
         "name": "soothe",
         "domain": "language",
         "kind": "Act",
-        "doc": "to ease someone's hostility by an act the simulation itself did not choose — `soothe`"
+        "doc": "to ease someone's hostility by an act the simulation itself did not choose — `!soothe`"
       },
       "south": {
         "name": "south",
