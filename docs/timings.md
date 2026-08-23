@@ -2315,3 +2315,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T19:20:52Z | rebaseline | 86.549 | 241.921 | 11.257 | 2.93 | 0 | 043694880 | campaign/the-drift | MacBookPro | 10 |
 | 2026-08-23T19:22:01Z | gate-commit | 35.444 | 106.899 | 30.906 | 3.89 | 0 | 043694880 | campaign/the-drift | MacBookPro | 10 |
 | 2026-08-23T19:22:46Z | gate-commit | 20.527 | 47.715 | 11.919 | 2.91 | 0 | 043694880 | campaign/the-drift | MacBookPro | 10 |
+| 2026-08-23T19:25:14Z | gate-commit | 45.705 | 51.653 | 13.009 | 1.41 | 0 | 043694880 | campaign/the-drift | MacBookPro | 10 |
