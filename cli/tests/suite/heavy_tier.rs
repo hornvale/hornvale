@@ -251,7 +251,7 @@ fn the_canonical_heavy_reason_states_no_duration() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 34] = [
+const EXPECTED_UNTOKENISED: [&str; 32] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs, +0.19 SE from the 0.60 bar; four census epochs of one unchanged report read 0.5667, 0.6083, 0.6000 and 0.6083, all inside one SE of the bar, so the battery separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -264,9 +264,7 @@ const EXPECTED_UNTOKENISED: [&str; 34] = [
     "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
     "PREREGISTERED, not met: awaits TOOL-min-vs-max-separation-compares-an-overlap (decision 0134 retires it; the whole-roster Spearman rho, already asserted above, carries the direction)",
     "TODO: re-enable once the number settles",
-    "The Hand Task 3: 0 of 64 seeds in the shared seed-search range now draw any creature in the entered chamber (confirmed live), because the only body that ever reliably reached the flagship's own structure was the possessed-body duplicate this task deletes -- see task-3-report.md",
-    "The Hand Task 3: OCCUPIED_SEED=0 no longer draws a creature in the entered chamber (0 of 64 seeds in the shared search range do, confirmed live), and there is no working replacement within the existing search range -- see task-3-report.md",
-    "The Hand Task 3: nothing is co-located with a fresh flagship possession by default any more (confirmed live: even sixty waits never bring another derived body into the flagship's own room), because the possessed-body duplicate this task deletes was the only thing that ever guaranteed it -- see task-3-report.md",
+    "The Hand Task 3: the seam does not serve this one (task-3-report.md). place_creature_at_me/place_creature_out_of_my_sight only place a body at the possessions OWN room, so they can manufacture co-location but not an ARRIVAL, which needs before=false at the wait's own start and after=true from the TICK's own commit -- something only the drive simulation can produce mid-call. Measured: placed at the flagship then relocated by its own drive-seeking, a wild creature departs reliably (see the departure test above) but never returns in 8 subsequent waits; six placed or unplaced companions (2 settled, 4 wild) produce zero arrivals across 40 unmodified waits. Fixing this needs either a day-parameterised placement seam able to pre-stage a same-tick position change, or accepting the null -- a design decision beyond a co-location fixture.",
     "calibration: run by hand, prints the approach_ease quantiles",
     "compiles the workspace in release; CI runs it with -- --ignored",
     "failing — investigate later",

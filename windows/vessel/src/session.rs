@@ -1306,6 +1306,134 @@ impl<'w> Session<'w> {
             .count()
     }
 
+    /// Commit `who` — another body from this session's own [`Self::bodies`]
+    /// — into the ledger at the DRIVEN body's current position, through the
+    /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
+    /// arrival commits with, so a manufactured co-location is
+    /// indistinguishable from one the world produced.
+    ///
+    /// **A test seam, not a verb — `handle` never reaches this.** The Hand's
+    /// Task 3 deleted the possessed body's duplicate representation, and
+    /// with it went the only thing that ever guaranteed a fresh possession
+    /// starts co-located with anything: every other settlement lives
+    /// elsewhere, and wild concentrations are scattered independently
+    /// (confirmed live: seed 42's flagship possession still finds nobody to
+    /// provoke after sixty `wait`s). The fidelity ruling on that finding
+    /// (idea registry: `SOC-one-creature-per-settlement`) is that changing
+    /// world population to restore an incidental co-location guarantee is
+    /// its own campaign — The Penstock already measured tick cost
+    /// superlinear in exactly that dimension — so a test that needs a
+    /// co-located body now asks for one explicitly, through here, rather
+    /// than relying on a population side effect.
+    /// Commit `who` — another body from this session's own [`Self::bodies`]
+    /// — into the ledger at the DRIVEN body's current position, through the
+    /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
+    /// arrival commits with, so a manufactured co-location is
+    /// indistinguishable from one the world produced. If the possession is
+    /// currently INDOORS, `who` also gets a fine-layer anchor at a cell the
+    /// possession can actually see — the same `Occupancy`/lit-cell join
+    /// [`Self::sighting`] reads back — so it is DRAWN on the chamber plan,
+    /// not merely present-but-unplaced.
+    ///
+    /// **A test seam, not a verb — `handle` never reaches this.** The Hand's
+    /// Task 3 deleted the possessed body's duplicate representation, and
+    /// with it went the only thing that ever guaranteed a fresh possession
+    /// starts co-located with anything: every other settlement lives
+    /// elsewhere, and wild concentrations are scattered independently
+    /// (confirmed live: seed 42's flagship possession still finds nobody to
+    /// provoke after sixty `wait`s). The fidelity ruling on that finding
+    /// (idea registry: `SOC-one-creature-per-settlement`) is that changing
+    /// world population to restore an incidental co-location guarantee is
+    /// its own campaign — The Penstock already measured tick cost
+    /// superlinear in exactly that dimension — so a test that needs a
+    /// co-located body now asks for one explicitly, through here, rather
+    /// than relying on a population side effect.
+    pub fn place_creature_at_me(&mut self, who: EntityId) {
+        let room = self.position();
+        let fact = crate::liveness::place_agent(who, &room, self.day);
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("AGENT_AT is registered every session and non-functional");
+        if let Some(inside) = self.inside.as_ref() {
+            let terrain = self.terrain_here();
+            let room_interior = crate::interior::interior_of(&room, &terrain);
+            if let Some(chamber) = self.chamber_interior_here() {
+                let cells =
+                    crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+                let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
+                // A chamber anchor whose OWN placed cell is actually lit —
+                // `sighting()` would draw a creature standing here, so this
+                // is the only choice honest enough not to fabricate a
+                // placement the fine layer could not itself have produced —
+                // then the room-interior anchor of the SAME kind, which is
+                // what `Occupancy::place`/`sighting()`'s join actually reads.
+                let anchor = chamber
+                    .ids()
+                    .into_iter()
+                    .find(|&a| cells.get(&a).is_some_and(|cell| lit.contains(cell)))
+                    .and_then(|chamber_anchor| {
+                        let kind = chamber.anchor(chamber_anchor).kind;
+                        room_interior
+                            .ids()
+                            .into_iter()
+                            .find(|&a| room_interior.anchor(a).kind == kind)
+                    });
+                if let Some(anchor) = anchor {
+                    self.occupancy.place(who, &room, anchor);
+                }
+            }
+        }
+    }
+
+    /// [`Self::place_creature_at_me`]'s complement: place `who` co-located
+    /// but specifically OUT OF SIGHT — a fine-layer anchor at a chamber cell
+    /// the current shadowcast does NOT light, so [`Self::sighting`]'s own
+    /// join places it on a cell that exists but is not drawn, which is
+    /// exactly the "present but unsensed" state the sight-gated verbs
+    /// (`!needs`, `!examine`, `!wait`'s narration) discriminate on.
+    ///
+    /// `false`, and nothing placed beyond the room-level `agent-at`, if the
+    /// possession is not indoors or the entered chamber has no cell outside
+    /// its own shadowcast — this seam refuses to fabricate an occlusion the
+    /// fine layer could not itself produce, the same discipline
+    /// [`Self::place_creature_at_me`] applies to a lit one.
+    /// type-audit: bare-ok(flag: return)
+    pub fn place_creature_out_of_my_sight(&mut self, who: EntityId) -> bool {
+        let room = self.position();
+        let fact = crate::liveness::place_agent(who, &room, self.day);
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("AGENT_AT is registered every session and non-functional");
+        let Some(inside) = self.inside.as_ref() else {
+            return false;
+        };
+        let terrain = self.terrain_here();
+        let room_interior = crate::interior::interior_of(&room, &terrain);
+        let Some(chamber) = self.chamber_interior_here() else {
+            return false;
+        };
+        let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+        let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
+        let anchor = chamber
+            .ids()
+            .into_iter()
+            .find(|&a| cells.get(&a).is_some_and(|cell| !lit.contains(cell)))
+            .and_then(|chamber_anchor| {
+                let kind = chamber.anchor(chamber_anchor).kind;
+                room_interior
+                    .ids()
+                    .into_iter()
+                    .find(|&a| room_interior.anchor(a).kind == kind)
+            });
+        match anchor {
+            Some(anchor) => {
+                self.occupancy.place(who, &room, anchor);
+                true
+            }
+            None => false,
+        }
+    }
+
     /// How many `drank` facts the session's owned ledger has committed —
     /// zero until the first `wait` (test accessor: The Confluence's
     /// on-water settlements can satisfy sustenance without ever committing
@@ -4868,59 +4996,11 @@ mod tests {
     }
 
     /// The XOR applied to `Inside::seed` by
-    /// [`perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`]
-    /// and by the search that picks its world. An arbitrary constant — its only
-    /// job is to be a DIFFERENT draw of the same placement — but it must be the
-    /// same constant in both places, or the search filters on one experiment
-    /// while the test runs another.
+    /// [`perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`].
+    /// An arbitrary constant — its only job is to be a DIFFERENT draw of the
+    /// same placement.
     /// type-audit: bare-ok(constructor-edge)
     const PERTURBATION: u64 = 0x5169_4741_u64;
-
-    /// The seeds [`world_where`] searches. Wide enough that "no world in here
-    /// draws a creature" is a finding about the sim rather than about the
-    /// sample, and cheap in practice because the search stops at its first hit
-    /// — 19 of the first 24 seeds qualify.
-    const SIGHT_SEEDS: std::ops::Range<u64> = 0..64;
-
-    /// The first seed in [`SIGHT_SEEDS`] whose fresh possession satisfies
-    /// `pred`, with the world it was built from.
-    ///
-    /// **Why a search and not a seed.** These tests originally stood on seed
-    /// 42, on the accident that its opening chamber happened to hold a
-    /// creature after one tick. The Tense reseeded that world and the accident
-    /// went away — sight was untouched and still worked on most seeds, but the
-    /// evidence for it had been pinned to one world that stopped exercising it.
-    /// The sibling batteries in `lattice::anchor_cells` already sweep
-    /// `0u64..64` rather than assert over one fixture; this is that idiom,
-    /// applied to whole worlds.
-    ///
-    /// It panics, naming `what` and the range, when nothing matches. A sweep
-    /// that quietly found nothing and let its caller pass would be strictly
-    /// worse than the hardcoded seed it replaces: the loud preconditions are
-    /// what caught the reseed.
-    fn world_where(what: &str, pred: impl Fn(&mut Session<'_>) -> bool) -> (u64, World) {
-        for seed in SIGHT_SEEDS {
-            let Some(world) = world_at(seed) else {
-                continue;
-            };
-            let hit = {
-                let Ok((mut session, _)) = Session::start(&world, &PossessOpts::default()) else {
-                    continue;
-                };
-                session.handle("wait");
-                session.handle("enter");
-                session.inside.is_some() && pred(&mut session)
-            };
-            if hit {
-                return (seed, world);
-            }
-        }
-        panic!(
-            "no seed in {SIGHT_SEEDS:?} produces a world where {what} — the \
-             search found nothing, so nothing below could be tested. That is a \
-             finding about the sim, not a flaky fixture."
-        );
-    }
 
     /// The regression this pins: `examine` must be able to tell "the lens
     /// itself failed" from "no grain surfaced that noun" — before this fix,
@@ -6272,63 +6352,6 @@ mod tests {
         session
     }
 
-    /// Does any anchor of this session's room draw at a chamber cell OUTSIDE
-    /// the possession's shadowcast? Factored out of
-    /// `a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks` so the
-    /// world search and the test itself apply one definition.
-    fn has_unlit_anchor(session: &Session<'_>) -> bool {
-        let room = session.position();
-        let Some(inside) = session.inside.as_ref() else {
-            return false;
-        };
-        let Some(chamber) = session.chamber_interior_here() else {
-            return false;
-        };
-        let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
-        let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
-        let terrain = session.terrain_here();
-        let interior = crate::interior::interior_of(&room, &terrain);
-        interior.ids().into_iter().any(|a| {
-            let kind = interior.anchor(a).kind;
-            chamber
-                .ids()
-                .into_iter()
-                .find(|&c| chamber.anchor(c).kind == kind)
-                .and_then(|c| cells.get(&c).copied())
-                .is_some_and(|cell| !lit.contains(&cell))
-        })
-    }
-
-    /// The lowest seed whose opening chamber both holds a creature and draws
-    /// at least one of its room's anchors outside sight — the precondition
-    /// `a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks` rests
-    /// on. Searched rather than pinned, for the reason that test records.
-    fn world_whose_opening_chamber_has_an_unlit_anchor() -> World {
-        for seed in 0..32u64 {
-            let Some(world) = world_at(seed) else {
-                continue;
-            };
-            let qualifies = {
-                let Ok((mut session, _)) = Session::start(&world, &PossessOpts::default()) else {
-                    continue;
-                };
-                session.handle("wait");
-                session.handle("enter");
-                session.inside.is_some()
-                    && !session.colocated_npcs().is_empty()
-                    && has_unlit_anchor(&session)
-            };
-            if qualifies {
-                return world;
-            }
-        }
-        panic!(
-            "no seed in 0..32 opens into a chamber that both holds a creature and draws an \
-             anchor outside sight — the sight narrowing this test exercises would be \
-             unobservable, which is a finding about the sim, not a flaky fixture"
-        )
-    }
-
     /// Commit an `agent-at` putting `who` in `room` as of the session's current
     /// day, then move the session's clock to the day the LEDGER actually
     /// stored.
@@ -6381,7 +6404,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "The Hand Task 3: 0 of 64 seeds in the shared seed-search range now draw any creature in the entered chamber (confirmed live), because the only body that ever reliably reached the flagship's own structure was the possessed-body duplicate this task deletes -- see task-3-report.md"]
     fn two_creatures_cannot_be_drawn_in_one_cell() {
         // THE SIGHTING, TEST 2. `lattice::Occupancy::place`'s `Refusal` path
         // shipped with no caller at all — its own module doc says a test over
@@ -6395,52 +6417,27 @@ mod tests {
         // One anchor resolves to one cell, so the second creature must be
         // refused and must not be drawn.
         //
-        // THE WORLD IS SEARCHED FOR, NOT PINNED (see `world_where`), and the
-        // predicate is both of this test's structural needs at once: one
-        // creature already drawn, and a second derived creature to collide with
-        // it. Asking for both up front is what keeps the assertions below about
-        // the REFUSAL rather than about whether some seed happened to oblige.
-        let (seed, world) = world_where(
-            "exactly one creature is drawn and a second is available to collide with it",
-            |s| {
-                let drawn = marks_of(s).len();
-                let others = s.colocated_npcs().first().copied().map(|first| {
-                    other_bodies(&s.bodies, s.driven)
-                        .iter()
-                        .any(|n| n.entity != first.entity)
-                });
-                drawn == 1 && others == Some(true)
-            },
-        );
+        // The Hand, Task 3: constructed directly through the test seam
+        // (`place_creature_at_me`, see task-3-report.md) rather than searched
+        // for. Both `bodies()[1]` and `bodies()[2]` are placed through it in
+        // turn: the seam's own anchor choice is deterministic (the first LIT
+        // chamber anchor), so both land at the SAME room-interior anchor —
+        // exactly the collision this test needs, and `colocated_npcs`'s
+        // derivation-order iteration (bodies()[1] before [2]) is what makes
+        // the FIRST one placed win the cell in `sighting()`'s own scan.
+        let world = seam_world();
         let mut session = possessed_inside(&world);
-
         let room = session.position();
-        let first = session
-            .colocated_npcs()
-            .first()
-            .copied()
-            .expect("the seed was chosen because a creature stands here")
-            .entity;
-        let anchor = session
-            .occupancy
-            .anchor_in(first, &room)
-            .expect("the tick recorded where it stands");
+        let first = session.bodies[1].entity;
+        session.place_creature_at_me(first);
         assert_eq!(
             marks_of(&session).len(),
             1,
-            "precondition: seed {seed} was chosen because exactly one creature \
-             is drawn before the second arrives"
+            "precondition: the first placement alone is drawn"
         );
 
-        // A second creature, made co-located the way the world makes one: an
-        // `agent-at` fact, which is what `colocated_npcs` reads.
-        let second = other_bodies(&session.bodies, session.driven)
-            .iter()
-            .map(|n| n.entity)
-            .find(|&e| e != first)
-            .expect("the seed was chosen because a second NPC is derived");
-        place_agent_now(&mut session, second, &room);
-        session.occupancy.place(second, &room, anchor);
+        let second = session.bodies[2].entity;
+        session.place_creature_at_me(second);
 
         assert_eq!(
             session.colocated_npcs().len(),
@@ -6450,7 +6447,7 @@ mod tests {
         assert_eq!(
             session.occupancy.anchor_in(first, &room),
             session.occupancy.anchor_in(second, &room),
-            "and both stand at the same anchor, which liveness permits"
+            "and both stand at the same anchor, which liveness permits — and is              what the seam's deterministic choice guarantees here"
         );
 
         let marks = marks_of(&session);
@@ -6508,7 +6505,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "The Hand Task 3: 0 of 64 seeds in the shared seed-search range now draw any creature in the entered chamber (confirmed live), because the only body that ever reliably reached the flagship's own structure was the possessed-body duplicate this task deletes -- see task-3-report.md"]
     fn a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks() {
         // THE SIGHTING, TEST 3. The narrowing is structural and sim-side
         // (`CLIENT-redaction-panes`): the client is never handed a creature it
@@ -6521,24 +6517,19 @@ mod tests {
         // shadowcast and then finds the room anchor that draws there. Hardcoding
         // an anchor id would pin a number that moves with the pattern
         // inventory.
-        // THE WORLD IS SEARCHED, NOT PINNED (decision 0134). This read seed 42
-        // until the terrain epoch, and "some anchor draws outside sight" is a
-        // property of whichever chamber the possession happens to open in —
-        // seed 42's now has every anchor lit, so the precondition below failed
-        // and the test asserted nothing it was written to assert. That is the
-        // same shape as the staple-witness and craton sweeps: a contingent
-        // subject pinned to one sample. Searching for a qualifying world keeps
-        // the measurement-not-hardcoding discipline the paragraph above
-        // describes, one level up.
-        let world = world_whose_opening_chamber_has_an_unlit_anchor();
+        //
+        // The Hand, Task 3: `seam_world()` (a plain seed-42 build) rather than
+        // a search, since nothing here needs a naturally co-located creature
+        // any more (see task-3-report.md) — `who` is placed explicitly, and
+        // the near/far anchor derivation below is a pure read of the entered
+        // chamber's own geometry, unrelated to who (if anyone) stands there.
+        // seed 42's chamber is confirmed (empirically, `place_creature_out_of_
+        // my_sight`) to have both a lit and an unlit anchor.
+        let world = seam_world();
         let mut session = possessed_inside(&world);
         let room = session.position();
-        let who = session
-            .colocated_npcs()
-            .first()
-            .copied()
-            .expect("a creature is here")
-            .entity;
+        let who = session.bodies[1].entity;
+        place_agent_now(&mut session, who, &room);
 
         let (near, far) = {
             let inside = session.inside.as_ref().unwrap();
@@ -6759,7 +6750,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "The Hand Task 3: 0 of 64 seeds in the shared seed-search range now draw any creature in the entered chamber (confirmed live), because the only body that ever reliably reached the flagship's own structure was the possessed-body duplicate this task deletes -- see task-3-report.md"]
     fn perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known() {
         // THE SIGHTING'S CENTRAL INVARIANT, and spec §2.1 as a test.
         //
@@ -6776,32 +6766,18 @@ mod tests {
         // own positive is as empty as one that cannot see its own negative) and
         // `known` must be byte-identical.
         //
-        // THE WORLD IS SEARCHED FOR, NOT PINNED (see `world_where`). The
-        // predicate carries BOTH halves of the control, because both are
-        // properties of the world and not of the code under test: something must
-        // be drawn from the embedding at all, and every creature must stay in
-        // sight under both placements — otherwise the `sensed.present`
-        // assertion below is asserting a coincidence rather than the invariant.
-        let (seed, world) = world_where(
-            "the embedding draws a creature and every creature stays in sight under a perturbed placement",
-            |s| {
-                if marks_of(s).is_empty() {
-                    return false;
-                }
-                let before = s.snapshot().unwrap();
-                let inside = s.inside.as_ref().unwrap();
-                let original = inside.seed;
-                s.inside.as_mut().unwrap().seed = Seed(original.0 ^ PERTURBATION);
-                let after = s.snapshot().unwrap();
-                s.inside.as_mut().unwrap().seed = original;
-                before.spatial != after.spatial && before.sensed.present == after.sensed.present
-            },
-        );
+        // The Hand, Task 3: constructed directly through the test seam
+        // (`place_creature_at_me`, see task-3-report.md) rather than searched
+        // for. `bodies()[1]` is placed once at a LIT cell (the seam's own
+        // choice), and stays in sight under the perturbed placement too —
+        // confirmed by the assertion below, which is this test's OWN positive
+        // control now that nothing is naturally drawn to search a world for.
+        let world = seam_world();
         let mut session = possessed_inside(&world);
+        session.place_creature_at_me(session.bodies[1].entity);
         assert!(
             !marks_of(&session).is_empty(),
-            "precondition: seed {seed} was chosen because something is drawn \
-             from the embedding at all"
+            "precondition: the placed companion is drawn from the embedding"
         );
 
         let before = session.snapshot().unwrap();
@@ -6826,8 +6802,8 @@ mod tests {
         );
         assert_eq!(
             before.sensed.present, after.sensed.present,
-            "nor may it move who is REPORTED here in seed {seed}, which was \
-             chosen because every creature stays in sight under both placements"
+            "nor may it move who is REPORTED here — the placed companion must \
+             stay in sight under both placements"
         );
     }
 }

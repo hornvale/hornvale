@@ -461,23 +461,20 @@ fn the_band_tag_is_what_the_client_switches_on() {
 }
 
 #[test]
-#[ignore = "The Hand Task 3: 0 of 64 seeds in the shared seed-search range now draw any creature in the entered chamber (confirmed live), because the only body that ever reliably reached the flagship's own structure was the possessed-body duplicate this task deletes -- see task-3-report.md"]
 fn a_creature_standing_in_the_chamber_reaches_the_plan() {
     // The Sighting, test 1. `wait` before `enter` is load-bearing and is the
     // answer to "why does the committed chamber fixture carry no marks": the
     // within-room `Occupancy` is populated by `DriveMovements::step_with_occupancy`,
     // which only runs on a tick, so before the first `wait` NO creature has a
-    // fine-layer position and the embedding has nothing to place. The fixture
-    // script is `enter` alone, at turn 1.
+    // fine-layer position and the embedding has nothing to place.
     //
-    // THE WORLD IS SEARCHED FOR, NOT PINNED. Whether any creature happens to be
-    // standing in the chamber you walk into is an accident of a particular
-    // world, and The Tense's reseed of seed 42 removed that accident without
-    // touching sight at all. See `common/mod.rs`; the search is loud when it
-    // comes up empty.
-    let (seed, world) = common::world_that_draws_a_creature();
+    // The Hand, Task 3: constructed directly through the test seam rather
+    // than searched for (see task-3-report.md) — `bodies()[1]` is placed once
+    // indoors, so it picks up a fine-layer anchor and is drawn.
+    let world = world();
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
     common::step_inside(&mut session);
+    session.place_creature_at_me(session.bodies()[1].entity);
     let snap = session.snapshot().expect("a live session snapshots");
     let SpatialChannel::Chamber { plan } = &snap.spatial else {
         panic!("`enter` puts the possession inside")
@@ -488,8 +485,9 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
 
     assert!(
         !marks.is_empty(),
-        "seed {seed} was chosen BECAUSE it draws a creature, so an empty plan \
-         here means the search and the snapshot disagree: present = {:?}",
+        "the placed companion was chosen BECAUSE it draws a mark, so an empty \
+         plan here means the seam placement and the snapshot disagree: present \
+         = {:?}",
         snap.sensed.present
     );
     for mark in &marks {
@@ -559,7 +557,6 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
 /// is actually taken at, because a fixture named `seed-42` holding seed 1's
 /// bytes is the kind of quiet lie a golden exists to prevent.
 #[test]
-#[ignore = "The Hand Task 3: OCCUPIED_SEED=0 no longer draws a creature in the entered chamber (0 of 64 seeds in the shared search range do, confirmed live), and there is no working replacement within the existing search range -- see task-3-report.md"]
 fn the_client_fixtures_are_current() {
     let world = world();
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
@@ -568,23 +565,26 @@ fn the_client_fixtures_are_current() {
     session.handle("enter");
     let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
 
+    // The Hand, Task 3: the occupied fixture's mark is placed directly
+    // through the test seam rather than relied on as a natural property of
+    // OCCUPIED_SEED (see task-3-report.md) — the possessed-body duplicate
+    // this task deletes was the only thing that ever reliably drew one.
+    // `clients/vessel/src/pane_plan_marks_test.ts` reads this fixture's mark
+    // coordinate FROM the fixture, never pinned, precisely so a regenerated
+    // mark (a different creature, a different cell) cannot break it.
     let occupied_world = common::build(OCCUPIED_SEED).expect("the fixture's seed builds");
     let (mut occupied_session, _) =
         Session::start(&occupied_world, &PossessOpts::default()).unwrap();
     common::step_inside(&mut occupied_session);
-    // The fixture's reason for existing, asserted rather than assumed. A golden
-    // cannot sweep, so this is the one place a concrete seed is still pinned —
-    // and a pinned seed is exactly what The Tense's reseed falsified. Fail here,
-    // by name, rather than silently re-freezing an empty `marks` array that the
-    // Casement's pane test would then decode nothing from.
+    occupied_session.place_creature_at_me(occupied_session.bodies()[1].entity);
     assert!(
         !common::marks_of(&occupied_session).is_empty(),
-        "seed {OCCUPIED_SEED} no longer draws a creature in the chamber it \
-         enters, so `snapshot-seed-{OCCUPIED_SEED}-chamber-occupied.json` \
-         cannot carry the mark it exists to carry. Re-point OCCUPIED_SEED at a \
-         seed that does (the sweeping tests in this crate name one), rename the \
-         fixture to match, and update clients/vessel/src/pane_plan_marks_test.ts, \
-         which decodes it by name AND by coordinate."
+        "seed {OCCUPIED_SEED} has no cell the entered chamber's own shadowcast \
+         lights, so `snapshot-seed-{OCCUPIED_SEED}-chamber-occupied.json` cannot \
+         carry the mark it exists to carry even through the test seam. Re-point \
+         OCCUPIED_SEED at a seed whose opening chamber has a lit cell, rename \
+         the fixture to match, and update \
+         clients/vessel/src/pane_plan_marks_test.ts's file reference."
     );
     let occupied = hornvale_vessel::snapshot_json(&occupied_session.snapshot().unwrap());
 

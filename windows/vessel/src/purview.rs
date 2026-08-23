@@ -483,18 +483,16 @@ mod tests {
     /// `derive_npcs`'s home-settlement body was a SEPARATE `Agent` twin that
     /// always started in the possessed body's own room — the duplicate Task
     /// 2 proved and this task deletes. With it gone, nothing derived starts
-    /// within [`PURVIEW_RADIUS`] of a fresh flagship possession by default:
-    /// confirmed live at seed 42 (`map` shows zero agent marks in the walk
-    /// band at turn 0). `purview.rs` has no access to `Session`'s private
-    /// ledger (a sibling module, not `session`'s own `mod tests`), so unlike
-    /// `session::tests::provoking_shows_up_in_the_social_channel` this test
-    /// cannot manufacture a co-located body itself; it is ignored rather
-    /// than asserting a precondition the campaign's premise now falsifies.
+    /// within [`PURVIEW_RADIUS`] of a fresh flagship possession by default
+    /// (confirmed live at seed 42: `map` shows zero agent marks in the walk
+    /// band at turn 0), so fix round 1 places `bodies()[1]` explicitly
+    /// through the test seam (`Session::place_creature_at_me`) rather than
+    /// asserting a precondition the campaign's premise falsifies on its own.
     #[test]
-    #[ignore = "The Hand Task 3: 0 of 64 seeds in the shared seed-search range now draw any creature in the entered chamber (confirmed live), because the only body that ever reliably reached the flagship's own structure was the possessed-body duplicate this task deletes -- see task-3-report.md"]
     fn an_agent_mark_stands_on_a_cell() {
         let w = world();
-        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        session.place_creature_at_me(session.bodies()[1].entity);
         let s = session.purview(0).unwrap();
         let agents: usize = s
             .cells

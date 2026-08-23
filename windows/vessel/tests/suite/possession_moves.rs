@@ -297,79 +297,51 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
 }
 
 #[test]
-#[ignore = "The Hand Task 3: nothing is co-located with a fresh flagship possession by default any more (confirmed live: even sixty waits never bring another derived body into the flagship's own room), because the possessed-body duplicate this task deletes was the only thing that ever guaranteed it -- see task-3-report.md"]
 fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cycle() {
     // THE FELT-STATE READ (the-wanting T4): `needs` renders a co-located
     // NPC's drive as diegetic prose, never a number, and that prose must
-    // actually track the drive over time — not a static line. The
-    // possessed agent's own settlement guarantees a co-located NPC at the
-    // starting room (the-quickening T3 review), and every derived NPC
-    // starts away from its resource with drive 0 at world day 0, rising at
-    // SUSTENANCE's 0.15/day (act 0.85, sated 0.15).
+    // actually track the drive over time — not a static line. Every
+    // derived NPC starts away from its resource with drive 0 at world day
+    // 0, rising at SUSTENANCE's 0.15/day (act 0.85, sated 0.15).
+    //
+    // The Hand, Task 3: the possessed body's own settlement no longer
+    // guarantees a co-located NPC (see task-3-report.md) -- `bodies()[1]`
+    // is placed explicitly through the test seam, `place_creature_at_me`.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let companion = session.bodies()[1].entity;
+    session.place_creature_at_me(companion);
 
     let out_text = |t: Turn| match t {
         Turn::Out(s) => s,
         Turn::Released(_) => panic!("needs never releases"),
     };
 
-    // Day 0.5 (PossessOpts::default, before any wait): re-derived at the
-    // the-living-community merge. The history-driven re-placement seats a
-    // different co-located home-settlement NPC (the bugbear of the flagship,
-    // rendered Doododoobodobaado since The Wearing) whose merged
-    // diurnal/fatigue physics put it on a REST
-    // phase at day 0.5 — it reads "settles down to rest", not the old
-    // "seems content". (A PLACEMENT/PHYSICS behavior change, not a moved value:
-    // the drive-cycle-differs intent is preserved by re-pinning against a day
-    // where the felt state genuinely moves — see below.)
+    // Day 0.5 (PossessOpts::default, before any wait), measured against
+    // `bodies()[1]` (The Hand, Task 3's manufactured companion, not the
+    // pre-Hand flagship twin): its drive state at day 0.5 reads "seems
+    // content", not any of the fatigue/hunger/thirst readings a different
+    // companion has read here across earlier campaigns' re-measurements —
+    // the specific reading is a fact about WHICH creature is placed, never
+    // the claim; only the "changes over the drive cycle" shape below is.
     let early = out_text(session.handle("needs"));
     assert!(
-        early.contains("settles down to rest"),
-        "the co-located NPC reads as resting at day 0.5: {early}"
+        early.contains("seems content"),
+        "the co-located NPC reads as content at day 0.5: {early}"
     );
     assert!(
         !early.contains("No one else is here"),
-        "the home settlement's NPC must be co-located at the start: {early}"
+        "the placed companion must be co-located at the start: {early}"
     );
 
-    // Wait to day 5.5: thirst has now risen past its restlessness threshold and
-    // momentarily dominates the fatigue-rest baseline, so the co-located NPC
-    // casts about for water — the felt state has moved off "settles down to
-    // rest" to a thirst-restlessness read (measured: day 5.5 is where this
-    // NPC's drive competition flips).
-    // The Tense re-measure (2026-08-05): the flip moved from day 5.5 to day
-    // 10.5. Re-measured rather than re-pinned to the weaker reading it now
-    // gives at 5.5 ("grows restless"), because that would have silently traded
-    // away what this test is FOR. Day-by-day over the first fortnight:
-    //
-    //   +1 +2 rest · +3 +4 +5 restless · +6..+9 rest · +10 CASTS ABOUT FOR
-    //   WATER · +11 restless · +12 rest · +13 restless · +14 rest
-    //
-    // "Grows restless" is the fatigue baseline being disturbed; "casts about
-    // for water" is thirst actually WINNING the drive competition, and it is
-    // the latter this assertion exists to witness. It happens once in fourteen
-    // days now, so the pin is narrow — if it moves again, re-measure the same
-    // way rather than accepting a restlessness read in its place.
-    // The Tense re-measure (2026-08-05). THIRST is no longer reachable here:
-    // swept `wait 1..=25` from a fresh session each time and "casts about for
-    // water" appears at none of them. What the NPC does instead, by wait:
-    //
-    //   1-4 rest · 5 restless · 6-8 rest · 9-10 EATS ITS FILL · 11 content ·
-    //   12-13 restless · 14-16 rest · 17-18 restless · 19-22 eats its fill · …
-    //
-    // Re-pinned to `wait 9` / "eats its fill" rather than to the "grows
-    // restless" this now gives at 5, and the distinction is the point: "grows
-    // restless" is the fatigue baseline being disturbed, while "eats its fill"
-    // is a drive actually WINNING the competition and being acted on — the same
-    // KIND of reading the thirst pin was, just hunger instead of thirst.
-    //
-    // Coverage cost, recorded rather than absorbed: this assertion used to
-    // witness THIRST beating the fatigue-rest baseline, and now witnesses
-    // hunger doing it. The thirst limb of the drive competition is no longer
-    // exercised anywhere in this test. Sweeping a wider range, or waiting in
-    // day-sized steps (thirst does surface at ten successive `wait 1`s, which
-    // is NOT the same state as one `wait 10`), would restore it.
+    // The Hand, Task 3 re-measure: with `bodies()[1]` placed as the
+    // companion instead of the pre-Hand flagship twin, one `wait 9` moves it
+    // to "eats its fill" — hunger winning the drive competition, the same
+    // KIND of reading earlier re-measurements (The Tense, 2026-08-05) used
+    // for the prior companion, just re-derived for this one rather than
+    // assumed to carry over. Re-measure again with `probe_needs`-style
+    // sweep (build a session, place `bodies()[1]`, print `needs` per wait)
+    // if this drifts, the same way those did.
     session.handle("wait 9");
     let later = out_text(session.handle("needs"));
     assert!(
@@ -414,16 +386,18 @@ fn why_resolves_by_numeric_id_and_reports_an_unknown_target() {
 }
 
 #[test]
-#[ignore = "The Hand Task 3: nothing is co-located with a fresh flagship possession by default any more (confirmed live: even sixty waits never bring another derived body into the flagship's own room), because the possessed-body duplicate this task deletes was the only thing that ever guaranteed it -- see task-3-report.md"]
 fn provoke_commits_one_player_authored_disposition_fact() {
     // THE FIRST PLAYER-AUTHORED FACT: `provoke` commits a disposition-shift
     // fact about a co-located NPC into the session-owned ledger, distinct
     // from every fact the world's own systems commit (the `player:`
-    // provenance is what tells the two apart). The possessed agent's own
-    // settlement guarantees a co-located NPC at the starting room
-    // (the-quickening T3 review), so no `go` is needed first.
+    // provenance is what tells the two apart).
+    //
+    // The Hand, Task 3: the possessed body's own settlement no longer
+    // guarantees a co-located NPC (see task-3-report.md); `bodies()[1]` is
+    // placed explicitly through the test seam.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    session.place_creature_at_me(session.bodies()[1].entity);
     let before = session.committed_disposition_count();
     let turn = session.handle("!provoke");
     let after = session.committed_disposition_count();
@@ -438,7 +412,6 @@ fn provoke_commits_one_player_authored_disposition_fact() {
 }
 
 #[test]
-#[ignore = "The Hand Task 3: nothing is co-located with a fresh flagship possession by default any more (confirmed live: even sixty waits never bring another derived body into the flagship's own room), because the possessed-body duplicate this task deletes was the only thing that ever guaranteed it -- see task-3-report.md"]
 fn a_repeat_same_day_provoke_is_a_ledger_no_op_and_the_narration_says_so() {
     // SAME-DAY DEDUP IS INTENTIONAL: one disposition shift per (NPC, day,
     // direction) — escalation is gated on time passing (a `wait`), not on
@@ -447,8 +420,13 @@ fn a_repeat_same_day_provoke_is_a_ledger_no_op_and_the_narration_says_so() {
     // `Ledger::commit` returns `Ok(false)` (idempotent no-op) the second
     // time: `committed_disposition_count` must not double-count, and the
     // narration must be honest that nothing further landed.
+    //
+    // The Hand, Task 3: `bodies()[1]` is placed explicitly through the test
+    // seam (see task-3-report.md) since the settlement no longer guarantees
+    // co-location on its own.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    session.place_creature_at_me(session.bodies()[1].entity);
 
     let out_text = |t: Turn| match t {
         Turn::Out(s) => s,
@@ -612,10 +590,19 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// alveolar trill as an ordinary manner re-places seed 42's settlements yet
 /// again, `Dooga` -> **`Doaba`**. Both copies moved together — see
 /// `the_first_mark.rs`'s `the_two_grievance_npc_copies_agree`.
-const GRIEVANCE_NPC: &str = "bugbear of Doaba";
+///
+/// **The Hand, Task 3: no longer the flagship's own twin.** The pre-Hand
+/// `GRIEVANCE_NPC` (`bugbear of Doaba`) WAS the possessed-body duplicate this
+/// task deletes, co-located by construction. `bodies()[1]` (`hobgoblin of
+/// Noaba` at seed 42) is placed explicitly through the test seam
+/// (`Session::place_creature_at_me`, see task-3-report.md) instead, and is
+/// RE-placed before every `!provoke`/`!soothe` below rather than trusted to
+/// stay put across a `wait` — its own drive-seeking is free to walk it away
+/// from the flagship the moment a tick runs, unlike the twin, whose home
+/// WAS the flagship.
+const GRIEVANCE_NPC: &str = "hobgoblin of Noaba";
 
 #[test]
-#[ignore = "The Hand Task 3: nothing is co-located with a fresh flagship possession by default any more (confirmed live: even sixty waits never bring another derived body into the flagship's own room), because the possessed-body duplicate this task deletes was the only thing that ever guaranteed it -- see task-3-report.md"]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
     // GUARD THE FIXTURE FIRST. `would_turn_hostile` answers `false` for a
     // label it has never seen, so the NEGATIVE assertions below are satisfied
@@ -629,8 +616,8 @@ fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
             .0
             .npc_labels()
             .contains(&GRIEVANCE_NPC),
-        "GRIEVANCE_NPC ({GRIEVANCE_NPC}) is not co-located at day 0.5 — the settlement was \
-         probably renamed; re-read it from book/src/gallery/possession-seed-42.md"
+        "GRIEVANCE_NPC ({GRIEVANCE_NPC}) is not derived at day 0.5 — the settlement was \
+         probably renamed; re-read `bodies()[1].label` from a fresh session"
     );
 
     // THE GRIEVANCE FOLD (Task 2, direct social consequence, not an ambient
@@ -645,12 +632,19 @@ fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
 
     // Provoking across three distinct days climbs grievance past the
     // threshold. Same-day repeats dedup (Task 1), so each provoke here is
-    // separated by a `wait` — three distinct days of antagonism.
+    // separated by a `wait` — three distinct days of antagonism. `companion`
+    // is re-placed before every act (The Hand, Task 3): its own drive-seeking
+    // runs on each `wait` and is free to walk it away from the flagship,
+    // where the pre-Hand twin's own home kept it put.
     let (mut b, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let companion = b.bodies()[1].entity;
+    b.place_creature_at_me(companion);
     b.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
     b.handle("wait");
+    b.place_creature_at_me(companion);
     b.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
     b.handle("wait");
+    b.place_creature_at_me(companion);
     assert!(
         !b.would_turn_hostile(GRIEVANCE_NPC),
         "two provokes is below threshold"
@@ -663,6 +657,7 @@ fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
 
     // soothe pulls back below the threshold (intent vs outcome).
     b.handle("wait");
+    b.place_creature_at_me(companion);
     b.handle(&format!("!soothe {GRIEVANCE_NPC}")); // day 3.5: grievance 2
     assert!(
         !b.would_turn_hostile(GRIEVANCE_NPC),
