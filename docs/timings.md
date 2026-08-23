@@ -2271,3 +2271,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T02:49:55Z | sluice:outboard | 37.454 | 23.240 | 38.057 | 1.64 | 0 | 90b3bccf3 |  | lefford | 40 |
 | 2026-08-23T02:56:14Z | sluice:gate | 378.924 | 10388.836 | 412.945 | 28.51 | 0 | 9a0cad4bf |  | lefford | 40 |
 | 2026-08-23T03:03:26Z | sluice:clients | 431.258 | 1500.872 | 39.941 | 3.57 | 0 | 32c1ea555 |  | lefford | 40 |
+| 2026-08-23T15:36:29Z | gate-commit | 95.133 | 1493.082 | 162.461 | 17.40 | 0 | f7e79abc2 | fix/clients-phase-and-golden-criterion | lefford | 40 |

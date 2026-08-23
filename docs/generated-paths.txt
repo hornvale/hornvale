@@ -6,6 +6,44 @@
 #
 # Adding a generated directory means adding it HERE and `git add`-ing its
 # contents in the same commit.
+#
+# THE CRITERION IS "REGENERATE-ARTIFACTS.SH WRITES IT", NOT "IT IS A COMMITTED
+# FIXTURE" — and the difference is load-bearing enough that two sessions
+# proposed widening this list the wrong way on 2026-08-23 before checking.
+#
+# A path belongs here when `scripts/regenerate-artifacts.sh` PRODUCES it, so a
+# stale copy is a bookkeeping failure the artifacts phase should fix on its own.
+# `clients/game/core/tests/fixtures/` qualifies: regenerate-artifacts.sh:827-843
+# writes those seed-42 session snapshots via `possess --snapshot`, and they are
+# a cached INPUT — tests read them instead of paying for genesis.
+#
+# BYTE-GOLDENS ARE THE OPPOSITE AND MUST NEVER BE LISTED HERE.
+# `cli/tests/fixtures/`, `windows/vessel/tests/fixtures/` and
+# `windows/worldgen/tests/fixtures/` are guarded by `kernel/src/golden.rs`,
+# which PANICS on mismatch unless `REBASELINE=1`. They are ASSERTIONS, not
+# inputs: a stale one means the world's bytes moved, which is exactly the
+# determinism signal the project exists to protect. `make rebaseline` does not
+# write them and must not — `make rebaseline-goldens` does, deliberately, so a
+# human reviews the diff before accepting new bytes.
+#
+# Listing a byte-golden here would be inert today (regeneration never touches
+# it, so the diff is always empty) and actively harmful the moment anything
+# did: the artifacts phase COMMITS the drift it finds, which would silently
+# rebaseline a determinism golden and land it green. The gate phase failing on
+# a stale golden is not a gap in this list. It is the design.
+#
+# AND `cli/tests/fixtures/` IS WORSE THAN THE OTHER TWO, not merely another
+# golden. `kernel/src/golden.rs` says so in its own header:
+#
+#     Frozen *historical* pins (the `pre-<campaign>` fixtures under
+#     `cli/tests/fixtures/`) are NOT goldens: their bytes must never track
+#     current code, so they are compared directly and have no accept path.
+#
+# A golden has an accept path a human may deliberately take. A frozen
+# historical pin has NONE, because its whole value is being a record of what
+# the world used to emit. Declaring that directory is a category error rather
+# than an inert mistake: there is no circumstance, including `REBASELINE=1`,
+# under which regenerating it is correct.
 book/src/gallery/
 book/src/reference/
 book/src/laboratory/
