@@ -16,7 +16,7 @@
 //!
 //! **The lattice's depth axis is the DELVE ladder, not the stratigraphic one**
 //! (spec §4.1, The Underworld). `ChamberAddr.band` indexes
-//! [`hornvale_terrain::DelveRung`]'s habitation rungs — ΔT classes above the
+//! [`hornvale_kernel::Band`]'s habitation rungs — ΔT classes above the
 //! cell's surface datum — so the same rung sits at different metre depths in
 //! different cells, and how far down the lattice a cave reaches is a fact
 //! about its budget *and* its cell's geothermal gradient. That is why both
@@ -32,10 +32,10 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed, Stream};
+use hornvale_kernel::{Band, CellId, Seed, Stream};
 use hornvale_terrain::{
-    BandKind, Cave, DelveRung, GeneratedTerrain, GeothermalGradient, StratigraphicColumn,
-    delta_t_range_of, rung_at_depth,
+    Cave, GeneratedTerrain, GeothermalGradient, Horizon, StratigraphicColumn, delta_t_range_of,
+    rung_at_depth,
 };
 
 /// Branch columns in the fixed lattice, beneath one cave-system address
@@ -51,7 +51,7 @@ use hornvale_terrain::{
 /// **column persisting downward**, one range shared by every band.
 ///
 /// **4**, chosen from The Deep Realm's Task 0 measured substrate rather than
-/// invented: a cave reaching `BandKind::Roots` (the deepest band the live
+/// invented: a cave reaching `Horizon::Roots` (the deepest band the live
 /// generator ever produces — 30 seeds, 55,947 caves) spans 4 rungs of
 /// `Realm::UNDERDARK.strata()` (`Regolith..=Roots`), so 4 branches keeps a
 /// full system's address space the same order of magnitude as the band ladder
@@ -110,7 +110,7 @@ pub const FLOORS_PER_RUN_CEILING: u8 = 20;
 /// values. `MAP-cave-depth-weld` — the fix rule 1a named as the reason to keep
 /// the address space wider than the realized one — landed in this campaign
 /// (spec §4.0) and made the situation worse, not better: with a metre budget
-/// capped at 3 km, `deepest_band` reached exactly `Basement` on 97.3–99.0% of
+/// capped at 3 km, `deepest_horizon` reached exactly `Basement` on 97.3–99.0% of
 /// cave-bearing cells across seeds 42 / 7 / 1234, so the lattice's depth axis
 /// carried almost no information at all. Re-pointing it at the delve ladder is
 /// what restores it: the same three seeds spread across all five rungs
@@ -251,7 +251,7 @@ pub enum ChamberOrigin {
 }
 
 /// A chamber's resolved content — deliberately minimal for this task. Spec
-/// §3's substrate table lists a chamber's content as "depth — `BandKind` on
+/// §3's substrate table lists a chamber's content as "depth — `Horizon` on
 /// each node — what the rock here is like", and that is exactly what
 /// `stratum` carries: the named stratum its address's `band` indexes. Task 4
 /// (ledger #24) adds `origin`, the seam's own payload; later tasks extend
@@ -273,7 +273,7 @@ pub struct Chamber {
     pub addr: ChamberAddr,
     /// Which rung of the delve ladder this chamber sits on — a habitation
     /// depth class, `rung_of_rank(addr.band)`. A pure function of the address.
-    pub rung: DelveRung,
+    pub rung: Band,
     /// The rock stratum this chamber sits in — the *archive* answer, read off
     /// the cell's own stratigraphic column at the depth [`Chamber::rung`]
     /// begins at. **Not derived from `rung`, and `rung` is not derived from
@@ -289,12 +289,12 @@ pub struct Chamber {
     pub origin: ChamberOrigin,
 }
 
-/// The one explicit mapping between a NAMED [`DelveRung`] (what
+/// The one explicit mapping between a NAMED [`Band`] (what
 /// [`rung_at_depth`] returns for a cave's budget) and the lattice's index
 /// space (what [`ChamberAddr::band`] indexes) — rule 1a's "compare them
 /// through one explicit mapping, in one place." [`chamber_exists`] is the
 /// only caller, so a lattice reader and the depth-budget gate can never
-/// diverge on what a `band` number means. Exhaustive: a sixth `DelveRung`
+/// diverge on what a `band` number means. Exhaustive: a sixth `Band`
 /// variant fails this to compile rather than silently misplacing it.
 ///
 /// `Surface` is `None`: it is a rung of the delve ladder but not a *habitation*
@@ -311,14 +311,14 @@ pub struct Chamber {
 /// widening it the right move rather than duplicating it in
 /// [`crate::delve_seating`].
 /// type-audit: bare-ok(index: return)
-pub fn rung_rank(rung: DelveRung) -> Option<u8> {
+pub fn rung_rank(rung: Band) -> Option<u8> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some(0),
-        DelveRung::Shallows => Some(1),
-        DelveRung::Deeps => Some(2),
-        DelveRung::Underdeep => Some(3),
-        DelveRung::Nadir => Some(4),
+        Band::Surface => None,
+        Band::Undercroft => Some(0),
+        Band::Shallows => Some(1),
+        Band::Deeps => Some(2),
+        Band::Underdeep => Some(3),
+        Band::Nadir => Some(4),
     }
 }
 
@@ -326,15 +326,15 @@ pub fn rung_rank(rung: DelveRung) -> Option<u8> {
 /// `None` for a rank past the ladder's end, so no caller can index out of it.
 ///
 /// Kept beside `rung_rank` on purpose — the two are one bijection over the
-/// habitation rungs, and a sixth `DelveRung` variant fails *both* to compile
+/// habitation rungs, and a sixth `Band` variant fails *both* to compile
 /// rather than leaving the pair half-updated.
-fn rung_of_rank(rank: u8) -> Option<DelveRung> {
+fn rung_of_rank(rank: u8) -> Option<Band> {
     match rank {
-        0 => Some(DelveRung::Undercroft),
-        1 => Some(DelveRung::Shallows),
-        2 => Some(DelveRung::Deeps),
-        3 => Some(DelveRung::Underdeep),
-        4 => Some(DelveRung::Nadir),
+        0 => Some(Band::Undercroft),
+        1 => Some(Band::Shallows),
+        2 => Some(Band::Deeps),
+        3 => Some(Band::Underdeep),
+        4 => Some(Band::Nadir),
         _ => None,
     }
 }
@@ -345,7 +345,7 @@ fn rung_of_rank(rank: u8) -> Option<DelveRung> {
 /// A derived `Debug` impl renders the variant's identifier, which *looks* like
 /// exactly this table and is not the same promise. `Debug` is a diagnostic
 /// facility: nothing stops a later reader from writing a hand-rolled `Debug`
-/// for [`DelveRung`] to make some log prettier, and doing so would silently
+/// for [`Band`] to make some log prettier, and doing so would silently
 /// re-key every chamber in every world with no test able to see it. Stating
 /// the strings here makes the contract reviewable, makes a rename an obvious
 /// epoch decision, and forces a sixth variant to choose its own spelling
@@ -355,14 +355,14 @@ fn rung_of_rank(rank: u8) -> Option<DelveRung> {
 /// survive**, and it did: re-pointing the axis at a different ladder changed
 /// *which table* is consulted, in one place, visibly — instead of silently
 /// changing what a `Debug` impl happened to print.
-fn rung_name(rung: DelveRung) -> &'static str {
+fn rung_name(rung: Band) -> &'static str {
     match rung {
-        DelveRung::Surface => "surface",
-        DelveRung::Undercroft => "undercroft",
-        DelveRung::Shallows => "shallows",
-        DelveRung::Deeps => "deeps",
-        DelveRung::Underdeep => "underdeep",
-        DelveRung::Nadir => "nadir",
+        Band::Surface => "surface",
+        Band::Undercroft => "undercroft",
+        Band::Shallows => "shallows",
+        Band::Deeps => "deeps",
+        Band::Underdeep => "underdeep",
+        Band::Nadir => "nadir",
     }
 }
 
@@ -393,28 +393,24 @@ fn rung_name(rung: DelveRung) -> &'static str {
 /// bottom, would give rank 0 a cell-varying stratum at the cost of naming a
 /// depth no chamber is actually at. Whichever a later task picks, it should
 /// pick knowing this is the trade, not discover it from a constant column.
-fn stratum_at(
-    rung: DelveRung,
-    gradient: GeothermalGradient,
-    column: &StratigraphicColumn,
-) -> BandKind {
+fn stratum_at(rung: Band, gradient: GeothermalGradient, column: &StratigraphicColumn) -> Horizon {
     let (delta_t_k, _) = delta_t_range_of(rung);
     let depth_m = delta_t_k / gradient.get() * 1000.0;
     hornvale_terrain::features::band_at_depth(column, depth_m)
 }
 
-/// The one explicit mapping from terrain's [`BandKind`] to climate's
+/// The one explicit mapping from terrain's [`Horizon`] to climate's
 /// [`hornvale_climate::Stratum`] — the two enums name the same five rock units
 /// from two domains that may not depend on each other, so the composition root
 /// is the only place allowed to state the correspondence. Exhaustive on both
 /// sides: a sixth variant on either fails this to compile.
-fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
+fn stratum_of_band(band: Horizon) -> hornvale_climate::Stratum {
     match band {
-        BandKind::Regolith => hornvale_climate::Stratum::Regolith,
-        BandKind::Cover => hornvale_climate::Stratum::Cover,
-        BandKind::Basement => hornvale_climate::Stratum::Basement,
-        BandKind::Roots => hornvale_climate::Stratum::Roots,
-        BandKind::Underneath => hornvale_climate::Stratum::Underneath,
+        Horizon::Regolith => hornvale_climate::Stratum::Regolith,
+        Horizon::Cover => hornvale_climate::Stratum::Cover,
+        Horizon::Basement => hornvale_climate::Stratum::Basement,
+        Horizon::Roots => hornvale_climate::Stratum::Roots,
+        Horizon::Underneath => hornvale_climate::Stratum::Underneath,
     }
 }
 
@@ -433,7 +429,7 @@ fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
 /// `the_key_spells_the_floor` sweeps the axis rather than sampling it.
 ///
 /// **`cell`, `entrance`, `branch` and `floor` are genuine integers naming a
-/// place and are spelled decimal. `band` is spelled by its [`DelveRung`] NAME,
+/// place and are spelled decimal. `band` is spelled by its [`Band`] NAME,
 /// never its numeric index.** An index is a declaration position: if the delve ladder
 /// ever gains a rung in the middle (spec §4.1 permits 4 to 6, so there is
 /// room), every index below it shifts, and a numeral-keyed chamber would
@@ -472,16 +468,16 @@ pub(crate) fn chamber_key(addr: ChamberAddr) -> String {
 /// `Sunless` by amendment B.3).
 ///
 /// `None` for `Surface`: the overworld is not a run. Exhaustive, so a sixth
-/// [`DelveRung`] fails this to compile rather than silently inheriting a
+/// [`Band`] fails this to compile rather than silently inheriting a
 /// neighbour's range.
-fn floors_range(rung: DelveRung) -> Option<(u8, u8)> {
+fn floors_range(rung: Band) -> Option<(u8, u8)> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some((1, 5)),
-        DelveRung::Shallows => Some((3, 10)),
-        DelveRung::Deeps => Some((5, 20)),
-        DelveRung::Underdeep => Some((5, 10)),
-        DelveRung::Nadir => Some((1, 5)),
+        Band::Surface => None,
+        Band::Undercroft => Some((1, 5)),
+        Band::Shallows => Some((3, 10)),
+        Band::Deeps => Some((5, 20)),
+        Band::Underdeep => Some((5, 10)),
+        Band::Nadir => Some((1, 5)),
     }
 }
 
@@ -490,7 +486,7 @@ fn floors_range(rung: DelveRung) -> Option<(u8, u8)> {
 ///
 /// Spelled to the same rules as a chamber key and for the same reasons:
 /// `cell`, `entrance` and `branch` are integers naming a place and are decimal;
-/// `band` is spelled by its [`DelveRung`] **name** through [`rung_name`]'s
+/// `band` is spelled by its [`Band`] **name** through [`rung_name`]'s
 /// explicit table, because an index is a declaration position and a mid-ladder
 /// insertion would silently re-key every run below it.
 ///
@@ -1293,7 +1289,7 @@ mod tests {
     }
 
     /// The band is spelled by NAME, never by index — rule 1a one level down.
-    /// A numeral here would mean that inserting a [`DelveRung`] variant
+    /// A numeral here would mean that inserting a [`Band`] variant
     /// mid-ladder silently moved every chamber below it to a different stream.
     #[test]
     fn the_key_names_its_rung_rather_than_numbering_it() {
@@ -1385,7 +1381,7 @@ mod tests {
         let column = fixture_column();
         let gradient = GeothermalGradient::new(24.0);
 
-        let mapped: Vec<(DelveRung, hornvale_climate::Stratum)> = (0..5u8)
+        let mapped: Vec<(Band, hornvale_climate::Stratum)> = (0..5u8)
             .filter_map(rung_of_rank)
             .map(|rung| (rung, stratum_of_band(stratum_at(rung, gradient, &column))))
             .collect();
@@ -1403,12 +1399,12 @@ mod tests {
         );
 
         let cool = stratum_of_band(stratum_at(
-            DelveRung::Deeps,
+            Band::Deeps,
             GeothermalGradient::new(15.0),
             &column,
         ));
         let hot = stratum_of_band(stratum_at(
-            DelveRung::Deeps,
+            Band::Deeps,
             GeothermalGradient::new(30.0),
             &column,
         ));
@@ -1722,20 +1718,20 @@ mod tests {
 
     /// `rung_rank` and `rung_of_rank` are one bijection over the habitation
     /// rungs. Kept honest here so the pair cannot drift half-updated when a
-    /// sixth [`DelveRung`] lands.
+    /// sixth [`Band`] lands.
     #[test]
     fn rung_rank_and_rung_of_rank_round_trip() {
         for rung in hornvale_terrain::rungs()
             .iter()
             .copied()
-            .filter(|r| *r != DelveRung::Surface)
+            .filter(|r| *r != Band::Surface)
         {
             let rank = rung_rank(rung).expect("a habitation rung has a rank");
             assert_eq!(rung_of_rank(rank), Some(rung));
         }
         assert_eq!(rung_of_rank(5), None, "the ladder ends at rank 4");
         assert_eq!(
-            rung_rank(DelveRung::Surface),
+            rung_rank(Band::Surface),
             None,
             "the overworld is not an underground address"
         );
@@ -2349,7 +2345,7 @@ mod tests {
             );
         }
         assert_eq!(
-            floors_range(DelveRung::Surface),
+            floors_range(Band::Surface),
             None,
             "the overworld is not a run"
         );

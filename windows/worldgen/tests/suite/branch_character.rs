@@ -13,8 +13,8 @@
 
 use std::collections::BTreeSet;
 
+use hornvale_kernel::Band;
 use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::DelveRung;
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, floors_in_run,
 };
@@ -48,7 +48,7 @@ const UNDERDEEP_REACH_MIN: f64 = 0.31;
 ///    not of the draw that consults it.
 #[test]
 fn a_character_only_occupies_its_declared_bands() {
-    let mut tables: Vec<(Character, Vec<DelveRung>)> = Vec::new();
+    let mut tables: Vec<(Character, Vec<Band>)> = Vec::new();
     for character in CHARACTERS {
         let bands = bands_of(*character);
         assert!(
@@ -58,7 +58,7 @@ fn a_character_only_occupies_its_declared_bands() {
         for rung in bands {
             assert_ne!(
                 *rung,
-                DelveRung::Surface,
+                Band::Surface,
                 "{character:?}'s table names Surface, which is not a habitation \
                  rung and has no position in the lattice"
             );
@@ -91,8 +91,8 @@ fn a_character_only_occupies_its_declared_bands() {
 
 /// A habitation rung is Underdeep-or-deeper — the eligibility floor the
 /// drow-tier table must respect.
-fn rung_rank_at_least_underdeep(rung: &DelveRung) -> bool {
-    matches!(rung, DelveRung::Underdeep | DelveRung::Nadir)
+fn rung_rank_at_least_underdeep(rung: &Band) -> bool {
+    matches!(rung, Band::Underdeep | Band::Nadir)
 }
 
 /// Spec B.4: reaching the Underdeep is NOT the same as meeting what lives

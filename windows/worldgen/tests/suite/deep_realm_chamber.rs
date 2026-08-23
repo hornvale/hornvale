@@ -19,8 +19,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{BandKind, Cave, CaveKind, DelveRung, GeothermalGradient, rung_at_depth};
+use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, Horizon, rung_at_depth};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, RunAddr, chamber_at,
     chamber_exists, floors_in_run, passages_from,
@@ -59,10 +59,10 @@ fn is_sideways(addr: ChamberAddr, neighbour: &ChamberAddr) -> bool {
 /// produces in quantity. Band tops are `[0, 1, 401, 17700.5, 35000]` m.
 ///
 /// **Fixtures are built through `Cave::from_reach` against this column**, so
-/// each one's `deepest_band` is derived from its own metre budget and the pair
+/// each one's `deepest_horizon` is derived from its own metre budget and the pair
 /// is a state the generator could actually author (The Underworld, spec §4.0).
 /// Before that they were struct literals pairing a 1 km budget with
-/// `BandKind::Roots`, whose top on any real column is ~14–20 km — an
+/// `Horizon::Roots`, whose top on any real column is ~14–20 km — an
 /// impossible world, and exactly the shape that lets a suite go green over a
 /// broken model once something downstream starts reading the budget.
 fn fixture_column() -> hornvale_terrain::StratigraphicColumn {
@@ -89,14 +89,14 @@ fn fixture_gradient() -> GeothermalGradient {
     GeothermalGradient::new(24.0)
 }
 
-/// A budget that stops inside the cover — `deepest_band` comes out `Cover`
+/// A budget that stops inside the cover — `deepest_horizon` comes out `Cover`
 /// (rank 1). Near the middle of the measured lava-tube/shallow-karst range.
 ///
 /// On the delve ladder at [`fixture_gradient`] this is ΔT = 4.8 K, the
 /// `Shallows` (rank 1) — which is what `chamber_exists` gates on now.
 const SHALLOW_REACH_M: f64 = 200.0;
 
-/// A budget that cuts past the 401 m basement contact — `deepest_band` comes
+/// A budget that cuts past the 401 m basement contact — `deepest_horizon` comes
 /// out `Basement` (rank 2). This is the median fault-void reach the 30-world
 /// readout measures, not an invented number.
 ///
@@ -126,8 +126,8 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     let col = fixture_column();
     let shallow = Cave::from_reach(CaveKind::Karst, SHALLOW_REACH_M, &col);
     let deep = Cave::from_reach(CaveKind::Karst, DEEP_REACH_M, &col);
-    assert_eq!(shallow.deepest_band, BandKind::Cover);
-    assert_eq!(deep.deepest_band, BandKind::Basement);
+    assert_eq!(shallow.deepest_horizon, Horizon::Cover);
+    assert_eq!(deep.deepest_horizon, Horizon::Basement);
     // The gate is the DELVE ladder since chamber/v2, so the shared region is
     // decided by the rungs, not the bands. Pinned rather than assumed: if
     // either fixture's rung moves, the loop bound below stops being the shared
@@ -135,11 +135,11 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     // cave admits — which it would pass, vacuously.
     assert_eq!(
         rung_at_depth(shallow.depth_reach_m, fixture_gradient()),
-        DelveRung::Shallows
+        Band::Shallows
     );
     assert_eq!(
         rung_at_depth(deep.depth_reach_m, fixture_gradient()),
-        DelveRung::Underdeep
+        Band::Underdeep
     );
 
     // `Shallows` is rank 1, so bands 0..=1 (Undercroft, Shallows) are in BOTH
@@ -205,7 +205,7 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
     let cell = CellId(42);
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
     assert!(
-        rung_at_depth(cave.depth_reach_m, fixture_gradient()) >= DelveRung::Deeps,
+        rung_at_depth(cave.depth_reach_m, fixture_gradient()) >= Band::Deeps,
         "the fixture must reach at least the Deeps for bands 0..=2 to all be \
          in budget; otherwise the sparseness below is measuring the gate"
     );
@@ -395,14 +395,14 @@ fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
 /// The delve ladder's rank of the fixture's deepest rung, spelled here because
 /// `hornvale_terrain` does not export one (`Surface` maps to `None`, matching
 /// `chamber::rung_rank`).
-fn rung_rank(rung: DelveRung) -> Option<u8> {
+fn rung_rank(rung: Band) -> Option<u8> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some(0),
-        DelveRung::Shallows => Some(1),
-        DelveRung::Deeps => Some(2),
-        DelveRung::Underdeep => Some(3),
-        DelveRung::Nadir => Some(4),
+        Band::Surface => None,
+        Band::Undercroft => Some(0),
+        Band::Shallows => Some(1),
+        Band::Deeps => Some(2),
+        Band::Underdeep => Some(3),
+        Band::Nadir => Some(4),
     }
 }
 
@@ -1017,7 +1017,7 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     // `chamber.rs`'s own module tests, where `stratum_at` is visible. This
     // test's job is the end-to-end path; that one's is the claim. The
     // assertion below is unchanged from before the epoch.
-    let mut seen: Vec<(DelveRung, hornvale_climate::Stratum)> = Vec::new();
+    let mut seen: Vec<(Band, hornvale_climate::Stratum)> = Vec::new();
     for band in 0..=3u8 {
         for branch in 0..BRANCHES_PER_SYSTEM {
             for floor in 0..FLOORS_PER_RUN_CEILING {
@@ -1106,7 +1106,7 @@ fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &col);
     let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
 
-    let mut by_band: Vec<(u8, DelveRung)> = Vec::new();
+    let mut by_band: Vec<(u8, Band)> = Vec::new();
     for raw_cell in 0u32..40 {
         for band in 0..=3u8 {
             for branch in 0..BRANCHES_PER_SYSTEM {

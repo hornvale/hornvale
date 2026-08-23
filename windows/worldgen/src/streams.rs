@@ -50,7 +50,7 @@ hornvale_kernel::stream_labels! {
     ///
     /// **Epoch v2 (The Underworld, spec §4.1)** was the previous one:
     /// `ChamberAddr.band` stopped indexing the stratigraphic ladder
-    /// (`BandKind`/`Stratum`) and started indexing the **delve ladder**
+    /// (`Horizon`/`Stratum`) and started indexing the **delve ladder**
     /// (`hornvale_terrain::DelveRung`), whose rungs are ΔT thresholds above
     /// the surface datum rather than rock units.
     ///

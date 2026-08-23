@@ -117,8 +117,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use hornvale_kernel::{Seed, quantize};
-use hornvale_terrain::{DelveRung, GeneratedTerrain};
+use hornvale_kernel::{Band, Seed, quantize};
+use hornvale_terrain::GeneratedTerrain;
 
 use crate::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, RunAddr, chamber_at,
@@ -129,7 +129,7 @@ use crate::chamber::{
 /// deliberately not the key's table. See [`stratum_word`] for why that
 /// distinction is load-bearing rather than fussy.
 ///
-/// **Exhaustive over [`DelveRung`], and that is the whole point of its
+/// **Exhaustive over [`Band`], and that is the whole point of its
 /// existence.** This function is what ties the band walk below to the delve
 /// ladder: a sixth rung fails THIS to compile, so the readout cannot be
 /// silently left one band short of the lattice it is meant to witness.
@@ -137,14 +137,14 @@ use crate::chamber::{
 /// `None` for `Surface`, which is a rung of the ladder but not a *habitation*
 /// rung and has no position in a lattice of underground places — the same
 /// answer `chamber::rung_rank` gives it.
-fn band_word(rung: DelveRung) -> Option<&'static str> {
+fn band_word(rung: Band) -> Option<&'static str> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some("undercroft"),
-        DelveRung::Shallows => Some("shallows"),
-        DelveRung::Deeps => Some("deeps"),
-        DelveRung::Underdeep => Some("underdeep"),
-        DelveRung::Nadir => Some("nadir"),
+        Band::Surface => None,
+        Band::Undercroft => Some("undercroft"),
+        Band::Shallows => Some("shallows"),
+        Band::Deeps => Some("deeps"),
+        Band::Underdeep => Some("underdeep"),
+        Band::Nadir => Some("nadir"),
     }
 }
 
@@ -166,7 +166,7 @@ fn band_word(rung: DelveRung) -> Option<&'static str> {
 ///
 /// Two independent guards now, and they fail at different times on purpose:
 ///
-/// 1. [`band_word`] is exhaustive over [`DelveRung`], so a sixth variant fails
+/// 1. [`band_word`] is exhaustive over [`Band`], so a sixth variant fails
 ///    at COMPILE time;
 /// 2. the `expect` below fails at RUN time if anyone gives `band_word` a
 ///    catch-all arm — a rung the lattice places but this readout has no word
@@ -182,7 +182,7 @@ fn habitation_bands() -> Vec<(u8, &'static str)> {
             let rank = rung_rank(rung)?;
             let word = band_word(rung).expect(
                 "a rung the lattice gives a band rank must have a word in this \
-                 readout — band_word is exhaustive over DelveRung so that this \
+                 readout — band_word is exhaustive over Band so that this \
                  cannot be reached by adding a variant, only by adding a \
                  catch-all arm",
             );

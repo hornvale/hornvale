@@ -3,7 +3,7 @@
 //! `cave_at` had never had a consumer when this battery was first written, so
 //! its distribution had never been checked against anything. This battery is
 //! the campaign's gate: if caves are vanishingly rare, or almost none reach
-//! past [`BandKind::Regolith`], the underworld is a scattering of shallow
+//! past [`Horizon::Regolith`], the underworld is a scattering of shallow
 //! pockets and the campaign reports that and stops.
 //!
 //! ## The substrate moved under this instrument, and what that changed
@@ -12,8 +12,8 @@
 //! stopped the campaign: 0.26% of land, one `CaveKind`, one depth band, 3 of
 //! 30 worlds caveless. The Hollow then repaired that model, and in doing so
 //! **changed the type this battery reads**: `Cave::depth_reach_bands` (a
-//! `u32` count, nominally `1..=4`) became [`Cave::deepest_band`] (a
-//! [`BandKind`], five named variants `Regolith..Underneath`). That is a type
+//! `u32` count, nominally `1..=4`) became [`Cave::deepest_horizon`] (a
+//! [`Horizon`], five named variants `Regolith..Underneath`). That is a type
 //! change, not a rename — a band derived from a column cannot reproduce a
 //! count derived from a ratio.
 //!
@@ -35,7 +35,7 @@
 //! here and the deepest-band fraction is reported beside it as a ceiling
 //! check.
 //!
-//! [`BandKind::Underneath`] is reported explicitly and separately: it is a
+//! [`Horizon::Underneath`] is reported explicitly and separately: it is a
 //! fifth band that the plan's Task 1 `UNDERDARK` ladder
 //! (`Regolith/Cover/Basement/Roots`) does not include. A nonzero count is a
 //! finding for Task 1, not a gate result.
@@ -60,11 +60,10 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Geosphere, Seed, Value};
+use hornvale_kernel::{Band, CellId, Geosphere, Seed, Value};
 use hornvale_settlement::CELL_ID;
 use hornvale_terrain::{
-    BandKind, Cave, CaveKind, DelveRung, GeneratedTerrain, GeothermalGradient, TerrainPins,
-    rung_at_depth,
+    Cave, CaveKind, GeneratedTerrain, GeothermalGradient, Horizon, TerrainPins, rung_at_depth,
 };
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
@@ -74,20 +73,20 @@ use std::collections::{BTreeSet, VecDeque};
 
 const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
-/// The five [`BandKind`] variants in declaration order, top to bottom. The
+/// The five [`Horizon`] variants in declaration order, top to bottom. The
 /// band histogram is indexed by position in this array, so a new variant
 /// added to the enum reddens [`band_index`]'s exhaustive match rather than
 /// silently landing in a neighbour's bucket.
 const BAND_NAMES: [&str; 5] = ["Regolith", "Cover", "Basement", "Roots", "Underneath"];
 
 /// Position of `band` in [`BAND_NAMES`]. Exhaustive by construction.
-fn band_index(band: BandKind) -> usize {
+fn band_index(band: Horizon) -> usize {
     match band {
-        BandKind::Regolith => 0,
-        BandKind::Cover => 1,
-        BandKind::Basement => 2,
-        BandKind::Roots => 3,
-        BandKind::Underneath => 4,
+        Horizon::Regolith => 0,
+        Horizon::Cover => 1,
+        Horizon::Basement => 2,
+        Horizon::Roots => 3,
+        Horizon::Underneath => 4,
     }
 }
 
@@ -96,25 +95,25 @@ fn band_index(band: BandKind) -> usize {
 /// the axis the chamber-count breakdown below must bucket on. [`BAND_NAMES`]
 /// is still used, unchanged, for the cave-substrate histogram: that one is
 /// asking the archive question ("which rock does this void reach"), which is
-/// still `BandKind`'s job and was never the gate's.
+/// still `Horizon`'s job and was never the gate's.
 const RUNG_NAMES: [&str; 5] = ["Undercroft", "Shallows", "Deeps", "Underdeep", "Nadir"];
 
 /// Position of `rung` in [`RUNG_NAMES`]. `Surface` is not a habitation rung
 /// and [`rung_at_depth`] never returns it, so it has no bucket; the arm
 /// panics rather than folding the overworld into `Undercroft`.
-fn rung_index(rung: DelveRung) -> usize {
+fn rung_index(rung: Band) -> usize {
     match rung {
-        DelveRung::Surface => panic!("Surface is not a habitation rung and has no lattice bucket"),
-        DelveRung::Undercroft => 0,
-        DelveRung::Shallows => 1,
-        DelveRung::Deeps => 2,
-        DelveRung::Underdeep => 3,
-        DelveRung::Nadir => 4,
+        Band::Surface => panic!("Surface is not a habitation rung and has no lattice bucket"),
+        Band::Undercroft => 0,
+        Band::Shallows => 1,
+        Band::Deeps => 2,
+        Band::Underdeep => 3,
+        Band::Nadir => 4,
     }
 }
 
 /// One seed's measured cave substrate: land/cave cell counts, the
-/// [`Cave::deepest_band`] histogram (indexed by [`band_index`]), the
+/// [`Cave::deepest_horizon`] histogram (indexed by [`band_index`]), the
 /// `CaveKind` breakdown, and the clustering split (cave cells with >=1
 /// neighbouring cave, vs. none).
 struct SeedReport {
@@ -173,7 +172,7 @@ fn measure_one(seed: Seed) -> SeedReport {
         land_cells += 1;
         if let Some(cave) = terrain.cave_at(cell) {
             cave_cells += 1;
-            band_histogram[band_index(cave.deepest_band)] += 1;
+            band_histogram[band_index(cave.deepest_horizon)] += 1;
             match cave.kind {
                 CaveKind::Karst => kind_karst += 1,
                 CaveKind::LavaTube => kind_lava_tube += 1,
@@ -265,7 +264,7 @@ fn report_cave_substrate() {
     for (idx, name) in BAND_NAMES.iter().enumerate() {
         let count = total_hist[idx];
         println!(
-            "2. deepest_band={name}: {count} caves ({:.6} of caves)",
+            "2. deepest_horizon={name}: {count} caves ({:.6} of caves)",
             count as f64 / total_caves as f64
         );
     }
@@ -482,8 +481,8 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 /// prediction for a reason that has nothing to do with `EXISTENCE_DENSITY`.
 /// Widening this is no longer a cost question.
 ///
-/// **This used to be indexed by `band_index(cave.deepest_band)`**, because the
-/// gate used to be `addr.band <= band_rank(cave.deepest_band)`. The arithmetic
+/// **This used to be indexed by `band_index(cave.deepest_horizon)`**, because the
+/// gate used to be `addr.band <= band_rank(cave.deepest_horizon)`. The arithmetic
 /// is unchanged and the input is not: `chamber/v2` re-pointed the lattice's
 /// depth axis at the delve ladder, so bucketing on the stratigraphic band
 /// would now compare a measured count against a prediction for a different
@@ -692,10 +691,10 @@ struct T8SeedReport {
     land_cells: usize,
     /// `(chamber_count, delve_rung, sealed)` — one entry per land cell that
     /// carries a cave. The middle element is the **gate's own axis**: it was
-    /// `deepest_band` while the gate was `band_rank`, and became the cave's
+    /// `deepest_horizon` while the gate was `band_rank`, and became the cave's
     /// delve rung when `chamber/v2` re-pointed the lattice, so the
     /// count-versus-prediction breakdown keeps comparing like with like.
-    cave_cells: Vec<(usize, DelveRung, bool)>,
+    cave_cells: Vec<(usize, Band, bool)>,
     /// Chamber count for EVERY land cell, cave or not (0 where there is no
     /// cave) — H2's own literal wording, reported so its zero-weighting can
     /// be attributed correctly rather than assumed.
@@ -714,7 +713,7 @@ struct T8SeedReport {
 /// places a flagship (`BuildDepth`'s own doc: "…plus settlement placement,
 /// naming, and glosses") — and measures Task 8's whole readout in one build:
 /// H2's chamber distribution (per cave AND per cell), the depth-weld's
-/// per-band breakdown (via each cave's own `deepest_band`), and
+/// per-band breakdown (via each cave's own `deepest_horizon`), and
 /// reachability from the flagship start. Terrain facts are a byte-identical
 /// prefix of the `BuildDepth::Terrain` build Task 0 uses (`BuildDepth`'s own
 /// doc), so this changes nothing about what Task 0 measured — it only adds
@@ -750,7 +749,7 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
 
     let mut land_cells = 0usize;
     let mut land_cell_ids: Vec<CellId> = Vec::new();
-    let mut cave_cells: Vec<(usize, DelveRung, bool)> = Vec::new();
+    let mut cave_cells: Vec<(usize, Band, bool)> = Vec::new();
     let mut per_cell_counts: Vec<usize> = Vec::new();
     let mut non_sealed: BTreeSet<CellId> = BTreeSet::new();
 

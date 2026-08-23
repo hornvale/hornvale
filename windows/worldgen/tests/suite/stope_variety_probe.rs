@@ -571,8 +571,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{Cave, DelveRung, GeothermalGradient, TerrainPins, rung_at_depth, rungs};
+use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins, rung_at_depth, rungs};
 use hornvale_worldgen::chamber::{
     ChamberAddr, RunAddr, chamber_exists, entrance_count, entrance_mouth, floors_in_run,
     passages_from, rung_rank,
@@ -640,8 +640,8 @@ const NADIR_WALK_RATE_CEILING: f64 = 0.0075;
 /// the sanctioned route from a test crate; it is `junctions.rs`'s
 /// `habitation_bands` verbatim, and it is the reason this file contains no
 /// literal band ceiling anywhere.
-fn habitation_bands() -> Vec<(u8, DelveRung)> {
-    let mut bands: Vec<(u8, DelveRung)> = rungs()
+fn habitation_bands() -> Vec<(u8, Band)> {
+    let mut bands: Vec<(u8, Band)> = rungs()
         .iter()
         .filter_map(|&rung| rung_rank(rung).map(|rank| (rank, rung)))
         .collect();
@@ -650,7 +650,7 @@ fn habitation_bands() -> Vec<(u8, DelveRung)> {
 }
 
 /// The lattice rank of one named rung, by the same route.
-fn rank_of(rung: DelveRung) -> u8 {
+fn rank_of(rung: Band) -> u8 {
     rung_rank(rung).expect("a named habitation rung has a rank")
 }
 
@@ -680,7 +680,7 @@ fn pct_floor(sorted: &[u32], q: f64) -> f64 {
 }
 
 /// A short spelling for a terminating band, including the "realized nothing"
-/// case. Exhaustive over [`DelveRung`]: a sixth rung fails this to compile
+/// case. Exhaustive over [`Band`]: a sixth rung fails this to compile
 /// rather than being folded into a neighbour.
 fn band_word(rank: Option<u8>) -> String {
     match rank {
@@ -911,12 +911,12 @@ fn read_system(
     cell: CellId,
     cave: &Cave,
     gradient: GeothermalGradient,
-    bands: &[(u8, DelveRung)],
+    bands: &[(u8, Band)],
 ) -> SystemReading {
     let deepest = rung_rank(rung_at_depth(cave.depth_reach_m, gradient))
         .expect("rung_at_depth never returns Surface");
-    let underdeep = rank_of(DelveRung::Underdeep);
-    let nadir = rank_of(DelveRung::Nadir);
+    let underdeep = rank_of(Band::Underdeep);
+    let nadir = rank_of(Band::Nadir);
 
     let entrances = entrance_count(seed, cell);
     let branch_counts: Vec<u8> = (0..entrances)
@@ -1046,7 +1046,7 @@ fn read_system(
             reached_nadir: reached_branch_bands.contains(&(branch, nadir)),
             reached_underdeep_head_only: head_branch_bands.contains(&(branch, underdeep)),
             reached_nadir_head_only: head_branch_bands.contains(&(branch, nadir)),
-            table_admits_nadir: bands_of(character).contains(&DelveRung::Nadir),
+            table_admits_nadir: bands_of(character).contains(&Band::Nadir),
         });
     }
 

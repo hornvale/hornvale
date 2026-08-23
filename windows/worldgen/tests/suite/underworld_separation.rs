@@ -282,14 +282,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::ecology::{ConditionResponse, ResourceVector};
 use hornvale_kernel::{
-    ANIMAL_PREY, CellId, DETRITUS, ENERGY, LIGHT, Mass, PHYSIOGNOMY, PLANT_FORAGE, SUBSTRATE, Seed,
-    WATER, sovereignty_floor,
+    ANIMAL_PREY, Band, CellId, DETRITUS, ENERGY, LIGHT, Mass, PHYSIOGNOMY, PLANT_FORAGE, SUBSTRATE,
+    Seed, WATER, sovereignty_floor,
 };
 use hornvale_species::{
     AxisPreference, BiosphereTraits, ConditionNiche, EnvironmentNiche, HabitatRealm, LifeSchedule,
     MetabolicClass, SocialForm,
 };
-use hornvale_terrain::{CaveKind, DelveRung, TerrainPins, rungs, water_table_depth_m};
+use hornvale_terrain::{CaveKind, TerrainPins, rungs, water_table_depth_m};
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists, rung_rank};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::delve_seating::{chamber_fit, seat_at, seating_for};
@@ -542,11 +542,11 @@ fn candidates() -> Vec<(&'static str, BiosphereTraits, EnvironmentNiche)> {
 }
 
 /// The habitation rungs, shallowest first — the ladder minus `Surface`.
-fn habitation_rungs() -> Vec<DelveRung> {
+fn habitation_rungs() -> Vec<Band> {
     rungs()
         .iter()
         .copied()
-        .filter(|r| *r != DelveRung::Surface)
+        .filter(|r| *r != Band::Surface)
         .collect()
 }
 
@@ -614,7 +614,7 @@ fn the_candidate_fit_tables_and_the_elevation_precondition() {
                 .iter()
                 .zip(fits.iter())
                 .filter_map(|(r, f)| f.map(|v| (*r, v)))
-                .fold(None::<(DelveRung, f64)>, |best, (r, v)| match best {
+                .fold(None::<(Band, f64)>, |best, (r, v)| match best {
                     None => Some((r, v)),
                     Some((_br, bv)) if v.total_cmp(&bv).is_gt() => Some((r, v)),
                     other => other,
@@ -633,7 +633,7 @@ fn the_candidate_fit_tables_and_the_elevation_precondition() {
 /// cannot disagree about which cells they describe.
 struct KindReadings {
     /// The seated rung at every cave-bearing land cell, in cell order.
-    seated: Vec<(CellId, DelveRung)>,
+    seated: Vec<(CellId, Band)>,
     /// The seating-scaled capacity at every cave-bearing land cell — what the
     /// deep-history bake actually reasons in.
     capacity: Vec<(CellId, f64)>,
@@ -901,7 +901,7 @@ fn the_separation_readout() {
         // H2's floor and H2c, per kind.
         // --------------------------------------------------------------
         println!("-- H2 floor / H2c: the seated rung --");
-        let mut modes: Vec<(&'static str, Option<DelveRung>)> = Vec::new();
+        let mut modes: Vec<(&'static str, Option<Band>)> = Vec::new();
         for (name, r) in &readings {
             let mut hist: BTreeMap<usize, usize> = BTreeMap::new();
             for (_, rung) in &r.seated {
@@ -1174,7 +1174,7 @@ fn the_lattice_band_is_the_ladder_position() {
         );
     }
     assert_eq!(
-        rung_rank(DelveRung::Surface),
+        rung_rank(Band::Surface),
         None,
         "the surface is not a lattice band"
     );

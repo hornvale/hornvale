@@ -2,7 +2,7 @@
 //!
 //! Measurement only, and the evidence for the acceptance criterion Task 1b
 //! parked (Ruling 8 in the campaign's SDD ledger): once a cave's depth became
-//! a budget in metres capped at 3 km (spec §4.0), `Cave::deepest_band` stopped
+//! a budget in metres capped at 3 km (spec §4.0), `Cave::deepest_horizon` stopped
 //! reaching `Roots`, and `chamber_exists` still gated on `band_rank` — so
 //! worlds could be carrying a silently reduced chamber count that nothing in
 //! the suite objected to. Ruling 8 asked for the numbers rather than the
@@ -10,7 +10,7 @@
 //!
 //! Two arms per seed, over the same cave-bearing land cells:
 //!
-//! - **band** — `band_rank(cave.deepest_band)`, the gate as it stood.
+//! - **band** — `band_rank(cave.deepest_horizon)`, the gate as it stood.
 //! - **rung** — the delve ladder's rank for
 //!   `rung_at_depth(cave.depth_reach_m, gradient)` (`hornvale_terrain::delve`),
 //!   the ladder the gate is being re-pointed at.
@@ -115,7 +115,7 @@
 //!    histograms) has mean addressable 12.15 / 11.72 / 12.71, against 11.91 /
 //!    11.89 / 11.96 after — −2.0% / +1.4% / −5.9%, a mean of −2.2% and a rise
 //!    on one of three seeds. What Task 1b actually broke is not the COUNT but
-//!    the VARIANCE: `deepest_band` collapsed onto `Basement` for 97.3–99.0% of
+//!    the VARIANCE: `deepest_horizon` collapsed onto `Basement` for 97.3–99.0% of
 //!    cave-bearing cells, so every cave got the same three-rung lattice and
 //!    the depth axis stopped distinguishing a shallow cave from a deep one at
 //!    all. That is the defect the re-point closes, and it is a worse one than
@@ -127,7 +127,8 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_terrain::{BandKind, DelveRung, TerrainPins, rung_at_depth};
+use hornvale_kernel::Band;
+use hornvale_terrain::{Horizon, TerrainPins, rung_at_depth};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, floors_in_run,
 };
@@ -140,27 +141,27 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 
 /// The band ladder's rank — a copy of `chamber.rs`'s private `band_rank`, so
 /// the probe can measure the retired gate without widening that function's
-/// visibility. Exhaustive: a sixth `BandKind` fails this to compile.
-fn band_rank(band: BandKind) -> u8 {
+/// visibility. Exhaustive: a sixth `Horizon` fails this to compile.
+fn band_rank(band: Horizon) -> u8 {
     match band {
-        BandKind::Regolith => 0,
-        BandKind::Cover => 1,
-        BandKind::Basement => 2,
-        BandKind::Roots => 3,
-        BandKind::Underneath => 4,
+        Horizon::Regolith => 0,
+        Horizon::Cover => 1,
+        Horizon::Basement => 2,
+        Horizon::Roots => 3,
+        Horizon::Underneath => 4,
     }
 }
 
 /// The delve ladder's rank over its habitation rungs. `Surface` is not a
 /// habitable rung and `rung_at_depth` never returns it, so it maps to `None`.
-fn rung_rank(rung: DelveRung) -> Option<u8> {
+fn rung_rank(rung: Band) -> Option<u8> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some(0),
-        DelveRung::Shallows => Some(1),
-        DelveRung::Deeps => Some(2),
-        DelveRung::Underdeep => Some(3),
-        DelveRung::Nadir => Some(4),
+        Band::Surface => None,
+        Band::Undercroft => Some(0),
+        Band::Shallows => Some(1),
+        Band::Deeps => Some(2),
+        Band::Underdeep => Some(3),
+        Band::Nadir => Some(4),
     }
 }
 
@@ -205,7 +206,7 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
             caves += 1;
             let gradient = terrain.geothermal_gradient_at(cell);
 
-            let b = band_rank(cave.deepest_band);
+            let b = band_rank(cave.deepest_horizon);
             let r = rung_rank(rung_at_depth(cave.depth_reach_m, gradient))
                 .expect("rung_at_depth never returns Surface");
             band_hist[b as usize] += 1;

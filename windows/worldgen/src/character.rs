@@ -31,8 +31,7 @@
 //! made of.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::DelveRung;
+use hornvale_kernel::{Band, CellId, Seed};
 
 use crate::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, floors_in_run};
 
@@ -74,17 +73,17 @@ pub const CHARACTERS: &[Character] = &[
 /// Pairwise distinct by construction-check (see
 /// `a_character_only_occupies_its_declared_bands`): two characters sharing
 /// a table would be two names for one thing.
-pub fn bands_of(character: Character) -> &'static [DelveRung] {
+pub fn bands_of(character: Character) -> &'static [Band] {
     match character {
         Character::WildCave => &[
-            DelveRung::Undercroft,
-            DelveRung::Shallows,
-            DelveRung::Deeps,
-            DelveRung::Underdeep,
-            DelveRung::Nadir,
+            Band::Undercroft,
+            Band::Shallows,
+            Band::Deeps,
+            Band::Underdeep,
+            Band::Nadir,
         ],
-        Character::FungalGardens => &[DelveRung::Undercroft, DelveRung::Shallows, DelveRung::Deeps],
-        Character::DrowTier => &[DelveRung::Underdeep, DelveRung::Nadir],
+        Character::FungalGardens => &[Band::Undercroft, Band::Shallows, Band::Deeps],
+        Character::DrowTier => &[Band::Underdeep, Band::Nadir],
     }
 }
 

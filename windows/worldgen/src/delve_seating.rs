@@ -45,7 +45,7 @@ use hornvale_climate::underworld::underworld_assignment;
 use hornvale_kernel::{Band, CellId, CellMap, Geosphere};
 use hornvale_species::{EnvironmentNiche, environment_fit};
 use hornvale_terrain::{
-    Cave, CaveKind, DelveRung, GeneratedTerrain, GeothermalGradient, delta_t_range_of, rungs,
+    Cave, CaveKind, GeneratedTerrain, GeothermalGradient, delta_t_range_of, rungs,
     water_table_depth_m,
 };
 
@@ -77,21 +77,21 @@ pub const UNDERWORLD_WORKS_COST: f64 = 0.5;
 /// The depth class one habitation band names, in the vocabulary the underworld
 /// corpus states its communities in.
 ///
-/// `DelveRung` and the corpus's own `UnderworldName::zone` field are both
-/// `hornvale_kernel::Band` now (decision 0044 clause (a) put the shared
+/// The delve ladder and the corpus's own `UnderworldName::zone` field are
+/// both `hornvale_kernel::Band` (decision 0044 clause (a) put the shared
 /// roster in the kernel; the two used to be a **mirrored pair** under
 /// decision 0094, guarded by the now-retired `cli/tests/suite/
-/// delve_roster_mirror.rs`). This function used to translate between two
-/// separately-declared enums and now translates a `Band` into itself, minus
-/// the one band no underworld community occupies — kept as an exhaustive
-/// match rather than collapsed to an identity, so a future `Band` variant
-/// fails to compile here rather than silently scoring against the wrong
-/// depth class.
+/// delve_roster_mirror.rs`, and `hornvale_terrain::delve` re-exported the
+/// kernel type as `DelveRung` until The Drift deleted that alias). This
+/// function translates a `Band` into itself, minus the one band no
+/// underworld community occupies — kept as an exhaustive match rather than
+/// collapsed to an identity, so a future `Band` variant fails to compile
+/// here rather than silently scoring against the wrong depth class.
 ///
 /// `Surface` is `None` for the reason `domains/climate::underworld` states on
 /// `UnderworldName::zone`: no underworld community is at the surface, so
 /// there is nothing for a surface band to be scored against.
-fn zone_of(rung: DelveRung) -> Option<Band> {
+fn zone_of(rung: Band) -> Option<Band> {
     match rung {
         Band::Surface => None,
         Band::Undercroft => Some(Band::Undercroft),
@@ -179,7 +179,7 @@ fn genus_of(cave: CaveKind) -> &'static str {
 /// caller may — and [`seating_for`] does — evaluate it once per people rather
 /// than once per cell.
 /// type-audit: bare-ok(ratio: return)
-pub fn chamber_fit(niche: &EnvironmentNiche, cave: CaveKind, rung: DelveRung) -> Option<f64> {
+pub fn chamber_fit(niche: &EnvironmentNiche, cave: CaveKind, rung: Band) -> Option<f64> {
     let zone = zone_of(rung)?;
     let genus = genus_of(cave);
     let assigned = || {
@@ -211,7 +211,7 @@ pub fn chamber_fit(niche: &EnvironmentNiche, cave: CaveKind, rung: DelveRung) ->
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RungSeat {
     /// The rung settled.
-    pub rung: DelveRung,
+    pub rung: Band,
     /// The factor capacity at this cell is multiplied by — [`chamber_fit`],
     /// times [`UNDERWORLD_WORKS_COST`] where the chamber needs dewatering.
     pub multiplier: f64,
@@ -347,7 +347,7 @@ pub fn seat_at(
     water_table_m: f64,
 ) -> Option<RungSeat> {
     let mut best: Option<RungSeat> = None;
-    for &rung in rungs().iter().filter(|r| **r != DelveRung::Surface) {
+    for &rung in rungs().iter().filter(|r| **r != Band::Surface) {
         let top_m = 1000.0 * delta_t_range_of(rung).0 / gradient.get();
         if top_m > cave.depth_reach_m {
             continue;
@@ -391,7 +391,7 @@ pub fn seat_at(
 pub struct Seating {
     /// The rung this people occupies at each cell. `Surface` everywhere for a
     /// surface people.
-    pub rung: CellMap<DelveRung>,
+    pub rung: CellMap<Band>,
     /// The factor this people's capacity at each cell is scaled by. `1.0`
     /// everywhere for a surface people, which is an IEEE-754 no-op.
     pub multiplier: CellMap<f64>,
@@ -406,7 +406,7 @@ impl Seating {
     /// than approximately so.
     pub fn all_surface(geo: &Geosphere) -> Seating {
         Seating {
-            rung: CellMap::from_fn(geo, |_| DelveRung::Surface),
+            rung: CellMap::from_fn(geo, |_| Band::Surface),
             multiplier: CellMap::from_fn(geo, |_| 1.0),
         }
     }
@@ -452,9 +452,7 @@ pub fn seating_for(
         .collect();
     let at = |cell: CellId| seats[cell.0 as usize];
     Seating {
-        rung: CellMap::from_fn(geo, |c| {
-            at(c).map_or(DelveRung::Undercroft, |seat| seat.rung)
-        }),
+        rung: CellMap::from_fn(geo, |c| at(c).map_or(Band::Undercroft, |seat| seat.rung)),
         multiplier: CellMap::from_fn(geo, |c| at(c).map_or(0.0, |seat| seat.multiplier)),
     }
 }
@@ -605,7 +603,7 @@ mod tests {
     fn every_formation_and_depth_class_scores() {
         let niche = drow();
         for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
-            for &rung in rungs().iter().filter(|r| **r != DelveRung::Surface) {
+            for &rung in rungs().iter().filter(|r| **r != Band::Surface) {
                 let fit = chamber_fit(&niche, kind, rung)
                     .unwrap_or_else(|| panic!("{kind:?} at {rung:?} has no fit"));
                 assert!(
@@ -701,11 +699,11 @@ mod tests {
     fn two_formations_do_not_score_identically() {
         let niche = drow();
         let differs = [
-            DelveRung::Undercroft,
-            DelveRung::Shallows,
-            DelveRung::Deeps,
-            DelveRung::Underdeep,
-            DelveRung::Nadir,
+            Band::Undercroft,
+            Band::Shallows,
+            Band::Deeps,
+            Band::Underdeep,
+            Band::Nadir,
         ]
         .into_iter()
         .any(|rung| {
@@ -725,10 +723,7 @@ mod tests {
     /// against a cave.
     #[test]
     fn the_surface_rung_has_no_chamber_fit() {
-        assert_eq!(
-            chamber_fit(&drow(), CaveKind::Karst, DelveRung::Surface),
-            None
-        );
+        assert_eq!(chamber_fit(&drow(), CaveKind::Karst, Band::Surface), None);
     }
 
     /// A niche that states no preference at all scores `0.0` everywhere, so
@@ -737,9 +732,6 @@ mod tests {
     #[test]
     fn an_indifferent_niche_scores_zero() {
         let blank = EnvironmentNiche::new(&[]).expect("the empty niche is legal");
-        assert_eq!(
-            chamber_fit(&blank, CaveKind::Karst, DelveRung::Deeps),
-            Some(0.0)
-        );
+        assert_eq!(chamber_fit(&blank, CaveKind::Karst, Band::Deeps), Some(0.0));
     }
 }

@@ -1,6 +1,6 @@
 //! The delve ladder — habitation depth, spaced by heat (spec §4.1).
 //!
-//! [`crate::BandKind`] keeps its five stratigraphic rungs and its entire
+//! [`crate::Horizon`] keeps its five stratigraphic rungs and its entire
 //! archival job (`Era`, `RockClass`, `unconformity`); it is not modified and
 //! nothing here reads it. This is a **second, independent ladder**: its rungs
 //! are placed at temperature offsets above the cell's surface datum, so a
@@ -86,14 +86,14 @@
 //!
 //! ## What this ladder is not
 //!
-//! [`rung_at_delta_t`] never returns [`DelveRung::Surface`]. Being at the
+//! [`rung_at_delta_t`] never returns [`Band::Surface`]. Being at the
 //! surface is a fact about not being in the rock column at all, not a fact
 //! about a temperature — the variant exists (spec §4.6) so that the overworld
 //! is a rung of the same ladder and no reader can mistake a `None` for it.
 //!
 //! ## Nadir: a refused split, and its true bound
 //!
-//! [`DelveRung::Nadir`] is the open-ended leftover bin, and leftover bins are
+//! [`Band::Nadir`] is the open-ended leftover bin, and leftover bins are
 //! large by construction: 38.65% of cave-bearing land cells terminate here
 //! (24.49 / 43.25 / 42.34% on seeds 42 / 7 / 1234), which falsified the
 //! campaign's own prediction that reaching it would be uncommon.
@@ -112,23 +112,19 @@
 //!
 //! ## Where the type itself lives
 //!
-//! [`DelveRung`] is a re-export of [`hornvale_kernel::Band`] (decision 0044
-//! clause (a); see that type's own docs for why). This module keeps the
+//! [`hornvale_kernel::Band`] holds the roster and the ordering (decision 0044
+//! clause (a); see that type's own docs for why) and is imported directly —
+//! this module used to re-export it under a second name, but The Drift
+//! deleted that alias (spec `2026-08-23-the-drift-design.md` §3.3) so the
+//! depth axis carries one public name rather than two. This module keeps the
 //! roster's *meaning* — the derivation from a ΔT to a band, and everything
 //! measured above — which is what a domain keeps under 0044's other half.
 
 use crate::strata::GeothermalGradient;
-
-/// A rung of the delve ladder — a habitation depth *class*, never a depth.
-///
-/// A re-export of [`hornvale_kernel::Band`]: the roster and its ordering are
-/// shared with `hornvale_climate::underworld`, so they live in the kernel
-/// (decision 0044 clause (a)). This crate owns the ΔT-to-band derivation
-/// below and nothing shares that.
-pub use hornvale_kernel::Band as DelveRung;
+use hornvale_kernel::Band;
 
 /// The ΔT (K above the surface datum) beyond which this campaign declares a
-/// chamber uninhabitable, and therefore the ΔT at which [`DelveRung::Nadir`]
+/// chamber uninhabitable, and therefore the ΔT at which [`Band::Nadir`]
 /// begins.
 ///
 /// **Authored, not derived.** Spec §4.1 fixes this value in the spec *before*
@@ -142,7 +138,7 @@ pub use hornvale_kernel::Band as DelveRung;
 /// type-audit: bare-ok(diagnostic-value)
 pub const HABITABLE_CEILING_K: f64 = 50.0;
 
-/// The ΔT at which [`DelveRung::Shallows`] begins.
+/// The ΔT at which [`Band::Shallows`] begins.
 ///
 /// **An a-priori bin, kept.** Spec §4.1 published `< 2 K` as its illustrative
 /// top rung before Task 1 ran, the probe binned against it, and it is one of
@@ -156,7 +152,7 @@ pub const HABITABLE_CEILING_K: f64 = 50.0;
 /// type-audit: bare-ok(diagnostic-value)
 const SHALLOWS_TOP_K: f64 = 2.0;
 
-/// The ΔT at which [`DelveRung::Deeps`] begins.
+/// The ΔT at which [`Band::Deeps`] begins.
 ///
 /// **This edge was MOVED after seeing finer data — 10.0 → 8.0 — and it is the
 /// only one in the table that was.** Recorded here rather than in a commit
@@ -196,7 +192,7 @@ const SHALLOWS_TOP_K: f64 = 2.0;
 /// type-audit: bare-ok(diagnostic-value)
 const DEEPS_TOP_K: f64 = 8.0;
 
-/// The ΔT at which [`DelveRung::Underdeep`] begins.
+/// The ΔT at which [`Band::Underdeep`] begins.
 ///
 /// **An a-priori bin, kept.** Spec §4.1 published `25 – 50 K` before Task 1
 /// ran, the probe binned against it, and the class holds 6.1 / 8.9 / 10.2% of
@@ -223,19 +219,19 @@ const UNDERDEEP_TOP_K: f64 = 25.0;
 /// entry begins at 0.0 (spec §4.1's frozen "the top habitation rung begins at
 /// ΔT = 0"); the last has no successor, which is what makes the bottom rung
 /// open-ended.
-const LADDER: [(DelveRung, f64); 5] = [
-    (DelveRung::Undercroft, 0.0),
-    (DelveRung::Shallows, SHALLOWS_TOP_K),
-    (DelveRung::Deeps, DEEPS_TOP_K),
-    (DelveRung::Underdeep, UNDERDEEP_TOP_K),
-    (DelveRung::Nadir, HABITABLE_CEILING_K),
+const LADDER: [(Band, f64); 5] = [
+    (Band::Undercroft, 0.0),
+    (Band::Shallows, SHALLOWS_TOP_K),
+    (Band::Deeps, DEEPS_TOP_K),
+    (Band::Underdeep, UNDERDEEP_TOP_K),
+    (Band::Nadir, HABITABLE_CEILING_K),
 ];
 
 /// Every rung, `Surface` first and then the habitation rungs shallowest to
 /// deepest — derived from [`LADDER`] in the same declaration so the two can
 /// never disagree about which rungs exist or in what order.
-const ALL_RUNGS: [DelveRung; 6] = [
-    DelveRung::Surface,
+const ALL_RUNGS: [Band; 6] = [
+    Band::Surface,
     LADDER[0].0,
     LADDER[1].0,
     LADDER[2].0,
@@ -243,23 +239,23 @@ const ALL_RUNGS: [DelveRung; 6] = [
     LADDER[4].0,
 ];
 
-/// Every rung of the ladder in order, [`DelveRung::Surface`] first.
+/// Every rung of the ladder in order, [`Band::Surface`] first.
 ///
 /// Callers that want only the habitation rungs filter `Surface` out; it is
 /// deliberately present so that iterating "the ladder" never silently omits
 /// the overworld.
-pub fn rungs() -> &'static [DelveRung] {
+pub fn rungs() -> &'static [Band] {
     &ALL_RUNGS
 }
 
 /// The half-open ΔT interval a rung covers, in K above the surface datum:
 /// `(low, Some(high))`, or `(low, None)` for the open-ended bottom rung.
 ///
-/// [`DelveRung::Surface`] is not a ΔT class at all, so it returns `(0.0,
+/// [`Band::Surface`] is not a ΔT class at all, so it returns `(0.0,
 /// Some(0.0))` — the empty interval `[0, 0)`, which contains nothing and
-/// therefore cannot claim a temperature away from [`DelveRung::Undercroft`].
+/// therefore cannot claim a temperature away from [`Band::Undercroft`].
 /// type-audit: bare-ok(diagnostic-value: return)
-pub fn delta_t_range_of(rung: DelveRung) -> (f64, Option<f64>) {
+pub fn delta_t_range_of(rung: Band) -> (f64, Option<f64>) {
     match LADDER.iter().position(|&(r, _)| r == rung) {
         // Surface: the empty interval at the datum. See this function's docs.
         None => (0.0, Some(0.0)),
@@ -276,9 +272,9 @@ pub fn delta_t_range_of(rung: DelveRung) -> (f64, Option<f64>) {
 /// which a cold-season or high-albedo cell can genuinely produce — and a
 /// non-finite ΔT both resolve to the top habitation rung rather than
 /// panicking, because the ladder is a classification of places and every place
-/// is somewhere. Never returns [`DelveRung::Surface`]; see the module docs.
+/// is somewhere. Never returns [`Band::Surface`]; see the module docs.
 /// type-audit: bare-ok(diagnostic-value: delta_t_k)
-pub fn rung_at_delta_t(delta_t_k: f64) -> DelveRung {
+pub fn rung_at_delta_t(delta_t_k: f64) -> Band {
     let mut found = LADDER[0].0;
     for &(rung, low) in LADDER.iter() {
         // NaN fails every comparison, so a non-finite ΔT keeps the initial
@@ -301,7 +297,7 @@ pub fn rung_at_delta_t(delta_t_k: f64) -> DelveRung {
 /// and a 30 K/km young crust is 30 K above its own, so the *same depth* is two
 /// different rungs and the *same rung* is two different depths.
 /// type-audit: bare-ok(ratio: depth_m)
-pub fn rung_at_depth(depth_m: f64, gradient: GeothermalGradient) -> DelveRung {
+pub fn rung_at_depth(depth_m: f64, gradient: GeothermalGradient) -> Band {
     rung_at_delta_t(gradient.get() * (depth_m / 1000.0))
 }
 
@@ -313,7 +309,7 @@ mod tests {
     #[test]
     fn the_ladder_is_within_the_specs_bound() {
         // Spec §4.1: at least 4 and at most 6 habitation rungs.
-        let habitation = rungs().iter().filter(|r| **r != DelveRung::Surface).count();
+        let habitation = rungs().iter().filter(|r| **r != Band::Surface).count();
         assert!(
             (4..=6).contains(&habitation),
             "habitation rungs = {habitation}, spec §4.1 allows 4..=6"
@@ -325,10 +321,10 @@ mod tests {
         // Every ΔT >= 0 resolves to exactly one rung, and consecutive rungs
         // share a boundary. This is the invariant that a hand-written
         // threshold table gets wrong.
-        let habitation: Vec<DelveRung> = rungs()
+        let habitation: Vec<Band> = rungs()
             .iter()
             .copied()
-            .filter(|r| *r != DelveRung::Surface)
+            .filter(|r| *r != Band::Surface)
             .collect();
         let (first_lo, _) = delta_t_range_of(habitation[0]);
         assert_eq!(first_lo, 0.0, "the top habitation rung must begin at 0 K");
@@ -349,7 +345,7 @@ mod tests {
 
     #[test]
     fn rung_at_delta_t_agrees_with_the_declared_ranges() {
-        for rung in rungs().iter().copied().filter(|r| *r != DelveRung::Surface) {
+        for rung in rungs().iter().copied().filter(|r| *r != Band::Surface) {
             let (lo, hi) = delta_t_range_of(rung);
             // A point just inside the low edge belongs to this rung.
             assert_eq!(rung_at_delta_t(lo), rung, "low edge of {rung:?}");
@@ -392,7 +388,7 @@ mod tests {
         let top = rungs()
             .iter()
             .copied()
-            .find(|r| *r != DelveRung::Surface)
+            .find(|r| *r != Band::Surface)
             .unwrap();
         assert_eq!(rung_at_delta_t(-5.0), top);
         assert_eq!(rung_at_delta_t(f64::NAN), top);
@@ -415,7 +411,7 @@ mod tests {
         }
         assert_eq!(
             ladder.first().copied(),
-            Some(DelveRung::Surface),
+            Some(Band::Surface),
             "Surface is the least rung"
         );
     }
@@ -425,11 +421,11 @@ mod tests {
     /// declared interval must be empty so it cannot be read as owning 0 K.
     #[test]
     fn surface_owns_no_temperature() {
-        assert_eq!(delta_t_range_of(DelveRung::Surface), (0.0, Some(0.0)));
+        assert_eq!(delta_t_range_of(Band::Surface), (0.0, Some(0.0)));
         for delta_t in [-1.0, 0.0, 1.0, 25.0, 50.0, 1_000.0, f64::NAN] {
             assert_ne!(
                 rung_at_delta_t(delta_t),
-                DelveRung::Surface,
+                Band::Surface,
                 "ΔT {delta_t} resolved to Surface"
             );
         }
@@ -441,7 +437,7 @@ mod tests {
     /// something about the mapping itself.
     #[test]
     fn a_rungs_depth_in_metres_varies_by_cell() {
-        let (deeps_low, _) = delta_t_range_of(DelveRung::Deeps);
+        let (deeps_low, _) = delta_t_range_of(Band::Deeps);
         let craton = GeothermalGradient::new(15.0);
         let young = GeothermalGradient::new(30.0);
         let depth_under = |g: GeothermalGradient| deeps_low / g.get() * 1000.0;
@@ -456,8 +452,8 @@ mod tests {
         // Deeps top is still Shallows, just at it is Deeps.
         assert_eq!(
             rung_at_depth(depth_under(craton) - 1.0, craton),
-            DelveRung::Shallows
+            Band::Shallows
         );
-        assert_eq!(rung_at_depth(depth_under(craton), craton), DelveRung::Deeps);
+        assert_eq!(rung_at_depth(depth_under(craton), craton), Band::Deeps);
     }
 }

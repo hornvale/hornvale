@@ -27,8 +27,8 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{Cave, CaveKind, DelveRung, GeothermalGradient, StratigraphicColumn};
+use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, StratigraphicColumn};
 use hornvale_vessel::{Cell, Level, LevelCellKind, generate_descent};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, Chamber, ChamberAddr, ChamberOrigin, ChamberOverrides, chamber_at,
@@ -235,7 +235,7 @@ fn a_real_descent_is_deterministic_connected_and_renders() {
                 .expect("address was confirmed to exist by find_addrs_at_bands")
         })
         .collect();
-    let rungs: Vec<DelveRung> = chambers.iter().map(|c| c.rung).collect();
+    let rungs: Vec<Band> = chambers.iter().map(|c| c.rung).collect();
     let origins: Vec<ChamberOrigin> = chambers.iter().map(|c| c.origin).collect();
     assert_eq!(
         origins[1],

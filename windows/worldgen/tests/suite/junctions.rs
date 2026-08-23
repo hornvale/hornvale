@@ -41,8 +41,8 @@
 //! roster check would NOT have caught that mutation — it used an inline
 //! `StreamLabel::dynamic`, which no `stream_labels()` roster can see.
 
-use hornvale_kernel::{CellId, Geosphere, Seed};
-use hornvale_terrain::{DelveRung, GeneratedTerrain, TerrainPins};
+use hornvale_kernel::{Band, CellId, Geosphere, Seed};
+use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, FLOORS_PER_RUN_CEILING, chamber_exists, entrance_count,
     junctions_at, rung_rank,
@@ -85,8 +85,8 @@ fn panel_terrain() -> GeneratedTerrain {
 /// ladder itself (`hornvale_terrain::rungs`) filtered through the lattice's
 /// one explicit mapping ([`rung_rank`]) — both `pub`. `Surface` has no
 /// habitation rank and drops out here exactly as it does there.
-fn habitation_bands() -> Vec<(u8, DelveRung)> {
-    let mut bands: Vec<(u8, DelveRung)> = hornvale_terrain::rungs()
+fn habitation_bands() -> Vec<(u8, Band)> {
+    let mut bands: Vec<(u8, Band)> = hornvale_terrain::rungs()
         .iter()
         .filter_map(|&rung| rung_rank(rung).map(|rank| (rank, rung)))
         .collect();
@@ -116,7 +116,7 @@ fn main_line_admits(
     terrain: &GeneratedTerrain,
     cell: CellId,
     rank: u8,
-    rung: DelveRung,
+    rung: Band,
 ) -> bool {
     let Some(cave) = terrain.cave_at(cell) else {
         return false;
