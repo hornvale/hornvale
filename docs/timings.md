@@ -2291,3 +2291,14 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T13:16:48Z | sluice:clients | 330.842 | 1350.915 | 21.783 | 4.15 | 0 | 97b93d38e |  | lefford | 40 |
 | 2026-08-23T16:44:42Z | gate-commit | 454.147 | 1124.203 | 165.274 | 2.84 | 0 | 49bf2427c | campaign/the-scour | ambrose | 12 |
 | 2026-08-23T16:48:06Z | gate-commit | 110.271 | 68.196 | 40.168 | 0.98 | 0 | 49bf2427c | campaign/the-scour | ambrose | 12 |
+| 2026-08-23T15:36:29Z | gate-commit | 95.133 | 1493.082 | 162.461 | 17.40 | 0 | f7e79abc2 | fix/clients-phase-and-golden-criterion | lefford | 40 |
+| 2026-08-23T15:55:23Z | sluice:artifacts | 98.073 | 743.440 | 36.069 | 7.95 | 0 | 1a0b09f76 |  | lefford | 40 |
+| 2026-08-23T15:56:01Z | sluice:outboard | 37.430 | 23.347 | 37.483 | 1.63 | 0 | c023c69db |  | lefford | 40 |
+| 2026-08-23T16:02:31Z | sluice:gate | 389.947 | 10475.625 | 383.527 | 27.85 | 0 | b099a5d3a |  | lefford | 40 |
+| 2026-08-23T16:06:40Z | sluice:clients | 248.582 | 1495.982 | 22.670 | 6.11 | 0 | 9e68c5cb2 |  | lefford | 40 |
+| 2026-08-23T15:15:54Z | gate-commit | 318.742 | 1045.280 | 77.760 | 3.52 | 0 | 49bf2427c | campaign/the-scour | MacBookPro | 10 |
+| 2026-08-23T15:17:32Z | gate-commit | 20.135 | 47.847 | 12.079 | 2.98 | 0 | 49bf2427c | campaign/the-scour | MacBookPro | 10 |
+| 2026-08-23T16:13:31Z | sluice:artifacts | 96.447 | 721.497 | 33.389 | 7.83 | 0 | 31c567059 |  | lefford | 40 |
+| 2026-08-23T16:14:10Z | sluice:outboard | 38.296 | 23.967 | 37.225 | 1.60 | 0 | ef581db12 |  | lefford | 40 |
+| 2026-08-23T16:20:38Z | sluice:gate | 388.272 | 10413.201 | 375.239 | 27.79 | 0 | 3948ec56f |  | lefford | 40 |
+| 2026-08-23T16:25:04Z | sluice:clients | 265.792 | 1502.331 | 25.875 | 5.75 | 0 | a47a4d200 |  | lefford | 40 |

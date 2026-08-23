@@ -13,6 +13,21 @@
 //! That was not hypothetical: `domains/terrain/CLAUDE.md` had already drifted,
 //! restating six paths after `clients/game/core/tests/fixtures/` became the
 //! seventh.
+//!
+//! THIRD DIRECTION: every declared path is one `scripts/regenerate-artifacts.sh`
+//! actually WRITES. This is the criterion the list exists on, and it is what
+//! keeps a BYTE-GOLDEN out of it — see the header of `docs/generated-paths.txt`.
+//! A golden is an assertion, not a regenerated input; declaring one would let
+//! the chamber's artifacts phase commit accepted drift and silently rebaseline
+//! a determinism guarantee. Two sessions proposed exactly that widening on
+//! 2026-08-23 before anyone checked which of the two kinds each directory was.
+//!
+//! WHAT THIS THIRD CHECK CANNOT SEE: it matches the declared path as a literal
+//! substring of the script. A future artifact written through a shell variable
+//! (`"$out_dir/foo.md"`) would read as undeclared-by-the-script and redden this
+//! test even though regeneration does produce it. That is a false positive, not
+//! a false negative, so it fails safe — but the fix is to write the path
+//! literally in the script, not to weaken this test.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -222,5 +237,37 @@ fn no_generated_artifact_is_routed_through_a_regenerating_merge_driver() {
          regenerating-it.md before re-adding one; the mechanism that works is \
          scripts/hooks/post-merge's advisory to run `make rebaseline`:\n  {}",
         offenders.join("\n  ")
+    );
+}
+
+/// Every declared path must be one `scripts/regenerate-artifacts.sh` writes.
+///
+/// The list's whole purpose is "regeneration produces this, so a stale copy is
+/// a bookkeeping failure the artifacts phase fixes on its own". A path the
+/// script never writes cannot satisfy that: at best its `git diff --exit-code`
+/// is permanently empty and the entry is decoration, and at worst — if it is a
+/// byte-golden under `kernel/src/golden.rs` — declaring it invites the chamber
+/// to commit drift that a human was supposed to review.
+#[test]
+fn every_declared_generated_path_is_written_by_the_regeneration_script() {
+    let script = std::fs::read_to_string(repo_root().join("scripts/regenerate-artifacts.sh"))
+        .expect("scripts/regenerate-artifacts.sh must exist");
+
+    let undeclared: Vec<String> = declared_paths()
+        .into_iter()
+        .filter(|p| !script.contains(p.as_str()))
+        .collect();
+
+    assert!(
+        undeclared.is_empty(),
+        "docs/generated-paths.txt declares {} path(s) that scripts/regenerate-artifacts.sh \
+         never writes: {:?}\n\
+         The list's criterion is 'regeneration produces it', not 'it is a committed fixture'.\n\
+         If one of these is a BYTE-GOLDEN (guarded by kernel/src/golden.rs, rebaselined only \
+         by `make rebaseline-goldens`), it does not belong here at all: goldens are assertions, \
+         and letting the artifacts phase commit their drift would silently accept a determinism \
+         change. See the header of docs/generated-paths.txt.",
+        undeclared.len(),
+        undeclared,
     );
 }

@@ -11,7 +11,6 @@ use hornvale_kernel::{AStarSolver, RoomAddr, RoomMeshMemo, SearchSpace, Solver, 
 /// A GOAP action — a precondition/effect transformation over the plan state.
 /// Minimal + heterogeneous (the precondition chain needs two kinds); the MAP-27
 /// authored-verb DSL is a followup.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Action {
     /// Walk to an adjacent room (precondition: adjacency; effect: position).
@@ -381,7 +380,6 @@ fn move_cost(n: &RoomAddr, avoid: &std::collections::BTreeSet<RoomAddr>) -> u64 
 }
 
 /// The GOAP search space for the sustenance goal: reach water and drink.
-/// type-audit: bare-ok(return)
 pub struct GoapSpace<'a> {
     /// The water room the `Drink` action requires.
     pub water: RoomAddr,
