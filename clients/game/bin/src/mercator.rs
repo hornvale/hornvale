@@ -17,6 +17,39 @@
 /// the spike).
 pub const LAT_CLAMP_DEG: f64 = 85.0;
 
+/// Design spec §3.3's caption: states the clamp and names the central line
+/// it is measured from — a stated refusal, not decoration. "±85°" alone
+/// tells a locked-world reader nothing useful: on a locked world the
+/// projection's own poles sit at the substellar and antistellar points
+/// ([`frame_for`]'s own doc), so what the clamp discards there is the
+/// substellar desert and the antistellar ice, not the geographic poles at
+/// all — a different pair of places than "±85°" alone would suggest.
+///
+/// **Derived from `f` itself, never from a `locked: bool` threaded a
+/// second time past [`frame_for`]** — the frame already knows which line
+/// it holds: a spinning world's frame puts its pole at the geographic pole
+/// (`pole_lat_deg == 90.0`, exactly, by construction in `frame_for`); a
+/// locked world's puts it at the substellar point (`pole_lat_deg == 0.0`).
+/// A `Frame` whose pole sits anywhere else (after [`centre_on`] rolls the
+/// projection under §3.2's re-centre command) is treated as the locked
+/// arm's own "not the geographic pole" case — the recentred line is real
+/// terrain either way, never the geographic pole by definition, so the
+/// safer of the two captions to default to is the one that does not
+/// promise "the equator" for a line that has moved off it.
+pub fn clamp_caption(f: &Frame) -> String {
+    if (f.pole_lat_deg - 90.0).abs() < 1e-9 {
+        format!(
+            "clamped at ±{LAT_CLAMP_DEG:.0}° from the equator — the polar ice caps are off \
+             the map"
+        )
+    } else {
+        format!(
+            "clamped at ±{LAT_CLAMP_DEG:.0}° from the terminator — the substellar desert and \
+             antistellar ice are off the map"
+        )
+    }
+}
+
 /// The rotation taking world coordinates into projection coordinates,
 /// expressed as the geographic position of the PROJECTION's north pole.
 ///
@@ -259,6 +292,37 @@ pub fn unproject(f: &Frame, row: u32, col: u32, w: u32, h: u32) -> (f64, f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // -- Task 4, Step 3 / §3.3: the clamp caption, both rotation regimes --
+
+    /// A spinning-world fixture cannot see the locked case, and the locked
+    /// case is the entire reason §3.3 exists (the task brief's own words)
+    /// — so this pins BOTH regimes rather than one.
+    #[test]
+    fn the_clamp_caption_names_the_equator_on_a_spinning_world() {
+        let f = frame_for(false);
+        let text = clamp_caption(&f);
+        assert!(text.contains("equator"), "got {text:?}");
+        assert!(!text.contains("terminator"), "got {text:?}");
+        assert!(
+            text.contains("±85°") || text.contains("85"),
+            "the clamp's own number must appear, got {text:?}"
+        );
+    }
+
+    /// The locked arm: the central line is the terminator, not the
+    /// equator, and what the clamp discards is the substellar desert and
+    /// the antistellar ice — not the polar ice caps, which is what a
+    /// reader would wrongly assume from "±85°" alone.
+    #[test]
+    fn the_clamp_caption_names_the_terminator_on_a_locked_world() {
+        let f = frame_for(true);
+        let text = clamp_caption(&f);
+        assert!(text.contains("terminator"), "got {text:?}");
+        assert!(!text.contains("equator"), "got {text:?}");
+        assert!(text.contains("desert"), "got {text:?}");
+        assert!(text.contains("ice"), "got {text:?}");
+    }
 
     #[test]
     fn a_spinning_world_holds_the_geographic_equator() {

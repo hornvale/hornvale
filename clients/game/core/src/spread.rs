@@ -117,7 +117,10 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// outdoors, the chamber-band floor plan indoors — the register switches
 /// picture, never prose. `strip` is the map strip's text (see `strip.rs`),
 /// `None` unless the map is focused — either way the row beneath the plate
-/// is reserved (see the module doc). `line` is
+/// is reserved (see the module doc). `strip_offset` is the character
+/// offset [`crate::strip::draw`] starts at (F3 — see that function's own
+/// doc for why this is never a clock); it is unused when `strip` is
+/// `None`, so a caller with nothing to scroll may pass `0`. `line` is
 /// the command line's contents, drawn into the entry pane regardless of
 /// `focus` — only whether its caret is *reported* depends on focus, never
 /// whether its text is drawn (see `entry::draw`'s doc). `echo` is the most
@@ -144,7 +147,11 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// here — see [`world_plate_width`]'s own doc for why a second copy
 /// elsewhere would reproduce a defect this campaign already fixed once, on
 /// the height axis.
-#[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 7, `world_plate` (The Portolan part II, Task 2) to 8 — mirroring `render_with`'s own allow, which this function's own parameter list mirrors one-for-one plus `snapshot`
+// `echo` (Task 3) pushed this to 7, `world_plate` (The Portolan part II,
+// Task 2) to 8, `strip_offset` (Task 4, F3) to 9 — mirroring `render_with`'s
+// own allow, which this function's own parameter list mirrors one-for-one
+// plus `snapshot`
+#[allow(clippy::too_many_arguments)]
 pub fn compose(
     snapshot: &crate::Snapshot,
     w: u16,
@@ -154,6 +161,7 @@ pub fn compose(
     line: crate::CommandLine<'_>,
     echo: Option<&str>,
     world_plate: Option<&Grid>,
+    strip_offset: u16,
 ) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
@@ -187,7 +195,13 @@ pub fn compose(
     );
 
     if let Some(text) = strip {
-        crate::strip::draw(text, &mut page, (0, content_height), plate_width);
+        crate::strip::draw(
+            text,
+            &mut page,
+            (0, content_height),
+            plate_width,
+            strip_offset,
+        );
     }
 
     let endpaper_row = h.saturating_sub(2);
@@ -221,6 +235,7 @@ mod tests {
             crate::CommandLine::default(),
             None,
             None,
+            0,
         );
         assert_eq!(g.width(), 80);
         assert_eq!(g.height(), 24);
@@ -249,6 +264,7 @@ mod tests {
                 crate::CommandLine::default(),
                 None,
                 None,
+                0,
             );
             let text = g.to_plain_text();
             let plate_has_ink = text
@@ -274,6 +290,7 @@ mod tests {
             crate::CommandLine::default(),
             None,
             None,
+            0,
         );
         let text = g.to_plain_text();
         let strip_row = text.lines().nth(20).unwrap();
@@ -285,6 +302,56 @@ mod tests {
         assert!(
             past_plate.trim().is_empty(),
             "the strip must not bleed into the entry's columns"
+        );
+    }
+
+    /// `compose` must actually HAND `strip_offset` to `strip::draw`, not
+    /// merely accept it — a text long enough to scroll shows a different
+    /// window at a nonzero offset.
+    #[test]
+    fn compose_threads_strip_offset_through_to_the_drawn_window() {
+        let s = crate::Snapshot::parse(WALK_FIXTURE).unwrap();
+        // Distinguishable characters, not a repeated one: scrolling an
+        // all-`z` string would look identical at every offset and the
+        // assertion below would pass vacuously.
+        let long: String = (0..200).map(|i| (b'a' + (i % 26) as u8) as char).collect();
+        let (head_grid, _) = compose(
+            &s,
+            80,
+            24,
+            Some(&long),
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            None,
+            0,
+        );
+        let (scrolled_grid, _) = compose(
+            &s,
+            80,
+            24,
+            Some(&long),
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            None,
+            5,
+        );
+        let head_row = head_grid
+            .to_plain_text()
+            .lines()
+            .nth(20)
+            .unwrap()
+            .to_string();
+        let scrolled_row = scrolled_grid
+            .to_plain_text()
+            .lines()
+            .nth(20)
+            .unwrap()
+            .to_string();
+        assert_ne!(
+            head_row, scrolled_row,
+            "compose must pass strip_offset through, not silently drop it"
         );
     }
 }

@@ -123,6 +123,7 @@ fn the_typed_buffer_is_reachable_from_a_real_render() {
         None,
         None,
         None,
+        0,
     )
     .unwrap();
     let p = grid.provenance();
@@ -150,6 +151,7 @@ fn the_echoed_line_is_reachable_from_a_real_render() {
         None,
         Some("look"),
         None,
+        0,
     )
     .unwrap();
     let p = grid.provenance();

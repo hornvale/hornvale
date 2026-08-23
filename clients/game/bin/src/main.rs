@@ -78,10 +78,15 @@ fn terminal_size() -> std::io::Result<(u16, u16)> {
 /// Draw the driver's current state at the terminal's current size.
 ///
 /// Reads `driver.snapshot()`/`focus()`/`cursor()`/`strip_text()`/
-/// `line_text()`/`caret()`/`echo()` fresh each call rather than being
-/// handed them, so every call site redraws the driver's true current state
-/// rather than whatever it happened to return from the action that
-/// triggered the redraw (`Event::Resize` has no action at all). The command
+/// `strip_offset()`/`line_text()`/`caret()`/`echo()` fresh each call rather
+/// than being handed them, so every call site redraws the driver's true
+/// current state rather than whatever it happened to return from the
+/// action that triggered the redraw (`Event::Resize` has no action at
+/// all). **This function IS the redraw F3 drives `strip_offset` from**:
+/// `Driver::refresh_strip` (called from every action that could change
+/// what the strip shows) advances the strip's own scroll counter, and this
+/// function reads it back out here, fresh — no timer anywhere in the loop.
+/// The command
 /// buffer moved into `Driver` itself with Task 3 (The Stylus) — it used to
 /// be a separate `bin::line::Line` this loop owned alongside the driver,
 /// but `Driver::apply` now needs to mutate it directly to answer `Submit`,
@@ -115,6 +120,7 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         driver.strip_text(),
         driver.echo(),
         world_plate.as_ref(),
+        driver.strip_offset(),
     ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),

@@ -54,6 +54,7 @@ fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
         None,
         None,
         Some(&plate),
+        0,
     )
     .unwrap();
     let (without, _) = render_with(
@@ -66,6 +67,7 @@ fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
         None,
         None,
         None,
+        0,
     )
     .unwrap();
     assert_eq!(with.get(20, 10).unwrap().source, Source::World);
@@ -145,6 +147,7 @@ fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
         None,
         None,
         Some(&plate),
+        0,
     )
     .unwrap();
     assert_eq!(
@@ -170,6 +173,7 @@ fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
         None,
         None,
         Some(&plate),
+        0,
     )
     .unwrap();
     assert_eq!(
@@ -196,6 +200,7 @@ fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
         None,
         None,
         Some(&plate),
+        0,
     )
     .unwrap();
     assert_eq!(floor.width(), 80, "80x24 degrades, never refuses");

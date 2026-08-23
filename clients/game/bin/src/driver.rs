@@ -80,7 +80,7 @@ use hornvale_vessel::{
 };
 use hornvale_worldgen::{
     BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
-    language_of_in, morph_options, resolve_at, terrain_of,
+    language_of_in, morph_options, resolve_chain_at, terrain_of,
 };
 
 /// What the strip says, with the map focused, over a band this campaign has
@@ -178,6 +178,16 @@ pub struct Driver {
     /// recomputing on every `CursorBy` rather than something more
     /// elaborate is fine.
     strip: Option<String>,
+    /// F3's own scroll driver: a counter advanced once per
+    /// [`Self::refresh_strip`] call — never a clock. `Instant`/`SystemTime`
+    /// are banned workspace-wide (decision 0001) and `clients/game` runs no
+    /// animation loop, so the strip's scroll position is driven by how many
+    /// times the client has actually redrawn the strip (a cursor move, a
+    /// zoom, a re-centre, a resize while the map is focused — every site
+    /// that calls `refresh_strip`), exactly the same "driven by the same
+    /// redraw the rest of the client uses" F3 asks for (design spec §5,
+    /// §7 F3). See [`Self::strip_offset`] for how this becomes a column.
+    redraw_count: u32,
     /// The world's landscape features, indexed by cell, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
     /// world's lifetime (`CellFeatureIndex`'s own doc).
@@ -406,6 +416,7 @@ impl Driver {
                 y: FLOOR_PLATE_CONTENT_HEIGHT / 2,
             },
             strip: None,
+            redraw_count: 0,
             index,
             nearest,
             geo,
@@ -932,8 +943,41 @@ impl Driver {
     /// the module doc: only the walk band resolves, and it resolves the
     /// cell the CURSOR points at, not the observer's own — every other band
     /// answers [`NOTHING_HERE_YET`] honestly.
+    ///
+    /// **Also advances [`Self::redraw_count`], F3's scroll driver.** Every
+    /// call site here is a real client redraw of the strip (a cursor move,
+    /// a zoom, a re-centre, a resize while the map is focused), so this is
+    /// the one place both jobs belong together — a caller that recomputes
+    /// the strip always also advances its scroll position by construction,
+    /// rather than the two drifting out of step because some call site
+    /// remembered one and not the other.
     fn refresh_strip(&mut self) {
         self.strip = Some(self.resolve());
+        self.redraw_count = self.redraw_count.wrapping_add(1);
+    }
+
+    /// F3's own answer, in a number: the map strip's current scroll offset,
+    /// a character count into `self.strip`'s own text — never a clock (see
+    /// [`Self::redraw_count`]'s doc). `0` whenever the strip fits the
+    /// active plate's width outright (nothing to scroll, and the common
+    /// case); otherwise cycles forward through every valid starting column
+    /// as [`Self::redraw_count`] advances, so a client that keeps
+    /// redrawing (any key press, any resize) eventually shows the whole
+    /// text a window at a time, and a client that never redraws again
+    /// (there is no idle-time animation loop — see the module constraint)
+    /// simply stops advancing, which is honest: nothing moved.
+    pub fn strip_offset(&self) -> u16 {
+        let Some(text) = &self.strip else {
+            return 0;
+        };
+        let len = text.chars().count();
+        let (plate_w, _) = self.active_plate_dims();
+        let overflow = len.saturating_sub(usize::from(plate_w));
+        if overflow == 0 {
+            return 0;
+        }
+        // `overflow + 1` valid starting columns: `0..=overflow`.
+        (self.redraw_count % (overflow as u32 + 1)) as u16
     }
 
     /// The strip text for the current turn.
@@ -954,9 +998,10 @@ impl Driver {
     /// empty at any step.
     fn resolve(&self) -> String {
         if self.world_view {
-            return self
+            let base = self
                 .resolve_world_view()
                 .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
+            return self.world_view_caption(base);
         }
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
@@ -968,6 +1013,59 @@ impl Driver {
             .resolve_walk_band(&chart)
             .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
         caption(base, chart.sight.as_ref())
+    }
+
+    /// Append §3.3's clamp/central-line caption, and F5's resolution
+    /// disclosure when the active zoom covers more than one terrain cell
+    /// per character, to `base` (the resolved containment chain, or
+    /// [`UNNAMED_TERRAIN`]). Unlike the walk band's [`caption`], this runs
+    /// UNCONDITIONALLY — the world view carries no sight channel to gate on
+    /// ([`Self::resolve_world_view`]'s own doc), and both captions are true
+    /// of the picture itself, independent of whether the cursor happens to
+    /// sit on a named feature.
+    fn world_view_caption(&self, base: String) -> String {
+        let mut text = base;
+        text.push_str(" — ");
+        text.push_str(&mercator::clamp_caption(&self.frame));
+        if let Some(disclosure) = self.resolution_disclosure() {
+            text.push_str(" — ");
+            text.push_str(&disclosure);
+        }
+        text
+    }
+
+    /// F5's resolution disclosure (decision 0123, "disclose a resolution
+    /// rather than refine a field", applied here to a lost SAMPLE rather
+    /// than a lost axis — decision 0142's own rule for a lost axis is the
+    /// same shape one level up): at any zoom where one screen character
+    /// stands for more than one real terrain cell, the strip says so,
+    /// rather than reporting with the exact same confident phrasing it
+    /// uses once the mesh's own resolution is reached.
+    ///
+    /// **Derived, never hardcoded.** `plate::virtual_dims` gives the
+    /// virtual chart's own cell count at the active zoom; the terrain's
+    /// own cell count ([`hornvale_kernel::Geosphere::cell_count`]) divided
+    /// by it is the mean number of real terrain cells behind one screen
+    /// character — never a second copy of [`plate::MAX_VIRTUAL_WIDTH`],
+    /// and never a hand-picked ratio. `None` once that mean is `<= 1`
+    /// (one character names at most one cell, on average — the design
+    /// ceiling `plate::MAX_ZOOM`'s own doc states).
+    fn resolution_disclosure(&self) -> Option<String> {
+        let (plate_w, _) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let virtual_cells = u64::from(virtual_w) * u64::from(virtual_h);
+        if virtual_cells == 0 {
+            return None;
+        }
+        let terrain_cells = self.geo.cell_count() as u64;
+        let ratio = terrain_cells as f64 / virtual_cells as f64;
+        if ratio <= 1.0 {
+            return None;
+        }
+        Some(format!(
+            "one character stands for roughly {} terrain cells at this zoom",
+            ratio.round() as u64
+        ))
     }
 
     /// The world view's own resolved [`hornvale_kernel::CellId`] at the
@@ -1010,15 +1108,19 @@ impl Driver {
     }
 
     /// The world view's own resolution chain: [`Self::world_view_cell`] to
-    /// its most specific feature's name.
+    /// the FULL containment chain there (Task 4, Step 1) — every feature at
+    /// the resolved cell, most specific first, each with its class named in
+    /// prose (design spec §5).
     fn resolve_world_view(&self) -> Option<String> {
         let cell_id = self.world_view_cell();
         let (species, ph, morph) = &self.namer;
-        resolve_at(&self.index, cell_id, self.seed, species, ph, morph)
+        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph)
     }
 
-    /// The walk band's own resolution chain, cursor position to name.
-    /// `None` at any step means "genuinely nothing individuated there" (no
+    /// The walk band's own resolution chain, cursor position to the full
+    /// containment chain (Task 4, Step 1) — every feature at the resolved
+    /// cell, most specific first. `None` at any step means "genuinely
+    /// nothing individuated there" (no
     /// chart cell occupies the cursor's box, the real scene could not be
     /// re-derived, the room address does not unpack, or the terrain index
     /// has no feature at the resolved cell) — the caller maps `None` to
@@ -1046,7 +1148,7 @@ impl Driver {
             .nearest
             .nearest(&self.geo, coord.latitude, coord.longitude);
         let (species, ph, morph) = &self.namer;
-        resolve_at(&self.index, cell_id, self.seed, species, ph, morph)
+        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph)
     }
 
     /// The current turn's `vessel/session/v2` JSON — what `hornvale-game-
@@ -1362,7 +1464,14 @@ mod portolan_tests {
                     u32::from(d.cursor.x),
                 );
                 let (species, ph, morph) = &d.namer;
-                let expected = resolve_at(&d.index, expected_cell, d.seed, species, ph, morph);
+                // `resolve_chain_at`, not `resolve_at`: Task 4 made
+                // `resolve_world_view` (`resolved`, below) return the FULL
+                // containment chain, so the independent reconstruction here
+                // must build the same chain to stay comparable — this test's
+                // own H3 claim (window/cursor state agrees with the
+                // resolver) is orthogonal to how many features get named.
+                let expected =
+                    resolve_chain_at(&d.index, expected_cell, d.seed, species, ph, morph);
 
                 let resolved = d.resolve_world_view();
                 assert_eq!(
@@ -1622,6 +1731,225 @@ mod portolan_tests {
              disagree with the glyph drawn from that same vote — a non-1.0 ratio here \
              means the fix itself is broken"
         );
+    }
+
+    // -- Task 4, Step 1: the containment chain -----------------------------
+
+    /// The strip carries the whole containment chain, most specific first
+    /// (§5), not only the most specific feature — the cut §5 withdraws.
+    ///
+    /// **Not seed 42's default flagship position** — that position turned
+    /// out (found by running this, not by reasoning about it) to resolve
+    /// to a SINGLE-feature cell, "Vngashngatva (a landmass)": the design
+    /// spec's own illustrative example text ("Vngashngatva (a volcano),
+    /// on Kxsokxkxzhakx (a landmass)", §5) uses the same name for a
+    /// volcano that this real seed-42 world gives its landmass — a
+    /// coincidence of the example's own invented names, not a fact about
+    /// this fixture. So this test SEARCHES the coarsest (whole-planet)
+    /// world view for a real multi-feature cell, through the actual
+    /// `Driver::world_view_cell`/`resolve_chain_at` production path,
+    /// rather than assuming one at a fixed position.
+    #[test]
+    fn the_strip_carries_the_whole_containment_chain_most_specific_first() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        assert_eq!(
+            d.window.zoom, 0,
+            "sanity: the coarsest zoom, whole planet in one screen"
+        );
+
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let mut found: Option<hornvale_kernel::CellId> = None;
+        'search: for y in 0..plate_h {
+            for x in 0..plate_w {
+                d.cursor = hornvale_game_core::Cursor { x, y };
+                let cell = d.world_view_cell();
+                if d.index.at(cell).len() >= 2 {
+                    found = Some(cell);
+                    break 'search;
+                }
+            }
+        }
+        let cell = found.expect(
+            "seed 42's real world has at least one multi-feature cell reachable at the \
+             coarsest zoom (the cursor was left at that position by the search above)",
+        );
+        let stack: Vec<_> = d.index.at(cell).to_vec();
+        assert!(
+            stack.len() >= 2,
+            "sanity: the found cell is genuinely multi-feature"
+        );
+
+        d.refresh_strip();
+        let s = d
+            .strip_text()
+            .expect("the world view always resolves once active")
+            .to_string();
+
+        let (species, ph, morph) = d.namer.clone();
+        let mut last_pos = 0usize;
+        for id in &stack {
+            let name = hornvale_worldgen::feature_name(d.seed, *id, &species, &ph, &morph).roman;
+            let pos = s
+                .find(&name)
+                .unwrap_or_else(|| panic!("{name:?} missing from chain {s:?}"));
+            assert!(
+                pos >= last_pos,
+                "chain out of order: {name:?} at byte {pos} precedes byte {last_pos} in {s:?}"
+            );
+            last_pos = pos;
+        }
+    }
+
+    // -- Task 4, Step 3 / §3.3: the clamp caption names the central line --
+
+    /// The world view's strip carries §3.3's caption. Seed 42's flagship
+    /// world is spinning (the default `SkyPins`, no `RotationPin::Locked`),
+    /// so `Driver::frame` holds the geographic equator — the spinning arm
+    /// of `mercator::clamp_caption`'s own two regimes. **The locked arm is
+    /// pinned separately, at the pure-function level
+    /// (`mercator::the_clamp_caption_names_the_terminator_on_a_locked_
+    /// world`)**: `Driver::start` has no rotation-pin entry point (a
+    /// `for_test` seam to add one was rejected for a single test — see
+    /// `map_focus_at_an_unresolved_band_refuses_rather_than_resolving`'s
+    /// own comment in `tests/driver.rs`), so a real end-to-end locked
+    /// `Driver` is not reachable without that seam. `mercator::frame_for`
+    /// is pure and exactly what `Driver::start` calls, so exercising it
+    /// directly is the same physics, not a weaker proxy.
+    #[test]
+    fn the_world_view_strip_names_the_equator_on_the_spinning_default_world() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let s = d
+            .strip_text()
+            .expect("the world view always resolves once active");
+        assert!(
+            s.contains("equator"),
+            "spec §3.3: the caption must name the central line, got {s:?}"
+        );
+        assert!(
+            !s.contains("terminator"),
+            "a spinning world's central line is the equator, not the terminator, got {s:?}"
+        );
+    }
+
+    // -- Task 4, Step 4 / F5: the resolution disclosure -------------------
+
+    /// F5: at the coarsest zoom (~51 real terrain cells behind every
+    /// character, per `plate::SUBSAMPLES_PER_AXIS`'s own doc), the strip
+    /// discloses its resolution; at the finest zoom (one character per
+    /// terrain cell, `plate::MAX_ZOOM`'s own design ceiling), it does not.
+    /// A test pinned at one zoom cannot see this requirement at all.
+    #[test]
+    fn the_resolution_disclosure_fires_at_the_coarsest_zoom_and_not_the_finest() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        assert_eq!(d.window.zoom, 0, "sanity: the coarsest rung");
+        let coarse = d
+            .strip_text()
+            .expect("the world view always resolves once active");
+        assert!(
+            coarse.contains("terrain cells"),
+            "the coarsest zoom must disclose its resolution, got {coarse:?}"
+        );
+
+        for _ in 0..plate::MAX_ZOOM {
+            d.apply(Action::Zoom(1));
+        }
+        assert_eq!(d.window.zoom, plate::MAX_ZOOM, "sanity: the finest rung");
+        let fine = d
+            .strip_text()
+            .expect("the world view always resolves once active");
+        assert!(
+            !fine.contains("terrain cells"),
+            "the finest zoom is ~one character per cell and must not disclose, got {fine:?}"
+        );
+    }
+
+    // -- Task 4, Step 2 / F3: scrolling is driven by the redraw counter,
+    //    never a clock -----------------------------------------------------
+
+    /// `Driver::strip_offset` advances as the client redraws (here: cursor
+    /// moves), and stays `0` once nothing is left to scroll (`refresh_strip`
+    /// still advances `redraw_count`, but `strip_offset` clamps to `0` once
+    /// `overflow` is `0`). Exercised against the CHAMBER band, whose strip
+    /// is the short, fixed [`NOTHING_HERE_YET`] refusal (no resolver exists
+    /// there yet — the module doc) rather than the walk band's own: Task 4
+    /// made the walk band's default seed-42 position resolve to the FULL
+    /// containment chain ("Vngashngatva (a volcano), on Kxsokxkxzhakx (a
+    /// landmass)"), which is itself longer than the 40-column floor plate —
+    /// confirmed by `strip_offset_is_a_pure_function_of_actions_taken_not_
+    /// of_time_elapsed` below actually scrolling — so the walk band is no
+    /// longer a text that fits, and using it here would pin a premise Task
+    /// 4 itself falsified.
+    #[test]
+    fn strip_offset_stays_zero_when_the_text_fits_the_plate() {
+        let mut d = test_driver();
+        // `handle`'s bool return is whether the possession RELEASED, not
+        // whether the verb succeeded, so the real check is the snapshot's
+        // own `spatial` tag just below.
+        d.handle("enter");
+        let snap = hornvale_game_core::Snapshot::parse(&d.cached)
+            .expect("a live session always yields a parseable snapshot");
+        assert!(
+            matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }),
+            "seed 42's flagship must land in the chamber band after one `enter`"
+        );
+        d.enter_map();
+        assert_eq!(
+            d.strip_text(),
+            Some(NOTHING_HERE_YET),
+            "sanity: the chamber band has no resolver, so the strip is the short refusal"
+        );
+        let before = d.redraw_count;
+        assert_eq!(
+            d.strip_offset(),
+            0,
+            "the chamber band's strip fits the plate at the floor"
+        );
+        d.apply(Action::CursorBy(1, 0));
+        assert!(
+            d.redraw_count > before,
+            "a cursor move is a redraw, and must advance the F3 counter"
+        );
+        assert_eq!(
+            d.strip_offset(),
+            0,
+            "still nothing to scroll, regardless of how many redraws happened"
+        );
+    }
+
+    /// F3 is driven by `redraw_count`, never a clock: two `Driver`s built
+    /// identically and driven through the identical sequence of actions
+    /// must report the identical `strip_offset` every step — if a clock
+    /// were involved, real wall-clock skew between the two constructions
+    /// (however small) would risk observable divergence. This is the
+    /// closest thing to a direct clock-absence proof available without
+    /// reaching into `main.rs`'s own event loop (which needs a real
+    /// terminal and is explicitly off-limits to a test — see the module
+    /// constraint on never launching the TUI binary).
+    #[test]
+    fn strip_offset_is_a_pure_function_of_actions_taken_not_of_time_elapsed() {
+        let mut a = test_driver();
+        let mut b = test_driver();
+        a.enter_map();
+        // Real wall-clock time passes here, between constructing `a` and
+        // `b`'s identical sequence and reading `a`'s own first offset --
+        // if `strip_offset` depended on a clock, this gap could already
+        // have moved `a` off whatever `b` reports below.
+        std::thread::yield_now();
+        b.enter_map();
+        assert_eq!(a.strip_offset(), b.strip_offset());
+        for _ in 0..5 {
+            a.apply(Action::CursorBy(1, 0));
+            b.apply(Action::CursorBy(1, 0));
+            assert_eq!(
+                a.strip_offset(),
+                b.strip_offset(),
+                "two drivers given the identical action sequence must report the identical \
+                 scroll offset -- a clock in the loop would risk this drifting"
+            );
+        }
     }
 }
 
