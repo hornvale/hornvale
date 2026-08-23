@@ -164,12 +164,6 @@ hornvale_kernel::stream_labels! {
     /// (decision 0102). Same separate-root-leg and `/v1` discipline as
     /// [`ENTRANCE_COUNT`].
     ENTRANCE_MOUTH = "chamber/entrance-mouth/v1" => "which floor of the lattice one entrance opens into, keyed on (cell, entrance)";
-    /// Where a non-main-line branch hangs off its parent (The Stope, Task 3;
-    /// amendment C.2) — a floor of the main line, drawn over the floors that
-    /// parent actually realizes. Keyed on the CHILD branch's place: cell,
-    /// entrance, branch (the child names itself; its parent is always the
-    /// main line, whose own root is the surface).
-    BRANCH_ROOT = "chamber/branch-root/v1" => "where a branch roots on its parent, keyed on (cell, entrance, branch)";
     /// Which branches of an adjacent band a branch connects to (The Drift,
     /// Task 6; spec §4.5) — the edges descent actually travels, drawn so
     /// that "every branch above has a child" and "every branch below has a

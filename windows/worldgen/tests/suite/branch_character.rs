@@ -15,12 +15,10 @@ use std::collections::BTreeSet;
 
 use hornvale_kernel::Band;
 use hornvale_kernel::{CellId, Seed};
-use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, levels_in_branch,
-};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::character::{
     BarrierPins, BarrierState, CHARACTERS, Character, bands_of, barrier_of, branch_count_of,
-    character_at, character_of, root_floor_of,
+    character_at, character_of,
 };
 
 /// The panel: the three preregistered seeds (spec B.4's table) and a few
@@ -296,50 +294,24 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
     );
 }
 
-/// C.2: a branch is a subtree with a ROOT FLOOR on its parent, not a
-/// parallel shaft. Every non-main-line branch's root floor must be a floor
-/// its parent — the main line — actually realizes, and the main line itself
-/// has no root floor (its root IS the surface).
-/// claim: invariant(forall-panel-seed) — every non-main root floor is realized
-#[test]
-fn a_branch_roots_on_a_floor_that_exists() {
-    for raw_seed in PANEL_SEEDS {
-        let seed = Seed(raw_seed);
-        for raw_cell in 0..PANEL_CELLS {
-            for entrance in 0..2u8 {
-                // The main line roots at the surface.
-                assert_eq!(
-                    root_floor_of(seed, CellId(raw_cell), entrance, 0),
-                    None,
-                    "cell {raw_cell} entrance {entrance} under seed {raw_seed}: the \
-                     main line reported a root floor, but its root is the surface"
-                );
-                for branch in 1..BRANCHES_PER_SYSTEM {
-                    let root = root_floor_of(seed, CellId(raw_cell), entrance, branch)
-                        .expect("every non-main-line branch hangs off its parent");
-                    let parent_realizes = levels_in_branch(
-                        seed,
-                        RunAddr {
-                            cell: CellId(raw_cell),
-                            branch: 0,
-                            band: Band::from_rank(root.band)
-                                .expect("root_floor_of only names real habitation ranks"),
-                        },
-                    );
-                    assert!(
-                        root.floor < parent_realizes,
-                        "branch {branch} of cell {raw_cell} entrance {entrance} \
-                         under seed {raw_seed} roots at band {} floor {}, but its \
-                         parent realizes only {parent_realizes} floors there — a \
-                         dangling subtree",
-                        root.band,
-                        root.floor
-                    );
-                }
-            }
-        }
-    }
-}
+// --- `a_branch_roots_on_a_floor_that_exists` LIVED HERE (The Drift, Task 7) ---
+//
+// It held The Stope's C.2 property: every non-main-line branch's root floor
+// is a floor its parent — the main line — actually realizes, and the main
+// line has none because its root is the surface. `root_floor_of` and the
+// `chamber/branch-root/v1` leg it read both retired with spec §4.6, so the
+// quantity the test asserted about no longer exists to be wrong.
+//
+// **It is recorded rather than silently dropped, because a deleted test is a
+// removed guard** — the same discipline amendment B.3 imposes on the descent
+// verb's lost outcome. The property has a successor and the successor is
+// strictly stronger: C.2 asked that a drawn root be *realized*, while spec
+// §4.5 guarantees that **every branch of every band has at least one parent
+// above it**, by construction rather than by draw. That is asserted over all
+// sixteen constructed width pairs by `every_branch_has_at_least_one_parent`
+// and over a real panel by
+// `the_shipped_composition_keeps_both_guarantees_over_a_panel`, both in
+// `windows/worldgen/src/chamber.rs`. Nothing here is left unguarded.
 
 /// Decision 0102's determinism half, for the barrier: same place in, same
 /// state out, even after unrelated queries interleave; two branches of one

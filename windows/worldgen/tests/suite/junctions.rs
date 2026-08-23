@@ -107,38 +107,45 @@ fn cave_cells(terrain: &GeneratedTerrain) -> Vec<CellId> {
         .collect()
 }
 
-/// Whether one system's MAIN LINE realizes a chamber at `band` **and** its
-/// character can occupy that rung — clauses 3 and 4 of the derivation rule,
-/// re-derived here from the shipped primitives rather than read back out of
-/// `junctions_at`.
-fn main_line_admits(
+/// Whether one system realizes a chamber at `(band, branch)` **and** that
+/// branch's character can occupy that rung — clauses 3 and 4 of the
+/// derivation rule, re-derived here from the shipped primitives rather than
+/// read back out of `junctions_at`.
+///
+/// **Branch-scoped since The Drift's Task 7** (spec §4.6). It used to ask
+/// only about the MAIN LINE, because a junction was a fact about
+/// `(cell, band)` and every branch could walk sideways to branch 0 to use
+/// its door. `passages_from` has no lateral rule any more, so the door
+/// belongs to the branch that can actually reach it.
+fn branch_admits(
     seed: Seed,
     terrain: &GeneratedTerrain,
     cell: CellId,
-    _rank: u8,
+    branch: u8,
     rung: Band,
 ) -> bool {
     let Some(cave) = terrain.cave_at(cell) else {
         return false;
     };
-    let main = ChamberAddr {
+    let here = ChamberAddr {
         cell,
-        branch: 0,
+        branch,
         band: rung,
         level: 0,
     };
-    if !chamber_exists(seed, &cave, terrain.geothermal_gradient_at(cell), main) {
+    if !chamber_exists(seed, &cave, terrain.geothermal_gradient_at(cell), here) {
         return false;
     }
-    bands_of(character_at(seed, main)).contains(&rung)
+    bands_of(character_at(seed, here)).contains(&rung)
 }
 
-/// The canonical address of one system at one band — what the whole panel
-/// scan asks from, and the only address shape `junctions_at` projects onto.
-fn canonical(cell: CellId, band: Band) -> ChamberAddr {
+/// The canonical address of one system at one `(band, branch)` — what the
+/// whole panel scan asks from, and the only address shape `junctions_at`
+/// projects onto.
+fn canonical(cell: CellId, band: Band, branch: u8) -> ChamberAddr {
     ChamberAddr {
         cell,
-        branch: 0,
+        branch,
         band,
         level: 0,
     }
@@ -157,9 +164,14 @@ fn all_junction_edges(terrain: &GeneratedTerrain) -> Vec<(ChamberAddr, ChamberAd
     let mut edges = Vec::new();
     for cell in cave_cells(terrain) {
         for &(_, rung) in &habitation_bands() {
-            let addr = canonical(cell, rung);
-            for far in junctions_at(Seed(42), terrain, addr) {
-                edges.push((addr, far));
+            // Every branch, not just the main line: a junction is a fact
+            // about `(cell, band, branch)` since Task 7, so a main-line-only
+            // scan would leave the whole re-scoping unmeasured.
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                let addr = canonical(cell, rung, branch);
+                for far in junctions_at(Seed(42), terrain, addr) {
+                    edges.push((addr, far));
+                }
             }
         }
     }
@@ -181,31 +193,37 @@ fn a_junction_is_the_derivation_rule_and_nothing_else() {
     let mut answered = 0usize;
     for &cell in &cells {
         for &(rank, rung) in &bands {
-            // Clauses 3 and 4 for the asking side; clause 1 is entailed by
-            // `cave_at` inside `main_line_admits`.
-            let expected: Vec<CellId> = if main_line_admits(Seed(42), &terrain, cell, rank, rung) {
-                let mut near: Vec<CellId> = geo
-                    .neighbors(cell)
-                    .iter()
-                    .copied()
-                    // Clause 2 is the geosphere's own adjacency, and clauses
-                    // 1/3/4 again for the far side.
-                    .filter(|&far| main_line_admits(Seed(42), &terrain, far, rank, rung))
-                    .collect();
-                near.sort();
-                near
-            } else {
-                Vec::new()
-            };
-            let shipped: Vec<CellId> = junctions_at(Seed(42), &terrain, canonical(cell, rung))
-                .iter()
-                .map(|a| a.cell)
-                .collect();
-            assert_eq!(
-                shipped, expected,
-                "junctions_at disagrees with the derivation rule at cell {cell:?} band {rank}"
-            );
-            answered += shipped.len();
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                // Clauses 3 and 4 for the asking side; clause 1 is entailed
+                // by `cave_at` inside `branch_admits`.
+                let expected: Vec<CellId> = if branch_admits(Seed(42), &terrain, cell, branch, rung)
+                {
+                    let mut near: Vec<CellId> = geo
+                        .neighbors(cell)
+                        .iter()
+                        .copied()
+                        // Clause 2 is the geosphere's own adjacency, and
+                        // clauses 1/3/4 again for the far side — at the
+                        // SAME branch, which is the re-scoping.
+                        .filter(|&far| branch_admits(Seed(42), &terrain, far, branch, rung))
+                        .collect();
+                    near.sort();
+                    near
+                } else {
+                    Vec::new()
+                };
+                let shipped: Vec<CellId> =
+                    junctions_at(Seed(42), &terrain, canonical(cell, rung, branch))
+                        .iter()
+                        .map(|a| a.cell)
+                        .collect();
+                assert_eq!(
+                    shipped, expected,
+                    "junctions_at disagrees with the derivation rule at cell \
+                     {cell:?} band {rank} branch {branch}"
+                );
+                answered += shipped.len();
+            }
         }
     }
 
@@ -249,7 +267,11 @@ fn a_junction_never_crosses_a_band() {
     let geo = terrain.geosphere();
     for (a, b) in all_junction_edges(&terrain) {
         assert_eq!(b.band, a.band, "junction {a:?} -> {b:?} changed bands");
-        assert_eq!(b.branch, 0, "junction endpoint left the main line");
+        assert_eq!(
+            b.branch, a.branch,
+            "junction {a:?} -> {b:?} changed branches — a junction joins branch \
+             b of one system to branch b of its neighbour (The Drift, §4.6)"
+        );
         assert_eq!(b.level, 0, "junction endpoint named a level");
         assert_ne!(b.cell, a.cell, "a system joined itself");
         let neighbours: Vec<CellId> = geo.neighbors(a.cell).to_vec();
@@ -298,24 +320,30 @@ fn nowhere_has_no_junctions() {
     }
 }
 
-/// The other half of the address convention: `branch` and `level` are
-/// ignored by the PROJECTION (`entrance` left the address entirely — The
-/// Drift, amendment A.3 — so it is no longer one of these fields at all).
-/// Every chamber of one system at one band stands on the same far side of
-/// the same doors, so any *existing* address of a system at a band gives the
-/// canonical address's answer.
+/// The other half of the address convention: **`level` is ignored by the
+/// PROJECTION** — every level of one run stands on the same far side of the
+/// same doors, so any *existing* address of a run gives that run's canonical
+/// (level-0) answer.
 ///
-/// Documented since the function was written and untested until review round
-/// 1 — which is how the existence half above went unnoticed underneath it.
+/// **`branch` was on this list until The Drift's Task 7 and is not any
+/// more** (spec §4.6), which is why this test was renamed rather than
+/// edited: `the_projection_ignores_branch_and_level` names a property that
+/// is now false, and a test whose name asserts the opposite of what it
+/// checks is worse than no test. The branch half has its own test below,
+/// `the_projection_is_scoped_to_the_branch`, which demands the two actually
+/// disagree somewhere.
+///
+/// Documented since the function was written and untested until The Stope's
+/// review round 1 — which is how the existence half above went unnoticed
+/// underneath it.
 ///
 /// The scan is capped at [`PROJECTION_SYSTEMS`] systems rather than run over
-/// the whole panel: the address space it walks is
-/// `entrances x branches x levels` per band, which is three orders of
-/// magnitude more `junctions_at` calls than the panel scan the other tests
-/// pay for. The cap is a cost bound, and the assertion below fails if it ever
-/// bounds the sample down to nothing.
+/// the whole panel: the address space it walks is `branches x levels` per
+/// band, which is orders of magnitude more `junctions_at` calls than the
+/// panel scan the other tests pay for. The cap is a cost bound, and the
+/// assertion below fails if it ever bounds the sample down to nothing.
 #[test]
-fn the_projection_ignores_branch_and_level() {
+fn the_projection_ignores_level() {
     let terrain = panel_terrain();
     let mut checked = 0usize;
     for cell in cave_cells(&terrain).into_iter().take(PROJECTION_SYSTEMS) {
@@ -324,32 +352,20 @@ fn the_projection_ignores_branch_and_level() {
         };
         let gradient = terrain.geothermal_gradient_at(cell);
         for &(_, rung) in &habitation_bands() {
-            let canon = canonical(cell, rung);
-            let expected = junctions_at(Seed(42), &terrain, canon);
-            // Any other EXISTING address of the same system at the same band,
-            // over both of the fields the projection drops. `entrance` is no
-            // longer one of them at all (The Drift, amendment A.3) — it left
-            // `ChamberAddr` entirely, so `entrance_count`'s draw is walked
-            // only to size the sweep the way it always did, not because it
-            // still names an address axis.
-            for _entrance in 0..entrance_count(Seed(42), cell) {
-                for branch in 0..BRANCHES_PER_SYSTEM {
-                    for level in 0..LEVELS_PER_BRANCH_CEILING {
-                        let other = ChamberAddr {
-                            branch,
-                            level,
-                            ..canon
-                        };
-                        if other == canon || !chamber_exists(Seed(42), &cave, gradient, other) {
-                            continue;
-                        }
-                        assert_eq!(
-                            junctions_at(Seed(42), &terrain, other),
-                            expected,
-                            "{other:?} answered differently from its system's canonical address"
-                        );
-                        checked += 1;
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                let canon = canonical(cell, rung, branch);
+                let expected = junctions_at(Seed(42), &terrain, canon);
+                for level in 0..LEVELS_PER_BRANCH_CEILING {
+                    let other = ChamberAddr { level, ..canon };
+                    if other == canon || !chamber_exists(Seed(42), &cave, gradient, other) {
+                        continue;
                     }
+                    assert_eq!(
+                        junctions_at(Seed(42), &terrain, other),
+                        expected,
+                        "{other:?} answered differently from its run's canonical address"
+                    );
+                    checked += 1;
                 }
             }
         }
@@ -358,6 +374,76 @@ fn the_projection_ignores_branch_and_level() {
         checked > 0,
         "no non-canonical address existed in the sample — the projection was never tested"
     );
+}
+
+/// **The junction relation is scoped to the BRANCH, not merely to the band**
+/// (The Drift, spec §4.6) — and this test exists because the re-scoping is
+/// otherwise unobservable: if every branch of a system happened to answer
+/// what branch 0 answers, the change would be a no-op that
+/// `the_projection_ignores_level` and the rule test would both wave through.
+///
+/// So it demands an actual disagreement somewhere on the panel: two existing
+/// addresses of ONE system at ONE band, differing only in `branch`, whose
+/// junction sets differ. `entrance_count` is walked here only to keep the
+/// sweep's shape comparable with the other panel tests — an entrance is not
+/// an address axis (amendment A.3).
+///
+/// The reason a disagreement must exist is structural rather than
+/// statistical: `branch_count_of` and `character_of` are both keyed on
+/// `(cell, band, branch)` since Task 5, so two branches of one system at one
+/// band can differ in whether the NEIGHBOUR realizes them and in whether
+/// their character can occupy the rung. Either difference moves the answer.
+#[test]
+fn the_projection_is_scoped_to_the_branch() {
+    let terrain = panel_terrain();
+    let mut disagreements = 0usize;
+    let mut compared = 0usize;
+    for cell in cave_cells(&terrain) {
+        let Some(cave) = terrain.cave_at(cell) else {
+            continue;
+        };
+        let gradient = terrain.geothermal_gradient_at(cell);
+        let _apertures = entrance_count(Seed(42), cell);
+        for &(_, rung) in &habitation_bands() {
+            let base = canonical(cell, rung, 0);
+            if !chamber_exists(Seed(42), &cave, gradient, base) {
+                continue;
+            }
+            let expected = junctions_at(Seed(42), &terrain, base);
+            for branch in 1..BRANCHES_PER_SYSTEM {
+                let other = canonical(cell, rung, branch);
+                if !chamber_exists(Seed(42), &cave, gradient, other) {
+                    continue;
+                }
+                compared += 1;
+                let answer = junctions_at(Seed(42), &terrain, other);
+                // Whatever it answers, it answers about ITS OWN branch.
+                for far in &answer {
+                    assert_eq!(
+                        far.branch, branch,
+                        "{other:?} answered with an endpoint on another branch"
+                    );
+                }
+                let same_cells: Vec<CellId> = answer.iter().map(|a| a.cell).collect();
+                let base_cells: Vec<CellId> = expected.iter().map(|a| a.cell).collect();
+                if same_cells != base_cells {
+                    disagreements += 1;
+                }
+            }
+        }
+    }
+    assert!(
+        compared > 0,
+        "no system on the panel had two existing branches at one band — the \
+         comparison never ran"
+    );
+    assert!(
+        disagreements > 0,
+        "every branch of every system answered exactly what its main line \
+         answered ({compared} comparisons) — the (band, branch) scoping is \
+         indistinguishable from the (band) scoping it replaced"
+    );
+    println!("junction branch scoping: {disagreements} of {compared} branch pairs disagree");
 }
 
 /// Past the habitation ladder there is no shared rung to stand on, so there
@@ -412,8 +498,8 @@ fn the_character_gate_actually_binds() {
             continue;
         };
         let gradient = terrain.geothermal_gradient_at(cell);
-        for &(rank, rung) in &habitation_bands() {
-            let main = canonical(cell, rung);
+        for &(_rank, rung) in &habitation_bands() {
+            let main = canonical(cell, rung, 0);
             // The chamber is there...
             if !chamber_exists(Seed(42), &cave, gradient, main) {
                 continue;
@@ -426,7 +512,7 @@ fn the_character_gate_actually_binds() {
             if !geo
                 .neighbors(cell)
                 .iter()
-                .any(|&far| main_line_admits(Seed(42), &terrain, far, rank, rung))
+                .any(|&far| branch_admits(Seed(42), &terrain, far, 0, rung))
             {
                 continue;
             }

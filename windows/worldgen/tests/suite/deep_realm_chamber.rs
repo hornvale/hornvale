@@ -23,40 +23,81 @@ use hornvale_kernel::{Band, CellId, Seed};
 use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, Horizon, rung_at_depth};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, LEVELS_PER_BRANCH_CEILING, RunAddr,
-    chamber_at, chamber_exists, levels_in_branch, passages_from,
+    chamber_at, chamber_exists, descents_from, levels_in_branch, passages_from,
 };
 
-/// The descent rule under test (The Stope, amendment C.4): level `f`'s
-/// downward neighbour is level `f + 1` of the SAME run while the run has
-/// levels left, else level 0 of the next band down. Spelled once here so the
-/// rule-pin tests state the rule rather than restating the implementation's
-/// control flow; every assertion below still travels through the shipped
-/// entry points (`passages_from`, `chamber_exists`, `levels_in_branch`).
+/// The descent rule under test (The Stope amendment C.4, as rewritten by The
+/// Drift's spec §4.5/§4.6): level `f`'s downward neighbours are level `f + 1`
+/// of the SAME run while the run has levels left, else **level 0 of every
+/// branch [`descents_from`] names in the band below**. Spelled once here so
+/// the rule-pin tests state the rule rather than restating the
+/// implementation's control flow; every assertion below still travels
+/// through the shipped entry points (`passages_from`, `chamber_exists`,
+/// `levels_in_branch`, `descents_from`).
 ///
-/// `None` at `Band::Nadir` with no levels left — the bottom of the ladder has
-/// no deeper band to descend into (The Drift promoted `band` to a typed
-/// [`Band`], so this is now representable rather than an implicit `+1`
-/// overflow past the old ceiling).
-fn descent_target(seed: Seed, addr: ChamberAddr) -> Option<ChamberAddr> {
+/// **It answers a SET now, not an `Option`.** Before The Drift a descent
+/// carried `addr.branch` across the band seam unconditionally, so there was
+/// exactly one target and `Option` was the honest shape. §4.5 draws which
+/// branches a branch descends into, so the seam fans out — and it is exactly
+/// that fan-out the old signature could not express. Empty at the ladder's
+/// bottom, and empty for a branch whose own band does not realize it.
+fn descent_targets(seed: Seed, addr: ChamberAddr) -> Vec<ChamberAddr> {
     if addr.level + 1 < levels_in_branch(seed, addr.run()) {
-        Some(ChamberAddr {
+        return vec![ChamberAddr {
             level: addr.level + 1,
             ..addr
-        })
-    } else {
-        addr.band.deeper().map(|deeper| ChamberAddr {
+        }];
+    }
+    let Some(deeper) = addr.band.deeper() else {
+        return Vec::new();
+    };
+    descents_from(seed, addr.cell, addr.band, addr.branch)
+        .into_iter()
+        .map(|to| ChamberAddr {
             band: deeper,
+            branch: to,
             level: 0,
             ..addr
         })
-    }
+        .collect()
 }
 
-/// A neighbour of `addr` is **sideways** when it stays on the caller's band
-/// and level (the branch axis). Everything else is part of the vertical
-/// descent sequence.
-fn is_sideways(addr: ChamberAddr, neighbour: &ChamberAddr) -> bool {
-    neighbour.band == addr.band && neighbour.level == addr.level
+/// The ASCENT rule, the exact mirror: level `f`'s upward neighbours are
+/// level `f - 1` of the same run, else — at level 0 — the **bottom** level of
+/// every branch of the band above that descends into this one.
+///
+/// The parent set is re-derived here from the public [`descents_from`] over
+/// the band above rather than read out of the private `ascents_from` the
+/// shipped path uses, so this is an independent check of the seam rather
+/// than a re-invocation of the code under test — the same posture
+/// `junctions.rs`'s rule test takes.
+fn ascent_targets(seed: Seed, addr: ChamberAddr) -> Vec<ChamberAddr> {
+    if addr.level > 0 {
+        return vec![ChamberAddr {
+            level: addr.level - 1,
+            ..addr
+        }];
+    }
+    let Some(shallower) = addr.band.shallower() else {
+        return Vec::new();
+    };
+    (0..BRANCHES_PER_SYSTEM)
+        .filter(|&from| descents_from(seed, addr.cell, shallower, from).contains(&addr.branch))
+        .filter_map(|from| {
+            let parent = RunAddr {
+                cell: addr.cell,
+                branch: from,
+                band: shallower,
+            };
+            let levels = levels_in_branch(seed, parent);
+            (levels > 0).then_some(ChamberAddr {
+                band: shallower,
+                branch: from,
+                level: levels - 1,
+                ..addr
+            })
+        })
+        .collect()
 }
 
 /// The column every fixture below is built against: 401 m of cover on 35 km
@@ -306,23 +347,33 @@ fn every_passage_is_traversable_in_both_directions() {
     }
 }
 
-/// **Every passage is either sideways or one step of the descent sequence.**
-/// Before amendment C.4 this test pinned the opposite — `floor` was not an
-/// adjacency axis at all, and the lattice was one disconnected copy of the
-/// graph per floor. C.4 makes the vertical axis a SEQUENCE (a run's drawn
-/// length is the sojourn; past it, the next band's floor 0), so the pin is
-/// rewritten: sideways neighbours stay on the caller's band and floor, and
-/// any non-sideways neighbour is exactly one step up or down that sequence.
+/// **Every passage is exactly one step of the descent sequence — there is no
+/// other kind.** The set of a chamber's passages is exactly its descent
+/// targets plus its ascent targets, intersected with what exists.
 ///
-/// The `saw_a_passage` control is not decoration: "every neighbour is one
-/// sequence step" is satisfied vacuously by a function that returns nothing,
-/// and existence here is a coin-flip draw per address.
-/// claim: invariant(forall-seed) — every passage is sideways or one descent
+/// The pin has been rewritten twice and the history is the point. Before The
+/// Stope's amendment C.4 the vertical axis was not an adjacency axis at all
+/// and the lattice was one disconnected copy of the graph per floor. C.4 made
+/// it a SEQUENCE, and this test then pinned "sideways OR one sequence step".
+/// **The Drift's spec §4.6 deleted the sideways half outright** — branches at
+/// one band are alternatives, not neighbours in a corridor — so the
+/// disjunction is gone and the assertion is now an equality against the two
+/// rule helpers.
+///
+/// An equality, not a containment, deliberately: containment in one direction
+/// would let a rule that *dropped* half its seam edges pass, and containment
+/// in the other would let one that invented edges pass. Both are the failure
+/// this file exists to catch.
+///
+/// The `saw_a_passage` control is not decoration: an equality between two
+/// empty sets is satisfied by a `passages_from` that returns nothing.
+/// claim: invariant(forall-seed) — every passage is one descent-sequence
 /// step over a hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
-fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
+fn every_passage_is_one_step_of_the_descent_sequence() {
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
     let mut saw_a_passage = false;
+    let mut saw_a_seam_step = false;
 
     for raw_seed in [1u64, 2, 3] {
         let seed = Seed(raw_seed);
@@ -337,53 +388,54 @@ fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
                             branch,
                             level,
                         };
-                        for &neighbour in &passages_from(seed, &cave, fixture_gradient(), addr) {
-                            saw_a_passage = true;
-                            if is_sideways(addr, &neighbour) {
-                                continue;
-                            }
-                            // One step of the sequence, in either direction:
-                            // within a band, adjacent levels; across the seam,
-                            // level 0 below or the run above's last level.
-                            let expected_down = descent_target(seed, addr);
-                            let expected_up = if addr.level > 0 {
-                                Some(ChamberAddr {
-                                    level: addr.level - 1,
-                                    ..addr
-                                })
+                        let shipped: BTreeSet<ChamberAddr> =
+                            passages_from(seed, &cave, fixture_gradient(), addr)
+                                .into_iter()
+                                .collect();
+                        if shipped.is_empty() {
+                            continue;
+                        }
+                        if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
+                            panic!("{addr:?} does not exist yet reported passages");
+                        }
+                        saw_a_passage = true;
+                        let expected: BTreeSet<ChamberAddr> = descent_targets(seed, addr)
+                            .into_iter()
+                            .chain(ascent_targets(seed, addr))
+                            .filter(|&t| chamber_exists(seed, &cave, fixture_gradient(), t))
+                            .collect();
+                        assert_eq!(
+                            shipped, expected,
+                            "seed {raw_seed} cell {raw_cell}: {addr:?}'s passages are \
+                             not exactly its descent and ascent targets"
+                        );
+                        for n in &shipped {
+                            // Every step moves along ONE axis: it stays in the
+                            // run (same band and branch) or crosses exactly one
+                            // rung of the ladder. Nothing stays put.
+                            assert_ne!(n, &addr, "a chamber is its own passage");
+                            if n.band == addr.band {
+                                assert_eq!(
+                                    n.branch, addr.branch,
+                                    "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
+                                     {n:?}, a branch change inside one band — the \
+                                     lateral rule is back"
+                                );
+                                assert_eq!(n.level.abs_diff(addr.level), 1);
                             } else {
-                                addr.band.shallower().map(|shallower| ChamberAddr {
-                                    band: shallower,
-                                    level: levels_in_branch(
-                                        seed,
-                                        RunAddr {
-                                            band: shallower,
-                                            ..addr.run()
-                                        },
-                                    )
-                                    .saturating_sub(1),
-                                    ..addr
-                                })
-                            };
-                            let is_sequence_step = Some(neighbour) == expected_down
-                                || expected_up.is_some_and(|up| neighbour == up);
-                            // Sideways-in-band steps share the band; seam steps
-                            // differ by exactly one rung of the ladder.
-                            let band_rank_diff = neighbour
-                                .band
-                                .rank()
-                                .zip(addr.band.rank())
-                                .map(|(a, b)| a.abs_diff(b))
-                                .unwrap_or(0);
-                            assert!(
-                                is_sequence_step
-                                    && band_rank_diff <= 1
-                                    && neighbour.branch == addr.branch,
-                                "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
-                                 {neighbour:?} as a passage, which is neither \
-                                 sideways nor one step of the descent sequence \
-                                 (C.4)"
-                            );
+                                saw_a_seam_step = true;
+                                let rank_diff = n
+                                    .band
+                                    .rank()
+                                    .zip(addr.band.rank())
+                                    .map(|(a, b)| a.abs_diff(b))
+                                    .unwrap_or(0);
+                                assert_eq!(
+                                    rank_diff, 1,
+                                    "seed {raw_seed} cell {raw_cell}: {addr:?} lists \
+                                     {n:?}, which is more than one rung away"
+                                );
+                            }
                         }
                     }
                 }
@@ -394,7 +446,12 @@ fn every_passage_is_sideways_or_one_step_of_the_descent_sequence() {
     assert!(
         saw_a_passage,
         "no address in the probed lattice had any passage at all, so the \
-         floor-preservation assertion above never ran"
+         equality above never ran"
+    );
+    assert!(
+        saw_a_seam_step,
+        "no passage ever crossed a band seam, so the seam arm of the \
+         assertion above never ran"
     );
 }
 
@@ -441,17 +498,17 @@ fn descending_from_a_runs_last_floor_lands_on_floor_zero_of_the_next_band() {
                         continue;
                     }
                     let deeper: Vec<ChamberAddr> =
-                        passages_from(seed, &cave, fixture_gradient(), addr)
-                            .into_iter()
-                            .filter(|n| !is_sideways(addr, n))
-                            .collect();
+                        passages_from(seed, &cave, fixture_gradient(), addr);
                     // The upward half of the sequence always exists for a
                     // non-root level; the downward half may be thinned by the
-                    // existence draw, so only assert when it spoke at all.
-                    if let Some(down) = deeper
+                    // rock, so only assert when it spoke at all. **Every**
+                    // downward neighbour is checked, not just the first: a
+                    // bottom level now fans out across the band-transition
+                    // edges, so `find` would have inspected one of several.
+                    for down in deeper
                         .iter()
                         .copied()
-                        .find(|n| n.band > addr.band || n.level > addr.level)
+                        .filter(|n| n.band > addr.band || n.level > addr.level)
                     {
                         cases += 1;
                         assert_eq!(
@@ -514,8 +571,14 @@ fn descending_from_an_earlier_floor_stays_in_the_band() {
                         if !chamber_exists(seed, &cave, fixture_gradient(), addr) {
                             continue;
                         }
-                        let down = descent_target(seed, addr)
-                            .expect("a level short of its run's drawn length always descends");
+                        let downs = descent_targets(seed, addr);
+                        assert_eq!(
+                            downs.len(),
+                            1,
+                            "a level short of its run's drawn length has exactly one \
+                             descent — the next level of its own run"
+                        );
+                        let down = downs[0];
                         // Only assert when the forced target cleared the same
                         // existence coin every chamber faces.
                         if !chamber_exists(seed, &cave, fixture_gradient(), down) {
@@ -609,7 +672,7 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
                     let descends = Some(neighbour.band) == addr.band.deeper()
                         || (neighbour.band == addr.band && neighbour.level == addr.level + 1);
                     assert!(
-                        is_sideways(addr, &neighbour) || !descends,
+                        !descends,
                         "seed {raw_seed} cell {raw_cell}: {addr:?} is the last level \
                          of the deepest band yet lists a DOWNWARD neighbour \
                          {neighbour:?} — there is nowhere below the ladder's end"
@@ -676,31 +739,38 @@ fn every_realized_floor_descends_unless_it_ends_the_deepest_band() {
                         if ends_the_ladder {
                             continue;
                         }
-                        let target = descent_target(seed, addr).expect(
-                            "not the deepest band's last level, so a descent target exists",
-                        );
-                        let target_levels = levels_in_branch(seed, target.run());
+                        let targets = descent_targets(seed, addr);
                         assert!(
-                            target_levels > 0,
-                            "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
-                             target {target:?} is off the habitation ladder — a \
-                             structural gate C.4 removed"
+                            !targets.is_empty(),
+                            "seed {raw_seed} cell {raw_cell}: {addr:?} is not the \
+                             deepest band's last level yet descends nowhere — \
+                             either the sequence or §4.5's every-branch-descends \
+                             guarantee is broken"
                         );
-                        assert!(
-                            target.level < target_levels,
-                            "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
-                             target {target:?} sits past its run's drawn length \
-                             ({target_levels}) — the old same-level gate, still live"
-                        );
-                        if chamber_exists(seed, &cave, gradient, target) {
-                            let passages = passages_from(seed, &cave, gradient, addr);
+                        for target in targets {
+                            let target_levels = levels_in_branch(seed, target.run());
                             assert!(
-                                passages.contains(&target),
-                                "seed {raw_seed} cell {raw_cell}: {addr:?} exists, its \
-                                 descent target {target:?} exists, yet passages are \
-                                 {passages:?} — the sequence is broken mid-band or \
-                                 at the band seam (C.4)"
+                                target_levels > 0,
+                                "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
+                                 target {target:?} is off the habitation ladder — a \
+                                 structural gate C.4 removed"
                             );
+                            assert!(
+                                target.level < target_levels,
+                                "seed {raw_seed} cell {raw_cell}: {addr:?}'s descent \
+                                 target {target:?} sits past its run's drawn length \
+                                 ({target_levels}) — the old same-level gate, still live"
+                            );
+                            if chamber_exists(seed, &cave, gradient, target) {
+                                let passages = passages_from(seed, &cave, gradient, addr);
+                                assert!(
+                                    passages.contains(&target),
+                                    "seed {raw_seed} cell {raw_cell}: {addr:?} exists, its \
+                                     descent target {target:?} exists, yet passages are \
+                                     {passages:?} — the sequence is broken mid-band or \
+                                     at the band seam (C.4)"
+                                );
+                            }
                         }
                     }
                 }

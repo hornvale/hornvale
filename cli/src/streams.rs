@@ -411,13 +411,15 @@ mod tests {
                 // discipline as `RUN_FLOORS`'s own v2 bump above.
                 // `chamber/branch-barrier/v1`, `chamber/branch-character/v1`
                 // and `chamber/branch-count/v1` are retired and never
-                // reused. `chamber/branch-root/v1` is UNCHANGED — it
-                // retires with `root_floor_of` itself in a later task
-                // (spec §4.6), not this one.
+                // reused. **`chamber/branch-root/v1` is GONE** (The Drift
+                // Task 7, spec §4.6): `root_floor_of` retired with it, so
+                // the label is not merely unchanged but absent — a leg
+                // nothing derives from must not sit in a stamp claiming a
+                // world reads it. Retired and never reused, like every
+                // superseded label above.
                 "chamber/branch-barrier v2",
                 "chamber/branch-character v2",
                 "chamber/branch-count v2",
-                "chamber/branch-root v1",
                 // The two Task 5 entrance legs (amendment C.3): how many
                 // apertures a system opens, and which floor each opens into.
                 // Both additive NEW labels at v1, both keyed on stable

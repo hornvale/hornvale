@@ -50,7 +50,7 @@ seed 42
   cave systems    874  (ocean-cell caves skipped: 0)
   floors drawn    113799
   chambers        30537
-  reachable       30537 from 1140 open entrances
+  reachable       30414 from 1229 open entrances
   junctions       4165 links across 1575 system pairs; largest network 119 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:4148  shallows:7915  deeps:14072  underdeep:3376  nadir:1026  
   by rock         regolith:1942  cover:715  basement:27880  roots:0  underneath:0  off-ladder:0
@@ -134,7 +134,7 @@ seed 7
   cave systems    1681  (ocean-cell caves skipped: 0)
   floors drawn    219277
   chambers        59227
-  reachable       59227 from 2193 open entrances
+  reachable       58987 from 2382 open entrances
   junctions       8253 links across 3007 system pairs; largest network 118 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:7923  shallows:16455  deeps:20917  underdeep:10490  nadir:3442  
   by rock         regolith:4306  cover:3540  basement:51381  roots:0  underneath:0  off-ladder:0
@@ -218,7 +218,7 @@ seed 1234
   cave systems    1266  (ocean-cell caves skipped: 0)
   floors drawn    164033
   chambers        48294
-  reachable       48294 from 1651 open entrances
+  reachable       48135 from 1813 open entrances
   junctions       6937 links across 2348 system pairs; largest network 128 systems at one band (MAP-underworld-shortcut)
   by band         undercroft:5910  shallows:12104  deeps:19940  underdeep:7759  nadir:2581  
   by rock         regolith:2902  cover:2650  basement:42742  roots:0  underneath:0  off-ladder:0

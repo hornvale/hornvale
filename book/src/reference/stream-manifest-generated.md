@@ -220,7 +220,6 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (cell, band) |
 | `chamber/entrance-count/v1` | how many surface apertures one cave system opens, keyed on cell |
 | `chamber/entrance-mouth/v1` | which floor of the lattice one entrance opens into, keyed on (cell, entrance) |
-| `chamber/branch-root/v1` | where a branch roots on its parent, keyed on (cell, entrance, branch) |
 | `chamber/band-descent/v1` | which branches of an adjacent band one branch connects to, keyed on (cell, branch, band, role) |
 | `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact cell |
 | `hazard/event/v1` | the per-cell hazard-event draw, keyed on (cell, process, world-time block) |

@@ -17,11 +17,6 @@
 //!   columns one cave system realizes **at a given band** (C.1's
 //!   drawn-realization half; weighted hard toward 1, and NOT tuned to hit a
 //!   target — see the test that measures it);
-//! - [`root_floor_of`] — where a non-main-line branch hangs off its parent
-//!   (C.2): a floor the parent actually realizes, or `None` for the main
-//!   line, whose root IS the surface. **Not re-keyed by Task 5** — it
-//!   retires with `BRANCH_ROOT` in Task 7 (spec §4.6) and keeps its
-//!   pre-Drift `entrance` parameter until then.
 //!
 //! **The Drift, amendment A.3 (Task 5): `entrance` is out of the first
 //! three draws' keys and `band` is in, all three at once.** Before this
@@ -38,9 +33,11 @@
 //! **This module ships dials only, no effects** (spec B.5): nothing here
 //! changes what exists, what renders, or what a world commits. The draws
 //! travel their own legs (`chamber/branch-count/v2`,
-//! `chamber/branch-character/v2`, `chamber/branch-barrier/v2`,
-//! `chamber/branch-root/v1`), so a later task can begin reading them without
-//! relocating anything.
+//! `chamber/branch-character/v2`, `chamber/branch-barrier/v2`), so a later
+//! task can begin reading them without relocating anything. **There were
+//! four; `chamber/branch-root/v1` retired with `root_floor_of`** (The Drift,
+//! Task 7, spec §4.6) — an entrance now lands in a top-band branch, so
+//! nothing needs to ask where a branch hangs off its parent.
 //!
 //! **`thaumic` is untouched and this module never reaches for it**: it is a
 //! rock property (`domains/terrain/src/lithology.rs`), pinned by terrain's
@@ -50,7 +47,7 @@
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Band, CellId, Seed};
 
-use crate::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, levels_in_branch};
+use crate::chamber::ChamberAddr;
 
 /// Which kind of inhabitant one branch carries, per band (spec B.5; The
 /// Drift Task 5 moved this from "for its whole depth" — see
@@ -162,30 +159,6 @@ pub fn parse_barrier_pin(s: &str, pins: &mut BarrierPins) -> Result<(), String> 
         }
     }
     Ok(())
-}
-
-/// Where a non-main-line branch roots on its parent (spec C.2): a level of
-/// the main line — the parent every side-branch hangs off today — named by
-/// band rank and level index. Both are coordinates the parent actually
-/// realizes ([`levels_in_branch`]); [`root_floor_of`] refuses to name a
-/// dangling one.
-/// type-audit: bare-ok(index: band), bare-ok(index: floor)
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct BranchRoot {
-    /// Which delve-ladder rank of the main line this branch descends from.
-    pub band: u8,
-    /// Which level of that run the junction sits at (`0..levels_in_branch` of
-    /// the parent run).
-    pub floor: u8,
-}
-
-/// The decimal key for [`root_floor_of`]'s own leg — cell, entrance, branch,
-/// a place, no band and no floor, because a root belongs to the BRANCH as a
-/// whole (spec B.5). **Not re-keyed by The Drift Task 5**: `BRANCH_ROOT`
-/// retires with `root_floor_of` itself (Task 7, spec §4.6), so it keeps the
-/// pre-Drift shape until then.
-fn branch_key(cell: CellId, entrance: u8, branch: u8) -> String {
-    format!("{}/{}/{branch}", cell.0, entrance)
 }
 
 /// The decimal key shared by [`character_of`] and [`barrier_of`] (The Drift,
@@ -329,128 +302,38 @@ pub fn branch_count_of(seed: Seed, cell: CellId, band: Band) -> u8 {
     }
 }
 
-/// The habitation band ranks, ascending — **derived from the delve ladder,
-/// never restated as a literal.**
-///
-/// This exists because `root_floor_of` walked `(0..5u8)`, which Task 7's
-/// probe found as the eighth instance of this campaign's signature defect
-/// and the only one in SHIPPED code. `chamber::rung_of_rank` is private to
-/// its module, so the route from here is the ladder itself
-/// ([`hornvale_terrain::rungs`]) filtered through the lattice's one explicit
-/// mapping ([`crate::chamber::rung_rank`]) — the same seam
-/// `tests/suite/junctions.rs` uses. `Surface` has no habitation rank and
-/// drops out here exactly as it does there.
-///
-/// A sixth habitation rung is already caught by `rung_of_rank(5) == None`
-/// (`chamber.rs`), so this was never a silent narrowing — but that tripwire
-/// only tells the next person the ladder grew, and then leaves them to find
-/// every bound by hand. This one now moves on its own.
-fn habitation_ranks() -> Vec<u8> {
-    let mut ranks: Vec<u8> = hornvale_terrain::rungs()
-        .iter()
-        .filter_map(|&rung| crate::chamber::rung_rank(rung))
-        .collect();
-    ranks.sort_unstable();
-    ranks
-}
-
-/// Where a non-main-line branch roots on its parent (spec C.2) — `None`
-/// for the main line, whose root IS the surface, and for any branch outside
-/// the lattice.
-///
-/// The root is drawn over floors the PARENT (the main line, branch 0)
-/// actually realizes: the eligible bands are the ranks whose parent run has
-/// at least one floor, the band is uniform over those, and the floor is
-/// uniform over that run's realized count — so the answer is never a
-/// dangling junction. If every parent run drew 0 floors the eligible set is
-/// empty and this returns `None`: a branch rooted NOWHERE, with nothing to
-/// hang off. Realizing the branch is
-/// [`crate::chamber::chamber_exists`]'s job regardless — a returned root
-/// does not imply the branch's system realized it (its own
-/// [`branch_count_of`] draw may have been smaller).
-///
-/// Today every habitation band realizes ≥1 floor by
-/// construction (every frozen range bottoms out at 1), but the filter is
-/// written anyway so the guarantee survives a future range change without
-/// depending on that coincidence.
-///
-/// Keyed on the CHILD branch's place under [`crate::streams::BRANCH_ROOT`]:
-/// the child names itself, and its parent is determined by the tree shape
-/// this campaign ships (all side branches hang off the main line).
-/// type-audit: bare-ok(index: entrance), bare-ok(index: branch)
-pub fn root_floor_of(seed: Seed, cell: CellId, entrance: u8, branch: u8) -> Option<BranchRoot> {
-    if branch == 0 || branch >= BRANCHES_PER_SYSTEM {
-        return None;
-    }
-    // `entrance` still travels this function's OWN `BRANCH_ROOT` derivation
-    // below (Task 5's re-keying, not this task's), but The Drift dropped it
-    // from `RunAddr` — see `crate::chamber::chamber_exists`'s own doc for the
-    // same transitional shape — so the parent-realization probe just below
-    // no longer takes it.
-    let parent_realizes: Vec<(u8, u8)> = habitation_ranks()
-        .into_iter()
-        .map(|rank| {
-            let band = Band::from_rank(rank).expect("habitation_ranks() only yields real ranks");
-            (
-                rank,
-                levels_in_branch(
-                    seed,
-                    RunAddr {
-                        cell,
-                        branch: 0,
-                        band,
-                    },
-                ),
-            )
-        })
-        .filter(|&(_, count)| count > 0)
-        .collect();
-    if parent_realizes.is_empty() {
-        // Every parent run drew 0 floors: no eligible band exists, so the
-        // branch roots nowhere rather than underflowing the tally.
-        return None;
-    }
-    let mut stream = seed
-        .derive(crate::streams::BRANCH_ROOT)
-        .derive(StreamLabel::dynamic(&branch_key(cell, entrance, branch)))
-        .stream();
-    let band_index = stream.range_u32(
-        0,
-        u32::try_from(parent_realizes.len() - 1).expect("bands fit u32"),
-    );
-    let (band, parent_count) = parent_realizes
-        [usize::try_from(band_index).expect("range_u32 answered inside the eligible set")];
-    let floor = stream.range_u32(0, u32::from(parent_count - 1));
-    Some(BranchRoot {
-        band,
-        floor: u8::try_from(floor).expect("range_u32(0, parent_count-1) fits a u8"),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chamber::BRANCHES_PER_SYSTEM;
     use std::collections::BTreeSet;
 
-    /// The four new labels are distinct strings — a typo colliding two legs
-    /// would silently couple two independent draws.
+    /// The three branch legs are distinct strings — a typo colliding two
+    /// legs would silently couple two independent draws.
+    ///
+    /// **It was four until The Drift's Task 7** (spec §4.6): `BRANCH_ROOT`
+    /// retired with `root_floor_of`, so there is one fewer leg to collide.
     #[test]
-    fn the_four_branch_labels_are_distinct() {
+    fn the_three_branch_labels_are_distinct() {
         let labels = [
             crate::streams::BRANCH_CHARACTER.as_str(),
             crate::streams::BRANCH_BARRIER.as_str(),
             crate::streams::BRANCH_COUNT.as_str(),
-            crate::streams::BRANCH_ROOT.as_str(),
         ];
         let set: BTreeSet<&str> = labels.iter().copied().collect();
-        assert_eq!(set.len(), 4, "two of the four branch legs share a label");
+        assert_eq!(set.len(), 3, "two of the three branch legs share a label");
     }
 
-    /// Each re-keyed leg spells its epoch `/v2` (The Drift, Task 5);
-    /// `BRANCH_ROOT` is untouched and stays `/v1` until Task 7 retires it.
-    /// None reuses a retired or existing label.
+    /// Each re-keyed leg spells its epoch `/v2` (The Drift, Task 5) and none
+    /// reuses a retired or existing label.
+    ///
+    /// **`chamber/branch-root/v1` is retired outright** (Task 7, spec §4.6)
+    /// rather than bumped: nothing derives from it any more, and a `/v2` of a
+    /// leg no world reads would mint an empty epoch — the case amendment A.6
+    /// names and refuses. Its absence is asserted from the one place that can
+    /// see it, `cli/src/streams.rs`'s stamp roster.
     #[test]
-    fn every_new_label_is_v2_except_branch_root() {
+    fn every_re_keyed_label_is_v2() {
         assert_eq!(
             crate::streams::BRANCH_CHARACTER.as_str(),
             "chamber/branch-character/v2"
@@ -462,10 +345,6 @@ mod tests {
         assert_eq!(
             crate::streams::BRANCH_COUNT.as_str(),
             "chamber/branch-count/v2"
-        );
-        assert_eq!(
-            crate::streams::BRANCH_ROOT.as_str(),
-            "chamber/branch-root/v1"
         );
     }
 
@@ -588,31 +467,6 @@ mod tests {
         }
     }
 
-    /// The root-floor draw is byte-pinned for known keys, including the
-    /// main line's `None`.
-    #[test]
-    fn the_root_floor_draw_is_byte_pinned_for_known_keys() {
-        let seed = Seed(42);
-        assert_eq!(
-            root_floor_of(seed, CellId(9), 0, 0),
-            None,
-            "main line roots at the surface"
-        );
-        for (cell, entrance, branch, expected) in [
-            (9u32, 0u8, 3u8, Some(BranchRoot { band: 1, floor: 5 })),
-            (0, 1, 1, Some(BranchRoot { band: 1, floor: 1 })),
-            (17, 0, 2, Some(BranchRoot { band: 1, floor: 0 })),
-            (5, 0, 1, Some(BranchRoot { band: 0, floor: 3 })),
-        ] {
-            assert_eq!(
-                root_floor_of(seed, CellId(cell), entrance, branch),
-                expected,
-                "cell {cell} entrance {entrance} branch {branch} moved off its \
-                 root pin"
-            );
-        }
-    }
-
     /// **Each shipped draw travels ITS OWN leg**, not a sibling's — the unit
     /// counterpart of the integration battery, and the hole Task 2 learned
     /// from: a test that re-implements the derivation cannot witness the
@@ -627,20 +481,14 @@ mod tests {
     #[test]
     fn each_draw_travels_its_own_leg_and_not_a_siblings() {
         let seed = Seed(90210);
-        // The three re-keyed draws (character, barrier, count) sweep every
-        // habitation band; `root_floor_of` is untouched by Task 5 and keeps
-        // its own entrance-keyed place list.
+        // All three surviving draws (character, barrier, count) sweep every
+        // habitation band. There used to be a fourth arm here, keyed on an
+        // entrance; `root_floor_of` retired with The Drift's Task 7.
         let band_places: Vec<(CellId, Band, u8)> = (0u32..12)
             .flat_map(|c| {
                 Band::habitation().iter().flat_map(move |&band| {
                     (0u8..BRANCHES_PER_SYSTEM).map(move |b| (CellId(c), band, b))
                 })
-            })
-            .collect();
-        let entrance_places: Vec<(CellId, u8, u8)> = (0u32..12)
-            .flat_map(|c| {
-                (0u8..2)
-                    .flat_map(move |e| (0u8..BRANCHES_PER_SYSTEM).map(move |b| (CellId(c), e, b)))
             })
             .collect();
 
@@ -734,67 +582,6 @@ mod tests {
         assert!(
             count_disagreed,
             "the branch-count draw agreed with a sibling leg everywhere"
-        );
-
-        // --- root floor ---
-        let mut root_disagreed = false;
-        for &(cell, e, b) in &entrance_places {
-            if b == 0 {
-                continue;
-            }
-            let shipped = root_floor_of(seed, cell, e, b);
-            // Re-derive under the declared leg and compare field-wise.
-            let mut own_stream = seed
-                .derive(crate::streams::BRANCH_ROOT)
-                .derive(StreamLabel::dynamic(&branch_key(cell, e, b)))
-                .stream();
-            let parent_counts: Vec<(u8, u8)> = (0..5u8)
-                .map(|rank| {
-                    let band = Band::from_rank(rank).expect("0..5u8 are all real habitation ranks");
-                    (
-                        rank,
-                        levels_in_branch(
-                            seed,
-                            RunAddr {
-                                cell,
-                                branch: 0,
-                                band,
-                            },
-                        ),
-                    )
-                })
-                .filter(|&(_, n)| n > 0)
-                .collect();
-            let band_i = own_stream.range_u32(0, (parent_counts.len() - 1) as u32);
-            let (band, parent_count) = parent_counts[usize::try_from(band_i).unwrap()];
-            let floor = own_stream.range_u32(0, u32::from(parent_count - 1));
-            assert_eq!(
-                shipped,
-                Some(BranchRoot {
-                    band,
-                    floor: u8::try_from(floor).unwrap()
-                }),
-                "root_floor_of does not travel the BRANCH_ROOT leg at {cell:?}/{e}/{b}"
-            );
-            // Sibling leg, same procedure: must differ somewhere.
-            let mut sib_stream = seed
-                .derive(crate::streams::BRANCH_BARRIER)
-                .derive(StreamLabel::dynamic(&branch_key(cell, e, b)))
-                .stream();
-            let sib_band_i = sib_stream.range_u32(0, (parent_counts.len() - 1) as u32);
-            let (sib_band, sib_parent) = parent_counts[usize::try_from(sib_band_i).unwrap()];
-            let sib_floor = sib_stream.range_u32(0, u32::from(sib_parent - 1));
-            if Some(BranchRoot {
-                band: sib_band,
-                floor: u8::try_from(sib_floor).unwrap(),
-            }) != shipped
-            {
-                root_disagreed = true;
-            }
-        }
-        assert!(
-            root_disagreed,
-            "the root draw agreed with a sibling leg on every probed branch"
         );
     }
 

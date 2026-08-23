@@ -96,12 +96,29 @@
 //! axis nobody wrote down is how a hole survives — that is the standing rule
 //! this list exists to serve.
 //!
-//! - **A junction sees BRANCH 0 and nothing else.**
-//!   [`crate::chamber::junctions_at`] projects onto the canonical main line,
-//!   so whether another branch realizes a chamber at that band is invisible
-//!   to the network. Widening the projection is a design change, not a bug
-//!   fix: it is what makes symmetry hold by construction (see that
-//!   function's doc), so any widening owes a new symmetry argument.
+//! - **A junction sees BRANCH 0 and nothing else — and WHERE that narrowing
+//!   lives moved under this sentence** (The Drift, Task 7). It used to be
+//!   `junctions_at`'s: the function projected every address of a system onto
+//!   the canonical main line, so branch 0's answer WAS the system's answer
+//!   and this witness could not have asked a narrower question if it tried.
+//!   Spec §4.6 re-scoped `junctions_at` to `(band, branch)`, because
+//!   `passages_from` no longer has a lateral rule and a door on branch 0 is
+//!   not one a walker on branch 2 can reach. **So the narrowing is now this
+//!   file's own choice**, made by the literal `branch: 0` in
+//!   [`junction_network`], and the numbers it reports mean "the MAIN-LINE
+//!   junction network" rather than "the junction network".
+//!
+//!   Every figure in the committed artifact is unchanged and still true
+//!   under the narrower reading, and `largest` in particular is not
+//!   overstated: all of this function's edges sit at branch 0, so each
+//!   band's edge set is already inside one `(band, branch)` layer, which is
+//!   what a traversable layer now is. **Widening it is a deliberate change
+//!   to a committed artifact and Task 7 did not make it**: the union over
+//!   branches is a different measurement, its component sweep would have to
+//!   key on `(band, branch)` rather than on band alone (a band is no longer
+//!   one traversable layer), and the result is a number a reader would
+//!   compare against every previously committed panel. Stated here rather
+//!   than left to be discovered.
 //! - **Past-the-ladder junction behaviour is never exercised.** A band past
 //!   the last habitation rung answers empty, and every loop that asks — this
 //!   one and the tests' — derives its bound from the delve ladder, so no

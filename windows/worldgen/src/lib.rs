@@ -108,8 +108,8 @@ pub mod vestige;
 pub mod volcano;
 pub use ablation::ChannelMask;
 pub use character::{
-    BarrierPins, BarrierState, BranchRoot, CHARACTERS, Character, bands_of, barrier_of,
-    branch_count_of, character_at, character_of, parse_barrier_pin, root_floor_of,
+    BarrierPins, BarrierState, CHARACTERS, Character, bands_of, barrier_of, branch_count_of,
+    character_at, character_of, parse_barrier_pin,
 };
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_from,

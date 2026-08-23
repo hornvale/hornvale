@@ -222,6 +222,75 @@
 //! — the movement is entirely in the denominator (which chambers exist),
 //! not in the reachability property Task 4 established.
 //!
+//! # MEASURED VALUES — AFTER TASK 7, 2026-08-23 (the descent rule rewritten
+//! # onto the band-transition edges; the lateral rule deleted; entrances
+//! # landed in top-band branches — spec §4.6) — THE CURRENT TREE
+//!
+//! ```text
+//! seed 42
+//!   systems 874    levels 30537   reachable 30414   entrances 1229 drawn / 1229 open
+//!   systems with an open mouth 874
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  99.60%   (30414 of 30537)
+//!   levels per system            mean 34.94   p10 8   median 34   p90 60
+//!   systems below 100%           27 of 874 = 3.09%
+//!   unreached levels by band     rank 0: 120   rank 1: 3
+//!   side mouths off their band's width  0 of 134 = 0.00%
+//! seed 7
+//!   systems 1681   levels 59227   reachable 58987   entrances 2382 drawn / 2382 open
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  99.59%   (58987 of 59227)
+//!   systems below 100%           35 of 1681 = 2.08%
+//!   unreached levels by band     rank 0: 142   rank 1: 98
+//!   side mouths off their band's width  0 of 268 = 0.00%
+//! seed 1234
+//!   systems 1266   levels 48294   reachable 48135   entrances 1813 drawn / 1813 open
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  99.67%   (48135 of 48294)
+//!   systems below 100%           28 of 1266 = 2.21%
+//!   unreached levels by band     rank 0: 90   rank 1: 56   rank 2: 13
+//!   side mouths off their band's width  0 of 237 = 0.00%
+//! ```
+//!
+//! Three things moved and each has a different cause. **`levels` did not
+//! move at all** on any seed — `chamber_exists` is untouched by this task, so
+//! the population is byte-for-byte the one Task 5 left, which is what makes
+//! the other two readings comparable rather than confounded.
+//!
+//! **`open entrances` rose to exactly `drawn`** (1140 -> 1229 on seed 42, and
+//! the same on the other two). Every drawn mouth is now open, by
+//! construction rather than by luck: a door lands at level 0 of the TOP
+//! habitation band, on a branch drawn against that band's own width; level 0
+//! of a realized run always exists, and no cave's depth budget stops short of
+//! the shallowest band. What used to close a door was the mismatch this task
+//! retired — 47.8% / 53.0% / 51.9% of drawn side mouths named a branch their
+//! independently drawn landing band did not realize. **That share is now
+//! 0.00% on all three seeds**, and the probe asserts it rather than printing
+//! it, because it is a property of the construction and not a statistic.
+//!
+//! **Reachability FELL, by 0.40 / 0.41 / 0.33 points, and this is a finding
+//! rather than noise.** Seed 42 goes 30,537/30,537 (100.00%) to
+//! 30,414/30,537 (99.60%) — 123 levels lost. The cause is the deleted lateral
+//! rule and nothing else, and the band histogram is what establishes that
+//! rather than an argument: **120 of seed 42's 123 unreached levels sit at
+//! rank 0**, the top band, with 3 one rung below; the other two seeds have
+//! the same shape, decaying with depth (142/98, then 90/56/13). Below the top
+//! band every branch is guaranteed a parent above it (spec §4.5's second
+//! guarantee), so once a band is entered the ladder carries you down. The top
+//! band has no band above it to be entered from: an Undercroft branch is
+//! reachable only if a door lands on it, or if some branch below is a child
+//! of both it and an already-reached branch. When neither holds, that branch
+//! — and whatever hangs beneath it — is cut off. **2.1-3.1% of systems are
+//! affected**, so the loss is concentrated in a few systems rather than
+//! spread thinly across all of them.
+//!
+//! **Both of §6's arms still clear their intents, including amendment C's
+//! replacement.** The per-system p10 (C.2's gated statistic, chosen because
+//! the median could not fail) reads 100.00% on all three seeds, and the
+//! whole-world arm reads 99.6% against a 90% intent. The shortfall is
+//! reported here because it is real and has a mechanism, not because it
+//! breaches anything.
+//!
 //! Wall time for the whole probe (three `BuildDepth::Terrain` worlds and
 //! ~1.6M `chamber_exists` calls) is ~1.5 s in the optimized test profile.
 //! It is `#[ignore]`d anyway, with the same reason every live-worldgen battery
@@ -239,7 +308,7 @@
 //! directly, the sanctioned posture for this crate's live-worldgen batteries.
 #![allow(clippy::disallowed_methods)]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Band, CellId, Seed};
@@ -248,6 +317,7 @@ use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
     entrance_mouth, passages_from, rung_rank,
 };
+use hornvale_worldgen::character::branch_count_of;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -277,16 +347,27 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// multi-thousand-level jump) and comes from a different mechanism — no
 /// lattice shape changed, but individual `(branch, band)` cells that were
 /// globally admitted or refused before Task 5 now flip independently per
-/// band, so the net change is the sum of many small band-local flips. The
-/// module's own "MEASURED VALUES" block records the movement in full. A
-/// move from any OTHER cause from here on — a terrain change, a stream
+/// band, so the net change is the sum of many small band-local flips.
+///
+/// **Task 7 (the descent rule, spec §4.6) moved it a FOURTH time, to
+/// `(30537, 30414, 1229)`**, and this movement is the only one of the four
+/// where `levels` stayed put: `chamber_exists` is untouched, so the
+/// population is identical and the two numbers that moved moved for reasons
+/// this task owns. `open entrances` rose to equal `drawn` because every mouth
+/// now lands somewhere that exists by construction; `reachable` fell by 123
+/// because the lateral `branch ± 1` rule is gone and a top-band branch no
+/// door landed on can be cut off. The module's own "MEASURED VALUES" block
+/// records all four movements in full, with the band histogram that
+/// establishes the third one's mechanism.
+///
+/// A move from any OTHER cause from here on — a terrain change, a stream
 /// relabelling, a lattice constant — is a determinism finding, and this
 /// equality still catches that.
 ///
 /// A band was considered and rejected: this is not a noisy statistic but a
 /// deterministic count over a fixed seed, and a band around a deterministic
 /// count only buys room for an undetected change.
-const SEED_42_BASELINE: (usize, usize, usize) = (30537, 30537, 1140);
+const SEED_42_BASELINE: (usize, usize, usize) = (30537, 30414, 1229);
 
 /// The habitation band ranks, ascending — **derived from the delve ladder**
 /// through the shipped [`rung_rank`], never restated as a literal range.
@@ -372,7 +453,7 @@ fn reachable_union(
 /// definitionally identical to `levels`/`reachable` and carries no
 /// information a reader could not already see; keeping it would print the
 /// same two numbers twice under different labels.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct SystemReach {
     /// Apertures this system draws, whether or not they open onto anything.
     drawn_mouths: usize,
@@ -382,6 +463,17 @@ struct SystemReach {
     levels: usize,
     /// Levels reached by one walk from the union of the open mouths.
     reachable: usize,
+    /// Drawn mouths that are NOT the literal head (`branch > 0`) — the
+    /// denominator of the mismatch share below.
+    drawn_side_mouths: usize,
+    /// Drawn side mouths naming a branch their own landing band does not
+    /// realize. **This was ~50% before Task 7 and is 0 by construction
+    /// after it** — see [`SystemReach`]'s own note and `entrance_mouth`'s
+    /// doc.
+    side_mouths_off_their_bands_width: usize,
+    /// Which bands the UNREACHED levels sit in, by rank — the diagnostic
+    /// for Task 7's residual, see [`ReachSummary::unreached_by_band`].
+    unreached_by_band: BTreeMap<u8, usize>,
 }
 
 /// Read one cave system through the shipped entry points only.
@@ -402,6 +494,7 @@ fn read_system(
     // unfalsifiable here, the same trap `underworld_readout`'s module doc
     // records.
     let mut levels = 0usize;
+    let mut existing: BTreeSet<ChamberAddr> = BTreeSet::new();
     for &rank in ranks {
         let band = Band::from_rank(rank).expect("ranks come from habitation_ranks()");
         for branch in 0..BRANCHES_PER_SYSTEM {
@@ -414,6 +507,7 @@ fn read_system(
                 };
                 if chamber_exists(seed, cave, gradient, addr) {
                     levels += 1;
+                    existing.insert(addr);
                 }
             }
         }
@@ -424,11 +518,28 @@ fn read_system(
     // entrance index comes from the loop, because the mouth type does not
     // carry the aperture it belongs to. Every mouth now resolves into the
     // SAME shared lattice `levels` walked above.
+    // THE MISMATCH MEASUREMENT (The Drift, Task 7). Before this task the
+    // side-branch pick was sized against `Band::Undercroft`'s width and the
+    // door was then landed by `root_floor_of` at an independently drawn
+    // band, so a mouth could name a branch its LANDING band did not
+    // realize — measured at 47.8% / 53.0% / 51.9% of drawn side mouths
+    // across this panel. It was benign only because `chamber_exists`
+    // refused the address downstream. Counted here, over the same
+    // population, so the fix is verified rather than asserted.
+    let mut drawn_side_mouths = 0usize;
+    let mut side_mouths_off_their_bands_width = 0usize;
+
     let mouths: Vec<ChamberAddr> = (0..entrances)
         .map(|entrance| {
             let mouth = entrance_mouth(seed, cell, entrance);
             let band =
                 Band::from_rank(mouth.band).expect("entrance_mouth only names a habitation rank");
+            if mouth.branch > 0 {
+                drawn_side_mouths += 1;
+                if mouth.branch >= branch_count_of(seed, cell, band) {
+                    side_mouths_off_their_bands_width += 1;
+                }
+            }
             ChamberAddr {
                 cell,
                 branch: mouth.branch,
@@ -441,11 +552,31 @@ fn read_system(
 
     let reached = reachable_union(seed, cave, gradient, &mouths);
 
+    // WHERE the unreached levels sit. Task 7 deleted the lateral rule, so a
+    // branch is entered only through the bands above and below it; the
+    // hypothesis this measures is that what is left unreached is a TOP-BAND
+    // branch no mouth landed on and no lower branch links back to, plus
+    // whatever hangs beneath it. A band histogram falsifies that directly if
+    // the residual is spread down the ladder instead.
+    let mut unreached_by_band: BTreeMap<u8, usize> = BTreeMap::new();
+    for addr in existing.difference(&reached) {
+        *unreached_by_band
+            .entry(
+                addr.band
+                    .rank()
+                    .expect("existing chambers sit on habitation bands"),
+            )
+            .or_insert(0) += 1;
+    }
+
     SystemReach {
         drawn_mouths: usize::from(entrances),
         open_mouths: mouths.len(),
         levels,
         reachable: reached.len(),
+        drawn_side_mouths,
+        side_mouths_off_their_bands_width,
+        unreached_by_band,
     }
 }
 
@@ -474,6 +605,16 @@ struct ReachSummary {
     /// Existing levels per system, ascending — §6's REPORTED, never gated,
     /// quantity.
     levels_per_system: Vec<usize>,
+    /// Drawn side-branch mouths across the world.
+    drawn_side_mouths: usize,
+    /// Of those, how many name a branch their landing band does not realize.
+    side_mouths_off_their_bands_width: usize,
+    /// Systems whose reachable share is strictly below 100% — amendment
+    /// C.2's second reported quantity, and the count that says whether a
+    /// whole-world shortfall is broad or concentrated.
+    systems_below_full: usize,
+    /// Unreached levels by band rank, summed over the world.
+    unreached_by_band: BTreeMap<u8, usize>,
 }
 
 impl ReachSummary {
@@ -519,6 +660,36 @@ impl ReachSummary {
             pct_usize(levels_each, 0.10),
             pct_usize(levels_each, 0.50),
             pct_usize(levels_each, 0.90),
+        );
+        println!(
+            "  systems below 100%           {} of {} with an open mouth = {:.2}%",
+            self.systems_below_full,
+            self.systems_with_open_mouth,
+            100.0 * share(self.systems_below_full, self.systems_with_open_mouth)
+        );
+        let unreached: Vec<String> = self
+            .unreached_by_band
+            .iter()
+            .map(|(rank, n)| format!("rank {rank}: {n}"))
+            .collect();
+        println!(
+            "  unreached levels by band     {}",
+            if unreached.is_empty() {
+                "none".to_string()
+            } else {
+                unreached.join("   ")
+            }
+        );
+        println!(
+            "  side mouths off their band's width  {} of {} = {:.2}%  \
+             (was ~50% before Task 7)",
+            self.side_mouths_off_their_bands_width,
+            self.drawn_side_mouths,
+            100.0
+                * share(
+                    self.side_mouths_off_their_bands_width,
+                    self.drawn_side_mouths
+                )
         );
         println!(
             "  §6 arms today: per-system median -> {}, whole-world -> {}",
@@ -583,6 +754,10 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
         systems_with_open_mouth: 0,
         per_system_share: Vec::new(),
         levels_per_system: Vec::new(),
+        drawn_side_mouths: 0,
+        side_mouths_off_their_bands_width: 0,
+        systems_below_full: 0,
+        unreached_by_band: BTreeMap::new(),
     };
 
     for cell in geo.cells() {
@@ -606,6 +781,14 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
         summary.levels += sys.levels;
         summary.reachable += sys.reachable;
         summary.levels_per_system.push(sys.levels);
+        summary.drawn_side_mouths += sys.drawn_side_mouths;
+        summary.side_mouths_off_their_bands_width += sys.side_mouths_off_their_bands_width;
+        for (rank, n) in &sys.unreached_by_band {
+            *summary.unreached_by_band.entry(*rank).or_insert(0) += n;
+        }
+        if sys.open_mouths > 0 && sys.reachable < sys.levels {
+            summary.systems_below_full += 1;
+        }
         if sys.open_mouths > 0 {
             summary.systems_with_open_mouth += 1;
             summary
@@ -696,6 +879,18 @@ fn the_drift_reachability_baseline() {
              summed rather than unioned",
             summary.reachable,
             summary.levels
+        );
+        assert_eq!(
+            summary.side_mouths_off_their_bands_width, 0,
+            "seed {seed}: {} of {} drawn side mouths name a branch their landing \
+             band does not realize. Task 7 was supposed to make this unaskable by \
+             construction — see `entrance_mouth`'s doc",
+            summary.side_mouths_off_their_bands_width, summary.drawn_side_mouths
+        );
+        assert!(
+            summary.drawn_side_mouths > 0,
+            "seed {seed}: no side-branch mouth was drawn at all, so the zero \
+             above is vacuous"
         );
         assert!(
             summary.open_entrances <= summary.drawn_entrances,

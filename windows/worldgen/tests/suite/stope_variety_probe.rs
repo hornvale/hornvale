@@ -417,6 +417,28 @@
 //! `0.5^23 = 1.2e-7`, against an observed `22/1928 = 1.1e-2` among the branches
 //! that realize a Nadir chamber at all.
 //!
+//! # THE MECHANISM SECTION BELOW DESCRIBES A WORLD THAT NO LONGER EXISTS
+//!
+//! **Read this before any paragraph under it** (The Drift, Task 7, spec
+//! §4.6). This probe has been RED since The Drift's Task 1 deleted
+//! `chamber_exists`'s existence coin — a deferral recorded at the time and
+//! carried to Task 9, which owns the re-baseline — and Task 7 then removed
+//! two more of the mechanisms the prose narrates:
+//!
+//! - **`root_floor_of` no longer exists.** The paragraphs below call its
+//!   band pick "the true mechanism" and "a live design lever", and print a
+//!   DEEP-MOUTH CENSUS spread across all five bands to demonstrate it. Every
+//!   entrance now lands at level 0 of the TOP habitation band, so that
+//!   census reads `band 0 Undercroft 100.00%` and the lever is gone.
+//! - **Lateral branch moves no longer exist.** The "lateral disabled"
+//!   ablation below compares against a rule `passages_from` does not have.
+//!
+//! Nothing here is edited to a new number, deliberately: re-baselining a
+//! preregistered readout is a measurement act and belongs to the task that
+//! owns it, not to a drive-by correction from the task that moved it. What
+//! IS corrected is anything that would read as a currently-true claim about
+//! shipped code — a false statement is not made safer by being stale.
+//!
 //! **The true mechanism is `entrance_mouth` -> `root_floor_of`, and it is a
 //! dial.** A side entrance does not descend; it maps to its branch's ROOT
 //! FLOOR, and `root_floor_of` picks that band **uniform over the parent's
@@ -1956,7 +1978,9 @@ fn did_the_stope_solve_the_oatmeal_problem() {
     // The unconditional walked-Nadir rate is the number this probe's finding is
     // actually about, and until review round 1 nothing asserted it. It is
     // banded, not pinned — see NADIR_WALK_RATE_FLOOR for why, and for what
-    // would legitimately move it.
+    // would legitimately move it. **It is currently OUTSIDE the band and has
+    // been since The Drift's Task 1** (the existence coin's deletion); Task 9
+    // owns the re-baseline. See this module's header.
     let nadir_walk = pooled.nadir_walk_rate();
     assert!(
         (NADIR_WALK_RATE_FLOOR..=NADIR_WALK_RATE_CEILING).contains(&nadir_walk),
@@ -1967,10 +1991,14 @@ fn did_the_stope_solve_the_oatmeal_problem() {
          new figure written into this module's header: `EXISTENCE_DENSITY` (the \
          per-address coin — 0.5 -> 0.7 alone moves this 4.4x), `floors_range`'s \
          frozen per-band ranges (they set how long a run is, and the deep-mouth \
-         account depends on the shallow bands staying long), and `root_floor_of`'s \
-         band pick (uniform over the parent's realized bands today, which is what \
-         puts ~1 side entrance in 5 straight into the Nadir band). A move with \
-         NONE of those three touched is a finding, not a bound to widen.",
+         account depends on the shallow bands staying long), and WHERE AN ENTRANCE \
+         LANDS (`entrance_mouth`; it was `root_floor_of`'s band pick, uniform over \
+         the parent's realized bands, which put ~1 side entrance in 5 straight into \
+         the Nadir band — The Drift's Task 7 retired that function and lands every \
+         mouth in the top band instead). A FOURTH mover joined them with the same \
+         task: `passages_from`'s descent rule itself, which now follows drawn \
+         band-transition edges and has no lateral `branch +/- 1` step at all. A \
+         move with NONE of those four touched is a finding, not a bound to widen.",
         nadir_walk * 100.0,
         pooled.reached_nadir_all,
         pooled.branches,
