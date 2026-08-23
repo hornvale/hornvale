@@ -595,3 +595,66 @@ measured here it read a perfect 100.00% while a real connectivity failure was
 live. Report it, label it as context, and state its blind zone in the same
 breath — a quantile reported without its resolution is the same defect this
 amendment exists to correct.
+
+---
+
+# AMENDMENT E, 2026-08-23: §4.5 gains a third guarantee — the top band is entered
+
+Nathan's ruling, after Task 7 measured the cost of the gap.
+
+## E.1 The gap §4.5 left
+
+§4.5 guarantees every branch **descends** and every branch **has a parent**.
+The second is **vacuous at the top band**, which has no band above it — so an
+Undercroft branch that no entrance lands on and no lower branch links back to
+is orphaned.
+
+Measured, and confirmed by two independent mutations: **120 of seed 42's 120
+unreached top-band levels sit in branches no open mouth landed on, and 0 in
+branches that have one.** Whole-world reachability 99.60 / 99.59 / 99.67%;
+systems affected 3.09 / 2.08 / 2.21%.
+
+This is a hole in the guarantee **set**, not a violation of either guarantee.
+Both still hold over all sixteen constructed width pairs.
+
+## E.2 The third guarantee
+
+> **Every branch in the top band is named by at least one entrance.**
+
+With E.2, all three guarantees together make a system's whole lattice one
+reachable component by construction: the top band is entered, every branch
+descends, and every branch below has a parent.
+
+## E.3 How it must be achieved — the same discipline as §4.5
+
+**By construction, never by repair.** The natural shape is the one Task 6
+already proved: every top-band branch draws an entrance, so the mouth-to-branch
+map is surjective by construction; any further apertures are drawn freely on
+top.
+
+A draw-then-patch that adds mouths until coverage is reached is **rejected for
+the same reason §4.5 rejects it** — order-dependence is a determinism hazard,
+not merely inelegant.
+
+The implementer chooses the mechanism and reports it. What is not negotiable:
+no repair pass, and the guarantee asserted over **constructed** widths rather
+than found absent on a seed panel.
+
+## E.4 What this costs, stated in advance so it is not a surprise
+
+`entrance_count`'s meaning changes: it can no longer be a free draw
+independent of the top band's width, because a system with fewer apertures
+than top-band branches cannot satisfy E.2. Expect `chamber/entrance-count` and
+possibly `chamber/entrance-mouth` to take an epoch suffix, and expect every
+world's apertures to move.
+
+**The measured target: the residual goes to zero.** Task 7's review already
+established that forcing an entrance onto every top-band branch takes the
+unreached count to **0 on all three seeds**, so this is a closing move with a
+known answer, not an experiment. A result other than zero is a finding.
+
+## E.5 The gate
+
+Amendment D's gate — the share of systems below 100% reachable — is the one
+that measures this, and its intent arm is **0%**. E.2 is what makes that
+arm reachable rather than aspirational.
