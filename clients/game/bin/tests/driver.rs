@@ -244,7 +244,7 @@ fn resize_re_resolves_against_the_real_plate_height() {
     // (the same arithmetic `spread::compose`/`content_height` apply), so
     // the real centre row is 18, not 10 -- the cursor's SCREEN position
     // (20, 10) has not moved, but it is no longer the observer's box.
-    driver.resize(40);
+    driver.resize(80, 40);
     let at_taller_height = driver.strip_text().map(str::to_string);
     assert_ne!(
         at_taller_height, at_floor_height,
@@ -275,7 +275,7 @@ fn resize_re_resolves_against_the_real_plate_height() {
 #[test]
 fn the_cursor_clamp_tracks_the_real_plate_height_too() {
     let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-    driver.resize(40);
+    driver.resize(80, 40);
     submit_line(&mut driver, "map");
     driver.apply(Action::CursorBy(0, 1000)); // drive it hard into the bottom clamp
     let cursor = driver

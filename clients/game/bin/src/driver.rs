@@ -24,15 +24,20 @@
 //! no `Agent`/`Knowledge`/`WorldContext` value ever crosses out.
 //!
 //! **Resolution genuinely tracks the cursor.** Spec §3.1 assigns the cursor
-//! query to `bin`; §9 defers "the walk / chamber / delve resolvers"
-//! (session-level cells/marks/agents) to a future campaign — so only the
-//! walk band resolves here, and every other band honestly answers
-//! [`NOTHING_HERE_YET`]. At the walk band, the *pointed-at* cell is what
-//! gets resolved, not the observer's own (an earlier revision of this
-//! module resolved the observer's cell unconditionally — a fix round
-//! caught that this made the strip position-invariant while the cursor
-//! visibly moved, exactly the "a wrong name is indistinguishable from a
-//! right one" failure the design spec warns against).
+//! query to `bin`; §9 defers "the chamber / delve resolvers" (session-level
+//! cells/marks/agents at those bands) to a future campaign — so those bands
+//! honestly answer [`NOTHING_HERE_YET`]. The walk band resolves against its
+//! own chart ([`Driver::resolve_walk_band`]); The Portolan part II, Task 3b
+//! adds a second resolver for the whole-world Mercator plate
+//! ([`Driver::resolve_world_view`]), active in place of the walk band's own
+//! whenever `self.world_view` is on (`spread::compose`'s own doc: the world
+//! view is a lens over whichever band the character occupies, never a new
+//! band). Either way, the *pointed-at* cell is what gets resolved, not the
+//! observer's own (an earlier revision of this module resolved the
+//! observer's cell unconditionally — a fix round caught that this made the
+//! strip position-invariant while the cursor visibly moved, exactly the "a
+//! wrong name is indistinguishable from a right one" failure the design
+//! spec warns against).
 //!
 //! The chain from a screen position to a [`hornvale_kernel::CellId`]:
 //! [`hornvale_game_core::chart::cell_at`] (new, shared with `draw` via a
@@ -196,10 +201,12 @@ pub struct Driver {
     /// from the committed `TIDALLY_LOCKED` fact and never recomputed — the
     /// central line does not move as the player does (spec §3.2).
     frame: Frame,
-    /// The world plate's window: which zoom level and which cell the
-    /// window's own origin sits at. Always the whole-planet view (`zoom: 0,
-    /// origin_col: 0, origin_row: 0`) in this task — zoom and scroll are
-    /// Task 3b's (The Portolan part II, Task 3b).
+    /// The world plate's window: which zoom level and which VIRTUAL-chart
+    /// cell the window's own origin sits at (`plate::virtual_dims`'s own
+    /// doc distinguishes the virtual chart from the drawn plate). Reset to
+    /// `Window { zoom: 0, origin_col: 0, origin_row: 0 }` on entering the
+    /// world view (`Driver::apply_zoom`) — the whole planet, no scroll
+    /// needed at the coarsest rung — and moved by zoom/scroll from there.
     window: Window,
     /// Whether the whole-world Mercator view is active. **Fix round 1
     /// (Task 3a's own review):** `Focus::Map` alone used to gate this in
@@ -213,11 +220,14 @@ pub struct Driver {
     /// 40-column plate and the strip kept resolving the walk band's own
     /// (now invisible) chart — a picture and a cursor/strip that no longer
     /// agreed at all. This field makes the world view its own explicit
-    /// state, defaulting OFF ([`Driver::start`] never sets it), so
-    /// `Focus::Map` on its own reproduces the pre-Task-3a behaviour
-    /// byte-identically. Nothing in this campaign yet sets it `true` — the
-    /// gesture that does is Task 3b's (The Portolan part II, Task 3b), and
-    /// building it is explicitly out of this task's scope; see
+    /// state, defaulting OFF ([`Driver::start`] never sets it).
+    ///
+    /// **Task 3b's own gesture (ruling T3-f): zooming OUT past the walk
+    /// band turns this on, at the coarsest rung; zooming IN past the
+    /// world view's finest rung turns it back off.** See
+    /// [`Driver::apply_zoom`]. `Focus::Map` alone still reproduces the
+    /// pre-Task-3a behaviour byte-identically — this field is untouched by
+    /// focus changes on their own, only by `Action::Zoom`; see
     /// [`Driver::world_plate_for_redraw`].
     world_view: bool,
     /// The world's seed, needed to draw a feature's name.
@@ -230,6 +240,16 @@ pub struct Driver {
     /// `main`'s `play` loop calls `resize` before the first draw, so a
     /// live session never resolves against the stale default.
     plate_height: u16,
+    /// The live terminal's own width, synced by [`Driver::resize`] — needed
+    /// (alongside `term_h`) to derive the world plate's real width via
+    /// [`hornvale_game_core::spread::world_plate_width`], which takes the
+    /// raw terminal size, not the already-reduced `plate_height`. Starts at
+    /// [`hornvale_game_core::MIN_WIDTH`], the same floor-before-first-resize
+    /// convention `plate_height` follows.
+    term_w: u16,
+    /// The live terminal's own height, synced by [`Driver::resize`] — see
+    /// `term_w`'s doc. Starts at [`hornvale_game_core::MIN_HEIGHT`].
+    term_h: u16,
     /// The possessed agent's species, phonology and naming morphology,
     /// resolved once at `start` (an agent's species does not change during
     /// a session) — the same triple [`resolve_at`] needs on every call.
@@ -395,6 +415,8 @@ impl Driver {
             world_view: false,
             seed: world_ref.seed,
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
+            term_w: hornvale_game_core::MIN_WIDTH,
+            term_h: hornvale_game_core::MIN_HEIGHT,
             namer: (species, ph, morph),
             line: Line::new(),
             history: History::new(),
@@ -404,25 +426,35 @@ impl Driver {
         Ok(driver)
     }
 
-    /// Sync the plate's REAL content height from the live terminal's row
-    /// count `h` (`main`'s `play` loop calls this at startup and on every
-    /// resize event, before the first/next draw). Uses
-    /// [`hornvale_game_core::spread::content_height`] — the SAME
-    /// computation `compose` itself applies to derive the plate it actually
-    /// draws into, not a second copy of it (fix round 2's own lesson,
-    /// applied to itself: two independent "what is the plate's content
-    /// height" computations is exactly the shape that produced the bug this
-    /// method fixes).
+    /// Sync the plate's REAL content height, and the raw terminal size,
+    /// from the live terminal's own `w`x`h` (`main`'s `play` loop calls
+    /// this at startup and on every resize event, before the first/next
+    /// draw). Uses [`hornvale_game_core::spread::content_height`] — the
+    /// SAME computation `compose` itself applies to derive the plate it
+    /// actually draws into, not a second copy of it (fix round 2's own
+    /// lesson, applied to itself: two independent "what is the plate's
+    /// content height" computations is exactly the shape that produced the
+    /// bug this method fixes). `term_w`/`term_h` are stored raw (not
+    /// reduced) because the world plate's width
+    /// ([`hornvale_game_core::spread::world_plate_width`]) needs the raw
+    /// terminal size, not the already-content-reduced height.
     ///
     /// Re-clamps the cursor into the new bounds: a terminal shrinking after
     /// the cursor moved into rows a taller plate offered must not leave it
-    /// parked outside the plate that is about to be drawn. With the map
+    /// parked outside the plate that is about to be drawn. With the world
+    /// view active, also re-clamps the window (its virtual chart's own
+    /// size depends on the plate's width, which just changed). With the map
     /// focused, also re-resolves the strip: the cursor's SCREEN position is
     /// unchanged by a resize, but which real cell that screen position
     /// names can change (the plate's centre moves), so the displayed text
-    /// must not go on describing whatever the old height resolved.
-    pub fn resize(&mut self, h: u16) {
+    /// must not go on describing whatever the old size resolved.
+    pub fn resize(&mut self, w: u16, h: u16) {
+        self.term_w = w;
+        self.term_h = h;
         self.plate_height = hornvale_game_core::spread::content_height(h);
+        if self.world_view {
+            self.reclamp_window();
+        }
         self.move_cursor(0, 0);
         if self.focus == Focus::Map {
             self.refresh_strip();
@@ -530,11 +562,9 @@ impl Driver {
     /// wants to know what a redraw would draw calls it too rather than
     /// reimplementing the check a third time.
     ///
-    /// `self.world_view` defaults to `false` and nothing in this campaign
-    /// yet sets it `true` (see the field's own doc) — Task 3b owns the
-    /// gesture, so this method currently always returns `None` in the live
-    /// game; it exists so the gate itself, and `main.rs`'s use of it, are
-    /// both exercised now rather than only once 3b lands.
+    /// `self.world_view` defaults to `false` and, since Task 3b, [`Self::
+    /// apply_zoom`] is the gesture that sets it `true` — zooming out past
+    /// the walk band (ruling T3-f, `-` on [`Focus::Map`]).
     pub fn world_plate_for_redraw(&self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
         (self.world_view && self.focus == Focus::Map).then(|| self.world_plate(w, h))
     }
@@ -561,11 +591,18 @@ impl Driver {
     /// first-token convention).
     /// `Move` executes a walk-mode direction exactly like a submitted line
     /// (echo + history + `handle`), minus any buffer involvement.
-    /// `CursorBy`/`ToggleFocus` are unchanged from part I. `Zoom` is
-    /// accepted and ignored — zoom itself belongs to The Portolan part II,
-    /// a paused follow-on campaign; this arm is where it will be
-    /// implemented. What matters now is only that a zoom key never falls
-    /// through to the buffer and types itself.
+    /// `CursorBy`/`ToggleFocus` are unchanged from part I.
+    ///
+    /// **`Zoom` is now implemented (Task 3b): one continuous ladder, per
+    /// ruling T3-f.** With the world view off, zooming out (`-`) turns it
+    /// on at the coarsest rung; with the world view on at its finest rung,
+    /// zooming in (`+`/`=`) turns it back off; between those, the keys move
+    /// the world map's own zoom, clamped to `0..=`[`plate::MAX_ZOOM`]. See
+    /// [`Self::apply_zoom`].
+    ///
+    /// **`Recentre` (`.`) rolls the projection to the cursor (spec §3.2),
+    /// only on command — never a side effect of cursor movement.** A no-op
+    /// unless the world view is active. See [`Self::recentre`].
     pub fn apply(&mut self, action: Action) -> bool {
         match action {
             Action::ToggleFocus => {
@@ -670,7 +707,14 @@ impl Driver {
                 self.echo = Some(taken.clone());
                 self.handle(&taken)
             }
-            Action::Zoom(_) => false,
+            Action::Zoom(delta) => {
+                self.apply_zoom(delta);
+                false
+            }
+            Action::Recentre => {
+                self.recentre();
+                false
+            }
             Action::None => false,
         }
     }
@@ -683,18 +727,205 @@ impl Driver {
         self.refresh_strip();
     }
 
-    /// Move the cursor by `(dx, dy)` grid cells, clamped to the plate's
-    /// REAL bounds (`self.plate_height`, kept live by [`Driver::resize`] —
-    /// fix round 2: an earlier revision clamped to the 80x24 floor's fixed
-    /// height regardless of the terminal's actual size, which could not
-    /// reach rows a taller plate actually draws).
+    /// The active plate's own width and height, in grid cells — the walk
+    /// band's fixed [`hornvale_game_core::spread::PLATE_WIDTH`] and
+    /// `self.plate_height` when the world view is off, or the world
+    /// plate's own fit when it is on: the SAME
+    /// [`hornvale_game_core::spread::world_plate_width`]
+    /// [`Driver::world_plate`] itself draws into, its height following
+    /// [`hornvale_game_core::spread::GLYPH_ASPECT`] the identical way that
+    /// method derives it.
+    ///
+    /// **Task 3a's own review finding, closed here (Task 3b):**
+    /// `move_cursor` used to clamp to the fixed walk-band width regardless
+    /// of which plate was actually on screen, leaving columns 40-103 of a
+    /// 104-column world plate unreachable. Every caller that needs "how
+    /// big is the plate right now" — the cursor clamp, the scroll math,
+    /// the world-view resolver — reads it from here, never a second copy
+    /// of the fit.
+    fn active_plate_dims(&self) -> (u16, u16) {
+        if self.world_view {
+            let width = hornvale_game_core::spread::world_plate_width(self.term_w, self.term_h);
+            let height = width / hornvale_game_core::spread::GLYPH_ASPECT;
+            (width, height)
+        } else {
+            (hornvale_game_core::spread::PLATE_WIDTH, self.plate_height)
+        }
+    }
+
+    /// Re-clamp `self.window`'s origin into the CURRENT zoom's virtual
+    /// bounds (`plate::virtual_dims`), for whichever plate is active.
+    /// Needed whenever the active plate's own size or the window's zoom
+    /// changes: `origin_col` wraps (longitude wraps), `origin_row` clamps
+    /// (latitude stops at the clamp — spec §4.2). Only ever meaningful
+    /// while the world view is on; callers only invoke it then.
+    fn reclamp_window(&mut self) {
+        let (plate_w, plate_h) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        if virtual_w > 0 {
+            self.window.origin_col %= virtual_w;
+        }
+        let max_origin_row = virtual_h.saturating_sub(u32::from(plate_h));
+        self.window.origin_row = self.window.origin_row.min(max_origin_row);
+    }
+
+    /// Move the cursor by `(dx, dy)` grid cells, clamped to the ACTIVE
+    /// plate's REAL bounds ([`Self::active_plate_dims`] — fix round 2: an
+    /// earlier revision clamped to the 80x24 floor's fixed height
+    /// regardless of the terminal's actual size; Task 3a's review found
+    /// the width half of the identical bug for the world plate).
+    ///
+    /// **With the world view on, an out-of-bounds move SCROLLS instead of
+    /// clamping (spec §4.2): the window moves, the cursor stays at the
+    /// edge.** Every unit of movement beyond the screen edge becomes one
+    /// unit of window movement — the same delta, split between "how far
+    /// the cursor got" and "how far the window had to move to make room
+    /// for the rest," so a `dx`/`dy` far larger than the plate (a resolver
+    /// test's deliberate stress case, not just an arrow key) is handled by
+    /// the identical formula as a single-cell nudge. Longitude wraps
+    /// (`origin_col`, modulo the virtual width); latitude clamps
+    /// (`origin_row`, stopped at the projection's own bound) — spec §4.2's
+    /// own asymmetry.
     fn move_cursor(&mut self, dx: i16, dy: i16) {
-        let max_x = i32::from(hornvale_game_core::spread::PLATE_WIDTH) - 1;
-        let max_y = i32::from(self.plate_height).saturating_sub(1).max(0);
-        let nx = (i32::from(self.cursor.x) + i32::from(dx)).clamp(0, max_x);
-        let ny = (i32::from(self.cursor.y) + i32::from(dy)).clamp(0, max_y);
-        self.cursor.x = nx as u16;
-        self.cursor.y = ny as u16;
+        let (plate_w, plate_h) = self.active_plate_dims();
+        let max_x = i64::from(plate_w).saturating_sub(1).max(0);
+        let max_y = i64::from(plate_h).saturating_sub(1).max(0);
+
+        let raw_x = i64::from(self.cursor.x) + i64::from(dx);
+        let clamped_x = raw_x.clamp(0, max_x);
+        self.cursor.x = clamped_x as u16;
+
+        let raw_y = i64::from(self.cursor.y) + i64::from(dy);
+        let clamped_y = raw_y.clamp(0, max_y);
+        self.cursor.y = clamped_y as u16;
+
+        if self.world_view {
+            let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+            let spill_x = raw_x - clamped_x;
+            if virtual_w > 0 {
+                self.window.origin_col = (i64::from(self.window.origin_col) + spill_x)
+                    .rem_euclid(i64::from(virtual_w))
+                    as u32;
+            }
+            let spill_y = raw_y - clamped_y;
+            let max_origin_row = i64::from(virtual_h)
+                .saturating_sub(i64::from(plate_h))
+                .max(0);
+            self.window.origin_row =
+                (i64::from(self.window.origin_row) + spill_y).clamp(0, max_origin_row) as u32;
+        }
+    }
+
+    /// Zoom the map view — ruling T3-f (2026-08-23, `task-3b-brief.md`):
+    /// one continuous ladder out of already-routed keys, rather than a new
+    /// binding or a fourth focus state.
+    ///
+    /// - `delta < 0` (zoom OUT): with the world view off, turn it ON at
+    ///   its coarsest rung (`Window { zoom: 0, .. }` — the whole planet,
+    ///   nothing further out); with it on and already at zoom `0`, do
+    ///   nothing (there IS nothing further out); otherwise zoom out one
+    ///   step.
+    /// - `delta > 0` (zoom IN): with the world view on and already at
+    ///   [`plate::MAX_ZOOM`] (the finest rung — one character per terrain
+    ///   cell, decision 0123), turn it OFF, returning to the walk-band
+    ///   chart; with it on and below the ceiling, zoom in one step;
+    ///   with it off, do nothing (the walk band has no zoom of its own).
+    ///
+    /// Either transition re-clamps the cursor into whichever plate is now
+    /// active ([`Self::move_cursor`]`(0, 0)`) and re-resolves the strip —
+    /// both the plate's own size and what the cursor points at can change
+    /// on every one of these transitions.
+    fn apply_zoom(&mut self, delta: i8) {
+        use std::cmp::Ordering;
+        match delta.cmp(&0) {
+            Ordering::Less => {
+                if !self.world_view {
+                    self.world_view = true;
+                    self.window = Window {
+                        zoom: 0,
+                        origin_col: 0,
+                        origin_row: 0,
+                    };
+                } else if self.window.zoom > 0 {
+                    self.window.zoom -= 1;
+                    self.reclamp_window();
+                }
+            }
+            Ordering::Greater => {
+                if self.world_view && self.window.zoom >= plate::MAX_ZOOM {
+                    self.world_view = false;
+                    self.window = Window {
+                        zoom: 0,
+                        origin_col: 0,
+                        origin_row: 0,
+                    };
+                } else if self.world_view {
+                    self.window.zoom += 1;
+                    self.reclamp_window();
+                }
+            }
+            Ordering::Equal => {}
+        }
+        self.move_cursor(0, 0);
+        self.refresh_strip();
+    }
+
+    /// Roll the projection so the point currently under the cursor sits on
+    /// the projection's own central line — spec §3.2's explicit re-centre
+    /// command, bound to `.` in [`Focus::Map`] (ruling T3-a). A no-op
+    /// unless the world view is active: the walk-band chart is not a
+    /// Mercator projection and has no central line to roll onto.
+    ///
+    /// Also re-derives `self.window`'s origin so the cursor's own SCREEN
+    /// position keeps naming the SAME geographic point after the roll,
+    /// rather than the picture jumping out from under the reader: it
+    /// re-projects that point under the NEW frame and sets the origin so
+    /// the projected cell lands exactly where the cursor already sits.
+    /// "The acknowledgement is the map redrawing" (`task-3b-brief.md`) —
+    /// there is no reply channel to say anything else.
+    fn recentre(&mut self) {
+        if !self.world_view {
+            return;
+        }
+        let (plate_w, plate_h) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let plate_row = self.window.origin_row + u32::from(self.cursor.y);
+        let plate_col = self.window.origin_col + u32::from(self.cursor.x);
+        let (lat, lon) =
+            mercator::unproject(&self.frame, plate_row, plate_col, virtual_w, virtual_h);
+
+        self.frame = mercator::centre_on(lat, lon);
+
+        if let Some((new_row, new_col)) =
+            mercator::project(&self.frame, lat, lon, virtual_w, virtual_h)
+        {
+            if virtual_w > 0 {
+                self.window.origin_col = (i64::from(new_col) - i64::from(self.cursor.x))
+                    .rem_euclid(i64::from(virtual_w))
+                    as u32;
+            }
+            let max_origin_row = i64::from(virtual_h)
+                .saturating_sub(i64::from(plate_h))
+                .max(0);
+            self.window.origin_row =
+                (i64::from(new_row) - i64::from(self.cursor.y)).clamp(0, max_origin_row) as u32;
+        }
+        self.refresh_strip();
+    }
+
+    /// The world plate's current [`Window`] — which zoom level and virtual
+    /// origin the plate is scrolled to. `pub` so a caller (a future task,
+    /// or a test) can read the zoom ladder's state without reaching into
+    /// private fields.
+    pub fn window(&self) -> &Window {
+        &self.window
+    }
+
+    /// The Mercator projection's current [`Frame`] — the world's own
+    /// rotation-derived central line at `start`, rolled by
+    /// [`Self::recentre`] on command thereafter.
+    pub fn frame(&self) -> &Frame {
+        &self.frame
     }
 
     /// Recompute `self.strip` for the current band and cursor position. See
@@ -705,13 +936,28 @@ impl Driver {
         self.strip = Some(self.resolve());
     }
 
-    /// The strip text for the current turn: [`NOTHING_HERE_YET`] unless the
-    /// current snapshot is a walk-band scene, in which case the cell the
-    /// cursor points at ([`Self::resolve_walk_band`]; see the module doc
-    /// for the chain from a screen position to a `CellId`) is resolved
-    /// against the terrain-feature index — [`UNNAMED_TERRAIN`] if that
-    /// chain comes up empty at any step.
+    /// The strip text for the current turn.
+    ///
+    /// **With the world view on, this resolves against the world plate —
+    /// Task 3a's review's other finding, closed here (Task 3b): the strip
+    /// used to keep resolving the walk band's own chart even while the
+    /// world plate was on screen, naming terrain that was not drawn.** See
+    /// [`Self::resolve_world_view`]; no sight caption applies there (the
+    /// world plate carries no observer-vision channel — that caption is
+    /// specific to the walk band's chart).
+    ///
+    /// Otherwise: [`NOTHING_HERE_YET`] unless the current snapshot is a
+    /// walk-band scene, in which case the cell the cursor points at
+    /// ([`Self::resolve_walk_band`]; see the module doc for the chain from
+    /// a screen position to a `CellId`) is resolved against the
+    /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
+    /// empty at any step.
     fn resolve(&self) -> String {
+        if self.world_view {
+            return self
+                .resolve_world_view()
+                .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
+        }
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
         };
@@ -722,6 +968,36 @@ impl Driver {
             .resolve_walk_band(&chart)
             .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
         caption(base, chart.sight.as_ref())
+    }
+
+    /// The world view's own resolution chain: the cursor's SCREEN
+    /// position, through [`plate::virtual_dims`] — the SAME function
+    /// [`plate::draw_with`] itself calls to turn a window position into a
+    /// Mercator cell (one source of truth; see that function's own doc) —
+    /// to a single geographic sample at the character's own centre, to the
+    /// nearest real terrain cell, to its most specific feature's name.
+    ///
+    /// **F5: which cell a coarse character resolves to.** The plate draws
+    /// by a 49-point AREA-MAJORITY vote (`plate.rs`'s own doc) — there is
+    /// no single terrain cell a drawn glyph "is", only a land/ocean tally.
+    /// Resolution needs exactly one real cell, so this asks for the cell
+    /// nearest the character's own CENTRE: a single-point query, the same
+    /// shape [`Self::resolve_walk_band`] already uses for the chart. This
+    /// is deliberately NOT the majority-voted glyph — the two answer
+    /// different questions ("what does this character mostly show" vs.
+    /// "what is the one real thing at its centre") and can disagree at
+    /// the coarsest zoom; see the task report's F5 measurement for how
+    /// often.
+    fn resolve_world_view(&self) -> Option<String> {
+        let (plate_w, _) = self.active_plate_dims();
+        let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
+        let plate_row = self.window.origin_row + u32::from(self.cursor.y);
+        let plate_col = self.window.origin_col + u32::from(self.cursor.x);
+        let (lat, lon) =
+            mercator::unproject(&self.frame, plate_row, plate_col, virtual_w, virtual_h);
+        let cell_id = self.nearest.nearest(&self.geo, lat, lon);
+        let (species, ph, morph) = &self.namer;
+        resolve_at(&self.index, cell_id, self.seed, species, ph, morph)
     }
 
     /// The walk band's own resolution chain, cursor position to name.
@@ -828,6 +1104,398 @@ impl Drop for Driver {
             drop(Box::from_raw(self.ctx));
             drop(Box::from_raw(self.world));
         }
+    }
+}
+
+/// Task 3b: zoom, cursor-driven scroll, re-centre, and the world-view
+/// resolver — the ladder from the walk band into the world map and back,
+/// and the two things Task 3a's own review left pointing at the wrong
+/// plate (the cursor clamp and the strip's resolver).
+///
+/// In-module rather than `tests/driver.rs` (the task's own instruction:
+/// "Test: in-module in both") — several of these reach private fields
+/// (`self.cursor`, `self.window`, `self.nearest`, `self.geo`, `self.namer`)
+/// directly, on purpose, to reconstruct an EXPECTED answer independently
+/// of the code under test rather than calling it a second time and
+/// comparing it with itself.
+#[cfg(test)]
+mod portolan_tests {
+    use super::*;
+    use hornvale_astronomy::RotationPin;
+    use hornvale_kernel::Value;
+
+    /// A fresh seed-42 flagship driver — the same construction every
+    /// acceptance test in `tests/driver.rs` uses.
+    fn test_driver() -> Driver {
+        Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
+    }
+
+    /// Enter the map and zoom out once — the T3-f gesture that turns the
+    /// world view on, at its coarsest rung.
+    fn enter_world_view(d: &mut Driver) {
+        d.enter_map();
+        d.apply(Action::Zoom(-1));
+        assert!(
+            d.world_view,
+            "zooming out from the walk band must enter the world view"
+        );
+    }
+
+    // -- Step 1: the zoom ladder, per ruling T3-f -----------------------
+
+    #[test]
+    fn zoom_out_from_the_walk_band_enters_the_world_view_at_the_coarsest_rung() {
+        let mut d = test_driver();
+        d.enter_map();
+        assert!(!d.world_view);
+        d.apply(Action::Zoom(-1));
+        assert!(d.world_view);
+        assert_eq!(d.window.zoom, 0, "the coarsest rung is zoom 0");
+        assert_eq!(d.window.origin_col, 0);
+        assert_eq!(d.window.origin_row, 0);
+    }
+
+    #[test]
+    fn zoom_out_at_the_coarsest_rung_does_nothing_further() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let before = d.window;
+        d.apply(Action::Zoom(-1));
+        assert_eq!(
+            d.window, before,
+            "there is nothing further out than the whole planet"
+        );
+        assert!(d.world_view, "must still be in the world view");
+    }
+
+    #[test]
+    fn zoom_in_climbs_one_step_at_a_time() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::Zoom(1));
+        assert_eq!(d.window.zoom, 1);
+        assert!(d.world_view);
+    }
+
+    #[test]
+    fn zoom_in_stops_at_max_zoom_then_the_next_press_leaves_the_world_view() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        for _ in 0..plate::MAX_ZOOM {
+            d.apply(Action::Zoom(1));
+        }
+        assert!(d.world_view);
+        assert_eq!(
+            d.window.zoom,
+            plate::MAX_ZOOM,
+            "maximum zoom is one character per terrain cell (decision 0123)"
+        );
+        d.apply(Action::Zoom(1));
+        assert!(
+            !d.world_view,
+            "one more zoom-in at the finest rung must leave the world view (ruling T3-f)"
+        );
+    }
+
+    /// Sixty-four presses is far more than [`plate::MAX_ZOOM`] steps, so
+    /// this must walk all the way up the ladder AND back off the top —
+    /// the ladder's ceiling must be a real stop, not merely a slow climb.
+    #[test]
+    fn many_zoom_ins_walk_off_the_top_of_the_ladder_and_back_to_the_walk_band() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        for _ in 0..64 {
+            d.apply(Action::Zoom(1));
+        }
+        assert!(!d.world_view);
+    }
+
+    #[test]
+    fn zoom_plus_on_the_walk_band_alone_is_a_no_op() {
+        let mut d = test_driver();
+        d.enter_map();
+        assert!(!d.world_view);
+        let before_window = d.window;
+        d.apply(Action::Zoom(1));
+        assert!(!d.world_view, "the walk band has no zoom of its own");
+        assert_eq!(d.window, before_window);
+    }
+
+    // -- Step 2: the cursor clamps to the ACTIVE plate -------------------
+
+    #[test]
+    fn the_cursor_reaches_columns_the_walk_bands_fixed_width_cannot() {
+        let mut d = test_driver();
+        d.resize(210, 56); // a realistic terminal, world plate wider than PLATE_WIDTH
+        enter_world_view(&mut d);
+        let (plate_w, _) = d.active_plate_dims();
+        assert!(
+            plate_w > hornvale_game_core::spread::PLATE_WIDTH,
+            "the test terminal must actually produce a wider-than-walk-band plate"
+        );
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        assert_eq!(
+            d.cursor.x,
+            plate_w - 1,
+            "the cursor must reach the world plate's own far edge, not stop at PLATE_WIDTH - 1"
+        );
+    }
+
+    #[test]
+    fn the_cursor_clamps_back_to_the_walk_bands_width_once_the_world_view_is_off() {
+        let mut d = test_driver();
+        d.resize(210, 56);
+        enter_world_view(&mut d);
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        for _ in 0..plate::MAX_ZOOM + 1 {
+            d.apply(Action::Zoom(1)); // walk back off the top of the ladder
+        }
+        assert!(!d.world_view);
+        d.apply(Action::CursorBy(i16::MAX, 0));
+        assert_eq!(
+            d.cursor.x,
+            hornvale_game_core::spread::PLATE_WIDTH - 1,
+            "back on the walk band, the clamp must be the fixed PLATE_WIDTH again"
+        );
+    }
+
+    // -- Step 3: the strip resolves against what is drawn -----------------
+
+    #[test]
+    fn the_strip_stops_naming_the_walk_bands_chart_once_the_world_view_is_on() {
+        let mut d = test_driver();
+        d.enter_map();
+        let walk_band_strip = d.strip_text().map(str::to_string);
+        assert!(
+            walk_band_strip
+                .as_deref()
+                .is_some_and(|t| t.starts_with("Vngashngatva")),
+            "sanity: the walk band must resolve the observer's own name at the default \
+             cursor, got {walk_band_strip:?}"
+        );
+
+        d.apply(Action::Zoom(-1)); // enter the world view
+        let world_view_strip = d.strip_text().map(str::to_string);
+        assert_ne!(
+            walk_band_strip, world_view_strip,
+            "the strip must stop naming the walk-band chart once the world plate is drawn \
+             instead of it"
+        );
+        assert_ne!(
+            world_view_strip.as_deref(),
+            Some(NOTHING_HERE_YET),
+            "the world view has a real resolver now; NOTHING_HERE_YET is reserved for a \
+             band with none at all"
+        );
+    }
+
+    // -- Step 4 / H3: scroll and cursor stay coherent, at MORE THAN ONE
+    //    offset and MORE THAN ONE zoom ------------------------------------
+
+    /// H3, the hypothesis at real risk: after scrolling, the cell under the
+    /// cursor must be the cell the window/frame state actually names —
+    /// checked by reconstructing the expectation FROM SCRATCH, using only
+    /// the public `window()`/`frame()` accessors and the SAME
+    /// [`plate::virtual_dims`] the plate itself draws from, never by
+    /// calling `resolve_world_view` a second time and comparing it with
+    /// itself. A test pinned at one offset and one zoom cannot see drift
+    /// between the window's own offset and the resolver's — this one
+    /// sweeps three zooms and five offsets, including one (`(39, 19)`)
+    /// larger than the floor plate itself, to force real scrolling.
+    #[test]
+    fn the_cell_under_the_cursor_matches_the_window_at_every_zoom_and_offset() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+
+        for target_zoom in [0u8, 1, 3] {
+            while d.window.zoom < target_zoom {
+                d.apply(Action::Zoom(1));
+            }
+            assert_eq!(d.window.zoom, target_zoom);
+
+            for &(dx, dy) in &[(0i16, 0i16), (7, 0), (0, 5), (39, 19), (-7, 3)] {
+                d.apply(Action::CursorBy(dx, dy));
+
+                let (plate_w, _) = d.active_plate_dims();
+                let (virtual_w, virtual_h) = plate::virtual_dims(d.window(), plate_w);
+                let plate_row = d.window().origin_row + u32::from(d.cursor.y);
+                let plate_col = d.window().origin_col + u32::from(d.cursor.x);
+                let (lat, lon) =
+                    mercator::unproject(d.frame(), plate_row, plate_col, virtual_w, virtual_h);
+                let expected_cell = d.nearest.nearest(&d.geo, lat, lon);
+                let (species, ph, morph) = &d.namer;
+                let expected = resolve_at(&d.index, expected_cell, d.seed, species, ph, morph);
+
+                let resolved = d.resolve_world_view();
+                assert_eq!(
+                    resolved, expected,
+                    "zoom {target_zoom}, offset ({dx}, {dy}), cursor {:?}, window {:?}: \
+                     the resolver drifted from the window/cursor state",
+                    d.cursor, d.window
+                );
+            }
+        }
+    }
+
+    // -- Step 5: `.` re-centres, and the routing table stays total --------
+
+    #[test]
+    fn recentre_rolls_the_projection_and_cursor_motion_alone_does_not() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let before = *d.frame();
+
+        d.apply(Action::CursorBy(12, 4));
+        assert_eq!(
+            *d.frame(),
+            before,
+            "the map must hold still while the cursor merely moves"
+        );
+
+        d.apply(Action::Recentre);
+        assert_ne!(
+            *d.frame(),
+            before,
+            "an explicit `.` must roll the projection"
+        );
+    }
+
+    #[test]
+    fn recentre_keeps_the_same_geographic_point_under_the_cursor() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::CursorBy(9, 5));
+        let before_name = d.resolve_world_view();
+
+        d.apply(Action::Recentre);
+        let after_name = d.resolve_world_view();
+
+        assert_eq!(
+            before_name, after_name,
+            "recentring must roll the map UNDER a still cursor, not change what the cursor \
+             names"
+        );
+    }
+
+    #[test]
+    fn recentre_is_a_no_op_off_the_world_view() {
+        let mut d = test_driver();
+        d.enter_map();
+        assert!(!d.world_view);
+        let before = *d.frame();
+        d.apply(Action::Recentre);
+        assert_eq!(
+            *d.frame(),
+            before,
+            "the walk-band chart has no central line to roll"
+        );
+    }
+
+    // -- Step 6 / H4: a LOCKED world's habitable band is not in the clamp -
+
+    /// H4: generate real `--rotation locked` worlds (not seed 42 alone —
+    /// a spinning-world fixture cannot see this defect at all) and confirm
+    /// every real settlement's committed `(latitude, longitude)` projects
+    /// inside the clamp under the locked frame, at the 80x24 floor's own
+    /// plate size.
+    ///
+    /// claim: invariant(forall-seed) — checked across seeds 42/7/1337 (the
+    /// task brief's own median-terminator-distance seed set), not a claim
+    /// about every seed; a locked world's real settlements never fall in
+    /// the projection's clamp.
+    #[test]
+    fn h4_locked_worlds_settlements_are_never_in_the_clamp() {
+        let plate_w = hornvale_game_core::spread::PLATE_WIDTH;
+        let plate_h = plate_w / hornvale_game_core::spread::GLYPH_ASPECT;
+        let frame = mercator::frame_for(true);
+
+        for seed in [42u64, 7, 1337] {
+            let pins = hornvale_astronomy::SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..hornvale_astronomy::SkyPins::default()
+            };
+            let world = build_world(
+                Seed(seed),
+                &pins,
+                SkyChoice::Generated,
+                &TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .expect("a locked world still generates");
+
+            let settlements: Vec<_> = world
+                .ledger
+                .find(hornvale_settlement::IS_SETTLEMENT)
+                .map(|f| f.subject)
+                .collect();
+            assert!(
+                !settlements.is_empty(),
+                "seed {seed} minted no settlements to check"
+            );
+
+            for id in settlements {
+                let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
+                    Some(Value::Number(n)) => *n,
+                    other => panic!("seed {seed}, settlement {id:?}: no latitude fact ({other:?})"),
+                };
+                let lon = match world.ledger.value_of(id, hornvale_settlement::LONGITUDE) {
+                    Some(Value::Number(n)) => *n,
+                    other => {
+                        panic!("seed {seed}, settlement {id:?}: no longitude fact ({other:?})")
+                    }
+                };
+                assert!(
+                    mercator::project(&frame, lat, lon, u32::from(plate_w), u32::from(plate_h))
+                        .is_some(),
+                    "seed {seed}: settlement {id:?} at ({lat}, {lon}) fell in the clamp on a \
+                     locked world"
+                );
+            }
+        }
+    }
+
+    // -- F5: which cell does a coarse character resolve to? ---------------
+
+    /// F5 measurement, not a pass/fail gate (the task brief's own framing:
+    /// "if drawn and resolved disagree, say so — it is a real finding").
+    /// At the coarsest zoom, compares the plate's DRAWN 49-point-majority
+    /// ocean/land glyph against the resolver's SINGLE-POINT-at-the-cell's-
+    /// own-centre answer, for every cell of the floor plate, and reports
+    /// the agreement ratio. Run with `--nocapture` to see the number; see
+    /// the task report for the measured figure and what it means.
+    #[test]
+    fn f5_drawn_majority_vs_resolved_single_point_at_the_coarsest_zoom() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let grid = d.world_plate(plate_w, plate_h);
+
+        let mut agree = 0u32;
+        let mut total = 0u32;
+        for y in 0..plate_h {
+            for x in 0..plate_w {
+                let (virtual_w, virtual_h) = plate::virtual_dims(&d.window, plate_w);
+                let plate_row = d.window.origin_row + u32::from(y);
+                let plate_col = d.window.origin_col + u32::from(x);
+                let (lat, lon) =
+                    mercator::unproject(&d.frame, plate_row, plate_col, virtual_w, virtual_h);
+                let cell = d.nearest.nearest(&d.geo, lat, lon);
+                let point_ocean = d.terrain.is_ocean(cell);
+
+                let drawn_ocean = grid.get(x, y).map(|c| c.glyph) == Some(Some('~'));
+                total += 1;
+                if point_ocean == drawn_ocean {
+                    agree += 1;
+                }
+            }
+        }
+        assert!(total > 0);
+        let ratio = f64::from(agree) / f64::from(total);
+        println!(
+            "F5: single-point-centre resolution agrees with the drawn 49-vote majority \
+             glyph on {agree}/{total} = {ratio:.4} of the {plate_w}x{plate_h} floor plate \
+             at the coarsest zoom"
+        );
     }
 }
 

@@ -145,8 +145,8 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
 fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     use crossterm::event::{Event, read};
 
-    let (_, h) = terminal_size()?;
-    driver.resize(h);
+    let (w, h) = terminal_size()?;
+    driver.resize(w, h);
     redraw(term, driver)?;
     loop {
         match read()? {
@@ -162,8 +162,8 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
                 }
             }
             Event::Resize(_, _) => {
-                let (_, h) = terminal_size()?;
-                driver.resize(h);
+                let (w, h) = terminal_size()?;
+                driver.resize(w, h);
                 redraw(term, driver)?;
             }
             _ => {}

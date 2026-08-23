@@ -70,11 +70,20 @@ pub enum Action {
     Submit,
     /// Move the map cursor by `(dx, dy)` grid cells.
     CursorBy(i16, i16),
-    /// Zoom the map in (`1`) or out (`-1`). **Routed, not implemented** —
-    /// zoom itself is The Portolan part II's. The driver accepts and
-    /// ignores it; what matters now is that `-` on the map does not fall
-    /// through to the buffer and type a `-`.
+    /// Zoom the map in (`1`) or out (`-1`). **Ruling T3-f (2026-08-23):**
+    /// one continuous ladder — `-` from the walk-band chart turns the
+    /// world view on at its coarsest rung; `+` at the world view's finest
+    /// rung turns it back off; between those, the two keys move the world
+    /// map's own zoom. See [`crate::driver::Driver::apply`]'s doc for the
+    /// implementation.
     Zoom(i8),
+    /// Roll the projection so the point under the cursor sits on the
+    /// central line (spec §3.2). Bound to `.` in [`Focus::Map`] — a
+    /// punctuation key, joining `-`/`+`/`=` as the established exception
+    /// to the total routing table (T3-a: letters stay unavailable so the
+    /// table stays predictable, decision 0159). A no-op unless the world
+    /// view is active.
+    Recentre,
     /// Send this movement word (`"north"`, `"up"`, …) to the session as if
     /// submitted. Produced only under [`Focus::Walk`]; executed by the
     /// driver's `apply`, which routes it through the same path `Submit` uses.
@@ -119,6 +128,7 @@ pub fn action_for(key: KeyEvent, focus: Focus) -> Action {
         Focus::Map => match key.code {
             KeyCode::Char('-') => Action::Zoom(-1),
             KeyCode::Char('+') | KeyCode::Char('=') => Action::Zoom(1),
+            KeyCode::Char('.') => Action::Recentre,
             KeyCode::Char(c) => Action::FocusAndType(c),
             KeyCode::Left => Action::CursorBy(-1, 0),
             KeyCode::Right => Action::CursorBy(1, 0),
@@ -195,13 +205,14 @@ mod tests {
 
     /// With the map focused, a printable character returns focus to the CLI
     /// AND types itself — one keypress, not two (spec §2). The zoom keys
-    /// are the deliberate exception, checked separately below.
+    /// and `.` (re-centre) are the deliberate exceptions, checked
+    /// separately below.
     #[test]
     fn a_printable_character_bounces_focus_back_to_the_cli_and_types() {
         let mut wrong = Vec::new();
         for b in 0x20u8..=0x7Eu8 {
             let c = b as char;
-            if matches!(c, '-' | '+' | '=') {
+            if matches!(c, '-' | '+' | '=' | '.') {
                 continue;
             }
             let key = KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE);
@@ -232,6 +243,22 @@ mod tests {
                 "{c} must be ordinary text on the CLI"
             );
         }
+    }
+
+    /// `.` is the re-centre key on the map, and ordinary text everywhere
+    /// else — the same discriminating shape the zoom keys' own test above
+    /// checks, so a routing change that made `.` fall through to the
+    /// buffer (or made it type on the map) is caught here rather than
+    /// only in the bounce-and-type sweep, which excludes it entirely.
+    #[test]
+    fn the_recentre_key_recentres_on_the_map_and_types_on_the_cli() {
+        let key = KeyEvent::new(KeyCode::Char('.'), KeyModifiers::NONE);
+        assert_eq!(action_for(key, Focus::Map), Action::Recentre);
+        assert_eq!(
+            action_for(key, Focus::Cli),
+            Action::Type('.'),
+            ". must be ordinary text on the CLI"
+        );
     }
 
     /// The named keys with the map focused. `Enter` and `Backspace` are

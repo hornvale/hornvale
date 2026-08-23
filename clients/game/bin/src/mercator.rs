@@ -166,6 +166,44 @@ fn from_frame(f: &Frame, frame_lat_deg: f64, frame_lon_deg: f64) -> (f64, f64) {
     }
 }
 
+/// A new [`Frame`] whose central line (the projection's own equator, the
+/// undistorted great circle) passes through the geographic point
+/// `(lat_deg, lon_deg)` — the map's re-centring gesture (spec §3.2's
+/// explicit "roll the projection" command; `bin`'s `.` key in the map
+/// focus).
+///
+/// **Derivation.** A frame's pole must sit 90° (angular distance) from
+/// every point on its own equator, so recentring on `P` means choosing a
+/// pole 90° from `P` — a whole great circle of valid choices (the "roll"
+/// degree of freedom a true oblique Mercator carries). This picks the one
+/// reached by moving 90° due NORTH from `P` along `P`'s own meridian —
+/// parameter-free, no extra roll angle to invent.
+///
+/// In Cartesian terms, with `v` = `P`'s unit vector
+/// (`cos(lat)cos(lon), cos(lat)sin(lon), sin(lat)`) and `n` = the
+/// geographic north pole `(0, 0, 1)`, the new pole is `n` projected
+/// orthogonal to `v` and renormalized: `n - (n·v)v`. Since `n·v =
+/// sin(lat_deg)`, this reduces to a closed form with no explicit
+/// pole-crossing case-split: `new_pole_lat = 90° - |lat_deg|`, and
+/// `new_pole_lon = lon_deg + 180°` when `lat_deg > 0` (the meridian path
+/// crossed the north pole on the way there) or `lon_deg` unchanged
+/// otherwise. At `lat_deg == 0` both branches agree — the new pole IS the
+/// geographic north pole, where longitude is moot. `mercator::tests`
+/// checks the closed form against the general definition (`P` lands on
+/// the new frame's equator) rather than trusting the algebra alone.
+pub fn centre_on(lat_deg: f64, lon_deg: f64) -> Frame {
+    let pole_lat_deg = 90.0 - lat_deg.abs();
+    let pole_lon_deg = if lat_deg > 0.0 {
+        wrap_deg_signed(lon_deg + 180.0)
+    } else {
+        lon_deg
+    };
+    Frame {
+        pole_lat_deg,
+        pole_lon_deg,
+    }
+}
+
 /// Wrap a longitude difference (degrees) into `(-180, 180]`.
 fn wrap_deg_signed(deg: f64) -> f64 {
     let wrapped = (deg + 180.0).rem_euclid(360.0) - 180.0;
@@ -271,5 +309,46 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// `centre_on`'s general definition, not the closed-form algebra:
+    /// whatever point it is asked to centre lands on the NEW frame's own
+    /// equator (`to_frame`'s frame-latitude is ~0), for a spread of points
+    /// including the ones the closed form case-splits on (`lat == 0`, the
+    /// crossing threshold `lat > 0` vs. `lat <= 0`, and the poles
+    /// themselves).
+    #[test]
+    fn centre_on_puts_the_point_on_the_new_frames_equator() {
+        for &(lat, lon) in &[
+            (0.0, 0.0),
+            (0.0, 137.0),
+            (30.0, -60.0),
+            (-30.0, -60.0),
+            (84.9, 12.0),
+            (-84.9, 12.0),
+            (45.0, 179.9),
+            (-45.0, -179.9),
+        ] {
+            let f = centre_on(lat, lon);
+            let (frame_lat, _) = to_frame(&f, lat, lon);
+            assert!(
+                frame_lat.abs() < 1e-6,
+                "centring on ({lat}, {lon}) left it at frame latitude {frame_lat}, not on \
+                 the equator"
+            );
+        }
+    }
+
+    /// A no-op re-centre (already on the geographic equator, at the prime
+    /// meridian) must not silently do nothing OR blow up — the pole ends
+    /// up at the geographic north pole either way (`lat == 0` is the
+    /// closed form's own boundary case), and the point must still land on
+    /// the new equator.
+    #[test]
+    fn centre_on_the_equator_itself_is_well_defined() {
+        let f = centre_on(0.0, 0.0);
+        assert!((f.pole_lat_deg - 90.0).abs() < 1e-9);
+        let (frame_lat, _) = to_frame(&f, 0.0, 0.0);
+        assert!(frame_lat.abs() < 1e-6);
     }
 }

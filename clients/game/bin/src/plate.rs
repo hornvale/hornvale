@@ -51,26 +51,99 @@ use crate::mercator::{self, Frame};
 /// A view onto the world plate: which zoom level, and which cell the
 /// window's origin sits at.
 ///
-/// The Portolan part II's Task 2 (this task) only ever constructs
+/// The Portolan part II's Task 2 only ever constructed
 /// `Window { zoom: 0, origin_col: 0, origin_row: 0 }` — the whole planet,
-/// filling the requested `w`x`h` exactly — and [`draw_with`] treats `w`
+/// filling the requested `w`x`h` exactly — and [`draw_with`] treated `w`
 /// and `h` as the FULL Mercator projection's own dimensions, so a zero
-/// origin is a no-op addition. Task 3 (zoom/scroll, a paused follow-on)
-/// is the first consumer that gives a nonzero origin or a `w`x`h` smaller
-/// than the virtual map meaning, and defines what that means; this task
-/// stores the fields and threads them into the projection call so the
-/// signature does not have to change again to start reading them.
+/// origin was a no-op addition. **Task 3b is the first consumer that gives
+/// a nonzero origin or a zoom above `0`, and [`virtual_dims`] is where
+/// that meaning is defined**: `w`/`h` (passed to [`draw`]/[`draw_with`])
+/// are always the DRAWN plate's own size — the screen window — while
+/// `zoom` picks how much larger a virtual chart that window scrolls
+/// inside of, and `origin_col`/`origin_row` are that virtual chart's own
+/// coordinates, not the screen's.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Window {
-    /// The zoom level. `0` is the whole-planet view drawn today; what a
-    /// higher level means is Task 3's to define.
+    /// The zoom level, `0..=`[`MAX_ZOOM`]. `0` is the whole planet (the
+    /// virtual chart is exactly the drawn plate's own size, so there is
+    /// nothing to scroll); [`MAX_ZOOM`] is one character per terrain cell
+    /// (see that constant's doc). See [`virtual_dims`] for the formula.
     pub zoom: u8,
-    /// The window's origin column, in plate cells, added to every drawn
-    /// column before inverse-projecting. Always `0` in this task.
+    /// The window's origin column, in VIRTUAL chart cells (see
+    /// [`virtual_dims`]), added to every drawn column before
+    /// inverse-projecting. `0` at `zoom == 0`, where it is the only valid
+    /// value (the whole virtual chart is on screen).
     pub origin_col: u32,
-    /// The window's origin row, in plate cells, added to every drawn row
-    /// before inverse-projecting. Always `0` in this task.
+    /// The window's origin row, in VIRTUAL chart cells (see
+    /// [`virtual_dims`]), added to every drawn row before
+    /// inverse-projecting. `0` at `zoom == 0`, where it is the only valid
+    /// value (the whole virtual chart is on screen).
     pub origin_row: u32,
+}
+
+/// Task 1's own measurement (its task report, Step 10): walking the
+/// equator at `GLOBE_LEVEL` (seed 42) crosses 385 distinct terrain cells
+/// — not spec §4.3's ~364 estimate. This is the zoom ladder's ceiling:
+/// beyond a virtual chart this wide, a character would be drawing detail
+/// the mesh does not have (decision 0123: disclose a resolution, never
+/// invent detail below it). The report notes this is believed to be a
+/// level-6-TOPOLOGY constant (the icosphere subdivision, not the terrain
+/// outcome) rather than a seed-42 fact, but flags that belief as
+/// unconfirmed against a second seed.
+pub const MAX_VIRTUAL_WIDTH: u16 = 385;
+
+/// How many zoom steps [`Window::zoom`] carries. Each step DOUBLES the
+/// virtual chart's width (see [`virtual_dims`]), starting from the 80x24
+/// floor's own plate width ([`hornvale_game_core::spread::PLATE_WIDTH`],
+/// 40 — the narrowest plate this client ever draws) and clamped at
+/// [`MAX_VIRTUAL_WIDTH`] (385): `40 << 3 == 320 < 385`, `40 << 4 == 640 >=
+/// 385`, so four doublings is the smallest ladder that reaches the
+/// ceiling from the floor. A wider terminal's plate (Task 3a's dynamic
+/// [`hornvale_game_core::spread::world_plate_width`]) reaches the ceiling
+/// in fewer of these four steps — [`virtual_dims`]'s own clamp catches
+/// that — so the last one or two zoom-in presses there are no-ops rather
+/// than the finest rung being unreachable; the ladder is sized for the
+/// floor, not wasted on it.
+pub const MAX_ZOOM: u8 = 4;
+
+/// The full virtual chart's width and height, in Mercator grid cells, at
+/// `win`'s zoom level, for a plate whose OWN drawn width is
+/// `plate_width` (its height following
+/// [`hornvale_game_core::spread::GLYPH_ASPECT`] — the same ratio
+/// `bin`'s `Driver::world_plate` derives the drawn plate's height from).
+///
+/// At `zoom == 0` this returns `(plate_width, plate_width / GLYPH_ASPECT)`
+/// exactly — the whole planet fits with no scrolling, by construction, no
+/// matter how wide `plate_width` itself is (a test probing a resolution no
+/// live terminal uses must still see this invariant hold). Each zoom step
+/// doubles the width, clamped at [`MAX_VIRTUAL_WIDTH`] — or at
+/// `plate_width`, whichever is larger, so the clamp only ever limits
+/// GROWTH and never forces the virtual chart narrower than what is
+/// already on screen.
+///
+/// **This is the ONE function both [`draw_with`] (painting) and `bin`'s
+/// cursor resolver (`driver.rs`) call to turn a window position into a
+/// Mercator cell — never a second copy of this doubling-and-clamp
+/// arithmetic.** This campaign has already fixed the "two computations of
+/// the same geometry disagree" defect twice (a stale cursor, then a
+/// hardcoded plate height); H3 is exactly this defect a third time, and
+/// this function is the fix.
+pub fn virtual_dims(win: &Window, plate_width: u16) -> (u32, u32) {
+    let plate_width = u32::from(plate_width);
+    let zoom = win.zoom.min(MAX_ZOOM);
+    let scaled = plate_width << zoom;
+    // The ceiling is `MAX_VIRTUAL_WIDTH`, EXCEPT when the plate itself is
+    // already wider than that (an oversized screen, or a test probing a
+    // resolution no live terminal uses) — `zoom == 0` must always yield
+    // `virtual_w == plate_width` exactly (the "whole planet, no scroll"
+    // invariant), even past 385 columns, so the effective ceiling can
+    // never be smaller than `plate_width` itself. `scaled` is always
+    // `>= plate_width` (zoom only grows it), so this only ever clamps
+    // GROWTH, never forces `virtual_w` below the plate's own width.
+    let ceiling = u32::from(MAX_VIRTUAL_WIDTH).max(plate_width);
+    let virtual_w = scaled.min(ceiling);
+    let virtual_h = virtual_w / u32::from(hornvale_game_core::spread::GLYPH_ASPECT);
+    (virtual_w, virtual_h)
 }
 
 /// The glyph for a cell whose sampled footprint is majority ocean — the
@@ -159,23 +232,36 @@ pub fn draw(
 /// up each sample's nearest terrain cell, and draws ocean or land by
 /// MAJORITY vote across the samples.
 ///
-/// **No polar fabrication (spec §6), and it is automatic rather than an
-/// extra check here.** `unproject`'s own `mercator_y` formula maps `row
-/// in [0, h)` to `y` strictly inside `(-y_max, y_max)` for ANY `h`
-/// (including the virtual, supersampled `h * SUBSAMPLES_PER_AXIS` this
-/// function actually calls it with) — never equal to either bound,
-/// because `(row + 0.5)/h` is strictly inside `(0, 1)` for every valid
-/// row — so the FRAME latitude it recovers is always strictly inside
-/// `(-LAT_CLAMP_DEG, LAT_CLAMP_DEG)`. There is no row/col this function
-/// visits, at any sub-sample resolution, for which `unproject` can hand
-/// back an out-of-clamp point, so there is no sample here that needs to
-/// be discarded; a runtime check on the GEOGRAPHIC latitude this function
-/// receives back would additionally be the wrong test to make —
-/// `mercator::to_frame`'s own doc is explicit that a locked frame's
-/// rotation is not a coordinate permutation, so a point's frame latitude
-/// and its geographic latitude are different numbers in that frame, and
-/// the clamp is stated on the former ([`mercator::project`]'s own `None`
-/// branch checks the frame latitude, never the geographic one).
+/// **`w`/`h` are the drawn plate's own size — the screen window —
+/// never the virtual chart's.** [`virtual_dims`]`(win, w)` gives the
+/// latter; `win.origin_row`/`origin_col` are offsets into IT, not into
+/// `w`x`h`. Task 2 (before Task 3b) only ever drew at `win.zoom == 0`,
+/// where the two coincide, so this distinction was invisible until zoom
+/// and scroll existed to tell them apart.
+///
+/// **No polar fabrication (spec §6) — automatic, PROVIDED the caller keeps
+/// `win.origin_row` inside its own valid range.** `unproject`'s own
+/// `mercator_y` formula maps a row inside `[0, virtual_h)` to a `y` value
+/// strictly inside `(-y_max, y_max)` — never equal to either bound — so the
+/// FRAME latitude it recovers is always strictly inside `(-LAT_CLAMP_DEG,
+/// LAT_CLAMP_DEG)`, PROVIDED every visited row (the origin plus up to `h -
+/// 1`) stays below `virtual_h`. `bin`'s `driver.rs` is the one place
+/// `origin_row` is ever set or moved, and every site there re-clamps it via
+/// [`virtual_dims`] for exactly this reason (see that module's
+/// `reclamp_window`).
+///
+/// `origin_col` carries no such obligation: longitude WRAPS (the module
+/// doc on `wrap_deg_signed`'s periodicity), so a column past the virtual
+/// width still lands on a valid, correctly wrapped longitude rather than
+/// an out-of-clamp one.
+///
+/// A runtime check on the GEOGRAPHIC latitude this function receives back
+/// would additionally be the wrong test to make: `mercator::to_frame`'s
+/// own doc is explicit that a locked frame's rotation is not a coordinate
+/// permutation, so a point's frame latitude and its geographic latitude
+/// are different numbers in that frame, and the clamp is stated on the
+/// former ([`mercator::project`]'s own `None` branch checks the frame
+/// latitude, never the geographic one).
 #[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8 — mirroring `hornvale_game_core::render_with`'s own allow
 pub fn draw_with(
     terrain: &GeneratedTerrain,
@@ -190,8 +276,9 @@ pub fn draw_with(
     let mut grid = Grid::new(w, h);
     let width = u32::from(w);
     let height = u32::from(h);
-    let sub_width = width * SUBSAMPLES_PER_AXIS;
-    let sub_height = height * SUBSAMPLES_PER_AXIS;
+    let (virtual_w, virtual_h) = virtual_dims(win, w);
+    let sub_width = virtual_w * SUBSAMPLES_PER_AXIS;
+    let sub_height = virtual_h * SUBSAMPLES_PER_AXIS;
 
     for row in 0..height {
         for col in 0..width {

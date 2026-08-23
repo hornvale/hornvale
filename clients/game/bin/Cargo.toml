@@ -49,3 +49,10 @@ signal-hook = "0.3"
 # dev-dependency so no shipped code path gains it.
 [dev-dependencies]
 serde_json = "1"
+# Task 3b's H4 test (`driver.rs`) builds a `--rotation locked` world
+# directly (bypassing `Driver`, which has no locked-pin entry point) and
+# reads real settlements' `latitude`/`longitude` facts off the ledger to
+# check none fall in the projection's clamp. An in-repo path dependency,
+# not a new external crate (the same category `hornvale-language` above
+# was added under) — dev-only, since no shipped code path needs it.
+hornvale-settlement = { path = "../../../domains/settlement" }
