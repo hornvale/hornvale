@@ -389,6 +389,7 @@
 - [The Stylus](./chronicle/the-stylus.md)
 - [The Chroma](./chronicle/the-chroma.md)
 - [The Penstock](./chronicle/the-penstock.md)
+- [The Scour](./chronicle/the-scour.md)
 - [The Wick](./chronicle/the-wick.md)
 - [The Deed](./chronicle/the-deed.md)
 - [The Stope](./chronicle/the-stope.md)

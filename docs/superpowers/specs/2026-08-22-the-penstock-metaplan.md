@@ -644,6 +644,83 @@ not have a further breakdown of those 59 bytes across the three heap
 sources, so it stops short of translating that into a stage-6 win estimate;
 that split is stage 6's own measurement to make.
 
+### 6.3 MEASURED, 2026-08-23 (The Scour): the suspect is confirmed, and mostly gone
+
+§6.2 named twelve unindexed `find(pred).filter(|f| f.subject == e)` sites as
+the likely driver of the superlinear residual, and required stage 2 to
+**confirm or kill that suspect before building anything**. The Scour
+repointed all twelve onto `Ledger::facts_of` — twelve one-line swaps against
+a method that already existed — and re-ran the bench.
+
+```
+                      BEFORE (2 runs)      AFTER (2 runs)
+  fitted slope         1.43 / 1.52          1.12 / 1.11
+  tail, 100->200       2.17 / 1.99          1.41 / 1.29
+  ms/tick @ 200 agents    5722.7            1752.2 / 1712.6
+```
+
+**3.3× at 200 agents, and the near-quadratic tail is largely gone.** The new
+values sit outside the old runs' spread, and the absolute change is far
+beyond run-to-run noise.
+
+**Behaviour-preserving, by a stronger check than the test suite.** Every
+deterministic counter the bench reports is **byte-identical** across the
+change — facts/agent/tick (2.2150 / 2.8250 / 2.6780 / 2.8960), searches
+(1.7750 / 2.2790 / 2.0675 / 2.2822), `total_bytes`, and the raw fact and
+search counts. Only wall time moved. `lens_purity` and the 21 deliberately-
+naive scans left in the `#[cfg(test)]` module as an independent oracle agree.
+
+**Consequence for the program, and it is a subtraction.** The case for
+stages 3–5 — the cached working set, `place`-keyed views, the eviction
+lifecycle — rested on a superlinear read cost that is now mostly removed by
+call sites rather than machinery. **Do not build them on the strength of
+§6.2's numbers; they are superseded.** A residue remains (1.11–1.12 fitted,
+1.29–1.41 in the tail), so something superlinear is still there, but it is a
+much smaller quarry and it has not been attributed. Stage 3 should open by
+measuring *that*, not by building against it.
+
+**Unchanged, and worth stating because it is easy to read this section as
+better news than it is.** Facts committed per agent per tick is *identical*
+before and after — this campaign touched reads, not writes. §6.1's finding
+stands untouched: the ledger still grows without bound, and stage 7 remains
+the one item in this program with no alternative.
+
+### 6.4 THE LEVEL IS ALARMING, AND §6.2 ANSWERED THE WRONG QUESTION ABOUT IT
+
+Raised by Nathan on reading §6.3, and it is correct: **1752 ms/tick at 200
+agents is 8.76 ms per agent per tick**, for one creature deciding one step,
+in a world with 221 settlements and a handful of drives. At the small rung it
+is 57.5/10 = **5.75 ms per agent-tick**. Most of the cost is therefore *not*
+scaling — it is a constant, and it is already large when the content is thin.
+
+**§6.2's verdict conflated slope with level, and must not be relied on as
+written.** It concluded "plan cost does not swamp query cost" from this
+reasoning: plan and commit are flat *per agent* while total cost was
+superlinear, so neither explains the *excess*. That is an argument about
+**shape**. §11's falsifier asks about **level** — *does planning dominate
+tick cost?* — and no measurement on this branch answers it. With the
+superlinearity now largely removed (§6.3), what remains is precisely a large
+constant, which is exactly where planning would sit unobserved.
+
+What is actually known per agent-tick at the 200 rung: **~2.28 A\* searches**
+and **~2.9 fact commits**, inside 8.76 ms. Nothing on this branch times
+either. If a room-graph search costs 1–2 ms, planning alone is most of the
+budget and §11's falsifier-1 *does* fire — the opposite of what §6.2 records.
+
+**The cheap experiment that settles it, and stage 3 should run it first.**
+The counters exist; the timings do not. Time the A\* path and the commit path
+inside the bench harness (which already carries the wall-clock exemption), and
+the residual stops being "everything else" and becomes attributed. Until then,
+treat §6.2's falsifier-1 verdict as **UNSETTLED**, not as the go-ahead it is
+phrased as.
+
+**Why this matters beyond bookkeeping.** A per-agent-tick cost of ~6–9 ms
+puts roughly 100–170 agents in a 1 s tick budget, before the content gets
+richer — and richer content is the whole direction of travel. Whatever the
+split turns out to be, the level is the binding constraint on agent count long
+before the slope is, and no cached-view layer addresses a constant that lives
+in planning.
+
 ## 7. The standing gate
 
 **Determinism.** Byte-identity of committed artifacts before and after, every
