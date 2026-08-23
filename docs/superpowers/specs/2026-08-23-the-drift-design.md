@@ -302,3 +302,79 @@ scan that finds none — a scan over three seeds is evidence about three seeds.
   `junctions_at`, which currently reads it per-branch across all bands? The
   junction eligibility rule consumes it; re-keying may change which systems
   join.
+
+---
+
+# AMENDMENT A, 2026-08-23: entrances are apertures into ONE system, and this IS an epoch
+
+Nathan's ruling, after Task 0's baseline exposed a model conflict this spec
+was written without seeing.
+
+## A.1 What Task 0 found
+
+`chamber_exists` gates on `branch_count_of(seed, cell, addr.entrance)` and
+every lattice draw carries the entrance, so **each entrance realizes its own
+private sublattice**. The tree states this and calls it deliberate
+(`chamber.rs:662-670`): *"a mouth can name a branch its own entrance never
+realized and be refused downstream... C.3 sanctions per-entrance
+realization."* Measured: seed 42 has 21,328 levels summed across entrances,
+against 14,976 at entrance 0 alone.
+
+## A.2 Why it cannot stand
+
+The model this campaign was designed from has a Blacksmith's Cellar and a
+Cave under the Well — two Undercroft entrances — **both descending into the
+same Spider Cave**. That requires one lattice per system with several
+apertures into it.
+
+Under per-entrance realization, §4.5's guarantees are true *within an
+entrance's private world* and say nothing about the system. The campaign's
+central promise would be structurally weaker than it reads, and a later
+campaign putting content in branches would discover it the hard way.
+
+## A.3 The ruling
+
+**`entrance` leaves the lattice entirely.** It survives only as *which
+aperture you came in by* — how many a system has (`ENTRANCE_COUNT`, keyed on
+cell) and where each one lands (`ENTRANCE_MOUTH`, keyed on `(cell, entrance)`).
+It is no longer part of any address, any lattice gate, or any per-branch draw.
+
+```
+ChamberAddr   (cell, band, branch, level)          -- entrance GONE
+RunAddr       (cell, band, branch)                 -- entrance GONE
+branch_count_of(seed, cell, band)                  -- entrance out, band in
+character_of   (seed, cell, band, branch)          -- entrance out, band in
+barrier_of     (seed, cell, band, branch, pins)    -- entrance out, band in
+levels_in_branch(seed, RunAddr)                    -- entrance out
+```
+
+This also dissolves the asymmetry `entrance_mouth`'s doc records as accepted:
+with one lattice there is no such thing as a branch "this entrance never
+realized", so a mouth either lands on a level that exists or it does not.
+
+## A.4 §5 is REVERSED: The Drift is a chamber epoch
+
+The spec's §5 claimed this campaign was not one, on the grounds that
+`chamber_key` spells only the band's name and no address moves. **Dropping
+`entrance` changes the key**, so every chamber in every world relocates.
+
+The label goes to **`chamber/v4`**. An epoch suffix, never a rename;
+`chamber/v1` through `v3` are retired and never reused.
+
+Nathan approved this cost explicitly. The campaign was already regenerating
+every world (§4.1 deletes the existence draw), so the epoch buys the correct
+model on a regeneration that was happening anyway — the same argument decision
+0176 made for riding the `Sunless -> Nadir` rename on The Stope's epoch.
+
+## A.5 What this does to the baseline, and to §6
+
+**§6's primary gate is unaffected and this is why it was chosen.** The
+per-system *share* of levels reachable is a ratio; it stays comparable across
+the change.
+
+**The absolute counts are not comparable, for a structural reason, and Task 8
+must say so rather than reporting a movement.** Today's 21,328 levels on seed
+42 is a sum over per-entrance sublattices. After A.3 there is one lattice per
+system, so the count falls for a reason that has nothing to do with §4.1's
+deleted coin. Reporting "levels went down" without that sentence would invert
+the campaign's own story.
