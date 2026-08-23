@@ -1175,7 +1175,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1233,6 +1232,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
@@ -1605,6 +1605,7 @@ hornvale-language::hornvale_language$lexicon::tests::knows_of_concept_compounds_
 hornvale-language::hornvale_language$lexicon::tests::knows_of_concept_with_an_unheld_component_falls_back_to_experiential_gap
 hornvale-language::hornvale_language$lexicon::tests::kobold_singleton_consumes_the_assigned_stream_path
 hornvale-language::hornvale_language$lexicon::tests::proto_root_is_keyed_by_family_not_species
+hornvale-language::hornvale_language$lexicon::tests::proto_root_universe_excludes_extradiegetic_concepts
 hornvale-language::hornvale_language$lexicon::tests::proto_root_universe_excludes_unnameable_concepts
 hornvale-language::hornvale_language$lexicon::tests::singleton_family_uses_the_assigned_proto_root
 hornvale-language::hornvale_language$lexicon::tests::two_daughters_share_a_proto_root
@@ -2592,8 +2593,10 @@ hornvale-vessel::hornvale_vessel$plan::tests::the_projection_is_deterministic
 hornvale-vessel::hornvale_vessel$plan::tests::the_standing_cell_is_carried_verbatim
 hornvale-vessel::hornvale_vessel$plan::tests::two_walls_at_different_light_levels_get_different_palette_entries
 hornvale-vessel::hornvale_vessel$purview::tests::agent_salience_outranks_every_settlement_salience
+hornvale-vessel::hornvale_vessel$session::tests::every_bare_verb_help_lists_is_classified
 hornvale-vessel::hornvale_vessel$session::tests::further_in_is_the_deeper_aperture_and_stops_at_the_last_chamber
 hornvale-vessel::hornvale_vessel$session::tests::neighbours_reads_the_link_graph_in_both_directions
+hornvale-vessel::hornvale_vessel$session::tests::session_control_is_never_an_in_character_verb
 hornvale-vessel::hornvale_vessel$structure::tests::a_built_locale_has_a_bounded_chamber_set
 hornvale-vessel::hornvale_vessel$structure::tests::a_different_locale_gives_a_different_structure
 hornvale-vessel::hornvale_vessel$structure::tests::an_unbuilt_locale_has_no_structure
@@ -2621,12 +2624,15 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
-hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
 hornvale-vessel::suite$action_module::every_action_variant_still_carries_a_concept_name
 hornvale-vessel::suite$action_module::the_action_layer_has_its_own_module
+hornvale-vessel::suite$action_mood::every_creature_action_is_in_character
+hornvale-vessel::suite$action_mood::every_group_a_instrument_is_out_of_character
+hornvale-vessel::suite$action_mood::every_group_b_objective_half_is_out_of_character
+hornvale-vessel::suite$action_mood::every_rostered_action_is_classified
 hornvale-vessel::suite$body_mass::an_absent_biosphere_falls_back_to_the_reference_mass
 hornvale-vessel::suite$body_mass::an_unknown_species_falls_back_to_the_reference_mass
 hornvale-vessel::suite$body_mass::the_inline_creature_derivation_and_mass_for_species_agree
@@ -2635,6 +2641,8 @@ hornvale-vessel::suite$course_properties::a_due_north_course_never_leaves_its_me
 hornvale-vessel::suite$course_properties::a_fixed_priority_exit_matching_cycle_traps_in_a_closed_room_set
 hornvale-vessel::suite$course_properties::a_memoryless_walk_leaves_the_meridian_that_h1_pins
 hornvale-vessel::suite$course_properties::bearing_based_resolution_escapes_the_fixed_priority_attractor
+hornvale-vessel::suite$gate_table::in_character_is_refused_while_asleep_and_permitted_awake
+hornvale-vessel::suite$gate_table::out_of_character_is_permitted_in_every_body_state
 hornvale-vessel::suite$lantern_lens::the_lens_can_be_declined
 hornvale-vessel::suite$lantern_lens::the_lens_gives_a_dichromat_no_hue_it_did_not_have
 hornvale-vessel::suite$lantern_lens::the_lens_is_a_deliberate_change_not_rounding_noise
@@ -2952,6 +2960,7 @@ hornvale-worldgen::suite$doctrine::synthetic_folk_flagship_gates_doctrine_to_non
 hornvale-worldgen::suite$era_substrate::eustatic_change_never_raises_sea_level
 hornvale-worldgen::suite$explanations::beta_matches_the_preregistered_roster
 hornvale-worldgen::suite$exposure::human_is_the_hue_ladders_deepest_witness
+hornvale-worldgen::suite$exposure::no_other_domain_claims_an_extradiegetic_concept_name
 hornvale-worldgen::suite$exposure::pack_depths_at_the_draconic_clade_value_opens_exactly_dark_light_red
 hornvale-worldgen::suite$graph_derive::a_land_route_links_the_pass_connected_settlements
 hornvale-worldgen::suite$graph_derive::a_shelf_joins_two_uplands_only_at_the_glacial_low_stand
@@ -3213,6 +3222,7 @@ hornvale::suite$docs_consistency::the_history_page_prose_names_the_cell_it_rende
 hornvale::suite$docs_consistency::the_waiver_list_only_shrinks
 hornvale::suite$generated_paths::every_declared_generated_path_is_tracked
 hornvale::suite$generated_paths::no_claude_md_restates_the_declared_path_list
+hornvale::suite$generated_paths::no_generated_artifact_is_routed_through_a_regenerating_merge_driver
 hornvale::suite$generated_paths::the_declared_list_is_not_empty
 hornvale::suite$generated_paths::the_root_guide_names_the_declared_path_list
 hornvale::suite$heavy_tier::heavy_tier_reason_strings_are_canonical
