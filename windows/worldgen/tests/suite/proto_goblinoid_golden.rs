@@ -65,9 +65,11 @@ fn is_unnameable(world: &World, concept: &str) -> bool {
 /// independently and so can (and on this seed does) collide across
 /// concepts. One `<concept>: <roman> /<ipa>/` line per concept in
 /// concept-id order, excluding any concept the registry itself records as
-/// objectively unnameable (`Void::Unnamed`), same as the page. Reconstructed
-/// independently here (not calling into `cli`) so this test never depends on
-/// the `cli` crate (layering: `windows/worldgen` sits below `cli`).
+/// objectively unnameable (`Void::Unnamed`) or that
+/// `hornvale_language::extradiegetic_pack` lists (The Deed, Task 2), same
+/// as the page. Reconstructed independently here (not calling into `cli`)
+/// so this test never depends on the `cli` crate (layering:
+/// `windows/worldgen` sits below `cli`).
 fn render_root_table_snapshot(world: &World) -> String {
     let phonology = proto_phonology_of(world, FAMILY);
     let wc = WorldComponents::assemble().expect("canonical registries");
@@ -76,14 +78,15 @@ fn render_root_table_snapshot(world: &World) -> String {
         .registry
         .concepts()
         .map(|c| c.name.as_str())
-        .filter(|name| !is_unnameable(world, name))
+        .filter(|name| !is_unnameable(world, name) && !hornvale_language::is_extradiegetic(name))
         .collect();
     let typ = typology_for(Some(FAMILY));
     let assignment =
         assign_proto_roots(&world.seed, FAMILY, &phonology, &typ, &universe, &daughters);
     let mut lines = Vec::new();
     for concept in world.registry.concepts() {
-        if is_unnameable(world, &concept.name) {
+        if is_unnameable(world, &concept.name) || hornvale_language::is_extradiegetic(&concept.name)
+        {
             continue;
         }
         let views = render_views(&assignment[&concept.name]);

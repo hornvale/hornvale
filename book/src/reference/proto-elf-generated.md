@@ -51,6 +51,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `bugbear-kind` | a bugbear | *Sreng | /sreŋ/ |
 | `burn` | Ground recovering from fire. | *Sruung | /sruuŋ/ |
 | `carrion-crawler-kind` | a carrion crawler | *Ngaengpuong | /ŋaeŋpuoŋ/ |
+| `chart` | to form a picture of the space around oneself — `map` | *Zrangbuung | /zraŋbuuŋ/ |
 | `child` | one's son or daughter | *Zhreng | /ʒreŋ/ |
 | `closed-canopy` | Tall closed-canopy tropical forest. | *Bong | /boŋ/ |
 | `coast` | where the land meets the sea | *Shraong | /ʃraoŋ/ |
@@ -121,12 +122,14 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Ngengngoeng | /ŋeŋŋoeŋ/ |
 | `kelp-forest` | a biome class | *Zreangbung | /zreaŋbuŋ/ |
 | `killer-whale-kind` | a killer whale | *Nguangtang | /ŋuaŋtaŋ/ |
+| `know` | to hold something in memory or understanding — `knows` | *Shraung | /ʃrauŋ/ |
 | `kobold-kind` | a kobold | *Zhreeng | /ʒreeŋ/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Boongngong | /booŋŋoŋ/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Shrunggung | /ʃruŋguŋ/ |
 | `light` | the color term for white/light hues | *Ngaong | /ŋaoŋ/ |
 | `lightless-water` | Water below all light. | *Ngangngung | /ŋaŋŋuŋ/ |
 | `little` | small in size or extent | *Ngoang | /ŋoaŋ/ |
+| `look` | to visually attend to something, near or far — `look`, `examine` | *Nguengngaong | /ŋueŋŋaoŋ/ |
 | `low` | near the ground | *Puangngeng | /puaŋŋeŋ/ |
 | `many` | an indefinitely large count | *Shroung | /ʃrouŋ/ |
 | `marine-snow` | Organic debris drifting endlessly down. | *Tang | /taŋ/ |
@@ -161,6 +164,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `pressure-ridge` | Sea ice buckled into a ridge. | *Srong | /sroŋ/ |
 | `rafted-floe` | Ice floes driven over one another. | *Duong | /duoŋ/ |
 | `rain` | liquid precipitation | *Zhroung | /ʒrouŋ/ |
+| `read` | to take meaning from written words — `consult` | *Shraang | /ʃraaŋ/ |
 | `red` | the color term for red | *Gungngong | /guŋŋoŋ/ |
 | `red-dragon-kind` | a red dragon | *Pangdong | /paŋdoŋ/ |
 | `reef-rubble` | Broken coral debris behind a reef. | *Beng | /beŋ/ |
@@ -179,6 +183,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `sea` | a body of salt water | *Zreung | /zreuŋ/ |
 | `sea-elf-kind` | a sea elf | *Ngoengdung | /ŋoeŋduŋ/ |
 | `sea-ice` | a biome class | *Sraungngong | /srauŋŋoŋ/ |
+| `sense` | to perceive another's felt bodily state — `needs` | *Duang | /duaŋ/ |
 | `shadow` | cast dark, distinct from open gloom | *Bungteng | /buŋteŋ/ |
 | `shrieker-kind` | a shrieker | *Zruungzraang | /zruuŋzraaŋ/ |
 | `shrubland` | a biome class | *Pong | /poŋ/ |
@@ -223,6 +228,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `valley` | low ground between heights | *Toongdung | /tooŋduŋ/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Ngungshruong | /ŋuŋʃruoŋ/ |
 | `vine` | a staple crop | *Guongshrueng | /guoŋʃrueŋ/ |
+| `wait` | to let time pass without acting — `wait` | *Tongsruung | /toŋsruuŋ/ |
 | `water` | the drinkable liquid | *Sraong | /sraoŋ/ |
 | `west` | the direction of decreasing longitude | *Ngeungboung | /ŋeuŋbouŋ/ |
 | `wheat` | a staple crop | *Ngoung | /ŋouŋ/ |
@@ -232,5 +238,6 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `wood-elf-kind` | a wood elf | *Shreongngung | /ʃreoŋŋuŋ/ |
 | `wooded-grassland` | Grassland with scattered trees. | *Zruanggeng | /zruaŋgeŋ/ |
 | `woolly-mammoth-kind` | a woolly mammoth | *Zruongngoung | /zruoŋŋouŋ/ |
+| `write` | to set words down in writing — `write` | *Buong | /buoŋ/ |
 | `xorn-kind` | a xorn | *Sreengzhroang | /sreeŋʒroaŋ/ |
 | `yellow` | the color term for yellow | *Bang | /baŋ/ |

@@ -126,9 +126,17 @@ pub fn tempo(mass_kg: f64) -> f64 {
 }
 
 /// The authored base cost of each action, before the creature's tempo. Five
-/// dials replacing the single historical `MOVE_DURATION`; none is zero, so the
-/// cost model is TOTAL (spec §2 rung 1). `Rest` keeps its jump-to-waking
-/// elsewhere — this is only the cost of the act of lying down.
+/// creature dials replacing the single historical `MOVE_DURATION`; none of
+/// those five is zero, so the cost model is TOTAL for every act a creature
+/// can plan (spec §2 rung 1). `Rest` keeps its jump-to-waking elsewhere —
+/// this is only the cost of the act of lying down.
+///
+/// Group A's seven operator instruments (The Deed) are the deliberate
+/// exception: an out-of-character act "charges nothing by default" (spec
+/// Arc I.b §3.4), so their dial is `Ticks(0)`. This is inert today — nothing
+/// routes a group-A `Action` through [`cost_ticks`], dispatch stays
+/// string-based for them — but the match must still be exhaustive, and
+/// `0` is the honest answer for what they *would* cost if ever charged.
 ///
 /// The match is exhaustive by variant deliberately, the same discipline
 /// `action::precondition_reads_committed_state` keeps: a new `Action` must
@@ -153,6 +161,34 @@ pub fn base_ticks(action: &Action) -> Ticks {
         Action::Eat => Ticks(3_000),
         // Lying DOWN is quick; the sleep itself is the jump-to-waking, not this.
         Action::Rest => Ticks(150),
+        // Group A: operator instruments charge nothing by default (spec
+        // §3.4) — see the doc above.
+        Action::Why
+        | Action::Npcs
+        | Action::Help
+        | Action::Eyes
+        | Action::Whoami
+        | Action::Provoke
+        | Action::Soothe => Ticks(0),
+        // Group B's objective halves (The Deed, Task 6) charge nothing for
+        // the same reason, `!wait` INCLUDED — and that last one is worth a
+        // sentence, because spec §3.4 calls `!wait` "the exception that moves
+        // the clock" and this arm looks like it contradicts that.
+        //
+        // It does not. `Session::wait` advances the day by the SPAN THE
+        // PLAYER ASKED FOR (`wait 3` is three days, under either mood), which
+        // is the act's effect and is parameterised by its argument.
+        // `base_ticks` answers a different question — what an act costs the
+        // body that performs it, keyed on `Action` alone with nowhere to put
+        // a span — and the honest answer for an out-of-character act is
+        // still zero. Charging a constant here would add a second, silent
+        // clock movement on top of the one the player named.
+        Action::ObjectiveMap
+        | Action::ObjectiveExamine
+        | Action::ObjectiveNeeds
+        | Action::ObjectiveWait
+        | Action::ObjectiveLook
+        | Action::ObjectiveKnows => Ticks(0),
     }
 }
 
@@ -258,8 +294,16 @@ mod tests {
 
     #[test]
     fn no_action_is_free() {
-        // THE TOTALITY PROPERTY (spec §2 rung 1). Every action costs something,
-        // so a future action cannot silently be added for free.
+        // THE TOTALITY PROPERTY (spec §2 rung 1) — for CREATURE acts. Every
+        // creature action costs something, so a future creature action
+        // cannot silently be added for free. Narrowed from "every action"
+        // (fix round 1, Finding 3): group A's seven operator instruments
+        // (The Deed) are the deliberate exception — `base_ticks`'s own doc
+        // states it plainly, "an out-of-character act charges nothing by
+        // default" (spec §3.4) — so this property was never meant to hold
+        // for them, and this list stays the hand-picked creature roster
+        // rather than `Action::all()` so it cannot silently start failing
+        // on an instrument this test was never about.
         let every = [
             Action::MoveTo(RoomAddr {
                 face: 0,

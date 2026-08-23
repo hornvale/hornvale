@@ -269,6 +269,15 @@ At every verb. `examine` answers as it would for a creature that is not there;
 `provoke` refuses as it would for a name that names nobody; the needs report
 lists no need.
 
+(That sentence has since acquired a qualifier, and it is the right one: at
+every **in-character** verb. [The Deed](./the-deed.md) split the surface into
+two namespaces, and the out-of-character half exists precisely to answer what
+the body cannot — `!examine` names a creature standing here in the dark and
+`!needs` reads the felt state of everyone present, seen or unseen. That is not
+a leak in the narrowing but a deliberate operator instrument, marked as one by
+its spelling; the bare forms below are unchanged, and `provoke` is now
+`!provoke` because the campaign read it as an instrument all along.)
+
 This is deliberate, and the reasoning is the same reasoning that put the
 narrowing sim-side. A distinct refusal — *"you sense something you cannot
 see"* — is itself a **positive, pollable presence oracle**. A player who can

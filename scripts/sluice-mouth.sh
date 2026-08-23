@@ -122,6 +122,15 @@ if ! out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-
     # paths, and a reader hunting `62e4699797fb...` as a file would have found
     # nothing.
     #
+    # THAT PARTICULAR POLLUTER IS GONE, AND THE SHAPE-BASED READ STAYS. The
+    # `merge=hv-regenerate` driver was retired by decision 0166, so merge-tree
+    # here no longer emits cargo banners. Keeping the positional `tail -n +2`
+    # would still be wrong: `2>&1` means ANY future tool that writes to stderr
+    # during a merge-tree reintroduces the identical bug, and the observed
+    # failure — a bare 40-hex OID reported as a conflicting path — came from
+    # trusting line position, not from the driver specifically. A read that
+    # locates its anchor by shape cannot be broken by a new talker upstream.
+    #
     # So: locate the OID line by its shape, print what follows until the blank.
     # If no OID line appears at all — a failure that produced no tree — fall
     # back to the raw output rather than printing nothing, because an empty

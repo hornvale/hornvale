@@ -6090,6 +6090,48 @@ fn exposure_of_impl(
         }
     }
 
+    // Unknown/Extradiegetic: FINAL and UNCONDITIONAL — every concept
+    // `hornvale_language::extradiegetic_pack()` lists (The Deed, Task 2) is
+    // an operator instrument (`!why`, `!npcs`, `!provoke`, ...) with no
+    // referent in the world at all, so no species can ever be
+    // Steeped/KnowsOf in it and no culture can ever come to know it — a
+    // claim about the WORLD, exactly like the Unnameable block immediately
+    // above, not about any one species' experience.
+    //
+    // Read directly from the pack roster rather than from a registry `Void`
+    // reading the way the Unnameable block does. Reusing `Void::Unnamed` for
+    // these concepts would NOT misroute anything through the block above —
+    // this block runs last and unconditionally, so it overwrites whatever
+    // the Unnameable block assigned regardless of which `Void` a concept was
+    // registered with. The actual problem is one level up: a bare registry
+    // `Void::Unnamed` reading cannot DISTINGUISH "objectively real, nobody
+    // here has named it" (a spectral class) from "not real at all" (an
+    // operator instrument) — the two are indistinguishable from the `Void`
+    // alone, so a generic Void-driven rule could never tell them apart.
+    // `extradiegetic_pack`'s own doc records this in full. So classification
+    // here is driven by pack membership, not by the (documented-compromise)
+    // `Void::Imperceptible` these concepts register with — the two are
+    // deliberately decoupled.
+    //
+    // Deliberately last and unconditional for the same reason the block
+    // above is: every rule earlier in this function commits via a bare
+    // `.insert()` or a yielding `.entry().or_insert()`, so a check placed
+    // anywhere upstream could still be silently overwritten by one that
+    // runs after it. These seven names collide with nothing else this
+    // function classifies today (they are not pack, biome, terrain, or
+    // settlement concepts), so this is a belt-and-suspenders guard against
+    // a future collision, not a live override.
+    for (name, _doc) in hornvale_language::extradiegetic_pack() {
+        classes.insert(
+            (*name).to_string(),
+            ExposureClass::Unknown {
+                reason: GapReason::Extradiegetic(format!(
+                    "{name} is an operator instrument; it has no referent in the world"
+                )),
+            },
+        );
+    }
+
     Ok(classes)
 }
 

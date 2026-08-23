@@ -1875,6 +1875,18 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T02:37:32Z | sluice:outboard | 35.491 | 21.910 | 35.683 | 1.62 | 0 | d1827eb91 |  | lefford | 40 |
 | 2026-08-20T02:43:29Z | sluice:gate | 356.370 | 9846.901 | 341.166 | 28.59 | 0 | d123648f8 |  | lefford | 40 |
 | 2026-08-20T02:46:31Z | sluice:clients | 182.037 | 369.786 | 11.417 | 2.09 | 0 | ebbbc2d08 |  | lefford | 40 |
+| 2026-08-20T15:08:40Z | prewarm | 147.748 | 1062.686 | 38.642 | 7.45 | 0 | 6d7e1ca9 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T15:21:06Z | gate-commit | 38.442 | 113.582 | 26.941 | 3.66 | 0 | 6d7e1ca9 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T15:22:01Z | gate-commit | 22.545 | 50.405 | 11.460 | 2.74 | 0 | 6d7e1ca9 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:15:28Z | gate-commit | 22.560 | 50.358 | 11.434 | 2.74 | 0 | db23f36b | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:16:21Z | gate-commit | 22.553 | 50.378 | 11.842 | 2.76 | 0 | db23f36b | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:37:33Z | gate-commit | 33.077 | 105.880 | 21.607 | 3.85 | 0 | 76f65816 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:39:19Z | gate-commit | 31.060 | 53.571 | 11.815 | 2.11 | 0 | 76f65816 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:47:12Z | rebaseline | 53.688 | 235.307 | 12.373 | 4.61 | 0 | 9cae88e3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:48:15Z | gate-commit | 38.875 | 107.644 | 18.285 | 3.24 | 0 | 9cae88e3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:48:53Z | gate-commit | 24.779 | 51.539 | 11.932 | 2.56 | 0 | 9cae88e3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:59:11Z | gate-commit | 34.917 | 91.722 | 17.524 | 3.13 | 0 | b1cb04d5 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T16:59:48Z | gate-commit | 22.797 | 50.350 | 11.628 | 2.72 | 0 | b1cb04d5 | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-19T21:10:11Z | rebaseline | 58.417 | 229.504 | 11.890 | 4.13 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
 | 2026-08-19T21:11:54Z | gate-commit | 85.511 | 84.519 | 43.602 | 1.50 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
 | 2026-08-19T21:12:17Z | gate-commit | 22.682 | 49.363 | 11.004 | 2.66 | 0 | 39f8629d | campaign/the-planes | MacBookPro | 10 |
@@ -1959,6 +1971,17 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T16:06:57Z | sluice:outboard | 35.565 | 22.497 | 36.319 | 1.65 | 0 | 7aca4abcd |  | lefford | 40 |
 | 2026-08-20T16:13:01Z | sluice:gate | 364.288 | 9958.475 | 366.516 | 28.34 | 0 | eb6544b50 |  | lefford | 40 |
 | 2026-08-20T16:16:00Z | sluice:clients | 178.401 | 356.813 | 11.414 | 2.06 | 0 | 28c72e9a9 |  | lefford | 40 |
+| 2026-08-20T17:04:51Z | rebaseline | 108.663 | 242.659 | 11.811 | 2.34 | 0 | c45d3120 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T17:05:47Z | gate-commit | 34.099 | 107.923 | 20.123 | 3.76 | 0 | c45d3120 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T17:06:10Z | gate-commit | 23.138 | 50.633 | 11.712 | 2.69 | 0 | d999032f | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T17:10:50Z | gate-commit | 31.737 | 77.385 | 17.724 | 3.00 | 0 | d999032f | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T17:11:31Z | gate-commit | 22.728 | 50.363 | 11.859 | 2.74 | 0 | d999032f | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T17:19:15Z | gate-commit | 41.667 | 62.259 | 16.280 | 1.88 | 0 | 0a89d8d3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T17:20:12Z | gate-commit | 33.691 | 54.914 | 12.282 | 1.99 | 0 | 0a89d8d3 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T18:02:28Z | gate-commit | 26.219 | 56.535 | 12.656 | 2.64 | 0 | 1f62d49c | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T18:03:09Z | gate-commit | 22.973 | 50.612 | 11.587 | 2.71 | 0 | 1f62d49c | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T18:20:31Z | gate-commit | 26.649 | 61.331 | 15.552 | 2.89 | 0 | e594084e | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T18:23:18Z | gate-commit | 22.362 | 50.162 | 11.672 | 2.77 | 0 | e594084e | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-20T16:53:06Z | rebaseline | 52.335 | 232.932 | 11.459 | 4.67 | 0 | d9ed93ad | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T16:56:09Z | gate-commit | 31.311 | 89.760 | 18.932 | 3.47 | 0 | d9ed93ad | campaign/the-stylus | MacBookPro | 10 |
 | 2026-08-20T16:56:54Z | gate-commit | 22.797 | 50.436 | 11.426 | 2.71 | 0 | a7f00ebe | campaign/the-stylus | MacBookPro | 10 |
@@ -1976,6 +1999,19 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-20T17:33:20Z | sluice:outboard | 35.020 | 21.076 | 33.089 | 1.55 | 0 | cc94eb220 |  | lefford | 40 |
 | 2026-08-20T17:39:59Z | sluice:gate | 398.605 | 10777.476 | 426.686 | 28.11 | 0 | b59a73c4b |  | lefford | 40 |
 | 2026-08-20T17:44:43Z | sluice:clients | 283.994 | 748.582 | 37.533 | 2.77 | 0 | 06119a466 |  | lefford | 40 |
+| 2026-08-20T18:35:16Z | rebaseline | 72.757 | 234.080 | 11.594 | 3.38 | 0 | dc324195 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T18:36:55Z | gate-commit | 82.758 | 396.714 | 36.901 | 5.24 | 0 | dc324195 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T19:28:42Z | rebaseline | 72.489 | 229.619 | 10.256 | 3.31 | 0 | 552d38ef | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T19:30:08Z | gate-commit | 59.001 | 215.127 | 28.279 | 4.13 | 0 | 552d38ef | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T19:30:52Z | gate-commit | 23.685 | 50.732 | 12.181 | 2.66 | 0 | 552d38ef | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T20:24:04Z | rebaseline | 68.476 | 233.802 | 11.789 | 3.59 | 0 | f9064cd8 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T20:25:04Z | gate-commit | 42.703 | 96.236 | 26.545 | 2.88 | 0 | f9064cd8 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T20:26:28Z | gate-commit | 27.232 | 51.518 | 11.626 | 2.32 | 0 | f9064cd8 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-20T20:35:17Z | gate-commit | 25.110 | 57.747 | 12.645 | 2.80 | 0 | f1a555c9 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T21:22:05Z | rebaseline | 70.540 | 232.148 | 11.529 | 3.45 | 0 | 21f32555e | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T21:23:30Z | gate-commit | 29.987 | 62.969 | 26.026 | 2.97 | 0 | 21f32555e | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T21:29:21Z | rebaseline | 45.561 | 236.785 | 11.172 | 5.44 | 0 | 98a892918 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T21:30:24Z | gate-commit | 27.662 | 54.726 | 13.885 | 2.48 | 0 | 98a892918 | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-20T18:12:54Z | rebaseline | 72.187 | 234.603 | 12.190 | 3.42 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T18:14:08Z | gate-commit | 73.583 | 411.105 | 35.170 | 6.06 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-20T18:14:52Z | gate-commit | 22.763 | 50.235 | 11.784 | 2.72 | 0 | 2f24e28e | campaign/the-stope | MacBookPro | 10 |
@@ -2140,6 +2176,18 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-22T12:59:25Z | sluice:outboard | 35.470 | 20.698 | 31.079 | 1.46 | 0 | 65af6ce01 |  | lefford | 40 |
 | 2026-08-22T13:05:27Z | sluice:gate | 362.567 | 9879.595 | 364.927 | 28.26 | 0 | 07b1458a4 |  | lefford | 40 |
 | 2026-08-22T13:09:07Z | sluice:clients | 218.967 | 1009.561 | 29.909 | 4.75 | 0 | 4160a2e51 |  | lefford | 40 |
+| 2026-08-22T21:35:58Z | rebaseline | 87.243 | 242.129 | 9.957 | 2.89 | 0 | f0013304f | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T21:38:02Z | gate-commit | 88.036 | 133.118 | 20.556 | 1.75 | 0 | f0013304f | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T22:15:46Z | rebaseline | 91.469 | 237.660 | 10.208 | 2.71 | 0 | 95d7cd598 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T22:20:15Z | gate-commit | 36.264 | 90.626 | 15.205 | 2.92 | 0 | 95d7cd598 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T22:23:33Z | gate-commit | 28.324 | 59.377 | 16.923 | 2.69 | 0 | 95d7cd598 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T22:24:20Z | gate-commit | 22.995 | 50.835 | 12.027 | 2.73 | 0 | 95d7cd598 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T23:28:26Z | rebaseline | 48.996 | 231.733 | 11.338 | 4.96 | 0 | 9ecabd731 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-22T23:54:58Z | rebaseline | 58.969 | 236.522 | 12.641 | 4.23 | 0 | 0dd111c2b | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T00:07:26Z | gate-commit | 32.736 | 89.151 | 24.067 | 3.46 | 0 | 0dd111c2b | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T00:08:14Z | gate-commit | 25.596 | 51.252 | 12.440 | 2.49 | 0 | 0dd111c2b | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T00:10:28Z | game-check | 89.063 | 525.544 | 9.853 | 6.01 | 0 | 823892de4 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T01:10:31Z | gate-commit | 38.073 | 88.795 | 39.265 | 3.36 | 0 | cd3a2da6d | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-22T21:45:18Z | rebaseline | 56.674 | 237.740 | 11.781 | 4.40 | 0 | 67d5a60cb | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-22T21:46:34Z | gate-commit | 35.176 | 108.029 | 20.781 | 3.66 | 0 | 67d5a60cb | campaign/the-stope | MacBookPro | 10 |
 | 2026-08-22T22:04:15Z | gate-commit | 44.404 | 122.344 | 37.559 | 3.60 | 0 | 438efdea4 | campaign/the-stope | MacBookPro | 10 |
@@ -2183,3 +2231,48 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T01:33:28Z | gate-commit | 88.076 | 517.499 | 33.021 | 6.25 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-23T01:35:21Z | gate-commit | 23.276 | 51.239 | 11.484 | 2.69 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
 | 2026-08-23T01:36:07Z | gate-commit | 22.919 | 50.998 | 11.601 | 2.73 | 0 | f6fd6b0aa | campaign/the-winze | MacBookPro | 10 |
+| 2026-08-23T01:11:00Z | gate-commit | 135.944 | 2441.801 | 207.000 | 19.48 | 0 | 77f2551d5 | fix/sluice-mouth-before-box | lefford | 40 |
+| 2026-08-23T01:26:59Z | sluice:artifacts | 120.906 | 1056.905 | 49.047 | 9.15 | 0 | 3638f50f0 |  | lefford | 40 |
+| 2026-08-23T01:27:36Z | sluice:outboard | 36.724 | 22.929 | 37.083 | 1.63 | 0 | abc9594e3 |  | lefford | 40 |
+| 2026-08-23T01:34:25Z | sluice:gate | 408.941 | 11018.493 | 443.934 | 28.03 | 0 | d91cda826 |  | lefford | 40 |
+| 2026-08-23T01:41:31Z | sluice:clients | 425.411 | 1474.550 | 40.641 | 3.56 | 0 | 408ed813c |  | lefford | 40 |
+| 2026-08-22T14:57:16Z | gate-commit | 53.455 | 87.693 | 37.481 | 2.34 | 0 | cca1560e2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T16:46:41Z | gate-commit | 529.304 | 1440.309 | 151.255 | 3.01 | 0 | cca1560e2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T18:36:30Z | gate-commit | 70.935 | 34.895 | 12.623 | 0.67 | 0 | 716506630 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:10:48Z | gate-commit | 149.907 | 145.010 | 52.045 | 1.31 | 0 | dae4be7e1 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:13:28Z | gate-commit | 92.738 | 60.633 | 35.693 | 1.04 | 0 | dae4be7e1 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:22:34Z | gate-commit | 6.601 | 2.362 | 0.988 | 0.51 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:24:49Z | gate-commit | 93.643 | 61.076 | 35.205 | 1.03 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:26:54Z | gate-commit | 96.982 | 60.209 | 34.467 | 0.98 | 0 | 6c52411d0 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:33:52Z | gate-commit | 95.860 | 61.003 | 35.446 | 1.01 | 0 | 917c13e45 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:35:46Z | gate-commit | 90.502 | 59.674 | 34.664 | 1.04 | 0 | 917c13e45 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:50:13Z | gate-commit | 107.851 | 65.203 | 39.178 | 0.97 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:50:47Z | gate-commit | 23.993 | 14.405 | 3.543 | 0.75 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T19:52:45Z | gate-commit | 98.718 | 64.611 | 40.077 | 1.06 | 0 | 482b326c2 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T20:29:26Z | gate-commit | 30.882 | 22.434 | 7.267 | 0.96 | 0 | 2bf2eed82 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T20:32:25Z | gate-commit | 152.779 | 183.873 | 54.435 | 1.56 | 0 | 2bf2eed82 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T20:35:38Z | gate-commit | 100.779 | 65.593 | 39.919 | 1.05 | 0 | 2bf2eed82 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:03:49Z | gate-commit | 143.480 | 70.227 | 42.243 | 0.78 | 0 | 49452b027 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:06:21Z | gate-commit | 120.607 | 70.897 | 42.403 | 0.94 | 0 | 49452b027 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:23:41Z | gate-commit | 105.888 | 67.369 | 39.706 | 1.01 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:48:17Z | gate-commit | 113.111 | 72.889 | 42.088 | 1.02 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:49:56Z | gate-commit | 91.269 | 65.344 | 36.917 | 1.12 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T21:52:50Z | gate-commit | 92.863 | 65.154 | 37.787 | 1.11 | 0 | abccf8146 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-22T23:15:25Z | gate-commit | 105.325 | 67.058 | 38.915 | 1.01 | 0 | 307e85bf7 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-23T01:25:45Z | gate-commit | 98.027 | 66.183 | 38.848 | 1.07 | 0 | 7eb8fa633 | campaign/the-penstock | ambrose | 12 |
+| 2026-08-23T01:28:58Z | gate-commit | 94.056 | 66.140 | 38.817 | 1.12 | 0 | f5e72719d | campaign/the-penstock | ambrose | 12 |
+| 2026-08-23T01:44:13Z | sluice:artifacts | 117.904 | 1081.744 | 52.429 | 9.62 | 0 | 132854255 |  | lefford | 40 |
+| 2026-08-23T01:44:52Z | sluice:outboard | 38.234 | 25.159 | 38.174 | 1.66 | 0 | 63d276d35 |  | lefford | 40 |
+| 2026-08-23T01:51:35Z | sluice:gate | 402.308 | 10964.708 | 447.335 | 28.37 | 0 | 003b5e200 |  | lefford | 40 |
+| 2026-08-23T01:58:47Z | sluice:clients | 432.081 | 1566.152 | 49.540 | 3.74 | 0 | 4b283b384 |  | lefford | 40 |
+| 2026-08-23T01:12:26Z | rebaseline | 74.647 | 238.501 | 12.001 | 3.36 | 0 | ffdd3760c | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T01:14:31Z | gate-commit | 86.699 | 473.239 | 43.760 | 5.96 | 0 | ffdd3760c | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T01:53:19Z | rebaseline | 38.420 | 232.024 | 11.476 | 6.34 | 0 | 5325c79ad | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:17:06Z | vessel-check | 43.144 | 68.752 | 4.262 | 1.69 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:18:15Z | vessel-check | 29.140 | 29.655 | 0.859 | 1.05 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:21:21Z | vessel-check | 14.767 | 15.707 | 0.580 | 1.10 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:45:16Z | gate-commit | 36.539 | 63.878 | 21.368 | 2.33 | 0 | 88de455bc | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:49:18Z | sluice:artifacts | 94.941 | 752.210 | 34.847 | 8.29 | 0 | 8ab4d38bf |  | lefford | 40 |
+| 2026-08-23T02:49:55Z | sluice:outboard | 37.454 | 23.240 | 38.057 | 1.64 | 0 | 90b3bccf3 |  | lefford | 40 |
+| 2026-08-23T02:56:14Z | sluice:gate | 378.924 | 10388.836 | 412.945 | 28.51 | 0 | 9a0cad4bf |  | lefford | 40 |
+| 2026-08-23T03:03:26Z | sluice:clients | 431.258 | 1500.872 | 39.941 | 3.57 | 0 | 32c1ea555 |  | lefford | 40 |
