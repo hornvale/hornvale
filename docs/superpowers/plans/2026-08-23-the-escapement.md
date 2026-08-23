@@ -36,7 +36,7 @@
 | `kernel/tests/suite/determinism.rs` | kernel determinism assertions | **Modify** — wire-shape test |
 | `domains/astronomy/src/provider.rs` | the one `WorldTime`→`StdDays` funnel (`fn t`) | **Modify** — port + clamp decision |
 | `domains/astronomy/src/calendar.rs` | `Calendar`, `local_day` | **Modify** — negative-time fix |
-| `domains/astronomy/tests/suite/genesis_properties.rs` | pin isolation / stream order | **Read only** — must stay green untouched |
+| `domains/astronomy/tests/suite/genesis_properties.rs` | pin isolation / stream order | **Append tests only** — its EXISTING pin-isolation tests must stay green and unmodified (Tasks 4 and 5 each add a new test here) |
 | `windows/scene/src/lib.rs` | `scene/eclipses/v1` wire structs | **Modify** — additive `*_ticks` |
 | `docs/decisions/0186…0188` | the three records this mints | **Create** |
 
@@ -594,7 +594,8 @@ construction."
 
 **Files:**
 - Modify: `domains/astronomy/src/calendar.rs:576-581`
-- Modify: `domains/astronomy/src/heliacal.rs:80-82` and `domains/astronomy/src/night_sky.rs:121-124` if the return type change reaches them
+- Modify (only if the index binding reaches them — **all six production callers currently DISCARD the index**, so most need no edit): `heliacal.rs:81` `(_, f)`, `night_sky.rs:122` `(_, f)`, `provider.rs:1538` `.map(|d| d.1)`, `eclipses.rs:277` `(_, fraction)`, `calendar.rs:643` `?.1`, `calendar.rs:687` `?.1`
+- Also in `calendar.rs`'s own test module: `:66` binds `index` (an integer-literal comparison still infers), `:78`, `:204`
 - Modify: `domains/astronomy/tests/suite/genesis_properties.rs`
 
 **Interfaces:**
