@@ -79,6 +79,10 @@ pub enum Action {
     /// submitted. Produced only under [`Focus::Walk`]; executed by the
     /// driver's `apply`, which routes it through the same path `Submit` uses.
     Move(&'static str),
+    /// Attempt tab completion of the word at the caret. Costs no turn and
+    /// sends nothing — the driver decides what completion does with it.
+    /// Produced only under [`Focus::Cli`] (spec §4.1).
+    Complete,
     /// Move focus to the other pane.
     ToggleFocus,
     /// The key does nothing in this focus. Costs no turn, draws
@@ -108,6 +112,7 @@ pub fn action_for(key: KeyEvent, focus: Focus) -> Action {
         Focus::Cli => match key.code {
             KeyCode::Char(c) => Action::Type(c),
             KeyCode::Left => Action::CaretBy(-1),
+            KeyCode::Tab => Action::Complete,
             KeyCode::Right => Action::CaretBy(1),
             KeyCode::Up => Action::HistoryPrev,
             KeyCode::Down => Action::HistoryNext,
@@ -185,7 +190,7 @@ mod tests {
             (KeyCode::Enter, Action::Submit),
             (KeyCode::Backspace, Action::DeleteBack),
             (KeyCode::Esc, Action::ToggleFocus),
-            (KeyCode::Tab, Action::None),
+            (KeyCode::Tab, Action::Complete),
         ];
         for (code, want) in cases {
             let key = KeyEvent::new(code, KeyModifiers::NONE);
@@ -259,13 +264,13 @@ mod tests {
         }
     }
 
-    /// `Tab` is reserved for completion and bound to NOTHING, in all three
-    /// focus states (spec §3.3). Spending it is the mistake this test makes
-    /// loud: it fails the moment anyone gives `Tab` a meaning.
+    /// `Tab` completes ONLY under the CLI (spec §4.1); Map and Walk keep it
+    /// bound to nothing — spending it there is the mistake this test makes
+    /// loud: it fails the moment anyone gives `Tab` a meaning elsewhere.
     #[test]
-    fn tab_is_bound_to_nothing_in_any_focus() {
+    fn tab_completes_only_under_the_cli() {
         let tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
-        assert_eq!(action_for(tab, Focus::Cli), Action::None);
+        assert_eq!(action_for(tab, Focus::Cli), Action::Complete);
         assert_eq!(action_for(tab, Focus::Map), Action::None);
         assert_eq!(action_for(tab, Focus::Walk), Action::None);
     }

@@ -546,6 +546,9 @@ impl Driver {
                 self.handle(&taken)
             }
             Action::Zoom(_) => false,
+            // Routing exists first (spec §4.1); what completion DOES is a
+            // later task — for now the key press is accepted and inert.
+            Action::Complete => false,
             Action::None => false,
         }
     }
