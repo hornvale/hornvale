@@ -539,3 +539,59 @@ Apply the p10 arm and the below-100% share, report the median as context
 rather than as a gate, and **state in the readout that the median was replaced
 and why** — including the mutation numbers above. A future reader who sees a
 median in the output must not mistake it for the thing that was checked.
+
+---
+
+# AMENDMENT D, 2026-08-23: C replaced a blind statistic with a narrower one
+
+Found by Task 7's review. **This amendment corrects amendment C, and the
+correction is a criticism of how C was validated, not only of what it chose.**
+
+## D.1 p10 is blind by arithmetic, not by luck
+
+`pct(sorted, 0.10) = sorted[round(0.10·(n−1))]`. With n = 874 systems on seed
+42 that is index 87, and only 27 systems sit below 1.0 — so `sorted[87] = 1.0`
+**necessarily**. p10 can move off 100% only when roughly **≥10% of systems**
+are below it. Task 7's defect touches **3.09% / 2.08% / 2.21%**.
+
+Confirmed twice, on two different real defects: Task 7's top-band orphans, and
+the reviewer's own `entrance_mouth` mutation (whole-world 100.00 → 99.43/
+99.50/99.54). **p10 read 100.00% on every seed under both.**
+
+## D.2 How C's validation failed, which is the part worth keeping
+
+C.1 justified p10 with a mutation that moved it 100% → 35.14%. That proved p10
+**can** move. It did not prove p10 sees a *concentrated* defect — and the
+mutation's population share was never measured. It plainly exceeded 10%, which
+is the only region where p10 has any resolution at all.
+
+**A replacement statistic must be validated against the defect class the
+original was blind to, at the population share that class actually has.**
+Validating it against a large-population mutation and concluding "it moves"
+repeats the original error with a different constant. Every quantile has a
+blind zone; choosing one without measuring the blind zone is choosing blind.
+
+## D.3 The gate
+
+The gated per-system arm becomes **the share of systems below 100% reachable**
+— which C.2 already required be *reported*, and which moved 0 → 27/35/28 under
+Task 7's defect while every quantile stood still. It has no blind zone: one
+affected system moves it.
+
+```
+share of systems below 100% reachable
+    0%            -> the intent: every system fully connected
+    0% - 5%       -> report, with the unreached-by-band histogram
+    > 5%          -> a connectivity defect survives §4.5's guarantees. STOP.
+```
+
+`p10` and the median are both **reported as context, never gated**. The
+whole-world arm is unchanged and still gated.
+
+## D.4 What Task 8 must not say
+
+Task 8's readout must not claim p10 checked anything. Under both defects
+measured here it read a perfect 100.00% while a real connectivity failure was
+live. Report it, label it as context, and state its blind zone in the same
+breath — a quantile reported without its resolution is the same defect this
+amendment exists to correct.
