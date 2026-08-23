@@ -16,7 +16,8 @@
 
 - **`hornvale-game-core` depends on NO hornvale crate.** It is a pure `vessel/session/v2` → grid renderer. Its `Cargo.toml` says "DELIBERATELY EMPTY OF HORNVALE CRATES". Do not add one.
 - **No schema change.** `Spatial` gains no variant; `vessel/session/v2` must not move. **If a task believes it must, that is a STOP** — a cross-repo contract, additive-or-versioned only.
-- **80×24 is the floor.** `render_with` refuses smaller rather than degrading. If the world plate does not fit at the floor, **the plate changes, not the floor.**
+- **80×24 is a DEGRADATION FLOOR, NOT THE DESIGN TARGET** (Nathan, 2026-08-23): *"we should suffer an 80x25 screen but by no means optimize with that in mind."* `render_with` still refuses anything smaller, and the plate still changes rather than the floor — but the size to design and judge against is a terminal filling a 1080p-or-larger screen, **~200×50 or more**. A criterion met only at 80×24, or a design choice that makes sense only there, is aimed at the wrong configuration.
+- **The plate does not currently grow with the terminal, and this campaign fixes that for the world view.** `spread.rs` has `pub const PLATE_WIDTH: u16 = 40` and `plate_width = PLATE_WIDTH.min(w)` — width only ever *shrinks*, while `content_height(h) = h - 4` grows without bound. On a 210×56 terminal the plate is 40×52: a Mercator, whose natural shape is width about 2x height, handed the one axis it cannot use. **Task 3 expands the plate to the terminal's width while map focus is active** (Nathan's ruling); the walk chart and chamber plan keep the two-pane split untouched.
 - **Ornament may never occupy a cell that carries information.** The cursor is the terminal's hardware cursor and occupies no grid cell.
 - **No second projection.** Reuse the spike's (`windows/worldgen/examples/portolan_spike.rs`); move it if both callers need it. Two copies of a projection is how a chart and a cursor come to disagree — this campaign has already fixed that exact defect once (`chart.rs`'s `boxes_of`).
 - **CO-LOCATION IS NOT DISCOVERY** (spec §A4, §A7). Visitedness is a fact about cells and may never be wired to a feature's label.
@@ -26,6 +27,7 @@
 - **`make gate-commit` compiles NONE of `clients/game`.** Most of this plan lives there. Run the client's own checks explicitly and paste them:
   `cd clients/game && cargo test -p hornvale-game-core -p hornvale-game`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
 - **Run the suite ONCE, inspect many.** Capture to a file and grep it. Never re-run to grep a second line.
+- **Test helpers the later tasks assume do not exist yet — build them, do not hallucinate them.** There is no `test_driver()` and no `test_world()` anywhere in `clients/game`. A driver is constructed as `Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap()` (see `clients/game/bin/tests/driver.rs`). `hornvale-game-core`'s tests are separate files (`cell.rs`, `chart.rs`, `plan.rs`, `schema.rs`, `spread.rs`, `provenance.rs`, `monochrome_floor.rs`) — **this crate has no `tests/suite.rs`**, because the workspace's test-binary consolidation does not reach `clients/game`. Committed fixtures are pulled in with `include_str!("fixtures/session-seed-42-turn-0.json")` (walk band) and `…-chamber.json` (chamber band).
 - **A test fixed at one configuration is blind to every defect that depends on it.** This campaign has hit that twice already — a test pinned at the 24-row floor missed a height bug, and a spinning-world fixture cannot see H4 at all. Vary the thing under test.
 
 ---
@@ -57,8 +59,8 @@
 - Produces:
   - `pub struct Frame { pole_lat_deg: f64, pole_lon_deg: f64 }`
   - `pub fn frame_for(locked: bool) -> Frame`
-  - `pub fn project(f: &Frame, lat_deg: f64, lon_deg: f64, w: u32, h: u32) -> Option<(u32, u32)>` — `None` above the clamp
-  - `pub fn unproject(f: &Frame, col: u32, row: u32, w: u32, h: u32) -> (f64, f64)`
+  - `pub fn project(f: &Frame, lat_deg: f64, lon_deg: f64, w: u32, h: u32) -> Option<(u32, u32)>` — **returns `(row, col)`, in that order**, matching the spike's own convention; `None` above the clamp
+  - `pub fn unproject(f: &Frame, row: u32, col: u32, w: u32, h: u32) -> (f64, f64)` — **`(row, col)` argument order**, matching `project`'s return
   - `pub const LAT_CLAMP_DEG: f64 = 85.0;`
 
 **Why `bin` and not the sim:** a projection is *rendering*, and decision 0022 puts rendering in the client. `bin` already depends on `hornvale-astronomy`, so it can read the rotation regime itself. The sim gains nothing.
@@ -71,7 +73,8 @@ fn a_spinning_world_holds_the_geographic_equator() {
     let f = frame_for(false);
     // The projection's pole IS the geographic pole, so the equator is the
     // line held true: lat 0 lands on the vertical centre of the plate.
-    let (_, row) = project(&f, 0.0, 0.0, 80, 40).expect("the equator is inside the clamp");
+    // `project` returns (ROW, COL) — the spike's own order; see Interfaces.
+    let (row, _col) = project(&f, 0.0, 0.0, 80, 40).expect("the equator is inside the clamp");
     assert_eq!(row, 20, "lat 0 sits on the plate's horizontal midline");
 }
 ```
@@ -83,7 +86,9 @@ Expected: FAIL — `mercator` does not exist (a compile error). **A compile-erro
 
 - [ ] **Step 3: Implement `Frame`, `frame_for`, and the Mercator core**
 
-Port `mercator_y`, `mercator_y_max`, `project` and `unproject` from `windows/worldgen/examples/portolan_spike.rs` (lines 51–104) unchanged in behaviour. They already route through `hornvale_kernel::math::ln`/`tan`, the libm-backed path, so they are cross-platform deterministic — keep that routing.
+Port `mercator_y`, `mercator_y_max`, `project` and `unproject` from `windows/worldgen/examples/portolan_spike.rs` (lines 51–104). They route through `hornvale_kernel::math::{ln, tan, atan, exp}`, the libm-backed path, so they are cross-platform deterministic — **keep that routing exactly**.
+
+**Port the MATH, not the clamp POLICY — this is the one deliberate divergence.** The spike's `project` clamps latitude and always returns a cell, by design: its doc says a feature past the clamp "still lands at the map's top/bottom edge rather than being dropped", which is right for placing a LABEL. It is wrong for drawing TERRAIN: spec §6 refuses polar fabrication, so a point above the clamp must yield `None` and its cell must be left blank. Keep `mercator_y`'s internal clamp (it is what makes the projection finite); add the out-of-band test that returns `None` before projecting. **If you find yourself making the locked-world test pass by clamping instead, stop — that is the defect this paragraph exists to prevent.**
 
 ```rust
 /// The rotation taking world coordinates into projection coordinates,
@@ -164,8 +169,8 @@ fn unproject_inverts_project_in_both_frames() {
     for locked in [false, true] {
         let f = frame_for(locked);
         for &(lat, lon) in &[(0.0, 0.0), (31.5, -117.25), (-64.0, 88.0), (12.0, 179.0)] {
-            if let Some((col, row)) = project(&f, lat, lon, 360, 180) {
-                let (rlat, rlon) = unproject(&f, col, row, 360, 180);
+            if let Some((row, col)) = project(&f, lat, lon, 360, 180) {
+                let (rlat, rlon) = unproject(&f, row, col, 360, 180);
                 // One cell of tolerance: project quantizes to a character.
                 assert!((rlat - lat).abs() < 2.0, "lat {lat} -> {rlat} (locked={locked})");
                 assert!(((rlon - lon + 540.0) % 360.0 - 180.0).abs() < 2.0, "lon {lon} -> {rlon}");
@@ -177,7 +182,7 @@ fn unproject_inverts_project_in_both_frames() {
 
 - [ ] **Step 10: Measure the zoom ladder (F1) and report it**
 
-Write a throwaway probe (do NOT commit it) that loads seed 42's terrain at `GLOBE_LEVEL` and counts the equatorial cell run, then report in the task report:
+Write a throwaway probe (do NOT commit it) that loads seed 42's terrain at `hornvale_terrain::GLOBE_LEVEL` (the spike does exactly this at line 107) and counts the equatorial cell run, then report in the task report:
 - the real equatorial cell count at level 6,
 - the resulting ladder: the virtual chart width at "whole planet in 40 columns" and at the one-character-per-terrain-cell ceiling,
 - **the actual numbers, not §4.3's ~364 estimate.** Every zoom constant in Task 3 comes from this measurement.
@@ -208,7 +213,7 @@ git commit -m "feat(game): the oblique Mercator, framed by the world's rotation 
 - Modify: `clients/game/core/src/lib.rs` (`render_with` gains `world_plate`)
 - Modify: `clients/game/core/src/spread.rs` (`compose` draws it)
 - Modify: `clients/game/bin/src/main.rs`, `clients/game/bin/src/driver.rs`
-- Test: in-module `#[cfg(test)]` in `plate.rs`; `clients/game/core/tests/suite.rs` for the compose half
+- Test: in-module `#[cfg(test)]` in `plate.rs`; `clients/game/core/tests/spread.rs` for the compose half; `clients/game/core/tests/monochrome_floor.rs` for the colour floor
 
 **Interfaces:**
 - Consumes: `mercator::{Frame, project, unproject}` (Task 1).
@@ -302,6 +307,8 @@ Expected: PASS.
 
 Colour tests in this crate must be hermetic — The Chroma's fix round found threaded tests mutating the environment under each other (`389d498de`). Call `Ink::resolve(color, colour_allowed)` directly rather than touching `NO_COLOR`.
 
+**`clients/game/core/tests/monochrome_floor.rs` already exists and is the model.** It renders each committed fixture twice, once per colour regime, compares cell by cell, and carries a companion assertion walking the COLOURED render for at least one non-`Plain` ink — *"so a world where colour never resolves cannot pass vacuously by producing two identical Plain screens."* It also owns an `ENV_LOCK` and a `with_no_color_removed` helper. **Extend that file's discipline; do not invent a second colour-test idiom.**
+
 ```rust
 #[test]
 fn a_land_cell_tints_when_colour_is_allowed_and_is_plain_when_it_is_not() {
@@ -315,9 +322,14 @@ fn a_land_cell_tints_when_colour_is_allowed_and_is_plain_when_it_is_not() {
     // Monochrome is the FLOOR: same glyphs, only the ink differs.
     assert_eq!(lit.to_plain_text(), mono.to_plain_text(),
         "colour may not change which glyph is drawn");
-    assert!(mono.cells().all(|c| c.ink == Ink::Plain));
-    assert!(lit.cells().any(|c| matches!(c.ink, Ink::Rgb(_))),
-        "with colour allowed at least one cell must claim one");
+    // `Grid` has NO `cells()`/`iter()` — walk it with `get(x, y)`.
+    let inks = |g: &Grid| -> Vec<Ink> {
+        (0..g.height()).flat_map(|y| (0..g.width()).filter_map(move |x| g.get(x, y).map(|c| c.ink))).collect()
+    };
+    assert!(inks(&mono).iter().all(|i| *i == Ink::Plain));
+    assert!(inks(&lit).iter().any(|i| matches!(i, Ink::Rgb(_))),
+        "with colour allowed at least one cell must claim one — this is the VACUITY guard: \
+         two identical all-Plain grids would otherwise pass the equality above");
 }
 ```
 
@@ -333,12 +345,16 @@ Expected: FAIL. Then implement using `Cell::inked(glyph, weight, Source::World, 
 - [ ] **Step 12: Write the compose test**
 
 ```rust
-// clients/game/core/tests/suite.rs
+// clients/game/core/tests/spread.rs  (compose lives in spread.rs; this crate has
+// NO tests/suite.rs — the workspace's test-binary consolidation does not reach
+// clients/game, which is outside the cargo workspace)
+const WALK: &str = include_str!("fixtures/session-seed-42-turn-0.json");
+
 #[test]
 fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
     let plate = { let mut g = Grid::new(40, 20); g.set(0, 0, Cell::glyph('#', Weight::Normal, Source::World)); g };
-    let (with, _)    = render_with(WALK_FIXTURE, 80, 24, Focus::Map, None, CommandLine::default(), None, None, Some(&plate)).unwrap();
-    let (without, _) = render_with(WALK_FIXTURE, 80, 24, Focus::Map, None, CommandLine::default(), None, None, None).unwrap();
+    let (with, _)    = render_with(WALK, 80, 24, Focus::Map, None, CommandLine::default(), None, None, Some(&plate)).unwrap();
+    let (without, _) = render_with(WALK, 80, 24, Focus::Map, None, CommandLine::default(), None, None, None).unwrap();
     assert_eq!(with.get(0, 0).unwrap().source, Source::World);
     assert_eq!(without.get(0, 0).unwrap().source, Source::Chart);
     // The entry pane is untouched by the lens.
@@ -351,6 +367,47 @@ fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
 - [ ] **Step 13: Render at exactly 80×24 and paste it in the task report (F4, H1')**
 
 Run the client with the world plate at the floor and **paste both renderings** — coloured and `NO_COLOR` — into the report, next to the Gazetteer's committed `elevation_ascii` of the same world. H1' is judged on the monochrome arm; say plainly whether the largest landmass is recognisable. **A falsified H1' is a finding, not a failure** — report it and stop rather than widening the floor.
+
+- [ ] **Step 15 (added 2026-08-23, after H1' was falsified): area-majority sampling**
+
+**Nathan's ruling.** H1' failed at 40 columns because the plate point-samples:
+800 screen cells over a ~40,962-cell mesh means ~51 terrain cells behind each
+character, and taking the single NEAREST one makes a character straddling a
+coastline land-or-water essentially at random. The fix is to sample the area, not
+the point.
+
+Each screen cell takes the **majority** of the terrain cells its own footprint
+covers, rather than the nearest cell to its centre. At the ceiling (one character
+per terrain cell) the footprint is 1 and the behaviour is unchanged, so this is a
+generalisation of today's code, not a replacement.
+
+**This is NOT forbidden by decision 0123.** 0123 governs a view *finer* than its
+model and forbids the field "inventing detail" below the model's resolution. This
+is the opposite direction — a view *coarser* than its model, summarising detail it
+actually has. Summarising what you have and inventing what you do not are
+different acts, and only the second is refused.
+
+**It also resolves the deferred Minor from Task 2's review.** `draw_with` rebuilds
+`NearestCellIndex::new(geo)` on every call (~200 ms measured). Point sampling made
+that merely wasteful; area sampling multiplies the per-cell work by ~51 and Task 3
+wires this into the redraw path, so build the index ONCE and hand it in (the idiom
+`driver.rs` already uses for its own `NearestCellIndex`). Change the signature
+rather than caching inside.
+
+- [ ] **Step 15a: re-measure, and report BOTH renderings side by side**
+
+Render seed 42 at 40×20 under both samplings and paste both into the report.
+
+- [ ] **Step 15b: state the post-unblinding change explicitly**
+
+**The original H1' result stands and is not overwritten.** It was falsified against
+nearest-cell sampling, and that is a real finding about point sampling at this
+ratio. What you are measuring now is a *different method*, chosen *after* seeing
+that result — so report it as **H1'' (area-majority sampling)**, name it as a
+post-unblinding method change, and say who decided it and why. Do not report a
+passing H1' as though the original prediction had held. If H1'' also fails, say so
+plainly; a second falsification is a finding about the 40-column rung itself and
+Task 3's ladder floor becomes the open question.
 
 - [ ] **Step 14: Run fmt, clippy, the full client suite, and commit**
 
@@ -445,22 +502,57 @@ Expected: PASS.
 
 - [ ] **Step 8: Write the failing re-centre test**
 
+**Re-centre is a KEY in map focus — `.` — not a typed command.** The controller
+ruled this before dispatch; the reasoning is load-bearing, so it is here rather
+than only in the ledger:
+
+- **Letters are not available.** `input.rs`'s `Focus::Map` arm routes
+  `KeyCode::Char(c) => Action::FocusAndType(c)` — every printable key that is not
+  `-`/`+`/`=` bounces to the CLI and types itself. That totality is The Stride's
+  convention, extended to the third focus state deliberately. Carving a letter out
+  of it would make the routing table non-total and unpredictable from the screen,
+  which decision 0159 exists to prevent.
+- **Punctuation is the established exception**: `-`, `+` and `=` are already map
+  verbs, so `.` joins a pattern rather than starting one. `Tab` stays reserved
+  (`CLIENT-tab-completion`).
+- **A typed `recentre` would need a reply channel that does not exist.** The entry
+  pane's prose is `narration.prose`, carried from the wire; there is no client-side
+  prose channel, and adding one to `vessel/session/v2` is the schema change this
+  plan refuses. A key needs no reply: **the acknowledgement is the map redrawing.**
+- `.` is mnemonic for the cursor's own point, and §3.2 centres on the CURSOR.
+
 ```rust
 #[test]
 fn recentre_rolls_the_projection_to_the_cursor_and_only_on_command() {
-    let mut d = test_driver();
+    let mut d = test_driver();          // Driver::start(42, PossessTarget::Flagship)
     d.enter_map();
     let before = *d.frame();
     d.apply(Action::CursorBy(12, 4));
     assert_eq!(*d.frame(), before, "the map holds still while the cursor moves");
-    d.handle("recentre");
-    assert_ne!(*d.frame(), before, "an explicit command rolls the projection");
+    d.apply(Action::Recentre);
+    assert_ne!(*d.frame(), before, "an explicit gesture rolls the projection");
+}
+
+#[test]
+fn the_map_routing_table_stays_total() {
+    // Every printable key that is not a map verb must still bounce to the CLI.
+    // A new exception that swallowed a letter would be invisible to the test
+    // above and would break decision 0159's predictability rule.
+    for c in ['a', 'z', 'Q', '9', ' '] {
+        assert!(matches!(action_for(press(c), Focus::Map), Action::FocusAndType(_)),
+            "{c:?} must still type itself");
+    }
+    assert!(matches!(action_for(press('.'), Focus::Map), Action::Recentre));
 }
 ```
 
 - [ ] **Step 9: Run, implement, re-run**
 
-Re-centring is a command, never a behaviour (spec §3.2): the map would otherwise reflow every keypress, and `RENDER-three-channels-three-clocks` records that the glyph layer is the most cacheable thing on screen.
+Add `Action::Recentre` and bind `KeyCode::Char('.')` in the `Focus::Map` arm of
+`input.rs`, beside the existing `-`/`+`/`=` bindings. Re-centring is a gesture,
+never a behaviour (spec §3.2): the map would otherwise reflow every keypress, and
+`RENDER-three-channels-three-clocks` records that the glyph layer is the most
+cacheable thing on screen.
 
 - [ ] **Step 10: Test H4 on a LOCKED world, not seed 42 alone**
 
@@ -477,6 +569,67 @@ fn a_locked_worlds_habitable_band_is_drawn_not_clamped() {
     }
 }
 ```
+
+- [ ] **Step 12: The map-focused full-width plate (Nathan's ruling, 2026-08-23)**
+
+While `Focus::Map` is active **and a world plate is being drawn**, the plate uses
+the terminal's full width instead of `PLATE_WIDTH`. Leaving map focus restores the
+two-pane split. The walk chart and chamber plan are **untouched at every focus** —
+this is the world view only, justified by the spec's own §11 decision that a world
+view is a **lens, not a band**: something consulted, not lived in.
+
+**One width, computed once.** `compose` already takes `focus` and `world_plate`;
+derive the plate's width there and expose it the way `content_height` already is,
+because `bin`'s cursor resolver needs the SAME number `compose` draws into.
+`content_height`'s own doc records why: *"Two callers computing 'the plate's
+content height' independently is exactly the shape that let a fixed-height
+assumption silently name the wrong cell at any non-floor terminal size."* A second
+copy of the width reproduces that defect on the other axis.
+
+**The Mercator's aspect decides the height, not the terminal.** The projection is
+naturally square in Mercator units, so at `GLYPH_ASPECT = 2` its natural shape is
+width about 2x height. Given `w` columns and `content_height(h)` rows, fit the
+largest Mercator that fits BOTH — do not stretch to fill, and do not letterbox
+silently without saying so in the report.
+
+```rust
+#[test]
+fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
+    // Walk focus: the two-pane split is untouched.
+    let (walk, _) = render_with(WALK, 210, 56, Focus::Walk, None, CommandLine::default(), None, None, Some(&plate)).unwrap();
+    assert!(walk.get(PLATE_WIDTH, 0).is_some_and(|c| c.source != Source::World),
+        "the walk view keeps its 40-column plate");
+
+    // Map focus: the plate reaches past PLATE_WIDTH.
+    let (map, _) = render_with(WALK, 210, 56, Focus::Map, None, CommandLine::default(), None, None, Some(&plate)).unwrap();
+    assert!((PLATE_WIDTH..120).any(|x| map.get(x, 10).is_some_and(|c| c.source == Source::World)),
+        "the map view draws world cells past the old fixed plate width");
+
+    // And the floor still works, degraded rather than refused.
+    let (floor, _) = render_with(WALK, 80, 24, Focus::Map, None, CommandLine::default(), None, None, Some(&plate)).unwrap();
+    assert_eq!(floor.width(), 80, "80x24 degrades, never refuses");
+}
+```
+
+- [ ] **Step 13: H1''' — re-measure at a REALISTIC terminal, and at the floor**
+
+**F10 — does the expanded plate resolve the landmass?** Render seed 42 with
+area-majority sampling at **210x56** (a full-screen 1080p terminal) and paste it,
+next to the same world at 80x24. Report:
+
+- whether the largest landmass reads as one coherent shape **at 210x56** — this is
+  the criterion that counts, per Nathan's ruling that the floor is not the target;
+- whether the 80x24 case remains *honest* (land and water distinguishable, nothing
+  fabricated), which is all the floor is required to be;
+- the sample count at each size, and the terrain-cells-per-sample ratio.
+
+**Label it H1''' and say what changed since H1''.** This is the THIRD framing of
+one hypothesis: H1' (nearest-cell, 40x20) falsified; H1'' (area-majority, 40x20)
+measured in Task 2's fix round; H1''' (area-majority, expanded plate). Each change
+was made after seeing the previous result, and the chronicle must show the whole
+sequence rather than only the framing that finally passed. **If H1''' fails too,
+that is a finding about the whole-planet rung and the ladder's floor becomes an
+open question for Nathan — do not rescue it.**
 
 - [ ] **Step 11: Run fmt, clippy, the full client suite, and commit**
 
