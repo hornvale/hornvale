@@ -62,7 +62,7 @@ use crate::history::History;
 use crate::input::Action;
 use crate::line::Line;
 use hornvale_astronomy::SkyPins;
-use hornvale_game_core::{Cursor, Focus};
+use hornvale_game_core::{CandidateSource, Cursor, Focus};
 use hornvale_kernel::{NearestCellIndex, RoomId, Seed, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::TerrainPins;
@@ -207,6 +207,126 @@ pub struct Driver {
     /// overwritten by the next submission: it names "what was asked most
     /// recently", not "what was asked this exact turn".
     echo: Option<String>,
+    /// The completion vocabulary's v1 scope, refreshed from every parsed
+    /// snapshot (see [`Driver::refresh`]). Held DIRECTLY rather than behind
+    /// a [`hornvale_game_core::Lexicon`]: spec §3 registers exactly one
+    /// scope in v1, so the fold (`Lexicon::candidates`'s ordered
+    /// first-wins dedup over scopes) has nothing to fold — wrapping a single
+    /// scope in a `Vec<Box<dyn CandidateSource>>` would buy allocation and
+    /// indirection without behaviour. The Lexicon becomes the right shape
+    /// the day a second scope lands; this field swaps for it then.
+    scope: hornvale_game_core::CurrentTurnNouns,
+    /// How an ambiguous completion presents (spec §4.2). [`TabStyle::Cycle`]
+    /// is implemented and unit-tested but unbound — no preference mechanism
+    /// exists yet, so every session runs [`TabStyle::Hint`].
+    tab_style: TabStyle,
+    /// The pending ambiguity under [`TabStyle::Hint`] — the stem the buffer
+    /// was extended to and the full match list it came from, for the strip
+    /// to present. Cleared by any edit or submission.
+    hint: Option<Hint>,
+    /// The pending rotation under [`TabStyle::Cycle`] — unreachable while
+    /// `tab_style` is [`TabStyle::Hint`], but implemented and tested so the
+    /// preference mechanism only has to flip a field. Cleared by any edit
+    /// or submission.
+    cycle: Option<CycleState>,
+}
+
+/// How an ambiguous completion presents (spec §4.2). Cycle is implemented
+/// and unit-tested but unbound — no preference mechanism exists yet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TabStyle {
+    /// Extend to the shared stem and show the alternatives once.
+    Hint,
+    /// Each successive press rotates through the matches.
+    Cycle,
+}
+
+/// One pending ambiguity under [`TabStyle::Hint`]: the stem the buffer now
+/// carries and every name that shares it, in candidate order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Hint {
+    /// The longest common prefix of all matches — what the buffer holds.
+    stem: String,
+    /// Every matching name, input order preserved.
+    matches: Vec<String>,
+}
+
+/// One pending rotation under [`TabStyle::Cycle`]: where the completed word
+/// begins (in char offsets, matching [`Line::caret`]'s units) and which
+/// match is currently filled.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CycleState {
+    /// Char offset of the word being rotated.
+    start: usize,
+    /// Every matching name, input order preserved.
+    matches: Vec<String>,
+    /// Index into `matches` of the currently-filled name.
+    index: usize,
+}
+
+/// What a Complete keypress decides, before any mutation — factored out of
+/// [`Driver::apply`] so the decision is unit-testable without minting a
+/// world (a full [`Driver`] costs a genesis; this function does not).
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CompletionDecision {
+    /// No token at the caret, or nothing matched: change nothing.
+    Noop,
+    /// Exactly one candidate matched: fill it whole.
+    Fill(String),
+    /// Several matched: extend to the shared stem and offer the rest.
+    Ambiguous {
+        /// The longest common prefix of ALL matches.
+        stem: String,
+        /// Every matching name, input order preserved.
+        matches: Vec<String>,
+    },
+}
+
+/// Char offset where the whitespace-delimited word ending at `caret`
+/// begins, or `None` when no token ends there.
+fn word_start_at_caret(text: &str, caret: usize) -> Option<usize> {
+    let prefix: Vec<char> = text.chars().take(caret).collect();
+    if prefix.last().is_none_or(|c| c.is_whitespace()) {
+        return None;
+    }
+    Some(
+        prefix
+            .iter()
+            .rposition(|c| c.is_whitespace())
+            .map_or(0, |i| i + 1),
+    )
+}
+
+/// Decide what a Complete keypress does for the token ending at `caret` in
+/// `text`, against `candidates`. Pure.
+fn completion_decision(
+    text: &str,
+    caret: usize,
+    candidates: &[hornvale_game_core::Candidate],
+) -> CompletionDecision {
+    let Some(start) = word_start_at_caret(text, caret) else {
+        return CompletionDecision::Noop;
+    };
+    let chars: Vec<char> = text.chars().collect();
+    let token: String = chars[start..caret].iter().collect();
+    if token.is_empty() {
+        return CompletionDecision::Noop;
+    }
+    match hornvale_game_core::complete(&token, candidates) {
+        hornvale_game_core::Completion::None => CompletionDecision::Noop,
+        hornvale_game_core::Completion::Unique(name) => {
+            // Filling the token with itself is a documented no-op (the
+            // engine's own note on `Unique`).
+            if name == token {
+                CompletionDecision::Noop
+            } else {
+                CompletionDecision::Fill(name)
+            }
+        }
+        hornvale_game_core::Completion::Prefix { stem, matches } => {
+            CompletionDecision::Ambiguous { stem, matches }
+        }
+    }
 }
 
 /// Append the sight-disclosure caption to a resolved strip text — the
@@ -338,6 +458,10 @@ impl Driver {
             line: Line::new(),
             history: History::new(),
             echo: None,
+            scope: hornvale_game_core::CurrentTurnNouns::default(),
+            tab_style: TabStyle::Hint,
+            hint: None,
+            cycle: None,
         };
         driver.refresh();
         Ok(driver)
@@ -454,6 +578,7 @@ impl Driver {
             }
             Action::Type(c) => {
                 self.line.insert(c);
+                self.clear_completion();
                 false
             }
             Action::FocusAndType(c) => {
@@ -474,10 +599,12 @@ impl Driver {
                 self.focus = Focus::Cli;
                 self.strip = None;
                 self.line.insert(c);
+                self.clear_completion();
                 false
             }
             Action::DeleteBack => {
                 self.line.backspace();
+                self.clear_completion();
                 false
             }
             Action::CaretBy(dx) => {
@@ -506,6 +633,7 @@ impl Driver {
                     return false;
                 }
                 let taken = self.line.take();
+                self.clear_completion();
                 self.history.push(taken.clone());
                 self.echo = Some(taken.clone());
                 let released = self.handle(&taken);
@@ -546,11 +674,100 @@ impl Driver {
                 self.handle(&taken)
             }
             Action::Zoom(_) => false,
-            // Routing exists first (spec §4.1); what completion DOES is a
-            // later task — for now the key press is accepted and inert.
-            Action::Complete => false,
+            // Completion (spec §4.2). Under [`TabStyle::Hint`] the token at
+            // the caret is completed against the lexicon: a unique match is
+            // filled whole, an ambiguous one extends to the shared stem and
+            // parks the alternatives in `self.hint` for the strip to show,
+            // and a no-match changes nothing. Never advances the turn.
+            Action::Complete => {
+                // Completion (spec §4.2). Under [`TabStyle::Hint`] the token
+                // at the caret is completed against the lexicon: a unique
+                // match is filled whole, an ambiguous one extends to the
+                // shared stem and parks the alternatives in `self.hint` for
+                // the strip to show, and a no-match changes nothing. Under
+                // [`TabStyle::Cycle`] an open rotation steps BEFORE the
+                // engine is consulted — the filled name alone would only
+                // ever complete to itself. Never advances the turn.
+                if self.tab_style == TabStyle::Cycle {
+                    self.cycle_step();
+                } else {
+                    let decision = completion_decision(
+                        &self.line.text(),
+                        self.line.caret(),
+                        &self.scope.candidates(),
+                    );
+                    self.apply_hint(decision);
+                }
+                false
+            }
             Action::None => false,
         }
+    }
+
+    /// Apply one hint-style completion decision. Always leaves the turn
+    /// unadvanced (the caller returns `false` regardless).
+    fn apply_hint(&mut self, decision: CompletionDecision) {
+        match decision {
+            CompletionDecision::Noop => {}
+            CompletionDecision::Fill(name) => {
+                self.line.replace_word_at_caret(&name);
+                self.hint = None;
+            }
+            CompletionDecision::Ambiguous { stem, matches } => {
+                self.line.replace_word_at_caret(&stem);
+                self.hint = Some(Hint { stem, matches });
+            }
+        }
+    }
+
+    /// One Complete keypress under [`TabStyle::Cycle`]. While a rotation is
+    /// open over the word at the caret (same char offset it opened at), it
+    /// steps to the next match, wrapping — this check happens FIRST,
+    /// because a filled name re-completed through the engine would only
+    /// ever yield itself. Otherwise a fresh ambiguous match fills its first
+    /// alternative and opens the rotation; unique fills and no-matches
+    /// behave exactly as under [`TabStyle::Hint`], closing any rotation.
+    fn cycle_step(&mut self) {
+        let text = self.line.text();
+        let caret = self.line.caret();
+        let here = word_start_at_caret(&text, caret);
+        if let Some(state) = &mut self.cycle
+            && state.start == here.unwrap_or(usize::MAX)
+        {
+            state.index = (state.index + 1) % state.matches.len();
+            let name = state.matches[state.index].clone();
+            self.line.replace_word_at_caret(&name);
+            return;
+        }
+        match completion_decision(&text, caret, &self.scope.candidates()) {
+            CompletionDecision::Ambiguous { stem, matches } => {
+                self.line.replace_word_at_caret(&stem);
+                let name = matches[0].clone();
+                let start = word_start_at_caret(&self.line.text(), self.line.caret()).unwrap_or(0);
+                self.line.replace_word_at_caret(&name);
+                self.hint = Some(Hint {
+                    stem: name,
+                    matches: matches.clone(),
+                });
+                self.cycle = Some(CycleState {
+                    start,
+                    matches,
+                    index: 0,
+                });
+            }
+            CompletionDecision::Fill(name) => {
+                self.line.replace_word_at_caret(&name);
+                self.clear_completion();
+            }
+            CompletionDecision::Noop => {}
+        }
+    }
+
+    /// Drop any pending hint and cycle state — every action that mutates
+    /// or submits the line owns one of these calls.
+    fn clear_completion(&mut self) {
+        self.hint = None;
+        self.cycle = None;
     }
 
     /// Enter the map focus and resolve its strip. Also called by `apply`'s
@@ -688,6 +905,15 @@ impl Driver {
             .snapshot()
             .map(|snap| snapshot_json(&snap))
             .unwrap_or_default();
+        // The completion scope rides every refresh: parse (which can fail
+        // only as `refresh`'s own doc describes — a dead session) and
+        // replace the noun catalog from the new narration. On failure the
+        // previous catalog stands rather than being cleared: stale
+        // candidates complete nothing harmful, and an empty one mid-session
+        // would be a regression masquerading as caution.
+        if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
+            self.scope.update(&snap.narration);
+        }
     }
 }
 
@@ -801,5 +1027,178 @@ mod caption_tests {
             let out = caption("googo ridge".to_string(), None);
             assert_eq!(out, "googo ridge");
         });
+    }
+}
+
+#[cfg(test)]
+mod completion_tests {
+    use super::*;
+    use crate::input::Action;
+    use hornvale_game_core::schema::{Narration, NounEntry};
+
+    /// A narration whose noun catalog names the completion fixtures: two
+    /// creatures sharing a long prefix, one unique thing.
+    fn fixture_narration() -> Narration {
+        Narration {
+            prose: String::new(),
+            nouns: vec![
+                NounEntry {
+                    noun: "Gnarlash".into(),
+                    datum: String::new(),
+                    kind: "creature".into(),
+                },
+                NounEntry {
+                    noun: "Gnarlwood".into(),
+                    datum: String::new(),
+                    kind: "place".into(),
+                },
+                NounEntry {
+                    noun: "bramble".into(),
+                    datum: String::new(),
+                    kind: "thing".into(),
+                },
+            ],
+        }
+    }
+
+    /// A live driver whose scope has been overwritten with the fixture
+    /// catalog — the real refresh path (`scope.update` from a parsed
+    /// snapshot) is exercised by the integration suite; these tests need a
+    /// KNOWN vocabulary.
+    fn seeded_driver() -> Driver {
+        let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+        d.scope.update(&fixture_narration());
+        d
+    }
+
+    #[test]
+    fn unique_match_replaces_the_token() {
+        let mut d = seeded_driver();
+        d.line.set("examine bram".to_string());
+        assert!(!d.apply(Action::Complete));
+        assert_eq!(d.line.text(), "examine bramble");
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn ambiguous_match_extends_to_stem_and_sets_hint() {
+        let mut d = seeded_driver();
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine Gnarl");
+        assert_eq!(
+            d.hint,
+            Some(Hint {
+                stem: "Gnarl".into(),
+                matches: vec!["Gnarlash".into(), "Gnarlwood".into()],
+            })
+        );
+    }
+
+    #[test]
+    fn typing_clears_a_pending_hint() {
+        let mut d = seeded_driver();
+        d.hint = Some(Hint {
+            stem: "Gnarl".into(),
+            matches: vec!["Gnarlash".into()],
+        });
+        d.apply(Action::Type('x'));
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn backspace_and_submit_also_clear_completion_state() {
+        let mut d = seeded_driver();
+        d.hint = Some(Hint {
+            stem: "s".into(),
+            matches: vec!["s".into()],
+        });
+        d.apply(Action::DeleteBack);
+        assert_eq!(d.hint, None);
+        // Submit on an empty buffer is its own documented no-op, but it must
+        // still close any pending state (the buffer cannot be non-empty here,
+        // so drive `clear_completion` through FocusAndType instead).
+        d.hint = Some(Hint {
+            stem: "s".into(),
+            matches: vec!["s".into()],
+        });
+        d.apply(Action::FocusAndType('a'));
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn complete_on_an_empty_buffer_is_a_noop() {
+        let mut d = seeded_driver();
+        assert!(!d.apply(Action::Complete));
+        assert_eq!(d.line.text(), "");
+        assert_eq!(d.hint, None);
+    }
+
+    #[test]
+    fn cycle_rotation_walks_matches_in_order_then_wraps() {
+        let mut d = seeded_driver();
+        d.tab_style = TabStyle::Cycle;
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete); // opens at matches[0]
+        assert_eq!(d.line.text(), "examine Gnarlash");
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine Gnarlwood");
+        d.apply(Action::Complete); // wraps to matches[0]
+        assert_eq!(d.line.text(), "examine Gnarlash");
+    }
+
+    #[test]
+    fn typing_closes_an_open_cycle_rotation() {
+        let mut d = seeded_driver();
+        d.tab_style = TabStyle::Cycle;
+        d.line.set("examine gnar".to_string());
+        d.apply(Action::Complete);
+        d.apply(Action::Type('h'));
+        assert_eq!(d.cycle, None);
+        // The stale rotation no longer steps: a fresh press re-completes
+        // against the edited token ("Gnarlash" → still ambiguous? No —
+        // "Gnarlah" matches nothing, so the buffer stands).
+        d.apply(Action::Complete);
+        assert_eq!(d.line.text(), "examine Gnarlashh");
+    }
+
+    /// The pure decision layer, exercised directly so the token-scan edge
+    /// cases need no world at all.
+    #[test]
+    fn decision_layer_edge_cases() {
+        let cands = |names: &[&str]| -> Vec<hornvale_game_core::Candidate> {
+            names
+                .iter()
+                .map(|n| hornvale_game_core::Candidate {
+                    name: n.to_string(),
+                    category: hornvale_game_core::Category::Thing,
+                })
+                .collect()
+        };
+        // Whitespace before the caret: no token, no-op.
+        assert_eq!(
+            completion_decision("examine ", 8, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // Empty text: no token.
+        assert_eq!(
+            completion_decision("", 0, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // A token already equal to its single match: documented no-op.
+        assert_eq!(
+            completion_decision("bramble", 7, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // No candidate starts with the token: no-op.
+        assert_eq!(
+            completion_decision("zz", 2, &cands(&["bramble"])),
+            CompletionDecision::Noop
+        );
+        // Caret mid-word completes only up to the caret ("examine br|amble").
+        assert_eq!(
+            completion_decision("examine bramble", 11, &cands(&["bramble"])),
+            CompletionDecision::Fill("bramble".into())
+        );
     }
 }

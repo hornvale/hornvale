@@ -2327,3 +2327,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T19:05:33Z | gate-commit | 56.524 | 46.313 | 13.092 | 1.05 | 0 | 089cf0d47 | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-23T19:09:41Z | gate-commit | 29.351 | 45.493 | 13.100 | 2.00 | 0 | 28a29d9a8 | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-23T19:15:22Z | game-check | 208.689 | 762.821 | 12.808 | 3.72 | 0 | 7fb8151e7 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:20:49Z | gate-commit | 36.194 | 46.865 | 13.518 | 1.67 | 0 | c5abcf6bd | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:24:08Z | gate-commit | 52.573 | 53.404 | 13.534 | 1.27 | 0 | f729b98d2 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:26:34Z | gate-commit | 29.992 | 45.354 | 12.899 | 1.94 | 0 | c6f1ea1a3 | campaign/the-lexicon | MacBookPro | 10 |
