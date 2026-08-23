@@ -254,7 +254,7 @@ pub struct NounEntry {
     pub datum: String,
     /// Coarse kind for completion-capable clients. Optional on the wire:
     /// older mirrors load unchanged (serde default), newer fixtures carry it.
-    /// Additive on `vessel/session/v1` per the schema discipline.
+    /// Additive on `vessel/session/v2` per the schema discipline.
     /// type-audit: bare-ok(identifier-text: kind)
     #[serde(default)]
     pub kind: String,
