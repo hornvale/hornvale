@@ -214,6 +214,57 @@ Two things follow that the earlier sections do not already say:
   offered as one — I meant it as a courtesy — and it caught a defect three
   reviews and my own re-reading had not.
 
+## Committing to `main` at the merge submission, and the guard that is not a gap
+
+At the last step of the campaign — the one irreversible one — the shell's
+working directory had silently reset to the **primary checkout**, and my next
+commands carried no `cd`. So `make gate-commit`, the `Sluice-Headline` commit
+and a timings commit all landed on **`main`** instead of the campaign branch.
+
+**What stopped it was the push refusing.** `git push origin
+HEAD:refs/heads/campaign/the-deed` from `main` was rejected as a
+non-fast-forward. Nothing reached a remote; `main` was reset to `origin/main`
+and verified at zero divergence.
+
+**That is luck wearing the costume of diligence**, and the queue named the
+reason precisely: the refusal depends entirely on the *relative position* of
+the two refs. Had main's tip been a **descendant** of the campaign branch, the
+same push is a fast-forward and `pre-push` allows it — main's tip would have
+gone onto the campaign branch and been submitted as a merge candidate.
+
+**`pre-commit` is NOT the gap here, and writing it up as one would do harm.**
+Its worktree guard is deliberately scoped — the hook says so itself:
+
+> Campaigns run in worktrees under `.claude/worktrees/`, and a linked worktree
+> sitting on `main` is essentially always a wrong-branch mistake … **The
+> PRIMARY checkout on `main` is legitimate (merges, infra, docs)**, so the
+> guard keys on linked-vs-primary (`git-dir != git-common-dir`), not on the
+> branch name alone.
+
+The primary checkout committing to `main` is the sanctioned path — it is how
+merges and infra land. The hook did not fail to stop me; it was never the
+instrument. Filing it as a hole risks someone "fixing" it into refusing
+legitimate work, which is a worse outcome than the mistake it would prevent.
+I had it framed as a gap until the queue corrected me.
+
+**The narrow, true statement of the hole:** nothing prevents pushing *main's
+tip* onto a campaign branch, and `pre-push` catches it only in the
+non-fast-forward case. Its tail is now closed by an unrelated change that
+landed the same night — the chamber consults the mouth before taking the
+flock, so such a submission is refused (`already an ancestor of base`) without
+consuming the box. Before that it would have merged to "Already up to date"
+and burned a run.
+
+**The remedy I adopted, which is cheap and would have caught it:** a branch
+assertion in front of every commit and push, rather than trusting the
+directory —
+
+    git branch --show-current | grep -qx 'campaign/the-deed' || { echo ABORT; exit 1; }
+
+Two memories about re-anchoring the working directory already existed and did
+not save me, because the reset is silent and arrives between commands rather
+than inside one. An assertion at the point of use beats a habit.
+
 ## What this arc did not do
 
 **Seven of the fourteen concepts it minted are inert.** `chart`, `know`,
