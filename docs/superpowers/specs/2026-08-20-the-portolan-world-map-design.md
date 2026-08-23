@@ -569,6 +569,12 @@ rung (`CLIENT-snapshot-chart-cannot-zoom`), explicitly out of scope here.
 - **Co-location is not discovery** (§A4). Visitedness is a fact about cells and
   may never be wired to a feature's label. A campaign that "fixes" a sparse map
   by letting a visited cell disclose its contents has broken this rule.
+- **No third copy of the delve roster.** `hornvale_terrain::delve::DelveRung`
+  owns the ladder and its derivation; `hornvale_climate::underworld::DelveZone`
+  mirrors the roster because the layering forbids climate importing terrain,
+  and `cli/tests/suite/delve_roster_mirror.rs` guards the pair (decision 0094:
+  the roster is shared, the derivation is not). If this campaign ever names a
+  depth, it reuses one of those two. **A third mirror is a STOP.**
 - **Colour may not carry the epistemic channel** (§A5).
 - **No new site kinds.** This campaign ships the mechanism against the world
   that exists (§A8) and does not widen the discoverable roster.
@@ -683,11 +689,14 @@ artifact exists in either the abandoned or the buried case (§A8, both verified
 against the code). **Settled — nothing left for a task to decide.**
 
 **F9 — what counts as "entering" a settlement or a cave?** §A4b names the
-encounter but deliberately not its threshold: `structure_at`, `enter` and
-`delve` already define arrival at a built place and at a cave, and the plan
-should adopt whichever the code already treats as arrival rather than minting a
-fourth notion. **Settled by:** Task 5 names the existing predicate it reuses and
-cites it. **Minting a new arrival test is a STOP.**
+encounter but deliberately not its threshold. **For a cave the answer is
+already owned:** the delve ladder leads with `Surface` and `Undercroft` is "cave
+mouths and the first few tens of metres of worked rock", so entering a cave is
+the `Surface -> Undercroft` transition `Session::delve` already performs
+(`session.rs`, setting `self.underground`). **For a settlement it is open:**
+`structure_at`'s existence predicate and the `enter` verb are the two
+candidates. **Settled by:** Task 5 names the existing predicate it reuses, for
+each kind, and cites it. **Minting a new arrival test is a STOP.**
 
 **F8 — does the strip's chain change under the gate?** §5 has the strip carry
 the whole containment chain. **Settled by:** Task 4, which must state what the
@@ -718,6 +727,29 @@ straight into things cannot see. The fixture must walk PAST something.
 world map and walks is byte-identical to one that never opens it, exactly as
 `purview`'s overlay is. *Falsified by* any ledger difference, which would mean
 the map became a writer.
+
+## A11b. Why a thin roster is the right trade — the owner's reasoning, recorded
+
+Approving the reduced roster (2026-08-23), Nathan gave the reason, and it is a
+design principle rather than a concession, so it is recorded rather than
+summarised:
+
+> "We're going to need to invest a lot of time in building things to hang from
+> this skeleton, but I think that's better than building a lot of things that
+> we then need to design a skeleton for."
+
+The discovery layer is the skeleton. It is specified against three feature
+kinds because three is enough to prove the joints — an extent feature, a point
+site, and a point site reached by a band transition (§A4b) — and every later
+feature is hung on the same rule rather than renegotiating it. The failure mode
+this avoids is the opposite order: a large accumulated roster whose structure
+must be retrofitted, where the retrofit is constrained by content that was
+authored without it.
+
+**This is also why `PLAY-ruins-have-no-artifact` is a good outcome and not a
+loss.** It is the skeleton refusing to hold a bone that does not exist yet, out
+loud, instead of quietly disclosing ruins by co-location because the roster
+looked thin.
 
 ## A12. Flagged for Nathan at G3
 
