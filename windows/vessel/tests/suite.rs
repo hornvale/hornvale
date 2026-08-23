@@ -45,6 +45,8 @@ mod lantern_seam;
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/one_roster.rs"]
+mod one_roster;
 #[path = "suite/ooc_namespace.rs"]
 mod ooc_namespace;
 #[path = "suite/ooc_objective.rs"]

@@ -126,6 +126,26 @@ pub fn agent_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> RoomAddr {
     latest_committed_position(ledger, npc, t).unwrap_or_else(|| npc.home.clone())
 }
 
+/// A body's settlement, or a neutral stand-in for one with none.
+///
+/// `Npc.village` is `Option<VillageInfo>` — `Some` for a settlement-derived
+/// body, `None` for a wild one (`derive_wild_npcs`) or a harness fabrication.
+/// A few session-prose readers (`Vantage::village`, the snapshot's self
+/// channel, `whoami`) carry a non-optional `VillageInfo`-shaped read that
+/// predates The Hand's `Option`, so rather than unwrap and panic the day a
+/// wild body is first driven, every one of them resolves through here
+/// instead: a wild body reads as an unpopulated, unnamed "wilds" rather than
+/// a settlement it never had.
+pub fn village_or_fallback(npc: &Npc) -> hornvale_settlement::VillageInfo {
+    npc.village
+        .clone()
+        .unwrap_or_else(|| hornvale_settlement::VillageInfo {
+            id: npc.entity,
+            name: "the wilds".to_string(),
+            population: 0,
+        })
+}
+
 /// The last committed `agent-at` position for `npc` with day ≤ `t`, if any.
 /// Commit order is time order, so the last matching fact is the position held
 /// at `t` (the whole-history case — every fact ≤ `t` — is the absolute latest).

@@ -30,7 +30,7 @@ fn examine_accepts_exactly_the_union_of_both_grains() {
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     let mut rooms_visited: Vec<u64> = Vec::new();
     for turn in 0..6 {
-        if let Ok(id) = session.agent().position.pack() {
+        if let Ok(id) = session.position().pack() {
             rooms_visited.push(id.0);
         }
         let prose: Vec<String> = session
@@ -150,7 +150,7 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
     // biome in v1) rather than assuming anything about noun ordering.
     let here_locale = session
         .context()
-        .describe(&session.agent().position, WorldTime::GENESIS)
+        .describe(&session.position(), WorldTime::GENESIS)
         .expect("the observer's own room describes");
     let biome_noun = here_locale.biome;
     let biome_chart_entry = chart
@@ -181,7 +181,7 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
 fn drawing_the_map_never_moves_the_world() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let where_i_stand = session.agent().position.clone();
+    let where_i_stand = session.position();
     let facts = session.committed_agent_at_count();
     let ledger_before = session.session_ledger_json();
     let knowledge_before = session.knowledge().0.clone();
@@ -190,7 +190,7 @@ fn drawing_the_map_never_moves_the_world() {
         session.handle("map out 2");
     }
     assert_eq!(
-        session.agent().position,
+        session.position(),
         where_i_stand,
         "map does not move the agent"
     );

@@ -181,9 +181,9 @@ pub fn knowledge_is_subset(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{mint_flagship, observable};
+    use crate::observable;
     use hornvale_astronomy::SkyPins;
-    use hornvale_kernel::{Seed, World, WorldTime};
+    use hornvale_kernel::{EntityId, Seed, World, WorldTime};
     use hornvale_locale::LocaleContext;
     use hornvale_terrain::TerrainPins;
     use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
@@ -199,14 +199,29 @@ mod tests {
         .expect("seed 42 builds")
     }
 
+    /// A settlement-derived body for these tests, in place of the pre-Hand
+    /// `mint_flagship` — `body_at` wants an already-minted entity, and this
+    /// harness never commits, so the placeholder is discarded just as
+    /// `agent::mint_at` used to discard it.
+    fn seam_body(
+        world: &World,
+        ctx: &LocaleContext,
+    ) -> (crate::liveness::Npc, hornvale_kernel::RoomAddr) {
+        let village = hornvale_settlement::village_info(world).expect("seed 42 has a flagship");
+        let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
+        let npc = crate::liveness::body_at(world, ctx, &village, entity);
+        let position = npc.home.clone();
+        (npc, position)
+    }
+
     #[test]
     fn the_identity_projection_is_a_subset_of_truth() {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let agent = mint_flagship(&world, &ctx).unwrap();
+        let (npc, position) = seam_body(&world, &ctx);
         let at = WorldTime::GENESIS;
-        let vantage = observable(&world, &ctx, &agent, at).unwrap();
-        let k = IdentityProjection.project(&vantage, &agent.perception);
+        let vantage = observable(&world, &ctx, &npc, &position, at).unwrap();
+        let k = IdentityProjection.project(&vantage, &npc.perception);
         assert!(!k.0.is_empty(), "the agent knows something");
         knowledge_is_subset(&k, &world, &ctx, at).unwrap();
     }
@@ -215,18 +230,18 @@ mod tests {
     fn knowledge_accumulates_across_rooms_and_stays_a_subset() {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let mut agent = mint_flagship(&world, &ctx).unwrap();
+        let (npc, mut position) = seam_body(&world, &ctx);
         let at = WorldTime::GENESIS;
         let mut k = IdentityProjection.project(
-            &observable(&world, &ctx, &agent, at).unwrap(),
-            &agent.perception,
+            &observable(&world, &ctx, &npc, &position, at).unwrap(),
+            &npc.perception,
         );
         let before = k.0.len();
         // step to a lateral neighbor and absorb its projection
-        agent.position = agent.position.neighbors()[0].clone();
+        position = position.neighbors()[0].clone();
         k.absorb(IdentityProjection.project(
-            &observable(&world, &ctx, &agent, at).unwrap(),
-            &agent.perception,
+            &observable(&world, &ctx, &npc, &position, at).unwrap(),
+            &npc.perception,
         ));
         assert!(k.0.len() > before, "walking grows knowledge");
         knowledge_is_subset(&k, &world, &ctx, at).unwrap();
@@ -236,11 +251,11 @@ mod tests {
     fn a_corrupted_entry_fails_the_subset_check() {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let agent = mint_flagship(&world, &ctx).unwrap();
+        let (npc, position) = seam_body(&world, &ctx);
         let at = WorldTime::GENESIS;
         let mut k = IdentityProjection.project(
-            &observable(&world, &ctx, &agent, at).unwrap(),
-            &agent.perception,
+            &observable(&world, &ctx, &npc, &position, at).unwrap(),
+            &npc.perception,
         );
         k.0.insert("settlement/999999/name".into(), "Liesburg".into());
         assert!(knowledge_is_subset(&k, &world, &ctx, at).is_err());

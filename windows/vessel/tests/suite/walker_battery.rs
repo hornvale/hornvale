@@ -42,7 +42,7 @@ fn the_walker_battery_holds_the_four_invariants() {
     let mut stream = world.seed.derive(VESSEL_WALK).stream();
 
     for step in 0..WALK_STEPS {
-        let here = session.agent().position.pack().unwrap().0;
+        let here = session.position().pack().unwrap().0;
 
         // Invariant 3+4: focalizer totality and examine totality.
         let f = session.focalized().unwrap();
@@ -82,7 +82,7 @@ fn the_walker_battery_holds_the_four_invariants() {
             Turn::Out(_) => {}
             Turn::Released(_) => panic!("step {step}: go must not release"),
         }
-        let after = session.agent().position.pack().unwrap().0;
+        let after = session.position().pack().unwrap().0;
         assert_eq!(
             after, target,
             "step {step}: go {word} reached the picked neighbor"

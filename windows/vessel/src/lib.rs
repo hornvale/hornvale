@@ -28,7 +28,7 @@ pub mod streams;
 pub mod structure;
 pub mod underworld_level;
 mod vantage;
-pub use agent::{Agent, AgentId, mint_at, mint_flagship, most_populous_settlement, walk_depth};
+pub use agent::{most_populous_settlement, walk_depth};
 pub use band::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use brief::{Brief, brief_of};
 pub use chamber_prose::describe_chamber;
@@ -82,18 +82,22 @@ impl std::fmt::Display for VesselError {
     }
 }
 
-/// Which settlement the commanded agent is minted at.
+/// Which settlement the commanded body is driven at.
 ///
 /// The `commanded` half of the possession grid (The Quire spec §7). The
 /// `focalized` half is not yet a parameter, and `commanded = NONE` — which
 /// yields the world viewer and attract mode — is not yet expressible.
 ///
-/// **Every variant MINTS.** Both arms call [`mint_at`], which derives a
-/// fresh [`AgentId`] from a seed stream; they differ only in *which*
-/// settlement they mint at. Selecting an agent the world already derived —
-/// what The Journal's brief means by "you possess a creature already living in
-/// the world" — is not implemented by any variant here, and decision 0116
-/// records that gap as open rather than closed.
+/// **Neither variant mints any more (The Hand, Task 3).** `Session::start`
+/// derives its roster once (`liveness::derive_npcs`) and both arms SELECT
+/// which already-derived body is driven — the home settlement's own entry,
+/// which `ordered_for_derivation` always hoists to the roster's front — they
+/// differ only in *which* settlement supplies that home. This is what closes
+/// the doctrine gap decision 0116 recorded as open ("you possess a creature
+/// already living in the world" — not one invented for the occasion):
+/// selecting an agent the world already derived is now exactly what both
+/// variants do. `RENDER-possession-still-mints` in the idea registry names
+/// that gap; a campaign closing The Hand should re-score it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PossessTarget {
     /// An agent minted at the flagship settlement — the first `is-settlement`

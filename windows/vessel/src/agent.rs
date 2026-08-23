@@ -1,33 +1,14 @@
-//! The Agent seam interface: an addressable individual derived lazily,
-//! game-side — never committed to the ledger (spec: reversibility rule).
+//! Settlement-selection helpers for a possession (The Hand, Task 3): which
+//! settlement a session drives from, and the walk-band depth every derived
+//! body shares. There is no `Agent` type here any more — `Session` drives a
+//! member of its own derived roster (a [`crate::liveness::Npc`]) rather than
+//! a second, separately-minted representation of the same villager.
 
 use crate::VesselError;
-use crate::streams::VESSEL_AGENT;
-use hornvale_kernel::{EntityId, RoomAddr, Value, World, math};
+use hornvale_kernel::{Value, World, math};
 use hornvale_locale::LocaleContext;
-use hornvale_settlement::{LATITUDE, LONGITUDE, VillageInfo, village_info};
-use hornvale_species::{PerceptionVector, perception_registry, species_of};
-
-/// A minted agent's id, drawn deterministically from the world seed.
-/// type-audit: bare-ok(index: 0)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AgentId(pub u64);
-
-/// An addressable individual bound to a vantage. Derived, never stored.
-/// type-audit: bare-ok(identifier-text: species)
-#[derive(Debug, Clone, PartialEq)]
-pub struct Agent {
-    /// Deterministic id (seed + mint inputs).
-    pub id: AgentId,
-    /// The species whose perception this agent carries.
-    pub species: String,
-    /// The species' authored perception vector (the dragon-test slot).
-    pub perception: PerceptionVector,
-    /// Where the agent stands, at walk depth.
-    pub position: RoomAddr,
-    /// The settlement this agent was minted from.
-    pub village: VillageInfo,
-}
+use hornvale_settlement::{LATITUDE, LONGITUDE, VillageInfo};
+use hornvale_species::{perception_registry, species_of};
 
 /// The canonical walk depth: six levels below the canonical grid — the
 /// same default as `hornvale locale`.
@@ -36,14 +17,24 @@ pub fn walk_depth(ctx: &LocaleContext) -> u32 {
     ctx.globe_level() + 6
 }
 
-/// Mint an agent at a NAMED settlement: its argmax cell's containing room at
-/// walk depth, its species' perception vector. Fails loudly with the
-/// physical reason — generation never retries.
-pub fn mint_at(
-    world: &World,
-    ctx: &LocaleContext,
-    village: VillageInfo,
-) -> Result<Agent, VesselError> {
+/// Fail loudly if `village`'s species is unknown to the perception registry —
+/// the same two-step check `mint_at` used to run ahead of minting an `Agent`,
+/// now its own function since nothing mints anything any more (The Hand,
+/// Task 3).
+///
+/// `liveness::body_at` (the shared body derivation `Session::start` and
+/// `derive_npcs` both call) is deliberately infallible here: an unresolved
+/// species silently falls back to the manikin's neutral perception, which is
+/// exactly the tolerant behaviour `derive_npcs` always wanted for every
+/// OTHER settlement's NPC — a possession's own roster should not refuse to
+/// start because some unrelated settlement's species is unrecognized. The
+/// DRIVEN body is different: a player commanding an unrecognized species was
+/// always a loud error before The Hand, not a silent fallback to "goblin",
+/// so `Session::start` calls this on the SELECTED settlement, ahead of
+/// deriving the roster, to keep that contract byte-for-byte even though the
+/// value this computes is thrown away in favour of `body_at`'s own
+/// resolution (identical whenever this check passes).
+pub(crate) fn check_species_known(world: &World, village: &VillageInfo) -> Result<(), VesselError> {
     let species = species_of(world, village.id)
         .ok_or_else(|| VesselError::NoSpecies(village.name.clone()))?;
     // `species` is free text read from the ledger (a committed `Value::Text`),
@@ -54,58 +45,11 @@ pub fn mint_at(
     // converse — a future non-speaking perceiver stays expressible), so an
     // unknown or plain-fauna label fails here. A dragon label cannot reach
     // this path anyway: `species` is read from a SETTLEMENT.
-    //
-    // This check is kept explicit (rather than delegated to `body_at`, which
-    // is infallible and falls back to the manikin's neutral perception on an
-    // unresolved species — the fallback `derive_npcs` always wanted) so
-    // `mint_at`'s fail-loud contract survives The Hand's merge byte-for-byte:
-    // its *value* on the success path is thrown away below in favour of
-    // `body_at`'s own resolution, which is identical whenever this check
-    // passes.
     perception_registry()
         .iter()
         .find(|(k, _)| k.0 == species.as_str())
         .ok_or_else(|| VesselError::NoSpecies(species.clone()))?;
-    // The Hand: build the shared body — species, perception, home, and every
-    // other per-settlement field — through the ONE derivation
-    // `liveness::derive_npcs` also calls (`liveness::body_at`), so the
-    // flagship's possessed body and a derived creature at the same
-    // settlement provably share it. `body_at` wants an already-minted
-    // `EntityId`; an `Agent` is never committed to the ledger (it never had
-    // one), so the placeholder below is discarded — only the other fields of
-    // the returned `Npc` feed the `Agent` constructed here. Its `home` is the
-    // same lat/lon → unit-sphere → `RoomAddr::containing(_, walk_depth(ctx))`
-    // routing this function used to compute inline (shared via
-    // `settlement_position`/`walk_depth`, still used by `liveness::
-    // settlement_room` under `body_at`), so the resulting `AgentId` stream
-    // draw is unchanged.
-    let placeholder_entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
-    let body = crate::liveness::body_at(world, ctx, &village, placeholder_entity);
-    let position = body.home;
-    let id = AgentId(
-        position
-            .seed(world.seed)
-            .derive(VESSEL_AGENT)
-            .stream()
-            .next_u64(),
-    );
-    Ok(Agent {
-        id,
-        species,
-        perception: body.perception,
-        position,
-        village: body
-            .village
-            .expect("body_at derives from a real settlement: Some(village) always"),
-    })
-}
-
-/// Mint the flagship settlement's agent. Retained verbatim in behaviour:
-/// this is the default possession and every committed transcript depends on
-/// it being unchanged.
-pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, VesselError> {
-    let village = village_info(world).ok_or(VesselError::NoSettlement)?;
-    mint_at(world, ctx, village)
+    Ok(())
 }
 
 /// The world's most-populous settlement — population descending, then id
@@ -137,9 +81,9 @@ fn number_fact(
     }
 }
 
-/// A settlement's lat/lon → unit-sphere position — the same derivation
-/// `mint_flagship` uses for the possessed agent's room, shared so
-/// `liveness::derive_npcs` (the-quickening) homes its NPCs the same way.
+/// A settlement's lat/lon → unit-sphere position — shared so
+/// `liveness::derive_npcs` (the-quickening) and `liveness::body_at` (The
+/// Hand) home every derived body, possessed or not, the same way.
 /// Panics if the settlement lacks committed `LATITUDE`/`LONGITUDE` facts:
 /// a settlement-genesis invariant (every `is-settlement` subject gets both
 /// unconditionally — `domains/settlement/src/genesis.rs`), never a runtime
@@ -177,34 +121,21 @@ mod tests {
     }
 
     #[test]
-    fn mint_is_deterministic_and_at_walk_depth() {
+    fn a_known_species_settlement_passes_the_check() {
         let world = seam_world();
-        let ctx = LocaleContext::build(&world).unwrap();
-        let a = mint_flagship(&world, &ctx).unwrap();
-        let b = mint_flagship(&world, &ctx).unwrap();
-        assert_eq!(a, b, "same world → identical mint");
-        assert_eq!(a.position.depth(), walk_depth(&ctx));
+        let village = hornvale_settlement::village_info(&world).expect("seed 42 has a flagship");
+        assert!(check_species_known(&world, &village).is_ok());
     }
 
     #[test]
-    fn the_minted_position_is_describable() {
-        let world = seam_world();
-        let ctx = LocaleContext::build(&world).unwrap();
-        let agent = mint_flagship(&world, &ctx).unwrap();
-        let locale = ctx
-            .describe(&agent.position, hornvale_kernel::WorldTime::GENESIS)
-            .unwrap();
-        assert!(!locale.biome.is_empty());
-    }
-
-    #[test]
-    fn a_world_without_settlements_refuses_the_mint() {
-        // World::new skips genesis: no settlement facts.
+    fn a_settlement_without_facts_has_no_lat_lon() {
+        // World::new skips genesis: no settlement facts, so `village_info`
+        // itself already returns `None` — `settlement_position` is never
+        // reachable without a real settlement to pass it.
         let world = World::new(Seed(42));
         let ctx = LocaleContext::build(&world).unwrap();
-        assert!(matches!(
-            mint_flagship(&world, &ctx),
-            Err(VesselError::NoSettlement)
-        ));
+        assert!(hornvale_settlement::village_info(&world).is_none());
+        // `walk_depth` has no settlement dependency at all.
+        assert_eq!(walk_depth(&ctx), ctx.globe_level() + 6);
     }
 }
