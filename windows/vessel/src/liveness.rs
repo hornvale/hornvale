@@ -1434,7 +1434,6 @@ pub struct Perceived {
 /// The decision's output — the FIRST action of the agent's current plan, or
 /// Hold. The tick depends only on this; the planner fills the body without
 /// changing the seam (The Wanting decision #9).
-/// type-audit: bare-ok(return)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     /// Perform this action next (the first step of the least-cost plan).
@@ -1586,7 +1585,6 @@ pub trait Drive {
 /// it names which drive a commitment mode is pursuing and imposes a fixed,
 /// reload-stable tie-break order (`Thirst` before `Thermal`). Deliberately
 /// tiny and closed; new drives extend it in their own campaigns.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DriveKind {
     /// The sustenance (thirst) stock drive.
@@ -1615,7 +1613,6 @@ pub enum DriveKind {
 /// (spec §5). Session-sandboxed (tick-local, never save-format): it carries
 /// across the steps of one walk to give hysteresis (no boundary-dithering, no
 /// mid-errand flip-flop), and is re-derived, never persisted.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
     /// Not pursuing any drive, and already home — nothing to do.
@@ -1653,7 +1650,6 @@ pub struct Affect {
 /// affect is first-class (`Content`/`Eager`); `Searching` is neutral seeking,
 /// NOT confusion (excluded from the distress metric); `Helpless` is the sticky
 /// negative scar that *persistence* upgrades `Lost`/`Frustrated` into.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AffectLabel {
     /// Positive, low arousal: needs met, puttering — the normal state.
@@ -1691,7 +1687,6 @@ pub struct Resolution {
 /// `drive_at` fold surfaced on the view; `proposal` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
 /// the same `DriveParams`/`SUSTENANCE` the fold uses.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug)]
 pub struct Thirst {
     /// The homeostatic parameters (rise/act) governing this drive.
@@ -2294,7 +2289,6 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 /// stranded from home can still rest (it is never *fatigue*-blocked). `home` is
 /// retained as a reserved hook for a future rest-QUALITY refinement (a safe,
 /// familiar den restoring more than an exposed camp).
-/// type-audit: bare-ok(return)
 pub struct Fatigue {
     /// The creature's home — reserved for a future rest-quality refinement
     /// (unused by the proposal today: rest is in place).
@@ -2652,7 +2646,6 @@ fn mettle_factor(boldness: f64) -> f64 {
 /// [`threat_value`], boldness applied separately). The alarm-free terrain half
 /// of the drive's urgency, factored out so the live drive and
 /// [`believed_hazard`]'s memory read the SAME danger — one source of truth.
-/// type-audit: bare-ok(return)
 fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64 {
     let here = threat_value(niche, &terrain.hazards(room));
     room.neighbors()
