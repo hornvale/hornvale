@@ -2,7 +2,7 @@
 
 **In flight** (merge pending). Process lessons only. The product story is in
 [the chronicle](../../book/src/chronicle/the-stope.md); the epoch is
-[decision 0161](../decisions/0161-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md).
+[decision 0176](../decisions/0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md).
 
 ## Two preregistration defects, and the second is the first one level up
 

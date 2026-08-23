@@ -1,4 +1,4 @@
-# 0161. The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch
+# 0176. The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch
 
 **Status:** Accepted (2026-08-22) · **Decider:** Nathan · **Relates:**
 [0039](0039-epochs-replace-tiers-refine.md),

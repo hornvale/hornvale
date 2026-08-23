@@ -190,4 +190,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0157](0157-never-ship-a-typology-bundle-no-family-uses.md) | Never ship a typology bundle no family uses | Accepted |
 | [0158](0158-a-trill-is-not-an-exotic-manner.md) | A trill is not an exotic manner | Accepted |
 | [0159](0159-focus-is-the-clients-one-input-mode.md) | Focus is the client's one input mode, and it is shown | Accepted |
-| [0161](0161-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
+| [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
