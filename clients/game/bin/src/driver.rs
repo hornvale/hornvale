@@ -61,10 +61,13 @@
 use crate::history::History;
 use crate::input::Action;
 use crate::line::Line;
+use crate::mercator::{self, Frame};
+use crate::plate::{self, Window};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{Cursor, Focus};
 use hornvale_kernel::{NearestCellIndex, RoomId, Seed, World};
 use hornvale_language::{MorphOptions, Phonology};
+use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
 use hornvale_terrain::landscape::CellFeatureIndex;
 use hornvale_vessel::{
@@ -181,6 +184,23 @@ pub struct Driver {
     nearest: NearestCellIndex,
     /// The world's `Geosphere`, held for `nearest`'s queries.
     geo: hornvale_kernel::Geosphere,
+    /// The world's reconstructed tectonic terrain, held so the world plate
+    /// can be redrawn on demand ([`Driver::world_plate`]) without
+    /// re-deriving `GeneratedTerrain` from the ledger on every call — the
+    /// same "build once, reuse for the session" idiom `index`/`nearest`
+    /// already follow (see the module doc's `terrain_of` note at `start`).
+    terrain: GeneratedTerrain,
+    /// The oblique Mercator frame the world's own rotation regime chooses
+    /// (spec §3.1): the geographic pole for a spinning world, the
+    /// substellar point for a tidally locked one. Derived once at `start`
+    /// from the committed `TIDALLY_LOCKED` fact and never recomputed — the
+    /// central line does not move as the player does (spec §3.2).
+    frame: Frame,
+    /// The world plate's window: which zoom level and which cell the
+    /// window's own origin sits at. Always the whole-planet view (`zoom: 0,
+    /// origin_col: 0, origin_row: 0`) in this task — zoom and scroll are
+    /// Task 3b's (The Portolan part II, Task 3b).
+    window: Window,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
     /// The plate's REAL content height, in grid rows — synced from the live
@@ -301,6 +321,24 @@ impl Driver {
         let index = CellFeatureIndex::build(&features);
         let nearest = NearestCellIndex::new(&geo);
 
+        // The Portolan part II: the projection's central line is derived
+        // from the world's own physics (spec §3.1), not assumed —
+        // `TIDALLY_LOCKED` is committed only when the world's rotation
+        // regime is `Rotation::Locked` (`domains/astronomy/src/facts.rs`'s
+        // `genesis`), so its mere presence in the ledger, on any subject,
+        // answers the question `frame_for` needs.
+        let locked = world_ref
+            .ledger
+            .find(hornvale_astronomy::facts::TIDALLY_LOCKED)
+            .next()
+            .is_some();
+        let frame = mercator::frame_for(locked);
+        let window = Window {
+            zoom: 0,
+            origin_col: 0,
+            origin_row: 0,
+        };
+
         // The possessed agent's species, phonology and morphology — needed
         // to draw a feature's name (`resolve_at`), resolved once since the
         // agent's species is fixed for the session.
@@ -332,6 +370,9 @@ impl Driver {
             index,
             nearest,
             geo,
+            terrain,
+            frame,
+            window,
             seed: world_ref.seed,
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
             namer: (species, ph, morph),
@@ -412,6 +453,38 @@ impl Driver {
         } else {
             None
         }
+    }
+
+    /// The whole-world Mercator plate, freshly rendered for a `w`-by-`h`
+    /// terminal — The Portolan part II, Task 3a wires this into the redraw
+    /// path.
+    ///
+    /// **The plate's own size is derived from the SAME fit `compose` itself
+    /// applies, never a second copy of it**:
+    /// [`hornvale_game_core::spread::world_plate_width`] gives the width,
+    /// and the height follows from
+    /// [`hornvale_game_core::spread::GLYPH_ASPECT`] — the ratio `core`
+    /// exposes rather than this module hardcoding a second `2` (see that
+    /// constant's own doc). This is what lets `world_plate_width`'s
+    /// `pub`-ness do its job: `compose` and this method size their two
+    /// `Grid`s from the identical computation.
+    ///
+    /// Callers should only invoke this while [`Focus::Map`] is active (see
+    /// `main.rs`'s `redraw`) — the plate resamples `SUBSAMPLES_PER_AXIS`
+    /// squared points per cell (`plate.rs`'s own doc), so an idle walk or
+    /// chamber session should never pay this cost.
+    pub fn world_plate(&self, w: u16, h: u16) -> hornvale_game_core::Grid {
+        let plate_width = hornvale_game_core::spread::world_plate_width(w, h);
+        let plate_height = plate_width / hornvale_game_core::spread::GLYPH_ASPECT;
+        plate::draw(
+            &self.terrain,
+            &self.geo,
+            &self.nearest,
+            &self.frame,
+            &self.window,
+            plate_width,
+            plate_height,
+        )
     }
 
     /// Apply one input [`Action`], returning whether the session RELEASED.

@@ -96,6 +96,116 @@ fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
     }
 }
 
+/// Task 3a (The Portolan part II): the plate's width is focus-dependent.
+/// Walk focus keeps the old `PLATE_WIDTH`-column plate even when a world
+/// plate is supplied — a caller-supplied `Grid` wider than that is CLIPPED,
+/// never stretched into; Map focus lets the plate reach
+/// `spread::world_plate_width`'s fit of the terminal's own size; the 80x24
+/// floor degrades to the SAME width the fit already gave it before this
+/// task (`world_plate_width(80, 24) == PLATE_WIDTH`, an identity that is
+/// itself a consistency check on `GLYPH_ASPECT`), never refusing.
+///
+/// **Deviates from the task brief's own draft of this test, found by
+/// running it, not by reasoning about it.** The brief's draft set exactly
+/// ONE non-blank cell on the synthetic plate at `(0, 0)` and then probed
+/// `(x, 10)` for `x` up to 120 — but `blit` only ever copies non-blank
+/// SOURCE cells (see `a_supplied_world_plate_replaces_the_band_view_and_
+/// nothing_else`'s own fix-round-1 note above for the same lesson learned
+/// once already), so a plate with exactly one non-blank cell can never
+/// populate row 10 at any column. This version fills the synthetic plate
+/// SOLIDLY with `Source::World` glyphs, well past both the old fixed width
+/// and the fit width at 210x56, so the probes below actually discriminate
+/// "clipped by the destination's own bounds" (`Grid::set` silently drops an
+/// out-of-range write — `cell.rs`'s own doc) from "the destination was
+/// sized wide enough to keep it".
+#[test]
+fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
+    let plate = {
+        let mut g = Grid::new(150, 40);
+        for y in 0..g.height() {
+            for x in 0..g.width() {
+                g.set(x, y, Cell::glyph('#', Weight::Normal, Source::World));
+            }
+        }
+        g
+    };
+
+    // Walk focus: the two-pane split is untouched. The synthetic plate is
+    // still drawn (world_plate replaces the band's own chart/plan
+    // regardless of focus — see the test above), but confined to the OLD
+    // fixed width: column 40 itself belongs to the entry pane, never the
+    // plate, so it cannot be `Source::World`.
+    let (walk, _) = render_with(
+        FIXTURE,
+        210,
+        56,
+        Focus::Walk,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+    )
+    .unwrap();
+    assert_eq!(
+        walk.get(39, 10).unwrap().source,
+        Source::World,
+        "the walk view still draws the supplied plate up to the old width"
+    );
+    assert_ne!(
+        walk.get(40, 10).unwrap().source,
+        Source::World,
+        "the walk view keeps its 40-column plate even with a wide plate supplied"
+    );
+
+    // Map focus: the plate reaches past the old fixed width, out to the
+    // 210x56 fit (`world_plate_width(210, 56) == 104`).
+    let (map, _) = render_with(
+        FIXTURE,
+        210,
+        56,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+    )
+    .unwrap();
+    assert_eq!(
+        map.get(100, 10).unwrap().source,
+        Source::World,
+        "the map view draws world cells past the old fixed plate width"
+    );
+    assert_ne!(
+        map.get(110, 10).unwrap().source,
+        Source::World,
+        "the map view still stops at the fit width, not the whole terminal \
+         or the supplied plate's own (wider) size"
+    );
+
+    // The floor degrades, never refuses -- and lands on the SAME width the
+    // fit already gave the old constant.
+    let (floor, _) = render_with(
+        FIXTURE,
+        80,
+        24,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+    )
+    .unwrap();
+    assert_eq!(floor.width(), 80, "80x24 degrades, never refuses");
+    assert_eq!(
+        floor.get(30, 10).unwrap().source,
+        Source::World,
+        "the floor still draws the plate within its own (unchanged) width"
+    );
+}
+
 /// ACCEPTANCE TEST 1: the complete spread in monochrome characters at
 /// 80x24, still usable.
 #[test]

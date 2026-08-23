@@ -96,6 +96,22 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         text: &text,
         caret: driver.caret(),
     };
+    // The Portolan part II, Task 3a: the world view is activated by
+    // `Focus::Map` alone. The map pane's only door is submitting a bare
+    // `map` (`Driver::enter_map`) — no new verb is added here, and
+    // `Focus::Map` is otherwise unused for the PLATE region specifically:
+    // before this task the plate drew the walk-band chart or the
+    // chamber-band floor plan regardless of focus (`spread::compose`
+    // dispatched on `snapshot.spatial` alone), so reusing `Focus::Map` to
+    // mean "show the world map" does not overload a meaning the plate
+    // already carried — only the CURSOR and the STRIP text differed by
+    // focus before now, and both keep behaving exactly as they did (Task 3b
+    // is what makes them track the world plate instead of the walk band's
+    // own small chart). Computed only under `Focus::Map`, never
+    // unconditionally: `Driver::world_plate`'s own doc states why (an idle
+    // walk/chamber session must not pay the resampling cost every redraw).
+    let world_plate =
+        (driver.focus() == hornvale_game_core::Focus::Map).then(|| driver.world_plate(w, h));
     match hornvale_game_core::render_with(
         &json,
         w,
@@ -105,14 +121,7 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         cmd_line,
         driver.strip_text(),
         driver.echo(),
-        // The Portolan part II, Task 2: the whole-world plate is drawn and
-        // threaded through `render_with`/`compose`, but nothing in this
-        // task gives the player a way to ask for it -- Task 3 (zoom/scroll,
-        // a paused follow-on) is what wires a toggle that ever passes
-        // `Some` here. Always `None` keeps this task's plumbing inert
-        // rather than half-wiring a feature with no input path to reach
-        // it.
-        None,
+        world_plate.as_ref(),
     ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),

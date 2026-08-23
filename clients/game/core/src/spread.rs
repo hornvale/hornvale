@@ -60,6 +60,41 @@ pub const fn content_height(h: u16) -> u16 {
     h.saturating_sub(RESERVED_ROWS)
 }
 
+/// How many plate COLUMNS a Mercator character spans per ROW. A terminal
+/// glyph reads roughly twice as tall as it is wide, so a projection that is
+/// square in its own coordinate space (The Portolan part II spec §4.1) needs
+/// twice as many columns as rows to read as square on screen. Matches
+/// `windows/worldgen/examples/portolan_spike.rs`'s own `GLYPH_ASPECT`
+/// (`2.0`) — `pub` so `bin` derives the plate's HEIGHT from this SAME ratio
+/// (`world_plate_width(w, h) / GLYPH_ASPECT`) rather than hardcoding a
+/// second `2`, the same one-source-of-truth reason [`world_plate_width`]
+/// itself is exposed rather than recomputed.
+pub const GLYPH_ASPECT: u16 = 2;
+
+/// The world plate's width while the map is focused, for a `w`-by-`h`
+/// terminal: the largest Mercator (aspect [`GLYPH_ASPECT`]:1) that fits
+/// BOTH the terminal's width and [`content_height`], never stretched past
+/// either — the smaller of `w` itself and `GLYPH_ASPECT * content_height(h)`.
+/// When the height bound is smaller, the plate is narrower than the full
+/// terminal and the entry pane keeps the remainder; when the width bound is
+/// smaller, the plate claims every column and the resulting Mercator is
+/// shorter than `content_height(h)` — letterboxed, not stretched (see
+/// `bin`'s `Driver::world_plate`, which derives the matching height from
+/// this same number rather than a second copy of the fit).
+///
+/// `pub` for the same reason [`content_height`] is: [`compose`] uses this
+/// number to size the plate region it draws into, and `bin`'s driver needs
+/// the SAME number to size the [`Grid`] it hands back — not a second,
+/// possibly-diverging copy of this fit. [`content_height`]'s own doc
+/// records why: two callers computing "the plate's content height"
+/// independently is exactly the shape that let a fixed-height assumption
+/// silently name the wrong cell at any non-floor terminal size. A second
+/// copy of the width formula reproduces that defect on the other axis.
+pub const fn world_plate_width(w: u16, h: u16) -> u16 {
+    let by_height = content_height(h).saturating_mul(GLYPH_ASPECT);
+    if by_height <= w { by_height } else { w }
+}
+
 /// Copy every non-blank cell of `src` into `dst`, offset by `origin`.
 /// Blank cells are skipped rather than overwriting whatever `dst` already
 /// carries there, so drawing order between panes never matters.
@@ -97,6 +132,18 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// occupies, not a new band, so the character's own position in the
 /// snapshot is untouched either way. `None` draws the band's own plate
 /// exactly as before this parameter existed.
+///
+/// **The plate's width is focus-dependent (The Portolan part II, Task 3a).**
+/// With [`crate::Focus::Map`] focused AND a `world_plate` supplied, the
+/// plate claims [`world_plate_width`] columns — up to the terminal's own
+/// width, per that function's fit — rather than the old fixed
+/// [`PLATE_WIDTH`]; every other combination (any other focus, or no
+/// `world_plate` at all) keeps [`PLATE_WIDTH`] unchanged, so a caller-
+/// supplied plate wider than the old fixed width is CLIPPED, never
+/// stretched into, outside `Focus::Map`. This is computed exactly once,
+/// here — see [`world_plate_width`]'s own doc for why a second copy
+/// elsewhere would reproduce a defect this campaign already fixed once, on
+/// the height axis.
 #[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 7, `world_plate` (The Portolan part II, Task 2) to 8 — mirroring `render_with`'s own allow, which this function's own parameter list mirrors one-for-one plus `snapshot`
 pub fn compose(
     snapshot: &crate::Snapshot,
@@ -110,7 +157,12 @@ pub fn compose(
 ) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
-    let plate_width = PLATE_WIDTH.min(w);
+    let plate_width = if focus == crate::Focus::Map && world_plate.is_some() {
+        world_plate_width(w, h)
+    } else {
+        PLATE_WIDTH
+    }
+    .min(w);
     let entry_width = w.saturating_sub(plate_width);
 
     let mut plate = Grid::new(plate_width, content_height);
