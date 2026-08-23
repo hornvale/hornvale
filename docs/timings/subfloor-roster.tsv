@@ -892,6 +892,7 @@ hornvale-kernel::hornvale_kernel$field::tests::noise_field_is_deterministic_and_
 hornvale-kernel::hornvale_kernel$field::tests::noise_field_scale_stretches_space
 hornvale-kernel::hornvale_kernel$field::tests::position_and_time_serialize_roundtrip
 hornvale-kernel::hornvale_kernel$field::tests::world_time_serializes_as_a_bare_scalar_not_an_object
+hornvale-kernel::hornvale_kernel$geosphere::tests::a1_grid_matches_the_full_band_scan_over_a_dense_sweep
 hornvale-kernel::hornvale_kernel$geosphere::tests::adjacency_is_mutual_and_has_the_right_valence
 hornvale-kernel::hornvale_kernel$geosphere::tests::base_icosahedron_has_twelve_unit_cells
 hornvale-kernel::hornvale_kernel$geosphere::tests::cellmap_covers_every_cell_and_indexes_by_id
@@ -1177,7 +1178,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1235,7 +1236,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -1259,7 +1259,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -2629,6 +2628,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
