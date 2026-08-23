@@ -6,11 +6,13 @@ pub mod cell;
 pub mod chart;
 pub mod endpaper;
 pub mod entry;
+pub mod lexicon;
 pub mod plan;
 pub mod schema;
 pub mod spread;
 pub mod strip;
 pub use cell::*;
+pub use lexicon::*;
 pub use schema::*;
 
 impl Snapshot {
