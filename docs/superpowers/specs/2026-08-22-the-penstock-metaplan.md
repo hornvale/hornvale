@@ -721,6 +721,73 @@ split turns out to be, the level is the binding constraint on agent count long
 before the slope is, and no cached-view layer addresses a constant that lives
 in planning.
 
+### 6.5 PROFILED, 2026-08-23: where the time is, and why 0.04% must NOT retire the read side
+
+Two profiles (`samply`, `--profile profiling`, this Mac), one per workload,
+because the two regimes differ so much that neither generalises:
+
+```
+  possess, 17-command script          agent_scaling bench, 200 agents
+  ------------------------------      -------------------------------
+  67.9%  build_world (genesis)        13.4%  NearestCellIndex::scan_at
+   2.6%  TICK                          5.3%  A* (AStarSolver::solve)
+  26.3%  libm transcendentals          ~5%   terrain::branch reads
+   9.7%  malloc                       33.3%  malloc + memcpy
+                                       0.04% ledger queries
+```
+
+A session start is **genesis-bound**; a long tick loop is bound by derived
+*geometry* and by the **allocator**. 93% of `scan_at` arrives via
+`RoomAddr::corner_weights` from the drive stack — `TOOL-24`'s open lever #1,
+independently reached.
+
+**THE 0.04% IS TRUE AND MUST NOT BE USED TO RETIRE STAGES 3–5.** An earlier
+draft of this section did exactly that, and Nathan refused it correctly. The
+figure measures a simulation in which **agents barely read about one
+another**: each reads ~2.3 facts about *itself* per tick and essentially
+nothing about anyone else. The mature workload this program exists to serve —
+belief as a fold over perceived events (`UNI-16`), social edges as a fold over
+events between a pair (`SOC-9`), GOAP planning over belief rather than truth,
+a creature reacting to who just walked in — makes every agent read about
+**M others**. Read cost goes from N to **N×M** with M rising from ~0. That is
+a new term, not a larger constant, and no measurement taken today can bound
+it.
+
+**The falsifiable form, so a later campaign can settle it rather than
+re-arguing it:** ledger-read share should scale with (agents × others each
+agent reasons about × reconsiderations per tick). Re-measure when belief or
+the social graph first ships. If it is still ~0 with M genuinely non-zero,
+*then* the read side can be retired on evidence.
+
+### 6.6 KEEP IT GENERAL: two classes of derived value, one store
+
+Nathan's standing direction (2026-08-23): *"however we benefit, we benefit —
+keep the system general so we're sure to be able to use it for whatever comes
+up."* The concrete content of "general" here is that the store must not be
+specialised to whichever derivation happens to be hot this month.
+
+| | **world-derived** | **ledger-derived** |
+|---|---|---|
+| examples | `corner_weights`, terrain branch geometry | belief, social edges, positions, plans |
+| a pure function of | (seed, place) | the ledger prefix |
+| invalidation | **never**, within a world | when a later fact touches the dependency set |
+| eviction | memory pressure only | pressure, or dependency touched |
+| hot **today** | yes, ~18% of a tick | no, 0.04% |
+| hot in the **mature sim** | unchanged | the N×M term above |
+
+The storage is identical; **only the invalidation policy differs**. A store
+built for the left column alone is a geometry memo and will need replacing. A
+store whose entries each carry their own dependency key — empty for
+world-derived, a (subject, predicate, place) set for ledger-derived — serves
+both, and serves the ones nobody has thought of yet. Build that, and let the
+first tenants be whichever is hot.
+
+**A consequence worth stating: the allocator, not the recomputation, may be
+the larger prize.** 33% of the bench is `malloc`+`memcpy`. Caching a value
+avoids recomputing it; handing back a slice of a dense array avoids
+*allocating* it. §1's "iterated as an array" clause was written as a
+performance nicety and the profile suggests it is the main event.
+
 ## 7. The standing gate
 
 **Determinism.** Byte-identity of committed artifacts before and after, every
