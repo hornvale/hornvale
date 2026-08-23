@@ -1,6 +1,6 @@
 # The Portolan, part II — the world map
 
-**Status:** DRAFT — awaiting G3 review. **Campaign:** The Portolan (extended).
+**Status:** DRAFT — awaiting G3 review; reshaped by **Amendment 1 (2026-08-23)**, which is part of the same G3 package and changes what is *labelled*, not what is *drawn*. **Campaign:** The Portolan (extended).
 **Branch:** `campaign/the-portolan`. **Extends:**
 `docs/superpowers/specs/2026-08-19-the-portolan-design.md`.
 
@@ -376,3 +376,279 @@ computation, which is precisely that shape a third time.
    Delete all three spike instruments. **Absorb main and regenerate at every
    stage boundary, not only here.** Write the retrospective LAST — the
    Gazetteer's was authored early and under-reported itself by three findings.
+
+---
+
+# Amendment 1 (2026-08-23) — the discovery layer
+
+**Status:** drafted for G3 alongside the body above. **Ruling by:** Nathan,
+2026-08-22. This amendment is additive: it does not supersede any section
+above except where it says so explicitly, in §A2.
+
+## A0. Why an amendment and not a rewrite
+
+The campaign paused for 275 commits, during which four campaigns landed on
+`clients/game` (The Stylus, The Chroma, The Wick, The Stride). The
+reassessment that reopened it first proposed replacing the design outright
+with a *remembered* map — geometry dead-reckoned from the possession's own
+traverse. **Nathan refused that for the player** and the refusal restored the
+body of this spec rather than replacing it:
+
+> "This sounds like an excellent concept for NPCs but not necessarily the
+> player, who counts on predictability and consistency to navigate the game
+> world."
+
+Once the map's geometry is complete and true, every load-bearing argument
+above holds unchanged: §2 (`bin` renders the plate, `core` composes it, no
+schema change), §3 (why Mercator), §3.1 (the central line derived from the
+world's physics), §4 (zoom and scroll), §5 (the strip), and F2
+(`Source::Look`'s caller discipline is the precedent for a caller-supplied
+plate). This amendment changes what is *labelled*, not what is *drawn*.
+
+**The framing defect worth recording**, because it is the transferable half:
+the reassessment reasoned on a ONE-axis fidelity spectrum, from "pure belief"
+to "ground truth". The design needs TWO axes — geometry-fidelity and
+naming-fidelity are independent — and Nathan's ruling pins them at opposite
+ends. That combination was not a rejected band on the spectrum; it fell
+*between its lines* and was therefore invisible. A one-dimensional organon
+cannot represent a two-dimensional decision, and its missing options do not
+announce themselves.
+
+## A1. The ruling
+
+- **Geometry is complete from the first turn.** The whole planet is drawn,
+  truthfully, at every zoom rung. Nothing about the terrain is withheld,
+  fogged, distorted, or deferred. The player navigates by this map and it
+  must be predictable and consistent.
+- **Naming is earned.** A feature's NAME appears only once the possession has
+  discovered it.
+- **The unreliable map is re-homed on NPCs** and is not built here. Captured
+  as `CLIENT-npc-dead-reckoned-map`, `CLIENT-loop-closure-collapses-map-error`
+  and `CLIENT-hearsay-placed-features`.
+
+## A2. What this amendment changes above
+
+| section | change |
+|---|---|
+| §1 "What this produces" | gains a fifth bullet: labels are discovery-gated (§A3) |
+| §8 H1 | **restated** — it was written as a monochrome legibility question one day before The Chroma landed (§A5) |
+| §6 Refusals | gains three (§A7) |
+| §12 Task outline | **replaced** by §A9 |
+| everything else | unchanged |
+
+## A3. Two visibility classes, and neither needs suppression machinery
+
+The distinction falls out of what is already rendered:
+
+- **Terrain-borne landmarks** — a volcano's cone, a river's course, a
+  coastline, a salt lake's basin — are *in the elevation and biome render*.
+  They draw whether or not they are known. Only the name is gated. This is
+  Nathan's "some major landmarks would be visible but not labelled", and it
+  costs one branch: do not write the label.
+- **Point sites** — settlements, ruins, cave mouths — are not in the terrain
+  render at all. They are invisible until discovered because they are simply
+  **not drawn yet**, not because anything suppresses them.
+
+**No feature is ever drawn and then hidden.** That refusal matters: a
+suppression pass is where a client learns to lie about what it knows, and it
+is also where an omniscient read leaks through a rendering bug.
+
+## A4. The discovery gate is already built
+
+A feature is discovered when the possession has walked a cell it occupies.
+The mechanism is the `room/<id>` knowledge keys, read exactly the way the fog
+already reads them.
+
+`windows/vessel/src/purview.rs` promotes walked cells to `state =
+"remembered"`, and **already does so at every zoom rung** — the predicate
+`w.path[..addr.path.len()] == addr.path[..]` marks a coarse cell whenever any
+walked room lies inside it, which is precisely the coarse-rung semantics a
+world map needs. Its module doc states the overlay "WRITES NOTHING", so a
+possession that draws the chart is byte-identical to one that never does.
+Determinism is untouched.
+
+**This corrects a registry row that said otherwise.**
+`CLIENT-remembered-map-asymmetry` claimed `"remembered"` had "no writer ever";
+it has had one, with tests, since before that row was written. The row is
+corrected in the same commit as this amendment.
+
+## A5. Colour (The Chroma drift)
+
+The Chroma landed **the day after** this spec was written, so the body above
+mentions colour exactly zero times while the client it targets now renders in
+truecolor.
+
+**The plate tints**, from terrain-derived substance, honouring `NO_COLOR` and
+preserving the monochrome floor, reusing The Chroma's `Ink`/`Ink::from_wire`
+gate rather than building a second colour path.
+
+**The provenance question this opens, stated rather than skipped:** The
+Chroma's colour is *wire-carried* — it read fields already on
+`vessel/session/v2` that had zero readers. A plate rendered in `bin` from
+`hornvale-terrain` carries colour that is **not on the wire**. That is the
+same shape as `Source::Look` and is admissible on the same terms: a declared
+caller discipline, stated in the doc, not a crate-enforced guarantee.
+
+**Colour may not carry the epistemic channel.** The obvious rendering —
+discovered in colour, undiscovered in grey — is refused: decision 0142 and The
+Illumination assign epistemic to WEIGHT, `CLIENT-bold-means-perishable` builds
+on that, and The Chroma assigns colour to substance. One channel, one meaning.
+Recorded as `CLIENT-colour-cannot-carry-epistemic`.
+
+**H1 is restated accordingly:**
+
+> **H1' — the map is legible at the floor, in both renderings.** At 80×24 with
+> the whole planet in 40 columns, land and water are distinguishable and the
+> largest landmass is recognisable against the Gazetteer's committed
+> `elevation_ascii` of the same world — **and this must hold under `NO_COLOR`
+> as well as in colour**, since monochrome is the floor. *Falsified if* the
+> 40-column planet is indistinguishable noise in either rendering. The
+> monochrome arm is the one at risk and it is the original H1; the coloured
+> arm is new and expected to be easier.
+
+## A6. Focus and the zoom keys (The Stylus / The Stride drift)
+
+The body above says "no new keys, no separate mode" (§4.2), written when the
+cursor lived in `Mode { Normal, Look }`. Decision **0159** superseded that:
+focus is the client's one input mode. Today `Focus { Walk, Cli, Map }`, `Map`
+entered by submitting bare `map`, `Esc` returning `Map → Walk`.
+
+The design lands *better* than specced, and the landing site is already marked
+in the source: `input.rs:120-121` binds `-`/`+`/`=` to `Action::Zoom(i8)`, and
+`driver.rs:548` accepts-and-ignores it with a doc naming "The Portolan part II"
+as where it gets implemented.
+
+**Those keys drive the plate's zoom ladder (§4), not the session's.** The sim
+has its own ladder — `map out N` → `purview(zoom_out)` — and it is a different
+instrument: `PURVIEW_RADIUS = 4` BFS rings, so that chart is ~9 cells across at
+*every* rung. It is a biome-diversity readout, not a map, and it is not a
+substitute for this campaign. Letting the snapshot reach it remains its own
+rung (`CLIENT-snapshot-chart-cannot-zoom`), explicitly out of scope here.
+
+## A7. Refusals added
+
+- **Nothing is drawn and then hidden** (§A3). Undiscovered point sites are not
+  rendered; undiscovered landmarks render as terrain and go unnamed.
+- **Colour may not carry the epistemic channel** (§A5).
+- **No new site kinds.** This campaign ships the mechanism against the world
+  that exists (§A8) and does not widen the discoverable roster.
+
+## A8. What there is to find, measured
+
+Scope rests on this, so it was measured rather than assumed. Three worlds
+generated at `--seed 42/7/1337`, spinning:
+
+```
+occ-function    agrarian: 625 / 801 / 584      (ZERO variation)
+occ-notability  common:   625 / 801 / 584      (ZERO variation)
+```
+
+**Every settlement in every world is the same kind of settlement.** No
+castles, towers, forts, temples or capitals exist as kinds. Of the roster
+Nathan named — "caves, towers, castles, towns" — caves and towns exist;
+towers and castles do not.
+
+The discoverable roster, seed 42 (spinning):
+
+```
+kind                          count   named?   in the terrain render?
+----------------------------  ------  -------  ----------------------
+settlement cells                 221   yes      no (point site)
+distinct ruin cells              170   --       no (point site)
+  under a live settlement        127
+  ABANDONED (no live site)        43
+natural feature classes            5   yes      YES
+  volcano/landmass/sea/
+  saltlake/river
+caves                             --   no       no; derived from the
+                                                 stratigraphic column
+```
+
+**The 43 abandoned ruin cells are the best discoverables the world has**, and
+nothing surfaces them today. Each carries a recorded cause (`fled` /
+`migrated` / `famine`), a founding date, a people, and a tech level. They are
+promoted to first-class discoverables by this campaign.
+
+That the roster is thin is a known and accepted condition, not a finding to
+act on here — Nathan, 2026-08-22: *"we have a metric butt-ton of features to
+add in the world for it to be worth exploring… let's ship the mechanism
+against what exists, and we'll add those features in time."* The bound is
+recorded as `PLAY-site-kinds-are-constant`.
+
+## A9. Revised task outline (replaces §12)
+
+**Stage 1 — the chart**
+1. Measure the zoom ladder (F1) and derive the central line (F1b). Reuse the
+   spike's projection; no second copy. **Test on a `--rotation locked` world,
+   not only seed 42** — a spinning-world fixture cannot see H4's defect.
+2. The world plate rendered in `bin`, composed by `core`, **in colour with a
+   monochrome floor** (§A5); F2, F4, H1'.
+
+**Stage 2 — moving in it**
+3. Zoom (the already-routed `-`/`+`/`=`), cursor-driven scroll, and the
+   explicit re-centre command (§3.2); F5, H2, H3, H4.
+4. The strip carries the chain and scrolls; F3.
+
+**Stage 3 — discovery**
+5. The discovery gate over the `room/<id>` keys (§A4), the two visibility
+   classes (§A3), and ruins promoted to first-class discoverables (§A8);
+   F6, F7, H5, H6.
+
+**Stage 4 — close**
+6. Chronicle, retrospective, registry rows, decision, freshness sweep. Delete
+   all three spike instruments. **Absorb main and regenerate at every stage
+   boundary, not only here.** Write the retrospective LAST.
+
+## A10. What is unverified in this amendment
+
+**F6 — does a coarse rung's discovery read the same way the fog's does?** §A4
+asserts the coarse-rung predicate is the one a world map wants. **Settled by:**
+Task 5 states, against the code, whether a cell at the world rung counts as
+discovered when *any* walked room lies inside it, and whether that reads as
+generous or stingy at the coarsest zoom — at ~9° a character, one visited
+village may light a cell containing dozens of unvisited ones. **If it reads as
+lying, that is a STOP**, not a tuning exercise: the honest fix is a different
+predicate, not a different threshold.
+
+**F7 — what does an undiscovered ruin cell look like when its site is also a
+live settlement?** 127 of 170 ruin cells sit under a live settlement. **Settled
+by:** Task 5 states whether discovering the settlement discloses the ruin
+beneath it, and defends the answer either way.
+
+**F8 — does the strip's chain change under the gate?** §5 has the strip carry
+the whole containment chain. **Settled by:** Task 4, which must state what the
+strip shows when an *outer* member of the chain is undiscovered and an inner
+one is not (standing in a named valley inside an unnamed landmass).
+
+## A11. Preregistered measurement added
+
+**H5 — the map is useful before it is complete.** From a cold start on seed 42,
+the world plate at minimum zoom is navigable — coastlines and the largest
+landmass legible — with **zero** features named. *Falsified if* an unlabelled
+plate is unreadable, which would mean labels were carrying the legibility that
+§A3 assumes terrain carries.
+
+**H6 — discovery is monotonic and never retroactive.** A feature named after a
+visit stays named for the rest of the session, and no feature is named before
+its cell is walked. *Falsified by* either direction; the second is the leak
+that matters, because it is an omniscient read escaping through the renderer.
+
+**H7 — the gate costs nothing in the ledger.** A possession that opens the
+world map and walks is byte-identical to one that never opens it, exactly as
+`purview`'s overlay is. *Falsified by* any ledger difference, which would mean
+the map became a writer.
+
+## A12. Flagged for Nathan at G3
+
+- **The fidelity ruling is his and is recorded as such** (§A1). It reverses a
+  proposal this session made, and the reversal is the reason the body of the
+  spec survives.
+- **The discoverable roster is thin and he has accepted that** (§A8) —
+  `PLAY-site-kinds-are-constant` is the row that unblocks the rest, and it is
+  deliberately not this campaign.
+- **No save-format, epoch, or determinism-contract decision is taken by this
+  amendment.** The gate is a pure read (§A4) and H7 preregisters that claim.
+- **One schema-adjacent NON-change:** the reassessment proposed an additive
+  `vessel/session/v2` channel to carry a remembered world. Nathan's ruling
+  removed the need for it, so §2's "no schema change" stands and no cross-repo
+  contract moves.
