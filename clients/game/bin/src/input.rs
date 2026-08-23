@@ -86,8 +86,9 @@ pub enum Action {
     /// Move focus to the other pane.
     ToggleFocus,
     /// The key does nothing in this focus. Costs no turn, draws
-    /// nothing, and is a deliberate destination — `Tab` is the clearest
-    /// case (spec §3.3).
+    /// nothing, and is a deliberate destination — under Map and Walk,
+    /// `Tab` is the clearest case (spec §4.1 routes it to [`Action::Complete`
+    /// under Cli only).
     None,
 }
 
