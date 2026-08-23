@@ -129,6 +129,33 @@ one wasted build. The control matters, because a faster green is also what a
 *broken* search looks like — deliberately mis-hinting a fixture still passed,
 just slower.
 
+## The close's own last defect, which proved a decision written an hour earlier
+
+The final stage gate went **red** on two byte-identity tests — after a green
+`make rebaseline` and a green `gate-commit`. Both are worth naming as
+insufficient here: the fixtures live outside the drift check (F-6), so the
+artifacts phase had nothing to regenerate and reported success over stale
+files.
+
+The merge queue attributed it to a `chamber/v3` epoch that had landed twenty
+minutes before — plausible, correctly timed, and wrong. The diff was **two
+lines**, and it was this campaign's own `packs.rs` gloss fix, an hour old:
+`provoke` and `soothe` going from bare to sigilled.
+
+**Which made it a live proof of decision 0172's deadline argument.** That
+record asserts a concept's doc string is a save-format contract, because
+`ConceptDef.doc` is a serialized field of `World.registry`. Here was the
+committed seed-42 world moving by exactly those two strings and nothing else.
+The fix was free only because the sole artifact carrying those concepts is a
+test fixture; after merge, a real saved world would have carried them and the
+same two-line change would have cost an epoch.
+
+The queue's own diagnosis of its error is the transferable part, and it is
+sharper than the incident: *"I verified WHETHER (a control proving both tests
+pass on main alone) and then asserted WHY without verifying that half at all.
+A mechanism that fits the timing is more convincing than either half alone,
+which is exactly when it needs evidence, not less."*
+
 ## What this arc did not do
 
 At the body level a possessed body is still not a creature: no drives, no
@@ -143,9 +170,16 @@ since every charged act now leaves a fractional day.
 
 - `PLAY-driver-substitutability` — the must-fix above (decision 0167).
 - `KNOW-commit-read-same-instant` — the quantize hazard (F-5).
-- **F-6**: two byte-goldens under `windows/vessel/tests/fixtures/` move with
-  the sim but are not in `docs/generated-paths.txt`, so the drift check cannot
-  see them.
+- **F-6**: **three fixture directories** move with the sim and are not
+  drift-checked — `cli/tests/fixtures/`, `windows/vessel/tests/fixtures/` and
+  `windows/worldgen/tests/fixtures/`. None is in `docs/generated-paths.txt`,
+  and `regenerate-artifacts.sh` never writes them; only
+  `make rebaseline-goldens` does, and nothing prompts you to run it. The
+  structural remedy is to declare them, with a wrinkle worth inheriting rather
+  than rediscovering: the drift check would then go red and `make rebaseline`
+  would **not** fix it, because the writer is a different command. A red with a
+  known remedy still beats silence, but it is a change to shared machinery and
+  should not arrive on a campaign close.
 - **F-3** (inherited): `purview_scene`'s ungated NPC marks — reaching it from
   inside a chamber discloses a creature the chamber band withheld. This arc
   built the gate table where the structural fix would live but did not close it.
