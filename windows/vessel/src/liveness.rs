@@ -129,11 +129,28 @@ pub fn agent_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> RoomAddr {
 /// The last committed `agent-at` position for `npc` with day ≤ `t`, if any.
 /// Commit order is time order, so the last matching fact is the position held
 /// at `t` (the whole-history case — every fact ≤ `t` — is the absolute latest).
+///
+/// **`t` is quantized before the comparison** (`KNOW-commit-read-same-instant`,
+/// The Hand Task 3 Step 2b). `Ledger::commit` quantizes a fact's `day` to 8
+/// significant digits, and that quantization rounds UPWARD as often as down
+/// (`quantize(0.011719999738288106) == 0.01172`, strictly greater) — so a fact
+/// committed at exactly `t` could fail its own `d <= t` filter, reading back as
+/// "no position committed yet" and falling to `npc.home`, one line away from
+/// the commit that just happened. Quantizing the query bound the same way the
+/// stored value already was makes the two directly comparable: a same-instant
+/// commit-then-read now finds itself, and every other case is unaffected — the
+/// tiny rounding quantization introduces cannot flip the ordering between a
+/// `t` and a `d` that were not already within one part in 10^8 of each other.
+/// Its own commit, ahead of The Hand's merge, because the merge is what makes
+/// this comparison run on the possessed body's OWN position every turn
+/// (previously a mutable field, byte-identical by construction) rather than
+/// only in the narrow `wait`/`narrate_motion` case that exposed it first.
 fn latest_committed_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> Option<RoomAddr> {
+    let t = hornvale_kernel::quantize(t.day());
     ledger
         .find(AGENT_AT)
         .filter(|f| f.subject == npc.entity)
-        .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
+        .filter(|f| f.day.map(|d| d.day() <= t).unwrap_or(false))
         .last()
         .and_then(|f| match &f.object {
             Value::Text(s) => Some(room_from_text(s)),
