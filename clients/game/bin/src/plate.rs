@@ -98,11 +98,19 @@ pub struct Window {
 /// clamped at ±85° is nearly SQUARE in projected coordinates — so the
 /// vertical axis samples roughly twice as coarsely as this ceiling
 /// implies and never reaches the mesh's real detail on that axis at all.
-/// Measured on seed 42: only 70.5% of the planet's 40,962 terrain cells
-/// are ever an `area_majority` representative at the finest zoom over the
-/// WHOLE virtual chart, so 330 of 874 cave cells (37.8%) are undrawable by
-/// construction on this axis alone — 5.7% at the design plate's coarsest
-/// rung, 1.1% at the 80x24 floor. Recorded, not fixed here (registry row
+/// Measured on seed 42, best case (finest zoom, scrolled across the WHOLE
+/// virtual chart, no plate size limiting what is on screen): only 70.5%
+/// of the planet's 40,962 terrain cells are EVER an `area_majority`
+/// representative at all -- 29.5% are undrawable by construction on this
+/// axis alone, no matter how the plate scrolls. Of the planet's 874 cave
+/// cells specifically, under that same best case, 330 (37.8%) are among
+/// the undrawable ones. **A real plate is worse than the best case**,
+/// because it shows one screen's worth at a time rather than scrolling
+/// everywhere at once: only **5.7% of all cells are ever drawable at the
+/// design plate's coarsest rung** (zoom 0, no scrolling), and only **1.1%
+/// at the 80x24 floor's coarsest rung** -- i.e. 94.3% and 98.9%
+/// undrawable respectively, at those two sizes, at that one rung.
+/// Recorded, not fixed here (registry row
 /// `MAP-vertical-axis-undersamples-the-mesh`): a genuine fix widens
 /// `virtual_h` independently of `GLYPH_ASPECT`'s horizontal role, which is
 /// a real signature change to every function in this module that takes
@@ -343,14 +351,15 @@ pub fn draw(
 /// former ([`mercator::project`]'s own `None` branch checks the frame
 /// latitude, never the geographic one).
 ///
-/// **Task 5: point sites are gated HERE, not filtered afterward.** Ruling
-/// F-b (spec Amendment 1, §A7's "nothing is drawn and then hidden"
-/// refusal): `settlements`/`discovered` are consulted per screen cell,
+/// **Task 5: point sites are gated HERE, not filtered afterward** — spec
+/// Amendment 1 §A7's "nothing is drawn and then hidden" refusal:
+/// `settlements`/`discovered` are consulted per screen cell,
 /// alongside the ocean/land vote, and an undiscovered site's glyph is
 /// simply never chosen — there is no suppression pass over an already-
-/// painted grid. A discovered site's glyph OVERRIDES the terrain glyph at
-/// its own cell (§A3: a point site "is not in the terrain render at all,"
-/// unlike a terrain-borne landmark, which draws regardless of discovery).
+/// painted grid, because a site never drawn cannot leak. A discovered
+/// site's glyph OVERRIDES the terrain glyph at its own cell (§A3: a point
+/// site "is not in the terrain render at all," unlike a terrain-borne
+/// landmark, which draws regardless of discovery).
 #[allow(clippy::too_many_arguments)] // `index` (fix round 1: build-once-pass-in, per Nathan's ruling) pushed this to 8; Task 5's `settlements`/`discovered` push it to 10 — mirroring `hornvale_game_core::render_with`'s own allow
 pub fn draw_with(
     terrain: &GeneratedTerrain,
@@ -491,8 +500,9 @@ mod tests {
     /// A committed-seed world, built the same way the spike builds one
     /// (`windows/worldgen/examples/portolan_spike.rs`'s own `main`,
     /// deleted at this campaign's close -- git history at `0292de87f^`)
-    /// — no `test_world()` helper exists anywhere in `clients/game`
-    /// (T2-d), so this is the one this module owns.
+    /// — no shared `test_world()` helper exists anywhere in `clients/game`
+    /// (grepped, not merely assumed), so this is the one this module
+    /// owns.
     fn test_world() -> (GeneratedTerrain, Geosphere) {
         let geo = Geosphere::new(hornvale_terrain::GLOBE_LEVEL);
         let outcome = hornvale_terrain::generate(Seed(42), &geo, &TerrainPins::default())
@@ -679,8 +689,8 @@ mod tests {
         let (terrain, _geo) = test_world();
         let settlements = BTreeSet::new();
         let discovered = Discovered::default();
-        // A cell measured (T2-d's own fixture world) to carry neither a
-        // settlement (empty `settlements`) nor a cave.
+        // A cell measured, against this module's own fixture world above, to
+        // carry neither a settlement (empty `settlements`) nor a cave.
         let bare = CellId(0);
         // Sanity: pick a cell `cave_at` genuinely refuses, so this test
         // does not accidentally exercise the cave arm.

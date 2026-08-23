@@ -455,6 +455,26 @@ The distinction falls out of what is already rendered:
 suppression pass is where a client learns to lie about what it knows, and it
 is also where an omniscient read leaks through a rendering bug.
 
+**Addendum, final review (2026-08-23): the claims above are mechanism
+claims, and each is true — but silent on a question they invite a reader
+to assume is settled.** "Not in the terrain render at all" and "not drawn
+yet" both describe what GATES a point site's glyph; neither says whether,
+once the gate opens, the plate's own sampling actually PAINTS that glyph
+anywhere on screen. It very often does not: only 1.1% of terrain cells are
+ever an `area_majority` representative at the 80x24 floor (5.7% at the
+design plate's own coarsest rung), so a discovered settlement can sit
+undrawable at every zoom this client ships — measured, for the seed-42
+flagship's own starting settlement, as true at every rung up to a
+resolution more than 3x `MAX_VIRTUAL_WIDTH`. This is not a defect in the
+discovery gate §A3 specifies; it is an entirely separate limit this
+amendment never had reason to state, recorded as
+`MAP-vertical-axis-undersamples-the-mesh` and
+`MAP-settlement-glyph-may-be-unreachable-at-any-shipped-zoom`. §11's own
+"a map may disclose its own resolution but may never invent detail below
+it" was built for the strip (F5) and not for the plate's own content —
+this amendment's silence on that gap was a choice, made explicit here
+rather than left to be rediscovered.
+
 ## A4. Two different questions, and conflating them was the defect
 
 Nathan's F6 and F7 rulings (2026-08-23) share one rule, and this amendment's

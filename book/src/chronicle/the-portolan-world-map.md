@@ -8,12 +8,29 @@ part I's mechanism was waiting for: a Mercator chart of the whole planet,
 scrolled and zoomed, with that same cursor and that same strip now pointing
 into a world instead of a room's worth of it.
 
-The spine of what shipped is one sentence: **the map is complete and the
-knowing is not.** Every terrain cell on the planet draws, truthfully, from
-the first turn — nothing is fogged, distorted, or deferred. What a feature
-is *called* is a separate question, answered only once the possession has
-actually met it. And the frame the map holds still by is not an arbitrary
-grid — it is read off the world's own physics.
+The spine of what shipped is one sentence, and it takes a caveat to stay
+honest: **the map's geometry is complete and the knowing is not.** What is
+complete is the geometry itself and its truthfulness — nothing about the
+terrain is fogged, distorted, invented, or withheld by knowledge; a locked
+world's substellar desert draws exactly like a spinning world's tropics,
+whether or not the possession has ever set foot there. What is *sampled* is
+which of those cells actually earns a character on screen. At the 80×24
+floor the plate is 40×20 — 800 characters standing in for a planet of
+40,962 terrain cells — and measured on seed 42, only about one cell in
+ninety (1.1%) is ever the representative a screen character draws. So a
+discovered point site is very likely **not drawn at all**, whatever its
+label would say: the worked case is the flagship's own starting
+settlement, undrawable at every zoom rung this client ships, appearing
+only past a resolution more than three times the client's own ceiling. The
+campaign's own ratified rule (decision 0177's second clause) is that a map
+"may disclose its own resolution but may never invent detail below it,"
+and this campaign built exactly that disclosure for the strip — F5's "one
+character stands for roughly N terrain cells at this zoom" — and never
+built the matching disclosure for the plate's own content. It honoured the
+second half of its own clause and not the first. What a feature is
+*called*, once it does draw, is a separate question again, answered only
+once the possession has actually met it. And the frame the map holds still
+by is not an arbitrary grid — it is read off the world's own physics.
 
 ## The equator is a fact about the world, not the graticule
 
@@ -63,12 +80,16 @@ followed, applied to the axis that had been silently exempted from it.
 
 ## Entering the map, and holding it still
 
-Two gestures reach the map, and neither is a new keybinding — both reuse
-keys the client already routed for a different purpose, on the reasoning
-that a letter key would break `Focus::Map`'s deliberately total routing
-table (every unclaimed letter already types itself into the command line),
-so the only room left for a new verb was in the punctuation this campaign
-had already claimed for zoom.
+**Map focus has to be entered first** — submitting the bare command `map`
+(The Stride's own routing, unchanged by this campaign) — because
+`Action::Zoom` is only ever routed while `Focus::Map` is current; "press
+`-`" is not by itself a complete answer to how a player reaches the world
+map. Two gestures reach the map from there, and neither is a new
+keybinding — both reuse keys the client already routed for a different
+purpose, on the reasoning that a letter key would break `Focus::Map`'s
+deliberately total routing table (every unclaimed letter already types
+itself into the command line), so the only room left for a new verb was in
+the punctuation this campaign had already claimed for zoom.
 
 **Zooming out past the walk band's own finest rung enters the world view,
 at its coarsest rung; zooming in past the world view's own finest rung
