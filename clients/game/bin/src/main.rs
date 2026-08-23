@@ -96,22 +96,15 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         text: &text,
         caret: driver.caret(),
     };
-    // The Portolan part II, Task 3a: the world view is activated by
-    // `Focus::Map` alone. The map pane's only door is submitting a bare
-    // `map` (`Driver::enter_map`) — no new verb is added here, and
-    // `Focus::Map` is otherwise unused for the PLATE region specifically:
-    // before this task the plate drew the walk-band chart or the
-    // chamber-band floor plan regardless of focus (`spread::compose`
-    // dispatched on `snapshot.spatial` alone), so reusing `Focus::Map` to
-    // mean "show the world map" does not overload a meaning the plate
-    // already carried — only the CURSOR and the STRIP text differed by
-    // focus before now, and both keep behaving exactly as they did (Task 3b
-    // is what makes them track the world plate instead of the walk band's
-    // own small chart). Computed only under `Focus::Map`, never
-    // unconditionally: `Driver::world_plate`'s own doc states why (an idle
-    // walk/chamber session must not pay the resampling cost every redraw).
-    let world_plate =
-        (driver.focus() == hornvale_game_core::Focus::Map).then(|| driver.world_plate(w, h));
+    // The Portolan part II, Task 3a: the world view's activation is
+    // `Driver`'s own decision, not re-derived here — `Driver::
+    // world_plate_for_redraw`'s doc explains why (fix round 1: an earlier
+    // revision gated this on `Focus::Map` alone, which silently retired the
+    // walk-band cursor/strip feature that ALSO lives behind `Focus::Map`).
+    // `Focus::Map`'s own door is still just submitting a bare `map`
+    // (`Driver::enter_map`); nothing here adds a new verb, and nothing here
+    // can yet turn the world view itself on — Task 3b owns that gesture.
+    let world_plate = driver.world_plate_for_redraw(w, h);
     match hornvale_game_core::render_with(
         &json,
         w,

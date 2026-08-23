@@ -201,6 +201,25 @@ pub struct Driver {
     /// origin_col: 0, origin_row: 0`) in this task — zoom and scroll are
     /// Task 3b's (The Portolan part II, Task 3b).
     window: Window,
+    /// Whether the whole-world Mercator view is active. **Fix round 1
+    /// (Task 3a's own review):** `Focus::Map` alone used to gate this in
+    /// `main.rs`, which silently retired the walk-band cursor/strip feature
+    /// shipped across `9f69e4e2a`/`81d940d9c`/`64c80be36` and chronicled in
+    /// `book/src/chronicle/the-stride.md`/`the-stylus.md` — that feature
+    /// ALSO lives behind `Focus::Map` (entering the map to point at, and
+    /// read the name of, the walk band's own local terrain), so reusing the
+    /// same focus value for the world view meant a 210x56 redraw drew a
+    /// 104-column Mercator while the cursor stayed clamped to the OLD
+    /// 40-column plate and the strip kept resolving the walk band's own
+    /// (now invisible) chart — a picture and a cursor/strip that no longer
+    /// agreed at all. This field makes the world view its own explicit
+    /// state, defaulting OFF ([`Driver::start`] never sets it), so
+    /// `Focus::Map` on its own reproduces the pre-Task-3a behaviour
+    /// byte-identically. Nothing in this campaign yet sets it `true` — the
+    /// gesture that does is Task 3b's (The Portolan part II, Task 3b), and
+    /// building it is explicitly out of this task's scope; see
+    /// [`Driver::world_plate_for_redraw`].
+    world_view: bool,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
     /// The plate's REAL content height, in grid rows — synced from the live
@@ -373,6 +392,7 @@ impl Driver {
             terrain,
             frame,
             window,
+            world_view: false,
             seed: world_ref.seed,
             plate_height: FLOOR_PLATE_CONTENT_HEIGHT,
             namer: (species, ph, morph),
@@ -469,10 +489,14 @@ impl Driver {
     /// `pub`-ness do its job: `compose` and this method size their two
     /// `Grid`s from the identical computation.
     ///
-    /// Callers should only invoke this while [`Focus::Map`] is active (see
-    /// `main.rs`'s `redraw`) — the plate resamples `SUBSAMPLES_PER_AXIS`
-    /// squared points per cell (`plate.rs`'s own doc), so an idle walk or
-    /// chamber session should never pay this cost.
+    /// **Unconditional — draws the Mercator whether or not the world view is
+    /// active.** [`Driver::world_plate_for_redraw`] is the gated entry point
+    /// every real caller (`main.rs`'s `redraw`) must use instead; this
+    /// method stays `pub` because it is also the seam a test drives to
+    /// exercise the plate's own rendering directly, unconditionally. The
+    /// plate resamples `SUBSAMPLES_PER_AXIS` squared points per cell
+    /// (`plate.rs`'s own doc), so a caller reaching this directly still owns
+    /// not paying that cost needlessly.
     pub fn world_plate(&self, w: u16, h: u16) -> hornvale_game_core::Grid {
         let plate_width = hornvale_game_core::spread::world_plate_width(w, h);
         let plate_height = plate_width / hornvale_game_core::spread::GLYPH_ASPECT;
@@ -485,6 +509,34 @@ impl Driver {
             plate_width,
             plate_height,
         )
+    }
+
+    /// The world plate to hand [`hornvale_game_core::render_with`] for a
+    /// `w`-by-`h` redraw, gated on the world view actually being active —
+    /// `Some(`[`Driver::world_plate`]`(w, h))` when [`Focus::Map`] is
+    /// focused AND `self.world_view` is on, `None` otherwise.
+    ///
+    /// **Fix round 1: this is the ONE place that decision is made.** Before
+    /// this method existed, `main.rs`'s `redraw` computed
+    /// `Some(driver.world_plate(w, h))` whenever `focus() == Focus::Map`,
+    /// with no `world_view` gate at all — `Focus::Map` already meant
+    /// something else (the walk-band cursor/strip feature this module's
+    /// `world_view` field doc names), so that reproduced the exact
+    /// class of bug `content_height`'s own doc warns about elsewhere in
+    /// this crate: two independent computations of "is the world view
+    /// showing" would have been one too many, this time on the ACTIVATION
+    /// question rather than a dimension. `main.rs` calls only this method
+    /// now, never re-deriving the condition itself, and every test that
+    /// wants to know what a redraw would draw calls it too rather than
+    /// reimplementing the check a third time.
+    ///
+    /// `self.world_view` defaults to `false` and nothing in this campaign
+    /// yet sets it `true` (see the field's own doc) — Task 3b owns the
+    /// gesture, so this method currently always returns `None` in the live
+    /// game; it exists so the gate itself, and `main.rs`'s use of it, are
+    /// both exercised now rather than only once 3b lands.
+    pub fn world_plate_for_redraw(&self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
+        (self.world_view && self.focus == Focus::Map).then(|| self.world_plate(w, h))
     }
 
     /// Apply one input [`Action`], returning whether the session RELEASED.

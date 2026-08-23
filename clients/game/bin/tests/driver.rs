@@ -3,7 +3,7 @@
 
 use hornvale_game::driver::Driver;
 use hornvale_game::input::Action;
-use hornvale_game_core::Focus;
+use hornvale_game_core::{CommandLine, Focus, Source, render_with, spread};
 
 /// The driver's ONLY output is snapshot JSON. If this ever returns a typed
 /// value, the containment in The Quire spec section 6 has been broken.
@@ -285,6 +285,126 @@ fn the_cursor_clamp_tracks_the_real_plate_height_too() {
         cursor.y, 35,
         "the clamp must reach row 35 (content height 36, 0-indexed) at a 40-row terminal, \
          not stop at the 20-row floor's row 19"
+    );
+}
+
+/// FIX ROUND 1 (Task 3a's own review, regression): `Focus::Map` alone must
+/// NOT activate the world view. The bug this pins: before the fix,
+/// `main.rs`'s `redraw` computed `Some(driver.world_plate(w, h))` whenever
+/// `driver.focus() == Focus::Map`, with no further gate. But `Focus::Map`
+/// already meant something else, shipped across `9f69e4e2a`/`81d940d9c`/
+/// `64c80be36` and chronicled in `book/src/chronicle/the-stride.md`/
+/// `the-stylus.md`: a cursor over the WALK BAND's own small chart, with the
+/// strip naming the feature it points at. Reusing the same focus value for
+/// the world view retired that shipped feature into misleading dead UI: a
+/// 210x56 redraw would draw a 104-column Mercator while the cursor stayed
+/// clamped to the OLD 40-column plate, resolving the walk band's own chart,
+/// which the Mercator had silently replaced -- a picture and a cursor/strip
+/// that no longer agreed at all, and columns 40..104 permanently
+/// uncursorable. This test drives the SAME call `main.rs`'s `redraw` makes
+/// (`Driver::world_plate_for_redraw`, then `render_with`) and checks what
+/// actually lands on the `Grid` and the strip -- it would have FAILED
+/// against the pre-fix `main.rs` logic (reproduced in the `regressed_grid`
+/// block below, built by calling `render_with` the OLD, ungated way).
+#[test]
+fn map_focus_alone_does_not_activate_the_world_view() {
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    submit_line(&mut driver, "map");
+    assert_eq!(driver.focus(), Focus::Map);
+
+    let (w, h) = (210u16, 56u16);
+
+    // The gate itself: the world view defaults OFF, and nothing in this
+    // campaign yet turns it on (Task 3b owns that gesture), so the gated
+    // plate must be `None`.
+    assert!(
+        driver.world_plate_for_redraw(w, h).is_none(),
+        "the world view must default OFF -- Task 3b owns the gesture that turns it on"
+    );
+
+    let json = driver.snapshot();
+    let empty_line = String::new();
+    let cmd_line = CommandLine {
+        text: &empty_line,
+        caret: 0,
+    };
+    let (grid, _) = render_with(
+        &json,
+        w,
+        h,
+        driver.focus(),
+        driver.cursor(),
+        cmd_line,
+        driver.strip_text(),
+        driver.echo(),
+        driver.world_plate_for_redraw(w, h).as_ref(),
+    )
+    .unwrap();
+
+    // The walk band's own chart must still be drawn somewhere in the plate
+    // region -- a regression that reinstates the old unconditional
+    // `Some(driver.world_plate(w, h))` replaces the whole region with the
+    // Mercator instead, and no cell anywhere would carry `Source::Chart`.
+    let content_h = spread::content_height(h);
+    let chart_drawn = (0..content_h).any(|y| {
+        (0..spread::PLATE_WIDTH).any(|x| grid.get(x, y).is_some_and(|c| c.source == Source::Chart))
+    });
+    assert!(
+        chart_drawn,
+        "the walk band's own chart must still draw when the world view is off"
+    );
+
+    // And no `Source::World` cell may appear anywhere the Mercator would
+    // have claimed had the old bug still gated on `Focus::Map` alone --
+    // the full fit width, not just the old fixed `PLATE_WIDTH`.
+    let would_be_world_width = spread::world_plate_width(w, h);
+    let world_leaked = (0..content_h).any(|y| {
+        (spread::PLATE_WIDTH..would_be_world_width)
+            .any(|x| grid.get(x, y).is_some_and(|c| c.source == Source::World))
+    });
+    assert!(
+        !world_leaked,
+        "no world content may appear while the view is off"
+    );
+
+    // The strip must still resolve the walk band's own real name -- the
+    // exact feature the regression silently retired.
+    assert!(
+        driver
+            .strip_text()
+            .is_some_and(|t| t.starts_with("Vngashngatva")),
+        "the strip must still resolve against the walk band, got {:?}",
+        driver.strip_text()
+    );
+
+    // Reproduce the OLD, buggy gate directly, to show the assertions above
+    // really do discriminate it: `Some(driver.world_plate(w, h))`
+    // unconditionally once focus is `Focus::Map`, with no `world_view`
+    // check at all.
+    let regressed_plate = driver.world_plate(w, h);
+    let (regressed_grid, _) = render_with(
+        &json,
+        w,
+        h,
+        driver.focus(),
+        driver.cursor(),
+        cmd_line,
+        driver.strip_text(),
+        driver.echo(),
+        Some(&regressed_plate),
+    )
+    .unwrap();
+    let regressed_chart_drawn = (0..content_h).any(|y| {
+        (0..spread::PLATE_WIDTH).any(|x| {
+            regressed_grid
+                .get(x, y)
+                .is_some_and(|c| c.source == Source::Chart)
+        })
+    });
+    assert!(
+        !regressed_chart_drawn,
+        "sanity check: the old unconditional gate must NOT draw the walk band's chart \
+         (if it does, this test's own discrimination is broken, not the fix)"
     );
 }
 
