@@ -119,11 +119,17 @@
 //!   is why this cheap readout cannot call it. **Task 4's job is to hand this
 //!   function a real override source**; until it does, a `made` of 0 means
 //!   "nobody asked", not "nothing was made".
-//! - **Vertical connection.** [`crate::chamber::passages_from`] does not treat
-//!   `level` as an adjacency axis yet, so [`Tallies::reachable`] counts only
-//!   the entrance level's component. That is not a defect in this readout: it
-//!   is the exact quantity amendment C.4 exists to move, printed so Task 3b
-//!   has something that can actually change.
+//! - **"Vertical connection" no longer belongs on this list, and its absence
+//!   here is itself the fact worth recording.** This bullet used to claim
+//!   `passages_from` does not treat `level` as an adjacency axis, so
+//!   `Tallies::reachable` counted only the entrance level's component — false
+//!   even when it was written (amendment C.4, The Stope, already made level
+//!   a real adjacency axis) and load-bearing false after The Drift: seed 42
+//!   reads `reachable == chambers == 30272`. Severing just the band-descent
+//!   step drops that to 5,569, which is what proves the connection is real
+//!   rather than a coincidence of the walk never being asked to use it. See
+//!   `reachability_is_reported_and_is_at_most_existence`'s own doc for the
+//!   measured account.
 //!
 //! **Cost.** One `BuildDepth::Terrain` world per seed, and a scan of the
 //! lattice over cave-bearing land cells. See `scripts/regenerate-artifacts.sh`
@@ -788,9 +794,10 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
 
     out.push_str("\n  the first three cave systems, run by run\n");
     out.push_str(&format!(
-        "  (key = the floor-0 derivation key; {GLYPH_EXISTS} exists, \
-         {GLYPH_REFUSED} refused, {GLYPH_PAST_RUN} past the run's drawn floors, \
-         {GLYPH_PAST_BRANCH} past the system's drawn branch count)\n"
+        "  (key = the floor-0 address's spelling, not a derivation key; \
+         {GLYPH_EXISTS} exists, {GLYPH_REFUSED} refused, {GLYPH_PAST_RUN} past \
+         the run's drawn floors, {GLYPH_PAST_BRANCH} past the system's drawn \
+         branch count)\n"
     ));
     for (cell, head, rows) in &transect {
         out.push_str(&format!("\n  cell {} — {head}\n", cell.0));

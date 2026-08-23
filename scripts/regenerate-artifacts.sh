@@ -654,7 +654,7 @@ gen_underworld_lattice() {
     printf 'A chamber is never stored. Existence and content are pure functions of an\n'
     printf 'address, so this page is a *witness*, not a record: every line is re-derived\n'
     printf 'from the seed on each regeneration, and a change to the derivation key, to\n'
-    printf 'the existence draw, to a run'"'"'s drawn length, to a chamber'"'"'s content or\n'
+    printf 'the existence gate, to a run'"'"'s drawn length, to a chamber'"'"'s content or\n'
     printf 'to the depth the rock grants a cave moves bytes here.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf '`reachable` is the count a player would actually experience: chambers\n'
@@ -678,9 +678,9 @@ gen_underworld_lattice() {
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'Each run shows one glyph per floor the LATTICE admits, never per floor the\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'run drew: a `#` exists, a `.` was refused by the existence draw (or sits\n'
+    printf 'run drew: a `#` exists, a `.` sits deeper than the cave'"'"'s budget\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'deeper than the cave'"'"'s budget reaches), and a `_` is past that run'"'"'s\n'
+    printf 'reaches, and a `_` is past that run'"'"'s\n'
     printf 'own drawn length. Bounding the row by the drawn length instead is what made\n'
     printf 'an earlier version of this page unable to see either floor gate at all.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal

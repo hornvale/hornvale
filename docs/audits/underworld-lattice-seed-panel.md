@@ -8,7 +8,7 @@ run by run -- the first three cave systems of each world.
 A chamber is never stored. Existence and content are pure functions of an
 address, so this page is a *witness*, not a record: every line is re-derived
 from the seed on each regeneration, and a change to the derivation key, to
-the existence draw, to a run's drawn length, to a chamber's content or
+the existence gate, to a run's drawn length, to a chamber's content or
 to the depth the rock grants a cave moves bytes here.
 
 `reachable` is the count a player would actually experience: chambers
@@ -24,8 +24,8 @@ shipped world derives from it any more. The real derivation keys are
 `crate::character` -- this column still witnesses the address's SPELLING (the
 rung name, the field order), which is what makes it worth printing.
 Each run shows one glyph per floor the LATTICE admits, never per floor the
-run drew: a `#` exists, a `.` was refused by the existence draw (or sits
-deeper than the cave's budget reaches), and a `_` is past that run's
+run drew: a `#` exists, a `.` sits deeper than the cave's budget
+reaches, and a `_` is past that run's
 own drawn length. Bounding the row by the drawn length instead is what made
 an earlier version of this page unable to see either floor gate at all.
 
@@ -59,7 +59,7 @@ seed 42
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
   the first three cave systems, run by run
-  (key = the floor-0 derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
+  (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
   cell 30 — fracture cave, reach 2145.7358 m, gradient 26.007865 K/km
     30/0/undercroft/0            regolith     3 floors  ###_________________
@@ -143,7 +143,7 @@ seed 7
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
   the first three cave systems, run by run
-  (key = the floor-0 derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
+  (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
   cell 52 — karst cave, reach 249.24025 m, gradient 24.917192 K/km
     52/0/undercroft/0            regolith     5 floors  #####_______________
@@ -227,7 +227,7 @@ seed 1234
   past branch cnt 0   (chambers beyond their system's drawn branches)
 
   the first three cave systems, run by run
-  (key = the floor-0 derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
+  (key = the floor-0 address's spelling, not a derivation key; # exists, . refused, _ past the run's drawn floors, ~ past the system's drawn branch count)
 
   cell 18 — fracture cave, reach 2694.0137 m, gradient 21.180804 K/km
     18/0/undercroft/0            regolith     1 floors  #___________________

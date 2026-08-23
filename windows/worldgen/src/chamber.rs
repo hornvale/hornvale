@@ -669,14 +669,19 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
 /// draw, so an entrance and the branch it opens into can never disagree
 /// about where the junction sits.
 ///
-/// **Accepted asymmetry between mouth and gate.** The side branch is drawn
-/// from entrance 0's `branch_count_of` lattice, but a mouth at entrance N is
-/// later adjudicated by [`chamber_exists`] against entrance N's own drawn
-/// branch width — so a mouth can name a branch its own entrance never
-/// realized and be refused downstream, where the witness treats it as a
-/// shut door. This is accepted, not an oversight: C.3 sanctions
-/// per-entrance realization, and an aperture into a branch that entrance's
-/// lattice did not realize is simply not open.
+/// **The mouth/gate asymmetry this doc used to accept is DISSOLVED, not
+/// merely narrowed** (The Drift, amendment A.3, which names this exact
+/// passage: "this also dissolves the asymmetry `entrance_mouth`'s doc
+/// records as accepted"). The side branch was always drawn from entrance 0's
+/// `branch_count_of` lattice; what changed is that [`chamber_exists`] now
+/// adjudicates every branch against that SAME entrance-0 lattice too
+/// (transitionally, via a literal `0` — see its own doc), rather than against
+/// the asking entrance's own. So a mouth and the gate it is checked against
+/// read the same drawn width by construction, and a mouth can no longer name
+/// a branch that lattice never realized. Task 5's re-keying of
+/// `branch_count_of` onto `(cell, band)` keeps this true rather than
+/// reopening it: every entrance still addresses into the one system-wide
+/// lattice `chamber_exists` gates against.
 /// type-audit: bare-ok(index: entrance)
 pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
     const HEAD: EntranceMouth = EntranceMouth {
