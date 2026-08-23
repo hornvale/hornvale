@@ -72,10 +72,10 @@ and only then choosing the command.
   1h37m 100%-CPU process from an earlier backgrounded run that nothing had
   reaped. Sweep after any kill.
 
-## macOS bash 3.2 is a defect *class*, not two defects
+## macOS bash 3.2 is a defect *class*, not a handful of defects
 
-Two independent failures in one session, from the same source, both
-**clean under shellcheck** and both fine on lefford's bash 5:
+Three independent failures in one session, from the same source, all
+**clean under shellcheck** and all fine on lefford's bash 5:
 
 - `scripts/test-worktree-freshness.sh` does not *parse* under 3.2 (a U+2026
   in a single-quoted awk body), so the guard that catches stale-name
@@ -85,6 +85,11 @@ Two independent failures in one session, from the same source, both
   locale-sensitive (12× between `LC_ALL=C` and UTF-8) on a 229 KB string, so
   `git commit` on a Mac took minutes to hours **in bash, with no compiler
   running**. Fixed in this campaign.
+
+And the third surfaced during this very close, which is how the count went
+from two to three inside an hour: `scripts/hooks/post-merge:67` calls `mapfile`, which is bash 4+, so the hook dies mid-body
+on darwin. It always exits 0, so the artifact-staleness advisory it exists to
+print has simply never printed on a Mac and nothing said so.
 
 The prior fix round of that same file reasoned correctly about which
 constructs bash 3.2 *supports* and never measured what one of them *costs*.
