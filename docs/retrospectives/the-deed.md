@@ -23,8 +23,11 @@ the careful act, which is exactly when the correction goes unaudited:
 | the same table's "charge time" column | gave descriptions (`band change`) where the reader needed yes/no |
 | "adding `day()` moves the type-audit report by one" | false — `day()` returns `WorldTime`, a typed quantity, so no primitive crosses the boundary |
 | Step 4b's remedy, strengthening a weak guard | applied literally it produces a test that **cannot fail**, because `Ledger::commit` dedups an identical envelope |
+| "delete the vacuous test; *this other one* carries its coverage" | the named replacement asserts `!text.contains("no verb")`, **which an empty string also passes** — it covers *is recognised*, not *answers*, so deleting on that basis would have left the exact hole it was closing |
 
-The last one is the sharpest: a correction whose whole purpose was to close a
+The fifth has its own lesson — **"X is redundant, Y covers it" requires checking Y** — and it is the cheapest of the five to repeat.
+
+The fourth is the sharpest: a correction whose whole purpose was to close a
 vacuity hole opened a different vacuity hole. The implementer measured it — a
 mutant committing on `out` left the "fixed" guard green — and repaired it by
 moving the baseline inside a scout loop.
@@ -158,6 +161,18 @@ which is exactly when it needs evidence, not less."*
 
 ## What this arc did not do
 
+**Seven of the fourteen concepts it minted are inert.** `chart`, `know`,
+`look`, `read`, `sense`, `wait` and `write` render `Gap | Gap` for every
+species in every world, because nothing grants them `Steeped` or `KnowsOf` —
+no culture can speak the acts a possessed body performs. Task 2 flagged this
+and handed it to "whichever task attaches `Action` variants (5-7)". **Tasks 5,
+6 and 7 each shipped without deciding**, which is precisely the failure this
+retrospective's own practice #1 exists to catch: `!wait`, deferred by Task 6
+to a Task 7 that never mentioned it. A finding deferred to a plural, unnamed
+set of future tasks is deferred to nobody. It may not be a defect — a culture
+that has never charted may rightly lack the word — but it is an unmade
+decision that shipped. `LANG-in-character-acts-are-unspeakable`.
+
 At the body level a possessed body is still not a creature: no drives, no
 affect, no occupancy presence, two committed predicates against a creature's
 five. Decision 0167 records it as a must-fix deferred to its own campaign.
@@ -186,6 +201,28 @@ since every charged act now leaves a fractional day.
 - **F-4**: per-session predicate doc strings are de-facto save-format contracts
   the moment a played world is saved. True today, undocumented today, and this
   arc widened the set.
+- **The composite universe rule is hand-tracked at two sites.**
+  `!is_unnameable(..) && !is_extradiegetic(..)` appears in `cli/src/proto.rs`
+  and in a worldgen golden test. `is_extradiegetic` was hoisted into
+  `domains/language`; `is_unnameable` **cannot** be — it is `&World`-keyed and
+  cannot move below `cli` in the layering. So a third exclusion added to
+  `proto_root_universe`'s filter needs manual addition at both sites, silently.
+- **Adding N concepts moves the trope audits by exactly N**, in both the token
+  count and the unrequired-token count, because tropes resolve against the
+  concept registry. This campaign's drift table missed it and three trope
+  artifacts moved unannounced. Stated here so the next concept-adding campaign
+  can predict it instead of discovering it.
+- **The published concept manifest's backlog now lists permanently unclosable
+  entries.** The seven operator instruments sit in its "Unnamed (lexeme gap)"
+  list, but an extradiegetic gap can never close (decision 0172) — so a page
+  that reads as a to-do list makes a promise it cannot keep.
+- **The Bridle's seam-guard request is answered by silence, which is the wrong
+  answer.** Board post 174 proposed `plan_to_water`/`plan_to_room` in
+  `windows/vessel/src/action.rs` as seam registrations and named The Deed as
+  owner, on the reasoning that the arc changing behaviour there should arm the
+  tripwire. No `seam-guard:` tag exists under `windows/vessel/src/` and no
+  vessel row exists in the roster. Declined by omission rather than on the
+  merits; an inherited request answered by silence will simply be re-asked.
 - The CLI hint path for retired bare forms — a bare group-A verb typed from
   habit gets an ordinary unknown-verb refusal rather than "did you mean `!why`?"
 - The world REPL (`cli/src/repl.rs`) keeps bare `help`/`why`. A different
