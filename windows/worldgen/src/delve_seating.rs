@@ -41,8 +41,8 @@
 //! production caller**, and its own doc now records this call site rather than
 //! the absence of one.
 
-use hornvale_climate::underworld::{DelveZone, underworld_assignment};
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_climate::underworld::underworld_assignment;
+use hornvale_kernel::{Band, CellId, CellMap, Geosphere};
 use hornvale_species::{EnvironmentNiche, environment_fit};
 use hornvale_terrain::{
     Cave, CaveKind, DelveRung, GeneratedTerrain, GeothermalGradient, delta_t_range_of, rungs,
@@ -74,26 +74,31 @@ use crate::chamber::{
 /// type-audit: bare-ok(ratio)
 pub const UNDERWORLD_WORKS_COST: f64 = 0.5;
 
-/// The depth class one habitation rung names, in the vocabulary the underworld
+/// The depth class one habitation band names, in the vocabulary the underworld
 /// corpus states its communities in.
 ///
-/// The two rosters are a **mirrored pair** under decision 0094 — same names,
-/// same order, different owners — and `cli/tests/delve_roster_mirror.rs`
-/// already fails if they drift. This is the one place the correspondence is
-/// spelled, and it is exhaustive on `DelveRung`, so a sixth rung fails to
-/// compile here rather than silently scoring against the wrong depth class.
+/// `DelveRung` and the corpus's own `UnderworldName::zone` field are both
+/// `hornvale_kernel::Band` now (decision 0044 clause (a) put the shared
+/// roster in the kernel; the two used to be a **mirrored pair** under
+/// decision 0094, guarded by the now-retired `cli/tests/suite/
+/// delve_roster_mirror.rs`). This function used to translate between two
+/// separately-declared enums and now translates a `Band` into itself, minus
+/// the one band no underworld community occupies — kept as an exhaustive
+/// match rather than collapsed to an identity, so a future `Band` variant
+/// fails to compile here rather than silently scoring against the wrong
+/// depth class.
 ///
-/// `Surface` is `None` for exactly the reason [`DelveZone`] has no `Surface`
-/// variant: no underworld community is at the surface, so there is nothing for
-/// a surface rung to be scored against.
-fn zone_of(rung: DelveRung) -> Option<DelveZone> {
+/// `Surface` is `None` for the reason `domains/climate::underworld` states on
+/// `UnderworldName::zone`: no underworld community is at the surface, so
+/// there is nothing for a surface band to be scored against.
+fn zone_of(rung: DelveRung) -> Option<Band> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some(DelveZone::Undercroft),
-        DelveRung::Shallows => Some(DelveZone::Shallows),
-        DelveRung::Deeps => Some(DelveZone::Deeps),
-        DelveRung::Underdeep => Some(DelveZone::Underdeep),
-        DelveRung::Nadir => Some(DelveZone::Nadir),
+        Band::Surface => None,
+        Band::Undercroft => Some(Band::Undercroft),
+        Band::Shallows => Some(Band::Shallows),
+        Band::Deeps => Some(Band::Deeps),
+        Band::Underdeep => Some(Band::Underdeep),
+        Band::Nadir => Some(Band::Nadir),
     }
 }
 

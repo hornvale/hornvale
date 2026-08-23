@@ -90,56 +90,42 @@
 //! surface is a fact about not being in the rock column at all, not a fact
 //! about a temperature — the variant exists (spec §4.6) so that the overworld
 //! is a rung of the same ladder and no reader can mistake a `None` for it.
+//!
+//! ## Nadir: a refused split, and its true bound
+//!
+//! [`DelveRung::Nadir`] is the open-ended leftover bin, and leftover bins are
+//! large by construction: 38.65% of cave-bearing land cells terminate here
+//! (24.49 / 43.25 / 42.34% on seeds 42 / 7 / 1234), which falsified the
+//! campaign's own prediction that reaching it would be uncommon.
+//!
+//! A sixth rung splitting this one was measured and **refused**: 99% of the
+//! whole super-50 K population lives in `[50, 61)` K, so there is nowhere
+//! stable to cut (amendment B.2).
+//!
+//! **Open-ended formally, bounded empirically.** No upper threshold exists
+//! here and none should — a ladder needs a class that cannot overflow. But no
+//! *cave* can reach far into it: reach is capped at
+//! [`crate::CAVE_REACH_CEILING_M`] (3000 m) and the gradient is clamped to
+//! 15–30 K/km, so a cave's ΔT cannot exceed 90 K and measures ~[50, 68] K in
+//! practice, unreachable at all below 16.7 K/km. Read "open-ended" as a
+//! property of the ladder, not as a claim about how hot a chamber gets.
+//!
+//! ## Where the type itself lives
+//!
+//! [`DelveRung`] is a re-export of [`hornvale_kernel::Band`] (decision 0044
+//! clause (a); see that type's own docs for why). This module keeps the
+//! roster's *meaning* — the derivation from a ΔT to a band, and everything
+//! measured above — which is what a domain keeps under 0044's other half.
 
 use crate::strata::GeothermalGradient;
 
 /// A rung of the delve ladder — a habitation depth *class*, never a depth.
 ///
-/// Ordered shallow → deep, so a **greater** rung is a **deeper** one, and
-/// [`DelveRung::Surface`] is the least. The derived `Ord` is load-bearing in
-/// two ways: it makes "further down the ladder" a comparison rather than a
-/// convention, and it lets a rung serve as half of a `BTreeMap` key (the
-/// workspace bans `HashMap`, so a map keyed by rung has no other option).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum DelveRung {
-    /// The overworld — above the rock column entirely, not a ΔT class.
-    Surface,
-    /// Cellars, cave mouths, the first few tens of metres of worked rock.
-    Undercroft,
-    /// Shallow inhabited depth: the top of the karst and lava-tube population.
-    Shallows,
-    /// The ladder's broad middle — a worked or walked depth, still temperate.
-    Deeps,
-    /// Deep habitation, warm enough that living here is a choice with a cost.
-    Underdeep,
-    /// Past the habitable ceiling: hot, and the deepest class the measured
-    /// cave population reaches.
-    ///
-    /// **Named `Sunless` until The Stope renamed it** (spec amendment B.3),
-    /// and the rename is a correction rather than a redecoration. "Sunless"
-    /// read as the eldritch deep — a promise this ladder does not make — while
-    /// the rung means only "past the ΔT at which the ladder stopped modelling
-    /// habitability". It is the open-ended leftover bin, and leftover bins are
-    /// large by construction: 38.65% of cave-bearing land cells terminate here
-    /// (24.49 / 43.25 / 42.34% on seeds 42 / 7 / 1234), which falsified the
-    /// campaign's own prediction that reaching it would be uncommon. `Nadir`
-    /// is astronomical vocabulary — the project's native idiom — and this
-    /// ladder measures ΔT **above the surface datum**, so "the lowest point
-    /// relative to the datum" is coherent with the ladder's own coordinate.
-    ///
-    /// A sixth rung splitting this one was measured and **refused**: 99% of
-    /// the whole super-50 K population lives in `[50, 61)` K, so there is
-    /// nowhere stable to cut (amendment B.2).
-    ///
-    /// **Open-ended formally, bounded empirically.** No upper threshold exists
-    /// here and none should — a ladder needs a class that cannot overflow. But
-    /// no *cave* can reach far into it: reach is capped at
-    /// [`crate::CAVE_REACH_CEILING_M`] (3000 m) and the gradient is clamped to
-    /// 15–30 K/km, so a cave's ΔT cannot exceed 90 K and measures ~[50, 68] K
-    /// in practice, unreachable at all below 16.7 K/km. Read "open-ended" as a
-    /// property of the ladder, not as a claim about how hot a chamber gets.
-    Nadir,
-}
+/// A re-export of [`hornvale_kernel::Band`]: the roster and its ordering are
+/// shared with `hornvale_climate::underworld`, so they live in the kernel
+/// (decision 0044 clause (a)). This crate owns the ΔT-to-band derivation
+/// below and nothing shares that.
+pub use hornvale_kernel::Band as DelveRung;
 
 /// The ΔT (K above the surface datum) beyond which this campaign declares a
 /// chamber uninhabitable, and therefore the ΔT at which [`DelveRung::Nadir`]
