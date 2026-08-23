@@ -378,3 +378,46 @@ must say so rather than reporting a movement.** Today's 21,328 levels on seed
 system, so the count falls for a reason that has nothing to do with §4.1's
 deleted coin. Reporting "levels went down" without that sentence would invert
 the campaign's own story.
+
+## A.6 CORRECTION to A.4 — the epoch is real, but `chamber_key` does not carry it
+
+A.4 said dropping `entrance` from `chamber_key` relocates every chamber and
+therefore forces `chamber/v4`. **The conclusion stands and the mechanism was
+wrong**, found while reviewing Task 1.
+
+`#[cfg(test)] mod tests` begins at `chamber.rs:1233`. **Every** `chamber_key`
+call inside `chamber.rs`, and both `derive(CHAMBER)` sites, sit below it. With
+§4.1's coin deleted, `chamber_exists` draws nothing, so:
+
+- **nothing in production derives from `crate::streams::CHAMBER`**, and
+- **`chamber_key` has exactly one production caller** —
+  `underworld_readout.rs:646`, which *prints* it as the witness's `key`
+  column.
+
+So changing `chamber_key` relocates **nothing**. What actually carries the
+epoch is the four labels that really do key on `entrance` and really are
+consumed:
+
+```
+chamber/run-floors/v1       (cell, entrance, branch, band)   -> v2
+chamber/branch-count/v1     (cell, entrance)                 -> v2
+chamber/branch-character/v1 (cell, entrance, branch)         -> v2
+chamber/branch-barrier/v1   (cell, entrance, branch)         -> v2
+chamber/branch-root/v1      (cell, entrance, branch)         -> RETIRED (§4.6)
+```
+
+**`CHAMBER` therefore stays at `chamber/v3` and is NOT bumped.** Bumping a
+label nothing derives from would mint an **empty epoch** — a label recording a
+discontinuity that never happened through it, which is precisely the case a
+monotonic label check cannot catch (`scripts/sluice-headline.sh` names it).
+
+**And Task 1 falsified a committed artifact's prose without touching it.**
+`docs/audits/underworld-lattice-seed-panel.md` says *"The `key` column is the
+real derivation key of that run's floor 0"*, and
+`underworld_readout.rs`'s module doc says the same. As of §4.1 that is false:
+it is a formatted address that derives nothing. Task 4 owns the correction —
+both the artifact prose and `chamber_key`'s own doc, which still claims the
+address is the seed-derivation key.
+
+This is the campaign's own standard turned on itself: a string presented as a
+derivation key, in a committed artifact, that no longer derives anything.
