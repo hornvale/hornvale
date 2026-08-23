@@ -277,35 +277,11 @@ pub fn draw_with(
     let width = u32::from(w);
     let height = u32::from(h);
     let (virtual_w, virtual_h) = virtual_dims(win, w);
-    let sub_width = virtual_w * SUBSAMPLES_PER_AXIS;
-    let sub_height = virtual_h * SUBSAMPLES_PER_AXIS;
 
     for row in 0..height {
         for col in 0..width {
-            let plate_row = win.origin_row + row;
-            let plate_col = win.origin_col + col;
-
-            let mut land_votes = 0u32;
-            let mut ocean_votes = 0u32;
-            for i in 0..SUBSAMPLES_PER_AXIS {
-                for j in 0..SUBSAMPLES_PER_AXIS {
-                    let sub_row = plate_row * SUBSAMPLES_PER_AXIS + i;
-                    let sub_col = plate_col * SUBSAMPLES_PER_AXIS + j;
-                    let (lat, lon) =
-                        mercator::unproject(f, sub_row, sub_col, sub_width, sub_height);
-                    let cell = index.nearest(geo, lat, lon);
-                    if terrain.is_ocean(cell) {
-                        ocean_votes += 1;
-                    } else {
-                        land_votes += 1;
-                    }
-                }
-            }
-
-            // `SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS` is odd (7*7 =
-            // 49), so `ocean_votes == land_votes` cannot happen and this
-            // is a true majority, never a tie broken by arm order.
-            let ocean = ocean_votes > land_votes;
+            let (ocean, _cell) =
+                area_majority(terrain, geo, index, f, win, virtual_w, virtual_h, row, col);
             let (glyph, color) = if ocean {
                 (OCEAN_GLYPH, OCEAN_COLOR)
             } else {
@@ -325,6 +301,91 @@ pub fn draw_with(
     }
 
     grid
+}
+
+/// The 49-point area-majority vote for ONE screen cell at `(row, col)`
+/// (screen-relative, before `win.origin_row`/`origin_col` are added) —
+/// SHARED by [`draw_with`] (which paints the winning class as a glyph)
+/// and `bin`'s world-view resolver (Task 3b fix round 1, Finding 2: the
+/// resolver must never name a cell whose class contradicts the glyph the
+/// player is looking at).
+///
+/// Returns whether the majority is ocean, and the [`hornvale_kernel::
+/// CellId`] of the MAJORITY-class sample nearest the screen cell's own
+/// true centre — the `(3, 3)` sub-sample, since [`SUBSAMPLES_PER_AXIS`]
+/// is odd (`7`) and index `3` of `0..7` is the exact centre. That
+/// sub-sample's own `unproject` call is provably identical to a direct
+/// single-point query at the screen cell's centre (`(row + 0.5, col +
+/// 0.5)` scaled by the virtual chart, not the sub-sampled grid — the
+/// `3.5 / 7 == 0.5` identity `bin`'s `driver.rs` `resolve_world_view` doc
+/// works out), so this is never coarser than what the previous,
+/// single-point resolver asked for — only additionally constrained to
+/// agree with what got drawn. Distance-to-centre ties break on the
+/// smaller `(i, j)` in row-major order: deterministic, and never reached
+/// by [`draw_with`] itself (which only reads the vote tally, never which
+/// sample cast it), so this matters only to the resolver.
+///
+/// `virtual_w`/`virtual_h` are `virtual_dims(win, plate_width)`'s own
+/// output — passed in rather than recomputed per cell, since [`draw_with`]
+/// already computes it once for the whole plate and a caller resolving a
+/// single cursor position computes it once per keypress; neither needs a
+/// second copy of that arithmetic per cell.
+#[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
+pub(crate) fn area_majority(
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    index: &NearestCellIndex,
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    row: u32,
+    col: u32,
+) -> (bool, hornvale_kernel::CellId) {
+    let plate_row = win.origin_row + row;
+    let plate_col = win.origin_col + col;
+    let sub_width = virtual_w * SUBSAMPLES_PER_AXIS;
+    let sub_height = virtual_h * SUBSAMPLES_PER_AXIS;
+
+    let mut land_votes = 0u32;
+    let mut ocean_votes = 0u32;
+    let mut samples: Vec<(u32, u32, bool, hornvale_kernel::CellId)> =
+        Vec::with_capacity((SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS) as usize);
+    for i in 0..SUBSAMPLES_PER_AXIS {
+        for j in 0..SUBSAMPLES_PER_AXIS {
+            let sub_row = plate_row * SUBSAMPLES_PER_AXIS + i;
+            let sub_col = plate_col * SUBSAMPLES_PER_AXIS + j;
+            let (lat, lon) = mercator::unproject(f, sub_row, sub_col, sub_width, sub_height);
+            let cell = index.nearest(geo, lat, lon);
+            let ocean = terrain.is_ocean(cell);
+            if ocean {
+                ocean_votes += 1;
+            } else {
+                land_votes += 1;
+            }
+            samples.push((i, j, ocean, cell));
+        }
+    }
+
+    // `SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS` is odd (7*7 = 49), so
+    // `ocean_votes == land_votes` cannot happen and this is a true
+    // majority, never a tie broken by arm order.
+    let ocean = ocean_votes > land_votes;
+
+    const CENTRE: i64 = (SUBSAMPLES_PER_AXIS / 2) as i64; // 3, the exact centre of 0..7
+    let nearest = samples
+        .into_iter()
+        .filter(|&(_, _, sample_ocean, _)| sample_ocean == ocean)
+        .map(|(i, j, _, cell)| {
+            let di = i64::from(i) - CENTRE;
+            let dj = i64::from(j) - CENTRE;
+            (di * di + dj * dj, i, j, cell)
+        })
+        .min()
+        .expect("the majority class always has at least one matching sample, by definition")
+        .3;
+
+    (ocean, nearest)
 }
 
 #[cfg(test)]
