@@ -82,6 +82,18 @@ unchanged, which is why extending the possession transcript to *show* the new
 verbs had to be a separate, deliberate act, isolated in its own commit so the
 one diff could be read line by line.
 
+(The first sentence of that middle paragraph has since acquired a boundary.
+[The Deed](./the-deed.md) gives a possessed body in-character acts that charge
+time and post facts, so a walk-band step now commits an `agent-at` exactly as a
+creature's does, and the player's whereabouts *are* part of a saved world's
+identity at the room tier. What this section actually turns on is untouched and
+was the reason the two tiers exist: entering a chamber, moving within it and
+leaving still commit nothing at all — they charge time now, which is a
+different question — so descent still needs no schema change, no new predicate
+and no epoch, and the test that pins it reads the whole ledger rather than one
+predicate precisely so a later campaign adding a commit path could not walk
+past it.)
+
 ## The footgun in the truncation
 
 A chamber's interior depends on whether anything is built where it stands, and

@@ -4,9 +4,9 @@
 unlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a
 full homeostatic drive cycle: watch a derived NPC grow thirsty and
 satisfy it — narrated by `wait`, felt directly through `needs`, and
-recounted with its own reason by `why`. This settlement condenses
+recounted with its own reason by `!why`. This settlement condenses
 directly onto fresh water (settlements-near-rivers): the NPC drinks in
-place rather than walking to it, so `why` recounts a drink, not a
+place rather than walking to it, so `!why` recounts a drink, not a
 journey — not every settlement's fate (condensation lands most, not
 all, towns on the river network), but this world's own flagship
 settlement's real, measured outcome. The world still moves only

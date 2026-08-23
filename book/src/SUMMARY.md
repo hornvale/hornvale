@@ -389,6 +389,7 @@
 - [The Stylus](./chronicle/the-stylus.md)
 - [The Chroma](./chronicle/the-chroma.md)
 - [The Wick](./chronicle/the-wick.md)
+- [The Deed](./chronicle/the-deed.md)
 
 # Appendix: The Frontier
 

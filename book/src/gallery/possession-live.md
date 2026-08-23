@@ -85,12 +85,23 @@ Lintel) and <code>out</code>,
 anything the chamber's prose or the floor plan's legend named),
 <code>back</code>,
 <code>wait</code> (the world moves too — a derived NPC keeps its own daily
-route, departing and returning), <code>npcs</code>, <code>why</code>,
-<code>whoami</code>, <code>knows</code>,
-<code>eyes</code> (bare, it reports whose eyes you are seeing colour through
-and what their projection drops; <code>eyes own|human|off</code> or any
-species name switches them — The Beholding),
-<code>release</code>. This terminal
+route, departing and returning), <code>knows</code>,
+<code>sleep</code> (lie down and let go of the day; the body stops obeying
+until its own cycle wakes it — The Deed),
+and <code>release</code>, which ends the possession rather than doing anything
+in the world.
+All but the last are <em>in-character</em> verbs: the body does them, so the
+body's own state can refuse them, the ones that move it cost it time, and the
+world remembers the ones that change it.
+A leading <code>!</code> selects the <em>out-of-character</em> namespace, which
+bypasses the body but never the world — the operator instruments
+<code>!whoami</code>, <code>!npcs</code>, <code>!why</code>, <code>!help</code>
+and <code>!eyes</code> (bare, it reports whose eyes you are seeing colour
+through and what their projection drops; <code>!eyes own|human|off</code> or
+any species name switches them — The Beholding), and an objective half of each
+dual verb — <code>!map</code>, <code>!look</code> and the rest — which still
+answers while the body cannot act. None of the instruments has a bare spelling;
+<code>!help</code> lists the lot. This terminal
 is
 <a href="https://github.com/hornvale/hornvale/tree/main/clients/vessel">clients/vessel</a>;
 the world it derives is the same

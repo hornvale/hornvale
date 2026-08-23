@@ -1927,6 +1927,25 @@ establishes that it discriminates**, and a fit that always exists is not that.
   are where a lazily generated world can begin to contradict its own prior. So
   the bet's confidence in *derivation* is materially higher than it was, and its
   confidence in the *loop* is unchanged.
+  **A supporting claim in that entry is corrected by [The
+  Deed](./chronicle/the-deed.md) (2026-08-22), and the score is not.** The
+  sentence above rests The Lintel's byte-identity on the player's position
+  never having been a committed datum, and that half is now false: a possessed
+  body's in-character acts charge time against its own mass and post `agent-at`
+  through the same constructor a creature's step uses, so a walk-band step is
+  persistent world state and the published possession transcript's day-stamps
+  moved with it. The half The Lintel actually turned on survives intact and for
+  the reason the two-tier law states: entering a chamber, moving within it and
+  leaving still commit nothing. What separates them is that the committed tier
+  is the *room*, so the correction is a boundary rather than a reversal. **The
+  bet itself does not move in either direction.** Committing on *action* is not
+  committing on *observation*; promotion-on-touch — where an observed detail is
+  kept — and the delta store it implies are exactly as unbuilt as they were,
+  and nothing here brings a lazily generated world any nearer to contradicting
+  its own prior. Recorded rather than passed over, because a campaign whose
+  headline is *the player now writes to the ledger* looks from outside like it
+  should have moved this row, and decision 0030's sweep is answered by a
+  statement either way.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's

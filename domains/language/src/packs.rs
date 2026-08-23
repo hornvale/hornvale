@@ -639,7 +639,7 @@ pub fn action_suite_pack() -> &'static [(&'static str, &'static str)] {
 
 /// The action suite's OUT-OF-CHARACTER concepts (The Deed, Task 2, spec
 /// §3.2 group A): operator instruments with no referent in the world at
-/// all — `!why`/`!npcs`/`!help`/`!eyes`/`!whoami`/`provoke`/`soothe`.
+/// all — `!why`/`!npcs`/`!help`/`!eyes`/`!whoami`/`!provoke`/`!soothe`.
 /// `(concept, doc)` pairs, deliberately NOT a [`PackEntry`] roster and NOT
 /// chained into [`register_concepts`]'s pack loop: pack membership maps
 /// straight to `ExposureClass::Steeped` (`windows/worldgen`'s
@@ -701,11 +701,11 @@ pub fn extradiegetic_pack() -> &'static [(&'static str, &'static str)] {
         ),
         (
             "provoke",
-            "to make someone hostile by an act the simulation itself did not choose — `provoke`",
+            "to make someone hostile by an act the simulation itself did not choose — `!provoke`",
         ),
         (
             "soothe",
-            "to ease someone's hostility by an act the simulation itself did not choose — `soothe`",
+            "to ease someone's hostility by an act the simulation itself did not choose — `!soothe`",
         ),
     ]
 }
