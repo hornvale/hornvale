@@ -2229,3 +2229,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T01:12:26Z | rebaseline | 74.647 | 238.501 | 12.001 | 3.36 | 0 | ffdd3760c | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-23T01:14:31Z | gate-commit | 86.699 | 473.239 | 43.760 | 5.96 | 0 | ffdd3760c | campaign/the-deed | MacBookPro | 10 |
 | 2026-08-23T01:53:19Z | rebaseline | 38.420 | 232.024 | 11.476 | 6.34 | 0 | 5325c79ad | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:17:06Z | vessel-check | 43.144 | 68.752 | 4.262 | 1.69 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:18:15Z | vessel-check | 29.140 | 29.655 | 0.859 | 1.05 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
+| 2026-08-23T02:21:21Z | vessel-check | 14.767 | 15.707 | 0.580 | 1.10 | 0 | 63cfabaa5 | campaign/the-deed | MacBookPro | 10 |
