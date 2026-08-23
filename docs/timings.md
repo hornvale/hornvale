@@ -2319,3 +2319,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T17:50:10Z | sluice:clients | 251.925 | 1441.846 | 17.245 | 5.79 | 0 | 7775d62e7 |  | lefford | 40 |
 | 2026-08-23T18:30:32Z | gate-commit | 69.993 | 142.217 | 23.422 | 2.37 | 0 | b8574a0dc | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-23T18:35:22Z | gate-commit | 25.253 | 53.292 | 18.378 | 2.84 | 0 | 95a56b42a | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:44:01Z | gate-commit | 16.657 | 16.407 | 1.441 | 1.07 | 0 | fa56c6ebb | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:46:33Z | gate-commit | 20.073 | 16.525 | 1.282 | 0.89 | 0 | 2b3ce98fd | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:48:08Z | gate-commit | 30.324 | 85.072 | 17.197 | 3.37 | 0 | d7b580c97 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:57:18Z | rebaseline | 102.358 | 207.053 | 10.505 | 2.13 | 0 | ad8c28b6f | campaign/the-lexicon | MacBookPro | 10 |

@@ -89,6 +89,9 @@ pub struct NounEntry {
     pub noun: String,
     /// What `examine` prints for it.
     pub datum: String,
+    /// Coarse kind (`creature`/`place`/`thing`/`unknown`) for completion.
+    #[serde(default)]
+    pub kind: String,
 }
 
 /// The band-tagged spatial channel. The wire tag is `band`.
