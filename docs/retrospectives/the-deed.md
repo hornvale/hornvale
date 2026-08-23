@@ -99,6 +99,17 @@ landed 30 hours earlier keying on conflicts; a scratch-repo reproduction of its
 own logic showed a **clean** merge, zero conflicts, still dropping one side.
 Retired in decision 0166.
 
+**Three independent sessions found it, and the registry had a `raw` row for it
+the whole time.** The Stylus minted
+`PROC-merge-driver-regenerates-from-unmerged-tree` after hitting it during its
+own absorption; The Chroma shipped a fail-loudly fix keying on conflicts; The
+Deed reproduced it in both merge directions and retired it. None of the three
+knew about the others until the queue's mouth bounced a merge. **The row was
+`raw`, which is the registry working exactly as intended and nobody reading
+it** — a `raw` row is a capture, not an alarm, and there is no mechanism that
+raises one when a third session trips the same wire. Flipped to
+`ratified (0166)` at this close.
+
 Three process points fall out:
 
 - **The driver's own test suite had no runner.** Nothing invoked it; the
