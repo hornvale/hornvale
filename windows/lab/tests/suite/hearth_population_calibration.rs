@@ -401,6 +401,21 @@ fn creature(entity: EntityId, home: RoomAddr, species: &str, niche: ConditionRes
         // planted scenario's timings are the creature-independent baseline.
         mass_kg: hornvale_vessel::clock::REFERENCE_MASS_KG,
         label: species.to_string(),
+        // The Hand: a synthetic body still needs the two fields a derived one
+        // carries. There is no world here, so both are fabricated — the
+        // village is a plausible placeholder and the perception agrees with
+        // the activity cycle set above, which is all any scenario reads. Same
+        // fabrication `synthetic.rs`'s own `creature` helper uses.
+        village: hornvale_settlement::VillageInfo {
+            id: entity,
+            name: "the harness".to_string(),
+            population: 1,
+        },
+        perception: hornvale_species::PerceptionVector {
+            activity: ActivityCycle::Diurnal,
+            night_vision: 0.5,
+            sky_attention: 0.5,
+        },
     }
 }
 
