@@ -128,25 +128,25 @@ pub enum Stratum {
     Hadal,
     /// The living skin: soil / weathered regolith. A rock depth *register* —
     /// explicitly not something a chamber moves between (The Stratum §3).
-    /// Mirrors `hornvale_terrain::BandKind::Regolith` (decision 0094: a
+    /// Mirrors `hornvale_terrain::Horizon::Regolith` (decision 0094: a
     /// shared roster, never a shared derivation — climate may not import
     /// terrain).
     Regolith,
     /// Deposited / volcanic surface rock — the legible archive. Mirrors
-    /// `hornvale_terrain::BandKind::Cover`.
+    /// `hornvale_terrain::Horizon::Cover`.
     Cover,
     /// Crystalline craton (terrain's inherited `Basement`). Mirrors
-    /// `hornvale_terrain::BandKind::Basement`.
+    /// `hornvale_terrain::Horizon::Basement`.
     Basement,
     /// Deep crust: hot, high-pressure. Mirrors
-    /// `hornvale_terrain::BandKind::Roots`.
+    /// `hornvale_terrain::Horizon::Roots`.
     Roots,
     /// The primordial substrate / threshold to the not-here. Measured empty
     /// (0 of 55,947 caves — Task 0) but included regardless: rule 1a makes
     /// `ChamberAddr.band` index this ladder, and the open
     /// `MAP-cave-depth-weld` fix may make this band occur — omitting it
     /// would relocate every address the day that fix lands. Mirrors
-    /// `hornvale_terrain::BandKind::Underneath`.
+    /// `hornvale_terrain::Horizon::Underneath`.
     Underneath,
 }
 

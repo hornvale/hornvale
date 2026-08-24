@@ -356,6 +356,23 @@ mod tests {
                 // spells the rung's NAME. `chamber/v2` joins `chamber/v1` in
                 // retirement; neither is ever reused.
                 "chamber v3",
+                // The Drift, Task 6 (spec §4.5): which branches of an
+                // adjacent band a branch connects to — the edges descent
+                // actually travels, which nothing drew before this campaign.
+                // A NEW label, ADDITIVE at v1: it derives its own independent
+                // stream and perturbs none of the ones around it, so no
+                // existing key moves and no world's existing draws change.
+                //
+                // Versioned from birth like every sibling here, because its
+                // KEY is a save-format contract: cell, branch, band NAME and
+                // the ROLE word (`child`/`parent`) — see
+                // `windows/worldgen/src/chamber.rs`'s `descent_key`. The role
+                // is in the key because one place in the lattice answers two
+                // independent questions ("who is below me", "who am I below"),
+                // and giving each its own stream is what keeps the two
+                // surjections whose union guarantees connectivity from
+                // sharing draws in a fixed order.
+                "chamber/band-descent v1",
                 // The Stope, Task 2: how many floors one RUN — the floors of
                 // one branch within one band — realizes. A NEW label,
                 // ADDITIVE at v1: it derives its own independent stream and
@@ -377,19 +394,72 @@ mod tests {
                 // PARENT and not by the observation that one key is a strict
                 // prefix of the other. See `windows/worldgen/src/streams.rs`'s
                 // `RUN_FLOORS`.
-                "chamber/branch-barrier v1",
-                "chamber/branch-character v1",
-                "chamber/branch-count v1",
-                "chamber/branch-root v1",
+                //
+                // **The Drift bumps it to v2** (spec amendment A.3/A.6):
+                // `entrance` left `RunAddr` entirely — an entrance is which
+                // aperture a player used, not a coordinate in a system's own
+                // lattice — so the key dropped a whole segment
+                // (`cell/branch/band` instead of `cell/entrance/branch/band`).
+                // Unlike `chamber v3` (a display formatter with no production
+                // reader, per A.6), this IS a live production leg —
+                // `levels_in_branch` is `chamber_exists`'s own drawn-length
+                // gate — so the re-keying rides a real epoch. `chamber/
+                // run-floors/v1` is retired and never reused.
+                // **The Drift Task 5 bumps these three to v2** (spec
+                // amendment A.3): `entrance` left each key entirely and
+                // `band` moved in — a branch's character, barrier and count
+                // are now facts about `(system, band)` rather than the
+                // system as a whole, which is what lets one system be two
+                // branches wide in the Undercroft and one wide in the
+                // Shallows. All three are live production legs
+                // (`chamber_exists`'s own branch gate reads `BRANCH_COUNT`
+                // directly), so the re-keying rides a real epoch, same
+                // discipline as `RUN_FLOORS`'s own v2 bump above.
+                // `chamber/branch-barrier/v1`, `chamber/branch-character/v1`
+                // and `chamber/branch-count/v1` are retired and never
+                // reused. **`chamber/branch-root/v1` is GONE** (The Drift
+                // Task 7, spec §4.6): `root_floor_of` retired with it, so
+                // the label is not merely unchanged but absent — a leg
+                // nothing derives from must not sit in a stamp claiming a
+                // world reads it. Retired and never reused, like every
+                // superseded label above.
+                "chamber/branch-barrier v2",
+                "chamber/branch-character v2",
+                "chamber/branch-count v2",
                 // The two Task 5 entrance legs (amendment C.3): how many
-                // apertures a system opens, and which floor each opens into.
-                // Both additive NEW labels at v1, both keyed on stable
+                // apertures a system opens, and which branch each opens on.
+                // Both were additive NEW labels at v1, both keyed on stable
                 // lattice places (cell; cell + entrance index). See
                 // `windows/worldgen/src/streams.rs`'s ENTRANCE_COUNT /
                 // ENTRANCE_MOUTH.
-                "chamber/entrance-count v1",
-                "chamber/entrance-mouth v1",
-                "chamber/run-floors v1",
+                //
+                // **The Drift Task 7b bumps BOTH to v2** (spec amendment
+                // E.2/E.4). §4.5's "every branch has a parent" is vacuous at
+                // the TOP band, which has no band above it, so a top-band
+                // branch no door landed on was orphaned along with
+                // everything hanging beneath it — 120 of seed 42's 123
+                // unreached levels. E.2 closes it by construction: every
+                // top-band branch is named by an aperture. That costs both
+                // legs a real discontinuity, and they are different ones:
+                //
+                //   - `entrance-count` keeps its key and changes its ANSWER
+                //     — it now supplies the size of the FREE aperture set,
+                //     which the shipped count raises to the top band's
+                //     branch width. One key, two different quantities across
+                //     the boundary.
+                //   - `entrance-mouth` changes its KEY as well, gaining a
+                //     `share`/`free` role word, because the sharing-out draw
+                //     indexes a shrinking pool of unspoken-for branches
+                //     while the free draw names any side branch. One key
+                //     would have served two questions at two widths.
+                //
+                // Neither is an empty epoch (A.6's refusal): both are live
+                // production legs every world derives every aperture from.
+                // `chamber/entrance-count/v1` and `chamber/entrance-mouth/v1`
+                // are retired and never reused.
+                "chamber/entrance-count v2",
+                "chamber/entrance-mouth v2",
+                "chamber/run-floors v2",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.

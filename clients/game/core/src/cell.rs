@@ -190,6 +190,32 @@ pub enum Source {
     /// backs (the echo is `bin`'s own record of what it sent, held
     /// alongside `Driver`, never a field read off a `Snapshot`).
     Echo,
+    /// The completion hint line beneath the command row (`entry.rs`, The
+    /// Lexicon Task 9): the stem-plus-matches presentation of an ambiguous
+    /// tab-completion, drawn from the driver's candidate vocabulary.
+    /// **Deliberately its own variant**, not [`Source::Chrome`] — the
+    /// candidates are world vocabulary (resolved names), the same reason
+    /// [`Source::Look`] is not `Chrome` — and not [`Source::Typed`]: only
+    /// the STEM is what the buffer holds; the remainder of each candidate
+    /// is *suggested*, never typed. Like [`Source::Look`], [`Source::Typed`],
+    /// and [`Source::Echo`], its provenance is a **caller discipline**:
+    /// this crate cannot verify that the strings handed over are genuinely
+    /// the resolver's matches, so `bin` must only ever pass real ones.
+    Hint,
+    /// The whole-world Mercator plate, rendered by `bin` from
+    /// `hornvale-terrain` and handed to [`render_with`] as a `Grid`.
+    ///
+    /// **Not verifiable by construction**, exactly like [`Source::Look`]:
+    /// `Chart`, `Plan`, `Prose` and `Identity` each trace to a field this
+    /// crate parsed off `Snapshot`, and this one does not — the planet is
+    /// not on `vessel/session/v2` and must not be (a world-terrain channel
+    /// would put a planet in every per-turn document). So its honesty is a
+    /// **caller discipline**: `bin` must pass a genuinely terrain-derived
+    /// plate, never a placeholder.
+    ///
+    /// **Deliberately not [`Source::Chrome`]**: the plate is world-derived
+    /// data, and `Chrome` means declared-inert.
+    World,
 }
 
 /// One character cell. A tile is a drop-in replacement for exactly one of
@@ -433,5 +459,16 @@ mod tests {
         assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Plain);
         unsafe { std::env::remove_var("NO_COLOR") };
         assert_eq!(Ink::from_wire(Some([36, 36, 1])), Ink::Rgb([36, 36, 1]));
+    }
+
+    /// The plate is world-derived, so `Chrome` (declared-inert) would be a
+    /// false claim. It is also not a snapshot channel — `core` cannot point
+    /// at a `Snapshot` field that justifies it — so it sits with `Look`,
+    /// `Typed` and `Echo` in the caller-discipline family.
+    #[test]
+    fn the_world_plate_has_its_own_provenance_and_it_is_not_chrome() {
+        let c = Cell::glyph('^', Weight::Normal, Source::World);
+        assert_eq!(c.source, Source::World);
+        assert_ne!(c.source, Source::Chrome);
     }
 }

@@ -33,13 +33,36 @@ needs the canonical box for, and they differ in exactly one respect:
 | | `make sluice-stage BRANCH=… REF=…` | `make sluice BRANCH=… REF=…` |
 |---|---|---|
 | when | every plan-stage boundary | work is complete |
-| phases | the `stage`-rung ones | all six, `heavy` last |
+| phases | `artifacts outboard gate clients` | **the same four** — see below |
 | merges main+branch in the chamber | yes | yes |
 | pushes | **never** | yes, the exact SHA it tested |
 | terminal state | `reported` | `landed` |
 | headline refused if junk | no — nothing permanent carries it | yes |
 
-Everything below applies to both unless it says otherwise. A stage gate is
+Everything below applies to both unless it says otherwise.
+
+**THE PHASE SETS ARE IDENTICAL, AND A MERGE DOES NOT RUN `heavy`.** An earlier
+version of this table said a merge runs "all six, `heavy` last." It does not.
+`scripts/sluice-run.sh:360` is unambiguous:
+
+```
+merge_phases="artifacts outboard gate clients"
+stage_phases="artifacts outboard gate clients"
+```
+
+The file says so in its own prose too — the two kinds "run the SAME phases and
+differ only in the push — which was always the design" (`:341`), and a merge
+product is "gated as itself, by four phases" (`:348`). `heavy` is not a chamber
+phase at all: it is a separate dispatch, `make heavy-remote REF=<full-sha>`.
+
+**Why this matters when choosing between them.** The difference is the push and
+nothing else, so a green stage gate on an ancestor SHA has already bought a
+merge's entire phase coverage. Do not reason that going straight to merge "adds
+the full suite" — it adds the push. The stage gate's real value is that its
+refusal is free, and it leaves `main` untouched by construction rather than by
+a phase passing. (Learned by The Forebay reasoning from the stale row and
+telling its decider the wrong thing.)
+ A stage gate is
 not a lesser instrument: it gates the same real merge product, which is what
 makes it worth queueing behind an hour of someone else's heavy run. What it
 replaced (`make gate-stage`) tested a bare branch tip and could go green on

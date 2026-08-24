@@ -388,6 +388,7 @@
 - [The Cant](./chronicle/the-cant.md)
 - [The Portolan](./chronicle/the-portolan.md)
 - [The Stylus](./chronicle/the-stylus.md)
+- [The Lexicon](./chronicle/the-lexicon.md)
 - [The Chroma](./chronicle/the-chroma.md)
 - [The Penstock](./chronicle/the-penstock.md)
 - [The Scour](./chronicle/the-scour.md)
@@ -395,7 +396,11 @@
 - [The Deed](./chronicle/the-deed.md)
 - [The Stope](./chronicle/the-stope.md)
 - [The Stride](./chronicle/the-stride.md)
+- [The Drift](./chronicle/the-drift.md)
+- [The Hand](./chronicle/the-hand.md)
 - [The Mirror](./chronicle/the-mirror.md)
+- [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
+- [The Forebay](./chronicle/the-forebay.md)
 
 # Appendix: The Frontier
 

@@ -36,6 +36,36 @@ const STOPWORDS: [&str; 14] = [
 /// The floor governs what is split OUT of a phrase, never the phrase itself.
 const MIN_WORD: usize = 4;
 
+/// The coarse kind a completion-capable client may filter on. Closed set;
+/// `Unknown` is the honest default where the sim claims nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NounKind {
+    /// A living or animate being. No render-site noun carries this yet —
+    /// creatures are tagged at later call sites (the session's present and
+    /// underground nouns).
+    Creature,
+    /// A location: biome, regime descriptor, village.
+    Place,
+    /// An object or phenomenon that is neither of the above.
+    Thing,
+    /// No kind claimed.
+    Unknown,
+}
+
+impl NounKind {
+    /// The lowercase wire tag this kind serializes as, for the additive
+    /// `kind` field on `snapshot::NounEntry`.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn tag(self) -> &'static str {
+        match self {
+            NounKind::Creature => "creature",
+            NounKind::Place => "place",
+            NounKind::Thing => "thing",
+            NounKind::Unknown => "unknown",
+        }
+    }
+}
+
 /// One examinable thing: what the prose called it, what `examine` prints, and
 /// the words a player may type to reach it.
 ///
@@ -53,6 +83,9 @@ pub struct Noun {
     pub datum: String,
     /// Lowercased words that resolve to this entry. Never serialized.
     pub words: Vec<String>,
+    /// The coarse kind claimed for this entry. Defaults to `Unknown`; see
+    /// `with_kind` for the construction sites that can claim one.
+    pub kind: NounKind,
 }
 
 impl Noun {
@@ -79,7 +112,14 @@ impl Noun {
             display: display.to_string(),
             datum: datum.to_string(),
             words,
+            kind: NounKind::Unknown,
         }
+    }
+
+    /// Attach a coarse kind, for construction sites that can claim one.
+    pub fn with_kind(mut self, kind: NounKind) -> Noun {
+        self.kind = kind;
+        self
     }
 
     /// Whether `wanted` (already trimmed) names this entry, case-insensitively.
@@ -171,7 +211,8 @@ impl Focalizer for TemplateFocalizer {
                     v.locale.fields.moisture,
                     height_phrase(v.locale.fields.height_asl_m)
                 ),
-            ),
+            )
+            .with_kind(NounKind::Place),
             Noun::new(
                 &descriptor,
                 &v.locale.regime.descriptor_noun,
@@ -179,20 +220,22 @@ impl Focalizer for TemplateFocalizer {
                     "The ground here: {} (strangeness {:.0}).",
                     v.locale.regime.descriptor, v.locale.regime.strangeness
                 ),
-            ),
+            )
+            .with_kind(NounKind::Place),
             Noun::new(
                 &village,
                 &village,
                 &format!("{} souls call it home.", v.village.population),
-            ),
-            Noun::new(&sky_noun, &sky_noun, &v.sky),
+            )
+            .with_kind(NounKind::Place),
+            Noun::new(&sky_noun, &sky_noun, &v.sky).with_kind(NounKind::Thing),
         ];
         // One entry per body the sky named — "the vast moon", "the sun" — so
         // a player can name what the sentence just said rather than only the
         // whole report. Two moons both yielding the word "moon" is expected;
         // `Noun::matches` and catalog order resolve it to the first.
         for (noun, datum) in &v.sky_bodies {
-            nouns.push(Noun::new(noun, noun, datum));
+            nouns.push(Noun::new(noun, noun, datum).with_kind(NounKind::Thing));
         }
         Focalized { prose, nouns }
     }
@@ -201,10 +244,18 @@ impl Focalizer for TemplateFocalizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{mint_flagship, observable};
-    use hornvale_kernel::{Seed, World, WorldTime};
+    use crate::observable;
+    use hornvale_kernel::{EntityId, Seed, World, WorldTime};
     use hornvale_locale::LocaleContext;
     use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+
+    #[test]
+    fn a_noun_defaults_to_unknown_and_with_kind_sets_it() {
+        let n = Noun::new("tropical seasonal forest", "forest", "warm.");
+        assert_eq!(n.kind, NounKind::Unknown);
+        let p = n.clone().with_kind(NounKind::Place);
+        assert_eq!(p.kind, NounKind::Place);
+    }
 
     #[test]
     fn significant_words_skip_stopwords_and_short_words() {
@@ -267,11 +318,15 @@ mod tests {
     fn vantage_at(day: f64) -> Vantage {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let agent = mint_flagship(&world, &ctx).unwrap();
+        let village = hornvale_settlement::village_info(&world).expect("seed 42 has a flagship");
+        let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
+        let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
+        let position = npc.home.clone();
         observable(
             &world,
             &ctx,
-            &agent,
+            &npc,
+            &position,
             WorldTime::new(day).expect("a day value is finite"),
         )
         .unwrap()
@@ -302,6 +357,34 @@ mod tests {
         let b = TemplateFocalizer.render(&vantage_at(0.0));
         assert_eq!(a.prose, b.prose);
         assert_eq!(a.nouns, b.nouns);
+    }
+
+    #[test]
+    fn rendered_noun_kinds_match_each_entrys_role() {
+        // Pins the four `.with_kind(...)` sites in `render()`: places are
+        // Place, everything the sky contributes is Thing. Swapping any tag
+        // must fail here.
+        let v = vantage_at(0.0);
+        let f = TemplateFocalizer.render(&v);
+        let kind_of = |display: &str| {
+            f.nouns
+                .iter()
+                .find(|n| n.display == *display)
+                .unwrap_or_else(|| panic!("no noun named {display:?}"))
+                .kind
+        };
+        assert_eq!(kind_of(&v.locale.biome), NounKind::Place);
+        assert_eq!(kind_of(&v.locale.regime.descriptor), NounKind::Place);
+        assert_eq!(kind_of(&v.village.name), NounKind::Place);
+        assert_eq!(kind_of("sky"), NounKind::Thing);
+        for (noun, _) in &v.sky_bodies {
+            assert_eq!(
+                kind_of(noun),
+                NounKind::Thing,
+                "sky body {noun:?} must be a Thing"
+            );
+        }
+        assert!(!f.nouns.iter().any(|n| n.kind == NounKind::Creature));
     }
 
     #[test]

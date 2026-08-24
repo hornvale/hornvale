@@ -56,13 +56,10 @@ fn full_land_graph(geo: &Geosphere) -> ConnectionGraph {
 /// simplification, it is what the composition root would hand it — and it is
 /// what makes each of these tests, unchanged, evidence that the re-key moved
 /// nothing above ground.
-fn surface_seating(
-    geo: &Geosphere,
-    peoples: &[KindId],
-) -> Vec<CellMap<hornvale_terrain::DelveRung>> {
+fn surface_seating(geo: &Geosphere, peoples: &[KindId]) -> Vec<CellMap<hornvale_kernel::Band>> {
     peoples
         .iter()
-        .map(|_| CellMap::from_fn(geo, |_| hornvale_terrain::DelveRung::Surface))
+        .map(|_| CellMap::from_fn(geo, |_| hornvale_kernel::Band::Surface))
         .collect()
 }
 

@@ -663,7 +663,7 @@ gen_underworld_lattice() {
     printf 'A chamber is never stored. Existence and content are pure functions of an\n'
     printf 'address, so this page is a *witness*, not a record: every line is re-derived\n'
     printf 'from the seed on each regeneration, and a change to the derivation key, to\n'
-    printf 'the existence draw, to a run'"'"'s drawn length, to a chamber'"'"'s content or\n'
+    printf 'the existence gate, to a run'"'"'s drawn length, to a chamber'"'"'s content or\n'
     printf 'to the depth the rock grants a cave moves bytes here.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf '`reachable` is the count a player would actually experience: chambers\n'
@@ -671,15 +671,25 @@ gen_underworld_lattice() {
     printf 'the descent sequence (a run'"'"'s drawn length is its sojourn; past it, the\n'
     printf 'next band'"'"'s floor 0). That sequence is the number, not a rounding error.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'The `key` column is the real derivation key of that run'"'"'s floor 0 --\n'
+    printf 'The `key` column is a DISPLAY FORMATTER of that run'"'"'s floor 0'"'"'s address,\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'the string `StreamLabel::dynamic` hashes -- not a rendering of the address.\n'
+    printf 'not a derivation key (The Drift, spec amendment A.6): Task 1 deleted the\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'chamber existence draw, chamber_key'"'"'s only production caller, so nothing in a\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'shipped world derives from it any more. The real derivation keys are\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '`levels_in_branch`'"'"'s RUN_FLOORS leg and the three per-branch legs in\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf '`crate::character` -- this column still witnesses the address'"'"'s SPELLING (the\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'rung name, the field order), which is what makes it worth printing.\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'Each run shows one glyph per floor the LATTICE admits, never per floor the\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'run drew: a `#` exists, a `.` was refused by the existence draw (or sits\n'
+    printf 'run drew: a `#` exists, a `.` sits deeper than the cave'"'"'s budget\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'deeper than the cave'"'"'s budget reaches), and a `_` is past that run'"'"'s\n'
+    printf 'reaches, and a `_` is past that run'"'"'s\n'
     printf 'own drawn length. Bounding the row by the drawn length instead is what made\n'
     printf 'an earlier version of this page unable to see either floor gate at all.\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -688,7 +698,7 @@ gen_underworld_lattice() {
     printf '`junctions_at` derives at each shared delve band -- derived, not drawn: it\n'
     printf 'consumes no stream leg OF ITS OWN, so a shortcut is a fact about the geology\n'
     printf 'rather than a die roll on top of an epoch. (It does travel the legs the facts\n'
-    printf 'it reads already have -- an existence draw here, a branch character there --\n'
+    printf 'it reads already have -- a branch-count draw here, a branch character there --\n'
     printf 'and an earlier version of this page dropped that qualifier and asserted the\n'
     printf 'falsehood that it consumes no stream at all.) A link is an EDGE, counted once\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal

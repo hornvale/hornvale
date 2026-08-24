@@ -26,7 +26,7 @@ use hornvale_kernel::{
 use hornvale_language::CommonVocabulary;
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{
-    BandKind, Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, TerrainPins,
+    Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, Horizon, TerrainPins,
 };
 use std::cell::RefCell;
 use std::sync::OnceLock;
@@ -109,8 +109,8 @@ pub mod vestige;
 pub mod volcano;
 pub use ablation::ChannelMask;
 pub use character::{
-    BarrierPins, BarrierState, BranchRoot, CHARACTERS, Character, bands_of, barrier_of,
-    branch_count_of, character_at, character_of, parse_barrier_pin, root_floor_of,
+    BarrierPins, BarrierState, CHARACTERS, Character, bands_of, barrier_of, branch_count_of,
+    character_at, character_of, parse_barrier_pin,
 };
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_from,
@@ -144,7 +144,7 @@ pub use history_emit::{
 /// new dependency edge — the layering graph is unchanged.
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
-pub use resolve::resolve_at;
+pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{
@@ -828,7 +828,7 @@ pub fn deposit_of(
         return Some(Deposit {
             process: DepositProcess::Lateritic,
             commodity: Commodity::Bauxite,
-            depth: BandKind::Regolith,
+            depth: Horizon::Regolith,
             grade: 0.4,
             tonnage: 0.6,
         });
@@ -2685,7 +2685,7 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// around it entirely by building a `Substrate` directly from another
 /// `Substrate`; it never asks what a cave's legacy `Biome` is.
 ///
-/// **The depth coordinate is metres, not a [`hornvale_terrain::DelveRung`],
+/// **The depth coordinate is metres, not a [`hornvale_kernel::Band`],
 /// and that is a deliberate departure from spec §4.3's wording.** §4.3 says
 /// this function "gains the chamber's delve rung and routes temperature
 /// through `temperature_at_depth`"; those two clauses are not jointly
@@ -7289,7 +7289,7 @@ fn bake_history_from(
             )
         })
         .collect();
-    let seating_rungs: Vec<hornvale_kernel::CellMap<hornvale_terrain::DelveRung>> =
+    let seating_rungs: Vec<hornvale_kernel::CellMap<hornvale_kernel::Band>> =
         seatings.into_iter().map(|s| s.rung).collect();
     // The Granary T2: the coarse biome class of every cell, built once here
     // (the composition root's own `biome_class` mapping over the climate's
@@ -9774,7 +9774,7 @@ mod tests {
         // (ΔT = 0 / 2 / 8 / 25 / 50 K); one depth inside each.
         let depths = [20.0, 200.0, 600.0, 1400.0, 2600.0];
 
-        let rungs: Vec<hornvale_terrain::DelveRung> = depths
+        let rungs: Vec<hornvale_kernel::Band> = depths
             .iter()
             .map(|&d| hornvale_terrain::rung_at_depth(d, gradient))
             .collect();
@@ -13064,7 +13064,7 @@ mod tests {
                             Some(Deposit {
                                 process: DepositProcess::Lateritic,
                                 commodity: Commodity::Bauxite,
-                                depth: BandKind::Regolith,
+                                depth: Horizon::Regolith,
                                 grade: 0.4,
                                 tonnage: 0.6,
                             }),
