@@ -174,11 +174,45 @@ goldens passing, a clean post-absorption regeneration and a conflict-free
 `merge-tree` against a current `main`, the residual risk was a phase this branch
 has no plausible way to redden.
 
-What made that judgement worth recording is that the **whole-workspace suite had
-not run anywhere** — `gate-commit` covers only the sub-floor tier, and the local
-wrapper correctly refuses a workspace-wide test invocation, naming the sluice as
-the thing that runs it. So the merge submission is not skipping the full suite;
-it is the first and only place it runs.
+**And then the stage gate ran anyway, and was green.** The judgement above was
+made believing the whole-workspace suite had not run anywhere — `gate-commit`
+covers only the sub-floor tier, and the local wrapper correctly refuses a
+workspace-wide test invocation, naming the sluice as the thing that runs it.
+While the merge was being prepared, an operator picked up the already-queued
+stage request and it **reported green: all four stage phases rc=0 in 935 s,
+`main` unchanged.** That SHA is an ancestor of the merge SHA and the only
+commits on top are this file and a `docs/timings.md` row, so the suite has run
+on exactly this code. The merge is therefore submitted on a *gated* SHA after
+all — a better position than the one the decision was taken from, and worth
+recording as luck rather than as vindication.
+
+## A conflict with a queued peer is predictable before it happens
+
+`campaign/the-hand` sat one place ahead in the queue, and rather than wait to be
+held, `git merge-tree` answered the question directly against the peer's own
+tip:
+
+```
+git merge-tree --write-tree <peer-tip> <my-tip>   ->  rc=1, 3 conflicts
+```
+
+The Hand mints decisions 0226-0230, so it rewrites `docs/decisions/README.md`
+and `docs/digest/decisions-in-force.md`, and its own `pub`-surface changes move
+`docs/audits/type-audit-report.md` — the same three files this campaign touches.
+So a hold was **certain** the moment The Hand landed, not merely possible.
+
+This is worth keeping because every instance of this shape on the board is
+narrated *after* the hold, by the operator, to a campaign that did not see it
+coming. The mouth's refusal is cheap by design (milliseconds, the box never
+taken, `main` untouched), so being held is not costly — but knowing in advance
+converts a surprise into a scheduled step, and the remedy is fixed and
+documented: absorb `main`, `make rebaseline`, regenerate the digest through its
+redirect, resubmit. **Never hand-resolve a generated file**; its content is a
+function of the code it was generated from, not of the two sides of the merge.
+
+The generalisable move: when `make sluice-status` shows a peer ahead of you,
+`merge-tree` against that peer's tip rather than against `main`. `main` is the
+wrong question — it is where you already are, not where you will be.
 
 ## Deferred, with homes
 
