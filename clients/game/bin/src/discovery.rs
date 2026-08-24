@@ -139,6 +139,24 @@ impl Discovered {
     pub fn contains(&self, id: FeatureId) -> bool {
         self.0.contains(&id)
     }
+
+    /// How many features have been discovered.
+    ///
+    /// **This is a sound VERSION for a cache key precisely because this
+    /// type is monotonic** (H6): [`Discovered::record`] is its only
+    /// mutator, it only ever inserts, and nothing removes or clears — so
+    /// the count strictly increases and two different discovery sets can
+    /// never share one. If a future campaign adds removal, every consumer
+    /// keying on this count silently serves stale data; change them
+    /// together.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Whether nothing has been discovered yet.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[cfg(test)]
