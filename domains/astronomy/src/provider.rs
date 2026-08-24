@@ -28,7 +28,7 @@ mod tests {
     fn ctx(day: f64) -> ObserverContext {
         ObserverContext::at(
             EntityId::new(1).unwrap(),
-            WorldTime::new(day).expect("a day value is finite"),
+            WorldTime::from_std_days(day).expect("a day value is finite"),
         )
     }
 
@@ -41,7 +41,10 @@ mod tests {
             vec![luna_like()],
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
-        (s, WorldTime::new(13.1).expect("a day value is finite"))
+        (
+            s,
+            WorldTime::from_std_days(13.1).expect("a day value is finite"),
+        )
     }
 
     #[test]
@@ -51,7 +54,7 @@ mod tests {
             s.sky_at(night),
             s.sky_at_visibility(night, Visibility::CLEAR)
         );
-        let noon = WorldTime::new(13.5).expect("a day value is finite");
+        let noon = WorldTime::from_std_days(13.5).expect("a day value is finite");
         assert_eq!(s.sky_at(noon), s.sky_at_visibility(noon, Visibility::CLEAR));
     }
 
@@ -214,11 +217,13 @@ mod tests {
             ..SkyPins::default()
         });
         let day_len = s.calendar().day_length().unwrap().get();
-        let noon = s.sky_at(WorldTime::new(10.5 * day_len).expect("a day value is finite"));
-        let night = s.sky_at(WorldTime::new(10.01 * day_len).expect("a day value is finite"));
+        let noon =
+            s.sky_at(WorldTime::from_std_days(10.5 * day_len).expect("a day value is finite"));
+        let night =
+            s.sky_at(WorldTime::from_std_days(10.01 * day_len).expect("a day value is finite"));
         assert_ne!(noon.description, night.description);
         assert_eq!(
-            s.sky_at(WorldTime::new(10.5 * day_len).expect("a day value is finite"))
+            s.sky_at(WorldTime::from_std_days(10.5 * day_len).expect("a day value is finite"))
                 .description,
             noon.description
         );
@@ -296,7 +301,7 @@ mod tests {
         });
         let obs = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime::new(10.5).expect("a day value is finite"),
+            WorldTime::from_std_days(10.5).expect("a day value is finite"),
             GeoCoord {
                 latitude: 40.0,
                 longitude: 25.0,
@@ -668,7 +673,7 @@ mod tests {
         let at = |day: f64| {
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(day).expect("a day value is finite"),
+                WorldTime::from_std_days(day).expect("a day value is finite"),
                 GeoCoord {
                     latitude: track.center_lat_deg,
                     longitude: ss,
@@ -714,7 +719,7 @@ mod tests {
         let night_lon = (ss + 360.0).rem_euclid(360.0) - 180.0;
         let obs = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime::new(lunar.day.0).expect("a day value is finite"),
+            WorldTime::from_std_days(lunar.day.0).expect("a day value is finite"),
             GeoCoord {
                 latitude: 0.0,
                 longitude: night_lon,
@@ -749,15 +754,15 @@ mod tests {
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
         let noon = s
-            .sky_at(WorldTime::new(10.5).expect("a day value is finite"))
+            .sky_at(WorldTime::from_std_days(10.5).expect("a day value is finite"))
             .description;
         assert!(noon.contains("The light is golden."), "got {noon}");
         let dusk = s
-            .sky_at(WorldTime::new(10.78).expect("a day value is finite"))
+            .sky_at(WorldTime::from_std_days(10.78).expect("a day value is finite"))
             .description;
         assert!(dusk.contains("The horizon glows gold."), "got {dusk}");
         let night = s
-            .sky_at(WorldTime::new(10.1).expect("a day value is finite"))
+            .sky_at(WorldTime::from_std_days(10.1).expect("a day value is finite"))
             .description;
         assert!(!night.contains("horizon"), "night takes no hue: {night}");
     }
@@ -851,7 +856,7 @@ mod tests {
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
         let at = |t: f64| {
-            s.sky_at(WorldTime::new(t).expect("a day value is finite"))
+            s.sky_at(WorldTime::from_std_days(t).expect("a day value is finite"))
                 .description
         };
         assert!(
@@ -882,7 +887,7 @@ mod tests {
                 ..SkyPins::default()
             };
             sky(pins)
-                .sky_at(WorldTime::new(10.5).expect("a day value is finite"))
+                .sky_at(WorldTime::from_std_days(10.5).expect("a day value is finite"))
                 .description
         };
         let retro = noon_sky(crate::pins::SpinPin::Retrograde);
@@ -904,21 +909,21 @@ mod tests {
         // Synodic month = 27.32 × 365.25 / (365.25 − 27.32) ≈ 29.53 d.
         // t = 13.1: phase ≈ 0.4436 — inside the centered full window
         // [7/16, 9/16); local-day fraction 0.1 — night.
-        let full = s.sky_at(WorldTime::new(13.1).expect("a day value is finite"));
+        let full = s.sky_at(WorldTime::from_std_days(13.1).expect("a day value is finite"));
         assert!(
             full.description.contains("shows its full face"),
             "got {}",
             full.description
         );
         // t = 7.1: phase ≈ 0.2404 — first quarter.
-        let quarter = s.sky_at(WorldTime::new(7.1).expect("a day value is finite"));
+        let quarter = s.sky_at(WorldTime::from_std_days(7.1).expect("a day value is finite"));
         assert!(
             quarter.description.contains("shows its first-quarter face"),
             "got {}",
             quarter.description
         );
         // t = 3.05: phase ≈ 0.1033 — waxing crescent.
-        let crescent = s.sky_at(WorldTime::new(3.05).expect("a day value is finite"));
+        let crescent = s.sky_at(WorldTime::from_std_days(3.05).expect("a day value is finite"));
         assert!(
             crescent
                 .description
@@ -941,7 +946,7 @@ mod tests {
                 neighbor(crate::pins::NeighborClass::RedDwarf, "dim red"),
             ],
         );
-        let night = s.sky_at(WorldTime::new(10.1).expect("a day value is finite"));
+        let night = s.sky_at(WorldTime::from_std_days(10.1).expect("a day value is finite"));
         assert!(
             night
                 .description
@@ -961,7 +966,7 @@ mod tests {
             vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
         );
         let noon = |day: f64| {
-            s.sky_at(WorldTime::new(day).expect("a day value is finite"))
+            s.sky_at(WorldTime::from_std_days(day).expect("a day value is finite"))
                 .description
         };
         // Year phase 0.25 is midsummer (daylight peaks); ±1/16 around each
@@ -1002,7 +1007,7 @@ mod tests {
         for k in 0..365 {
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(k as f64 * year / 365.0).expect("a day value is finite"),
+                WorldTime::from_std_days(k as f64 * year / 365.0).expect("a day value is finite"),
                 GeoCoord {
                     latitude: 35.0,
                     longitude: 0.0,
@@ -1047,7 +1052,7 @@ mod tests {
             let t = k as f64 * span / 60.0;
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(t).expect("a day value is finite"),
+                WorldTime::from_std_days(t).expect("a day value is finite"),
                 GeoCoord {
                     latitude: 35.0,
                     longitude: 0.0,
@@ -1145,7 +1150,7 @@ mod tests {
             let t = k as f64 * span / samples as f64;
             let obs = ObserverContext::at_position(
                 EntityId::new(1).unwrap(),
-                WorldTime::new(t).expect("a day value is finite"),
+                WorldTime::from_std_days(t).expect("a day value is finite"),
                 GeoCoord {
                     latitude: 35.0,
                     longitude: 0.0,

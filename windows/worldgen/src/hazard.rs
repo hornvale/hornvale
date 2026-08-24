@@ -478,13 +478,13 @@ fn process_events(
     recurrence: Years,
     window: (WorldTime, WorldTime),
 ) -> Vec<HazardEvent> {
-    let (start, end) = (window.0.as_std_days(), window.1.as_std_days());
+    let (start, end) = (window.0, window.1);
     if end <= start {
         return Vec::new();
     }
     let lambda = BLOCK_DAYS / recurrence.days();
     let mut events = Vec::new();
-    for block in block_index(start)..=block_index(end) {
+    for block in block_index(start.as_std_days())..=block_index(end.as_std_days()) {
         let mut stream = event_stream(seed, key, kind, block);
         let count = poisson_count(stream.next_f64(), lambda);
         let block_start = block as f64 * BLOCK_DAYS;
@@ -496,16 +496,30 @@ fn process_events(
         // 1e-15 per event) and costs, at worst, one event landing a moment
         // early. A guard would be a branch on every event of every query to
         // move an event by one ulp.
-        let mut days: Vec<f64> = (0..count)
-            .map(|_| block_start + stream.next_f64() * BLOCK_DAYS)
+        //
+        // **ONE DOMAIN PER COMPARISON** (spec §2.1, The Escapement). The
+        // continuous draw crosses onto the tick lattice HERE, at the draw, and
+        // every comparison below is an exact `i64` tick comparison — including
+        // the window filter. It used to compare the raw `f64` draw against the
+        // window bounds and then store a rounded instant, so taking a stored
+        // day back out and using it as a bound compared a raw draw against a
+        // round-tripped one: whichever way the rounding went, the half-open
+        // property broke. Sorting on the lattice is deliberate too — two
+        // events at the same tick ARE simultaneous under §2.1, and a stable
+        // sort resolves them in draw order rather than by an `f64` difference
+        // the lattice does not represent.
+        let mut days: Vec<WorldTime> = (0..count)
+            .map(|_| {
+                WorldTime::from_std_days(block_start + stream.next_f64() * BLOCK_DAYS)
+                    .expect("a finite day inside a finite window")
+            })
             .collect();
-        days.sort_by(|a, b| a.total_cmp(b));
+        days.sort();
         for day in days {
             let magnitude = magnitude_of(kind, stream.next_f64());
             if day >= start && day < end {
                 events.push(HazardEvent {
-                    day: WorldTime::from_std_days(day)
-                        .expect("a finite day inside a finite window"),
+                    day,
                     kind,
                     magnitude,
                 });

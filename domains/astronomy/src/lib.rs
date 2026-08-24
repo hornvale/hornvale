@@ -560,7 +560,7 @@ mod tests {
     fn ctx(day: f64) -> ObserverContext {
         ObserverContext::at(
             EntityId::new(1).unwrap(),
-            WorldTime::new(day).expect("a day value is finite"),
+            WorldTime::from_std_days(day).expect("a day value is finite"),
         )
     }
 
@@ -568,7 +568,7 @@ mod tests {
     fn the_sky_never_changes() {
         let sun = ConstantSun;
         let a = sun.sky_at(WorldTime::GENESIS);
-        let b = sun.sky_at(WorldTime::new(9999.5).expect("a day value is finite"));
+        let b = sun.sky_at(WorldTime::from_std_days(9999.5).expect("a day value is finite"));
         assert_eq!(a.description, b.description);
         assert_eq!(a.bodies, b.bodies);
         assert!(a.description.contains("zenith"));

@@ -16,53 +16,42 @@ pub struct Position {
     pub y: f64,
 }
 
-/// Simulated time since world genesis, exposed as an exact tick count.
+/// Simulated time since world genesis, as an exact tick count.
 ///
-/// **Why an integer and not `f64` days, and why this type still holds an
-/// `f64` today** (The Escapement, decision 0186): an instant IS a tick — the
-/// tick lattice is the time domain, not a quantization of it. A `WorldTime`
-/// used to be emitted through [`crate::quantize`] like every other float,
-/// and 8 *significant* digits give precision proportional to MAGNITUDE.
-/// Time is the only unbounded quantity in the system, so a committed day
-/// decayed with world age, measured at 43.2 s of resolution at world-year
-/// 100 and **12 hours** at 200,000, a horizon
-/// `windows/worldgen/src/hazard.rs` actually constructs.
+/// **Why an integer and not `f64` days** (The Escapement, decision 0186):
+/// an instant IS a tick — the tick lattice is the time domain, not a
+/// quantization of it. A `WorldTime` used to be emitted through
+/// [`crate::quantize`] like every other float, and 8 *significant* digits
+/// give precision proportional to MAGNITUDE. Time is the only unbounded
+/// quantity in the system, so a committed day decayed with world age,
+/// measured at 43.2 s of resolution at world-year 100 and **12 hours** at
+/// 200,000, a horizon `windows/worldgen/src/hazard.rs` actually constructs.
+/// Ticks do not decay: `Ledger::commit` no longer canonicalises a day at
+/// all, because an integer needs no canonicalisation.
 ///
-/// **The migration is staged** (Ruling 8 — see "Execution phasing" in
-/// `docs/superpowers/plans/2026-08-23-the-escapement.md`): flipping the
-/// field to `i64` changes behaviour workspace-wide the instant a value
-/// rounds to its nearest tick at construction, and most of the affected
-/// comparison sites are in `windows/vessel`, held off by
-/// `campaign/the-hand`. **Phase A (this commit)** adds the full tick-shaped
-/// surface — [`WorldTime::from_ticks`], [`WorldTime::ticks`],
-/// [`WorldTime::from_std_days`], [`WorldTime::as_std_days`],
-/// [`WorldTime::whole_days`], [`WorldTime::tick_of_day`] — as accessors over
-/// the SAME `f64` field this type has always had, so nothing rounds on
-/// storage and no behaviour changes; its job is letting later tasks port
-/// call sites to the new names one crate at a time, ahead of the
-/// representation flip. **Phase B** flips the field itself to an exact
-/// `i64`, derives `Ord`/`Eq`/`Hash`, deletes the shims below, and lands in
-/// one commit together with the tick-domain comparison fixes and the vessel
-/// port.
+/// **One domain per comparison** (spec §2.1). Code that draws a continuous
+/// time converts to ticks ONCE, at the draw, via
+/// [`WorldTime::from_std_days`], and compares ticks exactly thereafter —
+/// never a raw `f64` draw against a round-tripped bound.
 ///
 /// The field is private and the crossings are named, because this type's
 /// whole job is that a value in some *other* unit cannot be stored here. A
 /// year stamped into a day-typed slot is what made `person-died`
 /// uncommittable in every world (The Ell); decision 0014 declined this
-/// wrapper, 0126 superseded it, and 0186 makes it exact (Phase B).
+/// wrapper, 0126 superseded it, and 0186 makes it exact.
 ///
 /// **Negative is legal.** A day is a *point on an axis*, not a duration:
 /// a founder born before the history record begins has a negative birth
 /// day. Do not copy `Years`'s non-negative rule here.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct WorldTime {
-    day: f64,
+    ticks: i64,
 }
 
 impl WorldTime {
     /// World genesis — day zero.
-    pub const GENESIS: WorldTime = WorldTime { day: 0.0 };
+    pub const GENESIS: WorldTime = WorldTime { ticks: 0 };
 
     /// Ticks per STANDARD day; one tick is 0.864 s.
     ///
@@ -73,54 +62,23 @@ impl WorldTime {
     /// type-audit: bare-ok(count)
     pub const TICKS_PER_STD_DAY: i64 = 100_000;
 
-    /// MIGRATION SHIM — deleted in Phase B, do not use in new code.
-    ///
-    /// Preserves the pre-Escapement `new(day)` signature and validation so
-    /// the workspace keeps compiling while crates are ported one at a time.
-    /// type-audit: bare-ok(constructor-edge: day)
-    pub fn new(day: f64) -> Result<WorldTime, crate::units::UnitError> {
-        WorldTime::from_std_days(day)
-    }
-
-    /// MIGRATION SHIM — deleted in Phase B, do not use in new code.
-    /// See [`WorldTime::new`]. At a ported site prefer
-    /// [`WorldTime::as_std_days`] (Phase A: identical) or
-    /// [`WorldTime::ticks`] (exact once Phase B lands).
-    /// type-audit: bare-ok(constructor-edge: return)
-    pub fn day(self) -> f64 {
-        self.as_std_days()
-    }
-
-    /// Build from an exact tick count.
-    ///
-    /// Phase A note: the field behind this type is still `f64`, so the
-    /// result is the closest representable day to
-    /// `ticks / TICKS_PER_STD_DAY` — not yet bit-exact the way Phase B's
-    /// `i64` field will make it.
+    /// Build from an exact tick count. This is the type's own
+    /// representation, so it is infallible and lossless.
     /// type-audit: bare-ok(count: ticks)
-    pub fn from_ticks(ticks: i64) -> WorldTime {
-        WorldTime {
-            day: ticks as f64 / Self::TICKS_PER_STD_DAY as f64,
-        }
+    pub const fn from_ticks(ticks: i64) -> WorldTime {
+        WorldTime { ticks }
     }
 
-    /// Ticks since genesis, rounded to the nearest tick.
-    ///
-    /// Phase A note: this ROUNDS a continuous `f64` day; it is not yet the
-    /// type's stored representation. Phase B makes it exact and cheap (a
-    /// field read, not a multiply-and-round).
+    /// Ticks since genesis — an exact field read.
     /// type-audit: bare-ok(count: return)
-    pub fn ticks(self) -> i64 {
-        (self.day * Self::TICKS_PER_STD_DAY as f64).round() as i64
+    pub const fn ticks(self) -> i64 {
+        self.ticks
     }
 
-    /// Build from fractional standard days.
-    ///
-    /// Phase A note: stores `days` EXACTLY — this constructor does not round
-    /// to a tick, because the field itself is still a continuous `f64`
-    /// (Phase B is what makes "constructed from a day" and "an exact tick"
-    /// the same fact). The tick-range check runs regardless, so a value
-    /// Phase B could not represent is already rejected today.
+    /// Build from fractional standard days, **rounding to the nearest
+    /// tick**. This is the one crossing from the continuous domain into the
+    /// lattice, and spec §2.1 requires it happen ONCE, at the draw — after
+    /// which comparisons are exact tick comparisons.
     /// type-audit: bare-ok(constructor-edge: days)
     pub fn from_std_days(days: f64) -> Result<WorldTime, crate::units::UnitError> {
         if !days.is_finite() {
@@ -140,47 +98,47 @@ impl WorldTime {
                 reason: "outside the representable tick range",
             });
         }
-        Ok(WorldTime { day: days })
+        Ok(WorldTime {
+            ticks: ticks as i64,
+        })
     }
 
-    /// Fractional standard days since genesis.
+    /// Fractional standard days since genesis. Lossless below 2^53 ticks
+    /// (~2.47e8 years), which is every horizon the project has ever used.
     /// type-audit: bare-ok(constructor-edge: return)
     pub fn as_std_days(self) -> f64 {
-        self.day
+        self.ticks as f64 / Self::TICKS_PER_STD_DAY as f64
     }
 
     /// Whole standard days since genesis, **flooring** — so one tick before
     /// genesis is day `-1`, not day `0`. `trunc`-style truncation toward zero
     /// is what this type exists to make impossible.
     ///
-    /// Derived from `ticks()`, not from the raw `f64` day (fix round 1, code
-    /// review): the two can disagree once rounding is involved (`day =
-    /// -3.0000001` rounds to `ticks() == -300_000`, but
-    /// `self.day.floor()` is `-4`), which broke the very identity this type
-    /// exists to make provable — one domain per computation (spec §2.1),
-    /// never an f64-derived value compared against a tick-derived one.
+    /// Derived from the stored tick count, never from an `f64` day: one
+    /// domain per computation (spec §2.1), never an f64-derived value
+    /// compared against a tick-derived one.
     /// type-audit: bare-ok(count: return)
-    pub fn whole_days(self) -> i64 {
-        self.ticks().div_euclid(Self::TICKS_PER_STD_DAY)
+    pub const fn whole_days(self) -> i64 {
+        self.ticks.div_euclid(Self::TICKS_PER_STD_DAY)
     }
 
     /// Tick within the current standard day, always in
     /// `0..TICKS_PER_STD_DAY` even for negative instants.
     ///
-    /// Derived from `ticks()`, same as `whole_days()` — see that method's
-    /// doc. `div_euclid`/`rem_euclid` satisfy `q * T + r == n` for every
-    /// `n`, so `whole_days() * TICKS_PER_STD_DAY + tick_of_day() ==
-    /// ticks()` holds structurally rather than by luck.
+    /// Derived from the stored tick count, same as `whole_days()`.
+    /// `div_euclid`/`rem_euclid` satisfy `q * T + r == n` for every `n`, so
+    /// `whole_days() * TICKS_PER_STD_DAY + tick_of_day() == ticks()` holds
+    /// structurally rather than by luck.
     /// type-audit: bare-ok(count: return)
-    pub fn tick_of_day(self) -> i64 {
-        self.ticks().rem_euclid(Self::TICKS_PER_STD_DAY)
+    pub const fn tick_of_day(self) -> i64 {
+        self.ticks.rem_euclid(Self::TICKS_PER_STD_DAY)
     }
 }
 
 impl std::ops::Sub for WorldTime {
     type Output = crate::units::TickSpan;
     fn sub(self, rhs: WorldTime) -> crate::units::TickSpan {
-        crate::units::TickSpan(self.day - rhs.day)
+        crate::units::TickSpan(self.ticks - rhs.ticks)
     }
 }
 
@@ -188,7 +146,7 @@ impl std::ops::Add<crate::units::TickSpan> for WorldTime {
     type Output = WorldTime;
     fn add(self, rhs: crate::units::TickSpan) -> WorldTime {
         WorldTime {
-            day: self.day + rhs.0,
+            ticks: self.ticks + rhs.0,
         }
     }
 }
@@ -281,17 +239,37 @@ mod tests {
 
     #[test]
     fn a_tick_count_round_trips_through_from_ticks_and_ticks() {
-        // Phase A: WorldTime still stores a continuous f64 day, so this only
-        // proves from_ticks/ticks agree with each other at ordinary
-        // magnitudes — not yet the exact-at-deep-time claim, which needs
-        // Phase B's i64 field and moves there.
         for n in [0_i64, 1, -1, 12_345, -987_654, WorldTime::TICKS_PER_STD_DAY] {
             assert_eq!(
                 WorldTime::from_ticks(n).ticks(),
                 n,
-                "from_ticks/ticks should round-trip at ordinary magnitudes"
+                "from_ticks/ticks must round-trip exactly"
             );
         }
+    }
+
+    #[test]
+    fn a_tick_count_round_trips_exactly_where_an_f64_day_could_not() {
+        // The whole point of the campaign: at deep time, an f64 day quantized
+        // to 8 significant digits lost sub-12-hour resolution. Ticks do not.
+        let deep = 200_000.0 * crate::units::Years::DAYS_PER_YEAR;
+        let t = WorldTime::from_std_days(deep).expect("finite");
+        let one_tick_later = WorldTime::from_ticks(t.ticks() + 1);
+        assert_ne!(
+            t, one_tick_later,
+            "adjacent ticks stay distinct at 200,000 years"
+        );
+        assert_eq!(one_tick_later.ticks() - t.ticks(), 1);
+
+        // The negative control: the SAME pair of instants is indistinguishable
+        // once each is put through the quantization that used to run at every
+        // commit.
+        let q = |x: WorldTime| crate::quantize::quantize(x.as_std_days());
+        assert_eq!(
+            q(t),
+            q(one_tick_later),
+            "8 significant digits cannot separate adjacent ticks at this horizon"
+        );
     }
 
     #[test]
@@ -366,19 +344,26 @@ mod tests {
         );
     }
 
-    // `world_time_is_ordered_and_equatable_so_it_can_key_a_map` moves to
-    // Phase B: with the field still `f64`, WorldTime cannot derive
-    // `Ord`/`Eq`/`Hash` (no total order over floats), so the claim it made —
-    // that WorldTime itself can key a BTreeMap — isn't true yet. `ticks()`
-    // already gives the exact integer key Phase B will store directly, so a
-    // caller that needs one today uses that.
+    /// An exact integer representation is what makes `Eq`/`Ord`/`Hash`
+    /// derivable at all — an `f64` day has no total order — and four memo
+    /// keys in `windows/vessel` spelled `day().to_bits()` for exactly this
+    /// reason before the flip. They key on the instant itself now.
     #[test]
-    fn world_time_ticks_can_key_a_map_even_though_the_type_itself_cannot_yet() {
-        let mut m: std::collections::BTreeMap<i64, &str> = std::collections::BTreeMap::new();
-        m.insert(WorldTime::from_ticks(2).ticks(), "later");
-        m.insert(WorldTime::from_ticks(1).ticks(), "earlier");
+    fn world_time_is_ordered_and_equatable_so_it_can_key_a_map() {
+        let mut m: std::collections::BTreeMap<WorldTime, &str> = std::collections::BTreeMap::new();
+        m.insert(WorldTime::from_ticks(2), "later");
+        m.insert(WorldTime::from_ticks(1), "earlier");
+        m.insert(WorldTime::from_ticks(-1), "before genesis");
         let order: Vec<&str> = m.values().copied().collect();
-        assert_eq!(order, vec!["earlier", "later"]);
+        assert_eq!(order, vec!["before genesis", "earlier", "later"]);
+
+        // The identity the `.to_bits()` keys were reaching for: two instants
+        // built by different routes are the SAME key when they are the same
+        // tick.
+        assert_eq!(
+            WorldTime::from_std_days(12.25).expect("finite"),
+            WorldTime::from_ticks(1_225_000)
+        );
     }
 
     #[test]
@@ -443,15 +428,15 @@ mod tests {
     /// deleting `#[serde(transparent)]` reddens this test.
     #[test]
     fn world_time_serializes_as_a_bare_scalar_not_an_object() {
-        // Phase A: the field is still f64, so the wire shape is still a bare
-        // day float. Phase B is what turns "12.25" into an integer tick
-        // count; that assertion moves there with the representation flip.
+        // The save-format epoch (decision 0186): the wire value is the exact
+        // integer tick count, not a fractional day. 12.25 days is 1,225,000
+        // ticks and serializes as that integer.
         let t = WorldTime::from_std_days(12.25).expect("finite");
         let json = serde_json::to_string(&t).unwrap();
         assert_eq!(
-            json, "12.25",
-            "WorldTime must serialize as the bare day scalar, not a \
-             {{\"day\":...}} object — #[serde(transparent)] is what keeps it that way"
+            json, "1225000",
+            "WorldTime must serialize as the bare tick scalar, not a \
+             {{\"ticks\":...}} object — #[serde(transparent)] is what keeps it that way"
         );
     }
 }

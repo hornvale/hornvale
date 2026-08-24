@@ -20,7 +20,8 @@ use crate::{
     most_populous_settlement, observable, reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, RoomId, Seed, Value, World, WorldTime, tick,
+    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, RoomId, Seed, TickSpan, Value, World,
+    WorldTime, tick,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
@@ -133,6 +134,34 @@ const SLEEP_REPLY: &str = "You lie down and let go of the day. Time still passes
 /// `dive`'s own refusal set).
 const SLEEP_ARGUMENT_REFUSAL: &str = "Sleep takes no length: you lie down until your own cycle wakes you. Say 'sleep' \
      on its own, or 'wait N' to let N days pass while you are awake.";
+
+/// Advance an instant by a DURATION in standard days, on the tick lattice, and
+/// report every failure as a caller-facing string rather than panicking.
+///
+/// **Two callers, one guard.** `charge` and `wait` both accumulate onto the
+/// session clock, and the guard predates The Escapement: `days` is validated
+/// finite and positive at its parse site, but the SUM is an accumulation the
+/// parse-site guard cannot see, and a live `possess` stdin can reach it with
+/// two `wait 1e308`s.
+///
+/// **What the flip changed is the failure MODE, not the guard.** The sum used
+/// to be an `f64` addition that could reach infinity; it is now an `i64` tick
+/// addition that can overflow, so it is `checked_add` rather than trusted. The
+/// crossing from the continuous domain onto the lattice happens ONCE, on the
+/// duration, before any arithmetic (spec §2.1) — never by re-deriving a float
+/// day from the instant, adding, and re-rounding.
+fn advanced_by(day: WorldTime, days: f64) -> Result<WorldTime, String> {
+    let span = TickSpan::from_std_days(days).map_err(|e| format!("error: {e}"))?;
+    day.ticks()
+        .checked_add(span.ticks())
+        .map(WorldTime::from_ticks)
+        .ok_or_else(|| {
+            format!(
+                "error: {days} is not a valid quantity of standard days: \
+                 outside the representable tick range"
+            )
+        })
+}
 
 /// What the body says when the gate refuses. The reason itself comes from
 /// [`crate::gate::verdict`], so a new [`BodyState`] row cannot reach a player
@@ -1575,12 +1604,12 @@ impl<'w> Session<'w> {
         );
         let ticks = cost_ticks(action, self.body_mass_kg, terrain_factor);
         let days = days_of(ticks, self.day_length_std());
-        match WorldTime::from_std_days(self.day.as_std_days() + days) {
+        match advanced_by(self.day, days) {
             Ok(d) => {
                 self.day = d;
                 Ok(())
             }
-            Err(e) => Err(format!("error: {e}")),
+            Err(e) => Err(e),
         }
     }
 
@@ -3499,13 +3528,14 @@ impl<'w> Session<'w> {
             .collect();
         let from = self.day;
         // `days` was validated as finite and positive above, but the SUM can
-        // still overflow to infinity — an accumulation, not a parse, so the
-        // parse-site guard above cannot see it (fix round 1, The Ell Task 2
-        // review: reachable live from `possess` stdin via two `wait 1e308`s).
-        // Route it through `wait`'s own error channel rather than expecting.
-        self.day = match WorldTime::from_std_days(self.day.as_std_days() + days) {
+        // still leave the representable range — an accumulation, not a parse,
+        // so the parse-site guard above cannot see it (fix round 1, The Ell
+        // Task 2 review: reachable live from `possess` stdin via two `wait
+        // 1e308`s). Route it through `wait`'s own error channel rather than
+        // expecting.
+        self.day = match advanced_by(self.day, days) {
             Ok(d) => d,
-            Err(e) => return Turn::Out(format!("error: {e}")),
+            Err(e) => return Turn::Out(e),
         };
         // Prefill the session-owned geometry memo (the-waymark fix round,
         // Finding 1) for each NPC's CURRENT position (`before`, captured
@@ -4325,7 +4355,11 @@ impl<'w> Session<'w> {
     /// falls back to the re-sculpting bare form on the `None` a failed
     /// build at `start` would leave.
     fn consult(&self) -> String {
-        let day = self.day.as_std_days().trunc() as u64;
+        // `whole_days()` FLOORS where `trunc() as u64` truncated toward zero
+        // and then saturated (The Escapement, decision 0186). A session's day
+        // is non-negative in practice, so the two agree here — but "day -1
+        // reads as day 0" is not a property this line should depend on.
+        let day = self.day.whole_days();
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
         let at = hornvale_astronomy::StdDays::new(self.day.as_std_days())
             .expect("a session's day is always finite and non-negative");

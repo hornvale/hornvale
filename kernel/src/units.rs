@@ -384,35 +384,60 @@ impl Years {
 /// impl can build one without a fallible constructor, while no crate outside
 /// the kernel can bypass the named crossings.
 ///
-/// **Phase A note** (The Escapement, Ruling 8): backed by the same `f64` day
-/// difference `WorldTime` itself still stores, so `ticks()` rounds rather
-/// than reading a stored integer, and `Eq`/`Ord`/`Hash` cannot be derived —
-/// the same reasons `WorldTime` cannot yet. Phase B makes both types exact
-/// `i64` ticks in the same commit.
+/// The span is exact ticks (The Escapement, decision 0186), so it derives
+/// `Eq`/`Ord`/`Hash` alongside `WorldTime` and a difference of two instants
+/// carries no rounding at all.
 /// type-audit: bare-ok(count)
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct TickSpan(pub(crate) f64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TickSpan(pub(crate) i64);
 
 impl TickSpan {
-    /// The span in ticks, rounded to the nearest tick.
-    ///
-    /// Phase A note: this rounds a continuous `f64` day difference; Phase B
-    /// makes it an exact field read.
+    /// The span in ticks — an exact field read.
     /// type-audit: bare-ok(count: return)
-    pub fn ticks(self) -> i64 {
-        (self.0 * crate::field::WorldTime::TICKS_PER_STD_DAY as f64).round() as i64
+    pub const fn ticks(self) -> i64 {
+        self.0
     }
 
     /// Build a span from an exact tick count.
     /// type-audit: bare-ok(count: ticks)
-    pub fn from_ticks(ticks: i64) -> TickSpan {
-        TickSpan(ticks as f64 / crate::field::WorldTime::TICKS_PER_STD_DAY as f64)
+    pub const fn from_ticks(ticks: i64) -> TickSpan {
+        TickSpan(ticks)
+    }
+
+    /// Build a span from a DURATION in fractional standard days, rounding to
+    /// the nearest tick.
+    ///
+    /// The span twin of [`crate::field::WorldTime::from_std_days`], and it
+    /// exists for the same reason: spec §2.1 requires the crossing from the
+    /// continuous domain onto the lattice happen ONCE, explicitly. Without it
+    /// a caller holding an `f64` duration has no way to reach the lattice
+    /// except by re-deriving a float day from an instant, adding, and
+    /// re-rounding — two crossings where one belongs, and the arithmetic
+    /// happening in the domain the campaign left.
+    /// type-audit: bare-ok(constructor-edge: days)
+    pub fn from_std_days(days: f64) -> Result<TickSpan, UnitError> {
+        if !days.is_finite() {
+            return Err(UnitError {
+                unit: "standard days",
+                value: days,
+                reason: "must be finite",
+            });
+        }
+        let ticks = (days * crate::field::WorldTime::TICKS_PER_STD_DAY as f64).round();
+        if ticks < i64::MIN as f64 || ticks > i64::MAX as f64 {
+            return Err(UnitError {
+                unit: "standard days",
+                value: days,
+                reason: "outside the representable tick range",
+            });
+        }
+        Ok(TickSpan(ticks as i64))
     }
 
     /// The span in fractional standard days.
     /// type-audit: bare-ok(constructor-edge: return)
     pub fn as_std_days(self) -> f64 {
-        self.0
+        self.0 as f64 / crate::field::WorldTime::TICKS_PER_STD_DAY as f64
     }
 }
 

@@ -311,19 +311,26 @@ impl Ledger {
         mut fact: Fact,
         registry: &ConceptRegistry,
     ) -> Result<bool, LedgerError> {
-        // Canonicalize numeric objects and days to a platform-stable form
-        // *before* the idempotency and contradiction checks, so dedup compares
-        // canonical values (see the `quantize` module: last-ULP libm divergence
-        // between platforms otherwise reaches the serialized ledger and breaks
+        // Canonicalize numeric objects to a platform-stable form *before* the
+        // idempotency and contradiction checks, so dedup compares canonical
+        // values (see the `quantize` module: last-ULP libm divergence between
+        // platforms otherwise reaches the serialized ledger and breaks
         // cross-platform byte-identity). Integer-valued facts (cell ids,
         // populations, counts) are unaffected — they quantize to themselves.
+        //
+        // `fact.day` is NOT canonicalized, and its absence here is the point of
+        // The Escapement (decision 0186). A `WorldTime` is an exact `i64` tick
+        // count, so there is nothing for quantization to canonicalize: the
+        // value is already platform-stable and already equal to itself. The
+        // block that used to sit here was actively harmful — 8 SIGNIFICANT
+        // digits give precision proportional to magnitude, and time is the only
+        // unbounded quantity in the system, so a committed day decayed to
+        // 12-hour resolution at world-year 200,000; worse, the rounding went
+        // UPWARD as often as down, so a fact committed at exactly `t` could
+        // fail its own `day <= t` filter on read-back.
         if let Value::Number(n) = fact.object {
             fact.object = Value::Number(crate::quantize::quantize(n));
         }
-        fact.day = fact.day.map(|d| {
-            crate::field::WorldTime::new(crate::quantize::quantize(d.day()))
-                .expect("quantizing an already-finite WorldTime cannot produce a non-finite one")
-        });
         self.ensure_index(); // fast contradiction/dedup for the rest of this build
         self.check(&fact, registry)?;
         let dup = match &self.index {
@@ -593,24 +600,30 @@ mod tests {
     use crate::field::WorldTime;
 
     #[test]
-    fn a_facts_day_is_typed_and_round_trips_as_a_bare_number() {
+    fn a_facts_day_is_typed_and_round_trips_as_a_bare_integer_tick_count() {
         let mut l = Ledger::default();
         let e = l.mint_entity(test_lineage(0));
+        let day = WorldTime::from_std_days(1234.5).expect("finite");
         let f = Fact {
             subject: e,
             predicate: "is-a".to_string(),
             object: Value::Text("thing".to_string()),
             place: None,
-            day: Some(WorldTime::new(1234.5).expect("finite")),
+            day: Some(day),
             provenance: "test".to_string(),
         };
         let json = serde_json::to_string(&f).expect("serializes");
+        // The save format's epoch (The Escapement, decision 0186): a day was a
+        // fractional `1234.5` and is now the exact tick count `123450000`. It
+        // must still be a BARE number — `#[serde(transparent)]` on `WorldTime`
+        // is what keeps it from becoming a `{"ticks":...}` object.
         assert!(
-            json.contains("\"day\":1234.5"),
-            "the wire shape must stay a bare number, not a nested object: {json}"
+            json.contains("\"day\":123450000"),
+            "the wire shape must stay a bare integer tick count, not a nested object: {json}"
         );
         let back: Fact = serde_json::from_str(&json).expect("round-trips");
-        assert_eq!(back.day.map(WorldTime::day), Some(1234.5));
+        assert_eq!(back.day, Some(day), "the tick count round-trips exactly");
+        assert_eq!(back.day.map(WorldTime::as_std_days), Some(1234.5));
     }
 
     #[test]
@@ -982,7 +995,13 @@ mod tests {
     }
 
     #[test]
-    fn committed_numbers_and_days_are_quantized() {
+    fn committed_numbers_are_quantized_but_days_are_exact() {
+        // BOTH halves of the commit boundary, in one test, because The
+        // Escapement (decision 0186) split them apart and each half is only
+        // meaningful against the other. A numeric OBJECT is still canonicalized
+        // to 8 significant digits — that is decision 0033, unchanged. A `day`
+        // is NOT, because it is an exact `i64` tick count with nothing left to
+        // canonicalize.
         use crate::quantize::quantize;
         let r = registry();
         let mut l = Ledger::default();
@@ -991,6 +1010,15 @@ mod tests {
             role: "quantize-subject",
             ordinal: 0,
         });
+
+        // Deep time is where the old day-quantize did its damage: 73,050,000.5
+        // standard days is world-year 200,000 at noon, a horizon
+        // `windows/worldgen/src/hazard.rs` actually constructs. Nine
+        // significant digits, so 8-significant-digit quantization cannot even
+        // hold the half-day.
+        let deep = WorldTime::from_ticks(7_305_000_050_000);
+        assert_eq!(deep.as_std_days(), 73_050_000.5);
+
         let raw = 210.2242156495795_f64;
         l.commit(
             Fact {
@@ -998,27 +1026,41 @@ mod tests {
                 predicate: "name".to_string(),
                 object: Value::Number(raw),
                 place: None,
-                day: Some(WorldTime::new(raw).expect("raw is finite")),
+                day: Some(deep),
                 provenance: "test".to_string(),
             },
             &r,
         )
         .unwrap();
         let stored = l.iter().next().unwrap();
+
+        // Half one: the numeric object still quantizes.
         assert_eq!(stored.object, Value::Number(quantize(raw)));
-        assert_eq!(
-            stored.day,
-            Some(WorldTime::new(quantize(raw)).expect("quantized raw is finite"))
-        );
         assert_ne!(
             stored.object,
             Value::Number(raw),
             "raw value must not survive"
         );
-        assert_ne!(
+
+        // Half two: the day is returned bit-for-bit as committed.
+        assert_eq!(
             stored.day,
-            Some(WorldTime::new(raw).expect("raw is finite")),
-            "raw day must not survive quantization at commit"
+            Some(deep),
+            "an exact tick count needs no canonicalization, so commit must not apply one"
+        );
+
+        // …and that assertion is not vacuous: the canonicalization that used to
+        // sit in `commit` WOULD have moved this instant, by twelve hours.
+        let as_quantized = WorldTime::from_std_days(quantize(deep.as_std_days()))
+            .expect("quantizing a finite day stays finite");
+        assert_ne!(
+            as_quantized, deep,
+            "the deleted quantize block was not a no-op — it destroyed the half-day"
+        );
+        assert_eq!(
+            (as_quantized - deep).ticks().abs(),
+            WorldTime::TICKS_PER_STD_DAY / 2,
+            "twelve hours of resolution, exactly what the campaign measured"
         );
     }
 
@@ -1036,7 +1078,7 @@ mod tests {
             predicate: "name".to_string(),
             object: Value::Number(42.5),
             place: None,
-            day: Some(WorldTime::new(3.0).expect("finite")),
+            day: Some(WorldTime::from_std_days(3.0).expect("finite")),
             provenance: "test".to_string(),
         };
         assert!(l.commit(f, &r).unwrap());
@@ -1581,7 +1623,7 @@ mod tests {
             .change_kind(
                 e,
                 "awakened-owlbear",
-                Some(WorldTime::new(12.5).expect("finite")),
+                Some(WorldTime::from_std_days(12.5).expect("finite")),
                 "test: the awakening",
                 &w.registry,
             )

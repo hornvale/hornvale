@@ -508,7 +508,10 @@ const DEFAULT_FORAGE: f64 = 1.0;
 /// `Terrain::solar_altitude` default, and `LocaleTerrain`'s fallback when a
 /// world carries no calendar.
 fn fractional_day_sun(day: WorldTime) -> Option<f64> {
-    let frac = day.as_std_days() - day.as_std_days().floor();
+    // `tick_of_day()` IS the time of day (The Escapement, decision 0186): an
+    // exact tick within the day, correct for negative instants where
+    // `x - x.floor()` on an f64 day was not.
+    let frac = day.tick_of_day() as f64 / WorldTime::TICKS_PER_STD_DAY as f64;
     Some(90.0 * hornvale_kernel::math::cos(std::f64::consts::TAU * (frac - 0.5)))
 }
 
@@ -1005,10 +1008,16 @@ pub fn believed_water(
 /// same fixed ledger (built once per tick instead of once per creature).
 #[derive(Default)]
 pub struct PrimaryAfraidMemo {
-    /// `(entity, day-bits) → emitted arousal` (`0.0` = not primary-afraid).
-    afraid: std::collections::BTreeMap<(EntityId, u64), f64>,
-    /// `t-day-bits → the emitter scan` over the (tick-fixed) roster and ledger.
-    scans: std::collections::BTreeMap<u64, EmitterScan>,
+    /// `(entity, instant) → emitted arousal` (`0.0` = not primary-afraid).
+    ///
+    /// Keyed on the `WorldTime` itself. It used to be keyed on
+    /// `day().to_bits()`, because an `f64` day has no total order and so could
+    /// not key a `BTreeMap`; a tick count is an exact `i64` and `WorldTime`
+    /// derives `Ord`/`Eq`/`Hash` (The Escapement, decision 0186).
+    afraid: std::collections::BTreeMap<(EntityId, WorldTime), f64>,
+    /// `t → the emitter scan` over the (tick-fixed) roster and ledger. Keyed on
+    /// the instant itself, same reason as `afraid`.
+    scans: std::collections::BTreeMap<WorldTime, EmitterScan>,
 }
 
 impl PrimaryAfraidMemo {
@@ -1093,13 +1102,13 @@ fn build_emitter_scan(
 /// inner `affect_of` reads an EMPTY band, so its own `believed_hazard` is
 /// emitter-free and never re-enters this path (the recursion break).
 fn emitter_arousal(
-    afraid: &mut std::collections::BTreeMap<(EntityId, u64), f64>,
+    afraid: &mut std::collections::BTreeMap<(EntityId, WorldTime), f64>,
     frozen: &Ledger,
     npc: &Npc,
     day: WorldTime,
     terrain: &dyn Terrain,
 ) -> f64 {
-    let key = (npc.entity, day.as_std_days().to_bits());
+    let key = (npc.entity, day);
     if let Some(&v) = afraid.get(&key) {
         return v;
     }
@@ -1253,13 +1262,12 @@ pub fn hazard_memory_memo(
     // timelines, and the cells any alarm could reach) is IDENTICAL for every
     // creature's re-derivation at this time over this ledger — build it once and
     // cache it per `t` (see [`PrimaryAfraidMemo`]).
-    let tbits = t.as_std_days().to_bits();
     memo.scans
-        .entry(tbits)
+        .entry(t)
         .or_insert_with(|| build_emitter_scan(roster, ledger, terrain, t));
     // Disjoint field borrows: the scan (read) and the affect memo (write).
     let PrimaryAfraidMemo { afraid, scans } = memo;
-    let scan = &scans[&tbits];
+    let scan = &scans[&t];
 
     // The emitter's committed position AT `day`: the latest entry with day ≤ it,
     // else its home (the pre-history fallback) — `agent_position` over the
@@ -4791,8 +4799,26 @@ impl<'a> DriveMovements<'a> {
             Some(d) => per_day / d,
             None => per_day,
         };
-        let to_ticks = (self.to.as_std_days() * scale).round() as u64;
-        let from_ticks = (self.from.as_std_days() * scale).round() as u64;
+        // Derived from the EXACT standard tick count rather than a re-derived
+        // f64 day (spec §2.1). The scheduler's lattice is LOCAL ticks; the
+        // kernel's is standard-day ticks.
+        let local_ticks_of = |t: WorldTime| -> u64 {
+            match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
+                // A rotation pin puts the two lattices at different rates, so
+                // this crossing is a genuine rescale and keeps the arithmetic
+                // it always had — bit for bit, now read off `ticks()`.
+                Some(d) => ((t.ticks() as f64 / WorldTime::TICKS_PER_STD_DAY as f64)
+                    * (per_day / d))
+                    .round() as u64,
+                // With no pin the two lattices COINCIDE, so the conversion is
+                // the identity — exactly, not to within a rounding budget.
+                // `max(0)` states what the old saturating `as u64` cast did
+                // silently for a pre-genesis instant.
+                None => t.ticks().max(0) as u64,
+            }
+        };
+        let to_ticks = local_ticks_of(self.to);
+        let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
             let mut st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
             // THE THRESHOLD's crossing: arrive at the landing anchor of the
@@ -7017,7 +7043,7 @@ mod tests {
                     role(f.subject),
                     f.predicate,
                     f.object,
-                    f.day.map(|d| d.as_std_days().to_bits()),
+                    f.day.map(|d| d.ticks()),
                     f.provenance
                 )
             })
@@ -7030,8 +7056,12 @@ mod tests {
         // being hoisted out of `DriveMovements::step`'s loop into `WalkState` +
         // `advance_one`, and the claim is that this changes NOTHING. So the
         // emitted fact sequence — subject, predicate, object, the day's exact
-        // bits, and provenance, IN ORDER — is pinned here against the loop as it
-        // stood before the extraction. Written and passing BEFORE the hoist; it
+        // TICK COUNT, and provenance, IN ORDER — is pinned here against the loop
+        // as it stood before the extraction. (The day column read `f64` bits
+        // until The Escapement, decision 0186, made an instant an exact `i64`
+        // tick; every one of the eighty rows below moved from `to_bits()` to
+        // `round(day * 100_000)` of the very same instant, and nothing else in
+        // any row moved at all.) Written and passing BEFORE the hoist; it
         // must still pass after, or the extraction is wrong.
         //
         // It is a golden, deliberately: a self-consistency check (run twice, get
@@ -7080,86 +7110,86 @@ mod tests {
         // not, so the emitted stream is still a pure function of the pre-tick
         // ledger.
         const EXPECTED: &[&str] = &[
-            r#"knower|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"knower|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"knower|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"knower|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"lost|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"knower|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"lost|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"knower|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"knower|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"lost|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"knower|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"lost|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"knower|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
-            r#"lost|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(100150)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"knower|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(576817)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(646967)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(656967)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(1206633)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(1206633)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(1206783)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1206783)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1236783)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1236783)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1246783)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1246783)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1246933)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1246933)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1256933)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1256933)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1266933)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1266933)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(1813750)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(1813750)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(1838750)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(1838750)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(1848750)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(1848750)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(1848900)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(1848900)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(1858900)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(1858900)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(1868900)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(1868900)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(2418567)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(2418567)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(2418717)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(2418717)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(2438717)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(2438717)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(2448717)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(2448717)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(2448867)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(2448867)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(2458867)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(2458867)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(2468867)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(2468867)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(3015683)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3015683)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3035683)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3035683)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3045683)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3045683)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3045833)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3045833)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3055833)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3055833)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3065833)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3065833)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(3615500)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(3615500)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(3615650)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(3615650)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(3635650)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(3635650)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(3645650)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(3645650)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(3645800)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(3645800)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(3655800)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(3655800)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(3665800)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(3665800)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -7389,13 +7419,7 @@ mod tests {
             };
             sys.step(&ledger)
                 .iter()
-                .map(|f| {
-                    (
-                        f.subject,
-                        f.predicate.clone(),
-                        f.day.map(|d| d.as_std_days().to_bits()),
-                    )
-                })
+                .map(|f| (f.subject, f.predicate.clone(), f.day.map(|d| d.ticks())))
                 .collect::<Vec<_>>()
         };
         let forward = run(npcs.clone());
