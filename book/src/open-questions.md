@@ -1545,6 +1545,34 @@ unexplained. The space it can hide in is now small enough to name: how a build
 chooses its compiler, given that this project's pin is silently conditional on
 the directory you invoke it from.
 
+[The Escapement](./chronicle/the-escapement.md) (2026-08-24) adds an entry of
+a different shape than any before it on this ledger: **byte-identical is not
+the same claim as adequately precise, and this project had been treating them
+as one.** Every prior entry asked whether two apparatuses agree on the same
+computation; this one found that the computation itself, `WorldTime`'s
+eight-significant-digit rounding, was internally consistent across platforms
+and still wrong — a committed instant's resolution decayed with world age
+because time was the one quantity in the system with no bound on its own
+magnitude, and significant-digit rounding buys constant precision only when
+magnitude is bounded. Both machines agreed, faithfully, on a value that was
+losing a day of resolution by world-year 200,000. The sharper form of the
+finding is not the deep-time table, though — it is that the identical defect
+also produced a present-day correctness bug (a fact failing its own `d <= t`
+read-back filter, because the rounding that makes two platforms agree can
+still round a value *away* from itself), found independently by a second
+campaign that had never heard of the first and was not looking for a
+determinism question at all. `WorldTime` is now an exact `i64` tick count and
+has left the quantize contract entirely rather than being rounded more
+finely (decisions 0186/0188) — the strongest form of "agrees across
+platforms" a quantity can have, an exact integer with nothing left to round.
+The bet on deterministic serialization is unmoved by this — nothing here
+contradicts a prior finding — but the ledger's standing question sharpens
+once more: **agreement between two apparatuses says nothing about whether the
+quantity they agree on is the right shape for what it is measuring**, and
+the only reason this instance surfaced at all was a defect that fell far
+enough from a determinism check's usual territory that nobody thought to
+look for it there.
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing

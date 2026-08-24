@@ -396,6 +396,7 @@
 - [The Stride](./chronicle/the-stride.md)
 - [The Mirror](./chronicle/the-mirror.md)
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
+- [The Escapement](./chronicle/the-escapement.md)
 
 # Appendix: The Frontier
 

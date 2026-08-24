@@ -32,8 +32,14 @@ edit in place):
 byte-identical across platforms (Apple libm vs glibc differ in the last ULP).
 Quantize **only** at serialization boundaries (`Ledger::commit`, CSV/JSON
 emit) — **never** in the compute path. The noise fields, sculpting, and
-orbital mechanics run at full precision. **Lorenz guard-rail:** never seed a
-chaotic forward-integrator from quantized ledger floats; resumption
+orbital mechanics run at full precision. **`WorldTime` is carved out of this
+contract entirely** (decision 0188): significant-digit rounding gives
+constant absolute precision only for a magnitude-bounded quantity, and
+`hornvale_kernel::WorldTime` is an exact `i64` tick count (decision 0186),
+not a quantized `f64` — `Ledger::commit`'s day-quantization block is deleted,
+not merely skipped. Every other quantized surface (`Value::Number` in a
+committed `Fact`, CSV/JSON emit) is unchanged. **Lorenz guard-rail:** never
+seed a chaotic forward-integrator from quantized ledger floats; resumption
 re-derives from the lossless seed. A lossy save is safe *only* because reload
 re-derives.
 
@@ -78,8 +84,11 @@ pure function of immutable dense-indexed data is precomputed into a `Vec` once
 
 - **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorts
   use `total_cmp` with a deterministic tie-break.
-- **No wall-clock time** — time is `WorldTime { day: f64 }`, absolute standard
-  days.
+- **No wall-clock time** — time is `WorldTime { ticks: i64 }`, an exact tick
+  count since genesis (100,000 ticks per standard day, decision 0186); the
+  signed difference between two instants is `TickSpan(i64)`. Now that
+  `WorldTime` is an exact integer it derives `Ord`/`Eq`/`Hash` and is a legal
+  `BTreeMap` key.
 - Both are enforced by `clippy.toml` `disallowed-types`; a justified
   exception gets a scoped `#[allow(clippy::disallowed_types)]` with a comment.
 - Every `pub` item, field, and variant carries a one-line doc comment

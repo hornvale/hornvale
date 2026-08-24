@@ -48,18 +48,40 @@ incidental):
 | `schema` | string | Always the literal `"scene/eclipses/v1"` — the version tag a consumer checks before trusting the rest of the document. |
 | `seed` | integer | The world's seed. This is a u64; JavaScript consumers parsing the document with plain `JSON.parse` lose integer precision above 2^53, so use BigInt-aware parsing when the exact seed matters. |
 | `from_day` | number | The queried window start, echoed back — see above. |
+| `from_day_ticks` | integer | The queried window start as an exact tick count — see "The additive `*_ticks` fields" below. |
 | `until_day` | number | The queried window end, echoed back — see above. |
+| `until_day_ticks` | integer | The queried window end as an exact tick count. |
 | `events` | array of object | The dated eclipses inside the closed window `[from_day, until_day]`, day-ascending. |
 
 Each entry in `events` is:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `day` | number | The syzygy, absolute standard days (`WorldTime`). |
+| `day` | number | The syzygy, absolute standard days (`WorldTime`), quantized to 8 significant digits. |
+| `day_ticks` | integer | The syzygy as an exact `i64` tick count — see below. |
 | `moon_index` | integer | Distance-sorted index into the system's moons — the same index `scene/moons/v1` uses. |
 | `body` | string | `"solar"` or `"lunar"` — which body is eclipsed: the anchor's star, or the moon itself. |
 | `kind` | string | `"total"` or `"annular"` — whether the eclipsing disc fully covers the eclipsed one or leaves a burning ring. |
 | `track` | object or null | The shadow's ground track, **solar events only** — see below. |
+
+### The additive `*_ticks` fields (The Escapement, decision 0188)
+
+`day_ticks`, `from_day_ticks`, and `until_day_ticks` were added beside their
+existing `f64` siblings, not in place of them: `scene/eclipses/v1` is a
+cross-repo contract the external Orrery consumes from a released catalog, and
+this schema is held to the same additive-or-versioned-only discipline as
+every other scene schema (see "Stability" below). The kernel's `WorldTime`
+retyped to an exact `i64` tick count (100,000 ticks per standard day) so that
+a committed instant no longer loses resolution as a world ages — the `f64`
+`day` field, still quantized to 8 significant digits, is good to only ~1.2
+hours by world-year 20,000, where the same instant's `day_ticks` is exact at
+every horizon the project has ever used. The `f64` fields stay quantized
+deliberately: quantizing them was never about the kernel's own
+representation, it is about giving an external consumer of the *float* wire
+format the same cross-platform stability every other quantized float on that
+wire gets, and an existing consumer that only reads `day` sees no change at
+all. A client that can parse a bare `i64` should prefer the `*_ticks` fields;
+one that cannot is unaffected.
 
 ### The solar-only `track`
 
@@ -121,10 +143,13 @@ drawn from 2 moons):
   "schema": "scene/eclipses/v1",
   "seed": 42,
   "from_day": 0.0,
+  "from_day_ticks": 0,
   "until_day": 2000.0,
+  "until_day_ticks": 200000000,
   "events": [
     {
       "day": 85.982974,
+      "day_ticks": 8598297,
       "moon_index": 0,
       "body": "solar",
       "kind": "total",
@@ -138,6 +163,7 @@ drawn from 2 moons):
     },
     {
       "day": 94.34317,
+      "day_ticks": 9434317,
       "moon_index": 0,
       "body": "lunar",
       "kind": "total",
@@ -202,7 +228,12 @@ the same seed, pins, and window always reproduces the same bytes, because
 every field routes through a pure ledger/orbital-element read or the
 declared-approximation formula above, none of which touches wall-clock
 time or platform-dependent floating point beyond the quantization boundary
-(decision 0033).
+(decision 0033). The `*_ticks` fields are exact `i64` values and never pass
+through that boundary at all (decision 0188) — an integer needs no rounding
+to agree bit-for-bit across platforms — while `day`, `from_day`, and
+`until_day` are still quantized to 8 significant digits, deliberately, so
+the existing float wire format keeps the cross-platform stability every
+other quantized float on it gets.
 
 ## Getting one
 

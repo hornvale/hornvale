@@ -668,9 +668,26 @@ contradicts, lower ("coarse constrains fine").
   because reload re-derives from the lossless seed — never seed a chaotic
   forward-integrator from quantized ledger floats; resumption re-derives
   from the seed, and any chaotic checkpoint needs its own full-precision
-  format.
-- **No wall-clock time anywhere**. Time is `WorldTime { day: f64 }` —
-  absolute standard days.
+  format. **Time is carved out of this contract** (decision 0188, The
+  Escapement): significant-digit rounding buys constant absolute precision
+  only for a magnitude-bounded quantity, and time is unbounded, so a
+  committed day's resolution decayed with world age under this scheme (43.2 s
+  at world-year 100, 24 hours at world-year 200,000). `Ledger::commit`'s
+  day-quantization block is deleted outright rather than made a no-op; every
+  other quantized surface 0033 named — `Value::Number` in a committed
+  `Fact`, the lab CSV, the scene/ephemeris `f64` fields — is unchanged.
+- **No wall-clock time anywhere**. Time is `WorldTime { ticks: i64 }` — an
+  exact tick count since genesis, 100,000 ticks per standard day, one tick =
+  0.864 s (decision 0186). Negative ticks are legal (a founder can be born
+  before the history record begins, decision 0126); `TickSpan(i64)` is the
+  signed difference between two instants. Being an exact integer, `WorldTime`
+  needs no quantization at any magnitude and is a legal `BTreeMap` key
+  (`Ord`/`Eq`/`Hash` all derive). The kernel hosts one named, world-independent
+  hatch between ticks and `f64` standard days for continuous consumers
+  (astronomy, climate, lab); ticks→`f64` is lossless below ~2.47e8 years,
+  `f64`→ticks always rounds and the rounding rule is named at the call. A
+  world file written before this flip does not load (decision 0189,
+  deliberately) — regenerate it from its seed and pins.
 - No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorting
   uses `total_cmp` with deterministic tie-breaks. (This ban and the
   wall-clock one are enforced workspace-wide by `clippy.toml`
