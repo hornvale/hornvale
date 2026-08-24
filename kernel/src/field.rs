@@ -152,13 +152,25 @@ impl WorldTime {
     /// Whole standard days since genesis, **flooring** — so one tick before
     /// genesis is day `-1`, not day `0`. `trunc`-style truncation toward zero
     /// is what this type exists to make impossible.
+    ///
+    /// Derived from `ticks()`, not from the raw `f64` day (fix round 1, code
+    /// review): the two can disagree once rounding is involved (`day =
+    /// -3.0000001` rounds to `ticks() == -300_000`, but
+    /// `self.day.floor()` is `-4`), which broke the very identity this type
+    /// exists to make provable — one domain per computation (spec §2.1),
+    /// never an f64-derived value compared against a tick-derived one.
     /// type-audit: bare-ok(count: return)
     pub fn whole_days(self) -> i64 {
-        self.day.floor() as i64
+        self.ticks().div_euclid(Self::TICKS_PER_STD_DAY)
     }
 
     /// Tick within the current standard day, always in
     /// `0..TICKS_PER_STD_DAY` even for negative instants.
+    ///
+    /// Derived from `ticks()`, same as `whole_days()` — see that method's
+    /// doc. `div_euclid`/`rem_euclid` satisfy `q * T + r == n` for every
+    /// `n`, so `whole_days() * TICKS_PER_STD_DAY + tick_of_day() ==
+    /// ticks()` holds structurally rather than by luck.
     /// type-audit: bare-ok(count: return)
     pub fn tick_of_day(self) -> i64 {
         self.ticks().rem_euclid(Self::TICKS_PER_STD_DAY)
@@ -308,17 +320,32 @@ mod tests {
     /// disagreement; this makes that check a test instead of a memory.
     #[test]
     fn whole_days_and_tick_of_day_agree_with_ticks_for_a_negative_off_boundary_day() {
-        // -2.75 days = -275,000 ticks exactly (2.75 = 11/4, representable
-        // without rounding), and 275,000 is not a multiple of
-        // TICKS_PER_STD_DAY, so this instant does not land on a day
-        // boundary.
-        let t = WorldTime::from_std_days(-2.75).expect("finite, in range");
-        assert_eq!(t.ticks(), -275_000);
+        // -3.0000001 days is the verified counterexample from fix round 1's
+        // code review: `-3.0000001 * TICKS_PER_STD_DAY == -300_000.01`,
+        // which ROUNDS to `ticks() == -300_000` -- exactly on a day
+        // boundary in tick space -- while the raw f64 day is a hair below
+        // -3.0, so a `whole_days()` computed from `self.day.floor()`
+        // (the pre-fix implementation) disagreed with one computed from
+        // `ticks()`: floor gave -4, ticks-based division gives -3. That
+        // mismatch is precisely what this test exists to catch, which is
+        // why an earlier version of this test (using the exactly
+        // representable -2.75, which never rounds) passed trivially and
+        // let the bug through -- see the fix-round-1 report for the
+        // captured pre-fix red on this exact value.
+        let t = WorldTime::from_std_days(-3.0000001).expect("finite, in range");
+        assert_eq!(
+            t.ticks(),
+            -300_000,
+            "the f64 day rounds onto a tick boundary"
+        );
 
         let whole = t.whole_days();
         let tick_of_day = t.tick_of_day();
-        assert_eq!(whole, -3, "floors, not truncates, toward negative infinity");
-        assert_eq!(tick_of_day, 25_000);
+        assert_eq!(
+            whole, -3,
+            "ticks()-derived, not floor(day)-derived -- floor(-3.0000001) is -4"
+        );
+        assert_eq!(tick_of_day, 0);
         assert_eq!(
             whole * WorldTime::TICKS_PER_STD_DAY + tick_of_day,
             t.ticks(),

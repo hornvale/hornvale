@@ -199,3 +199,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0172](0172-a-concept-with-no-possible-referent-is-an-extradiegetic-gap.md) | A concept with no possible referent is lexicalised as an extradiegetic gap | Accepted |
 | [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
 | [0186](0186-an-instant-is-an-exact-tick-count.md) | An instant is an exact tick count — the lattice is the time domain | Accepted |
+| [0187](0187-a-pre-genesis-sky-query-is-clamped-to-genesis.md) | A pre-genesis sky query is clamped to genesis, deliberately | Accepted |
