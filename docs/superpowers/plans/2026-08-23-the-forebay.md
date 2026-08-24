@@ -617,7 +617,7 @@ Then add `kernel/src/room.rs docs/audits/` and commit.
 - Modify: `kernel/src/room.rs` (`corner_weights` field doc at `:646`; `corner_weights_geo_level` docs at `:660`-`:668` and `:698`-`:706`)
 - Create: `docs/decisions/0206-a-derived-values-key-is-its-validity.md`
 - Create: `docs/decisions/0207-the-derived-store-is-generic-per-shape.md`
-- Create: `docs/decisions/0208-corner-weights-level-guard-is-total.md`
+- Create: `docs/decisions/0208-completing-the-key-retired-the-level-guard.md`
 
 **Interfaces:** consumes Tasks 2-3. Produces nothing code-facing.
 

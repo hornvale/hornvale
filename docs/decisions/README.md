@@ -202,4 +202,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0197](0197-co-location-is-not-discovery.md) | Co-location is not discovery | Accepted |
 | [0206](0206-a-derived-values-key-is-its-validity.md) | A derived value's key is its validity | Accepted |
 | [0207](0207-the-derived-store-is-generic-per-shape.md) | The derived store is generic per value shape, never heterogeneous | Accepted |
-| [0208](0208-corner-weights-level-guard-is-total.md) | Completing `corner_weights`'s key retired its level guard | Accepted |
+| [0208](0208-completing-the-key-retired-the-level-guard.md) | Completing `corner_weights`'s key retired its level guard | Accepted |
