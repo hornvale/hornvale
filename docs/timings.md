@@ -2364,3 +2364,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-24T14:40:13Z | rebaseline | 58.326 | 211.351 | 10.073 | 3.80 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T14:44:14Z | quick | 19.404 | 24.423 | 15.514 | 2.06 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T14:58:08Z | quick | 10.915 | 10.232 | 0.446 | 0.98 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:58:58Z | gate-commit | 31.278 | 73.353 | 33.910 | 3.43 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
