@@ -141,3 +141,38 @@ fn possessing_an_entity_absent_from_the_roster_fails_loudly() {
         Err(e) => assert_eq!(e, hornvale_vessel::VesselError::NoSuchCreature(absent)),
     }
 }
+
+#[test]
+fn who_else_is_here_does_not_include_you() {
+    let (world, _ctx) = seed_42();
+    // Drive a NON-zero roster member (the fourth), not the flagship — a
+    // driven index of 0 cannot distinguish "excludes the driven ENTITY" from
+    // "excludes whatever sits at index 0", which is exactly the bug Task 4
+    // already paid for once (see
+    // `possessing_a_creature_does_not_renumber_other_bodies_handles` above).
+    let (flagship, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    assert!(
+        flagship.bodies().len() >= 4,
+        "precondition: seed 42 derives 4+ bodies"
+    );
+    let fourth = flagship.bodies()[3].entity;
+    drop(flagship);
+
+    let (s, _) = Session::start(
+        &world,
+        &PossessOpts {
+            target: PossessTarget::Creature(fourth),
+            ..Default::default()
+        },
+    )
+    .expect("possessing the fourth roster member starts");
+    let me = s.agent_entity();
+    assert_eq!(me, fourth, "precondition: the fourth member is driven");
+    assert!(
+        !s.colocated_entities().contains(&me),
+        "`needs` and `examine` answer about the OTHERS; you are not one of them"
+    );
+    // Anti-vacuity: the roster must actually contain you, or this passes for
+    // the wrong reason.
+    assert!(s.bodies().iter().any(|b| b.entity == me));
+}

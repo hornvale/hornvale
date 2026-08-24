@@ -4434,6 +4434,19 @@ impl<'w> Session<'w> {
 
     /// Every derived NPC sharing the possessed agent's current room — the
     /// co-located lookup `needs` and `provoke`/`soothe` both build on.
+    ///
+    /// **THE HAND, TASK 6: THIS IS A PLACEHOLDER, LABELLED AS ONE.** The
+    /// exclusion of the driven body is a single hardcoded index
+    /// (`other_bodies(&self.bodies, self.driven)`, not a fixed `0` — see that
+    /// function's own docs) applied by a linear scan over a roster that is
+    /// always tiny. It covers exactly one thing: keeping the driven body out
+    /// of its own "who else is here" answer. It does not cover, and is not
+    /// meant to cover, an area query, a scenery/exclusion component, or a
+    /// cached index — none of that exists yet. The shape that supersedes
+    /// this is a component-style exclusion: creatures in the area lacking an
+    /// `ExcludeFromWhoElse`-like marker, served by an indexed query and
+    /// iterated as an array (the Infocom/Inform scenery-flag pattern). That
+    /// is Penstock-lineage work, not this task's.
     fn colocated_npcs(&self) -> Vec<&Npc> {
         // `.into_iter()`, not `.iter()`: `other_bodies` returns an owned
         // `Vec<&Npc>` now (The Hand, Task 4 fix round 1), so `.into_iter()`
@@ -4442,6 +4455,18 @@ impl<'w> Session<'w> {
         other_bodies(&self.bodies, self.driven)
             .into_iter()
             .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.position())
+            .collect()
+    }
+
+    /// Who else is here, as stable entity identities — [`Self::colocated_npcs`]
+    /// with the borrow stripped off, so a caller (or a test) can ask the
+    /// question without going through prose. Carries the same placeholder
+    /// scope [`Self::colocated_npcs`] documents: a linear scan excluding one
+    /// index, not an area query.
+    pub fn colocated_entities(&self) -> Vec<EntityId> {
+        self.colocated_npcs()
+            .into_iter()
+            .map(|npc| npc.entity)
             .collect()
     }
 
