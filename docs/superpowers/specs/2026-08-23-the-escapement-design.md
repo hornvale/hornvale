@@ -87,18 +87,87 @@ negative `StdDays` to a calendar method** — the only `StdDays(-` in the tree
 is an unrelated eclipse guard. Integer ticks make all three sites one exact
 `div_euclid`/`rem_euclid` pair.
 
+**These are LATENT, not live, and an earlier draft of this spec said
+otherwise.** Reachability was traced rather than assumed:
+
+- The only `WorldTime` → `StdDays` conversion in the whole domain is
+  `provider.rs`'s `fn t`, which is `StdDays(time.day().max(0.0))` — it
+  **clamps**. Negative time cannot reach `local_day` through the provider.
+- The only call sites that bypass that funnel are
+  `windows/worldgen/src/lib.rs`'s `night_sky_lines`, which calls
+  `night_sky_at` and `heliacal_events` with a hardcoded
+  `StdDays::new(0.0).unwrap()`.
+
+So no caller can hand `local_day` a negative value today. The defect is a
+landmine on a public API with zero coverage, not a wrong answer being
+served. It is fixed here because stage 2 ports that exact function anyway
+and the fix is nearly free — **not** because anything is currently broken.
+Justifying it as a live bug would be false, and the campaign does not need
+it: §1's precision decay is live, verified, and sufficient on its own.
+
+**The clamp is the more interesting finding.** `StdDays(time.day().max(0.0))`
+silently maps *both* negative time and NaN to genesis, so the sky at a
+pre-genesis founder's birth is reported as the sky at genesis with no
+signal. Under integer ticks the NaN half disappears by construction, and the
+clamp becomes an explicit choice that should be recorded rather than
+inherited: clamp, `None`, or error. Stage 2 must decide it and mint a
+decision record from the block; it must not silently preserve a `max(0.0)`
+whose only justification is a comment.
+
 ---
 
 ## 2. Non-goals
 
-- **Not** changing the compute path. Astronomy, climate and terrain keep
-  computing in `f64`; only the representation of an *instant* changes.
+- ~~**Not** changing the compute path.~~ **STRUCK — this non-goal was false and
+  the campaign found out at Task 1.** See §2.1. Astronomy, climate and terrain
+  still *compute* in `f64`, but wherever an instant is STORED mid-computation,
+  representing it quantizes the computation. The tick lattice therefore reaches
+  the compute path, deliberately and with authorization.
 - **Not** re-tuning any physical constant, threshold or calibration.
 - **Not** breaking the cross-repo scene contract. See §5.
 - **Not** renaming `windows/vessel`'s `Ticks(u64)`. It is an action *cost* — a
   duration, legitimately unsigned — and renaming it is scope creep.
 - **Not** touching `windows/vessel` or `windows/lab/src/{synthetic,health}.rs`
   before `campaign/the-hand` lands. See §6, stage 4.
+
+### 2.1 The tick lattice IS the time domain (amends decision 0033)
+
+An earlier draft of §2 promised this campaign would not touch the compute path.
+`windows/worldgen/src/hazard.rs` disproves it:
+
+```
+:500   event days are DRAWN continuously   block_start + stream.next_f64() * BLOCK_DAYS
+:505   filtered continuously               if day >= start && day < end
+:507   the survivor is STORED              WorldTime::new(day)   <- rounds to a tick
+```
+
+Take a stored day back out and use it as a window bound — which
+`the_window_is_half_open_at_both_ends` does — and a raw continuous draw is now
+compared against a tick-rounded bound. The half-open property breaks in
+whichever direction the rounding went. That is quantization in the compute
+path, which decision 0033 forbids in as many words.
+
+**Ratified position (Nathan, 2026-08-23): an instant IS a tick.** The lattice is
+not a quantization *of* the time domain, it is the time domain. Consequences,
+accepted deliberately:
+
+1. Code that draws a continuous time converts to ticks **once, at the draw**,
+   and compares ticks exactly thereafter. One domain per comparison, never a
+   raw draw against a round-tripped bound.
+2. Which events fall inside a window changes at boundaries. Committed artifacts
+   move; the census may move. That is the epoch.
+3. **This is a determinism improvement, not merely a cost.** Boundary behaviour
+   stops depending on `f64` ULP accidents and becomes exactly reproducible.
+   `hazard.rs:493-499` already documents an analogous ULP boundary hazard it
+   chose to *record rather than guard*, so the precedent for accepting jitter at
+   this scale exists — this makes that jitter deterministic.
+4. Decision 0033 needs an amending record from this campaign's block: quantize
+   stays emit-only for *magnitudes*, while time is exact by representation and
+   therefore leaves the quantize contract entirely.
+
+**The physical magnitude is nothing** — 0.864 s on hazard events drawn across
+10,000 to 200,000 years. The reason this needed ratification is not the
+magnitude; it is that it amends a constitutional rule and moves committed bytes.
 
 ---
 
@@ -256,9 +325,20 @@ irreversible external commitment.
 
 ## 6. Stages
 
-The tree does not compile between stages 1 and 4, so 1–4 land as one commit
-series on the branch. "Gated" in stage 4 means *do not write it* until The
-Hand's shape is known — not that it merges separately.
+**Every commit compiles and gates green.** An earlier draft of this section said
+the tree does not compile between stages 1 and 4 and that they would "land as
+one commit series" — that was not achievable and the campaign discovered it at
+Task 1. `scripts/hooks/pre-commit` runs `make gate-commit`, whose lint step is
+an *unscoped* workspace clippy with `-D warnings`, so the whole workspace must
+compile for any commit to land at all, and `--no-verify` is forbidden. Stage 1
+therefore keeps `WorldTime::new` and `WorldTime::day` as **migration shims**
+over the new API, and the last porting stage deletes them behind a grep that
+must return zero. The "332 sites break loudly" property is not lost, only
+collected into one controlled moment instead of blocking nine tasks' worth of
+commits.
+
+"Gated" in stage 4 means *do not write it* until The Hand's shape is known —
+not that it merges separately.
 
 **Stage 1 — the kernel.** `WorldTime { ticks: i64 }`, `TickSpan`, the named
 hatch, `GENESIS`, the validating constructor (range, not finiteness). Delete
@@ -270,8 +350,12 @@ are byte-identical to base modulo the day encoding.
 (`provider.rs`'s `fn t(&self, time: WorldTime) -> StdDays`) onto the hatch.
 Fix `local_day` to `(i64, f64)` with `div_euclid`/`rem_euclid`, **with a test
 that passes a negative `StdDays`** — the coverage that does not exist today.
-Exit: eclipse and heliacal goldens move only where the negative-time fix
-makes them move, and each such move is explained in the commit.
+Decide and record the `fn t` clamp question (clamp / `None` / error).
+Exit: **no eclipse or heliacal golden moves.** Because the negative path is
+unreachable today (§1), a golden that moves means the port changed
+*reachable* behaviour, which is a bug in the port, not a consequence of the
+fix. This is the inverted expectation from the earlier draft and it is a
+much stronger check.
 
 **Stage 3 — the remaining domains and the unblocked windows.** climate,
 locale, person, terrain, species, historiography, cli, and

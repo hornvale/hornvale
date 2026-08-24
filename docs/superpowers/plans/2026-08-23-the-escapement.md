@@ -26,6 +26,68 @@
 
 ---
 
+## Execution phasing — READ THIS BEFORE ANY TASK (Ruling 8, supersedes the stage numbering below)
+
+The stage structure below was written before two facts were known, and it is
+wrong about sequencing. It is kept because its task CONTENT is still correct;
+this section overrides its ORDER and its commit boundaries.
+
+**Fact 1.** `scripts/hooks/pre-commit` runs `make gate-commit`, whose lint step
+is an unscoped workspace clippy with `-D warnings` and whose test step is the
+sub-floor tier. So every commit needs the whole workspace to compile AND that
+tier green. There is no such thing as a commit that leaves the tree broken.
+
+**Fact 2.** Flipping the representation changes behaviour immediately and
+workspace-wide, because `from_std_days` rounds at construction. Measured: it
+reddens `hornvale-vessel liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted`
+and `hornvale-worldgen hazard::tests::the_window_is_half_open_at_both_ends`.
+The majority of the affected comparison sites are in `windows/vessel`, which
+`campaign/the-hand` holds off. So a single-phase migration forces the very
+first commit to touch vessel.
+
+**Therefore the migration is two phases.**
+
+### Phase A — additive API and renames. Behaviour-preserving. Vessel untouched.
+
+`WorldTime` KEEPS its `f64` field. Add the full new surface as accessors over
+it:
+
+```rust
+pub struct WorldTime { day: f64 }              // UNCHANGED in Phase A
+
+pub const fn from_ticks(t: i64) -> WorldTime   // stores t as f64 / TICKS_PER_STD_DAY
+pub fn ticks(self) -> i64                      // (self.day * TICKS_PER_STD_DAY).round() as i64
+pub fn from_std_days(d: f64) -> Result<..>     // stores d EXACTLY — no rounding yet
+pub fn as_std_days(self) -> f64                // returns self.day
+pub fn whole_days(self) -> i64                 // floor, via as_std_days
+pub fn tick_of_day(self) -> i64                // rem_euclid over ticks()
+```
+
+`new`/`day` stay as shims. **Nothing rounds on storage, so nothing changes
+behaviour and every commit is green.** Then port crate by crate — Tasks 4, 5,
+6, 7, 10 — each a pure rename, each its own green reviewable commit. Vessel is
+NOT ported in Phase A: the shims are behaviour-preserving, so leaving it
+unported costs nothing and keeps The Hand's files untouched.
+
+`Ord`/`Eq`/`Hash` CANNOT be derived in Phase A (the field is still `f64`), so
+the four `.day().to_bits()` memo-key collapses wait for Phase B. They are all
+in vessel anyway.
+
+Phase A delivers **no user-visible value** — it is preparation, and that is
+fine. Its job is to get 332 mechanical renames out of the risky commit.
+
+### Phase B — the representation flip. One commit. Gated on The Hand.
+
+Flip the field to `i64`, derive `Ord`/`Eq`/`Hash`, delete the shims, and in the
+SAME commit: the tick-domain comparison fixes (§2.1 of the spec — one domain per
+comparison, convert at the draw), the vessel port, and the artifact
+regeneration. These cannot be separated; the campaign proved that twice.
+
+Phase B is where every golden moves. Expect it to be a large commit and review
+it as a unit.
+
+---
+
 ## File Structure
 
 | File | Responsibility | Change |
@@ -332,6 +394,54 @@ Add `TickSpan` to the `units` re-export on the same pattern; find the existing `
 
 Run: `cargo test -p hornvale-kernel --lib field 2>&1 | tail -20`
 Expected: PASS, 7 tests in the `field` module.
+
+- [ ] **Step 6b: Add the transitional migration shims — REQUIRED, see Ruling 5**
+
+`scripts/hooks/pre-commit` runs `make gate-commit`, whose lint step is an
+unscoped `cargo clippy --workspace --all-targets -- -D warnings`. So **the whole workspace must compile for ANY
+commit to land**, and `--no-verify` is forbidden (global CLAUDE.md,
+unconditional). Without shims, no commit is possible between here and Task 9 —
+the plan's original "stages 1-4 land as one commit series" was never achievable.
+
+Verified: the entire external surface is `WorldTime::new(f64)` (224 sites) and
+`.day()` (110 sites). There are **zero** bare `WorldTime { .. }` struct literals
+outside the kernel (the three `WorldTime {` greps are return types), and
+astronomy's `.day` field accesses are on `StdDays`, an unrelated type. So two
+shims restore compilation workspace-wide.
+
+Add to the `impl WorldTime` block:
+
+```rust
+    /// MIGRATION SHIM — deleted in Task 9, do not use in new code.
+    ///
+    /// Preserves the pre-Escapement `new(days)` signature so the workspace
+    /// keeps compiling while crates are ported one at a time. Every call site
+    /// is a not-yet-ported site, and the check that no site survives is the
+    /// build itself, once Task 9 deletes this.
+    /// type-audit: bare-ok(constructor-edge: days)
+    pub fn new(days: f64) -> Result<WorldTime, crate::units::UnitError> {
+        WorldTime::from_std_days(days)
+    }
+
+    /// MIGRATION SHIM — deleted in Task 9, do not use in new code.
+    /// See [`WorldTime::new`]. At a ported site prefer
+    /// [`WorldTime::as_std_days`] (a continuous crossing) or
+    /// [`WorldTime::ticks`] (exact).
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn day(self) -> f64 {
+        self.as_std_days()
+    }
+```
+
+Do **not** mark them `#[deprecated]`: `-D warnings` turns a deprecation warning
+into an error, breaking the workspace exactly as hard as having no shim.
+
+`kernel/src/ledger.rs` needs no production edit once the shims exist — it calls
+`WorldTime::new` and `.day()`, which still resolve. **Leave that file's
+production code alone; deleting its quantize call is Task 2's job.** A kernel
+TEST asserting the old *float* wire shape does belong to this task, because this
+task is what changed the wire shape.
+
 
 - [ ] **Step 7: `cargo fmt` and commit**
 
@@ -870,11 +980,34 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-escapement.txt | tail -20
 ```
 Run ONCE, then grep `/tmp/hv-escapement.txt` freely. Do not re-run the suite to find a second failure line.
 
+- [ ] **Step 4b: Delete the migration shims — the loud break, deferred to here**
+
+Task 1 kept `WorldTime::new` and `WorldTime::day` as shims so every intermediate
+commit could pass the unscoped workspace clippy gate. Vessel is the last crate
+to port, so they go now.
+
+```bash
+# must return ZERO before you delete anything
+grep -rn "WorldTime::new(\|\.day()" --include=*.rs kernel domains windows cli tools
+```
+
+Branch table:
+
+- **Zero hits** → delete both shims from `kernel/src/field.rs`, then run
+  `cargo check --workspace --all-targets`. Green means the migration is complete,
+  mechanically proven rather than asserted.
+- **Any hits** → unported sites the sweeps missed. Port them with Task 6's
+  table, then re-run. Do not delete the shims while a caller remains.
+
+This step is why the shims were safe. The "332 sites break loudly" property the
+design wanted is not lost — it is collected into one controlled moment instead
+of blocking every commit for nine tasks.
+
 - [ ] **Step 5: `cargo fmt` and commit**
 
 ```bash
 cargo fmt
-git add windows/vessel windows/lab
+git add windows/vessel windows/lab kernel/src/field.rs
 git commit -m "refactor(vessel)!: port to WorldTime ticks
 
 Four .day().to_bits() memo keys collapse to the value: Ord/Eq exist now. The

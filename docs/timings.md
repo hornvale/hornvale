@@ -2317,3 +2317,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T17:39:53Z | sluice:outboard | 38.199 | 23.637 | 37.067 | 1.59 | 0 | aa2817100 |  | lefford | 40 |
 | 2026-08-23T17:45:57Z | sluice:gate | 364.686 | 10246.247 | 350.239 | 29.06 | 0 | 67f23ca91 |  | lefford | 40 |
 | 2026-08-23T17:50:10Z | sluice:clients | 251.925 | 1441.846 | 17.245 | 5.79 | 0 | 7775d62e7 |  | lefford | 40 |
+| 2026-08-23T19:33:06Z | prewarm | 662.478 | 2082.513 | 136.074 | 3.35 | 0 | 92d2a0548 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-23T23:40:48Z | gate-commit | 4.914 | 6.471 | 1.397 | 1.60 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-23T23:51:41Z | gate-commit | 5.280 | 3.023 | 0.945 | 0.75 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T00:00:33Z | gate-commit | 41.934 | 81.857 | 13.110 | 2.26 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T00:02:31Z | gate-commit | 95.721 | 62.079 | 49.815 | 1.17 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T00:14:09Z | gate-commit | 276.576 | 771.478 | 105.770 | 3.17 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:01:20Z | gate-commit | 142.427 | 123.633 | 52.734 | 1.24 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T01:03:55Z | gate-commit | 103.307 | 64.023 | 37.670 | 0.98 | 0 | 5cbc3adf4 | campaign/the-escapement | ambrose | 12 |
