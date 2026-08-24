@@ -5035,11 +5035,12 @@ mod tests {
         // The Escapement's Ruling 9 (kernel/src/field.rs) changed WHICH
         // rejection is reachable here, and this test used to assert on the
         // wrong one. `from_std_days` now checks the representable tick
-        // range as well as finiteness, and that range is roughly nine
-        // orders of magnitude narrower than f64's own range — so two
-        // constructible `WorldTime`s can never sum to `f64::MAX`, let alone
-        // overflow it to infinity: overflow-to-infinity is no longer
-        // reachable through this accumulation at all. "outside the
+        // range as well as finiteness, and that range is roughly 294
+        // orders of magnitude narrower than f64's own range
+        // (`i64::MAX / TICKS_PER_STD_DAY` is ~9.22e13 days; `f64::MAX` is
+        // ~1.80e308) — so two constructible `WorldTime`s can never sum to
+        // `f64::MAX`, let alone overflow it to infinity: overflow-to-infinity
+        // is no longer reachable through this accumulation at all. "outside the
         // representable tick range" is what fires instead, from the exact
         // same `Err` arm of the exact same `from_std_days` call, so the
         // invariant this test exists for — a construction failure inside
