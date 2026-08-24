@@ -2365,3 +2365,9 @@ this file never invents a measured value it does not hold.
 | 2026-08-24T14:44:14Z | quick | 19.404 | 24.423 | 15.514 | 2.06 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T14:58:08Z | quick | 10.915 | 10.232 | 0.446 | 0.98 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T14:58:58Z | gate-commit | 31.278 | 73.353 | 33.910 | 3.43 | 0 | 1413bf960 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:28:38Z | quick | 2.769 | 2.324 | 0.122 | 0.88 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:28:45Z | quick | 2.272 | 2.120 | 0.085 | 0.97 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:29:06Z | quick | 15.561 | 15.330 | 2.088 | 1.12 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:29:49Z | gate-commit | 34.747 | 118.595 | 11.722 | 3.75 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:31:07Z | quick | 18.142 | 15.492 | 2.166 | 0.97 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T15:31:44Z | gate-commit | 31.780 | 31.499 | 7.667 | 1.23 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |

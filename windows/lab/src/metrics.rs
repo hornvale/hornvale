@@ -4837,6 +4837,83 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(a.unresolved as f64)
             }),
         },
+        // --- THE GRANARY readouts: do raids land on the hunger side of the
+        // year? (The Granary, T8.) ---
+        //
+        // T4 stamps raid endings at sub-year phases (`year + phase /
+        // PHASES_PER_YEAR`), so an occupation record's `ended` bake-year stamp
+        // now carries its day-of-year in the fractional part. Two aggregate
+        // per-world columns ask whether those stamps cluster away from
+        // uniformity and toward each site's depleted (zero-production) half of
+        // the authored harvest curve. Per-event rows do not fit the lab's
+        // aggregate-metric model, so both fold every raid ending on a world
+        // into one number. Settlement rung for the same reason as the three
+        // raid columns above.
+        Metric {
+            name: "granary-raid-phase-concentration",
+            doc: "Circular (Rayleigh-style) concentration R of this world's \
+                  raid-caused occupation endings' day-of-year stamps (The \
+                  Granary T8): the mean resultant length of the phases, 0 when \
+                  uniformly spread around the year and approaching 1 as all \
+                  raids land at one moment. Day-of-year is the fractional part \
+                  of the record's bake-year `ended` stamp. Absent on a world \
+                  with fewer than 5 raid-caused endings — below that floor the \
+                  concentration statistic is noise, not signal.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.5, 0.7],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let stamps = raid_stamps(
+                    &occupation_records(v.world()),
+                    v.climate.climate.geosphere(),
+                    &v.climate.climate,
+                );
+                if stamps.len() < RAID_FLOOR {
+                    return MetricValue::Absent;
+                }
+                let (mut cs, mut sn) = (0.0_f64, 0.0_f64);
+                for &(phase, _) in &stamps {
+                    let theta = std::f64::consts::TAU * phase;
+                    cs += hornvale_kernel::math::cos(theta);
+                    sn += hornvale_kernel::math::sin(theta);
+                }
+                let n = stamps.len() as f64;
+                MetricValue::Number((cs * cs + sn * sn).sqrt() / n)
+            }),
+        },
+        Metric {
+            name: "granary-raids-in-depleted-half",
+            doc: "Fraction of this world's raid-caused occupation endings whose \
+                  day-of-year stamp falls in the DEPLETED half of the victim \
+                  site's authored harvest curve (The Granary T8): the half-year \
+                  starting half a year past the curve peak, where `Curve::at` \
+                  returns exactly zero and a settlement lives off stores. The \
+                  curve is keyed exactly as the bake keys it at open — \
+                  `geo.coord(site).latitude` and `biome_class(climate.biome_map())` \
+                  through `worldgen::harvest::Curve` — so the column measures the \
+                  same seasonality the granary integrates. Uniform raids give \
+                  0.5; hunger-side clustering gives > 0.5. Absent under the same \
+                  5-ending floor as `granary-raid-phase-concentration`.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.25, 0.4, 0.5, 0.6, 0.75],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let stamps = raid_stamps(
+                    &occupation_records(v.world()),
+                    v.climate.climate.geosphere(),
+                    &v.climate.climate,
+                );
+                if stamps.len() < RAID_FLOOR {
+                    return MetricValue::Absent;
+                }
+                let depleted = stamps.iter().filter(|&&(_, d)| d).count();
+                MetricValue::Number(depleted as f64 / stamps.len() as f64)
+            }),
+        },
         // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
         // (The Assize). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
         // seed 42 alone, and `history_sundering.rs` reported the same quantity
@@ -5107,6 +5184,47 @@ fn raid_attribution(records: &[OccupationRecord]) -> RaidAttribution {
         initiators: initiators.len() as u64,
         unresolved,
     }
+}
+
+/// Minimum raid-caused endings a world must carry before either Granary
+/// column reports (T8): below five stamps the circular concentration is noise
+/// rather than signal, so the world reads Absent instead.
+const RAID_FLOOR: usize = 5;
+
+/// One raid-caused ending's sub-year stamp, folded off a record list: the
+/// annual phase of the `ended` bake-year stamp (its fractional part), plus
+/// whether that phase falls in the DEPLETED half of the victim site's
+/// authored harvest curve. The curve is keyed exactly as [`Bake`] keys it at
+/// open — latitude off the geosphere, coarse biome class off the climate's
+/// biome map — via the same public [`crate::harvest::Curve`] the bake
+/// consumes, so these columns measure the seasonality the granary actually
+/// integrates. Records without a raid hand or an end stamp contribute
+/// nothing; a site whose latitude or biome cannot key a curve contributes
+/// nothing rather than aborting the fold.
+fn raid_stamps(
+    records: &[OccupationRecord],
+    geo: &hornvale_kernel::Geosphere,
+    climate: &GeneratedClimate,
+) -> Vec<(f64, bool)> {
+    let mut stamps = Vec::new();
+    for r in records {
+        if !matches!(r.ended_by, Ended::By(_)) {
+            continue;
+        }
+        let Some(year) = r.core.ended else { continue };
+        let site = r.core.site;
+        let Ok(lat) = hornvale_worldgen::harvest::LatDeg::new(geo.coord(site).latitude) else {
+            continue;
+        };
+        let biome = hornvale_worldgen::biome_class(*climate.biome_map().get(site));
+        let curve = hornvale_worldgen::harvest::Curve::new(lat, biome);
+        let peak = curve.peak_day_of_year() / hornvale_kernel::units::Years::DAYS_PER_YEAR;
+        // Growing half: [peak, peak+0.5). Depleted half: the complement,
+        // [peak+0.5, peak+1.0) mod 1 — where `Curve::at` returns zero.
+        let depleted = (year.fract().rem_euclid(1.0) - peak - 0.5).rem_euclid(1.0) < 0.5;
+        stamps.push((year.fract().rem_euclid(1.0), depleted));
+    }
+    stamps
 }
 
 /// The preregistered readout epoch the diachronic battery uses (`EPOCH_2` in
@@ -9679,7 +9797,11 @@ mod tests {
         // dimensionless atmospheric greenhouse residual drawn in astronomy.
         // A field read directly off `AstronomyView`, no sweep, so no cost
         // concern; nothing consumes the predicate or the metric yet.
-        assert_eq!(registry().len(), 224);
+        // +2 for THE GRANARY (T8: granary-raid-phase-concentration,
+        // granary-raids-in-depleted-half) — per-world aggregates over the
+        // bake's raid-ending day-of-year stamps; both read committed history
+        // records only, so no sweep cost beyond the bake itself.
+        assert_eq!(registry().len(), 226);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
