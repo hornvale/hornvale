@@ -220,41 +220,74 @@ and negative days are constitutionally legal — a community founder can be
 born before the history record begins (decision 0126). `local_day`'s
 `local as u64` cast **saturated**: every negative local day collapsed to
 zero, silently, with no test anywhere exercising the branch. Verified rather
-than assumed: `local = -5.3` cast to `0`, not `-6`. Tracing every caller found
-the defect was **latent, not live** — the sole `WorldTime → StdDays` funnel
-(`GeneratedSky::t`) clamps to genesis first, so nothing reachable today could
-hand `local_day` a negative value — but the fix was nearly free once the
-surrounding code was being rewritten anyway, and it is now a `div_euclid`/
-`rem_euclid` pair with the first test in the tree that passes a negative
-`StdDays` to any calendar method.
+than assumed: `local = -5.3` cast to `0`, not `-6`.
+
+Tracing every caller was supposed to settle whether this was live or latent,
+and it did not — it only felt like it did. The trace found that the sole
+`WorldTime -> StdDays` funnel (`GeneratedSky::t`) clamps to genesis before
+handing anything to `local_day`, and that the two funnel-bypassing call sites
+in `windows/worldgen` pass a hardcoded zero, and concluded from those two
+checks that **the defect was latent, not live** — nothing reachable today
+could hand `local_day` a negative value. That conclusion was wrong, and it
+stood, believed, for the rest of the campaign: `domains/astronomy/src/
+heliacal.rs` calls `local_day` directly, beneath the funnel, with values it
+builds internally from an already-clamped time, and those values are
+negative on almost every world the domain has ever generated — 1,293,003
+divergent calls measured in a single seed-267 build, none of them at a
+non-negative local day. The defect was **live**, and the campaign's own
+census refresh is what proved it: three settlement names moved, downstream
+of exactly this fix, weeks after the "latent" conclusion had already been
+written into a spec and a decision record. Decision 0190 records the
+correction — not because the fix changes (it does not; the same `div_euclid`/
+`rem_euclid` pair was the right repair either way) but because the *reason*
+given for shipping it as low-priority cleanup rather than a live bugfix was
+false, and false claims belong on the record as corrected, not quietly
+forgotten.
 
 That same clamp — `time.day().max(0.0)`, previously justified only by a code
 comment — is now a decision rather than an inherited assumption (decision
-0187). A pre-genesis sky query answers as the sky at genesis, because the
-public `StdDays` type cannot receive a negative value to answer honestly in
-the first place; the choice was between a total function with no case to
-defend and a case the type system had already foreclosed one layer up. The
-tension worth stating plainly: `Calendar::local_day`, fixed the same commit,
-now answers correctly for negative time on the strength of the very same
+0187), and that decision's own choice is unaffected by the correction above.
+A pre-genesis sky query answers as the sky at genesis, because the public
+`StdDays` type cannot receive a negative value to answer honestly in the
+first place; the choice was between a total function with no case to defend
+and a case the type system had already foreclosed one layer up. The tension
+worth stating plainly: `Calendar::local_day`, fixed the same commit, now
+answers correctly for negative time on the strength of the very same
 precedent (decision 0126) that the sky's clamp seems to decline. The
 resolution is structural, not a disagreement about what a pre-genesis moment
-means — the calendar's negative path is reachable in principle and the sky's
-is not, because nothing outside `domains/astronomy` can construct a negative
-`StdDays` to ask the sky the question at all.
+means — the calendar's negative path is reachable **in fact**, through
+`heliacal.rs`, and the sky's is not, because nothing outside
+`domains/astronomy` can construct a negative `StdDays` to ask the sky the
+question at all. That the calendar's path turned out to be reachable, where
+an earlier draft of this chronicle said "in principle" and meant "probably
+never," is the correction this section now carries.
 
 ## The epoch, and what stays put
 
 Every internal representation of time moves: `World`/`Ledger` JSON, the
 committed almanacs and session fixtures, the lab study CSVs, the Domesday
-survey, the census goldens. Nothing about generation itself moves — no
-seed-derivation label changed, no draw was added, and stream consumption
-order is exactly what it was before, which is the load-bearing claim the
-pin-isolation property tests exist to hold. A controller re-parse of the
-seed-42 world on both sides of the flip found 12,534 facts on each side, zero
-non-day differences, and every one of the 12,502 dated facts satisfying
-`old == quantize(new / 100,000)` — the same instants, some now up to 495
-ticks (7 minutes 8 seconds) better resolved than the old encoding could have
-placed them.
+survey, the census goldens. No seed-derivation label changed, no draw was
+added, and stream consumption order is exactly what it was before, which is
+the load-bearing claim the pin-isolation property tests exist to hold. A
+controller re-parse of the seed-42 world on both sides of the flip found
+12,534 facts on each side, zero non-day differences, and every one of the
+12,502 dated facts satisfying `old == quantize(new / 100,000)` — the same
+instants, some now up to 495 ticks (7 minutes 8 seconds) better resolved than
+the old encoding could have placed them.
+
+**"Nothing about generation itself moves" is not quite the right sentence,
+though an earlier draft of this chronicle used exactly it.** The *tick
+representation flip* moved nothing generated — zero census cells, zero
+non-`day` ledger bytes, confirmed by the re-parse above. But this campaign
+also fixed `Calendar::local_day`'s live negative-time defect (the previous
+section), a stage before the flip landed, and that fix changed a generated
+**value**: which heliacal risings and settings a scan finds on some worlds,
+which changes a settlement's presiding concept, which changes its drawn
+name. The census refresh that closed this campaign moved three cells because
+of it. That is a legitimate consequence of fixing a real bug, not a
+regression, and it does not touch the load-bearing claim above — no label,
+no draw, no stream order moved — but "generation itself" did move, once, on
+purpose, and saying otherwise overstated the epoch's own scope.
 
 The one thing that does *not* move is the cross-repo contract.
 `scene/eclipses/v1`'s `day`, `from_day`, and `until_day` fields stay exactly

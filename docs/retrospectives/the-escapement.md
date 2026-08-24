@@ -10,17 +10,41 @@ things, and across this campaign the second kept getting inherited from the
 first without being checked on its own terms. It recurred in six distinct
 costumes, spread across an implementer, a reviewer, and the controller
 session writing this file — the error was not any one person's, and naming
-whose turn it was each time is less useful than naming the shape.
+whose turn it was each time is less useful than naming the shape. **The
+first costume below is the sharpest instance of the whole pattern, because it
+did not stop at one bad inference — it survived a second pass that believed
+it was correcting the first, got inherited into a spec, a decision record,
+and this file's own first draft, and was only caught three weeks later by an
+unrelated measurement that had no idea it was checking anything.**
 
 ### Six costumes
 
-1. **A verified defect read as a verified blast radius.** `local_day`'s
+1. **A verified defect read as a verified blast radius, corrected once, and
+   the correction was the same error one level up.** `local_day`'s
    `local as u64` cast was shown, with a command, to saturate every negative
    input to zero. That is real. What followed it was an unchecked jump to
-   "live bug" — tracing every caller afterward found the negative path is
-   unreachable today, because the sole funnel into it clamps first. The
-   defect and its reach are two separate claims, and only the first had been
-   verified.
+   "live bug." A reachability trace then checked whether `GeneratedSky::t` —
+   the domain's one `WorldTime -> StdDays` funnel — could emit a negative
+   value (no, it clamps) and whether the funnel-bypassing call sites named in
+   `windows/worldgen/src/lib.rs` could construct one (no, they pass a
+   hardcoded zero), and from those two checks concluded the negative path was
+   **unreachable altogether** — a claim about every path into the function,
+   drawn from evidence about two of them. That conclusion read as a
+   correction of the first over-claim, and it was published as one: in this
+   spec (§1), in decision 0187's rationale, and in this file's own first
+   draft of this very costume. It stood, believed, through the rest of the
+   campaign. It was wrong: `domains/astronomy/src/heliacal.rs` calls
+   `local_day` directly, beneath the funnel, with values it constructs
+   internally from an already-clamped time — and those values are negative on
+   almost every world (1,293,003 divergent calls measured in a single
+   seed-267 build; decision 0190 records the correction). Nothing forced the
+   question until a census refresh, weeks and several stages later, moved
+   three settlement names that trace straight back to this exact fix. The
+   defect and its reach are two separate claims; this campaign verified the
+   first, asserted the second from a check that covered only some of the
+   paths that mattered, and then treated that narrower check as if it closed
+   the question — twice, the second time while writing a document about
+   exactly this failure mode.
 
 2. **A number correct in one context, reused in another where it was
    false.** "Nine orders of magnitude" was written once, correctly, about how

@@ -156,23 +156,58 @@ negative `StdDays` to a calendar method** — the only `StdDays(-` in the tree
 is an unrelated eclipse guard. Integer ticks make all three sites one exact
 `div_euclid`/`rem_euclid` pair.
 
-**These are LATENT, not live, and an earlier draft of this spec said
-otherwise.** Reachability was traced rather than assumed:
+**These are LIVE, not latent — this section itself got that wrong once, and
+it is worth narrating exactly how.** An earlier draft of this spec said
+"live." This section then "corrected" that to "latent" on the strength of a
+reachability trace that was real but incomplete, and the incomplete trace
+stood — in this spec, on the project board, and in decision 0187's rationale
+— until a census refresh forced the question weeks later. Decision
+[0190](../../decisions/0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md)
+records the correction on the decision-log side; here is the trace, redone at
+the site the first pass missed.
 
-- The only `WorldTime` → `StdDays` conversion in the whole domain is
+What the earlier trace found was real, as far as it went:
+
+- The only `WorldTime` → `StdDays` conversion in `GeneratedSky`'s own path is
   `provider.rs`'s `fn t`, which is `StdDays(time.day().max(0.0))` — it
-  **clamps**. Negative time cannot reach `local_day` through the provider.
-- The only call sites that bypass that funnel are
-  `windows/worldgen/src/lib.rs`'s `night_sky_lines`, which calls
-  `night_sky_at` and `heliacal_events` with a hardcoded
-  `StdDays::new(0.0).unwrap()`.
+  **clamps**. Negative time cannot reach `local_day` through that funnel.
+- `windows/worldgen/src/lib.rs`'s `night_sky_lines` does bypass the funnel,
+  and it does pass a hardcoded `StdDays::new(0.0).unwrap()` — never negative.
 
-So no caller can hand `local_day` a negative value today. The defect is a
-landmine on a public API with zero coverage, not a wrong answer being
-served. It is fixed here because stage 2 ports that exact function anyway
-and the fix is nearly free — **not** because anything is currently broken.
-Justifying it as a live bug would be false, and the campaign does not need
-it: §1's precision decay is live, verified, and sufficient on its own.
+What it missed: `domains/astronomy/src/heliacal.rs` calls
+`Calendar::local_day` **directly, below the funnel, with a real (non-zero)
+time**. `heliacal_events` computes `year_start = t.0 - calendar.year_phase(t)
+* year` (`heliacal.rs:112`) from the already-clamped, non-negative `t` it is
+given, then scans `SAMPLES` (400) points forward from `year_start`
+(`heliacal.rs:137`) and calls `at_local_fraction`, which calls
+`calendar.local_day(t_sample)` (`heliacal.rs:81`) on each one. `year_start` is
+negative whenever `t < year_phase(t) * year`, which holds at genesis for
+essentially every world with a nonzero drawn `year_phase_offset` — the early
+scan samples are pre-genesis by construction, and nothing clamps them before
+they reach `local_day`. The earlier trace checked whether a caller could hand
+`local_day` a negative `StdDays` from *outside* astronomy; it did not check
+whether a function *inside* astronomy, downstream of the clamp, could
+construct one itself. It can, and does, on almost every seed.
+
+Measured, not argued: instrumenting `local_day` to compare the old and fixed
+fraction formulas while building a single seed-267 world (`hornvale new`)
+found **1,293,003 fraction divergences out of 2,776,344 probe calls, every
+one at `local < 0`, zero at `local >= 0`**
+(`.superpowers/sdd/2026-08-23-the-escapement/census-attribution.md` has the
+full instrumentation and backtrace). The negative path was not a corner case
+sitting behind an unreachable guard — it was the common case for the early
+part of every year scan, on almost every world the domain has ever built.
+
+The consequence reaches something observable. The corrected fraction changes
+which heliacal risings and settings `heliacal_events` finds, for 2 of 354
+seed-267 settlements and 1 of 274 in seed 831; that changes `presiding` for
+those cells, which changes the settlement's drawn name. Those are the three
+cells this campaign's census refresh moved — the fix's fingerprint, not a
+regression. So the defect fixed here (§1's table above) was live on
+essentially every world this domain has ever generated, not latent. It is
+still fixed for the reason originally given — stage 2 ports this exact
+function anyway and the fix is nearly free — but the claim that nothing was
+currently broken does not survive: something was, and the census caught it.
 
 **The clamp is the more interesting finding.** `StdDays(time.day().max(0.0))`
 silently maps *both* negative time and NaN to genesis, so the sky at a
@@ -359,9 +394,31 @@ the Domesday survey (a pure read over the census), and the census goldens.
 **Cross-repo (does *not* move):** see §5.
 
 No seed-derivation label changes, no new draw, and **no change to stream
-consumption order** — this campaign alters representation, not generation.
-That is the load-bearing claim of the whole epoch and stage 1's exit
-criterion tests it directly (§7).
+consumption order** — all three verified directly, index by index, not
+merely argued: `World.derived_under`, the concept registry, the fact count,
+and the `(subject, predicate, provenance)` sequence are identical between a
+pre- and post-campaign world at the same seed
+(`.superpowers/sdd/2026-08-23-the-escapement/census-attribution.md`). Only
+`object.Text` values differ, at the same indices — nothing inserted, dropped,
+or reordered.
+
+**The clause this section used to draw from those three facts — "this
+campaign alters representation, not generation" — is too strong as
+originally written, and needs restating precisely.** Generation *did*
+change, once: at `3bc4fd871` (Phase A Task 5), fixing `Calendar::local_day`'s
+negative-time defect (§1) changed which heliacal risings and settings a
+scan finds on some worlds, which changes a settlement's `presiding` concept
+and, downstream, its drawn name. That is a changed **value**, produced by a
+bugfix, not a changed seed label or stream order — the ledger stays
+index-aligned because naming draws are salted per settlement, so a changed
+concept list at one settlement cannot shift another's draws. Measured
+precisely: the representation flip itself (`9ad5911a3`, Phase B) moved
+**zero** census cells and zero non-`day` ledger bytes; the `local_day` fix
+(`3bc4fd871`, Phase A, landed *before* the flip) moved **three**. Stage 1's
+exit criterion (§7) still holds for what it actually tests — the tick
+encoding's own byte-identity — which is a separate claim from "nothing in
+this campaign changed a generated value," and that separate, stronger claim
+is the one this section retracts.
 
 ---
 
@@ -420,11 +477,17 @@ are byte-identical to base modulo the day encoding.
 Fix `local_day` to `(i64, f64)` with `div_euclid`/`rem_euclid`, **with a test
 that passes a negative `StdDays`** — the coverage that does not exist today.
 Decide and record the `fn t` clamp question (clamp / `None` / error).
-Exit: **no eclipse or heliacal golden moves.** Because the negative path is
-unreachable today (§1), a golden that moves means the port changed
-*reachable* behaviour, which is a bug in the port, not a consequence of the
-fix. This is the inverted expectation from the earlier draft and it is a
-much stronger check.
+Exit: **no eclipse or heliacal golden moves.** An earlier draft of this exit
+criterion argued that a moved golden would prove the port changed
+*reachable* behaviour, on the premise that the negative path was unreachable
+before this stage. §1 now records that premise as wrong — the path is live,
+through `heliacal.rs`, on almost every world — so a moved golden would not
+by itself indict the port; the campaign's own census refresh moved three
+cells *because* the fix changes reachable behaviour, correctly. What this
+exit criterion actually checks is narrower and still holds: the specific
+committed seed-42 astronomy fixtures it names were not sensitive to the fix
+(their heliacal salience ranking did not flip), which is a fact about those
+two seeds, not evidence that nothing downstream could move.
 
 **Stage 3 — the remaining domains and the unblocked windows.** climate,
 locale, person, terrain, species, historiography, cli, and
@@ -453,14 +516,22 @@ wrong and a branch table cannot.
   and commit in the same commit.
 - `docs/digest/` moved → expected once decisions are minted; regenerate via
   the redirect, never by hand.
-- A **lab study CSV** or **census** column moved → **STOP.** Representation
-  changed a *measured value*, which contradicts §4's load-bearing claim.
-  Attribute it before proceeding.
+- A **lab study CSV** or **census** column moved → **STOP.** A measured value
+  changed. Attribute it before proceeding — to the representation flip, or to
+  something else — rather than assuming which.
 - `book/src/gallery/` moved → **STOP**, epoch event, escalate.
 
 **On the census:** a refresh is a carve-out requiring explicit authorization
-and runs only on lefford. It is stage 5 work, not stage 1, and the goldens it
-moves must be attributable to the day encoding alone.
+and runs only on lefford. It is stage 5 work, not stage 1, and every golden it
+moves must be attributed, not assumed. **This rule caught exactly the case it
+exists for, late.** The census refresh that closed this campaign moved three
+cells, and the closing narrative first assumed they were attributable to the
+day encoding (the representation flip). They were not: attribution
+(`.superpowers/sdd/2026-08-23-the-escapement/census-attribution.md`) traced
+them to `3bc4fd871`'s `local_day` bugfix, landed a stage earlier — a real
+attribution, just not the first guess. "STOP and attribute" was the right
+instinct; the miss was treating the first plausible cause as the attribution
+itself instead of testing it.
 
 **The claim that must be tested, not asserted:** that no seed-derivation
 label, no draw and no stream consumption order changed. The pin-isolation

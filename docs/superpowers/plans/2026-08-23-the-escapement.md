@@ -818,7 +818,7 @@ cargo test -p hornvale-astronomy --test suite 2>&1 | tail -20
 Branch table:
 
 - **All green** → correct. The two callers use only the fraction, and for non-negative input the new expression is identical to the old.
-- **`golden_seed_42` or a night-sky/eclipse golden red** → **STOP.** The negative path is unreachable today (spec §1), so a moved golden means the port changed *reachable* behaviour. That is a bug in this task, not a consequence of the fix. Diff the golden and find which non-negative input changed.
+- **`golden_seed_42` or a night-sky/eclipse golden red** → **STOP.** The negative path is unreachable today (spec §1), so a moved golden means the port changed *reachable* behaviour. That is a bug in this task, not a consequence of the fix. Diff the golden and find which non-negative input changed. **Correction, added after close (decision 0190): "unreachable today" was wrong.** `heliacal.rs` reaches `local_day` beneath the funnel this claim checked, on almost every world, and the negative path was live. The branch table's outcome held anyway — no *named* golden here moved — but not for the reason given; see spec §1 and §6 as corrected.
 - **A type error at `heliacal.rs:81` or `night_sky.rs:122`** → expected only if those bind the index; they destructure `(_, f)` so they should not. Fix by keeping the discard.
 
 - [ ] **Step 5: Commit**

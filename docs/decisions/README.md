@@ -202,5 +202,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0187](0187-a-pre-genesis-sky-query-is-clamped-to-genesis.md) | A pre-genesis sky query is clamped to genesis, deliberately | Accepted |
 | [0188](0188-quantize-still-governs-magnitude-time-leaves-it.md) | Quantize still governs magnitude; time leaves the contract entirely | Accepted |
 | [0189](0189-a-pre-flip-world-file-does-not-load-and-that-is-the-point.md) | A pre-flip world file does not load, and that is the point | Accepted |
+| [0190](0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md) | A reachability trace is not closed by finding one funnel | Accepted |
 | [0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md) | A map's frame is a fact about the world, and a view of the world is a lens | Accepted |
 | [0197](0197-co-location-is-not-discovery.md) | Co-location is not discovery | Accepted |
