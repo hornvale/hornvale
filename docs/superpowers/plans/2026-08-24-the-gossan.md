@@ -964,11 +964,20 @@ cargo fmt && make gate-commit
 git add -A
 git commit -m "refactor(the-gossan): one predicate for the question four sites spelled four ways
 
-allometry keeps its own comparison and does NOT adopt the predicate, because
-life_history takes only the thermal axis and widening its signature to take a
-parameter it never reads is the opposite of this campaign's point. The comment
-at that site now says so. The three liveness sites, which hold whole traits,
-adopt it."
+All four adopt it, allometry included. An earlier draft of this task carved
+allometry out because it held only the thermal axis and the predicate was
+specified to take both — but that two-axis predicate had zero possible
+callers, since every one of the four sites holds a ThermalStrategy and nothing
+else. With the corrected single-axis signature the carve-out has no reason to
+exist, and keeping it would have left one of the four spellings
+un-consolidated for no benefit.
+
+liveness.rs:799's Unmodelled | Absent => base is deliberately NOT routed
+through the predicate. It is an arm of an exhaustive match on the thermal
+axis, not a fifth spelling of the question, and its grouping is load-bearing:
+Unmodelled groups with Absent there and with Endothermic in
+basal_metabolic_rate_w. Rewriting it would destroy the exhaustive match and
+change behaviour while reading like tidying."
 ```
 
 ---
