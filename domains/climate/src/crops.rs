@@ -70,7 +70,7 @@ fn arable(formation: Formation) -> bool {
     )
 }
 
-/// The staple that grows best at a cell, or `None` where nothing does.
+/// The staple that grows best at a vertex, or `None` where nothing does.
 ///
 /// Bands are the conventional ones: barley tolerates cold where wheat will
 /// not, rice wants heat and standing water, millet heat without it, tubers

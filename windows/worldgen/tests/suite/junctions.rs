@@ -30,7 +30,7 @@
 //! nothing a second call could read — and a `junctions_at` that *did* draw
 //! would derive a fresh seed-keyed stream per call and be exactly as
 //! invariant. Review proved it: a mutation making each link a literal coin
-//! flip keyed on the unordered cell pair left all three junction tests green
+//! flip keyed on the unordered vertex pair left all three junction tests green
 //! and the whole 300-test crate green with it.
 //!
 //! So the assertion is now an **independent re-derivation** of the
@@ -41,7 +41,7 @@
 //! roster check would NOT have caught that mutation — it used an inline
 //! `StreamLabel::dynamic`, which no `stream_labels()` roster can see.
 
-use hornvale_kernel::{Band, CellId, Geosphere, Seed};
+use hornvale_kernel::{Band, Geosphere, Seed, Vertex};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, junctions_at,
@@ -99,16 +99,16 @@ fn habitation_bands() -> Vec<(u8, Band)> {
     bands
 }
 
-/// Every cave-bearing cell of the panel world, in cell order.
+/// Every cave-bearing vertex of the panel world, in vertex order.
 ///
-/// No `is_ocean` filter: `cave_at` refuses an ocean cell as its first act, so
+/// No `is_ocean` filter: `cave_at` refuses an ocean vertex as its first act, so
 /// a test-side ocean guard is the same dead pairing review found inside
 /// `junctions_at` (round 1, F8).
-fn cave_cells(terrain: &GeneratedTerrain) -> Vec<CellId> {
+fn cave_vertices(terrain: &GeneratedTerrain) -> Vec<Vertex> {
     terrain
         .geosphere()
-        .cells()
-        .filter(|&cell| terrain.cave_at(cell).is_some())
+        .vertices()
+        .filter(|&vertex| terrain.cave_at(vertex).is_some())
         .collect()
 }
 
@@ -119,26 +119,26 @@ fn cave_cells(terrain: &GeneratedTerrain) -> Vec<CellId> {
 ///
 /// **Branch-scoped since The Drift's Task 7** (spec §4.6). It used to ask
 /// only about the MAIN LINE, because a junction was a fact about
-/// `(cell, band)` and every branch could walk sideways to branch 0 to use
+/// `(vertex, band)` and every branch could walk sideways to branch 0 to use
 /// its door. `passages_from` has no lateral rule any more, so the door
 /// belongs to the branch that can actually reach it.
 fn branch_admits(
     seed: Seed,
     terrain: &GeneratedTerrain,
-    cell: CellId,
+    vertex: Vertex,
     branch: u8,
     rung: Band,
 ) -> bool {
-    let Some(cave) = terrain.cave_at(cell) else {
+    let Some(cave) = terrain.cave_at(vertex) else {
         return false;
     };
     let here = ChamberAddr {
-        cell,
+        vertex,
         branch,
         band: rung,
         level: 0,
     };
-    if !chamber_exists(seed, &cave, terrain.geothermal_gradient_at(cell), here) {
+    if !chamber_exists(seed, &cave, terrain.geothermal_gradient_at(vertex), here) {
         return false;
     }
     bands_of(character_at(seed, here)).contains(&rung)
@@ -147,9 +147,9 @@ fn branch_admits(
 /// The canonical address of one system at one `(band, branch)` — what the
 /// whole panel scan asks from, and the only address shape `junctions_at`
 /// projects onto.
-fn canonical(cell: CellId, band: Band, branch: u8) -> ChamberAddr {
+fn canonical(vertex: Vertex, band: Band, branch: u8) -> ChamberAddr {
     ChamberAddr {
-        cell,
+        vertex,
         branch,
         band,
         level: 0,
@@ -159,7 +159,7 @@ fn canonical(cell: CellId, band: Band, branch: u8) -> ChamberAddr {
 /// Every `(asked, answered)` junction pair in the world, as ORDERED pairs —
 /// both directions of every edge, deliberately.
 ///
-/// It filtered `far.cell > addr.cell` for one commit, which made
+/// It filtered `far.vertex > addr.vertex` for one commit, which made
 /// `junctions_are_symmetric` blind in one direction: "`junctions_at(Y)` names
 /// X but `junctions_at(X)` does not name Y", for X < Y, produced no pair from
 /// either side and was never checked. Review demonstrated it with mirror
@@ -167,13 +167,13 @@ fn canonical(cell: CellId, band: Band, branch: u8) -> ChamberAddr {
 /// smaller-id ones went red. The dedup bought nothing; the scan is ~0.3 s.
 fn all_junction_edges(terrain: &GeneratedTerrain) -> Vec<(ChamberAddr, ChamberAddr)> {
     let mut edges = Vec::new();
-    for cell in cave_cells(terrain) {
+    for vertex in cave_vertices(terrain) {
         for &(_, rung) in &habitation_bands() {
             // Every branch, not just the main line: a junction is a fact
-            // about `(cell, band, branch)` since Task 7, so a main-line-only
+            // about `(vertex, band, branch)` since Task 7, so a main-line-only
             // scan would leave the whole re-scoping unmeasured.
             for branch in 0..BRANCHES_PER_SYSTEM {
-                let addr = canonical(cell, rung, branch);
+                let addr = canonical(vertex, rung, branch);
                 for far in junctions_at(Seed(42), terrain, addr) {
                     edges.push((addr, far));
                 }
@@ -192,40 +192,40 @@ fn all_junction_edges(terrain: &GeneratedTerrain) -> Vec<(ChamberAddr, ChamberAd
 fn a_junction_is_the_derivation_rule_and_nothing_else() {
     let terrain = panel_terrain();
     let geo = terrain.geosphere();
-    let cells = cave_cells(&terrain);
+    let vertices = cave_vertices(&terrain);
     let bands = habitation_bands();
 
     let mut answered = 0usize;
-    for &cell in &cells {
+    for &vertex in &vertices {
         for &(rank, rung) in &bands {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 // Clauses 3 and 4 for the asking side; clause 1 is entailed
                 // by `cave_at` inside `branch_admits`.
-                let expected: Vec<CellId> = if branch_admits(Seed(42), &terrain, cell, branch, rung)
-                {
-                    let mut near: Vec<CellId> = geo
-                        .neighbors(cell)
+                let expected: Vec<Vertex> =
+                    if branch_admits(Seed(42), &terrain, vertex, branch, rung) {
+                        let mut near: Vec<Vertex> = geo
+                            .neighbors(vertex)
+                            .iter()
+                            .copied()
+                            // Clause 2 is the geosphere's own adjacency, and
+                            // clauses 1/3/4 again for the far side — at the
+                            // SAME branch, which is the re-scoping.
+                            .filter(|&far| branch_admits(Seed(42), &terrain, far, branch, rung))
+                            .collect();
+                        near.sort();
+                        near
+                    } else {
+                        Vec::new()
+                    };
+                let shipped: Vec<Vertex> =
+                    junctions_at(Seed(42), &terrain, canonical(vertex, rung, branch))
                         .iter()
-                        .copied()
-                        // Clause 2 is the geosphere's own adjacency, and
-                        // clauses 1/3/4 again for the far side — at the
-                        // SAME branch, which is the re-scoping.
-                        .filter(|&far| branch_admits(Seed(42), &terrain, far, branch, rung))
-                        .collect();
-                    near.sort();
-                    near
-                } else {
-                    Vec::new()
-                };
-                let shipped: Vec<CellId> =
-                    junctions_at(Seed(42), &terrain, canonical(cell, rung, branch))
-                        .iter()
-                        .map(|a| a.cell)
+                        .map(|a| a.vertex)
                         .collect();
                 assert_eq!(
                     shipped, expected,
-                    "junctions_at disagrees with the derivation rule at cell \
-                     {cell:?} band {rank} branch {branch}"
+                    "junctions_at disagrees with the derivation rule at vertex \
+                     {vertex:?} band {rank} branch {branch}"
                 );
                 answered += shipped.len();
             }
@@ -255,7 +255,7 @@ fn junctions_are_symmetric() {
     for (a, b) in &edges {
         let back = junctions_at(Seed(42), &terrain, *b);
         assert!(
-            back.iter().any(|c| c.cell == a.cell),
+            back.iter().any(|c| c.vertex == a.vertex),
             "junction {a:?} -> {b:?} is not symmetric: asked from B, A is absent"
         );
     }
@@ -263,7 +263,7 @@ fn junctions_are_symmetric() {
 
 /// Two systems join at a SHARED band or not at all (Task 6, step 1): every
 /// junction endpoint sits at exactly the band it was asked from, on the
-/// neighbour system's main line, in a geographically adjacent cell. Anything
+/// neighbour system's main line, in a geographically adjacent vertex. Anything
 /// else would be a vertical teleport, and the depth ladder would mean
 /// nothing.
 #[test]
@@ -278,11 +278,11 @@ fn a_junction_never_crosses_a_band() {
              b of one system to branch b of its neighbour (The Drift, §4.6)"
         );
         assert_eq!(b.level, 0, "junction endpoint named a level");
-        assert_ne!(b.cell, a.cell, "a system joined itself");
-        let neighbours: Vec<CellId> = geo.neighbors(a.cell).to_vec();
+        assert_ne!(b.vertex, a.vertex, "a system joined itself");
+        let neighbours: Vec<Vertex> = geo.neighbors(a.vertex).to_vec();
         assert!(
-            neighbours.contains(&b.cell),
-            "junction {a:?} -> {b:?} crossed to a non-adjacent cell"
+            neighbours.contains(&b.vertex),
+            "junction {a:?} -> {b:?} crossed to a non-adjacent vertex"
         );
     }
 }
@@ -351,14 +351,14 @@ fn nowhere_has_no_junctions() {
 fn the_projection_ignores_level() {
     let terrain = panel_terrain();
     let mut checked = 0usize;
-    for cell in cave_cells(&terrain).into_iter().take(PROJECTION_SYSTEMS) {
-        let Some(cave) = terrain.cave_at(cell) else {
+    for vertex in cave_vertices(&terrain).into_iter().take(PROJECTION_SYSTEMS) {
+        let Some(cave) = terrain.cave_at(vertex) else {
             continue;
         };
-        let gradient = terrain.geothermal_gradient_at(cell);
+        let gradient = terrain.geothermal_gradient_at(vertex);
         for &(_, rung) in &habitation_bands() {
             for branch in 0..BRANCHES_PER_SYSTEM {
-                let canon = canonical(cell, rung, branch);
+                let canon = canonical(vertex, rung, branch);
                 let expected = junctions_at(Seed(42), &terrain, canon);
                 for level in 0..LEVELS_PER_BRANCH_CEILING {
                     let other = ChamberAddr { level, ..canon };
@@ -394,7 +394,7 @@ fn the_projection_ignores_level() {
 ///
 /// The reason a disagreement must exist is structural rather than
 /// statistical: `branch_count_of` and `character_of` are both keyed on
-/// `(cell, band, branch)` since Task 5, so two branches of one system at one
+/// `(vertex, band, branch)` since Task 5, so two branches of one system at one
 /// band can differ in whether the NEIGHBOUR realizes them and in whether
 /// their character can occupy the rung. Either difference moves the answer.
 #[test]
@@ -402,19 +402,19 @@ fn the_projection_is_scoped_to_the_branch() {
     let terrain = panel_terrain();
     let mut disagreements = 0usize;
     let mut compared = 0usize;
-    for cell in cave_cells(&terrain) {
-        let Some(cave) = terrain.cave_at(cell) else {
+    for vertex in cave_vertices(&terrain) {
+        let Some(cave) = terrain.cave_at(vertex) else {
             continue;
         };
-        let gradient = terrain.geothermal_gradient_at(cell);
+        let gradient = terrain.geothermal_gradient_at(vertex);
         for &(_, rung) in &habitation_bands() {
-            let base = canonical(cell, rung, 0);
+            let base = canonical(vertex, rung, 0);
             if !chamber_exists(Seed(42), &cave, gradient, base) {
                 continue;
             }
             let expected = junctions_at(Seed(42), &terrain, base);
             for branch in 1..BRANCHES_PER_SYSTEM {
-                let other = canonical(cell, rung, branch);
+                let other = canonical(vertex, rung, branch);
                 if !chamber_exists(Seed(42), &cave, gradient, other) {
                     continue;
                 }
@@ -427,9 +427,9 @@ fn the_projection_is_scoped_to_the_branch() {
                         "{other:?} answered with an endpoint on another branch"
                     );
                 }
-                let same_cells: Vec<CellId> = answer.iter().map(|a| a.cell).collect();
-                let base_cells: Vec<CellId> = expected.iter().map(|a| a.cell).collect();
-                if same_cells != base_cells {
+                let same_vertices: Vec<Vertex> = answer.iter().map(|a| a.vertex).collect();
+                let base_vertices: Vec<Vertex> = expected.iter().map(|a| a.vertex).collect();
+                if same_vertices != base_vertices {
                     disagreements += 1;
                 }
             }
@@ -496,13 +496,13 @@ fn the_character_gate_actually_binds() {
     let terrain = panel_terrain();
     let geo = terrain.geosphere();
     let mut refused_with_a_willing_neighbour = 0usize;
-    for cell in cave_cells(&terrain) {
-        let Some(cave) = terrain.cave_at(cell) else {
+    for vertex in cave_vertices(&terrain) {
+        let Some(cave) = terrain.cave_at(vertex) else {
             continue;
         };
-        let gradient = terrain.geothermal_gradient_at(cell);
+        let gradient = terrain.geothermal_gradient_at(vertex);
         for &(_rank, rung) in &habitation_bands() {
-            let main = canonical(cell, rung, 0);
+            let main = canonical(vertex, rung, 0);
             // The chamber is there...
             if !chamber_exists(Seed(42), &cave, gradient, main) {
                 continue;
@@ -513,7 +513,7 @@ fn the_character_gate_actually_binds() {
             }
             // A neighbour that would have joined but for that refusal.
             if !geo
-                .neighbors(cell)
+                .neighbors(vertex)
                 .iter()
                 .any(|&far| branch_admits(Seed(42), &terrain, far, 0, rung))
             {

@@ -7,22 +7,27 @@
 use crate::regime::{EnergySource, Kingdom, Negations, Substrate};
 use crate::streams::LOCALE_PLACE;
 use hornvale_climate::GeneratedClimate;
-use hornvale_kernel::{CellId, Seed, quantize};
+use hornvale_kernel::{Seed, Vertex, quantize};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-/// Target strangeness mass: at most this fraction of land cells host an exotic.
+/// Target strangeness mass: at most this fraction of land vertices host an exotic.
 const BUDGET_FRACTION: f64 = 0.01;
-/// Minimum spacing between placed sites, in integer cell-graph hops.
+/// Minimum spacing between placed sites, in integer vertex-graph hops.
 const REPULSION_HOPS: u32 = 3;
 
 /// A placed exotic site — a derived, findable record (never stored in the save).
-/// type-audit: bare-ok(index: cell), bare-ok(flag: endemic)
+/// type-audit: bare-ok(index: vertex), bare-ok(flag: endemic)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct StrangeSite {
-    /// Canonical-grid cell index.
-    pub cell: u32,
+    /// Canonical-grid vertex index.
+    ///
+    /// **Wire name frozen at `cell`** (decision 0246): it is a key of
+    /// `locale/room/v2`, present in every committed locale JSON and in
+    /// `tests/fixtures/pre-stage-2-rooms.jsonl`.
+    #[serde(rename = "cell")]
+    pub vertex: u32,
     /// The energy negation, if any.
     pub energy: EnergySource,
     /// The kingdom negation, if any.
@@ -36,16 +41,16 @@ pub(crate) struct StrangenessBudget {
     sites: BTreeMap<u32, StrangeSite>,
 }
 
-/// One candidate exotic regime and its per-cell eligibility score.
+/// One candidate exotic regime and its per-vertex eligibility score.
 struct Candidate {
     energy: EnergySource,
     kingdom: Kingdom,
-    score: fn(&GeneratedTerrain, CellId) -> f64,
+    score: fn(&GeneratedTerrain, Vertex) -> f64,
 }
 
 /// Flow-accumulation at which the damp term reaches half its ceiling. Chosen
-/// so an ordinary watercourse counts as damp while a single upstream cell does
-/// not; the transform saturates, so no per-world maximum is needed and no cell
+/// so an ordinary watercourse counts as damp while a single upstream vertex does
+/// not; the transform saturates, so no per-world maximum is needed and no vertex
 /// can dominate by draining a continent.
 /// type-audit: bare-ok(count)
 const DRAINAGE_SCALE: f64 = 8.0;
@@ -100,7 +105,7 @@ fn candidates() -> [Candidate; 4] {
         //
         // The damp clause was documented from the beginning and never
         // implemented: the score read `1.0 - unrest`, which is >= 0.6 on any
-        // quiet land cell, so this candidate was not a warrant at all but a
+        // quiet land vertex, so this candidate was not a warrant at all but a
         // near-constant default. Against the vent candidates — which score raw
         // `unrest`, high only near plate boundaries — it won the weighted draw
         // almost everywhere, and 92-98% of every world's placed exotics came
@@ -127,7 +132,7 @@ fn candidates() -> [Candidate; 4] {
 }
 
 impl StrangenessBudget {
-    /// Build the placement for a world (bounded O(cells)).
+    /// Build the placement for a world (bounded O(vertices)).
     pub(crate) fn build(
         seed: Seed,
         climate: &GeneratedClimate,
@@ -135,16 +140,16 @@ impl StrangenessBudget {
     ) -> StrangenessBudget {
         let geo = climate.geosphere();
         let globe = terrain.globe();
-        // Land cells only, in CellId order (deterministic).
-        let land: Vec<CellId> = geo
-            .cells()
+        // Land vertices only, in Vertex order (deterministic).
+        let land: Vec<Vertex> = geo
+            .vertices()
             .filter(|&c| quantize(globe.elevation.get(c).get()) > quantize(globe.sea_level.get()))
             .collect();
         let cands = candidates();
         let mut sites: BTreeMap<u32, StrangeSite> = BTreeMap::new();
-        let mut accepted: Vec<CellId> = Vec::new();
+        let mut accepted: Vec<Vertex> = Vec::new();
 
-        // (2) Founder floor: reserve each candidate's single most-eligible cell.
+        // (2) Founder floor: reserve each candidate's single most-eligible vertex.
         for cand in &cands {
             if let Some(best) = land
                 .iter()
@@ -166,7 +171,7 @@ impl StrangenessBudget {
             }
         }
 
-        // (3) Field-weighted blue-noise over a seeded permutation of land cells.
+        // (3) Field-weighted blue-noise over a seeded permutation of land vertices.
         // Exempt from the quantize rule: an exact IEEE-754 multiply of an
         // integer by a compile-time constant (no libm involved), so it is
         // platform-identical without quantization.
@@ -194,9 +199,9 @@ impl StrangenessBudget {
         StrangenessBudget { sites }
     }
 
-    /// The negation vector a placed cell carries, if any.
-    pub(crate) fn regime_at(&self, cell: CellId) -> Option<Negations> {
-        self.sites.get(&cell.0).map(|s| Negations {
+    /// The negation vector a placed vertex carries, if any.
+    pub(crate) fn regime_at(&self, vertex: Vertex) -> Option<Negations> {
+        self.sites.get(&vertex.0).map(|s| Negations {
             substrate: Substrate::Ordinary, // substrate comes from the derived proxy
             energy: s.energy,
             kingdom: s.kingdom,
@@ -212,26 +217,26 @@ impl StrangenessBudget {
 
 fn insert_site(
     sites: &mut BTreeMap<u32, StrangeSite>,
-    accepted: &mut Vec<CellId>,
-    cell: CellId,
+    accepted: &mut Vec<Vertex>,
+    vertex: Vertex,
     cand: &Candidate,
     endemic: bool,
 ) {
     sites.insert(
-        cell.0,
+        vertex.0,
         StrangeSite {
-            cell: cell.0,
+            vertex: vertex.0,
             energy: cand.energy,
             kingdom: cand.kingdom,
             endemic,
         },
     );
-    accepted.push(cell);
+    accepted.push(vertex);
 }
 
 /// A Fisher–Yates permutation off the given stream (deterministic).
-fn permute(cells: &[CellId], stream: &mut hornvale_kernel::Stream) -> Vec<CellId> {
-    let mut v = cells.to_vec();
+fn permute(vertices: &[Vertex], stream: &mut hornvale_kernel::Stream) -> Vec<Vertex> {
+    let mut v = vertices.to_vec();
     for i in (1..v.len()).rev() {
         let j = (stream.next_u64() % (i as u64 + 1)) as usize;
         v.swap(i, j);
@@ -239,11 +244,11 @@ fn permute(cells: &[CellId], stream: &mut hornvale_kernel::Stream) -> Vec<CellId
     v
 }
 
-/// True if `c` is within REPULSION_HOPS graph-hops of any accepted cell.
+/// True if `c` is within REPULSION_HOPS graph-hops of any accepted vertex.
 /// Uses the geosphere's integer neighbour graph (no transcendentals).
 /// `hops_between(a, b, max)` returns `Some(hops)` iff `b` is within `max`
 /// hops of `a` (a bounded BFS), else `None`.
-fn within_repulsion(accepted: &[CellId], c: CellId, geo: &hornvale_kernel::Geosphere) -> bool {
+fn within_repulsion(accepted: &[Vertex], c: Vertex, geo: &hornvale_kernel::Geosphere) -> bool {
     accepted
         .iter()
         .any(|&a| geo.hops_between(a, c, REPULSION_HOPS).is_some())
@@ -290,7 +295,7 @@ mod tests {
     #[test]
     fn placed_sites_are_a_small_minority() {
         let (b, climate, _terrain) = budget_for(42);
-        let land = climate.geosphere().cells().count(); // upper bound
+        let land = climate.geosphere().vertices().count(); // upper bound
         assert!(b.sites().len() * 20 < land, "strange sites must stay rare");
     }
 
@@ -335,8 +340,8 @@ mod tests {
     #[test]
     #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn census_budget_and_spacing_hold_across_seeds() {
-        // Founder-floor cells intentionally bypass the repulsion radius (each
-        // candidate reserves its single best-unclaimed cell before the
+        // Founder-floor vertices intentionally bypass the repulsion radius (each
+        // candidate reserves its single best-unclaimed vertex before the
         // blue-noise pass), so a global pairwise-spacing invariant is false
         // by design and is not asserted here.
         for seed in 0..25 {
@@ -344,7 +349,7 @@ mod tests {
             let globe = terrain.globe();
             let land_count = climate
                 .geosphere()
-                .cells()
+                .vertices()
                 .filter(|&c| {
                     quantize(globe.elevation.get(c).get()) > quantize(globe.sea_level.get())
                 })
@@ -365,13 +370,13 @@ mod tests {
                 "seed {seed}: rebuilding the budget must be byte-identical"
             );
 
-            // Distinct cells: no silent overwrite in the sites map.
-            let cells: Vec<u32> = sites.iter().map(|s| s.cell).collect();
-            let distinct: std::collections::BTreeSet<u32> = cells.iter().copied().collect();
+            // Distinct vertices: no silent overwrite in the sites map.
+            let vertices: Vec<u32> = sites.iter().map(|s| s.vertex).collect();
+            let distinct: std::collections::BTreeSet<u32> = vertices.iter().copied().collect();
             assert_eq!(
-                cells.len(),
+                vertices.len(),
                 distinct.len(),
-                "seed {seed}: placed sites must occupy distinct cells"
+                "seed {seed}: placed sites must occupy distinct vertices"
             );
         }
     }

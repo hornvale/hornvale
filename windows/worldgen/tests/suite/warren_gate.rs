@@ -5,7 +5,7 @@
 //! near-saturated-damp kind (rust-monster, xorn) was scored against sunlight
 //! and rainfall. This battery is the live-path check that a `Subterranean`
 //! kind (`hornvale_species::HabitatRealm::Subterranean`) is now scored
-//! against `subterranean_substrate` and gated on whether the cell actually
+//! against `subterranean_substrate` and gated on whether the vertex actually
 //! holds a cave (spec §3.1).
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
@@ -94,7 +94,7 @@ fn realm_slice(wc: &WorldComponents) -> Vec<HabitatRealm> {
 #[test]
 fn a_subterranean_kind_scores_zero_where_there_is_no_cave() {
     // The keystone (spec 3.1): a declared realm is worth nothing without
-    // per-cell availability. ~88% of land cells hold no cave; a subterranean
+    // per-vertex availability. ~88% of land vertices hold no cave; a subterranean
     // kind must draw no capacity from them.
     let (terrain, climate, obliquity_deg, insolation_scalar, regime, wc) = fixture();
     let geo = terrain.geosphere();
@@ -127,12 +127,12 @@ fn a_subterranean_kind_scores_zero_where_there_is_no_cave() {
     let mut land_cave_nonzero = 0usize;
     let mut land_no_cave = 0usize;
     let mut land_cave = 0usize;
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        let has_cave = terrain.cave_at(cell).is_some();
-        let v = *k.get(cell);
+        let has_cave = terrain.cave_at(vertex).is_some();
+        let v = *k.get(vertex);
         if has_cave {
             land_cave += 1;
             if v > 0.0 {
@@ -146,17 +146,23 @@ fn a_subterranean_kind_scores_zero_where_there_is_no_cave() {
         }
     }
 
-    assert!(land_no_cave > 0, "seed 42 must have cave-free land cells");
-    assert!(land_cave > 0, "seed 42 must have cave-bearing land cells");
+    assert!(
+        land_no_cave > 0,
+        "seed 42 must have cave-free land vertices"
+    );
+    assert!(
+        land_cave > 0,
+        "seed 42 must have cave-bearing land vertices"
+    );
     assert_eq!(
         land_no_cave_nonzero, 0,
-        "rust-monster must score exactly 0.0 on every cave-free land cell \
-         ({land_no_cave} such cells, {land_no_cave_nonzero} scored nonzero)"
+        "rust-monster must score exactly 0.0 on every cave-free land vertex \
+         ({land_no_cave} such vertices, {land_no_cave_nonzero} scored nonzero)"
     );
     assert!(
         land_cave_nonzero > 0,
-        "rust-monster must score > 0.0 on at least one cave-bearing land cell \
-         (of {land_cave} such cells, {land_cave_nonzero} scored nonzero)"
+        "rust-monster must score > 0.0 on at least one cave-bearing land vertex \
+         (of {land_cave} such vertices, {land_cave_nonzero} scored nonzero)"
     );
 }
 
@@ -230,7 +236,7 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
         &regime,
     );
     let mineral = mineral_supply_field(geo, &terrain, 1.0);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let detritus = detritus_supply_field(geo, &terrain);
     let marine = marine_forage_supply_field(geo, &terrain, &climate, 1.0);
     let prey = prey_supply_field(geo, &forage);
@@ -239,18 +245,18 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
     let cn = &goblin.condition_niche;
 
     let mut mismatches = 0usize;
-    for cell in geo.cells() {
-        let s = substrate.get(cell);
+    for vertex in geo.vertices() {
+        let s = substrate.get(vertex);
         use hornvale_kernel::{
             ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
         };
         let per_axis = [
-            (PHOTOSYNTHATE, base_carrying.at(cell)),
-            (PLANT_FORAGE, *forage.get(cell)),
-            (MINERAL, *mineral.get(cell)),
-            (DETRITUS, *detritus.get(cell)),
-            (ANIMAL_PREY, *prey.get(cell)),
-            (MARINE_FORAGE, *marine.get(cell)),
+            (PHOTOSYNTHATE, base_carrying.at(vertex)),
+            (PLANT_FORAGE, *forage.get(vertex)),
+            (MINERAL, *mineral.get(vertex)),
+            (DETRITUS, *detritus.get(vertex)),
+            (ANIMAL_PREY, *prey.get(vertex)),
+            (MARINE_FORAGE, *marine.get(vertex)),
         ];
         let supply = axis_supply(&goblin.niche, &per_axis);
         let saturated = supply / (1.0 + supply);
@@ -264,7 +270,7 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
             .min(cn.elevation.eval(s.height_asl_m.get(), 0.0));
         let k_ref = saturated * tolerance;
 
-        let k_live_v = *k_live.get(cell);
+        let k_live_v = *k_live.get(vertex);
         if k_ref.to_bits() != k_live_v.to_bits() {
             mismatches += 1;
         }
@@ -272,6 +278,6 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
     assert_eq!(
         mismatches, 0,
         "goblin's live K must be bit-identical to the realm-free single-substrate \
-         formula at every cell ({mismatches} mismatches)"
+         formula at every vertex ({mismatches} mismatches)"
     );
 }

@@ -7,7 +7,7 @@
 //!    underworld communities that occur in a given cave formation at a given
 //!    depth class. Task 7 shipped `environment_fit` with no production
 //!    consumer; this is that consumer.
-//! 2. [`seat_at`] — which rung of one cell's column a people would settle, and
+//! 2. [`seat_at`] — which rung of one vertex's column a people would settle, and
 //!    the factor its capacity there is scaled by.
 //! 3. [`seating_for`] — the whole map of both, one per people, which is what
 //!    the deep-history bake keys its node index on.
@@ -42,7 +42,7 @@
 //! the absence of one.
 
 use hornvale_climate::underworld::underworld_assignment;
-use hornvale_kernel::{Band, CellId, CellMap, Geosphere};
+use hornvale_kernel::{Band, Geosphere, Vertex, VertexMap};
 use hornvale_species::{EnvironmentNiche, environment_fit};
 use hornvale_terrain::{
     Cave, CaveKind, GeneratedTerrain, GeothermalGradient, delta_t_range_of, rungs,
@@ -176,7 +176,7 @@ fn genus_of(cave: CaveKind) -> &'static str {
 ///
 /// The whole function ranges over `(3 formations × 5 depth classes)`, so a
 /// caller may — and [`seating_for`] does — evaluate it once per people rather
-/// than once per cell.
+/// than once per vertex.
 /// type-audit: bare-ok(ratio: return)
 pub fn chamber_fit(niche: &EnvironmentNiche, cave: CaveKind, rung: Band) -> Option<f64> {
     let zone = zone_of(rung)?;
@@ -204,14 +204,14 @@ pub fn chamber_fit(niche: &EnvironmentNiche, cave: CaveKind, rung: Band) -> Opti
     Some(total / counted as f64)
 }
 
-/// One people's seat in one cell's column: which rung it would settle, and the
+/// One people's seat in one vertex's column: which rung it would settle, and the
 /// factor its capacity there is scaled by.
 /// type-audit: bare-ok(ratio: multiplier), bare-ok(flag: works), bare-ok(ratio: fit)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RungSeat {
     /// The rung settled.
     pub rung: Band,
-    /// The factor capacity at this cell is multiplied by — [`chamber_fit`],
+    /// The factor capacity at this vertex is multiplied by — [`chamber_fit`],
     /// times [`UNDERWORLD_WORKS_COST`] where the chamber needs dewatering.
     pub multiplier: f64,
     /// Whether the chamber at that rung is phreatic **as found**, and so
@@ -380,20 +380,20 @@ pub fn seat_at(
     best
 }
 
-/// One people's seating over the whole globe: its rung at every cell, and the
+/// One people's seating over the whole globe: its rung at every vertex, and the
 /// factor its capacity there is scaled by.
 ///
-/// Two `CellMap`s rather than one of pairs because the bake reads them at
+/// Two `VertexMap`s rather than one of pairs because the bake reads them at
 /// different moments — the rung on every index lookup, the multiplier once,
 /// when the capacity fields are built.
 /// type-audit: bare-ok(ratio: multiplier)
 pub struct Seating {
-    /// The rung this people occupies at each cell. `Surface` everywhere for a
+    /// The rung this people occupies at each vertex. `Surface` everywhere for a
     /// surface people.
-    pub rung: CellMap<Band>,
-    /// The factor this people's capacity at each cell is scaled by. `1.0`
+    pub rung: VertexMap<Band>,
+    /// The factor this people's capacity at each vertex is scaled by. `1.0`
     /// everywhere for a surface people, which is an IEEE-754 no-op.
-    pub multiplier: CellMap<f64>,
+    pub multiplier: VertexMap<f64>,
 }
 
 impl Seating {
@@ -401,12 +401,12 @@ impl Seating {
     /// everywhere, at an untouched capacity.
     ///
     /// This is what makes the re-key inert for a surface people — one rung,
-    /// one community per cell, and a multiplier that is exactly `1.0` rather
+    /// one community per vertex, and a multiplier that is exactly `1.0` rather
     /// than approximately so.
     pub fn all_surface(geo: &Geosphere) -> Seating {
         Seating {
-            rung: CellMap::from_fn(geo, |_| Band::Surface),
-            multiplier: CellMap::from_fn(geo, |_| 1.0),
+            rung: VertexMap::from_fn(geo, |_| Band::Surface),
+            multiplier: VertexMap::from_fn(geo, |_| 1.0),
         }
     }
 }
@@ -422,11 +422,11 @@ impl Seating {
 /// single capacity field. It is also the honest fallback: `rust-monster` and
 /// `xorn` are subterranean and settle nothing, so there is nothing to seat.
 ///
-/// A cell with no cave gets `Undercroft` at multiplier `0.0`. The rung there
+/// A vertex with no cave gets `Undercroft` at multiplier `0.0`. The rung there
 /// is unobservable — the realm gate already zeroes a subterranean kind's
-/// capacity on a caveless cell, so no community is ever opened at one — and
+/// capacity on a caveless vertex, so no community is ever opened at one — and
 /// naming the shallowest habitation rung beats naming `Surface`, which would
-/// put a subterranean people into the overworld's index at a cell it cannot
+/// put a subterranean people into the overworld's index at a vertex it cannot
 /// live in.
 pub fn seating_for(
     geo: &Geosphere,
@@ -438,21 +438,21 @@ pub fn seating_for(
     };
     let sea = terrain.sea_level().get();
     let seats: Vec<Option<RungSeat>> = geo
-        .cells()
-        .map(|cell| {
-            let cave = terrain.cave_at(cell)?;
+        .vertices()
+        .map(|vertex| {
+            let cave = terrain.cave_at(vertex)?;
             let table = water_table_depth_m(
-                terrain.drainage_at(cell),
-                terrain.material_at(cell).porosity,
-                terrain.elevation_at(cell).get() - sea,
+                terrain.drainage_at(vertex),
+                terrain.material_at(vertex).porosity,
+                terrain.elevation_at(vertex).get() - sea,
             );
-            seat_at(niche, &cave, terrain.geothermal_gradient_at(cell), table)
+            seat_at(niche, &cave, terrain.geothermal_gradient_at(vertex), table)
         })
         .collect();
-    let at = |cell: CellId| seats[cell.0 as usize];
+    let at = |vertex: Vertex| seats[vertex.0 as usize];
     Seating {
-        rung: CellMap::from_fn(geo, |c| at(c).map_or(Band::Undercroft, |seat| seat.rung)),
-        multiplier: CellMap::from_fn(geo, |c| at(c).map_or(0.0, |seat| seat.multiplier)),
+        rung: VertexMap::from_fn(geo, |c| at(c).map_or(Band::Undercroft, |seat| seat.rung)),
+        multiplier: VertexMap::from_fn(geo, |c| at(c).map_or(0.0, |seat| seat.multiplier)),
     }
 }
 
@@ -460,7 +460,7 @@ pub fn seating_for(
 /// 2's **producer**, which the campaign bound to this task as an acceptance
 /// criterion rather than deferring a fourth time.
 ///
-/// Every address in the lattice at a community's own `(cell, rung)` that
+/// Every address in the lattice at a community's own `(vertex, rung)` that
 /// exists at all resolves to [`ChamberOrigin::Made`]: keeping a working depth
 /// dry is what settling underground *is*, so a people's own halls are cut,
 /// not found. Consequently [`is_sump`] answers `false` for every one of them,
@@ -469,7 +469,7 @@ pub fn seating_for(
 /// **The rung is re-derived rather than carried.** An [`Occupation`] records
 /// its site and its people and nothing about depth, and adding a rung to it
 /// would put a new field on a serialized type for information that is already
-/// a pure function of `(niche, terrain, cell)`. Re-deriving it here through
+/// a pure function of `(niche, terrain, vertex)`. Re-deriving it here through
 /// the same [`seating_for`] the bake was handed is exact, not approximate:
 /// same inputs, same function, same answer.
 ///
@@ -546,15 +546,15 @@ pub fn made_chambers(
         let Some(seating) = seating.get(&record.core.people) else {
             continue;
         };
-        let cell = record.core.site;
-        let band = *seating.rung.get(cell);
+        let vertex = record.core.site;
+        let band = *seating.rung.get(vertex);
         if band == Band::Surface {
             continue; // a surface community cuts no chamber
         }
-        let Some(cave) = terrain.cave_at(cell) else {
+        let Some(cave) = terrain.cave_at(vertex) else {
             continue;
         };
-        let gradient = terrain.geothermal_gradient_at(cell);
+        let gradient = terrain.geothermal_gradient_at(vertex);
         // **`level: 0` is a deliberate narrowing, not the whole run** (The
         // Stope). A settled community occupies the levels its run realizes,
         // and how many those are is `chamber::levels_in_branch`, which landed
@@ -569,7 +569,7 @@ pub fn made_chambers(
         // occupies.
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
-                cell,
+                vertex,
                 branch,
                 band,
                 level: 0,

@@ -225,7 +225,7 @@ const REGION_PER_TILE_BUDGET_MS: f64 = 420.0;
 const GENESIS_BUDGET_MS: f64 = 13000.0;
 
 /// Wall-time budget for one `SceneContext::build` — the terrain and climate
-/// derivation, the two nearest-cell indices, and the biome map, built once per
+/// derivation, the two nearest-vertex indices, and the biome map, built once per
 /// world and reused by every terrain-facing entry point.
 ///
 /// **New in The Cistern; no Sextant counterpart.** Measured 1308.0 ms on

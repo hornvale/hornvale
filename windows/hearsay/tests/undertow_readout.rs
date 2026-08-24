@@ -28,13 +28,13 @@
 //!
 //! **A reimplementation is a second instrument and could disagree with the
 //! first silently, so it is held to the original on every ending, every rule
-//! and BOTH arms — not sampled.** Every reported contact-arm cell is produced
+//! and BOTH arms — not sampled.** Every reported contact-arm vertex is produced
 //! by the copy and checked holder-for-holder (presence, hops, rung,
 //! remembered day) against `variants_about_accumulating` under the same
 //! policy. That control is asserted, and a red there means this file's numbers
 //! are not the model's numbers.
 //!
-//! The DESCENT cells use the shipped walk directly and no copy at all: no
+//! The DESCENT vertices use the shipped walk directly and no copy at all: no
 //! route information is wanted there, because §5.5's erratum measured zero
 //! descent-carried crossings on this bake, and the descent arm's own job here
 //! is to be the unmoved reference H1's ratio divides by.
@@ -62,7 +62,7 @@
 //! **2. `Additive` carries the non-argmin defect, and — re-derived against
 //! this tree — the CROSSING ARM DOES NOT MOVE IT.**
 //! `probe_argmin_defect_crossing_arms.rs` measures 49 of 9,531 contact
-//! holder-rule cells off the argmin under `Crossing::Free` and **the same 49
+//! holder-rule vertices off the argmin under `Crossing::Free` and **the same 49
 //! under `Crossing::ContactWeighted`** — all of them additive; quadrature and
 //! multiplicative are exactly 0 under both arms. The cause is structural:
 //! `gen_span` telescopes within a same-people segment along a locally monotone
@@ -78,7 +78,7 @@
 //! was that differential defect rate rather than the mechanism. On the merge
 //! product it is 49 -> 49: the two arms sit at an identical defect rate, so an
 //! arm-to-arm additive comparison is NOT differentially confounded here.
-//! Additive still carries the whole of the defect (1.54% of its cells against
+//! Additive still carries the whole of the defect (1.54% of its vertices against
 //! 0% for the other two rules), so it remains the rule with the most
 //! degeneracy in it — but the confound this file was built to disclose is not
 //! present on this substrate, and the annotation below says so rather than
@@ -105,7 +105,7 @@
 //! ## What is asserted
 //!
 //! The battery **ASSERTS ONLY SUBSTRATE CONTROLS** (spec §6.4): the panel
-//! built; held claims exist in every cell; no claim reports a rung its own
+//! built; held claims exist in every vertex; no claim reports a rung its own
 //! world's ladders lack; `AS_SHIPPED` reproduces the pre-campaign walk and the
 //! descent arm is unmoved by `Crossing`; the penalty never removes (or adds) a
 //! holder; the copy of the walk agrees with the shipped one holder-for-holder;
@@ -836,8 +836,8 @@ fn same_claim(x: &Claim, y: &Claim) -> bool {
 
 /// Every quantity §6 asks for, over one world.
 ///
-/// Six walks per ending per rule: two shipped walks for the descent cells
-/// (which need no route information), two copied walks for the contact cells,
+/// Six walks per ending per rule: two shipped walks for the descent vertices
+/// (which need no route information), two copied walks for the contact vertices,
 /// and two more shipped walks holding those copies honest.
 fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
     let probe = Probe {
@@ -873,7 +873,7 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
         }
 
         for (ri, rule) in Accumulation::ALL.iter().enumerate() {
-            // ---- the DESCENT cells: the shipped walk, both Crossing arms.
+            // ---- the DESCENT vertices: the shipped walk, both Crossing arms.
             let mut descent: [Vec<Claim>; 2] = Default::default();
             for (ci, arm) in Crossing::ALL.iter().enumerate() {
                 let claims = shipped(read, led, *rule, Contact::Descent, *arm, e.subject);
@@ -900,7 +900,7 @@ fn measure_seed(seed: u64, led: &Ledger, read: &WorldRead) -> SeedRow {
                 row.descent_moved[ri] += descent[0].len().abs_diff(descent[1].len());
             }
 
-            // ---- the CONTACT cells: the copied walk, held to the shipped one.
+            // ---- the CONTACT vertices: the copied walk, held to the shipped one.
             let mut contact_arms: [Vec<Held>; 2] = Default::default();
             for (ci, arm) in Crossing::ALL.iter().enumerate() {
                 let mine = probe.walk(*rule, *arm, e.subject);
@@ -1099,10 +1099,10 @@ fn the_undertow_readout_over_a_seed_panel() {
         PILOT_TEST_SECONDS / PILOT_SEEDS as f64
     );
     println!(
-        "instrument           : contact cells walk a COPY of derive.rs's relaxation (a Claim \
-         carries no route, and §6.2 is a question about the route); every contact cell is held \
+        "instrument           : contact vertices walk a COPY of derive.rs's relaxation (a Claim \
+         carries no route, and §6.2 is a question about the route); every contact vertex is held \
          holder-for-holder to variants_about_accumulating under the same policy, asserted \
-         below. Descent cells are the shipped walk itself."
+         below. Descent vertices are the shipped walk itself."
     );
 
     let endings = sum(&rows, |r| r.endings);
@@ -1156,8 +1156,8 @@ fn the_undertow_readout_over_a_seed_panel() {
     println!("\n=== READ THIS BEFORE THE ADDITIVE COLUMN (Task 3, re-derived at the close) ===");
     println!(
         "  `probe_argmin_defect_crossing_arms.rs` measures 49 of 9,531 contact holder-rule \
-         cells off the argmin under `Crossing::Free` on seeds 0-11, and THE SAME 49 under \
-         `Crossing::ContactWeighted` — all of them ADDITIVE (1.54% of its cells); quadrature \
+         vertices off the argmin under `Crossing::Free` on seeds 0-11, and THE SAME 49 under \
+         `Crossing::ContactWeighted` — all of them ADDITIVE (1.54% of its vertices); quadrature \
          and multiplicative are exactly 0 under BOTH arms."
     );
     println!(
@@ -1251,7 +1251,7 @@ fn the_undertow_readout_over_a_seed_panel() {
         );
         if *rule == Accumulation::Additive {
             println!(
-                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 cells); \
+                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 vertices); \
                  re-derived, the two arms sit at the SAME 49, so this comparison is not \
                  differentially confounded — see the caveat above."
             );
@@ -1569,7 +1569,7 @@ fn the_undertow_readout_over_a_seed_panel() {
              penalty, so a route that won with zero crossings under Free still wins under \
              ContactWeighted — the mechanism CANNOT push this direction. But the relaxation \
              is not always its own argmin (spec §3.5, re-derived: 49 of 9,531 holder-rule \
-             cells, IDENTICAL under both arms), so a \
+             vertices, IDENTICAL under both arms), so a \
              non-zero here would be that DEFECT surfacing, not the mechanism, and asserting \
              zero would conflate the two",
             overall[0].0,
@@ -1580,7 +1580,7 @@ fn the_undertow_readout_over_a_seed_panel() {
         );
         if *rule == Accumulation::Additive {
             println!(
-                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 cells); \
+                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 vertices); \
                  re-derived, the two arms sit at the SAME 49, so this comparison is not \
                  differentially confounded — see the caveat above."
             );
@@ -1724,7 +1724,7 @@ fn the_undertow_readout_over_a_seed_panel() {
         );
         if *rule == Accumulation::Additive {
             println!(
-                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 cells); \
+                "    ^ ADDITIVE carries the whole non-argmin defect (49 of 3,177 vertices); \
                  re-derived, the two arms sit at the SAME 49, so this comparison is not \
                  differentially confounded — see the caveat above."
             );
@@ -1763,7 +1763,7 @@ fn the_undertow_readout_over_a_seed_panel() {
                 let held = sum(&rows, |r| r.held[ai][ci][ri]);
                 assert!(
                     held > 0,
-                    "control: cell {}/{}/{} produced no held claims at all",
+                    "control: vertex {}/{}/{} produced no held claims at all",
                     contact.label(),
                     arm.label(),
                     rule.label()

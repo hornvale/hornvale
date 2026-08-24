@@ -346,13 +346,13 @@ mod tests {
     use hornvale_history::record::{
         Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
     };
-    use hornvale_kernel::{CellId, EntityId, KindId};
+    use hornvale_kernel::{EntityId, KindId, Vertex};
 
     fn rec(people: &'static str, site: u32, founded: f64, peak: u32) -> OccupationRecord {
         OccupationRecord {
             core: Occupation {
                 people: KindId(people),
-                site: CellId(site),
+                site: Vertex(site),
                 founded,
                 ended: None,
                 peak_population: peak,
@@ -365,7 +365,7 @@ mod tests {
             },
             id: EntityId::new(1).expect("nonzero"),
             ended_by: Ended::Nature,
-            founded_from: Founding::Genesis(CellId(site)),
+            founded_from: Founding::Genesis(Vertex(site)),
         }
     }
 

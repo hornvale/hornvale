@@ -137,17 +137,17 @@ const GAP: &str = "—";
 
 /// Per-tongue wordlists parsed from the committed dictionary artifact
 /// (`book/src/reference/dictionary-generated.md`). A `## Heading` opens a
-/// tongue; a table row's **third** cell is its surface word.
+/// tongue; a table row's **third** cell is its surface word.  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
 ///
 /// Two rows are excluded and both exclusions are load-bearing. The table's own
 /// `| Concept | Gloss | Word | ... |` **header** parses as a row whose third
-/// cell is the literal `Word` — counting it is the defect that nearly put a
-/// fabricated figure into this campaign's spec. And a `—` cell is a lexical
+/// cell is the literal `Word` — counting it is the defect that nearly put a  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
+/// fabricated figure into this campaign's spec. And a `—` cell is a lexical  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
 /// gap, not a word. A tongue left with no words is omitted entirely rather
 /// than returned empty, so it cannot enter the accuracy denominator.
 ///
 /// The `Cognates` section is skipped: its rows carry one column per daughter,
-/// so its third cell is a proto form rather than one tongue's word.
+/// so its third cell is a proto form rather than one tongue's word.  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
 ///
 /// **Two independent shape checks, each catching a different way the
 /// artifact can break, each with its own message.** Neither is "the parse
@@ -157,9 +157,9 @@ const GAP: &str = "—";
 ///   nothing downstream can be trusted, so this errors even before any table
 ///   is examined.
 /// - **At least one heading was seen, but no table row (inside a non-
-///   `Cognates` section) ever reached the point of being cell-indexed** — a
+///   `Cognates` section) ever reached the point of being cell-indexed** — a  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
 ///   row counts here the moment it starts with `|` and splits into at least
-///   five `|`-delimited cells, *regardless* of whether cell three then turns
+///   five `|`-delimited cells, *regardless* of whether cell three then turns  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
 ///   out to be the header text, the `---` separator, a gap, or a real word.
 ///   A row missing its leading `|` (or otherwise short) never reaches that
 ///   point and does not count, so a document whose headings survived but
@@ -169,7 +169,7 @@ const GAP: &str = "—";
 /// **What this does NOT catch, and what does instead.** A row that keeps the
 /// `| ... | ... |` shape but carries wrong *content* — a shifted column, a
 /// corrupted word — still counts as a seen row and parses without error.
-/// This function has no way to know a cell's content is wrong, only that its
+/// This function has no way to know a cell's content is wrong, only that its  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
 /// shape is intact. That is Task 3's job: `the_baseline_roster_is_eighteen_
 /// tongues` catches a roster that gained or lost a tongue, and
 /// `the_baseline_sits_between_chance_and_certainty` catches an accuracy
@@ -202,12 +202,13 @@ pub fn wordlists_from_dictionary(md: &str) -> Result<Vec<(String, Vec<String>)>,
         if name == "Cognates" || !line.starts_with('|') {
             continue;
         }
-        let cells: Vec<&str> = line.split('|').collect();
+        let cells: Vec<&str> = line.split('|').collect(); // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
         if cells.len() < 5 {
+            // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
             continue;
         }
         saw_row = true;
-        let word = cells[3].trim();
+        let word = cells[3].trim(); // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
         if word.is_empty() || word == GAP || word == "Word" || word.starts_with("---") {
             continue;
         }
@@ -333,7 +334,7 @@ mod tests {
 
     /// A heading that survives alongside table rows that do not (every row
     /// here is missing its leading `|`, so none ever reaches the point of
-    /// being cell-indexed) must error, and the error must name the table —
+    /// being cell-indexed) must error, and the error must name the table —  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
     /// not the heading — shape as what broke, distinguishing it from the
     /// "no heading at all" failure mode. Asserting only `is_err()` would pass
     /// even if the two `Err` paths were swapped.

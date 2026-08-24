@@ -8,7 +8,7 @@ The solid shape of a world: its plates, its elevation, and the landforms the scu
 
 ### `cave-fraction`
 
-Fraction of land cells with a cave
+Fraction of land vertices with a cave
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -18,7 +18,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `continent-count`
 
-Connected land components at least 0.5% of the world's total land cells (Task 9 iteration 3's size floor, Earth-calibrated: Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does not) — the unfloored fringe of sub-floor fragments is preserved separately by landmass-count
+Connected land components at least 0.5% of the world's total land vertices (Task 9 iteration 3's size floor, Earth-calibrated: Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does not) — the unfloored fringe of sub-floor fragments is preserved separately by landmass-count
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -28,7 +28,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `deposit-density`
 
-Fraction of land cells with an ore deposit (The Lode, spec §5)
+Fraction of land vertices with an ore deposit (The Lode, spec §5)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -38,7 +38,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `dominant-commodity`
 
-The most common land ore commodity by cell count (The Lode, spec §5); Absent where no land cell has a deposit
+The most common land ore commodity by vertex count (The Lode, spec §5); Absent where no land vertex has a deposit
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -49,7 +49,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `dominant-rock`
 
-The most common land rock class by cell count, spec §4's fine taxonomy (The Ground); Absent on a landless world
+The most common land rock class by vertex count, spec §4's fine taxonomy (The Ground); Absent on a landless world
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -84,7 +84,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `largest-continent-share`
 
-Largest land component's share of all land cells; Absent on a landless world
+Largest land component's share of all land vertices; Absent on a landless world
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -114,7 +114,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `mean-land-elevation-m`
 
-Mean elevation above sea level over land cells, m — the term the lapse rate turns into a temperature penalty. Land is `e >= sea`, matching `mountain-coverage`'s land definition; `mean-land-temperature-c` uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is `e < sea`), so the two metrics ARE mutually comparable — this is the coupling the campaign's lapse-rate regression rests on. Absent on a landless world
+Mean elevation above sea level over land vertices, m — the term the lapse rate turns into a temperature penalty. Land is `e >= sea`, matching `mountain-coverage`'s land definition; `mean-land-temperature-c` uses `!is_ocean(vertex)`, which is the same condition (`is_ocean` is `e < sea`), so the two metrics ARE mutually comparable — this is the coupling the campaign's lapse-rate regression rests on. Absent on a landless world
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -124,7 +124,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `mean-ore-grade`
 
-Mean ore grade [0,1] over land cells with a deposit (The Lode, spec §5); 0.0 where no land cell has a deposit
+Mean ore grade [0,1] over land vertices with a deposit (The Lode, spec §5); 0.0 where no land vertex has a deposit
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -134,7 +134,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `mountain-coverage`
 
-Fraction of land cells standing above 2000 m over the sea
+Fraction of land vertices standing above 2000 m over the sea
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -144,7 +144,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `ocean-fraction`
 
-Fraction of globe cells below sea level
+Fraction of globe vertices below sea level
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -196,7 +196,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `plate-size-gini`
 
-Gini coefficient over plate cell counts (Earth's plate sizes are heavy-tailed; uniform Voronoi scores low)
+Gini coefficient over plate vertex counts (Earth's plate sizes are heavy-tailed; uniform Voronoi scores low)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -206,7 +206,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `sediment-volume`
 
-Total deposited sediment volume proxy: Σ sediment thickness (meters) over every cell, one cell-area unit per cell — the carve's own volume-proxy convention (spec §5): repose's receiver-side gains, routing's floodplain/ playa deposit, the marine wedge/delta fill, and atoll cap material, all summed
+Total deposited sediment volume proxy: Σ sediment thickness (meters) over every vertex, one vertex-area unit per vertex — the carve's own volume-proxy convention (spec §5): repose's receiver-side gains, routing's floodplain/ playa deposit, the marine wedge/delta fill, and atoll cap material, all summed
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -216,7 +216,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `unconformity-fraction`
 
-Fraction of land cells recording a nonconformity (missing time) — the archive's floating gaps.
+Fraction of land vertices recording a nonconformity (missing time) — the archive's floating gaps.
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -226,7 +226,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `unrest-coverage`
 
-Fraction of cells with tectonic unrest above 0.3
+Fraction of vertices with tectonic unrest above 0.3
 
 n = 1000 present, 0 absent (of 1000 worlds)
 

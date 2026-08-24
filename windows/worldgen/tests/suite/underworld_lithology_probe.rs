@@ -5,7 +5,7 @@
 //! constraint 2 says to prefer a pure function of fields terrain already owns
 //! and to add a stream draw only "if a pure derivation proves degenerate".
 //! That is not answerable without knowing how the candidate input fields are
-//! actually distributed over cave-bearing cells, so this was run *before* any
+//! actually distributed over cave-bearing vertices, so this was run *before* any
 //! formula was written, and its result chose the functional form. A control
 //! that steered a design decision has to be reproducible from the record; this
 //! file is that reproduction.
@@ -114,7 +114,7 @@ fn report(name: &str, mut v: Vec<f64>) {
 
 /// claim: readout(off-gate, heavy:, prints only, harness guards excepted) —
 /// the distribution of every `MaterialBuffer` and column axis a pure depth
-/// derivation could read, over cave-bearing land cells, split by cave kind.
+/// derivation could read, over cave-bearing land vertices, split by cave kind.
 /// The input-domain survey that chose `cave_depth`'s functional form; not a
 /// gate on any value.
 #[test]
@@ -149,18 +149,18 @@ fn what_does_a_depth_budget_have_to_read() {
             let mut dtb = Vec::new();
             let mut soil = Vec::new();
             let mut unconformities = 0usize;
-            for cell in geo.cells() {
-                if terrain.is_ocean(cell) {
+            for vertex in geo.vertices() {
+                if terrain.is_ocean(vertex) {
                     continue;
                 }
-                let Some(cave) = terrain.cave_at(cell) else {
+                let Some(cave) = terrain.cave_at(vertex) else {
                     continue;
                 };
                 if cave.kind != kind {
                     continue;
                 }
-                let b = terrain.material_at(cell);
-                let col = terrain.column_at(cell);
+                let b = terrain.material_at(vertex);
+                let col = terrain.column_at(vertex);
                 carbonate.push(b.carbonate);
                 porosity.push(b.porosity);
                 induration.push(b.induration);
@@ -194,7 +194,7 @@ fn what_does_a_depth_budget_have_to_read() {
     // than as a finding.
     assert!(
         total > 0,
-        "the survey found no cave-bearing cells across {} seeds — it is \
+        "the survey found no cave-bearing vertices across {} seeds — it is \
          measuring nothing",
         SEEDS.len()
     );

@@ -984,7 +984,7 @@ pub use speech::{
 
 /// Every seed-derivation label (or pattern) this crate uses, with docs.
 /// `<species>` stands for the concrete species leg of the path (e.g.
-/// `goblin`, `kobold`) and the per-entity salt leg (the settlement cell id,
+/// `goblin`, `kobold`) and the per-entity salt leg (the settlement vertex id,
 /// the belief id) is omitted, matching the documentation convention of the
 /// other domains' `stream_labels()`. Labels are permanent save-format
 /// contracts (spec §3); regeneration uses epoch suffixes, never renames.
@@ -1011,7 +1011,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/name/settlement",
-            "(retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by cell id): a bare stem",
+            "(retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by vertex id): a bare stem",
         ),
         (
             "language/<species>/name/deity",
@@ -1027,7 +1027,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/name/landform",
-            "(The Repose, Task 3) per-landform name, keyed at the composition root by (seed, cell, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084)",
+            "(The Repose, Task 3) per-landform name, keyed at the composition root by (seed, vertex, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084)",
         ),
         (
             "language/<species>/name/settlement/v2",

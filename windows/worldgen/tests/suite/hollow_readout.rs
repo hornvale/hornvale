@@ -5,7 +5,7 @@
 //! table. This battery exists so the baseline and the readout are produced by
 //! the identical code path.
 //!
-//! **Land** is `!terrain.is_ocean(cell)` — the predicate `cave_at` itself gates
+//! **Land** is `!terrain.is_ocean(vertex)` — the predicate `cave_at` itself gates
 //! on internally, so no second land test is introduced.
 //!
 //! Built to `BuildDepth::Terrain`, the shallowest rung producing terrain:
@@ -17,7 +17,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::{CaveKind, Horizon, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
@@ -35,7 +35,7 @@ const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 /// land only because the pre-campaign gate read a single field (`Karst`
 /// proneness) whose land distribution happened to be bimodal. The gate now
 /// reads whichever process `cave_process` selects, whose range is the union of
-/// three, so a partial table would silently drop cells out of the readout.
+/// three, so a partial table would silently drop vertices out of the readout.
 const PROB_BUCKETS: [(f64, f64); 20] = [
     (0.00, 0.05),
     (0.05, 0.10),
@@ -102,46 +102,46 @@ struct Readout {
     worlds: usize,
     /// Worlds with no cave at all.
     caveless_worlds: usize,
-    /// Land cells (`!is_ocean`) across all worlds.
+    /// Land vertices (`!is_ocean`) across all worlds.
     land: usize,
-    /// Land cells carrying a cave.
+    /// Land vertices carrying a cave.
     caves: usize,
     /// Per-world cave fraction of land, one entry per seed.
     per_world_fraction: Vec<f64>,
-    /// Cave cells by kind, in `CaveKind` declaration order.
+    /// Cave vertices by kind, in `CaveKind` declaration order.
     kinds: [usize; 3],
     /// Worlds in which each kind occurs at least once, same order. This is
     /// the reachability signal H1 actually cares about: The Hollow's defect
     /// was `LavaTube` and `Fracture` being UNREACHABLE, which is a statement
     /// about worlds, not about a share of a pooled total.
     kind_worlds: [usize; 3],
-    /// Cave cells by `deepest_horizon`, in `Horizon` declaration order
+    /// Cave vertices by `deepest_horizon`, in `Horizon` declaration order
     /// (Regolith, Cover, Basement, Roots, Underneath). REPORTED, and no
     /// longer asserted on — see H2's disclosure in
     /// `cave_substrate_meets_preregistered_criteria`.
     bands: [usize; 5],
-    /// Cave cells by [`reach_bin`] — the restated H2's classifier. Five equal
+    /// Cave vertices by [`reach_bin`] — the restated H2's classifier. Five equal
     /// bins over the depth budget's own declared range.
     reach_bins: [usize; REACH_BINS],
     /// Every cave's `depth_reach_m`, for the distributional readout H2's
     /// restatement rests on. Unsorted until `report` sorts a copy.
     reaches: Vec<f64>,
-    /// Cave cells with at least one caved neighbour.
+    /// Cave vertices with at least one caved neighbour.
     clustered: usize,
-    /// Cave cells with no caved neighbour.
+    /// Cave vertices with no caved neighbour.
     solitary: usize,
-    /// Per `PROB_BUCKETS` entry: (land cells in bucket, caves in bucket, sum
-    /// of those cells' nominal probabilities). The third element makes the
+    /// Per `PROB_BUCKETS` entry: (land vertices in bucket, caves in bucket, sum
+    /// of those vertices' nominal probabilities). The third element makes the
     /// bucket's *mean* nominal readable alongside its midpoint — they differ
     /// whenever a bucket's interior distribution is not uniform, which the
     /// `[0.00,0.05)` bucket's mass at exactly zero guarantees.
     gate: [(usize, usize, f64); 20],
     /// The same triples, kept PER WORLD — one entry per seed. H4's variance
-    /// model needs the world as its sampling unit, not the cell: the gate
-    /// reads a smooth spatial field, so cells within a world are nowhere near
+    /// model needs the world as its sampling unit, not the vertex: the gate
+    /// reads a smooth spatial field, so vertices within a world are nowhere near
     /// independent draws. See `cave_substrate_meets_preregistered_criteria`.
     gate_per_world: Vec<[(usize, usize, f64); 20]>,
-    /// Land cells whose nominal probability fell outside every bucket, i.e.
+    /// Land vertices whose nominal probability fell outside every bucket, i.e.
     /// exactly 1.0. Reported so "exhaustive over land" stays checkable.
     unbucketed: usize,
 }
@@ -176,7 +176,7 @@ fn presence_prob(field: f64, belt: f64) -> f64 {
     (field * (0.4 + 0.6 * belt)).clamp(0.0, 1.0)
 }
 
-/// Build one seed to `BuildDepth::Terrain` and fold its land cells into `out`.
+/// Build one seed to `BuildDepth::Terrain` and fold its land vertices into `out`.
 fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
     let artifacts = build_world_to_with_artifacts(
         seed,
@@ -193,13 +193,13 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
         .unwrap_or_else(|| panic!("{seed:?} at BuildDepth::Terrain produced no terrain"));
     let geo = terrain.geosphere();
 
-    let mut cave_set: BTreeSet<CellId> = BTreeSet::new();
+    let mut cave_set: BTreeSet<Vertex> = BTreeSet::new();
     let (mut world_land, mut world_caves) = (0usize, 0usize);
     let mut world_kinds = [0usize; 3];
     let mut world_gate = [(0usize, 0usize, 0.0f64); 20];
 
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
         world_land += 1;
@@ -210,23 +210,23 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
         // gate became kind-first, a Fracture or LavaTube cave was being
         // credited to a probability that never gated it.
         let selected = hornvale_terrain::cave_process(
-            &terrain.material_at(cell),
-            terrain.drainage_at(cell),
-            terrain.crust_age_at(cell),
-            terrain.nearest_boundary_at(cell),
+            &terrain.material_at(vertex),
+            terrain.drainage_at(vertex),
+            terrain.crust_age_at(vertex),
+            terrain.nearest_boundary_at(vertex),
         );
-        // No supporting process is proneness zero: the cell cannot host a cave
+        // No supporting process is proneness zero: the vertex cannot host a cave
         // and its nominal probability is zero, which is a real bucket entry.
         let proneness = selected.map_or(0.0, |(_, p)| p);
-        let prob = presence_prob(proneness, belt_weight(terrain.boundary_distance_at(cell)));
+        let prob = presence_prob(proneness, belt_weight(terrain.boundary_distance_at(vertex)));
         let bucket = PROB_BUCKETS
             .iter()
             .position(|&(lo, hi)| prob >= lo && prob < hi);
 
-        let cave = terrain.cave_at(cell);
+        let cave = terrain.cave_at(vertex);
         if let Some(cave) = cave {
             world_caves += 1;
-            cave_set.insert(cell);
+            cave_set.insert(vertex);
             let ki = match cave.kind {
                 CaveKind::Karst => 0,
                 CaveKind::LavaTube => 1,
@@ -260,8 +260,8 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
     }
     out.gate_per_world.push(world_gate);
 
-    for &cell in &cave_set {
-        if geo.neighbors(cell).iter().any(|nb| cave_set.contains(nb)) {
+    for &vertex in &cave_set {
+        if geo.neighbors(vertex).iter().any(|nb| cave_set.contains(nb)) {
             out.clustered += 1;
         } else {
             out.solitary += 1;
@@ -299,7 +299,7 @@ fn measure() -> Readout {
 /// Print the five numbers, in the spec's §4 order.
 fn report(r: &Readout) {
     println!(
-        "== The Hollow readout — {} worlds, {} land cells",
+        "== The Hollow readout — {} worlds, {} land vertices",
         r.worlds, r.land
     );
     println!(
@@ -416,20 +416,20 @@ fn report(r: &Readout) {
     let bucketed: usize = r.gate.iter().map(|&(c, _, _)| c).sum();
     println!(
         "gate calibration — nominal presence_prob vs realized hit rate \
-         ({bucketed} of {} land cells bucketed, {} outside every bucket):",
+         ({bucketed} of {} land vertices bucketed, {} outside every bucket):",
         r.land, r.unbucketed
     );
     for (i, &(lo, hi)) in PROB_BUCKETS.iter().enumerate() {
-        let (cells, hits, prob_sum) = r.gate[i];
-        if cells == 0 {
+        let (vertices, hits, prob_sum) = r.gate[i];
+        if vertices == 0 {
             continue;
         }
         println!(
-            "  [{lo:.2},{hi:.2})  cells={cells:>8}  caves={hits:>7}  realized={:.5}  \
+            "  [{lo:.2},{hi:.2})  vertices={vertices:>8}  caves={hits:>7}  realized={:.5}  \
              mid={:.3}  mean-nominal={:.5}",
-            hits as f64 / cells as f64,
+            hits as f64 / vertices as f64,
             (lo + hi) / 2.0,
-            prob_sum / cells as f64
+            prob_sum / vertices as f64
         );
     }
 }
@@ -440,7 +440,7 @@ fn report_cave_substrate() {
     report(&r);
     assert!(
         r.land > 0,
-        "the harness found no land cells — it is measuring nothing"
+        "the harness found no land vertices — it is measuring nothing"
     );
     assert_eq!(r.worlds, 30, "expected 30 worlds");
 }
@@ -508,7 +508,7 @@ fn cave_substrate_meets_preregistered_criteria() {
     // H1b — anti-collapse backstop. Deliberately MUCH weaker than the retired
     // 5%: the mix is legitimately world-dependent, so a share floor cannot be
     // a reachability test. This only catches a kind present everywhere but
-    // vanishingly thin (30 worlds x 1 cell would pass H1 alone). 1% sits 5x
+    // vanishingly thin (30 worlds x 1 vertex would pass H1 alone). 1% sits 5x
     // under the measured 4.92%, so it is a backstop, not a calibration.
     for (i, name) in names.iter().enumerate() {
         let share = r.kinds[i] as f64 / r.caves as f64;
@@ -621,34 +621,34 @@ fn cave_substrate_meets_preregistered_criteria() {
     // H1's.
     //
     // WHAT WAS WRONG. The 0.25 bound is a claim about a rate's precision, and
-    // it was being applied as though the bucket's CELLS were independent
+    // it was being applied as though the bucket's VERTICES were independent
     // Bernoulli draws. They are not, and H5 four lines below is the proof:
     // it ASSERTS >=90% clustering, i.e. that the gate field is spatially
     // smooth by design. A subpopulation's effective sample size is therefore
     // set by how many independent noise regions it occupies (tens), not by
-    // its cell count (thousands). Measured overdispersion across the 30
+    // its vertex count (thousands). Measured overdispersion across the 30
     // worlds is chi2/df = 5.5-48.8 in EVERY bucket, against 1.0 for
-    // independent cells. H4 and H5 were in direct tension and H5 is the one
+    // independent vertices. H4 and H5 were in direct tension and H5 is the one
     // stating the intended physics.
     //
     // WHAT THE FAILURE ACTUALLY WAS. Buckets [0.05,0.10) and [0.15,0.20) are
     // ~93% LavaTube (Karst is exactly 0 in both, in all 30 worlds), so they
     // are the population the terrain epoch thinned by 76% (9837 -> 2379).
     // What remained was dominated by ONE world: seed 3 supplied 36% and 30%
-    // of their cells, and 90% and >100% of their excess — the other 29 worlds
+    // of their vertices, and 90% and >100% of their excess — the other 29 worlds
     // are collectively NEGATIVE in the second bucket. Excluding seed 3 the
     // buckets read +8.2% and -14.5%. Under the correct variance model the
     // pooled excess is 1.09 and 0.72 sigma; the binomial reading was 8.64 and
     // 5.95. Those buckets were EMPTY at the battery's founding commit
     // 34cfaeb7, so this rule had only ever been exercised on dense, spatially
-    // diffuse populations where cell-count precision is roughly adequate.
+    // diffuse populations where vertex-count precision is roughly adequate.
     //
     // WHAT IS NOT THE REASON. The gate is not decalibrated: `uniformize`
-    // maps the field onto a uniform correctly — over all 473 318 land cells
+    // maps the field onto a uniform correctly — over all 473 318 land vertices
     // every 5%-wide bin of U holds 4.72-5.14%, mean(U) = 0.50005. And the
     // harness reconstruction still matches production, which
     // `provider.rs::cave_at_agrees_with_the_kind_first_gate` pins directly.
-    // Neither the 0.25 bound nor the 500-cell floor was widened, and no seed
+    // Neither the 0.25 bound nor the 500-vertex floor was widened, and no seed
     // was re-pinned — all three would have silenced the symptom and left the
     // estimator wrong.
     //
@@ -729,12 +729,12 @@ fn cave_substrate_meets_preregistered_criteria() {
     // which the aggregate would average away.
     const H4_SIGMA: f64 = 3.0;
     for (i, &(lo, hi)) in PROB_BUCKETS.iter().enumerate() {
-        let (cells, hits, prob_sum) = r.gate[i];
-        if cells < 500 {
+        let (vertices, hits, prob_sum) = r.gate[i];
+        if vertices < 500 {
             continue; // too few samples for a rate to mean anything
         }
-        let realized = hits as f64 / cells as f64;
-        let nominal = prob_sum / cells as f64;
+        let realized = hits as f64 / vertices as f64;
+        let nominal = prob_sum / vertices as f64;
         let relative = (realized - nominal).abs() / nominal;
         if relative < 0.25 {
             continue;

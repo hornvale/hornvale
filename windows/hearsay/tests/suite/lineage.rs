@@ -165,7 +165,7 @@ fn a_number_valued_founding_is_a_root_not_a_parent() {
     assert_eq!(
         lin.parent(eid(1)),
         None,
-        "Genesis(cell) is not a parent link"
+        "Genesis(vertex) is not a parent link"
     );
     assert_eq!(lin.roots(), &[eid(1)]);
 }

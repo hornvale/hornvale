@@ -2,11 +2,11 @@
 //!
 //! The Fallow's `H1` predicts that a land-capital account plus year-to-year
 //! variance restores deep-history columns — at least four stacked layers on some
-//! cell, against the one that The Tilth's stages 1+4 leave. That prediction rests
+//! vertex, against the one that The Tilth's stages 1+4 leave. That prediction rests
 //! on a *mechanism*: a community draws its ground down, a bad stretch arrives, the
 //! ground cannot carry it, the community leaves, the ground recovers, someone
 //! returns. Nothing about that requires a `Geosphere`, a world, or the bake — so it
-//! can be tested as a **pure time-stepped model of one cell in milliseconds**,
+//! can be tested as a **pure time-stepped model of one vertex in milliseconds**,
 //! before committing to the determinism-sensitive bake rewire it would otherwise
 //! need.
 //!
@@ -46,9 +46,9 @@ fn climate_multiplier(epoch: usize, amplitude: f64) -> f64 {
     (1.0 + amplitude * beat / 2.0).max(0.0)
 }
 
-/// One cell's two-millennia history under a land-capital model.
+/// One vertex's two-millennia history under a land-capital model.
 /// Returns the number of distinct occupations (the column depth).
-fn run_cell(base_capacity: f64, extraction_rate: f64, variance: f64, regen_rate: f64) -> usize {
+fn run_vertex(base_capacity: f64, extraction_rate: f64, variance: f64, regen_rate: f64) -> usize {
     // The capital account, normalised: 1.0 is pristine ground, 0.0 exhausted.
     let mut tilth = 1.0_f64;
     let mut pop = 0.0_f64;
@@ -94,7 +94,7 @@ fn run_cell(base_capacity: f64, extraction_rate: f64, variance: f64, regen_rate:
 #[ignore = "probe: measurement only, run explicitly"]
 fn fallow_feasibility_sweep() {
     println!("\n######## THE FALLOW — §3.1 feasibility sweep ########");
-    println!("One cell, 80 epochs x 25 years, no world. Column depth as a surface.");
+    println!("One vertex, 80 epochs x 25 years, no world. Column depth as a surface.");
     println!("Target: H1 wants >= 4 layers. Stages 1+4 currently deliver 1.\n");
 
     // Marginal-but-real ground: the median capacity on good ground post-stage-1+4
@@ -117,7 +117,7 @@ fn fallow_feasibility_sweep() {
     for e in extractions {
         print!("{e:>10.2}");
         for v in variances {
-            let n = run_cell(base, e, v, regen);
+            let n = run_vertex(base, e, v, regen);
             total += 1;
             if n >= 4 {
                 in_target += 1;
@@ -127,7 +127,7 @@ fn fallow_feasibility_sweep() {
         println!();
     }
     println!(
-        "\n  cells of the sweep reaching H1's >= 4 layers: {in_target}/{total}\n\
+        "\n  vertices of the sweep reaching H1's >= 4 layers: {in_target}/{total}\n\
          \x20 A WIDE regime supports §3.1 (the mechanism works without tuning).\n\
          \x20 A NARROW regime is evidence AGAINST it -- columns would then be an\n\
          \x20 artifact of particular constants, which is the trap the old hard zero\n\
@@ -139,19 +139,19 @@ fn fallow_feasibility_sweep() {
     println!("\n  CONTROLS (which term earns its keep?)");
     println!(
         "    variance only, no extraction   (e=0.00, v=0.6): {} layers",
-        run_cell(base, 0.0, 0.6, regen)
+        run_vertex(base, 0.0, 0.6, regen)
     );
     println!(
         "    extraction only, no variance   (e=0.04, v=0.0): {} layers",
-        run_cell(base, 0.04, 0.0, regen)
+        run_vertex(base, 0.04, 0.0, regen)
     );
     println!(
         "    both                           (e=0.04, v=0.6): {} layers",
-        run_cell(base, 0.04, 0.6, regen)
+        run_vertex(base, 0.04, 0.6, regen)
     );
     println!(
         "    neither                        (e=0.00, v=0.0): {} layers",
-        run_cell(base, 0.0, 0.0, regen)
+        run_vertex(base, 0.0, 0.0, regen)
     );
     println!(
         "\n  If 'variance only' already reaches >= 4, the capital account is\n\

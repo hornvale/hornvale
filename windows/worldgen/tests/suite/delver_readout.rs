@@ -68,7 +68,7 @@
 //!
 //! The decomposition is proven rather than assumed: the reconstruction
 //! `saturated * tolerance_liebig_value(..)` is asserted **bit-identical** to
-//! `per_species_suitability` on every land cell of every kind measured, which
+//! `per_species_suitability` on every land vertex of every kind measured, which
 //! is what validates both of this file's mirrors of private production code.
 //!
 //! ## The mutations — applied as temporary local edits, observed RED, reverted
@@ -155,7 +155,7 @@
 // for.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_kernel::{CellId, ConditionResponse, Mass, Seed, Value, World, sovereignty_floor};
+use hornvale_kernel::{ConditionResponse, Mass, Seed, Value, Vertex, World, sovereignty_floor};
 use hornvale_species::ConditionNiche;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
@@ -237,7 +237,7 @@ fn binding_axis(cn: &ConditionNiche, s: &Substrate, floor_buf: f64) -> &'static 
     best.0
 }
 
-/// One kind's bind profile on one world: the share of LAND cells on which
+/// One kind's bind profile on one world: the share of LAND vertices on which
 /// each of the four condition axes is the Liebig minimum.
 ///
 /// `delver_bind_audit.rs`'s `bind_shares` returned the elevation share alone.
@@ -247,17 +247,17 @@ fn binding_axis(cn: &ConditionNiche, s: &Substrate, floor_buf: f64) -> &'static 
 struct BindProfile {
     /// The kind this profile is for.
     kind: &'static str,
-    /// Share of land cells binding on temperature / moisture / insolation /
+    /// Share of land vertices binding on temperature / moisture / insolation /
     /// elevation, in that order. Sums to 1.0.
     shares: [f64; 4],
-    /// The land-cell count every share is over.
+    /// The land-vertex count every share is over.
     land: usize,
 }
 
-/// Per kind in `kinds` at `seed`: the share of LAND cells on which each axis
+/// Per kind in `kinds` at `seed`: the share of LAND vertices on which each axis
 /// is the Liebig minimum.
 ///
-/// Land is `!terrain.is_ocean(cell)`, never `elevation < 0` — a world's sea
+/// Land is `!terrain.is_ocean(vertex)`, never `elevation < 0` — a world's sea
 /// level is not zero (seed 42's sits at −2,936 m).
 fn bind_shares(seed_value: u64, kinds: &[&'static str]) -> Vec<BindProfile> {
     let wc = WorldComponents::assemble().expect("components assemble");
@@ -298,9 +298,9 @@ fn bind_shares(seed_value: u64, kinds: &[&'static str]) -> Vec<BindProfile> {
         insolation_scalar,
         &regime,
     );
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
-    println!("== seed {seed_value} ==  land cells: {}", land.len());
+    println!("== seed {seed_value} ==  land vertices: {}", land.len());
     println!(
         "{:<14} {:>7} {:>9} {:>7} {:>6}  {:>8} {:>8} {:>8} {:>8}",
         "kind", "mass", "floor", "dev_el", "below", "temp%", "moist%", "insol%", "ELEV%"
@@ -376,7 +376,7 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
     assert_eq!(
         xs.len(),
         ys.len(),
-        "correlation needs paired samples over the same cells"
+        "correlation needs paired samples over the same vertices"
     );
     assert!(!xs.is_empty(), "correlation over an empty land mask");
     let n = xs.len() as f64;
@@ -403,8 +403,8 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
     sxy / (sxx * syy).sqrt()
 }
 
-/// Pearson correlation of each requested pair of kinds' per-cell suitability,
-/// over the land cells of the world at `seed`, ascending by pair. **Verbatim
+/// Pearson correlation of each requested pair of kinds' per-vertex suitability,
+/// over the land vertices of the world at `seed`, ascending by pair. **Verbatim
 /// from `delver_distinctness.rs`.**
 ///
 /// The species slices are built exactly as the live path builds them
@@ -480,7 +480,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     let column = |name: &str| -> Vec<f64> {
         let idx = roster
@@ -494,7 +494,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         land.iter().map(|&c| *k.get(c)).collect()
     };
 
-    println!("== seed {seed} ==  land cells: {}", land.len());
+    println!("== seed {seed} ==  land vertices: {}", land.len());
     let mut out: Vec<((String, String), f64)> = Vec::new();
     for (i, first) in kinds.iter().enumerate() {
         for second in &kinds[i + 1..] {
@@ -556,7 +556,7 @@ fn tolerance_liebig_value(cn: &ConditionNiche, s: &Substrate, floor_buf: f64) ->
 /// Pairwise correlation of the **supply term alone**, with the tolerance layer
 /// held out entirely.
 ///
-/// `per_species_suitability`'s per-cell product is
+/// `per_species_suitability`'s per-vertex product is
 /// `saturated * tolerance_liebig(..) * availability`, where
 /// `saturated = supply / (1 + supply)` and `supply = axis_supply(niche,
 /// per_axis)`. `availability` is exactly `1.0` for every `Surface` kind, and
@@ -570,7 +570,7 @@ fn tolerance_liebig_value(cn: &ConditionNiche, s: &Substrate, floor_buf: f64) ->
 /// `EraInvariantSupply::build`, which applies them itself; the other three
 /// come from public builders that take no such constant.
 ///
-/// Returns the pair correlations ascending by pair, and the land-cell count.
+/// Returns the pair correlations ascending by pair, and the land-vertex count.
 fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usize) {
     use hornvale_kernel::{
         ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
@@ -607,7 +607,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
     // assembles them.
     let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
     let era = EraInvariantSupply::build(
         geo,
@@ -667,7 +667,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     // Per kind: the supply-only column, and the mirror proof that
     // `saturated * tolerance` reproduces production bit-for-bit.
@@ -712,7 +712,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
             ];
             let supply = axis_supply(&bio.niche, &per_axis);
             let saturated = supply / (1.0 + supply);
-            // THE MIRROR PROOF. If this holds on every land cell for every
+            // THE MIRROR PROOF. If this holds on every land vertex for every
             // kind, then `saturated` really is production's supply factor and
             // `tolerance_liebig_value` really is production's tolerance — the
             // decomposition is not a re-derivation that happens to look right.
@@ -722,7 +722,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
                 reconstructed,
                 *real.get(c),
                 "the supply×tolerance decomposition must reproduce \
-                 per_species_suitability BIT-FOR-BIT for {name} at cell {c:?}; \
+                 per_species_suitability BIT-FOR-BIT for {name} at vertex {c:?}; \
                  got {reconstructed} against {}. A mismatch means one of the \
                  two mirrors has drifted from the production capacity path and \
                  every number this probe reports is measuring something else.",
@@ -734,7 +734,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
     };
 
     println!(
-        "== seed {seed} (SUPPLY ONLY) ==  land cells: {}",
+        "== seed {seed} (SUPPLY ONLY) ==  land vertices: {}",
         land.len()
     );
     let mut out: Vec<((String, String), f64)> = Vec::new();
@@ -872,12 +872,12 @@ fn the_dwarf_floors_are_what_the_roster_was_authored_against() {
 /// land.** Not 99% of it: the closed form
 ///
 /// ```text
-///   elevation is the Liebig minimum on every cell
+///   elevation is the Liebig minimum on every vertex
 ///       iff  devotion_elev < sovereignty_floor(mass, potency)
 /// ```
 ///
 /// admits no exception, so this asserts exact equality with 1.0 and would
-/// catch one dissenting cell out of ~19,000.
+/// catch one dissenting vertex out of ~19,000.
 ///
 /// **The plan's wording of P1 was false by construction and is not what this
 /// asserts.** It said "elevation binds on ≥99% of land for all five dwarves";
@@ -892,7 +892,7 @@ fn the_dwarf_floors_are_what_the_roster_was_authored_against() {
 ///   gully-dwarf        0.30   0.4385   100.00%   100.00%   100.00%
 ///   hill-dwarf         0.30   0.4477   100.00%   100.00%   100.00%
 ///   desert-dwarf       0.70   0.4433    13.34%    31.59%     8.64%
-///   land cells:                          11,066    19,046    11,571
+///   land vertices:                          11,066    19,046    11,571
 /// ```
 ///
 /// The two below-floor rows are 100.00% exactly, on every seed — every one of
@@ -901,7 +901,7 @@ fn the_dwarf_floors_are_what_the_roster_was_authored_against() {
 /// claim: invariant(forall-seed) — over SEEDS [42, 7, 1234] x each dwarf whose
 /// `devotion_elev < sovereignty_floor` (gully-dwarf and hill-dwarf on the
 /// shipped roster of three), elevation is the Liebig minimum on EVERY land
-/// cell (`share == 1.0` exactly), plus a `checked == 2 * SEEDS.len()`
+/// vertex (`share == 1.0` exactly), plus a `checked == 2 * SEEDS.len()`
 /// non-vacuity guard. Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
@@ -924,7 +924,7 @@ fn p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land() {
                 profile.shares[3], 1.0,
                 "seed {seed}: {}'s elevation devotion {dev:.4} is below its \
                  sovereignty floor {floor:.6}, so elevation must be the Liebig \
-                 minimum on ALL {} land cells; it bound on {:.6}. If this \
+                 minimum on ALL {} land vertices; it bound on {:.6}. If this \
                  dropped, the tolerance model changed and the roster's whole \
                  authoring premise is void.",
                 profile.kind, profile.land, profile.shares[3]
@@ -951,7 +951,7 @@ fn p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land() {
 /// dwarves show.
 ///
 /// claim: rate(forall-seed, desert-dwarf's elevation share of land < 0.99) —
-/// over SEEDS [42, 7, 1234], one kind. A bound on a per-world cell share,
+/// over SEEDS [42, 7, 1234], one kind. A bound on a per-world vertex share,
 /// asserted on every seed; it is the theorem's second direction and the
 /// probe's discrimination control, not a calibrated threshold. Off-gate
 /// (heavy:).
@@ -965,7 +965,7 @@ fn p1_desert_dwarf_is_not_elevation_bound() {
             d.shares[3] < 0.99,
             "seed {seed}: desert-dwarf's elevation devotion 0.70 sits ABOVE its \
              floor 0.443252, so the theorem does not apply and a climate axis \
-             must bind on a real share of the {} land cells. Elevation bound on \
+             must bind on a real share of the {} land vertices. Elevation bound on \
              {:.6}, which means this probe cannot discriminate and every \
              elevation result it reports is worthless.",
             d.land,
@@ -979,7 +979,7 @@ fn p1_desert_dwarf_is_not_elevation_bound() {
 // ---------------------------------------------------------------------------
 
 /// **P3′, first half (spec §10.2) — desert-dwarf's temperature or moisture
-/// curve is the Liebig minimum on ≥ 20% of land cells. CONFIRMED, by a wide
+/// curve is the Liebig minimum on ≥ 20% of land vertices. CONFIRMED, by a wide
 /// margin.**
 ///
 /// Measured 2026-08-07 — desert-dwarf's share of land per binding axis:
@@ -989,7 +989,7 @@ fn p1_desert_dwarf_is_not_elevation_bound() {
 ///     42          70.32%     16.26%        0.08%      13.34%       86.58%
 ///      7          37.37%     30.10%        0.94%      31.59%       67.47%
 ///   1234          80.71%     10.65%        0.00%       8.64%       91.36%
-///   land cells:   11,066 / 19,046 / 11,571
+///   land vertices:   11,066 / 19,046 / 11,571
 /// ```
 ///
 /// The frozen floor was 20% and the measured climate share is 67–91%. This is
@@ -1007,7 +1007,7 @@ fn p1_desert_dwarf_is_not_elevation_bound() {
 /// **What this hands `BIO-gnoll-desert`.** Gnoll is documented for the same
 /// `Desert` climate tile and selects nothing there. The mechanism is that
 /// gnoll's `devotion_elev` of 0.40 sits BELOW its floor of 0.4954, so its
-/// authored moisture curve is never the Liebig minimum on any cell — it is
+/// authored moisture curve is never the Liebig minimum on any vertex — it is
 /// prepared, not connected. `delver_bind_audit.rs` measured gnoll at 100.00%
 /// elevation-bound on all three seeds, and desert-dwarf is the same model with
 /// the predicate flipped, so the diagnosis is a contrast and not an inference.
@@ -1036,13 +1036,13 @@ fn p3_desert_dwarfs_climate_curves_bind() {
         let climate_share = d.shares[0] + d.shares[1];
         println!(
             "seed {seed}: desert-dwarf temp {:.4} + moist {:.4} = {climate_share:.4} \
-             (insol {:.4}, elev {:.4}) over {} land cells",
+             (insol {:.4}, elev {:.4}) over {} land vertices",
             d.shares[0], d.shares[1], d.shares[2], d.shares[3], d.land
         );
         assert!(
             climate_share >= 0.20,
             "seed {seed}: P3′ freezes desert-dwarf's temperature-or-moisture \
-             bind share at >= 20% of the {} land cells; measured \
+             bind share at >= 20% of the {} land vertices; measured \
              {climate_share:.6}. Below the floor, the roster's first \
              climate-selected people does not select on climate.",
             d.land
@@ -1068,7 +1068,7 @@ fn p3_desert_dwarfs_climate_curves_bind() {
 ///   desert-dwarf vs gully-dwarf   0.5922    0.5353    0.6313   CONFIRMED 3/3
 ///   gully-dwarf  vs hill-dwarf    0.6925    0.7551    0.6928   CONFIRMED 3/3
 ///   desert-dwarf vs hill-dwarf    0.9629    0.8625    0.9796   REFUTED   2/3
-///   land cells:                   11,066    19,046    11,571
+///   land vertices:                   11,066    19,046    11,571
 /// ```
 ///
 /// **The threshold was not moved and nothing was retuned.** 0.95 is the
@@ -1206,7 +1206,7 @@ fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
 /// `ResourceVector`. That is the wrong instrument for the question: perturbing
 /// an authored input measures the input's leverage, not which of capacity's
 /// two factors carries the spatial pattern. `per_species_suitability`'s
-/// per-cell value is `saturated * tolerance_liebig(..)` for a Surface kind, so
+/// per-vertex value is `saturated * tolerance_liebig(..)` for a Surface kind, so
 /// the factors can be separated and the supply one correlated on its own.
 ///
 /// **The reading was frozen before the run**, in two branches:
@@ -1229,7 +1229,7 @@ fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
 ///                     supply only        1.0000    1.0000    1.0000
 ///   gully  vs hill    full capacity      0.6925    0.7551    0.6928
 ///                     supply only        0.9994    0.9994    0.9994
-///   land cells:                          11,066    19,046    11,571
+///   land vertices:                          11,066    19,046    11,571
 /// ```
 ///
 /// (Supply-only to six digits: 0.999684 / 0.999660 / 0.999643 ·
@@ -1256,7 +1256,7 @@ fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
 ///
 /// **The scope limit, stated because it is easy to overrun.** Pearson `r` is
 /// invariant under a positive affine rescale, so this measures how supply
-/// *sorts* cells, not how large it is. `BIO-supply-drowns-niche` is a claim
+/// *sorts* vertices, not how large it is. `BIO-supply-drowns-niche` is a claim
 /// about **magnitude** — that supply spans orders of magnitude while tolerance
 /// is bounded in `[0,1]` — and nothing here measures magnitude. So that row is
 /// neither confirmed nor discharged by this test; what is added to it is that
@@ -1269,7 +1269,7 @@ fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
 ///
 /// The decomposition is proven, not assumed: [`supply_only_correlations`]
 /// reconstructs `saturated * tolerance_liebig_value(..)` and asserts
-/// bit-for-bit equality with `per_species_suitability` on every land cell of
+/// bit-for-bit equality with `per_species_suitability` on every land vertex of
 /// every kind measured — so both of this file's mirrors of private production
 /// code are checked against production on every run of this test.
 ///
@@ -1310,7 +1310,7 @@ fn the_supply_term_is_near_kind_independent_across_the_dwarf_family() {
             let f = r_of(&full, a, b);
             let sp = r_of(&supply, a, b);
             println!(
-                "seed {seed} ({land} land cells): {a} vs {b} — full {f:.6}, \
+                "seed {seed} ({land} land vertices): {a} vs {b} — full {f:.6}, \
                  supply-only {sp:.6}, tolerance moves it {:.6}",
                 f - sp
             );

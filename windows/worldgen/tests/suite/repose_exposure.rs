@@ -28,7 +28,7 @@
 //! this doc proves that byte-for-byte.
 //!
 //! Committed fixture: `fixtures/repose-exposure.csv`, seeds 1..=30, 440,715
-//! settleable land cells and **26,146** settlements pooled over the sweep
+//! settleable land vertices and **26,146** settlements pooled over the sweep
 //! (population 1,467,398) — spec §6.2's population applied correctly to
 //! both sides of the readout (land AND settlements).
 //!
@@ -58,7 +58,7 @@
 //! land routinely reaches several kilometres, and an absolute 2500 m cut
 //! captures nearly half of all settleable land — not a mountain fringe:
 //!
-//! | band | land cells | land share | settlement share |
+//! | band | land vertices | land share | settlement share |
 //! |---|---|---|---|
 //! | `0-250m` | 50,792 | 11.5% | 65.5% |
 //! | `250-1000m` | 55,764 | 12.7% | 14.4% |
@@ -76,8 +76,8 @@
 //!
 //! **Deciles are NOT degenerate.** Unaffected by the fix (land accounting was
 //! never the buggy side): land splits almost exactly evenly across the ten
-//! unrest deciles — 44,044 to 44,149 cells each (a spread under 0.25%),
-//! despite unrest being a smooth field with a real mass of cells near zero
+//! unrest deciles — 44,044 to 44,149 vertices each (a spread under 0.25%),
+//! despite unrest being a smooth field with a real mass of vertices near zero
 //! on calm interiors. Tied values did not collapse the low deciles;
 //! `decile_of`'s rank-based partition handles them cleanly.
 //!
@@ -175,7 +175,7 @@
 //!   originally carried — "falling monotonically … and monotonically
 //!   decreasing within EVERY band checked separately (not merely in the
 //!   pooled mix)" — was false on both counts, and is re-derived here from
-//!   the committed fixture rather than restated.** The land-cell-weighted
+//!   the committed fixture rather than restated.** The land-vertex-weighted
 //!   pooled series is not monotone: it rises at d2→d3 (0.006012 → 0.007355)
 //!   before resuming its fall. Per band it is worse — the "within EVERY
 //!   band" clause is falsified in all four:
@@ -257,11 +257,11 @@
 //! **Critical finding, independently confirmed from the committed fixture
 //! before this fix**: the settlement side of this readout never applied
 //! the `is_settleable` predicate the land side already used. A marine
-//! settlement's attractor cell is ocean — negative elevation-above-sea-level
+//! settlement's attractor vertex is ocean — negative elevation-above-sea-level
 //! — so `band_of`'s loop never satisfied any threshold and fell through to
 //! its `BANDS[0]` (the `0-250m` band) default, and its decile was computed
 //! against `sorted_unrest`, a distribution built ONLY from settleable land: a
-//! meaningless lookup for a cell that was never in that distribution. The
+//! meaningless lookup for a vertex that was never in that distribution. The
 //! fingerprint was unmistakable: `giant-squid` (30,971 settlements),
 //! `reef-shark` (2,121) and `sea-elf` (4) each read EXACTLY 100.0% `0-250m`
 //! with zero everywhere else — not an ecological distribution — and
@@ -272,8 +272,8 @@
 //! copy — to the settlement loop.** Per spec §6.2's exact definition
 //! (settleable land = not ocean AND non-zero carrying capacity), this
 //! excludes both true marine settlements and the much smaller residual of
-//! non-ocean cells with zero carrying capacity (e.g. a founder-floor
-//! settlement placed at a barren cell by [`hornvale_demography::stack_condense`]'s
+//! non-ocean vertices with zero carrying capacity (e.g. a founder-floor
+//! settlement placed at a barren vertex by [`hornvale_demography::stack_condense`]'s
 //! floor mechanism, which bypasses the normal density threshold and can
 //! land anywhere with nonzero inflow) — the same reason the small residual
 //! of excluded settlements is not purely 100%/0% split by kind; see the
@@ -313,7 +313,7 @@
 //! **Both fix-round-1 guards RE-VERIFIED against the corrected baseline —
 //! same no-tuning rule, reported honestly:**
 //!
-//! - **Discrimination guard.** The land-cell-weighted andosol-share spread
+//! - **Discrimination guard.** The land-vertex-weighted andosol-share spread
 //!   the `0.002` threshold was calibrated against is BYTE-IDENTICAL to
 //!   before this fix (decile 0: 0.009151, decile 9: 0.000000 — land and
 //!   soil accounting were never the buggy side, so this could not have
@@ -347,13 +347,13 @@
 //!
 //! **UNITS, because the first encoding of this table got them wrong.** It
 //! reported a SYMMETRIC DIFFERENCE over a denominator of SETTLEMENTS. Those
-//! are different things: a settlement that RELOCATES contributes TWO cells to
+//! are different things: a settlement that RELOCATES contributes TWO vertices to
 //! a symmetric difference, the one it left and the one it took, so the
 //! original "3,036 of 26,146 = 11.6%" was inflated. **The inflation has no
 //! 2× ceiling** — an earlier draft claimed one, but 2× is the PURE-RELOCATION
 //! case; an arm that also creates settlements inflates further, and arm B's
 //! own row does exactly that at 399/193 = 2.07×. The figure to
-//! quote is **`vacated`** — baseline attractor cells that hold no settlement
+//! quote is **`vacated`** — baseline attractor vertices that hold no settlement
 //! under the arm — which is 1:1 with baseline settlements. See [`Movement`]
 //! for the full definition; measured values are in the fix-round-2 section at
 //! the end of this doc.
@@ -474,11 +474,11 @@
 //!   that repels settlement from high-unrest ground lets more settlement
 //!   onto it. It reaches the whole population — `hostility` is a term in
 //!   `carrying_capacity` for every kind, and it vacates 1,518 baseline
-//!   settlement cells, 5.81% of the settleable-land population — so this can
+//!   settlement vertices, 5.81% of the settleable-land population — so this can
 //!   be stated plainly.
 //! - **Arm B (mineral) — a working POSITIVE CONTROL but UNDERPOWERED for
 //!   attribution. The mineral hypothesis is UNTESTED, not refuted.** It
-//!   vacates 193 baseline settlement cells (0.74%), so the harness
+//!   vacates 193 baseline settlement vertices (0.74%), so the harness
 //!   demonstrably sees the channel; the
 //!   gradient falls slightly in all four bands (×5.395 → ×5.125 in
 //!   `2500m+`, ~6% of the effect). That 6% is a fact about the ROSTER, not
@@ -499,7 +499,7 @@
 //!   30-seed sweep, and it is absent from the committed fixture's `people`
 //!   column entirely. It is a registered kind that places nothing. (`xorn`
 //!   is `Subterranean`, so `per_species_suitability`'s cave-availability
-//!   gate zeroes its K on every cell without a cave; that is the likely
+//!   gate zeroes its K on every vertex without a cave; that is the likely
 //!   cause but this probe did not measure it, and a registered-but-unplaced
 //!   kind is worth its own look.)
 //! - **`rust-monster` holds 104 of the 26,146 settlements — 0.4%.**
@@ -516,7 +516,7 @@
 //!
 //! **The instrument-sensitivity table originally reported a SYMMETRIC
 //! DIFFERENCE against a denominator of SETTLEMENTS.** Those are different
-//! units: one settlement that relocates contributes TWO cells to a symmetric
+//! units: one settlement that relocates contributes TWO vertices to a symmetric
 //! difference. Superseded figures, kept so the correction is legible: "arm A
 //! moved 3,036 of 26,146 = 11.6%" and "arm B moved 399 = 1.5%". Arm A's was
 //! inflated by exactly 2× and arm B's by 2.07× — **2× is not an upper bound**,
@@ -524,10 +524,10 @@
 //! exceeds it, as arm B does.
 //!
 //! **Corrected, decomposed** (30 seeds, settleable-land population, base
-//! 26,146 of 59,690 total attractor cells). `vacated` is the quotable
+//! 26,146 of 59,690 total attractor vertices). `vacated` is the quotable
 //! share-of-baseline figure; see [`Movement`]:
 //!
-//! | arm | vacated | share of 26,146 | newly occupied | net | changed cells |
+//! | arm | vacated | share of 26,146 | newly occupied | net | changed vertices |
 //! |---|---|---|---|---|---|
 //! | A — hostility off | 1,518 | **5.81%** | 1,518 | +0 | 3,036 |
 //! | B — mineral unrest off | 193 | **0.74%** | 206 | +13 | 399 |
@@ -536,7 +536,7 @@
 //! **The decomposition earns its keep immediately** — none of this was
 //! visible in a symmetric difference, which sums the two halves and cannot
 //! tell relocation from creation. Arm A vacates and re-occupies exactly
-//! 1,518 cells; arm B nets +13; the combined arm nets −22.
+//! 1,518 vertices; arm B nets +13; the combined arm nets −22.
 //!
 //! **WITHDRAWN, and by measurement (fix round 3, 2026-08-12): arm A is NOT
 //! "pure relocation".** This paragraph read arm A's pooled `net == 0` as
@@ -544,14 +544,14 @@
 //! inference does not follow from a POOLED sum, so it was turned into a
 //! per-seed assertion — and the assertion went RED. Measured per seed:
 //!
-//! - Occupied-cell net is **nonzero in 29 of 30 seeds**, spanning **−21 to
+//! - Occupied-vertex net is **nonzero in 29 of 30 seeds**, spanning **−21 to
 //!   +12**; only seed 29 nets zero. The pooled `+0` is these thirty values
 //!   cancelling, not an absence of change.
 //! - The settleable SETTLEMENT-count delta per seed is **identical to the
-//!   cell net at every seed** (same vector, −21..+12), so on this population
-//!   no arm-side cell hosts two settlements. That 1:1-ness is measured here,
+//!   vertex net at every seed** (same vector, −21..+12), so on this population
+//!   no arm-side vertex hosts two settlements. That 1:1-ness is measured here,
 //!   not assumed — [`hornvale_demography::stack_condense`] can place two
-//!   settlements on one cell, so it had to be checked rather than inherited
+//!   settlements on one vertex, so it had to be checked rather than inherited
 //!   from the baseline.
 //!
 //! Corrected statement: **arm A produces no net change in AGGREGATE
@@ -599,7 +599,7 @@
 //! | `kobold` | 27 | **0** | 0 | 30.24 y | 60.48 y | 604.8 y |
 //!
 //! **Read the four zeros correctly: they are "no mountain", NOT "forgot".**
-//! Four of the five peoples place not one settlement on an edifice cell
+//! Four of the five peoples place not one settlement on an edifice vertex
 //! anywhere in the sweep, so their stock is zero for want of anything to
 //! remember. Conflating that with forgetting would be the campaign's own
 //! headline claim asserted on a population that cannot support it.
@@ -670,7 +670,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_demography::stack_condense::HeadcountRender;
-use hornvale_kernel::{CellId, KindId, Seed, World, quantize};
+use hornvale_kernel::{KindId, Seed, Vertex, World, quantize};
 use hornvale_worldgen::{
     ChannelMask, SettlementPins, SkyChoice, WorldComponents, build_world_from_components,
     climate_from, demography_report_from, demography_report_from_masked, generation_length_of,
@@ -708,7 +708,7 @@ const BANDS: [(&str, f64); 4] = [
     ("2500m+", 2500.0),
 ];
 
-/// One stratum's readout: a (decile, band, people) cell of the design.
+/// One stratum's readout: a (decile, band, people) vertex of the design.
 #[derive(Debug, Clone, PartialEq)]
 struct ExposureRow {
     /// Unrest decile, 0..DECILES (0 = calmest tenth of settleable land).
@@ -717,9 +717,9 @@ struct ExposureRow {
     band: &'static str,
     /// The people this row is for, or "pooled" for the all-peoples row.
     people: &'static str,
-    /// Settleable land cells in this stratum, summed over seeds.
-    land_cells: u64,
-    /// Settlements whose attractor cell falls in this stratum.
+    /// Settleable land vertices in this stratum, summed over seeds.
+    land_vertices: u64,
+    /// Settlements whose attractor vertex falls in this stratum.
     settlements: u64,
     /// Total headcount at those settlements.
     population: f64,
@@ -727,7 +727,7 @@ struct ExposureRow {
     exposure_ratio: f64,
     /// population share / land-area share.
     weighted_ratio: f64,
-    /// Share of this stratum's land cells classified `Andosol` — the
+    /// Share of this stratum's land vertices classified `Andosol` — the
     /// discrimination guard's input (spec §6.7).
     andosol_share: f64,
     /// **Population-weighted mean knownness** of this stratum's settlements
@@ -737,7 +737,7 @@ struct ExposureRow {
     /// **The mean is over EVERY settlement in the stratum, not over the few
     /// that have a mountain**, so it reads as a share: how much of this
     /// stratum's population lives with a remembered eruption. A settlement on
-    /// a cell with no edifice contributes a 0 by
+    /// a vertex with no edifice contributes a 0 by
     /// [`hornvale_worldgen::knownness`]'s own definition — there is nothing
     /// there to remember — and only 409 of the 26,146 settleable-land
     /// settlements, 1.56%, sit on an edifice at all (measured, module doc).
@@ -746,7 +746,7 @@ struct ExposureRow {
     /// deliberately keeps the dilution, so that the two together decompose
     /// (see below).
     knownness: f64,
-    /// Settlements in this stratum whose cell belongs to a volcano — the
+    /// Settlements in this stratum whose vertex belongs to a volcano — the
     /// population knownness can say anything at all about.
     ///
     /// **Added in fix round 1 because the column above collapses three
@@ -799,12 +799,12 @@ fn world_of(seed: u64, wc: &WorldComponents) -> World {
     .expect("seed builds at default pins")
 }
 
-/// Which elevation band a land cell falls in. Metres ABOVE SEA LEVEL, never
+/// Which elevation band a land vertex falls in. Metres ABOVE SEA LEVEL, never
 /// above the isostatic datum: `terrain.sea_level()` on seed 42 is
-/// -2,936.17 m, and the two disagree on thousands of cells — the exact trap
+/// -2,936.17 m, and the two disagree on thousands of vertices — the exact trap
 /// `waterline_probe.rs`'s correction header documents.
-fn band_of(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> &'static str {
-    let above = terrain.elevation_at(cell).get() - terrain.sea_level().get();
+fn band_of(terrain: &hornvale_terrain::GeneratedTerrain, vertex: Vertex) -> &'static str {
+    let above = terrain.elevation_at(vertex).get() - terrain.sea_level().get();
     let mut chosen = BANDS[0].0;
     for (label, lower) in BANDS {
         if above >= lower {
@@ -814,7 +814,7 @@ fn band_of(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> &'stat
     chosen
 }
 
-/// The unrest decile of a cell, given the sorted settleable-land unrest
+/// The unrest decile of a vertex, given the sorted settleable-land unrest
 /// values for its world. Ties break to the LOWER decile so the mapping is a
 /// deterministic function of the value, not of iteration order.
 fn decile_of(sorted_unrest: &[f64], u: f64) -> usize {
@@ -847,8 +847,8 @@ fn headcount_of(render: HeadcountRender) -> f64 {
 /// row alike.
 #[derive(Debug, Clone, Copy, Default)]
 struct LandTally {
-    /// Settleable land cells in this stratum.
-    cells: u64,
+    /// Settleable land vertices in this stratum.
+    vertices: u64,
     /// Of those, the ones classified `Andosol`.
     andosol: u64,
 }
@@ -856,7 +856,7 @@ struct LandTally {
 /// Accumulated settlement tallies for one (decile, band, people) stratum.
 #[derive(Debug, Clone, Copy, Default)]
 struct SettlementTally {
-    /// Settlements whose attractor cell falls in this stratum.
+    /// Settlements whose attractor vertex falls in this stratum.
     count: u64,
     /// Total headcount ([`headcount_of`]) at those settlements.
     population: f64,
@@ -870,7 +870,7 @@ struct SettlementTally {
     /// contributes nothing to this sum either way. Only the DENOMINATOR
     /// differs between the two columns.
     knownness_weight: f64,
-    /// Settlements here whose cell belongs to a volcano.
+    /// Settlements here whose vertex belongs to a volcano.
     edifice_count: u64,
     /// Of those, the ones with a non-zero stock.
     remembering_count: u64,
@@ -880,7 +880,7 @@ struct SettlementTally {
 }
 
 /// Build the full exposure-row vector for `seeds`: one row per (decile,
-/// band, people) cell of the design, "pooled" plus every kind that founds at
+/// band, people) vertex of the design, "pooled" plus every kind that founds at
 /// least one settlement anywhere in the sweep. Pure aside from world genesis
 /// — same `seeds` in, byte-identical rows out.
 ///
@@ -967,13 +967,13 @@ fn exposure_rows_masked(
             geo,
             &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
         );
-        let is_settleable = |cell: CellId| !terrain.is_ocean(cell) && capacity.at(cell) > 0.0;
+        let is_settleable = |vertex: Vertex| !terrain.is_ocean(vertex) && capacity.at(vertex) > 0.0;
 
         // This seed's settleable-land unrest distribution, sorted once and
-        // reused for every decile lookup below (land cells AND settlements
+        // reused for every decile lookup below (land vertices AND settlements
         // alike) — `decile_of`'s contract.
         let mut sorted_unrest: Vec<f64> = geo
-            .cells()
+            .vertices()
             .filter(|&c| is_settleable(c))
             .map(|c| terrain.unrest_at(c))
             .collect();
@@ -981,15 +981,15 @@ fn exposure_rows_masked(
 
         let soils = hornvale_worldgen::soil_of(&terrain, &climate, geo);
 
-        for cell in geo.cells() {
-            if !is_settleable(cell) {
+        for vertex in geo.vertices() {
+            if !is_settleable(vertex) {
                 continue;
             }
-            let decile = decile_of(&sorted_unrest, terrain.unrest_at(cell));
-            let band = band_of(&terrain, cell);
+            let decile = decile_of(&sorted_unrest, terrain.unrest_at(vertex));
+            let band = band_of(&terrain, vertex);
             let entry = land.entry((decile, band)).or_default();
-            entry.cells += 1;
-            if *soils.get(cell) == hornvale_terrain::SoilOrder::Andosol {
+            entry.vertices += 1;
+            if *soils.get(vertex) == hornvale_terrain::SoilOrder::Andosol {
                 entry.andosol += 1;
             }
         }
@@ -1017,7 +1017,7 @@ fn exposure_rows_masked(
             .expect("demography report reconstructs");
         for s in &report.stack_settlements {
             // FIX ROUND 2 (2026-08-12): spec §6.2 fixes the population as
-            // settleable land only. A marine settlement's cell fails
+            // settleable land only. A marine settlement's vertex fails
             // `is_settleable` (it's ocean), so it must be excluded here with
             // the SAME predicate object the land tally above already used —
             // not a re-derived copy. Before this fix the settlement loop
@@ -1025,13 +1025,13 @@ fn exposure_rows_masked(
             // elevation-above-sea-level fell through `band_of`'s loop to the
             // `BANDS[0]` (the `0-250m` band) default, and its decile was computed
             // against `sorted_unrest`, a distribution built ONLY from
-            // settleable land — meaningless for a cell that was never in it.
+            // settleable land — meaningless for a vertex that was never in it.
             // See this file's module doc for the measured blast radius.
-            if !is_settleable(s.cell) {
+            if !is_settleable(s.vertex) {
                 continue;
             }
-            let decile = decile_of(&sorted_unrest, terrain.unrest_at(s.cell));
-            let band = band_of(&terrain, s.cell);
+            let decile = decile_of(&sorted_unrest, terrain.unrest_at(s.vertex));
+            let band = band_of(&terrain, s.vertex);
             let population: f64 = s
                 .rendered
                 .iter()
@@ -1068,10 +1068,11 @@ fn exposure_rows_masked(
                         .expect("a derived generation length is finite and non-negative")
                 })
             });
-            let stock = knownness(Seed(seed), &terrain, people, generation, s.cell, now).stock;
+            let stock = knownness(Seed(seed), &terrain, people, generation, s.vertex, now).stock;
             // The predicate `knownness` itself gates on, so the count cannot
             // disagree with the column it explains.
-            let on_edifice = hornvale_worldgen::volcano_at(Seed(seed), &terrain, s.cell).is_some();
+            let on_edifice =
+                hornvale_worldgen::volcano_at(Seed(seed), &terrain, s.vertex).is_some();
 
             let per_people = settle.entry((decile, band, people)).or_default();
             per_people.count += 1;
@@ -1098,7 +1099,7 @@ fn exposure_rows_masked(
     // Land-area share's denominator: total settleable land across the WHOLE
     // sweep and every stratum — the same figure for every row regardless of
     // which people it belongs to, since land has no owner.
-    let total_land: u64 = land.values().map(|t| t.cells).sum();
+    let total_land: u64 = land.values().map(|t| t.vertices).sum();
 
     // Each people's own settlement/population totals — the denominators of
     // ITS settlement share and population share. A people that founds zero
@@ -1140,7 +1141,7 @@ fn exposure_rows_masked(
                     .unwrap_or_default();
 
                 let land_area_share = if total_land > 0 {
-                    land_tally.cells as f64 / total_land as f64
+                    land_tally.vertices as f64 / total_land as f64
                 } else {
                     0.0
                 };
@@ -1169,8 +1170,8 @@ fn exposure_rows_masked(
                 } else {
                     0.0
                 };
-                let andosol_share = if land_tally.cells > 0 {
-                    land_tally.andosol as f64 / land_tally.cells as f64
+                let andosol_share = if land_tally.vertices > 0 {
+                    land_tally.andosol as f64 / land_tally.vertices as f64
                 } else {
                     0.0
                 };
@@ -1197,7 +1198,7 @@ fn exposure_rows_masked(
                     decile,
                     band,
                     people,
-                    land_cells: land_tally.cells,
+                    land_vertices: land_tally.vertices,
                     settlements: settle_tally.count,
                     population: settle_tally.population,
                     exposure_ratio,
@@ -1229,7 +1230,7 @@ fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
             r.decile,
             r.band,
             r.people,
-            r.land_cells,
+            r.land_vertices,
             r.settlements,
             quantize(r.population),
             quantize(r.exposure_ratio),
@@ -1268,7 +1269,7 @@ fn repose_exposure_readout_matches_the_committed_fixture() {
 /// ambiguity:** the brief's draft summed `andosol_share` (already a
 /// per-stratum SHARE, in `[0, 1]`) across the four elevation bands within a
 /// decile, which can reach 4.0 and is dimensionally meaningless as a
-/// discrimination statistic. Replaced with a `land_cells`-weighted MEAN of
+/// discrimination statistic. Replaced with a `land_vertices`-weighted MEAN of
 /// `andosol_share` across the four bands within a decile — a proper `[0, 1]`
 /// share of that decile's land, guarded against a zero denominator (a decile
 /// that happens to carry no land at all, e.g. under decile collapse — see
@@ -1310,7 +1311,7 @@ fn unrest_deciles_differ_in_andosol_share() {
         let land: u64 = pooled
             .iter()
             .filter(|r| r.decile == decile)
-            .map(|r| r.land_cells)
+            .map(|r| r.land_vertices)
             .sum();
         if land == 0 {
             return 0.0;
@@ -1318,7 +1319,7 @@ fn unrest_deciles_differ_in_andosol_share() {
         let weighted: f64 = pooled
             .iter()
             .filter(|r| r.decile == decile)
-            .map(|r| r.andosol_share * r.land_cells as f64)
+            .map(|r| r.andosol_share * r.land_vertices as f64)
             .sum();
         weighted / land as f64
     };
@@ -1358,7 +1359,7 @@ fn exposure_ratios_are_within_absurdity_bounds() {
     for r in exposure_rows(1..=30)
         .iter()
         .filter(|r| r.people == "pooled")
-        .filter(|r| r.land_cells > 0)
+        .filter(|r| r.land_vertices > 0)
     {
         assert!(
             r.exposure_ratio < 20.0,
@@ -1380,12 +1381,12 @@ fn exposure_ratios_are_within_absurdity_bounds() {
 }
 
 /// POPULATION GUARD (spec §6.2, fix round 2, 2026-08-12). Direction: this
-/// catches a settlement entering the readout from a cell the land tally
-/// never counted. It cannot catch a settleable-land cell being misbanded.
+/// catches a settlement entering the readout from a vertex the land tally
+/// never counted. It cannot catch a settleable-land vertex being misbanded.
 ///
 /// **Regression guard for the fix-round-2 defect**: the settlement loop
 /// once applied no `is_settleable` filter at all, so a marine settlement's
-/// cell (ocean, negative elevation-above-sea-level) fell through `band_of`'s
+/// vertex (ocean, negative elevation-above-sea-level) fell through `band_of`'s
 /// loop to the `BANDS[0]` (the `0-250m` band) default and was counted
 /// against a decile distribution built only from settleable land. 52% of the
 /// pooled sweep (three kinds reading exactly 100.0% `0-250m` with zero
@@ -1427,13 +1428,13 @@ fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
             geo,
             &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
         );
-        let is_settleable = |cell: CellId| !terrain.is_ocean(cell) && capacity.at(cell) > 0.0;
+        let is_settleable = |vertex: Vertex| !terrain.is_ocean(vertex) && capacity.at(vertex) > 0.0;
         let report = demography_report_from(&world, &wc, &terrain, &climate)
             .expect("demography report reconstructs");
         settleable_only_total += report
             .stack_settlements
             .iter()
-            .filter(|s| is_settleable(s.cell))
+            .filter(|s| is_settleable(s.vertex))
             .count() as u64;
     }
 
@@ -1475,10 +1476,10 @@ fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
 /// What is shipped instead is an INDEPENDENT recomputation. Each of the two
 /// application points has exactly one pre-mask formula, and the test writes
 /// that formula out again, by hand, from the terrain — then asserts the
-/// shipped `NONE` path agrees bit-for-bit over every cell of three worlds:
+/// shipped `NONE` path agrees bit-for-bit over every vertex of three worlds:
 ///
 /// - `hostility` — `carrying_inputs_of` (which is `carrying_inputs_at` at
-///   `NONE`) must equal `terrain.unrest_at(cell).clamp(0.0, 1.0)`.
+///   `NONE`) must equal `terrain.unrest_at(vertex).clamp(0.0, 1.0)`.
 /// - `MINERAL` supply — `mineral_supply_field` (which is
 ///   `mineral_supply_field_masked` at `NONE`) must equal
 ///   `0.0` at sea and `terrain.prospectivity_at(c) * scale` on land.
@@ -1504,8 +1505,8 @@ fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
 /// make about it, and it costs nothing extra.
 ///
 /// claim: structural(seed: [1, 42, 30]) — bit-identity of two arithmetics
-/// over three named worlds, every cell of each. Three seeds, not thirty:
-/// a bit-identity that holds on every cell of three whole globes and fails on
+/// over three named worlds, every vertex of each. Three seeds, not thirty:
+/// a bit-identity that holds on every vertex of three whole globes and fails on
 /// a fourth would be a different defect (a seed-dependent code path) than
 /// anything this seam can express.
 #[test]
@@ -1520,12 +1521,12 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
 
         // Application point 1: the unrest hostility penalty.
         let inputs = hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate);
-        for cell in geo.cells() {
-            let expected = terrain.unrest_at(cell).clamp(0.0, 1.0);
+        for vertex in geo.vertices() {
+            let expected = terrain.unrest_at(vertex).clamp(0.0, 1.0);
             assert_eq!(
-                inputs.get(cell).hostility.to_bits(),
+                inputs.get(vertex).hostility.to_bits(),
                 expected.to_bits(),
-                "seed {seed}, cell {cell:?}: hostility at ChannelMask::NONE diverged \
+                "seed {seed}, vertex {vertex:?}: hostility at ChannelMask::NONE diverged \
                  from the formula it replaced"
             );
         }
@@ -1543,16 +1544,16 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
         // `1.0` pass.
         for scale in [1.0_f64, 2.5] {
             let mineral = hornvale_worldgen::mineral_supply_field(geo, &terrain, scale);
-            for cell in geo.cells() {
-                let expected = if terrain.is_ocean(cell) {
+            for vertex in geo.vertices() {
+                let expected = if terrain.is_ocean(vertex) {
                     0.0
                 } else {
-                    terrain.prospectivity_at(cell) * scale
+                    terrain.prospectivity_at(vertex) * scale
                 };
                 assert_eq!(
-                    mineral.get(cell).to_bits(),
+                    mineral.get(vertex).to_bits(),
                     expected.to_bits(),
-                    "seed {seed}, cell {cell:?}, scale {scale}: mineral supply at \
+                    "seed {seed}, vertex {vertex:?}, scale {scale}: mineral supply at \
                  ChannelMask::NONE diverged from the formula it replaced"
                 );
             }
@@ -1560,20 +1561,20 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
     }
 }
 
-/// One seed's settlement attractor cells under one channel mask, **one entry
+/// One seed's settlement attractor vertices under one channel mask, **one entry
 /// per settlement, NOT deduplicated**. Per-seed (never pooled across seeds)
-/// so that two different seeds' identical cell indices cannot cancel; the
+/// so that two different seeds' identical vertex indices cannot cancel; the
 /// caller derives the set and sums the per-seed differences.
 ///
 /// **Returns a `Vec`, not a `BTreeSet`, and the difference is load-bearing
 /// (fix round 3, 2026-08-12).** [`hornvale_demography::stack_condense`] can
-/// place TWO settlements on ONE cell — `stack_condense.rs` asserts exactly
-/// that case — so a set collapses them and a cell count is not a settlement
-/// count in general. It happens to be 1:1 at BASELINE (26,146 attractor cells
+/// place TWO settlements on ONE vertex — `stack_condense.rs` asserts exactly
+/// that case — so a set collapses them and a vertex count is not a settlement
+/// count in general. It happens to be 1:1 at BASELINE (26,146 attractor vertices
 /// against Task 1's 26,146 settlements), but that is a measured coincidence
 /// of the baseline, not a property, and it was never established for an
 /// arm's own output. Any claim about settlements being CREATED or DESTROYED
-/// has to count this `Vec`; only claims about which cells are OCCUPIED may
+/// has to count this `Vec`; only claims about which vertices are OCCUPIED may
 /// use the set.
 ///
 /// Takes an ALREADY-BUILT world/terrain/climate: the four arms differ only
@@ -1582,18 +1583,18 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
 /// four reports off it costs a quarter of what four independent 30-seed
 /// sweeps would, for byte-identical results (the report is pure over the
 /// committed world; see [`demography_report_from`]'s doc).
-fn attractor_cells_of(
+fn attractor_vertices_of(
     world: &hornvale_kernel::World,
     wc: &WorldComponents,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
     mask: ChannelMask,
-) -> Vec<CellId> {
+) -> Vec<Vertex> {
     demography_report_from_masked(world, wc, terrain, climate, mask)
         .expect("demography report reconstructs")
         .stack_settlements
         .iter()
-        .map(|s| s.cell)
+        .map(|s| s.vertex)
         .collect()
 }
 
@@ -1684,7 +1685,7 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     let mut move_b = Movement::default();
     let mut move_ab = Movement::default();
     // PER-SEED, because a pooled net of zero can hide +3 and -3 in different
-    // worlds (fix round 3). Both are needed: cells answer "which ground is
+    // worlds (fix round 3). Both are needed: vertices answer "which ground is
     // occupied", settlements answer "were any created or destroyed".
     let mut per_seed_net_a: Vec<i64> = Vec::new();
     let mut per_seed_settlement_delta_a: Vec<i64> = Vec::new();
@@ -1706,24 +1707,25 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
             geo,
             &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
         );
-        let is_settleable = |cell: &CellId| !terrain.is_ocean(*cell) && capacity.at(*cell) > 0.0;
+        let is_settleable =
+            |vertex: &Vertex| !terrain.is_ocean(*vertex) && capacity.at(*vertex) > 0.0;
 
-        // One entry per settlement; `cells_of` derives the occupied-cell set.
-        let base_v = attractor_cells_of(&world, &wc, &terrain, &climate, ChannelMask::NONE);
-        let a_v = attractor_cells_of(&world, &wc, &terrain, &climate, arm_a_mask);
-        let b_v = attractor_cells_of(&world, &wc, &terrain, &climate, arm_b_mask);
-        let ab_v = attractor_cells_of(&world, &wc, &terrain, &climate, combined_mask);
+        // One entry per settlement; `vertices_of` derives the occupied-vertex set.
+        let base_v = attractor_vertices_of(&world, &wc, &terrain, &climate, ChannelMask::NONE);
+        let a_v = attractor_vertices_of(&world, &wc, &terrain, &climate, arm_a_mask);
+        let b_v = attractor_vertices_of(&world, &wc, &terrain, &climate, arm_b_mask);
+        let ab_v = attractor_vertices_of(&world, &wc, &terrain, &climate, combined_mask);
 
-        // SETTLEMENT counts (not cell counts) on the settleable-land
+        // SETTLEMENT counts (not vertex counts) on the settleable-land
         // population — the only quantity that can support a "created or
-        // destroyed" claim. See [`attractor_cells_of`].
-        let settlements_in = |v: &[CellId]| v.iter().filter(|c| is_settleable(c)).count() as i64;
+        // destroyed" claim. See [`attractor_vertices_of`].
+        let settlements_in = |v: &[Vertex]| v.iter().filter(|c| is_settleable(c)).count() as i64;
         per_seed_settlement_delta_a.push(settlements_in(&a_v) - settlements_in(&base_v));
 
-        let base: BTreeSet<CellId> = base_v.iter().copied().collect();
-        let a: BTreeSet<CellId> = a_v.iter().copied().collect();
-        let b: BTreeSet<CellId> = b_v.iter().copied().collect();
-        let ab: BTreeSet<CellId> = ab_v.iter().copied().collect();
+        let base: BTreeSet<Vertex> = base_v.iter().copied().collect();
+        let a: BTreeSet<Vertex> = a_v.iter().copied().collect();
+        let b: BTreeSet<Vertex> = b_v.iter().copied().collect();
+        let ab: BTreeSet<Vertex> = ab_v.iter().copied().collect();
 
         base_all += base.len();
         base_settleable += base.iter().filter(|c| is_settleable(c)).count();
@@ -1737,7 +1739,7 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
         move_ab += movement_of(&base, &ab, &is_settleable);
     }
     let pct = |n: usize| 100.0 * n as f64 / base_settleable as f64;
-    println!("REPOSE ARMS: base attractor cells {base_all} (settleable {base_settleable})");
+    println!("REPOSE ARMS: base attractor vertices {base_all} (settleable {base_settleable})");
     for (label, m) in [
         ("A hostility", move_a),
         ("B mineral", move_b),
@@ -1745,12 +1747,12 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     ] {
         println!(
             "REPOSE ARMS: arm {label:12} vacated {} ({:.2}% of base) | newly-occupied {} | \
-             net {:+} | changed cells {}",
+             net {:+} | changed vertices {}",
             m.vacated,
             pct(m.vacated),
             m.newly_occupied,
             m.net(),
-            m.changed_cells()
+            m.changed_vertices()
         );
     }
 
@@ -1760,8 +1762,8 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     // The module doc read arm A's POOLED `net == 0` as "moves settlements
     // without creating or destroying a single one". A pooled net cannot
     // support that: +3 in one world and -3 in another sums to zero and looks
-    // identical to no change anywhere. Nor could a CELL net, since two
-    // settlements can share a cell (see `attractor_cells_of`). So both were
+    // identical to no change anywhere. Nor could a VERTEX net, since two
+    // settlements can share a vertex (see `attractor_vertices_of`). So both were
     // checked PER SEED, as assertions, and both went RED. The numbers are
     // printed below and recorded in the module doc; the claim is withdrawn.
     //
@@ -1782,11 +1784,11 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     let (net_lo, net_hi) = span(&per_seed_net_a);
     let (d_lo, d_hi) = span(&per_seed_settlement_delta_a);
     println!(
-        "REPOSE ARMS: arm A per-seed occupied-cell net: pooled {pooled_net:+}, but \
+        "REPOSE ARMS: arm A per-seed occupied-vertex net: pooled {pooled_net:+}, but \
          {nonzero} of {} seeds NONZERO, range {net_lo:+}..{net_hi:+} - NOT pure relocation",
         per_seed_net_a.len()
     );
-    println!("REPOSE ARMS: arm A per-seed occupied-cell nets: {per_seed_net_a:?}");
+    println!("REPOSE ARMS: arm A per-seed occupied-vertex nets: {per_seed_net_a:?}");
     println!(
         "REPOSE ARMS: arm A per-seed settleable SETTLEMENT-count delta: range \
          {d_lo:+}..{d_hi:+}: {per_seed_settlement_delta_a:?}"
@@ -1794,25 +1796,25 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
 
     // POSITIVE CONTROLS, asserted on the SETTLEABLE-LAND population — the one
     // the exposure readout above measures, and therefore the one arm C's null
-    // is a null about. Movement among marine attractor cells would prove the
+    // is a null about. Movement among marine attractor vertices would prove the
     // mask does something, but not that it does something where the effect
     // under investigation lives. If either of these is zero, the harness is
     // blind and arm C's null above means nothing.
     //
     // Asserted on `vacated` rather than on the symmetric difference the first
     // encoding used. That is a STRENGTHENING, not a change of intent:
-    // `vacated > 0` implies `changed_cells > 0`, and `vacated` is the figure
+    // `vacated > 0` implies `changed_vertices > 0`, and `vacated` is the figure
     // this test tells a reader to quote (see [`Movement`]).
     assert!(
         move_a.vacated > 0,
         "arm A (hostility ablated) vacated NO settleable-land baseline \
-         settlement cell across 30 seeds — the ablation harness cannot see \
+         settlement vertex across 30 seeds — the ablation harness cannot see \
          movement in the population spec §6.2 measures, so arm C proves nothing"
     );
     assert!(
         move_b.vacated > 0,
         "arm B (mineral unrest ablated) vacated NO settleable-land baseline \
-         settlement cell across 30 seeds — the ablation harness cannot see \
+         settlement vertex across 30 seeds — the ablation harness cannot see \
          movement in the population spec §6.2 measures, so arm C proves nothing"
     );
 }
@@ -1824,19 +1826,19 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
 /// The first encoding of the arms summed
 /// `base.symmetric_difference(&arm).count()` and reported it as "settlements
 /// moved", against a denominator of baseline SETTLEMENTS. Those are different
-/// units. A settlement that RELOCATES contributes TWO cells to a symmetric
+/// units. A settlement that RELOCATES contributes TWO vertices to a symmetric
 /// difference — the one it left and the one it took — so the figure is
 /// inflated against that denominator, and the module doc's original
-/// "3,036 of 26,146 = 11.6%" was a count of changed CELLS over a count of
+/// "3,036 of 26,146 = 11.6%" was a count of changed VERTICES over a count of
 /// SETTLEMENTS. **2× is the PURE-RELOCATION case, not an upper bound:** an
 /// arm that also creates settlements inflates further, and arm B measures
 /// 399/193 = 2.07×.
 ///
 /// **Which figure to quote: `vacated`, as a share of the baseline.** It is
-/// 1:1 with baseline settlements — 26,146 attractor cells against Task 1's
+/// 1:1 with baseline settlements — 26,146 attractor vertices against Task 1's
 /// 26,146 settlements — which is a MEASURED property of the baseline, not a
 /// general one: [`hornvale_demography::stack_condense`] can place two
-/// settlements on one cell, so an ARM's own cell count needs its own check
+/// settlements on one vertex, so an ARM's own vertex count needs its own check
 /// (fix round 3 made it, per seed; see the module doc). It answers the
 /// question the arms are asked: how much of the settlement pattern this
 /// readout measures does the channel account for. `newly_occupied` and `net`
@@ -1845,22 +1847,22 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
 /// creation without both.
 #[derive(Debug, Clone, Copy, Default)]
 struct Movement {
-    /// Baseline attractor cells holding no settlement under the arm — 1:1
+    /// Baseline attractor vertices holding no settlement under the arm — 1:1
     /// with baseline settlements, so this is the share-quotable figure.
     vacated: usize,
-    /// Cells holding a settlement under the arm but not at baseline.
+    /// Vertices holding a settlement under the arm but not at baseline.
     newly_occupied: usize,
 }
 
 impl Movement {
-    /// Cells whose occupancy CHANGED either way. This is exactly what a
+    /// Vertices whose occupancy CHANGED either way. This is exactly what a
     /// symmetric difference counts — kept, named honestly, so the old figure
     /// remains comparable and nobody re-derives it by accident.
-    fn changed_cells(self) -> usize {
+    fn changed_vertices(self) -> usize {
         self.vacated + self.newly_occupied
     }
 
-    /// Signed change in occupied cells. Zero POOLED does NOT mean pure
+    /// Signed change in occupied vertices. Zero POOLED does NOT mean pure
     /// relocation — arm A pools to zero while 29 of its 30 seeds are
     /// individually nonzero (module doc, fix round 3). Read it per seed.
     fn net(self) -> i64 {
@@ -1878,9 +1880,9 @@ impl std::ops::AddAssign for Movement {
 /// One seed's [`Movement`] of `arm` against `base`, both sides filtered by
 /// the same `keep` predicate.
 fn movement_of(
-    base: &BTreeSet<CellId>,
-    arm: &BTreeSet<CellId>,
-    keep: &impl Fn(&CellId) -> bool,
+    base: &BTreeSet<Vertex>,
+    arm: &BTreeSet<Vertex>,
+    keep: &impl Fn(&Vertex) -> bool,
 ) -> Movement {
     Movement {
         vacated: base.difference(arm).filter(|c| keep(c)).count(),
@@ -2007,7 +2009,7 @@ const SOIL_SPELLINGS: [&str; 4] = [
 ];
 
 /// Every function in `windows/worldgen/src/lib.rs` whose output reaches a
-/// species' per-cell K, and therefore reaches settlement condensation: the
+/// species' per-vertex K, and therefore reaches settlement condensation: the
 /// four rungs of The Repose's mask threading plus the supply/substrate fields
 /// `per_species_suitability_masked` reads. Named by their exact signature
 /// line so [`body_of`] fails loudly rather than silently scanning nothing if
@@ -2019,7 +2021,7 @@ const SOIL_SPELLINGS: [&str; 4] = [
 /// a wrapper and leaves the arithmetic unscanned. `substrate_field` is
 /// exactly that shape — a 16-line wrapper that builds the insolation field
 /// and immediately hands off to `substrate_field_at`, which is where the
-/// per-cell `Substrate` is actually assembled from terrain and climate, and
+/// per-vertex `Substrate` is actually assembled from terrain and climate, and
 /// therefore the single most plausible place a future campaign would add a
 /// soil axis. The first encoding named only the wrapper: someone could have
 /// added a soil term to `Substrate` in `substrate_field_at`, and arm C would
@@ -2028,7 +2030,7 @@ const SOIL_SPELLINGS: [&str; 4] = [
 /// Swept the other eight entries for the same wrapper/body shape when this
 /// was fixed. `substrate_field` was the only delegator: `forage_supply_field`,
 /// `prey_supply_field`, `detritus_supply_field` and
-/// `marine_forage_supply_field` each hold their own `CellMap::from_fn` body,
+/// `marine_forage_supply_field` each hold their own `VertexMap::from_fn` body,
 /// and the four mask rungs hold theirs. **Re-run that sweep if you add an
 /// entry** — a name here is worth only the body it actually points at.
 const SITING_CHAIN: [&str; 10] = [
@@ -2257,7 +2259,7 @@ fn which_channel_carries_the_exposure_gradient() {
 ///
 /// **What the numbers mean before anyone reads them.** The column is a
 /// population-weighted mean over EVERY settlement in a stratum, and a
-/// settlement whose cell carries no edifice contributes a 0 because there is
+/// settlement whose vertex carries no edifice contributes a 0 because there is
 /// no mountain to remember. Only 1.56% of settleable-land settlements sit on
 /// an edifice (measured, module doc), so a stratum mean of 0.01 does not mean
 /// "everyone half-remembers"; it means a small, remembering minority inside a

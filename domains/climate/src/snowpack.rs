@@ -51,7 +51,7 @@ impl Substrate for Snowpack {
         (degree_days * self.melt_per_degree_day_mm).min(post_gain.max(0.0))
     }
 
-    /// Enough years for a seasonal pack to settle, and a hard stop for a cell
+    /// Enough years for a seasonal pack to settle, and a hard stop for a vertex
     /// that accumulates indefinitely — a glacier is reported as
     /// non-convergence rather than spun on forever.
     fn spin_up_years(&self) -> u32 {
@@ -181,8 +181,8 @@ mod tests {
     }
 
     #[test]
-    fn a_permanently_frozen_cell_never_converges() {
-        // The glacier. A cell that snows and never rises above freezing
+    fn a_permanently_frozen_vertex_never_converges() {
+        // The glacier. A vertex that snows and never rises above freezing
         // accumulates without bound; the honest answer is non-convergence at
         // the cap, not a fabricated equilibrium.
         let year = vec![day(4.0, -20.0); 360];

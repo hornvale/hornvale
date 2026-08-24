@@ -76,7 +76,7 @@ fn founding_coords_of(
         .ledger
         .value_of(occupation, hornvale_history::OCC_SITE)?
     {
-        Value::Number(n) => hornvale_kernel::CellId(*n as u32),
+        Value::Number(n) => hornvale_kernel::Vertex(*n as u32),
         _ => return None,
     };
     Some(hornvale_history::record::FoundingCoords {
@@ -125,7 +125,7 @@ fn mother_of(world: &World, occupation: EntityId) -> Option<EntityId> {
         .value_of(occupation, hornvale_history::OCC_FOUNDED_FROM)?
     {
         Value::Entity(e) => Some(*e),
-        // A `Number` value is `Founding::Genesis(CellId)` — a root, not a
+        // A `Number` value is `Founding::Genesis(Vertex)` — a root, not a
         // parent. See `windows/almanac::history`'s decoder, which this
         // mirrors.
         _ => None,

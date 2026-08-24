@@ -197,7 +197,7 @@ fn moons_flip_the_calendar_and_seat_gods_no_moonless_world_can_hold() {
     //
     // What finally reddened it was not a leak into head selection. The head
     // is NOT displaced: the same entity heads the section in both arms, same
-    // cell, same people, same population, same `name-gloss`. Only its
+    // vertex, same people, same population, same `name-gloss`. Only its
     // rendered name moved, one letter, because toponymic wear (The Wearing)
     // keys a morpheme to its own culture's corpus size and the moons pin
     // moves that corpus — moons reach tides, tides reach climate, climate

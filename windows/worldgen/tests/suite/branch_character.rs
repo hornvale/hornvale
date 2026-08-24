@@ -14,7 +14,7 @@
 use std::collections::BTreeSet;
 
 use hornvale_kernel::Band;
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::character::{
     BarrierPins, BarrierState, CHARACTERS, Character, bands_of, barrier_of, branch_count_of,
@@ -22,10 +22,10 @@ use hornvale_worldgen::character::{
 };
 
 /// The panel: the three preregistered seeds (spec B.4's table) and a few
-/// hundred cells' worth of systems each — enough draws that a weighting
+/// hundred vertices' worth of systems each — enough draws that a weighting
 /// claim (mode, rarity) is evidence and not noise.
 const PANEL_SEEDS: [u64; 3] = [42, 7, 1234];
-const PANEL_CELLS: u32 = 300;
+const PANEL_VERTICES: u32 = 300;
 
 /// Spec B.4's LOWEST measured share of systems reaching the Underdeep across
 /// the preregistered seeds (31 / 52 / 53%) — the bound a drow-tier character
@@ -108,11 +108,11 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
     let mut total = 0usize;
     for raw_seed in PANEL_SEEDS {
         let seed = Seed(raw_seed);
-        for raw_cell in 0..PANEL_CELLS {
+        for raw_vertex in 0..PANEL_VERTICES {
             for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     total += 1;
-                    if character_of(seed, CellId(raw_cell), band, branch) == Character::DrowTier {
+                    if character_of(seed, Vertex(raw_vertex), band, branch) == Character::DrowTier {
                         drow += 1;
                     }
                 }
@@ -142,7 +142,7 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
 /// **This is a revision, not merely a rename.** Before Task 5,
 /// `character_of` took no band parameter, so "same character at every
 /// depth" held for a whole branch across every band. Task 5 re-keyed
-/// `character_of` onto `(cell, band, branch)` (amendment A.3), so a branch
+/// `character_of` onto `(vertex, band, branch)` (amendment A.3), so a branch
 /// can now carry a DIFFERENT character at each band it occupies — see
 /// `character_and_barrier_are_keyed_at_the_same_granularity` in
 /// `hornvale_worldgen::character`'s own tests, which demands exactly that
@@ -154,13 +154,13 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
 #[test]
 fn one_branch_at_one_band_has_one_character_across_its_floors() {
     let seed = Seed(90210);
-    for raw_cell in 0u32..20 {
+    for raw_vertex in 0u32..20 {
         for branch in 0..BRANCHES_PER_SYSTEM {
             for &band in Band::habitation() {
-                let expected = character_of(seed, CellId(raw_cell), band, branch);
+                let expected = character_of(seed, Vertex(raw_vertex), band, branch);
                 for level in 0..8u8 {
                     let addr = ChamberAddr {
-                        cell: CellId(raw_cell),
+                        vertex: Vertex(raw_vertex),
                         branch,
                         band,
                         level,
@@ -189,7 +189,7 @@ fn one_branch_at_one_band_has_one_character_across_its_floors() {
 /// positive control is branch 0, which every count admits.
 ///
 /// **The enforcement half is checked at each BAND** (The Drift, Task 5):
-/// `chamber_exists` now reads `branch_count_of(seed, addr.cell, addr.band)`
+/// `chamber_exists` now reads `branch_count_of(seed, addr.vertex, addr.band)`
 /// directly, so the gate enforces THAT band's own drawn width — there is no
 /// longer a single system-wide width to enforce. The histogram and
 /// enforcement halves both sweep every habitation band now, in lockstep, so
@@ -217,12 +217,12 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
     let gradient = hornvale_terrain::GeothermalGradient::new(24.0);
     for raw_seed in PANEL_SEEDS {
         let seed = Seed(raw_seed);
-        for raw_cell in 0..PANEL_CELLS {
+        for raw_vertex in 0..PANEL_VERTICES {
             for &band in Band::habitation() {
-                let count = branch_count_of(seed, CellId(raw_cell), band);
+                let count = branch_count_of(seed, Vertex(raw_vertex), band);
                 assert!(
                     (1..=BRANCHES_PER_SYSTEM).contains(&count),
-                    "cell {raw_cell} band {band:?} under seed {raw_seed} \
+                    "vertex {raw_vertex} band {band:?} under seed {raw_seed} \
                      drew {count} branches, outside 1..={BRANCHES_PER_SYSTEM}"
                 );
                 histogram[usize::from(count - 1)] += 1;
@@ -240,13 +240,13 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                             &cave,
                             gradient,
                             ChamberAddr {
-                                cell: CellId(raw_cell),
+                                vertex: Vertex(raw_vertex),
                                 branch,
                                 band,
                                 level: 0,
                             },
                         ),
-                        "cell {raw_cell} band {band:?} drew {count} branches \
+                        "vertex {raw_vertex} band {band:?} drew {count} branches \
                          yet branch {branch} still exists under seed {raw_seed} — \
                          the count is reported but not enforced"
                     );
@@ -260,7 +260,7 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                         &cave,
                         gradient,
                         ChamberAddr {
-                            cell: CellId(raw_cell),
+                            vertex: Vertex(raw_vertex),
                             branch,
                             band,
                             level: 0,
@@ -321,14 +321,14 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
 #[test]
 fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
     let seed = Seed(90210);
-    let cell = CellId(9);
+    let vertex = Vertex(9);
 
-    let first = barrier_of(seed, cell, Band::Undercroft, 2, &BarrierPins::default());
-    for raw_cell in 0u32..30 {
+    let first = barrier_of(seed, vertex, Band::Undercroft, 2, &BarrierPins::default());
+    for raw_vertex in 0u32..30 {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let _ = barrier_of(
                 seed,
-                CellId(raw_cell),
+                Vertex(raw_vertex),
                 Band::Shallows,
                 branch,
                 &BarrierPins::default(),
@@ -336,7 +336,7 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
         }
     }
     assert_eq!(
-        barrier_of(seed, cell, Band::Undercroft, 2, &BarrierPins::default()),
+        barrier_of(seed, vertex, Band::Undercroft, 2, &BarrierPins::default()),
         first,
         "the same branch answered a different barrier after unrelated queries — \
          the draw advanced a stream instead of keying on a place"
@@ -344,12 +344,12 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
 
     // Two branches of one system may differ — and do, somewhere on the panel.
     let mut differing_systems = 0usize;
-    for raw_cell in 0..PANEL_CELLS {
+    for raw_vertex in 0..PANEL_VERTICES {
         let states: BTreeSet<BarrierState> = (0..BRANCHES_PER_SYSTEM)
             .map(|b| {
                 barrier_of(
                     seed,
-                    CellId(raw_cell),
+                    Vertex(raw_vertex),
                     Band::Undercroft,
                     b,
                     &BarrierPins::default(),
@@ -374,12 +374,12 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
         BarrierState::Open,
     ] {
         let pins = BarrierPins { state: Some(state) };
-        for raw_cell in 0u32..10 {
+        for raw_vertex in 0u32..10 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 assert_eq!(
-                    barrier_of(seed, CellId(raw_cell), Band::Undercroft, branch, &pins),
+                    barrier_of(seed, Vertex(raw_vertex), Band::Undercroft, branch, &pins),
                     state,
-                    "pin {:?} did not hold at cell {raw_cell} branch {branch}",
+                    "pin {:?} did not hold at vertex {raw_vertex} branch {branch}",
                     state
                 );
             }

@@ -230,14 +230,14 @@ pub fn cost_ticks(action: &Action, mass_kg: f64, terrain_factor: f64) -> Ticks {
 mod tests {
     use super::*;
     use crate::action::Action;
-    use hornvale_kernel::room::RoomAddr;
+    use hornvale_kernel::room::Facet;
 
     #[test]
     fn a_move_costs_exactly_todays_duration_on_an_earthlike_world() {
         // The bridge to today's behaviour: MOVE_DURATION was 0.1 days, and an
         // Earth-like rotation gives 100_000 ticks per local day, so a
         // reference-mass creature's move is 10_000 ticks = 0.1 days exactly.
-        let mv = Action::MoveTo(RoomAddr {
+        let mv = Action::MoveTo(Facet {
             face: 0,
             path: vec![0],
         });
@@ -269,7 +269,7 @@ mod tests {
         // The other half of §4.1: base costs are authored in TICKS, so a move
         // must mean the same absolute duration whatever the planet does — a
         // bear's gait is set by the bear, not by the sky. Under 0.1% spread.
-        let mv = Action::MoveTo(RoomAddr {
+        let mv = Action::MoveTo(Facet {
             face: 0,
             path: vec![0],
         });
@@ -305,7 +305,7 @@ mod tests {
         // rather than `Action::all()` so it cannot silently start failing
         // on an instrument this test was never about.
         let every = [
-            Action::MoveTo(RoomAddr {
+            Action::MoveTo(Facet {
                 face: 0,
                 path: vec![0],
             }),
@@ -384,7 +384,7 @@ mod tests {
         // Bounded: a cliff must not stall a walk outright.
         assert!(climb_factor(0.0, 1.0e9) <= MAX_CLIMB_FACTOR);
         // And it reaches the cost model.
-        let mv = Action::MoveTo(RoomAddr {
+        let mv = Action::MoveTo(Facet {
             face: 0,
             path: vec![0],
         });

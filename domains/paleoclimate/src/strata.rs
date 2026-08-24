@@ -3,7 +3,7 @@
 //! composition root. The full fields live here on the non-serialized
 //! `PaleoRecord`; only summaries become facts (see `facts`).
 
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Temperature};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Temperature, VertexMap};
 
 /// One coarse era's climate fields, all bare kernel types, filled by the
 /// composition root after re-running climate at the era's sea level and
@@ -21,10 +21,10 @@ pub struct EraClimate {
     /// cold a world's present poles already run. The single source of
     /// truth: `ice_fraction` and the envelope in `extract` both derive from
     /// this same mask, so they cannot disagree with each other about which
-    /// cells advanced.
-    pub ice: CellMap<bool>,
-    /// Habitability per cell under this era's offset climate.
-    pub habitable: CellMap<bool>,
+    /// vertices advanced.
+    pub ice: VertexMap<bool>,
+    /// Habitability per vertex under this era's offset climate.
+    pub habitable: VertexMap<bool>,
     /// Sea level this era (metres): present + eustatic change.
     pub sea_level: ReferenceElevation,
     /// Land fraction under ice this era (for the glacial-maximum summary).
@@ -37,7 +37,7 @@ pub struct EraClimate {
 /// An absolute snowline, not an anomaly threshold (decision 0008 extended):
 /// an anomaly-only diagnostic makes glaciation spatially flat, because the
 /// only per-era signal is a single global albedo-cooling scalar — every
-/// cell's anomaly is identical, so it is either all-iced or none-iced. The
+/// vertex's anomaly is identical, so it is either all-iced or none-iced. The
 /// world's present temperature field varies by latitude (equator warm, pole
 /// cold), so comparing an ABSOLUTE reading against a fixed freezing point
 /// lets the same global cooling offset move a latitudinal snowline instead
@@ -47,21 +47,21 @@ pub struct EraClimate {
 /// composition root's `climate_at_era` for the advance-beyond-present
 /// convention this feeds.
 ///
-/// Takes a per-cell [`Temperature`], not a bare `f64` (decision 0008): an
+/// Takes a per-vertex [`Temperature`], not a bare `f64` (decision 0008): an
 /// earlier version of this function accepted an anomaly and callers twice
 /// mixed up the two conventions. `Temperature` and [`hornvale_kernel::TempAnomaly`]
 /// stay distinct types precisely so that mistake can't happen again.
 /// type-audit: bare-ok(flag: return)
 pub fn glaciated(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
-    temperature: &CellMap<Temperature>,
+    elevation: &VertexMap<ReferenceElevation>,
+    temperature: &VertexMap<Temperature>,
     freeze: Temperature,
     sea_level: ReferenceElevation,
-) -> CellMap<bool> {
-    CellMap::from_fn(geo, |cell| {
-        let elev = *elevation.get(cell);
-        elev >= sea_level && temperature.get(cell).get() < freeze.get()
+) -> VertexMap<bool> {
+    VertexMap::from_fn(geo, |vertex| {
+        let elev = *elevation.get(vertex);
+        elev >= sea_level && temperature.get(vertex).get() < freeze.get()
     })
 }
 
@@ -70,11 +70,11 @@ pub fn glaciated(
 #[derive(Debug, Clone)]
 pub struct PaleoRecord {
     /// Union of every era's ice mask ("this valley was under ice").
-    pub envelope: CellMap<bool>,
+    pub envelope: VertexMap<bool>,
     /// The tide-mark band swept by eustatic sea level across eras.
-    pub shoreline: CellMap<bool>,
-    /// Cells habitable through the glacial maximum.
-    pub refugia: CellMap<bool>,
+    pub shoreline: VertexMap<bool>,
+    /// Vertices habitable through the glacial maximum.
+    pub refugia: VertexMap<bool>,
     /// Absolute standard day of peak ice.
     pub glacial_maximum_day: f64,
     /// Land fraction under ice at the maximum.
@@ -88,11 +88,11 @@ pub struct PaleoRecord {
 /// mask, computed once by the composition root).
 pub fn extract(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     present_sea_level: ReferenceElevation,
     eras: &[EraClimate],
 ) -> PaleoRecord {
-    // Sea-level band: cells sometimes shore, sometimes not, across all eras
+    // Sea-level band: vertices sometimes shore, sometimes not, across all eras
     // (including the present stand).
     let mut min_sea = present_sea_level;
     let mut max_sea = present_sea_level;
@@ -100,17 +100,17 @@ pub fn extract(
         min_sea = min_sea.min(e.sea_level);
         max_sea = max_sea.max(e.sea_level);
     }
-    let shoreline = CellMap::from_fn(geo, |cell| {
-        let elev = *elevation.get(cell);
+    let shoreline = VertexMap::from_fn(geo, |vertex| {
+        let elev = *elevation.get(vertex);
         (min_sea..=max_sea).contains(&elev)
     });
 
     // Ice-extent envelope: OR of every era's precomputed diagnostic ice mask.
-    let mut envelope = CellMap::from_fn(geo, |_| false);
+    let mut envelope = VertexMap::from_fn(geo, |_| false);
     for e in eras {
-        envelope = CellMap::from_fn(geo, |cell| {
-            let had = *envelope.get(cell);
-            had || *e.ice.get(cell)
+        envelope = VertexMap::from_fn(geo, |vertex| {
+            let had = *envelope.get(vertex);
+            had || *e.ice.get(vertex)
         });
     }
 
@@ -123,7 +123,7 @@ pub fn extract(
     });
     let (glacial_maximum_day, max_ice_fraction, refugia) = match peak {
         Some(e) => (e.day, e.ice_fraction, e.habitable.clone()),
-        None => (0.0, 0.0, CellMap::from_fn(geo, |_| false)),
+        None => (0.0, 0.0, VertexMap::from_fn(geo, |_| false)),
     };
 
     PaleoRecord {
@@ -148,8 +148,8 @@ mod tests {
     #[test]
     fn glaciated_ices_land_under_a_cold_field() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
-        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| e(100.0)); // all land
+        let temperature = VertexMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
         let freeze = Temperature::new(0.0).unwrap();
         let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
@@ -161,8 +161,8 @@ mod tests {
     #[test]
     fn glaciated_leaves_land_bare_under_a_warm_field() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
-        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(20.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| e(100.0)); // all land
+        let temperature = VertexMap::from_fn(&geo, |_| Temperature::new(20.0).unwrap());
         let freeze = Temperature::new(0.0).unwrap();
         let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
@@ -174,13 +174,13 @@ mod tests {
     #[test]
     fn glaciated_never_ices_ocean_regardless_of_temperature() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| e(-100.0)); // all ocean
-        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| e(-100.0)); // all ocean
+        let temperature = VertexMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
         let freeze = Temperature::new(0.0).unwrap();
         let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().all(|(_, &b)| !b),
-            "ocean cells are never marked as glaciated land"
+            "ocean vertices are never marked as glaciated land"
         );
     }
 
@@ -191,8 +191,8 @@ mod tests {
         // model fixes: an anomaly-only diagnostic could only ice everything
         // or nothing at once.
         let geo = Geosphere::new(4);
-        let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
-        let temperature = CellMap::from_fn(&geo, |c| {
+        let elevation = VertexMap::from_fn(&geo, |_| e(100.0)); // all land
+        let temperature = VertexMap::from_fn(&geo, |c| {
             Temperature::new(30.0 - geo.coord(c).latitude.abs()).unwrap()
         });
         let freeze = Temperature::new(0.0).unwrap();
@@ -210,8 +210,8 @@ mod tests {
     fn era(geo: &Geosphere, day: f64, ice_all: bool, sea: f64, ice_fraction: f64) -> EraClimate {
         EraClimate {
             day,
-            ice: CellMap::from_fn(geo, |_| ice_all),
-            habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 45.0),
+            ice: VertexMap::from_fn(geo, |_| ice_all),
+            habitable: VertexMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 45.0),
             sea_level: e(sea),
             ice_fraction,
         }
@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn envelope_unions_cold_eras() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |_| e(100.0)); // all land
+        let elev = VertexMap::from_fn(&geo, |_| e(100.0)); // all land
         let eras = vec![
             era(&geo, 0.0, false, 0.0, 0.0),  // warm: no ice
             era(&geo, 1.0, true, -50.0, 0.9), // cold: all ice
@@ -228,7 +228,7 @@ mod tests {
         let rec = extract(&geo, &elev, e(0.0), &eras);
         assert!(
             rec.envelope.iter().all(|(_, &b)| b),
-            "cold era ices every land cell"
+            "cold era ices every land vertex"
         );
         assert_eq!(rec.max_ice_fraction, 0.9);
         assert_eq!(rec.glacial_maximum_day, 1.0);
@@ -237,11 +237,11 @@ mod tests {
     #[test]
     fn shoreline_is_the_swept_band() {
         let geo = Geosphere::new(3);
-        // Elevation ramps with latitude so some cells fall in the band.
-        let elev = CellMap::from_fn(&geo, |c| e(geo.coord(c).latitude));
+        // Elevation ramps with latitude so some vertices fall in the band.
+        let elev = VertexMap::from_fn(&geo, |c| e(geo.coord(c).latitude));
         let eras = vec![era(&geo, 0.0, false, -30.0, 0.0)];
         let rec = extract(&geo, &elev, e(0.0), &eras); // band = [-30, 0]
         let any = rec.shoreline.iter().any(|(_, &b)| b);
-        assert!(any, "some cells must lie in the [-30,0] sea band");
+        assert!(any, "some vertices must lie in the [-30,0] sea band");
     }
 }

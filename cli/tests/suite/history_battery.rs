@@ -330,13 +330,13 @@ fn history_gates_full_world_and_cross_seed() {
     // TENDENCY, not a per-seed universal (re-scoped 2026-07-23, deliberately,
     // after The Sundering's moving-sea epoch — this heavy-tier twin was missed
     // when the light gate was re-pinned). The moving sea produces TWO regimes,
-    // confirmed by inspecting per-cell structure:
+    // confirmed by inspecting per-vertex structure:
     //   - MOST worlds (8/9) have climate-contested MARGINAL land that glacial/
     //     sea churn forces to be re-occupied repeatedly at tiny populations
-    //     (e.g. seed 3 stacks cells 24-27 layers deep at mean peak ~1) — deep
+    //     (e.g. seed 3 stacks vertices 24-27 layers deep at mean peak ~1) — deep
     //     stacks on poor land, a strong NEGATIVE correlation.
     //   - A SPARSE world with no such churn (seed 2, when it held 79 occupied
-    //     cells) re-stacked on good land — a genuine POSITIVE correlation, not a
+    //     vertices) re-stacked on good land — a genuine POSITIVE correlation, not a
     //     numerical fluke.
     // The finding "stratigraphy accretes on marginal land" therefore holds as a
     // robust central tendency, and the median gate keeps its falsification teeth
@@ -430,7 +430,7 @@ fn render_report(
         "1. **Displacement is MIGRATION, not raiding.** The campaign was \
          preregistered around a raid->flee->resettle floor. On the original seed-42 \
          world measured at this campaign's start — ample vacant habitable land — \
-         glacially-displaced communities migrated to empty cells instead of crowding \
+         glacially-displaced communities migrated to empty vertices instead of crowding \
          into raids (raids ~ 0), so the displacement gate is re-pointed at \
          `census(bake).migrated`, read off the ledger. Raid-driven displacement is \
          deferred to campaign C3. *(C3, The Tumult, has since arrived: raids are no \
@@ -454,7 +454,7 @@ fn render_report(
          FALSIFIED: the correlation is robustly *negative* on every sampled world. \
          A one-time reconstruction of the true carrying-capacity field agrees with \
          the ledger's mean-peak-population signal (seed-42: -0.35 either way), so it \
-         is not a proxy artifact. Prime cells are settled once and persist; \
+         is not a proxy artifact. Prime vertices are settled once and persist; \
          re-occupation stacks form on contested, climate-volatile land.\n\n",
     );
 
@@ -473,7 +473,7 @@ fn render_report(
     writeln!(
         md,
         "- **territories-separated**: mean pairwise region overlap {region42:.4} (ceiling \
-         {MAX_REGION_OVERLAP}; raw cell-set overlap {raw42:.4} is a structural 0). PASS — \
+         {MAX_REGION_OVERLAP}; raw vertex-set overlap {raw42:.4} is a structural 0). PASS — \
          the four goblinoids occupy strongly distinct countries. **The diversity payoff \
          landed.**",
     )

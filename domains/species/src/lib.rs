@@ -320,7 +320,7 @@ pub const DRACONIC_NIGHT_VISION: f64 = 0.9;
 ///
 /// **The elevation frame (The Tumult's re-datum).** The elevation axis is
 /// **height above the world's sea level, in metres** — the value worldgen's
-/// `substrate_field` computes as `elevation_at(cell) − sea_level`. It was
+/// `substrate_field` computes as `elevation_at(vertex) − sea_level`. It was
 /// previously the raw `hornvale_kernel::ReferenceElevation`, whose datum is
 /// isostatic (0 m = a reference-thickness crust at equilibrium) and whose
 /// sea level is a *drawn* value differing by ~1.8 km between worlds — so an
@@ -329,14 +329,14 @@ pub const DRACONIC_NIGHT_VISION: f64 = 0.9;
 /// above its highest land. The optima below are authored against the
 /// corrected frame, on named percentiles of the measured distribution of
 /// **settleable land** (land above sea level with non-zero carrying
-/// capacity), pooled over seeds 1..=30, n = 142 595 cells:
+/// capacity), pooled over seeds 1..=30, n = 142 595 vertices:
 ///
 /// | percentile | p15 | p25 | p35 | p50 | p65 | p75 | p85 | p95 |
 /// |---|---:|---:|---:|---:|---:|---:|---:|---:|
 /// | metres above sea level | 142 | 621 | 1004 | 1561 | 2166 | 2651 | 3251 | 4148 |
 ///
 /// (All land, ignoring capacity, runs higher — median 2188 m, and a world's
-/// single highest land cell has a median of ≈ 6970 m.)
+/// single highest land vertex has a median of ≈ 6970 m.)
 ///
 /// Three of the four peoples' elevation optima and every fauna kind's were
 /// re-checked against that table and kept: they had always been *written* as
@@ -366,7 +366,7 @@ pub struct ConditionNiche {
 /// Kobold condition niche: cool HIGHLANDER — dark-adapted (consistent with
 /// cool/polar), wide/indifferent on moisture, and staked to high elevation as
 /// its exclusive, hard-excluding stronghold axis (Task B2b re-authoring: the
-/// original B2 optima wanted cold+low-light cells that are also food-poor on
+/// original B2 optima wanted cold+low-light vertices that are also food-poor on
 /// this world; elevation is a geographically independent axis the lowland
 /// species can't contest). See the species chapter's model card for the
 /// ecological rationale.
@@ -378,7 +378,7 @@ pub struct ConditionNiche {
 /// ran ~25× below every other people's *everywhere*. The new 3000 m above sea
 /// level is p79 of settleable land: a genuine top-fifth stake. Measured over
 /// seeds 1..=30, it is the exclusive stronghold the prose claims — kobold is
-/// the best-fit people on every settleable cell above 3000 m (mean fit 0.130
+/// the best-fit people on every settleable vertex above 3000 m (mean fit 0.130
 /// against hobgoblin 0.041, goblin 0.049, bugbear 0.004) while its own fit on
 /// land below 500 m collapses to 0.0065, i.e. hard-excluded from the lowlands
 /// the other three hold.
@@ -515,7 +515,7 @@ fn bugbear_condition_niche() -> ConditionNiche {
             width: 11.0,
             devotion: 0.85,
         },
-        // WETTEST cells — its stronghold
+        // WETTEST vertices — its stronghold
         moisture: ConditionResponse {
             optimum: 0.82,
             width: 0.20,
@@ -702,7 +702,7 @@ fn otyugh_condition_niche() -> ConditionNiche {
             width: 10.0,
             devotion: 0.80,
         },
-        // WETTEST cells — its stronghold, near the measured ceiling.
+        // WETTEST vertices — its stronghold, near the measured ceiling.
         moisture: ConditionResponse {
             optimum: 0.83,
             width: 0.15,
@@ -730,7 +730,7 @@ fn otyugh_condition_niche() -> ConditionNiche {
 ///
 /// **Insolation re-authored (The Deep Realm, Task 6).** The old curve
 /// (`optimum: 0.05, width: 0.20`) approximated cave-dark by biasing toward
-/// the darkest *surface* cells — a proxy authored back when no subterranean
+/// the darkest *surface* vertices — a proxy authored back when no subterranean
 /// substrate existed to score against directly. Now that one does
 /// (`hornvale_worldgen::subterranean_substrate` reads insolation as `0.0`
 /// exactly, always), the proxy is no longer needed to make a xorn read as
@@ -797,10 +797,10 @@ fn xorn_condition_niche() -> ConditionNiche {
 ///   species' curve at the same moment the reading beneath it moves would
 ///   make the two changes unattributable, and nothing measures this curve
 ///   today anyway — `warren_readout`'s P1 tripwire shows the Liebig minimum
-///   is bound by the unfloored elevation axis on every cave-bearing cell, so
+///   is bound by the unfloored elevation axis on every cave-bearing vertex, so
 ///   moisture does not reach the result at all.
 /// - **insolation** moves from `0.03` (the darkest available *surface*
-///   cells, a proxy for "inside a cave") to `0.0` exactly — the true
+///   vertices, a proxy for "inside a cave") to `0.0` exactly — the true
 ///   subterranean reading — with devotion raised to `0.70`, the strongest
 ///   axis in this niche: darkness is this creature's defining trait.
 /// - **elevation** widens from `-500` (sub-sea-level, a second proxy for
@@ -911,7 +911,7 @@ fn black_dragon_condition_niche() -> ConditionNiche {
             width: 12.0,
             devotion: 0.80,
         },
-        // wettest cells — its stronghold, like the otyugh's swamp.
+        // wettest vertices — its stronghold, like the otyugh's swamp.
         moisture: ConditionResponse {
             optimum: 0.80,
             width: 0.18,
@@ -967,7 +967,7 @@ fn owlbear_condition_niche() -> ConditionNiche {
 // `ANIMAL_PREY`/`PLANT_FORAGE` supply terms both derive from
 // `forage_supply_field`, itself a fraction of the NPP-based `base_carrying`
 // field, which collapses toward 0 wherever `carrying_capacity`'s aridity term
-// pushes hostility high (desert-band cells, moisture < 0.2) — this is why
+// pushes hostility high (desert-band vertices, moisture < 0.2) — this is why
 // EVERY existing NPP-fed kind (giant-elk, giant-goat, woolly-mammoth, the
 // four peoples, the three dragons, owlbear) carries no desert row at all in
 // the readout; (2) `DETRITUS`'s supply is `DETRITUS_AMBIENT`, a flat land-mask
@@ -1080,7 +1080,7 @@ fn giant_hyena_condition_niche() -> ConditionNiche {
 /// would bleed into `Alpine`.
 /// Large beast, Challenge 1 (5E MM, verified). Mass is an author's estimate
 /// for the MM's Large size category; ~150 kg, matching the giant hyena's
-/// scale for the shared cell.
+/// scale for the shared vertex.
 fn dire_wolf_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -1110,7 +1110,7 @@ fn dire_wolf_condition_niche() -> ConditionNiche {
 }
 
 /// Rhinoceros condition niche: the herbivore prey base for the giant hyena
-/// (savanna) — the hot-arid/savanna cell. A pure `PLANT_FORAGE` grazer inherits
+/// (savanna) — the hot-arid/savanna vertex. A pure `PLANT_FORAGE` grazer inherits
 /// the same desert-NPP collapse the giant elk/goat/mammoth already show (see
 /// the block comment above), so this is authored savanna-dominant with an
 /// arid lean toward the desert margin, not as a true desert occupant — the
@@ -1204,7 +1204,7 @@ fn carrion_crawler_condition_niche() -> ConditionNiche {
             width: 9.0,
             devotion: 0.55,
         },
-        // moist forest litter, below the otyugh's wettest-cell stake.
+        // moist forest litter, below the otyugh's wettest-vertex stake.
         moisture: ConditionResponse {
             optimum: 0.55,
             width: 0.22,
@@ -1224,7 +1224,7 @@ fn carrion_crawler_condition_niche() -> ConditionNiche {
     }
 }
 
-/// Shrieker condition niche: `Sessile × DETRITUS` — a genuinely new cell
+/// Shrieker condition niche: `Sessile × DETRITUS` — a genuinely new vertex
 /// (both existing `Sessile` kinds, treant/twig-blight, are `PHOTOSYNTHATE`
 /// autotrophs), a decomposer that cannot move. Medium plant, Challenge 0
 /// (5E MM, verified) — `potency` is `0.0` either way (`CR/30 = 0`), so this
@@ -1266,13 +1266,13 @@ fn shrieker_condition_niche() -> ConditionNiche {
 
 // The Vacancy (T8): four marine kinds plus one amphibious kind, the first
 // roster members to weight `MARINE_FORAGE` (The Vacancy T6). Elevation below
-// is `elevation_at(cell) - sea_level`
+// is `elevation_at(vertex) - sea_level`
 // ([`ConditionNiche`]'s struct doc), so a marine optimum is NEGATIVE — its
 // magnitude is depth. The percentiles cited per kind below come from a
 // throwaway probe (deleted before commit, not part of the suite) that
-// measured `substrate_field`'s elevation reading over every OCEAN cell across
+// measured `substrate_field`'s elevation reading over every OCEAN vertex across
 // seeds 1..=30 — the same sweep `occupancy_readout.rs` uses — bucketed by the
-// cell's `Biome`:
+// vertex's `Biome`:
 //
 // | biome | n | min | p5 | p25 | p50 | p75 | p95 | max |
 // |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1287,25 +1287,25 @@ fn shrieker_condition_niche() -> ConditionNiche {
 // epipelagic, all `depth_m < 200` in `classify_marine`) sit almost entirely at
 // a single dominant depth (-40 m — p50 through p95 tie exactly, a shelf-break
 // artifact of the sculpting pipeline, not a modelling choice made here); (2)
-// `Abyssal` is vanishingly rare (4 cells total across the whole 30-seed sweep,
+// `Abyssal` is vanishingly rare (4 vertices total across the whole 30-seed sweep,
 // right at its 4000 m floor) and `HadalTrench` never occurred at all, so a
 // kind "for" the abyssal is honestly a bathypelagic kind whose tail can reach
 // the boundary, not a kind with a real abyssal stronghold to measure against.
 //
 // `marine_forage_supply_field` (worldgen) keys `MARINE_FORAGE` productivity
-// directly to the cell's biome class (coral-reef/kelp-forest 0.85, epipelagic
+// directly to the vertex's biome class (coral-reef/kelp-forest 0.85, epipelagic
 // 0.45, mesopelagic 0.15, bathypelagic 0.05, abyssal/hadal-trench 0.02,
 // upwelling 1.0) rather than to a continuous NPP field the way the land's
 // `PHOTOSYNTHATE`/`PLANT_FORAGE` supply is — so, unlike The Vacancy T7's
 // land kinds (whose `mean_k` ranking was dominated by NPP magnitude,
 // independent of the kind's own target biome — BIO-supply-drowns-niche), a marine kind's own
 // elevation+temperature optimum is what SELECTS its supply tier, because it
-// selects which biome class the cell classifies as in the first place.
+// selects which biome class the vertex classifies as in the first place.
 // Measured per-kind below; `upwelling`'s productivity (1.0) is the one
 // remaining confound, since it can outrank a shelf/deep-water kind's own
-// target biome on cells the kind's wide condition tolerance also reaches.
+// target biome on vertices the kind's wide condition tolerance also reaches.
 //
-// Temperature at every cell (including ocean) is `climate.mean_temperature_at`,
+// Temperature at every vertex (including ocean) is `climate.mean_temperature_at`,
 // a pure function of latitude and elevation-above-sea-level lapse (elevation
 // below sea level applies NO lapse term) — i.e. sea-surface temperature only,
 // uncorrelated with depth (`domains/climate/src/temperature.rs`). Insolation
@@ -1314,7 +1314,7 @@ fn shrieker_condition_niche() -> ConditionNiche {
 // distinguish "sunlit shallows" from "aphotic deep water" the way real ocean
 // physics would; a deep-water kind's low insolation/cool temperature
 // optimum below is a thematic placement, not a claim the model enforces
-// depth-linked light or cold. Moisture at every ocean cell is the banded
+// depth-linked light or cold. Moisture at every ocean vertex is the banded
 // circulation model's base wetness plus a flat +0.3 ocean-proximity bonus
 // (`domains/climate/src/moisture.rs::ocean_bonus`), landing at 0.55 (a
 // sinking/dry band) or 0.90 (a rising/wet band) on spinning worlds — a
@@ -1446,7 +1446,7 @@ fn killer_whale_condition_niche() -> ConditionNiche {
 
 /// Giant squid condition niche: the `Bathypelagic`/`Abyssal` witness — a
 /// deep, cold-and-dark-themed specialist. `Abyssal` is nearly unoccupiable
-/// territory in this model (4 cells total across the 30-seed probe sweep,
+/// territory in this model (4 vertices total across the 30-seed probe sweep,
 /// right at its 4000 m floor — see block comment), so this niche targets
 /// `Bathypelagic`'s bulk (p50 depth 1263 m, p95 1026 m) with a tail reaching
 /// toward the abyssal floor, rather than staking on the abyssal itself. Huge
@@ -1489,9 +1489,9 @@ fn giant_squid_condition_niche() -> ConditionNiche {
 /// a coastal/estuarine ambush predator whose elevation optimum sits AT sea
 /// level with a wide tolerance, so it scores well on both low-lying coastal
 /// LAND (where its `ANIMAL_PREY` weight draws supply) and shallow marine
-/// shelf cells (where its `MARINE_FORAGE` weight draws supply) — the same
+/// shelf vertices (where its `MARINE_FORAGE` weight draws supply) — the same
 /// single condition-niche curve read against whichever supply field is
-/// nonzero at that cell, no special case anywhere. Huge beast, Challenge 5
+/// nonzero at that vertex, no special case anywhere. Huge beast, Challenge 5
 /// (5E MM, verified). Mass is an author's estimate for the MM's Huge size
 /// category (the "giant" prefix marks the fantastical scale-up; real
 /// saltwater crocodiles top out near 1,000 kg): ~1,000 kg.
@@ -1611,7 +1611,7 @@ fn gnoll_condition_niche() -> ConditionNiche {
 /// **The rule.** On each axis, human's response must vary by no more than
 /// 20% of its peak across the measured p5–p95 span of settleable land
 /// (`windows/worldgen/tests/generalist_baseline.rs`'s Task 5b extension,
-/// seeds 1..=30, 142593 settleable cells — the same population, same
+/// seeds 1..=30, 142593 settleable vertices — the same population, same
 /// [`hornvale_worldgen::Substrate`] frame,
 /// [`crate::ConditionResponse::eval`] scores). Since
 /// `bump = exp(-0.5 z²)`, `bump >= 0.80` requires `|z| <= 0.6680`, so a
@@ -1752,7 +1752,7 @@ fn human_condition_niche() -> ConditionNiche {
 // `floor + (1 - floor) * devotion * exp(-z²/2)`. So elevation's value never
 // exceeds its own `devotion`, and the other three never fall below the floor:
 //
-//     elevation is the Liebig minimum on EVERY cell
+//     elevation is the Liebig minimum on EVERY vertex
 //         iff  devotion_elev < sovereignty_floor(mass, potency)
 //
 // `windows/worldgen/tests/delver_bind_audit.rs` measured that closed form on
@@ -1815,8 +1815,8 @@ fn desert_dwarf_condition_niche() -> ConditionNiche {
     ConditionNiche {
         // hot, clear of the Desert tile's >= 20 C floor with margin. Narrow
         // (8.0) because this is the axis that must actually select: at
-        // devotion 0.70 the response spans [floor, 0.833], so a cell 12 C off
-        // the optimum reads at the floor and a cell on it reads nearly twice
+        // devotion 0.70 the response spans [floor, 0.833], so a vertex 12 C off
+        // the optimum reads at the floor and a vertex on it reads nearly twice
         // that.
         temperature: ConditionResponse {
             optimum: 28.0,
@@ -1959,7 +1959,7 @@ fn hill_dwarf_condition_niche() -> ConditionNiche {
 // `floor + (1 - floor) * devotion * exp(-z²/2)`. So elevation's value never
 // exceeds its own `devotion`, and the other three never fall below the floor:
 //
-//     elevation is the Liebig minimum on EVERY cell
+//     elevation is the Liebig minimum on EVERY vertex
 //         iff  devotion_elev < sovereignty_floor(mass, potency)
 //
 // **Every elf is authored BELOW its floor, and that is the whole strategy.**
@@ -2004,7 +2004,7 @@ fn hill_dwarf_condition_niche() -> ConditionNiche {
 ///
 /// **PREPARED climate, affinity-carried identity.** `devotion_elev` is `0.30`
 /// against a sovereignty floor of `0.421703` at 50.0 kg, so elevation is the
-/// Liebig minimum on every cell and the three curves below are never read. The
+/// Liebig minimum on every vertex and the three curves below are never read. The
 /// aridity is stated here because it is true of the kind, and it is stated as
 /// PREPARED because the model will not act on it — the acting is the biome
 /// affinity's job (Task 3), which is the one channel outside the minimum.
@@ -2220,7 +2220,7 @@ fn snow_elf_condition_niche() -> ConditionNiche {
 ///
 /// **PREPARED climate**: `devotion_elev` `0.30` against a floor of `0.429202`
 /// at 55.0 kg, so the three curves below are computed and discarded on every
-/// cell. Temperate forest is the affinity's claim to make (Task 3), not this
+/// vertex. Temperate forest is the affinity's claim to make (Task 3), not this
 /// function's.
 fn wood_elf_condition_niche() -> ConditionNiche {
     ConditionNiche {
@@ -2433,7 +2433,7 @@ pub enum HabitatRealm {
     /// Scored against the surface substrate — every kind not in the store.
     Surface,
     /// Scored against the subterranean substrate, and gated by whether the
-    /// cell holds a cave at all. A void that does not exist is not habitat.
+    /// vertex holds a cave at all. A void that does not exist is not habitat.
     Subterranean,
 }
 
@@ -2447,7 +2447,7 @@ impl Component for HabitatRealm {}
 /// The sparse habitat-realm component: **only** kinds that are not
 /// `Surface` appear. Two rows today, both re-homed by The Deep Realm, whose
 /// niches have been authored for darkness and near-saturation since that
-/// campaign and scored against sunlit surface cells until this one.
+/// campaign and scored against sunlit surface vertices until this one.
 ///
 /// Sparse rather than a `BiosphereTraits` field because this has a single
 /// consumer (`per_species_suitability`) which holds a slice, not a row —
@@ -2594,7 +2594,7 @@ impl Component for BiomeAffinity {}
 ///   elevation.devotion  <  sovereignty_floor(mass, potency)
 /// ```
 ///
-/// the elevation term is below the other three at **every** cell of every
+/// the elevation term is below the other three at **every** vertex of every
 /// world, the minimum is elevation everywhere, and the temperature, moisture
 /// and insolation curves contribute exactly nothing. Every occupant below
 /// clears that bar, so each affinity restores a preference the model was
@@ -2623,7 +2623,7 @@ impl Component for BiomeAffinity {}
 /// A row carries two separable things. Its **shape** says which biomes are the
 /// kind's country and how far out each one sits; that is derived per kind from
 /// the classifier read at the kind's own authored climate (see below, and every
-/// row says its own working). Its **level** says how much of a cell the kind
+/// row says its own working). Its **level** says how much of a vertex the kind
 /// still takes where the biome is not its country at all; that is derived from
 /// the model and is not authored at any row.
 ///
@@ -2694,7 +2694,7 @@ impl Component for BiomeAffinity {}
 /// For any kind *not* in this registry it would be. For these eight it is not,
 /// and the reason is the admission test above: every occupant has
 /// `elevation.devotion < sovereignty_floor`, so `tolerance_liebig`'s minimum is
-/// the **unfloored** elevation term at every cell of every world and the floor
+/// the **unfloored** elevation term at every vertex of every world and the floor
 /// never reaches the product at all. The quantity is computed and discarded for
 /// exactly the kinds this registry admits — which is the same sentence that
 /// admitted them.
@@ -2737,7 +2737,7 @@ impl Component for BiomeAffinity {}
 /// "Level is gauge" is what made a bare constant look safe, and the sentence
 /// that states its exemption has to be written carefully, because the obvious
 /// version of it is false. **A UNIFORM rescale of a whole row cannot reorder
-/// that kind's own ranking** — genesis and `best_home` rank cells in the kind's
+/// that kind's own ranking** — genesis and `best_home` rank vertices in the kind's
 /// own units, so a constant factor reorders nothing for it. That is true, and it
 /// is what The Radiation's chronicle says.
 ///
@@ -2745,13 +2745,13 @@ impl Component for BiomeAffinity {}
 /// that exemption.** [`BiomeAffinity::from_preferences`] maps each preference to
 /// `floor + (1 - floor) * p`, which holds a stronghold at exactly `1.00` while
 /// pulling every lower rung down: it changes the ladder's CONTRAST, not its
-/// scale. The factor then multiplies the capacity field per cell, keyed on that
-/// cell's biome, so it reweights biome against every other condition in the
-/// product — and cells reorder. Measured, seed 42, the seven authored rows moved
+/// scale. The factor then multiplies the capacity field per vertex, keyed on that
+/// vertex's biome, so it reweights biome against every other condition in the
+/// product — and vertices reorder. Measured, seed 42, the seven authored rows moved
 /// from their shipped level to `0.6 x` their gap to `1.0`, with every shape held
-/// fixed: **all seven row-carrying kinds have their own cell ranking changed**,
-/// and gnoll's argmax — the cell `best_home` would pick — moves from 30312 to
-/// 2276 with only 5 of its top 50 cells surviving. All eleven row-LESS kinds are
+/// fixed: **all seven row-carrying kinds have their own vertex ranking changed**,
+/// and gnoll's argmax — the vertex `best_home` would pick — moves from 30312 to
+/// 2276 with only 5 of its top 50 vertices surviving. All eleven row-LESS kinds are
 /// bit-identical, which is the control: for them the factor is `1.0` at every
 /// level and the level genuinely is gauge.
 ///
@@ -2761,7 +2761,7 @@ impl Component for BiomeAffinity {}
 /// else. For a kind with a shaped row, **the level is load-bearing in all four
 /// consumers**, and here they are with the evidence for each.
 ///
-/// 1. **Within-kind cell ranking** (genesis's founding pool, `best_home`'s
+/// 1. **Within-kind vertex ranking** (genesis's founding pool, `best_home`'s
 ///    choice of ground) — the consumer this paragraph used to exempt.
 ///    Evidence: the seven-of-seven reordering measured above.
 /// 2. **`per_species_capacity`** — the factor multiplies the headcount that
@@ -2769,15 +2769,15 @@ impl Component for BiomeAffinity {}
 ///    function of population. Evidence, immediately above: at the abandoned
 ///    `0.25` the six elf rows took seed 42's tithe census from 552 occupation
 ///    records to 193 and breached four deliberate fidelity floors.
-/// 3. **`coexist::pack`, the per-kind share** — a cell's share is `K^β`
+/// 3. **`coexist::pack`, the per-kind share** — a vertex's share is `K^β`
 ///    normalized **across** kinds (`hornvale_worldgen`'s
 ///    `demography_report_with_beta_from` hands `per_species_k` to
 ///    `hornvale_demography::coexist::pack`), so rescaling ONE kind's level
-///    moves EVERY kind's share in that cell, not only its own. Evidence: The
+///    moves EVERY kind's share in that vertex, not only its own. Evidence: The
 ///    Muster's positive control, recorded in full in the module doc of
 ///    `windows/worldgen/tests/beta_calibration_freeze.rs` — a level-only
 ///    change, every authored shape carried through unchanged, takes the mean
-///    per-claimed-cell diversity from 2.5789 to 1.4155 and reddens a
+///    per-claimed-vertex diversity from 2.5789 to 1.4155 and reddens a
 ///    preregistered band. It takes a roster where every kind carries a row to
 ///    do it; at today's seven rows in eighteen kinds the level moves that
 ///    quantity by 0.9 without ever crossing an edge, which is a statement
@@ -2790,7 +2790,7 @@ impl Component for BiomeAffinity {}
 ///    1.4155 pair and all three arrangements among them — reproduces
 ///    bit-identically. Retyping `Fact.day` and moving the bake from years to
 ///    days does not reach this path; the test file's module doc says why.)
-/// 4. **`coexist::pack`, the cell's capacity** — that same cell's total is a
+/// 4. **`coexist::pack`, the vertex's capacity** — that same vertex's total is a
 ///    plain **sum** of the present kinds' `K`, so the level moves the total,
 ///    and with it the wilderness fraction and the emigration pressure derived
 ///    from it, even where it moves no ordering at all.
@@ -2876,10 +2876,10 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
     [
         // THE RANGE (task 4), occupant one: the gnoll, the roster's strongest
         // DESERT authoring and — until this row — a people that selected no
-        // arid cell at all. Its niche states temperature optimum 29.0 °C at
+        // arid vertex at all. Its niche states temperature optimum 29.0 °C at
         // devotion 0.80 and moisture optimum 0.12 at devotion 0.75, the most
         // committed hot-arid pair in `biosphere_registry`, and the admission
-        // table above shows every bit of it discarded on every land cell of
+        // table above shows every bit of it discarded on every land vertex of
         // every world. Measured on seed 42 before this row existed: 20 gnoll
         // settlements, **zero** of them on an arid biome.
         //
@@ -2911,7 +2911,7 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // 0.85** is the roster's strongest COLD authoring, and the admission
         // table shows it discarded exactly as gnoll's desert authoring is: at
         // 6000 kg its sovereignty floor is 0.692367 and its elevation devotion
-        // is 0.50, so elevation is the minimum on every cell and the deep-cold
+        // is 0.50, so elevation is the minimum on every vertex and the deep-cold
         // curve never binds.
         //
         // FAUNA, and that is the point of choosing it. `SocialForm::Gregarious`
@@ -2957,7 +2957,7 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // The family is authored on the affinity route rather than the
         // condition-curve route, and the admission table above is why: every
         // elf's elevation devotion is 0.30 against a sovereignty floor of
-        // 0.4217-0.4360, so the Liebig minimum is elevation on every cell of
+        // 0.4217-0.4360, so the Liebig minimum is elevation on every vertex of
         // every world and each kind's temperature/moisture/insolation curves
         // are computed and discarded. Those curves are still authored — they
         // are true of the kind, and they are what the strongholds below are
@@ -3074,7 +3074,7 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // `radiation_affinity::the_sea_elf_is_confined_to_the_shelf_band` pins
         // both halves: the four shelf classes strictly above the default, the
         // five deep ones at or below it. Authored to the whole ocean this kind
-        // would hold ~27,000 cells against wood's ~800; on the shelf band it
+        // would hold ~27,000 vertices against wood's ~800; on the shelf band it
         // holds ~1,425 (three-seed mean, 42/7/1234), which is the same order as
         // the rest of the family.
         (
@@ -3083,7 +3083,7 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
                 floor_of("sea-elf"),
                 vec![
                     // Stronghold — sea-elf's own authored (depth, SST)
-                    // reading, classified, on an upwelling cell.
+                    // reading, classified, on an upwelling vertex.
                     ("upwelling", AFFINITY_STRONGHOLD),
                     // Near: the same 0-200 m shelf, one SST step either side of
                     // the 12-20 °C gap this kind sits in — reef above, kelp
@@ -3766,9 +3766,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // proportion a sparse-ground people would.
                 //
                 // An earlier draft made this sum to 0.60 to express "takes
-                // less from a cell than a farmer does". Reverted, for two
+                // less from a vertex than a farmer does". Reverted, for two
                 // reasons. **Ecologically it puts the scarcity in the wrong
-                // object**: a desert is poor because the *cell* supplies
+                // object**: a desert is poor because the *vertex* supplies
                 // little, which the supply field already says, not because
                 // the people are worse at extraction — that is a claim about
                 // the creature, and a different one. **And it would confound
@@ -3932,7 +3932,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 trophic_mode: TrophicMode::Heterotrophic,
                 // THE ONLY ELF ON `MARINE_FORAGE`, and it must be: that axis
                 // is what `marine_forage_supply_field` pays out on a water
-                // cell, so a sea people without a weight on it would draw zero
+                // vertex, so a sea people without a weight on it would draw zero
                 // supply everywhere it lives and its shelf affinity would
                 // multiply zero — authored, admitted and void. The small
                 // terrestrial residue is the shore: a settled coastal people
@@ -5548,7 +5548,7 @@ fn check_unit_range(value: f64, unit: &'static str) -> Result<(), UnitError> {
 /// `environment_fit` therefore says "these conditions suit this kind", never
 /// "this kind belongs in this realm". The realm gate is a separate mechanism
 /// and stays so: [`HabitatRealm::Subterranean`] gives a kind `availability =
-/// 0.0` on any cell whose terrain holds no cave, in worldgen's
+/// 0.0` on any vertex whose terrain holds no cave, in worldgen's
 /// `per_species_suitability_masked`. A reader who assumes this function
 /// discriminates realm will be wrong.
 /// type-audit: bare-ok(ratio: return)

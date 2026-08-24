@@ -8,7 +8,7 @@ Where and how peoples settle: placement, condensation, and the built shape of a 
 
 ### `capacity-by-abs-latitude`
 
-The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-cell K (summed over the roster's PEOPLED kinds' individual fields, each species' own psychology folded in — fauna kinds have no psychology and are excluded, preserving this metric's pre-menagerie population) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land cells (a wholly ocean or wholly polar world)
+The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-vertex K (summed over the roster's PEOPLED kinds' individual fields, each species' own psychology folded in — fauna kinds have no psychology and are excluded, preserving this metric's pre-menagerie population) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land vertices (a wholly ocean or wholly polar world)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -58,7 +58,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `flagship-coastal`
 
-Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if there is no goblin flagship
+Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if there is no goblin flagship
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -91,7 +91,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `goblin-flagship-coastal`
 
-Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if goblins placed no settlement
+Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if goblins placed no settlement
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -115,7 +115,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `goblin-flagship-surplus`
 
-The goblin flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement
+The goblin flagship vertex's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -135,7 +135,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `kobold-flagship-coastal`
 
-Whether the kobold flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if kobolds placed no settlement
+Whether the kobold flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if kobolds placed no settlement
 
 n = 982 present, 18 absent (of 1000 worlds)
 
@@ -158,7 +158,7 @@ n = 982 present, 18 absent (of 1000 worlds)
 
 ### `kobold-flagship-surplus`
 
-The kobold flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if kobolds placed no settlement
+The kobold flagship vertex's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if kobolds placed no settlement
 
 n = 982 present, 18 absent (of 1000 worlds)
 
@@ -188,7 +188,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `per-cell-diversity`
 
-Mean per-cell species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land cells, of the demography report's `byproducts.strife` field — already the per-cell inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a cell, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable cells
+Mean per-vertex species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land vertices, of the demography report's `byproducts.strife` field — already the per-vertex inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a vertex, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable vertices
 
 n = 1000 present, 0 absent (of 1000 worlds)
 

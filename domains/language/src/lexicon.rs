@@ -41,7 +41,7 @@ pub enum ExposureClass {
 
 /// The recountable reason a concept has no word: composed upstream by
 /// whichever domain determined the gap (e.g. "no settlement in or beside
-/// coastal cells" for a landlocked culture's missing `sea`; "hue ladder
+/// coastal vertices" for a landlocked culture's missing `sea`; "hue ladder
 /// depth 3 from night-vision 0.8" for an unacquired color term), or, when
 /// [`build_lexicon`] itself falls back a `KnowsOf` compound to a gap,
 /// composed here from the missing recipe or component.

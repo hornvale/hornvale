@@ -657,8 +657,8 @@ fn homophony_count_is_measured_and_pinned() {
     // competitors instead of six. No narrower cause is asserted, because none
     // was measured. The campaign's other candidate mover IS ruled out rather
     // than assumed away: `b0f32252`'s cross-roster lexicon repair measured
-    // ZERO moved cells on `the-census`, the fixture this file reads; its five
-    // repaired cells are all on `census-of-the-meeting`'s `goblin-solo`
+    // ZERO moved vertices on `the-census`, the fixture this file reads; its five
+    // repaired vertices are all on `census-of-the-meeting`'s `goblin-solo`
     // roster, and `homophony-count-goblin` there is one of them.
     //
     // The claim was re-checked rather than assumed, and it HOLDS — but the

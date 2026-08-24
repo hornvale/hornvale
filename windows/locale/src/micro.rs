@@ -1,4 +1,4 @@
-//! The sub-cell micro-field: a few grounded per-room continuous axes drawn
+//! The sub-vertex micro-field: a few grounded per-room continuous axes drawn
 //! from the room's address noise, so a walk through homogeneous biome still
 //! varies room-to-room (the "miles and miles of forest" answer).
 //!
@@ -50,15 +50,15 @@ const LOCAL_VARIATION: f64 = 0.1;
 /// The wetness a room's ground is grounded at, before local variation: a
 /// **budget and an allocation**.
 ///
-/// The budget is the climate supply the room's cells receive — `moisture`,
+/// The budget is the climate supply the room's vertices receive — `moisture`,
 /// the same blended number the room's own document emits. The allocation is
 /// where the room sits relative to its local watercourse: at the channel the
 /// ground gets everything the supply left unclaimed, at the dry edge of the
 /// valley it gets only the supply, and beyond the valley — or where the coarse
-/// graph gives the cell no outflow at all, so there is no watercourse to be
+/// graph gives the vertex no outflow at all, so there is no watercourse to be
 /// near — it gets only the supply as well.
 ///
-/// So a wet cell reads wet everywhere and a dry cell reads dry except along
+/// So a wet vertex reads wet everywhere and a dry vertex reads dry except along
 /// its rivers, which is the riparian corridor a desert actually has.
 ///
 /// `moisture` is deliberately the **already-quantized** blend the document
@@ -143,10 +143,10 @@ pub(crate) fn micro_field(room_seed: Seed, grounded: Option<f64>) -> MicroField 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{CellId, RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed, Vertex};
 
     fn seed_for(path: Vec<u8>) -> Seed {
-        RoomAddr { face: 3, path }.seed(Seed(42))
+        Facet { face: 3, path }.seed(Seed(42))
     }
 
     fn reading(distance: f64) -> RillReading {
@@ -154,7 +154,7 @@ mod tests {
             distance,
             band_edges: [0.01, 0.02, 0.03, 0.04],
             catchment: 1e-4,
-            cell: CellId(0),
+            vertex: Vertex(0),
         }
     }
 

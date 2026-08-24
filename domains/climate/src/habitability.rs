@@ -3,7 +3,7 @@
 //! (spec §6). It pre-wires the embark seam and yields the Lab's habitable-
 //! fraction unknown number (spec §10).
 
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Temperature};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Temperature, VertexMap};
 
 /// Coldest tolerable annual-mean temperature (°C).
 const HABITABLE_MIN_C: f64 = -5.0;
@@ -12,7 +12,7 @@ const HABITABLE_MAX_C: f64 = 35.0;
 /// Aridity floor: below this moisture there is no reliable liquid water.
 const HABITABLE_MIN_MOISTURE: f64 = 0.2;
 
-/// Whether a cell could host a vale-like settlement.
+/// Whether a vertex could host a vale-like settlement.
 /// type-audit: bare-ok(ratio: moisture), bare-ok(flag: return)
 pub fn is_habitable(
     temp_c: Temperature,
@@ -27,28 +27,28 @@ pub fn is_habitable(
         && moisture >= HABITABLE_MIN_MOISTURE
 }
 
-/// The per-cell habitability mask.
+/// The per-vertex habitability mask.
 /// type-audit: bare-ok(ratio: moisture), bare-ok(flag: return)
 pub fn habitability_map(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
-    mean_temp: &CellMap<Temperature>,
-    moisture: &CellMap<f64>,
+    elevation: &VertexMap<ReferenceElevation>,
+    mean_temp: &VertexMap<Temperature>,
+    moisture: &VertexMap<f64>,
     sea_level: ReferenceElevation,
-) -> CellMap<bool> {
-    CellMap::from_fn(geo, |cell| {
+) -> VertexMap<bool> {
+    VertexMap::from_fn(geo, |vertex| {
         is_habitable(
-            *mean_temp.get(cell),
-            *moisture.get(cell),
-            *elevation.get(cell),
+            *mean_temp.get(vertex),
+            *moisture.get(vertex),
+            *elevation.get(vertex),
             sea_level,
         )
     })
 }
 
-/// The fraction of cells that are habitable.
+/// The fraction of vertices that are habitable.
 /// type-audit: bare-ok(flag: map), bare-ok(ratio: return)
-pub fn habitable_fraction(map: &CellMap<bool>) -> f64 {
+pub fn habitable_fraction(map: &VertexMap<bool>) -> f64 {
     if map.is_empty() {
         return 0.0;
     }
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn fraction_is_between_zero_and_one() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |c| {
+        let elev = VertexMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[2] > 0.0 {
                 200.0
             } else {
@@ -106,8 +106,8 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         });
-        let temp = CellMap::from_fn(&geo, |_| t(15.0));
-        let moist = CellMap::from_fn(&geo, |_| 0.5);
+        let temp = VertexMap::from_fn(&geo, |_| t(15.0));
+        let moist = VertexMap::from_fn(&geo, |_| 0.5);
         let map = habitability_map(
             &geo,
             &elev,
