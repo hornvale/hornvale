@@ -57,3 +57,48 @@ fn a_driven_body_still_arbitrates_its_own_drives() {
         "the driven body's own arbitration produced a mode: {mode:?}"
     );
 }
+
+/// The mechanical content of spec §5.2's "commits on `Do`, nothing on
+/// `Hold`" argument: a driven body's own arbitration runs every `!wait` (the
+/// test above), but nothing it decides ever reaches the ledger while the
+/// player has queued nothing — the body waits ON THE PLAYER, not on its own
+/// drives. This is the assertion the other two in this file cannot make:
+/// both pass whether or not the driven body's own walk is wired in at all
+/// (see the Task 5 fix-round report's first mutation proof), because neither
+/// reads the DRIVEN body's own committed facts across a `!wait`. This one
+/// does, and DOES redden under "the driven body removed from the loop"
+/// (mutation proof 2 in the report).
+///
+/// **It does NOT redden under "swap the driven body's controller for
+/// `DefaultController`", and that was verified empirically, not assumed.**
+/// Seed 42's flagship body, walked solo (band-of-one — see
+/// `DriveMovements::step_one_with_controller`'s own doc for why), reaches
+/// `Mode::Pursuing(Fatigue)` with a BLOCKED proposal on its very first
+/// arbitration this session ever runs, so `resolution.intent` is already
+/// `Hold` before any controller is asked — `DefaultController` and
+/// `PlayerController` are indistinguishable here because arbitration itself
+/// never proposes a `Do` for this specific body at this specific starting
+/// state. The genuine, deterministic proof that `DefaultController` is a
+/// pass-through and `PlayerController` overrides a real `Do` is
+/// `liveness::tests::a_default_controller_passes_through_and_a_player_controller_holds`,
+/// which constructs a body it KNOWS wants to act rather than relying on
+/// seed 42's own population to happen to want one.
+#[test]
+fn a_driven_body_does_not_act_on_its_own_drives_while_the_player_says_nothing() {
+    let (world, _ctx) = seed_42();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let who = s.agent_entity();
+    let before = s.committed_fact_count_for(who);
+    // Long enough that seed 42's flagship body (fix round 1's mutation probe:
+    // `Pursuing(Fatigue)` inside 200 days) would actually reach `Rest` under
+    // real GOAP — `committed_agent_at_count_for` alone cannot see a `Rest`
+    // (it never moves), so this reads every predicate the body could emit.
+    s.handle("!wait 200");
+    assert_eq!(
+        s.committed_fact_count_for(who),
+        before,
+        "a driven body must not act on its own GOAP (any predicate — agent-at, \
+         drank, rested, eaten) while the player says nothing (spec 2.3/5.2: it \
+         waits on the player, PlayerController answers Hold)"
+    );
+}

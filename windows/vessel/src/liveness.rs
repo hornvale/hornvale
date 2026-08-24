@@ -10,6 +10,7 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
+use crate::controller::{Controller, DefaultController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
@@ -3209,33 +3210,6 @@ impl HomeNavCache {
 /// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
-    stage0_resolve(
-        view,
-        home,
-        p,
-        budget,
-        EntityId::new(1).expect("1 is a valid nonzero entity id"),
-    )
-    .intent
-}
-
-/// [`decide`]'s own computation, minus the placeholder entity and the
-/// `.intent` projection — extracted (The Hand, Task 5) so a caller that also
-/// needs the [`Mode`]/[`Affect`] half of the [`Resolution`] (the driven
-/// body's own co-present arbitration, spec §2.3) can share the identical
-/// Stage-0 setup rather than duplicating it. `decide` is unchanged in VALUE
-/// by this extraction — same drive set, same disposition, same fresh
-/// per-call caches — it only now takes a real `entity` (used solely as the
-/// `HomeNavCache` key, and each call still builds a throwaway single-call
-/// cache, so a different entity id changes nothing about the result).
-/// type-audit: bare-ok(count: budget)
-pub(crate) fn stage0_resolve(
-    view: &Perceived,
-    home: &RoomAddr,
-    p: &DriveParams,
-    budget: usize,
-    entity: EntityId,
-) -> Resolution {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
     // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
@@ -3255,10 +3229,11 @@ pub(crate) fn stage0_resolve(
         &disposition,
         Mode::Idle,
         budget,
-        entity,
+        EntityId::new(1).expect("1 is a valid nonzero entity id"),
         &mut home_nav_cache,
         &mut mesh_memo,
     )
+    .intent
 }
 
 /// How a creature is disposed to decide right now — the psychology dials that
@@ -4952,6 +4927,15 @@ impl<'a> DriveMovements<'a> {
                 &mut out,
                 mesh_memo,
                 home_nav_cache,
+                // Every body in `self.npcs` today is GOAP-driven (a possessed
+                // body's own walk goes through `step_one_with_controller`
+                // instead, on a separate call, so `band`/`alarm` here never
+                // include it — see that method's own doc for why folding it
+                // into THIS population would risk changing another body's
+                // shared belief or ambient alarm). `DefaultController` is a
+                // byte-identical pass-through of `resolution.intent`, so this
+                // line changes nothing about what any of them do.
+                &mut DefaultController,
             ) {
                 // This creature's walk is over — past `to`, out of `MAX_STEPS`,
                 // or halted by an arm's own stop condition. It is not requeued.
@@ -5142,6 +5126,7 @@ impl<'a> DriveMovements<'a> {
         out: &mut Vec<Fact>,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        controller: &mut dyn Controller,
     ) -> bool {
         if st.day > self.to.day() || st.steps >= MAX_STEPS {
             return false;
@@ -5183,6 +5168,20 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
         );
         st.mode = resolution.mode;
+        // THE CONTROLLER SEAM (The Hand, Task 5 fix round 1, spec §3.3): the
+        // walk arbitrates UNCONDITIONALLY, above — `resolution` is the body's
+        // own felt state (mode, affect) and what its own drives would do,
+        // computed identically regardless of who is driving. What actually
+        // HAPPENS is this one call: `DefaultController` (every NPC today)
+        // answers with `resolution.intent` unchanged, so this is a byte-
+        // identical pass-through for every existing committed trail;
+        // `PlayerController` (a possessed body's own walk, `Session::wait`)
+        // answers `Hold` unless a verb queued a real action, so nothing here
+        // ever double-moves a body the player is driving through the verb
+        // loop. Nothing below this line ever reads `resolution.intent`
+        // again — only `intent`, so `advance_one` itself learns nothing about
+        // which controller answered.
+        let intent = controller.intend(npc, &resolution);
         // THE ACTION CLOCK (spec §2 rung 1, §3): every action costs time, and
         // what it costs depends on the creature doing it. Charged HERE, once,
         // above the behaviour match, so the cost model is TOTAL by construction
@@ -5206,7 +5205,7 @@ impl<'a> DriveMovements<'a> {
         // The interval guard stays exactly where `MoveTo`'s was: charging is
         // what can carry a walk past `to.day`, so it is checked immediately
         // after the charge and before anything is emitted.
-        if let Intent::Do(action) = &resolution.intent {
+        if let Intent::Do(action) = &intent {
             let ground = match action {
                 Action::MoveTo(n) => {
                     climb_factor(self.terrain.elevation(&st.pos), self.terrain.elevation(n))
@@ -5218,7 +5217,7 @@ impl<'a> DriveMovements<'a> {
                 return false;
             }
         }
-        match resolution.intent {
+        match intent {
             Intent::Do(Action::MoveTo(n)) => {
                 // Provenance follows the committed errand (the mode):
                 // thirst distinguishes BELIEVED (beelining a known
@@ -5362,6 +5361,76 @@ impl<'a> DriveMovements<'a> {
             }
         }
         true
+    }
+
+    /// Run this walk for exactly ONE body — never `self.npcs` — asking
+    /// `controller` for the intent at every decision point via the SAME
+    /// [`Self::advance_one`] every other body's walk calls (The Hand, Task 5
+    /// fix round 1, spec §2.3/§3.3: "the loop arbitrates first,
+    /// unconditionally, then asks the controller"). This is the seam a
+    /// possessed body's own arbitration uses.
+    ///
+    /// **Deliberately NOT folded into `self.npcs`/[`Self::step_with_occupancy`].**
+    /// That population feeds `alarm_field_memo` and `WalkState::begin`'s
+    /// `band` (The Tidings' shared-belief pooling) for every OTHER body's own
+    /// walk — adding a possessed body to it would let its own history leak
+    /// into another creature's believed water or the ambient alarm field,
+    /// silently changing THAT creature's committed trail depending on who
+    /// happens to be riding along, exactly the risk spec §3.4 flags for "who
+    /// else is here" and defers. A solo, band-of-one walk avoids that by
+    /// construction: this body's own alarm/hazard/band are built from
+    /// `[body]` alone. The cost is real but scoped: this body's own arbitration
+    /// does not sense an ambient population's fear or pooled belief — a
+    /// richness gap, not a correctness one, and later Bridle work can close it
+    /// without touching this seam or any other body's walk.
+    ///
+    /// Returns the facts this body's OWN walk would commit (empty under
+    /// [`crate::controller::PlayerController`] with nothing queued — see that
+    /// controller's own doc for why nothing here ever double-moves a body the
+    /// player drives through the verb loop) and the LAST commitment mode its
+    /// own arbitration reached this call: the host's felt state, independent
+    /// of whether the controller let it act on it.
+    pub(crate) fn step_one_with_controller(
+        &self,
+        frozen: &Ledger,
+        body: &Npc,
+        mesh_memo: &mut RoomMeshMemo,
+        home_nav_cache: &mut HomeNavCache,
+        controller: &mut dyn Controller,
+    ) -> (Vec<Fact>, Mode) {
+        let band = [body.clone()];
+        let mut occupancy = Occupancy::default();
+        let mut afraid_memo = PrimaryAfraidMemo::new();
+        let alarm = alarm_field_memo(frozen, &band, self.terrain, self.from, &mut afraid_memo);
+        let memory = hazard_memory_memo(
+            frozen,
+            body,
+            self.from,
+            self.terrain,
+            &band,
+            &mut afraid_memo,
+        );
+        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain);
+        occupancy.arrive(
+            body.entity,
+            &st.pos,
+            &st.interior,
+            seam_kind(self.terrain.is_built(&st.pos)),
+        );
+        let mut out = Vec::new();
+        while self.advance_one(
+            frozen,
+            body,
+            &mut st,
+            &mut occupancy,
+            &alarm,
+            &memory,
+            &mut out,
+            mesh_memo,
+            home_nav_cache,
+            controller,
+        ) {}
+        (out, st.mode)
     }
 }
 
@@ -8573,6 +8642,90 @@ mod tests {
             "expected a bounded number of moves, not one per tick or an explosion; got {moves}"
         );
         let _ = ledger;
+    }
+
+    /// The Hand, Task 5 fix round 1's mutation proof: the SAME thirsty body,
+    /// on the SAME walk, differing only in which [`Controller`]
+    /// [`DriveMovements::step_one_with_controller`] is asked. This is the
+    /// deterministic, seed-independent proof that the trait actually gates
+    /// what gets committed — the fixture is
+    /// `a_thirsty_agent_plans_to_water_and_the_tick_walks_it`'s own (a body
+    /// guaranteed to want water within the window), read twice.
+    ///
+    /// `DefaultController` must be a byte-identical PASS-THROUGH of
+    /// `decide_step`'s own resolution: the body drinks, exactly as it would
+    /// with no controller in the loop at all — this is what proves every
+    /// existing NPC's committed trail is unperturbed by this task.
+    /// `PlayerController` must HOLD it — nothing committed — regardless of
+    /// what the body's own arbitration wants, which is spec §5.2's "commits
+    /// on `Do`, nothing on `Hold`" argument made mechanical. Swap
+    /// `DefaultController` for `PlayerController` in the first call (or vice
+    /// versa) and one of the two assertions below reddens; that swap is
+    /// exactly what a session-level test cannot always force (seed 42's own
+    /// possessed bodies, walked solo, happen to arbitrate straight to `Hold`
+    /// on their very first decision — see the Task 5 fix-round report), which
+    /// is why this test constructs a body it KNOWS wants to act.
+    #[test]
+    fn a_default_controller_passes_through_and_a_player_controller_holds() {
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let npc = Npc {
+            entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: water.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "herder".into(),
+        };
+        let t = PlantedTerrain {
+            elevations: [(water.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            ..Default::default()
+        };
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime::GENESIS,
+            to: WorldTime::new(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &t,
+        };
+
+        let (default_facts, _mode) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        assert!(
+            default_facts.iter().any(|f| f.predicate == DRANK),
+            "DefaultController is a pass-through of the body's own arbitration              (which wants water) — it must act: {default_facts:?}"
+        );
+
+        let (player_facts, _mode) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::PlayerController::new(),
+        );
+        assert!(
+            player_facts.is_empty(),
+            "PlayerController holds the body regardless of what its own              arbitration wants, and commits nothing: {player_facts:?}"
+        );
     }
 
     #[test]

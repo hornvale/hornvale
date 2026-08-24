@@ -4,14 +4,13 @@
 use crate::action::{Action, Mood};
 use crate::agent::check_species_known;
 use crate::clock::{climb_factor, cost_ticks, days_of, mass_for_species};
-use crate::controller::{Controller, PlayerController};
+use crate::controller::PlayerController;
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Mode, Npc, Occupancy, PLAN_BUDGET, Perceived, PrimaryAfraidMemo, RESTED,
-    SUSTENANCE, Terrain, affect_of_memo_occupied, agent_at_fact, agent_position, believed_water,
-    built_rooms, derive_npcs, derive_wild_npcs, drive_at, lowest_unvisited_neighbor_memo,
-    next_awake_day, rested_fact, species_activity, stage0_resolve, village_or_fallback,
+    LocaleTerrain, Mode, Npc, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain,
+    affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
+    derive_wild_npcs, next_awake_day, rested_fact, species_activity, village_or_fallback,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -667,6 +666,11 @@ pub struct Session<'w> {
     /// `wait` after its first, which requires the cache itself, not merely
     /// its backing memo, to outlive one tick. See `HomeNavCache`'s own doc.
     home_nav_cache: HomeNavCache,
+    /// The driven body's own commitment mode as of the most recent `!wait`
+    /// (The Hand, Task 5 fix round 1, spec §2.3) — `None` before the first
+    /// one. Set by [`Self::wait`], the only place the driven body's own
+    /// arbitration runs; read back by [`Self::driven_mode`].
+    driven_mode: Option<Mode>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1035,6 +1039,7 @@ impl<'w> Session<'w> {
             underground: None,
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
             home_nav_cache: HomeNavCache::new(),
+            driven_mode: None,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -1067,73 +1072,24 @@ impl<'w> Session<'w> {
         agent_position(&self.ledger, self.driven_body(), self.day)
     }
 
-    /// The driven body's own commitment mode, as of right now — arbitration
-    /// run for the possessed body itself (The Hand, Task 5, spec §2.3: the
-    /// co-present decision made mechanical). A possession is not displacement;
-    /// the host has its own drives and its own felt state while you ride it,
-    /// and this is that computation's route out, alongside
-    /// [`Self::committed_agent_at_count_for`] for what actually happened.
+    /// The driven body's own commitment mode, as of the most recent `!wait`
+    /// tick — arbitration run for the possessed body itself (The Hand, Task 5
+    /// fix round 1, spec §2.3: the co-present decision made mechanical). A
+    /// possession is not displacement; the host has its own drives and its
+    /// own felt state while you ride it, and this is that computation's route
+    /// out, alongside [`Self::committed_agent_at_count_for`] for what
+    /// actually happened.
     ///
-    /// Purely re-derived from the frozen ledger every call (the belief == fold
-    /// discipline `believed_water`/`drive_at` already carry), never a stored
-    /// field — a possessed body's `agent-at` history is exactly what a
-    /// creature's own is, so there is nothing session-persistent to keep in
-    /// step. `None` only if the roster is somehow empty, which `Session::start`
-    /// never produces.
-    ///
-    /// **Scope, honestly stated**: this reads the Stage-0 single-drive
-    /// (thirst-only) arbitration — the same one [`crate::controller::
-    /// DefaultController`] wraps — not the full species drive stack
-    /// [`DriveMovements`]'s own walk gives every other body (thermal, fatigue,
-    /// hunger, danger, social). Giving the driven body that full richness
-    /// needs the same per-tick hysteresis state (`WalkState`'s `believed`,
-    /// `visited`, carried `mode`) every other body's walk keeps between ticks,
-    /// which this task does not add — see the Task 5 report.
+    /// **This is the tick's own answer, not a separate re-derivation.**
+    /// `Session::wait` runs the driven body through
+    /// [`DriveMovements::step_one_with_controller`] — the SAME `advance_one`
+    /// every other body's walk calls, with a fresh [`PlayerController`] so
+    /// nothing here ever double-moves a body the player drives through the
+    /// verb loop (`go`, `drink`, …) — and stores the mode that call's own
+    /// arbitration reached. `None` before the first `!wait` (there is no tick
+    /// to report on yet).
     pub fn driven_mode(&self) -> Option<Mode> {
-        let npc = self.driven_body();
-        let terrain = LocaleTerrain::with_fields(
-            &self.wctx.ctx,
-            self.calendar.as_ref(),
-            self.predator.as_ref(),
-            self.prey.as_ref(),
-            Some(&self.built),
-            Some(&self.mesh_memo),
-        );
-        let position = self.position();
-        let drive = drive_at(
-            &self.ledger,
-            npc.entity,
-            &npc.home,
-            self.day,
-            &SUSTENANCE,
-            &terrain,
-            npc.metabolic_class,
-        );
-        let believed = believed_water(&self.ledger, npc, self.day, &terrain, PLAN_BUDGET);
-        let mut visited = std::collections::BTreeSet::new();
-        visited.insert(position.clone());
-        let mut scratch_memo = hornvale_kernel::RoomMeshMemo::new();
-        let explore_step =
-            lowest_unvisited_neighbor_memo(&position, &visited, &terrain, &mut scratch_memo);
-        let view = Perceived {
-            position,
-            drive,
-            fatigue: 0.0,
-            believed_water: believed,
-            believed_hazard: std::collections::BTreeSet::new(),
-            explore_step,
-        };
-        // "The loop arbitrates first, unconditionally" (spec §3.3): the mode
-        // and affect are the host's own, regardless of who ends up deciding
-        // what the body does. `intent` is discarded here — the driven body's
-        // committed acts still come from the verb loop (`go`, `drink`, …),
-        // never from this observation — but the controller is still asked,
-        // exactly as every other body's tick asks its own, so nothing about
-        // this read learns who chose either.
-        let resolution = stage0_resolve(&view, &npc.home, &SUSTENANCE, PLAN_BUDGET, npc.entity);
-        let mut controller = PlayerController::new();
-        let _ = controller.intend(npc, &view, resolution.mode);
-        Some(resolution.mode)
+        self.driven_mode
     }
 
     /// The accumulated knowledge (read-only).
@@ -1593,6 +1549,21 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(count: return)
     pub fn committed_fact_count(&self) -> usize {
         self.ledger.len()
+    }
+
+    /// How many facts the session's owned ledger has committed with `who` as
+    /// SUBJECT, across every predicate — the per-entity counterpart to
+    /// [`Self::committed_fact_count`], the same way
+    /// [`Self::committed_agent_at_count_for`] narrows
+    /// [`Self::committed_agent_at_count`]. Added for The Hand, Task 5 fix
+    /// round 1: proving a driven body's own arbitration commits NOTHING while
+    /// the player says nothing needs every predicate a creature's own drives
+    /// can emit (`agent-at`, `drank`, `rested`, `eaten`), not only position —
+    /// a body pursuing Fatigue that reaches `Rest` without ever moving would
+    /// slip past `committed_agent_at_count_for` alone.
+    /// type-audit: bare-ok(count: return)
+    pub fn committed_fact_count_for(&self, who: EntityId) -> usize {
+        self.ledger.iter().filter(|f| f.subject == who).count()
     }
 
     /// The driven body's own stable identity as a ledger `EntityId` — the
@@ -3954,6 +3925,26 @@ impl<'w> Session<'w> {
         // (Important 4, The Threshold whole-branch review).
         let (_facts, occupancy) =
             sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo, &mut self.home_nav_cache);
+        // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
+        // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
+        // just called, in a solo band-of-one walk (`step_one_with_controller`'s
+        // own doc says why it is not folded into `sys.npcs` above), asked
+        // through a FRESH `PlayerController` — nothing queues an action on
+        // it yet, so its intent is unconditionally `Hold` and it commits
+        // nothing (`step_one_with_controller`'s facts are discarded here),
+        // exactly the "commits on `Do`, nothing on `Hold`" argument spec
+        // §5.2 makes. Cloned out of `self.bodies` first: `driven_body()`
+        // borrows all of `self`, which cannot coexist with the `&mut
+        // self.mesh_memo`/`&mut self.home_nav_cache` borrows this call needs.
+        let driven_npc = self.driven_body().clone();
+        let (_driven_facts, driven_mode) = sys.step_one_with_controller(
+            &self.ledger,
+            &driven_npc,
+            &mut self.mesh_memo,
+            &mut self.home_nav_cache,
+            &mut PlayerController::new(),
+        );
+        self.driven_mode = Some(driven_mode);
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
