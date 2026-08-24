@@ -128,3 +128,63 @@ fn one_fact_at_a_time_equals_folding_from_scratch() {
     assert_eq!(one_by_one.state(), scan.state());
     assert_eq!(one_by_one.position(), scan.position());
 }
+
+#[test]
+fn rebuilding_upto_a_position_equals_the_prefix_it_names() {
+    let l = ledger_of(20);
+    let upto = Folded::<Probe>::rebuild_upto(&l, 7);
+
+    // The same prefix, reached the long way round.
+    let prefix = ledger_of(7);
+    let scan: Folded<Probe> = Folded::rebuild(&prefix);
+
+    assert_eq!(upto.state(), scan.state());
+    assert_eq!(upto.position(), 7);
+}
+
+#[test]
+fn resuming_from_a_checkpoint_reaches_the_same_place_as_folding_throughout() {
+    let l = ledger_of(20);
+
+    // The checkpoint: whatever the state was at position 7.
+    let checkpoint = Folded::<Probe>::rebuild_upto(&l, 7);
+    let carried = Probe {
+        count: checkpoint.state().count,
+        rolling: checkpoint.state().rolling,
+    };
+
+    let mut resumed: Folded<Probe> = Folded::resume(carried, checkpoint.position());
+    resumed.advance_to(&l);
+
+    let scan: Folded<Probe> = Folded::rebuild(&l);
+    assert_eq!(resumed.state(), scan.state());
+    assert_eq!(resumed.position(), scan.position());
+}
+
+#[test]
+fn rebuilding_upto_beyond_the_ledger_stops_at_the_ledger() {
+    let l = ledger_of(5);
+    let over = Folded::<Probe>::rebuild_upto(&l, 500);
+    let all: Folded<Probe> = Folded::rebuild(&l);
+    assert_eq!(over.state(), all.state());
+    assert_eq!(over.position(), all.position());
+}
+
+#[test]
+#[should_panic(expected = "exactly once")]
+fn absorbing_the_same_position_twice_panics() {
+    let l = ledger_of(3);
+    let mut f: Folded<Probe> = Folded::new();
+    let first = l.iter().next().expect("the ledger has facts");
+    f.absorb_at(0, first);
+    f.absorb_at(0, first); // the repeat bug, made loud
+}
+
+#[test]
+#[should_panic(expected = "exactly once")]
+fn skipping_a_position_panics() {
+    let l = ledger_of(3);
+    let mut f: Folded<Probe> = Folded::new();
+    let second = l.iter().nth(1).expect("the ledger has 3 facts");
+    f.absorb_at(1, second); // position 0 was never absorbed
+}
