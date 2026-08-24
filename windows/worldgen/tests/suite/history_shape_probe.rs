@@ -10,12 +10,12 @@
 //!
 //! The Tilth's session handoff recorded that adopting Lieth had flattened deep
 //! history "from 16 stacked steadings to 1". Run against the branch it described,
-//! this probe reported a **deepest column of 16**, at cells 29654 and 29659. The
-//! handoff was reading the *showcase page*, which points at cell 1400 — a cell
-//! that had indeed emptied. The churn had not gone; it had **moved**, and cell
+//! this probe reported a **deepest column of 16**, at vertices 29654 and 29659. The
+//! handoff was reading the *showcase page*, which points at vertex 1400 — a vertex
+//! that had indeed emptied. The churn had not gone; it had **moved**, and vertex
 //! 1400 emptied for a specific reason: it was an all-gnoll column, and gnoll is
 //! the one settling people Liebig did not rescue (its arid optimum carries no
-//! photosynthate-derived food). One cell's story is not the world's.
+//! photosynthate-derived food). One vertex's story is not the world's.
 //!
 //! That mattered three ways:
 //!
@@ -51,12 +51,12 @@ const SEED: u64 = 42;
 
 /// The spec's five probe seeds. One seed cannot tell a shift from the spread:
 /// genesis siting is a uniform draw over a shortlist, so any change that moves
-/// which cells are drawn re-rolls the whole world rather than nudging it. A
+/// which vertices are drawn re-rolls the whole world rather than nudging it. A
 /// single-seed reading of a count like `records_total` is therefore one sample of
 /// a wide distribution, and comparing two of them measures noise.
 const SEEDS: [u64; 5] = [42, 7, 999_999, 16_244_526_067_196_353_746, 1234];
 
-/// How many of the deepest columns to print — enough to tell one freak cell from
+/// How many of the deepest columns to print — enough to tell one freak vertex from
 /// a population of deep ones.
 const REPORT_COLUMNS: usize = 10;
 
@@ -90,19 +90,19 @@ fn deep_history_shape_at_seed_42() {
     // Column depth: occupations per site over the whole span. This is the
     // quantity The Fallow's H1 is stated in, counted off the bake's own records
     // rather than the emitted ledger, so it needs no world file on disk.
-    let mut by_cell: BTreeMap<u32, u64> = BTreeMap::new();
+    let mut by_vertex: BTreeMap<u32, u64> = BTreeMap::new();
     for r in &h.records {
-        *by_cell.entry(r.core.site.0).or_default() += 1;
+        *by_vertex.entry(r.core.site.0).or_default() += 1;
     }
-    // Deepest first, ties by ascending cell — a total, deterministic order.
-    let mut depths: Vec<(u64, u32)> = by_cell.iter().map(|(cell, n)| (*n, *cell)).collect();
+    // Deepest first, ties by ascending vertex — a total, deterministic order.
+    let mut depths: Vec<(u64, u32)> = by_vertex.iter().map(|(vertex, n)| (*n, *vertex)).collect();
     depths.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
 
     println!("== stratigraphy ==");
-    println!("  distinct sites   {}", by_cell.len());
+    println!("  distinct sites   {}", by_vertex.len());
     println!("  deepest columns:");
-    for (n, cell) in depths.iter().take(REPORT_COLUMNS) {
-        println!("    {n:>3} layers   cell {cell}");
+    for (n, vertex) in depths.iter().take(REPORT_COLUMNS) {
+        println!("    {n:>3} layers   vertex {vertex}");
     }
 }
 
@@ -167,7 +167,7 @@ fn eviction_causes_and_timeline() {
 /// The same shape across [`SEEDS`], so a count can be read against its spread.
 ///
 /// This exists because a single-seed comparison misled twice in one session. A
-/// `GENESIS_TOP_CELLS` sweep on seed 42 alone produced 433 / 483 / 558 / 281
+/// `GENESIS_TOP_VERTICES` sweep on seed 42 alone produced 433 / 483 / 558 / 281
 /// records for pool sizes 8 / 16 / 32 / 64 — a *non-monotonic* curve, which is
 /// the signature of re-rolling rather than of a trend. Any per-seed count here
 /// has to be read against the min–max band this prints, and an invariant floor
@@ -194,24 +194,24 @@ fn deep_history_shape_across_probe_seeds() {
         )
         .expect("probe seed builds");
         let c = census(&h);
-        let mut by_cell: BTreeMap<u32, u64> = BTreeMap::new();
+        let mut by_vertex: BTreeMap<u32, u64> = BTreeMap::new();
         for r in &h.records {
-            *by_cell.entry(r.core.site.0).or_default() += 1;
+            *by_vertex.entry(r.core.site.0).or_default() += 1;
         }
-        let deep = by_cell.values().copied().max().unwrap_or(0);
+        let deep = by_vertex.values().copied().max().unwrap_or(0);
         println!(
             "  {:<22}  {:>7}  {:>5}  {:>5}  {:>7}  {:>4}  {:>4}  {:>5}",
             seed,
             c.records_total,
             c.alive_at_now,
-            by_cell.len(),
+            by_vertex.len(),
             deep,
             c.migrated,
             c.collapsed,
             c.raided
         );
         records.push(c.records_total);
-        sites.push(by_cell.len());
+        sites.push(by_vertex.len());
         deepest.push(deep);
     }
 

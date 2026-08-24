@@ -37,7 +37,7 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// The surface-invariance control: settling peoples that are **not** in
 /// `habitat_realm_registry`, each pinned alone so no subterranean people is in
 /// the world at all. Under the re-key every one of them is seated at
-/// [`hornvale_kernel::Band::Surface`] on every cell, so a pinned run is
+/// [`hornvale_kernel::Band::Surface`] on every vertex, so a pinned run is
 /// the same object before and after and must reproduce byte for byte. A move
 /// here means the `Surface` rung is not keyed consistently, which is the one
 /// outcome spec §4.6 forbids.
@@ -52,7 +52,7 @@ const SURFACE_CONTROL: [&str; 4] = ["human", "hobgoblin", "kobold", "snow-elf"];
 /// An order-sensitive digest of a whole record stream — every field the bake
 /// decides, folded in commit order. Two runs agreeing here agree on the world,
 /// not merely on its totals: a count can stay put while two communities swap
-/// cells, and that is exactly the failure the control is looking for.
+/// vertices, and that is exactly the failure the control is looking for.
 ///
 /// FNV-1a over the record stream's own bytes, not `hornvale_kernel`'s seed
 /// hash: this is a test instrument, never a save-format surface, and nothing
@@ -231,22 +231,22 @@ fn where_underworld_communities_found_and_what_they_cut() {
                 continue;
             };
             underworld_records += 1;
-            let cell = record.core.site;
-            let rung = *seat.rung.get(cell);
+            let vertex = record.core.site;
+            let rung = *seat.rung.get(vertex);
             *by_rung.entry(format!("{rung:?}")).or_default() += 1;
             // Re-asked the way `seat_at` asked it: the rung's own top depth
             // against this column's table.
-            if let Some(cave) = terrain.cave_at(cell) {
+            if let Some(cave) = terrain.cave_at(vertex) {
                 let table = water_table_depth_m(
-                    terrain.drainage_at(cell),
-                    terrain.material_at(cell).porosity,
-                    terrain.elevation_at(cell).get() - sea,
+                    terrain.drainage_at(vertex),
+                    terrain.material_at(vertex).porosity,
+                    terrain.elevation_at(vertex).get() - sea,
                 );
                 let niche = niches
                     .get(&record.core.people)
                     .expect("a seated people carries a niche");
                 if let Some(chosen) =
-                    seat_at(niche, &cave, terrain.geothermal_gradient_at(cell), table)
+                    seat_at(niche, &cave, terrain.geothermal_gradient_at(vertex), table)
                     && chosen.works
                 {
                     under_water += 1;
@@ -265,7 +265,7 @@ fn where_underworld_communities_found_and_what_they_cut() {
         let drained = overrides
             .keys()
             .filter(|addr| {
-                let cell = addr.cell;
+                let vertex = addr.vertex;
                 let Some(rung) = rungs()
                     .iter()
                     .filter(|r| **r != Band::Surface)
@@ -274,12 +274,12 @@ fn where_underworld_communities_found_and_what_they_cut() {
                 else {
                     return false;
                 };
-                let gradient = terrain.geothermal_gradient_at(cell).get();
+                let gradient = terrain.geothermal_gradient_at(vertex).get();
                 let top_m = 1000.0 * hornvale_terrain::delta_t_range_of(rung).0 / gradient;
                 let table = water_table_depth_m(
-                    terrain.drainage_at(cell),
-                    terrain.material_at(cell).porosity,
-                    terrain.elevation_at(cell).get() - sea,
+                    terrain.drainage_at(vertex),
+                    terrain.material_at(vertex).porosity,
+                    terrain.elevation_at(vertex).get() - sea,
                 );
                 is_phreatic(top_m, table)
             })
@@ -303,24 +303,25 @@ fn where_underworld_communities_found_and_what_they_cut() {
         // observable. That was the measurement the decision not to wire it
         // rests on, so it is committed rather than narrated.
         let mut occupied_bands: BTreeMap<u8, usize> = BTreeMap::new();
-        let mut columns: std::collections::BTreeSet<(KindId, hornvale_kernel::CellId)> =
+        let mut columns: std::collections::BTreeSet<(KindId, hornvale_kernel::Vertex)> =
             std::collections::BTreeSet::new();
         for record in &history.records {
             if seating.contains_key(&record.core.people) {
                 columns.insert((record.core.people, record.core.site));
             }
         }
-        for (people, cell) in &columns {
-            let Some(cave) = terrain.cave_at(*cell) else {
+        for (people, vertex) in &columns {
+            let Some(cave) = terrain.cave_at(*vertex) else {
                 continue;
             };
             let table = water_table_depth_m(
-                terrain.drainage_at(*cell),
-                terrain.material_at(*cell).porosity,
-                terrain.elevation_at(*cell).get() - sea,
+                terrain.drainage_at(*vertex),
+                terrain.material_at(*vertex).porosity,
+                terrain.elevation_at(*vertex).get() - sea,
             );
             let niche = niches.get(people).expect("a seated people carries a niche");
-            if let Some(seat) = seat_at(niche, &cave, terrain.geothermal_gradient_at(*cell), table)
+            if let Some(seat) =
+                seat_at(niche, &cave, terrain.geothermal_gradient_at(*vertex), table)
                 && let Some(band) = hornvale_worldgen::chamber::rung_rank(seat.rung)
             {
                 *occupied_bands.entry(band).or_default() += 1;

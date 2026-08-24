@@ -97,7 +97,7 @@ pub struct SelfChannel {
     pub settlement: String,
     /// How many live there.
     pub population: u32,
-    /// The agent's room, as a packed `RoomId`.
+    /// The agent's room, as a packed `FacetId`.
     pub room: u64,
 }
 
@@ -247,13 +247,19 @@ pub enum SpatialChannel {
 }
 
 /// One examinable noun and its datum.
-/// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum)
+/// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum), bare-ok(identifier-text: kind)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct NounEntry {
     /// The noun as the prose mentions it.
     pub noun: String,
     /// What `examine` prints for it.
     pub datum: String,
+    /// Coarse kind for completion-capable clients. Optional on the wire:
+    /// older mirrors load unchanged (serde default), newer fixtures carry it.
+    /// Additive on `vessel/session/v2` per the schema discipline.
+    /// type-audit: bare-ok(identifier-text: kind)
+    #[serde(default)]
+    pub kind: String,
 }
 
 /// Serialize a snapshot. Floats quantize at this boundary and nowhere else.
@@ -389,6 +395,7 @@ mod tests {
                 nouns: vec![NounEntry {
                     noun: "sky".to_string(),
                     datum: "Night.".to_string(),
+                    kind: "thing".to_string(),
                 }],
             },
             spatial: SpatialChannel::Chamber {

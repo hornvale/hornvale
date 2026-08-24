@@ -1,25 +1,25 @@
 //! Integration tests for `ConnectionGraph`: construction, edge lookup, and
 //! `reachable_regions` connected-components over a conductance threshold.
 
-use hornvale_kernel::CellId;
+use hornvale_kernel::Vertex;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use std::collections::BTreeSet;
 
-/// A 4-cell graph: 0-1 an adjacency edge, 1-2 a water route, 3 isolated.
-fn four_cell_graph() -> ConnectionGraph {
+/// A 4-vertex graph: 0-1 an adjacency edge, 1-2 a water route, 3 isolated.
+fn four_vertex_graph() -> ConnectionGraph {
     let mut graph = ConnectionGraph::new(4);
     graph.add_edge(
-        CellId(0),
+        Vertex(0),
         Edge {
-            to: CellId(1),
+            to: Vertex(1),
             kind: EdgeKind::Adjacency,
             conductance: 1.0,
         },
     );
     graph.add_edge(
-        CellId(1),
+        Vertex(1),
         Edge {
-            to: CellId(2),
+            to: Vertex(2),
             kind: EdgeKind::WaterRoute,
             conductance: 0.5,
         },
@@ -29,74 +29,74 @@ fn four_cell_graph() -> ConnectionGraph {
 
 #[test]
 fn edges_reports_both_kinds_at_the_shared_node() {
-    let graph = four_cell_graph();
-    let kinds: Vec<EdgeKind> = graph.edges(CellId(1)).iter().map(|e| e.kind).collect();
+    let graph = four_vertex_graph();
+    let kinds: Vec<EdgeKind> = graph.edges(Vertex(1)).iter().map(|e| e.kind).collect();
     assert!(kinds.contains(&EdgeKind::Adjacency));
     assert!(kinds.contains(&EdgeKind::WaterRoute));
 }
 
 #[test]
 fn add_edge_is_undirected() {
-    let graph = four_cell_graph();
+    let graph = four_vertex_graph();
     // 0-1 was added from 0's side; 1's adjacency list must see it too.
-    let from_one: Vec<CellId> = graph.edges(CellId(1)).iter().map(|e| e.to).collect();
-    assert!(from_one.contains(&CellId(0)));
+    let from_one: Vec<Vertex> = graph.edges(Vertex(1)).iter().map(|e| e.to).collect();
+    assert!(from_one.contains(&Vertex(0)));
 }
 
 #[test]
 fn reachable_regions_splits_by_conductance_threshold() {
-    let graph = four_cell_graph();
+    let graph = four_vertex_graph();
     let regions = graph.reachable_regions(0.0);
     assert_eq!(regions.len(), 2);
     assert_eq!(
         regions[0],
-        BTreeSet::from([CellId(0), CellId(1), CellId(2)])
+        BTreeSet::from([Vertex(0), Vertex(1), Vertex(2)])
     );
-    assert_eq!(regions[1], BTreeSet::from([CellId(3)]));
+    assert_eq!(regions[1], BTreeSet::from([Vertex(3)]));
 }
 
 #[test]
-fn reachable_regions_orders_components_by_min_cell_id() {
-    let graph = four_cell_graph();
+fn reachable_regions_orders_components_by_min_vertex_id() {
+    let graph = four_vertex_graph();
     let regions = graph.reachable_regions(0.0);
-    // Component 0 (containing CellId(0)) sorts before component 1
-    // (containing only CellId(3)), regardless of insertion order.
-    let mins: Vec<CellId> = regions
+    // Component 0 (containing Vertex(0)) sorts before component 1
+    // (containing only Vertex(3)), regardless of insertion order.
+    let mins: Vec<Vertex> = regions
         .iter()
         .map(|region| *region.iter().next().unwrap())
         .collect();
-    assert_eq!(mins, vec![CellId(0), CellId(3)]);
+    assert_eq!(mins, vec![Vertex(0), Vertex(3)]);
 }
 
 #[test]
 fn a_high_conductance_threshold_isolates_the_water_route() {
-    let graph = four_cell_graph();
+    let graph = four_vertex_graph();
     // Only the 0-1 adjacency (conductance 1.0) survives a 0.75 threshold;
     // the 1-2 water route (conductance 0.5) does not.
     let regions = graph.reachable_regions(0.75);
     assert_eq!(regions.len(), 3);
-    assert_eq!(regions[0], BTreeSet::from([CellId(0), CellId(1)]));
-    assert_eq!(regions[1], BTreeSet::from([CellId(2)]));
-    assert_eq!(regions[2], BTreeSet::from([CellId(3)]));
+    assert_eq!(regions[0], BTreeSet::from([Vertex(0), Vertex(1)]));
+    assert_eq!(regions[1], BTreeSet::from([Vertex(2)]));
+    assert_eq!(regions[2], BTreeSet::from([Vertex(3)]));
 }
 
 #[test]
 fn nodes_iterates_every_node_added_at_construction() {
     let graph = ConnectionGraph::new(4);
-    let mut ids: Vec<CellId> = graph.nodes().collect();
+    let mut ids: Vec<Vertex> = graph.nodes().collect();
     ids.sort();
-    assert_eq!(ids, vec![CellId(0), CellId(1), CellId(2), CellId(3)]);
+    assert_eq!(ids, vec![Vertex(0), Vertex(1), Vertex(2), Vertex(3)]);
 }
 
 #[test]
-fn nodes_are_yielded_in_ascending_cellid_order_without_sorting() {
-    // The dense-Vec adjacency (The Lookup) must preserve the ascending-CellId
+fn nodes_are_yielded_in_ascending_vertex_order_without_sorting() {
+    // The dense-Vec adjacency (The Lookup) must preserve the ascending-Vertex
     // iteration a BTreeMap gave — asserted WITHOUT sorting the result.
     let graph = ConnectionGraph::new(5);
-    let ids: Vec<CellId> = graph.nodes().collect();
+    let ids: Vec<Vertex> = graph.nodes().collect();
     assert_eq!(
         ids,
-        vec![CellId(0), CellId(1), CellId(2), CellId(3), CellId(4)]
+        vec![Vertex(0), Vertex(1), Vertex(2), Vertex(3), Vertex(4)]
     );
 }
 
@@ -105,5 +105,5 @@ fn edges_on_an_out_of_range_node_is_empty_not_a_panic() {
     // Preserved defensive behavior: a node id past the graph's size reads as
     // an empty edge list, matching the old BTreeMap `get(&id).unwrap_or(&[])`.
     let graph = ConnectionGraph::new(3);
-    assert!(graph.edges(CellId(99)).is_empty());
+    assert!(graph.edges(Vertex(99)).is_empty());
 }

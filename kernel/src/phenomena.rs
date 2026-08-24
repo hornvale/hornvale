@@ -200,7 +200,7 @@ pub struct ObserverContext {
     /// The observer's position on the globe, if placed. `None` is a
     /// position-blind observation (nowhere in particular) — the sky is not
     /// culled by horizon. Placed by the composition root from the flagship
-    /// cell (SEQ-4); consumed by providers to cull the visible sky (SEQ-5).
+    /// vertex (SEQ-4); consumed by providers to cull the visible sky (SEQ-5).
     pub position: Option<GeoCoord>,
 }
 

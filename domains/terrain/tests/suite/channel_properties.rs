@@ -8,11 +8,11 @@
 //! that pin it are the only things asserting the referent is downstream rather
 //! than build order.
 
-use hornvale_kernel::{CellId, Geosphere, Seed, math};
+use hornvale_kernel::{Geosphere, Seed, Vertex, math};
 use hornvale_terrain::{ChannelNetwork, GeneratedTerrain, TerrainPins, generate};
 
 /// Level 5: the minimum subdivision that actually accumulates
-/// `RIVER_MIN_DRAINAGE` anywhere for seed 42 — level 4 has zero river cells
+/// `RIVER_MIN_DRAINAGE` anywhere for seed 42 — level 4 has zero river vertices
 /// (see `channel.rs`'s own `a_built_network_is_well_formed_and_deterministic`
 /// test comment). Level 6 (the canonical grid) is Task 6's measurement, not
 /// this task's, and `transverse_at` is a known, already-reviewed O(total
@@ -27,13 +27,13 @@ fn build_seed_42_terrain() -> GeneratedTerrain {
 }
 
 /// Mean angular separation of `c` from its neighbours — the same quantity
-/// `channel.rs`'s private `cell_spacing` computes, re-derived here from two
-/// adjacent cell positions because `Geosphere` has no public
-/// `mean_cell_edge()` and one integration-test caller does not earn it a
+/// `channel.rs`'s private `vertex_spacing` computes, re-derived here from two
+/// adjacent vertex positions because `Geosphere` has no public
+/// `mean_vertex_edge()` and one integration-test caller does not earn it a
 /// new kernel method.
-fn local_cell_edge(geo: &hornvale_kernel::Geosphere, c: CellId) -> f64 {
+fn local_vertex_edge(geo: &hornvale_kernel::Geosphere, c: Vertex) -> f64 {
     let neighbors = geo.neighbors(c);
-    assert!(!neighbors.is_empty(), "cell {c:?} has no neighbours");
+    assert!(!neighbors.is_empty(), "vertex {c:?} has no neighbours");
     let p = geo.position(c);
     let sum: f64 = neighbors
         .iter()
@@ -47,15 +47,15 @@ fn local_cell_edge(geo: &hornvale_kernel::Geosphere, c: CellId) -> f64 {
 }
 
 #[test]
-fn seed_42_has_channels_and_they_are_narrower_than_a_cell() {
+fn seed_42_has_channels_and_they_are_narrower_than_a_vertex() {
     let terrain = build_seed_42_terrain();
     let net = terrain.channels();
     assert!(!net.polylines.is_empty(), "seed 42 has no channels at all");
     let widest = net.widest_half_width() * 2.0;
-    let cell_edge = local_cell_edge(terrain.geosphere(), CellId(0));
+    let vertex_edge = local_vertex_edge(terrain.geosphere(), Vertex(0));
     assert!(
-        widest < cell_edge / 10.0,
-        "widest channel {widest} is not far narrower than a cell edge {cell_edge}"
+        widest < vertex_edge / 10.0,
+        "widest channel {widest} is not far narrower than a vertex edge {vertex_edge}"
     );
 }
 
@@ -99,7 +99,7 @@ fn seed_42_has_channels_and_they_are_narrower_than_a_cell() {
 fn provider_transverse_at_agrees_with_the_network() {
     let terrain = build_seed_42_terrain();
     let net = terrain.channels();
-    for c in terrain.geosphere().cells().step_by(53) {
+    for c in terrain.geosphere().vertices().step_by(53) {
         let p = terrain.geosphere().position(c);
         assert_eq!(terrain.transverse_at(p), net.transverse_at(p));
     }
@@ -119,7 +119,7 @@ fn provider_transverse_at_agrees_with_the_network() {
 // ---------------------------------------------------------------------------
 
 /// The perpendicular offset the mirrored pairs are taken at, radians. An
-/// order of magnitude below the level-5 cell spacing (~0.0378 rad), so a
+/// order of magnitude below the level-5 vertex spacing (~0.0378 rad), so a
 /// mirrored pair straddles its own segment rather than wandering into a
 /// neighbouring reach.
 ///
@@ -242,7 +242,7 @@ fn sample_positions_near_channels(net: &ChannelNetwork, wanted: usize) -> Vec<[f
 
 /// THE PROPERTY THE WHOLE CONVENTION RESTS ON. `ChannelNetwork::build` starts
 /// each run at a head and follows `TectonicGlobe.downhill`, appending as it
-/// goes, so `run_cells[i]` — and the parallel `polylines[i].points` — run
+/// goes, so `run_vertices[i]` — and the parallel `polylines[i].points` — run
 /// **downstream**. That is what makes "left of the winning segment's travel
 /// direction" mean "left bank facing downstream" rather than "left of whatever
 /// order the run happened to be built in".
@@ -325,13 +325,13 @@ fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
     let net = terrain.channels();
     let globe = terrain.globe();
     let mut edges = 0usize;
-    for (i, cells) in net.run_cells.iter().enumerate() {
+    for (i, vertices) in net.run_vertices.iter().enumerate() {
         assert_eq!(
-            cells.len(),
+            vertices.len(),
             net.polylines[i].points.len(),
-            "seed {seed}: run cells are not parallel to polyline points"
+            "seed {seed}: run vertices are not parallel to polyline points"
         );
-        for pair in cells.windows(2) {
+        for pair in vertices.windows(2) {
             assert_eq!(
                 *globe.downhill.get(pair[0]),
                 Some(pair[1]),
@@ -347,7 +347,7 @@ fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
     // absorbed by the other four in the total. The measured minimum across the
     // sweep is seed 42's 2770 (it was 54 after The Rill's Task 2 and 33 at The
     // Ford; Task 3 renders the whole land flow tree, so a "segment" is now any
-    // downhill step on land rather than one between two river cells).
+    // downhill step on land rather than one between two river vertices).
     assert!(
         edges >= 1_300,
         "only {edges} channel segments on seed {seed} at level {TEST_LEVEL} (the five sweep \
@@ -510,7 +510,7 @@ fn the_bank_sign_is_identical_across_two_builds() {
 
 /// The subdivision levels the equality battery sweeps: the whole legal range
 /// (`TerrainPins` admits 4-7). Level matters because it moves both quantities
-/// the index is built from at once — `L_max` halves with cell spacing while
+/// the index is built from at once — `L_max` halves with vertex spacing while
 /// the vertex count quadruples — so a grid sized correctly at one level is not
 /// thereby sized correctly at another.
 ///
@@ -774,7 +774,7 @@ fn segment_midpoint_probes(net: &ChannelNetwork, budget: usize) -> Vec<Probe> {
 
 /// Positions at and immediately around every confluence — the points where the
 /// build's repair pass has placed a tributary's mouth vertex EXACTLY on its
-/// trunk's vertex for the shared cell.
+/// trunk's vertex for the shared vertex.
 ///
 /// Present because a coincident vertex is the one place two different lines are
 /// guaranteed to be exactly equidistant from a probe placed on it, so it is
@@ -783,8 +783,8 @@ fn segment_midpoint_probes(net: &ChannelNetwork, budget: usize) -> Vec<Probe> {
 /// straddle it so the neighbourhood is covered as well as the point.
 fn confluence_probes(net: &ChannelNetwork, budget: usize) -> Vec<Probe> {
     let mut out = Vec::new();
-    for (i, cells) in net.run_cells.iter().enumerate() {
-        let Some(&mouth) = cells.last() else {
+    for (i, vertices) in net.run_vertices.iter().enumerate() {
+        let Some(&mouth) = vertices.last() else {
             continue;
         };
         let Some((trunk, _)) = net.trunk_vertex(mouth) else {
@@ -829,15 +829,15 @@ fn equality_probes(terrain: &GeneratedTerrain) -> Vec<Probe> {
             why: "beside a channel",
         });
     }
-    // Cell centres, strided across the whole globe. This is where the sample
+    // Vertex centres, strided across the whole globe. This is where the sample
     // gets its FAR-FROM-NETWORK positions — mid-ocean, deep desert — which the
     // near-channel sampler cannot produce and which are the only positions
     // that exercise the search radius growing past its first guess.
-    let stride = (geo.cell_count() / CATEGORY_BUDGET).max(1);
-    for c in geo.cells().step_by(stride) {
+    let stride = (geo.vertex_count() / CATEGORY_BUDGET).max(1);
+    for c in geo.vertices().step_by(stride) {
         out.push(Probe {
             at: geo.position(c),
-            why: "a cell centre",
+            why: "a vertex centre",
         });
     }
     out.extend(beyond_endpoint_probes(net, CATEGORY_BUDGET));
@@ -940,7 +940,7 @@ fn assert_index_equals_reference(terrain: &GeneratedTerrain, level: u32) -> usiz
 /// policy is covered.
 ///
 /// The sample deliberately spans the regions the coverage argument has to
-/// survive: beside a channel (the common case), at a cell centre far from any
+/// survive: beside a channel (the common case), at a vertex centre far from any
 /// (the search radius grows past its first guess), beyond a line's endpoints
 /// (the winner is not the line whose bucket the query is in), at the poles
 /// (where a longitude window must widen without bound), and at a confluence

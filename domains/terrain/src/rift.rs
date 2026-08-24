@@ -31,8 +31,8 @@ pub const SEAM_SLACK: f64 = 0.02;
 /// Amplitude of the fracture-noise term blended into `seam_side`: the
 /// margin is not a perfect great-circle arc between the two plain
 /// envelopes, but wobbles by up to this much (the noise term ranges over
-/// `[-FRACTURE_AMP/2, FRACTURE_AMP/2]`). This is the multi-cell-scale
-/// wobble; the finer, cell-scale crenulation octave is a separate band
+/// `[-FRACTURE_AMP/2, FRACTURE_AMP/2]`). This is the multi-vertex-scale
+/// wobble; the finer, vertex-scale crenulation octave is a separate band
 /// with its own amplitude (`CRENULATION_AMP`), added in Task 10's tuning
 /// season.
 /// type-audit: bare-ok(ratio)
@@ -46,14 +46,14 @@ pub const FRACTURE_FREQ: f64 = 6.0;
 /// shape; kept private — not a knob Task 10 exposes yet).
 const FRACTURE_OCTAVES: u32 = 4;
 
-/// Amplitude of the cell-scale crenulation octave blended into `seam_side`
+/// Amplitude of the vertex-scale crenulation octave blended into `seam_side`
 /// on top of the fracture wobble (Task 10 tuning season, spec §5; the
 /// Stage-0 probe's co-top shoreline-development lever, Census of Coasts IV).
 /// A finer, higher-frequency band that alternates land/ocean at roughly
-/// cell scale along every rifted margin — the texture the
+/// vertex scale along every rifted margin — the texture the
 /// shoreline-development estimator rewards. Value `FRACTURE_AMP * 0.5` =
 /// 0.175: the Stage-0 readout ranks crenulation's leverage by injected
-/// coastal-cell fraction, not by a seam-space amplitude, so no direct mapping
+/// coastal-vertex fraction, not by a seam-space amplitude, so no direct mapping
 /// exists; iteration 1 started here (shoreline 6.8647 → 7.2334).
 ///
 /// **This is the fit-battery ceiling and stays here.** Iteration 2 probed a
@@ -73,9 +73,9 @@ const FRACTURE_OCTAVES: u32 = 4;
 pub const CRENULATION_AMP: f64 = FRACTURE_AMP * 0.5;
 
 /// Base spatial frequency of the crenulation octave — eight times the
-/// fracture base (`FRACTURE_FREQ`), i.e. cell-scale on the canonical L6 mesh
-/// (~1° cells), so the octave alternates over roughly single cells rather
-/// than the multi-cell fracture wobble. A first-probe frequency (Task 10);
+/// fracture base (`FRACTURE_FREQ`), i.e. vertex-scale on the canonical L6 mesh
+/// (~1° vertices), so the octave alternates over roughly single vertices rather
+/// than the multi-vertex fracture wobble. A first-probe frequency (Task 10);
 /// tunable alongside `CRENULATION_AMP`.
 /// type-audit: bare-ok(ratio)
 pub const CRENULATION_FREQ: f64 = 48.0;
@@ -115,7 +115,7 @@ pub struct Seam {
     /// (e.g. a different craton layout) without perturbing any other
     /// seam's noise.
     pub noise_seed: Seed,
-    /// Hash-derived seed for this seam's cell-scale crenulation octave
+    /// Hash-derived seed for this seam's vertex-scale crenulation octave
     /// (`{noise_seed}::crenulation`) — the finer, higher-frequency band
     /// (`CRENULATION_AMP`/`CRENULATION_FREQ`) layered on top of the fracture
     /// wobble. Distinct from `noise_seed` so the crenulation octave is
@@ -234,8 +234,8 @@ fn plain_envelope(center: [f64; 3], radius_rad: f64, p: [f64; 3]) -> f64 {
 /// where `env_x` is the plain envelope (`plain_envelope`) of craton `x`
 /// evaluated against its ASSEMBLY center (not its drawn center) — the
 /// contact-configuration geometry `draw_rift` seamed against. The first fBm
-/// term is the multi-cell fracture wobble; the second is the finer,
-/// cell-scale crenulation octave (Task 10), added on top with its own seed
+/// term is the multi-vertex fracture wobble; the second is the finer,
+/// vertex-scale crenulation octave (Task 10), added on top with its own seed
 /// and amplitude. Each fBm term is sampled at the 3-D point `p` itself
 /// (spherical fBm at the
 /// assembly-frame position, `crust::sphere_fbm01`'s house pattern) rather

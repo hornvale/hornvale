@@ -102,6 +102,24 @@ fn v2_bytes_are_pinned() {
 }
 
 #[test]
+fn noun_kind_rides_the_wire_additively() {
+    // The Lexicon Task 2: `NounEntry` carries a coarse kind for
+    // completion-capable clients. Additive on `vessel/session/v2` — serde
+    // default keeps older mirrors loading — and rendered as the lowercase tag
+    // of `NounKind`. The first noun a fresh snapshot narrates is the biome
+    // descriptor, which focalize tags `Place`.
+    let world = world();
+    let (session, _) = Session::start(&world, &opts()).unwrap();
+    let json = snapshot_json(&session.snapshot().unwrap());
+    let v: serde_json::Value = serde_json::from_str(&json).expect("a snapshot parses");
+    assert_eq!(
+        v["narration"]["nouns"][0]["kind"].as_str(),
+        Some("place"),
+        "nouns must carry their coarse kind on the wire: {json:.200}"
+    );
+}
+
+#[test]
 fn the_schema_tag_is_the_one_every_client_pins() {
     // Asserted on the BYTES and against a literal, not against
     // `SESSION_SCHEMA`: the constant and the wire agreeing is tautological,
@@ -363,7 +381,7 @@ fn a_settlement_free_world_refuses_possession_rather_than_panicking() {
     // output that moves. That reasoning was right and the remedy was wrong:
     // scouting is fragile in the same way, just later and more expensively. The
     // Tense made empty worlds rare -- habitability became a relation between a
-    // species and a cell instead of a global -10 C snowline, so cold ground is
+    // species and a vertex instead of a global -10 C snowline, so cold ground is
     // poor rather than forbidden, and seed 1234, which had ZERO survivors for a
     // whole campaign, now carries 36. The scout found nothing in 43..80,
     // widening it to 43..400 meant building 357 full worlds, and neither

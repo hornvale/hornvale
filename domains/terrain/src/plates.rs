@@ -1,13 +1,13 @@
 //! Plates: Voronoi regions on the unit sphere, moving about a drawn Euler
 //! pole, with a drawn orogenic maturity. Continental/oceanic character is
 //! no longer a plate property — it lives in the crust field (`crust.rs`,
-//! Crust epoch v2): a plate's cells are continental or oceanic cell by
-//! cell, by crust thickness, independent of which plate they ride on.
+//! Crust epoch v2): a plate's vertices are continental or oceanic vertex by
+//! vertex, by crust thickness, independent of which plate they ride on.
 
 use crate::pins::TerrainPins;
 use crate::streams;
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellMap, Geosphere, Seed, Stream, math};
+use hornvale_kernel::{Geosphere, Seed, Stream, VertexMap, math};
 
 /// A tectonic plate.
 /// type-audit: bare-ok(index: id), bare-ok(ratio: seed_position), bare-ok(ratio: euler_axis), bare-ok(ratio: rate), bare-ok(ratio: maturity), bare-ok(ratio: weight)
@@ -139,21 +139,21 @@ pub fn generate_plates(
         .collect()
 }
 
-/// Edge-noise amplitude, radians (~3.4 degrees: boundaries wander a cell
+/// Edge-noise amplitude, radians (~3.4 degrees: boundaries wander a vertex
 /// or two without tearing plates apart).
 const EDGE_AMP: f64 = 0.06;
 
-/// Assign each cell to a plate by weighted, edge-noised angular distance:
+/// Assign each vertex to a plate by weighted, edge-noised angular distance:
 /// score = (angle + noise) / weight, smallest wins, ties to the lower
 /// plate id. Noise is stateless per-plate hash-noise (`plate-edge`) — no
 /// draws, so any grid level samples the same boundaries.
 /// type-audit: bare-ok(index)
-pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> CellMap<u32> {
+pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> VertexMap<u32> {
     let edge_root = terrain_seed.derive(crate::streams::PLATE_EDGE);
     // Precompute one edge-noise sampler per plate: its seed depends only on
-    // the plate id, not the cell, so the `format!`, the `derive`, and the
+    // the plate id, not the vertex, so the `format!`, the `derive`, and the
     // slice/octave-seed derivations run once per plate instead of once per
-    // (cell × plate). Byte-identical — same per-plate seed, same sampler.
+    // (vertex × plate). Byte-identical — same per-plate seed, same sampler.
     let plate_fbms: Vec<crate::crust::SphereFbm> = plates
         .iter()
         .map(|plate| {
@@ -161,8 +161,8 @@ pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> C
             crate::crust::SphereFbm::new(noise_seed, 8.0, 4)
         })
         .collect();
-    CellMap::from_fn(geo, |cell| {
-        let position = geo.position(cell);
+    VertexMap::from_fn(geo, |vertex| {
+        let position = geo.position(vertex);
         let mut best = 0u32;
         let mut best_score = f64::INFINITY;
         for (plate, fbm) in plates.iter().zip(&plate_fbms) {
@@ -236,12 +236,12 @@ mod tests {
     }
 
     #[test]
-    fn every_cell_joins_exactly_one_plate() {
+    fn every_vertex_joins_exactly_one_plate() {
         let geo = Geosphere::new(2);
         let terrain_seed = Seed(42).derive(streams::ROOT);
         let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let assignment = assign_plates(&geo, terrain_seed, &plates);
-        assert_eq!(assignment.len(), geo.cell_count());
+        assert_eq!(assignment.len(), geo.vertex_count());
         for (_, plate) in assignment.iter() {
             assert!((*plate as usize) < plates.len());
         }
@@ -255,8 +255,8 @@ mod tests {
             &TerrainPins::default(),
             &mut Vec::new(),
         );
-        for cell in geo.cells() {
-            let p = geo.position(cell);
+        for vertex in geo.vertices() {
+            let p = geo.position(vertex);
             for plate in &plates {
                 assert!(dot(velocity_at(plate, p), p).abs() < 1e-12);
             }
@@ -283,7 +283,7 @@ mod tests {
             for (_, plate) in assignment.iter() {
                 counts[*plate as usize] += 1;
             }
-            ginis.push(crate::shape::gini(&counts).expect("nonzero cells"));
+            ginis.push(crate::shape::gini(&counts).expect("nonzero vertices"));
         }
         let median = {
             let mut g = ginis.clone();
@@ -321,20 +321,20 @@ mod tests {
     #[test]
     fn plate_edges_wander_off_the_great_circle() {
         // Two equal-weight antipodal plates: the unweighted boundary is the
-        // equator; with edge noise, boundary-adjacent cells must appear at
+        // equator; with edge noise, boundary-adjacent vertices must appear at
         // varied latitudes.
         let geo = Geosphere::new(4);
         let plates = two_test_plates();
         let assignment = assign_plates(&geo, Seed(42).derive(streams::ROOT), &plates);
         let mut boundary_lats = Vec::new();
-        for cell in geo.cells() {
-            let mine = *assignment.get(cell);
+        for vertex in geo.vertices() {
+            let mine = *assignment.get(vertex);
             if geo
-                .neighbors(cell)
+                .neighbors(vertex)
                 .iter()
                 .any(|n| *assignment.get(*n) != mine)
             {
-                boundary_lats.push(geo.coord(cell).latitude);
+                boundary_lats.push(geo.coord(vertex).latitude);
             }
         }
         let (lo, hi) = boundary_lats

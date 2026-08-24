@@ -6,7 +6,7 @@
 //! `HEALTH_WILD`) never once landed on a creature standing in a room that was
 //! both built and cold, and worried aloud that the joint condition might be
 //! structurally rare — settlements condense onto rivers in temperate bands
-//! (The Confluence), and the coldest cells sit at the poles or altitude,
+//! (The Confluence), and the coldest vertices sit at the poles or altitude,
 //! typically unsettled.
 //!
 //! `cold_built_settlements_are_common_not_rare` (below) answers that worry
@@ -155,8 +155,7 @@
 use hornvale_kernel::ecology::ConditionResponse;
 use hornvale_kernel::test_lineage;
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, PLANT_FORAGE, ResourceVector, RoomAddr,
-    WorldTime,
+    ANIMAL_PREY, ConceptRegistry, EntityId, Facet, Ledger, PLANT_FORAGE, ResourceVector, WorldTime,
 };
 use hornvale_lab::health::{AffectTrace, health_report, run_simulation};
 use hornvale_locale::LocaleContext;
@@ -319,27 +318,27 @@ fn cold_built_settlements_are_common_not_rare() {
 struct PlantedHearthTerrain {
     /// Rooms whose water is fresh (drinkable) — every planted room, so
     /// thirst is always serviceable in place and never itself distresses.
-    fresh: BTreeSet<RoomAddr>,
+    fresh: BTreeSet<Facet>,
     /// Per-room planted temperature (°C); unplanted rooms read `INFINITY`.
-    temps: BTreeMap<RoomAddr, f64>,
+    temps: BTreeMap<Facet, f64>,
     /// Rooms reading `is_built` true — the ONE thing the two arms of every
     /// A/B below differ in. Empty = "hearth forced inert" (every room reads
     /// unbuilt, the pre-Task-5b state); the real planted set = "hearth
     /// live" (the arming Task 5/5b wired).
-    built: BTreeSet<RoomAddr>,
+    built: BTreeSet<Facet>,
 }
 
 impl Terrain for PlantedHearthTerrain {
-    fn elevation(&self, _room: &RoomAddr) -> f64 {
+    fn elevation(&self, _room: &Facet) -> f64 {
         f64::INFINITY
     }
-    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+    fn is_fresh_water(&self, room: &Facet) -> bool {
         self.fresh.contains(room)
     }
-    fn temperature(&self, room: &RoomAddr, _day: WorldTime) -> f64 {
+    fn temperature(&self, room: &Facet, _day: WorldTime) -> f64 {
         self.temps.get(room).copied().unwrap_or(f64::INFINITY)
     }
-    fn is_built(&self, room: &RoomAddr) -> bool {
+    fn is_built(&self, room: &Facet) -> bool {
         self.built.contains(room)
     }
 }
@@ -375,7 +374,7 @@ const WARM_BUILT_C: f64 = 20.0;
 /// defaults `synthetic.rs`'s own `creature` helper uses — duplicated rather
 /// than shared because that helper is private to its module and this file's
 /// niche varies per scenario, not per call site.
-fn creature(entity: EntityId, home: RoomAddr, species: &str, niche: ConditionResponse) -> Body {
+fn creature(entity: EntityId, home: Facet, species: &str, niche: ConditionResponse) -> Body {
     Body {
         entity,
         home: home.clone(),
@@ -460,21 +459,21 @@ struct PlantedPopulation {
     npcs: Vec<Body>,
     cold_idx: Vec<usize>,
     warm_idx: Vec<usize>,
-    fresh: BTreeSet<RoomAddr>,
-    temps: BTreeMap<RoomAddr, f64>,
+    fresh: BTreeSet<Facet>,
+    temps: BTreeMap<Facet, f64>,
 }
 
 fn plant_population() -> PlantedPopulation {
     // Six well-separated rooms (one per axis direction, so each lands on a
     // distinct face of the room mesh and none are neighbours of another).
     let cold_rooms = [
-        RoomAddr::containing([1.0, 0.0, 0.0], 6),
-        RoomAddr::containing([-1.0, 0.0, 0.0], 6),
-        RoomAddr::containing([0.0, 1.0, 0.0], 6),
+        Facet::containing([1.0, 0.0, 0.0], 6),
+        Facet::containing([-1.0, 0.0, 0.0], 6),
+        Facet::containing([0.0, 1.0, 0.0], 6),
     ];
     let warm_rooms = [
-        RoomAddr::containing([0.0, -1.0, 0.0], 6),
-        RoomAddr::containing([0.0, 0.0, 1.0], 6),
+        Facet::containing([0.0, -1.0, 0.0], 6),
+        Facet::containing([0.0, 0.0, 1.0], 6),
     ];
 
     let mut ledger = Ledger::default();
@@ -564,7 +563,7 @@ const REPLANTED_TICKS: usize = 40;
 #[test]
 fn the_hearth_never_worsens_a_planted_cold_built_population() {
     let pop = plant_population();
-    let every_room: BTreeSet<RoomAddr> = pop.temps.keys().cloned().collect();
+    let every_room: BTreeSet<Facet> = pop.temps.keys().cloned().collect();
 
     // "Hearth live": every planted room reads built (the arming Task 5/5b
     // wired). "Hearth forced inert": none do — the pre-Task-5b state, on the
@@ -694,7 +693,7 @@ const MUTATION_COLD_C: f64 = -19.75;
 /// of an instrument that can never see anything.
 #[test]
 fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
-    let room = RoomAddr::containing([0.0, 0.0, -1.0], 6);
+    let room = Facet::containing([0.0, 0.0, -1.0], 6);
     let mut ledger = Ledger::default();
     let registry = planted_registry();
     let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -703,7 +702,7 @@ fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
         .expect("place mutation creature");
     let npc = creature(e, room.clone(), "kobold-mutation", MUTATION_NICHE);
 
-    let fresh: BTreeSet<RoomAddr> = [room.clone()].into_iter().collect();
+    let fresh: BTreeSet<Facet> = [room.clone()].into_iter().collect();
     let mut temps = BTreeMap::new();
     // The room AND its neighbours are equally cold (see `plant_population`'s
     // identical comment) — no kinder neighbour to flee to, so the ONLY
@@ -713,7 +712,7 @@ fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
     for n in room.neighbors() {
         temps.insert(n, MUTATION_COLD_C);
     }
-    let built: BTreeSet<RoomAddr> = [room.clone()].into_iter().collect();
+    let built: BTreeSet<Facet> = [room.clone()].into_iter().collect();
 
     let terrain_live = PlantedHearthTerrain {
         fresh: fresh.clone(),

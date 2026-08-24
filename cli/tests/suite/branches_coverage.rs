@@ -50,22 +50,22 @@ fn default_generated_seed_42() -> World {
     seed_42_with(&SettlementPins::default())
 }
 
-/// `species`' settlements keyed by their committed cell id — the stable
+/// `species`' settlements keyed by their committed vertex id — the stable
 /// coordinate for comparing a pinned against an unpinned world, since a
 /// bigger or smaller roster shuffles entity ids and commit order but never
-/// which cell a settlement stands on.
-fn settlements_by_cell(world: &World, species: &str) -> BTreeMap<u32, EntityId> {
+/// which vertex a settlement stands on.
+fn settlements_by_vertex(world: &World, species: &str) -> BTreeMap<u32, EntityId> {
     world
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
         .map(|f| f.subject)
         .filter(|id| hornvale_species::species_of(world, *id).as_deref() == Some(species))
         .map(|id| {
-            let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
+            let vertex = match world.ledger.value_of(id, hornvale_settlement::VERTEX_ID) {
                 Some(Value::Number(n)) => *n as u32,
                 other => panic!("settlement {id:?} has no numeric cell-id fact: {other:?}"),
             };
-            (cell, id)
+            (vertex, id)
         })
         .collect()
 }
@@ -74,9 +74,9 @@ fn settlements_by_cell(world: &World, species: &str) -> BTreeMap<u32, EntityId> 
 /// coexistence stack (decision-ledger #49): a species pin now selects a
 /// **deterministic restricted roster**, not a population-preserving mask.
 /// Because settlement genesis packs species competitively against a
-/// shared per-cell capacity (`per_species_suitability`), pinning `--species X`
+/// shared per-vertex capacity (`per_species_suitability`), pinning `--species X`
 /// removes X's competitors and legitimately changes X's own density on
-/// cells it still holds — the old "population unchanged vs. unpinned"
+/// vertices it still holds — the old "population unchanged vs. unpinned"
 /// contract no longer holds by construction, and asserting it would be
 /// asserting a falsehood about the coexistence stack.
 ///
@@ -95,9 +95,9 @@ fn assert_species_pin_isolated(species: &str) {
         species: Some(species.to_string()),
     });
 
-    let pinned_cells = settlements_by_cell(&pinned_a, species);
+    let pinned_vertices = settlements_by_vertex(&pinned_a, species);
     assert!(
-        !pinned_cells.is_empty(),
+        !pinned_vertices.is_empty(),
         "the {species}-pinned world should place at least one {species} settlement"
     );
 
@@ -237,8 +237,8 @@ fn gaps_have_reasons() {
     // staple gap (`"{species} lives by {subsistence} here and raises no
     // staple"`, `windows/worldgen/src/lib.rs`) shipped without a marker and
     // stayed green for as long as seed 42 happened to settle no speaker on a
-    // cell that both grows a crop and is worked by herding/fishing/foraging.
-    // The Range moved gnoll onto exactly such a cell and this test went red on
+    // vertex that both grows a crop and is worked by herding/fishing/foraging.
+    // The Range moved gnoll onto exactly such a vertex and this test went red on
     // a production string that had always been legitimate. Adding a gap reason
     // means adding its marker here; the test cannot tell you that itself.
     let markers = [

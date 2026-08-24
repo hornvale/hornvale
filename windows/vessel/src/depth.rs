@@ -1,20 +1,25 @@
-//! The band notation (Rose Window metaplan §1b.3) in code. A place's BAND is a
-//! function of its address depth: the walk band is the ~1.7 km locale a body
-//! commits to, the chamber band is the ~3.3 m place inside a structure.
+//! Arithmetic on refinement DEPTH — where chambers sit ([`chamber_depth`]) and
+//! how to get back up to the walk band ([`truncate_to_walk`]) before reading
+//! any walk-band-keyed datum.
 //!
-//! An address below the walk band is IDENTITY, NOT SHAPE (§1b.3 law 3): its
-//! triangle geometry means nothing, and connectivity comes from the structure's
-//! own graph.
+//! **This module is named `depth`, not `band`, and the rename is the point**
+//! (The Lexicon of Place). It holds no `Band` type and never did — the kernel's
+//! `Band` is the cave ladder, a different thing entirely, and a module here
+//! called `band` claimed a word that belongs to it. Everything in this file is
+//! a function of a [`Facet`]'s path length, which is depth.
 //!
-//! What this module holds is therefore only ARITHMETIC on depths: where chambers
-//! sit ([`chamber_depth`]) and how to get back up to the walk band
-//! ([`truncate_to_walk`]) before reading any walk-band-keyed datum. It
-//! deliberately holds no `Band` enum and no `band_of(addr)` classifier: the
-//! question the session actually asks is "am I inside a structure?", which is
-//! session state (`Session::inside`), not a property an address can answer. An
-//! address at chamber depth is a chamber only because a structure put one there.
+//! The band notation (Rose Window metaplan §1b.3) is still what the depths
+//! MEAN: the walk band is the ~1.7 km locale a body commits to, the chamber
+//! band is the ~3.3 m place inside a structure. An address below the walk band
+//! is IDENTITY, NOT SHAPE (§1b.3 law 3) — its triangle geometry means nothing,
+//! and connectivity comes from the structure's own graph.
+//!
+//! There is deliberately no `band_of(addr)` classifier: the question a session
+//! actually asks is "am I inside a structure?", which is session state
+//! (`Session::inside`), not a property an address can answer. An address at
+//! chamber depth is a chamber only because a structure put one there.
 
-use hornvale_kernel::RoomAddr;
+use hornvale_kernel::Facet;
 
 /// How many refinements below the walk band a chamber sits. Nine halvings of a
 /// ~1.7 km locale edge is ≈3.3 m — a human-scale room. Declared as a constant
@@ -37,8 +42,8 @@ pub fn chamber_depth(walk_depth: u32) -> u32 {
 /// so callers may apply this unconditionally — which is the whole point, and the
 /// only thing this adds over the kernel primitive it delegates to.
 /// type-audit: bare-ok(count: walk_depth)
-pub fn truncate_to_walk(addr: &RoomAddr, walk_depth: u32) -> RoomAddr {
-    // `RoomAddr::ancestor` (kernel/src/room.rs) already does the bounds-checked
+pub fn truncate_to_walk(addr: &Facet, walk_depth: u32) -> Facet {
+    // `Facet::ancestor` (kernel/src/room.rs) already does the bounds-checked
     // slice and returns `None` when `walk_depth` is deeper than the address.
     // Delegate: re-deriving the slice here would duplicate a save-format-
     // adjacent primitive, and a second copy is a second thing to get wrong.
@@ -48,13 +53,13 @@ pub fn truncate_to_walk(addr: &RoomAddr, walk_depth: u32) -> RoomAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::RoomAddr;
+    use hornvale_kernel::Facet;
 
     /// The walk depth on the canonical globe (`GLOBE_LEVEL` 6 + 6).
     const WALK: u32 = 12;
 
-    fn addr(depth: u32) -> RoomAddr {
-        RoomAddr {
+    fn addr(depth: u32) -> Facet {
+        Facet {
             face: 3,
             // a fixed, arbitrary child sequence: 0,1,2,3,0,1,2,3,...
             path: (0..depth).map(|i| (i % 4) as u8).collect(),

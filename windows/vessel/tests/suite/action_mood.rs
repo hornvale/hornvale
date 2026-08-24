@@ -24,7 +24,7 @@ use hornvale_vessel::action::{Action, Mood};
 /// reverse audits use).
 fn creature_actions() -> Vec<Action> {
     vec![
-        Action::MoveTo(hornvale_kernel::RoomAddr {
+        Action::MoveTo(hornvale_kernel::Facet {
             face: 0,
             path: Vec::new(),
         }),

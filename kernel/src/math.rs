@@ -103,13 +103,13 @@ pub fn tanh(x: f64) -> f64 {
 /// bit-for-bit.
 ///
 /// This sits on the determinism path (the result typically feeds
-/// `RoomAddr::containing`): it calls `cos`/`sin` above — never `f64`'s
+/// `Facet::containing`): it calls `cos`/`sin` above — never `f64`'s
 /// inherent methods — in the fixed order `cos(lat)*cos(lon)`,
 /// `cos(lat)*sin(lon)`, `sin(lat)`. Do not reorder the calls or substitute
 /// std's transcendentals; either would move a world's saved rooms.
 ///
-/// Same deferred verdict `RoomAddr::containing`'s own `[f64; 3]` position
-/// parameter and `NearestCellIndex::nearest`'s own `latitude`/`longitude`
+/// Same deferred verdict `Facet::containing`'s own `[f64; 3]` position
+/// parameter and `NearestVertexIndex::nearest`'s own `latitude`/`longitude`
 /// parameters carry (this is that identical lat/lon-degrees-in,
 /// unit-sphere-xyz-out shape).
 /// type-audit: pending(wave-1)

@@ -75,6 +75,27 @@ impl Line {
         std::mem::take(&mut self.chars).into_iter().collect()
     }
 
+    /// Replace the whitespace-delimited word containing-or-ending-at the
+    /// caret with `word`, for tab completion. The scan runs back from the
+    /// caret to the first whitespace; everything from that word-start
+    /// through the CARET is replaced, so any suffix after the caret belongs
+    /// to a later word and is preserved untouched. The caret ends up just
+    /// past the inserted word. If the character before the caret is
+    /// whitespace (or the buffer is empty) there is no word to complete and
+    /// this is a documented no-op.
+    pub fn replace_word_at_caret(&mut self, word: &str) {
+        if self.caret == 0 || self.chars[self.caret - 1].is_whitespace() {
+            return;
+        }
+        let start = self.chars[..self.caret]
+            .iter()
+            .rposition(|c| c.is_whitespace())
+            .map_or(0, |i| i + 1);
+        let replacement: Vec<char> = word.chars().collect();
+        self.chars.splice(start..self.caret, replacement);
+        self.caret = start + word.chars().count();
+    }
+
     /// Replace the contents, putting the caret at the end — how history
     /// recall lands a remembered line (Task 3).
     pub fn set(&mut self, text: String) {
@@ -155,6 +176,47 @@ mod tests {
     /// must not panic the caret arithmetic or split a character in half.
     /// The sim's own prose carries non-ASCII (`entry.rs`'s truncation
     /// marker is `\u{2026}`), so this is reachable, not theoretical.
+    #[test]
+    fn replace_word_at_caret_swaps_only_the_trailing_token() {
+        let mut l = Line::new();
+        l.set(String::from("examine vng"));
+        l.replace_word_at_caret("Vngashngatva");
+        assert_eq!(l.text(), "examine Vngashngatva");
+        assert_eq!(l.caret(), l.text().chars().count());
+    }
+
+    #[test]
+    fn replace_word_at_caret_replaces_a_partial_word_and_preserves_the_suffix() {
+        // Caret mid-word: "examine vng" with the caret after "vn". Only the
+        // token up to the caret is replaced — the trailing "g" belongs to a
+        // later edit, not to this one.
+        let mut l = Line::new();
+        l.set(String::from("examine vng"));
+        for _ in 0..1 {
+            l.caret_left();
+        }
+        l.replace_word_at_caret("Vngash");
+        assert_eq!(l.text(), "examine Vngashg");
+        assert_eq!(l.caret(), "examine Vngash".chars().count());
+    }
+
+    #[test]
+    fn replace_word_at_caret_at_whitespace_is_a_documented_noop() {
+        let mut l = Line::new();
+        l.set(String::from("examine "));
+        l.replace_word_at_caret("Vngashngatva");
+        assert_eq!(l.text(), "examine ");
+        assert_eq!(l.caret(), 8);
+    }
+
+    #[test]
+    fn replace_word_at_caret_on_empty_buffer_inserts_nothing() {
+        let mut l = Line::new();
+        l.replace_word_at_caret("Vngashngatva");
+        assert!(l.is_empty());
+        assert_eq!(l.caret(), 0);
+    }
+
     #[test]
     fn a_multi_byte_character_does_not_break_the_caret() {
         let mut l = Line::new();

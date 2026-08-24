@@ -9,7 +9,7 @@
 //! including corners no generated world contains.
 //!
 //! It needs **no terrain sculpting and no climate generation**: `carrying_capacity`
-//! takes bare per-cell inputs, and the per-species term needs only four substrate
+//! takes bare per-vertex inputs, and the per-species term needs only four substrate
 //! readings. So a full sweep costs milliseconds instead of the ~2 s per world a real
 //! build costs, and it is a *controlled experiment* rather than a sample.
 //!
@@ -179,8 +179,8 @@ fn tilth_phase_diagram() {
         "  unsettled, FOOD-limited         {unsettled_food:3}  (someone fits; too little to eat)"
     );
     println!(
-        "\nA food-limited cell is a FOOD-WEB problem (a niche that eats something\n\
-         which survives there); a tolerance-limited cell is a ROSTER problem (author\n\
+        "\nA food-limited vertex is a FOOD-WEB problem (a niche that eats something\n\
+         which survives there); a tolerance-limited vertex is a ROSTER problem (author\n\
          a species that fits). They are not interchangeable, and the counts say which\n\
          work actually buys settlements."
     );

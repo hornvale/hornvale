@@ -151,7 +151,7 @@ pub enum Source {
     /// `Identity` each trace to a field this crate itself parsed off
     /// `Snapshot` — the crate can point at the exact struct field that
     /// justifies the label. `Look`'s text does not: it traces to
-    /// `resolve_at` in `windows/worldgen`, answered by a `CellFeatureIndex`
+    /// `resolve_at` in `windows/worldgen`, answered by a `VertexFeatureIndex`
     /// over `domains/terrain` and queried live by `bin` (Task 3) — it is
     /// not carried on `vessel/session/v2` at all, so there is no `Snapshot`
     /// field for this crate to check the label against. Structurally, the
@@ -190,6 +190,18 @@ pub enum Source {
     /// backs (the echo is `bin`'s own record of what it sent, held
     /// alongside `Driver`, never a field read off a `Snapshot`).
     Echo,
+    /// The completion hint line beneath the command row (`entry.rs`, The
+    /// Lexicon Task 9): the stem-plus-matches presentation of an ambiguous
+    /// tab-completion, drawn from the driver's candidate vocabulary.
+    /// **Deliberately its own variant**, not [`Source::Chrome`] — the
+    /// candidates are world vocabulary (resolved names), the same reason
+    /// [`Source::Look`] is not `Chrome` — and not [`Source::Typed`]: only
+    /// the STEM is what the buffer holds; the remainder of each candidate
+    /// is *suggested*, never typed. Like [`Source::Look`], [`Source::Typed`],
+    /// and [`Source::Echo`], its provenance is a **caller discipline**:
+    /// this crate cannot verify that the strings handed over are genuinely
+    /// the resolver's matches, so `bin` must only ever pass real ones.
+    Hint,
     /// The whole-world Mercator plate, rendered by `bin` from
     /// `hornvale-terrain` and handed to [`render_with`] as a `Grid`.
     ///

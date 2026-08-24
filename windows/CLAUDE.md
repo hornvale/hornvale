@@ -68,7 +68,7 @@ cannot drift apart. Read the root `CLAUDE.md` "Architecture" and
 | `book` | committed classification facts as Common sentences |
 | `chronicle` | the derived-history engine |
 | `scene` | semantic-only scene descriptions over the query surface (Ring 2) |
-| `locale` | a `RoomAddr` as an observable place |
+| `locale` | a `Facet` as an observable place |
 | `vessel` | possession: walking the locale mesh through a verb loop |
 | `lab` | the measurement instrument — studies over generated worlds |
 

@@ -1,4 +1,4 @@
-//! Cursor resolution: turn a cell into the name of the most specific
+//! Cursor resolution: turn a vertex into the name of the most specific
 //! feature there, or (The Portolan part II, Task 4) the full containment
 //! chain. See `docs/superpowers/specs/2026-08-19-the-portolan-design.md`
 //! §3 and `docs/superpowers/specs/2026-08-20-the-portolan-world-map-
@@ -6,9 +6,9 @@
 //! map strip that reports it.
 //!
 //! This is deliberately a thin function, not a new kind of index: the real
-//! work (declaring salience, building `CellId -> Vec<FeatureId>` once at
+//! work (declaring salience, building `Vertex -> Vec<FeatureId>` once at
 //! world load) lives in `hornvale_terrain::landscape` — `FeatureClass::
-//! salience` and `CellFeatureIndex` — because it needs nothing this crate
+//! salience` and `VertexFeatureIndex` — because it needs nothing this crate
 //! adds (`domains/terrain` may not depend on `hornvale-language` or
 //! `windows/worldgen`, by the kernel -> domains -> windows layering). What
 //! belongs here is the one step that DOES need this crate: turning a
@@ -17,31 +17,31 @@
 //! [`hornvale_almanac::gazetteer::class_words`] — already this crate's own
 //! dependency, reused rather than a second copy of the class-to-noun table.
 
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 use hornvale_language::{MorphOptions, Phonology};
-use hornvale_terrain::landscape::{CellFeatureIndex, FeatureClass, FeatureId};
+use hornvale_terrain::landscape::{FeatureClass, FeatureId, VertexFeatureIndex};
 
-/// The most specific feature's name at `cell`, or `None` if `cell` carries
+/// The most specific feature's name at `vertex`, or `None` if `vertex` carries
 /// no individuated feature (real terrain below every class's individuation
-/// floor — seed 42 measured 377 of 40,962 cells like this, 0.92%).
+/// floor — seed 42 measured 377 of 40,962 vertices like this, 0.92%).
 ///
-/// `index` must already be built (`CellFeatureIndex::build`, which sorts
-/// each cell's stack most-specific-first), so this is an `O(1)` lookup —
-/// `index.at(cell).first()` — plus one name draw. The caller supplies the
+/// `index` must already be built (`VertexFeatureIndex::build`, which sorts
+/// each vertex's stack most-specific-first), so this is an `O(1)` lookup —
+/// `index.at(vertex).first()` — plus one name draw. The caller supplies the
 /// world's seed and one people's phonology/morphology; a different people
-/// at the same cell draws a different name from the same [`FeatureId`], the
+/// at the same vertex draws a different name from the same [`FeatureId`], the
 /// same multi-name shape [`crate::gazetteer_class_entries`] already gives
 /// the gazetteer page.
 /// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: return)
 pub fn resolve_at(
-    index: &CellFeatureIndex,
-    cell: CellId,
+    index: &VertexFeatureIndex,
+    vertex: Vertex,
     seed: Seed,
     species: &str,
     ph: &Phonology,
     morph: &MorphOptions,
 ) -> Option<String> {
-    let id = *index.at(cell).first()?;
+    let id = *index.at(vertex).first()?;
     Some(crate::feature_name(seed, id, species, ph, morph).roman)
 }
 
@@ -51,7 +51,7 @@ pub fn resolve_at(
 /// inferred from a sibling link's own state — see [`format_chain`]'s doc
 /// for why an outer link's discovery says nothing about an inner one's
 /// (spec Amendment 1, §A4b: "co-location is not discovery" applies in
-/// both directions along the chain, not just from cell to feature).
+/// both directions along the chain, not just from vertex to feature).
 ///
 /// **Task 5 wired the real gate.** [`resolve_chain_at`] takes a caller-
 /// supplied `is_discovered` predicate and asks it per link, so this field
@@ -72,7 +72,7 @@ pub struct ChainLink {
     pub class: FeatureClass,
     /// Whether the possession has discovered this specific feature (spec
     /// Amendment 1 §A4b): an extent feature (volcano/landmass/sea/salt
-    /// lake/river) is discovered by entering any cell of its extent.
+    /// lake/river) is discovered by entering any vertex of its extent.
     pub discovered: bool,
 }
 
@@ -124,7 +124,7 @@ fn describe(link: &ChainLink) -> String {
 /// either way (§A3), so the strip states what class of thing is there even
 /// when it cannot yet say which one.
 ///
-/// `None` iff `links` is empty (mirrors [`resolve_at`]'s `None` for a cell
+/// `None` iff `links` is empty (mirrors [`resolve_at`]'s `None` for a vertex
 /// with no individuated feature at all).
 ///
 /// **`prose`, not `identifier-text`: this returns composed, punctuated,
@@ -149,14 +149,14 @@ pub fn format_chain(links: &[ChainLink]) -> Option<String> {
     Some(text)
 }
 
-/// The full containment chain at `cell`, most specific first, formatted as
-/// the strip's own prose ([`format_chain`]) — every entry [`CellFeatureIndex::
+/// The full containment chain at `vertex`, most specific first, formatted as
+/// the strip's own prose ([`format_chain`]) — every entry [`VertexFeatureIndex::
 /// at`] returns, not only the first ([`resolve_at`]'s own scope). `None`
-/// iff `cell` carries no individuated feature at all (same 0.92% case
+/// iff `vertex` carries no individuated feature at all (same 0.92% case
 /// [`resolve_at`]'s doc measures).
 ///
 /// **The discovery gate (Task 5).** `is_discovered` is asked once per link,
-/// in the SAME most-specific-first order [`CellFeatureIndex::at`] already
+/// in the SAME most-specific-first order [`VertexFeatureIndex::at`] already
 /// sorts them — never inferred from a sibling link, matching [`ChainLink`]'s
 /// own doc on why co-location along the chain never leaks either direction.
 /// This crate holds no session state of its own (the containment
@@ -170,15 +170,15 @@ pub fn format_chain(links: &[ChainLink]) -> Option<String> {
 /// composed, punctuated chain text, not a bare name.
 /// type-audit: bare-ok(identifier-text: species), bare-ok(prose: return)
 pub fn resolve_chain_at(
-    index: &CellFeatureIndex,
-    cell: CellId,
+    index: &VertexFeatureIndex,
+    vertex: Vertex,
     seed: Seed,
     species: &str,
     ph: &Phonology,
     morph: &MorphOptions,
     is_discovered: &dyn Fn(FeatureId) -> bool,
 ) -> Option<String> {
-    let ids: &[FeatureId] = index.at(cell);
+    let ids: &[FeatureId] = index.at(vertex);
     let links: Vec<ChainLink> = ids
         .iter()
         .map(|id| ChainLink {
@@ -226,26 +226,26 @@ mod tests {
         (ph, morph)
     }
 
-    /// A cell inside a real feature's extent resolves to `Some` name; the
+    /// A vertex inside a real feature's extent resolves to `Some` name; the
     /// name matches what [`crate::feature_name`] draws directly for that
     /// feature's identity, so `resolve_at` is not doing anything to the
     /// name besides the lookup.
     #[test]
-    fn a_covered_cell_resolves_to_the_most_specific_features_name() {
+    fn a_covered_vertex_resolves_to_the_most_specific_features_name() {
         let seed = Seed(42);
         let geo = Geosphere::new(LEVEL);
         let outcome = hornvale_terrain::generate(seed, &geo, &TerrainPins::default())
             .expect("default pins generate");
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
         let features = crate::gazetteer_features(seed, &geo, &terrain);
-        let index = CellFeatureIndex::build(&features);
+        let index = VertexFeatureIndex::build(&features);
         let (ph, morph) = test_phonology();
 
         let covered = features
             .first()
             .and_then(|f| f.extent.iter().next().copied())
             .expect("seed 42 has at least one feature with a nonempty extent");
-        let want_id = *index.at(covered).first().expect("covered cell resolves");
+        let want_id = *index.at(covered).first().expect("covered vertex resolves");
         let want = crate::feature_name(seed, want_id, PEOPLE, &ph, &morph).roman;
 
         assert_eq!(
@@ -254,37 +254,37 @@ mod tests {
         );
     }
 
-    /// An empty index (no features at all) resolves every cell to `None`,
+    /// An empty index (no features at all) resolves every vertex to `None`,
     /// not a panic.
     #[test]
     fn an_empty_index_resolves_to_none() {
         let (ph, morph) = test_phonology();
-        let index = CellFeatureIndex::build(&[]);
+        let index = VertexFeatureIndex::build(&[]);
         assert_eq!(
-            resolve_at(&index, CellId(0), Seed(42), PEOPLE, &ph, &morph),
+            resolve_at(&index, Vertex(0), Seed(42), PEOPLE, &ph, &morph),
             None
         );
     }
 
     // -- Task 4, Step 1: the containment chain -----------------------------
 
-    /// A real cell whose stack is at least two deep — the same search shape
+    /// A real vertex whose stack is at least two deep — the same search shape
     /// `landscape.rs`'s own `at_orders_most_specific_first` test pins
     /// against a hand-built fixture, run here against real seed-42 data so
     /// the chain-formatting prose is exercised against a genuine multi-
     /// feature stack, not only the single-feature case
-    /// `a_covered_cell_resolves_to_the_most_specific_features_name` already
+    /// `a_covered_vertex_resolves_to_the_most_specific_features_name` already
     /// covers.
-    fn multi_feature_cell(index: &CellFeatureIndex, geo: &Geosphere) -> CellId {
-        geo.cells().find(|&c| index.at(c).len() >= 2).expect(
-            "seed 42 at LEVEL has at least one multi-feature cell (measured 99.84% \
-                     of multi-feature cells form a proper containment chain -- spec §3.2)",
+    fn multi_feature_vertex(index: &VertexFeatureIndex, geo: &Geosphere) -> Vertex {
+        geo.vertices().find(|&c| index.at(c).len() >= 2).expect(
+            "seed 42 at LEVEL has at least one multi-feature vertex (measured 99.84% \
+                     of multi-feature vertices form a proper containment chain -- spec §3.2)",
         )
     }
 
-    /// The containment chain names every feature at a multi-feature cell,
+    /// The containment chain names every feature at a multi-feature vertex,
     /// most specific first — the property `at_orders_most_specific_first`
-    /// (`domains/terrain::landscape`) already pins on `CellFeatureIndex`
+    /// (`domains/terrain::landscape`) already pins on `VertexFeatureIndex`
     /// itself; this pins that `resolve_chain_at` carries that same order
     /// through into the drawn prose, unbroken.
     #[test]
@@ -295,21 +295,21 @@ mod tests {
             .expect("default pins generate");
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
         let features = crate::gazetteer_features(seed, &geo, &terrain);
-        let index = CellFeatureIndex::build(&features);
+        let index = VertexFeatureIndex::build(&features);
         let (ph, morph) = test_phonology();
 
-        let cell = multi_feature_cell(&index, &geo);
-        let stack = index.at(cell);
+        let vertex = multi_feature_vertex(&index, &geo);
+        let stack = index.at(vertex);
         assert!(
             stack.len() >= 2,
-            "sanity: the fixture cell must be multi-feature"
+            "sanity: the fixture vertex must be multi-feature"
         );
 
-        let text = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|_| true)
-            .expect("a multi-feature cell resolves to Some chain");
+        let text = resolve_chain_at(&index, vertex, seed, PEOPLE, &ph, &morph, &|_| true)
+            .expect("a multi-feature vertex resolves to Some chain");
 
         // Every link's own name and class-noun must appear, in the SAME
-        // order `CellFeatureIndex::at` already sorted them (most specific
+        // order `VertexFeatureIndex::at` already sorted them (most specific
         // first, `FeatureClass::salience` ascending).
         let mut last_pos = 0usize;
         for id in stack {
@@ -426,14 +426,15 @@ mod tests {
             .expect("default pins generate");
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
         let features = crate::gazetteer_features(seed, &geo, &terrain);
-        let index = CellFeatureIndex::build(&features);
+        let index = VertexFeatureIndex::build(&features);
         let (ph, morph) = test_phonology();
 
-        let cell = multi_feature_cell(&index, &geo);
-        let stack = index.at(cell);
+        let vertex = multi_feature_vertex(&index, &geo);
+        let stack = index.at(vertex);
 
-        let none_discovered = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|_| false)
-            .expect("a multi-feature cell still resolves to Some chain when undiscovered");
+        let none_discovered =
+            resolve_chain_at(&index, vertex, seed, PEOPLE, &ph, &morph, &|_| false)
+                .expect("a multi-feature vertex still resolves to Some chain when undiscovered");
         for id in stack {
             let name = crate::feature_name(seed, *id, PEOPLE, &ph, &morph).roman;
             assert!(
@@ -443,8 +444,8 @@ mod tests {
             );
         }
 
-        let all_discovered = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|_| true)
-            .expect("a multi-feature cell resolves to Some chain when fully discovered");
+        let all_discovered = resolve_chain_at(&index, vertex, seed, PEOPLE, &ph, &morph, &|_| true)
+            .expect("a multi-feature vertex resolves to Some chain when fully discovered");
         for id in stack {
             let name = crate::feature_name(seed, *id, PEOPLE, &ph, &morph).roman;
             assert!(
@@ -466,10 +467,10 @@ mod tests {
         // the most-specific (first) link must show that link's real name
         // and no other link's.
         let first_id = stack[0];
-        let only_first = resolve_chain_at(&index, cell, seed, PEOPLE, &ph, &morph, &|id| {
+        let only_first = resolve_chain_at(&index, vertex, seed, PEOPLE, &ph, &morph, &|id| {
             id == first_id
         })
-        .expect("a multi-feature cell resolves to Some chain");
+        .expect("a multi-feature vertex resolves to Some chain");
         let first_name = crate::feature_name(seed, first_id, PEOPLE, &ph, &morph).roman;
         assert!(
             only_first.contains(&first_name),

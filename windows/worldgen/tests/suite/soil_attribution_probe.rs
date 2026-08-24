@@ -28,9 +28,9 @@
 //! ```
 //!
 //! Every branch below it reads `mean_temp_c` or `moisture`. So for each land
-//! cell this probe recomputes the two early-return inputs exactly as
+//! vertex this probe recomputes the two early-return inputs exactly as
 //! `hornvale_worldgen::soil_of` supplies them (slope = the maximum elevation
-//! *drop* to any neighbour) and records which predicate fires. For the cells
+//! *drop* to any neighbour) and records which predicate fires. For the vertices
 //! that reach the climate ladder it records what the ladder actually says —
 //! the counterfactual distribution, i.e. what `dominant-soil-order` would
 //! report if the early return were not pre-empting it.
@@ -78,14 +78,14 @@ const THIN_SOIL_M: f64 = 0.25;
 /// to the lowest neighbour. Mirrored for the same reason as [`THIN_SOIL_M`].
 const STEEP_DROP_M: f64 = 300.0;
 
-/// Which arm of `classify_soil`'s early return a land cell took.
+/// Which arm of `classify_soil`'s early return a land vertex took.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Arm {
     /// `depth < 0.25` fired (whether or not the slope also would have).
     Thin,
     /// `slope > 300.0` fired and the soil was deep enough.
     Steep,
-    /// Neither fired; the cell reached the temperature/moisture ladder.
+    /// Neither fired; the vertex reached the temperature/moisture ladder.
     Ladder,
 }
 
@@ -104,14 +104,14 @@ fn order_name(o: SoilOrder) -> &'static str {
     }
 }
 
-/// One world's land-cell attribution.
+/// One world's land-vertex attribution.
 struct WorldAttribution {
     seed: u64,
     land: usize,
     thin: usize,
     steep: usize,
     ladder: usize,
-    /// What the climate ladder said, for the cells that reached it.
+    /// What the climate ladder said, for the vertices that reached it.
     ladder_orders: std::collections::BTreeMap<SoilOrder, usize>,
     /// The shipped `dominant-soil-order` for this world, recomputed exactly
     /// as `windows/lab/src/metrics.rs` does it.
@@ -147,18 +147,18 @@ fn attribute(seed: u64, wc: &WorldComponents) -> Option<WorldAttribution> {
     let mut shipped: std::collections::BTreeMap<SoilOrder, usize> =
         std::collections::BTreeMap::new();
 
-    for cell in geo.cells() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
         a.land += 1;
-        *shipped.entry(*soils.get(cell)).or_insert(0) += 1;
+        *shipped.entry(*soils.get(vertex)).or_insert(0) += 1;
 
-        let mat = terrain.material_at(cell);
-        let here = terrain.elevation_at(cell).get();
+        let mat = terrain.material_at(vertex);
+        let here = terrain.elevation_at(vertex).get();
         // Exactly `soil_of`'s slope: the maximum DROP to any neighbour.
         let slope = geo
-            .neighbors(cell)
+            .neighbors(vertex)
             .iter()
             .map(|n| here - terrain.elevation_at(*n).get())
             .fold(0.0_f64, f64::max);
@@ -175,7 +175,7 @@ fn attribute(seed: u64, wc: &WorldComponents) -> Option<WorldAttribution> {
             Arm::Steep => a.steep += 1,
             Arm::Ladder => {
                 a.ladder += 1;
-                *a.ladder_orders.entry(*soils.get(cell)).or_insert(0) += 1;
+                *a.ladder_orders.entry(*soils.get(vertex)).or_insert(0) += 1;
             }
         }
     }
@@ -187,9 +187,9 @@ fn attribute(seed: u64, wc: &WorldComponents) -> Option<WorldAttribution> {
     Some(a)
 }
 
-/// claim: readout(preregistered) — the share of land cells taking each arm
+/// claim: readout(preregistered) — the share of land vertices taking each arm
 /// of `classify_soil`'s climate-independent early return, and the
-/// counterfactual soil distribution over the cells that reach the climate
+/// counterfactual soil distribution over the vertices that reach the climate
 /// ladder. Prints; asserts only the wiring invariant (§3 of the header),
 /// because the *quantity* is the finding and pinning it would freeze a
 /// number this campaign is trying to explain.
@@ -205,7 +205,7 @@ fn leptosol_freeze_is_attributed_to_a_named_branch() {
         "no seed in {SEEDS:?} produced a world — the probe measured nothing"
     );
 
-    println!("== classify_soil early-return attribution, land cells ==");
+    println!("== classify_soil early-return attribution, land vertices ==");
     println!(
         "{:>6}  {:>7}  {:>16}  {:>16}  {:>16}  shipped dominant",
         "seed", "land", "thin(<0.25m)", "steep(>300m)", "reached ladder"
@@ -243,7 +243,7 @@ fn leptosol_freeze_is_attributed_to_a_named_branch() {
 
     let pct = |n: usize| 100.0 * n as f64 / tl.max(1) as f64;
     println!(
-        "\n== aggregate over {} worlds, {tl} land cells ==",
+        "\n== aggregate over {} worlds, {tl} land vertices ==",
         worlds.len()
     );
     println!(
@@ -263,23 +263,23 @@ fn leptosol_freeze_is_attributed_to_a_named_branch() {
         worlds.len()
     );
 
-    println!("\n== counterfactual: what the ladder says, for cells that reach it ==");
+    println!("\n== counterfactual: what the ladder says, for vertices that reach it ==");
     if tld == 0 {
-        println!("   (no land cell anywhere reached the ladder)");
+        println!("   (no land vertex anywhere reached the ladder)");
     } else {
         let mut rows: Vec<(SoilOrder, usize)> =
             ladder_total.iter().map(|(&o, &n)| (o, n)).collect();
         rows.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
         for (o, n) in rows {
             println!(
-                "   {:<12} {n:>8}  {:>6.2}% of ladder cells",
+                "   {:<12} {n:>8}  {:>6.2}% of ladder vertices",
                 order_name(o),
                 100.0 * n as f64 / tld as f64
             );
         }
     }
 
-    // The wiring invariant (header outcome 3). A cell that reaches the
+    // The wiring invariant (header outcome 3). A vertex that reaches the
     // ladder cannot be classified leptosol by the shipped path: every
     // remaining arm of `classify_soil` returns something else. If this
     // fires, the probe's mirrored thresholds have drifted from
@@ -287,7 +287,7 @@ fn leptosol_freeze_is_attributed_to_a_named_branch() {
     assert_eq!(
         ladder_total.get(&SoilOrder::Leptosol).copied().unwrap_or(0),
         0,
-        "a land cell reached the climate ladder yet the shipped path classified it \
+        "a land vertex reached the climate ladder yet the shipped path classified it \
          leptosol. That is unreachable in `classify_soil` as written, so the probe's \
          copies of THIN_SOIL_M/STEEP_DROP_M no longer match lithology.rs and this \
          probe is attributing the freeze to the wrong branch. Re-read \

@@ -3,7 +3,7 @@
 //! Hornvale's fine layer is two layers that had never met. The **relational**
 //! one is [`crate::interior::Interior`] — anchors and the RCC-8 relations
 //! between them, where creatures actually stand
-//! ([`crate::liveness::Occupancy`] holds `(RoomAddr, AnchorId)`). The
+//! ([`crate::liveness::Occupancy`] holds `(Facet, AnchorId)`). The
 //! **metric** one is [`Lattice`] — cells of one grid, which is what gets
 //! drawn. This module is the map from the first to the second.
 //!
@@ -327,7 +327,7 @@ mod tests {
     use crate::lattice::{embed_with, extent_for};
     use crate::liveness::Terrain;
     use crate::structure::{Structure, structure_at};
-    use hornvale_kernel::{RoomAddr, WorldTime};
+    use hornvale_kernel::{Facet, WorldTime};
 
     const WALK: u32 = 12;
 
@@ -338,16 +338,16 @@ mod tests {
         built_walk_ids: BTreeSet<u64>,
     }
     impl Terrain for WalkKeyedTerrain {
-        fn elevation(&self, _r: &RoomAddr) -> f64 {
+        fn elevation(&self, _r: &Facet) -> f64 {
             0.0
         }
-        fn is_fresh_water(&self, _r: &RoomAddr) -> bool {
+        fn is_fresh_water(&self, _r: &Facet) -> bool {
             false
         }
-        fn temperature(&self, _r: &RoomAddr, _d: WorldTime) -> f64 {
+        fn temperature(&self, _r: &Facet, _d: WorldTime) -> f64 {
             -20.0
         }
-        fn is_built(&self, r: &RoomAddr) -> bool {
+        fn is_built(&self, r: &Facet) -> bool {
             r.pack()
                 .ok()
                 .is_some_and(|id| self.built_walk_ids.contains(&id.0))
@@ -375,8 +375,8 @@ mod tests {
     }
 
     /// The `n`th walk-band locale, `n` written out as base-4 path digits.
-    fn locale_number(n: u64) -> RoomAddr {
-        RoomAddr {
+    fn locale_number(n: u64) -> Facet {
+        Facet {
             face: 3,
             path: (0..WALK).map(|i| ((n >> (2 * i)) & 0b11) as u8).collect(),
         }
@@ -386,7 +386,7 @@ mod tests {
     /// locales rather than hand-built: `structure_at` draws the count, so the
     /// honest way to get a four-chamber structure is to go and find a locale
     /// that has one.
-    fn structure_of(chamber_count: usize, seed: Seed) -> (RoomAddr, Structure) {
+    fn structure_of(chamber_count: usize, seed: Seed) -> (Facet, Structure) {
         for n in 0u64..4096 {
             let locale = locale_number(n);
             let s = structure_at(&locale, &brief(), seed, WALK).expect("built");

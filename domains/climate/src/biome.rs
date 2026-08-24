@@ -1,4 +1,4 @@
-//! Biomes: a queryable field over the globe, derived per cell from
+//! Biomes: a queryable field over the globe, derived per vertex from
 //! temperature, moisture, elevation, and (for the sea) depth, surface
 //! temperature, and seafloor features. Land follows a Whittaker lookup with
 //! ice/alpine specials; marine follows depth/SST/boundary/upwelling. Biomes
@@ -8,7 +8,7 @@
 use crate::facets::{BiomeExpr, Formation, Realm, Stratum};
 use hornvale_kernel::{ReferenceElevation, Temperature};
 
-/// A seafloor tectonic feature at an ocean cell (climate-owned; the
+/// A seafloor tectonic feature at an ocean vertex (climate-owned; the
 /// composition root maps `terrain::BoundaryKind` into this so climate imports
 /// no domain).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -116,11 +116,11 @@ pub const ALL: &[Biome] = &[
 /// **Left unchanged deliberately, and this is a scope call, not an oversight.**
 /// Spec §3.4 asked for provenance on this constant, not a re-fit; re-fitting
 /// the slope to 57 m/degree moves `classify_land`'s `Alpine` branch on every
-/// high-latitude cell of every world, which is a census-moving physics change
+/// high-latitude vertex of every world, which is a census-moving physics change
 /// and would need its own preregistration and its own refresh. The defect is
 /// therefore RECORDED here and carried as `CLIM-treeline-slope-not-earths`
 /// rather than fixed at a campaign close. What makes that safe to defer: the error is one-directional
-/// (too *few* `Alpine` cells at high latitude, never too many) and it is
+/// (too *few* `Alpine` vertices at high latitude, never too many) and it is
 /// smallest exactly where this campaign's population now lives.
 /// type-audit: pending(wave-2)
 pub fn tree_line_m(latitude_deg: f64) -> f64 {
@@ -146,10 +146,10 @@ pub fn tree_line_m(latitude_deg: f64) -> f64 {
 const ICE_C: f64 = -20.0;
 
 impl Biome {
-    /// True for the marine variants — asks whether a cell's SURFACE medium is
-    /// water, never a claim about the column beneath it: a cell with an
+    /// True for the marine variants — asks whether a vertex's SURFACE medium is
+    /// water, never a claim about the column beneath it: a vertex with an
     /// underworld under it is not marine and never will be, because the
-    /// underworld is a stratum beneath the cell rather than the cell's own
+    /// underworld is a stratum beneath the vertex rather than the vertex's own
     /// biome.
     /// type-audit: bare-ok(flag)
     pub fn is_marine(self) -> bool {
@@ -324,7 +324,7 @@ impl Biome {
     }
 }
 
-/// Classify a land cell. Specials first (ice below `ICE_C`, alpine above the
+/// Classify a land vertex. Specials first (ice below `ICE_C`, alpine above the
 /// tree line), then a Whittaker lookup on (annual-mean temperature, moisture).
 /// type-audit: bare-ok(ratio: moisture), pending(wave-2: latitude_deg)
 pub fn classify_land(
@@ -385,7 +385,7 @@ pub fn classify_land(
 /// Frozen-surface threshold (°C).
 const SEA_ICE_C: f64 = -2.0;
 
-/// Classify a marine cell by depth, surface temperature, seafloor feature,
+/// Classify a marine vertex by depth, surface temperature, seafloor feature,
 /// and upwelling, in precedence order (see the task's interface note).
 /// type-audit: pending(wave-2: depth_m), bare-ok(flag: upwelling)
 pub fn classify_marine(
@@ -402,7 +402,7 @@ pub fn classify_marine(
 ///
 /// The precedence chain below is the legacy one, deliberately unchanged. Two
 /// arms look like bugs and are not: a deep trench is tested BEFORE a ridge (so
-/// a cell that is both is hadal open water, not a vent), and the shallow band
+/// a vertex that is both is hadal open water, not a vent), and the shallow band
 /// matches reef above 20 °C and kelp below 12 °C, leaving 12–20 °C to fall
 /// through to the arms beneath. Both are current behaviour, and the seed-42
 /// world fixture will catch any tidying of either.
@@ -443,8 +443,8 @@ pub fn classify_marine_expr(
     }
 }
 
-/// Classify any cell: marine when below sea level (depth = sea_level − elev),
-/// otherwise land. `sst_c` is the surface temperature used for marine cells.
+/// Classify any vertex: marine when below sea level (depth = sea_level − elev),
+/// otherwise land. `sst_c` is the surface temperature used for marine vertices.
 /// type-audit: bare-ok(ratio: moisture), pending(wave-2: latitude_deg), bare-ok(flag: upwelling)
 #[allow(clippy::too_many_arguments)]
 pub fn classify(
@@ -759,7 +759,7 @@ mod tests {
     }
 
     #[test]
-    fn land_cells_are_overworld_surface_and_project_to_themselves() {
+    fn land_vertices_are_overworld_surface_and_project_to_themselves() {
         for (temp, moist, elev, lat) in [
             (25.0, 0.8, 100.0, 5.0),
             (5.0, 0.5, 200.0, 50.0),

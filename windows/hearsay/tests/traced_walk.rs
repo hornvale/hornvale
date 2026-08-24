@@ -222,7 +222,7 @@ fn traced_agrees_with_the_shipped_walk_holder_for_holder() {
          is a vacuous pass; skipped seeds: {skipped:?}"
     );
     println!(
-        "traced_walk agreement battery: {checked} (subject, rule, contact, crossing) cells \
+        "traced_walk agreement battery: {checked} (subject, rule, contact, crossing) vertices \
          checked, holder-for-holder byte-identical; skipped seeds {skipped:?}"
     );
 }

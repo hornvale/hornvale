@@ -106,7 +106,7 @@ mod tests {
     fn wetness_saturates_at_field_capacity() {
         // Past field capacity additional rain becomes runoff, not more mud.
         // A ceiling, not an unbounded integral - and it is what keeps a
-        // monsoon cell from reporting absurd receptivity.
+        // monsoon vertex from reporting absurd receptivity.
         let s = DEFAULT_WETNESS;
         let deluge: Vec<DayContext> = vec![day(500.0, 15.0); 360];
         let out = spin_up(&s, &deluge, 1e-6);
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn frozen_ground_does_not_dry() {
         // The freeze modifier's first appearance: below freezing the
-        // evaporative sink is suppressed entirely, so a frozen wet cell holds
+        // evaporative sink is suppressed entirely, so a frozen wet vertex holds
         // its water instead of quietly evaporating.
         let s = DEFAULT_WETNESS;
         let warm = s.sink(&day(0.0, 15.0), 20.0);
@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(
             receptivity(10.0, 0.0),
             0.0,
-            "a zero-capacity cell divided by zero"
+            "a zero-capacity vertex divided by zero"
         );
     }
 

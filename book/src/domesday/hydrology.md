@@ -8,7 +8,7 @@ Where water moves and gathers: rivers, lakes, aquifers, and the coasts between l
 
 ### `aquifer-fraction`
 
-Fraction of land cells whose hydrogeology classifies as an aquifer (The Ground, spec §3)
+Fraction of land vertices whose hydrogeology classifies as an aquifer (The Ground, spec §3)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -38,7 +38,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `channel-connectivity`
 
-H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its cell's undisplaced position while the trunk's vertex for that same cell was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a cell onto its claiming run BEFORE testing whether it was already claimed, so any cell the flow continues past is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world. **THE RILL'S TASK 3 THEN LEFT THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED AND REPAIRED IT.** The walk used to continue only while the next cell classified as `River`, while `ChannelNetwork::build`'s reach predicate is `!Ocean && downhill.is_some()` — strictly wider once Task 3 rendered the whole land flow tree (3,606 runs at seed 42, from 183). A run ending on a SUB-THRESHOLD trunk — rendered as a narrow channel, but not classified a river — stopped the walk BEFORE its join was examined, and that walk scored intact with nothing tested. **Measured at last (The Millrace, prediction P3, seed 42 at the canonical grid): 2,987 of 3,606 walks — 82.83% — had a false FIRST continuation test**, 0.749-0.850 across the 64 probe worlds; The Rill's review had guessed ~3,500 and rightly declined to assert it. The walk now asks `build`'s own reach predicate, so it stops only where the flow stops: on seed 42 alone the joins actually crossed go 853 -> 2,333 (2.74x), and summed over all 64 probe worlds they go 90,537 -> 219,763 (2.43x). **The value did not move.** The two rules are bit-identical on all 64 probe worlds, both 1.0, so this is a vacuous 1.0 converted into a tested 1.0 — which is why the repair landed in this column rather than beside it in a second one, and why no census value changed. The 0.95 floor is The Ford's preregistration, scored against The Ford's network; it is neither restated, retuned, nor re-scored here. Above all, do not read this column's stillness across a change as evidence that joins are sound: it is a constant by construction, and a column that did not move because it became vacuous is not the same reassurance as one that did not move because nothing broke
+H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its vertex's undisplaced position while the trunk's vertex for that same vertex was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a vertex onto its claiming run BEFORE testing whether it was already claimed, so any vertex the flow continues past is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world. **THE RILL'S TASK 3 THEN LEFT THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED AND REPAIRED IT.** The walk used to continue only while the next vertex classified as `River`, while `ChannelNetwork::build`'s reach predicate is `!Ocean && downhill.is_some()` — strictly wider once Task 3 rendered the whole land flow tree (3,606 runs at seed 42, from 183). A run ending on a SUB-THRESHOLD trunk — rendered as a narrow channel, but not classified a river — stopped the walk BEFORE its join was examined, and that walk scored intact with nothing tested. **Measured at last (The Millrace, prediction P3, seed 42 at the canonical grid): 2,987 of 3,606 walks — 82.83% — had a false FIRST continuation test**, 0.749-0.850 across the 64 probe worlds; The Rill's review had guessed ~3,500 and rightly declined to assert it. The walk now asks `build`'s own reach predicate, so it stops only where the flow stops: on seed 42 alone the joins actually crossed go 853 -> 2,333 (2.74x), and summed over all 64 probe worlds they go 90,537 -> 219,763 (2.43x). **The value did not move.** The two rules are bit-identical on all 64 probe worlds, both 1.0, so this is a vacuous 1.0 converted into a tested 1.0 — which is why the repair landed in this column rather than beside it in a second one, and why no census value changed. The 0.95 floor is The Ford's preregistration, scored against The Ford's network; it is neither restated, retuned, nor re-scored here. Above all, do not read this column's stillness across a change as evidence that joins are sound: it is a constant by construction, and a column that did not move because it became vacuous is not the same reassurance as one that did not move because nothing broke
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -48,7 +48,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `channel-land-fraction`
 
-H1's axis (The Ford, spec §10): the fraction of LAND AREA the channel network occupies — the area of the river tube (every polyline segment's arc length times its channel width) over the land area (land cells over all cells, times 4π). Preregistered interval [0.005%, 0.5%]; below it rivers are invisible at room scale, above it a river is still effectively as wide as the cell carrying it. NOT a per-cell reading: the polylines run THROUGH cell centres, so sampling at them overstates this by ~127x. ABSENT ONLY ON A WORLD WITH NO LAND: unlike its four Ford siblings, which go Absent whenever the network is empty, this column reads a true Number(0.0) on a land-bearing world that happens to have no channels. The asymmetry is deliberate — zero channel area over positive land area is a measurement, while a connectivity or monotonicity fraction over zero transects has no denominator to divide by — but a consumer reading the five columns together must not treat a 0.0 here as the same state as an Absent there
+H1's axis (The Ford, spec §10): the fraction of LAND AREA the channel network occupies — the area of the river tube (every polyline segment's arc length times its channel width) over the land area (land vertices over all vertices, times 4π). Preregistered interval [0.005%, 0.5%]; below it rivers are invisible at room scale, above it a river is still effectively as wide as the vertex carrying it. NOT a per-vertex reading: the polylines run THROUGH vertex centres, so sampling at them overstates this by ~127x. ABSENT ONLY ON A WORLD WITH NO LAND: unlike its four Ford siblings, which go Absent whenever the network is empty, this column reads a true Number(0.0) on a land-bearing world that happens to have no channels. The asymmetry is deliberate — zero channel area over positive land area is a measurement, while a connectivity or monotonicity fraction over zero transects has no denominator to divide by — but a consumer reading the five columns together must not treat a 0.0 here as the same state as an Absent there
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -68,7 +68,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `coast-roughness-slope`
 
-Multi-scale coastline-roughness slope, unbanded: the least-squares slope of ln(shoreline development) against mesh level, measured at L4/L5/L6 by projecting each level's cells onto the canonical L6 land/ocean truth (NearestCellIndex). A companion to shoreline-development, not a replacement — that estimator is unchanged. Positive means roughness concentrates at fine scales, which makes this slope immune to the single-hex land/ocean alternation exploit that inflates shoreline-development without changing the coast's coarse shape; Absent if any of the three levels has no shoreline
+Multi-scale coastline-roughness slope, unbanded: the least-squares slope of ln(shoreline development) against mesh level, measured at L4/L5/L6 by projecting each level's vertices onto the canonical L6 land/ocean truth (NearestVertexIndex). A companion to shoreline-development, not a replacement — that estimator is unchanged. Positive means roughness concentrates at fine scales, which makes this slope immune to the single-hex land/ocean alternation exploit that inflates shoreline-development without changing the coast's coarse shape; Absent if any of the three levels has no shoreline
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -78,7 +78,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `delta-count`
 
-Count of cells a river-mouth delta lobe raised above sea level (spec §5's top-K discrete deltas) — a cell count, not a mouth count: each of the top-K mouths can raise the mouth cell itself plus up to two adjacent hop-1 ocean cells
+Count of vertices a river-mouth delta lobe raised above sea level (spec §5's top-K discrete deltas) — a vertex count, not a mouth count: each of the top-K mouths can raise the mouth vertex itself plus up to two adjacent hop-1 ocean vertices
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -88,7 +88,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `endorheic-coverage`
 
-Fraction of land cells that are endorheic (interior-draining)
+Fraction of land vertices that are endorheic (interior-draining)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -108,7 +108,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `karst-fraction`
 
-Fraction of land cells whose hydrogeology classifies as karst (The Ground, spec §3)
+Fraction of land vertices whose hydrogeology classifies as karst (The Ground, spec §3)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -118,7 +118,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `rerouted-flow-fraction`
 
-The A→B→C escalation diagnostic (spec §8, preregistered, a permanent census column): the flux-weighted fraction of the world's 20 largest pre-carve rivers' mainstem cells whose downhill target changed across the carve. Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 flag, Nathan decides; > 0.30 A rejected as sole engine, engine B enters evaluation
+The A→B→C escalation diagnostic (spec §8, preregistered, a permanent census column): the flux-weighted fraction of the world's 20 largest pre-carve rivers' mainstem vertices whose downhill target changed across the carve. Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 flag, Nathan decides; > 0.30 A rejected as sole engine, engine B enters evaluation
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -128,7 +128,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `shelf-fraction`
 
-Fraction of cells within the shelf band (±200 m) of sea level — the populated shelf Earth's hypsometry keeps
+Fraction of vertices within the shelf band (±200 m) of sea level — the populated shelf Earth's hypsometry keeps
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -138,7 +138,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `shelf-width-active-median`
 
-Median shelf width over ACTIVE-margin coast land cells: hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (active median should be narrower than passive); Absent if the world has no active-margin coast
+Median shelf width over ACTIVE-margin coast land vertices: hops seaward from the coast vertex, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (active median should be narrower than passive); Absent if the world has no active-margin coast
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -148,7 +148,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `shelf-width-passive-median`
 
-Median shelf width over PASSIVE-margin coast land cells (Passive/Interior/Oceanic, mirroring the carve's own wedge-reach margin split): hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (passive median should exceed active); Absent if the world has no passive-margin coast
+Median shelf width over PASSIVE-margin coast land vertices (Passive/Interior/Oceanic, mirroring the carve's own wedge-reach margin split): hops seaward from the coast vertex, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (passive median should exceed active); Absent if the world has no passive-margin coast
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -168,7 +168,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `waterfall-count`
 
-Count of waterfall (knickpoint) sites the carve found: land cells where a high-drainage watercourse crosses a sharp PRE-carve induration step (spec §5's derived point observations)
+Count of waterfall (knickpoint) sites the carve found: land vertices where a high-drainage watercourse crosses a sharp PRE-carve induration step (spec §5's derived point observations)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 

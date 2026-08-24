@@ -2423,6 +2423,21 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T17:39:53Z | sluice:outboard | 38.199 | 23.637 | 37.067 | 1.59 | 0 | aa2817100 |  | lefford | 40 |
 | 2026-08-23T17:45:57Z | sluice:gate | 364.686 | 10246.247 | 350.239 | 29.06 | 0 | 67f23ca91 |  | lefford | 40 |
 | 2026-08-23T17:50:10Z | sluice:clients | 251.925 | 1441.846 | 17.245 | 5.79 | 0 | 7775d62e7 |  | lefford | 40 |
+| 2026-08-23T18:30:32Z | gate-commit | 69.993 | 142.217 | 23.422 | 2.37 | 0 | b8574a0dc | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:35:22Z | gate-commit | 25.253 | 53.292 | 18.378 | 2.84 | 0 | 95a56b42a | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:44:01Z | gate-commit | 16.657 | 16.407 | 1.441 | 1.07 | 0 | fa56c6ebb | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:46:33Z | gate-commit | 20.073 | 16.525 | 1.282 | 0.89 | 0 | 2b3ce98fd | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:48:08Z | gate-commit | 30.324 | 85.072 | 17.197 | 3.37 | 0 | d7b580c97 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:57:18Z | rebaseline | 102.358 | 207.053 | 10.505 | 2.13 | 0 | ad8c28b6f | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T18:59:59Z | gate-commit | 62.947 | 54.515 | 17.779 | 1.15 | 0 | ad8c28b6f | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:05:33Z | gate-commit | 56.524 | 46.313 | 13.092 | 1.05 | 0 | 089cf0d47 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:09:41Z | gate-commit | 29.351 | 45.493 | 13.100 | 2.00 | 0 | 28a29d9a8 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:15:22Z | game-check | 208.689 | 762.821 | 12.808 | 3.72 | 0 | 7fb8151e7 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:20:49Z | gate-commit | 36.194 | 46.865 | 13.518 | 1.67 | 0 | c5abcf6bd | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:24:08Z | gate-commit | 52.573 | 53.404 | 13.534 | 1.27 | 0 | f729b98d2 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:26:34Z | gate-commit | 29.992 | 45.354 | 12.899 | 1.94 | 0 | c6f1ea1a3 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T19:46:52Z | gate-commit | 31.726 | 43.983 | 12.938 | 1.79 | 0 | d1cc6100b | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-23T20:01:47Z | gate-commit | 71.773 | 46.529 | 13.263 | 0.83 | 0 | bad1ec7fc | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-23T19:21:40Z | gate-commit | 239.083 | 245.542 | 101.700 | 1.45 | 0 | 27312e02c | campaign/the-leat | ambrose | 12 |
 | 2026-08-23T19:24:37Z | gate-commit | 155.618 | 69.608 | 40.331 | 0.71 | 0 | 27312e02c | campaign/the-leat | ambrose | 12 |
 | 2026-08-23T21:10:01Z | sluice:artifacts | 61.592 | 543.066 | 24.696 | 9.22 | 0 | bd8938743 |  | lefford | 40 |
@@ -2460,6 +2475,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T23:54:59Z | sluice:outboard | 37.674 | 23.890 | 37.623 | 1.63 | 0 | 39f10bfc0 |  | lefford | 40 |
 | 2026-08-24T00:01:44Z | sluice:gate | 405.025 | 10955.894 | 449.294 | 28.16 | 0 | c43dafe6e |  | lefford | 40 |
 | 2026-08-24T00:08:07Z | sluice:clients | 383.207 | 3450.336 | 46.161 | 9.12 | 0 | 91dc00fbc |  | lefford | 40 |
+| 2026-08-24T13:11:10Z | gate-commit | 83.826 | 526.411 | 38.170 | 6.74 | 0 | 379c1128c | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-24T13:31:08Z | gate-commit | 19.577 | 46.530 | 12.063 | 2.99 | 0 | ec296a379 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-24T13:37:03Z | gate-commit | 20.573 | 44.184 | 10.418 | 2.65 | 0 | ec296a379 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-24T13:40:46Z | gate-commit | 24.834 | 48.202 | 12.676 | 2.45 | 0 | ec296a379 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-24T13:48:48Z | game-check | 399.055 | 1899.342 | 16.348 | 4.80 | 0 | ec296a379 | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-24T01:46:04Z | gate-commit | 547.659 | 1403.535 | 174.780 | 2.88 | 0 | 45a037860 | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T01:52:41Z | gate-commit | 115.070 | 65.693 | 37.752 | 0.90 | 0 | d8fbabd71 | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T02:03:00Z | gate-commit | 56.478 | 62.730 | 47.859 | 1.96 | 0 | d8fbabd71 | campaign/the-forebay | ambrose | 12 |
@@ -2545,6 +2565,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T14:37:02Z | gate-commit | 20.139 | 47.282 | 12.183 | 2.95 | 0 | 0b4850dfb | fix/marquee-ticks-on-time | MacBookPro | 10 |
 | 2026-08-24T15:23:42Z | gate-commit | 32.680 | 50.904 | 12.959 | 1.95 | 0 | 70c05214f | fix/marquee-ticks-on-time | MacBookPro | 10 |
 | 2026-08-24T15:24:16Z | gate-commit | 34.473 | 51.077 | 12.760 | 1.85 | 0 | 70c05214f | fix/marquee-ticks-on-time | MacBookPro | 10 |
+| 2026-08-24T14:56:49Z | rebaseline | 112.145 | 240.141 | 12.463 | 2.25 | 0 | 8f2ac353c | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-24T15:15:08Z | gate-commit | 101.745 | 644.307 | 45.528 | 6.78 | 0 | 40f8ea02f | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-24T15:17:40Z | gate-commit | 30.023 | 50.071 | 12.585 | 2.09 | 0 | 40f8ea02f | campaign/the-lexicon | MacBookPro | 10 |
 | 2026-08-24T14:21:39Z | rebaseline | 395.926 | 256.376 | 21.017 | 0.70 | 0 | bb37a1a1c | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T14:33:02Z | gate-commit | 677.578 | 780.251 | 171.510 | 1.40 | 0 | bb37a1a1c | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T14:40:34Z | sluice:artifacts | 128.043 | 1058.917 | 50.950 | 8.67 | 0 | 1561dc001 |  | lefford | 40 |
@@ -2581,3 +2604,38 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T22:44:56Z | gate-commit | 144.112 | 60.675 | 32.808 | 0.65 | 0 | 9b9c2f476 | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-24T22:55:25Z | gate-commit | 368.488 | 152.543 | 149.712 | 0.82 | 0 | 6a49aa78e | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-24T22:57:47Z | gate-commit | 124.814 | 60.740 | 28.613 | 0.72 | 0 | 6a49aa78e | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T15:21:55Z | gate-commit | 109.868 | 546.183 | 51.095 | 5.44 | 0 | d1b0dd690 | campaign/the-lexicon | MacBookPro | 10 |
+| 2026-08-24T16:37:31Z | sluice:artifacts | 104.132 | 771.064 | 35.026 | 7.74 | 0 | 70921f3e0 |  | lefford | 40 |
+| 2026-08-24T16:38:11Z | sluice:outboard | 39.403 | 24.647 | 38.347 | 1.60 | 0 | 730de5266 |  | lefford | 40 |
+| 2026-08-24T16:44:52Z | sluice:gate | 401.448 | 10689.372 | 405.570 | 27.64 | 0 | 547788055 |  | lefford | 40 |
+| 2026-08-24T16:52:01Z | sluice:clients | 428.993 | 5262.927 | 83.261 | 12.46 | 0 | f12462bf1 |  | lefford | 40 |
+| 2026-08-24T17:56:47Z | gate-commit | 23.238 | 17.899 | 4.558 | 0.97 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T17:57:22Z | gate-commit | 15.588 | 16.913 | 4.279 | 1.36 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T17:58:08Z | gate-commit | 36.874 | 120.745 | 23.232 | 3.90 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T18:08:00Z | gate-commit | 122.306 | 811.765 | 64.859 | 7.17 | 0 | 600bf2a3c | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T18:09:06Z | rebaseline | 60.420 | 231.663 | 11.306 | 4.02 | 0 | b16381579 | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:02:19Z | rebaseline | 103.375 | 237.098 | 10.379 | 2.39 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:08:41Z | rebaseline | 99.635 | 241.561 | 10.080 | 2.53 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:17:15Z | quick | 36.796 | 48.866 | 39.978 | 2.41 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:18:47Z | rebaseline | 83.560 | 242.848 | 12.620 | 3.06 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:25:30Z | gate-commit | 28.995 | 51.106 | 12.714 | 2.20 | 0 | da524ef9e | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:36:22Z | vessel-check | 42.924 | 68.857 | 3.903 | 1.70 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:37:06Z | world-check | 43.973 | 68.986 | 3.783 | 1.65 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:43:48Z | game-check | 401.982 | 2192.470 | 27.007 | 5.52 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T20:44:21Z | gate-commit | 19.884 | 47.420 | 12.162 | 3.00 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:10:23Z | rebaseline | 57.868 | 242.100 | 11.589 | 4.38 | 0 | bb1163cda | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:30:34Z | gate-commit | 43.531 | 78.005 | 55.835 | 3.07 | 0 | 2cd6f5e79 | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T17:21:14Z | sluice:artifacts | 61.261 | 551.758 | 20.220 | 9.34 | 0 | f274278a5 |  | lefford | 40 |
+| 2026-08-24T17:21:54Z | sluice:outboard | 39.890 | 24.890 | 38.764 | 1.60 | 0 | 06a9a77d2 |  | lefford | 40 |
+| 2026-08-24T17:27:59Z | sluice:gate | 365.233 | 10363.058 | 363.865 | 29.37 | 0 | a25091fd4 |  | lefford | 40 |
+| 2026-08-24T18:04:30Z | gate-commit | 120.159 | 1867.698 | 179.725 | 17.04 | 0 | 66b3ce381 | fix/gitignore-pi | lefford | 40 |
+| 2026-08-24T18:05:55Z | sluice:artifacts | 62.150 | 547.410 | 22.006 | 9.16 | 0 | 1ef760fad |  | lefford | 40 |
+| 2026-08-24T18:06:35Z | sluice:outboard | 39.070 | 24.484 | 38.130 | 1.60 | 0 | a8c4d956d |  | lefford | 40 |
+| 2026-08-24T18:12:49Z | sluice:gate | 374.825 | 10384.171 | 367.906 | 28.69 | 0 | 941938956 |  | lefford | 40 |
+| 2026-08-24T18:19:44Z | sluice:clients | 414.662 | 5191.040 | 73.323 | 12.70 | 0 | 0240b5055 |  | lefford | 40 |
+| 2026-08-24T21:34:36Z | rebaseline | 71.943 | 239.632 | 10.455 | 3.48 | 0 | 061473e3f | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:36:31Z | gate-commit | 29.069 | 51.170 | 12.324 | 2.18 | 0 | b639666e8 | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:50:30Z | sluice:artifacts | 138.465 | 1330.157 | 66.974 | 10.09 | 0 | ea436c227 |  | lefford | 40 |
+| 2026-08-24T21:51:13Z | sluice:outboard | 42.556 | 29.597 | 42.089 | 1.68 | 0 | e5772b897 |  | lefford | 40 |
+| 2026-08-24T21:58:38Z | sluice:gate | 444.452 | 12266.248 | 507.369 | 28.74 | 0 | 3e36028b2 |  | lefford | 40 |
+| 2026-08-24T22:05:56Z | sluice:clients | 438.347 | 5447.220 | 100.208 | 12.66 | 0 | 1a021d49e |  | lefford | 40 |

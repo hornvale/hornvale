@@ -59,7 +59,7 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// Absorb of main (Task 16, The Underworld and peers merged in): 0.7994579945799458.
 /// Accuracy **rose** +0.0081. The Burr never changed a word after Stage 5; this
 /// move is The Underworld's placement re-key (decision 0102, keying the bake to a
-/// PLACE not a cell), which shifts which concepts each tongue is exposed to and so
+/// PLACE not a vertex), which shifts which concepts each tongue is exposed to and so
 /// which words populate the dictionary the classifier reads — a different corpus of
 /// the SAME per-family character, measured once more on the merged product. The
 /// campaign's thesis is unaffected: every typological stage still raised

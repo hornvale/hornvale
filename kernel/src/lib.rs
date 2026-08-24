@@ -53,7 +53,7 @@ pub use ecology::{
     sovereignty_floor, v1_basis,
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
-pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
+pub use geosphere::{GeoCoord, Geosphere, NearestVertexIndex, Vertex, VertexMap};
 pub use ledger::{
     EntityId, Fact, KindId, Ledger, LedgerError, Lineage, Value, derive_entity_id, test_lineage,
 };
@@ -69,9 +69,7 @@ pub use provenance::Provenance;
 pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};
 pub use refine::choose_consistent;
 pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, RegistryError};
-pub use room::{
-    FaceLattice, MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError, RoomMeshMemo,
-};
+pub use room::{FaceLattice, Facet, FacetError, FacetId, FacetIdError, MAX_DEPTH, RoomMeshMemo};
 pub use schedule::{CapabilitySchema, ScheduleError, System, TickSystem, tick};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;

@@ -406,7 +406,7 @@ pub struct Residue {
 /// ledger-side count. Ignored for every cause but `Migrated`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Departure {
-    /// The paleoclimate turned the cell hostile: the people walked away over a
+    /// The paleoclimate turned the vertex hostile: the people walked away over a
     /// generation, onto vacant ground.
     Climate,
     /// The people left of its own accord, in the single season it took a
@@ -484,7 +484,7 @@ pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed, departure: Depar
             CauseOfEnd::Migrated => match departure {
                 Departure::Climate => {
                     // Climate abandonment is the real world's dominant end (a
-                    // cell the paleoclimate turned hostile, walked away from
+                    // vertex the paleoclimate turned hostile, walked away from
                     // over a generation) — and the one that leaves the classic
                     // archaeological hamlet. A young departure leaves a child's
                     // doll in the grass; but for centuries and millennia after,

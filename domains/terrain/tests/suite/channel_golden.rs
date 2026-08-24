@@ -25,7 +25,7 @@
 //! **THIS FIXTURE WAS RE-BASELINED BY THE RILL'S TASK 3, AND A RE-BASELINED
 //! FIXTURE JUDGES NOTHING.** It witnesses whatever it was regenerated from, so
 //! the guards that had to exist BEFORE the re-baseline live in
-//! `rill_properties.rs`: `the_network_renders_every_river_cells_downhill_edge`
+//! `rill_properties.rs`: `the_network_renders_every_river_vertices_downhill_edge`
 //! (watched green on the pre-change network — every edge the old network drew,
 //! the new one still draws, in the same direction) and
 //! `the_meander_field_is_pinned` (the noise field's own values at eight fixed
@@ -34,8 +34,8 @@
 //! AMPLITUDE, the head/mouth anchoring rule and the perpendicular the
 //! displacement is taken along — and it covers them going forward, which is all
 //! a re-baselined witness can ever do. The migration itself was checked rather
-//! than assumed: all 54 non-terminal cells of the old fixture carry IDENTICAL
-//! band edges in the new one, and all 32 cells interior in both networks carry
+//! than assumed: all 54 non-terminal vertices of the old fixture carry IDENTICAL
+//! band edges in the new one, and all 32 vertices interior in both networks carry
 //! an identical displacement magnitude AND sign.
 //!
 //! **What is pinned, and why it is a witness rather than a restatement.**
@@ -43,9 +43,9 @@
 //! this test agreeing with the code's own arithmetic, and a mutation that
 //! changed the arithmetic would change both sides together. What is pinned is
 //! the *observable consequence*: for every vertex of every polyline, how far
-//! and which way the channel was displaced from the cell it was placed from.
+//! and which way the channel was displaced from the vertex it was placed from.
 //! That displacement is read by comparing two things the network publishes —
-//! `run_cells[i][j]`'s position on the geosphere, and `polylines[i][j]` — so
+//! `run_vertices[i][j]`'s position on the geosphere, and `polylines[i][j]` — so
 //! the fixture is derived from the network's output, never from the noise
 //! call that produced it. Change the seed the field is drawn from and every
 //! interior row moves.
@@ -59,7 +59,7 @@
 //! confluence repair's DIRECTION — and the trap in choosing one.** In
 //! `ChannelNetwork::build`'s confluence pass, replace the mouth assignment
 //! with a reflection of the trunk vertex `t` across the great circle through
-//! the mouth cell `b` and its predecessor `pv`:
+//! the mouth vertex `b` and its predecessor `pv`:
 //!
 //! ```text
 //! let n = normalize(cross(b, pv));            // n is perpendicular to b
@@ -92,7 +92,7 @@ use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 /// sub-second world; 3887 channel vertices since The Rill's Task 3, **76
 /// immediately before Task 3, and 46 before the campaign began**). Both
 /// baselines are given because the ~51x below is 3887/76 — Task 2 had already
-/// taken the fixture 46 -> 76 by making every run reach the cell it drains
+/// taken the fixture 46 -> 76 by making every run reach the vertex it drains
 /// into, so dividing by the pre-campaign 46 gives 84.5 and contradicts it.
 /// Level 6 is the readout's grid.
 ///
@@ -110,8 +110,8 @@ const LEVEL: u32 = 5;
 /// its own negation.
 ///
 /// `travel` is the direction of travel AT this vertex, as a vector rather
-/// than as the next cell's position. That distinction is a bug fix, not a
-/// style choice: the caller used to pass `cells[(j+1).min(len-1)]`, which at a
+/// than as the next vertex's position. That distinction is a bug fix, not a
+/// style choice: the caller used to pass `vertices[(j+1).min(len-1)]`, which at a
 /// run's final vertex is the vertex itself, making `cross(base, base)` the
 /// zero vector and rendering EVERY final vertex with a positive sign whatever
 /// side it actually landed on. That is the one place the confluence repair
@@ -127,11 +127,11 @@ fn signed_displacement(base: [f64; 3], placed: [f64; 3], travel: [f64; 3]) -> f6
             a[0] * b[1] - a[1] * b[0],
         ]
     };
-    // An ANCHORED vertex is the cell's own position, bit for bit, and has no
+    // An ANCHORED vertex is the vertex's own position, bit for bit, and has no
     // side. Say that exactly instead of letting `acos(dot(p, p))` report the
     // ~1.5e-8 rad of float residue it actually does: that residue is five
     // orders of magnitude below a real displacement (~1e-4), its sign is
-    // arbitrary — it flipped on cell 824 purely from this function's change
+    // arbitrary — it flipped on vertex 824 purely from this function's change
     // of travel vector — and it was silently counting anchored rows as
     // "moved" in `the_pinned_displacements_are_not_all_zero`, inflating the
     // very number that guards this fixture against vacuity.
@@ -174,24 +174,24 @@ fn render() -> String {
         net.polylines.iter().map(|l| l.points.len()).sum::<usize>()
     ));
     for (i, line) in net.polylines.iter().enumerate() {
-        let cells = &net.run_cells[i];
+        let vertices = &net.run_vertices[i];
         for (j, &placed) in line.points.iter().enumerate() {
-            let base = geo.position(cells[j]);
-            // The direction of travel: toward the next cell, or — at the last
+            let base = geo.position(vertices[j]);
+            // The direction of travel: toward the next vertex, or — at the last
             // vertex, where there is no next — away from the previous one. A
-            // run always has at least two cells, so both arms are in range.
+            // run always has at least two vertices, so both arms are in range.
             // `cross(base, ·)` annihilates any component along `base`, so
             // passing the difference vector gives the identical left-normal
-            // the next cell's position did at interior vertices.
-            let travel = if j + 1 < cells.len() {
-                sub(geo.position(cells[j + 1]), base)
+            // the next vertex's position did at interior vertices.
+            let travel = if j + 1 < vertices.len() {
+                sub(geo.position(vertices[j + 1]), base)
             } else {
-                sub(base, geo.position(cells[j - 1]))
+                sub(base, geo.position(vertices[j - 1]))
             };
             let e = net.band_edges[i][j];
             out.push_str(&format!(
                 "{i} {j} {} {} {} {} {} {}\n",
-                cells[j].0,
+                vertices[j].0,
                 quantize(signed_displacement(base, placed, travel)),
                 quantize(e[0]),
                 quantize(e[1]),
