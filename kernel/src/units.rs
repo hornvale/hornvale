@@ -375,6 +375,47 @@ impl Years {
     }
 }
 
+/// A signed difference between two [`crate::field::WorldTime`] instants, in
+/// ticks. Signed because a span is directional: `earlier - later` is negative
+/// and that ordering must not be silently lost.
+///
+/// Distinct from `Years`, which is a NON-NEGATIVE coarse span, and from
+/// astronomy's `StdDays`. The field is `pub(crate)` so the kernel's own `Sub`
+/// impl can build one without a fallible constructor, while no crate outside
+/// the kernel can bypass the named crossings.
+///
+/// **Phase A note** (The Escapement, Ruling 8): backed by the same `f64` day
+/// difference `WorldTime` itself still stores, so `ticks()` rounds rather
+/// than reading a stored integer, and `Eq`/`Ord`/`Hash` cannot be derived —
+/// the same reasons `WorldTime` cannot yet. Phase B makes both types exact
+/// `i64` ticks in the same commit.
+/// type-audit: bare-ok(count)
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct TickSpan(pub(crate) f64);
+
+impl TickSpan {
+    /// The span in ticks, rounded to the nearest tick.
+    ///
+    /// Phase A note: this rounds a continuous `f64` day difference; Phase B
+    /// makes it an exact field read.
+    /// type-audit: bare-ok(count: return)
+    pub fn ticks(self) -> i64 {
+        (self.0 * crate::field::WorldTime::TICKS_PER_STD_DAY as f64).round() as i64
+    }
+
+    /// Build a span from an exact tick count.
+    /// type-audit: bare-ok(count: ticks)
+    pub fn from_ticks(ticks: i64) -> TickSpan {
+        TickSpan(ticks as f64 / crate::field::WorldTime::TICKS_PER_STD_DAY as f64)
+    }
+
+    /// The span in fractional standard days.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn as_std_days(self) -> f64 {
+        self.0
+    }
+}
+
 /// Mean annual precipitation, millimetres per year, as an absolute
 /// non-negative quantity. 0 mm/yr is valid (a desert); only non-negative,
 /// finite values are physically meaningful.
