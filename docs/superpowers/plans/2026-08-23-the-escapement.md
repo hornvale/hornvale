@@ -1026,9 +1026,28 @@ commit could pass the unscoped workspace clippy gate. Vessel is the last crate
 to port, so they go now.
 
 ```bash
-# must return ZERO before you delete anything
-grep -rn "WorldTime::new(\|\.day()" --include=*.rs kernel domains windows cli tools
+# must return ZERO before you delete anything.
+# THREE spellings, not one — a literal `.day()` grep misses two of them.
+grep -rnE 'WorldTime::new\(|WorldTime::day|\.day\(\)' \
+     --include=*.rs kernel domains windows cli tools clients
 ```
+
+**Why three patterns and not the obvious one.** The campaign learned each of
+these the hard way:
+
+- `WorldTime::day` as a **bare function reference** passed to `.map(...)` is
+  invisible to a `.day()` search. Four such sites existed in
+  `windows/vessel/src/liveness.rs` and one still sits at
+  `kernel/src/ledger.rs:613`. In a file whose only usage is this form, the
+  naive grep returns a **false all-clear**.
+- `clients/` is outside the cargo workspace, so no gate compiles it. It must be
+  in the search path or a break there is silent until someone runs
+  `make vessel-check` or `make world-check`.
+- **Expect false positives and read them.** `windows/vessel/src/session.rs`
+  defines `pub fn day(&self) -> WorldTime`, so `s.day()` is a *session*
+  accessor that must NOT be renamed. The grep cannot tell it from
+  `WorldTime::day()`. Zero hits is the goal; a handful of `Session::day()` hits
+  is the correct steady state, not a miss.
 
 Branch table:
 
