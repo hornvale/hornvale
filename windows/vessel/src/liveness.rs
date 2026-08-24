@@ -123,8 +123,7 @@ pub fn agent_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> RoomAddr {
 /// at `t` (the whole-history case — every fact ≤ `t` — is the absolute latest).
 fn latest_committed_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> Option<RoomAddr> {
     ledger
-        .find(AGENT_AT)
-        .filter(|f| f.subject == npc.entity)
+        .facts_of(npc.entity, AGENT_AT)
         .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| match &f.object {
@@ -845,8 +844,7 @@ fn rise_at(temp: f64, class: MetabolicClass, p: &DriveParams) -> f64 {
 /// integral reads.
 fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, RoomAddr)> {
     let mut v: Vec<(f64, RoomAddr)> = ledger
-        .find(AGENT_AT)
-        .filter(|f| f.subject == entity)
+        .facts_of(entity, AGENT_AT)
         .filter_map(|f| {
             let d = f.day?.day();
             if d > upto {
@@ -932,8 +930,7 @@ pub fn drive_at(
     class: MetabolicClass,
 ) -> f64 {
     let last_drank = ledger
-        .find(DRANK)
-        .filter(|f| f.subject == entity)
+        .facts_of(entity, DRANK)
         .filter_map(|f| f.day)
         .fold(0.0_f64, |acc, d| acc.max(d.day()));
     let sightings = agent_sightings(ledger, entity, t.day());
@@ -1038,8 +1035,7 @@ fn build_emitter_scan(
         let frightening =
             |room: &RoomAddr| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
         let mut timeline: Vec<(f64, RoomAddr)> = ledger
-            .find(AGENT_AT)
-            .filter(|f| f.subject == m.entity)
+            .facts_of(m.entity, AGENT_AT)
             .filter_map(|f| {
                 let d = f.day.filter(|d| *d <= t)?.day();
                 match &f.object {
@@ -1434,7 +1430,6 @@ pub struct Perceived {
 /// The decision's output — the FIRST action of the agent's current plan, or
 /// Hold. The tick depends only on this; the planner fills the body without
 /// changing the seam (The Wanting decision #9).
-/// type-audit: bare-ok(return)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     /// Perform this action next (the first step of the least-cost plan).
@@ -1586,7 +1581,6 @@ pub trait Drive {
 /// it names which drive a commitment mode is pursuing and imposes a fixed,
 /// reload-stable tie-break order (`Thirst` before `Thermal`). Deliberately
 /// tiny and closed; new drives extend it in their own campaigns.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DriveKind {
     /// The sustenance (thirst) stock drive.
@@ -1615,7 +1609,6 @@ pub enum DriveKind {
 /// (spec §5). Session-sandboxed (tick-local, never save-format): it carries
 /// across the steps of one walk to give hysteresis (no boundary-dithering, no
 /// mid-errand flip-flop), and is re-derived, never persisted.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
     /// Not pursuing any drive, and already home — nothing to do.
@@ -1653,7 +1646,6 @@ pub struct Affect {
 /// affect is first-class (`Content`/`Eager`); `Searching` is neutral seeking,
 /// NOT confusion (excluded from the distress metric); `Helpless` is the sticky
 /// negative scar that *persistence* upgrades `Lost`/`Frustrated` into.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AffectLabel {
     /// Positive, low arousal: needs met, puttering — the normal state.
@@ -1691,7 +1683,6 @@ pub struct Resolution {
 /// `drive_at` fold surfaced on the view; `proposal` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
 /// the same `DriveParams`/`SUSTENANCE` the fold uses.
-/// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug)]
 pub struct Thirst {
     /// The homeostatic parameters (rise/act) governing this drive.
@@ -2280,8 +2271,7 @@ fn is_awake(
 /// type-audit: bare-ok(ratio: return)
 pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
     let last_rested = ledger
-        .find(RESTED)
-        .filter(|f| f.subject == entity)
+        .facts_of(entity, RESTED)
         .filter_map(|f| f.day)
         .fold(0.0_f64, |acc, d| acc.max(d.day()));
     (FATIGUE_RISE * (t.day() - last_rested)).clamp(0.0, 1.0)
@@ -2294,7 +2284,6 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 /// stranded from home can still rest (it is never *fatigue*-blocked). `home` is
 /// retained as a reserved hook for a future rest-QUALITY refinement (a safe,
 /// familiar den restoring more than an exposed camp).
-/// type-audit: bare-ok(return)
 pub struct Fatigue {
     /// The creature's home — reserved for a future rest-quality refinement
     /// (unused by the proposal today: rest is in place).
@@ -2465,8 +2454,7 @@ pub fn hunger_at(
     class: MetabolicClass,
 ) -> f64 {
     let last_ate = ledger
-        .find(EATEN)
-        .filter(|f| f.subject == entity)
+        .facts_of(entity, EATEN)
         .filter_map(|f| f.day)
         .fold(0.0_f64, |acc, d| acc.max(d.day()));
     let sightings = agent_sightings(ledger, entity, t.day());
@@ -2652,7 +2640,6 @@ fn mettle_factor(boldness: f64) -> f64 {
 /// [`threat_value`], boldness applied separately). The alarm-free terrain half
 /// of the drive's urgency, factored out so the live drive and
 /// [`believed_hazard`]'s memory read the SAME danger — one source of truth.
-/// type-audit: bare-ok(return)
 fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64 {
     let here = threat_value(niche, &terrain.hazards(room));
     room.neighbors()
@@ -3779,8 +3766,7 @@ pub fn affect_of_memo_occupied(
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
-        .find(DRANK)
-        .filter(|f| f.subject == npc.entity)
+        .facts_of(npc.entity, DRANK)
         .filter_map(|f| f.day)
         .fold(0.0_f64, |acc, d| acc.max(d.day()));
     let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
@@ -4228,8 +4214,7 @@ pub struct DriveMovements<'a> {
 /// return that later day.
 fn room_entry_day(ledger: &Ledger, npc: &Npc, t: WorldTime) -> f64 {
     ledger
-        .find(AGENT_AT)
-        .filter(|f| f.subject == npc.entity)
+        .facts_of(npc.entity, AGENT_AT)
         .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| f.day)
@@ -4504,8 +4489,7 @@ fn decide_step(
 /// it is being asked about.
 fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId, day: f64) -> f64 {
     ledger
-        .find(predicate)
-        .filter(|f| f.subject == entity)
+        .facts_of(entity, predicate)
         .filter_map(|f| f.day)
         .map(WorldTime::day)
         .filter(|&d| d <= day)
@@ -4983,22 +4967,19 @@ impl WalkState {
         // the starting last-drank day from `frozen`, then simulate forward,
         // updating a local `last_drank` as we emit `DRANK` facts.
         let last_drank = frozen
-            .find(DRANK)
-            .filter(|f| f.subject == npc.entity)
+            .facts_of(npc.entity, DRANK)
             .filter_map(|f| f.day)
             .fold(0.0_f64, |acc, d| acc.max(d.day()));
         // Likewise the last rest day (The Slumber): fatigue is time since it,
         // reset when a `rested` fact is emitted.
         let last_rested = frozen
-            .find(RESTED)
-            .filter(|f| f.subject == npc.entity)
+            .facts_of(npc.entity, RESTED)
             .filter_map(|f| f.day)
             .fold(0.0_f64, |acc, d| acc.max(d.day()));
         // Likewise the last meal day (The Provender): hunger is a path
         // integral since it, reset when an `eaten` fact is emitted.
         let last_ate = frozen
-            .find(EATEN)
-            .filter(|f| f.subject == npc.entity)
+            .facts_of(npc.entity, EATEN)
             .filter_map(|f| f.day)
             .fold(0.0_f64, |acc, d| acc.max(d.day()));
         // Belief and exploration state, evolved locally across the walk (the

@@ -6008,6 +6008,48 @@ mod tests {
         );
     }
 
+    /// **Tripwire for `clients/game/bin/src/driver.rs`'s
+    /// `DELVE_SUCCESS_PREFIX` constant.** That client (outside this
+    /// workspace, outside this crate's reach to import from) detects a
+    /// successful delve by matching this EXACT literal prefix — including
+    /// the trailing period — against the turn's own narration text via
+    /// `str::starts_with`. It is the ONLY signal available to it:
+    /// `Spatial` deliberately folds underground into `Walk`
+    /// (`the_underground_band_folds_into_walk_as_map_does`, this module),
+    /// so there is no typed alternative to read instead.
+    ///
+    /// The nearest existing coverage before this test
+    /// (`underground_examine_answers_for_the_rock_it_names`, below) only
+    /// ever asserts `.contains("You worm down into the dark")` — no
+    /// trailing period, substring rather than prefix — so a reword that
+    /// inserted a word after "down" or dropped the period would silently
+    /// break the client's cave-discovery gate while every test in THIS
+    /// crate stayed green. Nothing else pins the literal the client
+    /// actually depends on; this does. If this string ever needs to
+    /// change, `driver.rs`'s `DELVE_SUCCESS_PREFIX` (and its own H6b
+    /// cave-discovery test) must change with it, in the SAME commit.
+    #[test]
+    fn delve_success_narration_matches_the_clients_own_literal() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let (open_cell, open_cave) = find_open_cave_cell(&terrain, world.seed);
+        let out = match session.delve_at(open_cell, open_cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            out.starts_with("You worm down into the dark."),
+            "the delve success prefix drifted -- update \
+             `clients/game/bin/src/driver.rs`'s `DELVE_SUCCESS_PREFIX` (and its \
+             own H6b cave-discovery test) in the SAME commit: got {out:?}"
+        );
+    }
+
     /// `delve` refuses while indoors, mirroring `dive`'s own "no water in
     /// here" guard one realm over — descending into rock through a
     /// building's own floor is not what either verb means.
