@@ -25,7 +25,7 @@
 //! Determinism: every arithmetic op stays in full `f64` precision (quantize
 //! only at the emit boundary, which is Task 4 — not here); the genesis draws
 //! derive per-people streams under `history/genesis/<people>`; the epoch
-//! dynamics draw sequentially from one `history/bake/v2` stream in commit
+//! dynamics draw sequentially from one `history/bake/v3` stream in commit
 //! order (bumped from `history/bake` by The Contour — decision 0006, an
 //! epoch suffix, never a rename);
 //! neighbour candidates sort by `f64::total_cmp`. Same seed ⇒ byte-identical
