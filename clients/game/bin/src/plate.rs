@@ -189,7 +189,7 @@ const OCEAN_COLOR: [u8; 3] = [20, 60, 160];
 const LAND_COLOR: [u8; 3] = [40, 120, 40];
 
 /// The glyph for a DISCOVERED settlement (Task 5, §A3's "point sites").
-/// Never drawn undiscovered — see [`point_site_at`]'s own doc for why
+/// Never drawn undiscovered — see [`draw_point_sites`]'s own doc for why
 /// "not yet drawn" is the only state an undiscovered site is ever in.
 pub(crate) const SETTLEMENT_GLYPH: char = '#';
 /// The glyph for a DISCOVERED cave mouth. See [`SETTLEMENT_GLYPH`].
@@ -203,39 +203,6 @@ pub(crate) const CAVE_GLYPH: char = 'o';
 const SETTLEMENT_COLOR: [u8; 3] = [220, 180, 60];
 /// The colour claim for a discovered cave mouth. See [`SETTLEMENT_COLOR`].
 const CAVE_COLOR: [u8; 3] = [130, 120, 110];
-
-/// Which point site, if any, stands at `cell` — and whether the possession
-/// has discovered it (§A4b: encountering the THING, never the ground it
-/// stands on). Settlement locations are precomputed once by the caller
-/// (`Driver::start`, the same "derive once, never per-turn" discipline
-/// `CellFeatureIndex` itself follows); cave presence is asked directly of
-/// `terrain.cave_at`, which is already an O(1) pure function of the cell —
-/// no second precomputed roster needed for it.
-///
-/// **Settlement checked before cave**, deterministically: the two rosters
-/// are drawn from disjoint sources (the ledger's settlement facts vs. the
-/// terrain's own cave process) and could in principle name the same cell:
-/// this ordering is arbitrary but fixed, so two calls with the same inputs
-/// always agree.
-///
-/// Returns `None` for a cell with no point site at all, `Some((id, false))`
-/// for one not yet discovered (never drawn — see [`draw_with`]'s own
-/// doc), and `Some((id, true))` for one to actually paint.
-fn point_site_at(
-    terrain: &GeneratedTerrain,
-    settlements: &BTreeSet<CellId>,
-    discovered: &Discovered,
-    cell: CellId,
-) -> Option<(FeatureId, bool)> {
-    let id = if settlements.contains(&cell) {
-        FeatureId::Settlement(cell)
-    } else if terrain.cave_at(cell).is_some() {
-        FeatureId::Cave(cell)
-    } else {
-        return None;
-    };
-    Some((id, discovered.contains(id)))
-}
 
 /// Sub-samples per axis for area-majority sampling: each screen cell
 /// takes the majority vote of `SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS`
@@ -286,6 +253,7 @@ pub fn draw(
     w: u16,
     h: u16,
     settlements: &BTreeSet<CellId>,
+    caves: &BTreeSet<CellId>,
     discovered: &Discovered,
 ) -> Grid {
     let colour_allowed = Ink::from_wire(Some([0, 0, 0])) != Ink::Plain;
@@ -299,6 +267,7 @@ pub fn draw(
         h,
         colour_allowed,
         settlements,
+        caves,
         discovered,
     )
 }
@@ -371,6 +340,7 @@ pub fn draw_with(
     h: u16,
     colour_allowed: bool,
     settlements: &BTreeSet<CellId>,
+    caves: &BTreeSet<CellId>,
     discovered: &Discovered,
 ) -> Grid {
     let mut grid = Grid::new(w, h);
@@ -382,13 +352,14 @@ pub fn draw_with(
         for col in 0..width {
             let (ocean, cell) =
                 area_majority(terrain, geo, index, f, win, virtual_w, virtual_h, row, col);
-            let (glyph, color) = match point_site_at(terrain, settlements, discovered, cell) {
-                Some((FeatureId::Settlement(_), true)) => (SETTLEMENT_GLYPH, SETTLEMENT_COLOR),
-                Some((FeatureId::Cave(_), true)) => (CAVE_GLYPH, CAVE_COLOR),
-                // Undiscovered (or no site at all): terrain, exactly as
-                // before Task 5 — never suppressed, never overridden.
-                _ if ocean => (OCEAN_GLYPH, OCEAN_COLOR),
-                _ => (LAND_GLYPH, LAND_COLOR),
+            // TERRAIN ONLY. Sites are PROJECTED in a second pass below —
+            // see `draw_point_sites` for why asking each screen cell "is
+            // your representative a site?" dropped 37.8% of caves.
+            let _ = cell;
+            let (glyph, color) = if ocean {
+                (OCEAN_GLYPH, OCEAN_COLOR)
+            } else {
+                (LAND_GLYPH, LAND_COLOR)
             };
             grid.set(
                 col as u16,
@@ -403,7 +374,107 @@ pub fn draw_with(
         }
     }
 
+    draw_point_sites(
+        geo,
+        f,
+        win,
+        virtual_w,
+        virtual_h,
+        w,
+        h,
+        colour_allowed,
+        settlements,
+        caves,
+        discovered,
+        &mut grid,
+    );
     grid
+}
+
+/// Draw every DISCOVERED point site by PROJECTING it, rather than by asking
+/// each screen cell whether its area-majority representative happens to be
+/// one.
+///
+/// **Why the direction matters.** The sampled scheme drew a site only when
+/// its exact cell won the majority vote for some character. Measured on seed
+/// 42: only 70.5% of the planet's 40,962 cells are ever a representative at
+/// any zoom or scroll position, so **37.8% of cave cells were undrawable by
+/// construction** — a player could walk into a cave the map could never show,
+/// at any rung. Terrain is a texture and belongs to sampling; a settlement or
+/// a cave mouth is a landmark and belongs to projection, the same way a real
+/// chart draws a coastline but pins a town.
+///
+/// It is also far cheaper: one projection per site in the roster against
+/// `width * height * 49` samples for the terrain pass.
+///
+/// **Undiscovered sites are never drawn**, so §A7's "nothing is drawn and
+/// then hidden" still holds by construction — an undiscovered site is not
+/// suppressed here, it is never reached.
+///
+/// Caves are drawn first and settlements second, so a settlement wins a cell
+/// they share — the same precedence the sampled scheme's `if/else` gave.
+#[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own parameter list, which this is lifted out of
+fn draw_point_sites(
+    geo: &Geosphere,
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    w: u16,
+    h: u16,
+    colour_allowed: bool,
+    settlements: &BTreeSet<CellId>,
+    caves: &BTreeSet<CellId>,
+    discovered: &Discovered,
+    grid: &mut Grid,
+) {
+    let width = u32::from(w);
+    let height = u32::from(h);
+
+    let place = |cell: CellId, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
+        if !discovered.contains(id) {
+            return;
+        }
+        let g = geo.coord(cell);
+        let Some((plate_row, plate_col)) =
+            mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)
+        else {
+            return; // above the clamp: not on this map at all
+        };
+        // LONGITUDE WRAPS, LATITUDE DOES NOT — the same asymmetry
+        // `move_cursor`'s scroll obeys, so a site just past the seam is
+        // still on screen when the window straddles it.
+        let dcol = (plate_col + virtual_w - (win.origin_col % virtual_w)) % virtual_w;
+        let Some(drow) = plate_row.checked_sub(win.origin_row) else {
+            return;
+        };
+        if dcol >= width || drow >= height {
+            return;
+        }
+        grid.set(
+            dcol as u16,
+            drow as u16,
+            Cell {
+                glyph: Some(glyph),
+                weight: Weight::Normal,
+                ink: Ink::resolve(Some(color), colour_allowed),
+                source: Source::World,
+            },
+        );
+    };
+
+    for &cell in caves {
+        place(cell, FeatureId::Cave(cell), CAVE_GLYPH, CAVE_COLOR, grid);
+    }
+    for &cell in settlements {
+        place(
+            cell,
+            FeatureId::Settlement(cell),
+            SETTLEMENT_GLYPH,
+            SETTLEMENT_COLOR,
+            grid,
+        );
+    }
 }
 
 /// The 49-point area-majority vote for ONE screen cell at `(row, col)`
@@ -511,6 +582,132 @@ mod tests {
         (terrain, geo)
     }
 
+    /// A settlement and a cave sharing one screen cell: the settlement
+    /// wins. Precedence used to be the `if/else` order inside
+    /// `point_site_at`; it is now the DRAW ORDER in `draw_point_sites`,
+    /// which is easy to invert by accident and was covered by nothing
+    /// after that function was removed.
+    #[test]
+    fn a_settlement_outranks_a_cave_on_the_same_cell() {
+        let (terrain, geo) = test_world();
+        let index = NearestCellIndex::new(&geo);
+        let f = crate::mercator::frame_for(false);
+        let win = Window {
+            zoom: 0,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (w, h) = (104u16, 52u16);
+        let (vw, vh) = virtual_dims(&win, w);
+
+        let shared = geo
+            .cells()
+            .find(|&c| {
+                let g = geo.coord(c);
+                crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)
+                    .is_some_and(|(r, cc)| r < u32::from(h) && cc < u32::from(w))
+            })
+            .expect("some cell projects on-plate");
+
+        let both: BTreeSet<CellId> = std::iter::once(shared).collect();
+        let mut discovered = Discovered::default();
+        discovered.record(FeatureId::Settlement(shared));
+        discovered.record(FeatureId::Cave(shared));
+
+        let grid = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &both,
+            &both,
+            &discovered,
+        );
+        let g = geo.coord(shared);
+        let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh).unwrap();
+        assert_eq!(
+            grid.get(col as u16, row as u16).and_then(|c| c.glyph),
+            Some(SETTLEMENT_GLYPH),
+            "a cave overwrote a settlement on a shared cell — draw order inverted"
+        );
+    }
+
+    /// THE INVERSION, AS A TEST. Sites used to be drawn by asking each
+    /// SCREEN CELL "is your area-majority representative a site?" — so a
+    /// site whose cell never won a vote was never drawn at any zoom.
+    /// Measured before this change: only 70.5% of cells are ever a
+    /// representative, so 37.8% of cave cells were undrawable by
+    /// construction.
+    ///
+    /// This test finds a cave the OLD scheme could not draw — one whose
+    /// cell is not the representative of the screen cell it falls in — and
+    /// asserts it draws now. It searches rather than hardcoding a cell, so
+    /// it cannot rot into a tautology if the sampling changes.
+    #[test]
+    fn a_cave_that_wins_no_vote_is_still_drawn() {
+        let (terrain, geo) = test_world();
+        let index = NearestCellIndex::new(&geo);
+        let f = crate::mercator::frame_for(false);
+        let win = Window {
+            zoom: 0,
+            origin_col: 0,
+            origin_row: 0,
+        };
+        let (w, h) = (104u16, 52u16);
+        let (vw, vh) = virtual_dims(&win, w);
+
+        // Every cave cell, and the screen cell each projects into.
+        let caves: BTreeSet<CellId> = (0..geo.cell_count())
+            .map(|i| CellId(i as u32))
+            .filter(|&c| terrain.cave_at(c).is_some())
+            .collect();
+        assert!(!caves.is_empty(), "seed 42 must have caves to test with");
+
+        // A cave that is NOT its own screen cell's representative: exactly
+        // the case the old scheme dropped.
+        let orphan = caves.iter().copied().find(|&c| {
+            let g = geo.coord(c);
+            match crate::mercator::project(&f, g.latitude, g.longitude, vw, vh) {
+                Some((row, col)) if row < u32::from(h) && col < u32::from(w) => {
+                    let (_, rep) =
+                        area_majority(&terrain, &geo, &index, &f, &win, vw, vh, row, col);
+                    rep != c
+                }
+                _ => false,
+            }
+        });
+        let orphan = orphan.expect("seed 42 must have a cave that wins no vote");
+
+        let mut discovered = Discovered::default();
+        discovered.record(FeatureId::Cave(orphan));
+        let grid = draw_with(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &BTreeSet::new(),
+            &caves,
+            &discovered,
+        );
+
+        let g = geo.coord(orphan);
+        let (row, col) = crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)
+            .expect("the orphan projects on-plate");
+        assert_eq!(
+            grid.get(col as u16, row as u16).and_then(|c| c.glyph),
+            Some(CAVE_GLYPH),
+            "a discovered cave that wins no area-majority vote was not drawn"
+        );
+    }
+
     /// F4: at the 80x24 floor, the plate is 40 columns wide; its content
     /// height is what `spread::content_height(24)` leaves after the strip
     /// row (20).
@@ -535,6 +732,7 @@ mod tests {
             40,
             20,
             &empty_settlements,
+            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
             &empty_discovered,
         );
         assert_eq!(g.width(), 40);
@@ -573,6 +771,7 @@ mod tests {
             20,
             true,
             &empty_settlements,
+            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
             &empty_discovered,
         );
         let mono = draw_with(
@@ -585,6 +784,7 @@ mod tests {
             20,
             false,
             &empty_settlements,
+            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
             &empty_discovered,
         );
 
@@ -646,6 +846,7 @@ mod tests {
             h,
             false,
             &empty_settlements,
+            &BTreeSet::new(), // no caves: this test's subject is terrain/colour
             &empty_discovered,
         );
 
@@ -682,97 +883,6 @@ mod tests {
 
     // -- Task 5: point sites, gated inside `draw_with` --------------------
 
-    /// [`point_site_at`] on a cell with no settlement and no cave: `None`,
-    /// regardless of discovery state (there is nothing to discover).
-    #[test]
-    fn point_site_at_a_bare_cell_is_none() {
-        let (terrain, _geo) = test_world();
-        let settlements = BTreeSet::new();
-        let discovered = Discovered::default();
-        // A cell measured, against this module's own fixture world above, to
-        // carry neither a settlement (empty `settlements`) nor a cave.
-        let bare = CellId(0);
-        // Sanity: pick a cell `cave_at` genuinely refuses, so this test
-        // does not accidentally exercise the cave arm.
-        let bare = (0..)
-            .map(CellId)
-            .find(|&c| terrain.cave_at(c).is_none())
-            .unwrap_or(bare);
-        assert_eq!(
-            point_site_at(&terrain, &settlements, &discovered, bare),
-            None
-        );
-    }
-
-    /// A settlement cell reads `Some((Settlement, false))` before
-    /// discovery and `Some((Settlement, true))` after — [`point_site_at`]
-    /// never invents or withholds the SITE's existence, only whether it is
-    /// drawn (that gate is `draw_with`'s own job, tested below).
-    #[test]
-    fn point_site_at_a_settlement_reflects_discovery() {
-        let (terrain, _geo) = test_world();
-        let cell = CellId(5);
-        let mut settlements = BTreeSet::new();
-        settlements.insert(cell);
-        let mut discovered = Discovered::default();
-
-        assert_eq!(
-            point_site_at(&terrain, &settlements, &discovered, cell),
-            Some((FeatureId::Settlement(cell), false))
-        );
-        discovered.record(FeatureId::Settlement(cell));
-        assert_eq!(
-            point_site_at(&terrain, &settlements, &discovered, cell),
-            Some((FeatureId::Settlement(cell), true))
-        );
-    }
-
-    /// A cave cell (found in real seed-42 terrain, since `cave_at` is a
-    /// real derivation, not a fixture) reads `Some((Cave, _))`, tracking
-    /// discovery the same way a settlement does.
-    #[test]
-    fn point_site_at_a_cave_reflects_discovery() {
-        let (terrain, geo) = test_world();
-        let cave_cell = geo
-            .cells()
-            .find(|&c| terrain.cave_at(c).is_some())
-            .expect("seed 42 at GLOBE_LEVEL has at least one cave cell");
-        let settlements = BTreeSet::new();
-        let mut discovered = Discovered::default();
-
-        assert_eq!(
-            point_site_at(&terrain, &settlements, &discovered, cave_cell),
-            Some((FeatureId::Cave(cave_cell), false))
-        );
-        discovered.record(FeatureId::Cave(cave_cell));
-        assert_eq!(
-            point_site_at(&terrain, &settlements, &discovered, cave_cell),
-            Some((FeatureId::Cave(cave_cell), true))
-        );
-    }
-
-    /// When a cell is BOTH a settlement and carries a cave (an edge case
-    /// the two independent sources could in principle collide on),
-    /// settlement wins deterministically — see [`point_site_at`]'s own
-    /// doc for why the ordering is arbitrary but fixed.
-    #[test]
-    fn point_site_at_prefers_settlement_over_cave_on_collision() {
-        let (terrain, geo) = test_world();
-        let cave_cell = geo
-            .cells()
-            .find(|&c| terrain.cave_at(c).is_some())
-            .expect("seed 42 at GLOBE_LEVEL has at least one cave cell");
-        let mut settlements = BTreeSet::new();
-        settlements.insert(cave_cell);
-        let discovered = Discovered::default();
-
-        assert_eq!(
-            point_site_at(&terrain, &settlements, &discovered, cave_cell),
-            Some((FeatureId::Settlement(cave_cell), false)),
-            "a cell that is both a settlement and a cave resolves to the settlement"
-        );
-    }
-
     /// **`draw_with` never draws an undiscovered point site, and always
     /// draws a discovered one** — the real test the discovery gate exists
     /// for (spec Amendment 1 §A3/§A7, "nothing is drawn and then hidden"):
@@ -798,6 +908,10 @@ mod tests {
             .find(|&c| terrain.cave_at(c).is_some())
             .expect("seed 42 at GLOBE_LEVEL has at least one cave cell");
         let settlements = BTreeSet::new();
+        // The cave roster this test's subject must be IN — sites are
+        // PROJECTED from the roster now, not sampled for, so an empty
+        // roster would make this test vacuous rather than failing.
+        let caves: BTreeSet<CellId> = std::iter::once(cave_cell).collect();
         let (w, h) = (400u16, 200u16);
         let (virtual_w, virtual_h) = virtual_dims(&win, w);
 
@@ -827,6 +941,7 @@ mod tests {
             h,
             false,
             &settlements,
+            &caves,
             &undiscovered,
         );
         assert_ne!(
@@ -847,6 +962,7 @@ mod tests {
             h,
             false,
             &settlements,
+            &caves,
             &discovered,
         );
         assert_eq!(

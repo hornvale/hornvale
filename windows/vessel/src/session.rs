@@ -1379,6 +1379,7 @@ impl<'w> Session<'w> {
                     .map(|n| NounEntry {
                         noun: n.display,
                         datum: n.datum,
+                        kind: n.kind.tag().to_string(),
                     })
                     .collect(),
             },

@@ -357,6 +357,7 @@ fn map_focus_alone_does_not_activate_the_world_view() {
         driver.echo(),
         world_plate.as_ref(),
         driver.strip_offset(),
+        None,
     )
     .unwrap();
 
@@ -412,6 +413,7 @@ fn map_focus_alone_does_not_activate_the_world_view() {
         driver.echo(),
         Some(&regressed_plate),
         driver.strip_offset(),
+        None,
     )
     .unwrap();
     let regressed_chart_drawn = (0..content_h).any(|y| {

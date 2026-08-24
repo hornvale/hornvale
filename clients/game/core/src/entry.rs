@@ -39,6 +39,16 @@
 //! `overflowing_prose_gets_a_visible_truncation_marker_not_a_silent_drop`
 //! test for the regression this decision is pinned against.
 //!
+//! ## The weight channel on this surface
+//!
+//! On a COMPLETION surface (the hint row, Task 9) [`Weight`] carries
+//! typed-vs-suggested, not emphasis: the stem — what the buffer already
+//! holds — is bold; each candidate's remainder — what completion is
+//! *suggesting* — stays normal. This deliberately diverges from the chart
+//! surfaces, where weight keeps its perishable ladder (see `chart.rs`).
+//! The two are never co-rendered, so one channel can safely mean different
+//! things per surface; see [`Hint`]'s doc for the full statement.
+//!
 //! **This was reconsidered once, and the marker won again.** Task 9b (commit
 //! `630d41c0`) tried the second option: a dedicated, always-visible ways-on
 //! row (`ways.rs`), re-deriving the exit list from `sensed.room.exits` and
@@ -78,6 +88,29 @@ const PROMPT_COLUMNS: u16 = 2;
 /// "there is more, and it is not shown" rather than a silent drop. See
 /// the module doc's "Overflow is a decision, not an accident".
 const TRUNCATION_MARKER: &str = "\u{2026} more, not shown \u{2026}";
+
+/// One pending completion ambiguity, threaded from the driver: the stem
+/// the command buffer was extended to and every candidate that shares it,
+/// in candidate order. Borrowed rather than owned — the driver holds the
+/// strings; this pane only renders them.
+///
+/// **The weight channel on this surface (spec §4.3, decision 0142).** On a
+/// COMPLETION surface weight carries typed-vs-suggested, not emphasis:
+/// the stem — what the buffer already holds, i.e. what the player typed —
+/// is [`Weight::Bold`]; the remainder of each candidate — what completion
+/// is *suggesting* — stays [`Weight::Normal`]. This deliberately diverges
+/// from the chart surfaces, where weight keeps its perishable ladder; the
+/// two are never co-rendered, so one channel can safely mean different
+/// things per surface.
+pub struct Hint<'a> {
+    /// The longest common prefix of all matches — what the buffer holds.
+    pub stem: &'a str,
+    /// Every matching name, input order preserved.
+    pub matches: &'a [&'a str],
+}
+
+/// Columns separating two adjacent candidates on the hint row.
+const HINT_JOIN_COLUMNS: &str = "  ";
 
 /// Word-wrap `text` into lines no wider than `width` columns.
 ///
@@ -176,6 +209,108 @@ fn write_command_line(
     x0 + (caret - window_start) as u16
 }
 
+/// Draw one candidate's glyphs starting at `(x0, y)`, stopping at `limit`:
+/// the stem bold (typed), the remainder normal (suggested). Returns the
+/// next free column.
+fn write_candidate(
+    into: &mut crate::Grid,
+    x0: u16,
+    y: u16,
+    limit: u16,
+    candidate: &str,
+    stem_len: usize,
+) -> u16 {
+    let mut x = x0;
+    for (i, ch) in candidate.chars().enumerate() {
+        if x >= limit {
+            break;
+        }
+        let weight = if i < stem_len {
+            Weight::Bold
+        } else {
+            Weight::Normal
+        };
+        into.set(x, y, Cell::glyph(ch, weight, Source::Hint));
+        x += 1;
+    }
+    x
+}
+
+/// Draw the completion-hint row at `y`, beneath the command row: as many
+/// full candidates as fit (joined with two spaces), then — when any are
+/// left over — a plain "… +N more" count. See [`Hint`]'s doc for the
+/// weight channel and [`draw`]'s doc for the layout.
+fn write_hint_line(into: &mut crate::Grid, x0: u16, y: u16, limit: u16, hint: &Hint<'_>) {
+    let join = HINT_JOIN_COLUMNS.chars().count() as u16;
+    let stem_len = hint.stem.chars().count();
+
+    // PLAN first, then write. Measure where each full candidate would end
+    // (joins included), decide how many fit, and — when any will be left
+    // over — reserve room for the count marker by dropping whole trailing
+    // candidates rather than clipping it. An honest "… +N more" that lost
+    // its digits to the pane edge is not honest.
+    let mut ends: Vec<u16> = Vec::with_capacity(hint.matches.len());
+    let mut x = x0;
+    for candidate in hint.matches {
+        let w = candidate.chars().count() as u16;
+        if !ends.is_empty() {
+            x += join;
+        }
+        x += w;
+        ends.push(x);
+    }
+    let marker_len =
+        |remaining: usize| format!("\u{2026} +{remaining} more").chars().count() as u16;
+    let mut drawn = ends.len();
+    // Two ways the planned row can overflow the fold: a candidate beyond
+    // the last was dropped outright, or the LAST candidate itself ran
+    // past `limit` while being written. Either way, drop trailing
+    // candidates until what remains — plus an honest "… +N more" count,
+    // owed whenever anything was dropped — fits. The marker's width
+    // shrinks as candidates are dropped ("+10 more" is wider than
+    // "+9 more"), so recompute INSIDE the loop.
+    loop {
+        let dropped = hint.matches.len() - drawn;
+        let marker = if dropped > 0 { marker_len(dropped) } else { 0 };
+        let join_after = if drawn > 0 { join } else { 0 };
+        let occupied = if drawn > 0 {
+            ends[drawn - 1] + join_after + marker
+        } else {
+            marker
+        };
+        if drawn == 0 || occupied <= limit {
+            break;
+        }
+        drawn -= 1;
+    }
+
+    // WRITE the planned row.
+    let mut x = x0;
+    for (i, candidate) in hint.matches.iter().take(drawn).enumerate() {
+        if i > 0 {
+            for ch in HINT_JOIN_COLUMNS.chars() {
+                if x < limit {
+                    into.set(x, y, Cell::glyph(ch, Weight::Normal, Source::Hint));
+                    x += 1;
+                }
+            }
+        }
+        x = write_candidate(into, x, y, limit, candidate, stem_len);
+    }
+    let remaining = hint.matches.len() - drawn;
+    if remaining > 0 {
+        // Plain count, never bold: it is arithmetic, not a suggested name.
+        let marker = format!("\u{2026} +{remaining} more");
+        let mut mx = x + if drawn > 0 { join } else { 0 };
+        for ch in marker.chars() {
+            if mx < limit {
+                into.set(mx, y, Cell::glyph(ch, Weight::Normal, Source::Hint));
+                mx += 1;
+            }
+        }
+    }
+}
+
 /// Draw the entry into `into`: `narration.prose` word-wrapped to `width`
 /// columns, filling up to `height - 1` rows from `origin` downward, then
 /// the `>` prompt and `line`'s editable buffer on the last of those
@@ -235,7 +370,15 @@ fn write_command_line(
 /// just drop it" rule is a single `…` in the last column when the line does
 /// not fit, rather than a longer marker string that would itself overflow a
 /// narrow pane.
-#[allow(clippy::too_many_arguments)] // `echo` (Task 3) pushed this to 8; splitting the position/size pair or the two text channels into a struct would hide, not clarify, the ask-then-answer layout this function's own doc explains
+///
+/// `hint`, when `Some`, is the pending completion ambiguity (Task 9, The
+/// Lexicon) drawn on the row immediately BENEATH the command row — see
+/// [`Hint`] for the weight channel and [`write_hint_line`] for the fitting
+/// rule. Like `echo`'s row, it is RESERVED out of `prose_rows` rather than
+/// drawn over whatever sits below (the command row lifts one above the
+/// pane's floor while a hint is pending), and like `echo` it is dropped in
+/// the degenerate `height < 2` pane.
+#[allow(clippy::too_many_arguments)] // `hint` (Task 9) pushed this to 9; see the echo-era note above — the parameters ARE the layout
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
@@ -245,12 +388,17 @@ pub fn draw(
     focus: Focus,
     line: CommandLine<'_>,
     echo: Option<&str>,
+    hint: Option<&Hint<'_>>,
 ) -> Option<(u16, u16)> {
     if height == 0 {
         return None;
     }
     let echo_rows: u16 = if echo.is_some() { 1 } else { 0 };
-    let prose_rows = height.saturating_sub(1).saturating_sub(echo_rows);
+    let hint_rows: u16 = if hint.is_some() && height >= 2 { 1 } else { 0 };
+    let prose_rows = height
+        .saturating_sub(1)
+        .saturating_sub(echo_rows)
+        .saturating_sub(hint_rows);
     let wrapped = wrap(&narration.prose, width as usize);
     let overflows = wrapped.len() as u16 > prose_rows;
     // When the prose overflows, the last visible row is sacrificed to the
@@ -267,7 +415,10 @@ pub fn draw(
         let marker_row = origin.1 + visible_rows;
         write_line(into, origin.0, marker_row, TRUNCATION_MARKER);
     }
-    let command_row = origin.1 + height - 1;
+    // The command row lifts one above the pane's floor while a hint is
+    // pending — the same reserved-row discipline `echo` follows, never
+    // silently drawing over whatever the plate or strip put below.
+    let command_row = origin.1 + height - 1 - hint_rows;
     // Guard the degenerate `height == 1` case: `echo_row` would be
     // `command_row.saturating_sub(1)`, one row ABOVE `origin`'s pane —
     // writing into whatever the plate or strip drew there. Unreachable
@@ -312,6 +463,9 @@ pub fn draw(
         line,
         available,
     );
+    if let Some(hint) = hint.filter(|_| height >= 2) {
+        write_hint_line(into, origin.0, command_row + 1, origin.0 + width, hint);
+    }
     (focus == Focus::Cli).then_some((caret_col, command_row))
 }
 
@@ -353,6 +507,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             None,
+            None,
         );
         assert_eq!(g.get(0, 2).unwrap().glyph, Some(PROMPT_GLYPH));
         assert_eq!(g.get(0, 0).unwrap().glyph, Some('h'));
@@ -379,6 +534,7 @@ mod tests {
                 text: "look",
                 caret: 4,
             },
+            None,
             None,
         );
         let row: String = (0..6)
@@ -415,6 +571,7 @@ mod tests {
                 caret: 4,
             },
             None,
+            None,
         );
         assert_eq!(caret, None);
         let row: String = (0..6)
@@ -446,6 +603,7 @@ mod tests {
                 caret: 1,
             },
             None,
+            None,
         );
         assert_eq!(caret, Some((3, 2)));
     }
@@ -475,6 +633,7 @@ mod tests {
                 text: &long,
                 caret: 60,
             },
+            None,
             None,
         );
         let (cx, _) = caret.expect("the CLI is focused, so a caret is reported");
@@ -512,6 +671,7 @@ mod tests {
                 caret: available as usize,
             },
             None,
+            None,
         );
         let (cx, _) = caret.expect("the CLI is focused, so a caret is reported");
         assert_eq!(cx, width - 1, "caret should sit on the pane's last column");
@@ -544,6 +704,7 @@ mod tests {
             10,
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
             None,
         );
         let text = g.to_plain_text();
@@ -580,6 +741,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             None,
+            None,
         );
         let text = g.to_plain_text();
         assert!(!text.contains("more, not shown"));
@@ -606,6 +768,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             Some("look"),
+            None,
         );
         let echo_row: String = (0..6)
             .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
@@ -646,6 +809,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             Some(&long),
+            None,
         );
         let echo_row: String = (0..width)
             .map(|x| g.get(x, 2).unwrap().glyph.unwrap_or(' '))
@@ -675,6 +839,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             Some("look"),
+            None,
         );
         let text = g.to_plain_text();
         assert!(!text.contains('\u{2026}'));
@@ -700,11 +865,110 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             None,
+            None,
         );
         let text = g.to_plain_text();
         assert!(
             text.contains("three"),
             "with no echo, all three prose rows fit above the command row: {text:?}"
         );
+    }
+
+    /// A pending ambiguity draws one hint row beneath the command row:
+    /// the stem — what the buffer already holds — BOLD in every candidate,
+    /// each remainder NORMAL (suggested, never typed). See [`Hint`]'s doc
+    /// for the typed-vs-suggested weight channel.
+    #[test]
+    fn ambiguous_hint_renders_beneath_the_command_row_with_bold_stems() {
+        let n = Narration {
+            prose: String::new(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(20, 3);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            20,
+            3,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            Some(&Hint {
+                stem: "lo",
+                matches: &["look", "loop"],
+            }),
+        );
+        // The command row lifts to make room: prompt on row 1, hint on 2.
+        assert_eq!(g.get(0, 1).unwrap().glyph, Some(PROMPT_GLYPH));
+        // "lo" bold, "ok" normal; two-space join; "lo" bold, "op" normal.
+        let expect = [
+            ('l', Weight::Bold),
+            ('o', Weight::Bold),
+            ('o', Weight::Normal),
+            ('k', Weight::Normal),
+            (' ', Weight::Normal),
+            (' ', Weight::Normal),
+            ('l', Weight::Bold),
+            ('o', Weight::Bold),
+            ('o', Weight::Normal),
+            ('p', Weight::Normal),
+        ];
+        for (i, (glyph, weight)) in expect.iter().enumerate() {
+            let cell = g.get(i as u16, 2).unwrap();
+            assert_eq!(cell.glyph, Some(*glyph), "column {i}: glyph");
+            assert_eq!(cell.weight, *weight, "column {i}: weight");
+            assert_eq!(cell.source, Source::Hint, "column {i}: source");
+        }
+    }
+
+    /// When the match list is wider than the pane, as many full
+    /// candidates as fit are drawn and the rest collapse to a PLAIN
+    /// "… +N more" count — arithmetic, not a suggested name, so it never
+    /// carries the bold stem.
+    #[test]
+    fn overlong_hint_collapses_to_fitting_matches_plus_a_count() {
+        let n = Narration {
+            prose: String::new(),
+            nouns: vec![],
+        };
+        // 22 columns: "look  loop  … +2 more" is 21 columns (10 for the two
+        // candidates and join, 2 for the second join, 9 for the marker), so
+        // the first two candidates fit beside an honest count — but adding
+        // "lord" would end at 16 + 2 + 9 = 27, past the fold.
+        let mut g = crate::Grid::new(22, 4);
+        draw(
+            &n,
+            &mut g,
+            (0, 0),
+            22,
+            4,
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            Some(&Hint {
+                stem: "lo",
+                matches: &["look", "loop", "lord", "long"],
+            }),
+        );
+        let row: String = (0..22)
+            .map(|x| g.get(x, 3).unwrap().glyph.unwrap_or(' '))
+            .collect();
+        let text = row.trim_end();
+        assert!(text.starts_with("look  loop"), "got {row:?}");
+        assert!(text.ends_with("+2 more"), "got {row:?}");
+        assert!(!text.contains("lord") && !text.contains("long"));
+        // The count marker is plain throughout — no bold anywhere in it.
+        // Char columns, not bytes: the ellipsis is three bytes but one cell.
+        let marker_chars = "+2 more".chars().count();
+        let total_chars = row.trim_end().chars().count();
+        let marker_start = total_chars - marker_chars;
+        for x in marker_start..total_chars {
+            assert_eq!(
+                g.get(x as u16, 3).unwrap().weight,
+                Weight::Normal,
+                "count marker column {x} must be plain"
+            );
+        }
     }
 }
