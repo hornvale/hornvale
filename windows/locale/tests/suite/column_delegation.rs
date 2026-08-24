@@ -66,10 +66,10 @@ fn regenerate(ctx: &LocaleContext) -> String {
     for id in (0..vertex_count).step_by(stride) {
         let vertex = Vertex(id as u32);
         let col = ctx.water_column_at(vertex);
-        writeln!(out, "VERTEX {id} COLUMN {col:?}").unwrap();
+        writeln!(out, "CELL {id} COLUMN {col:?}").unwrap(); // lexicon: frozen golden header, tests/fixtures/column_before.txt
         for s in ALL_STRATA {
             let expr = ctx.expr_at_stratum(vertex, s);
-            writeln!(out, "VERTEX {id} STRATUM {s:?} EXPR {expr:?}").unwrap();
+            writeln!(out, "CELL {id} STRATUM {s:?} EXPR {expr:?}").unwrap(); // lexicon: frozen golden header
         }
     }
     out
