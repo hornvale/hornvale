@@ -4355,7 +4355,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lifespan-years-goblin",
             doc: "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent \
-                   if goblin is off-roster or Ametabolic",
+                   if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
@@ -4366,7 +4366,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lifespan-years-kobold",
             doc: "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent \
-                   if kobold is off-roster or Ametabolic",
+                   if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
@@ -4377,7 +4377,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "age-at-maturity-years-goblin",
             doc: "Goblin's age at first reproduction in years (BIO-2 spec §4); \
-                   Absent if goblin is off-roster or Ametabolic",
+                   Absent if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
@@ -4388,7 +4388,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "age-at-maturity-years-kobold",
             doc: "Kobold's age at first reproduction in years (BIO-2 spec §4); \
-                   Absent if kobold is off-roster or Ametabolic",
+                   Absent if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
@@ -4426,7 +4426,7 @@ pub fn registry() -> Vec<Metric> {
             name: "reproductive-tempo-goblin",
             doc: "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) \
                    ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is \
-                   off-roster or Ametabolic",
+                   off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
@@ -4438,7 +4438,7 @@ pub fn registry() -> Vec<Metric> {
             name: "reproductive-tempo-kobold",
             doc: "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) \
                    ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is \
-                   off-roster or Ametabolic",
+                   off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
@@ -4449,7 +4449,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "generation-length-years-goblin",
             doc: "Goblin's generation length in years (BIO-2 spec §5, MEM-7's \
-                   handle); Absent if goblin is off-roster or Ametabolic",
+                   handle); Absent if goblin is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
@@ -4460,7 +4460,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "generation-length-years-kobold",
             doc: "Kobold's generation length in years (BIO-2 spec §5, MEM-7's \
-                   handle); Absent if kobold is off-roster or Ametabolic",
+                   handle); Absent if kobold is off-roster or ametabolic",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
@@ -8766,8 +8766,8 @@ fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species:
 }
 
 /// `species`' maximum lifespan in years (BIO-2 spec §4/§5). `Absent` if
-/// `species` is off-roster or `Ametabolic` (a construct has no mass-derived
-/// lifespan).
+/// `species` is off-roster or ametabolic (`ThermalStrategy::Absent` — a
+/// construct has no mass-derived lifespan).
 fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.lifespan) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8776,7 +8776,7 @@ fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' age at first reproduction in years (BIO-2 spec §4/§5). `Absent`
-/// if `species` is off-roster or `Ametabolic`.
+/// if `species` is off-roster or ametabolic (`ThermalStrategy::Absent`).
 fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.age_at_maturity) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8785,7 +8785,7 @@ fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' reference-temperature basal metabolic rate in watts (BIO-2
-/// spec §4). Always present — `0.0` for `Ametabolic`, never `None`. `Absent`
+/// spec §4). Always present — `0.0` for an ametabolic species, never `None`. `Absent`
 /// only if `species` is off-roster.
 fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species) {
@@ -8796,7 +8796,7 @@ fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricVal
 
 /// `species`' reproductive output on the r–K axis, 0 (fast/prolific) … 1
 /// (slow/sparse) (BIO-2 spec §4/CAP-2). `Absent` if `species` is off-roster
-/// or `Ametabolic`.
+/// or ametabolic (`ThermalStrategy::Absent`).
 fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.reproductive_tempo) {
         Some(tempo) => MetricValue::Number(tempo),
@@ -8805,7 +8805,7 @@ fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue
 }
 
 /// `species`' generation length in years (BIO-2 spec §5, MEM-7's handle).
-/// `Absent` if `species` is off-roster or `Ametabolic`.
+/// `Absent` if `species` is off-roster or ametabolic (`ThermalStrategy::Absent`).
 fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species).and_then(|lh| lh.generation_length) {
         Some(years) => MetricValue::Number(years.get()),
@@ -8815,7 +8815,7 @@ fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue 
 
 /// `species`' overall life-history speed, 0 (fast) … 1 (slow) — an absolute,
 /// roster-independent position defined for anything with mass (BIO-2 spec
-/// §5), so this is present even for `Ametabolic`. `Absent` only if `species`
+/// §5), so this is present even for an ametabolic species. `Absent` only if `species`
 /// is off-roster.
 fn species_pace_of_life_metric(v: &FullView, species: &str) -> MetricValue {
     match species_life_history(v, species) {
@@ -12620,8 +12620,8 @@ mod tests {
         // (goblin + kobold both registered) so the campaign's headline
         // cross-species claim (ectotherm kobold vs endotherm goblinoids) is
         // queryable. Both species are always on the default roster and
-        // neither is `Ametabolic` (goblin is Endotherm, kobold is
-        // Ectotherm), so these read `Number` at seed 42, but `Absent` stays
+        // neither is ametabolic (goblin is Endothermic, kobold is
+        // Ectothermic), so these read `Number` at seed 42, but `Absent` stays
         // a legal kind for a roster where a species is missing or
         // ametabolic.
         let names: std::collections::BTreeSet<&str> =
