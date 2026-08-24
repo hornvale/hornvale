@@ -138,7 +138,7 @@ fn a_conquerors_abandoned_seat_does_not_read_as_a_climate_departure() {
         "the conqueror's line must say what it was:\n{text}"
     );
     assert!(
-        text.contains("cell 7"),
+        text.contains("vertex 7"),
         "and name the ground they took it from:\n{text}"
     );
     assert!(
@@ -221,7 +221,7 @@ fn a_restacked_site_reads_as_stratigraphy() {
         text.contains("fled the ice"),
         "the founded-from thread:\n{text}"
     );
-    assert!(text.contains("cell 7"), "{text}");
+    assert!(text.contains("vertex 7"), "{text}");
 }
 
 #[test]

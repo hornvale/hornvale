@@ -2656,3 +2656,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T22:55:17Z | sluice:outboard | 38.935 | 24.010 | 38.371 | 1.60 | 0 | cc87d7008 |  | lefford | 40 |
 | 2026-08-24T23:02:23Z | sluice:gate | 424.945 | 11790.017 | 476.691 | 28.87 | 0 | 38663deca |  | lefford | 40 |
 | 2026-08-24T23:09:33Z | sluice:clients | 430.299 | 5298.559 | 84.678 | 12.51 | 0 | 96548b5b1 |  | lefford | 40 |
+| 2026-08-24T22:58:04Z | rebaseline | 56.722 | 233.210 | 11.254 | 4.31 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:16:14Z | rebaseline | 63.086 | 235.482 | 10.973 | 3.91 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:17:56Z | gate-commit | 30.155 | 61.421 | 30.854 | 3.06 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:19:20Z | rebaseline | 45.308 | 230.173 | 10.272 | 5.31 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
+| 2026-08-24T23:19:53Z | gate-commit | 20.092 | 47.802 | 12.199 | 2.99 | 0 | 2d66a91f5 | passage/one-word-per-concept | MacBookPro | 10 |
