@@ -387,6 +387,7 @@
 - [The Cant](./chronicle/the-cant.md)
 - [The Portolan](./chronicle/the-portolan.md)
 - [The Stylus](./chronicle/the-stylus.md)
+- [The Lexicon](./chronicle/the-lexicon.md)
 - [The Chroma](./chronicle/the-chroma.md)
 - [The Penstock](./chronicle/the-penstock.md)
 - [The Scour](./chronicle/the-scour.md)
