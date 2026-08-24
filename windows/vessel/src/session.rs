@@ -2454,18 +2454,39 @@ impl<'w> Session<'w> {
     /// Descend into the cave at this cell's entrance chamber (The Deep
     /// Realm, Task 5).
     ///
-    /// Mirrors `dive`, but the chamber lattice has a THIRD outcome `dive`
-    /// never needed. Task 3 measured that even where a cave exists, its own
-    /// entrance address (`branch = 0, band = 0, floor = 0`) resolves to an actual chamber
-    /// only 51.5% of the time — spec §3.4 rung 0, `Sealed`: "the void exists
-    /// and is unreachable," a real chamber a later dig could find, not a
-    /// defect. `dive`'s own doc warns what happens when a refusal doesn't
-    /// name what stopped you: it reads as a parse failure rather than a fact
-    /// about the world. So each of the three outcomes below is named:
+    /// Mirrors `dive`, but with an extra outcome `dive` never needed — TWO
+    /// today, and it was THREE until The Drift. `dive`'s own doc warns what
+    /// happens when a refusal doesn't name what stopped you: it reads as a
+    /// parse failure rather than a fact about the world. So each outcome
+    /// below is named:
     ///   1. no cave at this cell at all — say so;
-    ///   2. a cave, but its entrance resolves to nothing — say it is
-    ///      SEALED, not that there is simply nothing here;
-    ///   3. a chamber — descend, and say what the rock here is.
+    ///   2. a chamber — descend, and say what the rock here is.
+    ///
+    /// # THE THIRD OUTCOME WAS REMOVED, AND THE CODE STILL CARRIES ITS ARM
+    ///
+    /// A cave used to be **SEALED** when its own entrance address
+    /// (`branch = 0, band = Undercroft, level = 0`) resolved to no chamber —
+    /// spec §3.4 rung 0, *"the void exists and is unreachable"*, a real
+    /// chamber a later dig could find rather than a defect. The Deep Realm's
+    /// Task 3 measured that a cave's entrance resolved to an actual chamber
+    /// only **51.5%** of the time, which is the 0.5 per-address existence
+    /// coin showing through.
+    ///
+    /// **The Drift deleted that coin** (spec §4.1), and a sealed cave is now
+    /// **impossible rather than rare**: every cave in shape realizes
+    /// chambers, measured `systems_with_open_mouth == systems` on all three
+    /// panel seeds (874/874, 1681/1681, 1266/1266) and 0 of 48,316 caves
+    /// sealed over thirty worlds. Nathan's ruling (spec amendment B) was to
+    /// accept two outcomes and build **restricted passage** later — locked
+    /// doors, collapses magic can clear, boss encounters, and the rare
+    /// chamber that stays lost with something worth finding
+    /// (`MAP-restricted-passage`).
+    ///
+    /// The sealed branch below is therefore **live code on an unreachable
+    /// path**, kept deliberately: it is what restricted passage will speak
+    /// through, and `delve_has_two_distinguishable_outcomes` reddens the
+    /// moment a sealed cave becomes possible again while that test still
+    /// claims two.
     fn delve(&mut self) -> Turn {
         if self.inside.is_some() {
             return Turn::Out("There is no rock to delve into in here.".to_string());
@@ -2505,16 +2526,22 @@ impl<'w> Session<'w> {
     /// impractical to do from a test: `chamber_column_here` resolves the
     /// possession's terrain cell through the same fuzzy corner-weighted walk-
     /// band lookup `column_here` uses, and a terrain cell spans many, many
-    /// walk-band rooms, so hitting one particular cell (let alone one with a
-    /// SEALED cave specifically, ~48.5% of caves per Task 3's measurement)
-    /// by walking is not something a test should depend on landing.
+    /// walk-band rooms, so hitting one particular cell by walking is not
+    /// something a test should depend on landing.
+    ///
+    /// **The parenthesis this used to carry — "let alone one with a SEALED
+    /// cave specifically, ~48.5% of caves per Task 3's measurement" — is
+    /// dead twice over.** The Drift deleted the existence coin that produced
+    /// the 48.5%, so the sealed population is now 0 of 48,316 caves over
+    /// thirty worlds; and there is consequently no sealed cell to steer to at
+    /// all. The seam is still worth having for the reason its first sentence
+    /// gives, and it is what restricted passage will be tested through.
     fn delve_at(&mut self, cell: hornvale_kernel::CellId, cave: hornvale_terrain::Cave) -> Turn {
         let addr = hornvale_worldgen::chamber::ChamberAddr {
             cell,
-            entrance: 0,
-            band: 0,
+            band: hornvale_kernel::Band::Undercroft,
             branch: 0,
-            floor: 0,
+            level: 0,
         };
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
         // The chamber lattice is placed by HEAT since `chamber/v2` (spec
@@ -6206,36 +6233,36 @@ mod tests {
         );
     }
 
-    /// The first cave-bearing cell this seed's terrain places whose entrance
-    /// address (`branch = 0, band = 0, floor = 0`) resolves to `want_open`. Scans the
-    /// terrain directly (`GeneratedTerrain::cave_at`) rather than steering a
-    /// walk there: a terrain cell spans many walk-band rooms (measured while
-    /// developing this campaign — dozens to low hundreds of `go` steps per
-    /// terrain-cell crossing), and even once ON the right cell, only 51.5% of
-    /// caves have a chamber at their entrance at all (Task 3), so a walk
-    /// cannot be relied on to land on either specific outcome. Direct
-    /// scanning is what `windows/worldgen/tests/deep_realm_substrate.rs`
-    /// (Task 0) and `deep_realm_chamber.rs` (Tasks 2-3) already do for the
-    /// same reason.
-    fn find_cave_cell(
-        terrain: &hornvale_terrain::GeneratedTerrain,
+    /// Every cave-bearing cell in `terrain`, paired with whether its entrance
+    /// address (`branch = 0, band = 0, floor = 0`) resolves to a chamber.
+    /// Scans the terrain directly (`GeneratedTerrain::cave_at`) rather than
+    /// steering a walk there: a terrain cell spans many walk-band rooms
+    /// (measured while developing The Deep Realm — dozens to low hundreds of
+    /// `go` steps per terrain-cell crossing), so a walk cannot be relied on
+    /// to land on a chosen cell. Direct scanning is what
+    /// `windows/worldgen/tests/deep_realm_substrate.rs` (Task 0) and
+    /// `deep_realm_chamber.rs` (Tasks 2-3) already do for the same reason.
+    ///
+    /// Shared by [`find_open_cave_cell`] (which stops at the first open hit)
+    /// and `delve_has_two_distinguishable_outcomes`'s exhaustive sealed-cave
+    /// scan (The Drift, Task 3b), which does not stop early — one derivation
+    /// for both, so the two can never quietly disagree about what "sealed"
+    /// means.
+    fn cave_entrance_states<'a>(
+        terrain: &'a hornvale_terrain::GeneratedTerrain,
         seed: Seed,
-        want_open: bool,
-    ) -> (hornvale_kernel::CellId, hornvale_terrain::Cave) {
+    ) -> impl Iterator<Item = (hornvale_kernel::CellId, hornvale_terrain::Cave, bool)> + 'a {
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
-        for cell in terrain.geosphere().cells() {
+        terrain.geosphere().cells().filter_map(move |cell| {
             if terrain.is_ocean(cell) {
-                continue;
+                return None;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
-                continue;
-            };
+            let cave = terrain.cave_at(cell)?;
             let addr = hornvale_worldgen::chamber::ChamberAddr {
                 cell,
-                entrance: 0,
-                band: 0,
+                band: hornvale_kernel::Band::Undercroft,
                 branch: 0,
-                floor: 0,
+                level: 0,
             };
             let is_open = hornvale_worldgen::chamber::chamber_at(
                 seed,
@@ -6246,28 +6273,73 @@ mod tests {
                 &overrides,
             )
             .is_some();
-            if is_open == want_open {
-                return (cell, cave);
-            }
-        }
-        panic!(
-            "no {} cave found in seed 42's terrain — the fixture no longer has one \
-             of the three outcomes this campaign's descent verb needs to distinguish",
-            if want_open { "open" } else { "sealed" }
-        );
+            Some((cell, cave, is_open))
+        })
     }
 
-    /// The Deep Realm, Task 5's own hazard: `delve` needs THREE
-    /// distinguishable outcomes, not the two the original plan sketch
-    /// anticipated. Task 3 measured that even a cell WITH a cave resolves no
-    /// chamber at its own entrance address 51.5% of the time (spec §3.4 rung
-    /// 0, `Sealed` — "the void exists and is unreachable," a real fact a
-    /// later dig could find, not a defect) — so "no cave" and "cave but
-    /// sealed" are different facts about the world and must read as such,
-    /// exactly the failure mode `dive`'s own doc warns a refusal that
-    /// doesn't name what stopped you falls into.
+    /// The first cave-bearing cell this seed's terrain places whose entrance
+    /// chamber is realized. Until The Drift (Task 1) deleted
+    /// `chamber_exists`'s 50% existence coin, this function also took a
+    /// `want_open` flag and could be asked for the SEALED counterpart
+    /// instead; that outcome is no longer reachable
+    /// (`delve_has_two_distinguishable_outcomes`'s doc comment records why),
+    /// so the flag is gone rather than kept as a parameter nothing ever
+    /// satisfies.
+    fn find_open_cave_cell(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        seed: Seed,
+    ) -> (hornvale_kernel::CellId, hornvale_terrain::Cave) {
+        cave_entrance_states(terrain, seed)
+            .find_map(|(cell, cave, is_open)| is_open.then_some((cell, cave)))
+            .unwrap_or_else(|| {
+                panic!(
+                    "no open cave found in seed 42's terrain — the fixture no longer has \
+                     one of the two outcomes this campaign's descent verb needs to \
+                     distinguish"
+                )
+            })
+    }
+
+    /// The Deep Realm, Task 5 shipped `delve` with THREE distinguishable
+    /// outcomes: no cave, a cave whose entrance chamber resolves to nothing
+    /// (**sealed** — spec §3.4 rung 0, "the void exists and is unreachable,"
+    /// a real fact a later dig could find, not a defect), and a cave with a
+    /// resolved chamber. This test carried that name and asserted all three
+    /// until The Drift.
+    ///
+    /// **What removed the third outcome.** The Drift's §4.1 deleted the 50%
+    /// existence coin `chamber_exists` gated on — the thing that made a
+    /// realized chamber a coin flip rather than a certainty. With the coin
+    /// gone, every cave inside the lattice's structural shape realizes a
+    /// chamber at every address the five remaining gates admit. Task 1's own
+    /// probe measured this directly rather than assuming it:
+    /// `systems_with_open_mouth == systems` on all three panel seeds —
+    /// 874/874, 1681/1681, 1266/1266. Sealed did not become rare. It became
+    /// **impossible**, and this test's failure (it passed at `69d1f5469`) is
+    /// what caught that a real behaviour change had happened, not a fixture
+    /// going stale on its own.
+    ///
+    /// **What would restore it.** Restricted passage — locked doors,
+    /// collapses that magic can clear, boss encounters, or the rare chamber
+    /// that stays lost with something worth finding in it (spec §7's
+    /// non-goal, promoted to owed work by AMENDMENT B). That is later
+    /// campaign work, filed in `book/src/frontier/idea-registry.md`; this
+    /// task does not build it.
+    ///
+    /// Nathan's ruling (spec AMENDMENT B, B.2): **accept two outcomes**
+    /// until that later campaign lands. Deleting this test instead would
+    /// have removed a permanent guard; renaming it without more would only
+    /// have recorded a fact that never gets checked again. So this
+    /// assertion is two-directional, the discipline `seam-guard`'s
+    /// STALE-DECL verdict names: a one-directional acknowledgement
+    /// ("sealed doesn't happen") can only ever be satisfied, so it rots.
+    /// The scan below re-checks every cave-bearing cell in the fixture on
+    /// every run and FAILS the moment a sealed cave becomes possible again
+    /// while this test still claims two outcomes — forcing whoever ships
+    /// restricted passage to come rename this test back, rather than
+    /// leaving a stale two-outcome claim sitting here looking satisfied.
     #[test]
-    fn delve_has_three_distinguishable_outcomes() {
+    fn delve_has_two_distinguishable_outcomes() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let terrain = session
@@ -6280,11 +6352,10 @@ mod tests {
         // the branch production reaches when `chamber_column_here` finds
         // nothing. This read the flagship's own STARTING CELL until decision
         // 0131, a convenience resting on the contingency that that one cell
-        // happened to be cave-free; the terrain epoch put a sealed cave under
-        // it and falsified that. The other two outcomes were already found by
-        // scanning rather than assumed, so this brings outcome 1 into line
-        // with them and leaves the test independent of where the flagship
-        // happens to stand.
+        // happened to be cave-free; the terrain epoch put a cave under it and
+        // falsified that. The other outcome is found by scanning rather than
+        // assumed, so this brings outcome 1 into line with it and leaves the
+        // test independent of where the flagship happens to stand.
         let no_cave = match session.delve_column(None) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
@@ -6295,21 +6366,8 @@ mod tests {
             "a refused delve must not change the underground state"
         );
 
-        // Outcome 2: a cave, but the entrance resolves to nothing — SEALED,
-        // named as such rather than read as "no cave here" again.
-        let (sealed_cell, sealed_cave) = find_cave_cell(&terrain, world.seed, false);
-        let sealed = match session.delve_at(sealed_cell, sealed_cave) {
-            Turn::Out(t) => t,
-            Turn::Released(_) => panic!("delve must not release"),
-        };
-        assert!(sealed.contains("sealed"), "{sealed}");
-        assert!(
-            session.underground.is_none(),
-            "a sealed entrance must not change the underground state"
-        );
-
-        // Outcome 3: a chamber — descend, and `climb` returns.
-        let (open_cell, open_cave) = find_cave_cell(&terrain, world.seed, true);
+        // Outcome 2: a chamber — descend, and `climb` returns.
+        let (open_cell, open_cave) = find_open_cave_cell(&terrain, world.seed);
         let open = match session.delve_at(open_cell, open_cave) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
@@ -6328,15 +6386,52 @@ mod tests {
         );
         assert!(up.contains("You climb back into the light"), "{up}");
 
-        // The whole point: each outcome must be told apart from the others.
-        assert_ne!(no_cave, sealed, "no-cave and sealed read identically");
-        assert_ne!(
-            sealed, open,
-            "sealed and a successful descent read identically"
-        );
+        // The whole point: the two live outcomes must be told apart.
         assert_ne!(
             no_cave, open,
             "no-cave and a successful descent read identically"
+        );
+
+        // The retired third outcome must STAY retired, loudly. Scan every
+        // cave-bearing cell's entrance address in the fixture terrain and
+        // assert none of them resolves SEALED. Scoped to this one seed
+        // rather than a multi-seed panel: the exhaustive scan already
+        // touches every cave-bearing cell this fixture has, and building
+        // further whole worlds to widen it would push this test toward the
+        // heavy tier `the_drift_reachability_baseline`
+        // (`windows/worldgen/tests/suite/drift_reach_probe.rs`) already
+        // measured `systems_with_open_mouth == systems` on — the workspace
+        // gate never runs that tier, which would defeat the point of
+        // pinning this guard where it actually runs.
+        //
+        // Non-vacuous by construction: `caves_examined` must itself be
+        // nonzero, or "zero of zero sealed" would satisfy this assertion by
+        // finding nothing rather than by finding the world genuinely
+        // connected.
+        let mut caves_examined = 0usize;
+        let mut sealed: Vec<hornvale_kernel::CellId> = Vec::new();
+        for (cell, _cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+            caves_examined += 1;
+            if !is_open {
+                sealed.push(cell);
+            }
+        }
+        assert!(
+            caves_examined > 0,
+            "non-vacuous guard: seed 42's terrain must contain at least one \
+             cave-bearing cell, or the sealed-cave scan below would pass by \
+             finding nothing rather than by finding the world connected"
+        );
+        assert!(
+            sealed.is_empty(),
+            "a SEALED cave exists again ({} of {caves_examined} cave-bearing cells \
+             examined, e.g. cell {:?}) — restricted passage has landed. Restore the \
+             third `delve_at` outcome this test used to assert, rename it back to \
+             `delve_has_three_distinguishable_outcomes`, and update its doc comment; \
+             do not leave a two-outcome claim standing once a sealed cave is possible \
+             again",
+            sealed.len(),
+            sealed[0],
         );
     }
 
@@ -6369,7 +6464,7 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (open_cell, open_cave) = find_cave_cell(&terrain, world.seed, true);
+        let (open_cell, open_cave) = find_open_cave_cell(&terrain, world.seed);
         let out = match session.delve_at(open_cell, open_cave) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
@@ -6403,7 +6498,7 @@ mod tests {
     /// diegetically — mirroring `SUBMERGED_LATERAL_REFUSAL`'s own guard one
     /// realm over. Exercised directly against a hand-picked open cave
     /// (`delve_at`) rather than a walk, for the same reason
-    /// `delve_has_three_distinguishable_outcomes` is.
+    /// `delve_has_two_distinguishable_outcomes` is.
     #[test]
     fn lateral_movement_is_refused_underground() {
         let world = seam_world();
@@ -6413,7 +6508,7 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        let (cell, cave) = find_open_cave_cell(&terrain, world.seed);
         session.delve_at(cell, cave);
         assert!(
             session.underground.is_some(),
@@ -6460,7 +6555,7 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        let (cell, cave) = find_open_cave_cell(&terrain, world.seed);
         session.delve_at(cell, cave);
         assert!(
             session.underground.is_some(),
@@ -6518,7 +6613,7 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        let (cell, cave) = find_open_cave_cell(&terrain, world.seed);
         let shown = match session.delve_at(cell, cave) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),

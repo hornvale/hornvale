@@ -1,11 +1,11 @@
 //! A cave's depth budget, in metres (The Underworld, spec §4.0).
 //!
 //! **Why this module exists.** Until The Underworld a cave's depth was a
-//! [`crate::strata::BandKind`] — a *name from the stratigraphic ladder*, not a
+//! [`crate::strata::Horizon`] — a *name from the stratigraphic ladder*, not a
 //! quantity — and the function that chose it read the same `proneness` scalar
 //! the presence gate reads. Two failures followed from that one shape:
 //!
-//! - **The depth coordinate was two-valued.** `top_depth_m(deepest_band)` is
+//! - **The depth coordinate was two-valued.** `top_depth_m(deepest_horizon)` is
 //!   `dtb = soil + sediment` (~0 m over most of the world) or `roots_top ≈
 //!   moho/2` (~14 km). Task 1 measured the consequence: ΔT above the surface
 //!   datum, which is that depth times a gradient varying only 1.27×, put 62–75%
@@ -332,11 +332,11 @@ mod tests {
             let reach = super::cave_depth_reach_m(kind, &karstic(), &col);
             let band = crate::features::cave_depth(kind, &col, &karstic());
             let idx = match band {
-                crate::strata::BandKind::Regolith => 0,
-                crate::strata::BandKind::Cover => 1,
-                crate::strata::BandKind::Basement => 2,
-                crate::strata::BandKind::Roots => 3,
-                crate::strata::BandKind::Underneath => 4,
+                crate::strata::Horizon::Regolith => 0,
+                crate::strata::Horizon::Cover => 1,
+                crate::strata::Horizon::Basement => 2,
+                crate::strata::Horizon::Roots => 3,
+                crate::strata::Horizon::Underneath => 4,
             };
             assert!(
                 col.bands[idx].top_depth_m <= reach,

@@ -758,16 +758,22 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 }
 
 /// The Deep Realm, Task 5: at a cell with no cave, `delve` refuses and names
-/// the absence — the first of the three outcomes `dive`'s own doc warns a
-/// descent verb must distinguish. The other two (a cave whose entrance is
-/// SEALED vs. a cave that actually descends) are exercised in
+/// the absence — the first of the outcomes `dive`'s own doc warns a descent
+/// verb must distinguish. The others are exercised in
 /// `windows/vessel/src/session.rs`'s own internal tests
-/// (`delve_has_three_distinguishable_outcomes`), which need a hand-picked
-/// cave cell — a terrain cell spans many walk-band rooms, so a test cannot
-/// reliably steer a walk to land on one specific outcome, let alone a
-/// SEALED one specifically (only ~48.5% of caves, Task 3), and only
+/// (`delve_has_two_distinguishable_outcomes`), which need a hand-picked cave
+/// cell — a terrain cell spans many walk-band rooms, so a test cannot
+/// reliably steer a walk to land on one specific outcome, and only
 /// `session.rs`'s own tests can reach the private `delve_at` seam that
 /// sidesteps needing to.
+///
+/// **There were THREE and there are TWO** (The Drift, spec amendment B).
+/// The third was a cave whose entrance address resolved to no chamber —
+/// SEALED — and it existed because a 0.5 per-address existence coin refused
+/// roughly 48.5% of cave entrances. Spec §4.1 deleted that coin, so a sealed
+/// cave is impossible rather than rare: 0 of 48,316 caves over thirty
+/// worlds. The test was renamed with the outcome it lost, not deleted, and
+/// it reddens if a sealed cave ever returns while it still claims two.
 ///
 /// This mirrored `there_is_nothing_to_dive_into_on_dry_land`: the flagship's
 /// own starting cell had no cave, so no walk was needed to observe the
@@ -782,7 +788,7 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 /// verb; which of the two the flagship's own ground happens to produce is a
 /// fact about seed 42's karst, not about `delve`.
 ///
-/// The no-cave branch did not lose coverage: `delve_has_three_distinguishable_outcomes`
+/// The no-cave branch did not lose coverage: `delve_has_two_distinguishable_outcomes`
 /// now reaches it directly through `delve_column(None)` rather than by
 /// standing somewhere that happens to qualify, so it can no longer be
 /// falsified by a coastline moving.

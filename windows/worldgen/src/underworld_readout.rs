@@ -21,17 +21,20 @@
 //!
 //! - **The shipped entry points, only.** Every existence verdict comes from
 //!   [`crate::chamber::chamber_at`], every floor count from
-//!   [`crate::chamber::floors_in_run`], every passage from
+//!   [`crate::chamber::levels_in_branch`], every passage from
 //!   [`crate::chamber::passages_from`]. Nothing here re-implements a
 //!   derivation, because a re-implementation cannot witness the real one —
 //!   Task 2's own lesson, learned when a test that derived both legs inline
 //!   let a re-parented `run_stream` through.
-//! - **The real derivation key**, spelled by `chamber::chamber_key`
-//!   rather than by a presentation table of this module's own. That is what
-//!   puts the `chamber/v3` epoch, the rung spellings and the key's field order
-//!   into the artifact's bytes: an accidental `chamber/v4`, or a reordered
-//!   key, changes the text on every transect row as well as relocating every
-//!   draw.
+//! - **The address's own formatter**, spelled by `chamber::chamber_key`
+//!   rather than by a presentation table of this module's own. **`chamber_key`
+//!   is a display formatter, not a derivation key, since The Drift's Task 1
+//!   deleted the chamber existence draw** (spec amendment A.6) — nothing in a
+//!   shipped world derives from `crate::streams::CHAMBER` any more, so the
+//!   `key` column below witnesses the address's SPELLING (the rung name, the
+//!   field order), not a stream that moves anything. The real derivation keys
+//!   are [`crate::chamber::levels_in_branch`]'s `RUN_FLOORS` leg and
+//!   `crate::character`'s three per-branch legs.
 //! - **Integers**, almost entirely. The only floats that cross this emit
 //!   boundary are a cave's depth budget and its cell's geothermal gradient,
 //!   and both go through [`hornvale_kernel::quantize`] here at the boundary —
@@ -39,10 +42,10 @@
 //!
 //! # THE LOOP BOUND IS THE LATTICE, NEVER A DRAW — read this before editing
 //!
-//! The floor walk is `0..FLOORS_PER_RUN_CEILING`, a **constant**, and it must
-//! stay one. The first version of this module walked `0..drawn`, where
-//! `drawn = floors_in_run(..)` is *the same value* `chamber_exists`'s own
-//! floor gate compares against — so the gate could never fire on any address
+//! The level walk is `0..LEVELS_PER_BRANCH_CEILING`, a **constant**, and it
+//! must stay one. The first version of this module walked `0..drawn`, where
+//! `drawn = levels_in_branch(..)` is *the same value* `chamber_exists`'s own
+//! level gate compares against — so the gate could never fire on any address
 //! this readout asked about, and review proved it by deleting the gate
 //! outright and getting a byte-identical artifact. That mutation deletes the
 //! whole of Task 2 (it is what makes a run a distribution rather than a
@@ -50,27 +53,40 @@
 //!
 //! **An instrument that derives its own loop bound from the draw it is meant
 //! to witness is self-consistent by construction and cannot ask a question the
-//! gate could answer differently.** Both floor gates
-//! ([`crate::chamber::FLOORS_PER_RUN_CEILING`] and the drawn length) are now
-//! visible and distinguishable, and [`Tallies::past_run_length`] is the
+//! gate could answer differently.** Both level gates
+//! ([`crate::chamber::LEVELS_PER_BRANCH_CEILING`] and the drawn length) are
+//! now visible and distinguishable, and [`Tallies::past_run_length`] is the
 //! sharpest reading of the second: it is 0 in a healthy tree and large the
 //! moment the gate stops gating.
 //!
-//! # The `entrance` axis, plural since Task 5 (amendment C.3)
+//! # The `entrance` axis, plural since Task 5 (amendment C.3) — and OUT of
+//! # the lattice since The Drift (amendment A.3)
 //!
-//! Every system here is walked over its **DRAWN** entrance count —
-//! [`crate::chamber::entrance_count`], keyed on the cell — never a module
-//! constant: the first draft carried a `WITNESSED_ENTRANCES = 1` const, which
-//! was the same self-consistent-by-construction defect the floor loop's doc
-//! section describes, one axis over. A count draw that stopped counting would
-//! otherwise have shrunk the witness in lockstep with the world and moved no
-//! byte. `windows/vessel`'s `delve_at` is still pinned at `entrance: 0` (the
-//! primary mouth, literal by C.3), so the *player* sees one door; the witness
-//! deliberately sees more, because its job is what the world says.
+//! **The per-entrance branch/band/level walk this section used to describe is
+//! GONE.** Before The Drift, `chamber_exists` keyed the branch-count gate on
+//! `(cell, entrance)`, so each entrance realized its OWN private sublattice —
+//! this readout walked every drawn entrance's full lattice and summed them,
+//! which is exactly the shape amendment A.1/A.2 found could not express two
+//! doors into ONE Spider Cave. With `entrance` gone from `ChamberAddr`, there
+//! is ONE shared lattice per system, walked ONCE — see the branch/band/level
+//! loop in [`render_underworld`], which no longer varies by entrance at all.
+//!
+//! Every system's entrance loop survives only for what C.3 says an entrance
+//! actually is: **which aperture a player used**. [`entrance_count`] (keyed
+//! on the cell) still says how many a system opens, and [`entrance_mouth`]
+//! (keyed on `(cell, entrance)`) still says which coordinate each one opens
+//! INTO — both of those coordinates now name a place in the ONE shared
+//! lattice rather than a private one. `windows/vessel`'s `delve_at` is still
+//! pinned at `entrance: 0` (the primary mouth, literal by C.3), so the
+//! *player* sees one door; the witness deliberately sees every drawn one,
+//! because its job is what the world says.
 //!
 //! Reachability follows C.3's union rule: the mouths of ONE system are seeds
 //! into ONE shared seen set, so overlapping per-entrance components cannot
-//! double-count ([`reachable_union`]).
+//! double-count ([`reachable_union`]) — and after The Drift this is no longer
+//! merely a discipline for summing walks that happen to overlap; every mouth
+//! seeds the SAME lattice by construction, so a union is the only reading
+//! that was ever coherent.
 //!
 //! # What this witness does NOT see today, stated rather than discovered
 //!
@@ -80,14 +96,29 @@
 //! axis nobody wrote down is how a hole survives — that is the standing rule
 //! this list exists to serve.
 //!
-//! - **A junction sees ENTRANCE 0, BRANCH 0 and nothing else.**
-//!   [`crate::chamber::junctions_at`] projects onto the canonical main line,
-//!   so whether another entrance's branches realize a chamber at that band is
-//!   invisible to the network. On seed 42 that is **252 of 874 systems**
-//!   (29%) with more than one entrance, every one of them judged by its
-//!   first. Widening the projection is a design change, not a bug fix: it is
-//!   what makes symmetry hold by construction (see that function's doc), so
-//!   any widening owes a new symmetry argument.
+//! - **A junction sees BRANCH 0 and nothing else — and WHERE that narrowing
+//!   lives moved under this sentence** (The Drift, Task 7). It used to be
+//!   `junctions_at`'s: the function projected every address of a system onto
+//!   the canonical main line, so branch 0's answer WAS the system's answer
+//!   and this witness could not have asked a narrower question if it tried.
+//!   Spec §4.6 re-scoped `junctions_at` to `(band, branch)`, because
+//!   `passages_from` no longer has a lateral rule and a door on branch 0 is
+//!   not one a walker on branch 2 can reach. **So the narrowing is now this
+//!   file's own choice**, made by the literal `branch: 0` in
+//!   [`junction_network`], and the numbers it reports mean "the MAIN-LINE
+//!   junction network" rather than "the junction network".
+//!
+//!   Every figure in the committed artifact is unchanged and still true
+//!   under the narrower reading, and `largest` in particular is not
+//!   overstated: all of this function's edges sit at branch 0, so each
+//!   band's edge set is already inside one `(band, branch)` layer, which is
+//!   what a traversable layer now is. **Widening it is a deliberate change
+//!   to a committed artifact and Task 7 did not make it**: the union over
+//!   branches is a different measurement, its component sweep would have to
+//!   key on `(band, branch)` rather than on band alone (a band is no longer
+//!   one traversable layer), and the result is a number a reader would
+//!   compare against every previously committed panel. Stated here rather
+//!   than left to be discovered.
 //! - **Past-the-ladder junction behaviour is never exercised.** A band past
 //!   the last habitation rung answers empty, and every loop that asks — this
 //!   one and the tests' — derives its bound from the delve ladder, so no
@@ -105,11 +136,19 @@
 //!   is why this cheap readout cannot call it. **Task 4's job is to hand this
 //!   function a real override source**; until it does, a `made` of 0 means
 //!   "nobody asked", not "nothing was made".
-//! - **Vertical connection.** [`crate::chamber::passages_from`] does not treat
-//!   `floor` as an adjacency axis yet, so [`Tallies::reachable`] counts only
-//!   the entrance floor's component. That is not a defect in this readout: it
-//!   is the exact quantity amendment C.4 exists to move, printed so Task 3b
-//!   has something that can actually change.
+//! - **"Vertical connection" no longer belongs on this list, and its absence
+//!   here is itself the fact worth recording.** This bullet used to claim
+//!   `passages_from` does not treat `level` as an adjacency axis, so
+//!   `Tallies::reachable` counted only the entrance level's component — false
+//!   even when it was written (amendment C.4, The Stope, already made level
+//!   a real adjacency axis) and load-bearing false after The Drift: seed 42
+//!   reads `reachable == chambers == 30537`. Severing just the band-descent
+//!   step drops that to 4,148 while `chambers` stands still, which is what
+//!   proves the connection is real rather than a coincidence of the walk
+//!   never being asked to use it. That equality is now ASSERTED rather than
+//!   reported — see `reachability_is_reported_and_equals_existence`'s own
+//!   doc for why the `<=` it replaced could not fail, and why this file is
+//!   where it had to be fixed.
 //!
 //! **Cost.** One `BuildDepth::Terrain` world per seed, and a scan of the
 //! lattice over cave-bearing land cells. See `scripts/regenerate-artifacts.sh`
@@ -117,19 +156,19 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use hornvale_kernel::{Seed, quantize};
-use hornvale_terrain::{DelveRung, GeneratedTerrain};
+use hornvale_kernel::{Band, Seed, quantize};
+use hornvale_terrain::GeneratedTerrain;
 
 use crate::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, FLOORS_PER_RUN_CEILING, RunAddr, chamber_at,
-    chamber_key, floors_in_run, passages_from, rung_rank,
+    BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, LEVELS_PER_BRANCH_CEILING, RunAddr,
+    chamber_at, chamber_key, levels_in_branch, passages_from, rung_rank,
 };
 
 /// A habitation rung's spelling **in this readout's tallies** — presentation,
 /// deliberately not the key's table. See [`stratum_word`] for why that
 /// distinction is load-bearing rather than fussy.
 ///
-/// **Exhaustive over [`DelveRung`], and that is the whole point of its
+/// **Exhaustive over [`Band`], and that is the whole point of its
 /// existence.** This function is what ties the band walk below to the delve
 /// ladder: a sixth rung fails THIS to compile, so the readout cannot be
 /// silently left one band short of the lattice it is meant to witness.
@@ -137,14 +176,14 @@ use crate::chamber::{
 /// `None` for `Surface`, which is a rung of the ladder but not a *habitation*
 /// rung and has no position in a lattice of underground places — the same
 /// answer `chamber::rung_rank` gives it.
-fn band_word(rung: DelveRung) -> Option<&'static str> {
+fn band_word(rung: Band) -> Option<&'static str> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some("undercroft"),
-        DelveRung::Shallows => Some("shallows"),
-        DelveRung::Deeps => Some("deeps"),
-        DelveRung::Underdeep => Some("underdeep"),
-        DelveRung::Nadir => Some("nadir"),
+        Band::Surface => None,
+        Band::Undercroft => Some("undercroft"),
+        Band::Shallows => Some("shallows"),
+        Band::Deeps => Some("deeps"),
+        Band::Underdeep => Some("underdeep"),
+        Band::Nadir => Some("nadir"),
     }
 }
 
@@ -155,8 +194,9 @@ fn band_word(rung: DelveRung) -> Option<&'static str> {
 ///
 /// It was a `const HABITATION_BANDS: u8 = 5` for one review round, and review
 /// found the same defect the module doc's loop-bound section is about, one
-/// axis over. `FLOORS_PER_RUN_CEILING` and `BRANCHES_PER_SYSTEM` are imported
-/// from the lattice; the band count alone was a local literal tied to nothing.
+/// axis over. `LEVELS_PER_BRANCH_CEILING` and `BRANCHES_PER_SYSTEM` are
+/// imported from the lattice; the band count alone was a local literal tied
+/// to nothing.
 /// So a sixth delve rung would have compiled this module unchanged, the walk
 /// would have kept stopping at five, and **that rung's chambers would have
 /// vanished from `chambers`, from `by_band` and from every transect row with
@@ -166,7 +206,7 @@ fn band_word(rung: DelveRung) -> Option<&'static str> {
 ///
 /// Two independent guards now, and they fail at different times on purpose:
 ///
-/// 1. [`band_word`] is exhaustive over [`DelveRung`], so a sixth variant fails
+/// 1. [`band_word`] is exhaustive over [`Band`], so a sixth variant fails
 ///    at COMPILE time;
 /// 2. the `expect` below fails at RUN time if anyone gives `band_word` a
 ///    catch-all arm — a rung the lattice places but this readout has no word
@@ -182,7 +222,7 @@ fn habitation_bands() -> Vec<(u8, &'static str)> {
             let rank = rung_rank(rung)?;
             let word = band_word(rung).expect(
                 "a rung the lattice gives a band rank must have a word in this \
-                 readout — band_word is exhaustive over DelveRung so that this \
+                 readout — band_word is exhaustive over Band so that this \
                  cannot be reached by adding a variant, only by adding a \
                  catch-all arm",
             );
@@ -208,15 +248,33 @@ const TRANSECT_SYSTEMS: usize = 3;
 /// to hide a gate that stopped gating.
 const GLYPH_EXISTS: char = '#';
 
-/// The glyph for a floor inside its run's drawn length that the existence draw
-/// refused.
+/// The glyph for a floor inside its run's drawn length that was refused
+/// anyway — by the rock's own depth budget, which is the one gate left that
+/// can do it.
+///
+/// **It used to mean "the existence draw refused it", and that draw is
+/// gone** (The Drift, spec §4.1). `chamber_exists` now admits every address
+/// inside its five structural gates, so within a run's drawn length the only
+/// remaining refusal is `band > rung_rank(rung_at_depth(..))` — a cave whose
+/// depth budget stops short of this band. The glyph is kept, and kept
+/// distinct from [`GLYPH_PAST_RUN`] and [`GLYPH_PAST_BRANCH`], because the
+/// three refusals still have three different causes.
 const GLYPH_REFUSED: char = '.';
 
 /// The glyph for a floor **past** its run's drawn length — inside the
 /// lattice's own ceiling, so this readout still asks about it, and refused.
-/// A gate that stopped gating turns roughly half of these into
-/// [`GLYPH_EXISTS`], which is exactly the movement review's mutation proved
-/// the first version of this module could not produce.
+/// A gate that stopped gating turns these into [`GLYPH_EXISTS`], which is
+/// exactly the movement review's mutation proved the first version of this
+/// module could not produce.
+///
+/// **"Roughly half of these" was right and is now wrong, and the direction
+/// matters: this readout got MORE sensitive, not less.** The old sentence
+/// was counting on the 0.5 per-address existence coin surviving the run gate
+/// as well, so a broken run gate exposed a floor that then had only even
+/// odds of showing up as `#`. The Drift deleted that coin (spec §4.1), so a
+/// run gate that stopped gating now turns **every** one of these into
+/// [`GLYPH_EXISTS`]. The mutation this glyph exists to be caught by moves
+/// twice as much of the artifact as it did when the claim was written.
 const GLYPH_PAST_RUN: char = '_';
 
 /// The glyph for a floor of a **branch its system never realized** — past
@@ -272,19 +330,22 @@ fn rock_rank(stratum: hornvale_climate::Stratum) -> Option<usize> {
     }
 }
 
-/// One cave system's run in the lattice: the key its floor 0 derives from, how
-/// many floors the run drew, and what the shipped path answered at **every**
-/// floor the lattice admits — not merely the drawn ones.
+/// One cave system's run in the lattice: the key its level 0 derives from,
+/// how many levels the run drew, and what the shipped path answered at
+/// **every** level the lattice admits — not merely the drawn ones.
 struct RunRow {
-    /// `chamber_key` of this run's floor 0 — the real derivation key, so the
-    /// epoch label's consequences and the key's field order reach the artifact.
+    /// `chamber_key` of this run's level 0 — a display formatter, not a
+    /// derivation key (spec amendment A.6; see [`chamber_key`]'s own doc), so
+    /// this witnesses the address's SPELLING (the epoch label's consequences,
+    /// the rung name, the key's field order) rather than a stream that moves
+    /// anything.
     key: String,
-    /// The floor count [`floors_in_run`] drew for this run, printed as its own
-    /// value. It is **reported**, never used as this row's loop bound: see the
-    /// module doc's loop-bound section for what happened when it was.
+    /// The level count [`levels_in_branch`] drew for this run, printed as its
+    /// own value. It is **reported**, never used as this row's loop bound:
+    /// see the module doc's loop-bound section for what happened when it was.
     drawn: u8,
-    /// One glyph per floor of the lattice's own ceiling, in floor order,
-    /// always [`FLOORS_PER_RUN_CEILING`] characters long:
+    /// One glyph per level of the lattice's own ceiling, in level order,
+    /// always [`LEVELS_PER_BRANCH_CEILING`] characters long:
     /// [`GLYPH_EXISTS`] / [`GLYPH_PAST_RUN`] / [`GLYPH_REFUSED`].
     realized: String,
     /// The rock the run's chambers sit in, read off the first realized
@@ -324,20 +385,20 @@ struct Tallies {
     /// in (a marine or surface register). Expected 0; printed regardless,
     /// because a silently dropped anomaly is not a witness.
     off_ladder_rock: usize,
-    /// **Realized chambers at a floor past their own run's drawn length** —
-    /// the direct reading of `chamber_exists`'s drawn-floor gate.
+    /// **Realized chambers at a level past their own run's drawn length** —
+    /// the direct reading of `chamber_exists`'s drawn-level gate.
     ///
     /// 0 in a healthy tree, and large the moment that gate stops gating. This
     /// is the counter review's gate-deletion mutation could not move in the
     /// first version of this module, because that version never asked about a
-    /// floor past the drawn length at all.
+    /// level past the drawn length at all.
     past_run_length: usize,
     /// Realized chambers at a **branch past their system's drawn branch
     /// count** — the direct reading of `chamber_exists`'s branch-count gate
     /// (spec C.1). 0 in a healthy tree, for the same reason
     /// [`Tallies::past_run_length`] is.
     past_branch_count: usize,
-    /// Floors drawn across every run of every cave system, whether or not the
+    /// Levels drawn across every run of every cave system, whether or not the
     /// band is inside a cave's budget. Separates "the run draw moved" from
     /// "the reach moved": the first moves this, the second does not.
     drawn_floors: usize,
@@ -370,10 +431,11 @@ struct Tallies {
 ///
 /// **One shared seen set across every mouth** — the union of the per-entrance
 /// components, never the sum. Two breadth-first walks from two mouths of one
-/// system overlap wherever their components meet (they always do when both
-/// open into the shared lattice at `entrance 0`, which every mouth addresses
-/// INTO); summing per-entrance counts would double-count exactly those
-/// chambers and overstate the world.
+/// system overlap wherever their components meet — since The Drift (amendment
+/// A.3) every mouth addresses INTO the same shared lattice by construction,
+/// so a union is the only reading that was ever coherent; summing
+/// per-entrance counts would double-count exactly those chambers and
+/// overstate the world.
 ///
 /// A plain flood-fill walk over the shipped adjacency function: nothing
 /// here knows the adjacency rule, which is the point — Task 3b changes that
@@ -444,13 +506,14 @@ fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, us
         if terrain.cave_at(cell).is_none() {
             continue;
         }
-        for band in 0..habitation_bands().len() as u8 {
+        for (rank, _) in habitation_bands() {
+            let band = hornvale_kernel::Band::from_rank(rank)
+                .expect("habitation_bands() yields real ranks");
             let addr = ChamberAddr {
                 cell,
-                entrance: 0,
                 branch: 0,
                 band,
-                floor: 0,
+                level: 0,
             };
             for far in crate::chamber::junctions_at(seed, terrain, addr) {
                 let pair = if cell < far.cell {
@@ -458,7 +521,7 @@ fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, us
                 } else {
                     (far.cell, cell)
                 };
-                by_band.entry(band).or_default().insert(pair);
+                by_band.entry(rank).or_default().insert(pair);
             }
         }
     }
@@ -564,111 +627,121 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         tallies.systems += 1;
         let gradient = terrain.geothermal_gradient_at(cell);
         let column = terrain.column_at(cell);
+        let want_transect = transect.len() < TRANSECT_SYSTEMS;
+        let mut rows: Vec<RunRow> = Vec::new();
+
+        // ONE shared lattice per system, walked ONCE (The Drift, amendment
+        // A.3) — before this campaign each of the system's drawn entrances
+        // realized its OWN private sublattice here, and this loop walked it
+        // once per entrance; with `entrance` gone from `ChamberAddr` there is
+        // exactly one lattice to walk, however many doors open into it.
+        //
+        // The system's drawn branch width, REPORTED against, never used as a
+        // loop bound: every branch the lattice admits is still walked, so a
+        // branch gate that stopped gating shows up as [`GLYPH_EXISTS`] where
+        // [`GLYPH_PAST_BRANCH`] belongs — the same falsifiability rule the
+        // level walk follows.
+        //
+        // **Read per BAND, not once per system** (The Drift, Task 5):
+        // `branch_count_of` is now keyed on `(cell, band)`, so a system can
+        // realize a different branch width at each band — the width used
+        // below must match the band the gate below is actually reporting
+        // against, exactly as `chamber_exists` itself reads `addr.band`.
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            for (rank, _) in habitation_bands() {
+                let band = hornvale_kernel::Band::from_rank(rank)
+                    .expect("habitation_bands() yields real ranks");
+                let realized_branches = crate::character::branch_count_of(seed, cell, band);
+                let run = RunAddr { cell, branch, band };
+                let drawn = levels_in_branch(seed, run);
+                tallies.drawn_floors += usize::from(drawn);
+
+                let mut realized = String::new();
+                let mut rock = "-";
+                // THE LATTICE'S OWN CEILING, never `drawn`. See the module
+                // doc: bounding this walk by the draw made the drawn-level
+                // gate unfalsifiable.
+                for level in 0..LEVELS_PER_BRANCH_CEILING {
+                    let addr = ChamberAddr {
+                        cell,
+                        branch,
+                        band,
+                        level,
+                    };
+                    match chamber_at(seed, &cave, gradient, &column, addr, &overrides) {
+                        // The EXISTS arm is first, so no refusal glyph
+                        // computed from `drawn` can mask a chamber the
+                        // shipped path admitted past it.
+                        Some(chamber) => {
+                            realized.push(GLYPH_EXISTS);
+                            tallies.chambers += 1;
+                            tallies.by_band[usize::from(rank)] += 1;
+                            if level >= drawn {
+                                tallies.past_run_length += 1;
+                            }
+                            if branch >= realized_branches {
+                                tallies.past_branch_count += 1;
+                            }
+                            match rock_rank(chamber.stratum) {
+                                Some(rank) => tallies.by_rock[rank] += 1,
+                                None => tallies.off_ladder_rock += 1,
+                            }
+                            match chamber.origin {
+                                ChamberOrigin::Found => tallies.by_origin[0] += 1,
+                                ChamberOrigin::Made => tallies.by_origin[1] += 1,
+                            }
+                            if rock == "-" {
+                                rock = stratum_word(chamber.stratum);
+                            }
+                        }
+                        None if level >= drawn => realized.push(GLYPH_PAST_RUN),
+                        None if branch >= realized_branches => realized.push(GLYPH_PAST_BRANCH),
+                        None => realized.push(GLYPH_REFUSED),
+                    }
+                }
+
+                if want_transect {
+                    rows.push(RunRow {
+                        key: chamber_key(ChamberAddr {
+                            cell,
+                            branch,
+                            band,
+                            level: 0,
+                        }),
+                        drawn,
+                        realized,
+                        rock,
+                    });
+                }
+            }
+        }
+
         // THE SYSTEM'S DRAWN ENTRANCE COUNT, never a module constant: the
-        // same falsifiability rule the floor walk follows. A count draw that
+        // same falsifiability rule the level walk follows. A count draw that
         // stopped counting must shrink the WORLD, not this witness's view of
         // it — bounding by a const would have made the two move together and
-        // the drift invisible.
+        // the drift invisible. Entrances survive The Drift only as WHICH
+        // APERTURE a player used (amendment A.3): each one still resolves to
+        // a coordinate in the ONE shared lattice walked above.
         let drawn_entrances = crate::chamber::entrance_count(seed, cell);
         tallies.entrances += usize::from(drawn_entrances);
         if drawn_entrances > 1 {
             tallies.multi_entrance_systems += 1;
         }
-        let want_transect = transect.len() < TRANSECT_SYSTEMS;
-        let mut rows: Vec<RunRow> = Vec::new();
         let mut mouths: Vec<ChamberAddr> = Vec::new();
-
         for entrance in 0..drawn_entrances {
-            // The system's drawn branch width, read once per entrance and
-            // REPORTED against, never used as a loop bound: every branch the
-            // lattice admits is still walked, so a branch gate that stopped
-            // gating shows up as [`GLYPH_EXISTS`] where [`GLYPH_PAST_BRANCH']
-            // belongs — the same falsifiability rule the floor walk follows.
-            let realized_branches = crate::character::branch_count_of(seed, cell, entrance);
-            for branch in 0..BRANCHES_PER_SYSTEM {
-                for band in 0..habitation_bands().len() as u8 {
-                    let run = RunAddr {
-                        cell,
-                        entrance,
-                        branch,
-                        band,
-                    };
-                    let drawn = floors_in_run(seed, run);
-                    tallies.drawn_floors += usize::from(drawn);
-
-                    let mut realized = String::new();
-                    let mut rock = "-";
-                    // THE LATTICE'S OWN CEILING, never `drawn`. See the module
-                    // doc: bounding this walk by the draw made the drawn-floor
-                    // gate unfalsifiable.
-                    for floor in 0..FLOORS_PER_RUN_CEILING {
-                        let addr = ChamberAddr {
-                            cell,
-                            entrance,
-                            branch,
-                            band,
-                            floor,
-                        };
-                        match chamber_at(seed, &cave, gradient, &column, addr, &overrides) {
-                            // The EXISTS arm is first, so no refusal glyph
-                            // computed from `drawn` can mask a chamber the
-                            // shipped path admitted past it.
-                            Some(chamber) => {
-                                realized.push(GLYPH_EXISTS);
-                                tallies.chambers += 1;
-                                tallies.by_band[usize::from(band)] += 1;
-                                if floor >= drawn {
-                                    tallies.past_run_length += 1;
-                                }
-                                if branch >= realized_branches {
-                                    tallies.past_branch_count += 1;
-                                }
-                                match rock_rank(chamber.stratum) {
-                                    Some(rank) => tallies.by_rock[rank] += 1,
-                                    None => tallies.off_ladder_rock += 1,
-                                }
-                                match chamber.origin {
-                                    ChamberOrigin::Found => tallies.by_origin[0] += 1,
-                                    ChamberOrigin::Made => tallies.by_origin[1] += 1,
-                                }
-                                if rock == "-" {
-                                    rock = stratum_word(chamber.stratum);
-                                }
-                            }
-                            None if floor >= drawn => realized.push(GLYPH_PAST_RUN),
-                            None if branch >= realized_branches => realized.push(GLYPH_PAST_BRANCH),
-                            None => realized.push(GLYPH_REFUSED),
-                        }
-                    }
-
-                    if want_transect {
-                        rows.push(RunRow {
-                            key: chamber_key(ChamberAddr {
-                                cell,
-                                entrance,
-                                branch,
-                                band,
-                                floor: 0,
-                            }),
-                            drawn,
-                            realized,
-                            rock,
-                        });
-                    }
-                }
-            }
-
             // This entrance's own mouth (C.3): entrance 0 is the main line's
             // head, every other opens into its drawn branch root — but the
             // mouth ADDRESS in the lattice is what reachability seeds on,
             // so it is read from the shipped mapping rather than restated.
             let mouth = crate::chamber::entrance_mouth(seed, cell, entrance);
+            let band = hornvale_kernel::Band::from_rank(mouth.band)
+                .expect("entrance_mouth only names a habitation rank");
             let entry = ChamberAddr {
                 cell,
-                entrance,
                 branch: mouth.branch,
-                band: mouth.band,
-                floor: mouth.floor,
+                band,
+                level: mouth.floor,
             };
             if chamber_at(seed, &cave, gradient, &column, entry, &overrides).is_some() {
                 tallies.open_entrances += 1;
@@ -705,7 +778,7 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
     ));
     out.push_str(&format!(
         "  lattice         {BRANCHES_PER_SYSTEM} branches per system, {} bands, \
-         {FLOORS_PER_RUN_CEILING} floors admitted per run\n",
+         {LEVELS_PER_BRANCH_CEILING} levels admitted per run\n",
         habitation_bands().len()
     ));
     out.push_str(&format!(
@@ -761,9 +834,10 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
 
     out.push_str("\n  the first three cave systems, run by run\n");
     out.push_str(&format!(
-        "  (key = the floor-0 derivation key; {GLYPH_EXISTS} exists, \
-         {GLYPH_REFUSED} refused, {GLYPH_PAST_RUN} past the run's drawn floors, \
-         {GLYPH_PAST_BRANCH} past the system's drawn branch count)\n"
+        "  (key = the floor-0 address's spelling, not a derivation key; \
+         {GLYPH_EXISTS} exists, {GLYPH_REFUSED} refused, {GLYPH_PAST_RUN} past \
+         the run's drawn floors, {GLYPH_PAST_BRANCH} past the system's drawn \
+         branch count)\n"
     ));
     for (cell, head, rows) in &transect {
         out.push_str(&format!("\n  cell {} — {head}\n", cell.0));
@@ -887,7 +961,7 @@ mod tests {
     /// Two arms, and the second is what makes the first mean something:
     ///
     /// 1. every transect row's glyph run is exactly
-    ///    [`FLOORS_PER_RUN_CEILING`] long — a row bounded by its own `drawn`
+    ///    [`LEVELS_PER_BRANCH_CEILING`] long — a row bounded by its own `drawn`
     ///    would be shorter, and `drawn` is at most the ceiling and usually far
     ///    under it;
     /// 2. at least one row actually carries [`GLYPH_PAST_RUN`], i.e. the
@@ -909,9 +983,9 @@ mod tests {
         for row in &rows {
             assert_eq!(
                 row.chars().count(),
-                usize::from(FLOORS_PER_RUN_CEILING),
+                usize::from(LEVELS_PER_BRANCH_CEILING),
                 "a transect row is {} glyphs long, not the lattice ceiling of \
-                 {FLOORS_PER_RUN_CEILING} — the floor walk is bounded by \
+                 {LEVELS_PER_BRANCH_CEILING} — the floor walk is bounded by \
                  something other than the lattice, which is how the drawn-floor \
                  gate became unfalsifiable once already: {row:?}",
                 row.chars().count()
@@ -929,7 +1003,7 @@ mod tests {
     ///
     /// Asserted here as well as printed, because this is the one tally whose
     /// healthy value is known in advance: `chamber_exists` refuses every floor
-    /// at or past `floors_in_run`, so any nonzero reading is that gate not
+    /// at or past `levels_in_branch`, so any nonzero reading is that gate not
     /// gating, not a world being unusual.
     #[test]
     fn no_chamber_exists_past_its_runs_drawn_length() {
@@ -1016,18 +1090,68 @@ mod tests {
         );
     }
 
-    /// **Reachability is reported, is nonzero, and is a strict subset of
-    /// existence** — the quantity amendment C.4 moves, and the one an
-    /// existence count cannot see.
+    /// **Reachability is reported, is nonzero, and EQUALS existence** — the
+    /// campaign's headline, asserted in the one place a merge actually runs.
     ///
-    /// The strictness is the interesting arm and it is asserted rather than
-    /// hoped for: `passages_from` does not treat `floor` as an adjacency axis
-    /// yet, so every chamber above floor 0 is unreachable from the entrance
-    /// today. `reachable == chambers` would mean either that this readout
-    /// stopped walking the graph or that vertical connection landed — both
-    /// worth a red rather than a silent pass.
+    /// # THIS WAS `<=`, AND `<=` COULD NOT FAIL
+    ///
+    /// `reachable` is [`reachable_union`]'s flood fill: it seeds only on
+    /// mouths that `chamber_at` already admitted, and expands only through
+    /// `passages_from`, which retains its candidates on `chamber_exists`.
+    /// `chambers` counts exactly the addresses `chamber_at` admits. So
+    /// `reachable` is a **subset of** `chambers` by construction, and
+    /// `reachable <= chambers` is a theorem about the code rather than a
+    /// claim about the world — true under every possible connectivity
+    /// defect, including a walk that reaches nothing but its own doorways.
+    /// The `reachable > 0` guard above it excludes only the empty case.
+    ///
+    /// **Why that mattered enough to change behaviour at the close of a
+    /// campaign.** The strong form of this claim lives in
+    /// `stope_variety_probe.rs` and in `drift_reach_probe.rs`'s gated arms,
+    /// and both are `heavy`-tier; decision 0148 took the heavy tier off the
+    /// merge queue's phase list. This test is not heavy — it runs in the
+    /// merge's `gate` phase on every landing — so with `<=` here, **nothing
+    /// on any schedule asserted that underworld reachability is 100%**. The
+    /// campaign's own product had no gate that could notice it regressing.
+    ///
+    /// # WHY EQUALITY IS THE RIGHT CLAIM, NOT A CONVENIENT ONE
+    ///
+    /// It is entailed, not observed. Deleting the existence coin (spec §4.1)
+    /// makes every address inside `chamber_exists`'s five structural gates
+    /// exist; §4.5's two by-construction guarantees make every branch descend
+    /// and every branch below the top have a parent; amendment E's third
+    /// makes every top-band branch named by an aperture. Together those put
+    /// the whole of a system's lattice in one component containing its own
+    /// entrances. Seed 42 reads `reachable == chambers == 30537`, and the
+    /// other two panel seeds read 59,227 and 48,294 the same way.
+    ///
+    /// An earlier version of this doc quoted **30,272** — the figure measured
+    /// between Tasks 4 and 5, before the three per-branch draws were re-keyed
+    /// on band. `drift_reach_probe.rs` records the move; this file did not,
+    /// which is the ordinary way a number in prose goes stale.
+    ///
+    /// # IT FIRES
+    ///
+    /// Proved rather than argued, and re-measured when this assertion was
+    /// strengthened: neutralising the band-descent step in `passages_from`
+    /// (so a run's bottom level offers no child below) takes seed 42's
+    /// reachable count to **4,148 of 30,537** and reddens here with a real
+    /// assertion failure, not a compile error. `chambers` does not move under
+    /// that mutation, which is what makes the two sides separate
+    /// computations rather than one quantity compared with itself.
+    ///
+    /// The module doc above carried **5,569** for this same severing, and it
+    /// was not re-taken after Task 7 rewired the descent rule onto the drawn
+    /// band-transition edges. 4,148 is the measured figure on the finished
+    /// world.
+    ///
+    /// **What would legitimately move it** — and the only things that should:
+    /// `descents_from`'s edge draw, `passages_from`'s vertical or lateral
+    /// rules, `entrance_mouth`'s landing, `aperture_count_at`'s width floor
+    /// (amendment E.2's construction), or a return of a per-address existence
+    /// draw. A move with none of those touched is a connectivity defect.
     #[test]
-    fn reachability_is_reported_and_is_a_strict_subset_of_existence() {
+    fn reachability_is_reported_and_equals_existence() {
         let seed = Seed(42);
         let text = render_underworld(seed, &terrain_for(seed));
         let reachable: usize = text
@@ -1051,12 +1175,23 @@ mod tests {
             "no chamber is reachable from any entrance, so the reachability \
              figure witnesses nothing"
         );
-        assert!(
-            reachable < chambers,
-            "reachable ({reachable}) is not strictly under existence \
-             ({chambers}); with `floor` still absent from passages_from's \
-             adjacency rule every chamber above floor 0 must be unreachable, \
-             so this means the graph walk or the adjacency rule moved"
+        assert_eq!(
+            reachable, chambers,
+            "seed 42's underworld is no longer wholly reachable from its own \
+             entrances: the walk reaches {reachable} of {chambers} chambers. \
+             Since The Drift (spec §4.1, §4.5 and amendment E) these two are \
+             equal by construction, and this is the ONLY assertion of that on \
+             the merge queue's schedule — the strong forms in \
+             `stope_variety_probe` and `drift_reach_probe` are heavy-tier and \
+             decision 0148 took heavy off the merge phases. Four things move \
+             this legitimately: `descents_from`'s band-transition edge draw, \
+             `passages_from`'s vertical or lateral rules, where \
+             `entrance_mouth` lands a door, and `aperture_count_at`'s width \
+             floor (amendment E.2's construction). A move with none of those \
+             touched is a connectivity defect, not a figure to re-baseline. \
+             `reachable` GREATER than `chambers` cannot happen at all — the \
+             walk seeds on `chamber_at` and expands through `chamber_exists` \
+             — so a red here always means the walk fell short."
         );
     }
 

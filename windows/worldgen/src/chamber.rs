@@ -16,7 +16,7 @@
 //!
 //! **The lattice's depth axis is the DELVE ladder, not the stratigraphic one**
 //! (spec §4.1, The Underworld). `ChamberAddr.band` indexes
-//! [`hornvale_terrain::DelveRung`]'s habitation rungs — ΔT classes above the
+//! [`hornvale_kernel::Band`]'s habitation rungs — ΔT classes above the
 //! cell's surface datum — so the same rung sits at different metre depths in
 //! different cells, and how far down the lattice a cave reaches is a fact
 //! about its budget *and* its cell's geothermal gradient. That is why both
@@ -32,16 +32,18 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed, Stream};
+use hornvale_kernel::{Band, CellId, Seed, Stream};
 use hornvale_terrain::{
-    BandKind, Cave, DelveRung, GeneratedTerrain, GeothermalGradient, StratigraphicColumn,
-    delta_t_range_of, rung_at_depth,
+    Cave, GeneratedTerrain, GeothermalGradient, Horizon, StratigraphicColumn, delta_t_range_of,
+    rung_at_depth,
 };
 
 /// Branch columns in the fixed lattice, beneath one cave-system address
-/// (`cell` plus `entrance`). Constant regardless of what any particular cave
-/// realizes — rule 1a: this is the lattice's own size, never a count of what
-/// a generator produced.
+/// (`cell` alone — amendment A.3 dissolved the per-entrance sublattice: an
+/// entrance is which aperture a player used, not a coordinate in the
+/// system's own address space). Constant regardless of what any particular
+/// cave realizes — rule 1a: this is the lattice's own size, never a count of
+/// what a generator produced.
 ///
 /// **Renamed from `SLOTS_PER_BAND` by The Stope**, with the field it bounds
 /// (spec §3.1: "`slot` reads as a position and it is an identity"). The value
@@ -51,7 +53,7 @@ use hornvale_terrain::{
 /// **column persisting downward**, one range shared by every band.
 ///
 /// **4**, chosen from The Deep Realm's Task 0 measured substrate rather than
-/// invented: a cave reaching `BandKind::Roots` (the deepest band the live
+/// invented: a cave reaching `Horizon::Roots` (the deepest band the live
 /// generator ever produces — 30 seeds, 55,947 caves) spans 4 rungs of
 /// `Realm::UNDERDARK.strata()` (`Regolith..=Roots`), so 4 branches keeps a
 /// full system's address space the same order of magnitude as the band ladder
@@ -63,56 +65,65 @@ use hornvale_terrain::{
 /// type-audit: bare-ok(count)
 pub const BRANCHES_PER_SYSTEM: u8 = 4;
 
-/// The lattice's **floor ceiling**: how many floors one *run* — the floors of
-/// one `branch` within one `band` — can hold. Like [`BRANCHES_PER_SYSTEM`],
-/// this is the lattice's own size, and rule 1a is the whole reason it is a
-/// constant here rather than a drawn quantity.
+/// The lattice's **level ceiling**: how many levels one *branch* — the
+/// levels of one `branch` within one `band` — can hold. Like
+/// [`BRANCHES_PER_SYSTEM`], this is the lattice's own size, and rule 1a is
+/// the whole reason it is a constant here rather than a drawn quantity.
 ///
-/// **This is deliberately NOT the realized floor count, and the distinction is
-/// decision 0102's** (The Stope, spec §3.1). A run's realized floor count is
+/// **Renamed from `FLOORS_PER_RUN_CEILING` by The Drift** (spec amendment
+/// A.3): `floor` becomes `level` throughout the address (spec §4.3 — "a
+/// screen-filling map", not a storey of a building), and "run" becomes
+/// "branch" now that a run's own coordinates are `(cell, band, branch)` with
+/// no `entrance` to distinguish it from the branch it belongs to.
+///
+/// **This is deliberately NOT the realized level count, and the distinction is
+/// decision 0102's** (The Stope, spec §3.1). A branch's realized level count is
 /// *drawn*, per band, within the ranges spec §3.1 froze (`Undercroft` 1–5,
 /// `Shallows` 3–10, `Deeps` 5–20, `Underdeep` 5–10, `Nadir` 1–5); letting that
 /// drawn count size the address space would let a generation quantity define
 /// the lattice, which is exactly the defect 0102 exists to prevent. So the
-/// lattice admits `0..FLOORS_PER_RUN_CEILING` at every run, and the draw
+/// lattice admits `0..LEVELS_PER_BRANCH_CEILING` at every branch, and the draw
 /// decides which of those addresses a world actually realizes. That draw is
-/// [`floors_in_run`], and it landed in Task 2 — this constant has bounded a
+/// [`levels_in_branch`], and it landed in Task 2 — this constant has bounded a
 /// *distribution* rather than stood in for one since.
 ///
 /// **20**, the maximum of §3.1's own ranges (`Deeps` 5–20). Widening it later
 /// is safe — a wider ceiling only admits addresses the lattice previously
-/// refused, and relocates none, because [`chamber_key`] spells `floor` as a
+/// refused, and relocates none, because [`chamber_key`] spells `level` as a
 /// place and not as a fraction of a count.
 /// type-audit: bare-ok(count)
-pub const FLOORS_PER_RUN_CEILING: u8 = 20;
-
-/// The fraction of in-budget addresses that exist, in expectation. A
-/// coin-flip midpoint, not a tuned density curve: this task ships the
-/// address lattice and its existence gate, and Task 8's H2 readout is
-/// where the shape of chamber density is measured against the spec's
-/// falsification. Kept private — not a save-format contract by itself,
-/// only [`chamber_key`]'s string and [`crate::streams::CHAMBER`] are; this
-/// constant may move without relocating any address, because it only
-/// changes which draws cross a threshold, not what the draws are keyed on.
-const EXISTENCE_DENSITY: f64 = 0.5;
+pub const LEVELS_PER_BRANCH_CEILING: u8 = 20;
 
 /// An address in the chamber lattice — a **place**, never a construction
-/// step (spec §3.1). Five small integers name: which cell, which entrance of
-/// that cell, which branch (a column persisting downward), which depth band,
-/// and which floor of that branch's run within that band.
+/// step (spec §3.1). Four coordinates name: which cell, which branch (a
+/// column persisting downward), which depth band, and which level of that
+/// branch within that band.
 ///
-/// **The Stope's epoch (`chamber/v3`) reshaped this type**, and both halves
-/// are save-format changes because [`chamber_key`] spells the whole address:
-/// `slot` was renamed to `branch` (spec §3.1 — "slot reads as a position and
-/// it is an identity"; a branch owns a character and a run of floors), and
-/// `floor` was added, because the underworld had no floors at all — a band
-/// was one interior-less point per branch.
+/// **The Drift's amendment A dropped `entrance`, and this is why.** Task 0's
+/// baseline found that the shipped lattice keyed every draw on `(cell,
+/// entrance)`, so each entrance of a cave system realized its OWN private
+/// sublattice — but the campaign's own worked example (a Blacksmith's Cellar
+/// and a Cave under the Well, two Undercroft entrances, both descending into
+/// the SAME Spider Cave) requires one lattice per SYSTEM with several
+/// apertures into it. An entrance survives only as *which aperture a player
+/// came in by* — [`entrance_count`] (keyed on the cell) and
+/// [`entrance_mouth`] (keyed on `(cell, entrance)`) still answer that
+/// question; it is no longer a coordinate of the place itself.
 ///
-/// **`band` indexes the delve ladder's habitation rungs
-/// ([`hornvale_terrain::rungs`] minus `Surface`), never a count of the rungs a
-/// particular cave realizes** (rule 1a). The permanent ladder has 5 habitation
-/// rungs regardless of what any world's caves reach, so `band` stays
-/// meaningful whatever the depth model does.
+/// **The Stope's epoch (`chamber/v3`) reshaped this type before that**, and
+/// both halves were save-format changes because [`chamber_key`] spelled the
+/// whole address: `slot` was renamed to `branch` (spec §3.1 — "slot reads as
+/// a position and it is an identity"; a branch owns a character and a run of
+/// levels), and `floor` (now `level`) was added, because the underworld had
+/// no interior at all — a band was one interior-less point per branch.
+///
+/// **`band` indexes the delve ladder's habitation rungs directly, as a
+/// [`Band`] rather than a bare rank** (The Drift, Task 4) — `hornvale_kernel`
+/// carries the roster and the ordering ([`Band::deeper`], [`Band::shallower`]
+/// step it; [`Band::Surface`] is representable but is not a habitation band
+/// and never names a real chamber, see [`chamber_exists`]). The permanent
+/// ladder has 5 habitation rungs regardless of what any world's caves reach,
+/// so `band` stays meaningful whatever the depth model does.
 ///
 /// **It used to index `hornvale_climate::Realm::UNDERDARK.strata()`**, and
 /// that is what `chamber/v1` was keyed on; rule 1a was written when Task 0
@@ -120,7 +131,7 @@ const EXISTENCE_DENSITY: f64 = 0.5;
 /// values. `MAP-cave-depth-weld` — the fix rule 1a named as the reason to keep
 /// the address space wider than the realized one — landed in this campaign
 /// (spec §4.0) and made the situation worse, not better: with a metre budget
-/// capped at 3 km, `deepest_band` reached exactly `Basement` on 97.3–99.0% of
+/// capped at 3 km, `deepest_horizon` reached exactly `Basement` on 97.3–99.0% of
 /// cave-bearing cells across seeds 42 / 7 / 1234, so the lattice's depth axis
 /// carried almost no information at all. Re-pointing it at the delve ladder is
 /// what restores it: the same three seeds spread across all five rungs
@@ -138,86 +149,78 @@ const EXISTENCE_DENSITY: f64 = 0.5;
 /// Deliberately carries **no `Serialize`/`Deserialize`**: nothing in this
 /// campaign writes a `ChamberAddr` to a ledger, and the moment one is
 /// committed its on-disk spelling becomes a permanent key (spec §3.1).
-/// type-audit: bare-ok(index: entrance), bare-ok(index: branch), bare-ok(index: band), bare-ok(index: floor)
+/// type-audit: bare-ok(index: branch), bare-ok(index: level)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChamberAddr {
     /// Which surface cell this chamber lies beneath.
     pub cell: CellId,
-    /// Which entrance of that cell's cave system this chamber's descent
-    /// starts from. Today's terrain model reports one cave per cell with no
-    /// separate aperture count (`hornvale_terrain::GeneratedTerrain::
-    /// cave_at`), so every current caller passes `0`; the field exists so a
-    /// future terrain change (multiple apertures into one system, spec
-    /// §3.4's `ShaftNet` rung) does not require relayering this type.
-    pub entrance: u8,
     /// Which branch of that cave system this chamber sits on
     /// (`0..BRANCHES_PER_SYSTEM`) — a column persisting downward through the
     /// bands, and the thing a character and a barrier state attach to (spec
     /// §3.3, §B.5). A lattice coordinate, not a count of chambers generated.
     pub branch: u8,
-    /// Which rung of the delve ladder this chamber sits at. Indexes the
-    /// permanent 5-rung habitation ladder — see this type's own docs and
-    /// rule 1a. The field keeps the name `band` because it names a position
-    /// on *the* depth axis of the lattice, whichever ladder that axis is; the
-    /// ladder it indexes is stated here and nowhere else.
-    pub band: u8,
-    /// Which floor of this branch's run within this band
-    /// (`0..FLOORS_PER_RUN_CEILING`) — the rung the lattice was missing. A
-    /// lattice coordinate: the ceiling is fixed, and how many of those floors
-    /// a given run *realizes* is a separate drawn quantity ([`floors_in_run`])
-    /// that may never size this axis (decision 0102; see
-    /// [`FLOORS_PER_RUN_CEILING`]).
-    pub floor: u8,
+    /// Which rung of the delve ladder this chamber sits at — a typed
+    /// [`Band`], not a bare index (The Drift, Task 4). `Band::Surface` is
+    /// representable but names no chamber; see [`chamber_exists`].
+    pub band: Band,
+    /// Which level of this branch's run within this band
+    /// (`0..LEVELS_PER_BRANCH_CEILING`) — the interior the lattice was
+    /// missing. A lattice coordinate: the ceiling is fixed, and how many of
+    /// those levels a given branch *realizes* is a separate drawn quantity
+    /// ([`levels_in_branch`]) that may never size this axis (decision 0102;
+    /// see [`LEVELS_PER_BRANCH_CEILING`]). **Renamed from `floor` by The
+    /// Drift** (spec §4.3): a level is a screen-filling map, not a storey.
+    pub level: u8,
 }
 
 impl ChamberAddr {
-    /// The **run** this chamber belongs to — its address with `floor`
+    /// The **run** this chamber belongs to — its address with `level`
     /// dropped. The one place that projection is spelled, so a caller can
     /// never assemble a [`RunAddr`] that disagrees with the chamber it came
     /// from.
     pub fn run(self) -> RunAddr {
         RunAddr {
             cell: self.cell,
-            entrance: self.entrance,
             branch: self.branch,
             band: self.band,
         }
     }
 }
 
-/// The address of a **run** — the floors of one `branch` within one `band`
+/// The address of a **run** — the levels of one `branch` within one `band`
 /// (spec §3.3: "a RUN = the floors of one branch within one band, and one
-/// engine owns it"). A [`ChamberAddr`] with `floor` removed.
+/// engine owns it"). A [`ChamberAddr`] with `level` removed.
 ///
-/// **This type exists so that a run cannot carry a floor**, which is the
+/// **This type exists so that a run cannot carry a level**, which is the
 /// whole content of the distinction: a run is exactly the thing that has no
-/// floor yet, because how many floors it has is what [`floors_in_run`] draws.
-/// Taking a `ChamberAddr` and ignoring its `floor` would compile, and would
-/// let a caller believe the answer depended on which floor they happened to
-/// pass.
+/// level yet, because how many levels it has is what [`levels_in_branch`]
+/// draws. Taking a `ChamberAddr` and ignoring its `level` would compile, and
+/// would let a caller believe the answer depended on which level they
+/// happened to pass.
 ///
-/// Every component is a coordinate in the fixed lattice — cell, entrance,
-/// branch, band — and none of them is a generation ordinal (decision 0102).
-/// The draw keyed on this is therefore a fact about a *place*, readable by
-/// anyone who can name the place, in any order, with nothing generated first.
+/// Every component is a coordinate in the fixed lattice — cell, branch,
+/// band — and none of them is a generation ordinal (decision 0102). The draw
+/// keyed on this is therefore a fact about a *place*, readable by anyone who
+/// can name the place, in any order, with nothing generated first.
+///
+/// **`entrance` is GONE, same as [`ChamberAddr`]'s** (The Drift, amendment
+/// A.3) — a run belongs to a system's shared lattice, not to any one
+/// aperture into it.
 ///
 /// Deliberately carries **no `Serialize`/`Deserialize`**, for the same reason
 /// [`ChamberAddr`] does not: nothing commits one, and the moment one is
 /// committed its on-disk spelling becomes a permanent key.
-/// type-audit: bare-ok(index: entrance), bare-ok(index: branch), bare-ok(index: band)
+/// type-audit: bare-ok(index: branch)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RunAddr {
     /// Which surface cell this run lies beneath.
     pub cell: CellId,
-    /// Which entrance of that cell's cave system this run's descent starts
-    /// from. See [`ChamberAddr::entrance`].
-    pub entrance: u8,
     /// Which branch of that cave system this run sits on
     /// (`0..BRANCHES_PER_SYSTEM`).
     pub branch: u8,
     /// Which rung of the delve ladder this run sits at — the same 5-rung
     /// habitation ladder [`ChamberAddr::band`] indexes.
-    pub band: u8,
+    pub band: Band,
 }
 
 /// A chamber's maker, or the lack of one — spec §3.3's opening sentence: "A
@@ -261,7 +264,7 @@ pub enum ChamberOrigin {
 }
 
 /// A chamber's resolved content — deliberately minimal for this task. Spec
-/// §3's substrate table lists a chamber's content as "depth — `BandKind` on
+/// §3's substrate table lists a chamber's content as "depth — `Horizon` on
 /// each node — what the rock here is like", and that is exactly what
 /// `stratum` carries: the named stratum its address's `band` indexes. Task 4
 /// (ledger #24) adds `origin`, the seam's own payload; later tasks extend
@@ -282,8 +285,9 @@ pub struct Chamber {
     /// The address this content was derived for.
     pub addr: ChamberAddr,
     /// Which rung of the delve ladder this chamber sits on — a habitation
-    /// depth class, `rung_of_rank(addr.band)`. A pure function of the address.
-    pub rung: DelveRung,
+    /// depth class, literally `addr.band` since The Drift promoted it to a
+    /// typed [`Band`] (Task 4). A pure function of the address.
+    pub rung: Band,
     /// The rock stratum this chamber sits in — the *archive* answer, read off
     /// the cell's own stratigraphic column at the depth [`Chamber::rung`]
     /// begins at. **Not derived from `rung`, and `rung` is not derived from
@@ -299,12 +303,12 @@ pub struct Chamber {
     pub origin: ChamberOrigin,
 }
 
-/// The one explicit mapping between a NAMED [`DelveRung`] (what
+/// The one explicit mapping between a NAMED [`Band`] (what
 /// [`rung_at_depth`] returns for a cave's budget) and the lattice's index
 /// space (what [`ChamberAddr::band`] indexes) — rule 1a's "compare them
 /// through one explicit mapping, in one place." [`chamber_exists`] is the
 /// only caller, so a lattice reader and the depth-budget gate can never
-/// diverge on what a `band` number means. Exhaustive: a sixth `DelveRung`
+/// diverge on what a `band` number means. Exhaustive: a sixth `Band`
 /// variant fails this to compile rather than silently misplacing it.
 ///
 /// `Surface` is `None`: it is a rung of the delve ladder but not a *habitation*
@@ -321,31 +325,14 @@ pub struct Chamber {
 /// widening it the right move rather than duplicating it in
 /// [`crate::delve_seating`].
 /// type-audit: bare-ok(index: return)
-pub fn rung_rank(rung: DelveRung) -> Option<u8> {
+pub fn rung_rank(rung: Band) -> Option<u8> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some(0),
-        DelveRung::Shallows => Some(1),
-        DelveRung::Deeps => Some(2),
-        DelveRung::Underdeep => Some(3),
-        DelveRung::Nadir => Some(4),
-    }
-}
-
-/// The inverse of [`rung_rank`]: the rung a [`ChamberAddr::band`] index names.
-/// `None` for a rank past the ladder's end, so no caller can index out of it.
-///
-/// Kept beside `rung_rank` on purpose — the two are one bijection over the
-/// habitation rungs, and a sixth `DelveRung` variant fails *both* to compile
-/// rather than leaving the pair half-updated.
-fn rung_of_rank(rank: u8) -> Option<DelveRung> {
-    match rank {
-        0 => Some(DelveRung::Undercroft),
-        1 => Some(DelveRung::Shallows),
-        2 => Some(DelveRung::Deeps),
-        3 => Some(DelveRung::Underdeep),
-        4 => Some(DelveRung::Nadir),
-        _ => None,
+        Band::Surface => None,
+        Band::Undercroft => Some(0),
+        Band::Shallows => Some(1),
+        Band::Deeps => Some(2),
+        Band::Underdeep => Some(3),
+        Band::Nadir => Some(4),
     }
 }
 
@@ -355,7 +342,7 @@ fn rung_of_rank(rank: u8) -> Option<DelveRung> {
 /// A derived `Debug` impl renders the variant's identifier, which *looks* like
 /// exactly this table and is not the same promise. `Debug` is a diagnostic
 /// facility: nothing stops a later reader from writing a hand-rolled `Debug`
-/// for [`DelveRung`] to make some log prettier, and doing so would silently
+/// for [`Band`] to make some log prettier, and doing so would silently
 /// re-key every chamber in every world with no test able to see it. Stating
 /// the strings here makes the contract reviewable, makes a rename an obvious
 /// epoch decision, and forces a sixth variant to choose its own spelling
@@ -365,14 +352,20 @@ fn rung_of_rank(rank: u8) -> Option<DelveRung> {
 /// survive**, and it did: re-pointing the axis at a different ladder changed
 /// *which table* is consulted, in one place, visibly — instead of silently
 /// changing what a `Debug` impl happened to print.
-fn rung_name(rung: DelveRung) -> &'static str {
+///
+/// **`pub(crate)` since The Drift Task 5**, so `crate::character`'s
+/// per-branch keys can spell `band` by the same name table `run_key` and
+/// `chamber_key` use, rather than growing a second copy of it — the same
+/// "one explicit mapping, in one place" argument [`rung_rank`]'s own doc
+/// makes for widening it to `pub`.
+pub(crate) fn rung_name(rung: Band) -> &'static str {
     match rung {
-        DelveRung::Surface => "surface",
-        DelveRung::Undercroft => "undercroft",
-        DelveRung::Shallows => "shallows",
-        DelveRung::Deeps => "deeps",
-        DelveRung::Underdeep => "underdeep",
-        DelveRung::Nadir => "nadir",
+        Band::Surface => "surface",
+        Band::Undercroft => "undercroft",
+        Band::Shallows => "shallows",
+        Band::Deeps => "deeps",
+        Band::Underdeep => "underdeep",
+        Band::Nadir => "nadir",
     }
 }
 
@@ -403,44 +396,46 @@ fn rung_name(rung: DelveRung) -> &'static str {
 /// bottom, would give rank 0 a cell-varying stratum at the cost of naming a
 /// depth no chamber is actually at. Whichever a later task picks, it should
 /// pick knowing this is the trade, not discover it from a constant column.
-fn stratum_at(
-    rung: DelveRung,
-    gradient: GeothermalGradient,
-    column: &StratigraphicColumn,
-) -> BandKind {
+fn stratum_at(rung: Band, gradient: GeothermalGradient, column: &StratigraphicColumn) -> Horizon {
     let (delta_t_k, _) = delta_t_range_of(rung);
     let depth_m = delta_t_k / gradient.get() * 1000.0;
     hornvale_terrain::features::band_at_depth(column, depth_m)
 }
 
-/// The one explicit mapping from terrain's [`BandKind`] to climate's
+/// The one explicit mapping from terrain's [`Horizon`] to climate's
 /// [`hornvale_climate::Stratum`] — the two enums name the same five rock units
 /// from two domains that may not depend on each other, so the composition root
 /// is the only place allowed to state the correspondence. Exhaustive on both
 /// sides: a sixth variant on either fails this to compile.
-fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
+fn stratum_of_band(band: Horizon) -> hornvale_climate::Stratum {
     match band {
-        BandKind::Regolith => hornvale_climate::Stratum::Regolith,
-        BandKind::Cover => hornvale_climate::Stratum::Cover,
-        BandKind::Basement => hornvale_climate::Stratum::Basement,
-        BandKind::Roots => hornvale_climate::Stratum::Roots,
-        BandKind::Underneath => hornvale_climate::Stratum::Underneath,
+        Horizon::Regolith => hornvale_climate::Stratum::Regolith,
+        Horizon::Cover => hornvale_climate::Stratum::Cover,
+        Horizon::Basement => hornvale_climate::Stratum::Basement,
+        Horizon::Roots => hornvale_climate::Stratum::Roots,
+        Horizon::Underneath => hornvale_climate::Stratum::Underneath,
     }
 }
 
 /// The one place the `chamber/v3` stream key is spelled — mirrors
 /// `deity_base_seed`'s discipline (`windows/worldgen/src/lib.rs`): "the one
 /// place the stream label is spelled, so [every caller] can never diverge."
-/// [`chamber_stream`] is the only caller.
+/// The Drift (spec §4.1) removed this key's only stream-deriving caller
+/// (`chamber_stream`, the existence draw) along with the draw itself; the
+/// key survives because `chamber_at`'s test fixtures and the key-pinning
+/// tests below still spell chamber addresses through it.
 ///
 /// **The key spells the WHOLE address, so every field here is a save-format
-/// contract.** The Stope added `floor` and renamed `slot` to `branch`; a key
-/// that omitted `floor` would derive one stream for every floor of a run,
-/// which is to say the floors would all be the same chamber. That is why
-/// `the_key_spells_the_floor` sweeps the axis rather than sampling it.
+/// contract.** The Stope added `floor` (since renamed `level`) and renamed
+/// `slot` to `branch`; a key that omitted `level` would derive one stream for
+/// every level of a run, which is to say the levels would all be the same
+/// chamber. That is why `the_key_spells_the_level` sweeps the axis rather
+/// than sampling it. **The Drift dropped `entrance`** (amendment A.3): an
+/// entrance is which aperture a player used, not a coordinate in the
+/// address, so the key no longer spells one at all.
 ///
-/// **`cell`, `entrance`, `branch` and `floor` are genuine integers naming a
-/// place and are spelled decimal. `band` is spelled by its [`DelveRung`] NAME,
+/// **`cell`, `branch` and `level` are genuine integers naming a
+/// place and are spelled decimal. `band` is spelled by its [`Band`] NAME,
 /// never its numeric index.** An index is a declaration position: if the delve ladder
 /// ever gains a rung in the middle (spec §4.1 permits 4 to 6, so there is
 /// room), every index below it shifts, and a numeral-keyed chamber would
@@ -452,88 +447,112 @@ fn stratum_of_band(band: BandKind) -> hornvale_climate::Stratum {
 ///
 /// The name comes from [`rung_name`]'s explicit table, **not** from a `Debug`
 /// impl — see that function for why the distinction is load-bearing rather
-/// than stylistic. A `band` past the ladder's end spells as `"out-of-ladder"`;
-/// it is unreachable through either public entry point (both gate on
-/// [`rung_rank`] first), and naming it beats both a panic and a silent
-/// collision with band 0.
+/// than stylistic. `addr.band` is now a typed [`Band`], so every value spells
+/// a real rung — including [`Band::Surface`], which [`chamber_exists`] never
+/// admits into a shipped address but which this pure formatter still names
+/// rather than panicking on, because a formatter that could panic on some
+/// inputs would not be safe to call from a debug context.
+///
+/// **`chamber_key` is a DISPLAY FORMATTER now, not a derivation key** (spec
+/// amendment A.6, correcting A.4). Before The Drift's Task 1 deleted the
+/// chamber existence draw, this string was hashed by `chamber_stream` into
+/// the seed's derivation tree — the whole reason the doc above used to call
+/// it "the real derivation key". That draw is gone, and with it went the
+/// only production reader of the composed stream: `#[cfg(test)] mod tests`
+/// begins after every remaining call site in this file, so nothing in a
+/// shipped world derives from `crate::streams::CHAMBER` any more (see that
+/// label's own doc). **What now carries the seed-derivation key is
+/// [`run_key`]** (under [`crate::streams::RUN_FLOORS`]) and the three
+/// per-branch keys in `crate::character` (under `BRANCH_COUNT` /
+/// `BRANCH_CHARACTER` / `BRANCH_BARRIER`) — this function's sole production
+/// caller is `underworld_readout.rs`'s witness, which prints it as a `key`
+/// column for a human to read, not to re-derive anything from.
 pub(crate) fn chamber_key(addr: ChamberAddr) -> String {
-    let band = rung_of_rank(addr.band).map_or("out-of-ladder", rung_name);
     format!(
-        "{}/{}/{}/{band}/{}",
-        addr.cell.0, addr.entrance, addr.branch, addr.floor
+        "{}/{}/{}/{}",
+        addr.cell.0,
+        addr.branch,
+        rung_name(addr.band),
+        addr.level
     )
 }
 
-/// The stream a chamber's own derivations draw from — [`chamber_key`]
-/// composed under [`crate::streams::CHAMBER`], following the composed-label
-/// pattern at `windows/worldgen/src/lib.rs`'s `deity_name_seed`.
-///
-/// **Precondition:** `addr.band` must be `< 5` (a valid habitation-rung
-/// index). Both callers ([`chamber_exists`] and [`chamber_at`]) only reach
-/// this after `addr.band` has already been checked against a cave's budget via
-/// [`rung_rank`], whose maximum return value is `4`, so an out-of-range `band`
-/// can never survive to here.
-fn chamber_stream(seed: Seed, addr: ChamberAddr) -> Stream {
-    seed.derive(crate::streams::CHAMBER)
-        .derive(StreamLabel::dynamic(&chamber_key(addr)))
-        .stream()
-}
+// `chamber_stream` (`chamber_key` composed under `crate::streams::CHAMBER`)
+// was the existence draw's only reader. The Drift (spec §4.1) deleted that
+// draw, and with it the function's last caller — an unused private helper is
+// a value with no reader, so it is deleted rather than kept around. Nothing
+// else consumed `crate::streams::CHAMBER` directly; `chamber_key` itself
+// stays (it is still spelled by `chamber_at`'s tests and the key-pinning
+// tests below, and by the underworld witness's display column — see this
+// function's own doc), and the label constant `crate::streams::CHAMBER`
+// stays too — it is a save-format contract already shipped, not a value
+// this task owns.
 
-/// Spec §3.1's floors-per-run range for a band, inclusive on both ends —
+/// Spec §3.1's levels-per-branch range for a band, inclusive on both ends —
 /// **frozen preregistration, not a tunable**. `Undercroft` 1–5, `Shallows`
 /// 3–10, `Deeps` 5–20, `Underdeep` 5–10, `Nadir` 1–5 (the last renamed from
 /// `Sunless` by amendment B.3).
 ///
-/// `None` for `Surface`: the overworld is not a run. Exhaustive, so a sixth
-/// [`DelveRung`] fails this to compile rather than silently inheriting a
+/// `None` for `Surface`: the overworld is not a branch. Exhaustive, so a
+/// sixth [`Band`] fails this to compile rather than silently inheriting a
 /// neighbour's range.
-fn floors_range(rung: DelveRung) -> Option<(u8, u8)> {
+fn levels_range(rung: Band) -> Option<(u8, u8)> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some((1, 5)),
-        DelveRung::Shallows => Some((3, 10)),
-        DelveRung::Deeps => Some((5, 20)),
-        DelveRung::Underdeep => Some((5, 10)),
-        DelveRung::Nadir => Some((1, 5)),
+        Band::Surface => None,
+        Band::Undercroft => Some((1, 5)),
+        Band::Shallows => Some((3, 10)),
+        Band::Deeps => Some((5, 20)),
+        Band::Underdeep => Some((5, 10)),
+        Band::Nadir => Some((1, 5)),
     }
 }
 
-/// The one place the `chamber/run-floors/v1` key is spelled — [`chamber_key`]'s
+/// The one place the `chamber/run-floors/v2` key is spelled — [`chamber_key`]'s
 /// discipline one axis over, and its own save-format contract.
 ///
 /// Spelled to the same rules as a chamber key and for the same reasons:
-/// `cell`, `entrance` and `branch` are integers naming a place and are decimal;
-/// `band` is spelled by its [`DelveRung`] **name** through [`rung_name`]'s
-/// explicit table, because an index is a declaration position and a mid-ladder
-/// insertion would silently re-key every run below it.
+/// `cell` and `branch` are integers naming a place and are decimal; `band` is
+/// spelled by its [`Band`] **name** through [`rung_name`]'s explicit table,
+/// because an index is a declaration position and a mid-ladder insertion
+/// would silently re-key every run below it.
 ///
-/// **It does not spell a floor, and that is the type's whole content**: a run
+/// **It does not spell a level, and that is the type's whole content**: a run
 /// is the thing that does not have one yet.
+///
+/// **`entrance` dropped out of this key at `chamber/run-floors/v2`** (The
+/// Drift, amendment A.3/A.6): every entrance of a system now addresses INTO
+/// the same shared lattice, so a run is no longer keyed to which aperture a
+/// caller happened to ask about. This is a real re-keying of a LIVE
+/// derivation — unlike [`chamber_key`], [`levels_in_branch`] is the shipped
+/// entry point `chamber_exists` reads — so the label epoch moved with it.
 fn run_key(run: RunAddr) -> String {
-    let band = rung_of_rank(run.band).map_or("out-of-ladder", rung_name);
-    format!("{}/{}/{}/{band}", run.cell.0, run.entrance, run.branch)
+    format!("{}/{}/{}", run.cell.0, run.branch, rung_name(run.band))
 }
 
-/// The stream a run's floor count is drawn from — [`run_key`] composed under
+/// The stream a run's level count is drawn from — [`run_key`] composed under
 /// [`crate::streams::RUN_FLOORS`], deliberately a **different parent** from
-/// [`chamber_stream`]'s. See `RUN_FLOORS`'s own doc for why the separation
-/// lives in the parent rather than in the key's shape.
+/// the (now-deleted, spec §4.1) existence draw's own — see `RUN_FLOORS`'s
+/// own doc for why the separation lives in the parent rather than in the
+/// key's shape.
 fn run_stream(seed: Seed, run: RunAddr) -> Stream {
     seed.derive(crate::streams::RUN_FLOORS)
         .derive(StreamLabel::dynamic(&run_key(run)))
         .stream()
 }
 
-/// **How many floors this run realizes** — the drawn quantity
-/// [`FLOORS_PER_RUN_CEILING`] is deliberately not (The Stope, Task 2, spec
+/// **How many levels this branch realizes** — the drawn quantity
+/// [`LEVELS_PER_BRANCH_CEILING`] is deliberately not (The Stope, Task 2, spec
 /// §3.1). Uniform on the band's own frozen range: `Undercroft` 1–5,
 /// `Shallows` 3–10, `Deeps` 5–20, `Underdeep` 5–10, `Nadir` 1–5.
 ///
+/// **Renamed from `floors_in_run` by The Drift** (spec §4.3): the levels of
+/// one branch within one band, and "run" now means exactly that place.
+///
 /// **It takes a [`RunAddr`], not a [`ChamberAddr`] and not a bare band.** The
-/// draw keys on cell, entrance, branch and band, and a function cannot key on
-/// what it is not given — so every component of the key is a parameter, and
-/// the parameter type is the one that *cannot* carry a floor, because a run
-/// is precisely the thing that has no floor yet.
+/// draw keys on cell, branch and band, and a function cannot key on what it
+/// is not given — so every component of the key is a parameter, and the
+/// parameter type is the one that *cannot* carry a level, because a run is
+/// precisely the thing that has no level yet.
 ///
 /// **It does NOT take a `Cave`, and that is the same rule [`Chamber`] states
 /// for content**: how long a run is is a fact about a *place* in the lattice,
@@ -547,26 +566,259 @@ fn run_stream(seed: Seed, run: RunAddr) -> Stream {
 /// **A place, never an ordinal** (decision 0102). Nothing here counts runs
 /// generated, and the answer for one run is independent of whether any other
 /// run has ever been asked about — see
-/// `a_runs_floor_count_is_deterministic_for_one_address`, which interleaves
+/// `a_runs_level_count_is_deterministic_for_one_address`, which interleaves
 /// unrelated queries specifically to catch a draw that advanced a shared
 /// stream.
 ///
 /// `0` for a band past the habitation ladder, which makes
-/// [`chamber_exists`]'s floor gate refuse every floor there rather than
+/// [`chamber_exists`]'s level gate refuse every level there rather than
 /// deriving a length for nowhere. Unreachable through `chamber_exists`, which
-/// gates on [`rung_rank`] first; stated so the function is total.
+/// gates on `Band::Surface` first; stated so the function is total.
 /// type-audit: bare-ok(count: return)
-pub fn floors_in_run(seed: Seed, run: RunAddr) -> u8 {
-    let Some(rung) = rung_of_rank(run.band) else {
-        return 0;
-    };
-    let Some((lo, hi)) = floors_range(rung) else {
+pub fn levels_in_branch(seed: Seed, run: RunAddr) -> u8 {
+    let Some((lo, hi)) = levels_range(run.band) else {
         return 0;
     };
     let drawn = run_stream(seed, run).range_u32(u32::from(lo), u32::from(hi));
     // `range_u32` is inclusive and `hi` came from a `u8`, so this cannot
     // truncate; `expect` states that rather than masking it with a cast.
     u8::try_from(drawn).expect("range_u32(lo, hi) never exceeds hi, which is a u8")
+}
+
+// --- Band-transition edges (The Drift, Task 6; spec §4.5) ---
+//
+// Descent happens at a branch's bottom level, into the top level of a branch
+// in the NEXT band down. Which branches those are was, until this task, not
+// drawn at all: the shipped rule descended within the same branch column, so
+// a system's bands were connected only by coincidence of numbering.
+//
+// The edge set for one adjacent band pair is the UNION OF TWO SURJECTIONS:
+//
+//   * every branch in the upper band draws one child below, so nothing
+//     descends into a dead end;
+//   * every branch in the lower band draws one parent above, so nothing is
+//     unreachable.
+//
+// Both of §4.5's guarantees are therefore true BY CONSTRUCTION — the upper
+// loop is total on the upper band's branches and the lower loop is total on
+// the lower band's, so neither property can fail for any pair of widths, at
+// any seed, in any world. **There is no repair pass, and its absence is the
+// design**: draw-then-patch is order-dependent, and an order-dependent
+// repair is a determinism hazard as well as a correctness one (§4.5).
+//
+// HOW MANY EDGES THIS PRODUCES IS NOT TUNED HERE. Spec §8 leaves "how many
+// edges beyond the guaranteed union" open on purpose — zero extra makes the
+// underworld a tree, many makes it a mesh — so this draws the union and
+// nothing more, and the shape it produces is REPORTED rather than fitted.
+// The union alone is already not a tree: an upper branch whose child draw
+// disagrees with some lower branch's parent draw contributes both edges.
+// The count is bounded by construction at `max(upper, lower) <= edges <=
+// upper + lower`, and `the_edge_count_sits_between_its_construction_bounds`
+// asserts exactly that rather than a fitted distribution.
+
+/// Which of the two questions a [`crate::streams::BAND_DESCENT`] draw is
+/// answering about one branch. It is spelled into the key, so these two
+/// words are a save-format contract like every other component of one.
+///
+/// **A role is a question, not an ordinal** (decision 0102): one place in
+/// the lattice is asked two independent things, and each gets its own
+/// stream. Folding them into a single stream and drawing twice in a fixed
+/// order would make the parent answer depend on whether the child draw was
+/// taken first — the order-dependence §4.5 rejects.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DescentRole {
+    /// Which branch of the band BELOW this branch descends into.
+    Child,
+    /// Which branch of the band ABOVE this branch hangs from.
+    Parent,
+}
+
+impl DescentRole {
+    /// The word this role is spelled by in a band-descent key.
+    fn word(self) -> &'static str {
+        match self {
+            DescentRole::Child => "child",
+            DescentRole::Parent => "parent",
+        }
+    }
+}
+
+/// The one place the `chamber/band-descent/v1` key is spelled — [`run_key`]'s
+/// discipline with a role appended, and its own save-format contract.
+///
+/// `cell` and `branch` are integers naming a place and are decimal; `band` is
+/// spelled by its [`Band`] **name** through [`rung_name`], never its rank,
+/// for the reason `chamber_key`/`run_key` both state: a rank is a
+/// declaration position, and a mid-ladder insertion would silently re-key
+/// every band below it. Field order is `RunAddr`'s own (cell, branch, band),
+/// the spelling every re-keyed leg in this crate agrees on, with
+/// [`DescentRole`]'s word last.
+///
+/// **The band is the branch's OWN band**, never the pair's upper one. A
+/// branch at the Deeps asks "who is my child" keyed at the Deeps and "who is
+/// my parent" keyed at the Deeps; the Shallows↔Deeps pair therefore reads
+/// one key at each end rather than two keys at the same end. That keeps a
+/// key naming a band the branch actually occupies.
+fn descent_key(cell: CellId, branch: u8, band: Band, role: DescentRole) -> String {
+    format!("{}/{branch}/{}/{}", cell.0, rung_name(band), role.word())
+}
+
+/// One band-descent draw: which of `width` branches in the adjacent band
+/// this branch connects to, uniform over `0..width`.
+///
+/// `width` is the ADJACENT band's drawn branch count, so this is a draw over
+/// a real population rather than over the lattice ceiling — the same
+/// drawn-realization discipline [`levels_in_branch`] applies to levels.
+/// Callers guarantee `width >= 1`; [`descent_edges`] refuses a zero-width
+/// pair before reaching here, so no draw is ever taken over an empty range.
+fn descent_pick(
+    seed: Seed,
+    cell: CellId,
+    branch: u8,
+    band: Band,
+    role: DescentRole,
+    width: u8,
+) -> u8 {
+    debug_assert!(width >= 1, "descent_pick needs a non-empty target band");
+    let drawn = seed
+        .derive(crate::streams::BAND_DESCENT)
+        .derive(StreamLabel::dynamic(&descent_key(cell, branch, band, role)))
+        .stream()
+        .range_u32(0, u32::from(width - 1));
+    // `range_u32` is inclusive and `width - 1` came from a `u8`, so this
+    // cannot truncate; `expect` states that rather than masking it.
+    u8::try_from(drawn).expect("range_u32(0, width - 1) never exceeds a u8")
+}
+
+/// **Every edge between one band and the next**, as `(upper branch, lower
+/// branch)` pairs, sorted and deduplicated (spec §4.5).
+///
+/// `band` is the UPPER band of the pair and `upper`/`lower` are the two
+/// bands' branch widths. **The widths are parameters, not reads**, and that
+/// is deliberate: it is what lets the guarantee tests construct all sixteen
+/// `(upper, lower)` pairs directly instead of sampling whichever widths a
+/// few seeds happen to draw. A guarantee is asserted, never measured into
+/// existence (spec §6). [`descents_from`] is the shipped caller and reads
+/// both widths from [`crate::character::branch_count_of`].
+///
+/// Empty for [`Band::Surface`] (not a habitation band, so it has no branches
+/// to connect), for [`Band::Nadir`] (nothing below it on the ladder), and
+/// for a zero width on either side (no pair of branches to join).
+fn descent_edges(seed: Seed, cell: CellId, band: Band, upper: u8, lower: u8) -> Vec<(u8, u8)> {
+    if band == Band::Surface || upper == 0 || lower == 0 {
+        return Vec::new();
+    }
+    let Some(below) = band.deeper() else {
+        return Vec::new();
+    };
+    let mut edges: Vec<(u8, u8)> = Vec::with_capacity(usize::from(upper) + usize::from(lower));
+    // Every branch above draws one child below, so nothing dead-ends.
+    for from in 0..upper {
+        let to = descent_pick(seed, cell, from, band, DescentRole::Child, lower);
+        edges.push((from, to));
+    }
+    // Every branch below draws one parent above, so nothing is orphaned.
+    for to in 0..lower {
+        let from = descent_pick(seed, cell, to, below, DescentRole::Parent, upper);
+        edges.push((from, to));
+    }
+    // Deterministic answer order, and the dedup is what makes the union a
+    // union: an upper branch and a lower branch that picked each other
+    // contribute the same edge twice. `(u8, u8)` is totally ordered, so
+    // `sort_unstable` is total and the result is independent of draw order.
+    edges.sort_unstable();
+    edges.dedup();
+    edges
+}
+
+/// **Which branches of the next band down this branch descends into** (spec
+/// §4.5) — the edge set [`passages_from`]'s vertical rule is rewritten
+/// against in Task 7. Ascending, deduplicated, and never empty for a branch
+/// this band realizes above [`Band::Nadir`].
+///
+/// Empty in exactly four cases, all of them "there is nowhere below to go":
+/// [`Band::Surface`] (not a habitation band), [`Band::Nadir`] (the bottom of
+/// the ladder), a `branch` outside the fixed lattice
+/// ([`BRANCHES_PER_SYSTEM`]), and a `branch` this band's own drawn width
+/// does not realize.
+///
+/// **It knows the LADDER, not the ROCK.** Whether a cave actually reaches
+/// the band below is a question about a place's geothermal gradient and its
+/// cave's depth budget, and it is [`chamber_exists`]'s — asked with the
+/// terrain this function is deliberately not given, exactly as
+/// [`levels_in_branch`] is not given a `Cave`. So "empty at the deepest band
+/// the rock allows" is a property of the composition, not of this function:
+/// the rock's floor shows up when a caller tests the returned addresses for
+/// existence.
+///
+/// **A place, never an ordinal** (decision 0102): the answer for one branch
+/// is a fact about `(cell, band, branch)` alone, independent of what has
+/// been asked before it.
+/// type-audit: bare-ok(index: branch), bare-ok(index: return)
+pub fn descents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
+    if band == Band::Surface || branch >= BRANCHES_PER_SYSTEM {
+        return Vec::new();
+    }
+    let Some(below) = band.deeper() else {
+        return Vec::new();
+    };
+    let upper = crate::character::branch_count_of(seed, cell, band);
+    if branch >= upper {
+        return Vec::new();
+    }
+    let lower = crate::character::branch_count_of(seed, cell, below);
+    descent_edges(seed, cell, band, upper, lower)
+        .into_iter()
+        .filter(|&(from, _)| from == branch)
+        .map(|(_, to)| to)
+        .collect()
+}
+
+/// **Which branches of the band ABOVE descend into this branch** — the exact
+/// mirror of [`descents_from`], read off the same edge set (spec §4.5).
+/// Ascending, deduplicated, empty at [`Band::Surface`], at the top of the
+/// habitation ladder, and for a branch this band's own drawn width does not
+/// realize.
+///
+/// **This is not a second derivation of the descent relation, and that is the
+/// whole reason it exists.** [`passages_from`]'s upward rule needs the same
+/// edges its downward rule uses, read from the other end; computing them a
+/// second way — a "who points at me" draw of its own, say — is precisely the
+/// two-derivations-that-must-agree shape spec §3.2 calls the one genuinely
+/// hard problem, and [`passages_from`]'s own doc says the temptation to
+/// special-case a direction *is* the bug. Both directions call
+/// [`descent_edges`] for the same `(cell, upper band)` pair and filter it on
+/// opposite coordinates, so the two can no more disagree than a set can
+/// disagree with itself.
+///
+/// Private on purpose. Nothing outside this module needs it: a consumer
+/// walking the lattice gets both directions from [`passages_from`], and a
+/// test that wants the parent set can re-derive it from the public
+/// [`descents_from`] over the band above — which is a genuinely independent
+/// check rather than a re-invocation of the code under test.
+fn ascents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
+    if band == Band::Surface || branch >= BRANCHES_PER_SYSTEM {
+        return Vec::new();
+    }
+    let Some(above) = band.shallower() else {
+        return Vec::new();
+    };
+    if above == Band::Surface {
+        // The top of the habitation ladder: nothing above it has branches to
+        // hang from. Returned before either width is read, so no draw is
+        // taken for a band that has none.
+        return Vec::new();
+    }
+    let lower = crate::character::branch_count_of(seed, cell, band);
+    if branch >= lower {
+        return Vec::new();
+    }
+    let upper = crate::character::branch_count_of(seed, cell, above);
+    descent_edges(seed, cell, above, upper, lower)
+        .into_iter()
+        .filter(|&(_, to)| to == branch)
+        .map(|(from, _)| from)
+        .collect()
 }
 
 // --- Entrances are plural (The Stope, Task 5; spec amendment C.3) ---
@@ -605,28 +857,65 @@ pub struct EntranceMouth {
     pub floor: u8,
 }
 
-/// How many apertures one cave system opens to the surface (C.3) — derived,
-/// not carried: terrain's cave model has no aperture count, so the plural
-/// lives here at the composition root.
+/// How many apertures one cave system opens to the surface (C.3, amended by
+/// spec E.2) — derived, not carried: terrain's cave model has no aperture
+/// count, so the plural lives here at the composition root.
 ///
-/// Weighted hard toward 1 (70% one entrance, then 20% / 7% / 3%), mirroring
-/// C.1's shape judgement for branches: mostly one door, occasionally more.
-/// These weights are the initial authoring choice, stated here and measured
-/// by `some_system_draws_more_than_one_entrance` and the panel artifact —
-/// they were not fitted to land a distribution, and must not be retuned to
-/// move one.
+/// # IT IS NO LONGER A FREE DRAW, AND THAT IS AMENDMENT E.2's WHOLE COST
+///
+/// The aperture set is the **union of two sets**, deduplicated by index the
+/// way [`descent_edges`] dedups its own union of two surjections:
+///
+/// * a GUARANTEED set — one aperture per branch the top band realizes, so
+///   that every top-band branch is named by a door (E.2); and
+/// * a FREE set, whose size is the weighted draw this leg has always taken:
+///   70% one aperture, then 20% / 7% / 3%.
+///
+/// The first `width` indices serve both sets at once, so a system opens
+/// `max(free, width)` apertures. A system with fewer apertures than top-band
+/// branches could not satisfy E.2 at all, which is why the count can no
+/// longer be independent of the width.
+///
+/// The weights are unchanged and are still the initial authoring choice —
+/// they were not fitted to land a distribution and must not be retuned to
+/// move one — but the SHIPPED distribution is now those weights taken
+/// pointwise-maximum against [`crate::character::branch_count_of`]'s, so
+/// `some_system_draws_more_than_one_entrance` and the panel artifact measure
+/// the composition rather than the weights alone.
 ///
 /// Keyed on the SYSTEM's cell alone under [`crate::streams::ENTRANCE_COUNT`]
 /// — no entrance index, because the count is a fact about the system as a
 /// whole and an entrance index cannot be named before this draw answers.
+///
+/// **Epoch v2** (spec E.4): the leg's answer is the FREE set's size, not the
+/// system's aperture count — a different quantity under an unchanged key,
+/// which is exactly the case an epoch exists to record. See
+/// [`crate::streams::ENTRANCE_COUNT`].
 /// type-audit: bare-ok(count: return)
 pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
+    aperture_count_at(seed, cell, top_band_width(seed, cell))
+}
+
+/// The top band's drawn branch width — the ONE read [`entrance_count`] and
+/// [`entrance_mouth`] share, so the two can never disagree about how many
+/// branches there are to cover.
+fn top_band_width(seed: Seed, cell: CellId) -> u8 {
+    crate::character::branch_count_of(seed, cell, top_band())
+}
+
+/// [`entrance_count`] at an **explicitly given** top-band width — the seam
+/// spec amendment E.2's guarantee is asserted through, exactly as
+/// [`descent_edges`] takes both band widths as parameters rather than
+/// reading them. A guarantee constructed over every width the lattice admits
+/// is a guarantee; the same guarantee found absent on a seed panel is
+/// evidence about that panel (spec §6).
+fn aperture_count_at(seed: Seed, cell: CellId, width: u8) -> u8 {
     let r = seed
         .derive(crate::streams::ENTRANCE_COUNT)
         .derive(StreamLabel::dynamic(&format!("{}", cell.0)))
         .stream()
         .next_f64();
-    if r < 0.70 {
+    let free = if r < 0.70 {
         1
     } else if r < 0.90 {
         2
@@ -634,10 +923,14 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
         3
     } else {
         4
-    }
+    };
+    // The union, deduplicated by index: the first `width` apertures are both
+    // the guaranteed set and the head of the free set, so the system opens
+    // whichever of the two is larger. No loop, no repair, no order.
+    free.max(width)
 }
 
-/// Which floor of the system's lattice one entrance opens into (C.3).
+/// Which level of the system's lattice one entrance opens into (C.3).
 ///
 /// **Entrance 0 is the main line's head by definition** — `EntranceMouth`
 /// `{ branch: 0, band: 0, floor: 0 }` — with no draw at all:
@@ -645,67 +938,209 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
 /// making it literal rather than drawn pins the primary entrance at the
 /// address every existing caller already uses.
 ///
-/// Every other entrance draws ONE side branch of the main line (uniform over
-/// `1..branch_count_of(cell)`; a width-one system has none, so its extra
-/// doors fall back to the head — two doors into the same hall, which is a
-/// legitimate C.3 reading) and maps to that branch's ROOT FLOOR (C.2):
-/// [`crate::character::root_floor_of`], which never names a floor the main
-/// line failed to realize. A branch that roots nowhere returns the head
-/// rather than a dangling aperture.
+/// **EVERY MOUTH NOW LANDS IN THE TOP HABITATION BAND, AT LEVEL 0** (The
+/// Drift, spec §4.6). A door is a hole in the ground: it opens on the
+/// shallowest thing under it, and everything deeper is reached by walking.
+///
+/// **AND EVERY BRANCH OF THAT BAND IS NAMED BY ONE** (Task 7b, spec
+/// amendment E.2). Apertures `0..width` share out the band's `width`
+/// branches bijectively — index 0 takes the head, the rest draw from what is
+/// left ([`shared_out_branch`]) — and [`entrance_count`] never returns fewer
+/// than `width`, so the mouth-to-branch map is SURJECTIVE by construction.
+/// Apertures beyond `width` draw a side branch freely on top, uniform over
+/// `1..width`; a width-one band has no side branch at all, so its extra doors
+/// fall back to the head — two doors into the same hall, a legitimate C.3
+/// reading.
+///
+/// The alternative — draw freely, then add mouths until every branch is
+/// covered — is rejected for E.3's reason and §4.5's: a repair pass's answer
+/// depends on the order the shortfalls were noticed in, which is a
+/// determinism hazard before it is an inelegance.
+///
+/// # THIS RETIRES A LIVE DEFECT, AND THE DEFECT WAS HALF OF ALL SIDE DOORS
+///
+/// Until this task the branch was picked against [`Band::Undercroft`]'s
+/// drawn width and the mouth was then landed by `root_floor_of` at a band
+/// drawn **uniform over every realized band** — a different band, with a
+/// different width. So a mouth could name a branch its own landing band did
+/// not realize. Measured across the three-seed panel before this change:
+/// **47.8% / 53.0% / 51.9% of drawn side-branch mouths** named such a
+/// branch. It was benign only because [`chamber_exists`] refused the address
+/// downstream, turning it into a closed door — a plausible number in a
+/// committed artifact, produced by a category error.
+///
+/// **The question is now unaskable by construction**, which is the point of
+/// fixing it here rather than gating it downstream: the branch is drawn
+/// against the width of the band the mouth lands in, because there is only
+/// one band it can land in. `a_drawn_mouth_names_a_branch_its_landing_band_
+/// realizes` asserts it directly, and `drift_reach_probe` re-measures the
+/// panel share that used to be ~50%.
+///
+/// **The top band is read from the ladder** ([`Band::habitation`]), never
+/// written as a literal: a sixth rung, or a rung inserted above the
+/// Undercroft, moves every door without an edit here.
 ///
 /// Keyed on the entrance's place `(cell, entrance index)` under
-/// [`crate::streams::ENTRANCE_MOUTH`] (decision 0102); the side-branch pick
-/// travels that leg, and the root itself is the branch's own established
-/// draw, so an entrance and the branch it opens into can never disagree
-/// about where the junction sits.
+/// [`crate::streams::ENTRANCE_MOUTH`] (decision 0102), **with the role that
+/// place is playing appended** — see [`mouth_key`].
 ///
-/// **Accepted asymmetry between mouth and gate.** The side branch is drawn
-/// from entrance 0's `branch_count_of` lattice, but a mouth at entrance N is
-/// later adjudicated by [`chamber_exists`] against entrance N's own drawn
-/// branch width — so a mouth can name a branch its own entrance never
-/// realized and be refused downstream, where the witness treats it as a
-/// shut door. This is accepted, not an oversight: C.3 sanctions
-/// per-entrance realization, and an aperture into a branch that entrance's
-/// lattice did not realize is simply not open.
+/// **Epoch v2** (spec E.4): the key gained that role word and the
+/// sharing-out draw ranges over a shrinking pool rather than over the side
+/// branches, so both the key and the meaning moved. Every door in every
+/// world moves with them.
 /// type-audit: bare-ok(index: entrance)
 pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
-    const HEAD: EntranceMouth = EntranceMouth {
-        branch: 0,
-        band: 0,
+    EntranceMouth {
+        branch: aperture_branch_at(seed, cell, entrance, top_band_width(seed, cell)),
+        band: rung_rank(top_band()).expect("a habitation band always has a rank"),
         floor: 0,
-    };
-    if entrance == 0 {
-        return HEAD;
     }
-    let branches = crate::character::branch_count_of(seed, cell, 0);
-    if branches <= 1 {
-        // No side branch exists to open into: this door joins the head.
-        return HEAD;
+}
+
+/// [`entrance_mouth`]'s branch at an **explicitly given** top-band width —
+/// [`aperture_count_at`]'s twin, and the other half of the seam E.2's
+/// guarantee is constructed over.
+///
+/// The two aperture sets [`entrance_count`] unions are separated here by
+/// index, and nothing else decides which is which:
+///
+/// * `0` is the main line's head by definition, with no draw;
+/// * `1..width` are the GUARANTEED apertures, which share out the remaining
+///   side branches one each ([`shared_out_branch`]) — so apertures
+///   `0..width` name branches `0..width` bijectively, and E.2 holds by
+///   construction rather than by a coverage check;
+/// * `width..` are the FREE apertures, each drawing a side branch on its
+///   own, independently and possibly onto a branch another door already
+///   opens on.
+fn aperture_branch_at(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+    if entrance == 0 || width <= 1 {
+        // Entrance 0 is the main line's head by definition; and where no
+        // side branch exists to open into, every other door joins it — a
+        // width-one band is entered by the head alone, which satisfies E.2
+        // trivially.
+        return 0;
     }
-    let mut stream = seed
+    if entrance < width {
+        return shared_out_branch(seed, cell, entrance, width);
+    }
+    let picked = seed
         .derive(crate::streams::ENTRANCE_MOUTH)
-        .derive(StreamLabel::dynamic(&format!("{}/{}", cell.0, entrance)))
-        .stream();
-    let picked = stream.range_u32(1, u32::from(branches - 1));
-    let branch = u8::try_from(picked).expect("range_u32(1, branches-1) fits a u8");
-    match crate::character::root_floor_of(seed, cell, 0, branch) {
-        Some(root) => EntranceMouth {
-            branch,
-            band: root.band,
-            floor: root.floor,
-        },
-        // The side branch roots nowhere (every parent run drew 0 floors);
-        // the door falls back to the head (openness is still decided
-        // downstream by `chamber_at`).
-        None => HEAD,
+        .derive(StreamLabel::dynamic(&mouth_key(
+            cell,
+            entrance,
+            ApertureRole::Free,
+        )))
+        .stream()
+        .range_u32(1, u32::from(width - 1));
+    u8::try_from(picked).expect("range_u32(1, width-1) fits a u8")
+}
+
+/// Which side branch one of the GUARANTEED apertures takes: aperture
+/// `1..width` draws from the branches `1..width` that the apertures before it
+/// have not already spoken for.
+///
+/// **This is a permutation, drawn — not an assignment, and not a repair.**
+/// Which door opens on which branch is still a fact about the world; what is
+/// no longer possible is for two doors to take the same branch and leave a
+/// third unentered. The draw ORDER is the aperture INDEX, a fixed coordinate
+/// of the lattice, so the answer for one aperture is the same whoever asks
+/// and in whatever order (decision 0102) — unlike a draw-then-patch, whose
+/// answer would depend on which shortfall a repair pass noticed first.
+///
+/// The pool cannot run dry: it starts at `width - 1` branches and the caller
+/// guarantees `entrance < width`, so step `e` still has `width - e >= 1`
+/// left. `expect` states that rather than masking it.
+fn shared_out_branch(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+    debug_assert!(
+        entrance >= 1 && entrance < width,
+        "shared_out_branch is for the guaranteed apertures only"
+    );
+    let mut pool: Vec<u8> = (1..width).collect();
+    let mut taken = 0u8;
+    for e in 1..=entrance {
+        let last = u32::try_from(pool.len())
+            .expect("the pool is at most BRANCHES_PER_SYSTEM wide")
+            .checked_sub(1)
+            .expect("entrance < width leaves a branch unspoken-for at every step");
+        let picked = seed
+            .derive(crate::streams::ENTRANCE_MOUTH)
+            .derive(StreamLabel::dynamic(&mouth_key(
+                cell,
+                e,
+                ApertureRole::Share,
+            )))
+            .stream()
+            .range_u32(0, last);
+        let index = usize::try_from(picked).expect("range_u32(0, len-1) indexes the pool");
+        taken = pool.remove(index);
     }
+    taken
+}
+
+/// Which of the two questions one aperture's mouth draw asks — the word its
+/// key ends with, the discipline [`DescentRole`] already applies to a band
+/// transition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ApertureRole {
+    /// One of the apertures sharing out the top band's branches one each:
+    /// the draw indexes the branches not yet spoken for.
+    Share,
+    /// An aperture beyond that sharing-out: the draw names any side branch,
+    /// freely and independently.
+    Free,
+}
+
+impl ApertureRole {
+    /// The word this role is spelled by in an entrance-mouth key.
+    fn word(self) -> &'static str {
+        match self {
+            ApertureRole::Share => "share",
+            ApertureRole::Free => "free",
+        }
+    }
+}
+
+/// The one place the `chamber/entrance-mouth/v2` key is spelled — the
+/// aperture's place (cell, index) with its role appended, and its own
+/// save-format contract.
+///
+/// **The role is a question, not an ordinal** — the same argument
+/// [`descent_key`] makes. The two draws range over different populations (a
+/// shrinking pool of unspoken-for branches; every side branch), and whether
+/// a given index asks one or the other depends on the top band's width, so
+/// one key answering both would mean one stream serving two questions at two
+/// widths. Spelling the role out makes them different keys instead.
+fn mouth_key(cell: CellId, entrance: u8, role: ApertureRole) -> String {
+    format!("{}/{entrance}/{}", cell.0, role.word())
+}
+
+/// The shallowest habitation band — where every entrance lands (spec §4.6).
+///
+/// Read off [`Band::habitation`] rather than named, so the ladder is the
+/// single source of truth for its own top: this campaign's signature defect
+/// is a bound restated as a literal, and "the top band" is a bound.
+/// `habitation()` is ordered shallow-to-deep by [`Band`]'s derived `Ord`
+/// (see its own doc), and is never empty.
+fn top_band() -> Band {
+    *Band::habitation()
+        .first()
+        .expect("the habitation ladder is never empty")
 }
 
 /// Whether a chamber exists at `addr`, under `cave`'s measured depth
 /// budget in this cell. Sparse and derived: no chamber is ever stored, so
-/// "exists" is a per-address predicate — a fixed-density draw, gated so
-/// `addr.band` reaches no deeper on the delve ladder than the cave's budget
-/// does (spec §4.0's metre budget, classified by spec §4.1's ladder).
+/// "exists" is a per-address predicate — **true for every address the
+/// lattice's own shape admits** (spec §4.1's keystone: "there is no level 7
+/// that does not exist"), gated so `addr.band` reaches no deeper on the delve
+/// ladder than the cave's budget does (spec §4.0's metre budget, classified
+/// by spec §4.1's ladder).
+///
+/// **The Drift (spec §4.1) deleted the existence coin this used to end
+/// with.** Steps 1-5 below already specified a fully contiguous shape —
+/// branches `0..drawn`, bands `0..deepest`, floors `0..drawn length` — and a
+/// sixth, fixed-probability draw punched random holes through it. There was
+/// nothing left to tune in the passage graph (spec §3.2: connectivity was
+/// never randomized), only a spurious draw to remove.
 ///
 /// **`gradient` is the cell's own geothermal gradient**, and it is what makes
 /// this a question about a *place* rather than about a length. A 480 m budget
@@ -714,10 +1149,11 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
 /// where it is. Callers get it from
 /// `hornvale_terrain::GeneratedTerrain::geothermal_gradient_at`.
 ///
-/// An out-of-lattice `branch` (`>= BRANCHES_PER_SYSTEM`) or `floor`
-/// (`>= FLOORS_PER_RUN_CEILING`) never exists — the lattice is fixed-size, and
-/// an address outside it names nowhere. Likewise a `band` past the ladder's
-/// end: [`rung_rank`] tops out at `4`.
+/// An out-of-lattice `branch` (`>= BRANCHES_PER_SYSTEM`) or `level`
+/// (`>= LEVELS_PER_BRANCH_CEILING`) never exists — the lattice is fixed-size,
+/// and an address outside it names nowhere. Likewise `Band::Surface`: it is a
+/// rung of the delve ladder but not a *habitation* rung, and has no position
+/// in a lattice of underground places.
 ///
 /// **The branch axis carries the same pair** (The Stope, Task 3, spec
 /// amendment C.1): [`BRANCHES_PER_SYSTEM`] sizes the address space — an
@@ -726,23 +1162,32 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
 /// THIS system realizes. A branch at or past its system's drawn count is
 /// refused here rather than merely unqueried, so the count is enforced by
 /// the shipped existence path and not just reported by the accessor: the
-/// identical lattice-ceiling/drawn-realization split the floor gates below
+/// identical lattice-ceiling/drawn-realization split the level gates below
 /// implement for runs.
 ///
-/// **There are TWO floor gates now, and the pair is the point** (The Stope,
-/// Task 2). [`FLOORS_PER_RUN_CEILING`] says which floors the address space
+/// **Task 5 removed the transitional literal `0` this doc used to describe**
+/// (amendment A.3 — Task 4/5 coupling). `branch_count_of` is now keyed on
+/// `(cell, band)`, so this gate reads `addr.band` directly: a branch is
+/// admitted only up to however many that SPECIFIC band's own draw realized,
+/// not a single system-wide width. This is what lets one system be two
+/// branches wide in the Undercroft and one wide in the Shallows — the same
+/// address, checked at two different bands, can now disagree about whether
+/// a given branch exists at all.
+///
+/// **There are TWO level gates now, and the pair is the point** (The Stope,
+/// Task 2). [`LEVELS_PER_BRANCH_CEILING`] says which levels the address space
 /// admits *at all* — refusing past it is what stops an address outside the
-/// lattice from silently deriving a chamber. [`floors_in_run`] says which of
-/// those admitted floors *this* run realizes, and refusing past that is what
-/// makes a run a distribution rather than a constant. Neither replaces the
-/// other: the first is the lattice's size and the second is a draw, and
+/// lattice from silently deriving a chamber. [`levels_in_branch`] says which
+/// of those admitted levels *this* run realizes, and refusing past that is
+/// what makes a run a distribution rather than a constant. Neither replaces
+/// the other: the first is the lattice's size and the second is a draw, and
 /// letting the draw resize the lattice is the defect decision 0102 exists to
 /// prevent.
 ///
-/// **Floor 0 is admitted by every run that exists at all**, because every
+/// **Level 0 is admitted by every run that exists at all**, because every
 /// band's frozen range has a minimum of at least 1. That is worth knowing
-/// before reading any floor-0 measurement as evidence about this gate: the
-/// heavy readouts that slice floor 0 are byte-identical across Task 2 by
+/// before reading any level-0 measurement as evidence about this gate: the
+/// heavy readouts that slice level 0 are byte-identical across Task 2 by
 /// construction, while the unsliced population fell ~3× (see
 /// `underworld_chamber_reach`).
 /// type-audit: bare-ok(flag: return)
@@ -755,30 +1200,36 @@ pub fn chamber_exists(
     if addr.branch >= BRANCHES_PER_SYSTEM {
         return false;
     }
-    if addr.floor >= FLOORS_PER_RUN_CEILING {
+    if addr.level >= LEVELS_PER_BRANCH_CEILING {
         return false;
     }
-    // C.1's drawn realization: past this system's drawn branch width, no
-    // chamber exists at any band or floor of the column. Branch 0 is always
-    // inside the count (`branch_count_of` draws 1..=BRANCHES_PER_SYSTEM), so
-    // every entrance's mouth survives this gate.
-    if addr.branch >= crate::character::branch_count_of(seed, addr.cell, addr.entrance) {
+    // `Surface` is not a habitation band and has no position in this
+    // lattice — representable now that `band` is a typed `Band`, where the
+    // old bare-`u8` rank had no way to name it at all.
+    if addr.band == Band::Surface {
         return false;
     }
-    // `rung_at_depth` never returns `Surface`, so this is always `Some`; the
-    // `else` arm refuses rather than unwrapping, because a future ladder that
-    // could return `Surface` here must mean "no underground address at all",
-    // not a panic.
-    let Some(deepest) = rung_rank(rung_at_depth(cave.depth_reach_m, gradient)) else {
+    // C.1's drawn realization: past THIS BAND's drawn branch width, no
+    // chamber exists at this band/level of the column (The Drift, Task 5 —
+    // the count is now a fact about `(system, band)`, not the system alone).
+    // Branch 0 is always inside the count at every band
+    // (`branch_count_of` draws 1..=BRANCHES_PER_SYSTEM), so the main line
+    // survives this gate everywhere.
+    if addr.branch >= crate::character::branch_count_of(seed, addr.cell, addr.band) {
         return false;
-    };
+    }
+    // `Band`'s derived `Ord` orders shallow -> deep (see its own doc), so
+    // "past the cave's budget" is a direct comparison now — no rank lookup
+    // needed. `rung_at_depth` never returns `Surface`.
+    let deepest = rung_at_depth(cave.depth_reach_m, gradient);
     if addr.band > deepest {
         return false;
     }
-    if addr.floor >= floors_in_run(seed, addr.run()) {
+    if addr.level >= levels_in_branch(seed, addr.run()) {
         return false;
     }
-    chamber_stream(seed, addr).next_f64() < EXISTENCE_DENSITY
+    // was: chamber_stream(seed, addr).next_f64() < EXISTENCE_DENSITY
+    true
 }
 
 /// The override source for a chamber's `origin` — spec §3.3's seam: "a
@@ -931,9 +1382,9 @@ pub fn chamber_at(
     if !chamber_exists(seed, cave, gradient, addr) {
         return None;
     }
-    // `chamber_exists` has already refused any `band` past the ladder's end,
-    // so the rank is in range here.
-    let rung = rung_of_rank(addr.band)?;
+    // `chamber_exists` has already refused `Band::Surface`, and `addr.band`
+    // is now the rung directly — no rank lookup needed.
+    let rung = addr.band;
     let stratum = stratum_of_band(stratum_at(rung, gradient, column));
     let origin = resolve_origin(ChamberOrigin::Found, overrides.get(&addr).copied());
     Some(Chamber {
@@ -953,67 +1404,71 @@ pub fn chamber_at(
 /// could drift. This function does not have that shape at all: **adjacency
 /// is a pure, symmetric function of two addresses alone**, defined once,
 /// here, and existence (via [`chamber_exists`]) is likewise a pure function
-/// of `(seed, cave, addr)`. Two addresses `A` and `B` are adjacent exactly
-/// when they differ in exactly one axis by exactly one step:
+/// of `(seed, cave, addr)`.
 ///
-/// - same `band`, `branch` differing by 1, **or**
-/// - same `branch`, `band` differing by 1.
+/// # THE LATTICE IS A LADDER NOW, NOT A CORRIDOR (The Drift, spec §4.6)
 ///
-/// **The vertical axis IS a sequence now (The Stope, amendment C.4).** The
-/// run's drawn length ([`floors_in_run`]) is its sojourn time: descending
-/// from floor `f` reaches floor `f + 1` of the SAME run while the run has
-/// floors left, else floor 0 of the next band down; ascending is the exact
-/// mirror (floor `f - 1`, or the previous band's last floor when `f = 0`).
-/// Sideways neighbours stay on the caller's own `addr.floor`, unchanged.
-/// This replaced the accidental same-floor rule that joined floor *N* of
-/// band *k* to floor *N* of band *k±1* — correct only while every band held
-/// one floor, and after Task 2's drawn counts an undesigned structural gate:
-/// Deeps floor >= 10 could never descend at all, and the Nadir was reachable
-/// only from Underdeep floors 0-4.
+/// **The lateral `branch ± 1` rule is DELETED, and its deletion is the point,
+/// not a casualty.** It joined branch *b* to branch *b ± 1* at the same band
+/// and level, which made the branch axis a corridor of adjacent rooms. After
+/// spec §4.4 a branch is not a neighbour of the branch beside it: branches
+/// at one band are **alternatives** — this system's two ways down from the
+/// Undercroft — and their indices are lattice coordinates, not positions in
+/// a row. A sideways step between two named places at the same depth is a
+/// different feature (a level's interior connectivity) that nobody asked for
+/// and that no draw in this campaign describes, and inheriting it from the
+/// pre-Drift address space would have made "how much of a system is
+/// reachable" answer a question about an accident.
 ///
+/// So **every passage is one step of the vertical sequence**, and there are
+/// exactly two shapes of step:
 ///
-/// Amendment B.5 makes the Nadir the endgame and B.7 preregisters the gate on
-/// reaching it at **0-10%**, set by the barrier draw. After Task 2 the Nadir
-/// is *additionally* reachable only from Underdeep floors 0-4 — a second gate
-/// nobody designed, sitting underneath the one Nathan did, and multiplying
-/// into B.7's rate. Whichever way spec §7 task 6 resolves vertical
-/// connection, it should resolve this deliberately rather than inherit it.
+/// - **inside a run** — level `f` joins level `f ± 1` of the same
+///   `(cell, band, branch)`, while the run's drawn length
+///   ([`levels_in_branch`]) has levels left;
+/// - **across a band seam** — a run's **bottom** level joins **level 0** of
+///   each branch [`descents_from`] names in the band below, and level 0 of a
+///   run joins the **bottom** level of each branch of the band above that
+///   descends into it.
 ///
-/// The candidate-generation rule below is unchanged from before `floor`
-/// existed — it varies `branch` and `band` and nothing else. **It does not
-/// follow that the floor-0 graph is unchanged**, and this doc said otherwise
-/// until review caught it: `chamber_exists` draws per address, `chamber_key`
-/// spells `floor`, and the `chamber/v3` epoch re-keyed every one of those
-/// draws, so which candidates survive `retain` moved at every floor including
-/// zero. `every_passage_is_sideways_or_one_step_of_the_descent_sequence` in
-/// `deep_realm_chamber.rs` asserts the shape C.4 gives it.
+/// A branch's drawn length is its sojourn time (The Stope, amendment C.4);
+/// which branch the seam lands on is The Drift's own drawn quantity (spec
+/// §4.5). **Descent happens only at a branch's bottom level**, never
+/// mid-run, and it arrives only at a top level, never at an arbitrary one.
 ///
-/// "Differs by 1" is symmetric in its two arguments by inspection — it is
-/// not computed relative to a starting address, so there is nothing that
-/// could make `A`'s view of the relation disagree with `B`'s. Consequently
-/// `passages_from(A)` contains `B` if and only if `passages_from(B)`
-/// contains `A`, for any two addresses, with nothing stored and nothing to
-/// keep in sync. **A future edit that makes adjacency depend on anything
-/// other than the two addresses themselves — which chambers happen to
-/// exist, a generation order, which one was asked first — re-creates the
-/// exact problem this function exists to dissolve.** If you are tempted to
-/// special-case a direction, that temptation is the bug.
+/// # WHY SYMMETRY STILL HOLDS BY CONSTRUCTION
 ///
-/// **Neither axis wraps.** `branch` does not wrap modularly (branch `0` is
-/// adjacent only to branch `1`, not also to `BRANCHES_PER_SYSTEM - 1`),
-/// matching `band`, which cannot wrap either — there is no rung before
-/// `Regolith` or
-/// after `Underneath` for it to wrap into. Keeping both axes non-wrapping
-/// means the lattice has one consistent shape rather than one axis behaving
-/// like a line and the other like a ring; end branches and end bands simply
-/// have fewer neighbours, which is the ordinary edge-of-space behaviour a
-/// bounded lattice should have. Non-wrapping is symmetric for the same
-/// reason wrapping would have been: "differs by 1" (or, under a modular
-/// scheme, "differs by 1 mod N") is symmetric either way, so this choice is
-/// about lattice shape, not about which option the two-way test would catch
-/// — an asymmetric IMPLEMENTATION of either scheme (for instance, computing
-/// one direction with wrapping arithmetic and the other without) is what the
-/// test guards against, not the choice itself.
+/// The two seam directions read **the same edge set** — [`descents_from`]
+/// filters it on the upper coordinate and `ascents_from` on the lower one —
+/// so `A` offers `B` across a seam exactly when `B` offers `A` back, with
+/// nothing stored and nothing to keep in sync. The in-run directions are
+/// exact mirrors for the same reason they always were. The levels agree too,
+/// and not by coincidence: the seam's upper endpoint is *defined* as its
+/// run's last realized level, which is the same number
+/// [`levels_in_branch`] answers whichever end asks.
+///
+/// **A future edit that makes adjacency depend on anything other than the
+/// two addresses themselves — which chambers happen to exist, a generation
+/// order, which one was asked first — re-creates the exact problem this
+/// function exists to dissolve.** If you are tempted to special-case a
+/// direction, that temptation is the bug. In particular: do not compute the
+/// upward seam from a second draw. It must be the descent edges read
+/// backwards, or the two ends are two derivations again.
+///
+/// **Neither axis wraps**, and the branch axis no longer connects at all.
+/// `band` cannot wrap — there is no rung above [`Band::Surface`] or below
+/// [`Band::Nadir`] — and `Band::deeper`/`Band::shallower` return `None`
+/// there, which is the typed replacement for the old `addr.band ± 1`
+/// arithmetic's implicit bound. End bands simply have fewer neighbours,
+/// which is the ordinary edge-of-space behaviour a bounded lattice should
+/// have.
+///
+/// **The rock, not the ladder, has the last word.** [`descents_from`] knows
+/// only the drawn branch widths; whether the band below is inside this
+/// cave's depth budget is [`chamber_exists`]'s question, and it is asked
+/// here, on every candidate, by the `retain` at the end. "No descent at the
+/// deepest band the rock allows" is a property of that composition, not of
+/// the draw.
 ///
 /// A non-existent `addr` has no passages — there is nothing to traverse
 /// from nowhere — so this returns an empty `Vec` without deriving any
@@ -1030,59 +1485,56 @@ pub fn passages_from(
 
     let mut candidates = Vec::new();
 
-    // Same band, adjacent branch. Guaranteed not to underflow/overflow: addr
-    // passed the chamber_exists check above, so
-    // addr.branch < BRANCHES_PER_SYSTEM.
-    if addr.branch > 0 {
+    // DOWN one step of the sequence: the next level of this run while the
+    // run has levels left, else — at the run's bottom — level 0 of every
+    // branch the band-transition draw names below (spec §4.5). `addr`
+    // passed `chamber_exists`, so `levels >= 1` and `addr.level <= levels - 1`;
+    // the `else` arm is therefore exactly the bottom level.
+    let levels = levels_in_branch(seed, addr.run());
+    if addr.level + 1 < levels {
         candidates.push(ChamberAddr {
-            branch: addr.branch - 1,
+            level: addr.level + 1,
             ..addr
         });
-    }
-    if addr.branch + 1 < BRANCHES_PER_SYSTEM {
-        candidates.push(ChamberAddr {
-            branch: addr.branch + 1,
-            ..addr
-        });
+    } else if let Some(deeper) = addr.band.deeper() {
+        for to in descents_from(seed, addr.cell, addr.band, addr.branch) {
+            candidates.push(ChamberAddr {
+                band: deeper,
+                branch: to,
+                level: 0,
+                ..addr
+            });
+        }
     }
 
-    // Same branch, one step of the descent sequence (C.4): down to the next
-    // floor of this run, or — past the run's drawn length — floor 0 of the
-    // band below; up to the previous floor, or — from floor 0 — the band
-    // above's last floor. The two directions are exact mirrors, so symmetry
-    // holds by construction. Off-the-ladder candidates are filtered by the
-    // retain below through `chamber_exists`'s own gate (`band` past the rung
-    // rank, `floor >= floors_in_run`), so end-of-space needs no special case.
-    let floors = floors_in_run(seed, addr.run());
-    if addr.floor + 1 < floors {
+    // UP one step, the exact mirror: the previous level of this run, else —
+    // at level 0 — the BOTTOM level of every branch above that descends into
+    // this one, read off the same edge set from the other end.
+    if addr.level > 0 {
         candidates.push(ChamberAddr {
-            floor: addr.floor + 1,
+            level: addr.level - 1,
             ..addr
         });
-    } else {
-        candidates.push(ChamberAddr {
-            band: addr.band + 1,
-            floor: 0,
-            ..addr
-        });
-    }
-    if addr.floor > 0 {
-        candidates.push(ChamberAddr {
-            floor: addr.floor - 1,
-            ..addr
-        });
-    } else if addr.band > 0 {
-        candidates.push(ChamberAddr {
-            band: addr.band - 1,
-            floor: floors_in_run(
-                seed,
-                RunAddr {
-                    band: addr.band - 1,
-                    ..addr.run()
-                },
-            ) - 1,
-            ..addr
-        });
+    } else if let Some(shallower) = addr.band.shallower() {
+        for from in ascents_from(seed, addr.cell, addr.band, addr.branch) {
+            let parent = RunAddr {
+                cell: addr.cell,
+                branch: from,
+                band: shallower,
+            };
+            let parent_levels = levels_in_branch(seed, parent);
+            // A run above that drew no levels has no bottom level to arrive
+            // from; guarded here rather than let a `0 - 1` underflow. The
+            // candidate would be refused by `chamber_exists` regardless.
+            if parent_levels > 0 {
+                candidates.push(ChamberAddr {
+                    band: shallower,
+                    branch: from,
+                    level: parent_levels - 1,
+                    ..addr
+                });
+            }
+        }
     }
 
     candidates.retain(|&candidate| chamber_exists(seed, cave, gradient, candidate));
@@ -1113,7 +1565,8 @@ pub fn passages_from(
 /// any draw of its own.
 ///
 /// **The derivation rule**, stated once so it cannot drift into a second
-/// copy: two systems are joined at a shared delve band exactly when
+/// copy: two systems are joined at a shared delve band **on a shared
+/// branch** exactly when
 ///
 /// 1. both cells are cave-bearing — and being LAND cells is *entailed by*
 ///    that, not gated beside it:
@@ -1123,10 +1576,10 @@ pub fn passages_from(
 ///    two independent gates for one review round, and the second one was
 ///    dead code the whole time (Task 6, review round 1),
 /// 2. the two cells are adjacent on the geosphere,
-/// 3. both MAIN LINES realize an existing chamber at the shared band —
-///    canonical endpoints `(entrance 0, branch 0, floor 0)`, gated by
+/// 3. both systems realize an existing chamber at the shared `(band,
+///    branch)` — canonical endpoints `(addr.branch, level 0)`, gated by
 ///    [`chamber_exists`] under each cell's OWN cave and gradient, and
-/// 4. the characters of both main lines can occupy the shared rung:
+/// 4. the characters of both those branches can occupy the shared rung:
 ///    [`crate::character::bands_of`] of each side contains the rung at
 ///    [`ChamberAddr::band`]. A drow-tier Underdeep may open into wild cave;
 ///    it does not open into fungus gardens three rungs up. Compatibility as
@@ -1135,38 +1588,68 @@ pub fn passages_from(
 ///    compatibility at all would make the character axis invisible to the
 ///    network.
 ///
+/// # THE SCOPE IS `(band, branch)` NOW, NOT `band` ALONE (The Drift, §4.6)
+///
+/// It used to project every address of a system onto its MAIN LINE — branch
+/// 0 — so a junction was a fact about `(cell, band)` and every branch of a
+/// system at one band stood on the same far side of the same doors. That
+/// reading was correct while the branch axis was a corridor: with the
+/// lateral `branch ± 1` rule live, anyone at any branch could walk to branch
+/// 0 and use its door, so attributing the door to the main line lost
+/// nothing.
+///
+/// [`passages_from`] no longer has that rule. Branches at one band are
+/// alternatives, reachable only through the bands above and below, so a
+/// junction attributed to branch 0 would be a door **the walker cannot
+/// get to** from branch 2 — and, worse, would hand a traversal a link
+/// between two systems that neither side can enter. So the rule is now
+/// stated over `(cell, band, branch)`: a junction joins branch *b* of one
+/// system to branch *b* of its neighbour, at the same band, and the two
+/// systems' other branches are joined only if their own `(band, branch)`
+/// pair satisfies the rule in its own right.
+///
 /// **Endpoints are CANONICAL, which is what makes symmetry hold by
 /// construction** rather than by agreement between two derivations — the
 /// exact defect spec §3.2 named the "one genuinely hard problem" and
-/// [`passages_from`] dissolved for the intra-system graph. The predicate
-/// above is stated over the unordered pair of canonical endpoints, so
+/// [`passages_from`] dissolved for the intra-system graph. **The re-scoping
+/// does not weaken that argument, and this is the sentence to check if you
+/// change it again**: the predicate is still stated over an UNORDERED PAIR
+/// of canonical endpoints, and `branch` enters both endpoints identically
+/// (it comes from the asking address and is copied to the far side
+/// unchanged), so the four clauses read the same from either end.
 /// `junctions_at(A)` names `B` if and only if `junctions_at(B)` names `A`,
-/// with nothing stored and nothing to keep in sync.
+/// with nothing stored and nothing to keep in sync. A rule that took the
+/// branch from one side and something else from the other — the far
+/// system's own main line, say — would be two derivations again, and the
+/// symmetry test would be catching a defect rather than confirming a
+/// construction.
 ///
-/// **A junction never crosses a band**: every answer sits at precisely
-/// `addr.band`. Two systems meet where their depths overlap or not at all —
-/// anything else would be a vertical teleport, and the depth ladder would
-/// mean nothing.
+/// **A junction never crosses a band, and never crosses a branch**: every
+/// answer sits at precisely `addr.band` and `addr.branch`. Two systems meet
+/// where their depths overlap or not at all — anything else would be a
+/// vertical teleport, and the depth ladder would mean nothing.
 ///
-/// **`addr`'s `entrance`, `branch` and `floor` are ignored by the
-/// PROJECTION, and not by the question of EXISTENCE** (Task 6, review round
-/// 1). Which junctions this system has depends only on `(addr.cell,
-/// addr.band)` — every chamber of one system at one band stands on the same
-/// far side of the same doors, so the answer is projected onto the canonical
-/// main line and the other three fields never reach it. But *whether* there
-/// is anyone standing there to ask is a question about `addr` itself, and
-/// this function gates on it exactly as [`passages_from`] does: **a
-/// non-existent `addr` has no junctions**, because there is nothing to
-/// traverse from nowhere. The first version answered a `branch: 99` address
-/// with three junctions while `passages_from` answered it with no passages,
-/// and a consumer composing the two into one traversal graph would have
-/// inherited that disagreement.
+/// **`addr`'s `level` is ignored by the PROJECTION, and `branch` no longer
+/// is** (The Drift, Task 7; the `branch` half of this note is what changed).
+/// Which junctions this address has depends on `(addr.cell, addr.band,
+/// addr.branch)`; every level of one run stands on the same far side of the
+/// same doors, so the answer is projected onto level 0 and `level` never
+/// reaches it. But *whether* there is anyone standing there to ask is a
+/// question about `addr` itself, and this function gates on it exactly as
+/// [`passages_from`] does: **a non-existent `addr` has no junctions**,
+/// because there is nothing to traverse from nowhere. The first version
+/// answered a `branch: 99` address with three junctions while `passages_from`
+/// answered it with no passages, and a consumer composing the two into one
+/// traversal graph would have inherited that disagreement.
 pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -> Vec<ChamberAddr> {
     // Past the habitation ladder there is no shared rung to stand on and no
-    // character can be eligible for it.
-    let Some(rung) = crate::chamber::rung_of_rank(addr.band) else {
+    // character can be eligible for it. `addr.band` is the rung directly now
+    // (a typed `Band`), so `Surface` is the one value to refuse rather than
+    // a rank lookup returning `None`.
+    if addr.band == Band::Surface {
         return Vec::new();
-    };
+    }
+    let rung = addr.band;
     // `cave_at` refuses an ocean cell before anything else it does, so this
     // is the land gate as well as the cave gate — a second `is_ocean` test
     // beside it could never fire.
@@ -1176,20 +1659,17 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
     let here_gradient = terrain.geothermal_gradient_at(addr.cell);
     // Nowhere has no junctions, matching `passages_from`'s convention for
     // the intra-system graph. This gate is about the ASKING address — its
-    // entrance, branch and floor included — and is why a `branch: 99`
-    // address answers with nothing.
+    // branch and level included — and is why a `branch: 99` address answers
+    // with nothing.
     if !chamber_exists(seed, &here_cave, here_gradient, addr) {
         return Vec::new();
     }
-    let here = ChamberAddr {
-        entrance: 0,
-        branch: 0,
-        floor: 0,
-        ..addr
-    };
-    // ...and this one is about the MAIN LINE the answer is projected onto,
-    // which is what makes symmetry hold by construction. Both are required:
-    // neither implies the other away from the canonical address.
+    let here = ChamberAddr { level: 0, ..addr };
+    // ...and this one is about the CANONICAL ENDPOINT the answer is
+    // projected onto — this branch's own level 0, not the main line's (The
+    // Drift, Task 7). That is what makes symmetry hold by construction. Both
+    // are required: neither implies the other away from the canonical
+    // address.
     if !chamber_exists(seed, &here_cave, here_gradient, here) {
         return Vec::new();
     }
@@ -1204,12 +1684,12 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
         let Some(cave) = terrain.cave_at(neighbour) else {
             continue;
         };
+        // The far endpoint carries the ASKING branch unchanged — the one
+        // thing that keeps the predicate symmetric in its two arguments.
         let there = ChamberAddr {
-            entrance: 0,
-            branch: 0,
-            floor: 0,
+            level: 0,
             cell: neighbour,
-            band: addr.band,
+            ..addr
         };
         if !chamber_exists(
             seed,
@@ -1244,71 +1724,85 @@ mod tests {
     /// If this test fails, you have re-keyed every chamber in every world.
     /// That is an **epoch** (`chamber/v4` next), not a fix to this assertion.
     ///
-    /// **These strings have moved twice.** The Underworld (`chamber/v2`)
+    /// **These strings have moved three times.** The Underworld (`chamber/v2`)
     /// re-pointed `addr.band` from the stratigraphic ladder at the delve
     /// ladder, so rank 2 spells `deeps` where it used to spell `basement`.
     /// The Stope (`chamber/v3`) added `floor` and renamed `slot` to `branch`,
-    /// which changes both the arity and the field order of the key. The old
-    /// values are kept in this comment rather than deleted, because a reader
-    /// arriving at a failing assertion needs to be able to tell "the epoch
-    /// happened" from "someone broke the key":
+    /// which changed both the arity and the field order of the key. **The
+    /// Drift dropped `entrance`** (amendment A.3) — a real re-keying of this
+    /// formatter's spelling, but not an epoch (amendment A.6: nothing derives
+    /// from `chamber_key` any more, so `chamber/v3` stays). The old values are
+    /// kept in this comment rather than deleted, because a reader arriving at
+    /// a failing assertion needs to be able to tell "the address changed" from
+    /// "someone broke the formatter":
     ///
     /// ```text
-    ///           before v2            v2                    v3
-    ///   first   "9/0/basement/3"     "9/0/deeps/3"         "9/0/3/deeps/0"
-    ///   second  "0/1/regolith/0"     "0/1/undercroft/0"    "0/1/0/undercroft/0"
+    ///           before v2            v2                    v3                    The Drift
+    ///   first   "9/0/basement/3"     "9/0/deeps/3"         "9/0/3/deeps/0"       "9/3/deeps/0"
+    ///   second  "0/1/regolith/0"     "0/1/undercroft/0"    "0/1/0/undercroft/0"  "0/0/undercroft/0"
     /// ```
     #[test]
     fn the_chamber_key_spelling_is_pinned() {
         assert_eq!(
             chamber_key(ChamberAddr {
                 cell: CellId(9),
-                entrance: 0,
                 branch: 3,
-                band: 2,
-                floor: 0,
+                band: Band::Deeps,
+                level: 0,
             }),
-            "9/0/3/deeps/0"
+            "9/3/deeps/0"
         );
         assert_eq!(
             chamber_key(ChamberAddr {
                 cell: CellId(0),
-                entrance: 1,
                 branch: 0,
-                band: 0,
-                floor: 0,
+                band: Band::Undercroft,
+                level: 0,
             }),
-            "0/1/0/undercroft/0"
+            "0/0/undercroft/0"
         );
-        // A floor other than 0, so the pin covers the axis The Stope added
+        // A level other than 0, so the pin covers the axis The Stope added
         // rather than only its zero value.
         assert_eq!(
             chamber_key(ChamberAddr {
                 cell: CellId(9),
-                entrance: 0,
                 branch: 3,
-                band: 2,
-                floor: 7,
+                band: Band::Deeps,
+                level: 7,
             }),
-            "9/0/3/deeps/7"
+            "9/3/deeps/7"
         );
     }
 
+    /// The derivation key after amendment A: `entrance` is GONE, because an
+    /// entrance is an aperture into a system and not a coordinate within it.
+    /// This MOVES every chamber in every world's key SPELLING — but not its
+    /// derivation (amendment A.6: `chamber_key` derives nothing any more).
+    #[test]
+    fn the_chamber_key_drops_the_entrance_and_names_the_band() {
+        let addr = ChamberAddr {
+            cell: CellId(31942),
+            band: Band::Deeps,
+            branch: 2,
+            level: 3,
+        };
+        assert_eq!(chamber_key(addr), "31942/2/deeps/3");
+    }
+
     /// The band is spelled by NAME, never by index — rule 1a one level down.
-    /// A numeral here would mean that inserting a [`DelveRung`] variant
+    /// A numeral here would mean that inserting a [`Band`] variant
     /// mid-ladder silently moved every chamber below it to a different stream.
     #[test]
     fn the_key_names_its_rung_rather_than_numbering_it() {
-        // `branch` and `floor` are deliberately chosen NOT to equal the band
+        // `branch` and `level` are deliberately chosen NOT to equal the band
         // index: they are spelled decimal and legitimately so, and a value
         // collision would make the second assertion below fire for the wrong
         // reason.
         let key = chamber_key(ChamberAddr {
             cell: CellId(7),
-            entrance: 0,
             branch: 1,
-            band: 3,
-            floor: 2,
+            band: Band::Underdeep,
+            level: 2,
         });
         assert!(
             key.contains("underdeep"),
@@ -1328,18 +1822,17 @@ mod tests {
     #[test]
     fn the_key_names_the_delve_ladder_not_the_stratigraphic_one() {
         let stratigraphic = ["regolith", "cover", "basement", "roots", "underneath"];
-        for band in 0..=4u8 {
+        for &band in Band::habitation() {
             let key = chamber_key(ChamberAddr {
                 cell: CellId(1),
-                entrance: 0,
                 branch: 0,
                 band,
-                floor: 0,
+                level: 0,
             });
             for name in stratigraphic {
                 assert!(
                     !key.contains(name),
-                    "rank {band} spells the stratigraphic band {name:?} in {key:?} — \
+                    "{band:?} spells the stratigraphic band {name:?} in {key:?} — \
                      `addr.band` indexes the delve ladder since chamber/v2"
                 );
             }
@@ -1387,8 +1880,8 @@ mod tests {
         let column = fixture_column();
         let gradient = GeothermalGradient::new(24.0);
 
-        let mapped: Vec<(DelveRung, hornvale_climate::Stratum)> = (0..5u8)
-            .filter_map(rung_of_rank)
+        let mapped: Vec<(Band, hornvale_climate::Stratum)> = (0..5u8)
+            .filter_map(Band::from_rank)
             .map(|rung| (rung, stratum_of_band(stratum_at(rung, gradient, &column))))
             .collect();
         assert_eq!(mapped.len(), 5, "every rank 0..=4 must map to a stratum");
@@ -1405,12 +1898,12 @@ mod tests {
         );
 
         let cool = stratum_of_band(stratum_at(
-            DelveRung::Deeps,
+            Band::Deeps,
             GeothermalGradient::new(15.0),
             &column,
         ));
         let hot = stratum_of_band(stratum_at(
-            DelveRung::Deeps,
+            Band::Deeps,
             GeothermalGradient::new(30.0),
             &column,
         ));
@@ -1423,30 +1916,29 @@ mod tests {
         );
     }
 
-    /// **The key must spell `floor`, or two floors of one run derive the same
+    /// **The key must spell `level`, or two levels of one run derive the same
     /// stream and are the same chamber.** This is the whole reason The Stope's
     /// address change is an epoch rather than an additive field.
     ///
-    /// Swept over the entire floor axis rather than sampled at two values: a
-    /// key that spelled `floor` for some values and not others (a key built by
-    /// appending `floor` only when non-zero, say) would pass a two-value
+    /// Swept over the entire level axis rather than sampled at two values: a
+    /// key that spelled `level` for some values and not others (a key built by
+    /// appending `level` only when non-zero, say) would pass a two-value
     /// sample and still collide.
     #[test]
-    fn the_key_spells_the_floor() {
+    fn the_key_spells_the_level() {
         let base = ChamberAddr {
             cell: CellId(9),
-            entrance: 0,
             branch: 3,
-            band: 2,
-            floor: 0,
+            band: Band::Deeps,
+            level: 0,
         };
-        let keys: std::collections::BTreeSet<String> = (0..FLOORS_PER_RUN_CEILING)
-            .map(|floor| chamber_key(ChamberAddr { floor, ..base }))
+        let keys: std::collections::BTreeSet<String> = (0..LEVELS_PER_BRANCH_CEILING)
+            .map(|level| chamber_key(ChamberAddr { level, ..base }))
             .collect();
         assert_eq!(
             keys.len(),
-            usize::from(FLOORS_PER_RUN_CEILING),
-            "two floors of one run share a key, so they are one chamber: {keys:?}"
+            usize::from(LEVELS_PER_BRANCH_CEILING),
+            "two levels of one run share a key, so they are one chamber: {keys:?}"
         );
     }
 
@@ -1454,26 +1946,29 @@ mod tests {
     /// lattice admits spells differently from every other. A collision would
     /// silently merge two places into one derived stream, and the epoch that
     /// added two axes is exactly when that becomes possible: `branch` and
-    /// `floor` are both spelled decimal, so a missing separator or a swapped
+    /// `level` are both spelled decimal, so a missing separator or a swapped
     /// pair of fields would alias.
+    ///
+    /// **No `entrance` axis to sweep** (The Drift, amendment A.3) — before
+    /// this campaign the same sweep varied `entrance` too, and a version of
+    /// this test that still did would fail for the RIGHT reason now: two
+    /// entrances of one system address the SAME lattice, so their keys are
+    /// supposed to collide.
     #[test]
     fn the_key_is_injective_over_the_lattice() {
         let mut keys = std::collections::BTreeSet::new();
         let mut count = 0usize;
         for cell in 0..3u32 {
-            for entrance in 0..2u8 {
-                for branch in 0..BRANCHES_PER_SYSTEM {
-                    for band in 0..5u8 {
-                        for floor in 0..FLOORS_PER_RUN_CEILING {
-                            count += 1;
-                            keys.insert(chamber_key(ChamberAddr {
-                                cell: CellId(cell),
-                                entrance,
-                                branch,
-                                band,
-                                floor,
-                            }));
-                        }
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for &band in Band::habitation() {
+                    for level in 0..LEVELS_PER_BRANCH_CEILING {
+                        count += 1;
+                        keys.insert(chamber_key(ChamberAddr {
+                            cell: CellId(cell),
+                            branch,
+                            band,
+                            level,
+                        }));
                     }
                 }
             }
@@ -1505,124 +2000,51 @@ mod tests {
         assert_ne!(crate::streams::CHAMBER.as_str(), "chamber/v1");
     }
 
-    /// **The SHIPPED existence draw travels [`crate::streams::CHAMBER`],
-    /// keyed on the WHOLE address.** This starts from [`chamber_exists`] —
-    /// the function every world actually calls — and compares it against the
-    /// derivation spelled out here, so re-parenting [`chamber_stream`], or
-    /// handing it anything other than `chamber_key(addr)`, reddens it.
-    ///
-    /// **The hole this closes had been open across two epochs.** Task 2's own
-    /// [`the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg`]
-    /// says so in its closing paragraph: `chamber_stream`'s parent was
-    /// unpinned, an accidental `derive(RUN_FLOORS)` there would relocate every
-    /// chamber in every world, and the only thing that could have objected —
-    /// the artifact drift check — was structurally blind to the chamber
-    /// lattice (Task 2's §6). Both halves are fixed together in Task 2b: this
-    /// is the unit half.
-    ///
-    /// Two arms, and the second is what makes the first non-vacuous:
-    ///
-    /// 1. the shipped verdict equals the `CHAMBER`-parented, whole-address
-    ///    derivation at every probed address;
-    /// 2. it DIFFERS from the `RUN_FLOORS`-parented derivation of the same
-    ///    key at at least one of them. Arm 1 alone would survive a re-parented
-    ///    `chamber_stream` if the two legs happened to agree everywhere — each
-    ///    address is an independent coin flip, so agreement everywhere is
-    ///    merely unlikely rather than impossible, and it is asserted rather
-    ///    than assumed.
-    ///
-    /// **What this test cannot see, stated because the sibling test's own
-    /// lesson is that a re-implementation is not a witness:** arm 1 calls
-    /// [`chamber_key`], so a change to `chamber_key`'s *format string* moves
-    /// both sides together and passes here. That direction is held by
-    /// [`the_chamber_key_spelling_is_pinned`] and by
-    /// [`the_existence_verdict_is_byte_pinned_over_a_known_lattice_slice`],
-    /// whose goldens are literal integers.
-    #[test]
-    fn the_existence_draw_travels_the_chamber_leg_and_is_keyed_on_the_whole_address() {
-        let seed = Seed(90210);
-        let column = fixture_column();
-        // At the reach ceiling under a 24 K/km cell: ΔT = 72 K, which is the
-        // Nadir, so every band 0..=4 is inside the budget and none of
-        // `chamber_exists`'s earlier gates can be what decides a verdict here.
-        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
-        let gradient = GeothermalGradient::new(24.0);
-
-        let mut probed = 0usize;
-        let mut disagreed = 0usize;
-        for raw_cell in 0u32..12 {
-            // Only the branches this system realizes: past the drawn count
-            // (spec C.1) the branch gate refuses before any draw happens, so
-            // a verdict there would say nothing about which stream was
-            // consulted — the same rule the floor loop below already follows.
-            let realized_branches = crate::character::branch_count_of(seed, CellId(raw_cell), 0);
-            for branch in 0..realized_branches {
-                for band in 0..5u8 {
-                    let run = RunAddr {
-                        cell: CellId(raw_cell),
-                        entrance: 0,
-                        branch,
-                        band,
-                    };
-                    // Only the floors this run realizes: past them the floor
-                    // gate refuses before any draw happens, so a verdict there
-                    // would say nothing about which stream was consulted.
-                    for floor in 0..floors_in_run(seed, run) {
-                        let addr = ChamberAddr {
-                            cell: CellId(raw_cell),
-                            entrance: 0,
-                            branch,
-                            band,
-                            floor,
-                        };
-                        let via_chamber_leg = seed
-                            .derive(crate::streams::CHAMBER)
-                            .derive(StreamLabel::dynamic(&chamber_key(addr)))
-                            .stream()
-                            .next_f64()
-                            < EXISTENCE_DENSITY;
-                        let via_run_leg = seed
-                            .derive(crate::streams::RUN_FLOORS)
-                            .derive(StreamLabel::dynamic(&chamber_key(addr)))
-                            .stream()
-                            .next_f64()
-                            < EXISTENCE_DENSITY;
-
-                        let shipped = chamber_exists(seed, &cave, gradient, addr);
-                        assert_eq!(
-                            shipped,
-                            via_chamber_leg,
-                            "{}: chamber_exists answered {shipped}, but the CHAMBER \
-                             leg keyed on the whole address derives {via_chamber_leg} \
-                             — the shipped existence draw is not travelling the \
-                             derivation it declares",
-                            chamber_key(addr)
-                        );
-                        probed += 1;
-                        if via_chamber_leg != via_run_leg {
-                            disagreed += 1;
-                        }
-                    }
-                }
-            }
-        }
-        assert!(probed > 0, "the sweep probed no realized address at all");
-        assert!(
-            disagreed > 0,
-            "the two legs agreed on all {probed} probed addresses, so arm 1 \
-             would pass under a re-parented chamber_stream — this test is \
-             vacuous as written and needs a wider or different sample"
-        );
-    }
+    // `the_existence_draw_travels_the_chamber_leg_and_is_keyed_on_the_whole_
+    // address` (formerly here) asserted that the SHIPPED existence draw
+    // travelled `crate::streams::CHAMBER`, keyed on the whole address, by
+    // re-deriving `chamber_stream`'s own computation inline and comparing it
+    // against `chamber_exists`'s verdict. The Drift (spec §4.1) deleted that
+    // draw and `chamber_stream` with it, so there is no shipped derivation
+    // left for this test to witness — it tested the mechanics of a coin flip
+    // that no longer exists, not a level's existence, so re-baselining it
+    // would have meant reintroducing dead machinery just to keep an assertion
+    // green. Deleted rather than adapted. `the_chamber_key_spelling_is_pinned`
+    // still pins `chamber_key`'s format, and `the_epoch_label_is_v3_and_v2_is_
+    // not_reused` still pins the `CHAMBER` label itself — both survive
+    // unchanged, because `chamber_key` and the label are unrelated to the
+    // deleted draw.
 
     /// The existence verdict is **byte-pinned over a known slice of the
     /// lattice** — one literal `u32` per `(branch, band)`, bit `f` set when
-    /// floor `f` exists. The same discipline
+    /// level `f` exists. The same discipline
     /// [`the_run_draw_is_byte_pinned_for_known_keys`] carries, and the
     /// cheapest possible witness that ANY part of the existence derivation
-    /// moved: the parent leg, the key's spelling, `next_f64`'s draw
-    /// semantics, [`EXISTENCE_DENSITY`], the floor ceiling, or the run draw
-    /// the floor gate reads.
+    /// moved: the key's spelling, the level ceiling, or the run draw the
+    /// level gate reads.
+    ///
+    /// **Re-baselined a second time by The Drift (spec amendment A.3).**
+    /// Task 1 already re-baselined this pin once, when §4.1's existence coin
+    /// was deleted and every level `0..levels_in_branch(seed, run)` began
+    /// existing unconditionally. The Drift moves it again, and the shape and
+    /// the values both moved for different reasons:
+    ///
+    /// - **The SHAPE**: dropping `entrance` collapses this system's
+    ///   per-entrance sublattices into ONE shared lattice, so the 40-entry
+    ///   slice this pin used to cover (`entrance 0`'s branch-1-wide lattice,
+    ///   then `entrance 1`'s branch-2-wide one) is now a single 20-entry
+    ///   lattice with the same branch-1 width, because `chamber_exists`
+    ///   passes a transitional literal `0` where `entrance` used to travel
+    ///   (see its own doc) — `branch_count_of`'s key is unaffected by that
+    ///   literal, since it was already `"{cell}/0"` for entrance 0.
+    /// - **The VALUES did NOT survive, and that is worth stating rather than
+    ///   assuming.** `run_key` (`RUN_FLOORS`'s leg) dropped `entrance` from
+    ///   its format string entirely — `"{cell}/{branch}/{band}"` instead of
+    ///   `"{cell}/{entrance}/{branch}/{band}"` — so even the addresses that
+    ///   were already at entrance 0 hash to a DIFFERENT string now, and
+    ///   `levels_in_branch` draws a different count from it. The masks below
+    ///   are therefore genuinely new numbers, not a copy of the old entrance-0
+    ///   row: this is exactly what `RUN_FLOORS` going to `/v2` means.
     ///
     /// **The goldens are literal integers, not values re-derived through the
     /// path they claim to pin.** That is the whole difference between a pin
@@ -1630,26 +2052,20 @@ mod tests {
     /// call reads, and none of them can move both sides of the comparison at
     /// once.
     ///
-    /// 20 floors fit a `u32` with room to spare
-    /// ([`FLOORS_PER_RUN_CEILING`]); a wider lattice would need a wider mask,
-    /// and the assertion below says so rather than truncating.
+    /// 20 levels fit a `u32` with room to spare
+    /// ([`LEVELS_PER_BRANCH_CEILING`]); a wider lattice would need a wider
+    /// mask, and the assertion below says so rather than truncating.
     ///
     /// If this fails, every chamber in every world has moved. That is an
-    /// **epoch** (`chamber/v4`), not a fix to these numbers.
-    ///
-    /// **The Stope's C.1 gate moved these goldens once already, on purpose**:
-    /// the branch-count draw now refuses branches past their system's drawn
-    /// width, so the slice covers TWO entrances (cell 9's entrance 0 draws 1
-    /// branch, entrance 1 draws 2) and the unrealized branches read as
-    /// literal zeros — a branch gate that stopped gating would fill those
-    /// rows in and redden this pin, which is exactly what it is for.
+    /// **epoch**, not a fix to these numbers — carried this time by
+    /// `RUN_FLOORS` going to `/v2` (spec amendment A.6), not by `CHAMBER`.
     #[test]
     fn the_existence_verdict_is_byte_pinned_over_a_known_lattice_slice() {
         assert!(
-            u32::from(FLOORS_PER_RUN_CEILING) <= u32::BITS,
-            "the lattice admits {FLOORS_PER_RUN_CEILING} floors, which no \
+            u32::from(LEVELS_PER_BRANCH_CEILING) <= u32::BITS,
+            "the lattice admits {LEVELS_PER_BRANCH_CEILING} levels, which no \
              longer fits the u32 masks below — widen the mask type rather \
-             than letting the pin silently cover only the first 32 floors"
+             than letting the pin silently cover only the first 32 levels"
         );
 
         let seed = Seed(42);
@@ -1657,51 +2073,47 @@ mod tests {
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
 
-        // Cell 9, entrances 0 and 1. Row-major over (entrance, branch 0..4,
-        // band 0..5), so each line below is one branch's undercroft /
-        // shallows / deeps / underdeep / nadir. Decimal, matching what
-        // `assert_eq!` prints on a failure, so the two can be compared by eye.
+        // Cell 9's ONE shared lattice (The Drift collapsed every entrance's
+        // sublattice into this one). Row-major over (branch 0..4, band
+        // 0..5), so each line below is one branch's undercroft / shallows /
+        // deeps / underdeep / nadir. Decimal, matching what `assert_eq!`
+        // prints on a failure, so the two can be compared by eye.
         //
-        // A zero is a legitimate reading, not a hole in the pin: entrance 0
-        // realizes one branch and entrance 1 two, so every row past those
-        // counts is zero by the C.1 gate, and branch 1's nadir run under
-        // entrance 1 realizes no floor at all — the sparsity this lattice is
-        // supposed to have.
-        let expected: [u32; 40] = [
-            1, 29, 1059, 17, 1, //
-            0, 0, 0, 0, 0, //
-            0, 0, 0, 0, 0, //
-            0, 0, 0, 0, 0, //
-            21, 472, 128, 892, 0, //
-            12, 5, 79535, 738, 1, //
-            0, 0, 0, 0, 0, //
+        // A zero is a legitimate reading, not a hole in the pin. **Re-baselined
+        // by The Drift, Task 5**: `branch_count_of` is now keyed on
+        // `(cell, band)`, and this cell is the demonstration that the width
+        // genuinely varies by band — cell 9 draws width 1 at Undercroft
+        // (branch 1's Undercroft column is 0) but a wider count at Deeps and
+        // at Underdeep (branch 1's Deeps column is nonzero, and branch 2's
+        // Underdeep column is nonzero too), so the SAME system is narrower
+        // at one band and wider at another.
+        let expected: [u32; 20] = [
+            3, 63, 262143, 255, 31, //
+            0, 0, 16383, 127, 0, //
+            0, 0, 524287, 0, 0, //
             0, 0, 0, 0, 0,
         ];
 
-        let mut got = [0u32; 40];
-        for entrance in 0..2u8 {
-            for branch in 0..BRANCHES_PER_SYSTEM {
-                for band in 0..5u8 {
-                    let mut mask = 0u32;
-                    for floor in 0..FLOORS_PER_RUN_CEILING {
-                        if chamber_exists(
-                            seed,
-                            &cave,
-                            gradient,
-                            ChamberAddr {
-                                cell: CellId(9),
-                                entrance,
-                                branch,
-                                band,
-                                floor,
-                            },
-                        ) {
-                            mask |= 1u32 << u32::from(floor);
-                        }
+        let mut got = [0u32; 20];
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            for (rank, &band) in Band::habitation().iter().enumerate() {
+                let mut mask = 0u32;
+                for level in 0..LEVELS_PER_BRANCH_CEILING {
+                    if chamber_exists(
+                        seed,
+                        &cave,
+                        gradient,
+                        ChamberAddr {
+                            cell: CellId(9),
+                            branch,
+                            band,
+                            level,
+                        },
+                    ) {
+                        mask |= 1u32 << u32::from(level);
                     }
-                    got[usize::from(entrance) * 20 + usize::from(branch) * 5 + usize::from(band)] =
-                        mask;
                 }
+                got[usize::from(branch) * 5 + rank] = mask;
             }
         }
         assert_eq!(
@@ -1724,56 +2136,106 @@ mod tests {
         let seed = Seed(90210);
         let column = fixture_column();
         // A cave at the reach ceiling, so the BAND gate cannot be what
-        // refuses — band 0 is inside any budget, but a deep cave keeps the
-        // fixture honest if a later reader moves the band under test.
+        // refuses — Undercroft is inside any budget, but a deep cave keeps
+        // the fixture honest if a later reader moves the band under test.
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
         let base = ChamberAddr {
             cell: CellId(1),
-            entrance: 0,
             branch: 0,
-            band: 0,
-            floor: 0,
+            band: Band::Undercroft,
+            level: 0,
         };
 
-        for floor in FLOORS_PER_RUN_CEILING..=FLOORS_PER_RUN_CEILING + 8 {
+        for level in LEVELS_PER_BRANCH_CEILING..=LEVELS_PER_BRANCH_CEILING + 8 {
             assert!(
-                !chamber_exists(seed, &cave, gradient, ChamberAddr { floor, ..base }),
-                "floor {floor} is outside the lattice \
-                 (ceiling {FLOORS_PER_RUN_CEILING}) and must name nowhere"
+                !chamber_exists(seed, &cave, gradient, ChamberAddr { level, ..base }),
+                "level {level} is outside the lattice \
+                 (ceiling {LEVELS_PER_BRANCH_CEILING}) and must name nowhere"
             );
         }
 
-        // Positive control: the gate refuses out-of-range floors and not the
+        // Positive control: the gate refuses out-of-range levels and not the
         // whole axis.
         assert!(
-            (0..FLOORS_PER_RUN_CEILING).any(|floor| chamber_exists(
+            (0..LEVELS_PER_BRANCH_CEILING).any(|level| chamber_exists(
                 seed,
                 &cave,
                 gradient,
-                ChamberAddr { floor, ..base }
+                ChamberAddr { level, ..base }
             )),
-            "no in-range floor exists either, so the refusal above proves \
-             nothing about the floor gate"
+            "no in-range level exists either, so the refusal above proves \
+             nothing about the level gate"
         );
     }
 
-    /// `rung_rank` and `rung_of_rank` are one bijection over the habitation
-    /// rungs. Kept honest here so the pair cannot drift half-updated when a
-    /// sixth [`DelveRung`] lands.
+    /// A branch's levels are CONTIGUOUS: within a run's drawn length there is
+    /// no gap. This is the campaign's keystone (spec §2), and before The
+    /// Drift it was false for about half of every run — a 50% existence coin
+    /// punched random holes through a shape steps 1-5 of `chamber_exists`
+    /// already made contiguous (spec §3.1).
+    #[test]
+    fn a_runs_levels_are_contiguous() {
+        let seed = Seed(42);
+        let column = fixture_column();
+        // At the reach ceiling under a 24 K/km cell, every habitation band is
+        // inside budget, so the BAND gate can never be what truncates the
+        // run below — only the drawn level count can.
+        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
+        let gradient = GeothermalGradient::new(24.0);
+        let base = ChamberAddr {
+            cell: CellId(31942),
+            branch: 0,
+            band: Band::Undercroft,
+            level: 0,
+        };
+
+        let drawn = levels_in_branch(seed, base.run());
+        assert!(
+            drawn > 1,
+            "a one-level run cannot exhibit a gap; pick a longer run"
+        );
+
+        for level in 0..drawn {
+            assert!(
+                chamber_exists(seed, &cave, gradient, ChamberAddr { level, ..base }),
+                "level {level} of a {drawn}-level run does not exist — the run \
+                 has a hole"
+            );
+        }
+        assert!(
+            !chamber_exists(
+                seed,
+                &cave,
+                gradient,
+                ChamberAddr {
+                    level: drawn,
+                    ..base
+                }
+            ),
+            "level {drawn} is past the drawn length and must not exist"
+        );
+    }
+
+    /// `rung_rank` and [`Band::from_rank`] are one bijection over the
+    /// habitation rungs. Kept honest here so the pair cannot drift
+    /// half-updated when a sixth [`Band`] lands. (`chamber.rs` no longer
+    /// carries its own `rung_of_rank` — The Drift deleted the private
+    /// duplicate once every caller could reach the kernel's public
+    /// equivalent instead.)
     #[test]
     fn rung_rank_and_rung_of_rank_round_trip() {
         for rung in hornvale_terrain::rungs()
             .iter()
             .copied()
-            .filter(|r| *r != DelveRung::Surface)
+            .filter(|r| *r != Band::Surface)
         {
             let rank = rung_rank(rung).expect("a habitation rung has a rank");
-            assert_eq!(rung_of_rank(rank), Some(rung));
+            assert_eq!(Band::from_rank(rank), Some(rung));
         }
-        assert_eq!(rung_of_rank(5), None, "the ladder ends at rank 4");
+        assert_eq!(Band::from_rank(5), None, "the ladder ends at rank 4");
         assert_eq!(
-            rung_rank(DelveRung::Surface),
+            rung_rank(Band::Surface),
             None,
             "the overworld is not an underground address"
         );
@@ -1860,22 +2322,22 @@ mod tests {
         );
     }
 
-    /// Spec §3.1's floors-per-band ranges, **restated as literals** rather
-    /// than read from [`floors_range`]. Reading the table the draw itself
+    /// Spec §3.1's levels-per-band ranges, **restated as literals** rather
+    /// than read from [`levels_range`]. Reading the table the draw itself
     /// reads would make the range assertion below circular — it would pass
     /// for any table at all. These five pairs are the frozen preregistration
     /// (spec §3.1, `Sunless` renamed `Nadir` by amendment B.3); moving one is
     /// a design act, and the campaign's own rule is that they are **not** to
     /// be retuned to make §4.2's readout land in its intended band.
-    const FROZEN_RANGES: [(u8, u8, u8); 5] = [
-        (0, 1, 5),  // Undercroft
-        (1, 3, 10), // Shallows
-        (2, 5, 20), // Deeps
-        (3, 5, 10), // Underdeep
-        (4, 1, 5),  // Nadir
+    const FROZEN_RANGES: [(Band, u8, u8); 5] = [
+        (Band::Undercroft, 1, 5),
+        (Band::Shallows, 3, 10),
+        (Band::Deeps, 5, 20),
+        (Band::Underdeep, 5, 10),
+        (Band::Nadir, 1, 5),
     ];
 
-    /// A run's drawn floor count lands inside its own band's frozen range —
+    /// A run's drawn level count lands inside its own band's frozen range —
     /// the first half of Task 2's claim.
     ///
     /// **The range check alone is satisfiable by a constant**, so the sweep
@@ -1883,71 +2345,70 @@ mod tests {
     /// Every frozen range spans at least three values, so a band that only
     /// ever answers one number is either not drawing or drawing on a key that
     /// does not vary here.
+    ///
+    /// **No `entrance` axis to sweep** (The Drift, amendment A.3) — a run
+    /// belongs to the system's ONE shared lattice now, not to any one
+    /// entrance's private view of it.
     /// claim: invariant(forall-seed) — a run's drawn count lies in its band's
     /// frozen range, over a hand-named lattice (seedless sweep, audit §5:
     /// builds no world)
     #[test]
-    fn a_runs_floor_count_falls_in_its_bands_frozen_range() {
+    fn a_runs_level_count_falls_in_its_bands_frozen_range() {
         for (band, lo, hi) in FROZEN_RANGES {
             let mut seen = std::collections::BTreeSet::new();
             for raw_seed in [1u64, 2, 3] {
                 let seed = Seed(raw_seed);
                 for raw_cell in 0u32..40 {
-                    for entrance in 0..2u8 {
-                        for branch in 0..BRANCHES_PER_SYSTEM {
-                            let run = RunAddr {
-                                cell: CellId(raw_cell),
-                                entrance,
-                                branch,
-                                band,
-                            };
-                            let n = floors_in_run(seed, run);
-                            assert!(
-                                (lo..=hi).contains(&n),
-                                "band {band}: {run:?} under seed {raw_seed} drew {n} \
-                                 floors, outside the frozen range {lo}..={hi}"
-                            );
-                            seen.insert(n);
-                        }
+                    for branch in 0..BRANCHES_PER_SYSTEM {
+                        let run = RunAddr {
+                            cell: CellId(raw_cell),
+                            branch,
+                            band,
+                        };
+                        let n = levels_in_branch(seed, run);
+                        assert!(
+                            (lo..=hi).contains(&n),
+                            "{band:?}: {run:?} under seed {raw_seed} drew {n} \
+                             levels, outside the frozen range {lo}..={hi}"
+                        );
+                        seen.insert(n);
                     }
                 }
             }
             assert!(
                 seen.len() > 1,
-                "band {band}: every run drew the same count {seen:?} — a constant \
+                "{band:?}: every run drew the same count {seen:?} — a constant \
                  satisfies the range check without drawing anything"
             );
             assert!(
                 seen.contains(&lo) && seen.contains(&hi),
-                "band {band}: the sweep saw {seen:?}, which does not reach both \
+                "{band:?}: the sweep saw {seen:?}, which does not reach both \
                  ends of {lo}..={hi} — the draw is not covering its own range"
             );
         }
     }
 
-    /// A run's floor count is a pure function of `(seed, run)`: asked twice,
+    /// A run's level count is a pure function of `(seed, run)`: asked twice,
     /// it answers the same, and asking about a *different* run in between
     /// cannot disturb it. The second half matters because a draw that
     /// advanced some shared stream would be deterministic per call sequence
     /// and not per place, which is decision 0102's defect wearing a
     /// deterministic mask.
     #[test]
-    fn a_runs_floor_count_is_deterministic_for_one_address() {
+    fn a_runs_level_count_is_deterministic_for_one_address() {
         let seed = Seed(90210);
         let run = RunAddr {
             cell: CellId(9),
-            entrance: 0,
             branch: 3,
-            band: 2,
+            band: Band::Deeps,
         };
-        let first = floors_in_run(seed, run);
+        let first = levels_in_branch(seed, run);
         for raw_cell in 0u32..20 {
-            for band in 0..5u8 {
-                let _ = floors_in_run(
+            for &band in Band::habitation() {
+                let _ = levels_in_branch(
                     seed,
                     RunAddr {
                         cell: CellId(raw_cell),
-                        entrance: 1,
                         branch: 0,
                         band,
                     },
@@ -1955,7 +2416,7 @@ mod tests {
             }
         }
         assert_eq!(
-            floors_in_run(seed, run),
+            levels_in_branch(seed, run),
             first,
             "the same run drew a different count after unrelated runs were \
              asked — the draw is keyed on a call order, not on a place"
@@ -1963,10 +2424,14 @@ mod tests {
     }
 
     /// **Every component of the run key is load-bearing.** Varying exactly one
-    /// of `cell`, `entrance`, `branch`, `band` must be able to change the
-    /// answer; a component the key dropped would make its column here
-    /// constant, and the whole point of keying on a place is that each
-    /// coordinate of the place names a different run.
+    /// of `cell`, `branch`, `band` must be able to change the answer; a
+    /// component the key dropped would make its column here constant, and
+    /// the whole point of keying on a place is that each coordinate of the
+    /// place names a different run.
+    ///
+    /// **`entrance` is not in this list, and that is the whole point of The
+    /// Drift** (amendment A.3) — it is not a run coordinate any more, so
+    /// there is nothing left here to vary it against.
     ///
     /// This subsumes the brief's "two different branches in one band may
     /// differ" — that is the `branch` row — and catches the three ways to get
@@ -1976,35 +2441,20 @@ mod tests {
         let seed = Seed(4242);
         let base = RunAddr {
             cell: CellId(0),
-            entrance: 0,
             branch: 0,
-            band: 2,
+            band: Band::Deeps,
         };
 
         let vary_cell = (0u32..200).any(|c| {
-            floors_in_run(
+            levels_in_branch(
                 seed,
                 RunAddr {
                     cell: CellId(c),
                     ..base
                 },
-            ) != floors_in_run(seed, base)
+            ) != levels_in_branch(seed, base)
         });
-        assert!(vary_cell, "`cell` never changed a run's floor count");
-
-        let vary_entrance = (0u8..64).any(|e| {
-            floors_in_run(
-                seed,
-                RunAddr {
-                    entrance: e,
-                    ..base
-                },
-            ) != floors_in_run(seed, base)
-        });
-        assert!(
-            vary_entrance,
-            "`entrance` never changed a run's floor count"
-        );
+        assert!(vary_cell, "`cell` never changed a run's level count");
 
         // `branch` has only BRANCHES_PER_SYSTEM values, so one cell is not
         // enough to be sure two of them differ; sweep cells until a cell whose
@@ -2013,7 +2463,7 @@ mod tests {
         let vary_branch = (0u32..200).any(|c| {
             let counts: std::collections::BTreeSet<u8> = (0..BRANCHES_PER_SYSTEM)
                 .map(|branch| {
-                    floors_in_run(
+                    levels_in_branch(
                         seed,
                         RunAddr {
                             cell: CellId(c),
@@ -2031,9 +2481,10 @@ mod tests {
              is not in the key, so a whole system is one column again"
         );
 
-        let vary_band = (0..5u8)
-            .any(|band| floors_in_run(seed, RunAddr { band, ..base }) != floors_in_run(seed, base));
-        assert!(vary_band, "`band` never changed a run's floor count");
+        let vary_band = Band::habitation().iter().any(|&band| {
+            levels_in_branch(seed, RunAddr { band, ..base }) != levels_in_branch(seed, base)
+        });
+        assert!(vary_band, "`band` never changed a run's level count");
     }
 
     /// The run key is a **save-format contract**, pinned the same way
@@ -2043,50 +2494,49 @@ mod tests {
     /// declaration position rather than a place).
     ///
     /// If this fails you have re-keyed every run in every world, which
-    /// re-decides how many floors every run has. That is an epoch
-    /// (`chamber/run-floors/v2` next), not a fix to this assertion.
+    /// re-decides how many levels every run has. That is an epoch — carried
+    /// by `chamber/run-floors/v2` (spec amendment A.6), which is why these
+    /// strings no longer spell an `entrance` segment at all.
     #[test]
     fn the_run_key_spelling_is_pinned() {
         assert_eq!(
             run_key(RunAddr {
                 cell: CellId(9),
-                entrance: 0,
                 branch: 3,
-                band: 2,
+                band: Band::Deeps,
             }),
-            "9/0/3/deeps"
+            "9/3/deeps"
         );
         assert_eq!(
             run_key(RunAddr {
                 cell: CellId(0),
-                entrance: 1,
                 branch: 0,
-                band: 0,
+                band: Band::Undercroft,
             }),
-            "0/1/0/undercroft"
+            "0/0/undercroft"
         );
     }
 
     /// The run key is **injective over the run lattice** — the same guard
     /// [`chamber_key`] carries, for the same reason: two runs sharing a key
-    /// would be one run, and every floor count in the world would be drawn
+    /// would be one run, and every level count in the world would be drawn
     /// half as many times as it looks.
+    ///
+    /// **No `entrance` axis to sweep** (The Drift, amendment A.3) — see
+    /// [`the_key_is_injective_over_the_lattice`]'s own doc for why.
     #[test]
     fn the_run_key_is_injective_over_the_lattice() {
         let mut keys = std::collections::BTreeSet::new();
         let mut count = 0usize;
         for cell in 0..5u32 {
-            for entrance in 0..3u8 {
-                for branch in 0..BRANCHES_PER_SYSTEM {
-                    for band in 0..5u8 {
-                        count += 1;
-                        keys.insert(run_key(RunAddr {
-                            cell: CellId(cell),
-                            entrance,
-                            branch,
-                            band,
-                        }));
-                    }
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                for &band in Band::habitation() {
+                    count += 1;
+                    keys.insert(run_key(RunAddr {
+                        cell: CellId(cell),
+                        branch,
+                        band,
+                    }));
                 }
             }
         }
@@ -2112,7 +2562,7 @@ mod tests {
     ///
     /// **WHAT THIS TEST DOES NOT HOLD, stated because the campaign report
     /// once claimed it did.** It derives both legs INLINE and calls neither
-    /// [`run_stream`] nor [`floors_in_run`], so it is a property of the two
+    /// [`run_stream`] nor [`levels_in_branch`], so it is a property of the two
     /// label CONSTANTS and says nothing about which parent the shipped draw
     /// actually travels. Review demonstrated the gap with a one-token
     /// mutation — `run_stream`'s `derive(RUN_FLOORS)` to `derive(CHAMBER)`,
@@ -2120,7 +2570,7 @@ mod tests {
     /// stayed green (371 lib tests, 286 suite tests). The assertion that
     /// closes it is
     /// [`the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg`],
-    /// which starts from `floors_in_run` instead. Both are kept: this one
+    /// which starts from `levels_in_branch` instead. Both are kept: this one
     /// says the separation is AVAILABLE, that one says the shipped path USES
     /// it.
     #[test]
@@ -2148,7 +2598,7 @@ mod tests {
     }
 
     /// **The SHIPPED run draw travels [`crate::streams::RUN_FLOORS`], not
-    /// [`crate::streams::CHAMBER`].** This starts from [`floors_in_run`] —
+    /// [`crate::streams::CHAMBER`].** This starts from [`levels_in_branch`] —
     /// the function the world actually calls — and compares it against the
     /// derivation spelled out here, so re-parenting [`run_stream`] reddens it.
     ///
@@ -2170,14 +2620,14 @@ mod tests {
     ///    1-in-16 chance of agreeing per run, a small sample could be
     ///    unlucky, so the disagreement is asserted rather than assumed.
     ///
-    /// **`chamber_stream`'s parent is unpinned in exactly this way**, and
-    /// that is a pre-existing gap rather than a regression this campaign
-    /// introduced: re-parenting it would relocate every chamber, and what
-    /// would object is the artifact drift check — which §6 of this campaign's
-    /// Task 2 report establishes is structurally blind to the chamber
-    /// lattice. Worth a follow-up; not fixed here, because a chamber-leg
-    /// assertion is not this task's subject and inventing one silently would
-    /// hide that the artifact-level witness is missing.
+    /// **The `chamber_stream` counterpart this paragraph used to warn about
+    /// no longer exists.** It was the existence draw's own stream, parented
+    /// on `crate::streams::CHAMBER` and unpinned in exactly this way; The
+    /// Drift (spec §4.1) deleted the draw and the function together, which
+    /// closes the gap by removing what it was a gap in, rather than by
+    /// pinning it. The lesson stated above (a re-implementing test is not a
+    /// witness) still applies to whatever next derivation is parented on
+    /// `CHAMBER`.
     #[test]
     fn the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg() {
         let seed = Seed(90210);
@@ -2185,15 +2635,13 @@ mod tests {
         let mut probed = 0usize;
         for raw_cell in 0u32..40 {
             for branch in 0..BRANCHES_PER_SYSTEM {
-                for band in 0..5u8 {
+                for &band in Band::habitation() {
                     let run = RunAddr {
                         cell: CellId(raw_cell),
-                        entrance: 0,
                         branch,
                         band,
                     };
-                    let rung = rung_of_rank(run.band).expect("ranks 0..=4 name a rung");
-                    let (lo, hi) = floors_range(rung).expect("a habitation rung has a range");
+                    let (lo, hi) = levels_range(run.band).expect("a habitation rung has a range");
 
                     let via_run_leg = seed
                         .derive(crate::streams::RUN_FLOORS)
@@ -2206,10 +2654,10 @@ mod tests {
                         .stream()
                         .range_u32(u32::from(lo), u32::from(hi));
 
-                    let shipped = u32::from(floors_in_run(seed, run));
+                    let shipped = u32::from(levels_in_branch(seed, run));
                     assert_eq!(
                         shipped, via_run_leg,
-                        "{run:?}: floors_in_run answered {shipped}, but the \
+                        "{run:?}: levels_in_branch answered {shipped}, but the \
                          RUN_FLOORS leg derives {via_run_leg} — the shipped draw \
                          is not travelling the leg it declares"
                     );
@@ -2236,25 +2684,28 @@ mod tests {
     /// the parent leg, the key spelling, `range_u32`'s draw semantics, or the
     /// range table.
     ///
-    /// If this fails, every run in every world is a different length. That is
-    /// an epoch (`chamber/run-floors/v2`), not a fix to these numbers.
+    /// **Re-baselined by The Drift** (spec amendment A.6): `RUN_FLOORS` moved
+    /// to `chamber/run-floors/v2` because dropping `entrance` from `RunAddr`
+    /// re-keys every run, and this is a LIVE production leg — unlike
+    /// `CHAMBER`, nothing here is a display formatter. If this fails, every
+    /// run in every world is a different length. That is a further epoch, not
+    /// a fix to these numbers.
     #[test]
     fn the_run_draw_is_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, entrance, branch, band, expected) in [
-            (9u32, 0u8, 3u8, 2u8, 16u8), // 9/0/3/deeps,        range 5-20
-            (0, 1, 0, 0, 2),             // 0/1/0/undercroft,   range 1-5
-            (17, 0, 2, 4, 4),            // 17/0/2/nadir,       range 1-5
-            (5, 0, 1, 3, 5),             // 5/0/1/underdeep,    range 5-10
+        for (cell, branch, band, expected) in [
+            (9u32, 3u8, Band::Deeps, 16u8), // 9/3/deeps,      range 5-20
+            (0, 0, Band::Undercroft, 4),    // 0/0/undercroft, range 1-5
+            (17, 2, Band::Nadir, 2),        // 17/2/nadir,     range 1-5
+            (5, 1, Band::Underdeep, 5),     // 5/1/underdeep,  range 5-10
         ] {
             let run = RunAddr {
                 cell: CellId(cell),
-                entrance,
                 branch,
                 band,
             };
             assert_eq!(
-                floors_in_run(seed, run),
+                levels_in_branch(seed, run),
                 expected,
                 "the run {} moved off its pin",
                 run_key(run)
@@ -2265,25 +2716,25 @@ mod tests {
     /// **The lattice ceiling must be at least as tall as the tallest thing
     /// the draw can ask for**, or a run reports a length the lattice refuses.
     ///
-    /// [`chamber_exists`] checks `floor >= FLOORS_PER_RUN_CEILING` BEFORE it
-    /// checks `floor >= floors_in_run(..)`, so a future range with `hi > 20`
-    /// would produce runs that claim N floors and realize 20 — a silent,
-    /// permanent truncation with no error anywhere. One assertion closes it,
-    /// and it belongs beside the table rather than in a reviewer's head.
+    /// [`chamber_exists`] checks `level >= LEVELS_PER_BRANCH_CEILING` BEFORE
+    /// it checks `level >= levels_in_branch(..)`, so a future range with
+    /// `hi > 20` would produce runs that claim N levels and realize 20 — a
+    /// silent, permanent truncation with no error anywhere. One assertion
+    /// closes it, and it belongs beside the table rather than in a reviewer's
+    /// head.
     #[test]
     fn the_lattice_ceiling_covers_every_bands_frozen_maximum() {
-        for rank in 0..5u8 {
-            let rung = rung_of_rank(rank).expect("ranks 0..=4 name a rung");
-            let (lo, hi) = floors_range(rung).expect("a habitation rung has a range");
+        for &rung in Band::habitation() {
+            let (lo, hi) = levels_range(rung).expect("a habitation rung has a range");
             assert!(
                 lo >= 1,
-                "{rung:?} may draw {lo} floors, so its run can be empty"
+                "{rung:?} may draw {lo} levels, so its run can be empty"
             );
             assert!(
-                hi <= FLOORS_PER_RUN_CEILING,
-                "{rung:?} may draw {hi} floors but the lattice admits only \
-                 {FLOORS_PER_RUN_CEILING}, so chamber_exists would truncate \
-                 the run silently — the ceiling gate runs first"
+                hi <= LEVELS_PER_BRANCH_CEILING,
+                "{rung:?} may draw {hi} levels but the lattice admits only \
+                 {LEVELS_PER_BRANCH_CEILING}, so chamber_exists would \
+                 truncate the run silently — the ceiling gate runs first"
             );
         }
     }
@@ -2291,9 +2742,18 @@ mod tests {
     /// The run-floors label is a **save-format contract**; `stream_labels!`
     /// cannot tell a bump from a typo, so the literal is asserted here — the
     /// same pin [`crate::streams::CHAMBER`] carries.
+    ///
+    /// **`/v2` since The Drift** (spec amendment A.6): dropping `entrance`
+    /// from `RunAddr` re-keys every run this label derives, and unlike
+    /// `CHAMBER` this is a LIVE production leg — see `RUN_FLOORS`'s own doc.
     #[test]
-    fn the_run_floors_label_is_v1() {
-        assert_eq!(crate::streams::RUN_FLOORS.as_str(), "chamber/run-floors/v1");
+    fn the_run_floors_label_is_v2() {
+        assert_eq!(crate::streams::RUN_FLOORS.as_str(), "chamber/run-floors/v2");
+        assert_ne!(
+            crate::streams::RUN_FLOORS.as_str(),
+            "chamber/run-floors/v1",
+            "chamber/run-floors/v1 is retired; The Drift re-shaped the run key"
+        );
         assert_ne!(
             crate::streams::RUN_FLOORS.as_str(),
             crate::streams::CHAMBER.as_str(),
@@ -2301,9 +2761,9 @@ mod tests {
         );
     }
 
-    /// **`chamber_exists` refuses a floor past its run's drawn count** — the
+    /// **`chamber_exists` refuses a level past its run's drawn count** — the
     /// half of Task 2 that changes what worlds contain. Before this, every
-    /// in-budget run admitted all [`FLOORS_PER_RUN_CEILING`] floors, so the
+    /// in-budget run admitted all [`LEVELS_PER_BRANCH_CEILING`] levels, so the
     /// realized population was the lattice ceiling wearing a distribution's
     /// clothes.
     ///
@@ -2311,14 +2771,14 @@ mod tests {
     /// **nothing** exists (a hard invariant), and below it **something** does
     /// (or "nothing past the count" would be satisfied by a gate that refused
     /// the whole axis). The control is stated as "at least one run in the
-    /// sweep has at least one realized floor" rather than per-run, because
+    /// sweep has at least one realized level" rather than per-run, because
     /// existence below the count is still a coin-flip draw.
     #[test]
-    fn chamber_exists_refuses_a_floor_past_its_runs_drawn_count() {
+    fn chamber_exists_refuses_a_level_past_its_runs_drawn_count() {
         let seed = Seed(90210);
         let column = fixture_column();
-        // At the reach ceiling, so every band 0..=4 is in budget and the BAND
-        // gate can never be what refuses.
+        // At the reach ceiling, so every habitation band is in budget and the
+        // BAND gate can never be what refuses.
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
 
@@ -2326,31 +2786,29 @@ mod tests {
         let mut runs_shorter_than_the_ceiling = 0usize;
         for raw_cell in 0u32..20 {
             for branch in 0..BRANCHES_PER_SYSTEM {
-                for band in 0..5u8 {
+                for &band in Band::habitation() {
                     let run = RunAddr {
                         cell: CellId(raw_cell),
-                        entrance: 0,
                         branch,
                         band,
                     };
-                    let drawn = floors_in_run(seed, run);
-                    if drawn < FLOORS_PER_RUN_CEILING {
+                    let drawn = levels_in_branch(seed, run);
+                    if drawn < LEVELS_PER_BRANCH_CEILING {
                         runs_shorter_than_the_ceiling += 1;
                     }
-                    for floor in 0..FLOORS_PER_RUN_CEILING {
+                    for level in 0..LEVELS_PER_BRANCH_CEILING {
                         let addr = ChamberAddr {
                             cell: run.cell,
-                            entrance: run.entrance,
                             branch: run.branch,
                             band: run.band,
-                            floor,
+                            level,
                         };
                         let exists = chamber_exists(seed, &cave, gradient, addr);
-                        if floor >= drawn {
+                        if level >= drawn {
                             assert!(
                                 !exists,
                                 "{addr:?} exists, but its run realizes only {drawn} \
-                                 floors — the lattice ceiling is standing in for the \
+                                 levels — the lattice ceiling is standing in for the \
                                  draw"
                             );
                         } else if exists {
@@ -2362,65 +2820,41 @@ mod tests {
         }
         assert!(
             runs_shorter_than_the_ceiling > 0,
-            "no run in the sweep drew fewer than {FLOORS_PER_RUN_CEILING} floors, \
-             so the refusal above never had anything to refuse"
+            "no run in the sweep drew fewer than {LEVELS_PER_BRANCH_CEILING} \
+             levels, so the refusal above never had anything to refuse"
         );
         assert!(
             realized_below > 0,
-            "no floor below any run's count exists either, so the refusal proves \
+            "no level below any run's count exists either, so the refusal proves \
              nothing about the run gate"
         );
     }
 
-    /// The floors-per-band table is spec §3.1's, exhaustively, and `Surface`
+    /// The levels-per-band table is spec §3.1's, exhaustively, and `Surface`
     /// has no run at all. Stated against the same literals
-    /// [`FROZEN_RANGES`] pins, so a silent edit to [`floors_range`] fails
+    /// [`FROZEN_RANGES`] pins, so a silent edit to [`levels_range`] fails
     /// here rather than being absorbed by a range check that reads it.
     #[test]
-    fn the_floors_per_band_table_is_spec_3_1s() {
+    fn the_levels_per_band_table_is_spec_3_1s() {
         for (band, lo, hi) in FROZEN_RANGES {
-            let rung = rung_of_rank(band).expect("ranks 0..=4 name a rung");
             assert_eq!(
-                floors_range(rung),
+                levels_range(band),
                 Some((lo, hi)),
-                "{rung:?} must carry spec §3.1's frozen range"
+                "{band:?} must carry spec §3.1's frozen range"
             );
         }
         assert_eq!(
-            floors_range(DelveRung::Surface),
+            levels_range(Band::Surface),
             None,
             "the overworld is not a run"
         );
-    }
-
-    /// A band outside the habitation ladder names no run, so it realizes no
-    /// floors — which makes [`chamber_exists`]'s gate refuse every floor
-    /// there rather than deriving a count for nowhere.
-    #[test]
-    fn a_band_past_the_ladder_realizes_no_floors() {
-        let seed = Seed(3);
-        for band in 5..=8u8 {
-            assert_eq!(
-                floors_in_run(
-                    seed,
-                    RunAddr {
-                        cell: CellId(1),
-                        entrance: 0,
-                        branch: 0,
-                        band,
-                    }
-                ),
-                0,
-                "band {band} is past the ladder and must realize no floors"
-            );
-        }
     }
 
     /// Every rung spells differently. A collision would silently merge two
     /// depths' chambers into one derived stream.
     #[test]
     fn every_rung_has_a_distinct_spelling() {
-        let names: Vec<&str> = (0..=4).filter_map(rung_of_rank).map(rung_name).collect();
+        let names: Vec<&str> = (0..=4).filter_map(Band::from_rank).map(rung_name).collect();
         assert_eq!(names.len(), 5, "every rank 0..=4 must name a rung");
         for (i, a) in names.iter().enumerate() {
             for b in &names[i + 1..] {
@@ -2448,13 +2882,21 @@ mod tests {
         );
     }
 
-    /// The BG3 case: two entrances of ONE system may open on DIFFERENT
-    /// floors of the lattice — one at the main-line head, another at a
-    /// branch's root floor (C.2), per C.3. Asserted as an existence over a
-    /// sweep: the draw must be CAPABLE of disagreement, not always so.
+    /// The BG3 case: two entrances of ONE system may open into DIFFERENT
+    /// places — one at the main-line head, another on a side branch, per
+    /// C.3. Asserted as an existence over a sweep: the draw must be CAPABLE
+    /// of disagreement, not always so.
+    ///
+    /// **Renamed from `..._on_different_floors` by The Drift's Task 7**
+    /// (spec §4.6). It is no longer a *floor* the two doors can disagree
+    /// about: every mouth lands at level 0 of the top habitation band, so
+    /// the only axis left is the BRANCH. The assertion is unchanged (two
+    /// mouths of one system differ) and its meaning narrowed with the
+    /// design — keeping the old name would have described a disagreement
+    /// that can no longer occur.
     /// claim: rate(seed x cell sweep) — some pair of mouths disagrees
     #[test]
-    fn two_entrances_of_one_system_may_open_on_different_floors() {
+    fn two_entrances_of_one_system_may_open_on_different_branches() {
         let mut found = None;
         'outer: for s in 0u64..40 {
             for c in 0u32..80 {
@@ -2473,7 +2915,7 @@ mod tests {
         }
         found.expect(
             "no multi-entrance system on the sweep opened its two entrances \
-             onto different floors — C.3's two-door reading is unrealizable",
+             onto different branches — C.3's two-door reading is unrealizable",
         );
     }
 
@@ -2529,10 +2971,38 @@ mod tests {
     /// The two new legs are byte-pinned for known keys — literal counts and
     /// literal mouths, the cheapest witness that any part of either
     /// derivation moved.
+    ///
+    /// **Re-baselined by The Drift, Task 5**: `entrance_mouth`'s own
+    /// `branch_count_of` query moved from a literal entrance index to
+    /// `Band::Undercroft` (see its own doc), which changes the actual
+    /// derived stream even where the numeral was textually the same, so
+    /// some mouths moved. `entrance_count` is untouched.
+    ///
+    /// **Re-baselined again by Task 7** (spec §4.6), and the shape of the
+    /// movement is worth reading: exactly ONE field of ONE row moved —
+    /// cell 5's `floor: 3` became `floor: 0`. Every `branch` is unchanged,
+    /// because the side-branch pick still travels the same leg with the
+    /// same key over the same width; what retired is the second half, where
+    /// `root_floor_of` then landed the door at a band and floor drawn
+    /// independently. A door now opens at level 0 of the top habitation
+    /// band, so `band` and `floor` are no longer drawn at all. Cells 9 and
+    /// 31 were already `0/0` (the head, and a width-one fallback), which is
+    /// why they do not move.
+    ///
+    /// **Re-baselined a THIRD time by Task 7b** (spec amendment E.2), and
+    /// this time BOTH legs moved, because both took an epoch — a new label
+    /// is a new parent seed, so every raw draw is different even where the
+    /// dynamic key reads the same. Counts: 1/2/3/1 became 2/4/1/2. Mouths:
+    /// cell 6 is a width-FOUR system, so its three side doors now share out
+    /// branches 3, 2 and 1 — a drawn permutation, not an assignment, which
+    /// is why aperture 1 does not simply take branch 1. Cells 31 and 17 are
+    /// width-one and keep the head. Cell 6's aperture 2 is pinned as well as
+    /// its aperture 1: a single row could be satisfied by a plain
+    /// `branch = entrance` map, and two of them from the same system cannot.
     #[test]
     fn the_entrance_draws_are_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, expected) in [(9u32, 1u8), (6, 2), (17, 3), (5, 1)] {
+        for (cell, expected) in [(9u32, 2u8), (6, 4), (17, 1), (5, 2)] {
             assert_eq!(
                 entrance_count(seed, CellId(cell)),
                 expected,
@@ -2553,25 +3023,34 @@ mod tests {
                 6,
                 1,
                 EntranceMouth {
-                    branch: 1,
+                    branch: 3,
                     band: 0,
-                    floor: 1,
+                    floor: 0,
+                },
+            ),
+            (
+                6,
+                2,
+                EntranceMouth {
+                    branch: 2,
+                    band: 0,
+                    floor: 0,
                 },
             ),
             (
                 31,
                 1,
                 EntranceMouth {
-                    branch: 3,
-                    band: 3,
-                    floor: 3,
+                    branch: 0,
+                    band: 0,
+                    floor: 0,
                 },
             ),
             (
                 5,
                 1,
                 EntranceMouth {
-                    branch: 0,
+                    branch: 1,
                     band: 0,
                     floor: 0,
                 },
@@ -2589,13 +3068,23 @@ mod tests {
     /// the Task 2/3 pattern. Arm 1: the shipped answer equals its declared
     /// leg everywhere probed. Arm 2: it differs from at least one sibling
     /// leg somewhere, so arm 1 cannot pass under a re-parented draw.
+    ///
+    /// **Both halves re-derive the COMPOSITION now, not the draw alone**
+    /// (Task 7b, spec E.2). The shipped count is the leg's free draw raised
+    /// to the top band's width, and the shipped mouth for aperture 1 is an
+    /// index into the pool of unspoken-for branches; a witness that
+    /// re-derived only the raw draw would be comparing two different
+    /// quantities and would fail for a reason that has nothing to do with
+    /// which leg the draw travelled.
     #[test]
     fn each_entrance_draw_travels_its_own_leg_and_not_a_siblings() {
         let seed = Seed(90210);
         // --- entrance count ---
         let mut count_disagreed = false;
         for c in 0u32..40 {
-            let shipped = entrance_count(seed, CellId(c));
+            let cell = CellId(c);
+            let width = crate::character::branch_count_of(seed, cell, top_band());
+            let shipped = entrance_count(seed, cell);
             let own = seed
                 .derive(crate::streams::ENTRANCE_COUNT)
                 .derive(StreamLabel::dynamic(&format!("{}", c)))
@@ -2603,7 +3092,7 @@ mod tests {
                 .next_f64();
             assert_eq!(
                 shipped,
-                count_from_raw(own),
+                count_from_raw(own).max(width),
                 "entrance_count does not travel the ENTRANCE_COUNT leg at cell {c}"
             );
             let sibling = seed
@@ -2611,7 +3100,7 @@ mod tests {
                 .derive(StreamLabel::dynamic(&format!("{}/0", c)))
                 .stream()
                 .next_f64();
-            if count_from_raw(sibling) != shipped {
+            if count_from_raw(sibling).max(width) != shipped {
                 count_disagreed = true;
             }
         }
@@ -2623,36 +3112,49 @@ mod tests {
         // --- entrance mouth ---
         let mut mouth_disagreed = false;
         for c in 0u32..200 {
-            if entrance_count(seed, CellId(c)) < 2 {
-                continue;
-            }
+            let cell = CellId(c);
             // A width-two system cannot disagree: its single side branch is
             // the only thing either leg could pick. Only a wider system
-            // discriminates the legs.
-            if crate::character::branch_count_of(seed, CellId(c), 0) < 3 {
+            // discriminates the legs. Aperture 1 is a `share` draw at every
+            // width above one, and `entrance_count` now guarantees it
+            // exists there, so no count filter is needed.
+            let width = crate::character::branch_count_of(seed, cell, top_band());
+            if width < 3 {
                 continue;
             }
-            let shipped = entrance_mouth(seed, CellId(c), 1);
+            let shipped = entrance_mouth(seed, cell, 1);
             let own = seed
                 .derive(crate::streams::ENTRANCE_MOUTH)
-                .derive(StreamLabel::dynamic(&format!("{}/1", c)))
+                .derive(StreamLabel::dynamic(&mouth_key(
+                    cell,
+                    1,
+                    ApertureRole::Share,
+                )))
                 .stream();
             assert_eq!(
                 Some(shipped),
-                mouth_from_raw(seed, CellId(c), own),
+                mouth_from_raw(seed, cell, own),
                 "entrance_mouth does not travel the ENTRANCE_MOUTH leg at cell {c}"
             );
+            // The sibling leg was `BRANCH_ROOT` until The Drift's Task 7
+            // retired that label; `ENTRANCE_COUNT` serves the same purpose
+            // — a DIFFERENT root leg read under the same dynamic key, so
+            // arm 1 cannot pass by luck under a re-parented draw.
             let sib = seed
-                .derive(crate::streams::BRANCH_ROOT)
-                .derive(StreamLabel::dynamic(&format!("{}/1", c)))
+                .derive(crate::streams::ENTRANCE_COUNT)
+                .derive(StreamLabel::dynamic(&mouth_key(
+                    cell,
+                    1,
+                    ApertureRole::Share,
+                )))
                 .stream();
-            if Some(shipped) != mouth_from_raw(seed, CellId(c), sib) {
+            if Some(shipped) != mouth_from_raw(seed, cell, sib) {
                 mouth_disagreed = true;
             }
         }
         assert!(
             mouth_disagreed,
-            "the mouth draw agreed with the branch-root leg everywhere"
+            "the mouth draw agreed with the entrance-count leg everywhere"
         );
     }
 
@@ -2668,15 +3170,25 @@ mod tests {
         }
     }
 
-    /// Re-derives the mouth from a caller-supplied first-draw stream — the
-    /// leg witness's comparison half. The side-branch pick comes from the
-    /// given stream; the root itself is the branch's own established draw.
+    /// Re-derives **aperture 1's** mouth from a caller-supplied first-draw
+    /// stream — the leg witness's comparison half. Where a mouth lands is not
+    /// drawn at all any more (The Drift, Task 7: every mouth opens at level 0
+    /// of the top habitation band), so only the branch comes from the stream.
+    ///
+    /// Aperture 1 is the FIRST of the sharing-out apertures (Task 7b), whose
+    /// pool is still the whole side-branch range `1..width` — nothing has
+    /// been removed from it yet — so the draw indexes `0..width - 1` and the
+    /// branch is one more than the index. That equivalence holds for
+    /// aperture 1 alone, which is why this helper takes no aperture index.
     fn mouth_from_raw(
         seed: Seed,
         cell: CellId,
         mut stream: hornvale_kernel::Stream,
     ) -> Option<EntranceMouth> {
-        let branches = crate::character::branch_count_of(seed, cell, 0);
+        // Same top-band reference `entrance_mouth` itself uses, read off the
+        // ladder rather than named.
+        let top = top_band();
+        let branches = crate::character::branch_count_of(seed, cell, top);
         if branches <= 1 {
             return Some(EntranceMouth {
                 branch: 0,
@@ -2684,12 +3196,871 @@ mod tests {
                 floor: 0,
             });
         }
-        let picked = stream.range_u32(1, u32::from(branches - 1));
-        let branch = u8::try_from(picked).ok()?;
-        crate::character::root_floor_of(seed, cell, 0, branch).map(|root| EntranceMouth {
+        let index = stream.range_u32(0, u32::from(branches - 2));
+        let branch = u8::try_from(index + 1).ok()?;
+        Some(EntranceMouth {
             branch,
-            band: root.band,
-            floor: root.floor,
+            band: rung_rank(top)?,
+            floor: 0,
         })
+    }
+
+    // --- Task 7b: the top band is entered (spec amendment E.2) ---
+
+    /// The branches every aperture of one system opens on, at an
+    /// **explicitly given** top-band width — the seam E.2's guarantee is
+    /// asserted through, the way §4.5's two are asserted through
+    /// [`descent_edges_for`].
+    ///
+    /// A one-line composition of the two shipped width-parameterised halves,
+    /// because the probed path must be the shipped path: a test-only
+    /// reimplementation would assert a guarantee about code no world runs.
+    fn aperture_branches_at(seed: Seed, cell: CellId, width: u8) -> std::collections::BTreeSet<u8> {
+        (0..aperture_count_at(seed, cell, width))
+            .map(|entrance| aperture_branch_at(seed, cell, entrance, width))
+            .collect()
+    }
+
+    /// GUARANTEE 3 (spec amendment E.2): **every branch in the top band is
+    /// named by at least one entrance.**
+    ///
+    /// §4.5's second guarantee — every branch has a parent — is *vacuous* at
+    /// the top band, which has no band above it to hang from. So a top-band
+    /// branch no door landed on, and that no lower branch links back to, was
+    /// orphaned: measured at 120 of seed 42's 123 unreached levels, all in
+    /// branches with no open mouth. With this third guarantee the three
+    /// together make a system's whole lattice one reachable component by
+    /// construction.
+    ///
+    /// **Constructed over every width the top band can realize**, and over
+    /// several cells, for the reason [`every_branch_has_at_least_one_parent`]
+    /// states: `branch_count_of` is weighted 60% toward width 1, where this
+    /// guarantee is trivial, so a seed-panel scan would spend nearly all its
+    /// evidence on the one case that cannot fail.
+    #[test]
+    fn every_top_band_branch_is_named_by_an_entrance() {
+        let seed = Seed(42);
+        for cell in [0u32, 5, 6, 7, 9, 17, 31, 4096] {
+            for width in 1..=BRANCHES_PER_SYSTEM {
+                let named = aperture_branches_at(seed, CellId(cell), width);
+                for branch in 0..width {
+                    assert!(
+                        named.contains(&branch),
+                        "cell {cell}, top-band width {width}: branch {branch} is named \
+                         by no entrance, so nothing enters it and everything hanging \
+                         beneath it is orphaned (spec amendment E.2). Named: {named:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    // --- Band-transition edges (The Drift, Task 6; spec §4.5) ---
+
+    /// The edge set for one adjacent band pair at **explicitly given
+    /// widths** — the seam §4.5's two guarantees are asserted through.
+    ///
+    /// It is a one-line forward to [`descent_edges`], which already takes
+    /// the widths as parameters, because the shipped path must be the
+    /// probed path: a test-only reimplementation would assert a guarantee
+    /// about code no world runs. The name is the one the plan's brief uses,
+    /// kept so a reader following the brief finds it here. **The brief's
+    /// signature carried an `entrance` argument**; amendment A.3 took
+    /// `entrance` out of the lattice entirely, so it is gone here too.
+    fn descent_edges_for(
+        seed: Seed,
+        cell: CellId,
+        band: Band,
+        upper: u8,
+        lower: u8,
+    ) -> Vec<(u8, u8)> {
+        descent_edges(seed, cell, band, upper, lower)
+    }
+
+    /// GUARANTEE 1 (spec §4.5): **every branch descends.** Nothing dead-ends
+    /// except at the bottom of the ladder.
+    ///
+    /// **This constructs the situation rather than scanning for it.** All
+    /// sixteen `(upper, lower)` width pairs are exercised directly, because a
+    /// panel scan would only ever exercise the widths a few seeds happen to
+    /// draw — `branch_count_of` is weighted 60% toward width 1, so a scan
+    /// would spend most of its evidence on the one pair where the guarantee
+    /// is trivial. A guarantee is asserted, never measured into existence
+    /// (spec §6).
+    #[test]
+    fn every_branch_has_at_least_one_descent() {
+        let seed = Seed(42);
+        for upper in 1..=BRANCHES_PER_SYSTEM {
+            for lower in 1..=BRANCHES_PER_SYSTEM {
+                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                for b in 0..upper {
+                    assert!(
+                        edges.iter().any(|&(from, _)| from == b),
+                        "branch {b} of {upper} descends nowhere ({upper} above, {lower} below)"
+                    );
+                }
+            }
+        }
+    }
+
+    /// GUARANTEE 2 (spec §4.5): **every branch is reachable.** Nothing is
+    /// orphaned below a band it cannot be entered from.
+    ///
+    /// Constructed over all sixteen width pairs for the same reason
+    /// [`every_branch_has_at_least_one_descent`] is.
+    #[test]
+    fn every_branch_has_at_least_one_parent() {
+        let seed = Seed(42);
+        for upper in 1..=BRANCHES_PER_SYSTEM {
+            for lower in 1..=BRANCHES_PER_SYSTEM {
+                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                for b in 0..lower {
+                    assert!(
+                        edges.iter().any(|&(_, to)| to == b),
+                        "branch {b} of {lower} has no parent ({upper} above, {lower} below)"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The union of two surjections is bounded on both sides **by
+    /// construction**, and this asserts the bounds rather than a fitted
+    /// distribution (spec §8 leaves the extra-edge count open on purpose).
+    ///
+    /// Lower bound `max(upper, lower)`: the child loop alone contributes an
+    /// edge from each of `upper` distinct sources and the parent loop an edge
+    /// into each of `lower` distinct targets, so neither can be collapsed
+    /// below its own arity. Upper bound `upper + lower`: exactly that many
+    /// edges are pushed before the dedup, which can only remove.
+    ///
+    /// Swept over several cells and every adjacent band pair, so a
+    /// coincidence at one place cannot carry it.
+    #[test]
+    fn the_edge_count_sits_between_its_construction_bounds() {
+        let seed = Seed(42);
+        for cell in [0u32, 7, 9, 4096] {
+            for &band in Band::habitation() {
+                let Some(_) = band.deeper() else { continue };
+                for upper in 1..=BRANCHES_PER_SYSTEM {
+                    for lower in 1..=BRANCHES_PER_SYSTEM {
+                        let edges = descent_edges_for(seed, CellId(cell), band, upper, lower);
+                        let n = u8::try_from(edges.len()).expect("at most 8 edges");
+                        assert!(
+                            n >= upper.max(lower) && n <= upper + lower,
+                            "cell {cell} {band:?} {upper}x{lower}: {n} edges is outside \
+                             [{}, {}]",
+                            upper.max(lower),
+                            upper + lower
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// The band-descent key is a **save-format contract**:
+    /// `StreamLabel::dynamic` hashes this string, so its spelling decides
+    /// every band-transition edge in every world forever.
+    ///
+    /// If this test fails, you have re-drawn the whole underworld's
+    /// connectivity. That is an epoch (`chamber/band-descent/v2` next), not a
+    /// fix to this assertion.
+    #[test]
+    fn the_band_descent_key_spelling_is_pinned() {
+        assert_eq!(
+            descent_key(CellId(9), 3, Band::Deeps, DescentRole::Child),
+            "9/3/deeps/child"
+        );
+        assert_eq!(
+            descent_key(CellId(0), 0, Band::Undercroft, DescentRole::Parent),
+            "0/0/undercroft/parent"
+        );
+        assert_eq!(
+            descent_key(CellId(12), 1, Band::Nadir, DescentRole::Parent),
+            "12/1/nadir/parent"
+        );
+    }
+
+    /// Every component of the band-descent key changes the key — including
+    /// the **role**, which is the one a reader is most likely to assume is
+    /// decorative. If the role did not separate the two draws, a branch's
+    /// child pick and its parent pick would share a stream and the two
+    /// surjections would stop being independent.
+    ///
+    /// The band is checked by NAME, not by rank: `rung_name` is what the key
+    /// spells, so this also pins that a mid-ladder insertion cannot silently
+    /// re-key an existing band.
+    #[test]
+    fn every_component_of_the_band_descent_key_is_load_bearing() {
+        let base = descent_key(CellId(9), 1, Band::Deeps, DescentRole::Child);
+        for other in [
+            descent_key(CellId(8), 1, Band::Deeps, DescentRole::Child),
+            descent_key(CellId(9), 2, Band::Deeps, DescentRole::Child),
+            descent_key(CellId(9), 1, Band::Shallows, DescentRole::Child),
+            descent_key(CellId(9), 1, Band::Deeps, DescentRole::Parent),
+        ] {
+            assert_ne!(base, other, "a key component is not load-bearing");
+        }
+        // And the whole role vocabulary is distinct, so no two roles could
+        // ever collapse onto one stream.
+        assert_ne!(DescentRole::Child.word(), DescentRole::Parent.word());
+    }
+
+    /// The band-descent label is `/v1` — this campaign draws something that
+    /// did not exist, so there is no earlier epoch to retire — and it is its
+    /// own root leg, never shared with a sibling draw.
+    #[test]
+    fn the_band_descent_label_is_v1() {
+        assert_eq!(
+            crate::streams::BAND_DESCENT.as_str(),
+            "chamber/band-descent/v1"
+        );
+        for sibling in [
+            crate::streams::CHAMBER.as_str(),
+            crate::streams::RUN_FLOORS.as_str(),
+            crate::streams::BRANCH_COUNT.as_str(),
+            crate::streams::BRANCH_CHARACTER.as_str(),
+            crate::streams::BRANCH_BARRIER.as_str(),
+            crate::streams::ENTRANCE_MOUTH.as_str(),
+        ] {
+            assert_ne!(
+                crate::streams::BAND_DESCENT.as_str(),
+                sibling,
+                "the band-descent draw must not share a sibling's label"
+            );
+        }
+    }
+
+    /// **The edge list itself is byte-pinned for known calls** — the half
+    /// [`the_band_descent_key_spelling_is_pinned`] cannot reach.
+    ///
+    /// That test pins what [`descent_key`] *returns*. It says nothing about
+    /// what [`descent_edges`] *passes it*, and review round 1 found both of
+    /// the arguments it chooses to be unguarded: the parent draw's `below`
+    /// could become `band`, and the child draw's [`DescentRole::Child`] could
+    /// become `Parent`, with all 47 tests still green. **The second is the
+    /// serious one**, and it is exactly what the role word exists to prevent:
+    /// under it the child draws for the pair `(B, B.deeper())` land in
+    /// `{cell}/{i}/{B}/parent`, the key space the parent draws for the pair
+    /// `(B.shallower(), B)` already occupy — one key answering two different
+    /// questions at two different widths.
+    ///
+    /// The widths were already pinned (swapping them reddens the guarantee
+    /// tests); the band and the role now are too. Same instrument
+    /// `the_entrance_draws_are_byte_pinned_for_known_keys` uses one section
+    /// up: freeze the shipped answer for a handful of named calls, so any
+    /// change to the derivation — key, band, role, parent leg or draw order —
+    /// has to come here and be admitted deliberately.
+    ///
+    /// If this fails you have re-drawn every band transition in every world.
+    /// That is an epoch (`chamber/band-descent/v2`), not a fix to these
+    /// literals.
+    ///
+    /// The four calls span both roles, three different `(band, band.deeper())`
+    /// pairs, asymmetric widths in both directions, and the saturated `4x4`
+    /// case, so no single coincidence can carry them all.
+    #[test]
+    fn the_descent_edges_are_byte_pinned_for_known_calls() {
+        assert_eq!(
+            descent_edges(Seed(42), CellId(9), Band::Deeps, 2, 3),
+            vec![(0, 0), (1, 0), (1, 1), (1, 2)]
+        );
+        assert_eq!(
+            descent_edges(Seed(42), CellId(9), Band::Shallows, 3, 2),
+            vec![(0, 0), (0, 1), (1, 0), (2, 0)]
+        );
+        assert_eq!(
+            descent_edges(Seed(42), CellId(0), Band::Undercroft, 4, 4),
+            vec![
+                (0, 3),
+                (1, 2),
+                (1, 3),
+                (2, 0),
+                (2, 1),
+                (2, 2),
+                (3, 1),
+                (3, 2)
+            ]
+        );
+        assert_eq!(
+            descent_edges(Seed(90210), CellId(7), Band::Underdeep, 2, 4),
+            vec![(0, 0), (0, 2), (1, 0), (1, 1), (1, 3)]
+        );
+    }
+
+    /// The descent draw travels the `BAND_DESCENT` leg and **not** a
+    /// sibling's, even where the key string would be identical. The
+    /// separation lives in the parent label, so a byte-identical key under a
+    /// different parent yields a different stream — the argument
+    /// `RUN_FLOORS`'s own doc makes, checked here for this leg.
+    ///
+    /// Two arms: the shipped pick agrees with a re-derivation through
+    /// `BAND_DESCENT`, and disagrees *somewhere* with the same key under
+    /// `RUN_FLOORS`. The second arm is the positive control — without it the
+    /// first would pass for a draw that ignored its parent entirely.
+    #[test]
+    fn the_descent_draw_travels_the_band_descent_leg_and_not_a_siblings() {
+        let seed = Seed(42);
+        let width = BRANCHES_PER_SYSTEM;
+        let mut sibling_disagreed = false;
+        for cell in 0u32..64 {
+            for &band in Band::habitation() {
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let key = descent_key(CellId(cell), branch, band, DescentRole::Child);
+                    let shipped =
+                        descent_pick(seed, CellId(cell), branch, band, DescentRole::Child, width);
+                    let own = seed
+                        .derive(crate::streams::BAND_DESCENT)
+                        .derive(StreamLabel::dynamic(&key))
+                        .stream()
+                        .range_u32(0, u32::from(width - 1));
+                    assert_eq!(
+                        u32::from(shipped),
+                        own,
+                        "the descent pick does not travel the BAND_DESCENT leg at {key}"
+                    );
+                    let sib = seed
+                        .derive(crate::streams::RUN_FLOORS)
+                        .derive(StreamLabel::dynamic(&key))
+                        .stream()
+                        .range_u32(0, u32::from(width - 1));
+                    if sib != own {
+                        sibling_disagreed = true;
+                    }
+                }
+            }
+        }
+        assert!(
+            sibling_disagreed,
+            "the band-descent leg agreed with the run-floors leg everywhere"
+        );
+    }
+
+    /// Nothing descends from the bottom of the ladder, and nothing descends
+    /// from the overworld. [`Band::Nadir`] has no band below it and
+    /// [`Band::Surface`] is not a habitation band at all — both answer empty,
+    /// and neither is spelled as a numeric bound.
+    #[test]
+    fn nothing_descends_from_the_bottom_or_the_top_of_the_ladder() {
+        let seed = Seed(42);
+        assert_eq!(Band::Nadir.deeper(), None, "Nadir is the bottom rung");
+        for cell in 0u32..64 {
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                assert!(
+                    descents_from(seed, CellId(cell), Band::Nadir, branch).is_empty(),
+                    "cell {cell} branch {branch} descends below the Nadir"
+                );
+                assert!(
+                    descents_from(seed, CellId(cell), Band::Surface, branch).is_empty(),
+                    "cell {cell} branch {branch} descends out of the overworld"
+                );
+            }
+        }
+    }
+
+    /// A branch the band's own drawn width does not realize descends
+    /// nowhere — the drawn-realization half of decision 0102's split, applied
+    /// to the edge set, so a caller cannot walk into a column this band never
+    /// filled in.
+    ///
+    /// Two arms again: past the width, empty; inside it, non-empty. Without
+    /// the second, a `descents_from` that returned empty for everything would
+    /// pass.
+    #[test]
+    fn a_branch_its_band_does_not_realize_descends_nowhere() {
+        let seed = Seed(42);
+        let mut saw_a_realized_branch = false;
+        for cell in 0u32..256 {
+            for &band in Band::habitation() {
+                if band.deeper().is_none() {
+                    continue;
+                }
+                let width = crate::character::branch_count_of(seed, CellId(cell), band);
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let d = descents_from(seed, CellId(cell), band, branch);
+                    if branch >= width {
+                        assert!(
+                            d.is_empty(),
+                            "cell {cell} {band:?} branch {branch} is past width {width} \
+                             and still descends"
+                        );
+                    } else {
+                        assert!(
+                            !d.is_empty(),
+                            "cell {cell} {band:?} branch {branch} is inside width {width} \
+                             and descends nowhere"
+                        );
+                        saw_a_realized_branch = true;
+                    }
+                }
+                // And an out-of-lattice branch is refused outright.
+                assert!(descents_from(seed, CellId(cell), band, BRANCHES_PER_SYSTEM).is_empty());
+            }
+        }
+        assert!(saw_a_realized_branch, "the sweep realized no branch at all");
+    }
+
+    /// Every answer is ascending, deduplicated, and inside the **lower**
+    /// band's drawn width — never the upper band's, and never the lattice
+    /// ceiling. Reading the wrong width into the child draw is the exact
+    /// mistake this composition could make silently, so it is asserted
+    /// rather than assumed.
+    #[test]
+    fn descents_from_answers_inside_the_lower_bands_drawn_width() {
+        let seed = Seed(42);
+        for cell in 0u32..256 {
+            for &band in Band::habitation() {
+                let Some(below) = band.deeper() else { continue };
+                let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let d = descents_from(seed, CellId(cell), band, branch);
+                    let mut sorted = d.clone();
+                    sorted.sort_unstable();
+                    sorted.dedup();
+                    assert_eq!(
+                        d, sorted,
+                        "cell {cell} {band:?} branch {branch} is not a set"
+                    );
+                    for to in d {
+                        assert!(
+                            to < lower,
+                            "cell {cell} {band:?} branch {branch} descends into branch {to}, \
+                             past the lower band's width {lower}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// **The shipped composition keeps both guarantees.**
+    /// [`every_branch_has_at_least_one_descent`] and its sibling assert the
+    /// property of [`descent_edges`] at constructed widths; this asserts that
+    /// [`descents_from`] hands that function the *right* widths — the upper
+    /// band's for the upper side and the lower band's for the lower — which
+    /// no amount of constructed-width evidence can establish.
+    ///
+    /// Read as a scan it would be weak evidence; read as what it is — a wiring
+    /// check on a composition whose underlying property is already proved by
+    /// construction — it is the half the constructed tests cannot reach.
+    ///
+    /// claim: structural(3 seeds x 256 cells x every adjacent band pair) —
+    /// the composition hands `descent_edges` the two bands' own widths, so
+    /// the union it returns spans exactly the branches those bands realize.
+    /// The seeds are a wiring witness, not a population estimate: the
+    /// property itself is proved by construction at all sixteen width pairs.
+    #[test]
+    fn the_shipped_composition_keeps_both_guarantees_over_a_panel() {
+        for seed in [Seed(42), Seed(7), Seed(90210)] {
+            for cell in 0u32..256 {
+                for &band in Band::habitation() {
+                    let Some(below) = band.deeper() else { continue };
+                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
+                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                    let mut parented: Vec<u8> = Vec::new();
+                    for branch in 0..upper {
+                        let d = descents_from(seed, CellId(cell), band, branch);
+                        assert!(
+                            !d.is_empty(),
+                            "seed {seed:?} cell {cell} {band:?} branch {branch} dead-ends"
+                        );
+                        parented.extend(d);
+                    }
+                    parented.sort_unstable();
+                    parented.dedup();
+                    let want: Vec<u8> = (0..lower).collect();
+                    assert_eq!(
+                        parented, want,
+                        "seed {seed:?} cell {cell} {band:?}: branches below are not all reached"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The edge set is a fact about a **place**, not about the order the
+    /// lattice was walked in (decision 0102). Interleaving unrelated queries
+    /// between two reads of the same place must not move the answer — the
+    /// failure this catches is a draw that advanced a shared stream, which is
+    /// exactly what a single-stream-per-place design with two ordered draws
+    /// would have produced.
+    #[test]
+    fn the_descent_edges_are_the_same_however_the_lattice_is_queried() {
+        let seed = Seed(42);
+        let subject = descents_from(seed, CellId(9), Band::Deeps, 0);
+        for cell in 0u32..64 {
+            for &band in Band::habitation() {
+                for branch in 0..BRANCHES_PER_SYSTEM {
+                    let _ = descents_from(seed, CellId(cell), band, branch);
+                    let _ = levels_in_branch(
+                        seed,
+                        RunAddr {
+                            cell: CellId(cell),
+                            branch,
+                            band,
+                        },
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            subject,
+            descents_from(seed, CellId(9), Band::Deeps, 0),
+            "the descent edges moved when unrelated places were queried"
+        );
+    }
+
+    /// **The one dial spec §8 leaves open, MEASURED and printed rather than
+    /// tuned.** How many edges the union produces beyond the bare minimum
+    /// decides whether the underworld is a tree or a mesh, and this campaign
+    /// draws the union and nothing more. The distribution is reported here —
+    /// `cargo test -p hornvale-worldgen descent -- --nocapture` prints it —
+    /// and the only assertion is the by-construction bound, so nothing in
+    /// this test can be satisfied by fitting the draw.
+    ///
+    /// claim: readout(3 seeds x 512 cells x every adjacent band pair) — the
+    /// edge-count distribution and mean out-degree are REPORTED, and the only
+    /// gate is the by-construction bound `max(upper, lower) <= n <= upper +
+    /// lower`. Spec §8 leaves the extra-edge count open; a test that gated it
+    /// would be this campaign tuning the one dial it was told not to tune.
+    #[test]
+    fn the_edge_count_distribution_over_a_panel_is_reported() {
+        let mut by_pair: BTreeMap<(u8, u8), BTreeMap<usize, usize>> = BTreeMap::new();
+        let mut edges_total = 0usize;
+        let mut upper_branches_total = 0usize;
+        let mut pairs_total = 0usize;
+        // The headline share: how often the union collapses to the fewest
+        // edges its construction permits, `max(upper, lower)` — a spanning
+        // shape with no redundancy at all. COUNTED HERE rather than added up
+        // by hand from the table below, because review round 1 caught the
+        // hand-computed version off by 18 pairs (87.0% for 86.8%): it read
+        // each row's smallest OBSERVED count as the minimum, when the
+        // minimum is `max(upper, lower)` and four of the square-ish rows
+        // never reach it at all.
+        let mut at_minimum_total = 0usize;
+        for seed in [Seed(42), Seed(7), Seed(90210)] {
+            for cell in 0u32..512 {
+                for &band in Band::habitation() {
+                    let Some(below) = band.deeper() else { continue };
+                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
+                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                    let n = descent_edges(seed, CellId(cell), band, upper, lower).len();
+                    assert!(
+                        n >= usize::from(upper.max(lower)) && n <= usize::from(upper + lower),
+                        "edge count {n} outside its construction bounds at {upper}x{lower}"
+                    );
+                    *by_pair
+                        .entry((upper, lower))
+                        .or_default()
+                        .entry(n)
+                        .or_insert(0) += 1;
+                    edges_total += n;
+                    upper_branches_total += usize::from(upper);
+                    pairs_total += 1;
+                    if n == usize::from(upper.max(lower)) {
+                        at_minimum_total += 1;
+                    }
+                }
+            }
+        }
+        // Reported, never gated (spec §6's "REPORTED, NEVER GATED" clause
+        // applies to a shape the design deliberately left open).
+        println!("band-descent edge shape over 3 seeds x 512 cells x 4 band pairs");
+        println!("  band pairs measured        {pairs_total}");
+        println!("  edges drawn                {edges_total}");
+        println!(
+            "  mean out-degree            {:.4} edges per upper branch",
+            edges_total as f64 / upper_branches_total as f64
+        );
+        println!(
+            "  mean edges per band pair   {:.4}",
+            edges_total as f64 / pairs_total as f64
+        );
+        println!(
+            "  at the minimum max(u,l)    {at_minimum_total} of {pairs_total} = {:.4}% \
+             (a spanning shape, no redundancy)",
+            100.0 * at_minimum_total as f64 / pairs_total as f64
+        );
+        for ((upper, lower), counts) in &by_pair {
+            let total: usize = counts.values().sum();
+            let sum: usize = counts.iter().map(|(n, c)| n * c).sum();
+            let shape: Vec<String> = counts.iter().map(|(n, c)| format!("{n}:{c}")).collect();
+            println!(
+                "  {upper}x{lower}  n={total:<6} mean={:.4}  {}",
+                sum as f64 / total as f64,
+                shape.join(" ")
+            );
+        }
+    }
+    // --- The descent RULE (The Drift, Task 7; spec §4.5/§4.6) ---
+
+    /// **Descent leaves from a branch's BOTTOM level and arrives at the TOP
+    /// level of a branch the band-transition draw named** (spec §4.5) — and
+    /// the branch it arrives on is `descents_from`'s answer, not the branch
+    /// it left.
+    ///
+    /// **THE BRIEF'S OWN VERSION OF THIS TEST COULD NOT FAIL, AND THAT IS
+    /// WORTH RECORDING.** It asked, from an Undercroft branch's bottom
+    /// level, for *some* neighbour with `band == Shallows && level == 0`.
+    /// The pre-Task-7 rule already answered exactly that — same branch,
+    /// next band, level 0 — so the assertion was green against the rule it
+    /// was written to reject. Its second arm ("a non-bottom level offers no
+    /// band change") was green for the same reason at the Undercroft, and
+    /// would have been WRONG one band down, where level 0's legitimate
+    /// ASCENT is a band change.
+    ///
+    /// What actually discriminates the two rules is the BRANCH: the old rule
+    /// carried `addr.branch` across the seam unconditionally, and the new one
+    /// carries `descents_from`'s drawn answer. So this test asserts set
+    /// equality against that draw and counts the cases where the drawn branch
+    /// differs from the source branch — the `crossings` control, without
+    /// which the whole sweep is satisfiable by the old rule.
+    /// claim: invariant(forall-swept-seed) — the descent rule over a
+    /// hand-built lattice (3 seeds x 40 cells, builds no world)
+    #[test]
+    fn descent_leaves_from_the_bottom_level_and_arrives_at_the_top() {
+        let column = fixture_column();
+        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
+        let gradient = GeothermalGradient::new(24.0);
+
+        let mut bottoms = 0u32;
+        let mut interiors = 0u32;
+        let mut crossings = 0u32;
+
+        for raw_seed in [42u64, 7, 90210] {
+            let seed = Seed(raw_seed);
+            for raw_cell in 0u32..40 {
+                let cell = CellId(raw_cell);
+                for &band in Band::habitation() {
+                    for branch in 0..BRANCHES_PER_SYSTEM {
+                        let levels = levels_in_branch(seed, RunAddr { cell, branch, band });
+                        for level in 0..levels {
+                            let addr = ChamberAddr {
+                                cell,
+                                branch,
+                                band,
+                                level,
+                            };
+                            if !chamber_exists(seed, &cave, gradient, addr) {
+                                continue;
+                            }
+                            let passages = passages_from(seed, &cave, gradient, addr);
+                            let deeper: std::collections::BTreeSet<ChamberAddr> = passages
+                                .iter()
+                                .copied()
+                                .filter(|n| n.band > addr.band)
+                                .collect();
+                            if level + 1 < levels {
+                                interiors += 1;
+                                assert!(
+                                    deeper.is_empty(),
+                                    "{addr:?} is not its run's bottom level ({levels} \
+                                     drawn) yet offers a band change {deeper:?} — \
+                                     descent is not bottom-only"
+                                );
+                                continue;
+                            }
+                            bottoms += 1;
+                            let Some(below) = band.deeper() else {
+                                assert!(
+                                    deeper.is_empty(),
+                                    "{addr:?} sits at the ladder's bottom yet descends"
+                                );
+                                continue;
+                            };
+                            let expected: std::collections::BTreeSet<ChamberAddr> =
+                                descents_from(seed, cell, band, branch)
+                                    .into_iter()
+                                    .map(|to| ChamberAddr {
+                                        cell,
+                                        branch: to,
+                                        band: below,
+                                        level: 0,
+                                    })
+                                    .filter(|&t| chamber_exists(seed, &cave, gradient, t))
+                                    .collect();
+                            assert_eq!(
+                                deeper, expected,
+                                "{addr:?} descends to {deeper:?}, but the band-transition \
+                                 draw names {expected:?} at level 0 of the band below"
+                            );
+                            crossings +=
+                                expected.iter().filter(|t| t.branch != branch).count() as u32;
+                        }
+                    }
+                }
+            }
+        }
+
+        assert!(bottoms > 0 && interiors > 0, "the sweep probed nothing");
+        assert!(
+            crossings > 0,
+            "no descent on the sweep ever landed on a branch other than the one \
+             it left, so the old same-branch rule satisfies every assertion \
+             above and this test cannot distinguish the two"
+        );
+        println!(
+            "descent rule: {bottoms} bottom levels, {interiors} interior levels, \
+             {crossings} branch-changing descents"
+        );
+    }
+    /// **No passage is a sideways step between branches** (spec §4.6). The
+    /// lateral `branch ± 1` rule is deleted: branches at one band are
+    /// alternatives, not neighbours in a corridor, so no two addresses
+    /// sharing a band and a level are ever adjacent.
+    ///
+    /// The `probed` control is not decoration — "no neighbour is lateral" is
+    /// satisfied vacuously by a `passages_from` that returns nothing at all,
+    /// and this is a function whose whole job is to return neighbours.
+    /// claim: invariant(forall-swept-seed) — no lateral passage, over a
+    /// hand-built lattice (3 seeds x 40 cells, builds no world)
+    #[test]
+    fn no_passage_is_a_sideways_step_between_branches() {
+        let column = fixture_column();
+        let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
+        let gradient = GeothermalGradient::new(24.0);
+        let mut probed = 0u32;
+
+        for raw_seed in [42u64, 7, 90210] {
+            let seed = Seed(raw_seed);
+            for raw_cell in 0u32..40 {
+                let cell = CellId(raw_cell);
+                for &band in Band::habitation() {
+                    for branch in 0..BRANCHES_PER_SYSTEM {
+                        for level in 0..LEVELS_PER_BRANCH_CEILING {
+                            let addr = ChamberAddr {
+                                cell,
+                                branch,
+                                band,
+                                level,
+                            };
+                            for n in passages_from(seed, &cave, gradient, addr) {
+                                probed += 1;
+                                assert!(
+                                    !(n.band == addr.band && n.level == addr.level),
+                                    "{addr:?} lists {n:?}, a sideways step to another \
+                                     branch at the same band and level — the lateral \
+                                     rule is back"
+                                );
+                                assert!(
+                                    n.branch == addr.branch || n.band != addr.band,
+                                    "{addr:?} lists {n:?}: a branch change inside one band"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(
+            probed > 0,
+            "no address had any passage — the sweep is vacuous"
+        );
+        println!("passages inspected for laterality: {probed}");
+    }
+
+    /// **The two seam directions read the SAME edge set** — the property
+    /// [`passages_from`]'s symmetry rests on, asserted against the drawn
+    /// edges directly rather than through two `passages_from` calls (which
+    /// `deep_realm_chamber.rs` already does end to end).
+    ///
+    /// For every adjacent band pair on a small panel, `ascents_from` of the
+    /// lower branch names the upper branch exactly when [`descents_from`] of
+    /// the upper branch names the lower one. A second draw for the upward
+    /// direction — the obvious wrong implementation — fails this at once.
+    /// claim: invariant(forall-swept-seed) — the two seam directions agree,
+    /// over the drawn edges alone (3 seeds x 64 cells, builds no world)
+    #[test]
+    fn the_two_seam_directions_read_one_edge_set() {
+        let mut agreements = 0u32;
+        let mut edges = 0u32;
+        for raw_seed in [42u64, 7, 90210] {
+            let seed = Seed(raw_seed);
+            for raw_cell in 0u32..64 {
+                let cell = CellId(raw_cell);
+                for &band in Band::habitation() {
+                    let Some(below) = band.deeper() else { continue };
+                    for up in 0..BRANCHES_PER_SYSTEM {
+                        for down in 0..BRANCHES_PER_SYSTEM {
+                            let descends = descents_from(seed, cell, band, up).contains(&down);
+                            let ascends = ascents_from(seed, cell, below, down).contains(&up);
+                            assert_eq!(
+                                descends, ascends,
+                                "seed {raw_seed} cell {raw_cell}: {band:?} branch {up} -> \
+                                 {below:?} branch {down} reads {descends} downward and \
+                                 {ascends} upward — the two directions are two derivations"
+                            );
+                            agreements += 1;
+                            if descends {
+                                edges += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(agreements > 0, "no band pair was probed");
+        assert!(
+            edges > 0,
+            "no edge was ever found, so both directions agreed only on `false` \
+             and the comparison proves nothing"
+        );
+        println!("seam directions compared: {agreements} pairs, {edges} edges");
+    }
+
+    /// **A drawn mouth always names a branch its landing band realizes**
+    /// (spec §4.6) — the defect `entrance_mouth`'s own doc records, retired
+    /// by construction rather than gated downstream.
+    ///
+    /// Before Task 7 the branch was drawn against the Undercroft's width and
+    /// the mouth was landed at a band `root_floor_of` drew independently, so
+    /// roughly half of all side-branch mouths named a branch their landing
+    /// band did not realize (47.8% / 53.0% / 51.9% across the panel). Every
+    /// one of those was refused downstream by [`chamber_exists`] as a closed
+    /// door — a real number in a committed artifact, produced by a category
+    /// error.
+    ///
+    /// This asserts the fix where it lives, over a wide sweep: the mouth's
+    /// branch is inside `branch_count_of` at the mouth's OWN band, always.
+    /// `drift_reach_probe` re-measures the panel share the prose above
+    /// quotes.
+    /// claim: invariant(forall-swept-seed) — every drawn mouth names a branch
+    /// its landing band realizes (4 seeds x 256 cells, builds no world)
+    #[test]
+    fn a_drawn_mouth_names_a_branch_its_landing_band_realizes() {
+        let mut side_doors = 0u32;
+        for raw_seed in [42u64, 7, 90210, 1234] {
+            let seed = Seed(raw_seed);
+            for raw_cell in 0u32..256 {
+                let cell = CellId(raw_cell);
+                for entrance in 0..entrance_count(seed, cell) {
+                    let mouth = entrance_mouth(seed, cell, entrance);
+                    let band = Band::from_rank(mouth.band)
+                        .expect("a mouth only ever names a habitation rank");
+                    assert!(
+                        mouth.branch < crate::character::branch_count_of(seed, cell, band),
+                        "seed {raw_seed} cell {raw_cell} entrance {entrance}: mouth \
+                         {mouth:?} names a branch {band:?} does not realize"
+                    );
+                    assert_eq!(
+                        band,
+                        top_band(),
+                        "seed {raw_seed} cell {raw_cell} entrance {entrance}: mouth \
+                         {mouth:?} landed outside the top habitation band"
+                    );
+                    assert_eq!(mouth.floor, 0, "a mouth landed below its run's head");
+                    if mouth.branch > 0 {
+                        side_doors += 1;
+                    }
+                }
+            }
+        }
+        assert!(
+            side_doors > 0,
+            "no side-branch mouth was drawn on the sweep, so the assertion \
+             above only ever saw the literal head"
+        );
+        println!("side-branch mouths checked: {side_doors}");
     }
 }

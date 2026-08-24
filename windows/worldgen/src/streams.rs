@@ -28,19 +28,34 @@ hornvale_kernel::stream_labels! {
     /// [`crate::disposition`] for why that key, and not the settlement's
     /// `EntityId`, its `BakeId`, or its bare current `cell-id`.
     SETTLEMENT_DISPOSITION = "settlement/disposition/v1" => "the per-settlement disposition draw, keyed on the occupation's (site, founded-year)";
-    /// The underworld chamber derivation (The Deep Realm). Keyed on a
-    /// ChamberAddr — a place in a fixed lattice, never a generation
-    /// ordinal. `crate::chamber`'s private `chamber_key` is the one place
-    /// the composed key is spelled.
+    /// The underworld chamber derivation (The Deep Realm). Spelled by
+    /// `crate::chamber`'s private `chamber_key`, but **`chamber_key` is a
+    /// DISPLAY FORMATTER now, not a derivation key** (The Drift, spec
+    /// amendment A.6, correcting an earlier A.4 that got the mechanism
+    /// wrong): Task 1 deleted the chamber existence draw, the only
+    /// production reader of a stream composed under this label, so nothing
+    /// in a shipped world derives from `CHAMBER` any more. What actually
+    /// carries the underworld's seed-derivation key is [`RUN_FLOORS`] and
+    /// the three per-branch labels in `crate::character`
+    /// (`BRANCH_COUNT`/`BRANCH_CHARACTER`/`BRANCH_BARRIER`).
+    ///
+    /// **Stays at v3 through The Drift, deliberately** (amendment A.6): The
+    /// Drift dropped `entrance` from `ChamberAddr` (amendment A.3), which
+    /// does change `chamber_key`'s spelling — but since nothing derives from
+    /// it, bumping this label would record a discontinuity that never
+    /// happened through it, an **empty epoch**. `chamber_key`'s sole
+    /// production caller is `underworld_readout.rs`'s witness, which prints
+    /// it as a `key` column for a human to read.
     ///
     /// **Epoch v3 (The Stope, spec §3.1 and amendment B.3).** The ADDRESS
     /// changed shape, in three ways that each re-key every chamber and which
     /// therefore ride one epoch rather than three:
     ///
-    /// 1. `ChamberAddr` gained a **`floor`**, the rung the lattice was
-    ///    missing — a band used to be one interior-less point per column.
-    ///    A key that did not spell it would derive one stream for every floor
-    ///    of a run, which is to say the floors would all be one chamber.
+    /// 1. `ChamberAddr` gained a **`floor`** (since renamed `level`), the
+    ///    rung the lattice was missing — a band used to be one
+    ///    interior-less point per column. A key that did not spell it would
+    ///    derive one stream for every floor of a run, which is to say the
+    ///    floors would all be one chamber.
     /// 2. `slot` was renamed **`branch`** (spec §3.1: "slot reads as a
     ///    position and it is an identity"), and the key's field order changed
     ///    with it.
@@ -50,60 +65,100 @@ hornvale_kernel::stream_labels! {
     ///
     /// **Epoch v2 (The Underworld, spec §4.1)** was the previous one:
     /// `ChamberAddr.band` stopped indexing the stratigraphic ladder
-    /// (`BandKind`/`Stratum`) and started indexing the **delve ladder**
+    /// (`Horizon`/`Stratum`) and started indexing the **delve ladder**
     /// (`hornvale_terrain::DelveRung`), whose rungs are ΔT thresholds above
     /// the surface datum rather than rock units.
     ///
     /// `chamber/v1` and `chamber/v2` are retired and must never be reused.
-    CHAMBER = "chamber/v3" => "the underworld chamber derivation, keyed on a delve-ladder address with a floor";
-    /// How many floors one **run** realizes — the floors of one `branch`
-    /// within one `band` (The Stope, Task 2; spec §3.1's per-band ranges).
-    /// Keyed on a [`crate::chamber::RunAddr`]: cell, entrance, branch and
-    /// band, a place in the fixed lattice and never a generation ordinal
-    /// (decision 0102).
+    CHAMBER = "chamber/v3" => "a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs";
+    /// How many levels one **run** (a branch's own place within one band)
+    /// realizes (The Stope, Task 2; spec §3.1's per-band ranges). Keyed on a
+    /// [`crate::chamber::RunAddr`]: cell, branch and band, a place in the
+    /// fixed lattice and never a generation ordinal (decision 0102).
     ///
-    /// **A SEPARATE ROOT LEG FROM [`CHAMBER`], AND THAT IS THE COLLISION
-    /// ARGUMENT.** A run key (`cell/entrance/branch/band`) is a strict prefix
-    /// of a chamber key (`cell/entrance/branch/band/floor`), so the two
-    /// strings can never be equal — but prefix-inequality is a property of
-    /// today's spelling, and a later campaign that made `floor` optional in
-    /// the key would break it silently. Deriving the run draw under its own
-    /// permanent label instead means the two dynamic legs hang off
-    /// **different parent seeds**, so even a byte-identical key string yields
-    /// a different stream. `the_run_leg_and_the_chamber_leg_cannot_collide`
-    /// in `crate::chamber` asserts exactly that, on the same string.
+    /// **Epoch v2 (The Drift, amendment A.3/A.6).** `entrance` dropped out of
+    /// `RunAddr` — every entrance of a system now addresses INTO the same
+    /// shared lattice rather than realizing its own private sublattice — and
+    /// this label is a LIVE production leg (`levels_in_branch` is
+    /// `chamber_exists`'s own floor gate), so the re-keying rides an epoch
+    /// rather than landing silently under `/v1`. `chamber/run-floors/v1` is
+    /// retired and must never be reused.
     ///
-    /// **Additive, not an epoch.** A new label derives its own independent
-    /// stream and perturbs no existing one, so `chamber/v3` stays and no
-    /// address relocates. What DOES change is which addresses exist: before
-    /// this leg every in-budget run admitted all
-    /// [`crate::chamber::FLOORS_PER_RUN_CEILING`] floors, and now it admits
-    /// the drawn count. That is a world change, carried by the gate rather
-    /// than by the key.
+    /// **A SEPARATE ROOT LEG, AND SINCE TASK 5 THAT IS THE WHOLE OF THE
+    /// COLLISION ARGUMENT RATHER THAN A BELT-AND-BRACES HALF OF IT.**
     ///
-    /// The `/v1` suffix is the epoch discipline `settlement/name/v2` set:
-    /// re-shaping the run key later takes a `/v2`, never a rename.
-    RUN_FLOORS = "chamber/run-floors/v1" => "how many floors one run realizes, keyed on (cell, entrance, branch, band)";
+    /// This doc used to rest the argument on prefixes: a run key
+    /// (`cell/branch/band`) is a strict prefix of a chamber key
+    /// (`cell/branch/band/level`), so the two strings can never be equal, and
+    /// the separate parent was the durable backstop for a later campaign that
+    /// made `level` optional. **The prefix half is still true of [`CHAMBER`]
+    /// and is no longer the interesting case.** After The Drift's Task 5
+    /// re-keyed the per-branch draws on band, `chamber::run_key` and
+    /// `character::band_branch_key` both format `cell/branch/rung_name(band)`
+    /// — **byte-identical strings, not a prefix relation.** They were
+    /// different shapes before that task; nothing announced that they had
+    /// converged.
+    ///
+    /// So `RUN_FLOORS`, [`BRANCH_CHARACTER`] and [`BRANCH_BARRIER`] are three
+    /// legs deriving from the *same* dynamic key, and the only thing keeping
+    /// their three draws apart is that they hang off **different parent
+    /// seeds**. That is sound — and it means the parent separation is now
+    /// load-bearing rather than defensive, so re-parenting any of these legs
+    /// is a save-format change even if no key string moves.
+    /// `the_run_leg_and_the_chamber_leg_cannot_collide` in `crate::chamber`
+    /// asserts the parent property directly, by handing the same string to
+    /// both legs; `the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg`
+    /// is what holds the shipped path to it.
+    ///
+    /// What else changes with this leg: before it every in-budget run
+    /// admitted all [`crate::chamber::LEVELS_PER_BRANCH_CEILING`] levels, and
+    /// now it admits the drawn count. That is a world change, carried by the
+    /// gate rather than by the key.
+    RUN_FLOORS = "chamber/run-floors/v2" => "how many levels one run realizes, keyed on (cell, branch, band)";
     /// Which [`crate::character::Character`] one branch carries (The Stope,
-    /// Task 3; spec B.4/B.5). Keyed on a **branch** — cell, entrance and
-    /// branch, a place in the fixed lattice and never a generation ordinal
+    /// Task 3; spec B.4/B.5). Keyed on a **branch at a band** — cell, branch
+    /// and band, a place in the fixed lattice and never a generation ordinal
     /// (decision 0102). A SEPARATE root leg from [`CHAMBER`] for the same
     /// collision argument [`RUN_FLOORS`]'s doc states: additive, perturbs no
-    /// existing draw, and the `/v1` epoch discipline applies to any later
-    /// re-shaping of the key.
-    BRANCH_CHARACTER = "chamber/branch-character/v1" => "which character one branch carries, keyed on (cell, entrance, branch)";
+    /// existing draw.
+    ///
+    /// **Epoch v2 (The Drift, amendment A.3, Task 5).** `entrance` dropped
+    /// out of the key and `band` moved in: before this change a branch's
+    /// character was a per-SYSTEM fact (one answer for the whole depth),
+    /// after it a per-`(system, band)` fact — a branch can carry a different
+    /// character at each band it occupies. This is a LIVE production leg
+    /// (`character_at` is `chamber_at`'s own character read), so the
+    /// re-keying rides an epoch. `chamber/branch-character/v1` is retired
+    /// and must never be reused.
+    BRANCH_CHARACTER = "chamber/branch-character/v2" => "which character one branch carries, keyed on (cell, branch, band)";
     /// How thin the barrier between the underworld and what lies beyond it
     /// is, on one branch (The Stope, Task 3; spec B.5). Same key shape as
     /// [`BRANCH_CHARACTER`] — character and barrier are ONE object per B.5:
     /// same owner, same lattice key — but its own parent leg, so the two
     /// draws cannot collide even by accident.
-    BRANCH_BARRIER = "chamber/branch-barrier/v1" => "the barrier thinness of one branch, keyed on (cell, entrance, branch)";
+    ///
+    /// **Epoch v2 (The Drift, amendment A.3, Task 5)**, same shape and same
+    /// reason as [`BRANCH_CHARACTER`]'s own v2 note: `entrance` out, `band`
+    /// in, re-keyed at the identical granularity so character and barrier
+    /// stay one object (B.5) rather than splitting across two. `chamber/
+    /// branch-barrier/v1` is retired and must never be reused.
+    BRANCH_BARRIER = "chamber/branch-barrier/v2" => "the barrier thinness of one branch, keyed on (cell, branch, band)";
     /// How many of the lattice's four branch columns one cave system
     /// realizes (The Stope, Task 3; amendment C.1) — the drawn realization
     /// half of the lattice-ceiling/drawn-realization split, with
-    /// `BRANCHES_PER_SYSTEM` as the ceiling. Keyed on the SYSTEM: cell and
-    /// entrance, no branch.
-    BRANCH_COUNT = "chamber/branch-count/v1" => "how many branches one cave system realizes, keyed on (cell, entrance)";
+    /// `BRANCHES_PER_SYSTEM` as the ceiling. Keyed on the SYSTEM **at a
+    /// band**: cell and band, no branch.
+    ///
+    /// **Epoch v2 (The Drift, amendment A.3, Task 5).** `entrance` dropped
+    /// out and `band` moved in: before this change a system had ONE branch
+    /// width for its whole depth; after it, a system may realize a
+    /// different width at each band — a system can be two branches wide in
+    /// the Undercroft and one wide in the Shallows. `chamber_exists` reads
+    /// this leg directly (`addr.branch >= branch_count_of(seed, addr.cell,
+    /// addr.band)`), so it is a LIVE production leg and the re-keying rides
+    /// an epoch. `chamber/branch-count/v1` is retired and must never be
+    /// reused.
+    BRANCH_COUNT = "chamber/branch-count/v2" => "how many branches one cave system realizes, keyed on (cell, band)";
     /// How many apertures one cave system opens to the surface (The Stope,
     /// Task 5; amendment C.3). Keyed on the SYSTEM's cell alone — no
     /// entrance index, because the count is a fact about the system as a
@@ -116,20 +171,76 @@ hornvale_kernel::stream_labels! {
     /// [`RUN_FLOORS`]'s doc states: additive, perturbs no existing draw,
     /// and the `/v1` epoch discipline applies to any later re-shaping of
     /// the key.
-    ENTRANCE_COUNT = "chamber/entrance-count/v1" => "how many surface apertures one cave system opens, keyed on cell";
-    /// Which floor of the system's lattice one entrance opens into (The
-    /// Stope, Task 5; amendment C.3) — main-line floor 0, or a branch's
-    /// root floor (C.2). Keyed on the ENTRANCE's place: cell and entrance
+    ///
+    /// **Epoch v2 (The Drift, Task 7b, spec amendment E.2/E.4).** The KEY is
+    /// unchanged — still the system's cell alone — and the epoch is real
+    /// anyway, because what the leg ANSWERS changed. It used to be the
+    /// system's aperture count outright; it is now the size of the FREE
+    /// aperture set only, which `crate::chamber::entrance_count` then takes
+    /// pointwise-maximum against the top band's drawn branch width so that
+    /// every top-band branch is named by a door (E.2). A system with fewer
+    /// apertures than top-band branches cannot satisfy that guarantee, so
+    /// the count can no longer be independent of the width. One key, two
+    /// different quantities across the boundary, is precisely the
+    /// discontinuity an epoch records — and unlike `CHAMBER` (amendment A.6,
+    /// which stays at v3 because nothing derives from it) this is a live
+    /// production leg that every world reads. `chamber/entrance-count/v1` is
+    /// retired and must never be reused.
+    ///
+    /// **Do not generalize this to "any downstream meaning change bumps the
+    /// leg".** This was a close call made cheap by circumstance:
+    /// `entrance-mouth` moved regardless, so every world's apertures were
+    /// moving anyway and the bump cost no additional stability. Had
+    /// `entrance-count` been the *only* leg in play, an epoch that reshuffles
+    /// every world purely to record a meaning change happening one level
+    /// above the label would have deserved a harder look.
+    ENTRANCE_COUNT = "chamber/entrance-count/v2" => "how large one cave system's FREE aperture set is, keyed on cell (the shipped count is this raised to the top band's branch width)";
+    /// Which branch of the top habitation band one aperture opens on (The
+    /// Stope, Task 5, amendment C.3; re-shaped by The Drift, Task 7b,
+    /// amendment E.2). Keyed on the APERTURE's place — cell and aperture
     /// index, a place in the fixed lattice and never a generation ordinal
-    /// (decision 0102). Same separate-root-leg and `/v1` discipline as
-    /// [`ENTRANCE_COUNT`].
-    ENTRANCE_MOUTH = "chamber/entrance-mouth/v1" => "which floor of the lattice one entrance opens into, keyed on (cell, entrance)";
-    /// Where a non-main-line branch hangs off its parent (The Stope, Task 3;
-    /// amendment C.2) — a floor of the main line, drawn over the floors that
-    /// parent actually realizes. Keyed on the CHILD branch's place: cell,
-    /// entrance, branch (the child names itself; its parent is always the
-    /// main line, whose own root is the surface).
-    BRANCH_ROOT = "chamber/branch-root/v1" => "where a branch roots on its parent, keyed on (cell, entrance, branch)";
+    /// (decision 0102) — **plus the role that place is playing**. Same
+    /// separate-root-leg discipline as [`ENTRANCE_COUNT`].
+    ///
+    /// **Epoch v2 (The Drift, Task 7b, spec amendment E.2/E.4)**, and here
+    /// both halves moved. The key gained a role word (`share` / `free`, the
+    /// discipline [`BAND_DESCENT`] already applies to a band transition),
+    /// and the two roles range over different populations: a `share` draw
+    /// indexes the branches not yet spoken for by a lower-indexed aperture —
+    /// which is what makes apertures `0..width` a bijection onto branches
+    /// `0..width`, and E.2 true by construction — while a `free` draw names
+    /// any side branch, as every mouth draw did before this task. Whether a
+    /// given index asks one question or the other depends on the top band's
+    /// width, so ONE key would have served two questions at two widths; the
+    /// role word is what keeps them apart. `chamber/entrance-mouth/v1` is
+    /// retired and must never be reused.
+    ENTRANCE_MOUTH = "chamber/entrance-mouth/v2" => "which top-band branch one aperture opens on, keyed on (cell, aperture, role)";
+    /// Which branches of an adjacent band a branch connects to (The Drift,
+    /// Task 6; spec §4.5) — the edges descent actually travels, drawn so
+    /// that "every branch above has a child" and "every branch below has a
+    /// parent" hold **by construction** rather than by a repair pass.
+    ///
+    /// Keyed on the branch's own place **plus which of the two questions is
+    /// being asked**: cell, branch, band, role — where role is `child`
+    /// (which branch of the band BELOW this one does this branch descend
+    /// into?) or `parent` (which branch of the band ABOVE does this one hang
+    /// from?). Cell/branch/band is [`RUN_FLOORS`]'s own field order and
+    /// spelling, so every re-keyed leg in this crate agrees; the band is
+    /// spelled by its `Band` NAME for the same reason the others are.
+    ///
+    /// **The role is a question, not an ordinal** (decision 0102). One place
+    /// in the lattice answers two independent questions, and giving each its
+    /// own key is what keeps them from sharing a stream — the same shape
+    /// [`HAZARD_EVENT`] uses when it puts the *process* in the key beside the
+    /// cell and the time block. The alternative — one stream per place, two
+    /// draws taken in a fixed order — would make the parent answer depend on
+    /// whether a child draw was taken first, which is exactly the
+    /// order-dependence spec §4.5 rejects a repair pass for.
+    ///
+    /// A separate root leg from [`CHAMBER`] for the collision argument
+    /// [`RUN_FLOORS`]'s doc states, and additive: it perturbs no existing
+    /// draw, so worlds move only through the new edges themselves.
+    BAND_DESCENT = "chamber/band-descent/v1" => "which branches of an adjacent band one branch connects to, keyed on (cell, branch, band, role)";
     /// The volcano-identity derivation (The Repose). Keyed on the edifice's
     /// **source contact cell** — a place in the fixed geosphere, never a
     /// generation ordinal, and never the query cell a caller happened to ask

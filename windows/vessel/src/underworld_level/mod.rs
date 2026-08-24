@@ -59,11 +59,11 @@ const BASE_LEVEL_W: i32 = 40;
 const BASE_LEVEL_H: i32 = 24;
 
 /// The extent a level gets, scaled by how deep its rung sits (deeper rungs
-/// get more room) — spec §4.3's "`DelveRung` modulates size", read out of
+/// get more room) — spec §4.3's "`Band` modulates size", read out of
 /// the rung's position in `hornvale_terrain::rungs()` rather than a
 /// worldgen-internal rank (that function is not confirmed `pub` across the
 /// crate boundary; this one is).
-pub fn generate_level_extent(rung: hornvale_terrain::DelveRung) -> Rect {
+pub fn generate_level_extent(rung: hornvale_kernel::Band) -> Rect {
     let rank = hornvale_terrain::rungs()
         .iter()
         .position(|r| *r == rung)
@@ -431,7 +431,7 @@ fn first_walkable_cell(level: &Level, rect: Rect) -> Option<Cell> {
 /// rungs the way it already does across leaves within one level.
 /// type-audit: bare-ok(diagnostic-value: depths_m), bare-ok(diagnostic-value: water_table_m)
 pub fn generate_descent(
-    rungs: &[hornvale_terrain::DelveRung],
+    rungs: &[hornvale_kernel::Band],
     cave_kind: hornvale_terrain::CaveKind,
     origins: &[hornvale_worldgen::chamber::ChamberOrigin],
     depths_m: &[f64],
@@ -481,7 +481,7 @@ fn engine_worked_bias(character: hornvale_worldgen::character::Character) -> f64
 /// is byte-identical to it and no stream contract moves.
 /// type-audit: bare-ok(diagnostic-value: depths_m), bare-ok(diagnostic-value: water_table_m)
 pub fn generate_descent_for_character(
-    rungs: &[hornvale_terrain::DelveRung],
+    rungs: &[hornvale_kernel::Band],
     cave_kind: hornvale_terrain::CaveKind,
     origins: &[hornvale_worldgen::chamber::ChamberOrigin],
     depths_m: &[f64],
@@ -703,10 +703,11 @@ mod tests {
     /// per-seed-without-exception invariant.
     #[test]
     fn worked_fraction_has_inertia_across_rungs() {
-        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let rungs = [DelveRung::Undercroft, DelveRung::Shallows, DelveRung::Deeps];
+        let rungs = [Band::Undercroft, Band::Shallows, Band::Deeps];
         // All three rungs Made: with inertia, later rungs' worked fraction
         // should not regress toward NEUTRAL_WORKED_BIAS as hard as an
         // independent re-roll would — measured as "the deepest rung's worked
@@ -738,10 +739,11 @@ mod tests {
     /// representative seed, not a statistical claim over a range.
     #[test]
     fn generate_descent_produces_one_level_per_rung() {
-        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let rungs = [DelveRung::Undercroft, DelveRung::Shallows];
+        let rungs = [Band::Undercroft, Band::Shallows];
         let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
         let depths_m = [20.0, 60.0];
         let levels = generate_descent(
@@ -760,10 +762,11 @@ mod tests {
     /// up-connected) at one representative seed.
     #[test]
     fn every_level_but_the_first_has_stairs_up_every_level_has_stairs_down() {
-        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let rungs = [DelveRung::Undercroft, DelveRung::Shallows, DelveRung::Deeps];
+        let rungs = [Band::Undercroft, Band::Shallows, Band::Deeps];
         let origins = [ChamberOrigin::Found; 3];
         let depths_m = [20.0, 60.0, 120.0];
         let levels = generate_descent(
@@ -838,10 +841,11 @@ mod tests {
     /// to avoid that path.
     #[test]
     fn stairs_down_and_stairs_up_never_share_a_cell() {
-        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let rungs = [DelveRung::Undercroft, DelveRung::Shallows];
+        let rungs = [Band::Undercroft, Band::Shallows];
         let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
         let depths_m = [20.0, 60.0];
         const TRIALS: u64 = 200;
@@ -920,10 +924,11 @@ mod tests {
         // (`generate_level_extent`), so their `cells` maps would have
         // different key sets and always compare unequal regardless of whether
         // the seed-reuse defect this test guards against is present.
-        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let rungs = [DelveRung::Undercroft, DelveRung::Undercroft];
+        let rungs = [Band::Undercroft, Band::Undercroft];
         let origins = [ChamberOrigin::Found, ChamberOrigin::Found];
         let depths_m = [20.0, 20.0];
         let levels = generate_descent(
@@ -953,10 +958,11 @@ mod tests {
     /// statistical shadow alone.
     #[test]
     fn different_characters_produce_structurally_different_descents() {
-        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
 
-        let rungs = [DelveRung::Undercroft, DelveRung::Shallows];
+        let rungs = [Band::Undercroft, Band::Shallows];
         let origins = [ChamberOrigin::Found; 2];
         let depths_m = [20.0, 60.0];
         const TRIALS: usize = 60;
@@ -1023,11 +1029,12 @@ mod tests {
     /// multi-leaf levels so the cross-leaf connector is actually exercised.
     #[test]
     fn every_character_engine_keeps_every_level_connected() {
-        use hornvale_terrain::{CaveKind, DelveRung};
+        use hornvale_kernel::Band;
+        use hornvale_terrain::CaveKind;
         use hornvale_worldgen::chamber::ChamberOrigin;
         use std::collections::{BTreeSet, VecDeque};
 
-        let rungs = [DelveRung::Undercroft, DelveRung::Shallows, DelveRung::Deeps];
+        let rungs = [Band::Undercroft, Band::Shallows, Band::Deeps];
         let origins = [
             ChamberOrigin::Found,
             ChamberOrigin::Made,

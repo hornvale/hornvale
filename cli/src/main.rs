@@ -1276,7 +1276,7 @@ fn cmd_systems_matrix() -> Result<(), String> {
 ///
 /// **A thin command, deliberately.** Every number it prints comes from
 /// `hornvale_worldgen::underworld_readout::render_underworld`, which reads the
-/// shipped `chamber_at` / `floors_in_run` entry points; this function only
+/// shipped `chamber_at` / `levels_in_branch` entry points; this function only
 /// builds the world and hands it over. The committed artifact is written by
 /// the `>` redirect in `scripts/regenerate-artifacts.sh` — running this bare
 /// prints to stdout and regenerates nothing, which is the trap

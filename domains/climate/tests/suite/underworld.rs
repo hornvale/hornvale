@@ -11,10 +11,10 @@
 //! per-test non-emptiness clauses are what make a red here mean something.
 
 use hornvale_climate::axes::{AssignedName, assignment};
-use hornvale_climate::underworld::{DelveZone, UnderworldName, underworld_assignment};
+use hornvale_climate::underworld::{UnderworldName, underworld_assignment};
 use hornvale_kernel::{
-    AxisValence, ENERGY, EnvironmentAxis, EnvironmentVector, LIGHT, PHYSIOGNOMY, SUBSTRATE, WATER,
-    environment_v1_basis,
+    AxisValence, Band, ENERGY, EnvironmentAxis, EnvironmentVector, LIGHT, PHYSIOGNOMY, SUBSTRATE,
+    WATER, environment_v1_basis,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -57,6 +57,34 @@ fn the_underworld_corpus_is_the_size_these_tests_assume() {
     );
     assert_eq!(assigned().len(), 22, "assigned communities");
     assert_eq!(resisters().len(), 2, "names the axes could not place");
+}
+
+/// **The property `DelveZone` used to carry structurally, now carried by
+/// hand.** Before The Drift, `UnderworldName::zone` was `DelveZone`, an enum
+/// with no `Surface` variant — the type system itself forbade authoring a row
+/// there, and `cli/tests/suite/delve_roster_mirror.rs` asserted the omission
+/// was deliberate. `zone` is `hornvale_kernel::Band` now, which *does* carry
+/// `Surface` (the overworld is a rung of the same ladder, spec §4.6), so
+/// nothing stops a row from being authored against it by mistake. This test
+/// is what replaces the old type-level guarantee: no underworld community is
+/// at the surface, checked as a corpus invariant rather than assumed from the
+/// type.
+#[test]
+fn no_underworld_community_occupies_the_surface() {
+    let names = underworld_assignment();
+    assert!(
+        !names.is_empty(),
+        "an empty corpus vacuously satisfies this"
+    );
+    for name in names {
+        assert_ne!(
+            name.zone,
+            Band::Surface,
+            "{} is authored at Band::Surface, but no underworld community \
+             occupies the overworld",
+            name.name
+        );
+    }
 }
 
 /// The underworld module's own doc makes a numeric claim — realised
@@ -276,13 +304,13 @@ fn energy_is_not_monotone_in_depth() {
     );
 
     let ladder = [
-        DelveZone::Undercroft,
-        DelveZone::Shallows,
-        DelveZone::Deeps,
-        DelveZone::Underdeep,
-        DelveZone::Nadir,
+        Band::Undercroft,
+        Band::Shallows,
+        Band::Deeps,
+        Band::Underdeep,
+        Band::Nadir,
     ];
-    let mut means: Vec<(DelveZone, f64, usize)> = Vec::new();
+    let mut means: Vec<(Band, f64, usize)> = Vec::new();
     for zone in ladder {
         let e: Vec<f64> = names
             .iter()
@@ -325,9 +353,9 @@ fn energy_is_not_monotone_in_depth() {
     // 3. The shape: a trough at the ladder's middle, fed from above and from
     //    below. `Deeps` is where detrital import has run out and the
     //    geothermal gradient has not yet paid.
-    let shallow: f64 = zone_mean(&names, &[DelveZone::Undercroft, DelveZone::Shallows]);
-    let trough: f64 = zone_mean(&names, &[DelveZone::Deeps]);
-    let deep: f64 = zone_mean(&names, &[DelveZone::Underdeep, DelveZone::Nadir]);
+    let shallow: f64 = zone_mean(&names, &[Band::Undercroft, Band::Shallows]);
+    let trough: f64 = zone_mean(&names, &[Band::Deeps]);
+    let deep: f64 = zone_mean(&names, &[Band::Underdeep, Band::Nadir]);
     println!(
         "the inversion: shallow(Undercroft+Shallows) {shallow:.3} > trough(Deeps) \
          {trough:.3} < deep(Underdeep+Nadir) {deep:.3}"
@@ -421,7 +449,7 @@ fn energy(n: &UnderworldName) -> f64 {
     n.vector.get(ENERGY).expect("assigned names carry ENERGY")
 }
 
-fn zone_mean(names: &[&'static UnderworldName], zones: &[DelveZone]) -> f64 {
+fn zone_mean(names: &[&'static UnderworldName], zones: &[Band]) -> f64 {
     let e: Vec<f64> = names
         .iter()
         .filter(|n| zones.contains(&n.zone))

@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -436,6 +436,14 @@ sluice: ## Request a merge through the queue (BRANCH=<branch> REF=<full-sha>)
 # merge product and reports; the entry ends `reported`, and main never moves.
 sluice-stage: ## Request a STAGE GATE through the queue — phases run, nothing is pushed (BRANCH=<branch> REF=<full-sha>)
 	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)" stage
+
+# BRANCH is the REQUESTER here, not the thing gated: a census regenerates at a
+# REF and delivers its goldens on a fresh `census/...` branch, which the
+# requester then submits as an ordinary merge. Nothing about a census pushes
+# main — see the header of scripts/sluice-census.sh for why that restraint is
+# deliberate rather than a limitation.
+sluice-census: ## Request a CENSUS through the queue — regenerates at REF, delivers goldens on a branch, never pushes main (BRANCH=<requester> REF=<full-sha>)
+	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)" census
 
 # FIX ROUND 1: the queue and its jobs live on the CANONICAL BOX
 # ($HV_SLUICE_DIR under ITS $HOME — sluice-request.sh enqueues over ssh, and

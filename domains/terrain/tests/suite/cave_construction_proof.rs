@@ -1,6 +1,6 @@
 //! The guard that makes `Cave`'s compile-fail doctest mean something.
 //!
-//! `Cave` carries a derived-field invariant (`deepest_band` is a lookup of
+//! `Cave` carries a derived-field invariant (`deepest_horizon` is a lookup of
 //! `depth_reach_m` against the column) that `#[non_exhaustive]` turns into a
 //! compiler guarantee: outside `hornvale-terrain`, a struct expression for
 //! `Cave` is refused. The natural proof is a `compile_fail` doctest — and a

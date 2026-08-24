@@ -27,8 +27,8 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{Cave, CaveKind, DelveRung, GeothermalGradient, StratigraphicColumn};
+use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, StratigraphicColumn};
 use hornvale_vessel::{Cell, Level, LevelCellKind, generate_descent};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, Chamber, ChamberAddr, ChamberOrigin, ChamberOverrides, chamber_at,
@@ -70,7 +70,7 @@ fn find_addrs_at_bands(
     seed: Seed,
     cave: &Cave,
     gradient: GeothermalGradient,
-    bands: &[u8],
+    bands: &[Band],
 ) -> Vec<ChamberAddr> {
     for raw_cell in 0u32..50 {
         let cell = CellId(raw_cell);
@@ -80,10 +80,9 @@ fn find_addrs_at_bands(
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let addr = ChamberAddr {
                     cell,
-                    entrance: 0,
                     band,
                     branch,
-                    floor: 0,
+                    level: 0,
                 };
                 if chamber_exists(seed, cave, gradient, addr) {
                     hit = Some(addr);
@@ -220,7 +219,12 @@ fn a_real_descent_is_deterministic_connected_and_renders() {
     // the same way a world's chamber lattice and a level's own geometry are
     // independent draws in the real pipeline.
     let fixture_seed = Seed(90210);
-    let addrs = find_addrs_at_bands(fixture_seed, &cave, gradient, &[0, 1, 2]);
+    let addrs = find_addrs_at_bands(
+        fixture_seed,
+        &cave,
+        gradient,
+        &[Band::Undercroft, Band::Shallows, Band::Deeps],
+    );
 
     // Exercise the override seam too (spec §3.3): the middle rung's chamber
     // is `Made`, the other two are the address-derived default (`Found`) —
@@ -235,7 +239,7 @@ fn a_real_descent_is_deterministic_connected_and_renders() {
                 .expect("address was confirmed to exist by find_addrs_at_bands")
         })
         .collect();
-    let rungs: Vec<DelveRung> = chambers.iter().map(|c| c.rung).collect();
+    let rungs: Vec<Band> = chambers.iter().map(|c| c.rung).collect();
     let origins: Vec<ChamberOrigin> = chambers.iter().map(|c| c.origin).collect();
     assert_eq!(
         origins[1],
@@ -278,7 +282,7 @@ fn a_second_seed_produces_a_different_shape() {
     let cave = Cave::from_reach(CaveKind::LavaTube, REACH_M, &col);
 
     let fixture_seed = Seed(90210);
-    let addrs = find_addrs_at_bands(fixture_seed, &cave, gradient, &[0]);
+    let addrs = find_addrs_at_bands(fixture_seed, &cave, gradient, &[Band::Undercroft]);
     let no_overrides = ChamberOverrides::new();
     let chamber = chamber_at(fixture_seed, &cave, gradient, &col, addrs[0], &no_overrides)
         .expect("address was confirmed to exist by find_addrs_at_bands");

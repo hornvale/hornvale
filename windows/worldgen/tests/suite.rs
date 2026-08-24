@@ -67,6 +67,8 @@ mod diachronic;
 mod dissolve_equivalence;
 #[path = "suite/doctrine.rs"]
 mod doctrine;
+#[path = "suite/drift_reach_probe.rs"]
+mod drift_reach_probe;
 #[path = "suite/era_substrate.rs"]
 mod era_substrate;
 #[path = "suite/explanations.rs"]

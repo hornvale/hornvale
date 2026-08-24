@@ -2,7 +2,7 @@
 //!
 //! Measurement only, and the evidence for the acceptance criterion Task 1b
 //! parked (Ruling 8 in the campaign's SDD ledger): once a cave's depth became
-//! a budget in metres capped at 3 km (spec §4.0), `Cave::deepest_band` stopped
+//! a budget in metres capped at 3 km (spec §4.0), `Cave::deepest_horizon` stopped
 //! reaching `Roots`, and `chamber_exists` still gated on `band_rank` — so
 //! worlds could be carrying a silently reduced chamber count that nothing in
 //! the suite objected to. Ruling 8 asked for the numbers rather than the
@@ -10,7 +10,7 @@
 //!
 //! Two arms per seed, over the same cave-bearing land cells:
 //!
-//! - **band** — `band_rank(cave.deepest_band)`, the gate as it stood.
+//! - **band** — `band_rank(cave.deepest_horizon)`, the gate as it stood.
 //! - **rung** — the delve ladder's rank for
 //!   `rung_at_depth(cave.depth_reach_m, gradient)` (`hornvale_terrain::delve`),
 //!   the ladder the gate is being re-pointed at.
@@ -74,7 +74,7 @@
 //! move — they did, by a factor of twenty, and an earlier draft of this
 //! paragraph said the opposite.** `chamber_exists` draws independently per
 //! address INCLUDING `floor` (`chamber.rs`), and at Task 1 every in-budget run
-//! admitted all `FLOORS_PER_RUN_CEILING` floors, so the chamber population of
+//! admitted all `LEVELS_PER_BRANCH_CEILING` floors, so the chamber population of
 //! a real world went from ~6.4 per cave to ~128 per cave in the same commit
 //! that took this reading. The three figures above are a **floor-0 slice**,
 //! chosen so they compare like with like against the `chamber/v2` row — which
@@ -88,11 +88,43 @@
 //! (`Undercroft` 1–5, `Shallows` 3–10, `Deeps` 5–20, `Underdeep` 5–10, `Nadir`
 //! 1–5), so **floor 0 exists in every run that exists at all** and the
 //! floor-0 slice is invariant under the draw by construction. What moved is
-//! everything above it: `how_many_floors_does_a_run_realize` measures the
+//! everything above it: `how_many_floors_does_a_run_realize` measured the
 //! unsliced population at **42.8 / 43.6 / 49.2 realized chambers per cave**,
 //! against the ~128 the ceiling was standing in for — a **3.0×/3.0×/2.6×
 //! reduction**. Read the two readouts together or the first one will tell you
 //! nothing happened.
+//!
+//! ## RE-READ, 2026-08-23 (The Drift) — every figure ABOVE is pre-Drift
+//!
+//! Two of this file's standing claims are falsified and neither test went red,
+//! because this probe asserts only vacuity guards. Re-run at close:
+//!
+//! ```text
+//! seed 42:   rung hist=[77, 131, 399, 53, 214]  addr 12.897 | realized 4512  (5.162/cave)
+//! seed 7:    rung hist=[84, 599, 121, 150, 727] addr 13.992 | realized 9353  (5.564/cave)
+//! seed 1234: rung hist=[91, 144, 366, 129, 536] addr 14.765 | realized 7372  (5.823/cave)
+//! ```
+//!
+//! **The control still does its job and the reading it gives is the opposite
+//! of the one above.** Both arms' histograms and both addressable means are
+//! byte-identical across four epochs now — terrain has not moved and a cave's
+//! REACH has not moved — while `realized / addressable` fell from **~0.500 to
+//! 0.400 / 0.398 / 0.394**. That is not the coin drifting; The Drift deleted
+//! the coin (spec §4.1), so the only per-address filter left at floor 0 is
+//! `branch < branch_count_of(..)`, whose authored weights give a mean width of
+//! 1.60 against `BRANCHES_PER_SYSTEM = 4` — exactly **0.400**. **So every
+//! sentence below reading "still `EXISTENCE_DENSITY = 0.5`" describes a
+//! constant that no longer exists**, and the ratio it names now measures a
+//! branch-width draw.
+//!
+//! The unsliced population moved too, and downward rather than up: the
+//! per-system realized median is **34 / 35 / 38** against the 42.8 / 43.6 /
+//! 49.2 quoted above. Two changes push in opposite directions and the second
+//! wins — deleting the coin roughly doubles what a realized branch contains,
+//! while amendment A.3 collapses four per-entrance sublattices into one
+//! lattice per system. **Absolute chamber counts are therefore not comparable
+//! across The Drift**, which is amendment A.5's own warning; the comparable
+//! quantity is the per-system reachable *share*, and it is 100.00%.
 //!
 //! The "after" arm was re-taken when review's finer re-bin moved
 //! `DEEPS_TOP_K` from 10 K to 8 K (see that constant's own doc). The earlier
@@ -115,7 +147,7 @@
 //!    histograms) has mean addressable 12.15 / 11.72 / 12.71, against 11.91 /
 //!    11.89 / 11.96 after — −2.0% / +1.4% / −5.9%, a mean of −2.2% and a rise
 //!    on one of three seeds. What Task 1b actually broke is not the COUNT but
-//!    the VARIANCE: `deepest_band` collapsed onto `Basement` for 97.3–99.0% of
+//!    the VARIANCE: `deepest_horizon` collapsed onto `Basement` for 97.3–99.0% of
 //!    cave-bearing cells, so every cave got the same three-rung lattice and
 //!    the depth axis stopped distinguishing a shallow cave from a deep one at
 //!    all. That is the defect the re-point closes, and it is a worse one than
@@ -127,9 +159,10 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_terrain::{BandKind, DelveRung, TerrainPins, rung_at_depth};
+use hornvale_kernel::Band;
+use hornvale_terrain::{Horizon, TerrainPins, rung_at_depth};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, floors_in_run,
+    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, levels_in_branch,
 };
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
@@ -140,27 +173,27 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 
 /// The band ladder's rank — a copy of `chamber.rs`'s private `band_rank`, so
 /// the probe can measure the retired gate without widening that function's
-/// visibility. Exhaustive: a sixth `BandKind` fails this to compile.
-fn band_rank(band: BandKind) -> u8 {
+/// visibility. Exhaustive: a sixth `Horizon` fails this to compile.
+fn band_rank(band: Horizon) -> u8 {
     match band {
-        BandKind::Regolith => 0,
-        BandKind::Cover => 1,
-        BandKind::Basement => 2,
-        BandKind::Roots => 3,
-        BandKind::Underneath => 4,
+        Horizon::Regolith => 0,
+        Horizon::Cover => 1,
+        Horizon::Basement => 2,
+        Horizon::Roots => 3,
+        Horizon::Underneath => 4,
     }
 }
 
 /// The delve ladder's rank over its habitation rungs. `Surface` is not a
 /// habitable rung and `rung_at_depth` never returns it, so it maps to `None`.
-fn rung_rank(rung: DelveRung) -> Option<u8> {
+fn rung_rank(rung: Band) -> Option<u8> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some(0),
-        DelveRung::Shallows => Some(1),
-        DelveRung::Deeps => Some(2),
-        DelveRung::Underdeep => Some(3),
-        DelveRung::Nadir => Some(4),
+        Band::Surface => None,
+        Band::Undercroft => Some(0),
+        Band::Shallows => Some(1),
+        Band::Deeps => Some(2),
+        Band::Underdeep => Some(3),
+        Band::Nadir => Some(4),
     }
 }
 
@@ -205,7 +238,7 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
             caves += 1;
             let gradient = terrain.geothermal_gradient_at(cell);
 
-            let b = band_rank(cave.deepest_band);
+            let b = band_rank(cave.deepest_horizon);
             let r = rung_rank(rung_at_depth(cave.depth_reach_m, gradient))
                 .expect("rung_at_depth never returns Surface");
             band_hist[b as usize] += 1;
@@ -218,7 +251,7 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
             // only the
             // in-budget part is deliberate: it means this loop measures the
             // gate rather than restating it.
-            for band in 0..=4u8 {
+            for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     if chamber_exists(
                         seed,
@@ -226,10 +259,9 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
                         gradient,
                         ChamberAddr {
                             cell,
-                            entrance: 0,
                             band,
                             branch,
-                            floor: 0,
+                            level: 0,
                         },
                     ) {
                         realized += 1;
@@ -413,26 +445,22 @@ fn how_many_floors_does_a_run_realize() {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let mut branch_drawn = 0usize;
                 let (mut lo_bound, mut hi_bound) = (0usize, 0usize);
-                for band in 0..=deepest {
-                    let run = RunAddr {
-                        cell,
-                        entrance: 0,
-                        branch,
-                        band,
-                    };
-                    let drawn = usize::from(floors_in_run(seed, run));
-                    band_floors[band as usize].push(drawn);
+                for band_rank in 0..=deepest {
+                    let band = Band::from_rank(band_rank)
+                        .expect("0..=deepest are all real habitation ranks");
+                    let run = RunAddr { cell, branch, band };
+                    let drawn = usize::from(levels_in_branch(seed, run));
+                    band_floors[band_rank as usize].push(drawn);
                     branch_drawn += drawn;
-                    let (lo, hi) = FROZEN_RANGES[band as usize];
+                    let (lo, hi) = FROZEN_RANGES[band_rank as usize];
                     lo_bound += lo;
                     hi_bound += hi;
-                    for floor in 0..drawn {
+                    for level in 0..drawn {
                         let addr = ChamberAddr {
                             cell,
-                            entrance: 0,
                             branch,
                             band,
-                            floor: floor as u8,
+                            level: level as u8,
                         };
                         if chamber_exists(seed, &cave, gradient, addr) {
                             system_realized += 1;

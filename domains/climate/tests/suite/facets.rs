@@ -2,14 +2,14 @@
 //! `Medium::Rock`, the graduated `Access` ladder, and the five-band rock
 //! column. `domains/climate` may not import `hornvale_terrain` (a sibling
 //! domain), so the roster correspondence this file asserts is checked by
-//! NAME against a hardcoded mirror of `hornvale_terrain::BandKind` — the
+//! NAME against a hardcoded mirror of `hornvale_terrain::Horizon` — the
 //! only thing keeping the deliberate duplicate (decision 0094) honest here.
 
 #[test]
 fn the_underworld_is_a_realm_with_a_rock_column() {
     let r = hornvale_climate::Realm::UNDERDARK;
     assert_eq!(r.medium, hornvale_climate::Medium::Rock);
-    // FIVE bands, mirroring hornvale_terrain::BandKind exactly. See ledger
+    // FIVE bands, mirroring hornvale_terrain::Horizon exactly. See ledger
     // #18A / rule 1a: a four-band ladder cannot absorb the open depth-weld
     // fix without relocating every ChamberAddr.
     assert_eq!(
@@ -28,10 +28,10 @@ fn the_underworld_is_a_realm_with_a_rock_column() {
 fn the_rock_ladder_matches_terrains_band_roster_one_for_one() {
     // Decision 0094: a shared roster, never a shared derivation. Climate may
     // not import terrain, so this is the only thing keeping the duplicate
-    // honest. If terrain adds a sixth BandKind, this reddens rather than
+    // honest. If terrain adds a sixth Horizon, this reddens rather than
     // silently giving the underworld a band it has no rock for.
     //
-    // hornvale_terrain::BandKind, mirrored here as of ledger #18A: five
+    // hornvale_terrain::Horizon, mirrored here as of ledger #18A: five
     // variants, this order — Regolith, Cover, Basement, Roots, Underneath.
     //
     // Assert the COUNT and the ORDER by name. Do not cast either enum to an
@@ -42,13 +42,13 @@ fn the_rock_ladder_matches_terrains_band_roster_one_for_one() {
         strata.len(),
         TERRAIN_BAND_ROSTER.len(),
         "the rock column must carry exactly as many bands as \
-         hornvale_terrain::BandKind has variants"
+         hornvale_terrain::Horizon has variants"
     );
     for (stratum, name) in strata.iter().zip(TERRAIN_BAND_ROSTER.iter()) {
         assert_eq!(
             &format!("{stratum:?}"),
             name,
-            "Stratum's rock bands must mirror BandKind's names, in order"
+            "Stratum's rock bands must mirror Horizon's names, in order"
         );
     }
 }
