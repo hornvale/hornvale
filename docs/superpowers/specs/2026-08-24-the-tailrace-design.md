@@ -339,54 +339,61 @@ and sharing one across repetitions at the same `(ledger, t)` would serve every
 call after the first from cache, measuring the memo's hit rate rather than the
 fold — reading, wrongly, as this fold being nearly free.
 
-**Results — three runs, box load average 7.0–16.3, reported without picking
-the flattering one.** The instrument's own module doc already documents a
-build-up of history from wall-clock order making load contention
-indistinguishable from a genuine effect at high load; that recurred here.
-Run 1 sat at load average 14.8–16.3 throughout and every elasticity below is
-suppressed relative to runs 2–3 (load 7.0–15.0) — same code, same seed, same
-probe agent, lower signal at higher load, exactly as §4's own history with
-`drive_at` predicts.
+**Results — four runs (the fourth added in fix round 1, to re-confirm the
+pattern survives the roster-distribution code added for that round), box load
+average 7.0–16.3, reported without picking the flattering one.** The
+instrument's own module doc already documents a build-up of history from
+wall-clock order making load contention indistinguishable from a genuine
+effect at high load; that recurred here. Run 1 sat at load average 14.8–16.3
+throughout and every elasticity below is suppressed relative to runs 2–4
+(load 7.0–15.0) — same code, same seed, same probe agent, lower signal at
+higher load, exactly as §4's own history with `drive_at` predicts.
 
-| fold | elasticity (run1 / run2 / run3) | r² (run1 / run2 / run3) | final-band µs/call (run1 / run2 / run3) |
+| fold | elasticity (run1/run2/run3/run4) | r² (run1/run2/run3/run4) | final-band µs/call (run1/run2/run3/run4) |
 |---|---|---|---|
-| `drive_at` (decisive, restated) | 0.18 / 1.14 / 0.81 | 0.010 / 0.824 / 0.544 | 1772.14 / 764.55 / 809.35 |
-| `hunger_at` | 0.21 / 1.09 / 1.22 | 0.012 / 0.824 / 0.913 | 2375.58 / 770.26 / 770.28 |
-| `fatigue_at` | -0.86 / 0.53 / -0.18 | 0.019 / 0.050 / 0.031 | 0.98 / 0.13 / 0.14 |
-| `believed_water` | 0.37 / 1.01 / 1.10 | 0.124 / 0.763 / 0.881 | 8878.72 / 4416.68 / 4344.16 |
-| `shared_believed_water` | 0.40 / 1.10 / 1.18 | 0.092 / 0.856 / 0.971 | 10199.48 / 4983.09 / 5349.93 |
-| `hazard_memory_memo` | 0.47 / 1.06 / 1.21 | 0.132 / 0.865 / 0.975 | 127122.78 / 73460.38 / 75564.65 |
+| `drive_at` (decisive, restated) | 0.18/1.14/0.81/1.33 | 0.010/0.824/0.544/0.861 | 1772.14/764.55/809.35/1011.08 |
+| `hunger_at` | 0.21/1.09/1.22/0.79 | 0.012/0.824/0.913/0.372 | 2375.58/770.26/770.28/1018.29 |
+| `fatigue_at` | -0.86/0.53/-0.18/-0.20 | 0.019/0.050/0.031/0.025 | 0.98/0.13/0.14/0.19 |
+| `believed_water` | 0.37/1.01/1.10/1.39 | 0.124/0.763/0.881/0.882 | 8878.72/4416.68/4344.16/6324.77 |
+| `shared_believed_water` | 0.40/1.10/1.18/1.27 | 0.092/0.856/0.971/0.887 | 10199.48/4983.09/5349.93/6804.43 |
+| `hazard_memory_memo` | 0.47/1.06/1.21/1.19 | 0.132/0.865/0.975/0.896 | 127122.78/73460.38/75564.65/96630.13 |
 
-Reading the two low-load runs (2, 3), where `r²` clears 0.76 for every fold but
-`fatigue_at`: **four of the five siblings — `hunger_at`, `believed_water`,
-`shared_believed_water`, `hazard_memory_memo` — show an elasticity
-indistinguishable from `drive_at`'s own (0.8–1.2 against `drive_at`'s
-0.8–1.14): each is, to measurement precision, proportional to the history it
-walks, the same shape §4 established for `drive_at` alone.** `fatigue_at` is
-the one exception, and cleanly so: its elasticity has no stable sign across
-runs (0.53, -0.18 in the two clean runs) and its absolute cost is
-three orders of magnitude below every other fold's (0.13–0.14 µs/call at the
-final band, against 764–75,565 µs/call for the rest) — consistent with a fold
+Reading the three higher-signal runs (2–4, load 7.0–15.0 at launch — still
+noisier than a quiet box, but each shows the DECISIVE column's own `r²` above
+0.5, unlike run 1's 0.010): **four of the five siblings — `hunger_at`,
+`believed_water`, `shared_believed_water`, `hazard_memory_memo` — show an
+elasticity in the same broad band `drive_at`'s own decisive measurement
+occupies (0.8–1.4 against `drive_at`'s 0.8–1.3): each is, to measurement
+precision, proportional to the history it walks, the same shape §4
+established for `drive_at` alone.** `hunger_at`'s run-4 `r²` (0.372) is the
+one exception inside that trio of runs — a reminder that noise does not fall
+uniformly across folds within a single run, not evidence against the shape
+(its run-2/run-3 `r²` of 0.824/0.913 and elasticity of 1.09/1.22 are as clean
+as `drive_at`'s own). `fatigue_at` is the one fold that is cleanly NOT
+history-proportional: its elasticity has no stable sign across any of the
+four runs (0.53, -0.18, -0.20 in runs 2–4) and its absolute cost is three
+orders of magnitude below every other fold's (0.13–0.19 µs/call at the final
+band, against 765–96,630 µs/call for the rest) — consistent with a fold
 whose OWN history (committed `rested` events) stayed near-empty across this
 run's 200 ticks, uncorrelated with the `agent-at` count it is plotted against.
 It carries no material share of anything.
 
 **Absolute magnitude, not just shape, is what stage 4's gate asks about — and
 here the five history-proportional folds separate sharply.** At the final
-band (clean runs), `hunger_at` costs almost exactly what `drive_at` costs
-(770 vs. 765–809 µs/call — the two are structural twins over the same
+band, `hunger_at` costs almost exactly what `drive_at` costs across every run
+(within ~1–30% of it — the two are structural twins over the same
 `integrate_thirst` machinery, differing only in which predicate resets the
 fold, so this is the expected result, not a surprise). `believed_water` and
-`shared_believed_water` cost **5–6× `drive_at`'s own per-call figure**
-(4,344–5,350 µs/call), not because they walk more history — the x-axis is
+`shared_believed_water` cost **5–8× `drive_at`'s own per-call figure**
+across the four runs, not because they walk more history — the x-axis is
 identical — but because `believed_water`'s inner loop calls the terrain's
 water-truth check once per raw `agent-at` posting, where `integrate_thirst`
 only evaluates terrain at *segment* boundaries (`bounds.dedup()`-collapsed),
 strictly fewer than the raw posting count. `hazard_memory_memo` is the
-extreme case: **90–100× `drive_at`'s per-call figure** (73,460–75,565
-µs/call), because `build_emitter_scan` — reached only through this fold, and
-timed as part of it per the interface note above — scans every one of the
-50 roster members' own full histories on every single call.
+extreme case: **72–160× `drive_at`'s per-call figure** across the four runs,
+because `build_emitter_scan` — reached only through this fold, and timed as
+part of it per the interface note above — scans every one of the 50 roster
+members' own full histories on every single call.
 
 **A caveat on that last number that changes how it should be read, not
 whether it matters.** Production shares ONE `PrimaryAfraidMemo` per tick
@@ -398,22 +405,24 @@ amortized over 50 creatures. This probe's fresh-memo-per-call design — require
 so the measurement is not the memo's hit rate — instead pays that scan cost on
 **every** repetition, which is the correct thing to do to expose the fold's
 true re-derivation cost and its history elasticity, but it means the raw
-73,460–75,565 µs/call figure is an upper bound on this fold's marginal
-per-creature production cost, not a literal per-tick-per-creature charge. Even
-dividing generously by the roster size (50) to approximate the amortized
-share — a rough bound, not a measurement — leaves roughly 1,470–1,510 µs of
-per-creature cost, still comparable to or larger than `drive_at`'s own
-764–809 µs/call. The elasticity (1.06–1.21 in the clean runs) is unaffected by
-this caveat: the scan's own cost grows with the SAME roster history that grows
-`probe_history`, so the fold's shape claim stands regardless of how its level
-is amortized. A probe splitting `build_emitter_scan`'s cost from the
-per-creature latest-visit fold it feeds would sharpen this further; that is a
-followup, not a gap in this task's own conclusion.
+73,460–96,630 µs/call figures (runs 2–4) are an upper bound on this fold's
+marginal per-creature production cost, not a literal per-tick-per-creature
+charge. Even dividing generously by the roster size (50) to approximate the
+amortized share — a rough bound, not a measurement — leaves roughly
+1,470–1,930 µs of per-creature cost, still comparable to or larger than
+`drive_at`'s own 765–1,011 µs/call. The elasticity (1.06–1.21 in runs 2–4) is
+unaffected by this caveat: the scan's own cost grows with the SAME roster
+history that grows `probe_history`, so the fold's shape claim stands
+regardless of how its level is amortized. A probe splitting
+`build_emitter_scan`'s cost from the per-creature latest-visit fold it feeds
+would sharpen this further; that is a followup, not a gap in this task's own
+conclusion.
 
 **Stage 4's entry gate.** `believed_water`, `shared_believed_water` and
 `hazard_memory_memo` all show `k > 0`, high `r²` at low load, and an
-elasticity in the same 0.8–1.2 band `drive_at`'s own decisive measurement
-occupies — and each costs *more* per call than `drive_at` itself, not less.
+elasticity in the same broad band `drive_at`'s own decisive measurement
+occupies across all four runs — and each costs *more* per call than
+`drive_at` itself, not less.
 **Stage 4 is entered.** Migrating belief and hazard to the incremental-fold
 primitive is motivated by measurement, not merely plausible from reading the
 code: all three carry a material share of `k`, and `hazard_memory_memo` in
@@ -431,8 +440,8 @@ alongside its `agent-at` count, at every band.
 
 **The result is not "the ratio is near 20" and not "materially different" — it
 is the third, more significant case the task brief named explicitly: the
-probe agent committed ZERO `drank` facts across all 200 ticks, in all three
-runs.** Its own `agent-at` history grew to 322 postings with no reset at all.
+probe agent committed ZERO `drank` facts across all 200 ticks, in all four
+runs (the original three, plus the fourth added in fix round 1).** Its own `agent-at` history grew to 322 postings with no reset at all.
 `S` — postings since the last drink — is therefore **unbounded** for this
 agent over the run's whole span, not merely large: the SINGLE-RESET regime
 `fold_depth_sweep.rs` isolates as a deliberate edge case ("a 'never drinks'
@@ -455,11 +464,126 @@ cadence. What it does unsettle is treating `RESET_EVERY = 20` as *typical*:
 at least one real derived agent's own production cadence is not "resets every
 ~20 postings", it is "never resets in 200 ticks", which sits at the opposite
 extreme from the periodic regime and close to the single-reset regime's own
-`S == H`. Whether the roster's OTHER members drink more regularly (making this
-probe agent unrepresentative) or share its cadence (making `RESET_EVERY = 20`
-too optimistic for the population generally) is unmeasured — this task
-measured one probe agent's ratio, as scoped, and reports the zero loudly
-rather than switching probe agents to manufacture a tidier number.
+`S == H`.
+
+**Fix round 1 — the selection effect, closed.** The probe agent is not a
+random roster member: it is chosen, BY CONSTRUCTION, as the roster member
+with the MOST `agent-at` postings after the first band — exactly the member
+most likely to still be walking rather than settled near water. So "the
+probe never drinks" risked being an artifact of that choice rather than a
+fact about the population, and the fix this round closes that by reporting
+the WHOLE roster's own `drank` distribution alongside the probe's figure
+(`session_length_scaling.rs` now computes `drank_counts` over the full
+50-agent roster at every band, the same indexed `facts_of` read
+`folded_counts` already uses).
+
+**At the final band, the roster's own distribution is: min 0, median 9.0, max
+47 `drank` facts; 23 of 50 agents (46.0%) have drunk ZERO times** — a value
+identical across repeated runs, as expected: it comes from the deterministic
+columns (facts committed, who drank how often), not the wall-clock-timed
+ones, so it does not carry the timing noise the six-fold table does.
+
+That number sits close to, but on the "most agents drink" side of, an even
+split: a slim majority (54%) of the roster has drunk at least once, against
+the 46% — nearly half — that, like the probe, never has. Read against the
+task brief's three-way branch: this is neither cleanly "most agents drink and
+only the tail does not" (46% is too large a share to call a tail) nor
+cleanly "few or no agents drink" (a majority *has* drunk). **The honest
+reading is a population that splits close to evenly between the two
+regimes**, with the probe landing — by construction — on the larger-history,
+never-yet-drunk side. That still means the single-reset (quadratic) regime is
+closer to a worst case than to strictly typical (a bare majority avoids it),
+but it is a much larger worst case than "one outlier agent": on this roster,
+essentially half the population is in it. `RESET_EVERY = 20` describes
+neither the never-drinks half (for whom `S` is unbounded within this run's
+200-tick horizon) nor, exactly, the drinking half either — the drinking
+half's own median of 9 `drank` events over 200 ticks (≈1 every 22 ticks) is
+at least in the right neighborhood of a `drank` roughly every 20-some ticks,
+though that is ticks, not the postings `RESET_EVERY` actually counts, and the
+two are not the same unit without knowing postings-per-tick for that half
+specifically — which this task did not separately measure.
+
+Whether the roster's OTHER members drink more regularly (making this probe
+agent unrepresentative) or a large share shares its cadence (making
+`RESET_EVERY = 20` optimistic for close to half the population) is now
+measured, not unmeasured: **it is closer to the latter than most readers
+would expect.** This task measured one probe agent's own ratio as scoped, and
+reports the near-even split loudly rather than treating 46% as a rounding
+error toward "most agents drink."
+
+### Reconciling with `fold_depth_sweep.rs`: the crossover between a linear and a quadratic regime
+
+Task 2's own decisive measurement of `drive_at` (§4, immediately above)
+reads an elasticity of 0.18 / 1.14 / 0.81 / 1.33 across four runs (median
+≈0.98) at the probe agent's history range of 130 → 322 facts. That looks, at
+first read, like it disagrees with `fold_depth_sweep.rs`'s single-reset
+sweep, whose own elasticity climbs toward 2.0 at high depth (Task 1's
+report). **It does not disagree — both are readings of the same underlying
+cost, at different points on the same curve, and the probe agent measured
+here is, per the finding immediately above, IN the single-reset (`S == H`)
+regime the whole time, not the periodic one.**
+
+Write cost as `a·H + b·H²` for an agent whose `S` tracks its whole history
+(the single-reset case: `S == H`, so the general `a·H + b·S·H` term
+becomes `a·H + b·H²`). Elasticity is `d(log cost)/d(log H) = (a + 2bH)/(a +
+bH)`: it tends to **1.0** for `H` well below the crossover `H₀ = a/b` (the
+linear term dominates), reads exactly **1.5** at the crossover itself, and
+tends to **2.0** well above it (the quadratic term dominates). A periodic
+agent (`S` bounded near `RESET_EVERY`) never leaves the linear regime at all,
+because its own cost is `a·H + b·(RESET_EVERY)·H` — linear in `H` for any
+`H`, with no crossover.
+
+**Bounding the crossover from `fold_depth_sweep.rs`'s own single-reset table
+(Task 1's report), without fitting a precise value the data does not pin.**
+Local elasticity between adjacent swept depths (`ln(y₂/y₁)/ln(x₂/x₁)`, a
+model-free finite difference, not a fit):
+
+| interval | local elasticity |
+|---|---|
+| 10 → 32 | 0.52 |
+| 32 → 100 | 1.19 |
+| 100 → 320 | 1.57 |
+| 320 → 1,000 | 1.80 |
+| 1,000 → 3,200 | 1.96 |
+| 3,200 → 10,000 | 2.09 |
+
+The sequence climbs monotonically from below 1.0 toward 2.0, crossing 1.5
+somewhere inside the 100 → 320 interval (1.19 at the 32–100 step, 1.57 at the
+100–320 step). **That places the crossover on the order of one to a few
+hundred facts of single-reset history** — this task's own data supports that
+range and no narrower a claim; interpolating a single point from a two-point
+finite difference would be manufacturing precision the measurement does not
+have.
+
+This bound is what reconciles the two instruments. `fold_depth_sweep.rs`'s
+`320` depth reads 31.7 µs/call (single-reset) against the periodic sweep's
+8.1 µs/call at the same depth — a 3.9× gap that is real and growing, but the
+depths above 320 (1,000, 3,200, 10,000) are where the elasticity actually
+reaches the ~2.0 asymptote (Task 1's report). Task 2's probe agent, over a
+real 200-tick session, reached only `H = 322` — landing almost exactly at the
+upper edge of the same 100–320 window this bound identifies, i.e. **right
+around the crossover itself**, not safely below it. That is exactly why its
+own measured elasticity (median ≈0.98, but ranging 0.18–1.33 across four
+runs) reads close to but not cleanly at 1.0: at the crossover, a small amount
+of run-to-run noise is enough to read anywhere from "still linear" to
+"visibly climbing," because the true curve is bending there, not flat. Both
+`fold_depth_sweep.rs`'s ~2.0 at depth ≥1,000 and `session_length_scaling.rs`'s
+~1.0 at depth ≤322 are correct readings of the SAME `a·H + b·H²` mechanism —
+they differ because they sample different, non-overlapping windows of the
+same curve, one below the bend and one above it. Neither instrument is wrong,
+and this is precisely the shape §4's own model (`ms/tick = C + k·h`, an affine
+fit with no single power-law exponent) already warned a naive log-log read
+would misrepresent.
+
+This also connects to the selection-effect finding directly above: the
+ORIGINAL decisive-measurement runs quoted earlier in this section, like this
+task's own, used the same max-history probe selection — so it is likely that
+they, too, were reading a single-reset-regime agent at `H` in the low
+hundreds, i.e. at or near the same crossover, rather than a periodic-regime
+agent safely inside the linear-only zone. The ~1.0 elasticity those runs
+report is therefore consistent with — not independent evidence against —
+the crossover bound above, not a demonstration that this fold's cost is
+linear at every depth a production session could reach.
 
 ## 5. Preregistration
 

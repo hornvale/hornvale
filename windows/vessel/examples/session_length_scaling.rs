@@ -385,6 +385,43 @@ fn folded_counts(ledger: &Ledger, roster: &[EntityId]) -> Vec<usize> {
         .collect()
 }
 
+/// Each roster member's own `DRANK` fact count — the whole-roster drinking
+/// cadence, added for the fix-round item that closes the selection-effect
+/// concern on the probe agent: the probe is chosen as the roster's MAX
+/// history member (unchanged, per the controller's instruction), which is
+/// exactly the member most likely to be still walking rather than settled
+/// near water. Reporting the FULL distribution alongside the probe's own
+/// figure is what lets a reader tell "the probe is a worst-case tail" apart
+/// from "no agent in this roster ever drinks."
+fn drank_counts(ledger: &Ledger, roster: &[EntityId]) -> Vec<usize> {
+    roster
+        .iter()
+        .map(|e| {
+            ledger
+                .facts_of(*e, hornvale_vessel::liveness::DRANK)
+                .count()
+        })
+        .collect()
+}
+
+/// The median of a `usize` slice (sorted copy; even length averages the two
+/// middle values as an `f64`). Integer sorting needs no `total_cmp` tie-break
+/// -- that discipline is for floats, per this workspace's own float-sorting
+/// rule -- so a plain `sort_unstable` is exact and deterministic here.
+fn median_of(counts: &[usize]) -> f64 {
+    let mut sorted = counts.to_vec();
+    sorted.sort_unstable();
+    let n = sorted.len();
+    if n == 0 {
+        return 0.0;
+    }
+    if n % 2 == 1 {
+        sorted[n / 2] as f64
+    } else {
+        (sorted[n / 2 - 1] as f64 + sorted[n / 2] as f64) / 2.0
+    }
+}
+
 /// Deterministic byte estimate for `ledger` — flat `Fact` size times the fact
 /// count plus the heap each fact's `String`/`Value::Text` fields own (byte
 /// length, not capacity). Copied from `agent_scaling.rs`.
@@ -491,6 +528,24 @@ struct Band {
     /// The probe agent's own `DRANK` rate: cumulative `DRANK` count divided
     /// by ticks elapsed so far.
     probe_drank_per_tick: f64,
+
+    // ---- Fix round 1: the SELECTION EFFECT on the probe agent. The probe
+    // is the roster's MAX-history member (unchanged by this fix -- see the
+    // module doc above `drank_counts`), which is exactly the member most
+    // likely to be still walking rather than settled near water, so "the
+    // probe never drinks" could be an artifact of that choice rather than a
+    // fact about the sim generally. These four fields report the WHOLE
+    // roster's own `DRANK` distribution at this band's end, so the claim can
+    // be scoped honestly against it. ----
+    /// The least `DRANK` count anywhere in the roster.
+    drank_roster_min: usize,
+    /// The roster's median `DRANK` count (even roster size averages the two
+    /// middle values).
+    drank_roster_median: f64,
+    /// The greatest `DRANK` count anywhere in the roster.
+    drank_roster_max: usize,
+    /// How many roster members have drunk zero times as of this band.
+    drank_roster_zero_count: usize,
 }
 
 fn main() {
@@ -595,6 +650,45 @@ fn main() {
                  fold_depth_sweep.rs's RESET_EVERY = 20 is being compared against this number \
                  in the report, not judged here.",
                 last.probe_history, last.probe_drank_count
+            );
+        }
+
+        // ---- Fix round 1, item 2: the roster-wide `drank` distribution,
+        // so the probe's own zero-drink figure (above) is scoped honestly
+        // rather than read as a fact about the whole roster. The probe is
+        // chosen as the roster's MAX-history member BY DESIGN (unchanged by
+        // this fix) -- exactly the member most likely to still be walking
+        // rather than settled near water, so its own cadence could easily be
+        // a worst-case tail rather than typical.
+        println!(
+            "drank-cadence, WHOLE ROSTER ({AGENTS} agents): min {}, median {:.1}, max {}              `drank` facts; {} of {AGENTS} agents ({:.1}%) have drunk ZERO times.",
+            last.drank_roster_min,
+            last.drank_roster_median,
+            last.drank_roster_max,
+            last.drank_roster_zero_count,
+            100.0 * last.drank_roster_zero_count as f64 / AGENTS as f64,
+        );
+        // The classification the brief's fix round asked for, in the
+        // program's own output as well as the report/spec -- three
+        // mutually exclusive readings of the SAME distribution.
+        let zero_frac = last.drank_roster_zero_count as f64 / AGENTS as f64;
+        if last.drank_roster_median > 0.0 && zero_frac < 0.5 {
+            println!(
+                "  reading: most agents DO drink (median {:.1} > 0, {:.1}% never have) -- the                  probe's own zero-drink figure looks like a WORST-CASE TAIL, not the typical                  agent. The quadratic (single-reset) regime is a worst case;                  RESET_EVERY=20 may still be a reasonable stand-in for the median agent.",
+                last.drank_roster_median,
+                100.0 * zero_frac
+            );
+        } else if zero_frac >= 0.5 {
+            println!(
+                "  reading: HALF OR MORE of the roster has never drunk (median {:.1}, {:.1}%                  zero) -- the quadratic (single-reset) regime looks TYPICAL, not a tail case,                  which would make `fold_depth_sweep.rs`'s periodic sweep the UNREPRESENTATIVE                  one, not the probe agent's own reading.",
+                last.drank_roster_median,
+                100.0 * zero_frac
+            );
+        } else {
+            println!(
+                "  reading: neither clean case -- median {:.1}, {:.1}% zero. Read the raw                  numbers above rather than either summary.",
+                last.drank_roster_median,
+                100.0 * zero_frac
             );
         }
     }
@@ -940,6 +1034,14 @@ fn run(
         if (tick + 1) % BAND == 0 {
             let facts_after = ledger.len();
             let counts = folded_counts(&ledger, &roster);
+            // Fix round 1: the WHOLE roster's own `DRANK` distribution, so
+            // the probe's zero-drink finding can be scoped against it rather
+            // than read as a fact about every agent.
+            let drank_all = drank_counts(&ledger, &roster);
+            let drank_roster_min = drank_all.iter().copied().min().unwrap_or(0);
+            let drank_roster_max = drank_all.iter().copied().max().unwrap_or(0);
+            let drank_roster_median = median_of(&drank_all);
+            let drank_roster_zero_count = drank_all.iter().filter(|&&c| c == 0).count();
             if probe.is_none() {
                 let (i, _) = counts
                     .iter()
@@ -1010,6 +1112,10 @@ fn run(
                 probe_drank_count: p_drank,
                 probe_folded_per_tick: p_history as f64 / ticks_elapsed,
                 probe_drank_per_tick: p_drank as f64 / ticks_elapsed,
+                drank_roster_min,
+                drank_roster_median,
+                drank_roster_max,
+                drank_roster_zero_count,
             });
             band_facts_before = facts_after;
             band_searches_before = searches_after;
