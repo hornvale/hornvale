@@ -1,5 +1,17 @@
 # The Hand — one body, and the controller is a parameter
 
+> **STATUS: IMPLEMENTED (2026-08-23).** Every item in §9's Definition of
+> Done is met except the census refresh, which §4 shows this arc cannot
+> move (the lab never starts a `Session`, so no census metric observes
+> possession; genesis byte-identity was verified rather than assumed).
+> §6's four decisions are recorded as
+> [0226](../../decisions/0226-a-possessed-host-is-co-present-not-displaced.md),
+> [0227](../../decisions/0227-possession-selects-a-body-it-does-not-mint-one.md),
+> [0228](../../decisions/0228-a-controller-is-a-parameter-of-the-tick.md) and
+> [0229](../../decisions/0229-one-body-type.md). **§5's risk 2 carries a
+> correction, not a confirmation** — see the amendment inline below; it is
+> the campaign's most important finding and the retrospective leads with it.
+
 *Arc II of The Bridle. Ships the controller stack, demotes GOAP to the
 default controller, and merges the two body types that made a controller
 stack impossible. Arc I (The Tackle, The Deed) shipped the action layer and

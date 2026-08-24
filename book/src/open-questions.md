@@ -1767,6 +1767,27 @@ one of the six was settled by neutralising the code under test and watching
 whether anything went red. Nothing in the standing gate does that for a
 Laboratory metric.
 
+[The Hand](./chronicle/the-hand.md) adds the clause about what to do once you
+find that the instrument is structurally blind. Arc II of The Bridle predicted
+that routing a possessed body through the creature tick would not change the
+ledger's growth rate, on the argument that a driven body *holds* most ticks and
+holding commits nothing. Measured before and after: 0.25 facts per body per
+tick, identical. The prediction held and the argument behind it is not what
+produced the number — the driven walk's facts are discarded unconditionally
+before they can reach the ledger, so the rate is flat **whatever the controller
+answers**, and forcing the controller to return a real action leaves the
+guarding test green. The same measurement had already been vacuous once, for an
+unrelated reason, against an earlier implementation that never touched the
+ledger at all: two vacuities with different causes, both hiding behind the same
+confirming number. What the campaign did next is the part worth keeping. It
+declined to run a third measurement and corrected the specification instead. A
+prediction whose instrument cannot separate it from its own negation is not
+confirmed by agreeing with it, and the residue that survives — *routing a
+possessed body through the tick costs no committed facts* — is a strictly
+smaller claim than the one preregistered. Recording the smaller claim is what
+keeps this chapter's accounting honest; staging measurements until one agrees
+is what would corrupt it.
+
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
 and it too came back **no** — a double falsification rather than a single

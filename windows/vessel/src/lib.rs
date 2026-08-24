@@ -110,10 +110,11 @@ impl std::fmt::Display for VesselError {
 /// already living in the world" — not one invented for the occasion):
 /// selecting an agent the world already derived is now exactly what both
 /// variants do. `RENDER-possession-still-mints` in the idea registry names
-/// that gap; a campaign closing The Hand should re-score it.
+/// that gap; The Hand closed it (decision 0227) and re-scored the row —
+/// possession now selects a roster index and `mint_at` is gone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PossessTarget {
-    /// An agent minted at the flagship settlement — the first `is-settlement`
+    /// The roster body at the flagship settlement — the first `is-settlement`
     /// fact in the ledger, which is what `village_info` returns. **Not the
     /// largest**: on seed 42 the flagship is Doaba (pop. 68) while the most
     /// populous is Geoboge (pop. 82), which is what [`PossessTarget::
@@ -134,8 +135,9 @@ pub enum PossessTarget {
     /// enum.
     #[default]
     Flagship,
-    /// An agent minted at the world's most-populous settlement, ranked
-    /// population-descending then id-ascending.
+    /// The roster body at the world's most-populous settlement, ranked
+    /// population-descending then id-ascending. Selected, never minted (The
+    /// Hand, decision 0227).
     MostPopulousSettlement,
     /// A specific, already-derived roster member, named by its ledger
     /// entity (The Hand, Task 4: "a creature on player-input" needs no
