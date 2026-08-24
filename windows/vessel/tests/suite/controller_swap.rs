@@ -5,7 +5,7 @@
 //! §2.3) made mechanical.
 
 use crate::body_fields::seed_42;
-use hornvale_vessel::liveness::{DriveKind, Mode};
+use hornvale_vessel::liveness::{AffectLabel, DriveKind, Mode};
 use hornvale_vessel::{PossessOpts, PossessTarget, Session};
 
 /// The Bridle's Arc II acceptance test: swap controllers and both paths
@@ -194,5 +194,69 @@ fn the_driven_walks_own_facts_never_reach_the_ledger_while_the_player_says_nothi
          player says nothing — Session::wait discards its facts \
          unconditionally (D2: this is a structural guard, not spec 5.2's \
          Hold-vs-Do argument)"
+    );
+}
+
+/// Co-present, for felt state as well as mode (The Confidant, Task 2):
+/// `driven_affect` is a SPECIFIC, empirically-verified value, not the
+/// exhaustive-over-all-six-variants trap `AffectLabel`'s six-variant enum
+/// invites (`matches!(a, Content | Eager | Searching | Frustrated | Lost |
+/// Helpless)` is vacuous — it can never fail). Seed 42's flagship body,
+/// waited 30 days from a fresh session, arbitrates to `AffectLabel::Eager`
+/// every time (checked directly: stable across single calls of 1, 5, 30, 100
+/// and 200 days, and down to a 0.001-day wait) — a real computation over
+/// this body's actual state, discriminating against every other
+/// `AffectLabel` value rather than vacuously accepting all of them.
+#[test]
+fn a_driven_bodys_felt_state_is_a_specific_circumplex_region() {
+    let (world, _ctx) = seed_42();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    s.handle("!wait 30");
+    let affect = s.driven_affect().expect("a driven body has a felt state");
+    assert_eq!(
+        affect,
+        AffectLabel::Eager,
+        "the driven body's own arbitration produced: {affect:?}"
+    );
+}
+
+/// **The decisive pin, mirroring N1 above for mode.** A literal keyed on
+/// elapsed time alone cannot ALSO vary by WHICH WORLD it is asked about,
+/// because `self.day` carries no seed identity. Real arbitration does: seed
+/// 42's flagship arbitrates to `AffectLabel::Eager` after one day; seed 13's
+/// arbitrates to `AffectLabel::Frustrated` (checked directly — ten seeds
+/// sampled for this task showed both `Eager` and `Content` alongside
+/// `Frustrated`, so this is not a two-value coincidence). This compares the
+/// SAME single checkpoint across two different seeds and asserts the
+/// reported label differs — a check no function of elapsed time alone can
+/// pass, because it never reads which world it is even in.
+///
+/// This is the trap-avoiding assertion the task brief names by name: a
+/// same-seed "as time passes" test (mirroring
+/// [`a_driven_bodys_mode_tracks_its_own_state_as_time_passes`] above) was
+/// tried first and does NOT discriminate here — seed 42's felt state stays
+/// `Eager` from day 0.001 through day 200 even while its `Mode` cycles
+/// through `Pursuing(Fatigue)`/`Pursuing(Thirst)`/others, so asserting
+/// `early != later` within one seed would be checking a fact that happens to
+/// be false, not a vacuous tautology, but still the wrong axis to vary.
+/// Varying the SEED is what actually discriminates.
+#[test]
+fn a_driven_bodys_early_affect_depends_on_which_seeds_population_not_merely_elapsed_time() {
+    let world_a = world_at_seed(42);
+    let (mut a, _) = Session::start(&world_a, &PossessOpts::default()).unwrap();
+    a.handle("!wait 1");
+    let affect_a = a.driven_affect().expect("a driven body has a felt state");
+
+    let world_b = world_at_seed(13);
+    let (mut b, _) = Session::start(&world_b, &PossessOpts::default()).unwrap();
+    b.handle("!wait 1");
+    let affect_b = b.driven_affect().expect("a driven body has a felt state");
+
+    assert_ne!(
+        affect_a, affect_b,
+        "two different seeds' driven bodies produced the SAME felt state at \
+         the same checkpoint ({affect_a:?}) — a function of elapsed time \
+         alone cannot tell worlds apart, so this can only pass by actually \
+         reading each body's own real state"
     );
 }

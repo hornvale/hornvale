@@ -672,6 +672,13 @@ pub struct Session<'w> {
     /// one. Set by [`Self::wait`], the only place the driven body's own
     /// arbitration runs; read back by [`Self::driven_mode`].
     driven_mode: Option<Mode>,
+    /// The driven body's own felt state as of the most recent `!wait` (The
+    /// Confidant, Task 2) — `None` before the first one. Set alongside
+    /// `driven_mode`, by the SAME [`Self::wait`] call into
+    /// [`DriveMovements::step_one_with_controller`], from the SAME
+    /// resolution — never a second, drift-prone derivation. Read back by
+    /// [`Self::driven_affect`].
+    driven_affect: Option<Affect>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1041,6 +1048,7 @@ impl<'w> Session<'w> {
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
             home_nav_cache: HomeNavCache::new(),
             driven_mode: None,
+            driven_affect: None,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -1091,6 +1099,17 @@ impl<'w> Session<'w> {
     /// to report on yet).
     pub fn driven_mode(&self) -> Option<Mode> {
         self.driven_mode
+    }
+
+    /// The driven body's own felt state, as of the most recent `!wait` tick
+    /// (The Confidant, Task 2) — the same co-present computation
+    /// [`Self::driven_mode`] documents, read back via its
+    /// [`AffectLabel`] rather than the full [`Affect`]: later tasks turn the
+    /// label into speech, and the richer `arousal`/`valence`/`object` fields
+    /// stay internal to arbitration until a caller actually needs them.
+    /// `None` before the first `!wait`.
+    pub fn driven_affect(&self) -> Option<AffectLabel> {
+        self.driven_affect.map(|affect| affect.label)
     }
 
     /// The accumulated knowledge (read-only).
@@ -3975,7 +3994,7 @@ impl<'w> Session<'w> {
         // cannot coexist with the `&mut self.mesh_memo`/`&mut
         // self.home_nav_cache` borrows this call needs.
         let driven_npc = self.driven_body().clone();
-        let (_driven_facts, driven_mode) = sys.step_one_with_controller(
+        let (_driven_facts, driven_mode, driven_affect) = sys.step_one_with_controller(
             &self.ledger,
             &driven_npc,
             &mut self.mesh_memo,
@@ -3983,6 +4002,7 @@ impl<'w> Session<'w> {
             &mut PlayerController::new(),
         );
         self.driven_mode = Some(driven_mode);
+        self.driven_affect = Some(driven_affect);
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();

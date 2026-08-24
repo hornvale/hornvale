@@ -4928,6 +4928,15 @@ struct WalkState {
     steps: usize,
     /// The commitment mode carried across this walk's steps (hysteresis).
     mode: Mode,
+    /// The most recent resolution's felt state (The Confidant, Task 2) — NOT
+    /// hysteresis like `mode`: a pure per-decision read, overwritten by every
+    /// `advance_one` iteration and never fed back into `decide_step`. The
+    /// placeholder `begin` seeds it with is always overwritten before being
+    /// read, because `advance_one`'s loop runs at least once whenever any
+    /// time has elapsed (`Session::wait` validates `days > 0.0`, so
+    /// `st.day == from.day() < to.day()` after `catch_up` returns, and the
+    /// loop's own guard is `st.day > self.to.day()`).
+    affect: Affect,
     /// The derived interior of the room at `pos` (The Threshold) — the anchor
     /// graph `Thermal`'s within-room branch routes over, and the graph the
     /// creature's `Occupancy` entry indexes into. Re-derived every time `pos`
@@ -4988,6 +4997,15 @@ impl WalkState {
         // `&mut Occupancy`, which is shared across the whole population and so
         // lives one level up rather than in this per-creature constructor.
         let interior = interior_of(&pos, terrain);
+        // A placeholder (spec §7's normal state, zeroed and objectless) —
+        // see the field's own doc for why this is always overwritten before
+        // any caller reads it back.
+        let affect = Affect {
+            arousal: 0.0,
+            valence: 0.0,
+            label: AffectLabel::Content,
+            object: None,
+        };
         WalkState {
             pos,
             day,
@@ -4998,6 +5016,7 @@ impl WalkState {
             visited,
             steps,
             mode,
+            affect,
             interior,
         }
     }
@@ -5082,6 +5101,10 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
         );
         st.mode = resolution.mode;
+        // The felt state this same resolution carries (The Confidant, Task 2):
+        // recorded alongside `mode` from the identical computation, never a
+        // second derivation — see `Resolution`'s own doc.
+        st.affect = resolution.affect;
         // THE CONTROLLER SEAM (The Hand, Task 5 fix round 1, spec §3.3): the
         // walk arbitrates UNCONDITIONALLY, above — `resolution` is the body's
         // own felt state (mode, affect) and what its own drives would do,
@@ -5301,9 +5324,14 @@ impl<'a> DriveMovements<'a> {
     /// Returns the facts this body's OWN walk would commit (empty under
     /// [`crate::controller::PlayerController`] with nothing queued — see that
     /// controller's own doc for why nothing here ever double-moves a body the
-    /// player drives through the verb loop) and the LAST commitment mode its
-    /// own arbitration reached this call: the host's felt state, independent
-    /// of whether the controller let it act on it.
+    /// player drives through the verb loop), the LAST commitment mode its own
+    /// arbitration reached this call, and the [`Affect`] that SAME resolution
+    /// carried (The Confidant, Task 2) — the host's felt state, independent
+    /// of whether the controller let it act on it. `advance_one`'s loop
+    /// always runs at least once whenever any time has elapsed (see
+    /// [`WalkState`]'s own `affect` field doc), so the returned `Affect`
+    /// always reflects a live decision this call made, never `begin`'s
+    /// placeholder.
     pub(crate) fn step_one_with_controller(
         &self,
         frozen: &Ledger,
@@ -5311,7 +5339,7 @@ impl<'a> DriveMovements<'a> {
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
-    ) -> (Vec<Fact>, Mode) {
+    ) -> (Vec<Fact>, Mode, Affect) {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
@@ -5401,7 +5429,7 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
             controller,
         ) {}
-        (out, st.mode)
+        (out, st.mode, st.affect)
     }
 }
 
@@ -8684,7 +8712,7 @@ mod tests {
             terrain: &t,
         };
 
-        let (default_facts, _mode) = sys.step_one_with_controller(
+        let (default_facts, _mode, _affect) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8697,7 +8725,7 @@ mod tests {
              (which wants water) — it must act: {default_facts:?}"
         );
 
-        let (player_facts, _mode) = sys.step_one_with_controller(
+        let (player_facts, _mode, _affect) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8774,7 +8802,7 @@ mod tests {
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
-        let (facts, _mode) = sys.step_one_with_controller(
+        let (facts, _mode, _affect) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
