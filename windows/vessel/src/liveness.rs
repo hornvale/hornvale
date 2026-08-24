@@ -10,7 +10,7 @@ use crate::action::{
 };
 use crate::agent::{settlement_position, walk_depth};
 use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
-use crate::controller::{Controller, DefaultController};
+use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
@@ -5451,6 +5451,25 @@ impl<'a> DriveMovements<'a> {
         // (never another creature's state), so nothing about running it here
         // needs the shared population `step_one_with_controller` deliberately
         // does not join.
+        //
+        // **A FRESH `PlayerController`, never the live `controller` (fix
+        // round 3, N2 — a defect in fix round 2's own routing).** Passing
+        // the live controller through here was wrong: `PlayerController::
+        // intend` is `self.pending.take()`, so the moment a verb queues a
+        // real action (`queue`, still dormant today — spec §1 "does not
+        // ship: the host speaking"), THIS call would take it, catch-up would
+        // discard it (`Intent::Do(_) => break 'catchup` — a committing
+        // action it refuses to fabricate, decision 0069), and `advance_one`
+        // below would then see nothing pending and Hold — the player's own
+        // action would silently vanish before the tick that was supposed to
+        // enact it ever ran. A fresh controller cannot consume anything: its
+        // `pending` starts (and, being fresh, only ever holds) `None`, so it
+        // always Holds here — true BY CONSTRUCTION now, not by the accident
+        // of nothing having called `queue` yet. This also states the actual
+        // design intent correctly: catch-up is a RETROSPECTIVE reconstruction
+        // of unwatched time, and must never be the thing that consumes an
+        // action meant for the live decision below, regardless of which
+        // controller ultimately governs that live decision.
         st.mode = catch_up(
             room_entry_day(frozen, body, self.from),
             self.from.day(),
@@ -5472,12 +5491,7 @@ impl<'a> DriveMovements<'a> {
             self.day_length_std,
             mesh_memo,
             home_nav_cache,
-            // The SAME controller `advance_one` below is asked with — a
-            // reborrow, not a second controller: `PlayerController` (the
-            // live path) must Hold here too, so the driven body's own
-            // within-room autopilot does not creep forward unwatched any
-            // more than its coarse position does.
-            &mut *controller,
+            &mut PlayerController::new(),
         );
         while self.advance_one(
             frozen,
@@ -8788,6 +8802,84 @@ mod tests {
             player_facts.is_empty(),
             "PlayerController holds the body regardless of what its own \
              arbitration wants, and commits nothing: {player_facts:?}"
+        );
+    }
+
+    /// The Hand, Task 5 fix round 3, N2: `step_one_with_controller`'s own
+    /// `catch_up` call used to reborrow the LIVE controller, so the moment a
+    /// verb ever queued a real action (`PlayerController::queue`, still
+    /// dormant in production — spec §1), catch-up would run first, TAKE that
+    /// queued action for itself, discard it (`Intent::Do(_) => break
+    /// 'catchup` — a committing action catch-up refuses to fabricate), and
+    /// `advance_one` would then see nothing pending and Hold. The player's
+    /// own action would vanish before the tick meant to enact it ever ran.
+    ///
+    /// This constructs exactly that hazard: an entity with an EARLIER
+    /// committed `agent-at` (day 0) than the walk's own `from` (day 3), which
+    /// is what gives `catch_up` a real 3-day gap to iterate at all — a
+    /// same-day fixture (like the two tests above) never enters catch-up's
+    /// loop and would pass even under the bug. A real action (`Drink`, which
+    /// `advance_one` commits unconditionally regardless of position) is
+    /// queued into the controller BEFORE the call. If it survives to be
+    /// committed, catch-up never touched it.
+    #[test]
+    fn catch_up_does_not_consume_the_controllers_pending_action() {
+        let mut registry = ConceptRegistry::default();
+        registry.register_predicate(AGENT_AT, false, "pos").unwrap();
+        registry.register_predicate(DRANK, false, "drank").unwrap();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        // The gap catch_up will reconstruct: last seen here on day 0, and the
+        // walk itself does not open until day 3.
+        ledger
+            .commit(agent_at_fact(e, &home, 0.0, "test setup"), &registry)
+            .unwrap();
+        let npc = Npc {
+            entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "herder".into(),
+        };
+        let t = PlantedTerrain::default();
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime::new(3.0).expect("a day value is finite"),
+            // Slack beyond `from`: `Drink`'s own clock charge (`cost_ticks`)
+            // must land at or before `to`, or `advance_one`'s interval guard
+            // returns before ever reaching the commit match — a half-day is
+            // generous next to `Drink`'s 150-tick base cost.
+            to: WorldTime::new(3.5).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &t,
+        };
+        let mut player = PlayerController::new();
+        player.queue(Action::Drink);
+        let (facts, _mode) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut player,
+        );
+        assert!(
+            facts.iter().any(|f| f.predicate == DRANK),
+            "the queued Drink must reach advance_one and commit, not be eaten \
+             by catch_up's own reconstruction pass over the day-0-to-day-3 \
+             gap: {facts:?}"
         );
     }
 

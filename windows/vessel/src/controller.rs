@@ -58,13 +58,22 @@ impl Controller for DefaultController {
 /// `resolution.intent` (what the body's OWN arbitration wanted) is read by
 /// nobody here and simply discarded. Nothing pending is `Intent::Hold`,
 /// never a GOAP fallback: a driven body with nothing queued waits on the
-/// player, it does not quietly act for itself. This is the mechanical
-/// content of spec §2.3's "commits on `Do`, nothing on `Hold`" argument — a
-/// driven body's own walk (`Session::wait`) constructs a fresh
-/// `PlayerController` every tick, so its intent is unconditionally `Hold`
-/// until a verb routes a real action through `queue` (later Bridle work;
-/// today's verb loop — `go`, `drink`, … — still commits directly, spec §1
-/// "Does not ship: the host speaking").
+/// player, it does not quietly act for itself.
+///
+/// **This is NOT what keeps the driven body's own walk out of the ledger**
+/// (fix round 3, N4 — an earlier version of this comment claimed it was, "the
+/// mechanical content of spec §2.3's commits-on-`Do` argument"; checked
+/// directly and that is false). `Session::wait` discards
+/// `DriveMovements::step_one_with_controller`'s returned facts
+/// UNCONDITIONALLY, regardless of what this `intend` answers — forcing it to
+/// `Intent::Do` still leaves the ledger untouched, because those facts never
+/// reach `tick()` at all. What THIS controller actually guarantees is
+/// narrower and still real: a driven body's own walk (`Session::wait`
+/// constructs a fresh one every tick) never autonomously acts on its own
+/// drives, because its intent is unconditionally `Hold` until a verb routes
+/// a real action through [`queue`](Self::queue) (later Bridle work; today's
+/// verb loop — `go`, `drink`, … — still commits directly, spec §1 "Does not
+/// ship: the host speaking").
 #[derive(Default)]
 pub struct PlayerController {
     pending: Option<Action>,

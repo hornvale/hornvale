@@ -3930,12 +3930,22 @@ impl<'w> Session<'w> {
         // just called, in a solo band-of-one walk (`step_one_with_controller`'s
         // own doc says why it is not folded into `sys.npcs` above), asked
         // through a FRESH `PlayerController` — nothing queues an action on
-        // it yet, so its intent is unconditionally `Hold` and it commits
-        // nothing (`step_one_with_controller`'s facts are discarded here),
-        // exactly the "commits on `Do`, nothing on `Hold`" argument spec
-        // §5.2 makes. Cloned out of `self.bodies` first: `driven_body()`
-        // borrows all of `self`, which cannot coexist with the `&mut
-        // self.mesh_memo`/`&mut self.home_nav_cache` borrows this call needs.
+        // it yet, so its intent is unconditionally `Hold`.
+        //
+        // **What actually keeps the ledger clean is the next line, not the
+        // `Hold` (fix round 3, N4): `_driven_facts` is discarded
+        // UNCONDITIONALLY, regardless of what `step_one_with_controller`
+        // returns.** An earlier version of this comment claimed this was
+        // "the commits on `Do`, nothing on `Hold` argument spec §5.2
+        // makes" — checked directly (fix round 2) and that claim is false:
+        // forcing the intent to `Do` here still leaves the ledger untouched,
+        // because the facts never reach `tick()` either way. The player's
+        // verbs (`go`, `drink`, …) are what the body DOES; this walk only
+        // ever supplies what the host WANTS (`self.driven_mode`) — spec
+        // §5.2 is being corrected at Task 8 to say so. Cloned out of
+        // `self.bodies` first: `driven_body()` borrows all of `self`, which
+        // cannot coexist with the `&mut self.mesh_memo`/`&mut
+        // self.home_nav_cache` borrows this call needs.
         let driven_npc = self.driven_body().clone();
         let (_driven_facts, driven_mode) = sys.step_one_with_controller(
             &self.ledger,
@@ -6581,7 +6591,8 @@ mod tests {
         assert_eq!(
             session.occupancy.anchor_in(first, &room),
             session.occupancy.anchor_in(second, &room),
-            "and both stand at the same anchor, which liveness permits — and is              what the seam's deterministic choice guarantees here"
+            "and both stand at the same anchor, which liveness permits — and is \
+             what the seam's deterministic choice guarantees here"
         );
 
         let marks = marks_of(&session);

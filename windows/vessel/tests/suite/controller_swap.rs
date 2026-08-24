@@ -70,24 +70,25 @@ fn a_driven_body_still_arbitrates_its_own_drives() {
     );
 }
 
-/// **D1 (Task 5 fix round 2), the decisive finding.** An independent
-/// reviewer replaced the ENTIRE `step_one_with_controller` call in
-/// `Session::wait` with `let _ = PlayerController::new(); self.driven_mode =
-/// Some(Mode::Idle);` and the whole crate stayed green — the driven walk had
-/// a real mechanism underneath (proven at the unit level by
-/// `liveness::tests::a_default_controller_passes_through_and_a_player_controller_holds`)
+/// An independent reviewer replaced the ENTIRE `step_one_with_controller`
+/// call in `Session::wait` with `let _ = PlayerController::new();
+/// self.driven_mode = Some(Mode::Idle);` and the whole crate stayed green —
+/// the driven walk had a real mechanism underneath (proven at the unit level
+/// by `liveness::tests::a_default_controller_passes_through_and_a_player_controller_holds`)
 /// but nothing observed its OWN OUTPUT changing tick to tick, so a literal
 /// could stand in for the entire call undetected. That is round 0's defect
 /// in a thinner form: a mechanism nothing observes is one refactor away from
 /// deletion while the suite stays green.
 ///
-/// This pins the CONTENT: the driven body's reported mode legitimately
-/// changes as real time passes and its own drives evolve (here, fatigue
-/// served first, thirst rising to take over) — a hardcoded `Mode::Idle` (or
-/// any other constant) cannot reproduce this, because it never reads
-/// `self.ledger`/`self.day` at all. Verified as this round's acceptance
-/// criterion: `scripts/mutate.py` applied to the reviewer's exact
-/// substitution reddens this test (quoted verbatim in the fix-round report).
+/// **This test alone does NOT close that finding (N1, Task 5 fix round 3's
+/// review).** It pins that the mode changes across two check-ins within ONE
+/// seed — real content, but a loophole survives: `self.day.day() < 5.0 {
+/// Homing } else { Pursuing(Fatigue) }`, reading nothing but elapsed time and
+/// never walking or asking a controller, ALSO changes between `!wait 1` and
+/// `!wait 30` and passes this assertion. The decisive pin is the test below,
+/// which this one still complements (it catches a mode frozen for the
+/// SESSION's whole lifetime, which the cross-seed test below does not by
+/// itself rule out).
 #[test]
 fn a_driven_bodys_mode_tracks_its_own_state_as_time_passes() {
     let (world, _ctx) = seed_42();
@@ -101,6 +102,56 @@ fn a_driven_bodys_mode_tracks_its_own_state_as_time_passes() {
         "the driven body's own arbitration must track its OWN evolving state \
          across ticks, not report a fixed value ({early:?} both times)"
     );
+}
+
+/// **N1 (Task 5 fix round 3), the decisive pin.** A literal keyed on elapsed
+/// time alone — the reviewer's own worked counter-example to the test above —
+/// cannot ALSO vary by WHICH WORLD it is asked about, because `self.day`
+/// carries no seed identity. Real arbitration does: seed 42's flagship
+/// arbitrates to `Pursuing(Fatigue)` after one day; seed 13's arbitrates to
+/// `Pursuing(Thermal)` (different species, different home, a genuinely
+/// different drive trajectory — empirically checked, not assumed; five
+/// seeds sampled for this fix round showed three distinct early-mode values).
+/// This compares the SAME single checkpoint across two different seeds and
+/// asserts the reported mode differs — a check no function of `self.day`
+/// alone can pass, because it never reads which world it is even in.
+///
+/// Verified as this round's acceptance criterion: `scripts/mutate.py`
+/// applied to the reviewer's exact substitution reddens this test (quoted
+/// verbatim in the fix-round report).
+#[test]
+fn a_driven_bodys_early_mode_depends_on_which_seeds_population_not_merely_elapsed_time() {
+    let world_a = world_at_seed(42);
+    let (mut a, _) = Session::start(&world_a, &PossessOpts::default()).unwrap();
+    a.handle("!wait 1");
+    let mode_a = a.driven_mode().expect("a driven body has a mode");
+
+    let world_b = world_at_seed(13);
+    let (mut b, _) = Session::start(&world_b, &PossessOpts::default()).unwrap();
+    b.handle("!wait 1");
+    let mode_b = b.driven_mode().expect("a driven body has a mode");
+
+    assert_ne!(
+        mode_a, mode_b,
+        "two different seeds' driven bodies produced the SAME mode at the \
+         same checkpoint ({mode_a:?}) — a function of elapsed time alone \
+         cannot tell worlds apart, so this can only pass by actually reading \
+         each body's own real state"
+    );
+}
+
+/// Builds a world at an arbitrary seed — [`seed_42`]'s own construction,
+/// parameterized, for [`a_driven_bodys_early_mode_depends_on_which_seeds_population_not_merely_elapsed_time`]'s
+/// cross-seed comparison.
+fn world_at_seed(seed: u64) -> hornvale_kernel::World {
+    hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(seed),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .expect("world builds")
 }
 
 /// **Relabelled honestly (D2, Task 5 fix round 2's review).** This used to
