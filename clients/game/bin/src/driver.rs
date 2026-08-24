@@ -235,6 +235,29 @@ pub struct Driver {
     /// redraw the rest of the client uses" F3 asks for (design spec §5,
     /// §7 F3). See [`Self::strip_offset`] for how this becomes a column.
     redraw_count: u32,
+    /// How many MARQUEE TICKS have elapsed — the strip's scroll driver
+    /// since `fix/marquee-ticks-on-time`.
+    ///
+    /// **Why this replaced `redraw_count` for that job.** F3 asked for a
+    /// scroll that introduces no clock, and `redraw_count` satisfied it
+    /// literally: the offset advanced once per real redraw. In play that
+    /// reads as a marquee that only moves when you press a key, which is
+    /// not what a marquee is — Nathan, 2026-08-24: "the marquee text
+    /// scrolls on the actions I take, not at a smooth, steady background
+    /// rate."
+    ///
+    /// **The wall-clock ban does not reach this crate.** `clippy.toml`'s
+    /// `disallowed-types` lives at the repo root; `clients/game` is its
+    /// own workspace, outside it and outside determinism (decision 0055,
+    /// and `clients/CLAUDE.md` says the workspace rules "do not bind this
+    /// tree"). `bin/examples/repossess_cost.rs` already uses `Instant` and
+    /// the client gate passes it — so the constraint F3 honoured was real
+    /// for the SIM and never bound the client's own render loop.
+    ///
+    /// The clock itself stays in `main.rs`'s loop; this type only counts
+    /// ticks, so every test drives the marquee by calling
+    /// [`Driver::tick_marquee`] and no test depends on real time.
+    marquee_ticks: u32,
     /// The world's landscape features, indexed by cell, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
     /// world's lifetime (`CellFeatureIndex`'s own doc).
@@ -520,6 +543,7 @@ impl Driver {
             },
             strip: None,
             redraw_count: 0,
+            marquee_ticks: 0,
             index,
             nearest,
             geo,
@@ -1094,6 +1118,27 @@ impl Driver {
         self.redraw_count = self.redraw_count.wrapping_add(1);
     }
 
+    /// Advance the marquee by one tick. Called by the render loop when its
+    /// input poll times out — never by an input handler, which is the
+    /// whole point: the strip must scroll while the player does nothing.
+    pub fn tick_marquee(&mut self) {
+        self.marquee_ticks = self.marquee_ticks.wrapping_add(1);
+    }
+
+    /// Whether the strip currently has more text than plate width, i.e.
+    /// whether there is anything for a tick to move.
+    ///
+    /// The loop blocks on input unless this is true, so an idle client
+    /// with a strip that fits wakes for nothing at all — a marquee is not
+    /// a reason to spin a terminal.
+    pub fn strip_is_scrolling(&self) -> bool {
+        let Some(text) = &self.strip else {
+            return false;
+        };
+        let (plate_w, _) = self.active_plate_dims();
+        text.chars().count() > usize::from(plate_w)
+    }
+
     /// F3's own answer, in a number: the map strip's current scroll offset,
     /// a character count into `self.strip`'s own text — never a clock (see
     /// [`Self::redraw_count`]'s doc). `0` whenever the strip fits the
@@ -1115,7 +1160,7 @@ impl Driver {
             return 0;
         }
         // `overflow + 1` valid starting columns: `0..=overflow`.
-        (self.redraw_count % (overflow as u32 + 1)) as u16
+        (self.marquee_ticks % (overflow as u32 + 1)) as u16
     }
 
     /// The strip text for the current turn.
@@ -2279,6 +2324,68 @@ mod portolan_tests {
     /// of_time_elapsed` below actually scrolling — so the walk band is no
     /// longer a text that fits, and using it here would pin a premise Task
     /// 4 itself falsified.
+    /// THE BUG, AS A TEST. The marquee used to advance on `redraw_count`,
+    /// so it moved only when the player pressed a key — Nathan, in play:
+    /// "the marquee text scrolls on the actions I take, not at a smooth,
+    /// steady background rate." Ticks are now the driver, so the offset
+    /// must move with NO action at all.
+    #[test]
+    fn the_marquee_advances_on_ticks_with_no_player_action() {
+        let mut d = test_driver();
+        d.strip = Some("x".repeat(400));
+        let before = d.strip_offset();
+        let redraws_before = d.redraw_count;
+
+        for _ in 0..3 {
+            d.tick_marquee();
+        }
+
+        assert_ne!(
+            d.strip_offset(),
+            before,
+            "three ticks did not move the marquee"
+        );
+        assert_eq!(
+            d.redraw_count, redraws_before,
+            "a tick is not a redraw and must not be counted as one"
+        );
+    }
+
+    /// The converse, and the one that would catch a regression to the old
+    /// behaviour: an ACTION alone must no longer move the marquee.
+    #[test]
+    fn a_player_action_alone_does_not_move_the_marquee() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.strip = Some("x".repeat(400));
+        let before = d.strip_offset();
+        for _ in 0..5 {
+            d.apply(Action::CursorBy(1, 0));
+        }
+        d.strip = Some("x".repeat(400)); // refresh_strip overwrote it
+        assert_eq!(
+            d.strip_offset(),
+            before,
+            "cursor moves scrolled the marquee — it is back on redraw_count"
+        );
+    }
+
+    /// An idle client must not be woken to animate nothing: the loop only
+    /// polls with a timeout while this is true.
+    #[test]
+    fn a_strip_that_fits_is_not_scrolling() {
+        let mut d = test_driver();
+        d.strip = Some("short".to_string());
+        assert!(
+            !d.strip_is_scrolling(),
+            "a fitting strip must not spin the loop"
+        );
+        d.strip = Some("x".repeat(400));
+        assert!(d.strip_is_scrolling(), "an overflowing strip must scroll");
+        d.strip = None;
+        assert!(!d.strip_is_scrolling(), "no strip is not scrolling");
+    }
+
     #[test]
     fn strip_offset_stays_zero_when_the_text_fits_the_plate() {
         let mut d = test_driver();
