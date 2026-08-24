@@ -264,14 +264,17 @@ to the bottom of the ladder, against about one in three hundred before. **This
 campaign resolved the previous campaign's headline finding**, and the mechanism
 is the one The Stope's ablations had already identified as the lever.
 
-## The epoch moved one artifact
+## The epoch moved one artifact that carries a world
 
 Every chamber in every world relocated, six seed-derivation labels took an
 epoch suffix, one retired and one is new. Across the whole campaign, exactly
-three drift-checked artifacts moved: the stream manifest (the labels
-themselves), the type-audit report (a handful of signatures), and the
-underworld witness page. The three seed-42 almanacs, the elevation map, every
-lab study, the Domesday survey and the committed client fixtures are
+**four** drift-checked artifacts moved, and only three of them are derived
+from a world at all: the stream manifest (the labels themselves), the
+type-audit report (a handful of signatures), and the underworld witness page.
+The fourth is the digest's decision index, which gained one line naming this
+campaign's decision record. Of the three, only the witness page carries
+chamber content. The three seed-42 almanacs, the elevation map, every lab
+study, the Domesday survey and the committed client fixtures are
 **byte-identical**.
 
 That is The Stope's demonstration repeated with a stronger premise, and it is

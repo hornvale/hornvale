@@ -91,8 +91,15 @@
 //!    the terrain's own depth budget. This is the only depth gate.
 //! 5. `floor >= levels_in_branch(..)` — Task 2's drawn run length. Every frozen
 //!    range bottoms out at 1, so this never empties a band.
-//! 6. `chamber_stream(..).next_f64() < EXISTENCE_DENSITY` — a fixed 0.5 coin
-//!    per address.
+//!
+//! **There was a sixth and there is not any more.**
+//! `chamber_stream(..).next_f64() < EXISTENCE_DENSITY` — a fixed 0.5 coin per
+//! address — was the whole of the randomness in the underworld's connectivity
+//! story, and The Drift's spec section 4.1 deleted it outright rather than
+//! lowering it, because the five gates above already describe a contiguous
+//! shape and the coin was punching holes through it. Every address inside
+//! gates 1-5 now exists. The list is five, and this note stays because the
+//! sixth is what most of the prose below is reasoning about.
 //!
 //! **Neither `bands_of` nor `barrier_of` appears anywhere in it.** Verified by
 //! grep over the whole tree: `bands_of` has exactly one production consumer,
@@ -144,7 +151,10 @@
 //!
 //! C.5   TOTAL FLOORS PER SYSTEM   reported; assert only max <= 200
 //!
-//! C.1   BRANCH COUNT (per entrance)
+//! C.1   BRANCH COUNT (per BAND since The Drift's Task 5; the draw was keyed
+//!       per ENTRANCE when C.1 was frozen, and `entrance` left its key
+//!       entirely under amendment A.3. The Drift's own section 6 restates the
+//!       same rule one level down: "BRANCHES PER BAND, mode 1")
 //!   mode is 1 -> proceed
 //!   mode > 1  -> the tree is not a tree
 //!   (a TIE for the top) -> THE TABLE NAMES NO ARM. See below.
@@ -788,11 +798,12 @@ const NADIR_GATE_CEILING: f64 = 0.10;
 /// (`entrance_mouth`). A move with none of those four touched is a finding,
 /// not a bound to widen.
 ///
-/// **The band's positive control is now the re-baseline itself, and no
-/// synthetic one was obtainable — stated rather than left implied.** The old
-/// band's control was `EXISTENCE_DENSITY: 0.5 -> 0.7`, and that constant no
-/// longer exists. Three replacements were tried at close and none of them
-/// isolates this assertion:
+/// **The band's positive control is the re-baseline itself; no synthetic one
+/// was found, and that is a statement about three attempts rather than about
+/// what is possible.** The old band's control was
+/// `EXISTENCE_DENSITY: 0.5 -> 0.7`, and that constant no longer exists. Three
+/// replacements were tried at close. All three redden the probe; **none of
+/// them reddens it HERE**:
 ///
 /// ```text
 /// passages_from: descents_from(..).take(0)   graph reading empties; the
@@ -800,19 +811,35 @@ const NADIR_GATE_CEILING: f64 = 0.10;
 /// chamber_exists: depth_reach_m * 0.5        B.7's conditional leaves its
 ///                                            `>10%` arm; that assertion
 ///                                            fires first
-/// passages_from: descents_from(..).take(1)   rate stays inside the band;
-///                                            probe exits 0
+/// passages_from: descents_from(..).take(1)   rate stays IN band (24.681%),
+///                                            and the probe exits 100 anyway:
+///                                            the amended `reachable == total`
+///                                            equality catches it at
+///                                            left 123110, right 138058
 /// ```
 ///
-/// The reason is structural rather than a gap in imagination: with the
-/// existence coin gone, *reaches the Nadir by walking* and *realizes a Nadir
-/// chamber in the lattice* are the **same number** on every seed, so any
-/// mutation large enough to move this rate by a factor of two also moves
-/// B.7's conditional off the arm asserted twenty lines earlier. This ratchet
-/// is therefore a second line of defence, not a first. What it *did* do is the
-/// job it exists for: it fired on the real tree at close, naming its own
-/// movers, which is how this re-baseline came to be taken deliberately instead
-/// of a stale figure being carried forward.
+/// **The third line was published as "probe exits 0" and that was wrong**,
+/// caught in review. It was measured before this file's closing guard was
+/// amended from `reachable < total` to an equality, so the reading was true of
+/// a tree that existed for about an hour. The correction is worth more than
+/// the original claim: it is a demonstrated red on the amended guard, which is
+/// the positive control that guard needed and did not otherwise have.
+///
+/// **What the three attempts do NOT establish is that no isolating mutation
+/// exists**, and an earlier version of this paragraph claimed exactly that —
+/// *"any mutation large enough to move this rate by a factor of two also moves
+/// B.7's conditional off its arm"*. That is over-general. B.7's conditional
+/// sits at **73.72%** against a `>10%` threshold, roughly 7x of headroom, so a
+/// mutation halving Nadir realization would take this ratchet under its floor
+/// (~14%) while B.7 still read `GateNotGating` (~37%). No such mutation was
+/// tried. What is true is narrower: *reaches the Nadir by walking* and
+/// *realizes a Nadir chamber in the lattice* are now the **same number** on
+/// every seed, so the two quantities cannot be perturbed independently, and
+/// each of the three mutations attempted happened to trip an assertion sitting
+/// ahead of this one. This ratchet is a second line of defence in practice.
+/// What it *did* do is the job it exists for: it fired on the real tree at
+/// close, naming its own movers, which is how this re-baseline came to be
+/// taken deliberately instead of a stale figure being carried forward.
 const NADIR_WALK_RATE_FLOOR: f64 = 0.14;
 
 /// THE HEADLINE RATCHET, ceiling. See [`NADIR_WALK_RATE_FLOOR`].
@@ -1039,7 +1066,10 @@ struct SystemReading {
     /// sublattice per entrance); `branch_count_of` no longer varies by
     /// entrance at all, only by band.
     branch_counts: Vec<u8>,
-    /// The per-system total, summed across entrances — REPORTED only.
+    /// The per-system total, summed across the five habitation BANDS —
+    /// REPORTED only. It was summed across entrances before The Drift's Task
+    /// 5 re-keyed the draw; the field kept its meaning (a per-system total)
+    /// and changed what it sums over.
     branch_total: u32,
     /// The spine: floors drawn on branch 0 across every band the rock admits.
     main_line_depth: u32,
@@ -1052,10 +1082,18 @@ struct SystemReading {
     /// entrances` line.
     reachable_chambers: usize,
     /// THE DEEP-MOUTH CENSUS: the band each NON-HEAD mouth (`entrance > 0`)
-    /// opens into, as drawn, before `chamber_exists` adjudicates it. A side
-    /// entrance is mapped by `entrance_mouth` through `root_floor_of`, whose
-    /// band pick is uniform over the parent's realized bands — so this is
-    /// where the deep-mouth mechanism is visible directly.
+    /// opens into, as drawn, before `chamber_exists` adjudicates it.
+    ///
+    /// **It is a one-column histogram now, and that is the finding rather
+    /// than a defect.** A side entrance used to be mapped by `entrance_mouth`
+    /// through `root_floor_of`, whose band pick was uniform over the parent's
+    /// realized bands — so roughly one door in five opened directly into the
+    /// Nadir, which was the mechanism this census made visible. The Drift's
+    /// Task 7 retired `root_floor_of`: `entrance_mouth` now returns
+    /// `band = top_band()`, `floor = 0` unconditionally, and only the BRANCH
+    /// is drawn. So this reads `band 0 Undercroft 100.00%` on every seed, and
+    /// it is kept because a second occupied row would mean the deep door had
+    /// come back.
     mouth_bands: Vec<u8>,
     /// The same, restricted to mouths that survive `chamber_exists` — the
     /// doors that are actually open.
@@ -1157,10 +1195,13 @@ fn read_system(
     //
     //  - entrance 0 is the surface head BY DEFINITION (`entrance_mouth`
     //    returns `HEAD` with no draw at all), so it is not a drawn mouth;
-    //  - a non-zero entrance ALSO returns `HEAD` when the system has width 1,
-    //    or when its picked side branch roots nowhere. Those are fallbacks,
-    //    not deep-mouth draws, and they are `branch == 0` — the only way a
-    //    mouth can carry branch 0, since `root_floor_of` refuses branch 0.
+    //  - a non-zero entrance ALSO resolves to branch 0 when the top band has
+    //    width 1 — `aperture_branch_at`'s own first gate, and since The
+    //    Drift's Task 7 the ONLY remaining fallback. The second half this
+    //    clause used to name ("or when its picked side branch roots
+    //    nowhere") went with `root_floor_of`: a guaranteed aperture is
+    //    bijective onto a branch by construction and a free one draws in
+    //    `1..=width-1`, so neither can root nowhere.
     //
     // So a DRAWN side-branch mouth is exactly `entrance > 0 && branch > 0`.
     // Folding the fallbacks in would put ~2/3 of the population at band 0 and
@@ -1207,12 +1248,19 @@ fn read_system(
 
     // THE ROUTE ABLATION. The same walk seeded from entrance 0's mouth alone
     // — the surface head, `EntranceMouth { branch: 0, band: 0, floor: 0 }` by
-    // definition. Every other mouth is a SIDE entrance, which
-    // `entrance_mouth` maps through `root_floor_of` to a band drawn uniformly
-    // over the parent's realized bands, so it can open directly into any band
-    // including the Nadir. Restricting to the head is therefore exactly the
-    // "you must descend the whole spine" story, and the gap between the two
-    // walks is how much of the deep reach does NOT come from descending.
+    // definition.
+    //
+    // **The gap this ablation measures is now structurally zero, and the
+    // ablation is kept as the witness of that.** It was written when
+    // `entrance_mouth` mapped a side entrance through `root_floor_of` to a
+    // band drawn uniformly over the parent's realized bands, so a door could
+    // open directly into any band including the Nadir, and the head-only walk
+    // was the "you must descend the whole spine" story. The Drift's Task 7
+    // retired that: every mouth now lands at level 0 of the TOP band and only
+    // its branch is drawn, so the head-only walk reaches the same component
+    // as the all-mouths walk and the printed ratio is 100.0% on every seed.
+    // A ratio below 100% would mean a mouth had landed somewhere the head
+    // cannot reach.
     let head_mouths: Vec<ChamberAddr> = mouths_by_entrance
         .iter()
         .filter(|(e, _)| *e == 0)
@@ -1356,8 +1404,17 @@ struct Tallies {
     /// Realized branch columns of every canonical lattice — the branch
     /// denominator.
     branches: usize,
-    /// Branch counts as DRAWN, one entry per entrance (C.1's gated quantity).
-    branch_count_per_entrance: BTreeMap<u8, usize>,
+    /// Branch counts as DRAWN, one entry per `(system, band)` pair — C.1's
+    /// gated quantity, re-keyed by The Drift's Task 5. **The field was named
+    /// `branch_count_per_band` and the histogram was printed under
+    /// "PER ENTRANCE / denominator: entrances drawn" until Task 9's review;
+    /// both halves of that label were false.** The population is every
+    /// habitation band of every system — 3,821 x 5 = 19,105 pooled — against
+    /// 7,134 entrances drawn, so a reader dividing by the wrong denominator
+    /// was out by 2.7x. Not filtered by the rock's depth budget on purpose:
+    /// the draw exists whether or not a cave reaches that band, and C.1 gates
+    /// the draw.
+    branch_count_per_band: BTreeMap<u8, usize>,
     /// Branch counts summed per system across entrances (reported only).
     branch_total_per_system: BTreeMap<u32, usize>,
     /// Entrance counts per system.
@@ -1432,7 +1489,7 @@ impl Tallies {
         self.systems += 1;
         *self.entrances_per_system.entry(sys.entrances).or_default() += 1;
         for &c in &sys.branch_counts {
-            *self.branch_count_per_entrance.entry(c).or_default() += 1;
+            *self.branch_count_per_band.entry(c).or_default() += 1;
         }
         *self
             .branch_total_per_system
@@ -1500,8 +1557,8 @@ impl Tallies {
         self.ocean_caves += other.ocean_caves;
         self.land_cells += other.land_cells;
         self.branches += other.branches;
-        for (k, v) in &other.branch_count_per_entrance {
-            *self.branch_count_per_entrance.entry(*k).or_default() += v;
+        for (k, v) in &other.branch_count_per_band {
+            *self.branch_count_per_band.entry(*k).or_default() += v;
         }
         for (k, v) in &other.branch_total_per_system {
             *self.branch_total_per_system.entry(*k).or_default() += v;
@@ -1601,17 +1658,20 @@ impl Tallies {
             );
         }
 
-        println!("  -- branch count PER ENTRANCE (C.1, GATED) --  denominator: entrances drawn");
-        let entrances: usize = self.branch_count_per_entrance.values().sum();
-        for (count, n) in &self.branch_count_per_entrance {
+        println!(
+            "  -- branch count PER BAND (C.1, GATED) --  denominator: (system, band) pairs \
+             over all five habitation bands, the DRAW's own population"
+        );
+        let band_slots: usize = self.branch_count_per_band.values().sum();
+        for (count, n) in &self.branch_count_per_band {
             println!(
                 "     {count} branch(es)  {n:>7}  {:>6.2}%",
-                *n as f64 / entrances.max(1) as f64 * 100.0
+                *n as f64 / band_slots.max(1) as f64 * 100.0
             );
         }
         println!(
             "     verdict {:?}",
-            classify_branch_count(&self.branch_count_per_entrance)
+            classify_branch_count(&self.branch_count_per_band)
         );
 
         println!("  -- branch count PER SYSTEM (reported) --  denominator: cave systems");
@@ -1779,11 +1839,15 @@ impl Tallies {
             self.reached_nadir_head_only as f64 / self.reached_nadir_all.max(1) as f64 * 100.0
         );
         // THE DEEP-MOUTH CENSUS — the other half of the mechanism evidence,
-        // and the half that names the lever. `entrance_mouth` maps a side
-        // entrance to its branch's root floor, and `root_floor_of` picks that
-        // band UNIFORM over the parent's realized bands (all five today, since
-        // every frozen range bottoms out at 1). So roughly one side entrance
-        // in five is a door that opens directly into the Nadir band.
+        // and the half that used to name the lever. It was written when
+        // `entrance_mouth` mapped a side entrance to its branch's root floor
+        // and `root_floor_of` picked that band UNIFORM over the parent's
+        // realized bands, which put roughly one side entrance in five
+        // directly into the Nadir. **The Drift's Task 7 deleted that pick**:
+        // `entrance_mouth` returns the top band at floor 0 unconditionally,
+        // so this census reads a single row — `band 0 Undercroft 100.00%` —
+        // and it now witnesses the ABSENCE of the deep door rather than its
+        // magnitude.
         let non_head: usize = self.mouth_bands.values().sum();
         println!(
             "       DEEP-MOUTH CENSUS: {non_head} DRAWN side-branch mouths (entrance > 0 \
@@ -1878,17 +1942,27 @@ fn a_tie_for_the_modal_branch_count_is_not_rounded_into_the_passing_arm() {
 /// - `rung_at_depth`'s ΔT boundaries, `CAVE_REACH_CEILING_M`, or the
 ///   gradient clamp — these decide `deepest`, so they move both depth and the
 ///   Nadir conditional.
-/// - `EXISTENCE_DENSITY` — the per-address coin, which decides which of the
-///   drawn floors are realized and therefore every terminating band. It also
-///   moves the ratcheted headline hard and non-linearly: 0.5 -> 0.7 is 4.4x,
-///   0.7 -> 0.9 another 10.5x (see the density sweep in the module header).
-/// - `root_floor_of`'s band pick (`windows/worldgen/src/character.rs`) — the
-///   uniform-over-realized-bands draw that puts ~1 side entrance in 5 straight
-///   into the Nadir band. This is the mechanism behind the walked-Nadir rate,
-///   and the one dial that moves it without touching geology or the ladder.
+/// - `descents_from`'s edge draw (`windows/worldgen/src/chamber.rs`) — the
+///   band-transition edges the vertical rule reads. It decides how a branch
+///   reaches the band below, so it moves the walked-Nadir rate and, if a
+///   guarantee were broken, the closing `reachable == total` equality.
+/// - `entrance_mouth` — where a door lands. Every mouth is at level 0 of the
+///   top band by construction (amendment E), so a change here moves both the
+///   deep-mouth census and the route ablation off their structural values.
 /// - Giving `barrier_of` or `bands_of` a consumer inside `chamber_exists`
 ///   would make B.7's question answerable for the first time; the Nadir
 ///   assertions here are the baseline that change must be read against.
+///
+/// **TWO MOVERS WERE LISTED HERE THAT NO LONGER EXIST**, and the list was
+/// contradicting [`NADIR_WALK_RATE_FLOOR`]'s twenty lines above it until Task
+/// 9's review. `EXISTENCE_DENSITY` — the per-address coin, "0.5 -> 0.7 is
+/// 4.4x" — was deleted by The Drift's spec section 4.1, and `root_floor_of`'s
+/// uniform band pick — "~1 side entrance in 5 straight into the Nadir" — was
+/// retired by its Task 7. Both are recorded rather than silently dropped
+/// because a reader diagnosing a moved number needs to know they were the
+/// answer once: the walked-Nadir rate moved 0.359% -> 28.678% precisely
+/// because these two went away, and nothing else on the list can produce a
+/// move of that size.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn did_the_stope_solve_the_oatmeal_problem() {
@@ -2086,19 +2160,19 @@ fn did_the_stope_solve_the_oatmeal_problem() {
          frozen ranges cannot produce that, so the measurement is wrong"
     );
 
-    // --- C.1: BRANCH COUNT, per entrance (Ruling R1) -----------------------
+    // --- C.1: BRANCH COUNT, per BAND (Ruling R1, re-keyed by Task 5) -------
     for (seed_value, t) in &per_seed {
         assert_eq!(
-            classify_branch_count(&t.branch_count_per_entrance),
+            classify_branch_count(&t.branch_count_per_band),
             BranchCountVerdict::ModeIsOne,
             "seed {seed_value}: the modal branch draw is not 1 — the tree is not \
              a tree (C.1). Report as a finding; do NOT re-weight \
              `branch_count_of`. Histogram: {:?}",
-            t.branch_count_per_entrance
+            t.branch_count_per_band
         );
     }
     assert_eq!(
-        classify_branch_count(&pooled.branch_count_per_entrance),
+        classify_branch_count(&pooled.branch_count_per_band),
         BranchCountVerdict::ModeIsOne,
         "pooled: the modal branch draw is not 1 (C.1)"
     );
@@ -2149,27 +2223,28 @@ fn did_the_stope_solve_the_oatmeal_problem() {
     // The unconditional walked-Nadir rate is the number this probe's finding is
     // actually about, and until review round 1 nothing asserted it. It is
     // banded, not pinned — see NADIR_WALK_RATE_FLOOR for why, and for what
-    // would legitimately move it. **It is currently OUTSIDE the band and has
-    // been since The Drift's Task 1** (the existence coin's deletion); Task 9
-    // owns the re-baseline. See this module's header.
+    // would legitimately move it. It sat OUTSIDE the band from The Drift's
+    // Task 1 (the existence coin's deletion) until Task 9 re-baselined it
+    // against the finished world. See this module's header.
     let nadir_walk = pooled.nadir_walk_rate();
     assert!(
         (NADIR_WALK_RATE_FLOOR..=NADIR_WALK_RATE_CEILING).contains(&nadir_walk),
         "the unconditional walked-Nadir rate is {:.4}% ({}/{}), outside the \
          ratcheted band [{:.4}%, {:.4}%] this campaign measured and reported. THIS \
          IS THE HEADLINE NUMBER, so read the doc comment before touching the \
-         band. Three changes move it LEGITIMATELY and want a re-baseline with the \
-         new figure written into this module's header: `EXISTENCE_DENSITY` (the \
-         per-address coin — 0.5 -> 0.7 alone moves this 4.4x), `floors_range`'s \
-         frozen per-band ranges (they set how long a run is, and the deep-mouth \
-         account depends on the shallow bands staying long), and WHERE AN ENTRANCE \
-         LANDS (`entrance_mouth`; it was `root_floor_of`'s band pick, uniform over \
-         the parent's realized bands, which put ~1 side entrance in 5 straight into \
-         the Nadir band — The Drift's Task 7 retired that function and lands every \
-         mouth in the top band instead). A FOURTH mover joined them with the same \
-         task: `passages_from`'s descent rule itself, which now follows drawn \
-         band-transition edges and has no lateral `branch +/- 1` step at all. A \
-         move with NONE of those four touched is a finding, not a bound to widen.",
+         band. Four changes move it LEGITIMATELY and want a re-baseline with the \
+         new figure written into this module's header: `floors_range`'s frozen \
+         per-band ranges (they set how long a run is); `branch_count_of`'s \
+         authored weights (they set how many branches exist to be counted); \
+         `descents_from`'s band-transition edge draw (it decides how a branch \
+         reaches the band below); and WHERE AN ENTRANCE LANDS (`entrance_mouth`, \
+         which since Task 7 puts every mouth at level 0 of the TOP band). A move \
+         with NONE of those four touched is a finding, not a bound to widen. \
+         TWO MOVERS THIS MESSAGE USED TO NAME NO LONGER EXIST and are gone from \
+         the list rather than left to send you hunting: `EXISTENCE_DENSITY`, the \
+         per-address coin (deleted, spec section 4.1), and `root_floor_of`'s \
+         uniform band pick (retired, Task 7). Between them they are why this \
+         rate moved 0.359% -> 28.678%.",
         nadir_walk * 100.0,
         pooled.reached_nadir_all,
         pooled.branches,

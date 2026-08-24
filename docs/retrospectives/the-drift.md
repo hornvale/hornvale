@@ -250,11 +250,22 @@ quantity that places peoples, **because the two are disjoint derivations**.
 
 The Drift is the strongest available test of that argument and it confirms it:
 an epoch that relocated every chamber in every world, deleted a draw, added a
-draw and bumped six labels moved **three** drift-checked artifacts — the stream
-manifest, the type-audit report and the underworld witness page. Every almanac,
-the elevation map, every lab study, the Domesday survey and the client fixtures
-are byte-identical. So the bet does not move; the paragraph explaining why it
-would not move gains its second instance, and that is recorded in the chapter.
+draw and bumped six labels moved **four** drift-checked artifacts, of which
+only three derive from a world — the stream manifest, the type-audit report and
+the underworld witness page, plus the digest's decision index, which gained one
+line for this campaign's decision record. Every almanac, the elevation map,
+every lab study, the Domesday survey and the client fixtures are
+byte-identical. So the bet does not move; the paragraph explaining why it would
+not move gains its second instance, and that is recorded in the chapter.
+
+**The count in the sentence above was three until review, and the correction is
+this campaign's own lesson landing on its own prose.** The digest index is not
+world-derived, so nothing about the argument changes — but a *countable* claim
+published in the Confidence Gradient has to be the count, and the number was
+taken from a `main...HEAD` diff read at a moment before the decision record
+existed. A measurement that was correct when taken and stale when published is
+the same defect shape as the three falsified probe claims this task went
+looking for, committed by the task that went looking for them.
 
 The instrument thread in the same chapter *does* gain a corner — the
 three-blind-statistics finding above — because "replace the statistic again" is

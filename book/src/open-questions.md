@@ -2000,10 +2000,13 @@ chamber address, bumped six seed-derivation labels and retired a seventh; every
 chamber in every world relocated for the second time in three days; and
 underworld reachability went from **7.0% to 100.00%** on all three panel seeds,
 which is the largest single change to what is *usable* underground the project
-has made. Across the whole campaign exactly **three** drift-checked artifacts
-moved: the stream manifest, the type-audit report, and the underworld witness
-page. Every almanac, the elevation map, every laboratory study, the Domesday
-survey and the client fixtures are byte-identical.
+has made. Across the whole campaign exactly **four** drift-checked artifacts
+moved, and only **three** of them derive from a world: the stream manifest
+(the labels themselves), the type-audit report, and the underworld witness
+page — plus `docs/digest/decisions-in-force.md`, which gained one index line
+for the campaign's decision record and is not world-derived at all. Every
+almanac, the elevation map, every laboratory study, the Domesday survey and
+the client fixtures are byte-identical.
 
 So the seating axis still takes the four or five distinct values The Underworld
 measured, and a campaign that made the underworld *connected* contributed

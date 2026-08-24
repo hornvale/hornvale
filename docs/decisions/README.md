@@ -198,3 +198,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0171](0171-a-players-acts-are-not-filtered-out-of-a-saved-world.md) | A player's acts are not filtered out of a saved played world | Accepted |
 | [0172](0172-a-concept-with-no-possible-referent-is-an-extradiegetic-gap.md) | A concept with no possible referent is lexicalised as an extradiegetic gap | Accepted |
 | [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
+| [0216](0216-the-depth-band-roster-is-a-kernel-type.md) | The depth-band roster is a kernel type, and moving it is not an epoch | Accepted |
