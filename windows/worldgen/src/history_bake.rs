@@ -992,7 +992,7 @@ struct Community {
     /// cell → biome class through the composition root's map), so committing
     /// it would add a save-format surface for a value that can be re-derived
     /// exactly. No draws feed it; determinism is untouched.
-    /// Consumed by [`Bake::integrate_stores`], which samples it once per epoch
+    /// Consumed by [`Bake::raid_phases`], which samples it once per epoch
     /// to weight the sub-year accrual phases (The Granary T3).
     curve: Curve,
 }
@@ -3110,43 +3110,60 @@ impl<'a> Bake<'a> {
         // pressure test above now owns that outcome, and reaches it only after
         // the community has failed to find anywhere to go.)
 
+        // The Granary T4: predation moved out of the per-community step and
+        // into [`Bake::raid_phases`], the 12-phase sub-year loop that runs
+        // once for the whole snapshot after every community has grown — a
+        // raid is now asked at each phase with the stores AS THEY STAND
+        // then, so a target whose granary bottoms out mid-year becomes
+        // beatable exactly when its hoard is gone, not at the epoch boundary.
         self.grow(idx, era, year, pressure);
-
-        // Opportunistic predation — decoupled from this community's own
-        // crowding (density is NOT the trigger).
-        if self.communities[idx].alive {
-            self.maybe_raid(idx, era, year);
-        }
     }
 
-    /// Integrate one community's granary across the sub-year phases of its
-    /// annual cycle (The Granary T3, spec §3.2). The epoch's logistic growth
-    /// increment IS the year's production: it is split across
-    /// [`PHASES_PER_YEAR`] phases by the community's harvest curve (shares
-    /// normalized to one, so the curve redistributes WHEN food arrives, never
-    /// HOW MUCH — pinned by test), and consumption bleeds that same annual
-    /// produce back EVENLY, phase by phase. The net is therefore zero over a
-    /// growth year: the granary banks only the seasonal timing surplus,
-    /// swelling through harvest and drawing down through winter, exactly as a
-    /// store fed seasonally but eaten daily would. A shrinking year (negative
-    /// increment) accrues negatively and consumes nothing extra — a pure
-    /// draw-down of reserves. The stock clamps at zero every phase; a
-    /// community whose curve is empty in the lean half starves its granary
-    /// mid-year even in a good year, which is the depletion signal Task 4's
-    /// phase-stamped raids key on.
+    /// Run the epoch's conflict checks at sub-year resolution (The Granary
+    /// T4, spec §3.4; it also carries The Granary T3's store integration,
+    /// spec §3.2). Once per epoch, after every snapshot community has
+    /// grown: walk the year in [`PHASES_PER_YEAR`] ascending phases; within a
+    /// phase, first advance each community's granary one phase-step — the
+    /// epoch's logistic growth increment IS the year's production, split
+    /// across the phases by the community's harvest curve (shares normalized
+    /// to one, so the curve redistributes WHEN food arrives, never HOW MUCH —
+    /// pinned by test), while consumption bleeds that same annual produce
+    /// back EVENLY, so a growth year nets zero on stores and a shrinking
+    /// year draws down by its increment; the stock clamps at zero every
+    /// phase — then ask [`Bake::maybe_raid`] whether it
+    /// now beats a neighbour — stamped `year + phase / PHASES_PER_YEAR`, so
+    /// every record the raid writes (ends, foundings via relocate/resettle,
+    /// tribute `since`) carries the crossing day rather than the epoch
+    /// boundary. A raider that wins closes its own index; the closed index is
+    /// skipped by later phases and its fresh seat waits for the next epoch,
+    /// exactly as a mid-epoch opening always has.
     ///
-    /// Determinism: pure float arithmetic over a fixed ascending phase order,
-    /// no draws, no maps. Demography is untouched — population already moved
-    /// before this runs; only stores gain intra-year resolution.
-    fn integrate_stores(&mut self, idx: usize, annual_production: f64) {
-        let shares = phase_shares(self.communities[idx].curve);
-        let consumption = annual_production.max(0.0) / PHASES_PER_YEAR as f64;
-        let mut stores = self.communities[idx].stores;
-        // Ascending phase order — spec §3.4's fixed processing order.
-        for &share in shares.iter() {
-            stores = store_phase_step(stores, share * annual_production, consumption);
+    /// Determinism: phases ascending outermost, communities in the caller's
+    /// snapshot order within each phase, `BTreeMap`/`Vec` containers only,
+    /// `total_cmp` tie-breaks unchanged inside `maybe_raid` — and no new
+    /// stream draws anywhere in the loop (`maybe_raid` itself consumes none),
+    /// so the draw sequence moves only where an actual raid's outcome does.
+    fn raid_phases(&mut self, snapshot: &[usize], era: &EraClimate, year: f64) {
+        // Frozen per-community curve shares: read once, before any raid can
+        // open or close communities, so a phase never sees a share another
+        // phase's outcome chose.
+        let shares: Vec<[f64; PHASES_PER_YEAR]> = (0..self.communities.len())
+            .map(|i| phase_shares(self.communities[i].curve))
+            .collect();
+        for (phase, stamp) in
+            (0..PHASES_PER_YEAR).map(|p| (p, year + p as f64 / PHASES_PER_YEAR as f64))
+        {
+            for &idx in snapshot {
+                if !self.communities[idx].alive {
+                    continue; // lost its seat to an earlier phase's raid
+                }
+                let production = self.epoch_growth[idx];
+                let consumption = production.max(0.0) / PHASES_PER_YEAR as f64;
+                let c = &mut self.communities[idx];
+                c.stores = store_phase_step(c.stores, shares[idx][phase] * production, consumption);
+                self.maybe_raid(idx, era, stamp);
+            }
         }
-        self.communities[idx].stores = stores;
     }
 
     /// Opportunistic predation (The Tumult), now resolving **two outcomes**
@@ -3566,10 +3583,12 @@ impl<'a> Bake<'a> {
         // an under-collection with no symptom. `begin_epoch` zeroes the buffer,
         // so nothing carries across epochs.
         self.epoch_growth[idx] += increment;
-        // The Granary T3: the same increment, integrated over the sub-year
-        // phases of the harvest curve into running stores (spec §3.2). Runs
-        // after decay, so decay keeps its per-epoch meaning unchanged.
-        self.integrate_stores(idx, increment);
+        // The Granary T3's store integration now lives in [`Bake::raid_phases`]
+        // (The Granary T4): the walk must interleave with the raid checks
+        // phase by phase — integrating here would run the whole year before
+        // any raid was asked, which is precisely the epoch-boundary timing
+        // T4 removes. Decay above still runs first, keeping its per-epoch
+        // meaning unchanged.
         self.touch(idx, year);
         self.tally.grew += 1;
 
@@ -3781,9 +3800,14 @@ pub fn bake(
         let snapshot: Vec<usize> = (0..bake.communities.len())
             .filter(|&i| bake.communities[i].alive)
             .collect();
-        for idx in snapshot {
-            bake.step_community(idx, &era, year);
+        for idx in &snapshot {
+            bake.step_community(*idx, &era, year);
         }
+        // The Granary T4: predation now runs as its own 12-phase pass over
+        // the same snapshot (re-borrowed), stamped within the year (see
+        // `raid_phases`). Snapshot indices only — anything opened this epoch
+        // waits, as before.
+        bake.raid_phases(&snapshot, &era, year);
         // Tribute is collected once the whole world has stepped, so there is
         // growth to tax and so no subordinate's remittance depends on whether
         // its patron happened to be stepped before or after it. Spec §4.3d's
@@ -4106,6 +4130,162 @@ mod tests {
             Founding::From(lineage),
             "must NOT be the lineage ancestor (R1) for a 2nd-generation move"
         );
+    }
+
+    #[test]
+    fn a_raider_strikes_in_the_depleted_phase_not_at_the_epoch_boundary() {
+        // The Granary T4: raid checks run once per sub-year phase, stamped
+        // `year + phase / PHASES_PER_YEAR`, so a target whose granary bottoms
+        // out mid-year becomes beatable exactly when its stores are gone —
+        // `strength` weighs stores at `STORE_WEIGHT`, so the same fight the
+        // target's post-harvest hoard would win at the epoch boundary is lost
+        // in the depleted phase. The fixture hands the target a shrinking
+        // year (negative annual production, consumption floored at zero), so
+        // its stores fall monotonically from a rich opening hoard and cross
+        // the dominance threshold part-way through; the expected crossing
+        // phase is replayed here from the SAME `phase_shares`/`store_phase_step`
+        // arithmetic the loop runs, so the assertion pins the exact phase.
+        use crate::harvest::{Curve, LatDeg};
+        use hornvale_kernel::ReferenceElevation;
+
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        // The raider sits on poor ground next to a rich cell: the prize is
+        // strictly better land (`Spoil::Evict`), which is what stamps both
+        // sides' crossing day on their records.
+        let target_cell = *geo
+            .neighbors(CellId(0))
+            .iter()
+            .next()
+            .expect("cell 0 has a neighbour");
+        let caps = caps_from_fn(&geo, |c| if c == target_cell { RICH } else { POOR });
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let era = EraClimate {
+            day: 0.0,
+            ice: CellMap::from_fn(&geo, |_| false),
+            habitable: CellMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+        let people = KindId("goblin");
+
+        let mut bake = Bake {
+            geo: fixture_geo(),
+            biomes: grassland_biomes(),
+            graphs: &graphs,
+            cur_graph: 0,
+            caps_by_era: &caps,
+            peoples: all_settlers(),
+            river_prox: &river_prox,
+            refugia: &refugia,
+            seed: Seed(1),
+            disposition: no_disposition(),
+            disposition_spread: no_spread(),
+            in_group_radius: no_radius(),
+            time_horizon: strips_to_the_floor(),
+            seating: surface_seating(),
+            records: Vec::new(),
+            communities: Vec::new(),
+            node_index: BTreeMap::new(),
+            next_id: 1,
+            stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+            tribute: BTreeMap::new(),
+            epoch_growth: Vec::new(),
+            tally: BakeCensus::default(),
+        };
+
+        // Raider on poor cell 0 (population 30, no stores); target on the
+        // rich neighbour (population 20). Dominance reads
+        // `30 > (20 + STORE_WEIGHT × s) × defensibility × RAID_MARGIN`, so
+        // with unit-conductance defensibility ≈ DEF_MIN = 0.75 the raid only
+        // clears once the target's stores drop below ~13.3.
+        const RAIDER_POP: f64 = 30.0;
+        const TARGET_POP: f64 = 20.0;
+        const OPENING_HOARD: f64 = 20.0;
+        const YEAR_PRODUCTION: f64 = -20.0; // a shrinking year: pure draw-down
+        let r_idx = bake.open(
+            people,
+            CellId(0),
+            100.0,
+            RAIDER_POP,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let t_idx = bake.open(
+            people,
+            target_cell,
+            100.0,
+            TARGET_POP,
+            Founding::Genesis(target_cell),
+            None,
+            0.0,
+        );
+        bake.begin_epoch();
+        // The target opens with a full granary and loses it over the year:
+        // negative production accrues negatively by the curve's shares and
+        // consumes nothing (spec §3.2's shrinking-year reading).
+        bake.communities[t_idx].stores = OPENING_HOARD;
+        bake.epoch_growth[t_idx] = YEAR_PRODUCTION;
+        // A deep-southern grassland curve: harvest peaks near mid-year, so
+        // the day-0 (southern autumn) share is ~zero and the hoard survives
+        // the early phases before crashing through the growing half.
+        bake.communities[t_idx].curve = Curve::new(
+            LatDeg::new(-55.0).expect("a valid latitude"),
+            BiomeClass::Grassland,
+        );
+
+        // Replay the exact store walk to find where the dominance threshold
+        // is first crossed (the raid fires at the FIRST such phase, since the
+        // raider is asked every phase in ascending order).
+        let d = defensibility_for_test(&graphs[0], CellId(0), target_cell);
+        let threshold = (RAIDER_POP / (RAID_MARGIN * d) - TARGET_POP) / STORE_WEIGHT;
+        assert!(
+            threshold > 0.0 && threshold < OPENING_HOARD,
+            "fixture must make the hoard decisive: threshold {threshold}"
+        );
+        let shares = phase_shares(bake.communities[t_idx].curve);
+        let mut s = OPENING_HOARD;
+        let expected_phase = (0..PHASES_PER_YEAR)
+            .find(|&p| {
+                s = store_phase_step(s, shares[p] * YEAR_PRODUCTION, 0.0);
+                s < threshold
+            })
+            .expect("the hoard must cross the threshold within the year");
+        assert!(expected_phase > 0, "crossing must not land on the boundary");
+
+        // Snapshot order is load-bearing here: within a phase each community
+        // advances its own granary before being ASKED, so the target must
+        // precede the raider for the raider to see the stores as they stand
+        // this phase — which is what the replay above predicts.
+        let snapshot = vec![t_idx, r_idx];
+        bake.raid_phases(&snapshot, &era, 100.0);
+
+        // The raid fired, and it fired AT the depleted phase: the loser's
+        // record ends `Fled` at the crossing timestamp, and the raider's new
+        // seat on the taken cell is founded at that same moment — not at the
+        // epoch boundary, where the target's hoard still out-muscles him.
+        let stamp = 100.0 + expected_phase as f64 / PHASES_PER_YEAR as f64;
+        let loser = bake
+            .records
+            .iter()
+            .find(|r| r.core.cause == Some(CauseOfEnd::Fled))
+            .expect("the depleted-phase raid must fire");
+        assert_eq!(loser.core.site, target_cell);
+        assert_eq!(loser.core.ended, Some(stamp));
+        match loser.ended_by {
+            Ended::By(raider) => {
+                let seat = bake
+                    .records
+                    .iter()
+                    .find(|r| r.founded_from == Founding::From(raider))
+                    .expect("the raider seated itself on the prize");
+                assert_eq!(seat.core.site, target_cell);
+                assert_eq!(seat.core.founded, stamp, "founding stamps the crossing day");
+            }
+            Ended::Nature => panic!("the fled record must name its raider"),
+        }
     }
 
     /// The owned inputs a hand-built [`Bake`] borrows, over `Geosphere::new(1)`
@@ -4623,9 +4803,10 @@ mod tests {
     /// stores unchanged — accrual sums to the increment and consumption bleeds
     /// the same total back, so the curve redistributes WHEN food arrives,
     /// never HOW MUCH. A shrinking year draws down by exactly its increment.
-    /// Scripted on a hand-built Bake; `integrate_stores` is compared against
-    /// the same loop written out here so any change to phase order or the
-    /// per-phase step shows up as a bit mismatch.
+    /// Scripted on a hand-built Bake driven through [`Bake::raid_phases`] —
+    /// the PRODUCTION loop itself, with a lone community so `maybe_raid` is
+    /// inert — compared against the same walk written out here so any change
+    /// to phase order or the per-phase step shows up as a bit mismatch.
     #[test]
     fn granary_integration_preserves_the_annual_increment() {
         let geo = Geosphere::new(1);
@@ -4646,7 +4827,9 @@ mod tests {
 
         // A growth year: stores end where they started.
         bake.communities[0].stores = 1000.0;
-        bake.integrate_stores(0, 37.5);
+        bake.begin_epoch();
+        bake.epoch_growth[0] = 37.5;
+        bake.raid_phases(&[0], &era_at(0.0), 100.0);
         assert!(
             (bake.communities[0].stores - 1000.0).abs() < 1e-8,
             "a growth year must net zero on stores, got {}",
@@ -4655,7 +4838,8 @@ mod tests {
 
         // A shrinking year: pure draw-down by exactly the negative increment.
         bake.communities[0].stores = 1000.0;
-        bake.integrate_stores(0, -25.0);
+        bake.epoch_growth[0] = -25.0;
+        bake.raid_phases(&[0], &era_at(0.0), 100.0);
         assert!(
             (bake.communities[0].stores - 975.0).abs() < 1e-8,
             "a shrinking year must draw down by its increment, got {}",
@@ -4665,16 +4849,17 @@ mod tests {
         // Bit-exact against the mirrored loop: ascending phases, accrue
         // share × annual, bleed annual/12, clamp at zero.
         bake.communities[0].stores = 1000.0;
+        bake.epoch_growth[0] = 37.5;
         let shares = phase_shares(bake.communities[0].curve);
         let mut mirrored = 1000.0;
         for &share in shares.iter() {
             mirrored = store_phase_step(mirrored, share * 37.5, 37.5 / PHASES_PER_YEAR as f64);
         }
-        bake.integrate_stores(0, 37.5);
+        bake.raid_phases(&[0], &era_at(0.0), 100.0);
         assert_eq!(
             bake.communities[0].stores.to_bits(),
             mirrored.to_bits(),
-            "integrate_stores diverged from the scripted mirror loop"
+            "raid_phases diverged from the scripted mirror loop"
         );
 
         // Same mirror discipline through the CLAMP: entering the year nearly
@@ -4684,6 +4869,7 @@ mod tests {
         // curve) cannot hide behind the net-zero identity here.
         bake.communities[0].curve = Curve::new(LatDeg::new(-55.0).unwrap(), BiomeClass::Grassland);
         bake.communities[0].stores = 1.0;
+        bake.epoch_growth[0] = 40.0;
         let southern_shares = phase_shares(bake.communities[0].curve);
         let mut clamped_mirror = 1.0;
         let mut unclamped = 1.0;
@@ -4694,12 +4880,12 @@ mod tests {
             clamped_mirror =
                 store_phase_step(clamped_mirror, share * 40.0, 40.0 / PHASES_PER_YEAR as f64);
         }
-        bake.integrate_stores(0, 40.0);
+        bake.raid_phases(&[0], &era_at(0.0), 100.0);
         assert!(trough < 0.0, "scenario must cross zero mid-year");
         assert_eq!(
             bake.communities[0].stores.to_bits(),
             clamped_mirror.to_bits(),
-            "integrate_stores diverged from the mirrored loop across the clamp"
+            "raid_phases diverged from the mirrored loop across the clamp"
         );
     }
 
@@ -4733,7 +4919,9 @@ mod tests {
         bake.communities[0].curve = Curve::new(LatDeg::new(-55.0).unwrap(), BiomeClass::Grassland);
         let production = 40.0;
         bake.communities[0].stores = 1.0;
-        bake.integrate_stores(0, production);
+        bake.begin_epoch();
+        bake.epoch_growth[0] = production;
+        bake.raid_phases(&[0], &era_at(0.0), 100.0);
         let final_stores = bake.communities[0].stores;
 
         // Mirror the year WITHOUT the clamp to prove the lean half actually
@@ -5345,9 +5533,14 @@ mod tests {
             let alive: Vec<usize> = (0..bake.communities.len())
                 .filter(|&i| bake.communities[i].alive)
                 .collect();
-            for idx in alive {
-                bake.step_community(idx, &era, year);
+            for idx in &alive {
+                bake.step_community(*idx, &era, year);
             }
+            // The Granary T4: predation left `step_community` and became this
+            // 12-phase pass (see `raid_phases`), so a hand-driven epoch must
+            // call it explicitly or no relation ever forms — subordination is
+            // `maybe_raid`'s doing, and `maybe_raid` now lives here.
+            bake.raid_phases(&alive, &era, year);
             // Who owes as collection begins, and how much has moved so far.
             let owing: Vec<usize> = bake.tribute.keys().copied().collect();
             let before_collection = bake.tally.tribute_collected;
@@ -5498,9 +5691,14 @@ mod tests {
             let alive: Vec<usize> = (0..bake.communities.len())
                 .filter(|&i| bake.communities[i].alive)
                 .collect();
-            for idx in alive {
-                bake.step_community(idx, &era, year);
+            for idx in &alive {
+                bake.step_community(*idx, &era, year);
             }
+            // The Granary T4: predation left `step_community` and became this
+            // 12-phase pass (see `raid_phases`) — same reason as the floor
+            // test below; without it the relation never forms and the arc has
+            // nothing to read.
+            bake.raid_phases(&alive, &era, year);
             // The standing demand the collection is about to run on, read AFTER
             // formation so the epoch a relation opens in counts too.
             let demanded = bake.tribute.get(&sub).map(|t| (t.patron, t.assessment));
@@ -5701,9 +5899,13 @@ mod tests {
                 let alive: Vec<usize> = (0..bake.communities.len())
                     .filter(|&i| bake.communities[i].alive)
                     .collect();
-                for idx in alive {
-                    bake.step_community(idx, &era, year);
+                for idx in &alive {
+                    bake.step_community(*idx, &era, year);
                 }
+                // The Granary T4: predation left `step_community` and became
+                // this 12-phase pass (see `raid_phases`) — same reason as the
+                // two tests above; without it no patron ever takes this vassal.
+                bake.raid_phases(&alive, &era, year);
                 let before_collection = bake.communities[sub].population;
                 bake.collect_tribute(year, &era);
                 // Nothing but `grow` and `collect_tribute` moves a population
