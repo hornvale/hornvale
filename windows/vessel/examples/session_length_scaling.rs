@@ -76,8 +76,17 @@ use hornvale_kernel::RoomAddr;
 use hornvale_kernel::{EntityId, Fact, Ledger, RoomMeshMemo, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_species::MetabolicClass;
+// `Body` reads as private everywhere else in this file's own comments (an
+// earlier assumption, carried into this campaign's task brief too) but is
+// in fact reachable at `hornvale_vessel::body::Body` -- `pub mod body` in
+// `lib.rs` re-exports a `pub struct Body` with `pub` fields, verified by a
+// standalone `cargo check` of a function taking `&Body`/`&[Body]` before
+// writing the probes below. Named directly rather than routed around.
+use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    DriveMovements, HomeNavCache, LocaleTerrain, SUSTENANCE, Terrain, derive_npcs, drive_at,
+    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, SUSTENANCE, Terrain,
+    believed_water, derive_npcs, drive_at, fatigue_at, hazard_memory_memo, hunger_at,
+    shared_believed_water,
 };
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 // The measurement harness times each tick for a diagnostic (never sim logic,
@@ -108,6 +117,14 @@ const CALIB_ITERS: u64 = 1 << 22;
 /// enough that scheduler noise averages out of a microsecond-scale span, small
 /// enough to stay free next to the band it follows.
 const FOLD_REPS: u32 = 200;
+
+/// The plan-search node-expansion budget passed to `believed_water`,
+/// `shared_believed_water` and (indirectly, via production's own call sites)
+/// the belief folds below. Mirrors `liveness.rs`'s own `PLAN_BUDGET` (1,000),
+/// which is a private `const` and so cannot be imported -- this is the same
+/// value, restated, so the probe pays the same search ceiling production
+/// does rather than a cheaper or more generous one of its own invention.
+const PROBE_BUDGET: usize = 1_000;
 
 /// Ticks per reported band. `TICKS / BAND` bands, each a mean over `BAND`
 /// individually-timed ticks — enough averaging that one scheduler hiccup does
@@ -208,6 +225,151 @@ fn probe_fold_us(
     us
 }
 
+/// Time one `hunger_at` call, averaged over `FOLD_REPS` back-to-back calls —
+/// the structural twin of [`probe_fold_us`], over `EATEN` instead of `DRANK`
+/// and the `HUNGER` params instead of `SUSTENANCE`. Same reasoning: nothing
+/// inside the timed span scales with anything but the length of history
+/// walked, and `&dyn Terrain` blocks the devirtualization that would let the
+/// optimizer hoist the identical-argument calls out of the loop.
+fn probe_hunger_us(
+    ledger: &Ledger,
+    entity: EntityId,
+    home: &RoomAddr,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    class: MetabolicClass,
+) -> f64 {
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let t0 = Instant::now();
+    let mut sink = 0.0_f64;
+    for _ in 0..FOLD_REPS {
+        sink += hunger_at(ledger, entity, home, t, terrain, class);
+    }
+    let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
+    // Consume `sink` so the calls cannot be optimized away.
+    if sink < 0.0 {
+        println!("hunger integral went negative -- impossible, reported so it is never silent");
+    }
+    us
+}
+
+/// Time one `fatigue_at` call, averaged over `FOLD_REPS` back-to-back calls —
+/// the simplest of the six folds: no terrain, no metabolic class, a pure fold
+/// over committed `RESTED` events.
+fn probe_fatigue_us(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let t0 = Instant::now();
+    let mut sink = 0.0_f64;
+    for _ in 0..FOLD_REPS {
+        sink += fatigue_at(ledger, entity, t);
+    }
+    let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
+    // Consume `sink` so the calls cannot be optimized away.
+    if sink < 0.0 {
+        println!("fatigue fold went negative -- impossible, reported so it is never silent");
+    }
+    us
+}
+
+/// Time one `believed_water` call, averaged over `FOLD_REPS` back-to-back
+/// calls — the water-belief fold over the probe agent's own `agent-at`
+/// history intersected with water-truth.
+fn probe_believed_water_us(
+    ledger: &Ledger,
+    npc: &Body,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    budget: usize,
+) -> f64 {
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let t0 = Instant::now();
+    let mut some_count: u64 = 0;
+    for _ in 0..FOLD_REPS {
+        if believed_water(ledger, npc, t, terrain, budget).is_some() {
+            some_count += 1;
+        }
+    }
+    let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
+    // Consume `some_count` so the calls cannot be optimized away. Unlike the
+    // impossible-value guards above, `None` (an ignorant belief) is a
+    // legitimate outcome of this fold, so a zero count is reported as a
+    // plain note, not an alarm.
+    if some_count == 0 {
+        println!(
+            "believed_water: probe agent has no known water across {FOLD_REPS} calls at this band"
+        );
+    }
+    us
+}
+
+/// Time one `shared_believed_water` call over the WHOLE roster, averaged over
+/// `FOLD_REPS` back-to-back calls. Threaded the full `band` slice deliberately
+/// — that is what `step_with_occupancy` passes in production, so this is
+/// production cost, not a cheaper single-agent proxy.
+fn probe_shared_believed_water_us(
+    ledger: &Ledger,
+    npc: &Body,
+    band: &[Body],
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    budget: usize,
+) -> f64 {
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let t0 = Instant::now();
+    let mut some_count: u64 = 0;
+    for _ in 0..FOLD_REPS {
+        if shared_believed_water(ledger, npc, band, t, terrain, budget).is_some() {
+            some_count += 1;
+        }
+    }
+    let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
+    if some_count == 0 {
+        println!(
+            "shared_believed_water: probe agent has no known water across {FOLD_REPS} calls at this band"
+        );
+    }
+    us
+}
+
+/// Time one `hazard_memory_memo` call over the whole roster, averaged over
+/// `FOLD_REPS` back-to-back calls, with a FRESH [`PrimaryAfraidMemo`]
+/// constructed INSIDE the loop on every repetition.
+///
+/// **This is the one place in this file where sharing the obvious state
+/// across repetitions would silently change what is measured.** The memo's
+/// own doc says "one per tick" for exactly this reason: a memo shared across
+/// `FOLD_REPS` calls at the SAME `(ledger, t)` would serve every call after
+/// the first from cache, so the loop would measure the memo's hit rate, not
+/// the fold — and it would read as this fold being nearly free, which is
+/// the wrong conclusion for the right-looking reason.
+fn probe_hazard_memory_memo_us(
+    ledger: &Ledger,
+    npc: &Body,
+    band: &[Body],
+    t: WorldTime,
+    terrain: &dyn Terrain,
+) -> f64 {
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let t0 = Instant::now();
+    let mut sink: u64 = 0;
+    for _ in 0..FOLD_REPS {
+        let mut memo = PrimaryAfraidMemo::new();
+        let mem = hazard_memory_memo(ledger, npc, t, terrain, band, &mut memo);
+        sink += (mem.shunned.len() + mem.dread.len()) as u64;
+    }
+    let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
+    // `sink == 0` is EXPECTED on a settled, hazard-free world (no
+    // primary-afraid emitter on seed 42 -- see `HazardMemory`'s own doc), so
+    // this guard is the vanishingly-unlikely-saturation kind, not a
+    // plausible note.
+    if sink == u64::MAX {
+        println!(
+            "hazard memory sink saturated -- vanishingly unlikely, reported so it is never silent"
+        );
+    }
+    us
+}
+
 /// Each roster member's own `agent-at` posting count — the per-agent history
 /// the folds in `liveness.rs` traverse on every evaluation. Read through
 /// `facts_of`, the same indexed path those folds use, so this counts exactly
@@ -290,6 +452,45 @@ struct Band {
     /// than taking it on trust.
     folded_min: usize,
     folded_max: usize,
+
+    // ---- The other five folds (Task 2, The Tailrace) — same shape as
+    // `fold_us`/`norm_fold_us`: a raw microsecond reading taken alongside
+    // `fold_us` at this band, and its twin normalised to band 1's machine
+    // speed by the same post-loop pass. ----
+    /// Mean microseconds for one `hunger_at` call on the probe agent.
+    hunger_us: f64,
+    /// `hunger_us` normalised to band 1's machine speed.
+    norm_hunger_us: f64,
+    /// Mean microseconds for one `fatigue_at` call on the probe agent.
+    fatigue_us: f64,
+    /// `fatigue_us` normalised to band 1's machine speed.
+    norm_fatigue_us: f64,
+    /// Mean microseconds for one `believed_water` call on the probe agent.
+    believed_water_us: f64,
+    /// `believed_water_us` normalised to band 1's machine speed.
+    norm_believed_water_us: f64,
+    /// Mean microseconds for one `shared_believed_water` call on the probe
+    /// agent, threaded the full roster (production's own call shape).
+    shared_believed_water_us: f64,
+    /// `shared_believed_water_us` normalised to band 1's machine speed.
+    norm_shared_believed_water_us: f64,
+    /// Mean microseconds for one `hazard_memory_memo` call on the probe
+    /// agent, threaded the full roster with a FRESH memo per call.
+    hazard_memory_memo_us: f64,
+    /// `hazard_memory_memo_us` normalised to band 1's machine speed.
+    norm_hazard_memory_memo_us: f64,
+
+    // ---- Step 3: grounding `fold_depth_sweep.rs`'s `RESET_EVERY` guess. ----
+    /// The probe agent's own cumulative `DRANK` fact count at this band's end.
+    probe_drank_count: usize,
+    /// The probe agent's own cumulative `AGENT_AT` count (== `probe_history`)
+    /// divided by ticks elapsed so far — its own posting rate, for the SAME
+    /// agent `probe_drank_per_tick` uses, so the ratio of the two is
+    /// production's postings-per-drink `S` with the tick divisor cancelling.
+    probe_folded_per_tick: f64,
+    /// The probe agent's own `DRANK` rate: cumulative `DRANK` count divided
+    /// by ticks elapsed so far.
+    probe_drank_per_tick: f64,
 }
 
 fn main() {
@@ -324,7 +525,7 @@ fn main() {
     let bands = run(&world, &ctx, home_settlement, day_length_std);
 
     println!(
-        "{:>5} {:>12} {:>11} {:>11} {:>9} {:>7} {:>9} {:>9} {:>12}",
+        "{:>5} {:>12} {:>11} {:>11} {:>9} {:>7} {:>9} {:>9} {:>9} {:>12}",
         "band",
         "ticks",
         "fold us*",
@@ -333,15 +534,17 @@ fn main() {
         "facts",
         "searches",
         "folded/a",
+        "drank/t",
         "ledger_len"
     );
     println!(
         "  (* normalised to band 1's machine speed. `fold us*` is the DECISIVE column -- \
-         see the module doc.)"
+         see the module doc. `drank/t` is the PROBE agent's own cumulative `drank` count \
+         divided by ticks elapsed so far -- step 3's grounding column, read against `folded/a`.)"
     );
     for b in &bands {
         println!(
-            "{:>5} {:>5}-{:<6} {:>11.2} {:>11.2} {:>9.2} {:>7} {:>9} {:>9.1} {:>12}",
+            "{:>5} {:>5}-{:<6} {:>11.2} {:>11.2} {:>9.2} {:>7} {:>9} {:>9.1} {:>9.4} {:>12}",
             b.index,
             b.ticks_before,
             b.ticks_before + BAND - 1,
@@ -351,6 +554,7 @@ fn main() {
             b.facts_delta,
             b.searches_delta,
             b.folded_len,
+            b.probe_drank_per_tick,
             b.ledger_len
         );
     }
@@ -363,6 +567,36 @@ fn main() {
              (a wide spread would mean the mean stands for nothing)",
             last.folded_len, last.folded_min, last.folded_max
         );
+
+        // ---- Step 3: ground `fold_depth_sweep.rs`'s `RESET_EVERY = 20`
+        // guess against the PROBE agent's own drinking cadence. `S` is
+        // production's postings-per-drink -- folded-per-tick divided by
+        // drank-per-tick, for the SAME agent, so the tick divisor cancels
+        // and `S` reduces to a plain ratio of two cumulative counts.
+        println!();
+        if last.probe_drank_count == 0 {
+            println!(
+                "drank-cadence: the probe agent committed ZERO `drank` facts across {TICKS} \
+                 ticks (folded {} `agent-at` postings over the same span). S is UNBOUNDED for \
+                 this agent -- the SINGLE-RESET regime IS its production regime, not the edge \
+                 case `fold_depth_sweep.rs` isolates deliberately.",
+                last.probe_history
+            );
+        } else {
+            // `probe_folded_per_tick / probe_drank_per_tick`: the tick
+            // divisor is the SAME for both (this band's cumulative ticks),
+            // so it cancels and the ratio reduces to the plain postings-per-
+            // drink count below -- computed this way so both stored rate
+            // columns are actually read, not just `probe_history` again.
+            let s_ratio = last.probe_folded_per_tick / last.probe_drank_per_tick;
+            println!(
+                "drank-cadence: probe agent's own postings-per-drink S = {s_ratio:.2} \
+                 ({} `agent-at` postings / {} `drank` facts over {TICKS} ticks). \
+                 fold_depth_sweep.rs's RESET_EVERY = 20 is being compared against this number \
+                 in the report, not judged here.",
+                last.probe_history, last.probe_drank_count
+            );
+        }
     }
 
     // BAND 1 IS EXCLUDED FROM EVERY STATISTIC BELOW, and the exclusion is
@@ -414,6 +648,86 @@ fn main() {
             &warm.iter().map(|b| b.norm_ms_per_tick).collect::<Vec<_>>(),
             first.folded_len,
             last.folded_len,
+        );
+
+        // ---- Task 2: the ATTRIBUTION -- the other five folds, each against
+        // the SAME x-axis (`probe_history`) `drive_at`'s own decisive fit
+        // above uses, so the six elasticities are directly comparable. A
+        // fold at elasticity ~1.0 walks history; a fold at ~0.0 does not --
+        // that is the whole answer to stage 4's entry gate.
+        println!();
+        println!(
+            "---- ATTRIBUTION: the other five folds against the probe agent's own history ----"
+        );
+        let history_x = || {
+            warm.iter()
+                .map(|b| b.probe_history as f64)
+                .collect::<Vec<_>>()
+        };
+        report_affine(
+            "hunger_at (us/call) vs the probe agent's own history",
+            "us/call",
+            &history_x(),
+            &warm.iter().map(|b| b.norm_hunger_us).collect::<Vec<_>>(),
+            first.probe_history as f64,
+            last.probe_history as f64,
+        );
+        report_affine(
+            "fatigue_at (us/call) vs the probe agent's own history",
+            "us/call",
+            &history_x(),
+            &warm.iter().map(|b| b.norm_fatigue_us).collect::<Vec<_>>(),
+            first.probe_history as f64,
+            last.probe_history as f64,
+        );
+        report_affine(
+            "believed_water (us/call) vs the probe agent's own history",
+            "us/call",
+            &history_x(),
+            &warm
+                .iter()
+                .map(|b| b.norm_believed_water_us)
+                .collect::<Vec<_>>(),
+            first.probe_history as f64,
+            last.probe_history as f64,
+        );
+        report_affine(
+            "shared_believed_water (us/call, full roster) vs the probe agent's own history",
+            "us/call",
+            &history_x(),
+            &warm
+                .iter()
+                .map(|b| b.norm_shared_believed_water_us)
+                .collect::<Vec<_>>(),
+            first.probe_history as f64,
+            last.probe_history as f64,
+        );
+        report_affine(
+            "hazard_memory_memo (us/call, full roster, fresh memo/call) vs the probe agent's own history",
+            "us/call",
+            &history_x(),
+            &warm
+                .iter()
+                .map(|b| b.norm_hazard_memory_memo_us)
+                .collect::<Vec<_>>(),
+            first.probe_history as f64,
+            last.probe_history as f64,
+        );
+
+        // The six ABSOLUTE us/call figures at the final band, side by side --
+        // a fold can be history-proportional (elasticity ~1.0) and still be
+        // cheap, and stage 4's gate is about MATERIAL share, not the
+        // exponent alone.
+        println!();
+        println!(
+            "final-band us/call, all six folds: drive_at={:.2} hunger_at={:.2} fatigue_at={:.2} \
+             believed_water={:.2} shared_believed_water={:.2} hazard_memory_memo={:.2}",
+            last.norm_fold_us,
+            last.norm_hunger_us,
+            last.norm_fatigue_us,
+            last.norm_believed_water_us,
+            last.norm_shared_believed_water_us,
+            last.norm_hazard_memory_memo_us,
         );
 
         // Monotonicity of the decisive column, with the CORRECT tail
@@ -569,8 +883,10 @@ fn run(
     // output does not advertise. The roster MEAN cannot be zero unless the
     // sim committed nothing at all, and `min`/`max` are printed beside it so
     // a reader can see whether the mean stands for anything.
-    // `Body` is private to the crate, so the roster is carried here as bare
-    // `EntityId`s -- everything below needs the identity, nothing needs the body.
+    // Carried here as bare `EntityId`s for `folded_counts`'s indexed
+    // `facts_of` reads -- the five new folds below need the full `Body`
+    // (`npcs` itself, indexed by `probe`'s stored position) rather than this
+    // identity-only projection.
     let roster: Vec<EntityId> = npcs.iter().map(|n| n.entity).collect();
 
     // The probe agent for `fold_us`, chosen ONCE and then fixed for the whole
@@ -580,8 +896,10 @@ fn run(
     // first member, which an earlier draft used and which read zero: the
     // per-agent spread is wide (min 0, max 420 measured at the final band), so
     // some derived bodies never commit a position at all and a positional
-    // choice can silently land on one.
-    let mut probe: Option<(EntityId, RoomAddr, MetabolicClass)> = None;
+    // choice can silently land on one. The fourth element is the same
+    // member's index into `npcs`, kept so the five `&Body`/`&[Body]` folds
+    // below can read `&npcs[idx]` without a second search.
+    let mut probe: Option<(EntityId, RoomAddr, MetabolicClass, usize)> = None;
 
     let mut bands: Vec<Band> = Vec::new();
     let mut band_facts_before = ledger.len();
@@ -628,20 +946,40 @@ fn run(
                     .enumerate()
                     .max_by_key(|(_, c)| **c)
                     .expect("the roster is non-empty");
-                probe = Some((roster[i], npcs[i].home.clone(), npcs[i].metabolic_class));
+                probe = Some((roster[i], npcs[i].home.clone(), npcs[i].metabolic_class, i));
             }
-            let (p_entity, p_home, p_class) = probe
+            let (p_entity, p_home, p_class, p_idx) = probe
                 .clone()
                 .expect("set on the first band and never cleared");
+            let npc = &npcs[p_idx];
             let p_history = ledger
                 .facts_of(p_entity, hornvale_vessel::liveness::AGENT_AT)
+                .count();
+            let p_drank = ledger
+                .facts_of(p_entity, hornvale_vessel::liveness::DRANK)
                 .count();
             let mesh_for_probe = mesh_memo.clone();
             let probe_terrain =
                 LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe));
             let fold_us = probe_fold_us(&ledger, p_entity, &p_home, day, &probe_terrain, p_class);
+            let hunger_us =
+                probe_hunger_us(&ledger, p_entity, &p_home, day, &probe_terrain, p_class);
+            let fatigue_us = probe_fatigue_us(&ledger, p_entity, day);
+            let believed_water_us =
+                probe_believed_water_us(&ledger, npc, day, &probe_terrain, PROBE_BUDGET);
+            let shared_believed_water_us = probe_shared_believed_water_us(
+                &ledger,
+                npc,
+                &npcs,
+                day,
+                &probe_terrain,
+                PROBE_BUDGET,
+            );
+            let hazard_memory_memo_us =
+                probe_hazard_memory_memo_us(&ledger, npc, &npcs, day, &probe_terrain);
             let calib_ms = calibrate();
             let searches_after = home_nav_cache.searches();
+            let ticks_elapsed = (tick + 1) as f64;
             bands.push(Band {
                 index: bands.len() + 1,
                 ticks_before: tick + 1 - BAND,
@@ -659,6 +997,19 @@ fn run(
                 fold_us,
                 norm_fold_us: 0.0,
                 probe_history: p_history,
+                hunger_us,
+                norm_hunger_us: 0.0,
+                fatigue_us,
+                norm_fatigue_us: 0.0,
+                believed_water_us,
+                norm_believed_water_us: 0.0,
+                shared_believed_water_us,
+                norm_shared_believed_water_us: 0.0,
+                hazard_memory_memo_us,
+                norm_hazard_memory_memo_us: 0.0,
+                probe_drank_count: p_drank,
+                probe_folded_per_tick: p_history as f64 / ticks_elapsed,
+                probe_drank_per_tick: p_drank as f64 / ticks_elapsed,
             });
             band_facts_before = facts_after;
             band_searches_before = searches_after;
@@ -672,6 +1023,11 @@ fn run(
         for b in bands.iter_mut() {
             b.norm_ms_per_tick = b.ms_per_tick * base / b.calib_ms;
             b.norm_fold_us = b.fold_us * base / b.calib_ms;
+            b.norm_hunger_us = b.hunger_us * base / b.calib_ms;
+            b.norm_fatigue_us = b.fatigue_us * base / b.calib_ms;
+            b.norm_believed_water_us = b.believed_water_us * base / b.calib_ms;
+            b.norm_shared_believed_water_us = b.shared_believed_water_us * base / b.calib_ms;
+            b.norm_hazard_memory_memo_us = b.hazard_memory_memo_us * base / b.calib_ms;
         }
     }
     bands

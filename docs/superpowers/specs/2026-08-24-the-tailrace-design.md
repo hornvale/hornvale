@@ -304,6 +304,163 @@ it cannot produce the 70–80% share — and that share is the number that makes
 campaign worth doing. One answers *is this real and does it matter*; the other
 answers *what exactly is the law*.
 
+### Attribution across the six folds
+
+Stage 1's remaining deliverable, and stage 4's entry gate. §4's decisive
+measurement establishes only that `drive_at` itself is history-proportional; it
+does not say which of the other five folds carry the rest of the whole tick's
+70–80% history-proportional share. This section closes that.
+
+**Method: direct timing, not a `samply` profile — a change from this
+campaign's own earlier plan, and worth stating why.** A sampling profiler
+attributes wall time to whatever symbol the program counter was in when a
+sample landed, which fails exactly where this question is hardest: a fold
+small enough to be inlined into its caller (plausible for `fatigue_at`, the
+cheapest of the six) disappears from the profile's symbol table entirely, and
+a missing symbol reads as "zero cost" when it may only mean "not separately
+addressable." Direct timing — `session_length_scaling.rs`'s existing
+`probe_fold_us` pattern, extended to the other five folds — has a known call
+count (`FOLD_REPS` back-to-back calls, timed as one span) and no
+symbolication step, so it cannot mistake absence-from-a-sample for absence-of-
+cost.
+
+Each of the five siblings gets its own probe function
+(`probe_hunger_us`/`probe_fatigue_us`/`probe_believed_water_us`/
+`probe_shared_believed_water_us`/`probe_hazard_memory_memo_us`), timed on the
+SAME fixed probe agent `drive_at`'s own decisive measurement uses, and
+regressed against the SAME x-axis (`probe_history`, that agent's own
+`agent-at` count) so all six elasticities are directly comparable.
+`shared_believed_water` and `hazard_memory_memo` are threaded the full
+50-agent roster, matching what `step_with_occupancy` actually passes — not a
+cheaper single-agent proxy. `hazard_memory_memo` constructs a FRESH
+`PrimaryAfraidMemo` inside the loop on every one of the `FOLD_REPS`
+repetitions: the type's own doc says "one per tick" for exactly this reason,
+and sharing one across repetitions at the same `(ledger, t)` would serve every
+call after the first from cache, measuring the memo's hit rate rather than the
+fold — reading, wrongly, as this fold being nearly free.
+
+**Results — three runs, box load average 7.0–16.3, reported without picking
+the flattering one.** The instrument's own module doc already documents a
+build-up of history from wall-clock order making load contention
+indistinguishable from a genuine effect at high load; that recurred here.
+Run 1 sat at load average 14.8–16.3 throughout and every elasticity below is
+suppressed relative to runs 2–3 (load 7.0–15.0) — same code, same seed, same
+probe agent, lower signal at higher load, exactly as §4's own history with
+`drive_at` predicts.
+
+| fold | elasticity (run1 / run2 / run3) | r² (run1 / run2 / run3) | final-band µs/call (run1 / run2 / run3) |
+|---|---|---|---|
+| `drive_at` (decisive, restated) | 0.18 / 1.14 / 0.81 | 0.010 / 0.824 / 0.544 | 1772.14 / 764.55 / 809.35 |
+| `hunger_at` | 0.21 / 1.09 / 1.22 | 0.012 / 0.824 / 0.913 | 2375.58 / 770.26 / 770.28 |
+| `fatigue_at` | -0.86 / 0.53 / -0.18 | 0.019 / 0.050 / 0.031 | 0.98 / 0.13 / 0.14 |
+| `believed_water` | 0.37 / 1.01 / 1.10 | 0.124 / 0.763 / 0.881 | 8878.72 / 4416.68 / 4344.16 |
+| `shared_believed_water` | 0.40 / 1.10 / 1.18 | 0.092 / 0.856 / 0.971 | 10199.48 / 4983.09 / 5349.93 |
+| `hazard_memory_memo` | 0.47 / 1.06 / 1.21 | 0.132 / 0.865 / 0.975 | 127122.78 / 73460.38 / 75564.65 |
+
+Reading the two low-load runs (2, 3), where `r²` clears 0.76 for every fold but
+`fatigue_at`: **four of the five siblings — `hunger_at`, `believed_water`,
+`shared_believed_water`, `hazard_memory_memo` — show an elasticity
+indistinguishable from `drive_at`'s own (0.8–1.2 against `drive_at`'s
+0.8–1.14): each is, to measurement precision, proportional to the history it
+walks, the same shape §4 established for `drive_at` alone.** `fatigue_at` is
+the one exception, and cleanly so: its elasticity has no stable sign across
+runs (0.53, -0.18 in the two clean runs) and its absolute cost is
+three orders of magnitude below every other fold's (0.13–0.14 µs/call at the
+final band, against 764–75,565 µs/call for the rest) — consistent with a fold
+whose OWN history (committed `rested` events) stayed near-empty across this
+run's 200 ticks, uncorrelated with the `agent-at` count it is plotted against.
+It carries no material share of anything.
+
+**Absolute magnitude, not just shape, is what stage 4's gate asks about — and
+here the five history-proportional folds separate sharply.** At the final
+band (clean runs), `hunger_at` costs almost exactly what `drive_at` costs
+(770 vs. 765–809 µs/call — the two are structural twins over the same
+`integrate_thirst` machinery, differing only in which predicate resets the
+fold, so this is the expected result, not a surprise). `believed_water` and
+`shared_believed_water` cost **5–6× `drive_at`'s own per-call figure**
+(4,344–5,350 µs/call), not because they walk more history — the x-axis is
+identical — but because `believed_water`'s inner loop calls the terrain's
+water-truth check once per raw `agent-at` posting, where `integrate_thirst`
+only evaluates terrain at *segment* boundaries (`bounds.dedup()`-collapsed),
+strictly fewer than the raw posting count. `hazard_memory_memo` is the
+extreme case: **90–100× `drive_at`'s per-call figure** (73,460–75,565
+µs/call), because `build_emitter_scan` — reached only through this fold, and
+timed as part of it per the interface note above — scans every one of the
+50 roster members' own full histories on every single call.
+
+**A caveat on that last number that changes how it should be read, not
+whether it matters.** Production shares ONE `PrimaryAfraidMemo` per tick
+across the whole 50-agent roster (`DriveMovements::step_with_occupancy`,
+`windows/vessel/src/liveness.rs:4701`: `afraid_memo` is built once and passed
+by `&mut` into every creature's `hazard_memory_memo` call for that tick), so
+`build_emitter_scan`'s O(roster × history) cost is paid **once per tick**,
+amortized over 50 creatures. This probe's fresh-memo-per-call design — required
+so the measurement is not the memo's hit rate — instead pays that scan cost on
+**every** repetition, which is the correct thing to do to expose the fold's
+true re-derivation cost and its history elasticity, but it means the raw
+73,460–75,565 µs/call figure is an upper bound on this fold's marginal
+per-creature production cost, not a literal per-tick-per-creature charge. Even
+dividing generously by the roster size (50) to approximate the amortized
+share — a rough bound, not a measurement — leaves roughly 1,470–1,510 µs of
+per-creature cost, still comparable to or larger than `drive_at`'s own
+764–809 µs/call. The elasticity (1.06–1.21 in the clean runs) is unaffected by
+this caveat: the scan's own cost grows with the SAME roster history that grows
+`probe_history`, so the fold's shape claim stands regardless of how its level
+is amortized. A probe splitting `build_emitter_scan`'s cost from the
+per-creature latest-visit fold it feeds would sharpen this further; that is a
+followup, not a gap in this task's own conclusion.
+
+**Stage 4's entry gate.** `believed_water`, `shared_believed_water` and
+`hazard_memory_memo` all show `k > 0`, high `r²` at low load, and an
+elasticity in the same 0.8–1.2 band `drive_at`'s own decisive measurement
+occupies — and each costs *more* per call than `drive_at` itself, not less.
+**Stage 4 is entered.** Migrating belief and hazard to the incremental-fold
+primitive is motivated by measurement, not merely plausible from reading the
+code: all three carry a material share of `k`, and `hazard_memory_memo` in
+particular is very likely the single largest per-call cost among the six
+folds even after the memo-amortization caveat above is applied.
+
+### Step 3's grounding: `fold_depth_sweep.rs`'s `RESET_EVERY`, and an unbounded `S`
+
+`fold_depth_sweep.rs`'s periodic-reset regime picks `RESET_EVERY = 20` as an
+authored guess at `S`, production's postings-per-drink, and says explicitly
+that a synthetic bench cannot ground that guess because it knows its own reset
+cadence by construction. `session_length_scaling.rs` can, because it drives a
+real session: it now reports the probe agent's own cumulative `drank` count
+alongside its `agent-at` count, at every band.
+
+**The result is not "the ratio is near 20" and not "materially different" — it
+is the third, more significant case the task brief named explicitly: the
+probe agent committed ZERO `drank` facts across all 200 ticks, in all three
+runs.** Its own `agent-at` history grew to 322 postings with no reset at all.
+`S` — postings since the last drink — is therefore **unbounded** for this
+agent over the run's whole span, not merely large: the SINGLE-RESET regime
+`fold_depth_sweep.rs` isolates as a deliberate edge case ("a 'never drinks'
+regime production does not reach", in that file's own words) is, for this
+particular agent, simply the regime it is actually in. The probe agent is
+the roster member `session_length_scaling.rs` picks by construction — the one
+with the MOST `agent-at` postings after the first band — which is one
+plausible reason it never reaches water: it may be the one member whose
+derived home/resource geometry puts water out of comfortable reach, which
+would also make it more likely to keep moving (and thus accumulate the most
+postings) rather than settling near a water source the way a better-placed
+member would. That is a hypothesis, not a finding this task measured; the
+finding is the zero count itself.
+
+**What this does and does not unsettle.** `fold_depth_sweep.rs`'s SHAPE claim
+— that periodic resets at a bounded `S` isolate the O(h) term from the
+O(s·h) term the single-reset regime exposes — survives this finding
+unchanged; it is a claim about the mechanism, not about any one agent's
+cadence. What it does unsettle is treating `RESET_EVERY = 20` as *typical*:
+at least one real derived agent's own production cadence is not "resets every
+~20 postings", it is "never resets in 200 ticks", which sits at the opposite
+extreme from the periodic regime and close to the single-reset regime's own
+`S == H`. Whether the roster's OTHER members drink more regularly (making this
+probe agent unrepresentative) or share its cadence (making `RESET_EVERY = 20`
+too optimistic for the population generally) is unmeasured — this task
+measured one probe agent's ratio, as scoped, and reports the zero loudly
+rather than switching probe agents to manufacture a tidier number.
+
 ## 5. Preregistration
 
 Frozen here, before the code that would move it (decision 0016). §6.1's own
