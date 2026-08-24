@@ -10,6 +10,45 @@
 > a reader will independently want to make have already been considered and
 > rejected on evidence, and one of them was ratified two days ago.
 
+## 0. Deltas from the approved draft
+
+Two departures, both settled with Nathan on 2026-08-24 during execution
+planning, both on evidence this draft did not have. The plan
+(`docs/superpowers/plans/2026-08-24-the-lexicon-of-place.md`) argues them at
+length; they are recorded here because §3's scope table is wrong without them.
+
+**D1. The vertex type is `Vertex`, not `Node`.** `Node` is already taken four
+ways in this repository, and minting a fifth is the defect class this campaign
+exists to remove:
+
+| where | what "node" means there |
+|---|---|
+| `windows/chronicle/src/config.rs:28` | `pub struct NodeId(pub u32)` — a graph node, ~36 uses, re-exported from `lib.rs:17` |
+| `domains/terrain/src/branch.rs:448` | `struct Node` — a river-network node |
+| `domains/astronomy` | the **orbital** node — "node line", "node longitude" |
+| `clients/` | DOM / Node.js — `node`, `createTextNode` |
+
+`Vertex` is held by nothing (one private `VertexGrid` in
+`domains/terrain/src/channel.rs:534`), is the word §2 below already uses to
+state the diagnosis, appears in 231 doc-comment lines, and pairs with `Facet`
+as ordinary mesh vocabulary — a vertex is a point, a facet is a patch, which
+is precisely the distinction §2 says nothing currently signals. The cascade is
+`VertexMap<T>`, `NearestVertexIndex`, `vertices()`, `vertex_count()`.
+
+**D2. The sweep is total, and it ends in a guard.** This draft renames the
+*type*; the campaign renames the *word*. Measured on `e2453a63b`:
+**447 distinct `cell`-bearing identifiers, 16,201 occurrences in `*.rs`** —
+the bare words `cell` (8,014) and `cells` (2,499) dominate, most of them doc
+prose. Renaming only the type leaves `VertexMap<T>` documented as "a value per
+cell", which is worse than not renaming at all, and leaves a glossary that has
+to say "cell means vertex, except where it is called `Vertex`".
+
+The guard is the durable half. "cell" arrived here by **convergent
+emergence** — every author reached for it independently, out of the GIS/raster
+convention §2 names — so a one-time rename decays. Only a check holds it, and
+it takes the three-valued shape `tropes check`, the timings baseline and
+type-audit's `waiver(...)` already use: it fails on novelty, not on existence.
+
 ## 1. What this is
 
 A **rename campaign, not a redesign.** The spatial vocabulary has accreted
@@ -45,23 +84,31 @@ convention is misled; one who does not learns the wrong thing.
 
 | rename | occurrences | files |
 |---|---|---|
-| `RoomAddr` → `Facet` | 740 | 50 |
+| `RoomAddr` → `Facet` | 757 | 51 |
 | `RoomId` → `FacetId` | 43 | 15 |
-| `CellId` → `Node` | 1,725 | 144 |
+| `CellId` → `Vertex` (D1) | 1,735 | 144 |
 | `windows/vessel/src/band.rs` → a depth-named module | — | 1 |
 | `level` → `depth`, **only** where it means mesh refinement | judgement | — |
 
-**~2,500 sites.** Most of it is mechanical — the compiler finds every one —
+**~2,500 sites for the types alone; ~16,200 for the whole word (D2).** Most of it is mechanical — the compiler finds every one —
 but doc comments and prose also say "cell" and "room", and those need
 judgement rather than substitution. A doc that says "the room's cells" is
 saying something true about faces and vertices and must survive the rename
 still saying it.
 
-**`level` needs care: it currently means three things.** `Geosphere`
-subdivision level; `RoomAddr` path depth; and `ChamberAddr.level` (*"a level is
-a screen-filling map, not a storey"* — The Drift). Rename only the first two,
-to `depth`; leave `ChamberAddr.level` alone, it is a different and correctly
-named thing.
+**`level` needs care: it means FOUR things, not three.** This draft named
+three and missed the one that is hardest to change:
+
+1. `Geosphere` subdivision level — **rename to `depth`.**
+2. `RoomAddr` path depth — **rename to `depth`.**
+3. `ChamberAddr.level` (*"a level is a screen-filling map, not a storey"* —
+   The Drift) — **leave alone**, it is a different and correctly named thing.
+4. `RegionAddr.level` / `RegionScene.level`
+   (`windows/scene/src/region.rs:93,240`) — a **cube-face quadtree depth**, on
+   a *different mesh* from the icosphere, and `RegionScene` derives
+   `Serialize`, so `level` is a field of the `scene/tiles-region/v1` wire
+   schema. **Frozen**, under the cross-repo additive-or-versioned rule, not
+   merely "left alone" — and it earns a glossary row for exactly that reason.
 
 ## 4. What does NOT change, and why
 
@@ -134,9 +181,35 @@ windows/vessel/src/purview.rs:146     strip_prefix("room/")
 scene/surrounds/v2                    `cells`, and clients/game's ChartCell mirror of it
 ```
 
+Committed data columns — **the first two are census goldens**, so moving one
+is a census-refresh carve-out needing explicit authorization:
+
+```
+per-cell-diversity      book/src/laboratory/generated/the-census/rows.csv
+cold-built-room-share   ...and census-of-the-meeting, and 8 lab fixtures
+cell                    book/src/laboratory/generated/earth-mask-l6/rows.csv
+cells_occupied          windows/worldgen/tests/fixtures/occupancy.csv
+land_cells              windows/worldgen/tests/fixtures/repose-exposure.csv
+```
+
+Serialized JSON keys, counted in the committed artifacts and fixtures
+themselves rather than inferred from the code — `"room"` ×306, `"cell"` ×30,
+`"cells"` ×12 — across `book/src/gallery/scene-surrounds-seed-42.json`,
+`book/src/reference/locale-seed-42.json`,
+`clients/game/core/tests/fixtures/`, `windows/scene/tests/fixtures/` and
+`windows/vessel/tests/fixtures/`.
+
+And `RegionScene.level`, for the reason §3 gives.
+
 **The constant NAMES may be renamed; the string VALUES may not.** After this
 campaign the code will say `Facet` while the label says `"room/face"`, and
 that mismatch is correct and permanent.
+
+**For a serde field the name IS the value**, so the rule needs a second
+clause: rename the Rust field and add `#[serde(rename = "<old wire name>")]`.
+Do it that way round rather than leaving the field spelled `cell`, for exactly
+the reason §5.1 gives below — an attribute is a *visible* tripwire, while a
+silently-old field name is what the next sweep renames without noticing.
 
 ### 5.1 The rule, and why it needs a guard
 
