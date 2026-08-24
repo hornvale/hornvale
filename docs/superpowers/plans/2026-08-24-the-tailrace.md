@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-24-the-tailrace-design.md` (G3-approved 2026-08-24)
 
+> **A note for anyone reading this plan after 2026-08-24.** Tasks 1–5 were written and executed against a tree where the kernel's cell type was named `RoomAddr` and its packed form `RoomId`. Absorbing `main` mid-plan brought in The Lexicon of Place, which renamed them to **`Facet`** and **`FacetId`** (and `CellId` → `Vertex`, `NearestCellIndex` → `NearestVertexIndex`). The task text below is left as it was written, because it is the record of what was actually instructed at the time; the code and the spec carry the new names. Read `RoomAddr` as `Facet` throughout.
+
 ## Global Constraints
 
 - **Scope is stages 1–2 only.** The spec's stages 3–5 rewrite `windows/vessel/src/liveness.rs`, which `campaign/the-escapement` holds off with an unmerged `WorldTime` epoch (f64 fractional days to i64 ticks) touching the same functions. They get a **second plan**, written after that lands, because every `f64` day in their code would be wrong today.

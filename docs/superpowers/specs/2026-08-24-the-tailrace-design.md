@@ -71,11 +71,11 @@ Every one of these reduces an unbounded history to bounded state. Read on
 | fold | line | what it walks | what it reduces to | bounded by |
 |---|---|---|---|---|
 | `agent_sightings` → `integrate_thirst`, via `drive_at` | 806, 835, 884 | every `agent-at` ≤ `t` | the accumulated integral, plus the last sighting's day and room | the interval since the last `drank` |
-| `hunger_at` | 2405 | the same trail, `HUNGER` params | likewise | the interval since the last `eaten` |
-| `fatigue_at` | 2233 | every `rested` fact | the latest `rested` day | O(1) — a max |
-| `believed_water` | 905 | every `agent-at` ≤ `t`, ∩ water | a `BTreeSet<RoomAddr>` | reachable water rooms |
-| `hazard_memory_memo` | 1176 | every `agent-at` ≤ `t` | a `BTreeMap<RoomAddr, f64>`, latest-visit-wins | cells visited |
-| `build_emitter_scan` | 985 | every roster member's `agent-at` ≤ `t` | a `BTreeSet<RoomAddr>` of alarm cells, plus per-emitter timelines | cells visited × emitters |
+| `hunger_at` | 2399 | the same trail, `HUNGER` params | likewise | the interval since the last `eaten` |
+| `fatigue_at` | 2228 | every `rested` fact | the latest `rested` day | O(1) — a max |
+| `believed_water` | 908 | every `agent-at` ≤ `t`, ∩ water | a `BTreeSet<Facet>` | reachable water rooms |
+| `hazard_memory_memo` | 1176 | every `agent-at` ≤ `t` | a `BTreeMap<Facet, f64>`, latest-visit-wins | facets visited |
+| `build_emitter_scan` | 985 | every roster member's `agent-at` ≤ `t` | a `BTreeSet<Facet>` of alarm facets, plus per-emitter timelines | facets visited × emitters |
 
 Three multipliers make this worse than the table suggests, and all three are
 in the same call path:
@@ -116,8 +116,8 @@ rather than rediscovering them.**
    fact must capture the position in force at that instant, not merely zero the
    sum.
 4. **`agent_sightings` SORTS, and the sort is not commit order.** It sorts by
-   `(day, RoomAddr)` — `a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1))`
-   (`:820`, and again at `:4325` where the tick folds `frozen` plus its own emitted moves). A fold advancing in commit order would break same-day ties
+   `(day, Facet)` — `a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1))`
+   (`:820`, and again at `:4310` where the tick folds `frozen` plus its own emitted moves). A fold advancing in commit order would break same-day ties
    differently, and the tie-break selects the *position* that governs the next
    segment, hence its temperature, hence the integral. **This is a live
    divergence, not a theoretical one**, and it is precisely what the FOLD ≡
@@ -129,7 +129,7 @@ rather than rediscovering them.**
 **`agent_sightings` is the hub, and the work is to DELETE it, not cache it.**
 Five of the six folds route through that one function (thirst, hunger, hazard,
 belief, the emitter scan), which makes it look like the obvious thing to
-maintain incrementally. It is not: its output is a `Vec<(f64, RoomAddr)>`
+maintain incrementally. It is not: its output is a `Vec<(f64, Facet)>`
 timeline, O(history) in *size* however cheaply it is kept up to date, so caching
 it bounds nothing at all. The bounded objects are the *reductions over* it — an
 accumulator, a set, a map — so each consumer gets its own and the shared
@@ -138,7 +138,7 @@ timeline goes away. That is why stage 3 is named "delete the hub" rather than
 suggests.
 
 **Past-`t` queries are real and are already documented in the tree.**
-`last_fact_day_at_or_before` (`:4451`) exists precisely because catch-up's
+`last_fact_day_at_or_before` (`:4436`) exists precisely because catch-up's
 replay loop evaluates many instants across a span, and its doc says why a
 whole-history fold cannot serve it: the folded value "could be looking
 chronologically PAST the day it is being asked about." So the primitive must be

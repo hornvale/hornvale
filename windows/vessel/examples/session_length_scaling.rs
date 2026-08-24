@@ -21,7 +21,7 @@
 //! `agent_sightings`/`integrate_thirst` via `drive_at` (the thirst path
 //! integral), `hunger_at` (the same trail, `HUNGER` params), `fatigue_at`
 //! (over `rested`), `believed_water` (the water belief), `hazard_memory_memo`
-//! (latest-visit-per-cell) and `build_emitter_scan` (alarm halos). The ledger
+//! (latest-visit-per-facet) and `build_emitter_scan` (alarm halos). The ledger
 //! is append-only, so each is O(history), and history grows every tick. Three
 //! multipliers sit in the same call path: `shared_believed_water` calls
 //! `believed_water` once per co-located peer, `build_emitter_scan` is threaded
@@ -46,7 +46,7 @@
 //! late bands DOWN, which is the opposite of the predicted trend. A rising
 //! curve measured through that headwind is therefore a lower bound on the
 //! real history term, and a FLAT curve is genuinely ambiguous (a real rise
-//! could be exactly cancelling cache warming) rather than a clean null.
+//! could be exactly offsetting cache warming) rather than a clean null.
 //!
 //! Reported alongside each band so the reader can judge it: the cache's
 //! search delta per band (warming shows up as a falling search count) and the
@@ -72,7 +72,7 @@
 //! byte-stable regardless of load, so a shape claim the deterministic columns
 //! contradict is a harness bug, not a finding.
 
-use hornvale_kernel::RoomAddr;
+use hornvale_kernel::Facet;
 use hornvale_kernel::{EntityId, Fact, Ledger, RoomMeshMemo, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_species::MetabolicClass;
@@ -206,7 +206,7 @@ fn calibrate() -> f64 {
 fn probe_fold_us(
     ledger: &Ledger,
     entity: EntityId,
-    home: &RoomAddr,
+    home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
     class: MetabolicClass,
@@ -234,7 +234,7 @@ fn probe_fold_us(
 fn probe_hunger_us(
     ledger: &Ledger,
     entity: EntityId,
-    home: &RoomAddr,
+    home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
     class: MetabolicClass,
@@ -523,7 +523,7 @@ struct Band {
     /// The probe agent's own cumulative `AGENT_AT` count (== `probe_history`)
     /// divided by ticks elapsed so far — its own posting rate, for the SAME
     /// agent `probe_drank_per_tick` uses, so the ratio of the two is
-    /// production's postings-per-drink `S` with the tick divisor cancelling.
+    /// production's postings-per-drink `S` with the tick divisor dividing out.
     probe_folded_per_tick: f64,
     /// The probe agent's own `DRANK` rate: cumulative `DRANK` count divided
     /// by ticks elapsed so far.
@@ -993,7 +993,7 @@ fn run(
     // choice can silently land on one. The fourth element is the same
     // member's index into `npcs`, kept so the five `&Body`/`&[Body]` folds
     // below can read `&npcs[idx]` without a second search.
-    let mut probe: Option<(EntityId, RoomAddr, MetabolicClass, usize)> = None;
+    let mut probe: Option<(EntityId, Facet, MetabolicClass, usize)> = None;
 
     let mut bands: Vec<Band> = Vec::new();
     let mut band_facts_before = ledger.len();

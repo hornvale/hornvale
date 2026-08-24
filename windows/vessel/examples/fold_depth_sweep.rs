@@ -143,7 +143,7 @@
 //! one of them, not a tiebreak.
 
 use hornvale_kernel::registry::ConceptRegistry;
-use hornvale_kernel::{EntityId, Fact, Ledger, RoomAddr, Value, WorldTime};
+use hornvale_kernel::{EntityId, Facet, Fact, Ledger, Value, WorldTime};
 use hornvale_species::MetabolicClass;
 use hornvale_vessel::liveness::{AGENT_AT, DRANK, SUSTENANCE, Terrain, drive_at};
 use std::collections::BTreeMap;
@@ -204,19 +204,19 @@ const RESET_EVERY: usize = 20;
 struct FlatTerrain;
 
 impl Terrain for FlatTerrain {
-    fn elevation(&self, _room: &RoomAddr) -> f64 {
+    fn elevation(&self, _room: &Facet) -> f64 {
         // Never read by `drive_at`'s call path (the thirst integral only
         // ever calls `temperature`, below) -- a finite, arbitrary value so
         // nothing panics if a future change routes through it.
         0.0
     }
 
-    fn is_fresh_water(&self, _room: &RoomAddr) -> bool {
+    fn is_fresh_water(&self, _room: &Facet) -> bool {
         // Same non-read as `elevation`; `false` is the simplest valid answer.
         false
     }
 
-    fn temperature(&self, _room: &RoomAddr, _day: WorldTime) -> f64 {
+    fn temperature(&self, _room: &Facet, _day: WorldTime) -> f64 {
         // THE ONE FIELD `drive_at`'s fold actually reads, once per segment
         // (via `rise_at`). A fixed, thermoneutral-ish value so every segment
         // costs the same -- see the struct doc.
@@ -228,20 +228,20 @@ impl Terrain for FlatTerrain {
 /// that the synthetic ledger's postings cycle through. A CONSTANT room would
 /// let a future optimisation collapse the segments and silently flatter the
 /// fold, so the postings must actually move.
-fn room_for(i: usize) -> RoomAddr {
+fn room_for(i: usize) -> Facet {
     const ROOM_COUNT: usize = 8;
-    RoomAddr {
+    Facet {
         face: (i % ROOM_COUNT) as u8,
         path: Vec::new(),
     }
 }
 
-/// Encode a `RoomAddr` exactly as `liveness.rs`'s own (private) `room_to_text`
-/// does: the packed `RoomId`, rendered as a decimal `u64` string.
+/// Encode a `Facet` exactly as `liveness.rs`'s own (private) `room_to_text`
+/// does: the packed `FacetId`, rendered as a decimal `u64` string.
 /// `drive_at` decodes this with `room_from_text`, so any other encoding either
 /// panics or silently reads a different room -- the second failure mode would
 /// produce a plausible but wrong number.
-fn room_to_text(r: &RoomAddr) -> String {
+fn room_to_text(r: &Facet) -> String {
     r.pack()
         .expect("a depth-0 face room always packs")
         .0
