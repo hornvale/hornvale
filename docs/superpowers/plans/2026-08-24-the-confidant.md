@@ -281,9 +281,15 @@ One dispatch, five independent edits, reviewed as one diff.
   decision 0227 says selection. **This crate is OUTSIDE the cargo workspace**,
   so it has no `subfloor-roster.tsv` entry and the rename is safe — but nothing
   in a gate compiles it either. Run `make game-check` after.
-- [ ] `windows/vessel/tests/suite/controller_swap.rs` — F-H1: the cross-seed
-  mode pin uses `assert_ne!` on a chosen pair, and a randomly redrawn pair
-  coincides at p≈0.46. Harden to assert ≥2 distinct modes across 3+ seeds.
+- [ ] `windows/vessel/tests/suite/controller_swap.rs` — **TWO** cross-seed pins
+  now, both knife-edge, both to harden. F-H1's mode pin: a randomly redrawn
+  pair coincides at p≈0.46. And Task 2's affect pin, MEASURED at 20 seeds —
+  Eager 12/20, Content 7/20, Frustrated 1/20, only 3 of 6 variants reachable,
+  concentration 0.485, so a random pair collides ~49% of the time and the
+  hardcoded seed 13 draws from the rare tail. The larger enum bought no
+  robustness: the reachable distribution sets the odds, not the variant count.
+  Harden BOTH to assert ≥2 distinct values across 3+ seeds rather than
+  `assert_ne!` on a chosen pair.
 - [ ] `make gate-commit` AND `make game-check`, then commit.
 
 ---
