@@ -164,12 +164,24 @@ decay and a board post is where a corrected one can land.
 ## The merge went in without a stage gate first, deliberately
 
 Nathan chose to submit the merge rather than wait for the queued stage gate to
-report. Recording why that is not a shortcut: a **merge** request runs all six
-chamber phases — including the whole-workspace suite a stage gate runs — and
-pushes only on green, holding the request and leaving `main` untouched
-otherwise. The stage gate's distinct value is that a red costs *milliseconds at
-the mouth* rather than the box; going straight to merge trades that cheapness
-for one queue slot instead of two. With `gate-commit` green, both byte-identity
+report. **The reasoning given for that at the time was wrong, and the
+correction is the useful part.** I told him a merge runs "all six chamber
+phases, including the whole-workspace suite a stage gate runs," so going
+straight to merge was not skipping verification. `scripts/sluice-run.sh:360`
+says otherwise:
+
+```
+merge_phases="artifacts outboard gate clients"
+stage_phases="artifacts outboard gate clients"
+```
+
+**Identical.** The two kinds differ *only* in the push — the file's own prose
+calls that "always the design" — and `heavy` is not a chamber phase at all but
+a separate `make heavy-remote` dispatch. So a merge buys the push, not
+coverage, and the stage gate that had already reported green on an ancestor SHA
+had bought this candidate's entire phase set. The real asymmetry is the one I
+under-sold: a stage gate's refusal is free and leaves `main` untouched *by
+construction*, where a merge leaves it untouched only because a phase passed. With `gate-commit` green, both byte-identity
 goldens passing, a clean post-absorption regeneration and a conflict-free
 `merge-tree` against a current `main`, the residual risk was a phase this branch
 has no plausible way to redden.
