@@ -97,7 +97,25 @@ gates build it, and there has been no CI since decision 0125, so the only thing
 that would ever catch it is a person remembering. Port all three in the Phase A
 sweep and run each crate's own check.
 
-### Phase B — the representation flip. One commit. Gated on The Hand.
+### The Hand is readable now, and the vessel gate is GONE
+
+`origin/campaign/the-hand` was pushed (tip `4f05c14a6`, unmerged, 49 commits
+ahead of main). Its diff answers the question the campaign had been sequencing
+around: **`Body` does NOT move where time lives.** Every `WorldTime` parameter
+is untouched; `Npc` becomes `Body` in type position only (`agent_position`,
+`latest_committed_position`, `room_entry_day`). So the vessel port is a
+**straight port**, and vessel's *rename* is behaviour-preserving exactly like
+every other crate's.
+
+**Consequence: vessel's rename moves OUT of Phase B and into the rename
+phase**, as its own commit. Re-derived on the merged tree:
+`windows/vessel` 127 `new` + 64 `.day()`; `windows/lab/src/{synthetic,health}.rs`
+11 `new` + 1 `.day()`. Same pure-rename rules, same prohibition on tick-domain
+conversion.
+
+Phase B therefore narrows to what is genuinely atomic: the flip itself.
+
+### Phase B — the representation flip. One commit.
 
 Flip the field to `i64`, derive `Ord`/`Eq`/`Hash`, delete the shims, and in the
 SAME commit: the tick-domain comparison fixes (§2.1 of the spec — one domain per

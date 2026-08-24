@@ -50,6 +50,32 @@ The same decay reaches a cross-repo schema. `scene/eclipses/v1`
 `f64` under `quantize_serde::f64_field`. An eclipse is a minutes-long event;
 at world-year 20,000 its emitted time is good to 1.2 hours.
 
+### The second motivation, found independently by another campaign
+
+The deep-time argument above is real but remote. `campaign/the-hand` found a
+**present-day** correctness bug with the same cause, without knowing this
+campaign existed, and worked around it — which is stronger evidence than
+anything in the table above.
+
+`Ledger::commit` quantizes a fact's day, and that rounding goes **upward** as
+often as down. So a fact committed at exactly `t` can fail its own `d <= t`
+filter on read-back. The Hand's `latest_committed_position` hit this: a
+possessed body read back as "no position committed yet" and fell to
+`npc.home`, one line after the commit that made it. Verified here rather than
+taken on trust:
+
+```
+quantize(0.011719999738288106) = 0.01171999999999999952   strictly greater
+so `q <= raw` is FALSE — the fact fails its own filter
+the same instant as ticks = 1172, and compares exactly equal to itself
+```
+
+Day 0.0117 is not deep time. It is the first hour of a world. The Hand's fix
+was to quantize the query bound to match the stored value; this campaign
+removes the quantization instead, so the mismatch cannot arise. **Whoever
+merges second must delete the other's half of this pair** — both branches
+compile and both suites pass in isolation, so nothing will raise it.
+
 ### What is *not* wrong
 
 The **compute** path is fine, and this spec does not claim otherwise. `f64`
