@@ -163,6 +163,27 @@ impl std::fmt::Display for DriverError {
 
 impl std::error::Error for DriverError {}
 
+/// Every input [`plate::draw_with`] reads that can CHANGE during a session,
+/// and nothing else — the memo in [`Driver::world_plate_for_redraw`] is only
+/// as correct as this key is complete.
+///
+/// **Deliberately absent, because they are fixed for the process:** the
+/// terrain, the `Geosphere`, the `NearestCellIndex`, the settlement roster
+/// (built once in `start`) and `colour_allowed` (resolved from `NO_COLOR`
+/// once per render by `plate::draw`, which cannot change under a running
+/// process). If any of those ever becomes mutable, it belongs here.
+///
+/// `discovered_len` stands in for the discovery set itself, which is sound
+/// only because that set is monotonic — see [`Discovered::len`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct PlateKey {
+    frame: Frame,
+    window: Window,
+    w: u16,
+    h: u16,
+    discovered_len: usize,
+}
+
 /// One live game: an owned [`World`], the [`WorldContext`] derived from it
 /// exactly once (the campaign's own headline — release-and-repossess reuses
 /// this rather than re-deriving it), and the live [`Session`] borrowing
@@ -266,6 +287,16 @@ pub struct Driver {
     /// focus changes on their own, only by `Action::Zoom`; see
     /// [`Driver::world_plate_for_redraw`].
     world_view: bool,
+    /// How many world plates have actually been rendered this session.
+    /// See [`Driver::plate_renders`] for why this is observable.
+    plate_renders: usize,
+    /// The last world plate drawn, with the inputs that produced it.
+    ///
+    /// A cursor move inside the plate changes none of those inputs, and
+    /// re-rendering costs ~265k `nearest()` calls at the design size —
+    /// measured 88% of a redraw. See [`PlateKey`] for what "the inputs"
+    /// means and what is deliberately not in it.
+    plate_cache: Option<(PlateKey, hornvale_game_core::Grid)>,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
     /// Every terrain cell the world's ledger commits at least one
@@ -497,6 +528,8 @@ impl Driver {
             frame,
             window,
             world_view: false,
+            plate_renders: 0,
+            plate_cache: None,
             seed: world_ref.seed,
             settlements,
             visited: Visited::default(),
@@ -654,8 +687,26 @@ impl Driver {
     /// `self.world_view` defaults to `false` and, since Task 3b, [`Self::
     /// apply_zoom`] is the gesture that sets it `true` — zooming out
     /// (`-` on [`Focus::Map`]) past the walk band.
-    pub fn world_plate_for_redraw(&self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
-        (self.world_view && self.focus == Focus::Map).then(|| self.world_plate(w, h))
+    pub fn world_plate_for_redraw(&mut self, w: u16, h: u16) -> Option<hornvale_game_core::Grid> {
+        if !(self.world_view && self.focus == Focus::Map) {
+            return None;
+        }
+        let key = PlateKey {
+            frame: self.frame,
+            window: self.window,
+            w,
+            h,
+            discovered_len: self.discovered.len(),
+        };
+        if let Some((cached, grid)) = &self.plate_cache
+            && *cached == key
+        {
+            return Some(grid.clone());
+        }
+        let grid = self.world_plate(w, h);
+        self.plate_renders += 1;
+        self.plate_cache = Some((key, grid.clone()));
+        Some(grid)
     }
 
     /// Apply one input [`Action`], returning whether the session RELEASED.
@@ -1366,6 +1417,24 @@ impl Driver {
         &self.visited
     }
 
+    /// How many times the world plate has actually been RENDERED (as
+    /// opposed to served from the memo). Exists because **a cache with no
+    /// observable hit is indistinguishable from a cache that never hits**:
+    /// every correctness test passes either way, so the counter is what
+    /// makes `a_cursor_move_inside_the_plate_does_not_re_render_it` a real
+    /// assertion rather than a hopeful one.
+    pub fn plate_renders(&self) -> usize {
+        self.plate_renders
+    }
+
+    /// Test-only mutable access to the discovery set, so a test can vary
+    /// that one cache-key input without walking a possession into a
+    /// settlement.
+    #[cfg(test)]
+    pub fn discovered_mut_for_test(&mut self) -> &mut Discovered {
+        &mut self.discovered
+    }
+
     /// Every feature the possession has discovered this session (spec
     /// Amendment 1 §A4b). See the `discovery` module's own doc.
     pub fn discovered(&self) -> &Discovered {
@@ -1422,6 +1491,106 @@ mod portolan_tests {
         assert!(
             d.world_view,
             "zooming out from the walk band must enter the world view"
+        );
+    }
+
+    // -- The world-plate memo (perf/world-plate-memo) ----------------
+    //
+    // MEASURED, on seed 42 at the 210x56 design size: one `draw_with` is
+    // 264,992 samples (5,408 cells x 49), of which `nearest()` is 88% at
+    // ~712 ns/sample -- hundreds of milliseconds, paid on EVERY keystroke
+    // because `redraw` re-rendered unconditionally. A cursor move inside
+    // the plate changes none of `draw_with`'s inputs.
+
+    /// THE TEST THAT MAKES THE CACHE NON-VACUOUS. A cache with no
+    /// observable hit is indistinguishable from one that never hits, and
+    /// every correctness test would pass either way — so the counter is
+    /// part of the design, not scaffolding.
+    #[test]
+    fn a_cursor_move_inside_the_plate_does_not_re_render_it() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let _ = d.world_plate_for_redraw(104, 56);
+        let after_first = d.plate_renders();
+        assert!(after_first > 0, "the first redraw must actually render");
+
+        // Interior moves: the window cannot scroll, so nothing changes.
+        for _ in 0..8 {
+            d.apply(Action::CursorBy(1, 0));
+            let _ = d.world_plate_for_redraw(104, 56);
+        }
+        assert_eq!(
+            d.plate_renders(),
+            after_first,
+            "eight interior cursor moves re-rendered the plate"
+        );
+    }
+
+    /// The other half: something that DOES change an input must re-render.
+    /// Without this, "never re-render" would pass the test above.
+    #[test]
+    fn a_zoom_re_renders_the_plate() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let _ = d.world_plate_for_redraw(104, 56);
+        let before = d.plate_renders();
+        d.apply(Action::Zoom(1));
+        let _ = d.world_plate_for_redraw(104, 56);
+        assert!(
+            d.plate_renders() > before,
+            "a zoom changes the window and must re-render"
+        );
+    }
+
+    /// KEY COMPLETENESS, field by field. A key missing an input serves a
+    /// stale plate -- the "wrong name indistinguishable from a right one"
+    /// shape this campaign hit repeatedly. Each arm varies ONE input.
+    #[test]
+    fn every_input_the_plate_reads_is_in_its_cache_key() {
+        // size
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let _ = d.world_plate_for_redraw(104, 56);
+        let n = d.plate_renders();
+        let _ = d.world_plate_for_redraw(80, 24);
+        assert!(d.plate_renders() > n, "a size change must re-render");
+
+        // frame (re-centre)
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let _ = d.world_plate_for_redraw(104, 56);
+        let n = d.plate_renders();
+        d.apply(Action::CursorBy(9, 4));
+        d.apply(Action::Recentre);
+        let _ = d.world_plate_for_redraw(104, 56);
+        assert!(
+            d.plate_renders() > n,
+            "a re-centre changes the frame and must re-render"
+        );
+
+        // discovery
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let _ = d.world_plate_for_redraw(104, 56);
+        let n = d.plate_renders();
+        d.discovered_mut_for_test()
+            .record(crate::discovery::FeatureId::Settlement(CellId(1)));
+        let _ = d.world_plate_for_redraw(104, 56);
+        assert!(d.plate_renders() > n, "a new discovery must re-render");
+    }
+
+    /// A cache that returns a DIFFERENT grid than a fresh render is worse
+    /// than no cache. Compare the hit against the uncached truth.
+    #[test]
+    fn a_cache_hit_returns_what_a_fresh_render_would_have_drawn() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let first = d.world_plate_for_redraw(104, 56).expect("world view is on");
+        let hit = d.world_plate_for_redraw(104, 56).expect("world view is on");
+        assert_eq!(
+            first.to_plain_text(),
+            hit.to_plain_text(),
+            "a cache hit drew something else"
         );
     }
 

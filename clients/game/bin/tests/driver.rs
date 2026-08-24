@@ -328,6 +328,11 @@ fn map_focus_alone_does_not_activate_the_world_view() {
         text: &empty_line,
         caret: 0,
     };
+    // Hoisted because `world_plate_for_redraw` takes `&mut self` since the
+    // plate memo (perf/world-plate-memo) -- it cannot share an expression
+    // with the immutable reads below. Same call, same arguments, same
+    // assertions; only the borrow is sequenced.
+    let world_plate = driver.world_plate_for_redraw(w, h);
     let (grid, _) = render_with(
         &json,
         w,
@@ -337,7 +342,7 @@ fn map_focus_alone_does_not_activate_the_world_view() {
         cmd_line,
         driver.strip_text(),
         driver.echo(),
-        driver.world_plate_for_redraw(w, h).as_ref(),
+        world_plate.as_ref(),
         driver.strip_offset(),
     )
     .unwrap();
