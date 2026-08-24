@@ -1,0 +1,411 @@
+# The Tailrace: The Read Side of Log Bounding — A Campaign Design
+
+**Program:** The Penstock (`docs/superpowers/specs/2026-08-22-the-penstock-metaplan.md`), stage 7.
+**Branch:** `campaign/the-tailrace`, from `origin/main` @ `c39444ba6`.
+**Decision block:** 0236–0245.
+**Status:** awaiting G3.
+
+---
+
+## 0. What this campaign is, and the thing it is not
+
+**It does not remove a single fact from the ledger.** Committed bytes at the
+end of a session are byte-identical before and after this campaign, by
+construction and by the drift check. A reader who takes "log bounding" to mean
+"the log gets smaller" will find this campaign delivered nothing.
+
+What it delivers is the **precondition** that both existing halves of stage 7
+silently assume and neither has: that *nothing depends on the raw history
+being there.* Today six production folds in `windows/vessel/src/liveness.rs`
+walk an agent's entire committed `agent-at` trail on every evaluation, so
+removing facts — by abstention at the commit site or by compaction after it —
+changes behaviour. That is not a storage question, and it is why stage 7 has
+been carveable in two incompatible ways for as long as it has existed.
+
+So this campaign proposes a re-carve, and it is the first thing to accept or
+reject at G3:
+
+| | delivers | when |
+|---|---|---|
+| **7a — The Tailrace** | the read side: nothing folds raw history any more | this campaign |
+| 7b — `UNI-intention-is-structured` | the typed, compositional intention, so a per-errand commit preserves the `why?` chain the per-step provenance carries today | enterable; costs an epoch |
+| 7c — `TOOL-log-bounding-epoch-fact-lifetime` | fact lifetime: what may leave, and how the seed plus the surviving prefix re-derives the world | enterable; `MEM-1`'s melt is its diegetic sibling |
+
+The ordering is forced, not chosen. 7c cannot be safe while the folds read raw
+history (this campaign). And 7b sits between them because **the trail is
+content, not bookkeeping**: each step's `provenance` is authored prose — *"went
+down to the river it knew (thirst)"*, *"fled the uncanny ground (fear)"* — and
+it is rendered, by `windows/historiography/src/lib.rs:53` and
+`cli/src/repl.rs:407`. Dropping steps without first making the intention carry
+its own `why?` would delete readable content, which is a fidelity cut and a
+carve-out, not an optimisation.
+
+## 1. The finding that motivates it, and why no existing instrument saw it
+
+§6.1 established that the commit *rate* is flat rather than falling, and
+concluded correctly that an append-only log with a non-summable rate grows
+without bound in RAM. That argument is about **storage**, and it is the only
+argument the metaplan makes for stage 7.
+
+There is a second one, and unlike the first it is measurable today rather
+than projected. The folds are O(history) and run per agent per tick, so **tick
+cost grows with session length** — the log costs
+CPU while it sits there, before it ever costs a byte too many. Neither sibling
+instrument can see this:
+
+- `windows/vessel/examples/agent_scaling.rs` sweeps *agent count* at a fixed
+  20 ticks, and attributes its superlinear residual to the population-wide
+  per-creature roster reads — an O(agents²) shape. Holding ticks fixed makes a
+  history term invisible to it by construction.
+- `windows/vessel/tests/suite/tick_commit_budget.rs` sweeps ticks but measures
+  facts committed, never time.
+
+So the campaign opens with the missing instrument (§3, stage 1), and §4 reports
+what it measured.
+
+## 2. The six folds, and why each is bounded
+
+Every one of these reduces an unbounded history to bounded state. Read on
+`origin/main`; line numbers are `windows/vessel/src/liveness.rs`.
+
+| fold | line | what it walks | what it reduces to | bounded by |
+|---|---|---|---|---|
+| `agent_sightings` → `integrate_thirst`, via `drive_at` | 806, 835, 884 | every `agent-at` ≤ `t` | the accumulated integral, plus the last sighting's day and room | the interval since the last `drank` |
+| `hunger_at` | 2405 | the same trail, `HUNGER` params | likewise | the interval since the last `eaten` |
+| `fatigue_at` | 2233 | every `rested` fact | the latest `rested` day | O(1) — a max |
+| `believed_water` | 905 | every `agent-at` ≤ `t`, ∩ water | a `BTreeSet<RoomAddr>` | reachable water rooms |
+| `hazard_memory_memo` | 1176 | every `agent-at` ≤ `t` | a `BTreeMap<RoomAddr, f64>`, latest-visit-wins | cells visited |
+| `build_emitter_scan` | 985 | every roster member's `agent-at` ≤ `t` | a `BTreeSet<RoomAddr>` of alarm cells, plus per-emitter timelines | cells visited × emitters |
+
+Three multipliers make this worse than the table suggests, and all three are
+in the same call path:
+
+- `shared_believed_water` (`:1323`) calls `believed_water` **once per
+  co-located peer**, so the history walk is multiplied by band size.
+- `build_emitter_scan` is threaded the **full roster**, so it is O(agents ×
+  history) inside a per-agent call — the O(agents²) term the sibling bench
+  suspected and the history term, compounded.
+- `step_with_occupancy`'s `begin` (`:4945`) folds `DRANK`, `RESTED` and
+  `EATEN` from scratch per creature per tick.
+
+**The thirst integral is exactly incrementalisable, and this is the load-bearing
+claim of the design.** Reading `integrate_thirst`'s own segmentation
+(`:848–856`): the bounds are `last_drank`, each sighting strictly inside
+`(last_drank, t)`, then `t`. So
+
+```
+thirst(t) = A(d_n) + rate(temp(p_n, d_n)) * (t - d_n)
+```
+
+where `A(d_n)` is the accumulation through the last sighting `(d_n, p_n)`, and a
+`drank` fact sets `A := 0`. Three scalars and one room, queryable at any `t`
+ahead of the frontier in O(1).
+
+**Four traps found while reading, recorded here so the plan inherits them
+rather than rediscovering them.**
+
+1. **Clamp at read, never incrementally.** `integrate_thirst` clamps to
+   `[0, 1]` on the **total**. An accumulator that clamps as it goes diverges
+   the moment a creature exceeds the ceiling and not before, which is the worst
+   possible failure schedule for noticing.
+2. **The segment's temperature is sampled at its START.** So the accumulator
+   carries the segment-start position and day, not the current ones.
+3. **The reset's own position comes from before the reset.** The first segment
+   begins at `last_drank`, and its governing position is "the latest sighting
+   with `d <= last_drank`" — a sighting *earlier* than the reset. So a `drank`
+   fact must capture the position in force at that instant, not merely zero the
+   sum.
+4. **`agent_sightings` SORTS, and the sort is not commit order.** It sorts by
+   `(day, RoomAddr)` — `a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1))`
+   (`:820`, and again at `:4325` where the tick folds `frozen` plus its own emitted moves). A fold advancing in commit order would break same-day ties
+   differently, and the tie-break selects the *position* that governs the next
+   segment, hence its temperature, hence the integral. **This is a live
+   divergence, not a theoretical one**, and it is precisely what the FOLD ≡
+   SCAN property exists to catch: the incremental fold must reproduce the
+   sorted order's tie-break, or the batch function must be changed to commit
+   order and the change justified as its own decision. Same-day sightings are
+   not exotic — the action clock can charge less than a day for a step.
+
+**Past-`t` queries are real and are already documented in the tree.**
+`last_fact_day_at_or_before` (`:4451`) exists precisely because catch-up's
+replay loop evaluates many instants across a span, and its doc says why a
+whole-history fold cannot serve it: the folded value "could be looking
+chronologically PAST the day it is being asked about." So the primitive must be
+restorable at an earlier position, not merely advanceable. For the three
+reset-partitioned drives this is cheap and exact — the reset facts *are*
+checkpoints, so restoring at position `p` means starting from the last reset at
+or before `p` — which is the bound the fold needs anyway.
+
+## 3. The mechanism, and why the store The Forebay shipped is not it
+
+`kernel/src/derived.rs`'s `Derived<K, V>` with `Validity::Ledger` is the
+obvious candidate and it is the wrong one. `Validity::is_stale` returns true
+once a fact touching a watched `DepKey` commits after the entry's recorded
+position, and a stale entry is evicted on read and recomputed from scratch. For
+these folds the watched dependency is `(subject, agent-at)`, which commits
+**every tick for that very subject**. So the entry is stale every tick, every
+read is a miss, and the recomputation is the O(history) walk being eliminated:
+a cache with a structurally guaranteed 100% miss rate.
+
+Invalidation and accumulation are different operations, not two policies over
+one. What these folds need is **extend-on-commit** — a value that *advances*
+with the log rather than being invalidated by it:
+
+```
+advance: (state, &Fact) -> state          O(1), exactly once, in commit order
+restore: position          -> state       from the nearest checkpoint at or before it
+read:    (state, t)        -> value       closed form ahead of the frontier
+```
+
+`Derived` is left untouched. The new primitive sits beside it in the kernel
+(generality is §6.6's standing direction, and `Derived` set the precedent that
+the *mechanism* is kernel-side while the *tenants* are not); the six folds are
+vessel's, and stay there. `Ledger::commit` gains no hook — the tick already
+holds the facts it is about to commit (`step_with_occupancy` returns them
+before they are appended), so the caller advances the fold explicitly and the
+kernel's write path is unchanged.
+
+**Nothing this campaign builds enters the save** (§8). The fold is session
+state, re-derivable from the ledger, exactly as `HomeNavCache` and
+`RoomMeshMemo` are.
+
+### The correctness ladder, strongest first
+
+Metaplan §7's ladder, with the subject changed from views to folds:
+
+1. **Type-level** — the fold hands out an immutable borrow; a read cannot
+   advance the state it reads.
+2. **Property — FOLD ≡ SCAN.** Over random ledgers, the incremental result is
+   byte-identical to the batch result. This is the campaign's central property
+   and every tenant gets it.
+3. **Property — advance-exactly-once, in commit order.** Double-advancing and
+   skipping are the two bugs this primitive can have; both are silent.
+4. **Adversarial — chaos-rebuild.** §7's chaos-eviction, adapted: discard the
+   accumulator at *every legal opportunity* and rebuild from the ledger, and
+   assert byte-identical output. If the fold is genuinely a fold, no schedule of
+   discards is observable.
+5. **Master oracle** — the census drift check, and the committed-artifact drift
+   check for the byte-identity claim in §0.
+
+## 4. Measured baseline
+
+Instrument: `windows/vessel/examples/session_length_scaling.rs`. Seed 42, **50
+agents held fixed**, 200 ticks in bands of 20, `--release`, on the Mac (the
+host this program's other probes use — metaplan §4:108, §6.5:737). **Four runs**, box
+load average 11.8–15.3 throughout.
+
+The deterministic columns are the control and they do not move across bands:
+facts committed per band 1,117–1,150; `HomeNavCache` searches 550–556. **The
+workload is identical band to band; only the history grows.** Band 1 is
+excluded from every statistic (2,279 searches against ~553 steady — a cold
+cache, not a sample of the same process), and the instrument declares the
+exclusion rather than applying it silently.
+
+### The decisive measurement: `drive_at` alone
+
+`drive_at` is timed directly, 200 back-to-back calls on one fixed probe agent,
+at every band. Nothing inside that span scales with anything but the history it
+walks — no A\*, no roster read, no occupancy, no commit.
+
+| | run 1 | run 2 | run 3 | run 4 |
+|---|---|---|---|---|
+| µs/call, band 2 → band 10 | 337 → 737 | 243 → 751 | 388 → 1019 | 414 → 917 |
+| `k` (µs/call per fact) | 1.89 | 2.50 | 3.33 | 2.90 |
+| `r²` | 0.820 | 0.975 | 0.972 | 0.948 |
+| **elasticity** | **0.86** | **1.24** | **1.07** | **1.02** |
+| monotone rises | 6/8 | 7/8 | 7/8 | 6/8 |
+
+The probe agent's own history grew 130 → 322 facts (**2.48×**) across those
+bands, and cost tracked it: **elasticity 0.86 / 1.24 / 1.07 / 1.02, median
+1.045**, with `r²` ≥ 0.82 in every run and ≥ 0.94 in three of four. `drive_at`
+is, to measurement precision, *proportional to the history it walks* — a pure
+walk with no meaningful fixed part at these depths. `k` spans 1.89–3.33 µs/call
+per fact across runs; the elasticity is the stable statistic and `k` the
+load-sensitive one, which is why H2 below is written against the elasticity.
+
+**`C` is deliberately not quoted as a floor.** The sampled range starts at 130
+facts, so the intercept is an extrapolation far outside the data and comes out
+negative on two of three runs. An earlier draft of the instrument printed "the
+history term is 106.5% of the total" from exactly that; the share is now
+suppressed when `C < 0` and the elasticity leads, because it needs no
+intercept.
+
+**In absolute terms: one `drive_at` call costs 0.74–1.02 ms at 322 facts of
+history**, and `drive_at` is called more than once per creature per tick.
+
+### The whole tick, for context — and a correction to this campaign's own earlier reasoning
+
+| | run 1 | run 2 | run 3 | run 4 |
+|---|---|---|---|---|
+| `k` (ms/tick per fact of mean per-agent history) | 2.72 | 2.70 | 3.25 | 3.67 |
+| `r²` | 0.842 | 0.843 | 0.839 | 0.791 |
+| history term's share at band 10 | 71.2% | 78.2% | 70.2% | 79.8% |
+
+**~70–80% of per-tick cost at 144 facts/agent of mean history is the history
+term**, stable across four runs (`r²` 0.79–0.84).
+
+That stability is a correction worth recording, because three earlier runs of
+the same column gave +2.05×, 0.70× and 0.64× — disagreeing about the *sign* —
+and this campaign's first diagnosis of that was box contention. Contention was
+real (one band ran 3.5× out of line at load average 18 while the calibration
+yardstick moved 19%, which is how we learned a single-threaded integer yardstick
+does not capture memory-bandwidth contention). But it was **not the main cause.**
+The main cause was fitting against `ledger_len`, which moves only 1.55× across
+this run because genesis commits ~12,500 facts before the walk begins, while
+`facts_of`'s `(subject, predicate)` index means a fold walks only its own
+agent's postings. Regressing on a near-constant produced the unstable sign. With
+the right x-axis the whole-tick column is *good* evidence, not junk — and the
+lesson is that "the box is noisy" was the more flattering explanation and the
+wrong one.
+
+### What this establishes, and what it does not
+
+**Establishes H1.** `k > 0` on the decisive column in all four runs with
+`r²` ≥ 0.82, and an elasticity indistinguishable from 1.0 (median 1.045). Per-tick cost is
+linear in history, so **total session cost is quadratic in session length.**
+
+**Does not establish** which of the six folds carry the term beyond `drive_at`
+itself, which is stage 1's remaining deliverable (the attribution profile). Nor
+does it connect to §6.4's 8.76 ms/agent-tick, which is a level claim about a
+different bench at a different agent count; joining the two would repeat the
+level-vs-shape conflation §6.4 itself identified in §6.2.
+
+## 5. Preregistration
+
+Frozen here, before the code that would move it (decision 0016). §6.1's own
+rule applies: the conclusion rests on the **shape** of a curve, not a
+magnitude.
+
+**The model.** Per-tick cost is affine in the per-agent folded history `h`, not
+a power law:
+
+```
+ms/tick = C + k * h
+```
+
+`C` is the history-independent floor (roster reads, A* searches, occupancy
+bookkeeping). `k` is milliseconds of tick time per additional committed fact
+per agent. An affine relation with a large intercept has **no** single
+power-law exponent, which is why this spec fits `C + k·h` and the instrument
+carries no log-log helper — see §4.
+
+**H1 (stage 1, the premise) — MET, see §4.** `k > 0` on the decisive column in
+four runs (`k` 1.89 / 2.50 / 3.33 / 2.90 µs/call per fact, `r²` 0.82 / 0.98 /
+0.97 / 0.95), with an elasticity of 0.86–1.24 (median 1.045) against a 2.48×
+history growth. Stage 2 is therefore
+enterable.
+
+**H2 (stage 5, the result).** Stated as a threshold rather than a direction,
+because "falls toward zero" is unfalsifiable. On the same instrument, same seed,
+same 50 agents, same 200 ticks, ≥3 runs:
+
+- **`drive_at`'s elasticity drops below 0.20**, against the 0.86–1.24 measured
+  now. That is the primary criterion: it says the fold stopped being a walk over
+  history.
+- **`C` becomes identifiable and positive** on the decisive column — currently
+  negative on two of three runs precisely because there is almost no fixed part
+  to find. A real O(1) fold has a real floor.
+- **The whole-tick history share falls below 20%**, against 70–80% now.
+
+Any one of those failing while the others pass is a finding to report, not a
+result to average away.
+
+The saving is therefore a **change of order** — per-tick cost linear in history
+means total session cost quadratic in session length — not a constant factor.
+
+**H3 (the negative control, and it must be stated).** Committed bytes do not
+move. No fact is removed. A campaign that reduced the fact count would have
+changed behaviour and failed §0.
+
+**Falsifier for the fix, not just the premise.** If `k` falls but `C` rises by
+more than the `k` saving at realistic session lengths, the fix is a
+pessimisation for short sessions. That is a finding to state, not to bury by
+choosing a long session for the headline number.
+
+**Not predicted, deliberately.** Any share of §6.4's 8.76 ms/agent-tick that
+the history term explains. §6.4 is a *level* claim about a different bench at a
+different agent count; connecting the two would be the level-vs-shape
+conflation §6.4 itself caught §6.2 making.
+
+## 6. The stage carve
+
+Strangler-fig, each stage measurement-gated on the one before, per the
+metaplan's own discipline.
+
+| # | stage | delivers | gate to enter |
+|---|---|---|---|
+| 1 | The instrument and the attribution | `session_length_scaling.rs` — **the instrument half is done and §4 reports it**; what remains is a `samply` profile attributing `k` across the six folds in cost order | — |
+| 2 | The primitive | the incremental ledger fold, kernel-side; FOLD ≡ SCAN, advance-exactly-once, chaos-rebuild | **met for `drive_at`** (§4); the profile decides whether stage 4 is also entered |
+| 3 | The reset-partitioned drives | thirst, hunger, fatigue onto the fold; `last_fact_day_at_or_before` becomes O(1) | stage 2's properties green |
+| 4 | Belief and hazard | `believed_water` (× peers), `hazard_memory_memo`, `build_emitter_scan` | stage 1's profile says these carry a material share of `k` |
+| 5 | The readout | re-run the instrument; H2/H3; state what 7b and 7c may now assume | stages 3–4 |
+
+Stage 4 is the one that may not be entered, and that is deliberate: if the
+profile says the three drives carry `k` and belief/hazard do not, migrating
+them is unmotivated memory for no measured gain — the same judgement §6.5 made
+against stage 2 of the parent program.
+
+## 7. Determinism contracts
+
+- **No serialized surface.** Nothing here enters the save. Serializing a fold
+  state would be a new decision, not an implementation detail (§8).
+- **Discarding the fold is a no-op, provably.** Any observable difference
+  between a rebuilt and a resident fold is a defect of the highest severity,
+  not a tolerance. This is what the chaos-rebuild harness buys.
+- **The fold is a pure function of the ledger prefix.** Memory availability
+  may never reach it; there is no eviction policy, because there is no budget.
+- **No new stream label, no new predicate, no epoch.** The campaign adds no
+  seed-derivation label and changes no save-format contract. That is what makes
+  it 7a rather than 7b.
+
+## 8. In / out
+
+**In:** the read side — the incremental-fold primitive, the six folds in
+`liveness.rs`, the instrument, and the attribution profile.
+**Out:** removing any fact (7c); the typed intention (7b, and an epoch);
+`MEM-1`'s melt; the O(agents²) roster term the sibling bench suspects, which is
+a different mechanism in the same call path and should not be silently absorbed
+into this campaign's headline.
+
+## 9. Decisions this campaign will need
+
+Numbered from the reserved block at ratification.
+
+1. **A fold advances; it is not invalidated** — the distinction between the
+   incremental-fold primitive and `Derived`'s memo, and the rule that a
+   dependency touched every tick makes a memo useless by construction.
+2. **The reset event is the checkpoint** — a past-position read is served from
+   the last reset at or before it, which is what bounds the three drives.
+3. Possibly: **the trail's provenance is content**, recording why 7c is gated
+   behind 7b rather than being reachable directly. This may be better as a
+   `see-also` on `MEM-1` than a decision of its own.
+
+## 10. Operational notes for the implementer
+
+- **`campaign/the-escapement` holds a live hold-off on `windows/vessel/` and
+  `kernel/src/ledger.rs`** — an unmerged `WorldTime` epoch (f64 fractional days
+  → i64 ticks, its decision 0186), 176 of 333 sites in `windows/vessel`,
+  committed the same day this spec was written and with uncommitted edits to
+  `liveness.rs` in its worktree. Its diff touches `agent_sightings`,
+  `integrate_thirst` and `latest_committed_position` directly. Stages 2–5 must
+  sequence behind it; stage 1 adds only a new file, which cannot conflict.
+  Expect every `f64` day in §2's arithmetic to become an integer tick count,
+  which makes the accumulator's arithmetic *exact* and is a simplification, not
+  a cost.
+- Read costs from `docs/timings.md` per host (`wall_s` is field 4), never from
+  `CLAUDE.md`'s prose. `gate-commit`'s documented 10–16 s does not hold on this
+  Mac: the warm floor is ~110–155 s and a cold run after an absorb is 450–700 s.
+- Predict a sluice hold with `git merge-tree` against the peer ahead in `make
+  sluice-status`, not against `main`.
+- **`make worktree-take` printed `scripts/test-worktree-freshness.sh: line
+  181: syntax error near unexpected token '('` — and it is NOT a bug on
+  `main`.** Traced rather than reported: `make worktree-take` resolves the
+  worktree pool from the **main checkout**, so it runs *that* checkout's copy
+  of the script, and this machine's main checkout sits on
+  `chore/heavy-tier-reclassify` @ `ea08a2ed5`, where an embedded `awk` program's
+  `END { ... }` block is unquoted and bash parses it. `bash -n` on `ea08a2ed5`
+  exits 2; on `origin/main` it exits 0 (fixed by `d8fbabd71`). So the failure is
+  a **stale-checkout artifact**, and the general lesson is worth more than the
+  instance: a `make` target that reaches into the main checkout runs the main
+  checkout's *code*, at whatever revision it happens to be parked on — so an
+  error it prints says nothing about the branch you are working in.
