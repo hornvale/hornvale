@@ -180,6 +180,19 @@ derivable with no new machinery: *you made it stay when it wanted to run.*
 That is the substrate under `PLAY-host-may-refuse`, `PLAY-soul-autonomy` and
 `PLAY-motive-drift`.
 
+> **Amended at final review (The Hand). The substrate shipped; "no new
+> machinery" overclaimed by one signature.** What the session retains is
+> `driven_mode: Option<Mode>` — the host's commitment *mode*, drive
+> granularity (`Pursuing(Fatigue)`, `Idle`), read back through
+> `Session::driven_mode`. What it does **not** retain is the *action*
+> arbitration chose: `advance_one` returns `bool`, and `Intent` appears
+> nowhere in `session.rs`. So the illustrating sentence above needs the intent
+> surfaced out of `advance_one`, which is a signature change — small, but not
+> nothing. The paragraph is left standing rather than rewritten because it is
+> what the spec predicted; decision 0226 and the chronicle now carry the
+> corrected version, and this note is here so a reader of the spec is not the
+> only one who sees the original.
+
 **Mind flayers fall out of the same shape.** If the intent source is a
 property of the relationship rather than of the body, "body A is driven by
 mind B" has the same structure as "body A is driven by a keyboard".
