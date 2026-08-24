@@ -2518,3 +2518,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T16:02:41Z | rebaseline | 62.783 | 233.231 | 12.187 | 3.91 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T16:06:44Z | gate-commit | 79.494 | 513.313 | 47.915 | 7.06 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
 | 2026-08-24T16:08:06Z | gate-commit | 19.061 | 46.471 | 11.875 | 3.06 | 0 | 3eee6e59a | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:28:23Z | gate-commit | 39.423 | 84.767 | 61.605 | 3.71 | 0 | 2176c0209 | campaign/the-confidant | MacBookPro | 10 |
+| 2026-08-24T16:29:50Z | gate-commit | 19.562 | 47.025 | 12.159 | 3.03 | 0 | 2176c0209 | campaign/the-confidant | MacBookPro | 10 |
