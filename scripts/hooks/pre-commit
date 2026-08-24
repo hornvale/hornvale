@@ -57,6 +57,23 @@ if [[ "$git_dir" != "$git_common" && "$branch" == "main" ]]; then
     exit 1
 fi
 
+# The bash-3.2 guard (Task 0, The Forebay). Every bash-shebanged file under
+# scripts/ must parse under macOS's /bin/bash 3.2 and avoid bash-4-only
+# constructs (mapfile/readarray, declare -A, ${var,,}/${var^^} case
+# expansion) -- shellcheck alone misses both classes (it reported a file
+# /bin/bash could not even parse as completely clean). Cheap and pure-text,
+# so it runs unconditionally on any commit that stages a scripts/ path,
+# rather than only on a rare trigger file the way the golden-pins and
+# stream-manifest tripwires below do.
+if git diff --cached --name-only --diff-filter=ACMR | grep -qE '^scripts/'; then
+    if ! bash scripts/check-bash32.sh; then
+        echo "pre-commit: 'scripts/check-bash32.sh' failed -- a staged scripts/ file" >&2
+        echo "either does not parse under /bin/bash (bash 3.2, what macOS ships) or" >&2
+        echo "uses a bash-4-only construct. See its output above for the file and line." >&2
+        exit 1
+    fi
+fi
+
 # The golden-pins.sql tripwire guard. `tools/census/queries/calibrate/
 # golden-pins.sql` deliberately duplicates every pinned calibration constant
 # in the three calibration test files, checked against the committed census
