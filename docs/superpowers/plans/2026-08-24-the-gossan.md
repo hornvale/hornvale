@@ -875,54 +875,82 @@ silently destroyed."
 In `domains/species/src/lib.rs`'s test module:
 
 ```rust
-    /// The predicate takes BOTH axes deliberately. `thermal == Absent` alone
-    /// would be correct only while the corpus contains no unsanctioned pair,
-    /// and the type admits twelve of them (spec §4.4) — relying on the
-    /// invariant here would make this the first place a bad pair goes wrong.
+    /// The predicate reads the THERMAL axis alone, because no caller holds
+    /// the other one (spec §4.3, corrected after Task 4). What makes that
+    /// safe is the sanctioned-pair table, not this function — so assert the
+    /// discrimination it DOES provide, and do not pretend to a check it
+    /// cannot make.
     #[test]
-    fn is_ametabolic_requires_both_axes_absent() {
-        use super::{ThermalStrategy as T, TrophicMode as M, is_ametabolic};
-        assert!(is_ametabolic(T::Absent, M::Absent));
-        assert!(!is_ametabolic(T::Absent, M::Heterotrophic));
-        assert!(!is_ametabolic(T::Endothermic, M::Absent));
-        assert!(!is_ametabolic(T::Unmodelled, M::Phototrophic));
+    fn is_ametabolic_is_true_only_for_the_absent_thermal_strategy() {
+        use super::{ThermalStrategy as T, is_ametabolic};
+        assert!(is_ametabolic(T::Absent));
+        assert!(!is_ametabolic(T::Endothermic));
+        assert!(!is_ametabolic(T::Ectothermic));
+        assert!(
+            !is_ametabolic(T::Unmodelled),
+            "Unmodelled means a metabolism nobody has modelled, NOT the \
+             absence of one — collapsing the two is the exact conflation this \
+             campaign split the enum to remove"
+        );
     }
 ```
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `cargo nextest run -p hornvale-species -E 'test(is_ametabolic_requires_both_axes_absent)'`
+Run: `cargo nextest run -p hornvale-species -E 'test(is_ametabolic_is_true_only_for_the_absent_thermal_strategy)'`
 Expected: FAIL to compile — `is_ametabolic` is not defined.
 
 - [ ] **Step 3: Add the predicate**
 
 ```rust
-/// Whether these two axes describe something with **no metabolism at all** —
-/// the question four separate sites used to ask in four spellings, in two
-/// crates, with no shared name (spec §4.3). That is the same drift that
-/// produced the mixed enum this campaign split.
-pub fn is_ametabolic(thermal: ThermalStrategy, trophic: TrophicMode) -> bool {
-    thermal == ThermalStrategy::Absent && trophic == TrophicMode::Absent
+/// Whether this describes something with **no metabolism at all** — the
+/// question four separate sites ask, in two crates, with no shared name
+/// (spec §4.3). That is the same drift that produced the mixed enum this
+/// campaign split.
+///
+/// **THE DIRECTION THIS RELIES ON, STATED.** It reads the thermal axis alone,
+/// so it is correct only while `ThermalStrategy::Absent` and
+/// `TrophicMode::Absent` occur together and never apart. The type admits
+/// twelve pairs where that is false (spec §4.4). What enforces it is
+/// `tests/suite/metabolic_pairs.rs`'s sanctioned-pair table, which consults
+/// every kind's pair on every commit-gate run. If that table is ever relaxed
+/// to admit a `(Absent, …)` pair with a live trophic mode, this function is
+/// the first place that goes wrong.
+///
+/// A two-axis signature was specified and is not available: every one of the
+/// four call sites holds a `ThermalStrategy` and nothing else, because `Body`
+/// carries only the axis the vessel layer reads.
+pub fn is_ametabolic(thermal: ThermalStrategy) -> bool {
+    thermal == ThermalStrategy::Absent
 }
 ```
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `cargo nextest run -p hornvale-species -E 'test(is_ametabolic_requires_both_axes_absent)'`
+Run: `cargo nextest run -p hornvale-species -E 'test(is_ametabolic_is_true_only_for_the_absent_thermal_strategy)'`
 Expected: PASS.
 
 - [ ] **Step 5: Repoint the four sites**
 
-- `domains/species/src/allometry.rs:141` — `life_history` already has both axes
-  only if its signature carries them. It takes `class: ThermalStrategy` alone,
-  so **leave this site as `class == ThermalStrategy::Absent` and add a comment
-  saying why**: widening `life_history`'s signature to take the trophic axis
-  would give it a parameter it never reads, which is the opposite of this
-  campaign's point. The predicate is for callers that hold a whole
-  `BiosphereTraits`.
-- `windows/vessel/src/liveness.rs:326`, `:3830`, `:4385` — each holds an NPC or
-  its traits, so each becomes
-  `hornvale_species::is_ametabolic(npc.thermal_strategy, npc.trophic_mode)`.
+**All four sites adopt the predicate**, and after Task 4 they all hold the same
+thing — a `ThermalStrategy` — which is what makes one shared name possible at
+all. (The plan originally carved `allometry` out, on the grounds that it lacked
+the trophic axis the predicate would need. With the corrected single-axis
+signature that carve-out has no reason to exist, and keeping it would leave one
+of the four spellings un-consolidated for no benefit.)
+
+- `domains/species/src/allometry.rs` — `life_history`'s
+  `if class == ThermalStrategy::Absent` becomes `if is_ametabolic(class)`.
+- `windows/vessel/src/liveness.rs:326` —
+  `matches!(class, ThermalStrategy::Absent)` becomes
+  `hornvale_species::is_ametabolic(class)`.
+- `windows/vessel/src/liveness.rs:3829` and `:4384` —
+  `matches!(npc.thermal_strategy, ThermalStrategy::Absent)` becomes
+  `hornvale_species::is_ametabolic(npc.thermal_strategy)`.
+
+Do **not** touch `rise_at`'s match arm at `:799`. It is an exhaustive match on
+the thermal axis, not a spelling of "is this ametabolic" — and its
+`Unmodelled | Absent => base` grouping is load-bearing (spec §3.3).
 
 - [ ] **Step 6: Run the affected suites**
 

@@ -145,12 +145,34 @@ Four spellings, two crates, no shared name — the same drift that produced the
 mixed enum. They become one function in `domains/species`:
 
 ```rust
-pub fn is_ametabolic(thermal: ThermalStrategy, trophic: TrophicMode) -> bool
+pub fn is_ametabolic(thermal: ThermalStrategy) -> bool
 ```
 
-It takes **both** axes rather than trusting `thermal == None`, because §4.4
-says the type admits pairs the corpus must not contain, and a predicate that
-silently relied on the invariant would be the place that breaks first.
+**CORRECTED after Task 4. This section originally specified a two-axis
+predicate, and that predicate has ZERO POSSIBLE CALLERS.** Measured against
+the post-Task-4 tree, every one of the four sites holds only a thermal value:
+
+```
+allometry.rs   life_history(mass, class: ThermalStrategy, schedule)   thermal only
+liveness.rs:326    a `class: ThermalStrategy` parameter               thermal only
+liveness.rs:3829   `npc.thermal_strategy` — `Body` has no trophic axis
+liveness.rs:4384   `npc.thermal_strategy` — same
+```
+
+`Body` (`windows/vessel/src/body.rs`) deliberately carries only the axis the
+vessel layer reads, on §4.5's own reasoning: an unread axis there, with no
+sanctioned-pair guard at that layer, would be exactly the rot this campaign
+exists to fix. So the two-axis signature was specified for a world in which
+some caller holds both, and no such caller exists.
+
+**The single-axis predicate DOES rely on the §4.4 invariant, and must say so
+rather than hide it.** Its doc names the guard that enforces it — the
+sanctioned-pair table of §4.4 — so the reliance is a stated direction rather
+than a silent assumption. That is the same discipline the project applies to
+any check whose blind side is real: name what it enforces, and name what
+enforces the rest. The original text was right that a predicate trusting the
+invariant is where a bad pair breaks first; it was wrong that a two-axis
+signature was available to avoid it.
 
 ### 4.4 The cost of splitting, named: 16 representable pairs, 4 meaningful
 
