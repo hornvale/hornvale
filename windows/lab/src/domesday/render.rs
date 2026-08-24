@@ -1085,7 +1085,7 @@ mod tests {
         // one has no space between its own dots, so it must be immune.
         let doc = "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 \
                     (slow/sparse) (BIO-2 spec \u{a7}4/CAP-2); Absent if goblin is off-roster \
-                    or Ametabolic";
+                    or ametabolic";
         let got = redact_registry_citations(doc);
         assert!(
             got.contains("(fast/prolific) ... 1 (slow/sparse)"),

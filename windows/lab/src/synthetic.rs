@@ -36,7 +36,7 @@ use hornvale_kernel::{
     ANIMAL_PREY, ConceptRegistry, EntityId, Facet, Ledger, Lineage, PLANT_FORAGE, ResourceVector,
     WorldTime,
 };
-use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_species::{ActivityCycle, ThermalStrategy};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, EATEN, Hazards, RESTED, Terrain, ThreatNiche, place_agent,
@@ -221,7 +221,7 @@ fn creature(
         temperature_niche: niche,
         deliberation_latency: 0.5,
         time_horizon: 0.0,
-        metabolic_class: MetabolicClass::Endotherm,
+        thermal_strategy: ThermalStrategy::Endothermic,
         // A balanced omnivore fed by the harness terrain's default productivity
         // (The Provender), so hunger stays quiet — these scenarios probe
         // thirst/thermal distress, not starvation.
@@ -702,7 +702,7 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
             MILD_NICHE,
         ),
         Body {
-            metabolic_class: MetabolicClass::Ametabolic,
+            thermal_strategy: ThermalStrategy::Absent,
             ..creature(knower, station.clone(), station, "goblin", MILD_NICHE)
         },
     ];

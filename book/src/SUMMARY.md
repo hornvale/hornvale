@@ -398,6 +398,7 @@
 - [The Stride](./chronicle/the-stride.md)
 - [The Drift](./chronicle/the-drift.md)
 - [The Hand](./chronicle/the-hand.md)
+- [The Gossan](./chronicle/the-gossan.md)
 - [The Mirror](./chronicle/the-mirror.md)
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
 - [The Forebay](./chronicle/the-forebay.md)

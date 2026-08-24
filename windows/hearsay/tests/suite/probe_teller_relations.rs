@@ -148,7 +148,7 @@ fn how_many_generations_does_one_retelling_span_on_seed_42() {
         let Some(bio) = wc.biosphere.get_by_label(people) else {
             continue;
         };
-        let lh = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let lh = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         if let Some(g) = lh.generation_length {
             gen_days.insert(occ, g.get() * year_days);
         }
@@ -323,7 +323,7 @@ fn does_generation_length_vary_by_people_on_seed_42() {
             .ok()
             .and_then(|wc| {
                 wc.biosphere.get_by_label(people).map(|bio| {
-                    hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+                    hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule)
                         .generation_length
                 })
             })

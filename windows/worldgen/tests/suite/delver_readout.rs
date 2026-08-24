@@ -1393,7 +1393,7 @@ fn p5_generation_length_reads_the_paced_schedule() {
         //
         // The mass-alone counterfactual: the SAME row with the schedule
         // reverted, which is exactly the mutation M2 applies for real.
-        let allometric = hornvale_species::life_history(bio.mass, bio.metabolic_class, {
+        let allometric = hornvale_species::life_history(bio.mass, bio.thermal_strategy, {
             hornvale_species::LifeSchedule::ALLOMETRIC
         })
         .generation_length

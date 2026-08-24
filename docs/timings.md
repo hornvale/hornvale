@@ -2590,6 +2590,35 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T16:38:11Z | sluice:outboard | 39.403 | 24.647 | 38.347 | 1.60 | 0 | 730de5266 |  | lefford | 40 |
 | 2026-08-24T16:44:52Z | sluice:gate | 401.448 | 10689.372 | 405.570 | 27.64 | 0 | 547788055 |  | lefford | 40 |
 | 2026-08-24T16:52:01Z | sluice:clients | 428.993 | 5262.927 | 83.261 | 12.46 | 0 | f12462bf1 |  | lefford | 40 |
+| 2026-08-24T17:57:05Z | gate-commit | 243.611 | 1063.653 | 73.493 | 4.67 | 0 | 5ccde4bb1 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T17:59:36Z | gate-commit | 21.283 | 48.285 | 12.140 | 2.84 | 0 | d849bbe62 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:00:50Z | gate-commit | 21.688 | 49.178 | 12.963 | 2.87 | 0 | b30ce2dfc | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:01:24Z | gate-commit | 21.481 | 47.792 | 12.149 | 2.79 | 0 | b30ce2dfc | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:02:12Z | gate-commit | 19.823 | 47.331 | 11.835 | 2.98 | 0 | b30ce2dfc | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:13:07Z | gate-commit | 19.601 | 47.212 | 11.810 | 3.01 | 0 | bad68c09f | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:36:37Z | gate-commit | 19.977 | 47.400 | 11.895 | 2.97 | 0 | 608df5a12 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:37:37Z | gate-commit | 20.267 | 47.284 | 12.150 | 2.93 | 0 | 608df5a12 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:43:58Z | gate-commit | 34.480 | 122.193 | 22.016 | 4.18 | 0 | 30187cf4d | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:44:41Z | gate-commit | 20.884 | 48.818 | 13.049 | 2.96 | 0 | 30187cf4d | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:52:21Z | gate-commit | 61.590 | 230.153 | 45.906 | 4.48 | 0 | 833029c16 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:53:10Z | gate-commit | 21.973 | 48.573 | 12.768 | 2.79 | 0 | 833029c16 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T18:55:53Z | gate-commit | 21.587 | 47.772 | 11.883 | 2.76 | 0 | c24d1aa5a | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T19:22:11Z | gate-commit | 39.462 | 74.990 | 21.248 | 2.44 | 0 | 80ecb2bf1 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T19:22:58Z | gate-commit | 28.014 | 49.457 | 12.520 | 2.21 | 0 | 80ecb2bf1 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T19:51:16Z | gate-commit | 44.666 | 67.236 | 22.301 | 2.00 | 0 | 668db4fa6 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T19:52:06Z | gate-commit | 37.666 | 49.580 | 11.879 | 1.63 | 0 | 668db4fa6 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:10:37Z | gate-commit | 18.253 | 33.983 | 21.181 | 3.02 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:11:16Z | gate-commit | 18.526 | 25.356 | 10.764 | 1.95 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:12:10Z | gate-commit | 40.295 | 169.101 | 31.210 | 4.97 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:13:20Z | gate-commit | 23.125 | 48.136 | 12.710 | 2.63 | 0 | e3fb21cdb | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:31:21Z | gate-commit | 37.226 | 64.829 | 23.217 | 2.37 | 0 | eaba1b75e | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:32:38Z | gate-commit | 29.115 | 50.830 | 12.367 | 2.17 | 0 | eaba1b75e | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T20:41:09Z | gate-commit | 54.320 | 139.438 | 43.591 | 3.37 | 0 | 7e16b1a55 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T21:26:36Z | gate-commit | 40.638 | 169.783 | 33.051 | 4.99 | 0 | 2b05efb60 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T21:28:25Z | rebaseline | 56.874 | 236.587 | 12.241 | 4.38 | 0 | 9212c619d | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T21:38:48Z | gate-commit | 19.026 | 46.888 | 11.846 | 3.09 | 0 | 9212c619d | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T21:44:10Z | gate-commit | 25.376 | 58.829 | 27.920 | 3.42 | 0 | 6b4909052 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T22:11:08Z | gate-commit | 19.305 | 46.904 | 11.487 | 3.02 | 0 | e02497af8 | campaign/the-gossan | MacBookPro | 10 |
 | 2026-08-24T17:56:47Z | gate-commit | 23.238 | 17.899 | 4.558 | 0.97 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T17:57:22Z | gate-commit | 15.588 | 16.913 | 4.279 | 1.36 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T17:58:08Z | gate-commit | 36.874 | 120.745 | 23.232 | 3.90 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
@@ -2620,3 +2649,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T21:51:13Z | sluice:outboard | 42.556 | 29.597 | 42.089 | 1.68 | 0 | e5772b897 |  | lefford | 40 |
 | 2026-08-24T21:58:38Z | sluice:gate | 444.452 | 12266.248 | 507.369 | 28.74 | 0 | 3e36028b2 |  | lefford | 40 |
 | 2026-08-24T22:05:56Z | sluice:clients | 438.347 | 5447.220 | 100.208 | 12.66 | 0 | 1a021d49e |  | lefford | 40 |
+| 2026-08-24T22:27:07Z | gate-commit | 33.222 | 87.253 | 37.142 | 3.74 | 0 | b4f886ebd | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T22:30:37Z | gate-commit | 26.455 | 51.270 | 14.362 | 2.48 | 0 | 861f6ce90 | campaign/the-gossan | MacBookPro | 10 |
+| 2026-08-24T22:39:40Z | gate-commit | 42.207 | 53.353 | 13.097 | 1.57 | 0 | 91ccff8ba | campaign/the-gossan | MacBookPro | 10 |

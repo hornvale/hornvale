@@ -2,7 +2,7 @@
 //! life-history from body mass and metabolic class. Universal exponents;
 //! per-class coefficients. No draws, no world state — see the design spec.
 
-use crate::{LifeSchedule, MetabolicClass};
+use crate::{LifeSchedule, ThermalStrategy, is_ametabolic};
 use hornvale_kernel::{Mass, Years, math};
 
 // Exponents (discovered; spec §4).
@@ -35,28 +35,32 @@ const MAX_PACE_MULTIPLIER: f64 = 1.5;
 /// Single per-class pace multiplier: shifts lifespan, maturity, and tempo
 /// together so the fast–slow covariation stays coherent (spec §4). Ectotherms
 /// are slower on every axis at once.
-fn pace_multiplier(class: MetabolicClass) -> f64 {
+fn pace_multiplier(class: ThermalStrategy) -> f64 {
     match class {
-        MetabolicClass::Endotherm => 1.0,
-        MetabolicClass::Ectotherm => MAX_PACE_MULTIPLIER,
-        MetabolicClass::Autotroph => 1.0,
-        // `life_history` nulls the biological traits for Ametabolic before
-        // any of the four time laws are called; the bare `lifespan` (etc.)
-        // called directly on an Ametabolic mass returns a number that means
-        // nothing.
-        MetabolicClass::Ametabolic => 1.0,
+        ThermalStrategy::Endothermic => 1.0,
+        ThermalStrategy::Ectothermic => MAX_PACE_MULTIPLIER,
+        // `Unmodelled` takes the endotherm's 1.0 because the old `Autotroph`
+        // did — this is the rename, not a modelling decision.
+        ThermalStrategy::Unmodelled => 1.0,
+        // `life_history` nulls the biological traits for `Absent` before any
+        // of the four time laws are called; the bare `lifespan` (etc.) called
+        // directly on an ametabolic mass returns a number that means nothing.
+        ThermalStrategy::Absent => 1.0,
     }
 }
 
 /// Basal metabolic rate in watts at a reference temperature (spec §4/§10 CAP-1
 /// — this is the BASAL rate; ectotherm realized rate couples to climate and is
-/// deferred). Surface-limited for `Autotroph` — see `MetabolicClass::Autotroph`.
+/// deferred). Surface-limited for the old `Autotroph` — see
+/// [`ThermalStrategy::Unmodelled`].
 /// type-audit: bare-ok(ratio: return)
-pub fn basal_metabolic_rate_w(mass: Mass, class: MetabolicClass) -> f64 {
+pub fn basal_metabolic_rate_w(mass: Mass, class: ThermalStrategy) -> f64 {
     let b0 = match class {
-        MetabolicClass::Endotherm | MetabolicClass::Autotroph => B0_ENDOTHERM,
-        MetabolicClass::Ectotherm => B0_ENDOTHERM * ECTOTHERM_METABOLIC_FRACTION,
-        MetabolicClass::Ametabolic => return 0.0,
+        // `Unmodelled` groups with `Endothermic` here and with `Absent` in
+        // `rise_at`. That disagreement is why the value exists.
+        ThermalStrategy::Endothermic | ThermalStrategy::Unmodelled => B0_ENDOTHERM,
+        ThermalStrategy::Ectothermic => B0_ENDOTHERM * ECTOTHERM_METABOLIC_FRACTION,
+        ThermalStrategy::Absent => return 0.0,
     };
     b0 * math::powf(mass.kilograms(), P_METABOLIC)
 }
@@ -65,7 +69,7 @@ pub fn basal_metabolic_rate_w(mass: Mass, class: MetabolicClass) -> f64 {
 /// anchor; the per-class pace multiplier lengthens ectotherm life. `schedule`
 /// is the third input (The Long Age, spec §3): `Allometric`'s factor is
 /// `1.0`, an IEEE-754 no-op, so every pre-campaign value is unchanged.
-pub fn lifespan(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -> Years {
+pub fn lifespan(mass: Mass, class: ThermalStrategy, schedule: LifeSchedule) -> Years {
     let k_life = ANCHOR_LIFESPAN_YR / math::powf(ANCHOR_MASS_KG, P_TIME);
     let yr =
         schedule.factor() * pace_multiplier(class) * k_life * math::powf(mass.kilograms(), P_TIME);
@@ -74,7 +78,7 @@ pub fn lifespan(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -> Ye
 
 /// Age at first reproduction (spec §4), ~20 % of lifespan at the anchor.
 /// `schedule` stretches this alongside `lifespan` (The Long Age, spec §3).
-pub fn age_at_maturity(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -> Years {
+pub fn age_at_maturity(mass: Mass, class: ThermalStrategy, schedule: LifeSchedule) -> Years {
     let k_mat = ANCHOR_MATURITY_YR / math::powf(ANCHOR_MASS_KG, P_TIME);
     let yr =
         schedule.factor() * pace_multiplier(class) * k_mat * math::powf(mass.kilograms(), P_TIME);
@@ -88,7 +92,7 @@ pub fn age_at_maturity(mass: Mass, class: MetabolicClass, schedule: LifeSchedule
 /// absolute (roster-independent). A strongly-paced `schedule` deliberately
 /// **saturates** this at 1.0 rather than exceeding it (spec §3.4/§3.5).
 /// type-audit: bare-ok(ratio: return)
-pub fn reproductive_tempo(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -> f64 {
+pub fn reproductive_tempo(mass: Mass, class: ThermalStrategy, schedule: LifeSchedule) -> f64 {
     // Fixed reference range: 1 kg → ~0, 1000 kg → ~1 (before the class shift).
     let raw = (math::log10(mass.kilograms()) / 3.0).clamp(0.0, 1.0);
     (raw * schedule.factor() * pace_multiplier(class)).clamp(0.0, 1.0)
@@ -99,21 +103,26 @@ pub fn reproductive_tempo(mass: Mass, class: MetabolicClass, schedule: LifeSched
 const GENERATION_FRACTION: f64 = 0.3;
 
 /// A species' derived life-history profile (spec §5). Computed on demand from
-/// the biosphere component — never stored. Biological fields are `None` for `Ametabolic`
-/// (a construct has no mass-derived life-history); `pace_of_life` is a
+/// the biosphere component — never stored. Biological fields are `None` for an
+/// ametabolic species (`ThermalStrategy::Absent` — a construct has no
+/// mass-derived life-history); `pace_of_life` is a
 /// size-derived position defined for anything with mass.
 /// type-audit: bare-ok(ratio: basal_metabolic_rate_w), bare-ok(ratio: reproductive_tempo), bare-ok(ratio: pace_of_life)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LifeHistory {
-    /// Reference-temperature basal metabolic rate, watts; 0.0 if `Ametabolic`.
+    /// Reference-temperature basal metabolic rate, watts; 0.0 if ametabolic
+    /// (`ThermalStrategy::Absent`).
     pub basal_metabolic_rate_w: f64,
-    /// Maximum lifespan; `None` if `Ametabolic`.
+    /// Maximum lifespan; `None` if ametabolic (`ThermalStrategy::Absent`).
     pub lifespan: Option<Years>,
-    /// Age at first reproduction; `None` if `Ametabolic`.
+    /// Age at first reproduction; `None` if ametabolic
+    /// (`ThermalStrategy::Absent`).
     pub age_at_maturity: Option<Years>,
-    /// Reproductive output on the r–K axis, 0 fast … 1 slow; `None` if `Ametabolic`.
+    /// Reproductive output on the r–K axis, 0 fast … 1 slow; `None` if
+    /// ametabolic (`ThermalStrategy::Absent`).
     pub reproductive_tempo: Option<f64>,
-    /// Generation length (MEM-7's handle); `None` if `Ametabolic`.
+    /// Generation length (MEM-7's handle); `None` if ametabolic
+    /// (`ThermalStrategy::Absent`).
     pub generation_length: Option<Years>,
     /// Overall life-history speed, 0 fast … 1 slow; absolute f(log mass).
     pub pace_of_life: f64,
@@ -125,7 +134,7 @@ pub struct LifeHistory {
 /// deliberately **saturates** this at 1.0 rather than rescaling the ceiling
 /// (spec §3.4/§3.5): `MAX_PACE_MULTIPLIER` normalizes the class component
 /// only.
-fn pace_of_life(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -> f64 {
+fn pace_of_life(mass: Mass, class: ThermalStrategy, schedule: LifeSchedule) -> f64 {
     let raw = (math::log10(mass.kilograms()) / 3.0).clamp(0.0, 1.0);
     // Ectotherms read slower on the same size.
     (raw * schedule.factor() * pace_multiplier(class) / MAX_PACE_MULTIPLIER).clamp(0.0, 1.0)
@@ -135,10 +144,10 @@ fn pace_of_life(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -> f6
 /// input to the four time laws (The Long Age, spec §3); `basal_metabolic_rate_w`
 /// deliberately keeps its two-argument signature and does not take it —
 /// metabolic rate is mass-set (Kleiber), not schedule-set.
-pub fn life_history(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -> LifeHistory {
+pub fn life_history(mass: Mass, class: ThermalStrategy, schedule: LifeSchedule) -> LifeHistory {
     let bmr = basal_metabolic_rate_w(mass, class);
     let pace = pace_of_life(mass, class, schedule);
-    if class == MetabolicClass::Ametabolic {
+    if is_ametabolic(class) {
         return LifeHistory {
             basal_metabolic_rate_w: bmr,
             lifespan: None,
@@ -165,7 +174,7 @@ pub fn life_history(mass: Mass, class: MetabolicClass, schedule: LifeSchedule) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::MetabolicClass::*;
+    use crate::ThermalStrategy::*;
     use hornvale_kernel::Mass;
 
     fn m(kg: f64) -> Mass {
@@ -174,9 +183,11 @@ mod tests {
 
     #[test]
     fn anchor_hits_documented_targets() {
-        assert!((lifespan(m(40.0), Endotherm, LifeSchedule::ALLOMETRIC).get() - 60.0).abs() < 1e-6);
         assert!(
-            (age_at_maturity(m(40.0), Endotherm, LifeSchedule::ALLOMETRIC).get() - 12.0).abs()
+            (lifespan(m(40.0), Endothermic, LifeSchedule::ALLOMETRIC).get() - 60.0).abs() < 1e-6
+        );
+        assert!(
+            (age_at_maturity(m(40.0), Endothermic, LifeSchedule::ALLOMETRIC).get() - 12.0).abs()
                 < 1e-6
         );
     }
@@ -184,45 +195,46 @@ mod tests {
     #[test]
     fn lifespan_and_maturity_increase_with_mass() {
         assert!(
-            lifespan(m(132.0), Endotherm, LifeSchedule::ALLOMETRIC).get()
-                > lifespan(m(18.0), Endotherm, LifeSchedule::ALLOMETRIC).get()
+            lifespan(m(132.0), Endothermic, LifeSchedule::ALLOMETRIC).get()
+                > lifespan(m(18.0), Endothermic, LifeSchedule::ALLOMETRIC).get()
         );
         assert!(
-            age_at_maturity(m(132.0), Endotherm, LifeSchedule::ALLOMETRIC).get()
-                > age_at_maturity(m(18.0), Endotherm, LifeSchedule::ALLOMETRIC).get()
+            age_at_maturity(m(132.0), Endothermic, LifeSchedule::ALLOMETRIC).get()
+                > age_at_maturity(m(18.0), Endothermic, LifeSchedule::ALLOMETRIC).get()
         );
     }
 
     #[test]
     fn ectotherms_outlive_endotherms_at_equal_mass() {
         assert!(
-            lifespan(m(20.0), Ectotherm, LifeSchedule::ALLOMETRIC).get()
-                > lifespan(m(20.0), Endotherm, LifeSchedule::ALLOMETRIC).get()
+            lifespan(m(20.0), Ectothermic, LifeSchedule::ALLOMETRIC).get()
+                > lifespan(m(20.0), Endothermic, LifeSchedule::ALLOMETRIC).get()
         );
     }
 
     #[test]
     fn metabolic_rate_rises_with_mass_and_is_lower_for_ectotherms() {
         assert!(
-            basal_metabolic_rate_w(m(100.0), Endotherm)
-                > basal_metabolic_rate_w(m(10.0), Endotherm)
+            basal_metabolic_rate_w(m(100.0), Endothermic)
+                > basal_metabolic_rate_w(m(10.0), Endothermic)
         );
         assert!(
-            basal_metabolic_rate_w(m(20.0), Ectotherm) < basal_metabolic_rate_w(m(20.0), Endotherm)
+            basal_metabolic_rate_w(m(20.0), Ectothermic)
+                < basal_metabolic_rate_w(m(20.0), Endothermic)
         );
     }
 
     #[test]
     fn tempo_slows_with_mass() {
         assert!(
-            reproductive_tempo(m(132.0), Endotherm, LifeSchedule::ALLOMETRIC)
-                > reproductive_tempo(m(18.0), Endotherm, LifeSchedule::ALLOMETRIC)
+            reproductive_tempo(m(132.0), Endothermic, LifeSchedule::ALLOMETRIC)
+                > reproductive_tempo(m(18.0), Endothermic, LifeSchedule::ALLOMETRIC)
         );
     }
 
     #[test]
     fn ametabolic_nulls_the_biological_traits() {
-        let lh = life_history(m(500.0), Ametabolic, LifeSchedule::ALLOMETRIC);
+        let lh = life_history(m(500.0), Absent, LifeSchedule::ALLOMETRIC);
         assert_eq!(lh.basal_metabolic_rate_w, 0.0);
         assert!(lh.lifespan.is_none());
         assert!(lh.age_at_maturity.is_none());
@@ -232,7 +244,7 @@ mod tests {
 
     #[test]
     fn living_classes_fill_every_trait() {
-        let lh = life_history(m(18.0), Endotherm, LifeSchedule::ALLOMETRIC);
+        let lh = life_history(m(18.0), Endothermic, LifeSchedule::ALLOMETRIC);
         assert!(lh.lifespan.is_some() && lh.generation_length.is_some());
         // generation length sits between maturity and lifespan
         // (`gen` is a reserved keyword in edition 2024 — see `gen` blocks)
@@ -245,13 +257,13 @@ mod tests {
     fn pace_of_life_is_roster_independent() {
         // pace depends only on this species' own mass+class, not on any registry
         // state — computing it twice (as if the roster changed) is identical.
-        let a = life_history(m(18.0), Endotherm, LifeSchedule::ALLOMETRIC).pace_of_life;
-        let b = life_history(m(18.0), Endotherm, LifeSchedule::ALLOMETRIC).pace_of_life;
+        let a = life_history(m(18.0), Endothermic, LifeSchedule::ALLOMETRIC).pace_of_life;
+        let b = life_history(m(18.0), Endothermic, LifeSchedule::ALLOMETRIC).pace_of_life;
         assert_eq!(a, b);
         // and it is monotone in mass
         assert!(
-            life_history(m(132.0), Endotherm, LifeSchedule::ALLOMETRIC).pace_of_life
-                > life_history(m(18.0), Endotherm, LifeSchedule::ALLOMETRIC).pace_of_life
+            life_history(m(132.0), Endothermic, LifeSchedule::ALLOMETRIC).pace_of_life
+                > life_history(m(18.0), Endothermic, LifeSchedule::ALLOMETRIC).pace_of_life
         );
     }
 
@@ -261,7 +273,7 @@ mod tests {
         // exactly 1.0 is an IEEE-754 no-op, so `Allometric` must not merely
         // be close to the old law -- it must be the same bits.
         for kg in [5.0, 18.1, 55.0, 70.0, 132.0, 2200.0, 6000.0] {
-            for class in [Endotherm, Ectotherm, Autotroph, Ametabolic] {
+            for class in [Endothermic, Ectothermic, Unmodelled, Absent] {
                 let lh = life_history(m(kg), class, LifeSchedule::ALLOMETRIC);
                 assert_eq!(
                     lh.pace_of_life.to_bits(),
@@ -274,7 +286,7 @@ mod tests {
 
     /// The pre-campaign expression, inlined verbatim as the witness the
     /// bit-identity test compares against.
-    fn pace_of_life_bare_reference(mass: Mass, class: MetabolicClass) -> f64 {
+    fn pace_of_life_bare_reference(mass: Mass, class: ThermalStrategy) -> f64 {
         let raw = (math::log10(mass.kilograms()) / 3.0).clamp(0.0, 1.0);
         (raw * pace_multiplier(class) / MAX_PACE_MULTIPLIER).clamp(0.0, 1.0)
     }
@@ -282,10 +294,10 @@ mod tests {
     #[test]
     fn a_paced_schedule_lengthens_life_and_maturity_together() {
         let slow = LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
-        let base_life = lifespan(m(60.0), Endotherm, LifeSchedule::ALLOMETRIC).get();
-        let base_mat = age_at_maturity(m(60.0), Endotherm, LifeSchedule::ALLOMETRIC).get();
-        let slow_life = lifespan(m(60.0), Endotherm, slow).get();
-        let slow_mat = age_at_maturity(m(60.0), Endotherm, slow).get();
+        let base_life = lifespan(m(60.0), Endothermic, LifeSchedule::ALLOMETRIC).get();
+        let base_mat = age_at_maturity(m(60.0), Endothermic, LifeSchedule::ALLOMETRIC).get();
+        let slow_life = lifespan(m(60.0), Endothermic, slow).get();
+        let slow_mat = age_at_maturity(m(60.0), Endothermic, slow).get();
         assert!(
             (slow_life / base_life - 11.0).abs() < 1e-9,
             "lifespan scales by the factor"
@@ -302,10 +314,10 @@ mod tests {
         // A long-lived creature is not a cold creature.
         let slow = LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
         assert_eq!(
-            life_history(m(60.0), Endotherm, slow)
+            life_history(m(60.0), Endothermic, slow)
                 .basal_metabolic_rate_w
                 .to_bits(),
-            life_history(m(60.0), Endotherm, LifeSchedule::ALLOMETRIC)
+            life_history(m(60.0), Endothermic, LifeSchedule::ALLOMETRIC)
                 .basal_metabolic_rate_w
                 .to_bits()
         );
@@ -317,7 +329,7 @@ mod tests {
         // component only, and an authored factor above it saturates. Raising
         // the ceiling instead would move pace_of_life for all thirty kinds.
         let slow = LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
-        assert_eq!(life_history(m(60.0), Endotherm, slow).pace_of_life, 1.0);
+        assert_eq!(life_history(m(60.0), Endothermic, slow).pace_of_life, 1.0);
     }
 
     #[test]
@@ -332,7 +344,7 @@ mod tests {
     #[test]
     fn ametabolic_still_nulls_the_biological_traits_under_any_schedule() {
         let slow = LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
-        let lh = life_history(m(500.0), Ametabolic, slow);
+        let lh = life_history(m(500.0), Absent, slow);
         assert!(lh.lifespan.is_none());
         assert!(lh.generation_length.is_none());
     }

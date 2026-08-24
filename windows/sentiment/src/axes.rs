@@ -217,8 +217,8 @@ fn activity_cycle_distance(a: &PerceptionVector, b: &PerceptionVector) -> f64 {
 /// `hornvale_species::reproductive_tempo` (already `[0,1]` by
 /// construction).
 fn reproductive_distance(a: &PeopleTraits, b: &PeopleTraits) -> f64 {
-    let tempo_a = hornvale_species::reproductive_tempo(a.mass, a.metabolic_class, a.schedule);
-    let tempo_b = hornvale_species::reproductive_tempo(b.mass, b.metabolic_class, b.schedule);
+    let tempo_a = hornvale_species::reproductive_tempo(a.mass, a.thermal_strategy, a.schedule);
+    let tempo_b = hornvale_species::reproductive_tempo(b.mass, b.thermal_strategy, b.schedule);
     (tempo_a - tempo_b).abs().min(1.0)
 }
 
@@ -266,8 +266,8 @@ mod smoke_tests {
     use hornvale_kernel::{Mass, PLANT_FORAGE, ResourceVector};
     use hornvale_language::speech::ExoticManner;
     use hornvale_species::{
-        ActivityCycle, HabitatRealm, LifeSchedule, MetabolicClass, MindVector, Sociality,
-        StatusBasis,
+        ActivityCycle, HabitatRealm, LifeSchedule, MindVector, Sociality, StatusBasis,
+        ThermalStrategy, TrophicMode,
     };
     use std::collections::BTreeSet;
 
@@ -303,7 +303,8 @@ mod smoke_tests {
                 },
             },
             mass: Mass::new(70.0).expect("valid mass"),
-            metabolic_class: MetabolicClass::Endotherm,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            trophic_mode: TrophicMode::Heterotrophic,
             schedule: LifeSchedule::Allometric,
             society: SocietyVector {
                 sociality: Sociality::Hierarchic,
