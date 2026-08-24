@@ -26,14 +26,14 @@ No direction here is closed; the nearest ground lies E, NW, SW.
    + +   +
       +
   ways on: E, NW, SW
-  legend: Doaba, bugbear of Doaba, buttressed canopy, damp, tropical rainforest
+  legend: Doaba, buttressed canopy, damp, tropical rainforest
 
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > !whoami
-A bugbear of Doaba (agent 7649963730982468685), day 0, room 896860167.
+A bugbear of Doaba (agent 3286669968037249024), day 0, room 896860167.
 > enter
 [chamber 235106516365287, day 0.011719999738288106]
 A small room, holding a doorway and a screen.
@@ -110,12 +110,12 @@ No direction here is closed; the nearest ground lies NE, W, SE.
 +   + +   + +
  + +   + +
 +   + @   + +
- + +   [2m&[0m +
+ + +   [2m#[0m +
 +   + +   + +
    +   + +
       +
   ways on: NE, W, SE
-  legend: Doaba, a stream gully, shaded, damp, on a rise, bugbear of Doaba, tropical rainforest
+  legend: Doaba, a stream gully, shaded, damp, on a rise, tropical rainforest
 
 > enter
 Nothing here is built; there is nothing to enter.
@@ -134,7 +134,7 @@ No direction here is closed; the nearest ground lies NW, SW, E.
 Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies NE, W, SE.
 > wait 90
-Time passes. You sense movement nearby (189 stirred).
+Time passes. You sense movement nearby (151 stirred).
 > examine sky
 The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are shrinking. The sky is a flat overcast.
 > knows

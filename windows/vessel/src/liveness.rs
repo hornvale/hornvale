@@ -9,7 +9,9 @@ use crate::action::{
     Action, is_replayable_in_catch_up, plan_to_room, plan_to_room_memo, plan_to_water,
 };
 use crate::agent::{settlement_position, walk_depth};
+use crate::body::Body;
 use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
+use crate::controller::{Controller, DefaultController, PlayerController};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
@@ -19,84 +21,6 @@ use hornvale_kernel::{
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, MetabolicClass};
-
-/// A derived non-player agent: a minted entity, a home and a resource room,
-/// its species, and that species' activity-cycle. Derived from the genesis
-/// world, never stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness), bare-ok(ratio: mass_kg)
-#[derive(Clone, Debug)]
-pub struct Npc {
-    /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
-    pub entity: EntityId,
-    /// Where the NPC rests (its home settlement's room).
-    pub home: RoomAddr,
-    /// The room its sustenance drive seeks (the-wanting supersedes the old
-    /// fixed-schedule destination: this IS the drive's resource anchor now).
-    pub resource: RoomAddr,
-    /// The NPC's species (kind label), threaded from `species_of` at derivation
-    /// the same way the niche and latency are — the health metric's by-species
-    /// distress attribution reads it.
-    pub species: String,
-    /// The species activity-cycle. Write-only this slice: the drive is the sole
-    /// mover (the activity gate was dropped), retained for the deferred
-    /// activity-gating followup (a diurnal NPC seeking water only while awake).
-    pub activity: ActivityCycle,
-    /// The species' temperature niche (`ConditionNiche.temperature`): the
-    /// thermal (flow) drive's setpoint and tolerance, threaded from the
-    /// species' authored `biosphere_registry` at derivation the same way
-    /// `activity` is (the perception/psych pattern). A per-NPC datum because
-    /// co-derived NPCs may be different species with different niches.
-    pub temperature_niche: ConditionResponse,
-    /// The species' `MindVector.deliberation_latency`: slides the arbitration
-    /// rule between *grab* (myopic, serve the loudest need) and *weigh* (the
-    /// full weighted sum) — psychology's first runtime job (spec §6). Threaded
-    /// from `psyche_registry` at derivation.
-    pub deliberation_latency: f64,
-    /// The species' `MindVector.time_horizon`: how far ahead the creature
-    /// plans (∈ [0,1]) — psychology's SECOND runtime dial (spec §6). A
-    /// foresighted creature pre-empts a projectable stock drive, engaging it
-    /// before its urgency crosses `act` (see `Drive::anticipation_lead`);
-    /// `0` is myopic (acts only once the need bites). Threaded from
-    /// `psyche_registry` at derivation, beside `deliberation_latency`.
-    pub time_horizon: f64,
-    /// The species' `MetabolicClass` (The Kindling): gates which homeostatic
-    /// drives the creature has and how its thirst couples to temperature. An
-    /// `Ametabolic` creature (construct/undead/elemental) has no homeostatic
-    /// drives at all; a metabolizing one's thirst rate couples to ambient heat
-    /// per class (`rise_at`). Threaded from `biosphere_registry` at derivation,
-    /// beside the niche.
-    pub metabolic_class: MetabolicClass,
-    /// The species' diet niche (`Taxon.niche`, a `ResourceVector` over the
-    /// resource axes): the dial the hunger drive reads to decide WHAT is food
-    /// (The Provender). An omnivore weights forage+prey, an autotroph
-    /// photosynthate, a lithovore mineral — read as a continuous mix, never
-    /// branched on a diet type. Threaded from the species' authored
-    /// `biosphere_registry` at derivation, beside the metabolic class.
-    pub niche: ResourceVector,
-    /// The species' `MindVector.threat_response` (flee 0 ↔ stand 1), read at
-    /// CREATURE scope as its boldness (The Mettle): scales the Danger drive's
-    /// felt threat — `× 2·(1 − boldness)`, centered on `0.5` (steady/inert), so
-    /// a coward (`< 0.5`) fears more and a bold creature (`> 0.5`) fears less.
-    /// The banked third psychology dial, threaded from `psyche_registry` at
-    /// derivation like `deliberation_latency`/`time_horizon` (default `0.5` — a
-    /// steady, byte-identical baseline — for a species without a psyche entry).
-    pub boldness: f64,
-    /// The creature's threat niche (The Bane): how much it dreads each kind of
-    /// hazard, DERIVED at derivation from its temperature niche (HEAT/COLD) and
-    /// metabolic class (UNCANNY) — a cold-adapted creature fears heat, an
-    /// elemental does not fear the eldritch. Read by the Danger drive against the
-    /// cell's hazards for per-kind fear.
-    pub threat_niche: ThreatNiche,
-    /// The species' adult body mass in kilograms (`BiosphereTraits::mass`),
-    /// threaded from `biosphere_registry` at derivation beside the metabolic
-    /// class. Read by the action clock to scale every action's cost
-    /// allometrically (The Action Clock); nothing else consumes it. Bare `f64`
-    /// rather than the kernel's `Mass`, matching `clock::tempo`'s parameter —
-    /// it is only ever consumed as the ratio `mass_kg / REFERENCE_MASS_KG`.
-    pub mass_kg: f64,
-    /// A short human label for prose ("the herder").
-    pub label: String,
-}
 
 /// A game-layer predicate: an agent's room position on a day. Non-functional
 /// (position changes over sim time — c5's kind-change shape); the current
@@ -114,17 +38,54 @@ pub const AGENT_AT: &str = "agent-at";
 /// transient-danger memory (The Phantom, §1) re-derive a PAST alarm field:
 /// re-placing each emitter where it stood on the remembered day, not where it
 /// stands now (a herd's panic is recovered even after the herd has moved on).
-pub fn agent_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> RoomAddr {
+pub fn agent_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> RoomAddr {
     latest_committed_position(ledger, npc, t).unwrap_or_else(|| npc.home.clone())
+}
+
+/// A body's settlement, or a neutral stand-in for one with none.
+///
+/// `Body.village` is `Option<VillageInfo>` — `Some` for a settlement-derived
+/// body, `None` for a wild one (`derive_wild_npcs`) or a harness fabrication.
+/// A few session-prose readers (`Vantage::village`, the snapshot's self
+/// channel, `whoami`) carry a non-optional `VillageInfo`-shaped read that
+/// predates The Hand's `Option`, so rather than unwrap and panic the day a
+/// wild body is first driven, every one of them resolves through here
+/// instead: a wild body reads as an unpopulated, unnamed "wilds" rather than
+/// a settlement it never had.
+pub fn village_or_fallback(npc: &Body) -> hornvale_settlement::VillageInfo {
+    npc.village
+        .clone()
+        .unwrap_or_else(|| hornvale_settlement::VillageInfo {
+            id: npc.entity,
+            name: "the wilds".to_string(),
+            population: 0,
+        })
 }
 
 /// The last committed `agent-at` position for `npc` with day ≤ `t`, if any.
 /// Commit order is time order, so the last matching fact is the position held
 /// at `t` (the whole-history case — every fact ≤ `t` — is the absolute latest).
-fn latest_committed_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> Option<RoomAddr> {
+///
+/// **`t` is quantized before the comparison** (`KNOW-commit-read-same-instant`,
+/// The Hand Task 3 Step 2b). `Ledger::commit` quantizes a fact's `day` to 8
+/// significant digits, and that quantization rounds UPWARD as often as down
+/// (`quantize(0.011719999738288106) == 0.01172`, strictly greater) — so a fact
+/// committed at exactly `t` could fail its own `d <= t` filter, reading back as
+/// "no position committed yet" and falling to `npc.home`, one line away from
+/// the commit that just happened. Quantizing the query bound the same way the
+/// stored value already was makes the two directly comparable: a same-instant
+/// commit-then-read now finds itself, and every other case is unaffected — the
+/// tiny rounding quantization introduces cannot flip the ordering between a
+/// `t` and a `d` that were not already within one part in 10^8 of each other.
+/// Its own commit, ahead of The Hand's merge, because the merge is what makes
+/// this comparison run on the possessed body's OWN position every turn
+/// (previously a mutable field, byte-identical by construction) rather than
+/// only in the narrow `wait`/`narrate_motion` case that exposed it first.
+fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Option<RoomAddr> {
+    let t = hornvale_kernel::quantize(t.day());
     ledger
         .facts_of(npc.entity, AGENT_AT)
-        .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
+        .filter(|f| f.day.map(|d| d.day() <= t).unwrap_or(false))
         .last()
         .and_then(|f| match &f.object {
             Value::Text(s) => Some(room_from_text(s)),
@@ -946,7 +907,7 @@ pub fn drive_at(
 /// type-audit: bare-ok(count: budget)
 pub fn believed_water(
     ledger: &Ledger,
-    npc: &Npc,
+    npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
@@ -1012,7 +973,7 @@ impl PrimaryAfraidMemo {
 /// alarms could reach. Shared across every creature's re-derivation at one time.
 struct EmitterScan {
     /// The ever-terrain-afraid members and their day-sorted position timelines.
-    emitters: Vec<(Npc, Vec<(f64, RoomAddr)>)>,
+    emitters: Vec<(Body, Vec<(f64, RoomAddr)>)>,
     /// Every cell within one hop of some emitter's frightening position.
     alarm_source_cells: std::collections::BTreeSet<RoomAddr>,
 }
@@ -1022,12 +983,12 @@ struct EmitterScan {
 /// (day ≤ `t`) and the union of cells their alarms could reach. Pure over
 /// `(roster, ledger, terrain, t)`; cached per `t` in [`PrimaryAfraidMemo`].
 fn build_emitter_scan(
-    roster: &[Npc],
+    roster: &[Body],
     ledger: &Ledger,
     terrain: &dyn Terrain,
     t: WorldTime,
 ) -> EmitterScan {
-    let mut emitters: Vec<(Npc, Vec<(f64, RoomAddr)>)> = Vec::new();
+    let mut emitters: Vec<(Body, Vec<(f64, RoomAddr)>)> = Vec::new();
     let mut alarm_source_cells: std::collections::BTreeSet<RoomAddr> =
         std::collections::BTreeSet::new();
     for m in roster {
@@ -1084,7 +1045,7 @@ fn build_emitter_scan(
 fn emitter_arousal(
     afraid: &mut std::collections::BTreeMap<(EntityId, u64), f64>,
     frozen: &Ledger,
-    npc: &Npc,
+    npc: &Body,
     day: WorldTime,
     terrain: &dyn Terrain,
 ) -> f64 {
@@ -1171,10 +1132,10 @@ pub struct HazardMemory {
 /// [`HazardMemory::dread`].
 pub fn believed_hazard(
     ledger: &Ledger,
-    npc: &Npc,
+    npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
-    roster: &[Npc],
+    roster: &[Body],
 ) -> std::collections::BTreeSet<RoomAddr> {
     hazard_memory(ledger, npc, t, terrain, roster).shunned
 }
@@ -1186,10 +1147,10 @@ pub fn believed_hazard(
 /// [`HazardMemory::dread`].
 pub fn believed_hazard_memo(
     ledger: &Ledger,
-    npc: &Npc,
+    npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
-    roster: &[Npc],
+    roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> std::collections::BTreeSet<RoomAddr> {
     hazard_memory_memo(ledger, npc, t, terrain, roster, memo).shunned
@@ -1199,10 +1160,10 @@ pub fn believed_hazard_memo(
 /// from caching (the hot sim paths thread a shared one).
 pub fn hazard_memory(
     ledger: &Ledger,
-    npc: &Npc,
+    npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
-    roster: &[Npc],
+    roster: &[Body],
 ) -> HazardMemory {
     let mut memo = PrimaryAfraidMemo::new();
     hazard_memory_memo(ledger, npc, t, terrain, roster, &mut memo)
@@ -1214,10 +1175,10 @@ pub fn hazard_memory(
 /// many re-derivations of a single tick.
 pub fn hazard_memory_memo(
     ledger: &Ledger,
-    npc: &Npc,
+    npc: &Body,
     t: WorldTime,
     terrain: &dyn Terrain,
-    roster: &[Npc],
+    roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
 ) -> HazardMemory {
     // Most-recent visit per cell (day ≤ t): the cell is judged at its LATEST
@@ -1253,7 +1214,7 @@ pub fn hazard_memory_memo(
     // The emitter's committed position AT `day`: the latest entry with day ≤ it,
     // else its home (the pre-history fallback) — `agent_position` over the
     // precomputed timeline.
-    let position_at = |m: &Npc, timeline: &[(f64, RoomAddr)], day: f64| -> RoomAddr {
+    let position_at = |m: &Body, timeline: &[(f64, RoomAddr)], day: f64| -> RoomAddr {
         let idx = timeline.partition_point(|(d, _)| *d <= day);
         if idx == 0 {
             m.home.clone()
@@ -1361,8 +1322,8 @@ pub fn hazard_memory_memo(
 /// type-audit: bare-ok(count: budget)
 pub fn shared_believed_water(
     frozen: &Ledger,
-    npc: &Npc,
-    band: &[Npc],
+    npc: &Body,
+    band: &[Body],
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
@@ -2664,7 +2625,7 @@ fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> 
 fn alarm_at(
     room: &RoomAddr,
     day: WorldTime,
-    roster: &[Npc],
+    roster: &[Body],
     terrain: &dyn Terrain,
     frozen: &Ledger,
 ) -> f64 {
@@ -2689,10 +2650,10 @@ fn alarm_at(
 /// seed-42 path, where no primary-afraid emitter ever raises an alarm).
 fn frightened_at(
     room: &RoomAddr,
-    npc: &Npc,
+    npc: &Body,
     terrain: &dyn Terrain,
     day: WorldTime,
-    roster: &[Npc],
+    roster: &[Body],
     frozen: &Ledger,
 ) -> bool {
     feels_frightening(
@@ -3142,7 +3103,7 @@ impl HomeNavCache {
 /// grab/weigh latency is irrelevant. A fresh `Idle` mode per call keeps it
 /// stateless, as before. `arbitrate` is the multi-drive live path.
 ///
-/// Stage-0 carries no creature identity at all (no `Npc`/`EntityId`
+/// Stage-0 carries no creature identity at all (no `Body`/`EntityId`
 /// parameter), so `arbitrate`'s `home_nav` seam (the-waymark, Task 4 fix
 /// round) is given a throwaway, single-call [`HomeNavCache`] and a fixed
 /// placeholder entity — this function is already documented stateless
@@ -3649,8 +3610,8 @@ pub fn arbitrate(
 /// acted on, not a poorer solo one.
 pub fn affect_of(
     frozen: &Ledger,
-    npc: &Npc,
-    band: &[Npc],
+    npc: &Body,
+    band: &[Body],
     day: WorldTime,
     terrain: &dyn Terrain,
 ) -> Affect {
@@ -3677,8 +3638,8 @@ pub fn affect_of(
 /// directly instead, precisely as it already does for `mesh_memo`.
 pub fn affect_of_memo(
     frozen: &Ledger,
-    npc: &Npc,
-    band: &[Npc],
+    npc: &Body,
+    band: &[Body],
     day: WorldTime,
     terrain: &dyn Terrain,
     memo: &mut PrimaryAfraidMemo,
@@ -3755,8 +3716,8 @@ pub fn affect_of_memo(
 #[allow(clippy::too_many_arguments)]
 pub fn affect_of_memo_occupied(
     frozen: &Ledger,
-    npc: &Npc,
-    band: &[Npc],
+    npc: &Body,
+    band: &[Body],
     day: WorldTime,
     terrain: &dyn Terrain,
     memo: &mut PrimaryAfraidMemo,
@@ -3951,7 +3912,7 @@ pub fn affect_of_memo_occupied(
 /// type-audit: bare-ok(ratio: return)
 pub fn alarm_field(
     frozen: &Ledger,
-    npcs: &[Npc],
+    npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
 ) -> std::collections::BTreeMap<RoomAddr, f64> {
@@ -3965,7 +3926,7 @@ pub fn alarm_field(
 /// type-audit: bare-ok(ratio: return)
 pub fn alarm_field_memo(
     frozen: &Ledger,
-    npcs: &[Npc],
+    npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
     memo: &mut PrimaryAfraidMemo,
@@ -4184,7 +4145,7 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 /// type-audit: bare-ok(ratio: day_length_std)
 pub struct DriveMovements<'a> {
     /// The NPCs this tick advances.
-    pub npcs: Vec<Npc>,
+    pub npcs: Vec<Body>,
     /// The interval start (the session's previous day).
     pub from: WorldTime,
     /// The interval end (the session's new day).
@@ -4212,7 +4173,7 @@ pub struct DriveMovements<'a> {
 /// between them changed the creature's COARSE position — if it had, a later
 /// `agent-at` would be the latest one instead, and this function would
 /// return that later day.
-fn room_entry_day(ledger: &Ledger, npc: &Npc, t: WorldTime) -> f64 {
+fn room_entry_day(ledger: &Ledger, npc: &Body, t: WorldTime) -> f64 {
     ledger
         .facts_of(npc.entity, AGENT_AT)
         .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
@@ -4251,7 +4212,7 @@ enum HoldStep {
 fn hold_step(
     day: f64,
     pos: &RoomAddr,
-    npc: &Npc,
+    npc: &Body,
     terrain: &dyn Terrain,
     drive: f64,
     params: &DriveParams,
@@ -4324,7 +4285,7 @@ fn hold_step(
 fn decide_step(
     day: f64,
     pos: &RoomAddr,
-    npc: &Npc,
+    npc: &Body,
     terrain: &dyn Terrain,
     believed: &mut Option<RoomAddr>,
     hazard: &HazardMemory,
@@ -4542,7 +4503,7 @@ fn catch_up(
     entry_day: f64,
     horizon: f64,
     pos: &RoomAddr,
-    npc: &Npc,
+    npc: &Body,
     terrain: &dyn Terrain,
     believed: &mut Option<RoomAddr>,
     hazard: &HazardMemory,
@@ -4559,6 +4520,7 @@ fn catch_up(
     day_length_std: Option<f64>,
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    controller: &mut dyn Controller,
 ) -> Mode {
     let mut day = entry_day;
     let mut steps = 0usize;
@@ -4604,7 +4566,20 @@ fn catch_up(
             home_nav_cache,
         );
         mode = resolution.mode;
-        match resolution.intent {
+        // THE CONTROLLER SEAM, extended to catch-up (The Hand, Task 5 fix
+        // round 2, item 7): `catch_up` commits nothing regardless (decision
+        // 0069 — it only ever touches ephemeral `Occupancy`, never the
+        // ledger), so routing it through `controller` costs no new
+        // committed-trail risk, but leaves the intent source genuinely
+        // singular: `DefaultController` (every NPC's own catch-up, and
+        // every existing call site in this module's own tests) is a
+        // byte-identical pass-through, and `PlayerController` (the driven
+        // body's own catch-up, `DriveMovements::step_one_with_controller`)
+        // Holds here too — a possessed body's own within-room autopilot
+        // does not creep forward on its own account while unwatched, any
+        // more than its coarse position does.
+        let intent = controller.intend(npc, &resolution);
+        match intent {
             // Requirement 1, straight from the source: an action reaches
             // this arm only when `is_replayable_in_catch_up` says its
             // effect is ephemeral — today exactly `MoveWithin`, checked
@@ -4752,12 +4727,12 @@ impl<'a> DriveMovements<'a> {
         // keeps the alarm wave terminating.
         //
         // The per-entity state is the whole of what must survive a pop: the
-        // `Npc`, its `WalkState` (spec §6's nine loop locals), and its
+        // `Body`, its `WalkState` (spec §6's nine loop locals), and its
         // `HazardMemory` — the last of which is here rather than in
         // `WalkState::begin` because computing it needs `&mut afraid_memo`.
         // It is a fold over `frozen`, so it is computed ONCE per creature, as
         // the sequential loop did, and carried rather than recomputed per pop.
-        let mut states: std::collections::BTreeMap<EntityId, (Npc, WalkState, HazardMemory)> =
+        let mut states: std::collections::BTreeMap<EntityId, (Body, WalkState, HazardMemory)> =
             std::collections::BTreeMap::new();
         let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
             std::collections::BTreeSet::new();
@@ -4843,6 +4818,10 @@ impl<'a> DriveMovements<'a> {
                 self.day_length_std,
                 mesh_memo,
                 home_nav_cache,
+                // Every body here is GOAP-driven (the driven body's own
+                // catch-up runs separately — see `step_one_with_controller`),
+                // so a fresh, stateless pass-through changes nothing.
+                &mut DefaultController,
             );
 
             queue.insert((from_ticks, npc.entity));
@@ -4865,6 +4844,15 @@ impl<'a> DriveMovements<'a> {
                 &mut out,
                 mesh_memo,
                 home_nav_cache,
+                // Every body in `self.npcs` today is GOAP-driven (a possessed
+                // body's own walk goes through `step_one_with_controller`
+                // instead, on a separate call, so `band`/`alarm` here never
+                // include it — see that method's own doc for why folding it
+                // into THIS population would risk changing another body's
+                // shared belief or ambient alarm). `DefaultController` is a
+                // byte-identical pass-through of `resolution.intent`, so this
+                // line changes nothing about what any of them do.
+                &mut DefaultController,
             ) {
                 // This creature's walk is over — past `to`, out of `MAX_STEPS`,
                 // or halted by an arm's own stop condition. It is not requeued.
@@ -4956,8 +4944,8 @@ impl WalkState {
     /// own frozen reads.
     fn begin(
         frozen: &Ledger,
-        npc: &Npc,
-        band: &[Npc],
+        npc: &Body,
+        band: &[Body],
         from: WorldTime,
         terrain: &dyn Terrain,
     ) -> WalkState {
@@ -5044,7 +5032,7 @@ impl<'a> DriveMovements<'a> {
     fn advance_one(
         &self,
         frozen: &Ledger,
-        npc: &Npc,
+        npc: &Body,
         st: &mut WalkState,
         occupancy: &mut Occupancy,
         alarm: &std::collections::BTreeMap<RoomAddr, f64>,
@@ -5052,6 +5040,7 @@ impl<'a> DriveMovements<'a> {
         out: &mut Vec<Fact>,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        controller: &mut dyn Controller,
     ) -> bool {
         if st.day > self.to.day() || st.steps >= MAX_STEPS {
             return false;
@@ -5093,6 +5082,20 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
         );
         st.mode = resolution.mode;
+        // THE CONTROLLER SEAM (The Hand, Task 5 fix round 1, spec §3.3): the
+        // walk arbitrates UNCONDITIONALLY, above — `resolution` is the body's
+        // own felt state (mode, affect) and what its own drives would do,
+        // computed identically regardless of who is driving. What actually
+        // HAPPENS is this one call: `DefaultController` (every NPC today)
+        // answers with `resolution.intent` unchanged, so this is a byte-
+        // identical pass-through for every existing committed trail;
+        // `PlayerController` (a possessed body's own walk, `Session::wait`)
+        // answers `Hold` unless a verb queued a real action, so nothing here
+        // ever double-moves a body the player is driving through the verb
+        // loop. Nothing below this line ever reads `resolution.intent`
+        // again — only `intent`, so `advance_one` itself learns nothing about
+        // which controller answered.
+        let intent = controller.intend(npc, &resolution);
         // THE ACTION CLOCK (spec §2 rung 1, §3): every action costs time, and
         // what it costs depends on the creature doing it. Charged HERE, once,
         // above the behaviour match, so the cost model is TOTAL by construction
@@ -5116,7 +5119,7 @@ impl<'a> DriveMovements<'a> {
         // The interval guard stays exactly where `MoveTo`'s was: charging is
         // what can carry a walk past `to.day`, so it is checked immediately
         // after the charge and before anything is emitted.
-        if let Intent::Do(action) = &resolution.intent {
+        if let Intent::Do(action) = &intent {
             let ground = match action {
                 Action::MoveTo(n) => {
                     climb_factor(self.terrain.elevation(&st.pos), self.terrain.elevation(n))
@@ -5128,7 +5131,7 @@ impl<'a> DriveMovements<'a> {
                 return false;
             }
         }
-        match resolution.intent {
+        match intent {
             Intent::Do(Action::MoveTo(n)) => {
                 // Provenance follows the committed errand (the mode):
                 // thirst distinguishes BELIEVED (beelining a known
@@ -5273,6 +5276,133 @@ impl<'a> DriveMovements<'a> {
         }
         true
     }
+
+    /// Run this walk for exactly ONE body — never `self.npcs` — asking
+    /// `controller` for the intent at every decision point via the SAME
+    /// [`Self::advance_one`] every other body's walk calls (The Hand, Task 5
+    /// fix round 1, spec §2.3/§3.3: "the loop arbitrates first,
+    /// unconditionally, then asks the controller"). This is the seam a
+    /// possessed body's own arbitration uses.
+    ///
+    /// **Deliberately NOT folded into `self.npcs`/[`Self::step_with_occupancy`].**
+    /// That population feeds `alarm_field_memo` and `WalkState::begin`'s
+    /// `band` (The Tidings' shared-belief pooling) for every OTHER body's own
+    /// walk — adding a possessed body to it would let its own history leak
+    /// into another creature's believed water or the ambient alarm field,
+    /// silently changing THAT creature's committed trail depending on who
+    /// happens to be riding along, exactly the risk spec §3.4 flags for "who
+    /// else is here" and defers. A solo, band-of-one walk avoids that by
+    /// construction: this body's own alarm/hazard/band are built from
+    /// `[body]` alone. The cost is real but scoped: this body's own arbitration
+    /// does not sense an ambient population's fear or pooled belief — a
+    /// richness gap, not a correctness one, and later Bridle work can close it
+    /// without touching this seam or any other body's walk.
+    ///
+    /// Returns the facts this body's OWN walk would commit (empty under
+    /// [`crate::controller::PlayerController`] with nothing queued — see that
+    /// controller's own doc for why nothing here ever double-moves a body the
+    /// player drives through the verb loop) and the LAST commitment mode its
+    /// own arbitration reached this call: the host's felt state, independent
+    /// of whether the controller let it act on it.
+    pub(crate) fn step_one_with_controller(
+        &self,
+        frozen: &Ledger,
+        body: &Body,
+        mesh_memo: &mut RoomMeshMemo,
+        home_nav_cache: &mut HomeNavCache,
+        controller: &mut dyn Controller,
+    ) -> (Vec<Fact>, Mode) {
+        let band = [body.clone()];
+        let mut occupancy = Occupancy::default();
+        let mut afraid_memo = PrimaryAfraidMemo::new();
+        let alarm = alarm_field_memo(frozen, &band, self.terrain, self.from, &mut afraid_memo);
+        let memory = hazard_memory_memo(
+            frozen,
+            body,
+            self.from,
+            self.terrain,
+            &band,
+            &mut afraid_memo,
+        );
+        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain);
+        occupancy.arrive(
+            body.entity,
+            &st.pos,
+            &st.interior,
+            seam_kind(self.terrain.is_built(&st.pos)),
+        );
+        let mut out = Vec::new();
+        // THE THRESHOLD's catch-up (The Hand, Task 5 fix round 2, D5):
+        // `step_with_occupancy`'s own setup loop runs this for every OTHER
+        // body before the shared clock opens, and it is what moves `st.mode`
+        // off `WalkState::begin`'s hardcoded `Mode::Idle` — reconstructing
+        // what this body's own decisions would have been across the gap
+        // between its last committed room-entry and `self.from` ("now"),
+        // exactly the observer-effect gap `catch_up`'s own doc names. Omitting
+        // it here left the driven body's FIRST arbitration each tick starting
+        // cold at `Idle` regardless of how much unwatched time had actually
+        // passed, which is a real asymmetry with every other body's walk, not
+        // a difference the trait or the band-of-one scoping requires — this
+        // reconstruction reads only `frozen` and this body's own locals
+        // (never another creature's state), so nothing about running it here
+        // needs the shared population `step_one_with_controller` deliberately
+        // does not join.
+        //
+        // **A FRESH `PlayerController`, never the live `controller` (fix
+        // round 3, N2 — a defect in fix round 2's own routing).** Passing
+        // the live controller through here was wrong: `PlayerController::
+        // intend` is `self.pending.take()`, so the moment a verb queues a
+        // real action (`queue`, still dormant today — spec §1 "does not
+        // ship: the host speaking"), THIS call would take it, catch-up would
+        // discard it (`Intent::Do(_) => break 'catchup` — a committing
+        // action it refuses to fabricate, decision 0069), and `advance_one`
+        // below would then see nothing pending and Hold — the player's own
+        // action would silently vanish before the tick that was supposed to
+        // enact it ever ran. A fresh controller cannot consume anything: its
+        // `pending` starts (and, being fresh, only ever holds) `None`, so it
+        // always Holds here — true BY CONSTRUCTION now, not by the accident
+        // of nothing having called `queue` yet. This also states the actual
+        // design intent correctly: catch-up is a RETROSPECTIVE reconstruction
+        // of unwatched time, and must never be the thing that consumes an
+        // action meant for the live decision below, regardless of which
+        // controller ultimately governs that live decision.
+        st.mode = catch_up(
+            room_entry_day(frozen, body, self.from),
+            self.from.day(),
+            &st.pos,
+            body,
+            self.terrain,
+            &mut st.believed,
+            &memory,
+            &alarm,
+            &st.visited,
+            &mut occupancy,
+            &st.interior,
+            st.mode,
+            &self.params,
+            PLAN_BUDGET,
+            frozen,
+            &out,
+            CATCH_UP_STEP_CAP,
+            self.day_length_std,
+            mesh_memo,
+            home_nav_cache,
+            &mut PlayerController::new(),
+        );
+        while self.advance_one(
+            frozen,
+            body,
+            &mut st,
+            &mut occupancy,
+            &alarm,
+            &memory,
+            &mut out,
+            mesh_memo,
+            home_nav_cache,
+            controller,
+        ) {}
+        (out, st.mode)
+    }
 }
 
 /// The nearer-to-home of an existing belief and a newly-perceived water room.
@@ -5356,14 +5486,115 @@ fn ordered_for_derivation(
     settlements
 }
 
+/// One settlement-derived body: species, activity-cycle, temperature niche,
+/// psychology dials, derived threat niche, mass, and perception — every field
+/// `derive_npcs`'s per-settlement loop used to build inline, now the ONE
+/// derivation it shares with `agent::mint_at`'s flagship mint (The Hand,
+/// Task 2). Proves the possessed body and a derived creature at the same
+/// settlement are the same villager, built once instead of by two parallel
+/// code paths.
+///
+/// Mints and commits nothing: `entity` is an already-minted [`EntityId`] the
+/// caller supplies. `derive_npcs` commits a NAME fact from its own ledger
+/// clone immediately after minting the entity, in the position that commit
+/// has always held; moving that commit in here would change commit order
+/// and therefore artifacts, so the caller keeps it (Task 2's ambiguity
+/// ruling). `agent::mint_at` has no ledger entity at all — an `Agent` is
+/// never committed — so it passes a placeholder that this function never
+/// reads back into anything the caller keeps.
+pub fn body_at(
+    world: &World,
+    ctx: &LocaleContext,
+    village: &hornvale_settlement::VillageInfo,
+    entity: EntityId,
+) -> Body {
+    let home = settlement_room(world, ctx, village.id);
+    let resource =
+        nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET).unwrap_or_else(|| home.clone());
+    let species =
+        hornvale_species::species_of(world, village.id).unwrap_or_else(|| "goblin".to_string());
+    let activity = species_activity(world, &species);
+    // Authored per-species data: the temperature niche (the thermal drive's
+    // setpoint/tolerance) and the psych vector's two runtime dials —
+    // deliberation latency (the arbitration tuning) and time horizon (the
+    // anticipation lead).
+    let biosphere = hornvale_species::biosphere_registry();
+    let temperature_niche = biosphere
+        .get_by_label(&species)
+        .map(|t| t.condition_niche.temperature)
+        .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
+    let metabolic_class = biosphere
+        .get_by_label(&species)
+        .map(|t| t.metabolic_class)
+        .unwrap_or(MetabolicClass::Endotherm);
+    let niche = biosphere
+        .get_by_label(&species)
+        .map(|t| t.niche.clone())
+        .unwrap_or_else(default_diet_niche);
+    // Body mass (The Action Clock): the allometric driver of every action's
+    // cost. Derived through `clock::mass_for_species` — the ONE derivation
+    // every body shares, creature and possessed alike, which is what makes
+    // the player's tariff the same tariff rather than a parallel one. The
+    // fallback for a species missing from the biosphere registry lives
+    // there.
+    let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
+    let psyche = hornvale_species::psyche_registry();
+    let deliberation_latency = psyche
+        .get_by_label(&species)
+        .map(|p| p.deliberation_latency)
+        .unwrap_or(0.5);
+    let time_horizon = psyche
+        .get_by_label(&species)
+        .map(|p| p.time_horizon)
+        .unwrap_or(0.5);
+    // Boldness (The Mettle): the banked `threat_response` read at creature
+    // scope. Default steady/inert for a species without a psyche entry — the
+    // beasts.
+    let boldness = psyche
+        .get_by_label(&species)
+        .map(|p| p.threat_response)
+        .unwrap_or(BOLDNESS_STEADY);
+    // The threat niche (The Bane): derived from the temperature niche +
+    // metabolic class already on hand — no fresh authoring.
+    let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+    // The same perception vector a possessed body resolves — an unresolved
+    // species falls back to the manikin's neutral perception, the same way
+    // every other per-species trait above falls back rather than
+    // propagating an error (this function is infallible; `mint_at` keeps
+    // its own fail-loud check ahead of calling this).
+    let perception = hornvale_species::perception_registry()
+        .get_by_label(&species)
+        .copied()
+        .unwrap_or(hornvale_species::PerceptionVector::MANIKIN);
+    let label = format!("{species} of {}", village.name);
+    Body {
+        entity,
+        home,
+        resource,
+        species,
+        activity,
+        temperature_niche,
+        deliberation_latency,
+        time_horizon,
+        metabolic_class,
+        niche,
+        boldness,
+        threat_niche,
+        mass_kg,
+        label,
+        perception,
+        village: Some(village.clone()),
+    }
+}
+
 /// Derive `k` NPCs from the `k` most-populous settlements, GUARANTEEING the
 /// possessed agent's own home settlement (`home_settlement`) is among them —
 /// otherwise no NPC is ever co-located with the player and the observation
 /// payoff (spec: "the herder has gone down to the river") can never fire
 /// (the-quickening T3 review). Each NPC is minted in `ledger` (a
-/// session-owned clone), homed at its settlement's cell room, with its
-/// drive's resource anchor (`nearest_water` over the true terrain, The
-/// Surmise) and species' activity-cycle.
+/// session-owned clone), then built by [`body_at`] — homed at its
+/// settlement's cell room, with its drive's resource anchor (`nearest_water`
+/// over the true terrain, The Surmise) and species' activity-cycle.
 /// type-audit: bare-ok(count: k)
 pub fn derive_npcs(
     world: &World,
@@ -5371,65 +5602,14 @@ pub fn derive_npcs(
     ledger: &mut Ledger,
     k: usize,
     home_settlement: EntityId,
-) -> Vec<Npc> {
+) -> Vec<Body> {
     let settlements = hornvale_settlement::all_settlements(world);
     let mut settlements = ordered_for_derivation(settlements, home_settlement);
     settlements.truncate(k);
 
-    // Authored per-species data, read once: the temperature niche (the thermal
-    // drive's setpoint/tolerance) and the psych vector's two runtime dials —
-    // deliberation latency (the arbitration tuning) and time horizon (the
-    // anticipation lead). Threaded onto each NPC the same way `activity` is —
-    // the perception/psych pattern.
-    let biosphere = hornvale_species::biosphere_registry();
-    let psyche = hornvale_species::psyche_registry();
-
     settlements
         .into_iter()
         .map(|village| {
-            let home = settlement_room(world, ctx, village.id);
-            let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
-                .unwrap_or_else(|| home.clone());
-            let species = hornvale_species::species_of(world, village.id)
-                .unwrap_or_else(|| "goblin".to_string());
-            let activity = species_activity(world, &species);
-            let temperature_niche = biosphere
-                .get_by_label(&species)
-                .map(|t| t.condition_niche.temperature)
-                .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
-            let metabolic_class = biosphere
-                .get_by_label(&species)
-                .map(|t| t.metabolic_class)
-                .unwrap_or(MetabolicClass::Endotherm);
-            let niche = biosphere
-                .get_by_label(&species)
-                .map(|t| t.niche.clone())
-                .unwrap_or_else(default_diet_niche);
-            // Body mass (The Action Clock): the allometric driver of every
-            // action's cost. Derived through `clock::mass_for_species` — the
-            // ONE derivation every body shares, creature and possessed alike,
-            // which is what makes the player's tariff the same tariff rather
-            // than a parallel one. The fallback for a species missing from the
-            // biosphere registry lives there.
-            let mass_kg = crate::clock::mass_for_species(&species, Some(&biosphere));
-            let deliberation_latency = psyche
-                .get_by_label(&species)
-                .map(|p| p.deliberation_latency)
-                .unwrap_or(0.5);
-            let time_horizon = psyche
-                .get_by_label(&species)
-                .map(|p| p.time_horizon)
-                .unwrap_or(0.5);
-            // Boldness (The Mettle): the banked `threat_response` read at
-            // creature scope. Default steady/inert for a species without a
-            // psyche entry — the beasts.
-            let boldness = psyche
-                .get_by_label(&species)
-                .map(|p| p.threat_response)
-                .unwrap_or(BOLDNESS_STEADY);
-            // The threat niche (The Bane): derived from the temperature niche +
-            // metabolic class already on hand — no fresh authoring.
-            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
             // A settlement NPC belongs to its settlement, and this map yields
             // exactly one per settlement, so ordinal 0. Deriving from
             // `village.id` is what makes an NPC's id independent of how many
@@ -5447,7 +5627,7 @@ pub fn derive_npcs(
                 role: "npc",
                 ordinal: 0,
             });
-            let label = format!("{species} of {}", village.name);
+            let npc = body_at(world, ctx, &village, entity);
             // A NAME fact so the provenance read (`why`, backed by
             // `windows/historiography::recount`) leads with the NPC's own
             // label rather than a bare entity id — NAME is kernel-core, so
@@ -5461,7 +5641,7 @@ pub fn derive_npcs(
                     Fact {
                         subject: entity,
                         predicate: hornvale_kernel::NAME.to_string(),
-                        object: Value::Text(label.clone()),
+                        object: Value::Text(npc.label.clone()),
                         place: None,
                         day: None,
                         provenance: "the-quickening".to_string(),
@@ -5469,29 +5649,14 @@ pub fn derive_npcs(
                     &world.registry,
                 )
                 .expect("a freshly minted NPC entity's first NAME fact always commits");
-            Npc {
-                entity,
-                home,
-                resource,
-                species,
-                activity,
-                temperature_niche,
-                deliberation_latency,
-                time_horizon,
-                metabolic_class,
-                niche,
-                boldness,
-                threat_niche,
-                mass_kg,
-                label,
-            }
+            npc
         })
         .collect()
 }
 
 /// Derive WILD NPCs (The Wilding) — beast agents, one per distinct
 /// mobile-beast `concentrations` entry (`worldgen::wild_concentrations_from`:
-/// a herd, a lair). A wild NPC is the same `Npc` a settlement produces — its
+/// a herd, a lair). A wild NPC is the same `Body` a settlement produces — its
 /// home is the concentration's cell, its traits its biosphere's, its psyche
 /// the DEFAULT (beasts carry no `psyche_registry` entry, so the `.unwrap_or`
 /// fallbacks apply, exactly as they already do for a settlement of a
@@ -5511,9 +5676,10 @@ pub fn derive_wild_npcs(
     ctx: &LocaleContext,
     ledger: &mut Ledger,
     concentrations: Vec<(String, [f64; 3])>,
-) -> Vec<Npc> {
+) -> Vec<Body> {
     let biosphere = hornvale_species::biosphere_registry();
     let psyche = hornvale_species::psyche_registry();
+    let perception = hornvale_species::perception_registry();
     concentrations
         .into_iter()
         .enumerate()
@@ -5553,6 +5719,16 @@ pub fn derive_wild_npcs(
                 .map(|p| p.threat_response)
                 .unwrap_or(BOLDNESS_STEADY);
             let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+            // A wild species is plain fauna, not one of the six settling
+            // peoples or the three dragons `perception_registry` actually
+            // rosters (see `agent::mint_at`'s comment on that roster), so this
+            // almost always misses and falls back to the manikin's neutral
+            // perception — same fallback shape as every other per-species
+            // trait above.
+            let perception = perception
+                .get_by_label(&species)
+                .copied()
+                .unwrap_or(hornvale_species::PerceptionVector::MANIKIN);
             // A herd or lair has no ledger entity — a concentration is a
             // (species, position) pair, not an entity — so a wild NPC roots.
             // Two concentrations can share a species, so the ordinal is the
@@ -5576,7 +5752,7 @@ pub fn derive_wild_npcs(
                     &world.registry,
                 )
                 .expect("a freshly minted wild NPC's first NAME fact always commits");
-            Npc {
+            Body {
                 entity,
                 home,
                 resource,
@@ -5591,6 +5767,15 @@ pub fn derive_wild_npcs(
                 threat_niche,
                 mass_kg,
                 label,
+                perception,
+                // The Hand ruling: a wild NPC has no settlement —
+                // `derive_wild_npcs` iterates beast concentrations (herds,
+                // lairs), not settlements, so there is genuinely no
+                // `VillageInfo` here. `None`, not a fabricated placeholder:
+                // a placeholder `population`/`id` would be indistinguishable
+                // from a real measurement to any later consumer (a future
+                // possessed-beast session's prose, in particular).
+                village: None,
             }
         })
         .collect()
@@ -5692,7 +5877,7 @@ fn parse_activity(t: &str) -> ActivityCycle {
 /// you must not (The Threshold, task 4).
 ///
 /// Keyed by [`EntityId`] rather than the brief's `NpcId`: no such type exists
-/// in this crate. [`Npc`] already carries `entity: EntityId` — its minted
+/// in this crate. [`Body`] already carries `entity: EntityId` — its minted
 /// ledger entity, the same handle every other bubble-scoped map in this
 /// module (the fear memo, the disposition state) keys by — so occupancy
 /// follows suit rather than inventing a parallel identity for the same thing.
@@ -5926,8 +6111,10 @@ mod tests {
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -5977,8 +6164,10 @@ mod tests {
         let home = raddr(1.0);
         let dry = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only(std::iter::empty()); // `dry` is never fresh
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
             species: "goblin".into(),
@@ -6024,8 +6213,10 @@ mod tests {
             .unwrap()
             .clone(); // 2 hops
         let t = PlantedTerrain::fresh_only([near.clone(), far.clone()]);
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: near.clone(),
             species: "goblin".into(),
@@ -6075,8 +6266,10 @@ mod tests {
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -6117,8 +6310,10 @@ mod tests {
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -6187,8 +6382,10 @@ mod tests {
         let smaller = std::cmp::min(first.clone(), second.clone());
         let larger = std::cmp::max(first.clone(), second.clone());
         let t = PlantedTerrain::fresh_only([first.clone(), second.clone()]);
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: first.clone(),
             species: "goblin".into(),
@@ -6239,9 +6436,11 @@ mod tests {
     /// A steady mortal NPC for the believed_hazard folds — the default mortal
     /// threat niche weights UNCANNY `1`, so a planted UNCANNY hazard reads as
     /// felt threat directly, and steady boldness (`0.5`) leaves it unscaled.
-    fn haunt_npc(entity: EntityId, home: RoomAddr) -> Npc {
-        Npc {
+    fn haunt_npc(entity: EntityId, home: RoomAddr) -> Body {
+        Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home,
             species: "goblin".into(),
@@ -6260,14 +6459,21 @@ mod tests {
         }
     }
 
-    /// Build an `Npc` with the same authored field values every belief test
+    /// Build an `Body` with the same authored field values every belief test
     /// uses, varying only what these tests vary: entity, home, resource, and
-    /// label. Mirrors the `Npc` literal repeated across the `believed_water`
+    /// label. Mirrors the `Body` literal repeated across the `believed_water`
     /// tests above — factored here only to keep the four-band-member Tidings
     /// tests below from repeating it four times over.
-    fn shared_belief_npc(entity: EntityId, home: RoomAddr, resource: RoomAddr, label: &str) -> Npc {
-        Npc {
+    fn shared_belief_npc(
+        entity: EntityId,
+        home: RoomAddr,
+        resource: RoomAddr,
+        label: &str,
+    ) -> Body {
+        Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home,
             resource,
             species: "goblin".into(),
@@ -7163,7 +7369,7 @@ mod tests {
     ///
     /// Returns the ledger (already carrying the creature's perception history),
     /// the terrain, and the creature at reference mass.
-    fn charged_walk_fixture() -> (Ledger, PlantedTerrain, Npc) {
+    fn charged_walk_fixture() -> (Ledger, PlantedTerrain, Body) {
         let reg = {
             let mut r = agent_at_reg();
             r.register_predicate(DRANK, false, "drank").unwrap();
@@ -7328,12 +7534,12 @@ mod tests {
     /// creature then explores continuously for the whole interval, so its walk
     /// is move-bound rather than drive-bound and the emitted sequence is a clean
     /// read on *who acts when* rather than on how often each gets thirsty.
-    fn interleaving_fixture(masses: &[f64]) -> (Ledger, PlantedTerrain, Vec<Npc>) {
+    fn interleaving_fixture(masses: &[f64]) -> (Ledger, PlantedTerrain, Vec<Body>) {
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
         let here = raddr(1.0);
         let terrain = PlantedTerrain::dry(std::collections::BTreeMap::new());
-        let mut npcs: Vec<Npc> = Vec::new();
+        let mut npcs: Vec<Body> = Vec::new();
         for mass_kg in masses {
             let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             let mut npc = shared_belief_npc(e, here.clone(), here.clone(), "walker");
@@ -7356,7 +7562,7 @@ mod tests {
         // with one another and the interleaving is non-trivial: were the order
         // input-derived, reversing the vector would show it immediately.
         let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
-        let run = |npcs: Vec<Npc>| {
+        let run = |npcs: Vec<Body>| {
             let sys = DriveMovements {
                 npcs,
                 from: WorldTime::new(1.0).expect("a day value is finite"),
@@ -7645,7 +7851,7 @@ mod tests {
     #[test]
     fn derived_npcs_carry_their_species_body_mass() {
         // THE PRECONDITION FOR PER-AGENT TEMPO (The Action Clock T2): if mass
-        // does not reach `Npc`, the action clock's tempo collapses to a
+        // does not reach `Body`, the action clock's tempo collapses to a
         // constant and the campaign has no per-agent variation at all.
         // Asserted on a REAL derived population — both the peopled roster and
         // the wild fauna, which are most of the health battery's population —
@@ -7779,8 +7985,10 @@ mod tests {
         let terrain = LocaleTerrain::new(&ctx);
         let home_id = hornvale_settlement::village_info(&world).unwrap().id;
         let home = settlement_room(&world, &ctx, home_id);
-        let npc = Npc {
+        let npc = Body {
             entity: EntityId::new(1).unwrap(),
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
             species: "goblin".into(),
@@ -8354,8 +8562,10 @@ mod tests {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -8408,6 +8618,175 @@ mod tests {
             "expected a bounded number of moves, not one per tick or an explosion; got {moves}"
         );
         let _ = ledger;
+    }
+
+    /// The Hand, Task 5 fix round 1's mutation proof: the SAME thirsty body,
+    /// on the SAME walk, differing only in which [`Controller`]
+    /// [`DriveMovements::step_one_with_controller`] is asked. This is the
+    /// deterministic, seed-independent proof that the trait actually gates
+    /// what gets committed — the fixture is
+    /// `a_thirsty_agent_plans_to_water_and_the_tick_walks_it`'s own (a body
+    /// guaranteed to want water within the window), read twice.
+    ///
+    /// `DefaultController` must be a byte-identical PASS-THROUGH of
+    /// `decide_step`'s own resolution: the body drinks, exactly as it would
+    /// with no controller in the loop at all — this is what proves every
+    /// existing NPC's committed trail is unperturbed by this task.
+    /// `PlayerController` must HOLD it — returning no action — regardless of
+    /// what the body's own arbitration wants. Scope this claim carefully: at
+    /// THIS unit's level the `Hold` is what leaves the returned fact vector
+    /// empty, but in the live session the driven walk's facts are discarded
+    /// unconditionally (`Session::wait`), so there the DISCARD and not the
+    /// `Hold` is what keeps the ledger clean. Spec §5.2's "commits on `Do`,
+    /// nothing on `Hold`" wording described the session level and was
+    /// withdrawn for it (The Hand, Task 5); do not re-import it here. Swap
+    /// `DefaultController` for `PlayerController` in the first call (or vice
+    /// versa) and one of the two assertions below reddens; that swap is
+    /// exactly what a session-level test cannot always force (seed 42's own
+    /// possessed bodies, walked solo, happen to arbitrate straight to `Hold`
+    /// on their very first decision — see the Task 5 fix-round report), which
+    /// is why this test constructs a body it KNOWS wants to act.
+    #[test]
+    fn a_default_controller_passes_through_and_a_player_controller_holds() {
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let npc = Body {
+            entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: water.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "herder".into(),
+        };
+        let t = PlantedTerrain {
+            elevations: [(water.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            ..Default::default()
+        };
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime::GENESIS,
+            to: WorldTime::new(40.0).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &t,
+        };
+
+        let (default_facts, _mode) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut DefaultController,
+        );
+        assert!(
+            default_facts.iter().any(|f| f.predicate == DRANK),
+            "DefaultController is a pass-through of the body's own arbitration \
+             (which wants water) — it must act: {default_facts:?}"
+        );
+
+        let (player_facts, _mode) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut crate::controller::PlayerController::new(),
+        );
+        assert!(
+            player_facts.is_empty(),
+            "PlayerController holds the body regardless of what its own \
+             arbitration wants, and commits nothing: {player_facts:?}"
+        );
+    }
+
+    /// The Hand, Task 5 fix round 3, N2: `step_one_with_controller`'s own
+    /// `catch_up` call used to reborrow the LIVE controller, so the moment a
+    /// verb ever queued a real action (`PlayerController::queue`, still
+    /// dormant in production — spec §1), catch-up would run first, TAKE that
+    /// queued action for itself, discard it (`Intent::Do(_) => break
+    /// 'catchup` — a committing action catch-up refuses to fabricate), and
+    /// `advance_one` would then see nothing pending and Hold. The player's
+    /// own action would vanish before the tick meant to enact it ever ran.
+    ///
+    /// This constructs exactly that hazard: an entity with an EARLIER
+    /// committed `agent-at` (day 0) than the walk's own `from` (day 3), which
+    /// is what gives `catch_up` a real 3-day gap to iterate at all — a
+    /// same-day fixture (like the two tests above) never enters catch-up's
+    /// loop and would pass even under the bug. A real action (`Drink`, which
+    /// `advance_one` commits unconditionally regardless of position) is
+    /// queued into the controller BEFORE the call. If it survives to be
+    /// committed, catch-up never touched it.
+    #[test]
+    fn catch_up_does_not_consume_the_controllers_pending_action() {
+        let mut registry = ConceptRegistry::default();
+        registry.register_predicate(AGENT_AT, false, "pos").unwrap();
+        registry.register_predicate(DRANK, false, "drank").unwrap();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        // The gap catch_up will reconstruct: last seen here on day 0, and the
+        // walk itself does not open until day 3.
+        ledger
+            .commit(agent_at_fact(e, &home, 0.0, "test setup"), &registry)
+            .unwrap();
+        let npc = Body {
+            entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "herder".into(),
+        };
+        let t = PlantedTerrain::default();
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime::new(3.0).expect("a day value is finite"),
+            // Slack beyond `from`: `Drink`'s own clock charge (`cost_ticks`)
+            // must land at or before `to`, or `advance_one`'s interval guard
+            // returns before ever reaching the commit match — a half-day is
+            // generous next to `Drink`'s 150-tick base cost.
+            to: WorldTime::new(3.5).expect("a day value is finite"),
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &t,
+        };
+        let mut player = PlayerController::new();
+        player.queue(Action::Drink);
+        let (facts, _mode) = sys.step_one_with_controller(
+            &ledger,
+            &npc,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut player,
+        );
+        assert!(
+            facts.iter().any(|f| f.predicate == DRANK),
+            "the queued Drink must reach advance_one and commit, not be eaten \
+             by catch_up's own reconstruction pass over the day-0-to-day-3 \
+             gap: {facts:?}"
+        );
     }
 
     #[test]
@@ -8465,8 +8844,10 @@ mod tests {
             .unwrap();
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
-        let npc = Npc {
+        let npc = Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -8545,8 +8926,10 @@ mod tests {
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
         let water = RoomAddr::containing([-1.0, 0.0, 0.0], 6); // irrelevant now: no water exists anywhere
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water,
             species: "goblin".into(),
@@ -8634,8 +9017,10 @@ mod tests {
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water,
             species: "goblin".into(),
@@ -8708,8 +9093,10 @@ mod tests {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = addr(1.0);
         let resource = home.neighbors()[0].clone();
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: resource.clone(),
             species: "goblin".into(),
@@ -8977,8 +9364,10 @@ mod tests {
         let terrain = PlantedTerrain::hazard([water.clone()], [(x.clone(), 0.4)]);
 
         // A steady mortal creature; home == start so homing does not pull it off X.
-        let npc_at = |entity: EntityId| Npc {
+        let npc_at = |entity: EntityId| Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: start.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -9164,8 +9553,10 @@ mod tests {
         let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
 
         // A steady mortal; home == start so homing does not pull it off course.
-        let npc_at = |entity: EntityId| Npc {
+        let npc_at = |entity: EntityId| Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: start.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -9184,8 +9575,10 @@ mod tests {
         };
         // The herd-mate B: knows water (so it beelines and settles, bounded), and
         // is the transient alarm source when standing at D.
-        let emitter_npc = |entity: EntityId| Npc {
+        let emitter_npc = |entity: EntityId| Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: far.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -9432,8 +9825,10 @@ mod tests {
         let far = raddr(-1.0);
         let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
 
-        let npc_at = |entity: EntityId, home: RoomAddr, label: &str| Npc {
+        let npc_at = |entity: EntityId, home: RoomAddr, label: &str| Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home,
             resource: water.clone(),
             species: "goblin".into(),
@@ -10341,11 +10736,18 @@ mod tests {
     /// A steady mortal NPC placed (via `commit_agent_at`) at `pos`, minted into
     /// `ledger` — the common emitter/reader for the `alarm_field` tests.
     /// `boldness` dials whether it is primary-afraid on hazard ground.
-    fn alarm_npc(ledger: &mut Ledger, reg: &ConceptRegistry, pos: &RoomAddr, boldness: f64) -> Npc {
+    fn alarm_npc(
+        ledger: &mut Ledger,
+        reg: &ConceptRegistry,
+        pos: &RoomAddr,
+        boldness: f64,
+    ) -> Body {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         commit_agent_at(ledger, reg, e, pos, 0.0);
-        Npc {
+        Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: pos.clone(),
             resource: pos.clone(),
             species: "goblin".into(),
@@ -10516,11 +10918,13 @@ mod tests {
 
         // A — a mortal dreading the uncanny fully (weight 1), steady boldness:
         // felt threat 0.8 ≥ DANGER_ACT, cornered, emits arousal 0.8 every tick.
-        let build_a = |ledger: &mut Ledger| -> Npc {
+        let build_a = |ledger: &mut Ledger| -> Body {
             let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             commit_agent_at(ledger, &reg, e, &x, 0.0);
-            Npc {
+            Body {
                 entity: e,
+                village: None,
+                perception: hornvale_species::PerceptionVector::MANIKIN,
                 home: x.clone(),
                 resource: x.clone(),
                 species: "goblin".into(),
@@ -10541,11 +10945,13 @@ mod tests {
         // B — dreads the uncanny only WEAKLY (0.25), so 0.8·0.25 = 0.20 <
         // DANGER_ACT (0.3): NO primary fear of its own. Its home is the safe
         // escape cell it flees to.
-        let build_b = |ledger: &mut Ledger| -> Npc {
+        let build_b = |ledger: &mut Ledger| -> Body {
             let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             commit_agent_at(ledger, &reg, e, &b_start, 0.0);
-            Npc {
+            Body {
                 entity: e,
+                village: None,
+                perception: hornvale_species::PerceptionVector::MANIKIN,
                 home: b_home.clone(),
                 resource: b_home.clone(),
                 species: "goblin".into(),
@@ -10990,8 +11396,10 @@ mod tests {
             r
         };
         commit_agent_at(&mut ledger, &reg, e, &away, 0.0);
-        let base = Npc {
+        let base = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
             species: "xorn".to_string(),
@@ -11107,8 +11515,10 @@ mod tests {
             // the water. (Position = latest agent-at; belief = the fold over history.)
             commit_agent_at(&mut ledger, &reg, e, seed_room, 0.0);
             commit_agent_at(&mut ledger, &reg, e, &home, 0.5);
-            let npc = Npc {
+            let npc = Body {
                 entity: e,
+                village: None,
+                perception: hornvale_species::PerceptionVector::MANIKIN,
                 home: home.clone(),
                 resource: w1.clone(),
                 species: "goblin".into(),
@@ -11197,8 +11607,10 @@ mod tests {
         };
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: water.clone(),
             species: "goblin".into(),
@@ -12160,8 +12572,10 @@ mod tests {
         let terrain = PlantedTerrain::thermal([(home.clone(), 80.0)]); // blistering, no water
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let base = Npc {
+        let base = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
             species: "xorn".to_string(),
@@ -12188,7 +12602,7 @@ mod tests {
         );
         assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
         assert_eq!(a.object, None, "no drive is engaged");
-        let meta = Npc {
+        let meta = Body {
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
             boldness: 0.5,
@@ -12225,8 +12639,10 @@ mod tests {
         );
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let base = Npc {
+        let base = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
             species: "xorn".to_string(),
@@ -12251,7 +12667,7 @@ mod tests {
             &terrain,
         );
         assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
-        let meta = Npc {
+        let meta = Body {
             metabolic_class: MetabolicClass::Endotherm,
             ..base.clone()
         };
@@ -12832,8 +13248,10 @@ mod tests {
         let home = raddr(1.0);
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
-        let npc = Npc {
+        let npc = Body {
             entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
             species: "human".to_string(),
@@ -13214,8 +13632,10 @@ mod tests {
             (ns[1].clone(), ambient),
             (ns[2].clone(), ambient),
         ]);
-        let build_npc = |entity: EntityId| Npc {
+        let build_npc = |entity: EntityId| Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home.clone(),
             species: "human".to_string(),
@@ -13610,13 +14030,15 @@ mod tests {
         }
     }
 
-    /// A cold-adapted `Npc` standing in `home`, otherwise inert on every
+    /// A cold-adapted `Body` standing in `home`, otherwise inert on every
     /// OTHER drive (ignorant of water, empty diet, no hazards, already
     /// home) — the shared fixture the catch-up tests below build on, so
     /// Thermal is provably the ONLY drive that can ever move it.
-    fn cold_thermal_npc(entity: EntityId, home: RoomAddr, niche: ConditionResponse) -> Npc {
-        Npc {
+    fn cold_thermal_npc(entity: EntityId, home: RoomAddr, niche: ConditionResponse) -> Body {
+        Body {
             entity,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
             home: home.clone(),
             resource: home,
             species: "test".to_string(),
@@ -13900,6 +14322,7 @@ mod tests {
             None,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut DefaultController,
         );
         let after = ledger.len();
 
@@ -14113,6 +14536,7 @@ mod tests {
                 None,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
+                &mut DefaultController,
             );
             occ.at(npc.entity)
         };

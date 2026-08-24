@@ -91,7 +91,19 @@ fn world() -> hornvale_kernel::World {
 /// from `book/src/gallery/possession-seed-42.md`, regenerated at this
 /// commit. Both copies moved together — see `the_two_grievance_npc_copies_
 /// agree` below, which is exactly the guard the ninth rename asked for.
-const GRIEVANCE_NPC: &str = "bugbear of Doaba";
+const GRIEVANCE_NPC: &str = "hobgoblin of Noaba";
+
+/// Places `bodies()[1]` (The Hand, Task 3's manufactured companion) at the
+/// possessed body's own room, through the test seam
+/// (`Session::place_creature_at_me`, see docs/retrospectives/the-hand.md) — nothing is
+/// co-located with a fresh flagship possession by default any more. Called
+/// before every `!provoke`/`!soothe` below that follows a `wait`, because
+/// the companion's own drive-seeking runs on every tick and is free to walk
+/// it away — unlike the pre-Hand duplicate, whose home WAS the flagship.
+fn place_companion(s: &mut Session) {
+    let who = s.bodies()[1].entity;
+    s.place_creature_at_me(who);
+}
 
 /// The duplication guard the comment above spent eight renames asking for.
 /// `possession_moves.rs` declares its own `GRIEVANCE_NPC` because integration
@@ -139,8 +151,8 @@ fn provoked_npc_turns_hostile_on_the_next_wait_but_an_unprovoked_one_does_not() 
             .0
             .npc_labels()
             .contains(&GRIEVANCE_NPC),
-        "GRIEVANCE_NPC ({GRIEVANCE_NPC}) is not co-located at day 0.5 — the settlement was \
-         probably renamed; re-read it from book/src/gallery/possession-seed-42.md"
+        "GRIEVANCE_NPC ({GRIEVANCE_NPC}) is not derived at day 0.5 — the settlement was \
+         probably renamed; re-read `bodies()[1].label` from a fresh session"
     );
 
     // control: only waits, never provokes -> no hostility.
@@ -156,12 +168,17 @@ fn provoked_npc_turns_hostile_on_the_next_wait_but_an_unprovoked_one_does_not() 
 
     // treatment: antagonize across three days, then wait -> the NPC turns
     // hostile. Same-day dedup (Task 1) means each provoke must be separated
-    // by a wait to land as a distinct day's grievance.
+    // by a wait to land as a distinct day's grievance. `place_companion` runs
+    // before every provoke (The Hand, Task 3): the companion is free to walk
+    // away from the flagship on each tick, unlike the pre-Hand twin.
     let (mut treat, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    place_companion(&mut treat);
     treat.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
     treat.handle("wait");
+    place_companion(&mut treat);
     treat.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
     treat.handle("wait");
+    place_companion(&mut treat);
     treat.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
     out_text(treat.handle("wait")); // grievance 3 crosses threshold; the tick fires the consequence
     assert_eq!(
@@ -178,10 +195,13 @@ fn a_second_wait_past_the_threshold_does_not_double_fire() {
     // with the NPC still past threshold.
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
     assert_eq!(s.committed_hostility_count(), 1, "fires exactly once");
@@ -224,10 +244,13 @@ fn same_action_trace_is_byte_identical() {
 fn played_world_persists_the_mark_across_reload() {
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait"); // grievance 3 crosses the threshold; the tick fires the consequence
     let played = s.into_played_world(w.seed);
@@ -307,10 +330,13 @@ fn into_played_world_never_mutates_the_input_world() {
 fn a_reloaded_played_world_does_not_re_fire_the_consequence_on_a_fresh_wait() {
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}"));
     s.handle("wait"); // grievance 3 crosses the threshold; the consequence fires
     let played = s.into_played_world(w.seed);
@@ -348,10 +374,13 @@ fn a_reloaded_played_world_does_not_re_fire_the_consequence_on_a_fresh_wait() {
 fn why_traces_the_fired_consequence_back_to_the_players_hand() {
     let w = world();
     let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
     s.handle("wait");
+    place_companion(&mut s);
     s.handle(&format!("!provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
     s.handle("wait"); // grievance 3 crosses the threshold; the tick fires the consequence
 

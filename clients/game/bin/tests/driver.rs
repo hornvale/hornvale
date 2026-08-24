@@ -41,12 +41,25 @@ fn handle_return_value_reports_whether_the_session_released() {
     assert!(!released, "an ordinary verb must not report a release");
 }
 
-/// `--target most-populous-settlement` must mint at a DIFFERENT settlement
-/// than the flagship default — seed 42's flagship is Googo (pop 68), the
-/// most-populous settlement is Toa (pop 84), so the two snapshots'
-/// `self.settlement` fields must disagree. If they ever agreed, `target`
-/// would be silently ignored by the driver. (Both agents are MINTED; the
-/// target chooses the settlement, not an existing resident.)
+/// `--target most-populous-settlement` must land in a DIFFERENT settlement
+/// than the flagship default, so the two snapshots' `self.settlement` fields
+/// must disagree. If they ever agreed, `target` would be silently ignored by
+/// the driver.
+///
+/// **Neither body is minted.** Possession SELECTS an already-derived roster
+/// member (The Hand, decision 0227): `Session` is `{ bodies, driven }`, the
+/// `AgentId` draw is retired, and the variant chooses which settlement's
+/// existing resident is driven. The test's name still says `mints` and is left
+/// alone deliberately: the rename is a code change and belongs in its own
+/// commit, not folded into a prose correction. It is cheap when someone does
+/// it — this crate is outside the cargo workspace, so no `nextest` filter and
+/// no `subfloor-roster.tsv` entry names this test; only `make game-check` runs
+/// it. Carried as a followup in `docs/retrospectives/the-hand.md`.
+///
+/// The two settlements' names and populations are **not** restated here: they
+/// are a reading of one world rather than an invariant, and `PossessTarget`'s
+/// own doc carries them along with the campaign that last moved them. This
+/// asserts only the property the variant needs, which is that the two differ.
 #[test]
 fn the_most_populous_target_mints_at_a_different_settlement_than_flagship() {
     let flagship = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
@@ -328,6 +341,11 @@ fn map_focus_alone_does_not_activate_the_world_view() {
         text: &empty_line,
         caret: 0,
     };
+    // Hoisted because `world_plate_for_redraw` takes `&mut self` since the
+    // plate memo (perf/world-plate-memo) -- it cannot share an expression
+    // with the immutable reads below. Same call, same arguments, same
+    // assertions; only the borrow is sequenced.
+    let world_plate = driver.world_plate_for_redraw(w, h);
     let (grid, _) = render_with(
         &json,
         w,
@@ -337,7 +355,7 @@ fn map_focus_alone_does_not_activate_the_world_view() {
         cmd_line,
         driver.strip_text(),
         driver.echo(),
-        driver.world_plate_for_redraw(w, h).as_ref(),
+        world_plate.as_ref(),
         driver.strip_offset(),
         None,
     )

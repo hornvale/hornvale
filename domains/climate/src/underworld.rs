@@ -12,16 +12,25 @@
 //! factoring of an existing decision tree; this is a fresh authoring against
 //! fields terrain already owns.
 //!
-//! # Layering — why the drivers are named in prose and not in types
+//! # Layering — why the drivers are named in prose, and one is not
 //!
 //! `hornvale-climate` may not import `hornvale-terrain` (constitutional; see
 //! `domains/CLAUDE.md`). `CaveKind`, `RockClass`, `MaterialBuffer`,
-//! `Commodity`, `WaterKind` and `DelveRung` therefore appear here as **words**,
-//! never as types. [`DelveZone`] is the one exception and is a *mirrored
-//! roster* under decision 0094: the five habitation rung NAMES and their
-//! order are shared, the derivation that maps a ΔT to a rung stays in
-//! `hornvale_terrain::delve` and is not duplicated. `cli/tests/
-//! delve_roster_mirror.rs` fails if the two rosters drift.
+//! `Commodity` and `WaterKind` therefore appear here as **words**, never as
+//! types. The depth axis used to be the same way — a `DelveZone` enum
+//! *mirroring* `hornvale_terrain::delve::DelveRung`'s five habitation rung
+//! names under decision 0094, with `cli/tests/suite/delve_roster_mirror.rs`
+//! failing if the two rosters drifted.
+//!
+//! **That mirror is gone.** It was never the deliberate kind of duplicate
+//! 0094 governs — 0094 is for a duplicate that buys independence, and this
+//! one bought nothing but a layering workaround: climate cannot **compute**
+//! a band (that derivation is terrain's alone) and could not even **import**
+//! terrain's type to name one. [`UnderworldName::zone`] is
+//! [`hornvale_kernel::Band`] directly now — the kernel is a legal import for
+//! both domains, and decision 0044 clause (a) says a roster more than one
+//! domain speaks belongs there. The mirror test retired with it; nothing
+//! here duplicates `hornvale_terrain::delve`'s derivation, same as before.
 //!
 //! # The scales are the surface corpus's scales
 //!
@@ -153,50 +162,11 @@ const L_DARK: f64 = 0.0;
 /// skylight, a slot.
 const L_DIM: f64 = 0.2;
 
-/// The five habitation rungs of terrain's delve ladder, **mirrored as a
-/// roster** (decision 0094): the names and their shallow-to-deep order are
-/// shared, the derivation is not.
-///
-/// `hornvale_terrain::delve::DelveRung` computes which rung a ΔT lands in;
-/// nothing here duplicates that, and nothing here may. What this enum is for
-/// is stating *at what depth class a community occurs*, which is the axis the
-/// energy inversion is measured against.
-///
-/// **One deliberate roster difference.** `DelveRung` also carries a `Surface`
-/// variant, because the overworld is a rung of the same ladder (spec §4.6).
-/// This enum has none: no underworld community is at the surface, and a
-/// variant no row could ever take would be a hole for a later reader to fall
-/// into. `cli/tests/delve_roster_mirror.rs` encodes exactly that expectation,
-/// so the difference is asserted rather than assumed.
-///
-/// The derived `Ord` is load-bearing: "deeper than" is a comparison here, the
-/// same way it is on `DelveRung`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum DelveZone {
-    /// Cave mouths and the first few tens of metres of worked rock.
-    Undercroft,
-    /// Shallow inhabited depth: the top of the karst and lava-tube population.
-    Shallows,
-    /// The ladder's broad middle — worked or walked, still temperate.
-    Deeps,
-    /// Deep habitation, warm enough that living here is a choice with a cost.
-    Underdeep,
-    /// Past the habitable ceiling: hot, and the deepest a cave reaches.
-    ///
-    /// **Named `Sunless` until The Stope** (spec amendment B.3). The mirror
-    /// rule (decision 0094) is what makes the rename land in both crates at
-    /// once: `hornvale_terrain::DelveRung::Nadir` moved and this roster moves
-    /// with it, or `cli/tests/delve_roster_mirror.rs` reddens.
-    Nadir,
-}
-
 /// One underworld community and the vector assigned to it.
 ///
 /// Deliberately `axes::AssignedName`'s three fields plus [`UnderworldName::zone`].
 /// It is not that type because the energy inversion is a claim *about depth*,
-/// and a claim about depth needs the depth on the row: a parallel
-/// name-to-zone table is precisely the silently-drifting duplicate decision
-/// 0094 exists to prevent.
+/// and a claim about depth needs the depth on the row.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: genera)
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnderworldName {
@@ -208,8 +178,16 @@ pub struct UnderworldName {
     /// community *of* — never empty, because a community with no genus could
     /// not be scored against the cave region at all.
     pub genera: &'static [&'static str],
-    /// The delve zone it occurs in.
-    pub zone: DelveZone,
+    /// The depth class it occurs in — [`hornvale_kernel::Band`], shared with
+    /// `hornvale_terrain::delve` (decision 0044 clause (a)). No row here is
+    /// ever [`hornvale_kernel::Band::Surface`]: no underworld community is at
+    /// the surface, and `Band` carries that variant only because the
+    /// overworld is a rung of the same ladder (spec §4.6). That is now a
+    /// corpus invariant checked by
+    /// `domains/climate/tests/suite/underworld.rs::no_underworld_community_occupies_the_surface`
+    /// rather than a type the field's own shape forbids — see this module's
+    /// layering section for why the type changed.
+    pub zone: hornvale_kernel::Band,
 }
 
 /// The three cave formations in [`crate::axes`], as genus pointers.
@@ -228,7 +206,7 @@ fn v(values: &[(EnvironmentAxis, f64)]) -> EnvironmentVector {
 fn c(
     name: &'static str,
     genera: &'static [&'static str],
-    zone: DelveZone,
+    zone: hornvale_kernel::Band,
     physiognomy: f64,
     energy: f64,
     water: f64,
@@ -251,7 +229,11 @@ fn c(
 
 /// A name the axes cannot place. Not an error — a counted finding, exactly as
 /// in [`crate::axes::assignment`].
-fn resists(name: &'static str, genera: &'static [&'static str], zone: DelveZone) -> UnderworldName {
+fn resists(
+    name: &'static str,
+    genera: &'static [&'static str],
+    zone: hornvale_kernel::Band,
+) -> UnderworldName {
     UnderworldName {
         name,
         vector: EnvironmentVector::new(&[]).expect("the empty vector is legal"),
@@ -267,7 +249,7 @@ fn resists(name: &'static str, genera: &'static [&'static str], zone: DelveZone)
 /// computed — the whole table is AUTHORED, and the comments are what make it
 /// auditable rather than tasteful.
 fn build() -> Vec<UnderworldName> {
-    use DelveZone::*;
+    use hornvale_kernel::Band::*;
     vec![
         // ================= karst: carbonate dissolution =================
         // Requires `MaterialBuffer::carbonate` high; the wettest and most

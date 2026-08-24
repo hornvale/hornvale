@@ -112,11 +112,11 @@ const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 /// ```
 ///
 /// **WHY, AND THE ATTRIBUTION IS NOT THE OBVIOUS ONE.** The Underworld re-keyed
-/// the history bake's node index from `CellId` to `(CellId, DelveRung)` —
+/// the history bake's node index from `CellId` to `(CellId, Band)` —
 /// decision 0145, one community per *place* rather than per cell — which is the
 /// change that most visibly touches settlement placement, and the natural
 /// reading is that it accounts for the move. It does not. Neutralising it
-/// alone (`Bake::rung_for` forced to `DelveRung::Surface`, which makes every
+/// alone (`Bake::rung_for` forced to `Band::Surface`, which makes every
 /// node-index key `(cell, Surface)` and so restores the old one-per-cell
 /// semantics exactly, with everything else about the campaign intact) reads:
 ///

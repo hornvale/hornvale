@@ -18,7 +18,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{BandKind, CaveKind, TerrainPins};
+use hornvale_terrain::{CaveKind, Horizon, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -61,7 +61,7 @@ const PROB_BUCKETS: [(f64, f64); 20] = [
 
 /// How many classes the restated H2 partitions the depth budget into.
 ///
-/// **Five, deliberately** — the same cardinality as the five `BandKind` rungs
+/// **Five, deliberately** — the same cardinality as the five `Horizon` rungs
 /// the original H2 counted, so the restatement changes the *classifier* and
 /// nothing else. A finer partition would make "at least 3 occupied" easier to
 /// satisfy, which would be a widening; this is not one.
@@ -115,7 +115,7 @@ struct Readout {
     /// was `LavaTube` and `Fracture` being UNREACHABLE, which is a statement
     /// about worlds, not about a share of a pooled total.
     kind_worlds: [usize; 3],
-    /// Cave cells by `deepest_band`, in `BandKind` declaration order
+    /// Cave cells by `deepest_horizon`, in `Horizon` declaration order
     /// (Regolith, Cover, Basement, Roots, Underneath). REPORTED, and no
     /// longer asserted on — see H2's disclosure in
     /// `cave_substrate_meets_preregistered_criteria`.
@@ -234,12 +234,12 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
             };
             out.kinds[ki] += 1;
             world_kinds[ki] += 1;
-            out.bands[match cave.deepest_band {
-                BandKind::Regolith => 0,
-                BandKind::Cover => 1,
-                BandKind::Basement => 2,
-                BandKind::Roots => 3,
-                BandKind::Underneath => 4,
+            out.bands[match cave.deepest_horizon {
+                Horizon::Regolith => 0,
+                Horizon::Cover => 1,
+                Horizon::Basement => 2,
+                Horizon::Roots => 3,
+                Horizon::Underneath => 4,
             }] += 1;
             out.reach_bins[reach_bin(cave.depth_reach_m)] += 1;
             out.reaches.push(cave.depth_reach_m);
@@ -526,13 +526,13 @@ fn cave_substrate_meets_preregistered_criteria() {
     // re-proved against the defect the original existed to catch. All three
     // are discharged; this comment is the disclosure 0138 requires.
     //
-    // WHAT THE ORIGINAL SAID. "At least 3 distinct `BandKind`s occur among
-    // caves' `deepest_band`, and the modal band holds under 90%." Its property
+    // WHAT THE ORIGINAL SAID. "At least 3 distinct `Horizon`s occur among
+    // caves' `deepest_horizon`, and the modal band holds under 90%." Its property
     // is The Hollow's spec §2.2 defect: `depth_reach_bands` was arithmetically
     // incapable of returning anything but 2, so "every cave in every world sat
     // at band 2" — a depth coordinate collapsed to one value.
     //
-    // WHY THE ESTIMATOR WAS INVALID. `deepest_band` was not a measurement of
+    // WHY THE ESTIMATOR WAS INVALID. `deepest_horizon` was not a measurement of
     // the world; it was the return value of a three-armed match on
     // `(kind, proneness >= 0.5, column.unconformity)`. Its range over its
     // ENTIRE input domain is exactly {Cover, Basement, Roots} — three values,
@@ -803,36 +803,36 @@ fn the_retired_h2_estimator_is_satisfied_by_its_own_generator() {
     /// Verbatim body of the retired `hornvale_terrain::features::cave_depth`
     /// at `1e92c152`, before The Underworld cut `MAP-cave-depth-weld`. Kept
     /// here only as the subject of this demonstration.
-    fn retired_cave_depth(kind: CaveKind, unconformity: bool, proneness: f64) -> BandKind {
+    fn retired_cave_depth(kind: CaveKind, unconformity: bool, proneness: f64) -> Horizon {
         const DEEP_PROCESS_PRONENESS: f64 = 0.5;
         let strong = proneness >= DEEP_PROCESS_PRONENESS;
         match kind {
             CaveKind::Karst => {
                 if strong || unconformity {
-                    BandKind::Basement
+                    Horizon::Basement
                 } else {
-                    BandKind::Cover
+                    Horizon::Cover
                 }
             }
-            CaveKind::LavaTube => BandKind::Cover,
+            CaveKind::LavaTube => Horizon::Cover,
             CaveKind::Fracture => {
                 if strong {
-                    BandKind::Roots
+                    Horizon::Roots
                 } else {
-                    BandKind::Basement
+                    Horizon::Basement
                 }
             }
         }
     }
 
-    /// `BandKind` is not `Ord`, so name it to collect a set.
-    fn name_of(band: BandKind) -> &'static str {
+    /// `Horizon` is not `Ord`, so name it to collect a set.
+    fn name_of(band: Horizon) -> &'static str {
         match band {
-            BandKind::Regolith => "Regolith",
-            BandKind::Cover => "Cover",
-            BandKind::Basement => "Basement",
-            BandKind::Roots => "Roots",
-            BandKind::Underneath => "Underneath",
+            Horizon::Regolith => "Regolith",
+            Horizon::Cover => "Cover",
+            Horizon::Basement => "Basement",
+            Horizon::Roots => "Roots",
+            Horizon::Underneath => "Underneath",
         }
     }
 
@@ -910,7 +910,7 @@ fn the_restated_h2_rejects_a_collapsed_and_a_two_valued_depth() {
     );
     assert!(modal >= 0.90, "…and the modal arm, got {modal:.4}");
 
-    // The pre-1b two-valued coordinate: `top_depth_m(deepest_band)` was ~0 m
+    // The pre-1b two-valued coordinate: `top_depth_m(deepest_horizon)` was ~0 m
     // or ~14 km, the latter clamped by the ceiling into the top class.
     let mut two_valued = [0usize; REACH_BINS];
     two_valued[reach_bin(0.0)] = 655;

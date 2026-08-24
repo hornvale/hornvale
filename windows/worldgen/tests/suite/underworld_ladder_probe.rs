@@ -10,7 +10,7 @@
 //!
 //! ## Measured, 2026-08-16, seeds 42 / 7 / 1234 — BEFORE Task 1b
 //!
-//! Depth is `top_depth_m(deepest_band)`, a band index. Two occupied classes;
+//! Depth is `top_depth_m(deepest_horizon)`, a band index. Two occupied classes;
 //! the three middle buckets hold 1–25 caves out of 874–1681 between them. This
 //! reading is what falsified spec §4.1's premise and occasioned §4.0.
 //!
@@ -73,7 +73,7 @@
 //! right.
 //!
 //! Two things to carry into §4.1's rung table rather than read as defects:
-//! `deepest_band` no longer reaches `Roots` on any cave (a metre budget capped
+//! `deepest_horizon` no longer reaches `Roots` on any cave (a metre budget capped
 //! at 3 km cannot, when `Roots` starts near 14 km), and `[50, ∞) K` grew rather
 //! than shrank, because fault voids in competent rock are genuinely deep.
 //!
@@ -127,7 +127,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_terrain::{BandKind, TerrainPins};
+use hornvale_terrain::{Horizon, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -186,12 +186,12 @@ fn how_hot_is_a_cave() {
             };
             let gradient = terrain.geothermal_gradient_at(cell).get();
             gradients.push(gradient);
-            let band_index = match cave.deepest_band {
-                BandKind::Regolith => 0,
-                BandKind::Cover => 1,
-                BandKind::Basement => 2,
-                BandKind::Roots => 3,
-                BandKind::Underneath => 4,
+            let band_index = match cave.deepest_horizon {
+                Horizon::Regolith => 0,
+                Horizon::Cover => 1,
+                Horizon::Basement => 2,
+                Horizon::Roots => 3,
+                Horizon::Underneath => 4,
             };
             band_hist[band_index] += 1;
             // ΔT at the cave's deepest reach: its depth budget in metres
@@ -200,7 +200,7 @@ fn how_hot_is_a_cave() {
             dt_samples.push(gradient * (cave.depth_reach_m / 1000.0));
             // The band-top coordinate, kept as an in-run control: the column's
             // own top-depth for the deepest band. **This is NOT the pre-1b
-            // reading** — `deepest_band` itself moved in Task 1b, so this is
+            // reading** — `deepest_horizon` itself moved in Task 1b, so this is
             // the old coordinate applied to the new band assignment. What it
             // shows is the narrower, still-live claim: a band top is not a
             // depth quantity even when the band is right. The pre-1b table in

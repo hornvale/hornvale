@@ -188,7 +188,6 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 | Label | Meaning |
 |---|---|
-| `vessel/agent` | minted agent id draw |
 | `vessel/walk` | walker-battery deterministic walk |
 | `room/furnishing/v1` | which patterns a room draws |
 | `room/chambers/v1` | which chambers a structure has |
@@ -213,14 +212,14 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
-| `chamber/v3` | the underworld chamber derivation, keyed on a delve-ladder address with a floor |
-| `chamber/run-floors/v1` | how many floors one run realizes, keyed on (cell, entrance, branch, band) |
-| `chamber/branch-character/v1` | which character one branch carries, keyed on (cell, entrance, branch) |
-| `chamber/branch-barrier/v1` | the barrier thinness of one branch, keyed on (cell, entrance, branch) |
-| `chamber/branch-count/v1` | how many branches one cave system realizes, keyed on (cell, entrance) |
-| `chamber/entrance-count/v1` | how many surface apertures one cave system opens, keyed on cell |
-| `chamber/entrance-mouth/v1` | which floor of the lattice one entrance opens into, keyed on (cell, entrance) |
-| `chamber/branch-root/v1` | where a branch roots on its parent, keyed on (cell, entrance, branch) |
+| `chamber/v3` | a display-only address formatter; the underworld's real derivation key is RUN_FLOORS and the per-branch legs |
+| `chamber/run-floors/v2` | how many levels one run realizes, keyed on (cell, branch, band) |
+| `chamber/branch-character/v2` | which character one branch carries, keyed on (cell, branch, band) |
+| `chamber/branch-barrier/v2` | the barrier thinness of one branch, keyed on (cell, branch, band) |
+| `chamber/branch-count/v2` | how many branches one cave system realizes, keyed on (cell, band) |
+| `chamber/entrance-count/v2` | how large one cave system's FREE aperture set is, keyed on cell (the shipped count is this raised to the top band's branch width) |
+| `chamber/entrance-mouth/v2` | which top-band branch one aperture opens on, keyed on (cell, aperture, role) |
+| `chamber/band-descent/v1` | which branches of an adjacent band one branch connects to, keyed on (cell, branch, band, role) |
 | `volcano/v1` | the volcano-identity derivation, keyed on the edifice's source contact cell |
 | `hazard/event/v1` | the per-cell hazard-event draw, keyed on (cell, process, world-time block) |
 

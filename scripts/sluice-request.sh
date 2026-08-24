@@ -13,8 +13,8 @@
 # actually returned an id.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-branch="${1:?usage: sluice-request.sh <branch> <full-sha> [merge|stage]}"
-ref="${2:?usage: sluice-request.sh <branch> <full-sha> [merge|stage]}"
+branch="${1:?usage: sluice-request.sh <branch> <full-sha> [merge|stage|census]}"
+ref="${2:?usage: sluice-request.sh <branch> <full-sha> [merge|stage|census]}"
 kind="${3:-merge}"
 case "$kind" in
     merge|stage) ;;

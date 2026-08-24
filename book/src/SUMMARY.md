@@ -395,6 +395,8 @@
 - [The Deed](./chronicle/the-deed.md)
 - [The Stope](./chronicle/the-stope.md)
 - [The Stride](./chronicle/the-stride.md)
+- [The Drift](./chronicle/the-drift.md)
+- [The Hand](./chronicle/the-hand.md)
 - [The Mirror](./chronicle/the-mirror.md)
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
 

@@ -942,7 +942,7 @@ mod tests {
         }
     }
 
-    /// The `Cave` derived-field invariant, on live worlds: `deepest_band` is
+    /// The `Cave` derived-field invariant, on live worlds: `deepest_horizon` is
     /// always the band the cave's own metre budget reaches (spec §4.0). Both
     /// constructors preserve it by construction, so this asserts that the
     /// generator really does go through one — a hand-built literal anywhere in
@@ -951,7 +951,7 @@ mod tests {
     /// Non-vacuous by assertion: the sweep must actually see caves, and it must
     /// see the band vary, or a generator that returned one constant band for
     /// everything would satisfy the invariant trivially.
-    /// claim: invariant(forall-seed, forall-cave) — `deepest_band` equals
+    /// claim: invariant(forall-seed, forall-cave) — `deepest_horizon` equals
     /// `band_at_depth(column, depth_reach_m)` for every cave the generator
     /// authors, over a small fixed seed set at a level-4 globe
     #[test]
@@ -971,17 +971,17 @@ mod tests {
                     cave.band_agrees_with_reach(&column),
                     "seed {raw} cell {cell:?}: band {:?} against a {} m budget, \
                      whose column puts it in {:?}",
-                    cave.deepest_band,
+                    cave.deepest_horizon,
                     cave.depth_reach_m,
                     crate::features::band_at_depth(&column, cave.depth_reach_m)
                 );
                 seen += 1;
-                bands.insert(match cave.deepest_band {
-                    crate::strata::BandKind::Regolith => "Regolith",
-                    crate::strata::BandKind::Cover => "Cover",
-                    crate::strata::BandKind::Basement => "Basement",
-                    crate::strata::BandKind::Roots => "Roots",
-                    crate::strata::BandKind::Underneath => "Underneath",
+                bands.insert(match cave.deepest_horizon {
+                    crate::strata::Horizon::Regolith => "Regolith",
+                    crate::strata::Horizon::Cover => "Cover",
+                    crate::strata::Horizon::Basement => "Basement",
+                    crate::strata::Horizon::Roots => "Roots",
+                    crate::strata::Horizon::Underneath => "Underneath",
                 });
             }
         }

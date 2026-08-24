@@ -10,7 +10,7 @@
 //!
 //! Measurement only. This exists because the campaign's Task 3b proposes to
 //! give a chamber its real elevation —
-//! `height_asl_m(chamber) = height_asl_m(surface) - top_depth_m(deepest_band)`
+//! `height_asl_m(chamber) = height_asl_m(surface) - top_depth_m(deepest_horizon)`
 //! — and the spec asserted that was a clean fidelity correction ("a chamber
 //! under a 2000 m peak is genuinely not at 2000 m") **without measuring the
 //! magnitude**.
@@ -28,15 +28,15 @@
 //! ```
 //!
 //! An authored elevation curve has `width` around 4000 m. If a cave's
-//! `deepest_band` is `Roots`, the chamber sits tens of kilometres down and
+//! `deepest_horizon` is `Roots`, the chamber sits tens of kilometres down and
 //! every elevation curve evaluates to ~0 there. That is arguably *correct* —
-//! `BandKind::Roots` is documented as "deep crust: hot, high-pressure", and
+//! `Horizon::Roots` is documented as "deep crust: hot, high-pressure", and
 //! nobody lives 20 km down — but it decides the campaign, because a
 //! subterranean dwarf must still clear `hornvale_demography::FLOOR` on some
 //! cell of every seed (`non_void_roster`, which admits no allowlist).
 //!
 //! So the question this answers is narrow and load-bearing: **over cave-
-//! bearing land cells, what is the distribution of `deepest_band`, and what
+//! bearing land cells, what is the distribution of `deepest_horizon`, and what
 //! depth in metres does it imply?** If karst and lava-tube caves dominate the
 //! shallow bands, the literal read is safe and deep fracture caves are
 //! correctly uninhabitable — a real selection effect. If `Roots` dominates,
@@ -68,7 +68,7 @@
 //! barely moves and `non_void_roster` has ample habitat. The remaining
 //! 28-33% are `Roots` caves at 14-21 km, which become correctly
 //! uninhabitable — that is a real selection effect and arguably the honest
-//! result: `BandKind::Roots` is "deep crust: hot, high-pressure".
+//! result: `Horizon::Roots` is "deep crust: hot, high-pressure".
 //!
 //! **2. It probably does NOT separate Mountain from Duergar, which was the
 //! reason for building it.** Among the shallow caves that remain habitable,
@@ -83,7 +83,7 @@
 // measuring a handful of worlds is exactly the site the allowance is for.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_terrain::BandKind;
+use hornvale_terrain::Horizon;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, climate_of, sky_of, substrate_field, terrain_of,
 };
@@ -92,13 +92,13 @@ use hornvale_worldgen::{
 const SEEDS: [u64; 3] = [42, 7, 1234];
 
 /// Name a band for the table, in column order (top to bottom).
-fn band_name(b: BandKind) -> &'static str {
+fn band_name(b: Horizon) -> &'static str {
     match b {
-        BandKind::Regolith => "Regolith",
-        BandKind::Cover => "Cover",
-        BandKind::Basement => "Basement",
-        BandKind::Roots => "Roots",
-        BandKind::Underneath => "Underneath",
+        Horizon::Regolith => "Regolith",
+        Horizon::Cover => "Cover",
+        Horizon::Basement => "Basement",
+        Horizon::Roots => "Roots",
+        Horizon::Underneath => "Underneath",
     }
 }
 
@@ -112,7 +112,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 }
 
 /// claim: readout(off-gate, heavy:, prints only, no assertion) — the
-/// `deepest_band` distribution and the depths it implies, over the
+/// `deepest_horizon` distribution and the depths it implies, over the
 /// cave-bearing land cells of seeds 42 / 7 / 1234. This test asserts nothing
 /// at all: every check in it is a build/lookup `expect`, and the result is
 /// the printed table (see the module doc, which records it). It is the
@@ -180,14 +180,14 @@ fn how_deep_is_a_cave() {
             let band = column
                 .bands
                 .iter()
-                .find(|b| b.kind == cave.deepest_band)
-                .expect("deepest_band is one of the five column bands");
-            let idx = match cave.deepest_band {
-                BandKind::Regolith => 0,
-                BandKind::Cover => 1,
-                BandKind::Basement => 2,
-                BandKind::Roots => 3,
-                BandKind::Underneath => 4,
+                .find(|b| b.kind == cave.deepest_horizon)
+                .expect("deepest_horizon is one of the five column bands");
+            let idx = match cave.deepest_horizon {
+                Horizon::Regolith => 0,
+                Horizon::Cover => 1,
+                Horizon::Basement => 2,
+                Horizon::Roots => 3,
+                Horizon::Underneath => 4,
             };
             counts[idx] += 1;
             depths[idx].push(band.top_depth_m);
@@ -205,11 +205,11 @@ fn how_deep_is_a_cave() {
                 continue;
             }
             let kind = [
-                BandKind::Regolith,
-                BandKind::Cover,
-                BandKind::Basement,
-                BandKind::Roots,
-                BandKind::Underneath,
+                Horizon::Regolith,
+                Horizon::Cover,
+                Horizon::Basement,
+                Horizon::Roots,
+                Horizon::Underneath,
             ][idx];
             let mut d = depths[idx].clone();
             d.sort_by(f64::total_cmp);

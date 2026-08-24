@@ -244,8 +244,8 @@ impl Focalizer for TemplateFocalizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{mint_flagship, observable};
-    use hornvale_kernel::{Seed, World, WorldTime};
+    use crate::observable;
+    use hornvale_kernel::{EntityId, Seed, World, WorldTime};
     use hornvale_locale::LocaleContext;
     use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
@@ -318,11 +318,15 @@ mod tests {
     fn vantage_at(day: f64) -> Vantage {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let agent = mint_flagship(&world, &ctx).unwrap();
+        let village = hornvale_settlement::village_info(&world).expect("seed 42 has a flagship");
+        let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
+        let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
+        let position = npc.home.clone();
         observable(
             &world,
             &ctx,
-            &agent,
+            &npc,
+            &position,
             WorldTime::new(day).expect("a day value is finite"),
         )
         .unwrap()

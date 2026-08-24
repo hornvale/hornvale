@@ -31,8 +31,6 @@ mod claim_shape;
 mod common_is_total;
 #[path = "suite/correspondence.rs"]
 mod correspondence;
-#[path = "suite/delve_roster_mirror.rs"]
-mod delve_roster_mirror;
 #[path = "suite/docs_consistency.rs"]
 mod docs_consistency;
 #[path = "suite/exit_criterion.rs"]

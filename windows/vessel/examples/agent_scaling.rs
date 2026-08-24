@@ -27,8 +27,8 @@
 //!
 //! `home_settlement` (the id `derive_npcs` guarantees a spot for,
 //! regardless of population rank) is the flagship's settlement —
-//! `mint_flagship(&world, &ctx)?.village.id` — copied from `Session::
-//! start`'s own default-possession construction.
+//! `hornvale_settlement::village_info(&world)?.id` (The Hand, Task 3: no
+//! more minting `Session::start`'s selection reads the same fact).
 //!
 //! The tick driver is `DriveMovements::step_with_occupancy`, called
 //! directly with a CALLER-OWNED `HomeNavCache` and `RoomMeshMemo` that
@@ -241,7 +241,6 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
     DriveMovements, HomeNavCache, LocaleTerrain, SUSTENANCE, derive_npcs,
 };
-use hornvale_vessel::mint_flagship;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 // The measurement harness times a single tick loop for a diagnostic (never
 // sim logic, never a fact, never seeded from wall-clock) -- exempt from the
@@ -453,9 +452,8 @@ fn main() {
         "agent_scaling: seed 42 has {settlement_count} settlements (the ceiling derive_npcs's k can reach)"
     );
 
-    let home_settlement = mint_flagship(&world, &ctx)
-        .expect("seed 42's flagship always mints")
-        .village
+    let home_settlement = hornvale_settlement::village_info(&world)
+        .expect("seed 42's flagship always exists")
         .id;
 
     // The planet's rotation period, exactly the read `Session::start` makes
