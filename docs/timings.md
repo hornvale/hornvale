@@ -2460,3 +2460,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T12:31:16Z | sluice:gate | 403.312 | 10838.283 | 399.542 | 27.86 | 0 | 2dfdb8772 |  | lefford | 40 |
 | 2026-08-24T12:38:05Z | sluice:clients | 408.426 | 3968.067 | 43.408 | 9.82 | 0 | 3ca18dda9 |  | lefford | 40 |
 | 2026-08-24T13:11:08Z | rebaseline | 207.567 | 263.809 | 21.679 | 1.38 | 0 | f2b80686e | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T13:19:16Z | gate-commit | 465.399 | 435.848 | 81.367 | 1.11 | 0 | f2b80686e | campaign/the-forebay | ambrose | 12 |
