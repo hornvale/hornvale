@@ -23,8 +23,8 @@
 //!   away from both — the one construction the geometry allows.
 //! - **A heat wave that passes** — a creature ON its water (thirst stays
 //!   serviceable, so it never itself distresses) but gripped by a blistering
-//!   thermal cell with no kinder neighbour: comfort is unservable and it Holds
-//!   in `Frustrated` while the wave lasts, then the wave breaks, the cell cools
+//!   thermal room with no kinder neighbour: comfort is unservable and it Holds
+//!   in `Frustrated` while the wave lasts, then the wave breaks, the room cools
 //!   into its niche, and it returns to `Content` — the spike-recover pattern.
 //!   (A permanent hostile climate would read chronic; the recovery is the
 //!   wave's end, sampled cleanly because the drive model's mid-cycle drinks are
@@ -33,8 +33,8 @@
 use crate::health::{AffectTrace, run_simulation};
 use hornvale_kernel::ecology::ConditionResponse;
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, Lineage, PLANT_FORAGE, ResourceVector,
-    RoomAddr, WorldTime,
+    ANIMAL_PREY, ConceptRegistry, EntityId, Facet, Ledger, Lineage, PLANT_FORAGE, ResourceVector,
+    WorldTime,
 };
 use hornvale_species::{ActivityCycle, MetabolicClass};
 use hornvale_vessel::body::Body;
@@ -48,7 +48,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// per-room temperatures (°C). Elevation is uniform (`INFINITY`, the
 /// undescribable-room convention) — the scenarios all give their creatures a
 /// water belief, so the ignorant-exploration path that reads elevation never
-/// fires. Unplanted temperatures read `INFINITY` → thermal urgency `0` (a cell
+/// fires. Unplanted temperatures read `INFINITY` → thermal urgency `0` (a room
 /// with no temperature registers no discomfort), so a scenario that plants no
 /// temperatures is thermally silent and exercises thirst alone.
 ///
@@ -59,27 +59,27 @@ use std::collections::{BTreeMap, BTreeSet};
 /// climate.
 #[derive(Default)]
 pub struct SyntheticTerrain {
-    fresh: BTreeSet<RoomAddr>,
-    temps: BTreeMap<RoomAddr, f64>,
+    fresh: BTreeSet<Facet>,
+    temps: BTreeMap<Facet, f64>,
     calm_after: Option<(f64, f64)>,
     /// Per-room food productivity (The Provender); rooms without an entry read
     /// `DEFAULT_FORAGE` (fed) — so a scenario that plants none feeds its
     /// creatures and hunger stays quiet, exactly as it does for the vessel
     /// tests' `PlantedTerrain`.
-    forage: BTreeMap<RoomAddr, f64>,
+    forage: BTreeMap<Facet, f64>,
     /// Per-room threat (The Dread); rooms without an entry read `0.0` (safe) —
     /// so a scenario that plants none is danger-free and fear stays quiet.
-    threat: BTreeMap<RoomAddr, f64>,
+    threat: BTreeMap<Facet, f64>,
 }
 
 impl Terrain for SyntheticTerrain {
-    fn elevation(&self, _room: &RoomAddr) -> f64 {
+    fn elevation(&self, _room: &Facet) -> f64 {
         f64::INFINITY
     }
-    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+    fn is_fresh_water(&self, room: &Facet) -> bool {
         self.fresh.contains(room)
     }
-    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64 {
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
         match self.temps.get(room) {
             None => f64::INFINITY,
             Some(&hot) => match self.calm_after {
@@ -88,11 +88,11 @@ impl Terrain for SyntheticTerrain {
             },
         }
     }
-    fn forage_value(&self, room: &RoomAddr) -> f64 {
+    fn forage_value(&self, room: &Facet) -> f64 {
         // `DEFAULT_FORAGE` (1.0) where unplanted, matching `PlantedTerrain`.
         self.forage.get(room).copied().unwrap_or(1.0)
     }
-    fn hazards(&self, room: &RoomAddr) -> Hazards {
+    fn hazards(&self, room: &Facet) -> Hazards {
         // The planted scalar maps to the UNCANNY axis (The Bane) — a mortal
         // niche weights UNCANNY `1`, so the dread scenarios read as before.
         Hazards {
@@ -165,15 +165,15 @@ const MILD_NICHE: ConditionResponse = ConditionResponse {
 };
 
 /// A narrow-tolerance niche for the thermally-stricken creature: a small band
-/// around a cool optimum, so a hot planted cell reads far past tolerance.
+/// around a cool optimum, so a hot planted room reads far past tolerance.
 const COOL_NICHE: ConditionResponse = ConditionResponse {
     optimum: 15.0,
     width: 5.0,
     devotion: 0.5,
 };
 
-/// A blistering planted cell temperature (°C) — far past `COOL_NICHE`'s
-/// tolerance, so thermal urgency pins to its ceiling and the cell is
+/// A blistering planted room temperature (°C) — far past `COOL_NICHE`'s
+/// tolerance, so thermal urgency pins to its ceiling and the room is
 /// unlivable.
 const BLISTERING_C: f64 = 60.0;
 
@@ -199,7 +199,7 @@ const HOT_WASTE_C: f64 = 45.0;
 /// this bounds the run just under `CHRONIC_TICKS`.
 const WAVE_BREAKS_DAY: f64 = 6.0;
 
-/// The comfortable temperature (°C) a planted cell reads once the wave has
+/// The comfortable temperature (°C) a planted room reads once the wave has
 /// broken — inside `COOL_NICHE`'s band, so thermal urgency falls to `0`.
 const AFTER_WAVE_C: f64 = 15.0;
 
@@ -207,8 +207,8 @@ const AFTER_WAVE_C: f64 = 15.0;
 /// ones (activity, label) at sane defaults.
 fn creature(
     entity: EntityId,
-    home: RoomAddr,
-    resource: RoomAddr,
+    home: Facet,
+    resource: Facet,
     species: &str,
     niche: ConditionResponse,
 ) -> Body {
@@ -275,10 +275,10 @@ fn synthetic_creature(n: u16) -> Lineage<'static> {
 /// uniform-cost search exhausts its 1000-node budget long before crossing the
 /// mesh): `.0` sits on water and serves as a home a belief can anchor to, `.1`
 /// is where a creature is stranded from it.
-fn water_and_a_far_exile() -> (RoomAddr, RoomAddr) {
+fn water_and_a_far_exile() -> (Facet, Facet) {
     (
-        RoomAddr::containing([1.0, 0.0, 0.0], 6),
-        RoomAddr::containing([-1.0, 0.05, 0.05], 6),
+        Facet::containing([1.0, 0.0, 0.0], 6),
+        Facet::containing([-1.0, 0.05, 0.05], 6),
     )
 }
 
@@ -321,7 +321,7 @@ pub fn stranded_from_known_water() -> Scenario {
 }
 
 /// **Stranded in a hot waste** → the same stranding as
-/// [`stranded_from_known_water`], but the exile cell is hot-but-livable
+/// [`stranded_from_known_water`], but the exile room is hot-but-livable
 /// (`HOT_WASTE_C`, inside a heat-adapted niche so thermal stays quiet). The
 /// Kindling's heat coupling quickens the endotherm's dehydration, so it crosses
 /// into thirst-distress SOONER than the temperate stranding — the coupling,
@@ -373,13 +373,13 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
 /// **A heat wave that passes** → a `Frustrated` spike that recovers (by-cause
 /// thermal, the recovery signal). The creature sits ON its spring, so thirst
 /// stays serviceable (it drinks and resets) and never itself distresses; but a
-/// blistering wave grips its cell and every neighbour with no kinder step, so
+/// blistering wave grips its room and every neighbour with no kinder step, so
 /// while it lasts the creature Holds in thermal `Frustrated`. When the wave
-/// breaks (day `WAVE_BREAKS_DAY`) the cell cools into its niche, comfort is met,
+/// breaks (day `WAVE_BREAKS_DAY`) the room cools into its niche, comfort is met,
 /// and the creature returns to `Content` — a distress spike, chronic-length yet
 /// recovered, produced end-to-end rather than typed by hand.
 pub fn a_heat_wave_that_passes() -> Scenario {
-    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let spring = Facet::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
@@ -413,14 +413,14 @@ pub fn a_heat_wave_that_passes() -> Scenario {
 /// hunger), the hunger analogue of [`stranded_from_known_water`]. The creature
 /// sits ON its home spring, so thirst stays serviceable (it drinks and resets,
 /// never itself distressing — the same isolation the heat-wave scenario uses);
-/// but its cell and every neighbour are barren (food-value `0`), so once hunger
-/// crosses its `act` there is no cell rich enough to eat and no richer
+/// but its room and every neighbour are barren (food-value `0`), so once hunger
+/// crosses its `act` there is no room rich enough to eat and no richer
 /// neighbour to forage toward: hunger — a survival drive — Holds unserviced and
 /// the creature starves, distress attributed to hunger, produced end-to-end by
 /// the real sim (The Provender). Proves hunger enters the drive competition and
 /// the by-cause reduction separates it.
 pub fn a_forager_in_a_food_desert() -> Scenario {
-    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let spring = Facet::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
@@ -428,7 +428,7 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
     ledger
         .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
-    // The spring and its three neighbours are all barren — no cell feeds the
+    // The spring and its three neighbours are all barren — no room feeds the
     // creature and no neighbour is richer, so hunger has no affordance and it
     // Holds (a local food pit, the hunger twin of the heat-wave's thermal pit).
     let mut forage = BTreeMap::new();
@@ -452,13 +452,13 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
 /// **A creature cornered by dread** → sustained danger distress (by-cause
 /// danger), the fear analogue of the food desert and heat wave (The Dread). The
 /// creature sits ON its home spring, so thirst stays serviceable (it drinks and
-/// resets, never itself distressing); but its cell and every neighbour are
+/// resets, never itself distressing); but its room and every neighbour are
 /// maximally uncanny (threat `1.0`), so danger — a survival drive — is engaged
 /// with nowhere safer to flee (a local dread-pit, the twin of the heat wave's
 /// thermal pit), and the creature Holds in danger-`Frustrated`. Proves the fifth
 /// drive enters the competition and the by-cause reduction separates fear.
 pub fn a_creature_cornered_by_dread() -> Scenario {
-    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let spring = Facet::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
@@ -494,15 +494,15 @@ pub fn a_creature_cornered_by_dread() -> Scenario {
 /// creature reads danger distress the bold one does not — the dial, end to end.
 /// Returns `(steady_trace_index 0, bold_trace_index 1)` in the scenario's npcs.
 pub fn dread_pit_steady_vs_bold() -> Scenario {
-    let steady_spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let steady_spring = Facet::containing([1.0, 0.0, 0.0], 6);
     // A distinct, far spring for the bold creature (its own separate dread-pit).
-    let bold_spring = RoomAddr::containing([-1.0, 0.05, 0.05], 6);
+    let bold_spring = Facet::containing([-1.0, 0.05, 0.05], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let mut threat = BTreeMap::new();
     let mut fresh = BTreeSet::new();
     let mut next_creature: u16 = 0;
-    let mut mint_pit = |ledger: &mut Ledger, spring: &RoomAddr| {
+    let mut mint_pit = |ledger: &mut Ledger, spring: &Facet| {
         // Two creatures share this ledger, so each needs its own ordinal —
         // reusing 0 would (correctly) trip the mint-time collision assert.
         let e = ledger.mint_entity(synthetic_creature(next_creature));

@@ -4,7 +4,7 @@
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
 };
-use hornvale_kernel::{CellId, EntityId, KindId};
+use hornvale_kernel::{EntityId, KindId, Vertex};
 
 fn eid(n: u64) -> EntityId {
     EntityId(std::num::NonZeroU64::new(n).unwrap())
@@ -16,7 +16,7 @@ fn tenure_and_liveness_read_off_the_span() {
     let alive = OccupationRecord {
         core: Occupation {
             people: goblin,
-            site: CellId(3),
+            site: Vertex(3),
             founded: 340.0,
             ended: None,
             peak_population: 80,
@@ -29,7 +29,7 @@ fn tenure_and_liveness_read_off_the_span() {
         },
         id: eid(10),
         ended_by: Ended::Nature,
-        founded_from: Founding::Genesis(CellId(3)),
+        founded_from: Founding::Genesis(Vertex(3)),
     };
     assert!(alive.is_alive());
     assert_eq!(alive.tenure(2000.0), 1660.0);
@@ -55,11 +55,11 @@ fn tech_horizon_is_ordinal() {
 #[test]
 fn the_core_carries_the_shared_facts_and_the_record_carries_identity() {
     use hornvale_history::record::{Ended, Founding, Occupation, OccupationRecord};
-    use hornvale_kernel::{CellId, EntityId, KindId};
+    use hornvale_kernel::{EntityId, KindId, Vertex};
 
     let core = Occupation {
         people: KindId("goblin"),
-        site: CellId(7),
+        site: Vertex(7),
         founded: 100.0,
         ended: Some(200.0),
         peak_population: 42,
@@ -80,7 +80,7 @@ fn the_core_carries_the_shared_facts_and_the_record_carries_identity() {
     let r = OccupationRecord {
         core: core.clone(),
         id: EntityId::new(9).expect("nonzero"),
-        founded_from: Founding::Genesis(CellId(7)),
+        founded_from: Founding::Genesis(Vertex(7)),
         ended_by: Ended::Nature,
     };
     assert_eq!(r.tenure(500.0), core.tenure(500.0), "the record delegates");
@@ -98,7 +98,7 @@ use hornvale_history::record::{founding_coords, founding_key, material_key};
 fn core(site: u32, founded: f64, peak: u32) -> hornvale_history::record::Occupation {
     hornvale_history::record::Occupation {
         people: hornvale_kernel::KindId("goblin"),
-        site: hornvale_kernel::CellId(site),
+        site: hornvale_kernel::Vertex(site),
         founded,
         ended: Some(founded + 100.0),
         peak_population: peak,

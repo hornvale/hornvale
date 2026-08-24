@@ -1,4 +1,4 @@
-//! The material buffer (The Ground, spec §2): a per-cell petrogenetic
+//! The material buffer (The Ground, spec §2): a per-vertex petrogenetic
 //! property vector and the projections over it. Pure functions of existing
 //! terrain fields — no new draws, no new stream labels.
 //!
@@ -21,9 +21,9 @@
 //!   continental formula's own minimum).
 //! - **Reserved, deferred to Sculpting (v3)**: `Gabbro` — this buffer has no
 //!   intrusive-vs-extrusive (exhumation/depth-of-crystallization) axis yet,
-//!   so mafic continental cells always read as extrusive Basalt/Andesite
+//!   so mafic continental vertices always read as extrusive Basalt/Andesite
 //!   rather than plutonic Gabbro; that axis is Sculpting's to add. `Chert` —
-//!   gated on abyssal very-low-porosity ocean cells, a niche combination the
+//!   gated on abyssal very-low-porosity ocean vertices, a niche combination the
 //!   current ocean-floor ranges rarely produce. `Quartzite` — gated on
 //!   `induration > 0.7` inside the low-metamorphic-grade band, which the
 //!   current induration formula rarely reaches; widening the induration
@@ -33,7 +33,7 @@ use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
 use crate::plates::{Plate, dot, normalize, sub, velocity_at};
 use hornvale_kernel::color::{Mixture, Reflectance};
-use hornvale_kernel::{CellId, CellMap, Fbm, Geosphere, math};
+use hornvale_kernel::{Fbm, Geosphere, Vertex, VertexMap, math};
 
 /// Regolith thickness in metres.
 /// type-audit: newtype
@@ -78,7 +78,7 @@ pub enum MarginPolarity {
     Oceanic,
 }
 
-/// A per-cell petrogenetic property vector — the material buffer.
+/// A per-vertex petrogenetic property vector — the material buffer.
 /// type-audit: bare-ok(ratio: silica), bare-ok(ratio: grain), bare-ok(ratio: induration), bare-ok(ratio: carbonate), bare-ok(ratio: metamorphic_grade), bare-ok(ratio: porosity), bare-ok(ratio: thaumic)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialBuffer {
@@ -108,19 +108,19 @@ pub struct MaterialBuffer {
 /// Metamorphic grade rises within this many graph hops of a boundary.
 const OROGEN_REACH: u32 = 4;
 
-/// Drainage (flow-accumulation, upstream land-cell count) above which a land
-/// cell reads as `Alluvium` rather than its ordinary clastic/igneous class.
+/// Drainage (flow-accumulation, upstream land-vertex count) above which a land
+/// vertex reads as `Alluvium` rather than its ordinary clastic/igneous class.
 /// Calibrated against the real distribution, not an imagined absolute: a
 /// 4-seed (`[1, 7, 42, 99]`) survey at the canonical `Geosphere::new(6)`
 /// found land drainage maxing out at 338 (p99 47, p95 18, p90 12, p50 3) —
 /// nowhere near a round number like 1000. `20.0` sits just above p90 and
-/// selects roughly the top 4-5% of land cells by accumulation: genuinely
+/// selects roughly the top 4-5% of land vertices by accumulation: genuinely
 /// high-flow valley bottoms, not merely-damp lowland.
 const ALLUVIUM_DRAINAGE_MIN: f64 = 20.0;
 
-/// Carve-deposited sediment thickness (metres) above which a land cell
+/// Carve-deposited sediment thickness (metres) above which a land vertex
 /// reads as `Alluvium` regardless of drainage (spec §2 stage 8, Sculpting
-/// Task 10): a cell the carve's routing/wedge/delta buried under real
+/// Task 10): a vertex the carve's routing/wedge/delta buried under real
 /// alluvium is alluvial even when its flow accumulation alone would not
 /// clear [`ALLUVIUM_DRAINAGE_MIN`] — a floodplain a river no longer
 /// actively occupies still reads as its deposit.
@@ -131,7 +131,7 @@ const ALLUVIUM_SEDIMENT_MIN_M: f64 = 2.0;
 /// [`COAL_GRAIN_MAX`] so only the finer end of the grain range qualifies
 /// (coal-forming peat accumulates in fine floodplain/deltaic muck, not
 /// coarse gravel). A 4-seed survey at `Geosphere::new(6)` found roughly
-/// 0.6% of clastic-eligible land cells clear both this and the grain gate —
+/// 0.6% of clastic-eligible land vertices clear both this and the grain gate —
 /// present but appropriately rare for a biogenic, waterlogged-basin rock.
 const COAL_SOIL_DEPTH_MIN: f64 = 1.25;
 
@@ -189,8 +189,8 @@ pub enum RockClass {
 }
 
 /// Project the buffer (plus grid context) onto a rock class (spec §4).
-/// `sediment_m` is the carve's deposited sediment thickness at the cell
-/// (Sculpting Task 10): a cell the carve buried under real alluvium reads
+/// `sediment_m` is the carve's deposited sediment thickness at the vertex
+/// (Sculpting Task 10): a vertex the carve buried under real alluvium reads
 /// as `Alluvium` even below the ordinary drainage gate.
 /// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(flag: ocean), bare-ok(ratio: sediment_m)
 pub fn classify_rock(
@@ -239,7 +239,7 @@ pub fn classify_rock(
         return RockClass::ReefLimestone;
     }
     // Arc magmatism (active margin) is checked before the plutonic arm below:
-    // arc cells are extrusive/intermediate by genesis, so they resolve to
+    // arc vertices are extrusive/intermediate by genesis, so they resolve to
     // Andesite/Rhyolite even when locally coarse and hard, never Granite/Gabbro
     // (those stay the stable-continental-interior read).
     if matches!(buf.margin, MarginPolarity::Active) {
@@ -281,14 +281,14 @@ pub enum Hydro {
     /// Where an aquifer meets the surface with flow. Never produced by
     /// [`hydrogeology`] itself (The Witness, Task 5b) — `hydrogeology` is a
     /// pointwise matrix-petrophysics read and a spring is not a property of
-    /// a single cell's rock, it is a property of a *contact*: water flowing
-    /// over from an `Aquifer` cell was the shipped model at F5, but land
+    /// a single vertex's rock, it is a property of a *contact*: water flowing
+    /// over from an `Aquifer` vertex was the shipped model at F5, but land
     /// drainage at production resolution (L6) maxes at 219 against the old
     /// 500 threshold, so that gate was unreachable regardless. `Spring` is
     /// promoted from `Aquifer` by `GeneratedTerrain::hydro_at` (decision
     /// 0085's precedent: the pointwise petrophysics is the durable signal,
     /// the geometric promotion is derived from it), when some neighbouring
-    /// cell is not itself an `Aquifer` and sits lower — the descending
+    /// vertex is not itself an `Aquifer` and sits lower — the descending
     /// contact a spring geologically is.
     Spring,
     /// Sheds water: thin-soil runoff.
@@ -349,7 +349,7 @@ impl Hydro {
 /// Classify hydrogeology from porosity/carbonate (spec §3). Pointwise matrix
 /// petrophysics only — `Aquifer`/`Aquitard`/`Runoff`/`Karst`, never
 /// `Spring` (The Witness, Task 5b): `Spring` is a property of a contact
-/// between cells, not of one cell's rock, and is promoted separately by
+/// between vertices, not of one vertex's rock, and is promoted separately by
 /// `GeneratedTerrain::hydro_at`. No longer takes a `drainage` argument —
 /// its only use was the retired flowing-vs-still split below.
 /// type-audit: bare-ok(flag: ocean)
@@ -371,10 +371,10 @@ pub fn hydrogeology(buf: &MaterialBuffer, ocean: bool) -> Hydro {
 
 /// Porosity above which carbonate rock (`carbonate > 0.5`) reads as `Karst`
 /// rather than falling through to the branches below — the CARBONATE scale.
-/// Measured against 8 seeds of continental land cells (The Witness, F5): the
+/// Measured against 8 seeds of continental land vertices (The Witness, F5): the
 /// carbonate class runs `n=1095 min=0.350 p50=0.425 p75=0.575 max=0.650`, so
 /// `0.4` sits just above the class floor and inside its normal range — most
-/// carbonate cells clear it. Unchanged by F5; this constant only gained a
+/// carbonate vertices clear it. Unchanged by F5; this constant only gained a
 /// name and its calibration record.
 const KARST_MIN_POROSITY: f64 = 0.4;
 
@@ -383,7 +383,7 @@ const KARST_MIN_POROSITY: f64 = 0.4;
 /// clastic (non-carbonate) class runs `n=4666 min=0.025 p50=0.100
 /// p75=0.250 p95=0.325 max=0.325`, quantised in ~0.075 steps (0.025, 0.100,
 /// 0.175, 0.250, 0.325) — `0.15` falls between the two lowest bands, so it
-/// selects roughly the bottom fifth to two-fifths of clastic cells
+/// selects roughly the bottom fifth to two-fifths of clastic vertices
 /// (`0.025`, and about half of `0.100`) as `Aquitard`. Unchanged by F5.
 const AQUITARD_MAX_POROSITY: f64 = 0.15;
 
@@ -433,7 +433,7 @@ const GRAIN_POROSITY_GAIN: f64 = 0.40;
 /// Drainage scale for [`cave_proneness`]'s wetting term. Formerly shared
 /// with `hydrogeology`'s flowing-vs-still `Spring` gate (named
 /// `SPRING_DRAINAGE_THRESHOLD`); that gate is retired (The Witness, Task
-/// 5b) — `drainage` measures water flowing *over* a cell, but a spring is
+/// 5b) — `drainage` measures water flowing *over* a vertex, but a spring is
 /// water emerging *from* one, so `hydrogeology` never needed `drainage` in
 /// the first place, and the retired gate was unreachable regardless (land
 /// drainage at production `GLOBE_LEVEL` (6) maxes at 219 against this
@@ -454,7 +454,7 @@ pub fn cave_proneness(buf: &MaterialBuffer, drainage: f64) -> f64 {
     (buf.carbonate * buf.porosity * (0.85 + 0.15 * wetting)).clamp(0.0, 1.0)
 }
 
-/// Induration/hardness at a cell, `[0,1]`: 0 soft (shale/soil) → 1 hard
+/// Induration/hardness at a vertex, `[0,1]`: 0 soft (shale/soil) → 1 hard
 /// (quartzite/gneiss). The Sculpting/Ground seam (spec §4): pulled out of
 /// `assemble_material` as a standalone pre-elevation function so the globe
 /// can compute it before `generate_elevation` runs, ahead of any elevation
@@ -492,7 +492,7 @@ pub fn induration_at(
     (0.35 + 0.4 * metamorphic_grade + 0.2 * grain).clamp(0.0, 1.0)
 }
 
-/// Carbonate content at a cell, `[0,1]` (spec §2/§4 pre-elevation seam,
+/// Carbonate content at a vertex, `[0,1]` (spec §2/§4 pre-elevation seam,
 /// mirroring [`induration_at`]): favors warm shallow shelves —
 /// approximated by shallow continental crust (within 6 km of the
 /// continental threshold) at low absolute latitude. Pointwise inputs only
@@ -515,25 +515,25 @@ pub(crate) fn carbonate_at(continental: bool, thickness_km: f64, lat: f64) -> f6
 /// axes derive from crust age/thickness and plate motion; grid-bound terms
 /// (metamorphic grade near boundaries, soil depth from slope/drainage) use
 /// the globe's boundary-distance and drainage fields. No draws.
-pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<MaterialBuffer> {
-    // Built once, not per cell: the seed (`globe.lithology_noise_seed()`)
-    // does not vary by cell, so `Fbm::new` (which precomputes per-octave
+pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> VertexMap<MaterialBuffer> {
+    // Built once, not per vertex: the seed (`globe.lithology_noise_seed()`)
+    // does not vary by vertex, so `Fbm::new` (which precomputes per-octave
     // seeds from the base seed) constructing a fresh instance on every one
-    // of `CellMap::from_fn`'s per-cell calls was pure waste. `Fbm::sample`
+    // of `VertexMap::from_fn`'s per-vertex calls was pure waste. `Fbm::sample`
     // is byte-identical to `fbm_2d` with the same seed/octaves (`kernel/
     // src/noise.rs`'s `fbm_2d` is literally `Fbm::new(seed,
     // octaves).sample(x, y)`), so hoisting the construction changes no
     // output. Same "build the sampler once above the loop" discipline
     // `domains/terrain/CLAUDE.md` documents for `SphereFbm`.
     let lithology_noise = Fbm::new(globe.lithology_noise_seed(), 3);
-    CellMap::from_fn(geo, |cell| {
-        let thickness = *globe.crust.get(cell);
+    VertexMap::from_fn(geo, |vertex| {
+        let thickness = *globe.crust.get(vertex);
         let continental = thickness >= crate::crust::CONTINENTAL_THRESHOLD_KM;
-        let age = *globe.crust_age.get(cell);
-        let p = geo.position(cell);
+        let age = *globe.crust_age.get(vertex);
+        let p = geo.position(vertex);
         // Margin polarity is needed before silica: arc (active-margin)
         // magmatism is intermediate, not felsic (see base_silica below).
-        let plate = &globe.plates[*globe.plate_of.get(cell) as usize];
+        let plate = &globe.plates[*globe.plate_of.get(vertex) as usize];
         let margin = margin_polarity(plate, p, continental);
 
         // Felsic index: continental crust is felsic (granitic) except at
@@ -549,8 +549,8 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         // Old cratons are more evolved/coarse; young crust finer.
         let grain = if continental { 0.4 + 0.5 * age } else { 0.2 };
         // Boundary influence.
-        let boundary = *globe.boundary.get(cell);
-        let hops = globe.boundary_distance.get(cell).map(|(h, _)| h);
+        let boundary = *globe.boundary.get(vertex);
+        let hops = globe.boundary_distance.get(vertex).map(|(h, _)| h);
         let near_orogen = matches!(
             boundary.map(|b| b.kind),
             Some(BoundaryKind::ContinentalCollision) | Some(BoundaryKind::CoastalRange)
@@ -561,19 +561,19 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
             0.0
         };
 
-        // Sub-cell patchiness from existing noise (no draws): perturb silica.
+        // Sub-vertex patchiness from existing noise (no draws): perturb silica.
         let patch = lithology_noise.sample(p[0] * 6.0, p[1] * 6.0) - 0.5;
         let silica = (base_silica + 0.15 * patch).clamp(0.0, 1.0);
 
         // Carbonate favors warm shallow shelves — same pre-elevation
         // function the globe computes ahead of the carve (the Sculpting/
         // Ground seam) — kept identical here so the buffer's axis and the
-        // pre-carve field never diverge. Atoll cells (Sculpting Task 9/10:
+        // pre-carve field never diverge. Atoll vertices (Sculpting Task 9/10:
         // reef caps grown over a drowned seamount the carve capped) always
         // override to a high carbonate reading, a biogenic reef regardless
         // of the pointwise shelf test.
         let lat = math::asin(p[2].clamp(-1.0, 1.0)).abs();
-        let carbonate = if globe.atoll_cells.contains(&cell) {
+        let carbonate = if globe.atoll_vertices.contains(&vertex) {
             0.9
         } else {
             carbonate_at(continental, thickness, lat)
@@ -601,8 +601,8 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
             + 0.3 * (1.0 - metamorphic_grade))
             .clamp(0.0, 1.0);
 
-        let sediment_m = *globe.sediment_thickness.get(cell);
-        let soil_depth = soil_depth_at(geo, globe, cell, sediment_m);
+        let sediment_m = *globe.sediment_thickness.get(vertex);
+        let soil_depth = soil_depth_at(geo, globe, vertex, sediment_m);
         let basement = if continental {
             Basement::Continental
         } else {
@@ -624,10 +624,10 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
     })
 }
 
-/// Active if the plate's surface motion at the cell points *outward* (leading
+/// Active if the plate's surface motion at the vertex points *outward* (leading
 /// edge), passive if inward (trailing), Interior if neither dominates.
 /// Pointwise inputs only (mirroring [`induration_at`]/[`carbonate_at`]): a
-/// plate reference and a cell position, both available before elevation
+/// plate reference and a vertex position, both available before elevation
 /// runs, so the globe can build a `margins` field the carve reads ahead of
 /// the carve's own elevation output. `assemble_material` calls the same
 /// function so the buffer's `margin` axis and the pre-carve field can never
@@ -642,7 +642,7 @@ pub(crate) fn margin_polarity(plate: &Plate, pos: [f64; 3], continental: bool) -
     if speed < 1e-6 {
         return MarginPolarity::Interior;
     }
-    // Outward component = velocity · (direction from plate seed to cell).
+    // Outward component = velocity · (direction from plate seed to vertex).
     let seed_dir = normalize(sub(pos, plate.seed_position));
     let outward = dot(vel, seed_dir) / speed;
     if outward > 0.25 {
@@ -663,19 +663,19 @@ pub(crate) fn margin_polarity(plate: &Plate, pos: [f64; 3], continental: bool) -
 fn soil_depth_at(
     geo: &Geosphere,
     globe: &TectonicGlobe,
-    cell: CellId,
+    vertex: Vertex,
     sediment_m: f64,
 ) -> SoilDepth {
-    if *globe.elevation.get(cell) < globe.sea_level {
+    if *globe.elevation.get(vertex) < globe.sea_level {
         return SoilDepth::new(0.0);
     }
-    let here = globe.elevation.get(cell).get();
+    let here = globe.elevation.get(vertex).get();
     let max_drop = geo
-        .neighbors(cell)
+        .neighbors(vertex)
         .iter()
         .map(|n| here - globe.elevation.get(*n).get())
         .fold(0.0_f64, f64::max);
-    let drainage = *globe.drainage.get(cell);
+    let drainage = *globe.drainage.get(vertex);
     // Accumulation ~ log(drainage) plus the carve's real deposited sediment
     // (capped at 10 m so an extreme delta/wedge fill doesn't dominate).
     let accum = 0.5 * math::ln(1.0 + drainage) + 0.8 * sediment_m.min(10.0);
@@ -1015,7 +1015,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(7), &geo, &TerrainPins::default()).unwrap();
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-        let classes: BTreeSet<_> = geo.cells().map(|c| terrain.rock_at(c)).collect();
+        let classes: BTreeSet<_> = geo.vertices().map(|c| terrain.rock_at(c)).collect();
         assert!(classes.len() >= 3, "world felt monolithic: {classes:?}");
     }
 
@@ -1028,9 +1028,9 @@ mod tests {
             let geo = Geosphere::new(6);
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-            for cell in geo.cells() {
-                if !terrain.is_ocean(cell) {
-                    classes.insert(terrain.rock_at(cell));
+            for vertex in geo.vertices() {
+                if !terrain.is_ocean(vertex) {
+                    classes.insert(terrain.rock_at(vertex));
                 }
             }
         }
@@ -1064,8 +1064,8 @@ mod tests {
             let geo = Geosphere::new(4);
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-            for cell in geo.cells() {
-                classes.insert(terrain.rock_at(cell));
+            for vertex in geo.vertices() {
+                classes.insert(terrain.rock_at(vertex));
             }
         }
         assert!(
@@ -1100,8 +1100,8 @@ mod tests {
             let geo = Geosphere::new(4);
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let lith = assemble_material(&geo, &outcome.globe);
-            for cell in geo.cells() {
-                match lith.get(cell).margin {
+            for vertex in geo.vertices() {
+                match lith.get(vertex).margin {
                     MarginPolarity::Active => saw_active = true,
                     MarginPolarity::Passive => saw_passive = true,
                     _ => {}
@@ -1117,8 +1117,8 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let lith = assemble_material(&geo, &outcome.globe);
-        for cell in geo.cells() {
-            let b = *lith.get(cell);
+        for vertex in geo.vertices() {
+            let b = *lith.get(vertex);
             for v in [
                 b.silica,
                 b.grain,
@@ -1180,7 +1180,7 @@ mod tests {
         // was F5's defect: the branches below were unreachable from
         // `assemble_material` for a thousand census seeds even though these
         // pure-function tests were green). See
-        // `a_real_world_produces_a_porous_non_carbonate_cell` for the
+        // `a_real_world_produces_a_porous_non_carbonate_vertex` for the
         // world-derived check, and the census's
         // `every_hydro_variant_is_reachable_somewhere_in_the_census`
         // (`windows/lab/tests/calibration.rs`, The Assay Task 8) for the
@@ -1224,13 +1224,13 @@ mod tests {
     }
 
     #[test]
-    fn a_real_world_produces_a_porous_non_carbonate_cell_in_bounded_shares() {
+    fn a_real_world_produces_a_porous_non_carbonate_vertex_in_bounded_shares() {
         // The defect this closes has two halves, and Task 5 shipped only a
         // fix for the first: `hydrogeology_reads_porosity_and_carbonate`
         // passed on hand-built `MaterialBuffer`s the real derivation could
         // not emit — `porosity` was gated at a carbonate-scale `0.5`, but
         // the derivation's clastic (non-carbonate) porosity maxed at 0.325
-        // (The Witness, F5), so no land cell on any seed could ever clear
+        // (The Witness, F5), so no land vertex on any seed could ever clear
         // it. Fixing that (a floor: `Aquifer`/`Spring` become reachable) is
         // NOT sufficient — Task 5's own fix, measured on the wrong
         // population, made 69.64% of land Aquifer, and a floor-only test
@@ -1247,7 +1247,7 @@ mod tests {
         let geo = Geosphere::new(6);
         let outcome = generate(Seed(0), &geo, &TerrainPins::default()).unwrap();
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-        let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
         let land_count = land.len() as f64;
         let aquifer = land
             .iter()
@@ -1301,20 +1301,20 @@ mod tests {
     }
 
     #[test]
-    fn oceanic_cells_are_mafic_active_margins_are_labeled() {
+    fn oceanic_vertices_are_mafic_active_margins_are_labeled() {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let lith = assemble_material(&geo, &outcome.globe);
         // Oceanic floor (thin crust) reads low-silica (mafic) and Oceanic margin.
         let ocean = geo
-            .cells()
+            .vertices()
             .find(|c| *outcome.globe.crust.get(*c) < crate::crust::CONTINENTAL_THRESHOLD_KM)
             .unwrap();
         assert!(lith.get(ocean).silica < 0.5);
         assert_eq!(lith.get(ocean).margin, MarginPolarity::Oceanic);
-        // At least one continental cell is a non-Oceanic margin.
+        // At least one continental vertex is a non-Oceanic margin.
         assert!(
-            geo.cells()
+            geo.vertices()
                 .any(|c| lith.get(c).margin != MarginPolarity::Oceanic)
         );
     }

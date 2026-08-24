@@ -1,16 +1,16 @@
 //! `scene/tiles-region/v1`: one cube-sphere quadtree tile's footprint, sampled
 //! at higher on-tile density than the global lattice. Continuous layers are
-//! barycentrically interpolated between geosphere cells (a smooth surface, not
-//! new physics — the ~110 km cell spacing is the resolution floor); discrete
-//! layers stay nearest-cell. The projection here is the normative one, shared
+//! barycentrically interpolated between geosphere vertices (a smooth surface, not
+//! new physics — the ~110 km vertex spacing is the resolution floor); discrete
+//! layers stay nearest-vertex. The projection here is the normative one, shared
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
 use crate::{SceneContext, SceneError, WaterfallPoint};
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, World};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World};
 use serde::Serialize;
 
 /// Deepest addressable quadtree level (the client clamps its own to ~18; this
-/// bound is a generous superset). Beyond the cell floor a tile is honest but
+/// bound is a generous superset). Beyond the vertex floor a tile is honest but
 /// carries no detail the coarser tile lacked.
 /// type-audit: bare-ok(count)
 pub const MAX_REGION_LEVEL: u32 = 24;
@@ -89,7 +89,10 @@ fn face_unit(face: usize, a: f64, b: f64) -> [f64; 3] {
 pub struct RegionAddr {
     /// One of the six cube faces (0..=5).
     pub face: u32,
-    /// Quadtree depth; the face is `2^level × 2^level` tiles.
+    /// Quadtree depth on the cube-face mesh (a different mesh from the
+    /// geosphere's own `depth`); frozen as a `scene/tiles-region/v1` wire
+    /// field — see "Level" means four things in
+    /// `book/src/reference/lexicon-of-place.md`.
     pub level: u32,
     /// Tile column on the face (0..2^level).
     pub ix: u32,
@@ -161,18 +164,22 @@ fn barycentric(p: [f64; 3], a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> (f64, f64,
     (1.0 - v - w, v, w)
 }
 
-/// The three geosphere cells whose triangle contains `s`, with barycentric
-/// weights in [0,1] summing to 1. The triangle is the nearest cell `c` plus a
+/// The three geosphere vertices whose triangle contains `s`, with barycentric
+/// weights in [0,1] summing to 1. The triangle is the nearest vertex `c` plus a
 /// pair of its neighbours that are themselves adjacent (a fan triangle around
 /// `c`); the one containing `s` wins. Transcendental-free (dot products only),
-/// so cross-platform byte-identical. Exact at a cell centre. Degrades to
-/// nearest-cell `(c, 1.0)` if no fan triangle contains `s` (a measure-zero
+/// so cross-platform byte-identical. Exact at a vertex centre. Degrades to
+/// nearest-vertex `(c, 1.0)` if no fan triangle contains `s` (a measure-zero
 /// safety net, not a normal path).
-fn triangle_weights(geo: &Geosphere, index: &NearestCellIndex, s: [f64; 3]) -> [(CellId, f64); 3] {
+fn triangle_weights(
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    s: [f64; 3],
+) -> [(Vertex, f64); 3] {
     let c = index.nearest_to_position(geo, s);
     let pc = geo.position(c);
     let neigh = geo.neighbors(c);
-    let mut best: Option<([(CellId, f64); 3], f64)> = None;
+    let mut best: Option<([(Vertex, f64); 3], f64)> = None;
     for (i, &a) in neigh.iter().enumerate() {
         for &b in &neigh[i + 1..] {
             // Only adjacent neighbour pairs form a real fan triangle.
@@ -210,12 +217,12 @@ fn triangle_weights(geo: &Geosphere, index: &NearestCellIndex, s: [f64; 3]) -> [
     }
 }
 
-/// Barycentrically interpolate a per-cell scalar at `s`.
+/// Barycentrically interpolate a per-vertex scalar at `s`.
 fn interp(
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     s: [f64; 3],
-    value: impl Fn(CellId) -> f64,
+    value: impl Fn(Vertex) -> f64,
 ) -> f64 {
     triangle_weights(geo, index, s)
         .iter()
@@ -226,7 +233,7 @@ fn interp(
 /// One `scene/tiles-region/v1` document (The Region §3.3). Field order is the
 /// JSON key order and is contract. Per-node layers are `(samples+1)²`,
 /// row-major (`i = row·(samples+1) + col`). Continuous layers are barycentric;
-/// discrete layers (`ocean`, `biome`, `plate`) are nearest-cell.
+/// discrete layers (`ocean`, `biome`, `plate`) are nearest-vertex.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: precip_mm_yr)
 #[derive(Debug, Serialize)]
 pub struct RegionScene {
@@ -236,7 +243,10 @@ pub struct RegionScene {
     pub seed: u64,
     /// Cube face (0..=5).
     pub face: u32,
-    /// Quadtree level.
+    /// Quadtree depth on the cube-face mesh (a different mesh from the
+    /// geosphere's own `depth`); frozen as a `scene/tiles-region/v1` wire
+    /// field — see "Level" means four things in
+    /// `book/src/reference/lexicon-of-place.md`.
     pub level: u32,
     /// Tile column.
     pub ix: u32,
@@ -258,11 +268,11 @@ pub struct RegionScene {
     /// Elevation per node, meters (barycentric).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub elevation_m: Vec<f64>,
-    /// Ocean flag per node (nearest-cell; the categorical coastline truth).
+    /// Ocean flag per node (nearest-vertex; the categorical coastline truth).
     pub ocean: Vec<bool>,
-    /// Biome index per node (nearest-cell).
+    /// Biome index per node (nearest-vertex).
     pub biome: Vec<u16>,
-    /// Plate id per node (nearest-cell).
+    /// Plate id per node (nearest-vertex).
     pub plate: Vec<u32>,
     /// Unrest per node, [0,1] (barycentric).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
@@ -277,14 +287,14 @@ pub struct RegionScene {
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub moisture: Vec<f64>,
     /// The water classification per node, as an index into `water_legend`
-    /// (WaterKind: ocean / salt-basin / river / dry-land) (nearest-cell).
+    /// (WaterKind: ocean / salt-basin / river / dry-land) (nearest-vertex).
     /// Appended per the schema stability contract.
     pub water: Vec<u8>,
     /// The water-kind catalog in stable index order — `water`'s values index
     /// into this. Appended per the schema stability contract.
     pub water_legend: Vec<String>,
     /// Flow-accumulation drainage per node (0 on ocean/dry land); river
-    /// magnitude (nearest-cell, coupled to `water`). Appended per the schema
+    /// magnitude (nearest-vertex, coupled to `water`). Appended per the schema
     /// stability contract.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub drainage: Vec<f64>,
@@ -303,7 +313,7 @@ pub struct RegionScene {
     ///
     /// Note this is the AMPLITUDE, interpolated per node. It is not the same
     /// quantity [`temperature_grid_region`] interpolates, which is the whole
-    /// diurnal ANOMALY (amplitude × waveform evaluated at each cell's own
+    /// diurnal ANOMALY (amplitude × waveform evaluated at each vertex's own
     /// longitude). A client multiplying this amplitude by a waveform at the
     /// NODE's longitude will therefore not reproduce that function to the
     /// last ULP; the two agree in the limit of a fine grid, not exactly.
@@ -315,7 +325,7 @@ pub struct RegionScene {
     /// Interpolated as PRECIPITATION, not derived from the interpolated
     /// `moisture`: [`hornvale_climate::precip_mm_yr`] is nonlinear, so
     /// `precip(interp(moisture))` ≠ `interp(precip(moisture))`, and only the
-    /// latter matches the per-cell values the tiles export ships.
+    /// latter matches the per-vertex values the tiles export ships.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub precip_mm_yr: Vec<f64>,
 }
@@ -400,20 +410,20 @@ pub fn tiles_region_scene_in(
     for s in &units {
         let tg = terrain.geosphere();
         let cg = climate.geosphere();
-        // Discrete: nearest-cell.
-        let t_cell = t_index.nearest_to_position(tg, *s);
-        let c_cell = c_index.nearest_to_position(cg, *s);
-        ocean.push(terrain.is_ocean(t_cell));
-        water.push(terrain.water_kind_at(t_cell).index());
-        drainage.push(terrain.drainage_at(t_cell));
-        let b = *biomes.get(c_cell);
+        // Discrete: nearest-vertex.
+        let t_vertex = t_index.nearest_to_position(tg, *s);
+        let c_vertex = c_index.nearest_to_position(cg, *s);
+        ocean.push(terrain.is_ocean(t_vertex));
+        water.push(terrain.water_kind_at(t_vertex).index());
+        drainage.push(terrain.drainage_at(t_vertex));
+        let b = *biomes.get(c_vertex);
         biome.push(
             catalog
                 .iter()
                 .position(|e| *e == b)
                 .expect("biome in catalog") as u16,
         );
-        plate.push(terrain.plate_of(t_cell));
+        plate.push(terrain.plate_of(t_vertex));
         // Continuous: barycentric.
         elevation_m.push(interp(tg, t_index, *s, |c| terrain.elevation_at(c).get()));
         unrest.push(interp(tg, t_index, *s, |c| terrain.unrest_at(c)));
@@ -423,24 +433,24 @@ pub fn tiles_region_scene_in(
         t_swing_c.push(interp(cg, c_index, *s, |c| climate.seasonal_swing_at(c)));
         t_diurnal_amp_c.push(interp(cg, c_index, *s, |c| climate.diurnal_amp_at(c)));
         // Barycentric interpolation is a convex combination in theory, but
-        // when several sampled cells sit exactly at the moisture domain's
-        // boundary (`1.0` — common now that ocean cells clamp there),
+        // when several sampled vertices sit exactly at the moisture domain's
+        // boundary (`1.0` — common now that ocean vertices clamp there),
         // floating-point summation can overshoot by an ULP or two; clamp
         // back into the declared `[0, 1]` domain.
         moisture.push(interp(cg, c_index, *s, |c| climate.moisture_at(c)).clamp(0.0, 1.0));
         // Interpolate the PRECIPITATION, not the moisture it derives from:
         // `precip_mm_yr` is a nonlinear function of moisture, so applying it
         // to an interpolated moisture would not equal the interpolation of
-        // the per-cell precipitation the tiles export ships, and the two
+        // the per-vertex precipitation the tiles export ships, and the two
         // documents would disagree wherever a client shows both.
         precip_mm_yr.push(interp(cg, c_index, *s, |c| climate.precip_at(c).get()));
     }
     let waterfalls = terrain
         .waterfalls()
         .iter()
-        .filter(|&&cell| tile_contains(&addr, terrain.geosphere().position(cell)))
-        .map(|&cell| {
-            let c = terrain.geosphere().coord(cell);
+        .filter(|&&vertex| tile_contains(&addr, terrain.geosphere().position(vertex)))
+        .map(|&vertex| {
+            let c = terrain.geosphere().coord(vertex);
             WaterfallPoint {
                 latitude: c.latitude,
                 longitude: c.longitude,
@@ -490,7 +500,7 @@ pub fn region_json(scene: &RegionScene) -> String {
 /// This equals `t_mean_c[i] + t_swing_c[i]·sin(τ·frac(day/period))` plus the
 /// interpolated diurnal term (spinning worlds only), because interpolation is
 /// linear and so distributes over every additive term `temperature_at` sums
-/// per cell — interpolation commutes with the evaluator (The Region §3.4).
+/// per vertex — interpolation commutes with the evaluator (The Region §3.4).
 /// Full precision (not quantized); the cross-repo contract test pins the
 /// client's reconstruction against these values.
 ///
@@ -638,19 +648,19 @@ mod tests {
     use hornvale_kernel::Geosphere;
 
     #[test]
-    fn weights_are_exact_at_a_cell_center() {
+    fn weights_are_exact_at_a_vertex_center() {
         let geo = Geosphere::new(4);
-        let index = NearestCellIndex::new(&geo);
-        for cell in geo.cells().take(50) {
-            let s = geo.position(cell);
+        let index = NearestVertexIndex::new(&geo);
+        for vertex in geo.vertices().take(50) {
+            let s = geo.position(vertex);
             let w = triangle_weights(&geo, &index, s);
-            // The cell carries essentially all the weight; the sum is 1.
+            // The vertex carries essentially all the weight; the sum is 1.
             let total: f64 = w.iter().map(|(_, x)| x).sum();
             assert!((total - 1.0).abs() < 1e-9, "weights sum to 1: {total}");
-            let on_cell: f64 = w.iter().filter(|(c, _)| *c == cell).map(|(_, x)| x).sum();
+            let on_vertex: f64 = w.iter().filter(|(c, _)| *c == vertex).map(|(_, x)| x).sum();
             assert!(
-                on_cell > 1.0 - 1e-9,
-                "cell {cell:?} weight {on_cell} not ~1"
+                on_vertex > 1.0 - 1e-9,
+                "vertex {vertex:?} weight {on_vertex} not ~1"
             );
         }
     }
@@ -658,10 +668,10 @@ mod tests {
     #[test]
     fn weights_are_a_partition_of_unity_off_center() {
         let geo = Geosphere::new(4);
-        let index = NearestCellIndex::new(&geo);
-        // A point between two cell centers.
-        let a = geo.position(CellId(20));
-        let b = geo.position(geo.neighbors(CellId(20))[0]);
+        let index = NearestVertexIndex::new(&geo);
+        // A point between two vertex centers.
+        let a = geo.position(Vertex(20));
+        let b = geo.position(geo.neighbors(Vertex(20))[0]);
         let mid = {
             let m = [
                 (a[0] + b[0]) / 2.0,
@@ -681,13 +691,16 @@ mod tests {
     }
 
     #[test]
-    fn interp_at_a_cell_center_returns_that_cells_value() {
+    fn interp_at_a_vertex_center_returns_that_vertexs_value() {
         let geo = Geosphere::new(4);
-        let index = NearestCellIndex::new(&geo);
-        let value = |c: CellId| c.0 as f64; // an arbitrary per-cell scalar
-        for cell in geo.cells().take(50) {
-            let got = interp(&geo, &index, geo.position(cell), value);
-            assert!((got - cell.0 as f64).abs() < 1e-6, "cell {cell:?}: {got}");
+        let index = NearestVertexIndex::new(&geo);
+        let value = |c: Vertex| c.0 as f64; // an arbitrary per-vertex scalar
+        for vertex in geo.vertices().take(50) {
+            let got = interp(&geo, &index, geo.position(vertex), value);
+            assert!(
+                (got - vertex.0 as f64).abs() < 1e-6,
+                "vertex {vertex:?}: {got}"
+            );
         }
     }
 
@@ -712,21 +725,21 @@ mod tests {
     #[test]
     fn water_fields_are_sized_legend_matches_and_ocean_has_no_drainage() {
         // Seed 44 (like the tiles_scene sibling test) reliably carries river
-        // cells. Anchor the region tile on a known river cell's position so
+        // vertices. Anchor the region tile on a known river vertex's position so
         // the tile actually exercises a River node rather than hoping a
         // fixed address happens to land on one (rivers are sparse
         // per-region). The tile is chosen wide (level 3) and densely
         // sampled (64 quads/edge, ~19.6 km/sample — finer than the ~110 km
-        // geosphere cell spacing) so nearest-cell sampling reliably finds
-        // river cells inside the tile's footprint.
+        // geosphere vertex spacing) so nearest-vertex sampling reliably finds
+        // river vertices inside the tile's footprint.
         let w = gen_seed(44);
         let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
-        let river_cell = terrain
+        let river_vertex = terrain
             .geosphere()
-            .cells()
+            .vertices()
             .find(|&c| terrain.water_kind_at(c) == hornvale_terrain::WaterKind::River)
-            .expect("seed 44 has river cells (see the tiles_scene sibling test)");
-        let pos = terrain.geosphere().position(river_cell);
+            .expect("seed 44 has river vertices (see the tiles_scene sibling test)");
+        let pos = terrain.geosphere().position(river_vertex);
         let level = 3;
         let (face, a, b) = locate_on_cube(pos);
         let n = 1u64 << level;
@@ -752,7 +765,7 @@ mod tests {
                 .water
                 .iter()
                 .any(|&wtr| wtr == hornvale_terrain::WaterKind::River.index()),
-            "expected at least one river node in the tile anchored on a known river cell"
+            "expected at least one river node in the tile anchored on a known river vertex"
         );
         let json = region_json(&scene);
         assert!(json.contains("water_legend"));
@@ -789,10 +802,10 @@ mod tests {
     /// round 1); `s` binds a node-unit position in
     /// `for (i, s) in a.node_units().iter().enumerate()`
     #[test]
-    fn discrete_layers_match_nearest_cell() {
+    fn discrete_layers_match_nearest_vertex() {
         let w = gen42();
         let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
-        let index = NearestCellIndex::new(terrain.geosphere());
+        let index = NearestVertexIndex::new(terrain.geosphere());
         let a = RegionAddr {
             face: 2,
             level: 2,
@@ -802,9 +815,9 @@ mod tests {
         };
         let scene = tiles_region_scene(&w, a.face, a.level, a.ix, a.iy, a.samples).unwrap();
         for (i, s) in a.node_units().iter().enumerate() {
-            let cell = index.nearest_to_position(terrain.geosphere(), *s);
-            assert_eq!(scene.ocean[i], terrain.is_ocean(cell), "ocean node {i}");
-            assert_eq!(scene.plate[i], terrain.plate_of(cell), "plate node {i}");
+            let vertex = index.nearest_to_position(terrain.geosphere(), *s);
+            assert_eq!(scene.ocean[i], terrain.is_ocean(vertex), "ocean node {i}");
+            assert_eq!(scene.plate[i], terrain.plate_of(vertex), "plate node {i}");
         }
     }
 
@@ -832,13 +845,13 @@ mod tests {
     }
 
     #[test]
-    fn continuous_layers_are_interpolated_not_nearest_cell() {
+    fn continuous_layers_are_interpolated_not_nearest_vertex() {
         // At a fine enough tile, some node's interpolated elevation must differ
-        // from the raw nearest-cell elevation — proving barycentric blending is
-        // actually happening (guards against a silent fallback to nearest-cell).
+        // from the raw nearest-vertex elevation — proving barycentric blending is
+        // actually happening (guards against a silent fallback to nearest-vertex).
         let w = gen42();
         let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
-        let index = NearestCellIndex::new(terrain.geosphere());
+        let index = NearestVertexIndex::new(terrain.geosphere());
         let addr = RegionAddr {
             face: 0,
             level: 4,
@@ -849,17 +862,17 @@ mod tests {
         let scene =
             tiles_region_scene(&w, addr.face, addr.level, addr.ix, addr.iy, addr.samples).unwrap();
         let any_differs = addr.node_units().iter().enumerate().any(|(i, s)| {
-            let cell = index.nearest_to_position(terrain.geosphere(), *s);
-            (scene.elevation_m[i] - terrain.elevation_at(cell).get()).abs() > 1e-6
+            let vertex = index.nearest_to_position(terrain.geosphere(), *s);
+            (scene.elevation_m[i] - terrain.elevation_at(vertex).get()).abs() > 1e-6
         });
         assert!(
             any_differs,
-            "no node's elevation differs from nearest-cell — interpolation is not happening"
+            "no node's elevation differs from nearest-vertex — interpolation is not happening"
         );
     }
 
     /// The per-node diurnal contribution, reconstructed exactly the way
-    /// `temperature_at` computes it per-cell (own latitude, own precomputed
+    /// `temperature_at` computes it per-vertex (own latitude, own precomputed
     /// amplitude) and then barycentrically interpolated — the same order of
     /// operations `interp(temperature_at)` performs internally, so this is an
     /// exact algebraic identity (interpolation distributes over the sum),
@@ -868,7 +881,7 @@ mod tests {
     /// amplitude field happens to be).
     fn interp_diurnal(
         climate: &hornvale_climate::GeneratedClimate,
-        c_index: &NearestCellIndex,
+        c_index: &NearestVertexIndex,
         s: [f64; 3],
         obliquity_deg: f64,
         year_phase: f64,
@@ -903,7 +916,7 @@ mod tests {
         // The provider values, at full precision (pre-quantization), from an
         // independent rebuild of the layers.
         let climate = climate_of(&w).unwrap();
-        let c_index = NearestCellIndex::new(climate.geosphere());
+        let c_index = NearestVertexIndex::new(climate.geosphere());
         let addr = RegionAddr {
             face,
             level,
@@ -925,7 +938,7 @@ mod tests {
                 // interp(mean) + interp(swing)·θ + interp(diurnal) (form B).
                 // Commutation is exact in real arithmetic — interpolation is
                 // linear and distributes over the sum of the three additive
-                // terms `temperature_at` computes per-cell — but only to
+                // terms `temperature_at` computes per-vertex — but only to
                 // float rounding here (weighted sums reduce in a different
                 // order), so assert tight-approximate — NOT assert_eq!.
                 let mean = interp(climate.geosphere(), &c_index, *s, |c| {
@@ -961,7 +974,7 @@ mod tests {
         let offset = climate.year_phase_offset();
         let obliquity_deg = climate.obliquity_deg();
         let zero_phase_day = (-offset).rem_euclid(1.0) * period;
-        let c_index = NearestCellIndex::new(climate.geosphere());
+        let c_index = NearestVertexIndex::new(climate.geosphere());
         let addr = RegionAddr {
             face: 0,
             level: 3,

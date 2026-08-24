@@ -71,7 +71,7 @@ const STRENGTH_MIN_MPA: f64 = 1.0;
 /// "strong rock". Deliberately **not** the intact-core maximum (quartzite and
 /// gneiss reach 250 MPa in a laboratory): `induration` is a rock-*mass* field
 /// by construction — [`crate::lithology::induration_at`] builds it from crust
-/// age and orogenic overprint at a ~110 km cell — and a jointed mass carries a
+/// age and orogenic overprint at a ~110 km vertex — and a jointed mass carries a
 /// fraction of intact strength. Applying a Hoek–Brown rock-mass reduction on
 /// top of this scale would double-count that fraction, so the scale absorbs it
 /// once, here.
@@ -163,7 +163,7 @@ fn closure_depth_m(induration: f64) -> f64 {
 }
 
 /// A cave's depth budget in metres below the surface: how far down the void
-/// this process opened actually reaches at this cell.
+/// this process opened actually reaches at this vertex.
 ///
 /// **It does not take a proneness, and that absence is the point** (spec §4.0,
 /// `MAP-cave-depth-weld`). Presence is gated on

@@ -4,7 +4,7 @@
 //! `sovereignty_floor(mass, potency)` and passes elevation a literal `0.0`.
 //! `ConditionResponse::eval` is `floor + (1 - floor) * devotion * bump`, so
 //! elevation's value never exceeds its `devotion` while the other three never
-//! fall below `floor_buf`. Elevation therefore binds on EVERY cell whenever
+//! fall below `floor_buf`. Elevation therefore binds on EVERY vertex whenever
 //! `devotion_elev < floor_buf`, regardless of terrain.
 //!
 //! That is the mechanism behind The Tilth's measured "elevation binds on 100%
@@ -13,7 +13,7 @@
 //!
 //! ## Measured, 2026-08-07, seeds 42 / 7 / 1234
 //!
-//! Share of LAND cells on which elevation is the Liebig minimum. `dev_el` is
+//! Share of LAND vertices on which elevation is the Liebig minimum. `dev_el` is
 //! the kind's authored elevation `devotion`; `floor` is
 //! `sovereignty_floor(mass, potency)`; `below` is the closed form's predicate
 //! `dev_el < floor`, which predicts a 100% share.
@@ -26,12 +26,12 @@
 //!   bugbear    132.0   0.4933    0.70     no   72.89%   78.12%   71.40%
 //!   gnoll      136.1   0.4954    0.40    YES  100.00%  100.00%  100.00%
 //!   human       70.0   0.4477    0.30    YES  100.00%  100.00%  100.00%
-//!   land cells:                                11,066   19,046   11,571
+//!   land vertices:                                11,066   19,046   11,571
 //! ```
 //!
 //! **The theorem is confirmed and the plan's generalisation of it is
 //! falsified.** Every `below == YES` row is 100% on every seed — exactly, not
-//! approximately; the assertion below is `== 1.0` and would catch one cell.
+//! approximately; the assertion below is `== 1.0` and would catch one vertex.
 //! But this campaign's plan predicted **> 99% for all six settling peoples**,
 //! extending The Tilth's result from the three kinds it named to the whole
 //! roster. Three of the six refute that immediately, and they are precisely
@@ -133,10 +133,10 @@ fn elevation_binds_everywhere_when_its_devotion_is_below_the_sovereignty_floor()
 /// behaviour The Tilth measured and this reproduces.
 const SETTLERS: [&str; 6] = ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll", "human"];
 
-/// Per settling kind at `seed`: its name, the share of LAND cells on which
-/// elevation is the Liebig minimum, and the land-cell count that share is over.
+/// Per settling kind at `seed`: its name, the share of LAND vertices on which
+/// elevation is the Liebig minimum, and the land-vertex count that share is over.
 ///
-/// Land is `!terrain.is_ocean(cell)`, never `elevation < 0` — a world's sea
+/// Land is `!terrain.is_ocean(vertex)`, never `elevation < 0` — a world's sea
 /// level is not zero (seed 42's sits at −2,936 m).
 fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
     let wc = WorldComponents::assemble().expect("components assemble");
@@ -177,10 +177,10 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
         insolation_scalar,
         &regime,
     );
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
-    println!("== seed {seed_value} ==  land cells: {}", land.len());
+    println!("== seed {seed_value} ==  land vertices: {}", land.len());
     println!(
         "{:<10} {:>7} {:>7} {:>7} {:>6}  {:>8} {:>8} {:>8} {:>8}",
         "kind", "mass", "floor", "dev_el", "below", "temp%", "moist%", "insol%", "ELEV%"
@@ -230,9 +230,9 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
 
 /// **The theorem, live.** For every settling kind whose authored
 /// `devotion_elev` sits BELOW its `sovereignty_floor`, elevation must be the
-/// Liebig minimum on *every* land cell — not 99% of them, all of them. The
+/// Liebig minimum on *every* land vertex — not 99% of them, all of them. The
 /// closed form admits no exception, so this asserts exact equality with 1.0
-/// and would catch a single dissenting cell.
+/// and would catch a single dissenting vertex.
 ///
 /// **This test replaced a falsified one.** The plan predicted the whole
 /// six-kind settling roster would be elevation-bound on > 99% of land,
@@ -245,8 +245,8 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
 ///
 /// claim: invariant(forall-seed) — over seeds [42, 7, 1234] x every settling
 /// kind whose `devotion_elev < sovereignty_floor` (gnoll and human on the
-/// shipped roster), elevation is the Liebig minimum on EVERY land cell
-/// (`share == 1.0` exactly, ~11k-19k cells per seed), plus a `checked >= 3`
+/// shipped roster), elevation is the Liebig minimum on EVERY land vertex
+/// (`share == 1.0` exactly, ~11k-19k vertices per seed), plus a `checked >= 3`
 /// non-vacuity guard. Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
@@ -269,7 +269,7 @@ fn every_kind_below_its_floor_is_elevation_bound_on_all_land() {
                 *elev_share, 1.0,
                 "seed {seed}: {kind}'s elevation devotion {:.4} is below its \
                  sovereignty floor {floor_buf:.4}, so elevation must bind on ALL \
-                 {n} land cells; it bound on {:.6}. If this dropped, the tolerance \
+                 {n} land vertices; it bound on {:.6}. If this dropped, the tolerance \
                  model changed and the spec's §3.1 premise is void.",
                 bio.condition_niche.elevation.devotion, elev_share
             );
@@ -285,13 +285,13 @@ fn every_kind_below_its_floor_is_elevation_bound_on_all_land() {
 /// **The instrument must be shown able to report a NON-elevation bind.** A
 /// bind audit whose every assertion reads "elevation won" cannot be told apart
 /// from one that hardcodes the answer — The Benchmark shipped a guard that was
-/// vacuous and green because it sampled the one cell where the bug was
+/// vacuous and green because it sampled the one vertex where the bug was
 /// invisible. Kobold's elevation devotion (0.95) sits far above its floor
 /// (0.3078), so the closed form says a climate axis MUST bind somewhere.
 ///
 /// claim: rate(forall-seed, kobold's elevation share of land < 0.99) — over
 /// seeds [42, 7, 1234], one kind (kobold, the roster's clearest above-floor
-/// settler). A bound on a per-world cell share, asserted on every seed; it is
+/// settler). A bound on a per-world vertex share, asserted on every seed; it is
 /// the instrument's discrimination control, not a calibrated threshold.
 /// Off-gate (heavy:).
 #[test]
@@ -307,7 +307,7 @@ fn a_kind_above_its_floor_lets_a_climate_axis_bind() {
             *kobold_share < 0.99,
             "seed {seed}: kobold's elevation devotion 0.95 is far above its floor \
              0.3078, so temperature/moisture/insolation must bind on a real share \
-             of the {n} land cells. Elevation bound on {kobold_share:.6}, which \
+             of the {n} land vertices. Elevation bound on {kobold_share:.6}, which \
              means this probe cannot discriminate and every elevation result it \
              reports is worthless."
         );

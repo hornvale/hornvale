@@ -9,7 +9,7 @@
 //! for `WATERFALL_MIN_DRAINAGE` to ever fire — see that test's own doc).
 
 use hornvale_kernel::{
-    CellId, CellMap, Geosphere, NearestCellIndex, ReferenceElevation, Seed, math,
+    Geosphere, NearestVertexIndex, ReferenceElevation, Seed, Vertex, VertexMap, math,
 };
 use hornvale_terrain::carve::{CarveDelta, CarveParams, MarginGeometry, carve, carve_incision};
 use hornvale_terrain::{
@@ -20,7 +20,7 @@ use hornvale_terrain::{
 /// freshly-composed [`CarveDelta`] from re-running [`carve`] once on those
 /// inputs. `globe::generate` wires the carve directly into `generate`
 /// (Sculpting Task 10), so `TectonicGlobe` only retains the carve's
-/// per-cell OUTPUTS (`sediment_thickness`, `carve_delta_m`, …), never the
+/// per-vertex OUTPUTS (`sediment_thickness`, `carve_delta_m`, …), never the
 /// scalar mass-balance totals (`eroded_total_m3`/`deposited_total_m3`/
 /// `ocean_loss_m3`) a full `CarveDelta` carries — those totals are exactly
 /// what the mass-balance and induration-monotonicity batteries need, so
@@ -38,8 +38,8 @@ use hornvale_terrain::{
 /// `margin_polarity` (both deliberately `pub(crate)` — "the carve reads
 /// this directly", i.e. only from inside this crate): per those functions'
 /// own doc, the assembled buffer's `carbonate`/`margin` axes can only
-/// diverge from the true pre-carve fields at atoll-capped cells (the
-/// carbonate override applied post-carve), a handful of cells out of tens
+/// diverge from the true pre-carve fields at atoll-capped vertices (the
+/// carbonate override applied post-carve), a handful of vertices out of tens
 /// of thousands that does not move a global-sum mass-balance identity or a
 /// decile-median monotonicity check.
 struct Rebuilt {
@@ -47,14 +47,14 @@ struct Rebuilt {
     /// world actually is.
     outcome: GenesisOutcome,
     /// Elevation BEFORE the carve (stage 5 of spec §2).
-    elevation_pre: CellMap<ReferenceElevation>,
+    elevation_pre: VertexMap<ReferenceElevation>,
     /// Sea level resolved against the pre-carve surface (spec §2 stage 5).
     sea_pre: ReferenceElevation,
     /// Provisional (pre-carve) drainage field.
-    drainage_pre: CellMap<f64>,
-    /// Carbonate content per cell, read off the generated globe's lithology
+    drainage_pre: VertexMap<f64>,
+    /// Carbonate content per vertex, read off the generated globe's lithology
     /// buffer (see the struct doc's divergence caveat).
-    carbonate: CellMap<f64>,
+    carbonate: VertexMap<f64>,
     /// A freshly-composed `CarveDelta` from one `carve()` call on the
     /// pre-carve inputs above — carries the mass-balance totals
     /// `TectonicGlobe` does not retain.
@@ -76,7 +76,8 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
         elevation::resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut notes);
     let supply = crust::continental_supply(&g.cratons);
     let effective_ocean = elevation::effective_ocean_target(ocean_target, supply, &mut notes);
-    let continental = CellMap::from_fn(geo, |c| *g.crust.get(c) >= crust::CONTINENTAL_THRESHOLD_KM);
+    let continental =
+        VertexMap::from_fn(geo, |c| *g.crust.get(c) >= crust::CONTINENTAL_THRESHOLD_KM);
     let elevation_pre = elevation::generate_elevation(
         terrain_seed,
         geo,
@@ -92,8 +93,8 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
     let sea_pre = elevation::derive_sea_level(&elevation_pre, effective_ocean);
     let (drainage_pre, endorheic_pre) = drainage::drainage_field(geo, &elevation_pre, sea_pre);
     let downhill = drainage::downhill_targets(geo, &elevation_pre, sea_pre);
-    let carbonate = CellMap::from_fn(geo, |c| g.lithology.get(c).carbonate);
-    let margins: CellMap<MarginPolarity> = CellMap::from_fn(geo, |c| g.lithology.get(c).margin);
+    let carbonate = VertexMap::from_fn(geo, |c| g.lithology.get(c).carbonate);
+    let margins: VertexMap<MarginPolarity> = VertexMap::from_fn(geo, |c| g.lithology.get(c).margin);
     let delta = carve(
         geo,
         &elevation_pre,
@@ -111,7 +112,7 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
         &g.trail_seamounts,
         &CarveParams::default(),
     );
-    let carved = CellMap::from_fn(geo, |c| {
+    let carved = VertexMap::from_fn(geo, |c| {
         ReferenceElevation::new(elevation_pre.get(c).get() + delta.delta_m.get(c))
             .expect("carved elevation finite")
     });
@@ -192,18 +193,18 @@ fn spearman(x: &[f64], y: &[f64]) -> f64 {
     pearson(&ranks(x), &ranks(y))
 }
 
-/// Connected-component count of `cells` under the geosphere's neighbor
-/// adjacency, restricted to `cells` itself. Local copy of `elevation.rs`'s
+/// Connected-component count of `vertices` under the geosphere's neighbor
+/// adjacency, restricted to `vertices` itself. Local copy of `elevation.rs`'s
 /// own test-local `count_components` (same cross-layer reason as `median`).
-fn count_components(geo: &Geosphere, cells: &std::collections::BTreeSet<CellId>) -> usize {
-    let mut unvisited = cells.clone();
+fn count_components(geo: &Geosphere, vertices: &std::collections::BTreeSet<Vertex>) -> usize {
+    let mut unvisited = vertices.clone();
     let mut components = 0;
     while let Some(&start) = unvisited.iter().next() {
         components += 1;
         unvisited.remove(&start);
         let mut stack = vec![start];
-        while let Some(cell) = stack.pop() {
-            for &neighbor in geo.neighbors(cell) {
+        while let Some(vertex) = stack.pop() {
+            for &neighbor in geo.neighbors(vertex) {
                 if unvisited.remove(&neighbor) {
                     stack.push(neighbor);
                 }
@@ -213,9 +214,9 @@ fn count_components(geo: &Geosphere, cells: &std::collections::BTreeSet<CellId>)
     components
 }
 
-/// Shelf width (spec §8) from a single coast land cell: hops seaward, each
-/// hop stepping to the current cell's shallowest ocean neighbor
-/// (`CellId`-ascending tiebreak), until a stepped-to cell's depth first
+/// Shelf width (spec §8) from a single coast land vertex: hops seaward, each
+/// hop stepping to the current vertex's shallowest ocean neighbor
+/// (`Vertex`-ascending tiebreak), until a stepped-to vertex's depth first
 /// exceeds `cap_depth_m`, or 8 hops are spent. Local copy of the census
 /// metric's own `shelf_width_hops` (`windows/lab/src/metrics.rs`), adapted
 /// to read a `TectonicGlobe` directly instead of a `TerrainView` (same
@@ -223,13 +224,13 @@ fn count_components(geo: &Geosphere, cells: &std::collections::BTreeSet<CellId>)
 fn shelf_width_hops(
     geo: &Geosphere,
     globe: &hornvale_terrain::TectonicGlobe,
-    coast: CellId,
+    coast: Vertex,
     cap_depth_m: f64,
 ) -> u32 {
-    let is_ocean = |c: CellId| *globe.elevation.get(c) < globe.sea_level;
+    let is_ocean = |c: Vertex| *globe.elevation.get(c) < globe.sea_level;
     let mut cur = coast;
     for hop in 1..=8u32 {
-        let mut candidates: Vec<CellId> = geo
+        let mut candidates: Vec<Vertex> = geo
             .neighbors(cur)
             .iter()
             .copied()
@@ -294,7 +295,7 @@ fn mass_balance_holds() {
 }
 
 /// Induration monotonicity (spec §8): harder rock incises less. Buckets
-/// PRE-carve land cells (seed 42) into induration deciles by RANK (not by
+/// PRE-carve land vertices (seed 42) into induration deciles by RANK (not by
 /// induration value — the distribution is not remotely uniform, so a
 /// value-binned histogram could easily starve a decile), then runs an
 /// actual Spearman rank-correlation check (`spearman`, decile index vs
@@ -316,14 +317,14 @@ fn mass_balance_holds() {
 /// Statistic re-derived for tuning iteration 1 (ledger #6, land-only
 /// incision slope) — two coupled changes, both forced by the same measured
 /// confound:
-/// - **Population**: cells with a POSITIVE LAND DROP only. The land-only
+/// - **Population**: vertices with a POSITIVE LAND DROP only. The land-only
 ///   slope term structurally zeroes incision where no lower land neighbor
-///   exists, and those cells are overwhelmingly SOFT — coastal/lowland
+///   exists, and those vertices are overwhelmingly SOFT — coastal/lowland
 ///   sediment (seed 42/L4 pre-carve: 53%/51%/31% of the three softest
 ///   induration deciles have no lower land neighbor, vs 3-9% of every
 ///   other decile). Including them makes rho measure coastal geometry, not
 ///   the induration response (raw rho flipped to +0.32).
-/// - **Slope-normalized incision**: per-cell `|incision| / (S/S0)^n`
+/// - **Slope-normalized incision**: per-vertex `|incision| / (S/S0)^n`
 ///   rather than raw `|incision|`. Under ledger #6 the slope term itself
 ///   became strongly induration-correlated at the soft end (soft coastal
 ///   flats have small LAND drops where they once had huge cliff drops), so
@@ -354,7 +355,7 @@ fn harder_rock_cuts_less() {
     let p = CarveParams::default();
     // Max drop to a LAND neighbor — the slope the incision law itself uses
     // post-ledger-#6 (see `carve_incision`'s doc).
-    let land_drop = |c: CellId| -> f64 {
+    let land_drop = |c: Vertex| -> f64 {
         let here = rebuilt.elevation_pre.get(c).get();
         geo.neighbors(c)
             .iter()
@@ -362,13 +363,13 @@ fn harder_rock_cuts_less() {
             .map(|nb| here - rebuilt.elevation_pre.get(*nb).get())
             .fold(0.0_f64, f64::max)
     };
-    let mut land: Vec<CellId> = geo
-        .cells()
+    let mut land: Vec<Vertex> = geo
+        .vertices()
         .filter(|&c| *rebuilt.elevation_pre.get(c) >= rebuilt.sea_pre && land_drop(c) > 0.0)
         .collect();
     assert!(
         land.len() >= 100,
-        "too few land cells to decile: {}",
+        "too few land vertices to decile: {}",
         land.len()
     );
     land.sort_by(|&a, &b| {
@@ -381,10 +382,10 @@ fn harder_rock_cuts_less() {
     const DECILES: usize = 10;
     let n = land.len();
     let mut buckets: Vec<Vec<f64>> = vec![Vec::new(); DECILES];
-    for (i, &cell) in land.iter().enumerate() {
+    for (i, &vertex) in land.iter().enumerate() {
         let bucket = (i * DECILES / n).min(DECILES - 1);
-        let s_pow = math::powf(land_drop(cell) / p.slope_ref_m, p.slope_exponent);
-        buckets[bucket].push(incision.get(cell).abs() / s_pow);
+        let s_pow = math::powf(land_drop(vertex) / p.slope_ref_m, p.slope_exponent);
+        buckets[bucket].push(incision.get(vertex).abs() / s_pow);
     }
     let medians: Vec<f64> = buckets
         .iter_mut()
@@ -401,10 +402,10 @@ fn harder_rock_cuts_less() {
     );
 }
 
-/// Atoll placement (spec §8, Task 9): every `atoll_cells` member (a) sits
+/// Atoll placement (spec §8, Task 9): every `atoll_vertices` member (a) sits
 /// below `atoll_max_abs_lat`, (b) composes close to (and, post-trim, at
 /// most the bounded solve-2 residual above) the final atoll cap — ruling
-/// #5c's sea-trim re-caps every atoll cell to `sea_1 - atoll_freeboard_m`,
+/// #5c's sea-trim re-caps every atoll vertex to `sea_1 - atoll_freeboard_m`,
 /// and the final solve lands at most `wedge_freeboard_m` below `sea_1`, so
 /// the ceiling here is `sea_final - atoll_freeboard_m + wedge_freeboard_m`
 /// (a double-count regression's hundreds-of-meters overshoot still fails
@@ -421,35 +422,35 @@ fn atolls_only_on_warm_submerged_seamounts() {
     for seed in [1u64, 7, 42, 99] {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
         let g = &outcome.globe;
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let ceiling =
             g.sea_level.get() - params.atoll_freeboard_m + params.wedge_freeboard_m + 1e-6;
         let floor = g.sea_level.get() - params.atoll_max_depth_m - params.wedge_freeboard_m - 1.0;
-        for &c in &g.atoll_cells {
+        for &c in &g.atoll_vertices {
             let lat = math::asin(geo.position(c)[2].clamp(-1.0, 1.0)).abs();
             assert!(
                 lat < params.atoll_max_abs_lat,
-                "seed {seed}: atoll cell {} at |lat| {lat} exceeds the cap",
+                "seed {seed}: atoll vertex {} at |lat| {lat} exceeds the cap",
                 c.0
             );
             let e = g.elevation.get(c).get();
             assert!(
                 (floor..=ceiling).contains(&e),
-                "seed {seed}: atoll cell {} composed at {e}, outside [{floor}, {ceiling}]",
+                "seed {seed}: atoll vertex {} composed at {e}, outside [{floor}, {ceiling}]",
                 c.0
             );
-            let maps_to_this_cell = g
+            let maps_to_this_vertex = g
                 .trail_seamounts
                 .iter()
                 .filter(|s| s.age_index >= 2)
                 .any(|s| index.nearest_to_position(&geo, s.position) == c);
             assert!(
-                maps_to_this_cell,
-                "seed {seed}: atoll cell {} has no age>=2 trail seamount mapping to it",
+                maps_to_this_vertex,
+                "seed {seed}: atoll vertex {} has no age>=2 trail seamount mapping to it",
                 c.0
             );
         }
-        total_atolls += g.atoll_cells.len();
+        total_atolls += g.atoll_vertices.len();
     }
     assert!(
         total_atolls > 0,
@@ -458,19 +459,19 @@ fn atolls_only_on_warm_submerged_seamounts() {
 }
 
 /// The re-cap holds after the final solve (ruling #5c, the sea-trim):
-/// post-generate, NO atoll cell sits above `sea_final - atoll_freeboard_m`
-/// and no cell the wedge deposited on — **ocean by `sea_pre`, the
+/// post-generate, NO atoll vertex sits above `sea_final - atoll_freeboard_m`
+/// and no vertex the wedge deposited on — **ocean by `sea_pre`, the
 /// classification under which the wedge ran, NOT by its final elevation**
 /// (review Critical 1: gating on final elevation silently exempted the
-/// emergent wedge-filled cells the ruling exists to fix; seed 34 L4 held
-/// 40 such cells at exactly sea level carrying 49-344 m of wedge sediment
+/// emergent wedge-filled vertices the ruling exists to fix; seed 34 L4 held
+/// 40 such vertices at exactly sea level carrying 49-344 m of wedge sediment
 /// on dry land, and this battery was verified RED on that exact world
 /// against the un-fixed gate) — above `sea_final - wedge_freeboard_m`, up
 /// to the honest measured tolerance: the `sea_1 → sea_final` shift of the
 /// bounded solve→trim→solve sequence (`sea_1` recomputed per-world via
 /// `Rebuilt`, so the tolerance is the actual shift, not a guessed
 /// constant). Only `shift >= 0` is structural (the trim only lowers
-/// cells); the `<= wedge_freeboard_m` half of the asserted bound is
+/// vertices); the `<= wedge_freeboard_m` half of the asserted bound is
 /// EMPIRICAL — max observed 39.957 m across a 120-world review sweep
 /// (L4/L5/L6 × seeds 1..=40; worst margin 0.043 m, L5 seed 18) — so any
 /// tuning that changes the freeboards or shelf density must re-verify it.
@@ -503,16 +504,16 @@ fn trim_recaps_hold_after_the_final_solve() {
         );
         let tol = shift.max(0.0) + 1e-6;
         let atoll_cap = sea_final.get() - p.atoll_freeboard_m;
-        for &c in &g.atoll_cells {
+        for &c in &g.atoll_vertices {
             assert!(
                 g.elevation.get(c).get() <= atoll_cap + tol,
-                "seed {seed} L{level}: atoll cell {} at {} above sea_final - atoll_freeboard \
+                "seed {seed} L{level}: atoll vertex {} at {} above sea_final - atoll_freeboard \
                  ({atoll_cap}) beyond the measured shift tolerance {tol} (shift {shift})",
                 c.0,
                 g.elevation.get(c).get()
             );
         }
-        // Barrier cells (tuning iteration 4, ledger #9): the sea-trim
+        // Barrier vertices (tuning iteration 4, ledger #9): the sea-trim
         // exempts them like delta lobes, so a barrier's elevation must
         // still sit exactly at its construction target
         // (`sea_pre + barrier_height_m`, unperturbed by the trim) AND
@@ -520,10 +521,10 @@ fn trim_recaps_hold_after_the_final_solve() {
         // mechanism exists to satisfy (a barrier must stay land after the
         // final re-solve, not just after the first one).
         let barrier_target = rebuilt.sea_pre.get() + p.barrier_height_m;
-        for &c in &g.barrier_cells {
+        for &c in &g.barrier_vertices {
             assert!(
                 (g.elevation.get(c).get() - barrier_target).abs() < 1e-6,
-                "seed {seed} L{level}: barrier cell {} at {} != construction target {barrier_target}",
+                "seed {seed} L{level}: barrier vertex {} at {} != construction target {barrier_target}",
                 c.0,
                 g.elevation.get(c).get()
             );
@@ -540,7 +541,7 @@ fn trim_recaps_hold_after_the_final_solve() {
             // (decision 0134).
             assert!(
                 g.elevation.get(c).get() >= sea_final.get() - 1e-6,
-                "seed {seed} L{level}: barrier cell {} at {} sank below the final sea level {}",
+                "seed {seed} L{level}: barrier vertex {} at {} sank below the final sea level {}",
                 c.0,
                 g.elevation.get(c).get(),
                 sea_final.get()
@@ -548,22 +549,22 @@ fn trim_recaps_hold_after_the_final_solve() {
         }
         // The wedge-cap bound, gated on the membership the wedge actually
         // deposited under: ocean by sea_pre with retained sediment. Atoll
-        // cells are excluded from this WEDGE bound only because their own
+        // vertices are excluded from this WEDGE bound only because their own
         // (tighter-freeboard) cap is asserted above; delta lobes and
-        // barrier cells (tuning iteration 4, ledger #9) are exempt by
+        // barrier vertices (tuning iteration 4, ledger #9) are exempt by
         // ruling — both are meant to stay subaerial past the final
         // re-solve, governed by their own construction, not this bound.
         let wedge_cap = sea_final.get() - p.wedge_freeboard_m;
         for (c, sed) in g.sediment_thickness.iter() {
             if *sed > 0.0
                 && *rebuilt.elevation_pre.get(c) < rebuilt.sea_pre
-                && !g.delta_cells.contains(&c)
-                && !g.atoll_cells.contains(&c)
-                && !g.barrier_cells.contains(&c)
+                && !g.delta_vertices.contains(&c)
+                && !g.atoll_vertices.contains(&c)
+                && !g.barrier_vertices.contains(&c)
             {
                 assert!(
                     g.elevation.get(c).get() <= wedge_cap + tol,
-                    "seed {seed} L{level}: wedge-deposited cell {} (ocean by sea_pre, sediment \
+                    "seed {seed} L{level}: wedge-deposited vertex {} (ocean by sea_pre, sediment \
                      {sed}) at {} above sea_final - wedge_freeboard ({wedge_cap}) beyond the \
                      measured shift tolerance {tol} (shift {shift})",
                     c.0,
@@ -606,7 +607,7 @@ fn generate_level_books_account_for_every_eroded_unit() {
         let rebuilt = rebuild(seed, &geo);
         let g = &rebuilt.outcome.globe;
         let d = &rebuilt.delta;
-        let carved = CellMap::from_fn(&geo, |c| {
+        let carved = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(rebuilt.elevation_pre.get(c).get() + d.delta_m.get(c))
                 .expect("carved elevation finite")
         });
@@ -615,9 +616,9 @@ fn generate_level_books_account_for_every_eroded_unit() {
             &carved,
             &rebuilt.elevation_pre,
             &d.sediment_thickness_m,
-            &d.delta_cells,
-            &d.atoll_cells,
-            &d.barrier_cells,
+            &d.delta_vertices,
+            &d.atoll_vertices,
+            &d.barrier_vertices,
             rebuilt.sea_pre,
             rebuilt.sea_carved,
             &CarveParams::default(),
@@ -705,8 +706,8 @@ fn arcs_are_discrete() {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
         let g = &outcome.globe;
-        let arc_land: std::collections::BTreeSet<CellId> = geo
-            .cells()
+        let arc_land: std::collections::BTreeSet<Vertex> = geo
+            .vertices()
             .filter(|&c| {
                 matches!(
                     g.boundary.get(c).map(|b| b.kind),
@@ -731,10 +732,10 @@ fn arcs_are_discrete() {
 
 /// Shelf-width asymmetry (spec §8): passive-margin coasts build wider
 /// shelves than active-margin coasts. Heavy: full genesis at L5 over 40
-/// seeds, coast cells pooled across the whole sweep.
+/// seeds, coast vertices pooled across the whole sweep.
 ///
 /// **The PRIMARY criterion is tail dominance** (ruling #5d): the rate of
-/// passive coast cells whose shelf walk reaches the 8-hop cap must be at
+/// passive coast vertices whose shelf walk reaches the 8-hop cap must be at
 /// least 1.5× the active rate. The spec §8 median criterion (passive
 /// median > active median) is **superseded** — recorded openly, not
 /// reframed: pooled medians TIE at 1.0 (passive n=32849, active n=7885
@@ -747,8 +748,8 @@ fn arcs_are_discrete() {
 /// claim: rate(forall-seed, tail-dominance ratio >= 1.5x) — off-gate (heavy:).
 /// The spec's own words call this "hunt-shaped" (spec §5), but Task 1's review
 /// read it directly and found it sweeps all 40 seeds unconditionally and pools
-/// a cell-level rate, closer to rate/invariant than a hunt; needs new
-/// cell/entity-level aggregation metrics before it can move (spec §6 item 7),
+/// a vertex-level rate, closer to rate/invariant than a hunt; needs new
+/// vertex/entity-level aggregation metrics before it can move (spec §6 item 7),
 /// not a lift-and-shift — see docs/audits/the-assay-build-volume-audit.md
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn shelf_width_asymmetry() {
@@ -760,19 +761,19 @@ fn shelf_width_asymmetry() {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
         let g = &outcome.globe;
-        for cell in geo.cells() {
-            if *g.elevation.get(cell) < g.sea_level {
+        for vertex in geo.vertices() {
+            if *g.elevation.get(vertex) < g.sea_level {
                 continue;
             }
             let is_coast = geo
-                .neighbors(cell)
+                .neighbors(vertex)
                 .iter()
                 .any(|&n| *g.elevation.get(n) < g.sea_level);
             if !is_coast {
                 continue;
             }
-            let width = f64::from(shelf_width_hops(&geo, g, cell, cap_depth_m));
-            match g.lithology.get(cell).margin {
+            let width = f64::from(shelf_width_hops(&geo, g, vertex, cap_depth_m));
+            match g.lithology.get(vertex).margin {
                 MarginPolarity::Active => active.push(width),
                 _ => passive.push(width),
             }
@@ -780,10 +781,10 @@ fn shelf_width_asymmetry() {
     }
     assert!(
         !passive.is_empty() && !active.is_empty(),
-        "no coast cells found on either margin"
+        "no coast vertices found on either margin"
     );
     // Primary (ruling #5d): tail dominance as a RATE ratio — the share of
-    // passive coast cells at the 8-hop cap is at least 1.5× the active
+    // passive coast vertices at the 8-hop cap is at least 1.5× the active
     // share. Rates, not raw counts: passive coast is ~4× more plentiful,
     // and a count comparison would pass on abundance alone.
     let passive_at_cap = passive.iter().filter(|&&w| w >= 8.0).count();
@@ -792,7 +793,7 @@ fn shelf_width_asymmetry() {
     let active_rate = active_at_cap as f64 / active.len() as f64;
     assert!(
         passive_at_cap > 0,
-        "no passive coast cell ever reaches the 8-hop cap — no tail to dominate"
+        "no passive coast vertex ever reaches the 8-hop cap — no tail to dominate"
     );
     assert!(
         passive_rate >= 1.5 * active_rate,
@@ -804,8 +805,11 @@ fn shelf_width_asymmetry() {
     );
 }
 
-/// Fraction of a globe's cells strictly below `sea_level`.
-fn flooded_fraction(elevation: &CellMap<ReferenceElevation>, sea_level: ReferenceElevation) -> f64 {
+/// Fraction of a globe's vertices strictly below `sea_level`.
+fn flooded_fraction(
+    elevation: &VertexMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+) -> f64 {
     let n = elevation.len() as f64;
     let below = elevation.iter().filter(|(_, e)| **e < sea_level).count();
     below as f64 / n
@@ -813,7 +817,7 @@ fn flooded_fraction(elevation: &CellMap<ReferenceElevation>, sea_level: Referenc
 
 /// The eustatic dividend (spec §6, §8): Deep Time's sea-level swings must
 /// flood/expose MORE area at v3 than at v2 — a real depositional shelf
-/// (gently sloped near sea level) has more cells packed into a given
+/// (gently sloped near sea level) has more vertices packed into a given
 /// vertical band than v2's steep, under-supplied coast did. Measured as a
 /// centered finite difference of the flooded-area fraction around each
 /// world's own sea level (`delta = 50 m`, comparable to `wedge_freeboard_m`

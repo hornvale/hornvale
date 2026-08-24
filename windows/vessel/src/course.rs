@@ -6,7 +6,7 @@
 //! functions inside `session.rs`. Wiring these functions into the `go` verb
 //! is a later task's job, not this module's.
 
-use hornvale_kernel::{GeoCoord, RoomAddr, math};
+use hornvale_kernel::{Facet, GeoCoord, math};
 use hornvale_locale::Compass;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
@@ -57,7 +57,7 @@ pub fn rhumb_advance(from: GeoCoord, bearing_deg: f64, delta_rad: f64) -> GeoCoo
 /// Squared and un-rooted deliberately: it is MONOTONIC in the angle, so it
 /// orders candidates identically to a great-circle distance while avoiding
 /// both a `sqrt` and an `acos`. `acos` near zero loses precision badly, and
-/// adjacent cells are exactly the near-zero case.
+/// adjacent rooms are exactly the near-zero case.
 fn chord_sq(a: [f64; 3], b: [f64; 3]) -> f64 {
     let (dx, dy, dz) = (a[0] - b[0], a[1] - b[1], a[2] - b[2]);
     dx * dx + dy * dy + dz * dz
@@ -82,7 +82,7 @@ fn angle_between_coords(a: GeoCoord, b: GeoCoord) -> f64 {
 /// its own. A constant would silently become a tuned number the first time
 /// the walk band moved.
 /// type-audit: bare-ok(ratio: return)
-pub fn step_length_rad(addr: &RoomAddr) -> f64 {
+pub fn step_length_rad(addr: &Facet) -> f64 {
     let here = addr.coord();
     let ns = addr.neighbors();
     let total: f64 = ns
@@ -98,9 +98,9 @@ pub fn step_length_rad(addr: &RoomAddr) -> f64 {
 /// the order `neighbors()` happens to return. `total_cmp` rather than
 /// `partial_cmp`: float ordering in this project is total and deterministic
 /// by rule.
-pub fn nearest_neighbour(position: &RoomAddr, target: GeoCoord) -> RoomAddr {
+pub fn nearest_neighbour(position: &Facet, target: GeoCoord) -> Facet {
     let t = math::unit_sphere_from_lat_lon(target.latitude, target.longitude);
-    let mut best: Option<(f64, u64, RoomAddr)> = None;
+    let mut best: Option<(f64, u64, Facet)> = None;
     for n in position.neighbors() {
         let c = n.coord();
         let d = chord_sq(math::unit_sphere_from_lat_lon(c.latitude, c.longitude), t);
@@ -113,7 +113,7 @@ pub fn nearest_neighbour(position: &RoomAddr, target: GeoCoord) -> RoomAddr {
             best = Some((d, key, n));
         }
     }
-    // `RoomAddr::neighbors` returns a fixed-size `[RoomAddr; 3]`, so the
+    // `Facet::neighbors` returns a fixed-size `[Facet; 3]`, so the
     // loop always runs three times and `best` is always `Some`.
     best.expect("a room always has three edge-neighbours").2
 }
@@ -139,8 +139,8 @@ pub fn bearing_of(c: Compass) -> f64 {
 
 /// A held bearing and the point dead reckoning has carried the walker to.
 ///
-/// `reckoned` is NOT a cell. It advances exactly along the rhumb and is
-/// never snapped to the cell the walker actually landed on — that is the
+/// `reckoned` is NOT a room. It advances exactly along the rhumb and is
+/// never snapped to the room the walker actually landed on — that is the
 /// whole mechanism. Snapping it would reduce this to picking the
 /// nearest-bearing neighbour each step, whose error is a random walk.
 /// type-audit: pending(wave-3: bearing_deg)
@@ -148,7 +148,7 @@ pub fn bearing_of(c: Compass) -> f64 {
 pub struct Course {
     /// Degrees clockwise from north; one of the eight canonical bearings.
     pub bearing_deg: f64,
-    /// Where exact dead reckoning has arrived, independent of any cell.
+    /// Where exact dead reckoning has arrived, independent of any room.
     pub reckoned: GeoCoord,
 }
 
@@ -341,20 +341,20 @@ mod tests {
         assert!(moved_in_longitude, "the course froze instead of winding");
     }
 
-    // These need a real `RoomAddr`, so they build one from a known face and
+    // These need a real `Facet`, so they build one from a known face and
     // path rather than a world. `walk_depth` (in the `agent` module) needs a
     // `LocaleContext`, which a pure unit test cannot cheaply build, so the
     // depth is the literal 12 (walk depth on the canonical grid: globe level
     // 6 + 6), matching `agent::walk_depth`'s own documented default.
 
-    /// A step length is positive, and small — adjacent cells at walk depth are
+    /// A step length is positive, and small — adjacent rooms at walk depth are
     /// a tiny fraction of a radian apart. An implementation that returned a
     /// CHORD rather than an ANGLE would also be positive and small, so the
     /// upper bound alone does not discriminate; the neighbour-distance
     /// agreement below is what does.
     #[test]
     fn a_step_length_is_positive_and_sub_radian() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };
@@ -377,7 +377,7 @@ mod tests {
     /// averaging all three, or divides by the wrong count.
     #[test]
     fn a_step_length_is_the_mean_of_its_three_neighbour_distances() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };
@@ -394,14 +394,14 @@ mod tests {
         );
     }
 
-    /// Resolution returns one of the three edge-neighbours and never the cell
+    /// Resolution returns one of the three edge-neighbours and never the room
     /// itself — a target that happens to land nearest the observer's own
     /// centroid must still produce a MOVE.
     ///
     /// FIRES WHEN: the candidate list includes `position`.
     #[test]
     fn resolution_always_returns_a_neighbour_never_the_cell_itself() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };
@@ -416,7 +416,7 @@ mod tests {
     /// sign would pass every "returns a neighbour" test above.
     #[test]
     fn aiming_at_a_neighbours_centroid_resolves_to_that_neighbour() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };

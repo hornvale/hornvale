@@ -8,7 +8,7 @@
 //! the suite objected to. Ruling 8 asked for the numbers rather than the
 //! assumption; this is the instrument that takes them.
 //!
-//! Two arms per seed, over the same cave-bearing land cells:
+//! Two arms per seed, over the same cave-bearing land vertices:
 //!
 //! - **band** — `band_rank(cave.deepest_horizon)`, the gate as it stood.
 //! - **rung** — the delve ladder's rank for
@@ -148,7 +148,7 @@
 //!    11.89 / 11.96 after — −2.0% / +1.4% / −5.9%, a mean of −2.2% and a rise
 //!    on one of three seeds. What Task 1b actually broke is not the COUNT but
 //!    the VARIANCE: `deepest_horizon` collapsed onto `Basement` for 97.3–99.0% of
-//!    cave-bearing cells, so every cave got the same three-rung lattice and
+//!    cave-bearing vertices, so every cave got the same three-rung lattice and
 //!    the depth axis stopped distinguishing a shallow cave from a deep one at
 //!    all. That is the defect the re-point closes, and it is a worse one than
 //!    a count shortfall would have been: a count can be noticed, and a
@@ -228,15 +228,15 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
         let mut rung_addressable = 0usize;
         let mut realized = 0usize;
 
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
             caves += 1;
-            let gradient = terrain.geothermal_gradient_at(cell);
+            let gradient = terrain.geothermal_gradient_at(vertex);
 
             let b = band_rank(cave.deepest_horizon);
             let r = rung_rank(rung_at_depth(cave.depth_reach_m, gradient))
@@ -258,7 +258,7 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
                         &cave,
                         gradient,
                         ChamberAddr {
-                            cell,
+                            vertex,
                             band,
                             branch,
                             level: 0,
@@ -428,15 +428,15 @@ fn how_many_floors_does_a_run_realize() {
         // sentence is actually about.
         let mut full_ladder_branch_drawn: Vec<usize> = Vec::new();
 
-        for cell in geo.cells() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
             caves += 1;
-            let gradient = terrain.geothermal_gradient_at(cell);
+            let gradient = terrain.geothermal_gradient_at(vertex);
             let deepest = rung_rank(rung_at_depth(cave.depth_reach_m, gradient))
                 .expect("rung_at_depth never returns Surface");
 
@@ -448,7 +448,11 @@ fn how_many_floors_does_a_run_realize() {
                 for band_rank in 0..=deepest {
                     let band = Band::from_rank(band_rank)
                         .expect("0..=deepest are all real habitation ranks");
-                    let run = RunAddr { cell, branch, band };
+                    let run = RunAddr {
+                        vertex,
+                        branch,
+                        band,
+                    };
                     let drawn = usize::from(levels_in_branch(seed, run));
                     band_floors[band_rank as usize].push(drawn);
                     branch_drawn += drawn;
@@ -457,7 +461,7 @@ fn how_many_floors_does_a_run_realize() {
                     hi_bound += hi;
                     for level in 0..drawn {
                         let addr = ChamberAddr {
-                            cell,
+                            vertex,
                             branch,
                             band,
                             level: level as u8,
@@ -469,7 +473,7 @@ fn how_many_floors_does_a_run_realize() {
                 }
                 assert!(
                     (lo_bound..=hi_bound).contains(&branch_drawn),
-                    "seed {seed_value} cell {cell:?} branch {branch}: {branch_drawn} \
+                    "seed {seed_value} vertex {vertex:?} branch {branch}: {branch_drawn} \
                      drawn floors over bands 0..={deepest} is outside the \
                      {lo_bound}..={hi_bound} that spec §3.1's frozen ranges allow"
                 );

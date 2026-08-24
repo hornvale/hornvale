@@ -1,5 +1,5 @@
 //! The Rill, Task 5: `MicroField::wetness` is a **budget and an allocation** —
-//! the climate supply a room's cell receives, redistributed by where the room
+//! the climate supply a room's vertex receives, redistributed by where the room
 //! sits relative to its local watercourse — instead of a fourth axis of
 //! address noise that happens to be called "wetness".
 //!
@@ -85,7 +85,7 @@
 
 use hornvale_climate::BiomeExpr;
 use hornvale_climate::variants::{GroundKind, Variant, variant_pool};
-use hornvale_kernel::{RoomAddr, Seed, World, WorldTime};
+use hornvale_kernel::{Facet, Seed, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext, grounded_wetness, wetness_is_grounded};
 use hornvale_terrain::branch::{CatchmentCut, rill_reading};
 use serde_json::Value;
@@ -118,7 +118,7 @@ struct Row {
     kind: String,
     id: u64,
     step: u64,
-    room: RoomAddr,
+    room: Facet,
     wetness: f64,
 }
 
@@ -132,7 +132,7 @@ fn rows() -> Vec<Row> {
                 kind: v["kind"].as_str().expect("kind").to_string(),
                 id: v["id"].as_u64().expect("id"),
                 step: v["step"].as_u64().expect("step"),
-                room: RoomAddr {
+                room: Facet {
                     face: v["face"].as_u64().expect("face") as u8,
                     path: v["path"]
                         .as_array()
@@ -159,8 +159,8 @@ fn world() -> World {
 /// address is a position on the sphere and carries no world state, so it
 /// survives an epoch intact — but the *walk* the fixture recorded from each
 /// head does not, which is why [`descend_from`] rebuilds it live.
-fn walk_heads(rows: &[Row]) -> Vec<RoomAddr> {
-    let mut out: Vec<Option<RoomAddr>> = Vec::new();
+fn walk_heads(rows: &[Row]) -> Vec<Facet> {
+    let mut out: Vec<Option<Facet>> = Vec::new();
     for r in rows.iter().filter(|r| r.kind == "walk" && r.step == 0) {
         while out.len() <= r.id as usize {
             out.push(None);
@@ -179,8 +179,8 @@ const WALK_LEN: usize = 16;
 ///
 /// The descent is therefore true by construction and the walk's LENGTH is the
 /// claim — see [`descending_walks_of_the_required_length_exist`].
-fn descend_from(ctx: &LocaleContext, head: &RoomAddr) -> Vec<RoomAddr> {
-    let elevation = |a: &RoomAddr| {
+fn descend_from(ctx: &LocaleContext, head: &Facet) -> Vec<Facet> {
+    let elevation = |a: &Facet| {
         ctx.describe(a, WorldTime::GENESIS)
             .map(|l| l.fields.elevation_m)
     };
@@ -191,7 +191,7 @@ fn descend_from(ctx: &LocaleContext, head: &RoomAddr) -> Vec<RoomAddr> {
         Err(_) => return walk,
     };
     while walk.len() < WALK_LEN {
-        let mut best: Option<(RoomAddr, f64)> = None;
+        let mut best: Option<(Facet, f64)> = None;
         for n in here.neighbors() {
             let Ok(e) = elevation(&n) else { continue };
             if e < here_e && best.as_ref().is_none_or(|(_, b)| e < *b) {
@@ -333,7 +333,7 @@ fn descending_walks_of_the_required_length_exist() {
     let rows = rows();
     let heads = walk_heads(&rows);
     assert!(!heads.is_empty(), "the fixture carries walk heads");
-    let walks: Vec<Vec<RoomAddr>> = heads.iter().map(|h| descend_from(&ctx, h)).collect();
+    let walks: Vec<Vec<Facet>> = heads.iter().map(|h| descend_from(&ctx, h)).collect();
     let steps: usize = walks.iter().map(|w| w.len() - 1).sum();
     let shortest = walks.iter().map(Vec::len).min().unwrap_or(0);
     println!(
@@ -442,9 +442,9 @@ fn descending_walks_of_the_required_length_exist() {
 ///
 /// # The obstacle is a scale measurement, not a choice of constant
 ///
-/// A sub-cell valley's terrace/dry edge has median 2.78e-6 rad against a
+/// A sub-vertex valley's terrace/dry edge has median 2.78e-6 rad against a
 /// walk-depth room edge of 2.83e-4 rad, so the rill geometry is about a hundred
-/// times finer than the room that must report it, and the cell-scale moisture
+/// times finer than the room that must report it, and the vertex-scale moisture
 /// field barely moves across a walk.
 ///
 /// # What The Glasshouse changed, and what it deliberately did not
@@ -509,7 +509,7 @@ fn a_walk_gets_damper_as_it_descends() {
     // The walk population is rebuilt LIVE from the captured heads. See
     // `descending_walks_of_the_required_length_exist` for why the fixture's own
     // walks can no longer be used.
-    let walks: Vec<Vec<RoomAddr>> = walk_heads(&rows)
+    let walks: Vec<Vec<Facet>> = walk_heads(&rows)
         .iter()
         .map(|h| descend_from(&ctx, h))
         .collect();
@@ -695,7 +695,7 @@ fn a_walk_gets_damper_as_it_descends() {
 }
 
 /// Whether a room stands inside the **coarse trunk's** valley — the reading the
-/// document already carries, as distinct from the sub-cell branch
+/// document already carries, as distinct from the sub-vertex branch
 /// [`rill_reading`] finds. `channel_bands[3]` is the terrace/dry edge.
 fn inside_a_trunk_band(loc: &Locale) -> bool {
     matches!(
@@ -875,7 +875,7 @@ fn damp_below_the_median_is_always_inside_a_valley() {
 /// the seed-42 sample reads dry:
 ///
 /// ```text
-/// RoomAddr { face: 0, path: [1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3] }:
+/// Facet { face: 0, path: [1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3] }:
 ///   "a mossy hollow, dry, on a rise"  (moisture 0.2, wetness -0.5909623)
 /// ```
 ///
@@ -1044,7 +1044,7 @@ fn the_micro_draw_order_is_unchanged() {
     let mut checked = 0usize;
     for line in FORD_FIXTURE.lines() {
         let v: Value = serde_json::from_str(line).expect("fixture line is JSON");
-        let room = RoomAddr {
+        let room = Facet {
             face: v["face"].as_u64().expect("face") as u8,
             path: v["path"]
                 .as_array()

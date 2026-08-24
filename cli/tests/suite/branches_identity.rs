@@ -7,7 +7,7 @@
 //! (hobgoblin, bugbear — cognate members of the goblinoid family alongside
 //! goblin, descending from a shared drawn proto-goblinoid vector) into the
 //! same settlement-placement pass that already held goblin and kobold. A
-//! bigger roster competing for the same cells shifts WHO wins WHICH cell
+//! bigger roster competing for the same vertices shifts WHO wins WHICH vertex
 //! world-wide, so goblin's own placement — and therefore its own committed
 //! names — legitimately changed too. Asserting "goblin structure/facts
 //! unchanged" here would be FALSE and this file must never do it.
@@ -32,7 +32,7 @@
 //! 5. `goblin_names_are_rebaselined_not_frozen` — goblin's committed
 //!    settlement names are non-empty AND DIFFER from the pre-Branches
 //!    fixture's (frozen at Task 2, back when only goblin and kobold
-//!    competed for cells) — proof the re-derivation actually happened, not
+//!    competed for vertices) — proof the re-derivation actually happened, not
 //!    a no-op merge, and (since the founder floor, MAP-22 K=1) proof
 //!    goblin still places real settlements in the shared four-people
 //!    world rather than being boxed out to zero.
@@ -49,7 +49,7 @@
 //!    win them all at seed 42), so the founder-floor "every people commits
 //!    at least one settlement name" guarantee this test used to check no
 //!    longer holds for them — a `peopled-by`/settlement-`name` fact is
-//!    committed only for a cell's DOMINANT species. What remains true, and
+//!    committed only for a vertex's DOMINANT species. What remains true, and
 //!    is asserted here instead: bugbear and kobold are still PRESENT — a
 //!    strictly positive density fraction in at least one settlement's
 //!    composition — matching The Niche's accepted 2-way coexistence
@@ -218,7 +218,7 @@ fn hobgoblin_and_bugbear_are_present() {
 
 /// (5) Goblin re-baselined: goblin's committed settlement names are
 /// non-empty AND DIFFER from the pre-Branches fixture's (frozen at Task
-/// 2, when only goblin and kobold competed for cells) — proving both
+/// 2, when only goblin and kobold competed for vertices) — proving both
 /// that the re-derivation actually happened world-wide (not a no-op
 /// merge) and that, since the founder floor (settlement's
 /// founder-reservation pass, MAP-22 K=1), goblin still places real
@@ -261,7 +261,7 @@ fn goblin_names_are_rebaselined_not_frozen() {
         world_names, fixture_names,
         "goblin's committed settlement names must differ from the \
          pre-Branches fixture — adding hobgoblin and bugbear to the same \
-         placement pass shifts which cells goblin wins world-wide, so its \
+         placement pass shifts which vertices goblin wins world-wide, so its \
          own names re-derive too; byte-identity here would mean The \
          Branches never actually touched placement"
     );

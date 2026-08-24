@@ -5,7 +5,7 @@
 //! overlays what it alone knows.
 
 use crate::{Feature, SceneError, features_of};
-use hornvale_kernel::{RoomAddr, SeaLevelHeight, World, WorldTime};
+use hornvale_kernel::{Facet, SeaLevelHeight, World, WorldTime};
 use hornvale_locale::{CoverClass, Locale, LocaleContext, biome_prose_name};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -187,7 +187,7 @@ pub struct SurroundsCell {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cover: Option<u32>,
     /// Great-circle initial azimuth from the observer to this cell's own
-    /// centroid, degrees clockwise from north (`RoomAddr::bearing_to`).
+    /// centroid, degrees clockwise from north (`Facet::bearing_to`).
     /// `Option`-free and present on every cell, including a seam cell (whose
     /// `room` is a plain `u64`, not the `Option`al lattice offsets above) —
     /// this and `distance_rad` are the whole north-up unblock (spec §5.1):
@@ -197,7 +197,7 @@ pub struct SurroundsCell {
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub bearing_deg: f64,
     /// Great-circle angular distance from the observer to this cell's own
-    /// centroid, radians (`RoomAddr::distance_rad_to`). See `bearing_deg`.
+    /// centroid, radians (`Facet::distance_rad_to`). See `bearing_deg`.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub distance_rad: f64,
 }
@@ -351,7 +351,12 @@ pub struct Sight {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Resolution {
     /// The canonical grid's refinement level.
-    pub grid_level: u32,
+    /// **Frozen wire key, and a `level` that is deliberately NOT `depth`.**
+    /// It is a key of `scene/surrounds/v2`, a cross-repo contract, present in
+    /// every committed surrounds JSON. `Geosphere::level` became
+    /// `Geosphere::depth` in The Lexicon of Place; this did not, and cannot.
+    /// See `book/src/reference/lexicon-of-place.md`.
+    pub grid_level: u32, // lexicon: frozen wire key of scene/surrounds/v2
     /// How many levels below `grid_level` this chart's cells sit. Each level
     /// quarters a cell, so `4^depth_below_grid` rooms share one grid cell.
     pub depth_below_grid: u32,
@@ -459,7 +464,7 @@ pub struct SurroundsScene {
 pub fn surrounds_scene_in(
     world: &World,
     ctx: &LocaleContext,
-    room: &RoomAddr,
+    room: &Facet,
     radius: u32,
     at: WorldTime,
 ) -> Result<SurroundsScene, SceneError> {
@@ -472,11 +477,11 @@ pub fn surrounds_scene_in(
 
     // Breadth-first over the mesh's edge-adjacency graph, out to `radius`
     // rings. BTreeSet/VecDeque only — no HashSet (determinism).
-    let mut seen: BTreeSet<RoomAddr> = BTreeSet::new();
-    let mut queue: VecDeque<(RoomAddr, u32)> = VecDeque::new();
+    let mut seen: BTreeSet<Facet> = BTreeSet::new();
+    let mut queue: VecDeque<(Facet, u32)> = VecDeque::new();
     seen.insert(room.clone());
     queue.push_back((room.clone(), 0));
-    let mut found: Vec<RoomAddr> = vec![room.clone()];
+    let mut found: Vec<Facet> = vec![room.clone()];
     while let Some((addr, ring)) = queue.pop_front() {
         if ring == radius {
             continue;
@@ -525,7 +530,7 @@ pub fn surrounds_scene_in(
         // question: `chamber_column_here` breaks a weight TIE differently.
         // It picks with `max_by_key(|c| c.weight)`, which returns the LAST
         // maximum, where `LocaleContext::dominant_corner` breaks to the
-        // lowest `CellId`. On an exact integer-weight tie — common on this
+        // lowest `Vertex`. On an exact integer-weight tie — common on this
         // mesh, since a room sitting on a lattice point can weigh 64/64/64 —
         // the two can name different cells, so a marked cave and the cave
         // `delve` actually descends into can diverge. That divergence
@@ -595,7 +600,7 @@ pub fn surrounds_scene_in(
             cover: None,
             // Option-free and present on every cell, seams included — the
             // north-up unblock (spec §5.1). `room`/`addr` are both already
-            // `RoomAddr`s in scope; no lattice offset is needed.
+            // `Facet`s in scope; no lattice offset is needed.
             bearing_deg: hornvale_kernel::quantize(room.bearing_to(addr)),
             distance_rad: hornvale_kernel::quantize(room.distance_rad_to(addr)),
         });
@@ -695,7 +700,7 @@ pub fn surrounds_scene_in(
 /// type-audit: bare-ok(count: radius)
 pub fn surrounds_scene(
     world: &World,
-    room: &RoomAddr,
+    room: &Facet,
     radius: u32,
     at: WorldTime,
 ) -> Result<SurroundsScene, SceneError> {
@@ -739,7 +744,7 @@ pub fn surrounds_scene(
 pub fn surrounds_scene_colored_in(
     world: &World,
     ctx: &LocaleContext,
-    room: &RoomAddr,
+    room: &Facet,
     radius: u32,
     at: WorldTime,
     observer: &hornvale_kernel::color::Observer,
@@ -748,7 +753,7 @@ pub fn surrounds_scene_colored_in(
 ) -> Result<SurroundsScene, SceneError> {
     let mut scene = surrounds_scene_in(world, ctx, room, radius, at)?;
     for cell in scene.cells.iter_mut() {
-        let addr = hornvale_kernel::RoomId(cell.room)
+        let addr = hornvale_kernel::FacetId(cell.room)
             .unpack()
             .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?;
         // `cell.micro` was already computed once, for every cell, in the
@@ -822,7 +827,7 @@ fn settlement_marks(world: &World, depth: u32) -> BTreeMap<u64, Vec<Mark>> {
             longitude,
         } = f;
         let position = hornvale_kernel::math::unit_sphere_from_lat_lon(latitude, longitude);
-        let Ok(id) = RoomAddr::containing(position, depth).pack() else {
+        let Ok(id) = Facet::containing(position, depth).pack() else {
             continue;
         };
         let flagship = kind == "flagship";
@@ -904,14 +909,14 @@ mod tests {
         .expect("seed 42 builds")
     }
 
-    fn observer(w: &hornvale_kernel::World) -> RoomAddr {
+    fn observer(w: &hornvale_kernel::World) -> Facet {
         let ctx = hornvale_locale::LocaleContext::build(w).unwrap();
         let depth = ctx.globe_level() + 6;
         // The flagship settlement's own room — the same place a possession
         // mints its agent, so the gallery scene shows the walked ground.
         let v = hornvale_settlement::village_info(w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(w, v.id).expect("the flagship has coordinates");
-        RoomAddr::containing(
+        Facet::containing(
             hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
             depth,
         )
@@ -968,7 +973,7 @@ mod tests {
     #[test]
     fn a_seam_observer_carries_no_coordinate_on_seam_cells() {
         let w = world();
-        let seam_observer = RoomAddr::containing(
+        let seam_observer = Facet::containing(
             hornvale_kernel::math::unit_sphere_from_lat_lon(-10.0, 0.0),
             12,
         );
@@ -1018,7 +1023,7 @@ mod tests {
     #[test]
     fn a_seam_observer_still_carries_bearing_and_distance_on_seam_cells() {
         let w = world();
-        let seam_observer = RoomAddr::containing(
+        let seam_observer = Facet::containing(
             hornvale_kernel::math::unit_sphere_from_lat_lon(-10.0, 0.0),
             12,
         );
@@ -1157,7 +1162,7 @@ mod tests {
     fn fixture_world() -> (
         hornvale_kernel::World,
         hornvale_locale::LocaleContext,
-        RoomAddr,
+        Facet,
     ) {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
@@ -1398,7 +1403,7 @@ mod tests {
         let s = surrounds_scene_colored_in(
             &w,
             &ctx,
-            &RoomAddr::containing(pos, gl + 6),
+            &Facet::containing(pos, gl + 6),
             8,
             WorldTime::GENESIS,
             &hornvale_kernel::color::standard_observer(),
@@ -1477,7 +1482,7 @@ mod tests {
             let s = surrounds_scene_colored_in(
                 &w,
                 &ctx,
-                &RoomAddr::containing(pos, depth),
+                &Facet::containing(pos, depth),
                 radius,
                 WorldTime::GENESIS,
                 &hornvale_kernel::color::standard_observer(),
@@ -1582,10 +1587,10 @@ mod tests {
         let globe = ctx.terrain().globe();
         let sea = globe.sea_level;
 
-        // A land cell whose RAW reading is still negative: raw bands `shelf`, the
+        // A land vertex whose RAW reading is still negative: raw bands `shelf`, the
         // corrected height bands `lowland` or above, so the two disagree. The
-        // majority of seed 42's land qualifies (8162 of 11,066 cells). Lowest
-        // CellId wins, for determinism.
+        // majority of seed 42's land qualifies (8162 of 11,066 vertices). Lowest
+        // Vertex wins, for determinism.
         let probe = globe
             .elevation
             .iter()
@@ -1594,7 +1599,7 @@ mod tests {
             .next()
             .expect("seed 42 has land below the zero of the isostatic datum");
         let coord = ctx.climate().geosphere().coord(probe);
-        let addr = RoomAddr::containing(
+        let addr = Facet::containing(
             hornvale_kernel::math::unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
             ctx.globe_level() + 6,
         );
@@ -1643,7 +1648,7 @@ mod tests {
     }
 
     #[test]
-    fn no_land_cell_bands_as_marine_relief() {
+    fn no_land_vertex_bands_as_marine_relief() {
         // Guards `relief_band`'s THRESHOLD SEMANTICS, and nothing else. It computes
         // its own height and never calls the builder, so it CANNOT detect the
         // original defect — which was the argument the call site passed.
@@ -1652,18 +1657,18 @@ mod tests {
         // bug fully reintroduced. Kept because the thresholds are worth pinning,
         // labelled so nobody mistakes it for the detector.
         //
-        // Stated over CELLS, where the invariant holds by definition: a land cell
-        // IS one with `elevation >= sea_level`, so its height is >= 0 and its band
-        // must be `lowland` or above. Deliberately NOT over rooms — a room's height
-        // is a three-corner blend while its water kind is a point sample of the
-        // dominant corner, so a shoreline room can be dry-land-dominant and still
-        // blend centimetres below sea level (spec §12.4).
+        // Stated over VERTICES, where the invariant holds by definition: a land
+        // vertex IS one with `elevation >= sea_level`, so its height is >= 0 and its
+        // band must be `lowland` or above. Deliberately NOT over rooms — a room's
+        // height is a three-corner blend while its water kind is a point sample of
+        // the dominant corner, so a shoreline room can be dry-land-dominant and
+        // still blend centimetres below sea level (spec §12.4).
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let globe = ctx.terrain().globe();
         let sea = globe.sea_level;
         let mut land = 0usize;
-        for (cell, e) in globe.elevation.iter() {
+        for (vertex, e) in globe.elevation.iter() {
             if e.total_cmp(sea) == std::cmp::Ordering::Less {
                 continue;
             }
@@ -1671,7 +1676,7 @@ mod tests {
             let band = relief_band(e.above(sea));
             assert!(
                 band >= 2,
-                "land cell {cell:?} at {:.1} m ({:.1} m above sea level) banded as {}",
+                "land vertex {vertex:?} at {:.1} m ({:.1} m above sea level) banded as {}",
                 e.get(),
                 e.above(sea).get(),
                 RELIEF_LEGEND[band as usize]
@@ -1679,14 +1684,14 @@ mod tests {
         }
         assert!(
             land > 1000,
-            "seed 42 has substantial land; got {land} cells"
+            "seed 42 has substantial land; got {land} vertices"
         );
     }
 
     /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,99,2026]
     #[test]
     #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
-    fn no_land_cell_bands_as_marine_relief_across_seeds() {
+    fn no_land_vertex_bands_as_marine_relief_across_seeds() {
         for seed in [1u64, 7, 42, 99, 2026] {
             let w = build_world(
                 Seed(seed),
@@ -1699,14 +1704,14 @@ mod tests {
             let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
             let globe = ctx.terrain().globe();
             let sea = globe.sea_level;
-            for (cell, e) in globe.elevation.iter() {
+            for (vertex, e) in globe.elevation.iter() {
                 if e.total_cmp(sea) == std::cmp::Ordering::Less {
                     continue;
                 }
                 let band = relief_band(e.above(sea));
                 assert!(
                     band >= 2,
-                    "seed {seed}: land cell {cell:?} banded as {}",
+                    "seed {seed}: land vertex {vertex:?} banded as {}",
                     RELIEF_LEGEND[band as usize]
                 );
             }
@@ -1910,7 +1915,7 @@ mod tests {
     /// file (e.g. `a_radius_four_neighbourhood_holds_thirty_one_cells`) runs
     /// in the ordinary gate; `cli/tests/heavy_tier.rs`'s `heavy:` token is
     /// reserved for the one test in this file that sweeps multiple seeds
-    /// (`no_land_cell_bands_as_marine_relief_across_seeds`), and tagging a
+    /// (`no_land_vertex_bands_as_marine_relief_across_seeds`), and tagging a
     /// single-world test with it would fail that guard's canonical-string
     /// check anyway.
     #[test]
@@ -2125,7 +2130,7 @@ mod tests {
                 hornvale_kernel::math::sin(t * 0.023) * 0.5,
                 hornvale_kernel::math::cos(t * 0.031),
             ];
-            let addr = RoomAddr::containing(dir, ctx.globe_level() + 6);
+            let addr = Facet::containing(dir, ctx.globe_level() + 6);
             if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS)
                 && loc.cave.is_some()
             {
@@ -2172,7 +2177,7 @@ mod tests {
                 hornvale_kernel::math::sin(t * 0.023) * 0.5,
                 hornvale_kernel::math::cos(t * 0.031),
             ];
-            let addr = RoomAddr::containing(dir, ctx.globe_level() + 6);
+            let addr = Facet::containing(dir, ctx.globe_level() + 6);
             if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS)
                 && loc.cave.is_none()
             {

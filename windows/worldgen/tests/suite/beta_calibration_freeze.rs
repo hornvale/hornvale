@@ -6,9 +6,9 @@
 //! **Preregistered target**: "realistic coexistence" for the shipped
 //! 4-goblinoid roster means a clear local dominant with graded rivals, not a
 //! monoculture and not undifferentiated sharing. Operationally: the mean
-//! per-CLAIMED-cell effective diversity — `byproducts.strife` (the inverse-
-//! Herfindahl evenness of a cell's per-species density shares) averaged over
-//! habitable cells where Σ species density > 0 — lands in the physically
+//! per-CLAIMED-vertex effective diversity — `byproducts.strife` (the inverse-
+//! Herfindahl evenness of a vertex's per-species density shares) averaged over
+//! habitable vertices where Σ species density > 0 — lands in the physically
 //! motivated band `[1.5, 3.0]`: comfortably above winner-take-all
 //! monoculture (`strife` → 1) and comfortably below undifferentiated
 //! "oatmeal" sharing (`strife` → 4, the species count).
@@ -19,10 +19,10 @@
 //! replaced that flat K with niche-differentiated K — each species' carrying
 //! capacity now peaks where its traits best fit the world's local
 //! conditions, rather than being flat across the map. That is a deliberate
-//! model change, not a regression: a world where each cell has a clearer
+//! model change, not a regression: a world where each vertex has a clearer
 //! locally-best-suited species *is* the campaign's biogeography, so
-//! per-cell diversity legitimately drops as species sort into the terrain
-//! that favors them instead of sharing every cell evenly. Re-running this
+//! per-vertex diversity legitimately drops as species sort into the terrain
+//! that favors them instead of sharing every vertex evenly. Re-running this
 //! test's five seeds at the frozen β=2.0 under niche-differentiated K
 //! measured:
 //!
@@ -72,7 +72,7 @@
 //! Two things are worth reading off that number rather than one. First, the
 //! bound's own quantity: 3.01 of a possible 12 is **25% of oatmeal**, where the
 //! original band permitted 75%. Absolute diversity rose, because there are more
-//! peoples available to share a cell; diversity *relative to undifferentiated
+//! peoples available to share a vertex; diversity *relative to undifferentiated
 //! sharing* fell to a third of what the band allows. The new kinds are
 //! partitioning space rather than piling onto it, which is precisely what this
 //! bound exists to check.
@@ -146,7 +146,7 @@
 //! alone can be made to redden this band is settled by the positive control in
 //! the next section, and the answer is *not at today's reach*. (A trap that
 //! section had to steer around: an over-strong affinity crush makes the world
-//! claim no cells at all and trips `claimed_diversity`'s `assert!(n > 0)`
+//! claim no vertices at all and trips `claimed_diversity`'s `assert!(n > 0)`
 //! before the band is ever evaluated — a red for the wrong reason.)
 //!
 //! **The Muster's positive control (2026-08-11): what reddens this guard, and
@@ -204,16 +204,16 @@
 //! maximum. Two mechanisms hold it there, and they are different in kind:
 //!
 //! 1. **The ceiling is unreachable in principle, by any mutation of this
-//!    store.** `strife` cannot exceed the number of species PRESENT in a cell,
-//!    and the mean claimed cell holds 6.44 of the 18 (pooled over the five
-//!    seeds' 177 336 claimed cells). A mean of 13.5 asks for more coexistence
-//!    than the world puts in a cell at all. This band can only ever be failed
+//!    store.** `strife` cannot exceed the number of species PRESENT in a vertex,
+//!    and the mean claimed vertex holds 6.44 of the 18 (pooled over the five
+//!    seeds' 177 336 claimed vertices). A mean of 13.5 asks for more coexistence
+//!    than the world puts in a vertex at all. This band can only ever be failed
 //!    from below.
 //! 2. **The floor asks for dominance, and the level cannot manufacture it at
 //!    partial reach.** The level is a biome-INDEPENDENT scalar on a kind's `K`,
 //!    so it registers only as a *contrast* between kinds that carry a row and
 //!    kinds that do not. That contrast is not thin — the seven carriers hold
-//!    61.2% of claimed-cell density — but deepening it SUPPRESSES those seven,
+//!    61.2% of claimed-vertex density — but deepening it SUPPRESSES those seven,
 //!    which evens out the survivors instead of concentrating them. Driven to
 //!    the extreme (level `0`: hard exclusion everywhere off the authored shape)
 //!    the mean *rises* to 2.97, away from the only edge it could cross. The
@@ -254,7 +254,7 @@
 //! | **`d = 1.70`** | **1.4155085834088321** | **RED, beneath the floor** |
 //!
 //! Reach and shape are held fixed across those three rows; only the level
-//! moves. It fails through the BAND — every seed still claims cells at every
+//! moves. It fails through the BAND — every seed still claims vertices at every
 //! arm, so `assert!(n > 0)` is never the thing that fires. And the seven-row
 //! `d = 1.00` arm reproduces 2.1127601185602627 exactly, which is this sweep's
 //! own check that it interpolates the shipped world rather than a neighbour of
@@ -287,7 +287,7 @@
 //! authored-roster table uses it is 3.05. The conclusion survives and is
 //! stronger than the arithmetic that was quoted for it: **no common-shape arm
 //! crosses either edge at any depth sampled**, including one that more than
-//! doubles claimed-cell diversity. (5.41 is also still far under the ceiling of
+//! doubles claimed-vertex diversity. (5.41 is also still far under the ceiling of
 //! 13.5, which is mechanism 1 above showing up from the other side.)
 //!
 //! *Differentiation is necessary and ALSO not sufficient.* Two full-reach,
@@ -359,7 +359,7 @@
 //! recorded above — the four-arm store decomposition, the biosphere arm and its
 //! per-seed array, the level-only null, all three full-reach arrangements, the
 //! common-shape sweep, the clamp onsets, the clamped-versus-unclamped pair, the
-//! 177 336 claimed cells at 6.4351 kinds each, and seed 42's 7-of-7 / 11-of-11
+//! 177 336 claimed vertices at 6.4351 kinds each, and seed 42's 7-of-7 / 11-of-11
 //! ranking split — and every one is **bit-identical** to what is written here.
 //!
 //! The reason is structural rather than lucky, and it is worth stating because
@@ -375,7 +375,7 @@
 //!
 //! **Weak-knob / Stage-B caveat** (carried from `coexist::BETA`'s doc and the
 //! A16b sweep's module doc): against the shipped roster's near-tied
-//! carrying capacities, β only moves claimed-cell diversity across a narrow
+//! carrying capacities, β only moves claimed-vertex diversity across a narrow
 //! band over the swept range β∈[0.1, 6.0] — this test's re-baselined
 //! [1.5, 3.0] band is wide enough to hold across that sweep's shape, so
 //! passing here confirms the frozen value is *in a physically sane regime*,
@@ -409,7 +409,7 @@ use hornvale_worldgen::{
 /// single-β read is directly comparable to that sweep's row for β=2.0.
 const SEEDS: [u64; 5] = [1, 2, 3, 4, 42];
 
-/// Mean `byproducts.strife` over habitable cells CLAIMED (Σ species density
+/// Mean `byproducts.strife` over habitable vertices CLAIMED (Σ species density
 /// > 0) by at least one species, for one seed's world at the frozen β.
 fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
     let world = build_world_to(
@@ -430,14 +430,19 @@ fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
 
     let mut sum = 0.0_f64;
     let mut n = 0u32;
-    for (cell, strife) in report.byproducts.strife.iter() {
-        let total_density: f64 = report.stack.density.iter().map(|(_, d)| *d.get(cell)).sum();
+    for (vertex, strife) in report.byproducts.strife.iter() {
+        let total_density: f64 = report
+            .stack
+            .density
+            .iter()
+            .map(|(_, d)| *d.get(vertex))
+            .sum();
         if total_density > 0.0 {
             sum += *strife;
             n += 1;
         }
     }
-    assert!(n > 0, "seed {seed} claims at least one cell");
+    assert!(n > 0, "seed {seed} claims at least one vertex");
     sum / f64::from(n)
 }
 
@@ -515,14 +520,14 @@ fn peopled_components() -> WorldComponents {
     .expect("the peopled-only component set is well-formed")
 }
 
-/// The preregistered freeze check: at the frozen β, the mean per-claimed-cell
+/// The preregistered freeze check: at the frozen β, the mean per-claimed-vertex
 /// effective diversity across a handful of seeds lands in the band
 /// `[MONOCULTURE_FLOOR, OATMEAL_FRACTION × peopled_count]` — `[1.5, 13.5]` at
 /// today's 18 peopled kinds. The ceiling is DERIVED (The Delvers) and the
 /// literal `3.0` this line used to name is the retired pre-Delvers value; see
 /// the module doc for that re-baseline, the niche-era one, and the weak-knob
 /// caveat.
-/// claim: readout(preregistered) — mean per-claimed-cell diversity across
+/// claim: readout(preregistered) — mean per-claimed-vertex diversity across
 /// SEEDS over the PEOPLED roster, band [1.5, 0.75 x peopled_count]
 #[test]
 fn beta_yields_realistic_coexistence() {
@@ -605,7 +610,7 @@ fn beta_yields_realistic_coexistence() {
     let n_seeds = BIOSPHERE_PER_SEED_AT_MUSTER.len();
     assert!(
         (MONOCULTURE_FLOOR..=ceiling).contains(&mean),
-        "mean per-claimed-cell diversity at beta={} across seeds {per_seed:?} = {mean}, \
+        "mean per-claimed-vertex diversity at beta={} across seeds {per_seed:?} = {mean}, \
          expected in [{MONOCULTURE_FLOOR}, {ceiling}] — the floor is absolute (monoculture \
          is 1 whatever the roster size) and the ceiling is {OATMEAL_FRACTION} x oatmeal, \
          where oatmeal = {oatmeal} peopled species. If this fails ABOVE the ceiling the \

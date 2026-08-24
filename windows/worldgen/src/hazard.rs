@@ -1,4 +1,4 @@
-//! The hazard field (The Repose, spec §3.1): how often a cell's ground acts.
+//! The hazard field (The Repose, spec §3.1): how often a vertex's ground acts.
 //!
 //! **It does not accumulate.** No stress builds toward a threshold and no
 //! state carries between calls: `hazard_at` is a pure read over terrain's
@@ -23,7 +23,7 @@
 //! there is nothing to accumulate and nothing to integrate forward. **The
 //! window a caller asks about is a filter, never a key**: draws are keyed on
 //! a block of a fixed lattice tiling world time, so the event sequence of a
-//! `(seed, cell)` exists independently of who asks about it and a narrower
+//! `(seed, vertex)` exists independently of who asks about it and a narrower
 //! query returns a subset of a wider one rather than an unrelated set. See
 //! [`events_in`] for what that buys and `crate::streams::HAZARD_EVENT` for
 //! the key.
@@ -35,7 +35,7 @@
 //!
 //! | authored | recovered |
 //! |---|---|
-//! | `B_VALUE` = 1.0 | b = 0.99935 (199,891 events, busiest cell) and 1.00162 (49,842 events, quietest) |
+//! | `B_VALUE` = 1.0 | b = 0.99935 (199,891 events, busiest vertex) and 1.00162 (49,842 events, quietest) |
 //! | recurrence 276.346 y | mean interval 276.495 y |
 //! | recurrence 17,498.865 y | mean interval 17,435.032 y |
 //! | recurrence 19,999.934 y | mean interval 20,063.645 y |
@@ -65,10 +65,10 @@
 //! the mean interval's.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed, Stream, WorldTime, Years, math};
+use hornvale_kernel::{Seed, Stream, Vertex, WorldTime, Years, math};
 use hornvale_terrain::GeneratedTerrain;
 
-/// How often a cell's ground acts, as mean intervals between events.
+/// How often a vertex's ground acts, as mean intervals between events.
 ///
 /// A STEADY rate, never an accumulating stress (spec §3.1): nothing here
 /// carries state between events, and the timeline of a Hornvale catastrophe
@@ -79,45 +79,45 @@ pub struct Recurrence {
     /// Mean interval between seismic events at or above the catalogue's
     /// lower magnitude cutoff.
     ///
-    /// This is the rate the events at this cell are actually drawn at:
-    /// seismicity is per-cell, so field and draw agree everywhere.
+    /// This is the rate the events at this vertex are actually drawn at:
+    /// seismicity is per-vertex, so field and draw agree everywhere.
     pub seismic: Years,
-    /// **The volcanic field's LOCAL value at this cell** — the eruption
-    /// interval this cell's own `unrest` maps to — or `None` where there is
+    /// **The volcanic field's LOCAL value at this vertex** — the eruption
+    /// interval this vertex's own `unrest` maps to — or `None` where there is
     /// no edifice.
     ///
     /// # Off-source this is NOT the rate eruptions are drawn at
     ///
     /// Read this before using it as "how often this place erupts". An
-    /// edifice spans one or two cells and belongs to **one mountain**, whose
+    /// edifice spans one or two vertices and belongs to **one mountain**, whose
     /// recurrence is sampled once at the edifice's source contact — the same
     /// sample-once-at-the-source shape terrain uses for the arc gate itself
     /// (`crate::volcano`'s module doc). [`events_in`] therefore draws
-    /// eruptions at `volcano_at(seed, terrain, cell).recurrence`, which is
-    /// this field read **at the source**, not here. On a flank cell the two
+    /// eruptions at `volcano_at(seed, terrain, vertex).recurrence`, which is
+    /// this field read **at the source**, not here. On a flank vertex the two
     /// disagree.
     ///
     /// **The rate eruptions actually happen at is
-    /// `volcano_at(seed, terrain, cell).recurrence`.** A consumer asking how
+    /// `volcano_at(seed, terrain, vertex).recurrence`.** A consumer asking how
     /// often the ground under a settlement erupts — Task 7's knownness
     /// half-life is exactly this question — wants that, not this field.
     ///
     /// Measured on 2026-08-14 (`hazard.rs`'s own module tests hold the shape
     /// of it; these are the counts behind them):
     ///
-    /// | globe | cones | multi-cell | non-source cells | disagreeing | worst ratio |
+    /// | globe | cones | multi-vertex | non-source vertices | disagreeing | worst ratio |
     /// |---|---|---|---|---|---|
     /// | seed 42, L6 | 187 | 114 | 173 | 173 | 1.9885 |
     /// | seed 43, L6 | 173 | 109 | 168 | 168 | 2.2977 |
     /// | seed 42, L5 | 89 | 47 | 76 | 76 | 1.8914 |
     /// | seed 43, L5 | 89 | 48 | 82 | 82 | 2.2811 |
     ///
-    /// So **every** off-source edifice cell disagrees, by up to a factor of
+    /// So **every** off-source edifice vertex disagrees, by up to a factor of
     /// about 2.3 on the globes measured. The disagreement is one-sided and
     /// that is structural rather than lucky: within one cone all of `unrest`'s
     /// factors but proximity are the contact's own, proximity decays away from
     /// the boundary, and `geometric_years` is strictly decreasing in `unrest`,
-    /// so a flank cell's local value is always the *quieter* one.
+    /// so a flank vertex's local value is always the *quieter* one.
     /// `off_source_the_local_field_is_never_more_active_than_the_drawn_rate`
     /// holds that, and
     /// `an_edifice_sources_field_value_is_the_rate_its_eruptions_are_drawn_at`
@@ -191,7 +191,7 @@ fn geometric_years(quiet_years: f64, active_years: f64, unrest: f64) -> Years {
     Years::new(years).expect("authored recurrence bounds are finite and positive")
 }
 
-/// Whether a cell carries a volcanic edifice — the gated island-arc cone
+/// Whether a vertex carries a volcanic edifice — the gated island-arc cone
 /// the elevation raised there.
 ///
 /// A pure delegation to terrain's own derived read, kept here so the hazard
@@ -200,19 +200,19 @@ fn geometric_years(quiet_years: f64, active_years: f64, unrest: f64) -> Years {
 /// terrain's concept, and a copy of the gate here could drift from the
 /// elevation it is supposed to describe.
 /// type-audit: bare-ok(flag: return)
-pub fn has_edifice(terrain: &GeneratedTerrain, cell: CellId) -> bool {
-    terrain.has_edifice(cell)
+pub fn has_edifice(terrain: &GeneratedTerrain, vertex: Vertex) -> bool {
+    terrain.has_edifice(vertex)
 }
 
-/// The hazard field at a cell: mean intervals between seismic events, and
+/// The hazard field at a vertex: mean intervals between seismic events, and
 /// between eruptions where there is an edifice to erupt from.
 ///
 /// **A field read, and only that.** [`Recurrence::seismic`] is the rate this
-/// cell's quakes are drawn at, but [`Recurrence::volcanic`] is the local field
-/// value and is *not* the rate its eruptions are drawn at unless the cell is
+/// vertex's quakes are drawn at, but [`Recurrence::volcanic`] is the local field
+/// value and is *not* the rate its eruptions are drawn at unless the vertex is
 /// its edifice's source contact — an eruption belongs to a mountain, and a
 /// mountain samples the field once, at its source. For the rate that actually
-/// governs events, ask `volcano_at(seed, terrain, cell).recurrence`. See
+/// governs events, ask `volcano_at(seed, terrain, vertex).recurrence`. See
 /// [`Recurrence::volcanic`] for the measured size of the gap.
 ///
 /// Pure and stateless (spec §3.1). Composes exactly three shipped readings —
@@ -221,7 +221,7 @@ pub fn has_edifice(terrain: &GeneratedTerrain, cell: CellId) -> bool {
 /// `unrest` is range-clamped to `[0,1]` because this module's monotonicity is
 /// stated over that range and terrain already guarantees it
 /// (`tectonic_properties.rs`'s `every_default_globe_satisfies_every_invariant`
-/// asserts `(0.0..=1.0).contains(u)` for every cell of every swept globe).
+/// asserts `(0.0..=1.0).contains(u)` for every vertex of every swept globe).
 ///
 /// **The clamp is a range guard for finite values, and deliberately not a
 /// total one.** `f64::clamp` PROPAGATES NaN rather than pinning it, so a NaN
@@ -232,10 +232,10 @@ pub fn has_edifice(terrain: &GeneratedTerrain, cell: CellId) -> bool {
 /// terrain field upstream, and the same range assertion above already fails
 /// on it (`contains` is false for NaN). Pinning it here would convert a
 /// loud upstream bug into a quiet 200-year recurrence.
-pub fn hazard_at(terrain: &GeneratedTerrain, cell: CellId) -> Recurrence {
-    let unrest = terrain.unrest_at(cell).clamp(0.0, 1.0);
+pub fn hazard_at(terrain: &GeneratedTerrain, vertex: Vertex) -> Recurrence {
+    let unrest = terrain.unrest_at(vertex).clamp(0.0, 1.0);
     let seismic = geometric_years(SEISMIC_QUIET_YEARS, SEISMIC_ACTIVE_YEARS, unrest);
-    let volcanic = has_edifice(terrain, cell)
+    let volcanic = has_edifice(terrain, vertex)
         .then(|| geometric_years(VOLCANIC_QUIET_YEARS, VOLCANIC_ACTIVE_YEARS, unrest));
     Recurrence { seismic, volcanic }
 }
@@ -254,8 +254,8 @@ pub enum HazardEventKind {
     /// origin, which is what a quake is, and nobody names an earthquake
     /// ([`crate::volcano`]'s module doc).
     Seismic,
-    /// An eruption at or above [`VEI_MIN`], of the volcano the cell belongs
-    /// to — keyed on that mountain's identity rather than on the query cell,
+    /// An eruption at or above [`VEI_MIN`], of the volcano the vertex belongs
+    /// to — keyed on that mountain's identity rather than on the query vertex,
     /// so the two halves of one cone share one eruption history.
     Eruption,
 }
@@ -263,7 +263,7 @@ pub enum HazardEventKind {
 /// One thing the ground did, at a time.
 ///
 /// Never committed and never stored: C0 writes no facts, and an event is
-/// recomputed on demand from `(seed, cell)` exactly as the volcano it belongs
+/// recomputed on demand from `(seed, vertex)` exactly as the volcano it belongs
 /// to is (decision 0100's recompute test puts both in the phenomenon
 /// register).
 /// type-audit: bare-ok(ratio: magnitude)
@@ -402,19 +402,19 @@ fn process_label(kind: HazardEventKind) -> &'static str {
 /// collide with today's — a place in space, which process, and a place in
 /// time. **No ordinal appears anywhere in it**, which is what lets a query
 /// filter the sequence instead of generating it (decision 0102).
-fn event_key(cell: CellId, kind: HazardEventKind, block: i64) -> String {
+fn event_key(vertex: Vertex, kind: HazardEventKind, block: i64) -> String {
     format!(
         "cell/{}/process/{}/block/{}",
-        cell.0,
+        vertex.0,
         process_label(kind),
         block
     )
 }
 
-/// The stream one block of one process at one cell draws from.
-fn event_stream(seed: Seed, cell: CellId, kind: HazardEventKind, block: i64) -> Stream {
+/// The stream one block of one process at one vertex draws from.
+fn event_stream(seed: Seed, vertex: Vertex, kind: HazardEventKind, block: i64) -> Stream {
     seed.derive(crate::streams::HAZARD_EVENT)
-        .derive(StreamLabel::dynamic(&event_key(cell, kind, block)))
+        .derive(StreamLabel::dynamic(&event_key(vertex, kind, block)))
         .stream()
 }
 
@@ -473,7 +473,7 @@ fn magnitude_of(kind: HazardEventKind, u: f64) -> f64 {
 /// window bounds.
 fn process_events(
     seed: Seed,
-    key: CellId,
+    key: Vertex,
     kind: HazardEventKind,
     recurrence: Years,
     window: (WorldTime, WorldTime),
@@ -540,7 +540,7 @@ fn process_events(
     events
 }
 
-/// Every hazard event at a cell inside a window, in time order.
+/// Every hazard event at a vertex inside a window, in time order.
 ///
 /// The window is **half-open**, `[start, end)`, so two adjacent windows
 /// partition their union with nothing duplicated and nothing lost. An empty
@@ -548,7 +548,7 @@ fn process_events(
 ///
 /// # What makes this a read and not a simulation
 ///
-/// The event sequence of a `(seed, cell)` exists whether or not anyone asks
+/// The event sequence of a `(seed, vertex)` exists whether or not anyone asks
 /// about it: draws are keyed on a block of the fixed timeline lattice, never
 /// on the request, so a narrower query returns exactly the wider query's
 /// events that fall inside it —
@@ -566,9 +566,9 @@ fn process_events(
 /// time.
 ///
 /// The two processes draw from separate streams under the same label, so a
-/// world's seismicity is unchanged by whether its cell has a volcano — and an
+/// world's seismicity is unchanged by whether its vertex has a volcano — and an
 /// eruption is keyed on the **volcano's** identity (its source contact),
-/// which is why every cell of one cone reports the same eruptions.
+/// which is why every vertex of one cone reports the same eruptions.
 ///
 /// # Cost
 ///
@@ -588,18 +588,18 @@ fn process_events(
 pub fn events_in(
     seed: Seed,
     terrain: &GeneratedTerrain,
-    cell: CellId,
+    vertex: Vertex,
     window: (WorldTime, WorldTime),
 ) -> Vec<HazardEvent> {
-    let recurrence = hazard_at(terrain, cell);
+    let recurrence = hazard_at(terrain, vertex);
     let mut events = process_events(
         seed,
-        cell,
+        vertex,
         HazardEventKind::Seismic,
         recurrence.seismic,
         window,
     );
-    if let Some(volcano) = crate::volcano::volcano_at(seed, terrain, cell) {
+    if let Some(volcano) = crate::volcano::volcano_at(seed, terrain, vertex) {
         events.extend(process_events(
             seed,
             volcano.source,
@@ -647,61 +647,68 @@ mod tests {
     fn a_transform_boundary_is_seismic_and_never_volcanic() {
         let (geo, terrain) = globe();
         let mut transforms = 0_u32;
-        for cell in geo.cells() {
-            if terrain.boundary_at(cell).map(|b| b.kind) != Some(BoundaryKind::Transform) {
+        for vertex in geo.vertices() {
+            if terrain.boundary_at(vertex).map(|b| b.kind) != Some(BoundaryKind::Transform) {
                 continue;
             }
             transforms += 1;
-            let hazard = hazard_at(&terrain, cell);
+            let hazard = hazard_at(&terrain, vertex);
             assert_eq!(
                 hazard.volcanic, None,
-                "{cell:?} is a transform boundary with a volcanic recurrence"
+                "{vertex:?} is a transform boundary with a volcanic recurrence"
             );
             assert!(
                 hazard.seismic.get() < SEISMIC_QUIET_YEARS,
-                "{cell:?} is a transform boundary yet no more seismic than a dead interior"
+                "{vertex:?} is a transform boundary yet no more seismic than a dead interior"
             );
         }
         assert!(transforms > 0, "no transform boundary on the test globe");
     }
 
-    /// Every cell without an edifice is amagmatic, and every cell with one
+    /// Every vertex without an edifice is amagmatic, and every vertex with one
     /// erupts. The two halves of the volcanic option, over a whole globe.
     #[test]
     fn volcanic_recurrence_exists_exactly_where_an_edifice_does() {
         let (geo, terrain) = globe();
         let mut edifices = 0_u32;
-        for cell in geo.cells() {
-            let hazard = hazard_at(&terrain, cell);
-            if has_edifice(&terrain, cell) {
+        for vertex in geo.vertices() {
+            let hazard = hazard_at(&terrain, vertex);
+            if has_edifice(&terrain, vertex) {
                 edifices += 1;
                 assert!(
                     hazard.volcanic.is_some(),
-                    "{cell:?} carries an edifice and no eruption interval"
+                    "{vertex:?} carries an edifice and no eruption interval"
                 );
             } else {
                 assert_eq!(
                     hazard.volcanic, None,
-                    "{cell:?} erupts from an edifice it does not have"
+                    "{vertex:?} erupts from an edifice it does not have"
                 );
             }
         }
         assert!(edifices > 0, "no edifice on the test globe");
     }
 
-    /// Recurrence is a pure function of the cell's fields: same inputs,
+    /// Recurrence is a pure function of the vertex's fields: same inputs,
     /// same answer, every call, with no memory between calls.
     #[test]
     fn hazard_is_pure_and_carries_no_state() {
         let (geo, terrain) = globe();
-        let cell = geo
-            .cells()
+        let vertex = geo
+            .vertices()
             .max_by(|a, b| terrain.unrest_at(*a).total_cmp(&terrain.unrest_at(*b)))
             .expect("a non-empty globe");
-        assert!(terrain.unrest_at(cell) > 0.0, "the scan found dead ground");
-        let first = hazard_at(&terrain, cell);
+        assert!(
+            terrain.unrest_at(vertex) > 0.0,
+            "the scan found dead ground"
+        );
+        let first = hazard_at(&terrain, vertex);
         for _ in 0..100 {
-            assert_eq!(hazard_at(&terrain, cell), first, "hazard accumulated state");
+            assert_eq!(
+                hazard_at(&terrain, vertex),
+                first,
+                "hazard accumulated state"
+            );
         }
     }
 
@@ -712,7 +719,7 @@ mod tests {
     fn higher_unrest_shortens_the_seismic_interval() {
         let (geo, terrain) = globe();
         let mut rows: Vec<(f64, f64)> = geo
-            .cells()
+            .vertices()
             .map(|c| (terrain.unrest_at(c), hazard_at(&terrain, c).seismic.get()))
             .collect();
         rows.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -745,22 +752,22 @@ mod tests {
         );
     }
 
-    /// The authored ends are the ends: no cell can be quieter than the dead
+    /// The authored ends are the ends: no vertex can be quieter than the dead
     /// interior or busier than the most active belt.
     #[test]
     fn every_interval_lies_inside_its_authored_bracket() {
         let (geo, terrain) = globe();
-        for cell in geo.cells() {
-            let hazard = hazard_at(&terrain, cell);
+        for vertex in geo.vertices() {
+            let hazard = hazard_at(&terrain, vertex);
             assert!(
                 (SEISMIC_ACTIVE_YEARS..=SEISMIC_QUIET_YEARS).contains(&hazard.seismic.get()),
-                "{cell:?} seismic {} escaped the authored bracket",
+                "{vertex:?} seismic {} escaped the authored bracket",
                 hazard.seismic.get()
             );
             if let Some(volcanic) = hazard.volcanic {
                 assert!(
                     (VOLCANIC_ACTIVE_YEARS..=VOLCANIC_QUIET_YEARS).contains(&volcanic.get()),
-                    "{cell:?} volcanic {} escaped the authored bracket",
+                    "{vertex:?} volcanic {} escaped the authored bracket",
                     volcanic.get()
                 );
             }
@@ -776,16 +783,16 @@ mod tests {
         )
     }
 
-    /// The busiest cell on the test globe, and the quietest.
-    fn extremes(geo: &Geosphere, terrain: &GeneratedTerrain) -> (CellId, CellId) {
-        let mut cells: Vec<CellId> = geo.cells().collect();
-        cells.sort_by(|a, b| {
+    /// The busiest vertex on the test globe, and the quietest.
+    fn extremes(geo: &Geosphere, terrain: &GeneratedTerrain) -> (Vertex, Vertex) {
+        let mut vertices: Vec<Vertex> = geo.vertices().collect();
+        vertices.sort_by(|a, b| {
             hazard_at(terrain, *a)
                 .seismic
                 .get()
                 .total_cmp(&hazard_at(terrain, *b).seismic.get())
         });
-        (cells[0], cells[cells.len() - 1])
+        (vertices[0], vertices[vertices.len() - 1])
     }
 
     /// A pure read, with no memory between calls — the same property
@@ -874,11 +881,11 @@ mod tests {
         );
         let mut seismic = 0_u32;
         let mut eruptions = 0_u32;
-        for cell in geo.cells() {
-            if hazard_at(&terrain, cell).volcanic.is_none() && seismic > 1_000 {
+        for vertex in geo.vertices() {
+            if hazard_at(&terrain, vertex).volcanic.is_none() && seismic > 1_000 {
                 continue;
             }
-            for event in events_in(Seed(42), &terrain, cell, long) {
+            for event in events_in(Seed(42), &terrain, vertex, long) {
                 match event.kind {
                     HazardEventKind::Seismic => {
                         seismic += 1;
@@ -901,48 +908,48 @@ mod tests {
         assert!(eruptions > 0, "no eruption on the test globe");
     }
 
-    /// A cell with no edifice never erupts — the event-stream twin of
+    /// A vertex with no edifice never erupts — the event-stream twin of
     /// [`volcanic_recurrence_exists_exactly_where_an_edifice_does`].
     #[test]
-    fn an_amagmatic_cell_never_erupts() {
+    fn an_amagmatic_vertex_never_erupts() {
         let (geo, terrain) = globe();
         let long = (
             WorldTime::GENESIS,
             WorldTime::from_std_days(100_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         );
         let mut checked = 0_u32;
-        for cell in geo.cells().take(400) {
-            if has_edifice(&terrain, cell) {
+        for vertex in geo.vertices().take(400) {
+            if has_edifice(&terrain, vertex) {
                 continue;
             }
             checked += 1;
-            for event in events_in(Seed(42), &terrain, cell, long) {
+            for event in events_in(Seed(42), &terrain, vertex, long) {
                 assert_eq!(
                     event.kind,
                     HazardEventKind::Seismic,
-                    "{cell:?} has no edifice yet erupted: {event:?}"
+                    "{vertex:?} has no edifice yet erupted: {event:?}"
                 );
             }
         }
-        assert!(checked > 0, "no amagmatic cell in the scan");
+        assert!(checked > 0, "no amagmatic vertex in the scan");
     }
 
-    /// **One mountain, one eruption history.** Two different cells of one
+    /// **One mountain, one eruption history.** Two different vertices of one
     /// cone report the same eruptions, because the eruption process is keyed
-    /// on the volcano's source contact rather than on the query cell.
+    /// on the volcano's source contact rather than on the query vertex.
     ///
-    /// Direction: this is red the moment the eruption draw keys on `cell`,
+    /// Direction: this is red the moment the eruption draw keys on `vertex`,
     /// which would give the two halves of one mountain independent — and
     /// differently-timed — eruptions, the same defect Task 5 fixed for
     /// identity one level up. It says nothing about the seismic process,
-    /// which is deliberately per-cell: a quake belongs to a belt, not to a
+    /// which is deliberately per-vertex: a quake belongs to a belt, not to a
     /// named thing.
     ///
-    /// Built at level 6 because a level-5 cone is usually a single cell, and
-    /// a one-cell cone cannot exercise "different cells agree" at all — the
+    /// Built at level 6 because a level-5 cone is usually a single vertex, and
+    /// a one-vertex cone cannot exercise "different vertices agree" at all — the
     /// same reason `volcano.rs`'s identity tests pay for level 6.
     #[test]
-    fn every_cell_of_one_cone_shares_one_eruption_history() {
+    fn every_vertex_of_one_cone_shares_one_eruption_history() {
         let geo = Geosphere::new(6);
         let outcome = hornvale_terrain::generate(Seed(42), &geo, &TerrainPins::default())
             .expect("default pins generate");
@@ -951,50 +958,50 @@ mod tests {
             WorldTime::GENESIS,
             WorldTime::from_std_days(50_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         );
-        let mut cones: std::collections::BTreeMap<CellId, Vec<CellId>> =
+        let mut cones: std::collections::BTreeMap<Vertex, Vec<Vertex>> =
             std::collections::BTreeMap::new();
-        for cell in geo.cells() {
-            if let Some(source) = terrain.edifice_source_at(cell) {
-                cones.entry(source).or_default().push(cell);
+        for vertex in geo.vertices() {
+            if let Some(source) = terrain.edifice_source_at(vertex) {
+                cones.entry(source).or_default().push(vertex);
             }
         }
         let mut compared = 0_u32;
-        for (source, cells) in cones.iter().filter(|(_, cells)| cells.len() > 1) {
-            let eruptions = |cell: CellId| -> Vec<HazardEvent> {
-                events_in(Seed(42), &terrain, cell, long)
+        for (source, vertices) in cones.iter().filter(|(_, vertices)| vertices.len() > 1) {
+            let eruptions = |vertex: Vertex| -> Vec<HazardEvent> {
+                events_in(Seed(42), &terrain, vertex, long)
                     .into_iter()
                     .filter(|e| e.kind == HazardEventKind::Eruption)
                     .collect()
             };
-            let first = eruptions(cells[0]);
+            let first = eruptions(vertices[0]);
             assert!(
                 !first.is_empty(),
                 "the cone at {source:?} never erupted in 50 ky"
             );
-            for cell in &cells[1..] {
+            for vertex in &vertices[1..] {
                 assert_eq!(
-                    eruptions(*cell),
+                    eruptions(*vertex),
                     first,
-                    "{cell:?} and {:?} are cells of the cone at {source:?} yet erupt on \
+                    "{vertex:?} and {:?} are vertices of the cone at {source:?} yet erupt on \
                      different days",
-                    cells[0]
+                    vertices[0]
                 );
                 compared += 1;
             }
         }
         assert!(
             compared > 0,
-            "no cone spans more than one cell — the property is untestable here"
+            "no cone spans more than one vertex — the property is untestable here"
         );
     }
 
-    /// Every edifice cell on a globe, grouped by the source contact that
+    /// Every edifice vertex on a globe, grouped by the source contact that
     /// identifies its cone.
-    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<CellId, Vec<CellId>> {
-        let mut cones: BTreeMap<CellId, Vec<CellId>> = BTreeMap::new();
-        for cell in geo.cells() {
-            if let Some(source) = terrain.edifice_source_at(cell) {
-                cones.entry(source).or_default().push(cell);
+    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<Vertex, Vec<Vertex>> {
+        let mut cones: BTreeMap<Vertex, Vec<Vertex>> = BTreeMap::new();
+        for vertex in geo.vertices() {
+            if let Some(source) = terrain.edifice_source_at(vertex) {
+                cones.entry(source).or_default().push(vertex);
             }
         }
         cones
@@ -1021,10 +1028,10 @@ mod tests {
     /// unrelated to the events everywhere rather than merely off-source.
     ///
     /// Direction: red if the volcano's recurrence stops being the field read
-    /// at its source. It says nothing about off-source cells; its sibling
+    /// at its source. It says nothing about off-source vertices; its sibling
     /// below owns those, and the two were mutation-proved as a pair. Making
-    /// `volcano_at` read the field at the QUERY cell leaves **this** test
-    /// green — at a source, `cell` and `source` are the same cell, so no
+    /// `volcano_at` read the field at the QUERY vertex leaves **this** test
+    /// green — at a source, `vertex` and `source` are the same vertex, so no
     /// assertion here could ever see that mutation — and turns the sibling
     /// red on its non-vacuity guard. Neither test covers the other; the
     /// division is deliberate, and stating it is what stops a future reader
@@ -1037,7 +1044,7 @@ mod tests {
         for source in cones.keys() {
             let field = hazard_at(&terrain, *source)
                 .volcanic
-                .expect("a source contact is an edifice cell");
+                .expect("a source contact is an edifice vertex");
             let drawn = crate::volcano::volcano_at(Seed(42), &terrain, *source)
                 .expect("a source contact has a volcano")
                 .recurrence;
@@ -1050,19 +1057,19 @@ mod tests {
     }
 
     /// **The off-source divergence is one-sided, and that is the known
-    /// geometry.** A flank cell's local field value is never *more* active
+    /// geometry.** A flank vertex's local field value is never *more* active
     /// than the rate its mountain's eruptions are drawn at.
     ///
     /// Structural rather than lucky: within one cone every factor of `unrest`
     /// but proximity is the contact's own, proximity decays away from the
     /// boundary, and `geometric_years` is strictly decreasing in `unrest`. So
-    /// the source — sitting on the boundary — is the most active cell of its
+    /// the source — sitting on the boundary — is the most active vertex of its
     /// cone, and every flank reads quieter. Measured over four globes on
-    /// 2026-08-14: 499 disagreeing off-source cells, **zero** of them more
+    /// 2026-08-14: 499 disagreeing off-source vertices, **zero** of them more
     /// active, worst ratio 2.2977.
     ///
     /// The non-vacuity assertion is the load-bearing half. Without it this
-    /// test passes trivially against a `volcano_at` keyed on the query cell,
+    /// test passes trivially against a `volcano_at` keyed on the query vertex,
     /// where the two quantities are equal everywhere by construction — and
     /// that is precisely the design Task 5 exists to prevent.
     ///
@@ -1081,20 +1088,20 @@ mod tests {
         let mut off_source = 0_u32;
         for seed in [42, 43, 44] {
             let (geo, terrain) = l6_globe(seed);
-            for (source, cells) in &cones(&geo, &terrain) {
-                for cell in cells.iter().filter(|c| *c != source) {
+            for (source, vertices) in &cones(&geo, &terrain) {
+                for vertex in vertices.iter().filter(|c| *c != source) {
                     off_source += 1;
-                    let local = hazard_at(&terrain, *cell)
+                    let local = hazard_at(&terrain, *vertex)
                         .volcanic
-                        .expect("an edifice cell")
+                        .expect("an edifice vertex")
                         .get();
-                    let drawn = crate::volcano::volcano_at(Seed(seed), &terrain, *cell)
-                        .expect("an edifice cell")
+                    let drawn = crate::volcano::volcano_at(Seed(seed), &terrain, *vertex)
+                        .expect("an edifice vertex")
                         .recurrence
                         .get();
                     assert!(
                         local >= drawn,
-                        "seed {seed}: {cell:?} is a flank of the cone at {source:?} yet its \
+                        "seed {seed}: {vertex:?} is a flank of the cone at {source:?} yet its \
                          local field is MORE active than the rate its eruptions are drawn \
                          at: {local} y against {drawn} y"
                     );
@@ -1104,13 +1111,13 @@ mod tests {
         }
         assert!(
             off_source > 100,
-            "only {off_source} off-source cells scanned"
+            "only {off_source} off-source vertices scanned"
         );
         // Non-vacuity: if the two quantities agreed everywhere there would be
         // no divergence to bound, and the inequality above would be free.
         assert!(
             disagreeing > 100,
-            "only {disagreeing} off-source cells disagree with their drawn rate — the \
+            "only {disagreeing} off-source vertices disagree with their drawn rate — the \
              divergence this test bounds has vanished, so the bound is vacuous"
         );
     }
@@ -1121,11 +1128,11 @@ mod tests {
     #[test]
     fn the_event_key_spelling_is_pinned() {
         assert_eq!(
-            event_key(CellId(0), HazardEventKind::Seismic, 0),
+            event_key(Vertex(0), HazardEventKind::Seismic, 0),
             "cell/0/process/seismic/block/0"
         );
         assert_eq!(
-            event_key(CellId(4127), HazardEventKind::Eruption, -3),
+            event_key(Vertex(4127), HazardEventKind::Eruption, -3),
             "cell/4127/process/eruption/block/-3"
         );
     }

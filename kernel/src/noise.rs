@@ -57,8 +57,8 @@ fn octave_seed(seed: Seed, octave: u32) -> Seed {
 /// only hoists the per-octave `Seed::derive` out of the per-sample loop.
 ///
 /// Build one per field (the seed and octave count are loop-invariant) and
-/// call [`Fbm::sample`] per cell; a `Seed::derive`-dominated profile
-/// (world generation) collapses `O(cells × octaves)` derivations to
+/// call [`Fbm::sample`] per vertex; a `Seed::derive`-dominated profile
+/// (world generation) collapses `O(vertices × octaves)` derivations to
 /// `O(octaves)`.
 #[derive(Clone, Debug)]
 pub struct Fbm {
@@ -101,7 +101,7 @@ impl Fbm {
 /// one-octave fbm equals plain value noise. Panics if octaves == 0.
 /// Internally derives per-octave streams labeled "octave-{n}" (n ≥ 1).
 ///
-/// This is the random-access convenience form; for a hot per-cell loop
+/// This is the random-access convenience form; for a hot per-vertex loop
 /// with a fixed seed, build an [`Fbm`] once and reuse it.
 /// type-audit: pending(wave-1: x), pending(wave-1: y), bare-ok(count: octaves), bare-ok(ratio: return)
 pub fn fbm_2d(seed: Seed, x: f64, y: f64, octaves: u32) -> f64 {

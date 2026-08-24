@@ -441,7 +441,7 @@ fn secondaries(hist: &[u64; 12]) -> (u64, u64) {
 /// Spec §8.1 — **subordination fires, at volume.** The gate that says branch 2
 /// of the raid rule is new motive rather than a relabelling of the shipped
 /// covet gate: seed 42 forms hundreds of standing relations on targets that
-/// keep their cell, their people and their life, none of which the eviction
+/// keep their vertex, their people and their life, none of which the eviction
 /// branch could have produced. Takeovers are excluded, so churn between rival
 /// patrons cannot be read as volume (§4.4's hysteresis note).
 #[test]

@@ -2,9 +2,9 @@
 //! reuse pay off under a locality-shaped access pattern?
 //!
 //! INFORMATIVE, NEVER A GATE — same standing as `query_scaling.rs` beside
-//! this file. It exists because the-leat profiled `NearestCellIndex::scan_at`
+//! this file. It exists because the-leat profiled `NearestVertexIndex::scan_at`
 //! at 13.4% of the `agent_scaling` bench, 93% of it arriving via
-//! `RoomAddr::corner_weights`, but `RoomMeshMemo` already caches
+//! `Facet::corner_weights`, but `RoomMeshMemo` already caches
 //! `corner_weights` and the bench already hoists one memo across all 20
 //! ticks. So that 13.4% may be pure MISS cost that no cache lifecycle can
 //! reduce, and nothing in the tree measured the memo's hit rate before this
@@ -25,7 +25,7 @@
 //! random walk radiating from and returning to a small number of fixed
 //! "settlement" anchors — chosen because a real creature's movement is
 //! locally correlated (it revisits its neighborhood far more than a uniform
-//! scan over all `RoomAddr`s would), which is the one property this probe
+//! scan over all `Facet`s would), which is the one property this probe
 //! needs to even ask the right question. But the walk's branching
 //! probabilities, expedition length, and settlement count are all invented
 //! by this file, not measured from `windows/vessel`'s actual creature
@@ -72,7 +72,7 @@
 //! it says the store's reuse *can* be high under locality, not that
 //! `agent_scaling.rs` measures 96.2% today.
 
-use hornvale_kernel::{Geosphere, NearestCellIndex, RoomAddr, RoomMeshMemo};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, RoomMeshMemo};
 
 /// Deterministic pseudo-random stream (decision 0004: no `rand` crate in
 /// this workspace, and none is added here). The same multiplicative-hash
@@ -89,7 +89,7 @@ fn random_path(rng: &mut u64, len: usize) -> Vec<u8> {
     (0..len).map(|_| (next(rng) % 4) as u8).collect()
 }
 
-/// The globe level backing `Geosphere`/`NearestCellIndex` — kept small so
+/// The globe level backing `Geosphere`/`NearestVertexIndex` — kept small so
 /// building the index is cheap; unrelated to how deep a room address goes.
 const GLOBE_LEVEL: u32 = 5;
 /// The refinement depth every room address in this probe lives at. Below
@@ -117,10 +117,10 @@ const STEPS_PER_EXPEDITION: usize = 10;
 
 /// The settlement anchor address for settlement `s`: a fixed face and a
 /// deterministic `SETTLEMENT_DEPTH`-digit path, distinct per settlement.
-fn settlement_anchor(s: usize) -> RoomAddr {
+fn settlement_anchor(s: usize) -> Facet {
     let face = ((s * 7) % 20) as u8;
     let mut seed = 0xA5A5_5A5A_0000_0001u64 ^ (s as u64);
-    RoomAddr {
+    Facet {
         face,
         path: random_path(&mut seed, SETTLEMENT_DEPTH),
     }
@@ -129,12 +129,12 @@ fn settlement_anchor(s: usize) -> RoomAddr {
 /// One creature's home: the settlement anchor extended to `ROOM_LEVEL` by a
 /// deterministic per-creature offset, so creatures at the same settlement
 /// have distinct but nearby homes.
-fn home_for(anchor: &RoomAddr, creature_id: u64) -> RoomAddr {
+fn home_for(anchor: &Facet, creature_id: u64) -> Facet {
     let mut seed = 0x9E37_79B9_7F4A_7C15u64 ^ creature_id;
     let extra = random_path(&mut seed, ROOM_LEVEL as usize - SETTLEMENT_DEPTH);
     let mut path = anchor.path.clone();
     path.extend(extra);
-    RoomAddr {
+    Facet {
         face: anchor.face,
         path,
     }
@@ -142,7 +142,7 @@ fn home_for(anchor: &RoomAddr, creature_id: u64) -> RoomAddr {
 
 fn main() {
     let geo = Geosphere::new(GLOBE_LEVEL);
-    let index = NearestCellIndex::new(&geo);
+    let index = NearestVertexIndex::new(&geo);
     let mut memo = RoomMeshMemo::new();
 
     println!(

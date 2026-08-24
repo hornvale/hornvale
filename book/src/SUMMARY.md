@@ -97,6 +97,7 @@
 
 # Reference
 
+- [The Lexicon of Place](./reference/lexicon-of-place.md)
 - [The Concept Registry](./reference/concept-registry.md)
 - [The Concept Manifest](./reference/concept-manifest-generated.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
@@ -401,6 +402,7 @@
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
 - [The Escapement](./chronicle/the-escapement.md)
 - [The Forebay](./chronicle/the-forebay.md)
+- [The Lexicon of Place](./chronicle/the-lexicon-of-place.md)
 
 # Appendix: The Frontier
 

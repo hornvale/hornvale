@@ -1,5 +1,5 @@
 //! Settlement: generated settlements placed on terrain, each committed as
-//! its own place entity tagged with cell/coordinates/biome/name/population.
+//! its own place entity tagged with vertex/coordinates/biome/name/population.
 #![warn(missing_docs)]
 
 pub mod genesis;
@@ -20,16 +20,21 @@ pub const IS_SETTLEMENT: &str = "is-settlement";
 pub const POPULATION: &str = "population";
 /// Predicate key marking an entity a traversable place (owned/registered by
 /// terrain; settlement commits facts against the same key for generated
-/// cells).
+/// vertices).
 /// type-audit: bare-ok(identifier-text)
 pub const IS_PLACE: &str = "is-place";
 /// Predicate key giving a place's biome (shared key; see `IS_PLACE`).
 /// type-audit: bare-ok(identifier-text)
 pub const BIOME: &str = "biome";
-/// Predicate: the Geosphere cell id a settlement sits on (functional,
+/// Predicate: the Geosphere vertex id a settlement sits on (functional,
 /// Number).
+///
+/// **The constant is `VERTEX_ID`; the predicate is still `"cell-id"`, and
+/// always will be** (decision 0246). It is a ledger predicate name, so it is
+/// in every committed world; renaming the value would be an epoch, not a
+/// tidy-up.
 /// type-audit: bare-ok(identifier-text)
-pub const CELL_ID: &str = "cell-id";
+pub const VERTEX_ID: &str = "cell-id"; // lexicon: frozen predicate VALUE, decision 0246
 /// Predicate: latitude of a settlement, degrees (functional, Number).
 /// type-audit: bare-ok(identifier-text)
 pub const LATITUDE: &str = "latitude";
@@ -103,7 +108,8 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_SETTLEMENT, true, "subject is a settlement")?;
     registry.register_predicate(POPULATION, true, "population of a settlement")?;
-    registry.register_predicate(CELL_ID, true, "Geosphere cell id a settlement sits on")?;
+    // lexicon: FROZEN — a predicate description is serialized into every world
+    registry.register_predicate(VERTEX_ID, true, "Geosphere cell id a settlement sits on")?;
     registry.register_predicate(LATITUDE, true, "settlement latitude, degrees")?;
     registry.register_predicate(LONGITUDE, true, "settlement longitude, degrees")?;
     registry.register_predicate(
@@ -220,7 +226,7 @@ mod tests {
 
     fn flagship(_seed: Seed, salt: u64) -> PlacedSettlement {
         PlacedSettlement {
-            cell: salt as u32,
+            vertex: salt as u32,
             latitude: 0.0,
             longitude: 0.0,
             biome: "temperate-forest".to_string(),
@@ -271,7 +277,7 @@ mod tests {
             ..flagship(Seed(42), 0)
         };
         let two = PlacedSettlement {
-            cell: 1,
+            vertex: 1,
             name: "Second".to_string(),
             ..flagship(Seed(42), 1)
         };

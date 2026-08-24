@@ -176,7 +176,7 @@ impl Lineage {
 /// Read the founding tree out of a ledger.
 ///
 /// `occ-founded-from` is a sum type: `Value::Entity` is a parent link,
-/// `Value::Number` is `Founding::Genesis(cell)` — a SITE id, and therefore a
+/// `Value::Number` is `Founding::Genesis(vertex)` — a SITE id, and therefore a
 /// root with no ancestor. Reading a Number as a parent is the mistake this
 /// function exists to make impossible.
 pub fn lineage_of(ledger: &Ledger) -> Lineage {

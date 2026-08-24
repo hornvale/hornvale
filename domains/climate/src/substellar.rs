@@ -38,7 +38,7 @@ pub fn substellar_cosine_dir(p: [f64; 3], dir: [f64; 3]) -> f64 {
 /// insolation `scale` (S^{1/4}), and the lapse cooling — the one mapping
 /// `mean_temperature` and the librating `temperature_at` both use.
 /// type-audit: bare-ok(ratio: cos_theta), bare-ok(ratio: scale), pending(wave-2: lapse), pending(wave-2: return)
-pub fn locked_cell_temperature(cos_theta: f64, scale: f64, lapse: f64) -> f64 {
+pub fn locked_vertex_temperature(cos_theta: f64, scale: f64, lapse: f64) -> f64 {
     if cos_theta > 0.0 {
         (-18.0 + 78.0 * math::powf(cos_theta, 0.3) * scale) - lapse
     } else {

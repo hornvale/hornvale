@@ -29,7 +29,7 @@
 //!   (spec §6.2's H1).
 //! - **`Contact::Descent` truly means descent-only.** The readout's private
 //!   `Probe::tellable` always walked the raid seam, because the readout never
-//!   called it under `Contact::Descent` (the descent cells there use the
+//!   called it under `Contact::Descent` (the descent vertices there use the
 //!   shipped walk directly). This walk reads `walk.policy.contact` the same
 //!   way `derive.rs`'s `tellable` does, so it agrees with the shipped walk
 //!   under BOTH `Contact` arms, which is what the agreement battery checks.

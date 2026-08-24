@@ -154,7 +154,7 @@ pub fn draw_paradigm_affix_proto(
     crate::morphology::draw_morph_proto(seed, family, axis, value, proto_ph)
 }
 
-/// One root's paradigm-cell computation for one axis value (spec §3.3):
+/// One root's paradigm-vertex computation for one axis value (spec §3.3):
 /// both candidate modern forms, kept fully traceable, and whether they
 /// diverge. `regular_root`/`regular_affix` are kept as their own
 /// [`Derivation`]s (rather than folding the regular path into one
@@ -182,7 +182,7 @@ pub struct ParadigmCell {
     pub is_irregular: bool,
 }
 
-/// Compute both candidate modern forms for one root's one paradigm cell
+/// Compute both candidate modern forms for one root's one paradigm vertex
 /// (spec §3.3) and whether they diverge. Pure and total: same inputs
 /// always produce the same [`ParadigmCell`], mirroring [`evolve`]'s own
 /// purity law — this function calls `evolve` and
@@ -228,37 +228,37 @@ pub fn realize_paradigm_cell(
     }
 }
 
-/// One root's paradigm cell after analogical leveling (spec §3.4): which
+/// One root's paradigm vertex after analogical leveling (spec §3.4): which
 /// form actually surfaces.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LeveledCell {
-    /// The underlying cell computation (Task 3), unchanged.
-    pub cell: ParadigmCell,
-    /// True if this cell's `cascade_native` form survived leveling (stayed
+    /// The underlying vertex computation (Task 3), unchanged.
+    pub vertex: ParadigmCell,
+    /// True if this vertex's `cascade_native` form survived leveling (stayed
     /// irregular); false if it regularized to `regular_form`, or if it was
     /// never divergent in the first place (nothing to level).
     pub survived: bool,
 }
 
 /// Apply analogical leveling (spec §3.4) across one paradigm category's
-/// cells: rank the DIVERGENT roots by their own proto-root segment length
+/// vertices: rank the DIVERGENT roots by their own proto-root segment length
 /// (shortest = most resistant, per Zipf's law of abbreviation), and let the
 /// shortest `leveling_fraction` (0.0-1.0, rounded to the nearest whole
 /// survivor count) keep their `cascade_native` form; the rest regularize.
-/// Non-divergent cells are untouched (nothing to level). Deterministic: a
+/// Non-divergent vertices are untouched (nothing to level). Deterministic: a
 /// `Vec` sort by `(length, id)` — never a `HashMap`, never a draw — so
 /// equal-length roots break ties by their own `RootId`'s `Ord` (the
 /// `BTreeMap` key's natural alphabetical order), never by insertion order.
-/// type-audit: bare-ok(identifier-text: cells), bare-ok(identifier-text: root_protos), bare-ok(ratio: leveling_fraction), bare-ok(identifier-text: return)
+/// type-audit: bare-ok(identifier-text: vertices), bare-ok(identifier-text: root_protos), bare-ok(ratio: leveling_fraction), bare-ok(identifier-text: return)
 pub fn level_paradigm(
-    cells: &BTreeMap<String, ParadigmCell>,
+    vertices: &BTreeMap<String, ParadigmCell>,
     root_protos: &BTreeMap<String, Vec<Segment>>,
     leveling_fraction: f64,
 ) -> BTreeMap<String, LeveledCell> {
-    let mut divergent: Vec<&String> = cells
+    let mut divergent: Vec<&String> = vertices
         .iter()
-        .filter(|(_, cell)| cell.is_irregular)
+        .filter(|(_, vertex)| vertex.is_irregular)
         .map(|(id, _)| id)
         .collect();
     divergent.sort_by(|a, b| {
@@ -270,14 +270,14 @@ pub fn level_paradigm(
     let survivor_count = ((divergent.len() as f64) * leveling_fraction).round() as usize;
     let survivors: BTreeSet<&String> = divergent.iter().take(survivor_count).copied().collect();
 
-    cells
+    vertices
         .iter()
-        .map(|(id, cell)| {
-            let survived = cell.is_irregular && survivors.contains(id);
+        .map(|(id, vertex)| {
+            let survived = vertex.is_irregular && survivors.contains(id);
             (
                 id.clone(),
                 LeveledCell {
-                    cell: cell.clone(),
+                    vertex: vertex.clone(),
                     survived,
                 },
             )
@@ -422,7 +422,7 @@ mod tests {
         let root_proto = vec![t(), a(), t()];
         let affix_proto = vec![e()];
 
-        let cell = realize_paradigm_cell(
+        let vertex = realize_paradigm_cell(
             &root_proto,
             &affix_proto,
             ClassPosition::Suffix,
@@ -431,16 +431,16 @@ mod tests {
         );
 
         assert_eq!(
-            cell.regular_form.segments,
+            vertex.regular_form.segments,
             vec![t(), a(), e()],
             "regular: root's own /t/ already dropped before affixing"
         );
         assert_eq!(
-            cell.cascade_native.modern,
+            vertex.cascade_native.modern,
             vec![t(), a(), t(), e()],
             "cascade-native: /t/ survives, no longer word-final in the joined form"
         );
-        assert!(cell.is_irregular);
+        assert!(vertex.is_irregular);
     }
 
     #[test]
@@ -460,7 +460,7 @@ mod tests {
         let root_proto = vec![t(), a()];
         let affix_proto = vec![e()];
 
-        let cell = realize_paradigm_cell(
+        let vertex = realize_paradigm_cell(
             &root_proto,
             &affix_proto,
             ClassPosition::Suffix,
@@ -468,12 +468,12 @@ mod tests {
             &ph,
         );
 
-        assert_eq!(cell.cascade_native.modern, cell.regular_form.segments);
-        assert!(!cell.is_irregular);
+        assert_eq!(vertex.cascade_native.modern, vertex.regular_form.segments);
+        assert!(!vertex.is_irregular);
     }
 
     #[test]
-    fn realize_paradigm_cell_is_pure() {
+    fn realize_paradigm_vertex_is_pure() {
         let ph = edge_test_phonology();
         let cascade = Cascade {
             rules: vec![SoundRule {
@@ -484,23 +484,29 @@ mod tests {
         let root_proto = vec![t(), a(), t()];
         let affix_proto = vec![e()];
 
-        let a_cell = realize_paradigm_cell(
+        let a_vertex = realize_paradigm_cell(
             &root_proto,
             &affix_proto,
             ClassPosition::Suffix,
             &cascade,
             &ph,
         );
-        let b_cell = realize_paradigm_cell(
+        let b_vertex = realize_paradigm_cell(
             &root_proto,
             &affix_proto,
             ClassPosition::Suffix,
             &cascade,
             &ph,
         );
-        assert_eq!(a_cell.cascade_native.modern, b_cell.cascade_native.modern);
-        assert_eq!(a_cell.regular_form.segments, b_cell.regular_form.segments);
-        assert_eq!(a_cell.is_irregular, b_cell.is_irregular);
+        assert_eq!(
+            a_vertex.cascade_native.modern,
+            b_vertex.cascade_native.modern
+        );
+        assert_eq!(
+            a_vertex.regular_form.segments,
+            b_vertex.regular_form.segments
+        );
+        assert_eq!(a_vertex.is_irregular, b_vertex.is_irregular);
     }
 
     #[test]
@@ -519,7 +525,7 @@ mod tests {
         let affix_proto = vec![e()];
 
         let mut root_protos: BTreeMap<String, Vec<Segment>> = BTreeMap::new();
-        let mut cells: BTreeMap<String, ParadigmCell> = BTreeMap::new();
+        let mut vertices: BTreeMap<String, ParadigmCell> = BTreeMap::new();
         for len in 2..=9usize {
             let id = format!("root-{len:02}");
             // Alternate a/t to keep it a legal onset-free CV*C shape, always
@@ -537,17 +543,17 @@ mod tests {
             }
             assert_eq!(proto.len(), len);
             assert!(matches!(proto.last(), Some(s) if *s == t()));
-            let cell =
+            let vertex =
                 realize_paradigm_cell(&proto, &affix_proto, ClassPosition::Suffix, &cascade, &ph);
             assert!(
-                cell.is_irregular,
+                vertex.is_irregular,
                 "root-{len:02} must diverge for this test's premise to hold"
             );
             root_protos.insert(id.clone(), proto);
-            cells.insert(id, cell);
+            vertices.insert(id, vertex);
         }
 
-        let leveled = level_paradigm(&cells, &root_protos, 0.25);
+        let leveled = level_paradigm(&vertices, &root_protos, 0.25);
 
         let survivor_count = leveled.values().filter(|lc| lc.survived).count();
         assert_eq!(survivor_count, 2, "round(8 * 0.25) == 2 survivors");
@@ -566,7 +572,7 @@ mod tests {
 
         let leveled_away_count = leveled
             .values()
-            .filter(|lc| lc.cell.is_irregular && !lc.survived)
+            .filter(|lc| lc.vertex.is_irregular && !lc.survived)
             .count();
         assert_eq!(
             leveled_away_count, 6,

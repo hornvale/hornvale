@@ -23,9 +23,9 @@ const ELVES: [&str; 6] = [
 /// **Sea takes the PRODUCTIVE SHALLOW BAND, not the whole ocean.**
 ///
 /// The campaign's second premise-check and its correction. "The ocean is 2.7x
-/// the land" (29,896 cells against 11,066 on seed 42) is a real number with the
+/// the land" (29,896 vertices against 11,066 on seed 42) is a real number with the
 /// wrong denominator: no elf gets all the land either. On the shelf band Sea
-/// gets **1,425 cells** as a three-seed mean (42/7/1234) — larger than Desert's
+/// gets **1,425 vertices** as a three-seed mean (42/7/1234) — larger than Desert's
 /// 241, smaller than Snow's 3,849 — and the roster comes out balanced with no
 /// outlier. The runaway exists ONLY if Sea is authored to the whole ocean.
 ///
@@ -66,7 +66,7 @@ fn the_sea_elf_is_confined_to_the_shelf_band() {
              grades the water that way (Upwelling 1.0, reef/kelp 0.85, \
              epipelagic 0.45, mesopelagic 0.15, bathypelagic 0.05). The \
              affinity SHARPENS that ranking; it must not contradict it, and it \
-             must not open 25,640 cells of deep ocean.",
+             must not open 25,640 vertices of deep ocean.",
             sea.factor(b),
             sea.default
         );

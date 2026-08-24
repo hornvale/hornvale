@@ -161,8 +161,8 @@ impl SeaLevelHeight {
 /// The signed metre difference between two elevations, as a bare `f64`.
 ///
 /// **Deliberately not a [`SeaLevelHeight`].** Subtracting two elevations is
-/// polymorphic in *meaning*: `cell - sea_level` is a height above sea level,
-/// but `cell - upwind_neighbour` is an orographic rise between two places
+/// polymorphic in *meaning*: `vertex - sea_level` is a height above sea level,
+/// but `vertex - upwind_neighbour` is an orographic rise between two places
 /// (`domains/climate`'s `moisture.rs` and `provider.rs` both do exactly that),
 /// and a terrain-detail delta is neither. Only the first has anything to do
 /// with a datum, so typing this operator's output as a datum-named quantity
@@ -182,7 +182,7 @@ impl Sub for ReferenceElevation {
 /// An absolute temperature, degrees Celsius.
 ///
 /// Distinguished at the type level from [`TempAnomaly`] (decision 0008):
-/// the two were previously both bare `CellMap<f64>`, and code has twice
+/// the two were previously both bare `VertexMap<f64>`, and code has twice
 /// mixed up "absolute reading" with "difference from present" when feeding
 /// the same function. A `Temperature` is a reading; it cannot be compared to a
 /// threshold meant for a difference, because there is no such comparison —
@@ -247,7 +247,7 @@ impl Add<TempAnomaly> for Temperature {
 
 /// A temperature difference relative to the world's present climate,
 /// degrees Celsius (e.g. an era's reading minus the present reading at the
-/// same cell). Only producible via [`Temperature`] subtraction — see that impl.
+/// same vertex). Only producible via [`Temperature`] subtraction — see that impl.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct TempAnomaly(f64);
 
@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn subtraction_stays_a_bare_number_because_it_is_polymorphic() {
-        // `cell - upwind_neighbour` is an orographic rise, not a height above
+        // `vertex - upwind_neighbour` is an orographic rise, not a height above
         // any datum, and `domains/climate` computes exactly that. Typing this
         // operator's output as a SeaLevelHeight would make it assert a datum
         // that isn't there.

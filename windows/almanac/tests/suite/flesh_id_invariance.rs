@@ -21,7 +21,7 @@ use hornvale_history::{
     OCC_CAUSE, OCC_ENDED, OCC_FOUNDED, OCC_FOUNDED_FROM, OCC_FUNCTION, OCC_NOTABILITY, OCC_PEAK,
     OCC_PEOPLE, OCC_SITE, OCC_TECH,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, KindId, Seed, Value, World, WorldTime};
+use hornvale_kernel::{EntityId, Fact, KindId, Seed, Value, Vertex, World, WorldTime};
 
 /// The stable text label for a tech horizon (round-trippable via `OCC_TECH`;
 /// mirrors `windows/worldgen/src/history_emit.rs`'s private helper of the
@@ -145,7 +145,7 @@ fn commit_occupation(world: &mut World, id: EntityId, core: &Occupation) {
 fn dead_core() -> Occupation {
     Occupation {
         people: KindId("gnoll"),
-        site: CellId(1400),
+        site: Vertex(1400),
         founded: 500.0,
         ended: Some(675.0),
         peak_population: 240,
@@ -169,7 +169,7 @@ fn world_with_occupation(id: u64, core: Occupation) -> (World, OccupationRecord)
     let record = OccupationRecord {
         core,
         id: entity,
-        founded_from: Founding::Genesis(CellId(1400)),
+        founded_from: Founding::Genesis(Vertex(1400)),
         ended_by: Ended::Nature,
     };
     (world, record)

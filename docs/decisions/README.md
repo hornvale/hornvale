@@ -214,3 +214,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0228](0228-a-controller-is-a-parameter-of-the-tick.md) | A controller is a parameter of the tick, not a property of the body | Accepted |
 | [0229](0229-one-body-type.md) | One body type | Accepted |
 | [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Accepted |
+| [0246](0246-a-renamed-concept-keeps-its-serialized-spelling-forever.md) | A renamed concept keeps its serialized spelling forever, and the freeze needs a test that cannot be rebaselined | Accepted |
+| [0247](0247-a-mesh-vertex-is-a-vertex-and-a-face-is-a-facet.md) | A mesh vertex is a `Vertex` and a face is a `Facet` | Accepted |

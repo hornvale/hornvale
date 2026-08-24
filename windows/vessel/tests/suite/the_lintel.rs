@@ -99,18 +99,18 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
     // bare `go n` — HISTORICAL reasoning, kept for the record rather than
     // silently deleted (final review F4: this comment used to describe live
     // behaviour and stopped being true when The Rhumb shipped). At the time
-    // this was written, the mesh's exit-triad model meant every cell offered
+    // this was written, the mesh's exit-triad model meant every room offered
     // exactly one of two labelled triads, `{N, SW, SE}` or `{NE, NW, S}`, so a
-    // single fixed direction was absent from half the cells outright: The
-    // Tense flipped the parity of the starting cell (the same flip
+    // single fixed direction was absent from half the rooms outright: The
+    // Tense flipped the parity of the starting room (the same flip
     // `the_purview.rs` records at both its rungs), which left the old `go n`
     // loop answering "No way n from here." twelve times and the walker
     // standing exactly where it began — a search that had quietly stopped
     // searching. Biasing over `n`/`ne`/`nw` was the fix, on the theory that at
-    // least one point was always available whichever triad the cell offered.
+    // least one point was always available whichever triad the room offered.
     //
     // Since decision 0141, `go` resolves all eight compass points from every
-    // walk-band cell via a carried rhumb course rather than exact-matching a
+    // walk-band room via a carried rhumb course rather than exact-matching a
     // labelled triad — there is no longer a triad a direction can be "absent"
     // from, so the loop below's `starts_with("No way ")` branch (and the
     // identical one in `enter_somewhere_built` above) is now dead: `go`

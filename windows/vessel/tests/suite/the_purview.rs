@@ -211,17 +211,17 @@ fn drawing_the_map_never_moves_the_world() {
     );
 }
 
-/// The `ways on:` footer must name the exits of the cell the chart actually
+/// The `ways on:` footer must name the exits of the room the chart actually
 /// draws, not the walk-depth room the agent stands in — those are different
-/// cells once `zoom_out > 0`, and a footer that reports the wrong one is
+/// rooms once `zoom_out > 0`, and a footer that reports the wrong one is
 /// exactly the "picture lies, caption doesn't" failure this campaign's
 /// rendering doctrine forbids. Measured directly on seed 42: after one `go`,
-/// the room the agent stands in exits NE/NW/S, but the ancestor cell
+/// the room the agent stands in exits NE/NW/S, but the ancestor room
 /// `map out 1` draws from there exits SE/N/SW — a genuine divergence, not a
 /// coincidence of ordering, so this test would have failed under the old
 /// code (which passed `self.ways()`, the walk-depth exits, unconditionally).
 #[test]
-fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
+fn map_out_names_the_drawn_rooms_own_exits_not_the_walk_depths() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     let way = session
@@ -241,12 +241,12 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
         // settlements to 122, so the walk lands in a different fine room and
         // that room has its own exits. `NE, NW, S` -> `N, SW, SE`. The CLAIM is
         // unchanged and is not about these three compass points: it is that
-        // `map` reports the drawn cell's OWN exits rather than the walk depth's,
+        // `map` reports the drawn room's OWN exits rather than the walk depth's,
         // which is why the pin is re-measured rather than relaxed to a count.
         // Re-measured again under The Glasshouse (decision 0134, 2026-08-14):
         // the terrain epoch moves every coastline, so the walk lands in a
         // different fine room again. `N, SW, SE` -> `NE, W, SE`. Note the
-        // claim survives the re-measure in the strong form: the drawn cell's
+        // claim survives the re-measure in the strong form: the drawn room's
         // exits and the walk-depth room's exits are STILL different sets, so
         // this test would still have failed under the code that passed
         // `self.ways()` unconditionally — a re-pin that kept the number but
@@ -256,7 +256,7 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
         // (the thermostat): the damped, greenhouse-forced insolation
         // baseline re-places the walk a second time this campaign.
         // `NE, W, SE` -> `E, NW, SW` — the fine room's new triad is exactly
-        // the PREVIOUS coarse cell's triad, which is a coincidence of this
+        // the PREVIOUS coarse room's triad, which is a coincidence of this
         // mesh's limited exit alphabet, not evidence the two rungs merged;
         // see the coarse re-measure below for the divergence check that
         // rules that out directly.
@@ -265,7 +265,7 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
          (if world-gen ever changes this, re-measure and update the pin)"
     );
     // The two triads SWAPPED under The Tense, which looks alarming and is not.
-    // Each cell on this mesh offers three exits, and `{N, SW, SE}` and
+    // Each room on this mesh offers three exits, and `{N, SW, SE}` and
     // `{NE, NW, S}` are the pair the walk alternated between there. (These are
     // not the ONLY triads the mesh admits: `{NW, SW, E}` occurs too, measured
     // out at sea in `session.rs`'s water walk. Do not infer a global
@@ -274,22 +274,22 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
     //
     // The Glasshouse (decision 0134) re-measured both rungs and is the reason
     // that warning stands: the fine room now exits `{NE, W, SE}` and the
-    // coarse cell `{E, NW, SW}` — a pair neither of the previous readings
+    // coarse room `{E, NW, SW}` — a pair neither of the previous readings
     // used, and one that includes `E` and `W`, which the old "two triads that
     // swap" framing had no room for. The alternation was a coincidence of two
     // samples. The CLAIM this test makes is untouched, and is precisely that
     // the two rungs report DIFFERENT triads: the footer must show the drawn
-    // cell's parity, never the walk-depth room's.
+    // room's parity, never the walk-depth room's.
     //
     // The Glasshouse, Stage B Task 4 (the thermostat) re-measured both rungs
     // again: the fine room now exits `{E, NW, SW}` — exactly the PREVIOUS
-    // reading's coarse triad — and the coarse cell exits `{SE, NE, W}`, a
+    // reading's coarse triad — and the coarse room exits `{SE, NE, W}`, a
     // triad neither rung has shown before. The two rungs are still genuinely
     // different sets, which is the only thing this test asserts.
     let coarse = out(session.handle("map out 1"));
     // The Glasshouse close (`k` settled at 0.30) re-measured both rungs a
     // third time this campaign. The fine room exits `{NE, W, SE}` and the
-    // coarse cell `{E, NW, SW}` — which is the Stage-B-Task-2 pair with the
+    // coarse room `{E, NW, SW}` — which is the Stage-B-Task-2 pair with the
     // two rungs EXCHANGED. Read that as the mesh's small exit alphabet
     // recurring, exactly as the note above warns, and not as an alternation
     // rule: three passes have now produced three different rung-to-triad
@@ -300,7 +300,7 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
     // walk-depth room's exits would fail on every one of the three points.
     assert!(
         coarse.contains("ways on: E, NW, SW"),
-        "the footer must report the DRAWN cell's own exits: {coarse}"
+        "the footer must report the DRAWN room's own exits: {coarse}"
     );
     assert!(
         !coarse.contains("ways on: NE, W, SE"),

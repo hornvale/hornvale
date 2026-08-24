@@ -1,18 +1,18 @@
 //! The carrying-capacity field K: a closed-form, seed-free people-density a
-//! cell can support, grounded in a Miami-model net-primary-productivity proxy
+//! vertex can support, grounded in a Miami-model net-primary-productivity proxy
 //! (Lieth) plus freshwater, coast, and aridity terms. All constants were
 //! calibrated once (the-gathering, Task 8) against the real biomass-by-
 //! latitude gradient and are now frozen as save-format constants.
 
 use hornvale_kernel::ecology::CapacityMap;
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{Geosphere, Vertex, VertexMap};
 
-/// The bare per-cell climate/terrain inputs the composition root assembles.
+/// The bare per-vertex climate/terrain inputs the composition root assembles.
 /// Demography never imports those domains; it sees only this.
 /// type-audit: bare-ok(flag: is_land), pending(wave-3: temperature_c), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(ratio: freshwater), bare-ok(flag: coastal), bare-ok(ratio: hostility)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CarryingInput {
-    /// Whether the cell is dry land (elevation at or above sea level).
+    /// Whether the vertex is dry land (elevation at or above sea level).
     ///
     /// **This is the ONLY hard gate on productivity** (decision 0103's
     /// decomposition applied to a conflated flag). It was `habitable`, carrying
@@ -39,7 +39,7 @@ pub struct CarryingInput {
     pub precip_mm_yr: f64,
     /// Freshwater availability in `[0, 1]` (drainage/moisture, at root).
     pub freshwater: f64,
-    /// Whether the cell borders the ocean.
+    /// Whether the vertex borders the ocean.
     pub coastal: bool,
     /// Hostility in `[0, 1]` (aridity, tectonic unrest).
     pub hostility: f64,
@@ -48,7 +48,7 @@ pub struct CarryingInput {
 // CALIBRATED (the-gathering, 2026-07-13): measured against the 200-seed
 // `studies/census-of-the-gathering.study.json` census via the Lab's
 // `capacity-by-abs-latitude` metric (design spec §5's headline calibration —
-// mean per-land-cell K in the |latitude| < 30 band over the |latitude| > 60
+// mean per-land-vertex K in the |latitude| < 30 band over the |latitude| > 60
 // band, polar band floored at 1% of the baseline unit against an exact
 // zero). The authored values below (drafted from the Miami/Lieth model's
 // textbook tropical optimum, never a fit) already reproduce the real
@@ -105,11 +105,11 @@ fn npp_precipitation(precip_mm_yr: f64) -> f64 {
 /// than by any flag — see [`temp_response`].
 ///
 /// Returns a [`CapacityMap`] — a people-DENSITY with units — rather than a bare
-/// `CellMap<f64>`, per decision 0103. The type is what stops this field being
+/// `VertexMap<f64>`, per decision 0103. The type is what stops this field being
 /// interchanged with a dimensionless suitability, which is a 20–100× silent
 /// rescale that no guard in the workspace previously caught.
-pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> CapacityMap {
-    let raw = CellMap::from_fn(geo, |c: CellId| {
+pub fn carrying_capacity(geo: &Geosphere, inputs: &VertexMap<CarryingInput>) -> CapacityMap {
+    let raw = VertexMap::from_fn(geo, |c: Vertex| {
         let i = inputs.get(c);
         if !i.is_land {
             return 0.0;
@@ -152,32 +152,32 @@ mod tests {
     #[test]
     fn sea_is_zero_and_wet_temperate_beats_desert() {
         let geo = Geosphere::new(2);
-        // cell 0 at sea, 1 wet-temperate land, 2 hot desert land.
-        let inputs = CellMap::from_fn(&geo, |c| match c.0 {
+        // vertex 0 at sea, 1 wet-temperate land, 2 hot desert land.
+        let inputs = VertexMap::from_fn(&geo, |c| match c.0 {
             0 => input(false, 15.0, 1400.0, 0.9, true, 0.0),
             1 => input(true, 15.0, 1400.0, 0.9, true, 0.0),
             _ => input(true, 40.0, 20.0, 0.05, false, 0.8),
         });
         let k = carrying_capacity(&geo, &inputs);
-        assert_eq!(k.at(CellId(0)), 0.0, "the sea supports no settlers");
+        assert_eq!(k.at(Vertex(0)), 0.0, "the sea supports no settlers");
         assert!(
-            k.at(CellId(1)) > k.at(CellId(2)),
+            k.at(Vertex(1)) > k.at(Vertex(2)),
             "wet-temperate beats desert"
         );
-        assert!(k.at(CellId(1)) >= 0.0 && k.at(CellId(2)) >= 0.0);
+        assert!(k.at(Vertex(1)) >= 0.0 && k.at(Vertex(2)) >= 0.0);
     }
 
     #[test]
     fn npp_proxy_is_liebig_minimum_of_temperature_and_moisture() {
         let geo = Geosphere::new(2);
         // Warm+dry and cool+wet should both be limited by their scarce factor.
-        let inputs = CellMap::from_fn(&geo, |c| match c.0 {
+        let inputs = VertexMap::from_fn(&geo, |c| match c.0 {
             0 => input(true, 25.0, 60.0, 0.5, false, 0.0), // water-limited
             _ => input(true, 25.0, 1700.0, 0.5, false, 0.0), // ample both
         });
         let k = carrying_capacity(&geo, &inputs);
         assert!(
-            k.at(CellId(0)) < k.at(CellId(1)),
+            k.at(Vertex(0)) < k.at(Vertex(1)),
             "the scarce factor caps K"
         );
     }

@@ -14,34 +14,34 @@
 //! belt with no point of origin, which is what a quake is, and nobody names
 //! an earthquake.
 //!
-//! # The key is the edifice's source contact, not the cell you asked about
+//! # The key is the edifice's source contact, not the vertex you asked about
 //!
-//! An edifice is wider than one cell. The elevation samples the along-strike
-//! arc gate **once per contact, at the source**, precisely so every cell
+//! An edifice is wider than one vertex. The elevation samples the along-strike
+//! arc gate **once per contact, at the source**, precisely so every vertex
 //! attributed to one contact shares one value, then decays that value
 //! outward (`terrain::elevation::edifice_present`). On the canonical
-//! seed-42 L6 globe that is **360 edifice cells over roughly 187 contact
-//! cells** — 187 cells at hop 0 and 173 at hop 1, a mean cluster of about
-//! 1.9 cells per contact.
+//! seed-42 L6 globe that is **360 edifice vertices over roughly 187 contact
+//! vertices** — 187 vertices at hop 0 and 173 at hop 1, a mean cluster of about
+//! 1.9 vertices per contact.
 //!
-//! So a `volcano_at` keyed on the **query** cell would mint up to 360
+//! So a `volcano_at` keyed on the **query** vertex would mint up to 360
 //! identities for 187 contacts on one seed, and the two halves of one
 //! contact's edifice would carry different identities, different
 //! recurrences and different names. This module keys on
 //! [`GeneratedTerrain::edifice_source_at`](hornvale_terrain::GeneratedTerrain::edifice_source_at)
 //! instead — the terrain's own unit of "one edifice" — and
-//! `every_cell_of_one_edifice_resolves_to_one_volcano` holds that property
+//! `every_vertex_of_one_edifice_resolves_to_one_volcano` holds that property
 //! over a whole globe rather than by construction-by-inspection.
 //!
 //! **This does NOT mean the globe carries 187 physically separate
-//! mountains.** "187" counts *contact cells*, and a contact cell is not the
+//! mountains.** "187" counts *contact vertices*, and a contact vertex is not the
 //! same unit as a volcanic cone in the terrain a player walks: 173 of the
 //! 187 contacts on seed 42 abut another contact on the same plate, so a
 //! single continuous stretch of gate-on arc — physically one ridge of
 //! coalesced cones — resolves to a *chain* of separately identified,
 //! separately named, separately styled `Volcano`s, one per contact, rotated
 //! onto the along-strike axis instead of across a cone's own width. This is
-//! a deliberate scale match, not a defect: an L6 cell is roughly 120 km and
+//! a deliberate scale match, not a defect: an L6 vertex is roughly 120 km and
 //! real arc cone spacing is 50-100 km, so one edifice identity per contact
 //! is physically defensible. But it means a settlement's horizon along one
 //! arc can hold on the order of **ten separately named volcanoes**, not
@@ -64,7 +64,7 @@
 //! for it.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed, Stream, Years};
+use hornvale_kernel::{Seed, Stream, Vertex, Years};
 use hornvale_language::{GeneratedName, MorphOptions, NameKind, Namer, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 
@@ -110,11 +110,11 @@ const ARC_EXPLOSIVE_SHARE: f64 = 0.75;
 /// plus its derived content, which is what the recomputation tests assert.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Volcano {
-    /// The edifice's source contact cell — **this volcano's identity**. Every
-    /// cell of the cone resolves here, so two neighbouring cells of one
-    /// mountain are one mountain. Never the cell a caller happened to ask
+    /// The edifice's source contact vertex — **this volcano's identity**. Every
+    /// vertex of the cone resolves here, so two neighbouring vertices of one
+    /// mountain are one mountain. Never the vertex a caller happened to ask
     /// about; see the module docs.
-    pub source: CellId,
+    pub source: Vertex,
     /// Mean interval between eruptions, read from the hazard field at the
     /// source (never a fresh draw — one source of truth for how often the
     /// mountain acts).
@@ -128,43 +128,43 @@ pub struct Volcano {
 ///
 /// A **save-format contract**: changing this string reseeds every volcano's
 /// style in every world, and is an epoch, not a cleanup. Spelled out here in
-/// one place — the `cell/` prefix says what the number is, so a future key
+/// one place — the `vertex/` prefix says what the number is, so a future key
 /// that needed a second component could not silently collide with today's.
-fn volcano_key(source: CellId) -> String {
+fn volcano_key(source: Vertex) -> String {
     format!("cell/{}", source.0)
 }
 
 /// The stream a volcano's own derivations draw from: [`volcano_key`]
 /// composed under [`crate::streams::VOLCANO`], following `chamber_stream`'s
 /// composed-label pattern one module over.
-fn volcano_stream(seed: Seed, source: CellId) -> Stream {
+fn volcano_stream(seed: Seed, source: Vertex) -> Stream {
     seed.derive(crate::streams::VOLCANO)
         .derive(StreamLabel::dynamic(&volcano_key(source)))
         .stream()
 }
 
-/// The volcano a cell belongs to, or `None` where there is no edifice.
+/// The volcano a vertex belongs to, or `None` where there is no edifice.
 ///
-/// Answers with the **same** [`Volcano`] for every cell of one cone, because
-/// it keys on the edifice's source contact rather than on `cell` (module
+/// Answers with the **same** [`Volcano`] for every vertex of one cone, because
+/// it keys on the edifice's source contact rather than on `vertex` (module
 /// docs). Pure: a fresh derivation of the same seed gives the same mountain,
 /// which is what makes identity real without a save-format change.
 ///
 /// # Panics
 ///
 /// Never, on any terrain the shipped generator produces. It reads the
-/// recurrence at the *source* cell, and a source is always an edifice cell
+/// recurrence at the *source* vertex, and a source is always an edifice vertex
 /// itself: it sits at distance 0 from itself, on the same plate (the distance
 /// field's BFS is same-plate, so `arc_side` cannot differ), under the same
 /// contact and the same gate value — so the predicate that admitted the query
-/// cell admits the source a fortiori.
+/// vertex admits the source a fortiori.
 /// `an_edifices_source_is_itself_an_edifice` asserts that over a whole globe
 /// rather than leaving it to this paragraph.
-pub fn volcano_at(seed: Seed, terrain: &GeneratedTerrain, cell: CellId) -> Option<Volcano> {
-    let source = terrain.edifice_source_at(cell)?;
+pub fn volcano_at(seed: Seed, terrain: &GeneratedTerrain, vertex: Vertex) -> Option<Volcano> {
+    let source = terrain.edifice_source_at(vertex)?;
     let recurrence = crate::hazard::hazard_at(terrain, source)
         .volcanic
-        .expect("an edifice's source contact is itself an edifice cell");
+        .expect("an edifice's source contact is itself an edifice vertex");
     let style = if volcano_stream(seed, source).next_f64() < ARC_EXPLOSIVE_SHARE {
         EruptionStyle::Explosive
     } else {
@@ -179,9 +179,9 @@ pub fn volcano_at(seed: Seed, terrain: &GeneratedTerrain, cell: CellId) -> Optio
 
 /// What one people calls one mountain.
 ///
-/// Takes the **volcano**, not a cell, and that is the point: the name is keyed
+/// Takes the **volcano**, not a vertex, and that is the point: the name is keyed
 /// on the mountain's identity, so the two halves of one cone cannot end up
-/// with two names. (An earlier signature took the query cell and would have
+/// with two names. (An earlier signature took the query vertex and would have
 /// done exactly that.) The other half of the key is `species` — a mountain has
 /// no language of its own, so it has as many names as there are peoples with a
 /// word for it, and none of them is *the* name.
@@ -212,11 +212,11 @@ mod tests {
     use std::collections::BTreeMap;
 
     /// The mesh level every test here builds at. Level 5 carries edifices,
-    /// but an edifice at that resolution is often a single cell — and this
-    /// module's central property is about the cells of one cone AGREEING,
-    /// which a one-cell cone cannot exercise. Level 6 is the canonical globe
-    /// Task 4 measured (360 edifice cells over ~187 contacts) and the
-    /// cheapest level at which multi-cell cones are common.
+    /// but an edifice at that resolution is often a single vertex — and this
+    /// module's central property is about the vertices of one cone AGREEING,
+    /// which a one-vertex cone cannot exercise. Level 6 is the canonical globe
+    /// Task 4 measured (360 edifice vertices over ~187 contacts) and the
+    /// cheapest level at which multi-vertex cones are common.
     const LEVEL: u32 = 6;
 
     fn globe() -> (Geosphere, GeneratedTerrain) {
@@ -231,13 +231,13 @@ mod tests {
         (geo, terrain)
     }
 
-    /// Every edifice cell on the globe, grouped by the source contact that
+    /// Every edifice vertex on the globe, grouped by the source contact that
     /// identifies its cone.
-    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<CellId, Vec<CellId>> {
-        let mut cones: BTreeMap<CellId, Vec<CellId>> = BTreeMap::new();
-        for cell in geo.cells() {
-            if let Some(source) = terrain.edifice_source_at(cell) {
-                cones.entry(source).or_default().push(cell);
+    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<Vertex, Vec<Vertex>> {
+        let mut cones: BTreeMap<Vertex, Vec<Vertex>> = BTreeMap::new();
+        for vertex in geo.vertices() {
+            if let Some(source) = terrain.edifice_source_at(vertex) {
+                cones.entry(source).or_default().push(vertex);
             }
         }
         cones
@@ -272,47 +272,47 @@ mod tests {
         }
     }
 
-    /// Every cone the globe carries, with its cells, having first asserted
+    /// Every cone the globe carries, with its vertices, having first asserted
     /// the thing that makes the agreement property non-vacuous: that some
-    /// cone spans more than one cell. "The same cell gives the same answer"
+    /// cone spans more than one vertex. "The same vertex gives the same answer"
     /// is NOT the property under test — the property is that *different*
-    /// cells of one mountain agree, and a globe of one-cell cones could not
+    /// vertices of one mountain agree, and a globe of one-vertex cones could not
     /// exercise it.
-    fn multi_cell_cones(
+    fn multi_vertex_cones(
         geo: &Geosphere,
         terrain: &GeneratedTerrain,
-    ) -> BTreeMap<CellId, Vec<CellId>> {
+    ) -> BTreeMap<Vertex, Vec<Vertex>> {
         let cones = cones(geo, terrain);
-        let multi = cones.values().filter(|cells| cells.len() > 1).count();
+        let multi = cones.values().filter(|vertices| vertices.len() > 1).count();
         assert!(
             multi > 0,
-            "no cone spans more than one cell — the agreement property is untestable here"
+            "no cone spans more than one vertex — the agreement property is untestable here"
         );
         cones
     }
 
-    /// **The identity property.** Two different cells of one cone are one
+    /// **The identity property.** Two different vertices of one cone are one
     /// mountain, not two mountains that happen to be adjacent. Direction:
-    /// this fails the moment identity is keyed on the query cell instead of
+    /// this fails the moment identity is keyed on the query vertex instead of
     /// the edifice's source contact.
     #[test]
-    fn every_cell_of_one_edifice_resolves_to_one_volcano() {
+    fn every_vertex_of_one_edifice_resolves_to_one_volcano() {
         let (geo, terrain) = globe();
-        for (source, cells) in &multi_cell_cones(&geo, &terrain) {
-            let first =
-                volcano_at(Seed(42), &terrain, cells[0]).expect("an edifice cell has a volcano");
-            for cell in cells {
-                let volcano =
-                    volcano_at(Seed(42), &terrain, *cell).expect("an edifice cell has a volcano");
+        for (source, vertices) in &multi_vertex_cones(&geo, &terrain) {
+            let first = volcano_at(Seed(42), &terrain, vertices[0])
+                .expect("an edifice vertex has a volcano");
+            for vertex in vertices {
+                let volcano = volcano_at(Seed(42), &terrain, *vertex)
+                    .expect("an edifice vertex has a volcano");
                 assert_eq!(
                     volcano, first,
-                    "{cell:?} and {:?} are cells of the cone at {source:?} yet resolve to \
+                    "{vertex:?} and {:?} are vertices of the cone at {source:?} yet resolve to \
                      different volcanoes",
-                    cells[0]
+                    vertices[0]
                 );
                 assert_eq!(
                     volcano.source, *source,
-                    "{cell:?} resolved to a volcano identified by some other contact"
+                    "{vertex:?} resolved to a volcano identified by some other contact"
                 );
             }
         }
@@ -325,8 +325,8 @@ mod tests {
     /// one_name`, whose doc claimed it "can fail on its own" but could not:
     /// under the shipped `volcano_name(&Volcano, …)` signature, the name is
     /// a pure function of a `Volcano` value, and
-    /// `every_cell_of_one_edifice_resolves_to_one_volcano` already asserts
-    /// every cell of one cone resolves to the *same* `Volcano` (full
+    /// `every_vertex_of_one_edifice_resolves_to_one_volcano` already asserts
+    /// every vertex of one cone resolves to the *same* `Volcano` (full
     /// `PartialEq`, including `recurrence` and `style`). Two equal
     /// `Volcano`s feeding a pure function are equal-name by construction —
     /// that test's collapse-invariance was a theorem of its sibling, not an
@@ -356,8 +356,8 @@ mod tests {
     /// remedy, so this test asserts a BUDGET, not zero collisions.
     ///
     /// **Measured, not guessed:** at seed 42, `species = "aeldrin"`, 208
-    /// volcanoes draw 207 distinct names — one pair (`CellId(13124)` and
-    /// `CellId(28635)`) shares `"Zharji"`, the worst collision group is
+    /// volcanoes draw 207 distinct names — one pair (`Vertex(13124)` and
+    /// `Vertex(28635)`) shares `"Zharji"`, the worst collision group is
     /// size 2. The budget below (at most 5 duplicated names, no group
     /// larger than 3) gives headroom for ordinary seed-to-seed birthday-
     /// problem noise while staying far too tight for a REAL regression to
@@ -370,8 +370,8 @@ mod tests {
     /// one_name`, whose doc claimed it "can fail on its own" but could not:
     /// under the shipped `volcano_name(&Volcano, …)` signature, the name is
     /// a pure function of a `Volcano` value, and
-    /// `every_cell_of_one_edifice_resolves_to_one_volcano` already asserts
-    /// every cell of one cone resolves to the *same* `Volcano` (full
+    /// `every_vertex_of_one_edifice_resolves_to_one_volcano` already asserts
+    /// every vertex of one cone resolves to the *same* `Volcano` (full
     /// `PartialEq`, including `recurrence` and `style`). Two equal
     /// `Volcano`s feeding a pure function are equal-name by construction —
     /// that test's collapse-invariance was a theorem of its sibling, not an
@@ -386,9 +386,9 @@ mod tests {
             all_cones.len() > 1,
             "fewer than two volcanoes on the test globe — distinctness is untestable here"
         );
-        let mut seen: BTreeMap<String, Vec<CellId>> = BTreeMap::new();
+        let mut seen: BTreeMap<String, Vec<Vertex>> = BTreeMap::new();
         for source in all_cones.keys() {
-            let volcano = volcano_at(Seed(42), &terrain, *source).expect("an edifice cell");
+            let volcano = volcano_at(Seed(42), &terrain, *source).expect("an edifice vertex");
             let name = volcano_name(Seed(42), &volcano, "aeldrin", &ph, &morph).roman;
             seen.entry(name).or_default().push(*source);
         }
@@ -401,7 +401,7 @@ mod tests {
             "{duplicated_names} of {total} names collided (budget 5, decision 0024's \
              collision base rate) — a real regression, not birthday-problem noise: {:?}",
             seen.iter()
-                .filter(|(_, cells)| cells.len() > 1)
+                .filter(|(_, vertices)| vertices.len() > 1)
                 .collect::<Vec<_>>()
         );
         assert!(
@@ -412,11 +412,11 @@ mod tests {
     }
 
     /// The precondition [`volcano_at`]'s `expect` rests on, asserted rather
-    /// than argued: an edifice's source contact is itself an edifice cell, so
+    /// than argued: an edifice's source contact is itself an edifice vertex, so
     /// the hazard field always has a volcanic recurrence to read there.
     ///
     /// **Held over several seeds, not one.** The invariant this leans on —
-    /// a boundary cell always seeds `boundary_distance` at `(0, itself)` —
+    /// a boundary vertex always seeds `boundary_distance` at `(0, itself)` —
     /// lives in `domains/terrain::boundaries::boundary_distance`, a
     /// different crate this module cannot see the internals of; a single
     /// seed-42 pass could not distinguish "true by construction" from "true
@@ -441,7 +441,7 @@ mod tests {
                 assert_eq!(
                     terrain.edifice_source_at(*source),
                     Some(*source),
-                    "seed {seed}: {source:?} identifies a cone but is not an edifice cell of it"
+                    "seed {seed}: {source:?} identifies a cone but is not an edifice vertex of it"
                 );
                 assert!(
                     crate::hazard::hazard_at(&terrain, *source)
@@ -461,12 +461,12 @@ mod tests {
         let (geo, terrain_a) = globe();
         let (_, terrain_b) = globe();
         let mut checked = 0_u32;
-        for cell in geo.cells() {
-            let a = volcano_at(Seed(42), &terrain_a, cell);
-            let b = volcano_at(Seed(42), &terrain_b, cell);
+        for vertex in geo.vertices() {
+            let a = volcano_at(Seed(42), &terrain_a, vertex);
+            let b = volcano_at(Seed(42), &terrain_b, vertex);
             assert_eq!(
                 a, b,
-                "{cell:?} changed between two independent derivations of the same seed"
+                "{vertex:?} changed between two independent derivations of the same seed"
             );
             checked += u32::from(a.is_some());
         }
@@ -483,13 +483,13 @@ mod tests {
         let (geo, terrain) = globe();
         let mut differing = 0_u32;
         let mut total = 0_u32;
-        for cell in geo.cells() {
-            let Some(here) = volcano_at(Seed(42), &terrain, cell) else {
+        for vertex in geo.vertices() {
+            let Some(here) = volcano_at(Seed(42), &terrain, vertex) else {
                 continue;
             };
             // The same terrain, read under a different world seed: only the
-            // style can move, and on some cells it must.
-            let there = volcano_at(Seed(43), &terrain, cell).expect("the same edifice");
+            // style can move, and on some vertices it must.
+            let there = volcano_at(Seed(43), &terrain, vertex).expect("the same edifice");
             assert_eq!(
                 here.source, there.source,
                 "the identity key is not the seed's"
@@ -513,8 +513,8 @@ mod tests {
         let (geo, terrain) = globe();
         let mut effusive = 0_u32;
         let mut explosive = 0_u32;
-        for cell in geo.cells() {
-            match volcano_at(Seed(42), &terrain, cell).map(|v| v.style) {
+        for vertex in geo.vertices() {
+            match volcano_at(Seed(42), &terrain, vertex).map(|v| v.style) {
                 Some(EruptionStyle::Effusive) => effusive += 1,
                 Some(EruptionStyle::Explosive) => explosive += 1,
                 None => {}
@@ -538,7 +538,7 @@ mod tests {
     fn one_volcano_carries_a_different_name_in_each_language() {
         let (geo, terrain) = globe();
         let volcano = geo
-            .cells()
+            .vertices()
             .find_map(|c| volcano_at(Seed(42), &terrain, c))
             .expect("a volcano on the test globe");
         let morph = morph();
@@ -557,7 +557,7 @@ mod tests {
     fn a_volcanos_name_is_stable_for_one_people() {
         let (geo, terrain) = globe();
         let volcano = geo
-            .cells()
+            .vertices()
             .find_map(|c| volcano_at(Seed(42), &terrain, c))
             .expect("a volcano on the test globe");
         let ph = phonology("aeldrin");
@@ -577,7 +577,7 @@ mod tests {
     /// guard `chamber_key` carries.
     #[test]
     fn the_volcano_key_spelling_is_pinned() {
-        assert_eq!(volcano_key(CellId(0)), "cell/0");
-        assert_eq!(volcano_key(CellId(4127)), "cell/4127");
+        assert_eq!(volcano_key(Vertex(0)), "cell/0");
+        assert_eq!(volcano_key(Vertex(4127)), "cell/4127");
     }
 }

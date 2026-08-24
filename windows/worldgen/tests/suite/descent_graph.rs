@@ -402,7 +402,7 @@ fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
     let mut world = World::new(Seed(42));
     hornvale_worldgen::register_all(&mut world.registry).expect("registry registers");
 
-    let found = |world: &mut World, cell: f64, day: f64| -> EntityId {
+    let found = |world: &mut World, vertex: f64, day: f64| -> EntityId {
         let id = world
             .ledger
             .mint_entity(test_lineage(world.ledger.entity_count() as u16));
@@ -412,7 +412,7 @@ fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
                 // NOT in the canonical roster — Lab mints this one itself.
                 Value::Text("goblin-twin".to_string()),
             ),
-            (hornvale_history::OCC_SITE, Value::Number(cell)),
+            (hornvale_history::OCC_SITE, Value::Number(vertex)),
             (hornvale_history::OCC_FOUNDED, Value::Number(day)),
         ] {
             world

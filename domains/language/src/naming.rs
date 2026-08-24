@@ -26,11 +26,11 @@
 //! "used" set through naming, and that purity is load-bearing. But note
 //! what it does and does not buy since The Wearing. **`Namer::name`'s v1
 //! names remain pin-isolated in the strong sense** — a name depends only on
-//! its own cell. **A glossed settlement name no longer is.** Its morphemes
+//! its own vertex. **A glossed settlement name no longer is.** Its morphemes
 //! are worn against a [`NameCorpus`], a per-culture statistic the
 //! composition root counts over that species' whole settlement scatter, so
 //! **a pin that moves a species' scatter can move every name of that
-//! species** — even for settlements whose own cell did not move.
+//! species** — even for settlements whose own vertex did not move.
 //!
 //! Measured by holding a world's scatter fixed and varying only the corpus
 //! (**re-measured for the drawn [`NameShape`], which changes which
@@ -106,7 +106,7 @@ pub enum NameKind {
     /// seed path so that adding landform naming to a world reseeds nothing
     /// that already exists. A landform has ONE identity and MANY names — one
     /// per people that has a word for it — so the name is keyed on
-    /// `(seed, cell, species)` at the composition root, never folded into the
+    /// `(seed, vertex, species)` at the composition root, never folded into the
     /// landform's own identity.
     Landform,
 }
@@ -253,7 +253,7 @@ pub struct MorphOptions {
 /// The concept ids an entity's own site facts resolve to, composed
 /// upstream by the composition root — never by this crate, which is
 /// kernel-only and never learns where a concept came from (a settlement:
-/// its cell's biome concept plus its people's presiding-belief phenomenon
+/// its vertex's biome concept plus its people's presiding-belief phenomenon
 /// concept; a deity: its phenomenon concept plus its sentiment's quality
 /// concept). [`Namer::glossed_name`] draws which 1-3 of these — of those
 /// that actually hold a [`crate::lexicon::LexEntry::Root`] or
@@ -397,7 +397,7 @@ impl<'a> Namer<'a> {
     }
 
     /// Draw a name of `kind` for `salt` (the caller's per-entity draw
-    /// index — e.g. the Nth settlement's cell id), applying `morph`'s
+    /// index — e.g. the Nth settlement's vertex id), applying `morph`'s
     /// morphology. A single deterministic draw: the name is a pure function
     /// of `(seed, species, kind, salt)` with no re-draw and no dependence on
     /// any other name — this, the **v1** draw, is pin-isolated in the strong
@@ -799,7 +799,7 @@ impl<'a> Namer<'a> {
     ///   production surrender is even a *subsequence* of the repaired form
     ///   — every one is a genuine deletion that costs the morpheme a
     ///   quarter to a third of its segments (longest retained run 12 of 16,
-    ///   4 of 6, 2 of 3). Over a 2560-cell synthetic grid the repair-aware
+    ///   4 of 6, 2 of 3). Over a 2560-vertex synthetic grid the repair-aware
     ///   rule rescues 11 of 520 surrenders (2.1 %). So the strict form
     ///   stands on evidence, and **the scarcity of surviving wear is not
     ///   this check's doing**: of 940 production morphemes, 611 clear
@@ -2485,7 +2485,7 @@ mod tests {
         // doc comment above): an intervening Landform draw moves nothing
         // else, for every salt tried. The last two salts are drawn from
         // `windows/worldgen::gazetteer::feature_salt`'s range (class in the
-        // high 32 bits, cell id in the low 32) rather than duplicating a
+        // high 32 bits, vertex id in the low 32) rather than duplicating a
         // property already held here for arbitrary u64s — the gazetteer's
         // salts are ordinary Landform salts, not a new kind, so the existing
         // property already covers them; these values just confirm the wide

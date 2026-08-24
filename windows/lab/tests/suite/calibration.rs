@@ -52,9 +52,9 @@
 //! The campaign's other candidate mover is ruled out rather than assumed away.
 //! `b0f32252` repaired a cross-roster lexicon read, and its measured blast
 //! radius on `the-census` — the fixture every test in this file loads — is
-//! **ZERO cells**: on the canonical roster the view's own component set IS the
+//! **ZERO vertices**: on the canonical roster the view's own component set IS the
 //! assembled canonical set, so the change is a no-op there. Its five repaired
-//! cells all land on `census-of-the-meeting`'s `goblin-solo` roster, which the
+//! vertices all land on `census-of-the-meeting`'s `goblin-solo` roster, which the
 //! rows re-pinned here do not read.
 //!
 //! ```text
@@ -76,7 +76,7 @@
 //! ## Census regen — The Tense (2026-08-06, lefford, decision 0063)
 //!
 //! **One cause under all of it: 230 worlds gained a flagship they did not
-//! have.** Capacity gained an era axis, so a cell's worth is the binding era's
+//! have.** Capacity gained an era axis, so a vertex's worth is the binding era's
 //! rather than the present day's, and worlds that could not previously seat a
 //! goblin flagship now can. The census records the size of that:
 //!
@@ -458,7 +458,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // returns to the value it held before The Range. WITNESS, not claim: the
     // guarded property is the *conjunction* asserted above (a frozen sky
     // never heads a cyclic pantheon), which is unmoved; this literal only
-    // records how many per-people heads land in the spinning-yet-eternal cell
+    // records how many per-people heads land in the spinning-yet-eternal vertex
     // of that table. The movement is downstream of placement, which is the
     // campaign's predicted mechanism and the only one the census diff found.
     //
@@ -467,7 +467,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // paragraph above already says: the guarded property is the *conjunction*
     // asserted above (a frozen sky never heads a cyclic pantheon), which is
     // unmoved; this literal only records how many per-people heads land in
-    // the spinning-yet-eternal cell of that table. The movement is downstream
+    // the spinning-yet-eternal vertex of that table. The movement is downstream
     // of placement — the underworld epoch re-decides which settlements
     // survive to seat a flagship pantheon — which is the campaign's predicted
     // mechanism and the only one the census diff found.
@@ -622,7 +622,7 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // them at that (pre-Branches) measurement.
     //
     // The Branches (Task 6d): the founder floor reserves every people its
-    // best habitable cell before competitive placement, so goblins now
+    // best habitable vertex before competitive placement, so goblins now
     // place a flagship on every one of the 500 seeds — no more total-
     // exclusion worlds, no more `Absent` rows. Seeds 172 and 257 are back to
     // inland goblin flagships (independently verified against the final
@@ -1705,7 +1705,7 @@ fn name_collision_rate_is_measured_and_pinned() {
     //
     // The Branches (Task 6b-2): re-measured against the final four-people
     // world. The founder floor (Task 6d) and the four-species niche vectors
-    // (Task 6c/6d) reshape which cells goblin/kobold win and how many
+    // (Task 6c/6d) reshape which vertices goblin/kobold win and how many
     // settlements they each field per world, which reshuffles per-world
     // site-concept reuse; the net effect is FEWER zero-collision worlds
     // (159 -> 40); the root/v2 injective assignment then made the site-concept
@@ -2004,11 +2004,11 @@ fn name_collision_rate_is_measured_and_pinned() {
         // build recorded 1,293,003 divergences in one seed-267 world alone,
         // every one at `local < 0`. This is NOT the `WorldTime`
         // representation flip landed earlier in the same campaign, which
-        // moved zero census cells — bisected across the 701 commits since
+        // moved zero census table entries — bisected across the 701 commits since
         // the previous refresh. The corrected fraction changes which
         // heliacal events a scan finds, which changes the phenomena list, a
         // settlement's presiding concept, and its gloss and name. Only two
-        // cells move in this metric (seed 267: 193/388 -> 191/388; seed 831:
+        // entries move in this metric (seed 267: 193/388 -> 191/388; seed 831:
         // 0.43521595 -> 0.42857143), so zero/nonzero/absent are unmoved at
         // 0/1000/0 (checked, not assumed). Mean:
         // 0.508_151_833_319_999 -> 0.508_140_034_159_999. This row still
@@ -2045,7 +2045,7 @@ fn name_length_distributions_are_measured_and_pinned() {
     // The Branches (Task 6b-2): re-measured against the final four-people
     // world (was goblin 498 present / 13.869961501975723 mean, kobold 498 /
     // 14.262681953972956 pre-Branches). The founder floor (Task 6d) and the
-    // four-species niche vectors change which cells goblin/kobold win and
+    // four-species niche vectors change which vertices goblin/kobold win and
     // how many settlements each fields per world; goblin is now present on
     // every seed (the founder floor's own guarantee), kobold on all but 1.
     // Merged re-baseline (phonology epoch + SKY-5 tides): the cascade reseed
@@ -2949,14 +2949,14 @@ fn null_control_blind_attribution_is_at_chance() {
     // Pinned calibration row (measured 2026-07-09, 500-seed census-of-the-meeting).
     // The null control is even stronger than the directional floor: EVERY one of
     // the 500 solo pairs is indistinguishable under the pick_kobold rule. Both
-    // goblin-vectored species land in identical cells, draw the same head-deity
+    // goblin-vectored species land in identical vertices, draw the same head-deity
     // domain and pantheon cyclic-share and size, so no tier of the rule ever
     // separates them — decided (and thus picks_twin) is exactly zero.
     //
     // The Living Community epoch (history-first placement) re-placed every
     // world; re-pinned to the regenerated 1000-seed census (lefford, 0063).
     // History-first placement is path-dependent (settlement order affects
-    // which cell each people condenses first), so the goblin-solo and
+    // which vertex each people condenses first), so the goblin-solo and
     // goblin-twin-solo builds are no longer perfect clones on every seed:
     // indistinguishable falls (500 -> 325) and a nonzero pool now decides
     // (0 -> 64), splitting close to chance (31 twin-picks / 64 decided =
@@ -3007,7 +3007,7 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     // Categorical: total-variation distance; numeric: standardized mean diff.
     // Bound: the conservative independent-two-sample envelope (spec §4.2). The
-    // two solo builds share seed/cell/phenomena ⇒ POSITIVELY correlated ⇒ true
+    // two solo builds share seed/vertex/phenomena ⇒ POSITIVELY correlated ⇒ true
     // distances are smaller than independence predicts, so this bound is safe.
     let cat = |a: &str, b: &str| {
         tv_distance(
@@ -3047,7 +3047,7 @@ fn null_control_distributions_are_within_the_sampling_bound() {
         "name-length SMD {namelen:.4} exceeds the bound"
     );
     // Pinned STRUCTURAL rows (exact zeroes, not measurements): the two solo
-    // builds share seed, cell, and phenomena, so the head-deity domain and
+    // builds share seed, vertex, and phenomena, so the head-deity domain and
     // cult form distributions and the pantheon-size mean are byte-identical
     // (TVD = SMD = 0) regardless of what names are drawn — naming never
     // feeds back into pantheon structure. Exact even after the merge of
@@ -3059,7 +3059,7 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // The Living Community epoch (history-first placement) re-placed every
     // world; re-pinned to the regenerated 1000-seed census (lefford, 0063).
     // History-first placement is path-dependent (settlement condensation
-    // order affects which cell a people commits first), so the two solo
+    // order affects which vertex a people commits first), so the two solo
     // builds are no longer perfect structural clones: head-deity domain
     // stays exactly identical (TVD = 0, the naming-independent invariant
     // still holds for that column), but cult-form and pantheon-size now

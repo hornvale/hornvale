@@ -9,7 +9,7 @@
 //! `cli/tests/architecture.rs` already uses.
 //!
 //! **Why these particular shapes.** The plan's first draft banned bare
-//! `u64::from(`, which fires on the legitimate `CellId` conversions this
+//! `u64::from(`, which fires on the legitimate `Vertex` conversions this
 //! same code performs (`u64::from(c.site.0)`, `u64::from(p.site.0)`,
 //! `u64::from(own.site.0)` and the byte-fold `u64::from(*b)` in
 //! `record.rs`). Every one of those goes through a COMPOUND path
@@ -78,7 +78,7 @@ fn u64_from_args(line: &str) -> Vec<&str> {
 }
 
 /// Whether a `u64::from(arg)` argument is the single-level `<ident>.0` shape
-/// an `EntityId` conversion takes. A `CellId` reached through a compound
+/// an `EntityId` conversion takes. A `Vertex` reached through a compound
 /// path (`p.site.0`, two dots) or a non-`.0` field (`c.peak_population`)
 /// does not match.
 fn looks_like_entity_conversion(arg: &str) -> bool {

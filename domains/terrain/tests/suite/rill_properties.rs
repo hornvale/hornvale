@@ -2,14 +2,14 @@
 //! and the level-6 band edges it produces are pinned against every later task.
 //!
 //! This file is what remains of a task that set out to change `drainage` from
-//! an upstream cell count into a drained area. The change was not made,
-//! because the law does not need it: `cell_edge` already carries the
-//! conversion. `N` cells tile the sphere, so their mean area is `4π/N`, and a
-//! locally hexagonal tiling of cells of area `A` has nearest-neighbour spacing
+//! an upstream vertex count into a drained area. The change was not made,
+//! because the law does not need it: `vertex_edge` already carries the
+//! conversion. `N` vertices tile the sphere, so their mean area is `4π/N`, and a
+//! locally hexagonal tiling of vertices of area `A` has nearest-neighbour spacing
 //! `d = √(2/√3)·√A = 1.0746·√A`. Therefore
 //!
 //! ```text
-//!   a · edge · √count  =  a · (edge/√A_cell) · √(count · A_cell)
+//!   a · edge · √count  =  a · (edge/√A_vertex) · √(count · A_vertex)
 //!                      =  (a · 1.0746) · √(drained area)
 //! ```
 //!
@@ -41,11 +41,11 @@
 //! relative difference, so the failure distinguishes "no longer scale-free"
 //! from "scale-free, no longer bit-exact".
 
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, RoomAddr, Seed};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex};
 use hornvale_terrain::{
-    CatchmentCut, ChannelNetwork, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_CELL_MAX,
-    RIVER_MIN_DRAINAGE, TerrainPins, WaterKind, band_edges, cell_catchment, channel_half_width,
-    generate, rills_of,
+    CatchmentCut, ChannelNetwork, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_VERTEX_MAX,
+    RIVER_MIN_DRAINAGE, TerrainPins, WaterKind, band_edges, channel_half_width, generate, rills_of,
+    vertex_catchment,
 };
 use std::collections::BTreeSet;
 
@@ -62,17 +62,17 @@ const FIXTURE: &str = include_str!("../fixtures/rill-width-law-seed-42-level-6.t
 const FIXTURE_ROWS: usize = 661;
 
 /// Level 6 to level 12 — the walk-depth span this campaign needs. Each step is
-/// one subdivision: four times the cells, half the spacing.
+/// one subdivision: four times the vertices, half the spacing.
 const DOUBLINGS: u32 = 6;
 
 /// One fixture row: the width law's three inputs and the four band edges they
 /// produced, every field carried as exact `f64` bits.
 struct Row {
-    /// Upstream land-cell count, `TectonicGlobe.drainage`.
+    /// Upstream land-vertex count, `TectonicGlobe.drainage`.
     drainage: f64,
     /// `local_slope`, metres of fall per radian.
     slope: f64,
-    /// `cell_spacing`, mean angular separation to neighbours, radians.
+    /// `vertex_spacing`, mean angular separation to neighbours, radians.
     spacing: f64,
     /// The four `band_edges` borders pinned at capture.
     edges: [f64; 4],
@@ -165,7 +165,7 @@ fn no_level_6_band_edge_has_moved() {
 /// not sampled.
 ///
 /// **R-3.** For a fixed physical drained area, refining the grid by one level
-/// quadruples the upstream cell count and halves the cell spacing. The width
+/// quadruples the upstream vertex count and halves the vertex spacing. The width
 /// law must not notice: `band_edges(count, slope, edge)` must equal
 /// `band_edges(4·count, slope, edge/2)`, and must keep equalling it six
 /// doublings down, which is level 6 to level 12.
@@ -208,7 +208,7 @@ fn the_width_law_is_scale_free_across_six_doublings() {
                      (count {count}, spacing {spacing}): {refined} against {base}, \
                      relative {:.3e}. A NON-ZERO relative difference means the law \
                      stopped being a function of drained area — most likely because \
-                     something multiplied by an area while keeping the cell edge, \
+                     something multiplied by an area while keeping the vertex edge, \
                      which applies the grid factor twice. A relative difference at \
                      the last ULP means it is still scale-free but no longer \
                      bit-exact, which is a different and much smaller finding",
@@ -231,7 +231,7 @@ fn the_width_law_is_scale_free_across_six_doublings() {
 }
 
 // ---------------------------------------------------------------------------
-// R-2 (Task 2): a run includes the cell it drains into.
+// R-2 (Task 2): a run includes the vertex it drains into.
 // ---------------------------------------------------------------------------
 
 /// The seeds the outlet sweep runs over — the campaign's usual trio. Three
@@ -246,7 +246,7 @@ const OUTLET_LEVEL: u32 = 6;
 
 /// Per-seed run floor, so a world that stopped producing channels is visible on
 /// its own rather than absorbed by the other two. Measured after Task 3: 3606 /
-/// 6086 / 3876 (was 183 / 359 / 192 when the network rendered river cells
+/// 6086 / 3876 (was 183 / 359 / 192 when the network rendered river vertices
 /// only).
 const MIN_RUNS_PER_SEED: usize = 1_500;
 
@@ -264,49 +264,49 @@ const MIN_RUNS_TOTAL: usize = 6_500;
 /// phenomenon disappearing.
 const MIN_OUTLET_RUNS: usize = 3_500;
 
-/// claim: invariant(forall-seed) — the last cell of every run, over three
-/// worlds on the canonical grid, is the cell that run drains into.
+/// claim: invariant(forall-seed) — the last vertex of every run, over three
+/// worlds on the canonical grid, is the vertex that run drains into.
 ///
-/// **R-2.** A run must include the cell it drains into. `build` walks a run
-/// down `downhill` and can stop for exactly two reasons, so the last cell of
+/// **R-2.** A run must include the vertex it drains into. `build` walks a run
+/// down `downhill` and can stop for exactly two reasons, so the last vertex of
 /// every run must be one of exactly two things:
 ///
 /// 1. it is not a **reach** — it is the outlet the run drains into: an ocean
-///    cell, or a terminal sink (land with nowhere to send its water, which
+///    vertex, or a terminal sink (land with nowhere to send its water, which
 ///    `water::classify` names a salt basin), and the run reached it; or
 /// 2. some *other* run carries it as a non-final vertex, which is a confluence:
 ///    this run joined a trunk another run had already claimed and stopped on
-///    the shared cell.
+///    the shared vertex.
 ///
 /// Anything else — a run ending on a reach that no other run continues past —
 /// is a run that **stopped short**, which is precisely the defect Task 2
 /// repaired. Before that fix `build` broke *before* pushing a non-river target,
-/// so every run draining straight to the sea ended one cell early and its mouth
-/// sat inland; the 39 seed-42 river cells that carried no polyline were exactly
+/// so every run draining straight to the sea ended one vertex early and its mouth
+/// sat inland; the 39 seed-42 river vertices that carried no polyline were exactly
 /// the 39 that read `Dry` at their own centres.
 ///
 /// **The classification is `is_reach`, not `water_kind == River` — Task 3
 /// changed which of those is the right question, and the difference is not
 /// cosmetic.** It used to be three clauses because a terminal sink was a
-/// *river* cell with no downhill target, a case distinct from an outlet. Now
+/// *river* vertex with no downhill target, a case distinct from an outlet. Now
 /// the reach predicate excludes terminal sinks by construction, so clause 1
 /// absorbs them: `other_nonreach` was measured at exactly **0** across the
 /// three worlds — every non-reach terminal is Ocean or SaltBasin. And the test
-/// could not simply keep asking about `River`: once every land cell is
-/// rendered, most confluences happen on cells that classify `DryLand`, and the
+/// could not simply keep asking about `River`: once every land vertex is
+/// rendered, most confluences happen on vertices that classify `DryLand`, and the
 /// old first clause caught them and demanded borrowed geometry of a vertex
-/// that is entitled to its own. It failed on seed 42 run 76 at `CellId(12678)`
+/// that is entitled to its own. It failed on seed 42 run 76 at `Vertex(12678)`
 /// for exactly that reason.
 ///
-/// The third clause reads the *owner* map — a cell some run carries as a
-/// non-final vertex — rather than "a cell that appears in two runs". The
+/// The third clause reads the *owner* map — a vertex some run carries as a
+/// non-final vertex — rather than "a vertex that appears in two runs". The
 /// distinction is load-bearing: two runs that both stopped short on the same
-/// cell would each appear in the other's cell list and would satisfy the weaker
+/// vertex would each appear in the other's vertex list and would satisfy the weaker
 /// form, so the weaker form is blind to the defect wherever it happens twice.
 ///
 /// The second clause carries a second assertion, on the same population: a
 /// mouth must carry the **arriving reach's** band geometry rather than the
-/// outlet cell's own. That is the one genuine design decision in Task 2, and
+/// outlet vertex's own. That is the one genuine design decision in Task 2, and
 /// the comment at it says why it is asserted here rather than left to the two
 /// witnesses that already exist.
 #[test]
@@ -319,41 +319,41 @@ fn every_run_reaches_its_outlet() {
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
 
-        // The run that CLAIMED each cell and continued past it, rebuilt from
-        // the published `run_cells` rather than from anything private — the
+        // The run that CLAIMED each vertex and continued past it, rebuilt from
+        // the published `run_vertices` rather than from anything private — the
         // same map `build`'s confluence repair keys on.
-        let mut owner: Vec<Option<usize>> = vec![None; geo.cell_count()];
-        for (i, cells) in net.run_cells.iter().enumerate() {
-            for (j, &c) in cells.iter().enumerate() {
-                if j + 1 < cells.len() {
+        let mut owner: Vec<Option<usize>> = vec![None; geo.vertex_count()];
+        for (i, vertices) in net.run_vertices.iter().enumerate() {
+            for (j, &c) in vertices.iter().enumerate() {
+                if j + 1 < vertices.len() {
                     owner[c.0 as usize] = Some(i);
                 }
             }
         }
 
         assert!(
-            net.run_cells.len() >= MIN_RUNS_PER_SEED,
+            net.run_vertices.len() >= MIN_RUNS_PER_SEED,
             "seed {seed} at level {OUTLET_LEVEL} has only {} runs — too few for this \
              assertion to have run on anything",
-            net.run_cells.len()
+            net.run_vertices.len()
         );
-        total_runs += net.run_cells.len();
+        total_runs += net.run_vertices.len();
 
         // A REACH: land with a downhill target, the same predicate `build`
         // walks on — restated here from committed state rather than read off
         // the network, so the classification below is not the object under
         // test's own opinion of itself.
-        let is_reach = |c: CellId| {
+        let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         };
 
-        for (i, cells) in net.run_cells.iter().enumerate() {
-            let last: CellId = *cells.last().expect("a run has at least two cells");
+        for (i, vertices) in net.run_vertices.iter().enumerate() {
+            let last: Vertex = *vertices.last().expect("a run has at least two vertices");
             if !is_reach(last) {
                 outlet_runs += 1;
                 // THE BORROWED MOUTH GEOMETRY, as a property. `band_edges` is
                 // per vertex from that vertex's own drainage, slope and
-                // spacing, and this vertex's cell is NOT a river — so `build`
+                // spacing, and this vertex's vertex is NOT a river — so `build`
                 // gives the mouth the arriving reach's geometry instead. Both
                 // alternatives were measured before the choice was made
                 // (`build`'s own comment carries the numbers): an ocean outlet
@@ -376,7 +376,7 @@ fn every_run_reaches_its_outlet() {
                     net.band_edges[i][n - 2],
                     "seed {seed}, run {i}: the mouth at {last:?} ({}) does not carry the \
                      arriving reach's band geometry — it computed its own from the outlet \
-                     cell's drainage and gradient, which describe the sea or the basin \
+                     vertex's drainage and gradient, which describe the sea or the basin \
                      rather than the river",
                     globe.water_kind.get(last).name()
                 );
@@ -386,7 +386,7 @@ fn every_run_reaches_its_outlet() {
                 owner[last.0 as usize].is_some_and(|trunk| trunk != i),
                 "seed {seed}, run {i}: it ends on reach {last:?}, which has a downhill \
                  target ({:?}) and which no other run continues past. The run stopped short of \
-                 the cell it drains into, so its mouth is inland and the outlet cell carries no \
+                 the vertex it drains into, so its mouth is inland and the outlet vertex carries no \
                  channel",
                 *globe.downhill.get(last)
             );
@@ -400,7 +400,7 @@ fn every_run_reaches_its_outlet() {
     );
     assert!(
         outlet_runs >= MIN_OUTLET_RUNS,
-        "only {outlet_runs} of {total_runs} runs end on the non-reach cell they drain into \
+        "only {outlet_runs} of {total_runs} runs end on the non-reach vertex they drain into \
          (measured 7176) — the terminal vertex is no longer being emitted, and the assertion \
          above cannot see that because a confluence satisfies it too"
     );
@@ -414,7 +414,7 @@ fn every_run_reaches_its_outlet() {
 // thing in the repo pinning network topology; a fixture regenerated after a
 // change witnesses the change rather than judging it. So the two tests below
 // were written and run BEFORE the widening, and
-// `the_network_renders_every_river_cells_downhill_edge` was watched PASSING on
+// `the_network_renders_every_river_vertices_downhill_edge` was watched PASSING on
 // the pre-change network. It is the durable statement that the widening was
 // ADDITIVE: every edge the old network drew, the new one still draws, in the
 // same direction, as a consecutive pair of the same run. Neither test reads a
@@ -423,14 +423,14 @@ fn every_run_reaches_its_outlet() {
 // cannot launder them.
 // ---------------------------------------------------------------------------
 
-/// The rendered edge set: every consecutive pair of cells in every run, as raw
-/// `CellId` values. This is the network's topology stated as a relation, which
+/// The rendered edge set: every consecutive pair of vertices in every run, as raw
+/// `Vertex` values. This is the network's topology stated as a relation, which
 /// is the form the flow tree it is a rendering of also takes — so the two are
 /// directly comparable without either side re-deriving the other's
 /// construction.
 fn rendered_edges(net: &ChannelNetwork) -> BTreeSet<(u32, u32)> {
     let mut edges = BTreeSet::new();
-    for run in &net.run_cells {
+    for run in &net.run_vertices {
         for pair in run.windows(2) {
             edges.insert((pair[0].0, pair[1].0));
         }
@@ -448,16 +448,16 @@ const MIN_RIVER_EDGES: usize = 1500;
 /// the flow tree would.
 const MIN_LAND_EDGES: usize = 20000;
 
-/// claim: invariant(forall-seed) — every `WaterKind::River` cell's downhill
+/// claim: invariant(forall-seed) — every `WaterKind::River` vertex's downhill
 /// edge is rendered, over three worlds on the canonical grid.
 ///
 /// **THE PRE-CHANGE TOPOLOGY WITNESS.** Written and watched green on the
 /// network as it stood before Task 3's widening (183 / 359 / 192 polylines,
 /// 883 / 1892 / 995 vertices), and green on the widened one. That is its whole
 /// job: it says the widening only ever ADDED, so no river the old network drew
-/// was moved onto a different cell, dropped, or reversed.
+/// was moved onto a different vertex, dropped, or reversed.
 ///
-/// The claim is over EDGES rather than over cells because a cell can appear in
+/// The claim is over EDGES rather than over vertices because a vertex can appear in
 /// a run for two different reasons — as a reach, or as the outlet a run merely
 /// terminates on — and only the edge form distinguishes them. It is also the
 /// form that carries direction: `(c, downhill(c))` renders as a consecutive
@@ -469,7 +469,7 @@ const MIN_LAND_EDGES: usize = 20000;
 /// byte golden pins the same topology and more, but it is re-baselined by this
 /// very task; this is what does not move.
 #[test]
-fn the_network_renders_every_river_cells_downhill_edge() {
+fn the_network_renders_every_river_vertices_downhill_edge() {
     let geo = Geosphere::new(OUTLET_LEVEL);
     let mut checked = 0usize;
     for seed in OUTLET_SEEDS {
@@ -477,7 +477,7 @@ fn the_network_renders_every_river_cells_downhill_edge() {
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let rendered = rendered_edges(&net);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if !matches!(*globe.water_kind.get(c), WaterKind::River) {
                 continue;
             }
@@ -486,7 +486,7 @@ fn the_network_renders_every_river_cells_downhill_edge() {
             };
             assert!(
                 rendered.contains(&(c.0, target.0)),
-                "seed {seed}: river cell {c:?} drains to {target:?}, and no run carries that \
+                "seed {seed}: river vertex {c:?} drains to {target:?}, and no run carries that \
                  edge. The network no longer contains the network it replaced — whatever else \
                  changed, an existing river was dropped, rerouted or reversed"
             );
@@ -504,25 +504,25 @@ fn the_network_renders_every_river_cells_downhill_edge() {
 /// claim: invariant(forall-seed) — the rendered edge set EQUALS the world's
 /// land flow tree, over three worlds on the canonical grid.
 ///
-/// **R-1.** `downhill` and `drainage` are computed for every land cell; before
+/// **R-1.** `downhill` and `drainage` are computed for every land vertex; before
 /// Task 3 the network rendered only the ~6.7% above [`RIVER_MIN_DRAINAGE`] and
 /// discarded the rest. This asserts the rest is now drawn: the set of
-/// consecutive run-cell pairs is exactly `{(c, downhill(c)) : c is land}`.
+/// consecutive run-vertex pairs is exactly `{(c, downhill(c)) : c is land}`.
 ///
 /// **Equality, not containment, and the second half is the load-bearing one.**
 /// Containment alone ("every land edge is rendered") is satisfied by a build
 /// that also invents edges the flow tree does not have — a run that skipped a
-/// cell, or one assembled from something other than `downhill`. The reverse
+/// vertex, or one assembled from something other than `downhill`. The reverse
 /// inclusion is what says the network is a rendering OF the flow tree rather
 /// than a superset of it, and it is the assertion that would catch a widened
-/// predicate that accidentally admitted ocean cells as reaches.
+/// predicate that accidentally admitted ocean vertices as reaches.
 ///
-/// The coverage half — R-1 as the brief states it, every land cell with a
-/// downhill target appearing in some `run_cells` — follows from the equality
-/// (such a cell sources a rendered edge, so it is in a run), and is asserted
+/// The coverage half — R-1 as the brief states it, every land vertex with a
+/// downhill target appearing in some `run_vertices` — follows from the equality
+/// (such a vertex sources a rendered edge, so it is in a run), and is asserted
 /// separately anyway because the exception set is the interesting part: a land
-/// cell absent from the network can only be a **terminal sink** with no land
-/// cell draining into it. Terminal sinks are `endorheic && no downhill`, which
+/// vertex absent from the network can only be a **terminal sink** with no land
+/// vertex draining into it. Terminal sinks are `endorheic && no downhill`, which
 /// `water::classify` reads as `SaltBasin`; there are 66 / 124 / 78 of them
 /// across the three worlds and only the inflow-less ones go unrendered.
 #[test]
@@ -536,16 +536,16 @@ fn the_network_renders_the_whole_flow_tree() {
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
 
-        let is_land = |c: CellId| *globe.elevation.get(c) >= globe.sea_level;
-        // The reference flow tree, straight off committed state. Not one cell
+        let is_land = |c: Vertex| *globe.elevation.get(c) >= globe.sea_level;
+        // The reference flow tree, straight off committed state. Not one vertex
         // of it comes from `net`.
         let mut flow_tree: BTreeSet<(u32, u32)> = BTreeSet::new();
-        let mut land_cells: Vec<CellId> = Vec::new();
-        for c in geo.cells() {
+        let mut land_vertices: Vec<Vertex> = Vec::new();
+        for c in geo.vertices() {
             if !is_land(c) {
                 continue;
             }
-            land_cells.push(c);
+            land_vertices.push(c);
             if let Some(target) = *globe.downhill.get(c) {
                 flow_tree.insert((c.0, target.0));
             }
@@ -565,27 +565,27 @@ fn the_network_renders_the_whole_flow_tree() {
         assert!(
             invented.is_empty(),
             "seed {seed}: {} rendered edges are not in the land flow tree (first: {:?}). A run \
-             is carrying a pair of cells that `downhill` does not join, so the polyline is not a \
+             is carrying a pair of vertices that `downhill` does not join, so the polyline is not a \
              rendering of the flow graph",
             invented.len(),
             invented.first()
         );
         land_edges_checked += flow_tree.len();
 
-        let covered: BTreeSet<CellId> = net.run_cells.iter().flatten().copied().collect();
-        for &c in &land_cells {
+        let covered: BTreeSet<Vertex> = net.run_vertices.iter().flatten().copied().collect();
+        for &c in &land_vertices {
             if covered.contains(&c) {
                 continue;
             }
             assert!(
                 globe.downhill.get(c).is_none(),
-                "seed {seed}: land cell {c:?} has a downhill target ({:?}) and appears in no \
+                "seed {seed}: land vertex {c:?} has a downhill target ({:?}) and appears in no \
                  run — R-1's coverage claim fails on it",
                 *globe.downhill.get(c)
             );
             unrendered_sinks += 1;
         }
-        sinks_total += land_cells
+        sinks_total += land_vertices
             .iter()
             .filter(|&&c| globe.downhill.get(c).is_none())
             .count();
@@ -596,12 +596,12 @@ fn the_network_renders_the_whole_flow_tree() {
         OUTLET_SEEDS.len()
     );
     // Not an assertion about a good number — a statement of the exception set's
-    // SIZE, so a future change that started leaving ordinary land cells out
+    // SIZE, so a future change that started leaving ordinary land vertices out
     // would have to move this too. Measured: 268 terminal sinks across the
     // three worlds, of which the inflow-less ones are unrendered.
     assert!(
         unrendered_sinks <= sinks_total,
-        "{unrendered_sinks} unrendered land cells against {sinks_total} terminal sinks — the \
+        "{unrendered_sinks} unrendered land vertices against {sinks_total} terminal sinks — the \
          exception set is larger than the only thing allowed to be in it"
     );
     assert!(
@@ -698,10 +698,10 @@ fn the_meander_field_is_pinned() {
 /// the predecessor campaign documented, now deliberately wider.
 #[test]
 fn the_width_law_is_scale_free_below_the_river_threshold_too() {
-    // The canonical level-6 cell edge; the exact value is immaterial here.
+    // The canonical level-6 vertex edge; the exact value is immaterial here.
     let spacing = 0.018_886;
     // The whole sub-threshold range the old zero-return swallowed, from a
-    // single land cell's own runoff up to the threshold itself.
+    // single land vertex's own runoff up to the threshold itself.
     for count in [1.0_f64, 2.0, 7.0, RIVER_MIN_DRAINAGE - 1.0] {
         let base = channel_half_width(count, spacing);
         assert!(
@@ -750,7 +750,7 @@ const MIN_COMPOSED_REACHES: usize = 20_000;
 /// stopped. Panics rather than looping if the relation cycles — both relations
 /// this is applied to are strictly descending and therefore acyclic, and a
 /// cycle would otherwise hang the suite rather than fail it.
-fn terminus(start: CellId, bound: usize, step: impl Fn(CellId) -> Option<CellId>) -> CellId {
+fn terminus(start: Vertex, bound: usize, step: impl Fn(Vertex) -> Option<Vertex>) -> Vertex {
     let mut current = start;
     for _ in 0..bound {
         match step(current) {
@@ -761,20 +761,20 @@ fn terminus(start: CellId, bound: usize, step: impl Fn(CellId) -> Option<CellId>
     panic!("the relation composed from {start:?} did not terminate within {bound} hops");
 }
 
-/// claim: invariant(forall-seed) — over three worlds, the coarse cell every
-/// reach's RENDERED chain terminates in is the coarse cell its `downhill`
+/// claim: invariant(forall-seed) — over three worlds, the coarse vertex every
+/// reach's RENDERED chain terminates in is the coarse vertex its `downhill`
 /// chain terminates in.
 ///
 /// **R-4, stated as the composed claim.** A Tier 2 branch is a share of one
-/// coarse cell's catchment and is attached to that cell's trunk, so the coarse
-/// cell it drains to is the one that cell's trunk chain reaches. That makes
+/// coarse vertex's catchment and is attached to that vertex's trunk, so the coarse
+/// vertex it drains to is the one that vertex's trunk chain reaches. That makes
 /// R-4 a claim about the *trunk network*, which is why this test can be — and
 /// was — watched green before Tier 2 was written: it is the reference the
 /// attachment inherits, and if it were false here no attachment rule could
 /// rescue it.
 ///
-/// The rendered successor of a cell is the next cell of the run that CLAIMED
-/// it, read from the published `run_cells`. A cell no run continues past is a
+/// The rendered successor of a vertex is the next vertex of the run that CLAIMED
+/// it, read from the published `run_vertices`. A vertex no run continues past is a
 /// terminus: either the non-reach outlet a run drains into, or — the defect
 /// this can see — a reach that some run stopped short on, which would compose
 /// to itself while the coarse graph composes onward to the sea.
@@ -787,13 +787,13 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
-        let is_reach = |c: CellId| {
+        let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         };
 
         // The rendered relation, from the published run structure alone.
-        let mut next: Vec<Option<CellId>> = vec![None; geo.cell_count()];
-        for (i, run) in net.run_cells.iter().enumerate() {
+        let mut next: Vec<Option<Vertex>> = vec![None; geo.vertex_count()];
+        for (i, run) in net.run_vertices.iter().enumerate() {
             for (j, &c) in run.iter().enumerate() {
                 if j + 1 == run.len() {
                     continue;
@@ -808,10 +808,10 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
             }
         }
 
-        let bound = geo.cell_count();
+        let bound = geo.vertex_count();
         let mut seed_total = 0usize;
         let mut seed_agreed = 0usize;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if !is_reach(c) {
                 continue;
             }
@@ -855,11 +855,11 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
 // construction turned out to do.
 // ---------------------------------------------------------------------------
 
-/// Coarse cells sampled per seed, by stride over the whole `CellId` ordering so
+/// Coarse vertices sampled per seed, by stride over the whole `Vertex` ordering so
 /// the sample crosses every latitude rather than one cap.
 ///
-/// **The population is one cell's whole partition, and the figure is
-/// [`RILLS_PER_CELL_MAX`]'s, not a second one typed here.** That constant
+/// **The population is one vertex's whole partition, and the figure is
+/// [`RILLS_PER_VERTEX_MAX`]'s, not a second one typed here.** That constant
 /// carries the derivation: `4π/40962` of catchment over a `RILL_MIN_CATCHMENT`
 /// of `4π/335544320` is a ratio of 8191.6, which the drawn cut turns into
 /// about **25,190 branches** (12,596 leaves) against the even cut's 16,382.
@@ -868,12 +868,12 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
 /// this campaign has now caught three times, and once inside the repair for it.
 /// The sweeps below print what they actually walked, so the count is a
 /// measurement in the run rather than a claim in a comment.
-const CELL_SAMPLE: usize = 120;
+const VERTEX_SAMPLE: usize = 120;
 
-/// Floor on the cells that actually carry a partition across the sweep, so
-/// none of these claims can pass on an empty population. A cell partitions
+/// Floor on the vertices that actually carry a partition across the sweep, so
+/// none of these claims can pass on an empty population. A vertex partitions
 /// only if a run continues past it, so this tracks the land fraction.
-const MIN_PARTITIONED_CELLS: usize = 100;
+const MIN_PARTITIONED_VERTICES: usize = 100;
 
 /// Floor on the attachments the incidence check below walks, so a sweep that
 /// stopped descending the partition cannot pass by checking a handful of
@@ -882,12 +882,12 @@ const MIN_PARTITIONED_CELLS: usize = 100;
 /// room for terrain drift and none for the coverage collapsing.
 const MIN_ATTACHMENTS: usize = 300_000;
 
-/// The reach cells of one seed, sampled by stride.
-fn sampled_cells(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Vec<CellId> {
-    let stride = (geo.cell_count() / CELL_SAMPLE).max(1);
-    (0..geo.cell_count())
+/// The reach vertices of one seed, sampled by stride.
+fn sampled_vertices(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Vec<Vertex> {
+    let stride = (geo.vertex_count() / VERTEX_SAMPLE).max(1);
+    (0..geo.vertex_count())
         .step_by(stride)
-        .map(|i| CellId(i as u32))
+        .map(|i| Vertex(i as u32))
         .filter(|&c| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         })
@@ -895,8 +895,8 @@ fn sampled_cells(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Ve
 }
 
 /// claim: invariant(forall-seed) — over three worlds, the branches within a
-/// coarse cell partition exactly the one unit of catchment the coarse
-/// accumulation credits that cell with.
+/// coarse vertex partition exactly the one unit of catchment the coarse
+/// accumulation credits that vertex with.
 ///
 /// **R-3's conservation half, and it is STRUCTURAL rather than checked after
 /// the fact.** `branch.rs` splits a share as `first = area·f` and
@@ -904,19 +904,19 @@ fn sampled_cells(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Ve
 /// no rounding can accumulate down the partition. This test says so in the
 /// strongest available form: for every sibling pair, the sum of the two shares
 /// is *bit-identical* to some share the partition also produced — its parent —
-/// or to the cell's whole catchment for the first cut. A partition that
+/// or to the vertex's whole catchment for the first cut. A partition that
 /// conserved only to a tolerance would fail this.
 ///
 /// **The reference is the coarse graph, not a constant this module chose.**
-/// `drainage` counts land cells upstream of and including a cell, so
-/// `drainage(c) − Σ drainage(u)` over the cells draining into `c` is exactly
-/// **1**: the cell's own contribution, the only part of the catchment the
+/// `drainage` counts land vertices upstream of and including a vertex, so
+/// `drainage(c) − Σ drainage(u)` over the vertices draining into `c` is exactly
+/// **1**: the vertex's own contribution, the only part of the catchment the
 /// trunk does not already carry. That identity is asserted here on the same
-/// cells, which is what ties the partitioned quantity to the coarse answer.
+/// vertices, which is what ties the partitioned quantity to the coarse answer.
 #[test]
-fn a_cells_branches_partition_its_own_unit_of_catchment() {
+fn a_vertices_branches_partition_its_own_unit_of_catchment() {
     let geo = Geosphere::new(OUTLET_LEVEL);
-    let unit = cell_catchment(&geo);
+    let unit = vertex_catchment(&geo);
     let mut partitioned = 0usize;
     let mut worst_total = 0.0_f64;
     let mut leaves = 0usize;
@@ -927,15 +927,15 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
 
         // Who drains into whom, for the coarse identity below.
-        let mut inflow = vec![0.0_f64; geo.cell_count()];
-        for c in geo.cells() {
+        let mut inflow = vec![0.0_f64; geo.vertex_count()];
+        for c in geo.vertices() {
             if let Some(t) = *globe.downhill.get(c) {
                 inflow[t.0 as usize] += *globe.drainage.get(c);
             }
         }
 
-        for cell in sampled_cells(globe, &geo) {
-            let rills = rills_of(cell, &net, &geo, &cut);
+        for vertex in sampled_vertices(globe, &geo) {
+            let rills = rills_of(vertex, &net, &geo, &cut);
             if rills.is_empty() {
                 continue;
             }
@@ -949,22 +949,22 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
             // assertion in this file agreed with it, because none of them
             // ever ran.
             assert!(
-                rills.len() <= RILLS_PER_CELL_MAX,
-                "seed {seed}, {cell:?}: {} branches against the stated bound of \
-                 {RILLS_PER_CELL_MAX}. Either the partition no longer terminates where its \
+                rills.len() <= RILLS_PER_VERTEX_MAX,
+                "seed {seed}, {vertex:?}: {} branches against the stated bound of \
+                 {RILLS_PER_VERTEX_MAX}. Either the partition no longer terminates where its \
                  doc says or the bound is stale — do not raise it without redoing the \
-                 arithmetic on `RILLS_PER_CELL_MAX`",
+                 arithmetic on `RILLS_PER_VERTEX_MAX`",
                 rills.len()
             );
 
-            // THE COARSE IDENTITY. The cell's own contribution to its own
-            // accumulation is one cell, exactly — which is the quantity the
+            // THE COARSE IDENTITY. The vertex's own contribution to its own
+            // accumulation is one vertex, exactly — which is the quantity the
             // partition below divides, expressed as an area.
-            let own = *globe.drainage.get(cell) - inflow[cell.0 as usize];
+            let own = *globe.drainage.get(vertex) - inflow[vertex.0 as usize];
             assert_eq!(
                 own, 1.0,
-                "seed {seed}, {cell:?}: the coarse accumulation credits this cell with {own} \
-                 of its own area, not 1. The partition divides one cell's worth of catchment, \
+                "seed {seed}, {vertex:?}: the coarse accumulation credits this vertex with {own} \
+                 of its own area, not 1. The partition divides one vertex's worth of catchment, \
                  so if this is not one the object being divided is not what `drainage` says \
                  the trunk collects here"
             );
@@ -983,7 +983,7 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
                 let sum = pair[0].share + pair[1].share;
                 assert!(
                     shares.contains(&sum),
-                    "seed {seed}, {cell:?}: two sibling shares {} and {} sum to {sum}, which is \
+                    "seed {seed}, {vertex:?}: two sibling shares {} and {} sum to {sum}, which is \
                      not a share the partition holds. The split is losing or inventing \
                      catchment, which a tolerance-based check would have absorbed",
                     pair[0].share,
@@ -993,13 +993,13 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
 
             // THE COMPOSED SUM, also in bits and ORDER-INDEPENDENT because the
             // conserved quantity is an integer: a leaf is a part the partition
-            // declined to divide, and the leaves tile the cell's catchment.
+            // declined to divide, and the leaves tile the vertex's catchment.
             let leaf = |r: &&hornvale_terrain::Rill| r.catchment <= RILL_MIN_CATCHMENT;
             let total: u64 = rills.iter().filter(leaf).map(|r| r.share).sum();
             leaves += rills.iter().filter(leaf).count();
             assert_eq!(
                 total, RILL_WHOLE,
-                "seed {seed}, {cell:?}: the leaves of the partition hold {total} of \
+                "seed {seed}, {vertex:?}: the leaves of the partition hold {total} of \
                  {RILL_WHOLE} — the parts no longer tile the whole"
             );
 
@@ -1011,39 +1011,39 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
         }
     }
     assert!(
-        partitioned >= MIN_PARTITIONED_CELLS,
-        "only {partitioned} sampled cells carry a partition — below the population these \
+        partitioned >= MIN_PARTITIONED_VERTICES,
+        "only {partitioned} sampled vertices carry a partition — below the population these \
          assertions were calibrated against"
     );
     println!(
-        "R-3: {partitioned} cells partitioned, {leaves} leaves; the share partition is exact \
+        "R-3: {partitioned} vertices partitioned, {leaves} leaves; the share partition is exact \
          in integers, and the worst drift of its f64 area rendering is {worst_total:.3e}"
     );
 }
 
 /// claim: invariant(forall-seed) — over three worlds, every branch is attached
 /// to the line one bisection above it, the first pair to the trunk of its own
-/// cell, and no branch leaves the catchment it is a share of.
+/// vertex, and no branch leaves the catchment it is a share of.
 ///
-/// **R-4's Tier 2 half.** The composed claim above establishes that a cell's
+/// **R-4's Tier 2 half.** The composed claim above establishes that a vertex's
 /// trunk chain reaches the coarse graph's own terminus. This establishes the
 /// other link: that a branch is joined to *that* trunk and to nothing else,
-/// and cannot wander out of the cell whose catchment it divides. Together they
-/// are the composed statement R-4 asks for — the coarse cell a branch's water
-/// ultimately reaches is the one the coarse graph sends its cell's water to —
+/// and cannot wander out of the vertex whose catchment it divides. Together they
+/// are the composed statement R-4 asks for — the coarse vertex a branch's water
+/// ultimately reaches is the one the coarse graph sends its vertex's water to —
 /// and it holds by construction rather than by margin, which is the whole
 /// difference between this design and the routed one it replaces.
 ///
 /// **What the reach bound below does and does not say, because the two are
 /// easy to confuse and the failure message used to confuse them.** It bounds a
-/// branch's angular reach from its own cell by the span of the object the
+/// branch's angular reach from its own vertex by the span of the object the
 /// branch is a share of \u2014 the catchment square plus the stretch of trunk it may
 /// attach to. That is a statement about the SCALAR partition's extent, and it
 /// holds by construction. It is **not** a statement that a branch stays inside
-/// its cell's Voronoi region: the square is a same-area proxy for the real
-/// region, so neighbouring cells' squares overlap at their corners
+/// its vertex's Voronoi region: the square is a same-area proxy for the real
+/// region, so neighbouring vertices' squares overlap at their corners
 /// (`branch.rs`'s own module doc concedes this), and a branch can satisfy this
-/// bound while sitting nearer another cell. `tests/rill_probe.rs` measures that
+/// bound while sitting nearer another vertex. `tests/rill_probe.rs` measures that
 /// geometric spill directly and it is **10.5\u201310.8%** of sampled branch heads
 /// across the three seeds \u2014 a named deviation, not a hypothetical. The divide
 /// that cannot be crossed is the one the partitioned scalar draws, and R-4's
@@ -1051,7 +1051,7 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
 #[test]
 fn every_branch_is_attached_to_the_line_above_it() {
     let geo = Geosphere::new(OUTLET_LEVEL);
-    let unit = cell_catchment(&geo);
+    let unit = vertex_catchment(&geo);
     let mut partitioned = 0usize;
     let mut checked = 0usize;
     let mut worst_reach = 0.0_f64;
@@ -1062,8 +1062,8 @@ fn every_branch_is_attached_to_the_line_above_it() {
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
-        for cell in sampled_cells(globe, &geo) {
-            let rills = rills_of(cell, &net, &geo, &cut);
+        for vertex in sampled_vertices(globe, &geo) {
+            let rills = rills_of(vertex, &net, &geo, &cut);
             if rills.is_empty() {
                 continue;
             }
@@ -1074,17 +1074,17 @@ fn every_branch_is_attached_to_the_line_above_it() {
             // second enumeration is the same list.
             assert_eq!(
                 rills,
-                rills_of(cell, &net, &geo, &cut),
-                "seed {seed}, {cell:?}: the partition is not reproducible"
+                rills_of(vertex, &net, &geo, &cut),
+                "seed {seed}, {vertex:?}: the partition is not reproducible"
             );
 
-            let here = geo.position(cell);
+            let here = geo.position(vertex);
             // THE BOUND IS COMPUTED, NOT TYPED. The furthest a branch may be
-            // from its cell is the half-diagonal of the cell's own catchment
+            // from its vertex is the half-diagonal of the vertex's own catchment
             // square — `s/√2` for a square of side `s`, hence the named
-            // constant — plus the furthest point of the cell's own stretch of
+            // constant — plus the furthest point of the vertex's own stretch of
             // trunk. That stretch runs to the midpoints of the arcs either
-            // side, which is half a cell spacing out, and the rendered vertex
+            // side, which is half a vertex spacing out, and the rendered vertex
             // is meander-displaced by up to `MEANDER_AMPLITUDE_RATIO` of the
             // same spacing. So the trunk term is `(0.5 + 0.25)·spacing`, every
             // factor of it read from the mesh or from a published constant.
@@ -1092,7 +1092,7 @@ fn every_branch_is_attached_to_the_line_above_it() {
             // level-6 spacing typed to three places, three lines below a
             // comment congratulating itself on naming constants rather than
             // typing them.
-            let neighbors = geo.neighbors(cell);
+            let neighbors = geo.neighbors(vertex);
             let spacing = neighbors
                 .iter()
                 .map(|&n| arc(here, geo.position(n)))
@@ -1100,10 +1100,10 @@ fn every_branch_is_attached_to_the_line_above_it() {
                 / neighbors.len() as f64;
             let bound = std::f64::consts::FRAC_1_SQRT_2 * unit.sqrt()
                 + (0.5 + hornvale_terrain::MEANDER_AMPLITUDE_RATIO) * spacing;
-            // PER CELL, so the message names the cell the reach came from.
+            // PER VERTEX, so the message names the vertex the reach came from.
             // The running maximum this replaced was correct only by an
             // argument — it is monotone and the assertion sits inside the
-            // loop, so the first crossing is always the current cell's — and a
+            // loop, so the first crossing is always the current vertex's — and a
             // message whose accuracy depends on where the assertion happens to
             // sit is one refactor from lying.
             let mut reach = 0.0_f64;
@@ -1114,27 +1114,27 @@ fn every_branch_is_attached_to_the_line_above_it() {
             worst_ratio = worst_ratio.max(reach / bound);
             assert!(
                 reach < bound,
-                "seed {seed}, {cell:?}: a branch reaches {reach} rad from its own cell, past \
+                "seed {seed}, {vertex:?}: a branch reaches {reach} rad from its own vertex, past \
                  the {bound} rad its own catchment and trunk stretch span. The partition has \
                  stopped being confined to the object it divides — a branch is drawing line \
                  outside the catchment whose share it carries. NOTE what this does NOT say: \
-                 a branch INSIDE this bound may still sit nearer a neighbouring cell, because \
+                 a branch INSIDE this bound may still sit nearer a neighbouring vertex, because \
                  the catchment square is a same-area proxy for the real region and the two \
                  overlap at the corners. That spill is measured in `tests/rill_probe.rs` \
                  (10.5-10.8% of sampled branch heads) rather than asserted here"
             );
 
             // THE TRUNK ITSELF, rebuilt from the published polyline rather
-            // than from `branch.rs`'s idea of it. The cell's stretch of trunk
+            // than from `branch.rs`'s idea of it. The vertex's stretch of trunk
             // spans the midpoints either side of its own vertex, so it lies
             // across TWO polyline segments and the reference is the nearer of
             // them. The first version of this test used only `[j, j+1]` and
-            // reddened at 3.6e-3 rad on the first cell it reached — the mouths
+            // reddened at 3.6e-3 rad on the first vertex it reached — the mouths
             // of parts on the upstream side of the vertex, which are on the
             // trunk and not on that one segment of it.
             let (line, j) = net
-                .trunk_vertex(cell)
-                .expect("a cell with a partition has a trunk");
+                .trunk_vertex(vertex)
+                .expect("a vertex with a partition has a trunk");
             let points = &net.polylines[line].points;
             let mut trunk = vec![[points[j], points[j + 1]]];
             if j > 0 {
@@ -1168,7 +1168,7 @@ fn every_branch_is_attached_to_the_line_above_it() {
                         assert_eq!(
                             rills[parent].depth + 1,
                             rill.depth,
-                            "seed {seed}, {cell:?}: a branch's parent is not one bisection above it"
+                            "seed {seed}, {vertex:?}: a branch's parent is not one bisection above it"
                         );
                         segment_gap([rills[parent].head, rills[parent].mouth], rill.mouth)
                     }
@@ -1176,7 +1176,7 @@ fn every_branch_is_attached_to_the_line_above_it() {
                 worst_gap = worst_gap.max(gap);
                 assert!(
                     gap < 1e-6,
-                    "seed {seed}, {cell:?}: a depth-{} branch's mouth is {gap} from the line it \
+                    "seed {seed}, {vertex:?}: a depth-{} branch's mouth is {gap} from the line it \
                      names as its parent. A branch whose mouth is not ON what it drains \
                      into is joined to the network in the graph and separated from it in space \
                      — the defect The Ford's confluence repair exists for",
@@ -1186,8 +1186,8 @@ fn every_branch_is_attached_to_the_line_above_it() {
         }
     }
     assert!(
-        partitioned >= MIN_PARTITIONED_CELLS,
-        "only {partitioned} sampled cells carry a partition"
+        partitioned >= MIN_PARTITIONED_VERTICES,
+        "only {partitioned} sampled vertices carry a partition"
     );
     // THE COVERAGE IS PRINTED AND FLOORED, not typed into a doc. `checked` is
     // already accumulated by the loop that owns it, so the number in the
@@ -1199,9 +1199,9 @@ fn every_branch_is_attached_to_the_line_above_it() {
          the network rather than the network"
     );
     println!(
-        "R-4 (Tier 2 half): {partitioned} cells, {checked} attachments checked (EVERY branch, \
+        "R-4 (Tier 2 half): {partitioned} vertices, {checked} attachments checked (EVERY branch, \
          no depth cap), worst mouth gap {worst_gap:.3e} rad, furthest branch point \
-         {worst_reach:.5} rad, worst reach as a fraction of its own cell's bound \
+         {worst_reach:.5} rad, worst reach as a fraction of its own vertex's bound \
          {worst_ratio:.4}"
     );
 }
@@ -1243,7 +1243,7 @@ fn segment_gap(seg: [[f64; 3]; 2], p: [f64; 3]) -> f64 {
     arc(p, [q[0] / n, q[1] / n, q[2] / n])
 }
 
-/// The hexagonal packing constant of the mesh: `cell_spacing / √(4π/N)`,
+/// The hexagonal packing constant of the mesh: `vertex_spacing / √(4π/N)`,
 /// measured at **1.078208 / 1.078231 / 1.078237 / 1.078238** across levels
 /// 4-7 (Task 1). It is what makes `a·edge·√count` equal `a·1.0782·√area`, and
 /// therefore what makes the width law's constant of proportionality below a
@@ -1271,7 +1271,7 @@ const ANCHOR_LEVELS: [u32; 2] = [5, 6];
 /// green. So the quantity asserted here is
 ///
 /// ```text
-///   half_width / √(drained area)  =  ½·CHANNEL_WIDTH_COEFF·(spacing/√A_cell)
+///   half_width / √(drained area)  =  ½·CHANNEL_WIDTH_COEFF·(spacing/√A_vertex)
 ///                                 =  ½·CHANNEL_WIDTH_COEFF·PACKING
 /// ```
 ///
@@ -1296,8 +1296,8 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
     let mut reading_worst = 0.0_f64;
     for level in ANCHOR_LEVELS {
         let geo = Geosphere::new(level);
-        let index = NearestCellIndex::new(&geo);
-        let unit = cell_catchment(&geo);
+        let index = NearestVertexIndex::new(&geo);
+        let unit = vertex_catchment(&geo);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed generates");
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
@@ -1306,42 +1306,42 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
         // THE ABSOLUTE DEPTH ANCHOR on `room_spacing` itself, carried forward
         // from the construction this replaces because the hazard is unchanged:
         // a spacing that answered for the wrong depth is invisible to every
-        // ratio. A globe-level room's three corners ARE three cells, so its
-        // three edges are three cell-to-cell separations — read here off
-        // `Geosphere::position` alone, with `RoomAddr::corners` nowhere in it.
-        let face = RoomAddr {
+        // ratio. A globe-level room's three corners ARE three vertices, so its
+        // three edges are three vertex-to-vertex separations — read here off
+        // `Geosphere::position` alone, with `Facet::corners` nowhere in it.
+        let face = Facet {
             face: 3,
             path: vec![1; level as usize],
         };
-        let cells = face
+        let vertices = face
             .corner_weights(&geo, &index)
-            .expect("a globe-level room has corner cells");
-        let mesh = (arc(geo.position(cells[0].0), geo.position(cells[1].0))
-            + arc(geo.position(cells[1].0), geo.position(cells[2].0))
-            + arc(geo.position(cells[2].0), geo.position(cells[0].0)))
+            .expect("a globe-level room has corner vertices");
+        let mesh = (arc(geo.position(vertices[0].0), geo.position(vertices[1].0))
+            + arc(geo.position(vertices[1].0), geo.position(vertices[2].0))
+            + arc(geo.position(vertices[2].0), geo.position(vertices[0].0)))
             / 3.0;
         let drift = (hornvale_terrain::room_spacing(&face) - mesh).abs() / mesh;
         assert!(
             drift < 1e-9,
             "at level {level}, room_spacing({face:?}) is {} against the {mesh} the mesh's own \
-             cell positions give — relative {drift:.3e}. The spacing is being derived at the \
+             vertex positions give — relative {drift:.3e}. The spacing is being derived at the \
              wrong DEPTH, which no parent/child ratio can see because the factor cancels",
             hornvale_terrain::room_spacing(&face)
         );
 
-        for cell in sampled_cells(globe, &geo) {
+        for vertex in sampled_vertices(globe, &geo) {
             // The same mean-of-neighbours spacing `channel.rs` uses, rebuilt
             // here from `Geosphere::position`. A single neighbour's arc is not
             // the same quantity — it carries the mesh's local anisotropy, and
             // using one widened the residual below from 3% to 9%.
-            let neighbors = geo.neighbors(cell);
+            let neighbors = geo.neighbors(vertex);
             let spacing = neighbors
                 .iter()
-                .map(|&n| arc(geo.position(cell), geo.position(n)))
+                .map(|&n| arc(geo.position(vertex), geo.position(n)))
                 .sum::<f64>()
                 / neighbors.len() as f64;
             let room = room_of_depth(&face, 12);
-            for rill in rills_of(cell, &net, &geo, &cut).iter().take(64) {
+            for rill in rills_of(vertex, &net, &geo, &cut).iter().take(64) {
                 let half = channel_half_width(rill.catchment / unit, spacing);
                 let k = half / rill.catchment.sqrt();
                 worst = worst.max((k - expected).abs() / expected);
@@ -1374,7 +1374,7 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
         "only {sampled} branches anchored — below the population this was calibrated against"
     );
     mean /= sampled as f64;
-    // TWO BOUNDS, AND THE REASON THERE ARE TWO. A single cell's spacing
+    // TWO BOUNDS, AND THE REASON THERE ARE TWO. A single vertex's spacing
     // departs from the mesh's mean by up to ~9% — the icosphere is not
     // uniform, and the packing constant is a global average, so a per-branch
     // bound tight enough to be interesting would redden on the twelve
@@ -1425,7 +1425,7 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
 
 /// A room of `depth` inside `face`, by taking child 0 the rest of the way
 /// down — any descendant will do, since only its spacing is read.
-fn room_of_depth(face: &RoomAddr, depth: u32) -> RoomAddr {
+fn room_of_depth(face: &Facet, depth: u32) -> Facet {
     let mut room = face.clone();
     while room.depth() < depth {
         room = room.child(0).expect("depth is below the cap");
@@ -1443,7 +1443,7 @@ fn room_of_depth(face: &RoomAddr, depth: u32) -> RoomAddr {
 /// preregistered `[3, 5]` for reasons having nothing to do with hydrology.
 ///
 /// So this asserts the discriminator directly, on the object rather than on
-/// the ratios: under [`CatchmentCut::Even`] every leaf of a cell's partition is
+/// the ratios: under [`CatchmentCut::Even`] every leaf of a vertex's partition is
 /// at the same depth (the tree is balanced and its shape is the rule's alone),
 /// and under [`CatchmentCut::Drawn`] the leaves are spread across several
 /// depths. If this ever stopped holding, R-5 would have become untestable
@@ -1455,12 +1455,12 @@ fn the_branching_follows_the_partition_and_not_a_fixed_rule() {
     let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed generates");
     let globe = &outcome.globe;
     let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
-    let cell = *sampled_cells(globe, &geo)
+    let vertex = *sampled_vertices(globe, &geo)
         .iter()
         .find(|&&c| net.trunk_vertex(c).is_some())
-        .expect("some sampled cell carries a trunk");
+        .expect("some sampled vertex carries a trunk");
     let spread = |cut: &CatchmentCut| {
-        let rills = rills_of(cell, &net, &geo, cut);
+        let rills = rills_of(vertex, &net, &geo, cut);
         let depths: Vec<u32> = rills
             .iter()
             .filter(|r| r.catchment <= RILL_MIN_CATCHMENT)
@@ -1474,7 +1474,7 @@ fn the_branching_follows_the_partition_and_not_a_fixed_rule() {
     let (drawn_lo, drawn_hi, drawn_leaves) =
         spread(&CatchmentCut::Drawn(globe.rill_partition_seed()));
     println!(
-        "the branching discriminator on {cell:?}: Even gives {even_leaves} leaves at depths \
+        "the branching discriminator on {vertex:?}: Even gives {even_leaves} leaves at depths \
          {even_lo}..={even_hi}; Drawn gives {drawn_leaves} leaves at depths {drawn_lo}..={drawn_hi}"
     );
     assert_eq!(

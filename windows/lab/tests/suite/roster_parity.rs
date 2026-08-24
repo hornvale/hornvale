@@ -32,13 +32,13 @@
 //!    `exposure_of_impl` and `independently_steeped_concepts` already carry.
 //! 5. the six staples, `hornvale_climate::Crop::catalog()`.
 //!
-//! Three rules read PER-CELL or per-coexisting-roster state, and a
-//! cell-by-cell comparison would not be meaningful — this run's seed sweep
+//! Three rules read PER-VERTEX or per-coexisting-roster state, and a
+//! vertex-by-vertex comparison would not be meaningful — this run's seed sweep
 //! would only ever witness whichever biomes/variants/kinds those particular
-//! cells happen to produce, and a test that froze that would be a golden on
+//! vertices happen to produce, and a test that froze that would be a golden on
 //! geography, not a soundness check. The honest unit of parity for these
 //! three is the CATEGORY each draws from, which — unlike the specific value
-//! any one cell yields — IS fixed and enumerable:
+//! any one vertex yields — IS fixed and enumerable:
 //!
 //! - `biome` draws from the closed `hornvale_climate::biome::ALL`.
 //! - the Toponym's variant draws from `hornvale_climate::Variant::catalog()`.
@@ -50,7 +50,7 @@
 //!   in `exposure.rs` documents that shift in detail).
 //!
 //! So: every statically enumerable source, plus the closed catalog each
-//! dynamic rule draws its concept names from — never a specific cell's,
+//! dynamic rule draws its concept names from — never a specific vertex's,
 //! seed's, or species' pairing verdict. `steepable_concept_roster` computes
 //! exactly this ceiling; this test re-derives the same ceiling independently
 //! (from the registry and the same public catalogs) and asserts the two
@@ -114,18 +114,18 @@ fn worldgen_can_steep() -> std::collections::BTreeSet<String> {
         can_steep.insert(concept.to_string());
     }
 
-    // Rule 6 (the STAPLE of a Farming cell): the closed crop catalog.
+    // Rule 6 (the STAPLE of a Farming vertex): the closed crop catalog.
     for crop in Crop::catalog() {
         can_steep.insert(crop.concept_name().to_string());
     }
 
-    // Rule 3 (biome of a settled cell): the closed biome catalog — the
-    // CATEGORY the per-cell rule draws from, not any one cell's reading.
+    // Rule 3 (biome of a settled vertex): the closed biome catalog — the
+    // CATEGORY the per-vertex rule draws from, not any one vertex's reading.
     for b in biome::ALL {
         can_steep.insert(b.concept_name().to_string());
     }
 
-    // Rule 4 (The Toponym's variant of a settled cell): the closed variant
+    // Rule 4 (The Toponym's variant of a settled vertex): the closed variant
     // catalog, on the same reasoning as biome above.
     for variant in Variant::catalog() {
         can_steep.insert(variant.concept_name().to_string());

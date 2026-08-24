@@ -72,7 +72,7 @@ fn number_of(result: &hornvale_lab::RunResult, row: &hornvale_lab::Row, metric: 
 
 #[test]
 fn mean_land_elevation_is_registered_and_positive() {
-    // Mean elevation ABOVE SEA LEVEL over land cells, so it is >= 0 by
+    // Mean elevation ABOVE SEA LEVEL over land vertices, so it is >= 0 by
     // construction. A negative value would mean the land/sea comparison
     // inverted; seed 1 has land, so Absent would also be a bug.
     let study = solo_study("mean-land-elevation-m");
