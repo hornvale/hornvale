@@ -106,3 +106,61 @@ fn pure_is_never_stale_and_ledger_is_stale_only_when_a_watched_dep_is_touched() 
     // Growth AND a touched fact names the watched dependency: stale.
     assert!(ledger.is_stale(6, std::slice::from_ref(&watched)));
 }
+
+#[test]
+fn a_stale_ledger_entry_is_never_returned_as_a_hit() {
+    // The key claim spec section 2.2 makes for the Ledger class,
+    // mechanised: an entry's validity is stored WITH the entry, and a stale
+    // entry is never handed back as a hit -- the behaviour that has no path
+    // through the store at all until Validity is threaded into `Derived`
+    // itself.
+    let e1 = EntityId::new(1).expect("1 is a valid EntityId");
+    let watched = DepKey {
+        subject: e1,
+        predicate: "likes".to_string(),
+        place: None,
+    };
+
+    let mut store: Derived<u64, u64> = Derived::new();
+    store.insert_with_validity(
+        7,
+        49,
+        Validity::Ledger {
+            position: 3,
+            deps: vec![watched.clone()],
+        },
+    );
+
+    // Fresh: the ledger has not grown past the recorded position, so this
+    // is a hit.
+    assert_eq!(store.get_at(&7, 3, &[]), Some(&49));
+    let hits_after_fresh_read = store.hits();
+    assert!(hits_after_fresh_read > 0);
+
+    // Grown, but nothing touched the watched dependency: still a hit.
+    assert_eq!(store.get_at(&7, 4, &[]), Some(&49));
+
+    // Grown AND a fact touching the watched dependency was committed since:
+    // the entry must NOT be returned, and must NOT be counted as a hit.
+    let hits_before_stale_read = store.hits();
+    let misses_before_stale_read = store.misses();
+    assert_eq!(
+        store.get_at(&7, 5, std::slice::from_ref(&watched)),
+        None,
+        "a stale Ledger entry must never be returned"
+    );
+    assert_eq!(
+        store.hits(),
+        hits_before_stale_read,
+        "a stale read must not count as a hit"
+    );
+    assert_eq!(
+        store.misses(),
+        misses_before_stale_read + 1,
+        "a stale read counts as a miss, like a fresh cold miss"
+    );
+
+    // The stale entry is gone, not merely hidden: a later read at the same
+    // key finds nothing to judge, rather than resurrecting the old value.
+    assert_eq!(store.get_at(&7, 5, &[]), None);
+}
