@@ -2824,5 +2824,115 @@ else
 fi
 unset HV_SLUICE_PHASES HV_SLUICE_WORKTREE
 
+echo "== census: kind=census is queueable, and delivers on a branch =="
+# A census cannot be a chamber phase (census-run.sh takes the shared claim
+# itself and rm -f's the claim file on exit), so scripts/sluice-census.sh runs
+# it instead. These tests stub census-run.sh entirely: the point under test is
+# the DELIVERY contract — refuse a bad ref, commit only the census's own
+# output, push a branch, never push main — not whether a census computes.
+
+if bash "$repo_root/scripts/sluice-queue.sh" add c/x "$(printf '0%.0s' $(seq 1 40))" census >/dev/null 2>&1; then
+    ok "the queue accepts kind=census"
+else
+    bad "the queue rejected kind=census — validate_kind was not widened"
+fi
+if bash "$repo_root/scripts/sluice-queue.sh" add c/x "$(printf '0%.0s' $(seq 1 40))" nonsense >/dev/null 2>&1; then
+    bad "the queue accepted a nonsense kind — widening validate_kind removed its teeth"
+else
+    ok "an unknown kind is still rejected (the widening did not open the gate)"
+fi
+
+cen="$tmp/cen"; mkdir -p "$cen/scripts"
+cen_origin="$tmp/cen-origin.git"; git init -q --bare -b main "$cen_origin"
+(
+    cd "$cen"
+    g init -q -b main .
+    g config user.email c@c; g config user.name c
+    mkdir -p book/src/laboratory/generated/the-census
+    printf 'seed,value\n42,1\n' > book/src/laboratory/generated/the-census/rows.csv
+    g add -A; g commit -qm root
+    g remote add origin "$cen_origin"; g push -q origin main
+)
+cen_ref="$(g -C "$cen" rev-parse HEAD)"
+cen_wt="$tmp/cen-wt"; cp -r "$cen" "$cen_wt"
+
+# The stub: `worktree` prints the path; a real invocation does what the mode says.
+write_stub() {  # $1 = moves|still|fails
+    cat > "$cen/scripts/census-run.sh" <<STUB
+#!/usr/bin/env bash
+[ "\${1:-}" = "worktree" ] && { echo "$cen_wt"; exit 0; }
+case "$1" in
+  moves) printf 'seed,value\n42,2\n' > "$cen_wt/book/src/laboratory/generated/the-census/rows.csv" ;;
+  still) : ;;
+  fails) echo "stub census exploded" >&2; exit 9 ;;
+esac
+exit 0
+STUB
+    chmod +x "$cen/scripts/census-run.sh"
+}
+
+run_census() {  # $1 = ref ; echoes rc
+    HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" \
+        bash "$repo_root/scripts/sluice-census.sh" "$1" >/dev/null 2>&1
+    echo $?
+}
+
+write_stub moves
+rc_bad=$(run_census "deadbeef")
+if [ "$rc_bad" = "2" ]; then
+    ok "a short/non-hex ref is refused with rc=2, before any work"
+else
+    bad "expected rc=2 for a malformed ref, got $rc_bad"
+fi
+
+main_before="$(g -C "$cen_origin" rev-parse main)"
+rc_moves=$(run_census "$cen_ref")
+if [ "$rc_moves" = "0" ]; then ok "a census whose goldens moved exits 0"; else bad "expected rc=0, got $rc_moves"; fi
+delivered="$(g -C "$cen_origin" for-each-ref --format='%(refname:short)' 'refs/heads/census/*' | head -1)"
+if [ -n "$delivered" ]; then
+    ok "the goldens were delivered on a branch ($delivered)"
+else
+    bad "no census/* branch was pushed — the delivery half did nothing"
+fi
+if [ "$(g -C "$cen_origin" rev-parse main)" = "$main_before" ]; then
+    ok "MAIN WAS NOT PUSHED — census goldens land through the chamber, not around it"
+else
+    bad "main MOVED — a census pushed straight to main, which is the one thing this must never do"
+fi
+if [ -n "$delivered" ] && g -C "$cen_origin" show "$delivered:book/src/laboratory/generated/the-census/rows.csv" 2>/dev/null | grep -q '42,2'; then
+    ok "the delivered branch carries the regenerated golden, not the old one"
+else
+    bad "the delivered branch does not carry the new golden"
+fi
+
+# MUTATION: a run that moves nothing must not manufacture a branch.
+before_n="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+write_stub still
+rc_still=$(run_census "$cen_ref")
+after_n="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+# "no new branch" alone is VACUOUS here, and a mutation proved it: deleting the
+# guard entirely still pushes nothing, because `git commit` refuses an empty
+# commit. The test then passes for a reason that has nothing to do with the
+# behaviour it claims to check. Assert the guard's OWN output, which only the
+# guard can produce.
+still_log=""
+for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && still_log="$_f"; done
+if [ "$rc_still" = "0" ] && [ "$before_n" = "$after_n" ] \
+   && [ -n "$still_log" ] && grep -q 'NO GOLDENS MOVED' "$still_log"; then
+    ok "a census that moves nothing reports NO GOLDENS MOVED, exits 0, and pushes no branch"
+else
+    bad "unmoved census: rc=$rc_still, branches $before_n -> $after_n, log=${still_log:-none} \
+(expected rc=0, no new branch, and the NO GOLDENS MOVED line)"
+fi
+
+write_stub fails
+rc_fail=$(run_census "$cen_ref")
+after_fail="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+if [ "$rc_fail" != "0" ] && [ "$after_fail" = "$after_n" ]; then
+    ok "a failed census propagates non-zero and delivers nothing"
+else
+    bad "failed census: rc=$rc_fail, branches $after_n -> $after_fail (expected non-zero and no branch)"
+fi
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

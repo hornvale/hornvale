@@ -13,14 +13,12 @@
 
 use std::collections::BTreeSet;
 
+use hornvale_kernel::Band;
 use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::DelveRung;
-use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, floors_in_run,
-};
+use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::character::{
     BarrierPins, BarrierState, CHARACTERS, Character, bands_of, barrier_of, branch_count_of,
-    character_at, character_of, root_floor_of,
+    character_at, character_of,
 };
 
 /// The panel: the three preregistered seeds (spec B.4's table) and a few
@@ -48,7 +46,7 @@ const UNDERDEEP_REACH_MIN: f64 = 0.31;
 ///    not of the draw that consults it.
 #[test]
 fn a_character_only_occupies_its_declared_bands() {
-    let mut tables: Vec<(Character, Vec<DelveRung>)> = Vec::new();
+    let mut tables: Vec<(Character, Vec<Band>)> = Vec::new();
     for character in CHARACTERS {
         let bands = bands_of(*character);
         assert!(
@@ -58,7 +56,7 @@ fn a_character_only_occupies_its_declared_bands() {
         for rung in bands {
             assert_ne!(
                 *rung,
-                DelveRung::Surface,
+                Band::Surface,
                 "{character:?}'s table names Surface, which is not a habitation \
                  rung and has no position in the lattice"
             );
@@ -91,8 +89,8 @@ fn a_character_only_occupies_its_declared_bands() {
 
 /// A habitation rung is Underdeep-or-deeper — the eligibility floor the
 /// drow-tier table must respect.
-fn rung_rank_at_least_underdeep(rung: &DelveRung) -> bool {
-    matches!(rung, DelveRung::Underdeep | DelveRung::Nadir)
+fn rung_rank_at_least_underdeep(rung: &Band) -> bool {
+    matches!(rung, Band::Underdeep | Band::Nadir)
 }
 
 /// Spec B.4: reaching the Underdeep is NOT the same as meeting what lives
@@ -111,11 +109,10 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
     for raw_seed in PANEL_SEEDS {
         let seed = Seed(raw_seed);
         for raw_cell in 0..PANEL_CELLS {
-            for entrance in 0..2u8 {
+            for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     total += 1;
-                    if character_of(seed, CellId(raw_cell), entrance, branch) == Character::DrowTier
-                    {
+                    if character_of(seed, CellId(raw_cell), band, branch) == Character::DrowTier {
                         drow += 1;
                     }
                 }
@@ -139,40 +136,41 @@ fn a_drow_tier_civilization_is_a_character_draw_not_a_band() {
     );
 }
 
-/// One branch carries ONE character for its whole depth (spec §3.3's
-/// coherence guarantee).
+/// One branch AT ONE BAND carries ONE character across every floor of that
+/// run (spec B.5's coherence guarantee, **narrowed by The Drift Task 5**).
 ///
-/// CONTROLLER NOTE (per the dispatch): the property as originally worded is
-/// vacuous — `character_of` takes no band parameter, so "same character at
-/// every depth" holds by type. What CAN break is the chamber-addressed
-/// projection: `character_at(addr)` must resolve every address of one branch
-/// — every band, every floor — to the same character as the branch-level
-/// accessor. If the projection ever consulted `band` or `floor`, a descent
-/// would change civilizations mid-branch, and this test reddens.
+/// **This is a revision, not merely a rename.** Before Task 5,
+/// `character_of` took no band parameter, so "same character at every
+/// depth" held for a whole branch across every band. Task 5 re-keyed
+/// `character_of` onto `(cell, band, branch)` (amendment A.3), so a branch
+/// can now carry a DIFFERENT character at each band it occupies — see
+/// `character_and_barrier_are_keyed_at_the_same_granularity` in
+/// `hornvale_worldgen::character`'s own tests, which demands exactly that
+/// variation. What survives from the old guarantee is narrower: the LEVEL
+/// axis. `character_at(addr)` must still resolve every FLOOR of one
+/// `(branch, band)` run to the same character as the band-level accessor —
+/// if the projection ever consulted `level`, a descent within one band
+/// would change civilizations mid-run, and this test reddens.
 #[test]
-fn one_branch_has_one_character_for_its_whole_depth() {
+fn one_branch_at_one_band_has_one_character_across_its_floors() {
     let seed = Seed(90210);
     for raw_cell in 0u32..20 {
-        for entrance in 0..2u8 {
-            for branch in 0..BRANCHES_PER_SYSTEM {
-                let expected = character_of(seed, CellId(raw_cell), entrance, branch);
-                for band in 0..5u8 {
-                    for floor in 0..8u8 {
-                        let addr = ChamberAddr {
-                            cell: CellId(raw_cell),
-                            entrance,
-                            branch,
-                            band,
-                            floor,
-                        };
-                        assert_eq!(
-                            character_at(seed, addr),
-                            expected,
-                            "{addr:?} resolved a different character than its own \
-                             branch's — the projection consulted something beyond \
-                             the branch identity"
-                        );
-                    }
+        for branch in 0..BRANCHES_PER_SYSTEM {
+            for &band in Band::habitation() {
+                let expected = character_of(seed, CellId(raw_cell), band, branch);
+                for level in 0..8u8 {
+                    let addr = ChamberAddr {
+                        cell: CellId(raw_cell),
+                        branch,
+                        band,
+                        level,
+                    };
+                    assert_eq!(
+                        character_at(seed, addr),
+                        expected,
+                        "{addr:?} resolved a different character than its own \
+                         branch-and-band's — the projection consulted `level`"
+                    );
                 }
             }
         }
@@ -189,6 +187,14 @@ fn one_branch_has_one_character_for_its_whole_depth() {
 /// columns but the world realizes the drawn width (the same
 /// lattice-ceiling/drawn-realization split Task 2 applied to floors). The
 /// positive control is branch 0, which every count admits.
+///
+/// **The enforcement half is checked at each BAND** (The Drift, Task 5):
+/// `chamber_exists` now reads `branch_count_of(seed, addr.cell, addr.band)`
+/// directly, so the gate enforces THAT band's own drawn width — there is no
+/// longer a single system-wide width to enforce. The histogram and
+/// enforcement halves both sweep every habitation band now, in lockstep, so
+/// each `count` is checked against the gate at the same band it was drawn
+/// from.
 /// claim: rate(panel-seeds) — branch-count histogram, mode must be 1
 #[test]
 fn most_systems_have_one_branch_and_none_has_more_than_four() {
@@ -212,16 +218,20 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
     for raw_seed in PANEL_SEEDS {
         let seed = Seed(raw_seed);
         for raw_cell in 0..PANEL_CELLS {
-            for entrance in 0..2u8 {
-                let count = branch_count_of(seed, CellId(raw_cell), entrance);
+            for &band in Band::habitation() {
+                let count = branch_count_of(seed, CellId(raw_cell), band);
                 assert!(
                     (1..=BRANCHES_PER_SYSTEM).contains(&count),
-                    "cell {raw_cell} entrance {entrance} under seed {raw_seed} \
+                    "cell {raw_cell} band {band:?} under seed {raw_seed} \
                      drew {count} branches, outside 1..={BRANCHES_PER_SYSTEM}"
                 );
                 histogram[usize::from(count - 1)] += 1;
                 systems += 1;
 
+                // Enforcement half: `chamber_exists` now reads THIS band's
+                // own drawn count (The Drift, Task 5), so the gate is checked
+                // at the SAME band the count above was drawn from.
+                //
                 // Realization half: past the count, nothing exists.
                 for branch in count..BRANCHES_PER_SYSTEM {
                     assert!(
@@ -231,13 +241,12 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                             gradient,
                             ChamberAddr {
                                 cell: CellId(raw_cell),
-                                entrance,
                                 branch,
-                                band: 0,
-                                floor: 0,
+                                band,
+                                level: 0,
                             },
                         ),
-                        "cell {raw_cell} entrance {entrance} drew {count} branches \
+                        "cell {raw_cell} band {band:?} drew {count} branches \
                          yet branch {branch} still exists under seed {raw_seed} — \
                          the count is reported but not enforced"
                     );
@@ -252,10 +261,9 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
                         gradient,
                         ChamberAddr {
                             cell: CellId(raw_cell),
-                            entrance,
                             branch,
-                            band: 0,
-                            floor: 0,
+                            band,
+                            level: 0,
                         },
                     ) {
                         realized_below_count += 1;
@@ -286,50 +294,24 @@ fn most_systems_have_one_branch_and_none_has_more_than_four() {
     );
 }
 
-/// C.2: a branch is a subtree with a ROOT FLOOR on its parent, not a
-/// parallel shaft. Every non-main-line branch's root floor must be a floor
-/// its parent — the main line — actually realizes, and the main line itself
-/// has no root floor (its root IS the surface).
-/// claim: invariant(forall-panel-seed) — every non-main root floor is realized
-#[test]
-fn a_branch_roots_on_a_floor_that_exists() {
-    for raw_seed in PANEL_SEEDS {
-        let seed = Seed(raw_seed);
-        for raw_cell in 0..PANEL_CELLS {
-            for entrance in 0..2u8 {
-                // The main line roots at the surface.
-                assert_eq!(
-                    root_floor_of(seed, CellId(raw_cell), entrance, 0),
-                    None,
-                    "cell {raw_cell} entrance {entrance} under seed {raw_seed}: the \
-                     main line reported a root floor, but its root is the surface"
-                );
-                for branch in 1..BRANCHES_PER_SYSTEM {
-                    let root = root_floor_of(seed, CellId(raw_cell), entrance, branch)
-                        .expect("every non-main-line branch hangs off its parent");
-                    let parent_realizes = floors_in_run(
-                        seed,
-                        RunAddr {
-                            cell: CellId(raw_cell),
-                            entrance,
-                            branch: 0,
-                            band: root.band,
-                        },
-                    );
-                    assert!(
-                        root.floor < parent_realizes,
-                        "branch {branch} of cell {raw_cell} entrance {entrance} \
-                         under seed {raw_seed} roots at band {} floor {}, but its \
-                         parent realizes only {parent_realizes} floors there — a \
-                         dangling subtree",
-                        root.band,
-                        root.floor
-                    );
-                }
-            }
-        }
-    }
-}
+// --- `a_branch_roots_on_a_floor_that_exists` LIVED HERE (The Drift, Task 7) ---
+//
+// It held The Stope's C.2 property: every non-main-line branch's root floor
+// is a floor its parent — the main line — actually realizes, and the main
+// line has none because its root is the surface. `root_floor_of` and the
+// `chamber/branch-root/v1` leg it read both retired with spec §4.6, so the
+// quantity the test asserted about no longer exists to be wrong.
+//
+// **It is recorded rather than silently dropped, because a deleted test is a
+// removed guard** — the same discipline amendment B.3 imposes on the descent
+// verb's lost outcome. The property has a successor and the successor is
+// strictly stronger: C.2 asked that a drawn root be *realized*, while spec
+// §4.5 guarantees that **every branch of every band has at least one parent
+// above it**, by construction rather than by draw. That is asserted over all
+// sixteen constructed width pairs by `every_branch_has_at_least_one_parent`
+// and over a real panel by
+// `the_shipped_composition_keeps_both_guarantees_over_a_panel`, both in
+// `windows/worldgen/src/chamber.rs`. Nothing here is left unguarded.
 
 /// Decision 0102's determinism half, for the barrier: same place in, same
 /// state out, even after unrelated queries interleave; two branches of one
@@ -341,14 +323,20 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
     let seed = Seed(90210);
     let cell = CellId(9);
 
-    let first = barrier_of(seed, cell, 0, 2, &BarrierPins::default());
+    let first = barrier_of(seed, cell, Band::Undercroft, 2, &BarrierPins::default());
     for raw_cell in 0u32..30 {
         for branch in 0..BRANCHES_PER_SYSTEM {
-            let _ = barrier_of(seed, CellId(raw_cell), 1, branch, &BarrierPins::default());
+            let _ = barrier_of(
+                seed,
+                CellId(raw_cell),
+                Band::Shallows,
+                branch,
+                &BarrierPins::default(),
+            );
         }
     }
     assert_eq!(
-        barrier_of(seed, cell, 0, 2, &BarrierPins::default()),
+        barrier_of(seed, cell, Band::Undercroft, 2, &BarrierPins::default()),
         first,
         "the same branch answered a different barrier after unrelated queries — \
          the draw advanced a stream instead of keying on a place"
@@ -358,7 +346,15 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
     let mut differing_systems = 0usize;
     for raw_cell in 0..PANEL_CELLS {
         let states: BTreeSet<BarrierState> = (0..BRANCHES_PER_SYSTEM)
-            .map(|b| barrier_of(seed, CellId(raw_cell), 0, b, &BarrierPins::default()))
+            .map(|b| {
+                barrier_of(
+                    seed,
+                    CellId(raw_cell),
+                    Band::Undercroft,
+                    b,
+                    &BarrierPins::default(),
+                )
+            })
             .collect();
         if states.len() > 1 {
             differing_systems += 1;
@@ -381,7 +377,7 @@ fn the_barrier_is_deterministic_and_keyed_on_the_branch() {
         for raw_cell in 0u32..10 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 assert_eq!(
-                    barrier_of(seed, CellId(raw_cell), 0, branch, &pins),
+                    barrier_of(seed, CellId(raw_cell), Band::Undercroft, branch, &pins),
                     state,
                     "pin {:?} did not hold at cell {raw_cell} branch {branch}",
                     state

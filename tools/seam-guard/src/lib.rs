@@ -185,15 +185,52 @@ pub fn default_roots() -> &'static [&'static str] {
     WORKSPACE_ROOTS
 }
 
-/// True iff the working tree has no uncommitted changes.
+/// True iff the working tree has no uncommitted changes to TRACKED files.
 ///
 /// The run rewrites real source files and restores them afterwards. Refusing
 /// to start on a dirty tree means recovery from any interruption is always
 /// the same single command — `git checkout -- <file>` — rather than a
 /// reconstruction from memory.
+///
+/// DIRECTION THIS CHECK ENFORCES, and what it deliberately ignores: it asks
+/// only about files git is tracking. Untracked files are NOT dirt for this
+/// purpose, because they play no part in the restore path above — nothing
+/// this tool writes could be recovered or corrupted by them, and
+/// `git checkout -- <file>` neither touches nor needs them.
+///
+/// It used to use a bare `git status --porcelain` and require the output
+/// EMPTY, which blocked on any untracked file at all. That was stricter than
+/// the rationale it cited, and not harmlessly so: on 2026-08-23 a single
+/// stray untracked directory (another tool's 619 KB of state, a day old)
+/// refused the whole run. Since decision 0148 took seam-guard off the merge
+/// phases, it runs ONLY when a human types it — and a tool that refuses on
+/// the first attempt for a reason unrelated to its own job is a tool people
+/// stop typing. The failure mode is silent: no verdicts get taken, and the
+/// committed roster still lists the registrations, so it reads healthy.
 pub fn tree_is_clean() -> bool {
+    tree_is_clean_in(Path::new("."))
+}
+
+/// [`tree_is_clean`], asked of a specific directory.
+///
+/// Split out so the behaviour is testable without `chdir`, which is
+/// process-global and would race under a parallel test runner.
+pub fn tree_is_clean_in(dir: &Path) -> bool {
+    // THE AMBIENT GIT ENVIRONMENT IS SCRUBBED, and `-C` is not enough on its
+    // own: `GIT_DIR` names a repository outright and `-C` only changes the
+    // working directory, so under a hook or a merge — where git exports
+    // `GIT_DIR` and `GIT_INDEX_FILE` — this would silently report on a
+    // DIFFERENT repository, or read a different index, than the one it was
+    // asked about. Same reasoning and same remedy as every git call in
+    // scripts/sluice-mouth.sh.
     Command::new("git")
-        .args(["status", "--porcelain"])
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .arg("-C")
+        .arg(dir)
+        .args(["status", "--porcelain", "--untracked-files=no"])
         .output()
         .map(|o| o.stdout.is_empty())
         .unwrap_or(false)

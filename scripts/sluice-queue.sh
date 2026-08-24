@@ -126,9 +126,17 @@ validate_state() {
 # pushes), so a third value arriving by typo must fail here rather than be
 # silently treated as one of the two. Empty is accepted and normalised to
 # `merge` by the caller, for rows written before this column existed.
+# `census` is a THIRD kind, and unlike merge/stage it is not run by
+# sluice-run.sh — scripts/sluice-census.sh runs it, because census-run.sh takes
+# the shared claim itself and deletes the claim file on exit, so it cannot be
+# nested inside a job already holding it (sluice-run.sh refuses it as a phase
+# for that reason). It is in the queue for ORDERING, not for dispatch: a census
+# competes for the same claim every chamber job takes, and before it had a kind
+# it was invisible to the FIFO that claim exists to serve — one unqueued census
+# left a merge waiting ~19 minutes on 2026-08-24.
 validate_kind() {
     case "$1" in
-        merge|stage) return 0 ;;
+        merge|stage|census) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -142,7 +150,7 @@ add)
     sha="${2:?usage: add <branch> <sha> [merge|stage]}"
     kind="${3:-merge}"
     if ! validate_kind "$kind"; then
-        echo "sluice-queue: add: '$kind' is not a known kind (merge|stage)" >&2
+        echo "sluice-queue: add: '$kind' is not a known kind (merge|stage|census)" >&2
         exit 1
     fi
     if ! validate_branch "$branch"; then

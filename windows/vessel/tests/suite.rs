@@ -21,8 +21,12 @@ mod common;
 mod action_module;
 #[path = "suite/action_mood.rs"]
 mod action_mood;
+#[path = "suite/body_fields.rs"]
+mod body_fields;
 #[path = "suite/body_mass.rs"]
 mod body_mass;
+#[path = "suite/controller_swap.rs"]
+mod controller_swap;
 #[path = "suite/course_properties.rs"]
 mod course_properties;
 #[path = "suite/display_handle.rs"]
@@ -43,6 +47,8 @@ mod lantern_seam;
 mod ledger_query_equivalence;
 #[path = "suite/liveness_genesis.rs"]
 mod liveness_genesis;
+#[path = "suite/one_roster.rs"]
+mod one_roster;
 #[path = "suite/ooc_namespace.rs"]
 mod ooc_namespace;
 #[path = "suite/ooc_objective.rs"]

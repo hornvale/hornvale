@@ -78,17 +78,22 @@ fn terminal_size() -> std::io::Result<(u16, u16)> {
 /// Draw the driver's current state at the terminal's current size.
 ///
 /// Reads `driver.snapshot()`/`focus()`/`cursor()`/`strip_text()`/
-/// `line_text()`/`caret()`/`echo()` fresh each call rather than being
-/// handed them, so every call site redraws the driver's true current state
-/// rather than whatever it happened to return from the action that
-/// triggered the redraw (`Event::Resize` has no action at all). The command
+/// `strip_offset()`/`line_text()`/`caret()`/`echo()` fresh each call rather
+/// than being handed them, so every call site redraws the driver's true
+/// current state rather than whatever it happened to return from the
+/// action that triggered the redraw (`Event::Resize` has no action at
+/// all). **This function IS the redraw F3 drives `strip_offset` from**:
+/// `Driver::refresh_strip` (called from every action that could change
+/// what the strip shows) advances the strip's own scroll counter, and this
+/// function reads it back out here, fresh — no timer anywhere in the loop.
+/// The command
 /// buffer moved into `Driver` itself with Task 3 (The Stylus) — it used to
 /// be a separate `bin::line::Line` this loop owned alongside the driver,
 /// but `Driver::apply` now needs to mutate it directly to answer `Submit`,
 /// so `Driver` owns it and this function reads it back through the small
 /// accessors rather than threading a second mutable buffer through the
 /// loop.
-fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
+fn redraw(term: &term::Term, driver: &mut Driver) -> std::io::Result<()> {
     let (w, h) = terminal_size()?;
     let json = driver.snapshot();
     let text = driver.line_text();
@@ -96,6 +101,15 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         text: &text,
         caret: driver.caret(),
     };
+    // The Portolan part II, Task 3a: the world view's activation is
+    // `Driver`'s own decision, not re-derived here — `Driver::
+    // world_plate_for_redraw`'s doc explains why (fix round 1: an earlier
+    // revision gated this on `Focus::Map` alone, which silently retired the
+    // walk-band cursor/strip feature that ALSO lives behind `Focus::Map`).
+    // `Focus::Map`'s own door is still just submitting a bare `map`
+    // (`Driver::enter_map`); nothing here adds a new verb, and nothing here
+    // can yet turn the world view itself on — Task 3b owns that gesture.
+    let world_plate = driver.world_plate_for_redraw(w, h);
     match hornvale_game_core::render_with(
         &json,
         w,
@@ -105,6 +119,8 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         cmd_line,
         driver.strip_text(),
         driver.echo(),
+        world_plate.as_ref(),
+        driver.strip_offset(),
     ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
@@ -135,9 +151,9 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
 fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
     use crossterm::event::{Event, read};
 
-    let (_, h) = terminal_size()?;
-    driver.resize(h);
-    redraw(term, driver)?;
+    let (w, h) = terminal_size()?;
+    driver.resize(w, h);
+    redraw(term, &mut *driver)?;
     loop {
         match read()? {
             Event::Key(key) => {
@@ -146,15 +162,15 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
                     continue;
                 }
                 let released = driver.apply(action);
-                redraw(term, driver)?;
+                redraw(term, &mut *driver)?;
                 if released {
                     return Ok(());
                 }
             }
             Event::Resize(_, _) => {
-                let (_, h) = terminal_size()?;
-                driver.resize(h);
-                redraw(term, driver)?;
+                let (w, h) = terminal_size()?;
+                driver.resize(w, h);
+                redraw(term, &mut *driver)?;
             }
             _ => {}
         }

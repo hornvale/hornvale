@@ -1,6 +1,215 @@
-use hornvale_game_core::render;
+use hornvale_game_core::{Cell, CommandLine, Focus, Grid, Source, Weight, render, render_with};
 
 const FIXTURE: &str = include_str!("fixtures/session-seed-42-turn-0.json");
+
+/// The world plate is composed here, not in `chart.rs`/`plan.rs`'s own
+/// tests, because `compose` lives in `spread.rs` — this crate has no
+/// `tests/suite.rs` (the workspace's test-binary consolidation does not
+/// reach `clients/game`, which is outside the cargo workspace), so this
+/// file is that home.
+///
+/// **Deviates from the task brief's own draft of this test at one point,
+/// found by running it, not by reasoning about it.** The brief's version
+/// checked cell `(0, 0)` for `Source::Chart` in the `without` render; for
+/// this fixture that cell is `Unattributed` — `chart::draw`'s own module
+/// doc states the observer's box is anchored to the plate's CENTRE, not
+/// its corner ("lands on (0, 0) [relative to the observer] ... anchors it
+/// to the grid centre directly"), and which relative boxes are non-blank
+/// around it depends on the fixture's own chart cells, which the corner
+/// is not guaranteed to be among. `(20, 10)` — the plate's own centre at
+/// 40x20, where the observer's `@` always lands by construction — is used
+/// instead, so this test does not depend on incidental fixture content.
+///
+/// **Fix round 1: this test did not discriminate the behaviour it
+/// claimed.** The synthetic plate below has exactly one non-blank cell,
+/// and `blit` skips blank source cells — so a hypothetical MERGE bug
+/// (`compose` drawing the band's chart/plan first and then blitting the
+/// world plate on top, rather than choosing one or the other) would leave
+/// the chart drawn everywhere the synthetic plate is blank, and `(20,
+/// 10)` alone would read `World` either way: the original two assertions
+/// passed under both the correct either/or and the merge bug. The fix
+/// adds a SECOND probe cell, `(20, 6)`, which the synthetic plate leaves
+/// blank and which the real `without` render draws as `Source::Chart`
+/// (found by probing the real render — not guessed): under the correct
+/// either/or, `(20, 6)` is `Unattributed` in `with` (the chart was never
+/// drawn at all, so there is nothing there for `blit` to skip past);
+/// under the merge bug, `(20, 6)` stays `Chart` in `with` (drawn first,
+/// then not overwritten because the synthetic plate is blank there). This
+/// was verified to actually discriminate — see the task report's "fix
+/// round 1" section for the red/green mutation proof.
+#[test]
+fn a_supplied_world_plate_replaces_the_band_view_and_nothing_else() {
+    let plate = {
+        let mut g = Grid::new(40, 20);
+        g.set(20, 10, Cell::glyph('#', Weight::Normal, Source::World));
+        g
+    };
+    let (with, _) = render_with(
+        FIXTURE,
+        80,
+        24,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+        0,
+    )
+    .unwrap();
+    let (without, _) = render_with(
+        FIXTURE,
+        80,
+        24,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        None,
+        0,
+    )
+    .unwrap();
+    assert_eq!(with.get(20, 10).unwrap().source, Source::World);
+    assert_eq!(without.get(20, 10).unwrap().source, Source::Chart);
+    // The discriminating probe: (20, 6) is Chart in `without` (confirmed
+    // by probing the real render) and blank in the synthetic plate, so a
+    // merge bug (draw chart, then blit world on top) would leave it
+    // `Chart` in `with` too. The correct either/or leaves it
+    // `Unattributed`: the chart was never drawn into `with`'s plate at
+    // all.
+    assert_eq!(without.get(20, 6).unwrap().source, Source::Chart);
+    assert_eq!(
+        with.get(20, 6).unwrap().source,
+        Source::Unattributed,
+        "the band's chart must not be drawn at all when a world plate is \
+         supplied — a cell the synthetic plate leaves blank must stay \
+         blank in `with`, not fall through to the chart underneath"
+    );
+    // The entry pane is untouched by the lens.
+    for y in 0..24 {
+        for x in 40..80 {
+            assert_eq!(
+                with.get(x, y),
+                without.get(x, y),
+                "the lens must not reach past the plate at ({x},{y})"
+            );
+        }
+    }
+}
+
+/// Task 3a (The Portolan part II): the plate's width is focus-dependent.
+/// Walk focus keeps the old `PLATE_WIDTH`-column plate even when a world
+/// plate is supplied — a caller-supplied `Grid` wider than that is CLIPPED,
+/// never stretched into; Map focus lets the plate reach
+/// `spread::world_plate_width`'s fit of the terminal's own size; the 80x24
+/// floor degrades to the SAME width the fit already gave it before this
+/// task (`world_plate_width(80, 24) == PLATE_WIDTH`, an identity that is
+/// itself a consistency check on `GLYPH_ASPECT`), never refusing.
+///
+/// **Deviates from the task brief's own draft of this test, found by
+/// running it, not by reasoning about it.** The brief's draft set exactly
+/// ONE non-blank cell on the synthetic plate at `(0, 0)` and then probed
+/// `(x, 10)` for `x` up to 120 — but `blit` only ever copies non-blank
+/// SOURCE cells (see `a_supplied_world_plate_replaces_the_band_view_and_
+/// nothing_else`'s own fix-round-1 note above for the same lesson learned
+/// once already), so a plate with exactly one non-blank cell can never
+/// populate row 10 at any column. This version fills the synthetic plate
+/// SOLIDLY with `Source::World` glyphs, well past both the old fixed width
+/// and the fit width at 210x56, so the probes below actually discriminate
+/// "clipped by the destination's own bounds" (`Grid::set` silently drops an
+/// out-of-range write — `cell.rs`'s own doc) from "the destination was
+/// sized wide enough to keep it".
+#[test]
+fn the_world_plate_uses_the_width_only_while_the_map_is_focused() {
+    let plate = {
+        let mut g = Grid::new(150, 40);
+        for y in 0..g.height() {
+            for x in 0..g.width() {
+                g.set(x, y, Cell::glyph('#', Weight::Normal, Source::World));
+            }
+        }
+        g
+    };
+
+    // Walk focus: the two-pane split is untouched. The synthetic plate is
+    // still drawn (world_plate replaces the band's own chart/plan
+    // regardless of focus — see the test above), but confined to the OLD
+    // fixed width: column 40 itself belongs to the entry pane, never the
+    // plate, so it cannot be `Source::World`.
+    let (walk, _) = render_with(
+        FIXTURE,
+        210,
+        56,
+        Focus::Walk,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+        0,
+    )
+    .unwrap();
+    assert_eq!(
+        walk.get(39, 10).unwrap().source,
+        Source::World,
+        "the walk view still draws the supplied plate up to the old width"
+    );
+    assert_ne!(
+        walk.get(40, 10).unwrap().source,
+        Source::World,
+        "the walk view keeps its 40-column plate even with a wide plate supplied"
+    );
+
+    // Map focus: the plate reaches past the old fixed width, out to the
+    // 210x56 fit (`world_plate_width(210, 56) == 104`).
+    let (map, _) = render_with(
+        FIXTURE,
+        210,
+        56,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+        0,
+    )
+    .unwrap();
+    assert_eq!(
+        map.get(100, 10).unwrap().source,
+        Source::World,
+        "the map view draws world cells past the old fixed plate width"
+    );
+    assert_ne!(
+        map.get(110, 10).unwrap().source,
+        Source::World,
+        "the map view still stops at the fit width, not the whole terminal \
+         or the supplied plate's own (wider) size"
+    );
+
+    // The floor degrades, never refuses -- and lands on the SAME width the
+    // fit already gave the old constant.
+    let (floor, _) = render_with(
+        FIXTURE,
+        80,
+        24,
+        Focus::Map,
+        None,
+        CommandLine::default(),
+        None,
+        None,
+        Some(&plate),
+        0,
+    )
+    .unwrap();
+    assert_eq!(floor.width(), 80, "80x24 degrades, never refuses");
+    assert_eq!(
+        floor.get(30, 10).unwrap().source,
+        Source::World,
+        "the floor still draws the plate within its own (unchanged) width"
+    );
+}
 
 /// ACCEPTANCE TEST 1: the complete spread in monochrome characters at
 /// 80x24, still usable.

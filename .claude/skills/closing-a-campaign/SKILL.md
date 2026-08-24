@@ -96,7 +96,14 @@ not done until every one is checked or explicitly N/A.
    different thing from step 4's golden pins: pins re-pin in the drifting
    commit, keystones refreeze at merge.
 
-6. **Submit to the merge queue** (`make sluice BRANCH=<branch>
+6. **Submit to the merge queue — and note that this is step SIX, after
+   step 3's artifacts, not before them.** Submitting first is the common
+   failure and it is not free: the campaign then owes a second merge to
+   carry the chronicle and retrospective, which is a second slot in a
+   strictly serial queue plus a window where `main` holds a campaign the
+   book does not describe. The Penstock (2026-08-23) did exactly this.
+   `submitting-to-the-sluice` now carries the same precondition as its own
+   step 0, so either skill catches it. (`make sluice BRANCH=<branch>
    REF=<full-sha>`; see the `submitting-to-the-sluice` skill for the
    load-bearing order of gate-commit → push → enqueue → nudge). Do not
    fast-forward main by hand: the chamber gates the merge *product* — the

@@ -51,9 +51,7 @@ pub use channel::{
     FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, MEANDER_AMPLITUDE_RATIO, Transverse, band_edges,
     channel_half_width, confinement,
 };
-pub use delve::{
-    DelveRung, HABITABLE_CEILING_K, delta_t_range_of, rung_at_delta_t, rung_at_depth, rungs,
-};
+pub use delve::{HABITABLE_CEILING_K, delta_t_range_of, rung_at_delta_t, rung_at_depth, rungs};
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
     lavatube_proneness,
@@ -67,7 +65,7 @@ pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
 pub use strata::{
-    BandKind, BandSample, Era, GeothermalGradient, StratigraphicColumn, column, depth_to_basement,
+    BandSample, Era, GeothermalGradient, Horizon, StratigraphicColumn, column, depth_to_basement,
     geothermal_gradient, temperature_at_depth, unconformity,
 };
 pub use water::{RIVER_MIN_DRAINAGE, RIVER_REACH, WaterKind, river_proximity};

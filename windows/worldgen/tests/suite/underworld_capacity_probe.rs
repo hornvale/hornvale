@@ -20,9 +20,9 @@
 use std::collections::BTreeMap;
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{KindId, Seed};
+use hornvale_kernel::{Band, KindId, Seed};
 use hornvale_species::{HabitatRealm, environment_niche_registry, habitat_realm_registry};
-use hornvale_terrain::{CaveKind, DelveRung, TerrainPins, is_phreatic, rungs, water_table_depth_m};
+use hornvale_terrain::{CaveKind, TerrainPins, is_phreatic, rungs, water_table_depth_m};
 use hornvale_worldgen::chamber::ChamberOrigin;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::delve_seating::{Seating, chamber_fit, made_chambers, seat_at, seating_for};
@@ -37,7 +37,7 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// The surface-invariance control: settling peoples that are **not** in
 /// `habitat_realm_registry`, each pinned alone so no subterranean people is in
 /// the world at all. Under the re-key every one of them is seated at
-/// [`hornvale_terrain::DelveRung::Surface`] on every cell, so a pinned run is
+/// [`hornvale_kernel::Band::Surface`] on every cell, so a pinned run is
 /// the same object before and after and must reproduce byte for byte. A move
 /// here means the `Surface` rung is not keyed consistently, which is the one
 /// outcome spec §4.6 forbids.
@@ -174,7 +174,7 @@ fn where_underworld_communities_found_and_what_they_cut() {
     for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
         let row: Vec<String> = rungs()
             .iter()
-            .filter(|r| **r != DelveRung::Surface)
+            .filter(|r| **r != Band::Surface)
             .map(|r| chamber_fit(drow, kind, *r).map_or("  --  ".into(), |f| format!("{f:.4}")))
             .collect();
         println!("  {:<10} {}", kind.name(), row.join("  "));
@@ -268,7 +268,7 @@ fn where_underworld_communities_found_and_what_they_cut() {
                 let cell = addr.cell;
                 let Some(rung) = rungs()
                     .iter()
-                    .filter(|r| **r != DelveRung::Surface)
+                    .filter(|r| **r != Band::Surface)
                     .nth(addr.band as usize)
                     .copied()
                 else {

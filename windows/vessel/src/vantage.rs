@@ -1,8 +1,9 @@
 //! The Vantage-query seam interface: what is observable from here, now,
 //! to this agent. Refinement steps 1 and 6 only — no elaboration.
 
-use crate::{Agent, VesselError};
-use hornvale_kernel::{World, WorldTime};
+use crate::VesselError;
+use crate::body::Body;
+use hornvale_kernel::{RoomAddr, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext};
 use hornvale_settlement::VillageInfo;
 
@@ -14,7 +15,7 @@ pub struct Vantage {
     pub locale: Locale,
     /// The possession's frozen day.
     pub day: WorldTime,
-    /// The settlement the agent was minted from.
+    /// The body's settlement, or a neutral fallback for a body with none.
     pub village: VillageInfo,
     /// The sky over this day, from the world's sky provider.
     pub sky: String,
@@ -28,15 +29,16 @@ pub struct Vantage {
     pub submerged: bool,
 }
 
-/// Bundle the locale room, the mint settlement, and the day's sky into a
-/// vantage. Pure over (world, agent, at).
+/// Bundle the locale room, the settlement, and the day's sky into a vantage.
+/// Pure over (world, npc, position, at).
 pub fn observable(
     world: &World,
     ctx: &LocaleContext,
-    agent: &Agent,
+    npc: &Body,
+    position: &RoomAddr,
     at: WorldTime,
 ) -> Result<Vantage, VesselError> {
-    observable_at(world, ctx, agent, at, None)
+    observable_at(world, ctx, npc, position, at, None)
 }
 
 /// Whether `stratum` sits in a water-medium realm — the question is about
@@ -54,15 +56,24 @@ pub fn submerged_in(stratum: Option<hornvale_climate::Stratum>) -> bool {
 
 /// [`observable`], optionally from a stratum within the water column rather
 /// than from the surface — the depth band's vantage.
+///
+/// `npc.village` is `None` for a wild creature; `Vantage::village` stays
+/// non-optional (every existing reader — `knowledge.rs`'s settlement facts,
+/// `focalize.rs`'s prose) assumes `Some`, so a `None` here resolves to a
+/// neutral stand-in ([`crate::liveness::village_or_fallback`]) rather than
+/// unwrapping. Unreached today (a driven body is always settlement-derived —
+/// `derive_npcs` places it at the roster's front), but a wild body could
+/// legitimately reach this once a later task admits driving one.
 pub fn observable_at(
     world: &World,
     ctx: &LocaleContext,
-    agent: &Agent,
+    npc: &Body,
+    position: &RoomAddr,
     at: WorldTime,
     stratum: Option<hornvale_climate::Stratum>,
 ) -> Result<Vantage, VesselError> {
     let locale = ctx
-        .describe_at(&agent.position, at, stratum)
+        .describe_at(position, at, stratum)
         .map_err(VesselError::Locale)?;
     // The walker's own cell, not the capital's: the sky over *here*, dimmed by
     // the weather *here*. (`at` is already this function's WorldTime, so the
@@ -77,7 +88,7 @@ pub fn observable_at(
         submerged: submerged_in(stratum),
         locale,
         day: at,
-        village: agent.village.clone(),
+        village: crate::liveness::village_or_fallback(npc),
         sky: report.description,
         sky_bodies: report.body_phrases,
     })

@@ -43,7 +43,7 @@ fn possession_opens_with_a_focalized_description() {
 fn go_moves_and_back_retraces() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let home = s.agent().position.clone();
+    let home = s.position();
     // find a real direction from the current room's ways-on
     let ways = match s.handle("look") {
         Turn::Out(t) => t,
@@ -67,9 +67,9 @@ fn go_moves_and_back_retraces() {
         Turn::Out(t) => assert!(t.contains("[room ")),
         _ => panic!("go must not release"),
     }
-    assert_ne!(s.agent().position, home, "go moved");
+    assert_ne!(s.position(), home, "go moved");
     s.handle("back");
-    assert_eq!(s.agent().position, home, "back retraces");
+    assert_eq!(s.position(), home, "back retraces");
 }
 
 /// The refusal is DIRECTIONAL as of The Lintel: coarse-ward (`exit`, toward
@@ -82,13 +82,13 @@ fn go_moves_and_back_retraces() {
 fn the_coarse_ward_exit_refuses_diegetically() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let before = s.agent().position.clone();
+    let before = s.position();
     let out = match s.handle("exit") {
         Turn::Out(t) => t,
         _ => panic!("exit must not release"),
     };
     assert!(out.contains("grain of the world"), "diegetic refusal");
-    assert_eq!(s.agent().position, before, "no movement");
+    assert_eq!(s.position(), before, "no movement");
 }
 
 /// Descending must never move the WALK-band position: the band change lives in
@@ -99,7 +99,7 @@ fn the_coarse_ward_exit_refuses_diegetically() {
 fn entering_leaves_the_walk_band_position_alone() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let before = s.agent().position.clone();
+    let before = s.position();
     let reply = match s.handle("enter") {
         Turn::Out(t) => t,
         _ => panic!("enter must not release"),
@@ -114,12 +114,12 @@ fn entering_leaves_the_walk_band_position_alone() {
         "the flagship's own locale is built, so this must actually descend: {reply:?}"
     );
     assert_eq!(
-        s.agent().position,
+        s.position(),
         before,
         "the possession's walk-band position is untouched by descent"
     );
     s.handle("out");
-    assert_eq!(s.agent().position, before);
+    assert_eq!(s.position(), before);
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
     let world = seam_world();
     let (mut s, opening) = Session::start(&world, &opts()).unwrap();
     assert!(opening.contains("day 0"));
-    let home = s.agent().position.pack().unwrap().0;
+    let home = s.position().pack().unwrap().0;
     let out = match s.handle("wait 90") {
         Turn::Out(t) => t,
         _ => panic!("wait must not release"),
@@ -161,7 +161,7 @@ fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
         _ => panic!("look must not release"),
     }
     assert_eq!(
-        s.agent().position.pack().unwrap().0,
+        s.position().pack().unwrap().0,
         home,
         "waiting does not move the possessed agent"
     );
@@ -758,16 +758,22 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 }
 
 /// The Deep Realm, Task 5: at a cell with no cave, `delve` refuses and names
-/// the absence — the first of the three outcomes `dive`'s own doc warns a
-/// descent verb must distinguish. The other two (a cave whose entrance is
-/// SEALED vs. a cave that actually descends) are exercised in
+/// the absence — the first of the outcomes `dive`'s own doc warns a descent
+/// verb must distinguish. The others are exercised in
 /// `windows/vessel/src/session.rs`'s own internal tests
-/// (`delve_has_three_distinguishable_outcomes`), which need a hand-picked
-/// cave cell — a terrain cell spans many walk-band rooms, so a test cannot
-/// reliably steer a walk to land on one specific outcome, let alone a
-/// SEALED one specifically (only ~48.5% of caves, Task 3), and only
+/// (`delve_has_two_distinguishable_outcomes`), which need a hand-picked cave
+/// cell — a terrain cell spans many walk-band rooms, so a test cannot
+/// reliably steer a walk to land on one specific outcome, and only
 /// `session.rs`'s own tests can reach the private `delve_at` seam that
 /// sidesteps needing to.
+///
+/// **There were THREE and there are TWO** (The Drift, spec amendment B).
+/// The third was a cave whose entrance address resolved to no chamber —
+/// SEALED — and it existed because a 0.5 per-address existence coin refused
+/// roughly 48.5% of cave entrances. Spec §4.1 deleted that coin, so a sealed
+/// cave is impossible rather than rare: 0 of 48,316 caves over thirty
+/// worlds. The test was renamed with the outcome it lost, not deleted, and
+/// it reddens if a sealed cave ever returns while it still claims two.
 ///
 /// This mirrored `there_is_nothing_to_dive_into_on_dry_land`: the flagship's
 /// own starting cell had no cave, so no walk was needed to observe the
@@ -782,7 +788,7 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 /// verb; which of the two the flagship's own ground happens to produce is a
 /// fact about seed 42's karst, not about `delve`.
 ///
-/// The no-cave branch did not lose coverage: `delve_has_three_distinguishable_outcomes`
+/// The no-cave branch did not lose coverage: `delve_has_two_distinguishable_outcomes`
 /// now reaches it directly through `delve_column(None)` rather than by
 /// standing somewhere that happens to qualify, so it can no longer be
 /// falsified by a coastline moving.
@@ -823,7 +829,7 @@ fn the_eyes_verb_reports_whose_eyes_and_what_the_projection_drops() {
         Turn::Out(t) => t,
         Turn::Released(_) => panic!("!eyes must not release"),
     };
-    let species = s.agent().species.clone();
+    let species = s.driven_body().species.clone();
     assert!(
         out.contains(&species),
         "the report must name whose eyes: {out}"
@@ -841,7 +847,7 @@ fn eyes_switches_the_chart_and_an_unknown_name_lists_the_roster() {
     let before = s.purview(0).unwrap();
     s.handle("!eyes kobold");
     let after = s.purview(0).unwrap();
-    if s.agent().species != "kobold" {
+    if s.driven_body().species != "kobold" {
         assert_ne!(
             before.cells.iter().map(|c| c.color).collect::<Vec<_>>(),
             after.cells.iter().map(|c| c.color).collect::<Vec<_>>(),

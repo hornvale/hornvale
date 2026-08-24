@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -437,6 +437,14 @@ sluice: ## Request a merge through the queue (BRANCH=<branch> REF=<full-sha>)
 sluice-stage: ## Request a STAGE GATE through the queue — phases run, nothing is pushed (BRANCH=<branch> REF=<full-sha>)
 	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)" stage
 
+# BRANCH is the REQUESTER here, not the thing gated: a census regenerates at a
+# REF and delivers its goldens on a fresh `census/...` branch, which the
+# requester then submits as an ordinary merge. Nothing about a census pushes
+# main — see the header of scripts/sluice-census.sh for why that restraint is
+# deliberate rather than a limitation.
+sluice-census: ## Request a CENSUS through the queue — regenerates at REF, delivers goldens on a branch, never pushes main (BRANCH=<requester> REF=<full-sha>)
+	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)" census
+
 # FIX ROUND 1: the queue and its jobs live on the CANONICAL BOX
 # ($HV_SLUICE_DIR under ITS $HOME — sluice-request.sh enqueues over ssh, and
 # sluice-run.sh runs there too), never on whatever machine typed `make
@@ -834,4 +842,57 @@ atlas-check:
 	@git diff --exit-code -- book/src/gallery/atlas.js || { \
 	    echo "atlas: book/src/gallery/atlas.js is stale — commit the rebuilt bundle." >&2; exit 1; }
 
-clients-check-run: vessel-check-run world-check-run game-check-run atlas-check
+# THE FOUR SUB-CHECKS RUN IN PARALLEL, and they used to be plain prerequisites
+# (i.e. serial). Measured on lefford 2026-08-23, alternating arms on an idle
+# box to cancel cache-warming drift:
+#
+#     serial    337, 337, 324 s   mean 330   <- matches the chamber's own
+#     parallel  239, 236, 250 s   mean 243      clients phase, 330.8 s
+#                                 gap 87 s, ~26%
+#
+# Round 1 ran serial-then-parallel and was NOT trusted: its warmup->serial delta
+# showed caches still warming, so the later arm was flattered. Round 2 ran
+# PARALLEL FIRST and the gap survived, with each arm's own spread at 13-14 s
+# against an 87 s difference.
+#
+# WHY IT WINS is not "more cores": the box has 40 and cargo already uses them.
+# It is that the four are differently shaped — world-check-run spends most of
+# its time in six SERIAL single-process `cargo run` scene generations, which
+# occupy roughly one core while game-check-run's builds want all of them.
+# Overlapping a latency-bound job with a throughput-bound one is the whole
+# saving, which is also why adding more parallelism beyond these four would buy
+# nothing.
+#
+# WHY SHELL BACKGROUNDING AND NOT `$(MAKE) -j4 -O`. The -j form works and
+# measured the same, but every cargo it spawns prints:
+#
+#     warning: failed to connect to jobserver from environment variable
+#     `MAKEFLAGS=" -j4 -Otarget --jobserver-auth=3,4 ..."`: Bad file descriptor
+#
+# make -j creates a jobserver and exports MAKEFLAGS naming its file
+# descriptors, but only passes those fds to recipe lines it recognises as
+# sub-makes -- so every cargo sees the advertisement, cannot open the fds, and
+# warns. Harmless (cargo falls back to its own -j nproc, which is exactly what
+# was measured) and NOT harmless in a gate log, where recurring benign warnings
+# are how people learn to stop reading gate logs. `--jobserver-style=fifo`
+# fixes it upstream and needs make 4.4; lefford has 4.3.
+#
+# Backgrounding four SERIAL sub-makes creates no jobserver at all, so the
+# warning cannot arise. Each target's output is captured to its own file and
+# printed whole after the `wait`, which gives strictly better grouping than
+# -Otarget did, and every target's pass/fail is named before the logs.
+clients-check-run:
+	@set -u; pids=""; names=""; \
+	for t in vessel-check-run world-check-run game-check-run atlas-check; do \
+	  $(MAKE) --no-print-directory $$t > /tmp/hv-clients-$$t.log 2>&1 & \
+	  pids="$$pids $$!"; names="$$names $$t"; \
+	done; \
+	rc=0; i=1; \
+	for p in $$pids; do \
+	  n=$$(echo $$names | cut -d' ' -f$$i); i=$$((i+1)); \
+	  if wait $$p; then echo "clients: $$n OK"; else rc=1; echo "clients: $$n FAILED"; fi; \
+	done; \
+	for t in vessel-check-run world-check-run game-check-run atlas-check; do \
+	  echo "----- $$t -----"; cat /tmp/hv-clients-$$t.log; \
+	done; \
+	exit $$rc

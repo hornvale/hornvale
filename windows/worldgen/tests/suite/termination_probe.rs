@@ -1,5 +1,5 @@
 //! THE STOPE, Task 0: where does a cave system's delve TERMINATE, and how
-//! rare is [`DelveRung::Nadir`]?
+//! rare is [`Band::Nadir`]?
 //!
 //! **The rung was named `Sunless` when every reading below was taken.** This
 //! file was swept to `Nadir` by Task 1, because it is live code naming a live
@@ -27,11 +27,11 @@
 //! `rung_at_depth(cave.depth_reach_m, terrain.geothermal_gradient_at(cell))`
 //! — the DELVE ladder (`domains/terrain/src/delve.rs`), which is spaced by
 //! temperature offset above the cell's surface datum. It is NOT
-//! `Cave::deepest_band`, which is the STRATIGRAPHIC ladder (Regolith / Cover
+//! `Cave::deepest_horizon`, which is the STRATIGRAPHIC ladder (Regolith / Cover
 //! / Basement / Roots / Underneath). The two are independent and neither
 //! derives the other (`windows/worldgen/src/chamber.rs`'s module doc says so
 //! explicitly), so the same `depth_reach_m` is two different rungs in two
-//! cells whose gradients differ. A probe that read `deepest_band` would be
+//! cells whose gradients differ. A probe that read `deepest_horizon` would be
 //! answering a different question than §4.1's branch table asks.
 //!
 //! ## The branch table (the campaign brief's Step 3), as a decision rule
@@ -204,7 +204,8 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_terrain::{CAVE_REACH_CEILING_M, DelveRung, TerrainPins, rung_at_depth, rungs};
+use hornvale_kernel::Band;
+use hornvale_terrain::{CAVE_REACH_CEILING_M, TerrainPins, rung_at_depth, rungs};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -256,15 +257,15 @@ fn classify(share: f64) -> Branch {
 
 /// The ladder's rank over its habitation rungs, shallowest first. `Surface`
 /// is not a habitation rung and `rung_at_depth` never returns it, so it has
-/// no bucket. Exhaustive: a sixth `DelveRung` fails this to compile.
-fn rung_rank(rung: DelveRung) -> Option<usize> {
+/// no bucket. Exhaustive: a sixth `Band` fails this to compile.
+fn rung_rank(rung: Band) -> Option<usize> {
     match rung {
-        DelveRung::Surface => None,
-        DelveRung::Undercroft => Some(0),
-        DelveRung::Shallows => Some(1),
-        DelveRung::Deeps => Some(2),
-        DelveRung::Underdeep => Some(3),
-        DelveRung::Nadir => Some(4),
+        Band::Surface => None,
+        Band::Undercroft => Some(0),
+        Band::Shallows => Some(1),
+        Band::Deeps => Some(2),
+        Band::Underdeep => Some(3),
+        Band::Nadir => Some(4),
     }
 }
 
@@ -757,7 +758,7 @@ mod branch_table {
         let mut seen = vec![false; 5];
         for rung in rungs().iter().copied() {
             match rung_rank(rung) {
-                None => assert_eq!(rung, DelveRung::Surface, "only Surface lacks a bucket"),
+                None => assert_eq!(rung, Band::Surface, "only Surface lacks a bucket"),
                 Some(rank) => {
                     assert!(!seen[rank], "{rung:?} reuses bucket {rank}");
                     seen[rank] = true;

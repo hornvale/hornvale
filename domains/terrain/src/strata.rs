@@ -88,7 +88,7 @@ pub enum Era {
 
 /// The named bands, top → bottom; resolution coarsens downward.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BandKind {
+pub enum Horizon {
     /// The living skin: soil / weathered regolith.
     Regolith,
     /// Deposited / volcanic surface rock — the legible archive.
@@ -106,7 +106,7 @@ pub enum BandKind {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BandSample {
     /// Which band this is.
-    pub kind: BandKind,
+    pub kind: Horizon,
     /// The era it records (deeper = older).
     pub era: Era,
     /// Depth to the top of this band, metres below the surface.
@@ -185,31 +185,31 @@ pub fn column(
     let roots_top = dtb + (moho_m - dtb).max(0.0) * 0.5;
     let bands = [
         BandSample {
-            kind: BandKind::Regolith,
+            kind: Horizon::Regolith,
             era: Era::Recent,
             top_depth_m: 0.0,
             rock: surface_rock,
         },
         BandSample {
-            kind: BandKind::Cover,
+            kind: Horizon::Cover,
             era: cover_era,
             top_depth_m: soil_depth_m,
             rock: surface_rock,
         },
         BandSample {
-            kind: BandKind::Basement,
+            kind: Horizon::Basement,
             era: basement_era,
             top_depth_m: dtb,
             rock: basement_rock,
         },
         BandSample {
-            kind: BandKind::Roots,
+            kind: Horizon::Roots,
             era: Era::Deep,
             top_depth_m: roots_top,
             rock: RockClass::Gneiss,
         },
         BandSample {
-            kind: BandKind::Underneath,
+            kind: Horizon::Underneath,
             era: Era::Primordial,
             top_depth_m: moho_m.max(dtb),
             rock: RockClass::Gabbro,
@@ -309,5 +309,16 @@ mod tests {
             Basement::Oceanic,
         );
         assert_eq!(ocean.bands[2].rock, RockClass::Gabbro);
+    }
+
+    /// The rock ladder and the delve ladder are INDEPENDENT: neither derives
+    /// the other, and after The Drift they no longer share a word either.
+    #[test]
+    fn the_rock_ladder_and_the_delve_ladder_are_different_types() {
+        // Compiles only if both names exist and are distinct types.
+        let rock: Horizon = Horizon::Basement;
+        let delve: hornvale_kernel::Band = hornvale_kernel::Band::Deeps;
+        assert_eq!(format!("{rock:?}"), "Basement");
+        assert_eq!(format!("{delve:?}"), "Deeps");
     }
 }

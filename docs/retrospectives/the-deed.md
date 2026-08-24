@@ -214,6 +214,57 @@ Two things follow that the earlier sections do not already say:
   offered as one — I meant it as a courtesy — and it caught a defect three
   reviews and my own re-reading had not.
 
+## Committing to `main` at the merge submission, and the guard that is not a gap
+
+At the last step of the campaign — the one irreversible one — the shell's
+working directory had silently reset to the **primary checkout**, and my next
+commands carried no `cd`. So `make gate-commit`, the `Sluice-Headline` commit
+and a timings commit all landed on **`main`** instead of the campaign branch.
+
+**What stopped it was the push refusing.** `git push origin
+HEAD:refs/heads/campaign/the-deed` from `main` was rejected as a
+non-fast-forward. Nothing reached a remote; `main` was reset to `origin/main`
+and verified at zero divergence.
+
+**That is luck wearing the costume of diligence**, and the queue named the
+reason precisely: the refusal depends entirely on the *relative position* of
+the two refs. Had main's tip been a **descendant** of the campaign branch, the
+same push is a fast-forward and `pre-push` allows it — main's tip would have
+gone onto the campaign branch and been submitted as a merge candidate.
+
+**`pre-commit` is NOT the gap here, and writing it up as one would do harm.**
+Its worktree guard is deliberately scoped — the hook says so itself:
+
+> Campaigns run in worktrees under `.claude/worktrees/`, and a linked worktree
+> sitting on `main` is essentially always a wrong-branch mistake … **The
+> PRIMARY checkout on `main` is legitimate (merges, infra, docs)**, so the
+> guard keys on linked-vs-primary (`git-dir != git-common-dir`), not on the
+> branch name alone.
+
+The primary checkout committing to `main` is the sanctioned path — it is how
+merges and infra land. The hook did not fail to stop me; it was never the
+instrument. Filing it as a hole risks someone "fixing" it into refusing
+legitimate work, which is a worse outcome than the mistake it would prevent.
+I had it framed as a gap until the queue corrected me.
+
+**The narrow, true statement of the hole:** nothing prevents pushing *main's
+tip* onto a campaign branch, and `pre-push` catches it only in the
+non-fast-forward case. Its tail is now closed by an unrelated change that
+landed the same night — the chamber consults the mouth before taking the
+flock, so such a submission is refused (`already an ancestor of base`) without
+consuming the box. Before that it would have merged to "Already up to date"
+and burned a run.
+
+**The remedy I adopted, which is cheap and would have caught it:** a branch
+assertion in front of every commit and push, rather than trusting the
+directory —
+
+    git branch --show-current | grep -qx 'campaign/the-deed' || { echo ABORT; exit 1; }
+
+Two memories about re-anchoring the working directory already existed and did
+not save me, because the reset is silent and arrives between commands rather
+than inside one. An assertion at the point of use beats a habit.
+
 ## What this arc did not do
 
 **Seven of the fourteen concepts it minted are inert.** `chart`, `know`,
@@ -238,18 +289,65 @@ since every charged act now leaves a fractional day.
 
 ## Follow-ups
 
+**Read this list as hypotheses, not findings — including the remedies.** One
+of the items below (F-6) was written carefully, reviewed, promoted out of
+scratch, and **wrong in its recommendation**; it was caught only when the
+merge queue picked it up to *implement*, and the file refused before the
+person did. Nothing about writing it more carefully would have found that.
+
+The generalisation is worth more than the instance: **a followup register full
+of well-written, unimplemented items is a register of unverified claims.**
+Handing someone a *claim* invites agreement; handing them a *task* forces
+contact with the thing, and the thing can refuse.
+
+So the two halves of a followup have very different standing, and are worth
+writing apart: the **observation** is usually the measured half, and the
+**remedy** is usually the unverified one. F-6's observation (nothing prompts a
+golden rebaseline) was true and survives. Its remedy (declare the directories)
+was false and would have been harmful. A later reader should be able to keep
+one without the other.
+
+
 - `PLAY-driver-substitutability` — the must-fix above (decision 0167).
 - `KNOW-commit-read-same-instant` — the quantize hazard (F-5).
-- **F-6**: **three fixture directories** move with the sim and are not
-  drift-checked — `cli/tests/fixtures/`, `windows/vessel/tests/fixtures/` and
-  `windows/worldgen/tests/fixtures/`. None is in `docs/generated-paths.txt`,
-  and `regenerate-artifacts.sh` never writes them; only
-  `make rebaseline-goldens` does, and nothing prompts you to run it. The
-  structural remedy is to declare them, with a wrinkle worth inheriting rather
-  than rediscovering: the drift check would then go red and `make rebaseline`
-  would **not** fix it, because the writer is a different command. A red with a
-  known remedy still beats silence, but it is a change to shared machinery and
-  should not arrive on a campaign close.
+- **F-6, RESOLVED THE OTHER WAY — and the recommendation this retrospective
+  originally carried was wrong.** It said `cli/tests/fixtures/`,
+  `windows/vessel/tests/fixtures/` and `windows/worldgen/tests/fixtures/`
+  should be declared in `docs/generated-paths.txt`. **They should not**, and
+  the reason is a distinction this campaign missed: those three are
+  **assertions**, not generated inputs. `regenerate-artifacts.sh` mentions
+  them **zero** times; `kernel/src/golden.rs` compares them and requires a
+  deliberate `REBASELINE=1` to accept drift. By contrast
+  `clients/game/core/tests/fixtures/`, which *is* declared, is written by
+  `regenerate-artifacts.sh` — a cached input.
+
+  Declaring the three would be **inert today** (regeneration never writes
+  them, so the diff is permanently empty) and **harmful the moment anything
+  did**: the artifacts phase *commits* the drift it finds, which would
+  silently rebaseline a determinism golden and land it green. **The gate
+  failing on a stale golden is not the gap — it is the design**, and it is
+  exactly what caught this campaign's first red.
+
+  Sharper still, and worse for the original recommendation:
+  `cli/tests/fixtures/` holds the frozen `pre-<campaign>` historical pins,
+  which `golden.rs`'s own header says are **not goldens at all** — *"their
+  bytes must never track current code, so they are compared directly and have
+  no accept path."* Declaring that directory is not merely inert, it is a
+  category error.
+
+  My stated wrinkle was wrong too, in the same direction: I wrote that the
+  drift check "would go red and `make rebaseline` would not fix it." It would
+  not go red. It would go **permanently, silently green**.
+
+  **The half that stands, and it is the one worth keeping:** nothing prompts
+  `make rebaseline-goldens`, and the golden tests are the only thing standing
+  there. That is what the first red actually demonstrated.
+
+  Fixed on main by the merge queue as an executable criterion rather than a
+  comment — every declared path must appear in `regenerate-artifacts.sh`,
+  derived rather than hardcoded, mutation-checked by declaring one of the
+  goldens and watching it fail.
+
 - **F-3** (inherited): `purview_scene`'s ungated NPC marks — reaching it from
   inside a chamber discloses a creature the chamber band withheld. This arc
   built the gate table where the structural fix would live but did not close it.
