@@ -340,10 +340,16 @@ the assertion never reached the function."
 
 - [ ] **Step 1: Write the failing bijection test**
 
-Add at the end of `domains/species/src/lib.rs`'s existing `#[cfg(test)] mod tests`
-block (if the crate has none at that location, create
-`#[cfg(test)] mod gossan_split_tests { ... }` immediately after the
-`TrophicMode` definition):
+Add to `domains/species/src/lib.rs` **at the top level of the file** — not
+nested inside the existing `#[cfg(test)] mod tests` at line 5557. Put it
+immediately after the `impl MetabolicClass` block Step 3 adds.
+
+**The nesting matters and is not a style preference.** `mod tests` brings crate
+items into scope with `use super::*`, and a glob import is private — it is not
+re-exported to a child module. So a `gossan_split_tests` nested inside `tests`
+would have `super` resolve to `tests`, and `use super::{MetabolicClass, …}`
+would fail to compile. At the top level, `super` is the crate root and the
+import resolves.
 
 ```rust
 #[cfg(test)]
