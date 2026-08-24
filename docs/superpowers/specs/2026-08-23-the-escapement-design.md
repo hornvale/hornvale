@@ -76,6 +76,37 @@ removes the quantization instead, so the mismatch cannot arise. **Whoever
 merges second must delete the other's half of this pair** — both branches
 compile and both suites pass in isolation, so nothing will raise it.
 
+### The precision becomes CONSTANT, not uniformly better
+
+The table above argues entirely from the deep end and is, on its own,
+misleading. Measured against the real `quantize`, comparing full lattice steps
+on both sides:
+
+| world-day | old (8 sig-digits) | new (1 tick) | finer |
+|---|---|---|---|
+| 7.8 | 1.0e-7 day | 1.0e-5 day | **old, by 100×** |
+| 50 | 1.0e-6 day | 1.0e-5 day | **old, by 10×** |
+| 100 | 1.0e-5 day | 1.0e-5 day | coincide |
+| 365.25 | 1.0e-5 day | 1.0e-5 day | coincide |
+| 3,652.5 | 1.0e-4 day | 1.0e-5 day | new, by 10× |
+| 36,525 | 1.0e-3 day | 1.0e-5 day | new, by 100× |
+
+The old lattice step is exactly `10^(floor(log10(day)) - 7)`, so it equals a
+tick for the whole decade `[100, 1000)`. **Below roughly world-day 100 the
+encoding this campaign removes was finer than the one it installs** — by 100×
+in a world's first weeks.
+
+This does not weaken the change; it states it correctly. A tick is 0.864 s,
+which is already the finest granularity the simulation itself resolves (it is
+`windows/vessel`'s own scheduler quantum), so nothing in the sim could use the
+sub-tick precision the old encoding offered early on. What the flip buys is a
+resolution that **does not decay with world age** — and the campaign's second
+motivation, the read-back bug below, is a shallow-end defect that the old
+encoding's extra precision did nothing to prevent.
+
+Stated plainly because an earlier draft of this section did not: this is a
+trade, and the deep end is where it pays.
+
 ### What is *not* wrong
 
 The **compute** path is fine, and this spec does not claim otherwise. `f64`
