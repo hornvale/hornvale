@@ -765,8 +765,8 @@ fn discarding_the_state_at_every_position_is_unobservable() {
     let resident: Folded<Probe> = Folded::rebuild(&l);
 
     let mut chaotic: Folded<Probe> = Folded::new();
-    for (i, fact) in l.iter().enumerate() {
-        chaotic.absorb_at(i as u64, fact);
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
         // Throw it all away and come back from the ledger.
         chaotic = Folded::rebuild_upto(&l, chaotic.position());
     }
@@ -789,8 +789,8 @@ fn discarding_the_state_at_every_third_position_is_unobservable() {
     let resident: Folded<Probe> = Folded::rebuild(&l);
 
     let mut chaotic: Folded<Probe> = Folded::new();
-    for (i, fact) in l.iter().enumerate() {
-        chaotic.absorb_at(i as u64, fact);
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
         if i % 3 == 0 {
             chaotic = Folded::rebuild_upto(&l, chaotic.position());
         }
