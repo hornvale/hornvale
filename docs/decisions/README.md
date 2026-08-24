@@ -200,3 +200,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
 | [0186](0186-an-instant-is-an-exact-tick-count.md) | An instant is an exact tick count — the lattice is the time domain | Accepted |
 | [0187](0187-a-pre-genesis-sky-query-is-clamped-to-genesis.md) | A pre-genesis sky query is clamped to genesis, deliberately | Accepted |
+| [0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md) | A map's frame is a fact about the world, and a view of the world is a lens | Accepted |
+| [0197](0197-co-location-is-not-discovery.md) | Co-location is not discovery | Accepted |

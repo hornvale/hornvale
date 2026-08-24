@@ -76,6 +76,8 @@ fn render(json: &str) -> Grid {
         CommandLine::default(),
         None,
         None,
+        None,
+        0,
     )
     .unwrap()
     .0

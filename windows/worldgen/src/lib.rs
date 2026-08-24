@@ -143,7 +143,7 @@ pub use history_emit::{
 /// new dependency edge — the layering graph is unchanged.
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
-pub use resolve::resolve_at;
+pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{
