@@ -194,10 +194,11 @@ the master oracle and must be unchanged: `make rebaseline` moves nothing but
 this campaign adds `pub` items — so that directory moving is *expected*, and
 `book/src/gallery/` or a census CSV moving would be a **STOP**).
 
-## 6. Task 0: a guard that is dead on this Mac, today
+## 6. Task 0: two guards that are dead on this Mac, today
 
-Found while taking this campaign's own worktree, and folded in at Nathan's
-direction rather than left as a followup.
+Both found by this campaign's own machinery rather than by looking — one
+during `make worktree-take`, one during its absorption of `origin/main` — and
+folded in at Nathan's direction rather than left as followups.
 
 `scripts/test-worktree-freshness.sh` — *"a worktree must never serve a binary
 compiled under a different path"* — **does not parse under macOS's bash 3.2**,
@@ -230,23 +231,79 @@ Three such comments sit inside one command substitution in that script
 error at line 181 — an `awk` program far below — which is why this survived:
 the reported location is nowhere near the cause.
 
-This is the **fourth** instance of the bash 3.2 class The Penstock chased; its
-own final commit was *"a third bash 3.2 instance, found during the close
-itself."* Three prior fixes were each spot fixes.
+### 6.1 It is not one defect, and the second one is worse
 
-**So the fix is a check, not a fourth spot fix.** Reword the three comments,
-and add a guard that parses every `scripts/*.sh` under the *system* bash so
-the next instance fails loudly at commit time instead of silently at use time.
-**`shellcheck` reports this file completely clean** — verified, and it is the
-reason a lint cannot replace the check:
+A scan of every `bash`-shebanged file in `scripts/` found a **second live
+defect**, in a different half of the class — and it fired during this
+campaign's own absorption of `origin/main`:
+
+```
+$ git merge origin/main
+...
+scripts/hooks/post-merge: line 75: mapfile: command not found
+```
+
+`mapfile` is bash 4.0+; macOS ships bash 3.2 as `/bin/bash`. The hook sets
+`set -euo pipefail`, so the missing builtin **aborts it at line 75** — and
+git ignores a post-merge hook's exit code, so the failure is silent.
+
+**What that hook is for makes this matter more than a broken advisory.** It is
+the thing that tells you, after a merge, that a generated artifact or the Rust
+code producing one has moved and `make rebaseline` is owed. CLAUDE.md is
+explicit that **there is no CI** and that *"a red main is invisible until
+someone runs a gate and `make rebaseline` … nothing runs it for you."* This
+hook is the only automated nudge toward that check, and on the Mac it has
+never run. Observed, not inferred: the absorption above touched both generated
+paths and `.rs` files, so the advisory's own conditions were met and it
+printed nothing.
+
+There is an irony worth recording because it is also the lesson. The comment
+directly above line 75 narrates this very hook being *"embarrassed"* by
+missing a case on its first substantive merge, and was extended to close that
+blind spot. It now misses **every** case on the Mac.
+
+### 6.2 The project already knows this class; nothing enforces it
+
+The scan's most useful result is that the knowledge exists and is inert. Two
+scripts carry comments explaining that they deliberately avoid these very
+constructs:
+
+- `scripts/census-canonical-host.sh:90` — *"`tr`, not `${var,,}`: bash 3.2
+  ships on macOS and lacks case expansion"*
+- `scripts/subfloor-run-chunked.sh:70` — *"`mapfile` is bash 4+; macOS ships
+  `/bin/bash` 3.2 … so `mapfile` is [out]"*
+
+So this is the **fourth and fifth** instances of a class the project has
+diagnosed correctly at least twice in prose, while a third file used the
+banned builtin anyway. The Penstock's own final commit was *"a third bash 3.2
+instance, found during the close itself."* Every prior fix was a spot fix, and
+the count keeps rising.
+
+### 6.3 So Task 0 is a check with two halves, because one would miss the other
+
+The two defects fail in different ways, and neither detector finds both:
+
+| defect | detector | why the other misses it |
+|---|---|---|
+| apostrophe in a comment inside `$(...)` | `/bin/bash -n <file>` | it parses fine on bash 4+; a construct grep has nothing to match |
+| `mapfile`, `${var,,}`, `declare -A` | grep for bash-4+ constructs | it **parses** cleanly under 3.2 — the failure is at runtime |
+
+Task 0 delivers both, over every `bash`-shebanged file in `scripts/`, plus the
+two fixes. Current inventory from the scan: **one parse failure**
+(`test-worktree-freshness.sh`) and **one construct violation**
+(`hooks/post-merge:75`).
+
+**`shellcheck` reports the parse-failing file completely clean** — verified,
+and it is the reason a lint cannot replace either half:
 
 ```
 $ shellcheck scripts/test-worktree-freshness.sh; echo "exit=$?"
 exit=0
 ```
 
-A clean shellcheck on a file the system bash cannot parse is a false green, so
-the check must invoke `/bin/bash -n` itself rather than lint.
+A clean shellcheck on a file the system bash cannot parse is a false green.
+
+
 
 ## 7. Metaplan housekeeping
 
@@ -288,8 +345,9 @@ From the reserved block 0206–0215.
 
 **In:** the `Derived` store; the three validity classes; the `WorldStamp`;
 migrating `RoomMeshMemo` onto it behind an unchanged public API; the hit/miss/
-invalidation counters; CACHE ≡ RECOMPUTE and chaos-eviction; Task 0's bash 3.2
-guard and its check; the three §7 metaplan corrections.
+invalidation counters; CACHE ≡ RECOMPUTE and chaos-eviction; Task 0's two
+bash 3.2 fixes and the two-half check that would have caught either; the
+three §7 metaplan corrections.
 
 **Out:** eviction, budget, hysteresis (§1.1). The condensation boundary and
 the working set (stage 5). Log bounding (stage 7 — next campaign). Any edit to
@@ -309,6 +367,14 @@ Task 1 may name but this campaign does not build. Serialization of anything
   be promoted to release-active totality, decision 3 records the partiality,
   and the correctness half of §2's win shrinks to the `Universal`/`World`
   split alone.
+- **Task 0's construct grep is unbounded in practice.** If the bash-4+ grep
+  turns up many violations rather than the one the scan found, the check would
+  land red and be disabled — the failure mode the metaplan's own seam-guard
+  discussion names ("a gate that failed on the mere EXISTENCE … would go red
+  on day one and stay red"). The scan says the current count is one, so the
+  check can land enforcing; if a later pass disagrees, it ratchets on novelty
+  instead.
+
 - **The facade cannot preserve `RoomMeshMemo`'s API.** Then the campaign
   cannot avoid editing vessel, and it must stop and renegotiate the hold-off
   rather than proceed.
