@@ -692,7 +692,16 @@ Use `closing-a-campaign`. Note the census question explicitly: this campaign is 
 
 **Spec coverage.** §1/§1.1 → Task 5 Step 3 and the Global Constraints. §2.1 → Task 4 Step 1 and Task 3 Step 3. §2.2 → Task 2 Step 3 and Task 4 Step 2. §2.3 → Task 2 Step 5 and the module doc's direction statement. §3 → Task 2 Step 3 and Task 3 Step 1. §4 → Task 1 entire. §5 → Task 2 Steps 1/5, Task 3 Steps 4/5. §6 → Task 0. §7 → Task 5. §8 → Task 4 Step 2. §9's out-of-scope items → Task 5 Step 4, registered rather than dropped. §10's falsifiers → Task 0 Step 3, Task 1 Step 6, Task 3 Step 1.
 
-**Placeholder scan.** No "TBD"/"TODO"/"handle edge cases". Four places defer to the implementer deliberately, each naming the *property* rather than prescribing a mutation from outside the code: Task 0 Step 2's case-expansion grep, Task 1 Step 4, Task 2 Step 1's third test, Task 2 Step 5. Task 1 Step 1 flags that `RoomAddr::new`'s signature must be read rather than trusted from this plan.
+**Placeholder scan.** No "TBD"/"TODO"/"handle edge cases". Four places defer to the implementer deliberately, each naming the *property* rather than prescribing a mutation from outside the code: Task 0 Step 2's case-expansion grep, Task 1 Step 4, Task 2 Step 1's third test, Task 2 Step 5. Task 1 Step 1 no longer defers on `RoomAddr` construction — the controller
+verified it pre-dispatch and the plan now states the answer, because the
+original sketch used a constructor that does not exist.
+
+**Two defects found by pre-dispatch verification, both in this plan's own
+text**, both corrected in place with the command and output inline: the
+apostrophe line set (three asserted, two real) and `RoomAddr::new` (asserted,
+absent). Both are the completeness-of-enumeration failure the dispatch skill
+names, and neither would have been caught by re-reading the plan against the
+spec — only by opening the code.
 
 **Type consistency.** The four counter names are fixed in Task 1's Interfaces and reused verbatim in Task 3 Step 1's surface test. `Derived<K, V>`'s method set is fixed in Task 2's Interfaces and consumed in Task 3 Step 3. `corner_weights_lookup` keeps `Option<Option<[(CellId, u64); 3]>>` in both Task 3 Step 3 and the surface test. Decision numbers 0206/0207/0208 agree between Task 4's file list and its Step 2.
 
