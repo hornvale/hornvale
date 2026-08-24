@@ -2360,3 +2360,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T03:00:16Z | gate-commit | 38.453 | 127.539 | 47.486 | 4.55 | 0 | 71a1d9e99 | fix/seam-guard-ignores-untracked | lefford | 40 |
 | 2026-08-24T03:02:57Z | gate-commit | 36.946 | 121.960 | 47.469 | 4.59 | 0 | 2157300d9 | fix/seam-guard-ignores-untracked | lefford | 40 |
 | 2026-08-24T03:05:17Z | sluice:artifacts | 61.035 | 542.520 | 23.501 | 9.27 | 0 | 26f12a54a |  | lefford | 40 |
+| 2026-08-24T03:05:57Z | sluice:outboard | 39.964 | 27.209 | 39.494 | 1.67 | 0 | b3655ae13 |  | lefford | 40 |
