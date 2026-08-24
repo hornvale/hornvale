@@ -1189,10 +1189,8 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_226_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1250,6 +1248,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
@@ -1260,6 +1259,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -1955,6 +1955,7 @@ hornvale-species::hornvale_species$tests::every_species_has_a_metabolic_class
 hornvale-species::hornvale_species$tests::goblin_is_currently_authored_at_the_manikin
 hornvale-species::hornvale_species$tests::goblin_perception_is_authored_at_the_manikin_and_kobold_contrasts
 hornvale-species::hornvale_species$tests::goblinoids_carry_mass_and_a_nonzero_omnivore_niche
+hornvale-species::hornvale_species$tests::is_ametabolic_is_true_only_for_the_absent_thermal_strategy
 hornvale-species::hornvale_species$tests::menagerie_families_and_climate_tiles_distinct
 hornvale-species::hornvale_species$tests::menagerie_is_biosphere_only_and_spans_axes
 hornvale-species::hornvale_species$tests::people_links_a_settlement_to_its_species
@@ -1986,6 +1987,11 @@ hornvale-species::suite$instance_lens::lens_is_total_never_panicking
 hornvale-species::suite$instance_lens::lens_returns_kind_defaults_when_no_overrides
 hornvale-species::suite$instance_lens::override_beats_default_and_latest_override_wins
 hornvale-species::suite$instance_lens::overrides_survive_kind_change
+hornvale-species::suite$life_history_golden::every_kinds_life_history_is_frozen
+hornvale-species::suite$life_history_golden::the_life_history_table_is_not_vacuous
+hornvale-species::suite$metabolic_pairs::chemotrophic_is_declared_and_unwitnessed
+hornvale-species::suite$metabolic_pairs::every_kind_carries_a_sanctioned_pair
+hornvale-species::suite$metabolic_pairs::sanctioned_thermal_keys_are_pairwise_distinct
 hornvale-species::suite$potency_assay::mundane_kinds_carry_no_potency
 hornvale-species::suite$potency_assay::potency_is_challenge_rating_over_thirty
 hornvale-species::suite$potency_assay::the_might_order_is_red_black_white_treant_xorn
@@ -2647,6 +2653,7 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_fi
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs

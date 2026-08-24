@@ -134,7 +134,7 @@ fn mother_of(world: &World, occupation: EntityId) -> Option<EntityId> {
 
 /// A people's generation length in years, from the shipped allometry.
 ///
-/// `None` for an `Ametabolic` kind (a construct has no mass-derived life
+/// `None` for an ametabolic kind (a construct has no mass-derived life
 /// history) or a species absent from this world's roster.
 ///
 /// `world` is unused today — the roster `WorldComponents::assemble()`
@@ -149,7 +149,7 @@ pub fn generation_length_of(world: &World, species: &str) -> Option<f64> {
     // literal cannot be built from it. `get_by_label` exists for exactly
     // this: a label-content comparison instead of a key construction.
     let bio = wc.biosphere.get_by_label(species)?;
-    hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+    hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule)
         .generation_length
         .map(|y| y.get()) // salt-allow: y is a StdDays, not an entity
 }
@@ -159,7 +159,7 @@ pub fn generation_length_of(world: &World, species: &str) -> Option<f64> {
 ///
 /// `None` in two cases: `occupation` is a genesis occupation with no mother
 /// community, or its people's generation length cannot be derived (an
-/// `Ametabolic` kind, or a species absent from this world's roster). The
+/// ametabolic kind, or a species absent from this world's roster). The
 /// latter is deliberate: with no generation length, `remove` has nothing to
 /// divide the founding gap by, so there is no basis to call the pair
 /// `Sibling`, `Ancestor`, or anything else — reporting "no forebear
