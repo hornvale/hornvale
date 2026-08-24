@@ -143,7 +143,7 @@ pub fn purview_scene(
     let walked: Vec<RoomAddr> = knowledge
         .0
         .keys()
-        .filter_map(|k| k.strip_prefix("room/"))
+        .filter_map(|k| k.strip_prefix(crate::knowledge::LOCALE_KEY_PREFIX))
         .filter_map(|id| id.parse::<u64>().ok())
         .filter_map(|id| RoomId(id).unpack().ok())
         .collect();
