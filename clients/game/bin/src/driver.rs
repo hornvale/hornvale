@@ -893,6 +893,18 @@ impl Driver {
         self.echo.as_deref()
     }
 
+    /// The pending completion ambiguity under [`TabStyle::Hint`], as an
+    /// owned `(stem, matches)` pair for the frame builder to hand the core
+    /// renderer ([`hornvale_game_core::entry::Hint`] borrows, so the caller
+    /// rebuilds the borrowed view from these strings at the call site).
+    /// `None` whenever no ambiguity is pending — cleared by any edit or
+    /// submission, matching the field's own discipline.
+    pub fn hint_parts(&self) -> Option<(String, Vec<String>)> {
+        self.hint
+            .as_ref()
+            .map(|h| (h.stem.clone(), h.matches.clone()))
+    }
+
     /// Re-derive `cached` from the live session. A snapshot read can fail
     /// only when the session itself is not live, which cannot happen
     /// between `start` succeeding and `Drop` running — so a failure here

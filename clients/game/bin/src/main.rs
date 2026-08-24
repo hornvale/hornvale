@@ -96,6 +96,20 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         text: &text,
         caret: driver.caret(),
     };
+    // Rebuild the renderer's borrowed `Hint` view from the driver's owned
+    // pair; both bindings live to the end of this function, so the borrows
+    // outlive the `render_with` call below.
+    let hint_parts = driver.hint_parts();
+    let matches: Vec<&str> = hint_parts
+        .as_ref()
+        .map(|(_, m)| m.iter().map(String::as_str).collect())
+        .unwrap_or_default();
+    let hint = hint_parts
+        .as_ref()
+        .map(|(s, _)| hornvale_game_core::entry::Hint {
+            stem: s.as_str(),
+            matches: &matches,
+        });
     match hornvale_game_core::render_with(
         &json,
         w,
@@ -105,6 +119,7 @@ fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
         cmd_line,
         driver.strip_text(),
         driver.echo(),
+        hint.as_ref(),
     ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),

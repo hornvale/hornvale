@@ -88,6 +88,10 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// whether its text is drawn (see `entry::draw`'s doc). `echo` is the most
 /// recently SUBMITTED line, drawn above the command row (see `entry::draw`'s
 /// doc for the ask-then-answer layout and why that row is reserved).
+/// `hint` is the pending tab-completion ambiguity, drawn beneath the
+/// command row when present (see [`crate::entry::Hint`] — the stem bold as
+/// typed, the suggested remainder normal, overlong lists collapsing to an
+/// honest "… +N more" count).
 pub fn compose(
     snapshot: &crate::Snapshot,
     w: u16,
@@ -96,6 +100,7 @@ pub fn compose(
     focus: crate::Focus,
     line: crate::CommandLine<'_>,
     echo: Option<&str>,
+    hint: Option<&crate::entry::Hint<'_>>,
 ) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
@@ -118,6 +123,7 @@ pub fn compose(
         focus,
         line,
         echo,
+        hint,
     );
 
     if let Some(text) = strip {
@@ -154,6 +160,7 @@ mod tests {
             crate::Focus::Cli,
             crate::CommandLine::default(),
             None,
+            None,
         );
         assert_eq!(g.width(), 80);
         assert_eq!(g.height(), 24);
@@ -181,6 +188,7 @@ mod tests {
                 crate::Focus::Cli,
                 crate::CommandLine::default(),
                 None,
+                None,
             );
             let text = g.to_plain_text();
             let plate_has_ink = text
@@ -204,6 +212,7 @@ mod tests {
             Some("a cairn"),
             crate::Focus::Cli,
             crate::CommandLine::default(),
+            None,
             None,
         );
         let text = g.to_plain_text();
