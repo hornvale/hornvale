@@ -99,6 +99,45 @@ Two consequences, and the second is a documentation defect:
    comment understates its own guarantee, and a reader (this one) built a
    whole design section on believing it.
 
+### 2.1b The level guard is not "total" — it is OBSOLETE, and that is the thesis
+
+An earlier draft of this section concluded that `corner_weights_geo_level`'s
+`debug_assert_eq!` guard is *total* rather than partial. True, but it buries
+the better finding, which surfaced only when the migration met the test suite.
+
+There is a test — `corner_weights_memo_asserts_against_geo_level_aliasing`
+(`kernel/src/room.rs`) — carrying
+`#[should_panic(expected = "RoomMeshMemo reused across two different globe
+levels")]`. It feeds one memo from a level-2 and then a level-3 geosphere and
+requires a **panic**.
+
+**Once the level is in the key, there is nothing left to panic about.** Two
+levels become two different keys; the memo holds both and answers each
+correctly. The guard existed *because the key was incomplete* — a `RoomAddr`
+alone did not name which geosphere resolved it, so mixing levels was a caller
+bug that no type prevented. Completing the key does not make the guard
+stronger; it **deletes the bug class the guard was watching for**.
+
+That is §2.3's obligation demonstrated on the campaign's own first tenant, and
+it is a capability gain rather than a removal: one memo may now legitimately
+serve more than one globe level, which is precisely the cross-world sharing a
+complete key buys. The census — thousands of worlds in one process — is the
+consumer that wants it.
+
+**So this test is EXPECTED to change, and the change is a deliverable rather
+than a regression.** It is the one exception to the migration's
+"if a pre-existing test needs editing, STOP" rule, and the replacement must
+assert the stronger property in place of the weaker one:
+
+> one memo fed from two different globe levels returns the **correct**
+> `corner_weights` for each, rather than panicking.
+
+Deleting a `should_panic` test without replacing its assertion would be a
+silent loss of coverage; replacing it with the correctness property is what
+makes the improvement legible. Decision 0208 records this — not "the guard is
+total", which is true and uninteresting, but "completing the key retired the
+guard, and here is the property that replaced it."
+
 ### 2.2 So there are two classes, split at key-completeness
 
 Once the level is admitted into the key, the three-class table collapses:
@@ -470,9 +509,11 @@ From the reserved block 0206–0215.
 2. **The derived store is generic per value shape, never heterogeneous** —
    because `TypeId` ordering is not build-stable and byte-identity forbids an
    unstable iteration order under a cache. (§3)
-3. **`corner_weights`'s level guard is total, and its doc comment is wrong to
-   call itself partial.** Small, but it is a determinism-adjacent claim in the
-   kernel and the next reader deserves the corrected version. (§2.1)
+3. **Completing the key retired `corner_weights`'s level guard.** Not "the
+   guard is total" — true but uninteresting — but that the bug class it
+   watched for no longer exists once the level is in the key, so one memo may
+   legitimately serve two globe levels. Records the property that replaces the
+   `should_panic` test. (§2.1, §2.1b)
 
 ## 9. In / out
 

@@ -484,7 +484,7 @@ Then add `kernel/src/derived.rs kernel/src/lib.rs kernel/tests/suite/derived.rs 
 ## Task 3: migrate `RoomMeshMemo` onto the store, API unchanged
 
 **Files:**
-- Modify: `kernel/src/room.rs` (`RoomMeshMemo` at `:644`-`:706`, `corner_weights_memo` at `:716`, `neighbors_memo` at `:746`)
+- Modify: `kernel/src/room.rs` — post-Task-1 lines: `RoomMeshMemo` struct `:645`, `impl` `:691`, `corner_weights_lookup` `:709`, `corner_weights_geo_level` `:723`, `corner_weights_memo` `:766`, `neighbors_memo` `:798`
 - Test: `kernel/src/room.rs` test module
 
 **Interfaces:**
@@ -544,7 +544,48 @@ Consequences to honour:
 cargo test -p hornvale-kernel > /tmp/hv-kernel-after.log 2>&1; echo "exit=$?"; grep -E "^test result" /tmp/hv-kernel-after.log
 ```
 
-All six pre-existing `corner_weights*` tests at `:1162`, `:1194`, `:1436`, `:1467`, `:1497`, `:1542` must pass **unmodified**. If any needs editing to pass, that is a behaviour change — STOP and report rather than editing the test.
+**Line numbers below are re-derived post-Task-1** (Task 1 added ~119 lines to
+`room.rs`, invalidating this plan's original citations — and the original list
+was wrong in composition too, naming six tests where there are eight, and
+counting two `neighbors_memo` tests as `corner_weights` ones).
+
+**TEN tests must pass, and NINE of them unmodified:**
+
+```
+  1216  corner_weights_sum_and_blend
+  1248  corner_weights_pin_cell_weight_pairing
+  1443  neighbors_memo_bit_equals_recomputation
+  1464  neighbors_memo_actually_memoizes
+  1490  corner_weights_memo_bit_equals_recomputation
+  1521  corner_weights_memo_actually_memoizes
+  1551  corner_weights_lookup_distinguishes_miss_from_a_cached_none
+  1621  memo_counts_hits_and_misses_separately_per_half        (Task 1)
+   ~    a_cached_none_counts_as_a_hit_not_a_miss               (Task 1)
+  1596  corner_weights_memo_asserts_against_geo_level_aliasing  <- THE EXCEPTION
+```
+
+If any of the nine needs editing to pass, that is a behaviour change — STOP
+and report rather than editing the test.
+
+**The tenth is the documented exception — read spec §2.1b before touching it.**
+`corner_weights_memo_asserts_against_geo_level_aliasing` is
+`#[should_panic(expected = "RoomMeshMemo reused across two different globe
+levels")]`. Once the level is in the key there is nothing to panic about: two
+levels are two keys, and the memo answers each correctly. The guard existed
+*because the key was incomplete*, so completing the key deletes the bug class
+rather than strengthening the guard — which is this campaign's whole thesis,
+landing on its own first tenant.
+
+**Replace it, do not delete it.** Deleting a `should_panic` test without
+replacing its assertion is a silent loss of coverage. The replacement must
+assert the stronger property:
+
+> one memo fed from two different globe levels returns the **correct**
+> `corner_weights` for each, rather than panicking.
+
+Whether the `debug_assert_eq!` itself stays is your call after reading the
+code — but it must not forbid a now-legitimate use. Say which you chose and
+why.
 
 - [ ] **Step 5: Prove byte-identity at the artifact level**
 
