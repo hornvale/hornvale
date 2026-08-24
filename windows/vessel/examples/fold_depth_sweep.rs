@@ -63,8 +63,7 @@
 //!
 //! - **PERIODIC RESETS** (`Some(RESET_EVERY)`): a `drank` fact every
 //!   `RESET_EVERY` postings, so `S` stays bounded near `RESET_EVERY` while
-//!   `H` grows across the sweep. This isolates the `O(H)` term and is the
-//!   sweep comparable to the spec's own in-situ regime.
+//!   `H` grows across the sweep. This isolates the `O(H)` term.
 //! - **SINGLE EARLY RESET** (`None`): the original regime, `S == H`,
 //!   exposing the `O(S*H)` term in isolation.
 //!
@@ -72,6 +71,64 @@
 //! conflict with each other, and a disagreement between either of them and
 //! spec §4 is a finding about the mechanism, not a bench defect to smooth
 //! over.
+//!
+//! **`RESET_EVERY = 20` is an AUTHORED GUESS, not a derived or measured
+//! number, and the periodic sweep is only an approximation of production's
+//! regime until it is grounded.** This bench is synthetic and knows its own
+//! reset cadence by construction, which is exactly why it cannot tell you
+//! whether 20 is close to how often a real agent actually drinks. The
+//! production postings-per-drink ratio is UNMEASURED as of this bench. The
+//! measurement that would settle it -- a `drank`-per-agent-per-tick column
+//! alongside the existing `folded/a` column in `session_length_scaling.rs`
+//! -- is scoped to a later task in this campaign, not this one. Read the
+//! periodic sweep below as "what the O(H) term looks like at a plausible,
+//! unverified cadence," not as a closed comparison to spec §4.
+//!
+//! ## Reconciling with spec §4, with numbers (measured; expect wall-clock noise to move these on a re-run, and it did)
+//!
+//! `report_affine`'s "fitted" elasticity is derived from the OLS line, which
+//! bakes the model's intercept into the number -- useful, but not the same
+//! statistic as a plain endpoint ratio. `report_raw_elasticities` computes a
+//! MODEL-FREE elasticity directly from two RAW medians (`ln(y2/y1) /
+//! ln(x2/x1)`), reported over three ranges of the same periodic sweep: the
+//! whole swept range, the top half (depth >= 1,000), and the top third
+//! (depth >= 3,200). A positive intercept `C` drags an end-to-end
+//! (whole-range) elasticity below the mechanism's true asymptotic exponent
+//! whenever `C` is a real share of the cost at the low end -- which is why
+//! the whole-range figure reads lower than the top-half one, and the
+//! top-half/top-third figures (where `C`'s share is smallest) are the ones
+//! actually comparable to spec §4's in-situ 0.86-1.24.
+//!
+//! TWO SEPARATE RUNS ON THIS BOX, NOT ONE, BECAUSE WALL TIME HERE IS NOISY
+//! AND THAT IS THE POINT OF SHOWING BOTH RATHER THAN PICKING ONE:
+//!
+//! ```text
+//!                    whole range     top half        top third
+//! run 1 (periodic)      0.849       1.062 (in range)  0.829
+//! run 2 (periodic)      0.874       1.073 (in range)  1.238 (in range, at the edge)
+//! run 1 (single-reset)  1.518       2.023              2.088
+//! run 2 (single-reset)  1.518       2.025              2.088
+//! ```
+//!
+//! The periodic figures moved measurably between runs (as expected -- this
+//! is a raw wall-clock measurement, not a fitted or averaged one, so it
+//! carries the full noise the small periodic-regime medians already show at
+//! low depth); the single-reset figures barely moved at all, because that
+//! regime's cost is dominated by the `O(H^2)` term and swamps the same
+//! wall-clock noise. The CONCLUSION did not move either way: in both runs
+//! the periodic regime's top-half elasticity landed inside spec §4's
+//! 0.86-1.24 in-situ range, and in both runs the single-reset regime's
+//! elasticity sat near 2 at the high end. The periodic top-third figure
+//! shows real run-to-run scatter (0.829 vs 1.238) -- report the range you
+//! see, not the most flattering point in it.
+//!
+//! **Conclusion:** the periodic regime's high-depth elasticity lands inside
+//! spec §4's in-situ range, so the two instruments agree about the regime
+//! production actually runs in -- SUBJECT TO `RESET_EVERY`'s cadence being a
+//! reasonable stand-in for reality, which is an open item, not something
+//! this bench closes (see `RESET_EVERY`'s doc). The single-reset regime's ~2
+//! exponent is real but belongs to a "never drinks" regime production does
+//! not reach.
 //!
 //! ## What this bench does, and does not, measure
 //!
@@ -124,6 +181,16 @@ const FOLD_REPS: u32 = 50;
 /// (the `DEPTHS` entries of 10) no reset ever triggers, so the periodic
 /// sweep is identical to the single-reset one at that one depth -- expected,
 /// not a bug, and worth knowing when reading that row.
+///
+/// **THIS IS AN AUTHORED GUESS, NOT A MEASURED OR DERIVED NUMBER.** Nothing
+/// in this bench (or its sibling `session_length_scaling.rs`) establishes
+/// how many `agent-at` postings a production agent actually accumulates
+/// between drinks -- this file is synthetic and sets its own cadence by
+/// construction, so it cannot ground that ratio from the inside. Do not read
+/// "20" as a derivation; read it as "a plausible value, picked to keep `S`
+/// small without being trivially tiny, pending the measurement that would
+/// settle it" (see the module doc's reconciliation section for what that
+/// measurement is and where it is scoped).
 const RESET_EVERY: usize = 20;
 
 /// A `Terrain` that answers the same thing everywhere -- so the only variable
@@ -299,6 +366,58 @@ fn report_monotonicity(ys: &[f64]) {
     );
 }
 
+/// A model-free elasticity between two swept points: `ln(y2/y1) /
+/// ln(x2/x1)`, computed directly off their RAW medians -- never off a
+/// fitted line. Distinguished from `report_affine`'s "fitted" elasticity
+/// (which bakes the OLS model's intercept into the number) precisely
+/// because the two can disagree, and a positive intercept `C` will pull the
+/// fitted one down relative to this one whenever `C` is a real share of the
+/// cost at the low end. `None` when either endpoint would make the ratio
+/// undefined or non-finite (a non-positive `x1`, or a non-positive `y`).
+fn raw_elasticity(x1: f64, y1: f64, x2: f64, y2: f64) -> Option<f64> {
+    if x1 > 0.0 && x2 > 0.0 && y1 > 0.0 && y2 > 0.0 && x1 != x2 {
+        Some(hornvale_kernel::math::ln(y2 / y1) / hornvale_kernel::math::ln(x2 / x1))
+    } else {
+        None
+    }
+}
+
+/// Print the raw-median (model-free) elasticity over three ranges of one
+/// sweep's medians: the whole swept range, the top half (depth >= 1,000),
+/// and the top third (depth >= 3,200). Reported alongside, not instead of,
+/// `report_affine`'s fitted number -- see [`raw_elasticity`]'s doc and the
+/// module doc's reconciliation section for why a positive `C` makes the two
+/// disagree, and by how much.
+fn report_raw_elasticities(xs: &[f64], ys: &[f64]) {
+    let last_i = xs.len() - 1;
+    println!("  raw-median elasticity (model-free, off the endpoints' own medians, not the fit):");
+    // "whole range" starts at index 0; "top half"/"top third" start at the
+    // first swept depth at or above the named threshold, if the sweep
+    // reaches that far (it always does for `DEPTHS` as authored, but this
+    // stays honest if a future edit shortens it).
+    let starts: [(&str, Option<usize>); 3] = [
+        ("whole range", Some(0)),
+        ("top half", xs.iter().position(|&x| x >= 1_000.0)),
+        ("top third", xs.iter().position(|&x| x >= 3_200.0)),
+    ];
+    for (label, start) in starts {
+        let Some(i) = start else {
+            println!("    {label:<12} -- sweep does not reach this range, skipped");
+            continue;
+        };
+        match raw_elasticity(xs[i], ys[i], xs[last_i], ys[last_i]) {
+            Some(e) => println!(
+                "    {label:<12} {:>6.0} -> {:>6.0} : {e:.3}",
+                xs[i], xs[last_i]
+            ),
+            None => println!(
+                "    {label:<12} {:>6.0} -> {:>6.0} : not computable (non-positive endpoint)",
+                xs[i], xs[last_i]
+            ),
+        }
+    }
+}
+
 /// Fit `ys = C + k * xs` by ordinary least squares and print it, with the `r^2`
 /// that says how much of the variance the fit actually explains. Reused,
 /// shape and all, from `session_length_scaling.rs::report_affine` -- same
@@ -326,18 +445,22 @@ fn report_affine(title: &str, unit: &str, xs: &[f64], ys: &[f64], x_first: f64, 
     };
     println!("    k = {k:.5} {unit} per additional fact of history  (r^2 = {r2:.3})");
 
-    // Elasticity between the first and last swept depth: 1.0 means cost is
-    // PROPORTIONAL to history (a pure walk over it), 0.0 means history is
-    // free, ~2.0 means quadratic. Needs no intercept, so it survives `C`
-    // being unidentifiable -- same reasoning `session_length_scaling.rs`
-    // states at length.
+    // FITTED elasticity between the first and last swept depth, off the OLS
+    // line: 1.0 means cost is PROPORTIONAL to history (a pure walk over it),
+    // 0.0 means history is free, ~2.0 means quadratic. Needs no intercept, so
+    // it survives `C` being unidentifiable -- same reasoning
+    // `session_length_scaling.rs` states at length. Labelled "fitted" and
+    // kept distinct from `report_raw_elasticities`'s MODEL-FREE number below
+    // -- the two can disagree (a positive `C` drags this one down), and two
+    // numbers both called "elasticity" that disagree silently is worse than
+    // either alone.
     let y_first = my - k * (mx - x_first);
     let y_last = my - k * (mx - x_last);
     if x_first > 0.0 && y_first > 0.0 && y_last > 0.0 {
         let elasticity = hornvale_kernel::math::ln(y_last / y_first)
             / hornvale_kernel::math::ln(x_last / x_first);
         println!(
-            "    elasticity over the measured range = {elasticity:.2} (1.0 = proportional to history, 0.0 = history free, 2.0 = quadratic)"
+            "    fitted elasticity (off the OLS line) = {elasticity:.2} (1.0 = proportional to history, 0.0 = history free, 2.0 = quadratic)"
         );
     }
     println!(
@@ -464,6 +587,11 @@ fn main() {
         *periodic_xs.first().expect("DEPTHS is non-empty"),
         *periodic_xs.last().expect("DEPTHS is non-empty"),
     );
+    // The model-free complement to the fitted elasticity above -- see the
+    // module doc's reconciliation section for the numbers this produced on
+    // one run and why the whole-range figure reads lower than the top-half
+    // one.
+    report_raw_elasticities(&periodic_xs, &periodic_ys);
     report_monotonicity(&periodic_ys);
 
     let (single_xs, single_ys) = run_sweep(
@@ -479,5 +607,6 @@ fn main() {
         *single_xs.first().expect("DEPTHS is non-empty"),
         *single_xs.last().expect("DEPTHS is non-empty"),
     );
+    report_raw_elasticities(&single_xs, &single_ys);
     report_monotonicity(&single_ys);
 }
