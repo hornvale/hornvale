@@ -6,7 +6,7 @@
 //! path and none on the path itself, so a `return null` in `sightOf` left 59
 //! of 59 tests green while the feature was dead. Every assertion here reads
 //! the LAST value in the chain — `PaletteEntry::color`, or the screen triple a
-//! cell's light and fabric produce — never an intermediate.
+//! vertex's light and fabric produce — never an intermediate.
 //!
 //! **Measured on derived fabric.** H2's substrate is real bedrock: the
 //! `MaterialBuffer` and `RockClass` a generated settlement actually stands on,
@@ -79,9 +79,9 @@ fn world_at(seed: u64) -> World {
 /// The ground under seed `seed`'s **flagship** settlement, as the fabric rules
 /// read it.
 ///
-/// Real bedrock: `GeneratedTerrain::material_at` and `rock_at` at the cell the
-/// settlement's own `hornvale_settlement::CELL_ID` fact names — the identical
-/// cell the composition root read `climate.biome_at` at when it committed the
+/// Real bedrock: `GeneratedTerrain::material_at` and `rock_at` at the vertex the
+/// settlement's own `hornvale_settlement::VERTEX_ID` fact names — the identical
+/// vertex the composition root read `climate.biome_at` at when it committed the
 /// settlement's biome, so fabric and prose cannot disagree about which ground
 /// this is (`fabric.rs`'s module doc records the rule).
 ///
@@ -111,15 +111,15 @@ fn flagship_ground(seed: u64) -> (FabricContext, String) {
     let flagship = settlements
         .first()
         .unwrap_or_else(|| panic!("seed {seed} condensed no settlements"));
-    let cell = match artifacts
+    let vertex = match artifacts
         .world
         .ledger
-        .value_of(flagship.id, hornvale_settlement::CELL_ID)
+        .value_of(flagship.id, hornvale_settlement::VERTEX_ID)
     {
         Some(Value::Number(n)) => Vertex(*n as u32),
         _ => panic!("settlement {} has no cell-id fact", flagship.id.0),
     };
-    let ctx = FabricContext::at(terrain, climate, cell);
+    let ctx = FabricContext::at(terrain, climate, vertex);
     let rock = format!("{:?}", ctx.rock);
     (ctx, rock)
 }

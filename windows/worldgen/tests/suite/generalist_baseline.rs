@@ -24,13 +24,13 @@
 //! - **Fit (K)** - `per_species_suitability`'s raw per-species score, computed
 //!   independently per species. "Best-fit people on a stronghold" (H2) is a
 //!   comparison of this quantity.
-//! - **Competitive share** - `hornvale_demography::coexist::cell_share`'s
+//! - **Competitive share** - `hornvale_demography::coexist::vertex_share`'s
 //!   overlap-weighted `K^β` softmax over whichever species are present at a
-//!   cell, at the frozen [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`].
-//!   This is what §4 of the design spec calls "human's per-cell competitive
+//!   vertex, at the frozen [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`].
+//!   This is what §4 of the design spec calls "human's per-vertex competitive
 //!   share from the coexistence packer" (H1's correlation axis, H3's
-//!   majority-share test). It depends on who else is present at the cell;
-//!   fit does not. `measure_one` computes it directly via `cell_share` (not
+//!   majority-share test). It depends on who else is present at the vertex;
+//!   fit does not. `measure_one` computes it directly via `vertex_share` (not
 //!   via `hornvale_demography::coexist::pack`'s final density), since
 //!   `pack`'s density additionally divides by home range and applies
 //!   trophic coupling - neither of which is part of "the share the K^β
@@ -72,14 +72,14 @@
 //! that exact same `wc.biosphere.iter()` ordering.
 //!
 //! **"Settleable land"** is not a second, independently-chosen filter: K is 0
-//! on every submerged cell for the whole roster today (`per_species_suitability`'s
+//! on every submerged vertex for the whole roster today (`per_species_suitability`'s
 //! own doc, The Tumult's land mask), so "does at least one of the peoples
 //! passed to `measure_one` clear [`VIABILITY_FLOOR`] here" already separates
 //! occupiable land from both ocean and the uninhabitable land the condition
 //! niches themselves exclude - the same viability test `non_void_roster.rs`
-//! applies per-kind, applied here per-cell across the whole roster passed in.
+//! applies per-kind, applied here per-vertex across the whole roster passed in.
 //! Both outputs of `measure_one` (the axis samples and every people's fit/share
-//! samples) are drawn from that identical filtered cell set, seed by seed, so
+//! samples) are drawn from that identical filtered vertex set, seed by seed, so
 //! the mean fits/shares are means over the same population the elevation
 //! quantiles describe - the spec's D3 concern ("a quantile from the wrong
 //! population carries the authority of evidence") applies equally to a mean.
@@ -101,7 +101,7 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeMap;
 
-/// The viability floor below which a cell's K is ecological noise rather
+/// The viability floor below which a vertex's K is ecological noise rather
 /// than presence - [`hornvale_demography::FLOOR`], unchanged. Reused
 /// identical to `non_void_roster.rs`'s `VIABILITY_FLOOR`; two different
 /// floors would let a kind pass one test and disagree with the other about
@@ -133,15 +133,15 @@ const PEOPLES_BEFORE_THE_GENERALIST: [&str; 5] =
 ///
 /// The post-human roster (Task 6): [`PEOPLES_BEFORE_THE_GENERALIST`] plus
 /// `"human"` - the exact set
-/// §4 of the design spec measures the readout over ("human's per-cell
+/// §4 of the design spec measures the readout over ("human's per-vertex
 /// competitive share... against the five existing peoples' shares on the
-/// same cells").
+/// same vertices").
 const PEOPLES_AS_OF_THE_GENERALIST: [&str; 6] =
     ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"];
 
-/// The four condition axes, sampled over the settleable-cell population, in
+/// The four condition axes, sampled over the settleable-vertex population, in
 /// the identical frame `per_species_suitability` scores a `ConditionNiche`
-/// against - each field is a direct per-cell read of
+/// against - each field is a direct per-vertex read of
 /// [`hornvale_worldgen::Substrate`] (via [`substrate_field`]), the exact
 /// struct `per_species_suitability` builds internally and reads as `s.temperature_c`/
 /// `s.moisture`/`s.insolation`/`s.height_asl_m` (`windows/worldgen/src/lib.rs`,
@@ -159,30 +159,30 @@ struct AxisSamples {
     /// global scalar - `Substrate::insolation` verbatim.
     insolation: Vec<f64>,
     /// Height above this world's sea level, metres - `Substrate::height_asl_m`
-    /// verbatim (the same `elevation_at(cell).above(sea_level())` The
+    /// verbatim (the same `elevation_at(vertex).above(sea_level())` The
     /// Tumult's re-datum, retyped by The Benchmark, performs).
     elevation: Vec<f64>,
 }
 
 /// Build `seed` to full depth and return `(axes, per_people_fits, per_people_shares)`
-/// over the cells settleable by at least one of `peoples`.
+/// over the vertices settleable by at least one of `peoples`.
 ///
-/// `axes` is that cell set's four condition-axis readings, in the identical
+/// `axes` is that vertex set's four condition-axis readings, in the identical
 /// frame [`per_species_suitability`] scores a `ConditionNiche` against - see
 /// [`AxisSamples`]. `per_people_fits` maps each people's name to its own
-/// per-cell K (the raw `per_species_suitability` output, computed independently
-/// per species - NOT a coexistence share) over that exact same cell set, one
-/// entry per settleable cell. `per_people_shares` maps each people's name to
-/// its own per-cell overlap-weighted competitive share
-/// (`hornvale_demography::coexist::cell_share`, at the frozen
+/// per-vertex K (the raw `per_species_suitability` output, computed independently
+/// per species - NOT a coexistence share) over that exact same vertex set, one
+/// entry per settleable vertex. `per_people_shares` maps each people's name to
+/// its own per-vertex overlap-weighted competitive share
+/// (`hornvale_demography::coexist::vertex_share`, at the frozen
 /// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`], over
 /// exactly `peoples` as the competing roster - present-species K > 0 only,
-/// mirroring `hornvale_demography::coexist::pack`'s own per-cell `present`
-/// filter), `0.0` for any people whose K at that cell was not `> 0.0` (so it
+/// mirroring `hornvale_demography::coexist::pack`'s own per-vertex `present`
+/// filter), `0.0` for any people whose K at that vertex was not `> 0.0` (so it
 /// never entered `present`, matching what `pack` would do). Every vector -
 /// `axes`' four fields, every `per_people_fits` value, every
 /// `per_people_shares` value - is the same length and indexed the same way,
-/// cell for cell, since all three are pushed inside one shared per-cell loop.
+/// vertex for vertex, since all three are pushed inside one shared per-vertex loop.
 fn measure_one(
     seed: Seed,
     peoples: &[&'static str],
@@ -282,9 +282,9 @@ fn measure_one(
     );
 
     // The competing roster's (id, mass, niche) triples and the resulting
-    // Pianka guild-overlap matrix - both cell-invariant, so (mirroring
+    // Pianka guild-overlap matrix - both vertex-invariant, so (mirroring
     // `hornvale_demography::coexist::pack`'s own hoist) derived once here
-    // rather than inside the per-cell loop below.
+    // rather than inside the per-vertex loop below.
     let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = bios
         .iter()
         .enumerate()
@@ -305,34 +305,34 @@ fn measure_one(
     let mut per_people: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
     let mut per_people_share: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
 
-    for cell in geo.vertices() {
-        let settleable = ks.iter().any(|(_, k)| *k.get(cell) >= VIABILITY_FLOOR);
+    for vertex in geo.vertices() {
+        let settleable = ks.iter().any(|(_, k)| *k.get(vertex) >= VIABILITY_FLOOR);
         if !settleable {
             continue;
         }
-        let s = substrate.get(cell);
+        let s = substrate.get(vertex);
         axes.temperature.push(s.temperature_c);
         axes.moisture.push(s.moisture);
         axes.insolation.push(s.insolation);
         axes.elevation.push(s.height_asl_m.get());
         for (tag, k) in &ks {
             let name = kinds[*tag as usize].0;
-            per_people.entry(name).or_default().push(*k.get(cell));
+            per_people.entry(name).or_default().push(*k.get(vertex));
         }
 
-        // The competitive share this cell's present species (K > 0, the
-        // same filter `pack`'s per-cell loop applies) get from the K^β
-        // softmax - `cell_share` directly, not `pack`'s final density,
+        // The competitive share this vertex's present species (K > 0, the
+        // same filter `pack`'s per-vertex loop applies) get from the K^β
+        // softmax - `vertex_share` directly, not `pack`'s final density,
         // since density additionally divides by home range and applies
         // trophic coupling, neither of which is part of "the share the
         // packer's BETA/FLOOR produce" (see the module doc).
         let present: Vec<(u32, f64)> = ks
             .iter()
-            .map(|(tag, k)| (*tag, *k.get(cell)))
+            .map(|(tag, k)| (*tag, *k.get(vertex)))
             .filter(|(_, k)| *k > 0.0)
             .collect();
         let capacity: f64 = present.iter().map(|(_, k)| *k).sum();
-        let shares = hornvale_demography::coexist::cell_share(
+        let shares = hornvale_demography::coexist::vertex_share(
             capacity,
             &present,
             &overlap,
@@ -349,7 +349,7 @@ fn measure_one(
     (axes, per_people, per_people_share)
 }
 
-/// Per-people, per-cell samples keyed by name - the shape both
+/// Per-people, per-vertex samples keyed by name - the shape both
 /// `per_people_fits` and `per_people_shares` share, factored into a named
 /// alias so `measure_one`'s signature reads as intent rather than tripping
 /// clippy's `type_complexity` lint on the raw nested type.
@@ -363,14 +363,14 @@ fn percentile_of_sorted(vals: &[f64], p: u32) -> f64 {
     vals[idx]
 }
 
-/// Pianka symmetric niche overlap over two aligned per-cell samples: `Σ aᵢbᵢ
+/// Pianka symmetric niche overlap over two aligned per-vertex samples: `Σ aᵢbᵢ
 /// / √(Σ aᵢ² · Σ bᵢ²)`, the identical formula
 /// [`hornvale_kernel::ResourceVector::overlap`] applies to a fixed
-/// resource-axis vector, generalized here to an arbitrary-length per-cell
-/// sample (a per-cell K/fit distribution over space is exactly the kind of
+/// resource-axis vector, generalized here to an arbitrary-length per-vertex
+/// sample (a per-vertex K/fit distribution over space is exactly the kind of
 /// utilization vector Pianka's index is defined for). `a` and `b` must be
-/// the same length and cell-aligned (index `i` = the same cell in both) -
-/// every caller here builds both from `measure_one`'s single per-cell loop,
+/// the same length and vertex-aligned (index `i` = the same vertex in both) -
+/// every caller here builds both from `measure_one`'s single per-vertex loop,
 /// so alignment holds by construction. Returns `0.0` if either vector is the
 /// zero vector (matching `ResourceVector::overlap`'s own convention).
 fn pianka(a: &[f64], b: &[f64]) -> f64 {
@@ -383,7 +383,7 @@ fn pianka(a: &[f64], b: &[f64]) -> f64 {
     numerator / (sum_a2 * sum_b2).sqrt()
 }
 
-/// Pearson correlation coefficient over two aligned per-cell samples (same
+/// Pearson correlation coefficient over two aligned per-vertex samples (same
 /// alignment contract as [`pianka`]). Returns `0.0` if either sample has
 /// zero variance (a constant vector correlates with nothing; this guards the
 /// division rather than producing `NaN`).
@@ -406,7 +406,7 @@ fn pearson(a: &[f64], b: &[f64]) -> f64 {
 
 /// Report one H2 stronghold band: every people's mean fit (K) and mean/max
 /// competitive share over `indices` (positions into the aggregated,
-/// cell-aligned `per_people_fit`/`per_people_share` vectors), the best-fit
+/// vertex-aligned `per_people_fit`/`per_people_share` vectors), the best-fit
 /// people by mean K, a POSITIVE CONTROL for the `>0.5` majority-share test
 /// (fix round 1, review finding 3: the locally-dominant-by-mean-share
 /// people's own majority-share fraction, so "0.5 is crossed by nobody" and
@@ -422,7 +422,7 @@ fn report_band(
 ) {
     println!("H2 band {label}: n = {}", indices.len());
     if indices.is_empty() {
-        println!("H2 band {label}: EMPTY - no cells in this band, nothing to report");
+        println!("H2 band {label}: EMPTY - no vertices in this band, nothing to report");
         return;
     }
     let mut best_fit: Option<(&str, f64)> = None;
@@ -507,7 +507,7 @@ fn report_land_distribution_and_pre_human_fits() {
         let mean = vals.iter().sum::<f64>() / vals.len() as f64;
         println!("pre-human mean fit {kind} = {mean:.4}");
     }
-    println!("n = {} settleable cells", elevations.len());
+    println!("n = {} settleable vertices", elevations.len());
 
     // Guard assertions (pre-flight ruling, 2026-08-03). This is a measurement
     // harness, not a hypothesis test - H1/H2/H3 are REPORTED in Task 6, never
@@ -562,7 +562,7 @@ fn report_the_preregistered_gause_readout() {
 
     let n = elevations.len();
     println!(
-        "n = {n} settleable cells (6-people population: bugbear, gnoll, goblin, hobgoblin, human, kobold)"
+        "n = {n} settleable vertices (6-people population: bugbear, gnoll, goblin, hobgoblin, human, kobold)"
     );
 
     // Guard assertions (pre-flight ruling, 2026-08-03; task brief step 1).
@@ -598,8 +598,8 @@ fn report_the_preregistered_gause_readout() {
         println!("mean competitive share {name} = {mean:.6}");
     }
     // Positive control for the majority-share (`>0.5`) test below (fix round
-    // 1, review finding 3): the max competitive share ANY cell gives each
-    // people, over all settleable land. Without this, "0/142593 cells cross
+    // 1, review finding 3): the max competitive share ANY vertex gives each
+    // people, over all settleable land. Without this, "0/142593 vertices cross
     // 0.5" cannot be told apart from "nothing in this dataset ever crosses
     // 0.5, for any people, regardless of dominance" - the max establishes
     // whether the threshold is reachable at all.

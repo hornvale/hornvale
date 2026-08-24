@@ -4,16 +4,16 @@
 use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, VertexMap};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-/// Connected components of the cells satisfying `member`, under
+/// Connected components of the vertices satisfying `member`, under
 /// [`Geosphere::neighbors`].
 ///
-/// Returned in ascending order of each component's lowest cell id — the
+/// Returned in ascending order of each component's lowest vertex id — the
 /// identity the caller assigns — so no call site has to sort. Traversal only:
 /// no draws, no transcendentals, integer comparisons, so cross-platform
 /// byte-identical.
 ///
-/// The components **partition** the members: every satisfying cell appears in
-/// exactly one. That is what makes "lowest cell id" a valid identity, and it
+/// The components **partition** the members: every satisfying vertex appears in
+/// exactly one. That is what makes "lowest vertex id" a valid identity, and it
 /// is asserted rather than assumed.
 /// type-audit: bare-ok(count: return)
 pub fn components(geo: &Geosphere, member: impl Fn(Vertex) -> bool) -> Vec<BTreeSet<Vertex>> {
@@ -26,9 +26,9 @@ pub fn components(geo: &Geosphere, member: impl Fn(Vertex) -> bool) -> Vec<BTree
         visited[start.0 as usize] = true;
         let mut queue = VecDeque::from([start]);
         let mut set = BTreeSet::new();
-        while let Some(cell) = queue.pop_front() {
-            set.insert(cell);
-            for &nb in geo.neighbors(cell) {
+        while let Some(vertex) = queue.pop_front() {
+            set.insert(vertex);
+            for &nb in geo.neighbors(vertex) {
                 if !visited[nb.0 as usize] && member(nb) {
                     visited[nb.0 as usize] = true;
                     queue.push_back(nb);
@@ -45,7 +45,7 @@ pub fn components(geo: &Geosphere, member: impl Fn(Vertex) -> bool) -> Vec<BTree
 /// **The discriminants are load-bearing and must not be reordered.** They form
 /// the high half of the naming salt (`windows/worldgen`), so changing one
 /// renames every feature of that class in every world. `Volcano = 0`
-/// deliberately: it makes a volcano's salt equal its bare cell id, which is
+/// deliberately: it makes a volcano's salt equal its bare vertex id, which is
 /// exactly what `volcano_name` already draws with, so adopting the scheme
 /// moves no volcano name.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -56,7 +56,7 @@ pub enum FeatureClass {
     Landmass = 1,
     /// A connected component of ocean.
     Sea = 2,
-    /// A connected component of endorheic salt-sink cells.
+    /// A connected component of endorheic salt-sink vertices.
     SaltLake = 3,
     /// A maximal subtree of the flow forest.
     River = 4,
@@ -73,7 +73,7 @@ impl FeatureClass {
     /// at", the cursor.
     ///
     /// **Declared, not derived from extent.** The Portolan's resolution spike
-    /// measured that 99.84% of multi-feature cells form a proper containment
+    /// measured that 99.84% of multi-feature vertices form a proper containment
     /// chain (a strict subset of a distinct extent is strictly smaller), so
     /// extent-ascending agrees with specificity *today*, by construction —
     /// but inferring salience from size would silently break the moment a
@@ -89,7 +89,7 @@ impl FeatureClass {
         match self {
             // A point-like edifice: the most specific thing a cursor can
             // stand on, whether it rises from land or (measured: 6.9% of
-            // multi-feature cells) from the sea floor.
+            // multi-feature vertices) from the sea floor.
             FeatureClass::Volcano => 0,
             // An endorheic sink: smaller and more specific than the river
             // catchment or landmass that contains it.
@@ -109,14 +109,14 @@ impl FeatureClass {
     }
 }
 
-/// A feature's stable identity: its class and its canonical cell.
-/// type-audit: bare-ok(index: cell)
+/// A feature's stable identity: its class and its canonical vertex.
+/// type-audit: bare-ok(index: vertex)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FeatureId {
     /// Which kind of feature.
     pub class: FeatureClass,
-    /// The canonical cell — a component's lowest, or a river's terminal.
-    pub cell: Vertex,
+    /// The canonical vertex — a component's lowest, or a river's terminal.
+    pub vertex: Vertex,
 }
 
 /// An individuated region of the world.
@@ -125,15 +125,15 @@ pub struct FeatureId {
 pub struct Feature {
     /// The stable identity.
     pub id: FeatureId,
-    /// Every cell the feature occupies.
+    /// Every vertex the feature occupies.
     pub extent: BTreeSet<Vertex>,
-    /// The cell a label is drawn at.
+    /// The vertex a label is drawn at.
     pub anchor: Vertex,
     /// The integer scalar ranking this feature within its class.
     pub magnitude: u32,
 }
 
-/// Fraction of a world's land (or ocean) cell count below which a connected
+/// Fraction of a world's land (or ocean) vertex count below which a connected
 /// component is a quantization artifact rather than a feature, not "how
 /// much land/ocean must exist for a floor to apply". Shared by the
 /// `GeneratedTerrain` provider's Landmass/Sea floors (`provider.rs`) and the
@@ -148,16 +148,16 @@ pub const PROPORTIONAL_SIZE_FLOOR_FRACTION: f64 = 0.005;
 /// Minimum a proportional size floor (`PROPORTIONAL_SIZE_FLOOR_FRACTION` ×
 /// a world's land/ocean extent) may fall to, regardless of how small that
 /// extent is. The fraction alone is unbounded below: on a world with under
-/// ~200 land cells it floors to less than 1, which admits every single-cell
+/// ~200 land vertices it floors to less than 1, which admits every single-vertex
 /// component — exactly the quantization-artifact case a floor exists to
 /// exclude in the first place (land is a threshold on a continuous field,
-/// so a lone cell is noise, not a landmass). 2 is the smallest value that
-/// rules that case out: a component must span at least two cells to be
+/// so a lone vertex is noise, not a landmass). 2 is the smallest value that
+/// rules that case out: a component must span at least two vertices to be
 /// more than a single point.
 /// type-audit: bare-ok(count)
 pub const PROPORTIONAL_SIZE_FLOOR_MIN: usize = 2;
 
-/// Every component of `member` at or above `floor` cells, as features of
+/// Every component of `member` at or above `floor` vertices, as features of
 /// `class`. Below the floor a component is not a small feature — it is not a
 /// feature, and stays anonymous.
 /// type-audit: bare-ok(count: floor)
@@ -171,10 +171,10 @@ pub fn classify(
         .into_iter()
         .filter(|extent| extent.len() >= floor)
         .map(|extent| {
-            let cell = *extent.first().expect("components are nonempty");
+            let vertex = *extent.first().expect("components are nonempty");
             Feature {
-                id: FeatureId { class, cell },
-                anchor: cell,
+                id: FeatureId { class, vertex },
+                anchor: vertex,
                 magnitude: extent.len() as u32,
                 extent,
             }
@@ -182,16 +182,16 @@ pub fn classify(
         .collect()
 }
 
-/// Every river catchment at or above `floor` cells.
+/// Every river catchment at or above `floor` vertices.
 ///
 /// A river is a maximal subtree of the flow forest [`crate::drainage::downhill_targets`]
-/// gives, and its identity is that subtree's **terminal** — the ocean cell it
+/// gives, and its identity is that subtree's **terminal** — the ocean vertex it
 /// empties into, or the interior minimum it dies in. Magnitude is catchment
 /// size, so the naming tier is how much land a river drains rather than how
 /// much water crosses its mouth.
 ///
 /// The extent holds the **land** that drains to the terminal; when the
-/// terminal is an ocean cell it is not itself a member. The partition property
+/// terminal is an ocean vertex it is not itself a member. The partition property
 /// in this module's tests pins that.
 ///
 /// The walk is bounded by `vertex_count` because the flow forest is acyclic by
@@ -225,7 +225,7 @@ pub fn rivers(
         .map(|(terminal, extent)| Feature {
             id: FeatureId {
                 class: FeatureClass::River,
-                cell: terminal,
+                vertex: terminal,
             },
             anchor: terminal,
             magnitude: extent.len() as u32,
@@ -239,7 +239,7 @@ pub fn rivers(
 ///
 /// **This ordering is the placement channel** — the same question
 /// `surrounds_ascii::box_rank` (`clients/game/core/src/chart.rs`) answers one
-/// rung down, for ASCII chart cells rather than world features. It is not
+/// rung down, for ASCII chart vertices rather than world features. It is not
 /// one of decision 0142's three measurement axes: ordering a feature set is
 /// a claim about what fits on the page, not about the world. This campaign
 /// ships the ordering and deliberately ships no salience banding — the map
@@ -247,7 +247,7 @@ pub fn rivers(
 /// number here.
 ///
 /// Within a class, features order by magnitude descending, ties broken by
-/// identity (`FeatureId::cell`) ascending — total, deterministic, and
+/// identity (`FeatureId::vertex`) ascending — total, deterministic, and
 /// integer-only, so no `total_cmp` appears anywhere in this module.
 #[derive(Clone, Debug, Default)]
 pub struct FeatureIndex {
@@ -262,7 +262,7 @@ impl FeatureIndex {
     pub(crate) fn from_parts(parts: Vec<(FeatureClass, Vec<Feature>)>) -> FeatureIndex {
         let mut by_class = BTreeMap::new();
         for (class, mut feats) in parts {
-            feats.sort_unstable_by_key(|f| (std::cmp::Reverse(f.magnitude), f.id.cell));
+            feats.sort_unstable_by_key(|f| (std::cmp::Reverse(f.magnitude), f.id.vertex));
             by_class.insert(class, feats);
         }
         FeatureIndex { by_class }
@@ -285,50 +285,53 @@ impl FeatureIndex {
     }
 }
 
-/// `Vertex -> Vec<FeatureId>`: every feature covering a given cell, most
+/// `Vertex -> Vec<FeatureId>`: every feature covering a given vertex, most
 /// specific first. The Portolan's cursor query — "what am I pointing at" —
 /// answered as a lookup rather than a scan.
 ///
 /// **Built once at world load and never invalidated.** The feature stack for
-/// a cell is immutable for the world's lifetime (terrain does not move), so
+/// a vertex is immutable for the world's lifetime (terrain does not move), so
 /// this is not a per-turn cache; a caller builds it exactly once from the
 /// genesis-time feature set and holds it for the world's whole life.
 ///
 /// Ordered by [`FeatureClass::salience`] ascending, ties broken by
-/// [`FeatureId`]'s own `Ord` (which orders `class` then `cell`) for a total,
+/// [`FeatureId`]'s own `Ord` (which orders `class` then `vertex`) for a total,
 /// deterministic order — the same reasoning [`FeatureIndex`] documents for
 /// its own tie-break, applied to a different ordering key.
 #[derive(Clone, Debug, Default)]
 pub struct VertexFeatureIndex {
-    by_cell: BTreeMap<Vertex, Vec<FeatureId>>,
+    by_vertex: BTreeMap<Vertex, Vec<FeatureId>>,
 }
 
 impl VertexFeatureIndex {
-    /// Index every `features[i].extent` cell, most-specific-first. Cost is
+    /// Index every `features[i].extent` vertex, most-specific-first. Cost is
     /// `O(sum of extent sizes * log)`, one pass over every feature's own
-    /// extent rather than one scan of every cell per feature — the same
+    /// extent rather than one scan of every vertex per feature — the same
     /// complexity shape the resolution spike measured `resolve_at`'s
     /// candidate cost against (`docs/superpowers/specs/2026-08-19-the-
     /// portolan-design.md` §4).
     pub fn build(features: &[Feature]) -> VertexFeatureIndex {
-        let mut by_cell: BTreeMap<Vertex, Vec<FeatureId>> = BTreeMap::new();
+        let mut by_vertex: BTreeMap<Vertex, Vec<FeatureId>> = BTreeMap::new();
         for feature in features {
-            for &cell in &feature.extent {
-                by_cell.entry(cell).or_default().push(feature.id);
+            for &vertex in &feature.extent {
+                by_vertex.entry(vertex).or_default().push(feature.id);
             }
         }
-        for ids in by_cell.values_mut() {
+        for ids in by_vertex.values_mut() {
             ids.sort_unstable_by_key(|id| (id.class.salience(), *id));
         }
-        VertexFeatureIndex { by_cell }
+        VertexFeatureIndex { by_vertex }
     }
 
-    /// Every feature covering `cell`, most specific first. Empty (never a
-    /// panic) for a cell no feature's extent contains — seed 42 measured
-    /// 377 of 40,962 cells (0.92%) like this: real terrain below every
+    /// Every feature covering `vertex`, most specific first. Empty (never a
+    /// panic) for a vertex no feature's extent contains — seed 42 measured
+    /// 377 of 40,962 vertices (0.92%) like this: real terrain below every
     /// class's individuation floor, not "nothing there."
-    pub fn at(&self, cell: Vertex) -> &[FeatureId] {
-        self.by_cell.get(&cell).map(Vec::as_slice).unwrap_or(&[])
+    pub fn at(&self, vertex: Vertex) -> &[FeatureId] {
+        self.by_vertex
+            .get(&vertex)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 }
 
@@ -337,10 +340,10 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
-    /// On a geosphere every cell neighbours another, so an all-true predicate
-    /// must yield exactly one component holding every cell.
+    /// On a geosphere every vertex neighbours another, so an all-true predicate
+    /// must yield exactly one component holding every vertex.
     #[test]
-    fn an_all_true_predicate_yields_one_component_of_every_cell() {
+    fn an_all_true_predicate_yields_one_component_of_every_vertex() {
         let geo = Geosphere::new(3);
         let comps = components(&geo, |_| true);
         assert_eq!(comps.len(), 1, "the whole sphere is connected");
@@ -355,7 +358,7 @@ mod tests {
     }
 
     /// Every member appears in exactly one component. THIS is what makes
-    /// "lowest cell id" a valid identity — if a cell could appear twice, two
+    /// "lowest vertex id" a valid identity — if a vertex could appear twice, two
     /// features would claim it.
     ///
     /// The predicate (`c.0 % 13 < 2`) is chosen to fragment the sphere into
@@ -376,10 +379,10 @@ mod tests {
         );
         let mut seen = BTreeSet::new();
         for comp in &comps {
-            for cell in comp {
+            for vertex in comp {
                 assert!(
-                    seen.insert(*cell),
-                    "cell {cell:?} appeared in two components"
+                    seen.insert(*vertex),
+                    "vertex {vertex:?} appeared in two components"
                 );
             }
         }
@@ -400,7 +403,7 @@ mod tests {
     /// identity order all trivially agree half the time) cannot distinguish
     /// identity order from those other orders.
     #[test]
-    fn components_are_ordered_by_their_lowest_cell_id() {
+    fn components_are_ordered_by_their_lowest_vertex_id() {
         let geo = Geosphere::new(3);
         let comps = components(&geo, |c| c.0 % 11 < 3);
         assert!(
@@ -433,17 +436,17 @@ mod tests {
         assert_eq!(firsts, sorted, "components must arrive in identity order");
     }
 
-    /// A feature's identity is the lowest cell in its extent — canonical,
+    /// A feature's identity is the lowest vertex in its extent — canonical,
     /// integer, needing no tie-break.
     ///
     /// The brief's original predicate (`c.0 % 7 < 4`) measures thin on
-    /// `Geosphere::new(3)`: only 5 components, one a 360-cell blob swallowing
+    /// `Geosphere::new(3)`: only 5 components, one a 360-vertex blob swallowing
     /// almost the whole sphere and the rest debris of size <= 4. `c.0 % 6 < 2`
     /// measures far richer (46 components, confirmed below) with no single
     /// component dominating, so a bug that only manifests away from the
     /// giant component has somewhere to show up.
     #[test]
-    fn a_features_identity_is_the_lowest_cell_of_its_extent() {
+    fn a_features_identity_is_the_lowest_vertex_of_its_extent() {
         let geo = Geosphere::new(3);
         let feats = classify(&geo, FeatureClass::Landmass, |c| c.0 % 6 < 2, 1);
         assert!(
@@ -452,7 +455,7 @@ mod tests {
             feats.len()
         );
         for f in &feats {
-            assert_eq!(f.id.cell, *f.extent.first().expect("nonempty extent"));
+            assert_eq!(f.id.vertex, *f.extent.first().expect("nonempty extent"));
         }
     }
 
@@ -513,21 +516,21 @@ mod tests {
         }
     }
 
-    /// A sloped test globe: a base field where every cell's elevation is its
+    /// A sloped test globe: a base field where every vertex's elevation is its
     /// distance to the nearer pole, so downhill flow converges on whichever
-    /// pole is closer (two large polar catchments), plus five one-cell
-    /// islands dropped onto otherwise-land cells with every one of their
+    /// pole is closer (two large polar catchments), plus five one-vertex
+    /// islands dropped onto otherwise-land vertices with every one of their
     /// neighbours forced below sea level. Each island is surrounded entirely
-    /// by the ocean pocket it carves, and the coastal cells that used to
+    /// by the ocean pocket it carves, and the coastal vertices that used to
     /// flow past that pocket toward a pole now terminate at it instead —
     /// fragmenting what would otherwise be two dominant catchments into many
     /// small ones scattered around each island.
     ///
-    /// Measured on `Geosphere::new(3)` (642 cells, 613 land): `rivers(..., 1)`
+    /// Measured on `Geosphere::new(3)` (642 vertices, 613 land): `rivers(..., 1)`
     /// yields **30 terminals** with extent sizes
     /// `[1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,3,4,4,8,8,8,8,9,14,19,19,20,29,186,248]`
     /// — 16 below a floor of 4 (island debris) and 14 at or above it
-    /// (including the two polar basins, 186 and 248 cells). Both facts are
+    /// (including the two polar basins, 186 and 248 vertices). Both facts are
     /// asserted below, generously under the measured counts, so a future
     /// edit that collapses this back into one dominant catchment (making the
     /// partition test vacuous) or loses the small fragments (making the
@@ -545,15 +548,16 @@ mod tests {
             let dz = p[2] - a[2];
             dx * dx + dy * dy + dz * dz
         };
-        let island_cells: Vec<Vertex> = [40, 140, 240, 340, 440].into_iter().map(Vertex).collect();
+        let island_vertices: Vec<Vertex> =
+            [40, 140, 240, 340, 440].into_iter().map(Vertex).collect();
         let mut island_neighbors: BTreeSet<Vertex> = BTreeSet::new();
-        for &island in &island_cells {
+        for &island in &island_vertices {
             for &nb in geo.neighbors(island) {
                 island_neighbors.insert(nb);
             }
         }
         let elevation = VertexMap::from_fn(&geo, |c| {
-            if island_cells.contains(&c) {
+            if island_vertices.contains(&c) {
                 return ReferenceElevation::new(50.0).unwrap();
             }
             if island_neighbors.contains(&c) {
@@ -582,20 +586,23 @@ mod tests {
         (geo, elevation, sea)
     }
 
-    /// Every land cell belongs to exactly one catchment — the river analogue
+    /// Every land vertex belongs to exactly one catchment — the river analogue
     /// of `components_partition_their_members`, and what makes the terminal a
     /// valid identity.
     #[test]
-    fn every_land_cell_belongs_to_exactly_one_catchment() {
+    fn every_land_vertex_belongs_to_exactly_one_catchment() {
         let (geo, elev, sea) = sloped_test_globe();
         let mut seen = BTreeSet::new();
         for r in rivers(&geo, &elev, sea, 1) {
-            for cell in &r.extent {
-                assert!(seen.insert(*cell), "cell {cell:?} is in two catchments");
+            for vertex in &r.extent {
+                assert!(
+                    seen.insert(*vertex),
+                    "vertex {vertex:?} is in two catchments"
+                );
             }
         }
         let land: BTreeSet<Vertex> = geo.vertices().filter(|c| *elev.get(*c) >= sea).collect();
-        assert_eq!(seen, land, "every land cell drains somewhere");
+        assert_eq!(seen, land, "every land vertex drains somewhere");
     }
 
     /// A river's identity is a fixed point of the downhill map.
@@ -605,9 +612,9 @@ mod tests {
         let downhill = crate::drainage::downhill_targets(&geo, &elev, sea);
         for r in rivers(&geo, &elev, sea, 1) {
             assert!(
-                downhill[r.id.cell.0 as usize].is_none(),
+                downhill[r.id.vertex.0 as usize].is_none(),
                 "terminal {:?} still points downhill",
-                r.id.cell
+                r.id.vertex
             );
         }
     }
@@ -632,11 +639,11 @@ mod tests {
     /// identity ascending. Total, deterministic, integer-only.
     ///
     /// The brief's own predicate (`c.0 % 7 < 4`) measures thin here (5
-    /// components, one a 360-cell blob, already flagged unusable for
+    /// components, one a 360-vertex blob, already flagged unusable for
     /// exactly this reason earlier in this module — see
-    /// `a_features_identity_is_the_lowest_cell_of_its_extent`'s comment).
+    /// `a_features_identity_is_the_lowest_vertex_of_its_extent`'s comment).
     /// Reused instead: `c.0 % 11 < 3`, already measured non-degenerate above
-    /// (`components_are_ordered_by_their_lowest_cell_id`, 49 components,
+    /// (`components_are_ordered_by_their_lowest_vertex_id`, 49 components,
     /// sizes `[1, 1, 3, 1, 8, 13, 1, 9, 3, 2, 4, 7, ...]`, repeatedly rising
     /// and falling). With floor 1 every component becomes a feature, so the
     /// same 49-count, non-monotonic guarantee carries over unchanged —
@@ -669,7 +676,8 @@ mod tests {
         for pair in index.of(FeatureClass::Landmass).windows(2) {
             let (a, b) = (&pair[0], &pair[1]);
             assert!(
-                a.magnitude > b.magnitude || (a.magnitude == b.magnitude && a.id.cell < b.id.cell),
+                a.magnitude > b.magnitude
+                    || (a.magnitude == b.magnitude && a.id.vertex < b.id.vertex),
                 "ordering is not total: {:?} before {:?}",
                 a.id,
                 b.id
@@ -723,9 +731,9 @@ mod tests {
     }
 
     /// A handful of hand-built features for [`VertexFeatureIndex`]'s tests:
-    /// a Volcano nested inside a Landmass (a containment chain — cells 3-4),
-    /// a standalone Sea, and a River/SaltLake pair sharing exactly one cell
-    /// with neither a subset of the other (a sibling overlap — cell 31) —
+    /// a Volcano nested inside a Landmass (a containment chain — vertices 3-4),
+    /// a standalone Sea, and a River/SaltLake pair sharing exactly one vertex
+    /// with neither a subset of the other (a sibling overlap — vertex 31) —
     /// the two shapes the resolution spike found in real data (99.84% chain,
     /// a 0.16% sliver of overlap).
     fn test_features() -> Vec<Feature> {
@@ -733,7 +741,7 @@ mod tests {
             Feature {
                 id: FeatureId {
                     class: FeatureClass::Landmass,
-                    cell: Vertex(0),
+                    vertex: Vertex(0),
                 },
                 extent: (0..10).map(Vertex).collect(),
                 anchor: Vertex(0),
@@ -742,7 +750,7 @@ mod tests {
             Feature {
                 id: FeatureId {
                     class: FeatureClass::Volcano,
-                    cell: Vertex(3),
+                    vertex: Vertex(3),
                 },
                 extent: [Vertex(3), Vertex(4)].into_iter().collect(),
                 anchor: Vertex(3),
@@ -751,7 +759,7 @@ mod tests {
             Feature {
                 id: FeatureId {
                     class: FeatureClass::Sea,
-                    cell: Vertex(20),
+                    vertex: Vertex(20),
                 },
                 extent: (20..25).map(Vertex).collect(),
                 anchor: Vertex(20),
@@ -760,7 +768,7 @@ mod tests {
             Feature {
                 id: FeatureId {
                     class: FeatureClass::River,
-                    cell: Vertex(30),
+                    vertex: Vertex(30),
                 },
                 extent: [Vertex(30), Vertex(31)].into_iter().collect(),
                 anchor: Vertex(30),
@@ -769,7 +777,7 @@ mod tests {
             Feature {
                 id: FeatureId {
                     class: FeatureClass::SaltLake,
-                    cell: Vertex(32),
+                    vertex: Vertex(32),
                 },
                 extent: [Vertex(31), Vertex(32)].into_iter().collect(),
                 anchor: Vertex(32),
@@ -807,17 +815,17 @@ mod tests {
     }
 
     /// The index answers containment, and it agrees with the extents it was
-    /// built from. Checked against EVERY cell of every feature rather than
+    /// built from. Checked against EVERY vertex of every feature rather than
     /// sampled, because a partial index reads exactly like a complete one.
     #[test]
     fn the_index_agrees_with_the_extents_it_was_built_from() {
         let feats = test_features();
         let index = VertexFeatureIndex::build(&feats);
         for f in &feats {
-            for cell in &f.extent {
+            for vertex in &f.extent {
                 assert!(
-                    index.at(*cell).contains(&f.id),
-                    "index lost {:?} at {cell:?}",
+                    index.at(*vertex).contains(&f.id),
+                    "index lost {:?} at {vertex:?}",
                     f.id
                 );
             }
@@ -837,18 +845,18 @@ mod tests {
         }
     }
 
-    /// A cell with no feature resolves to an empty slice, not a panic.
-    /// Seed 42's real terrain measured 377 of 40,962 cells like this.
+    /// A vertex with no feature resolves to an empty slice, not a panic.
+    /// Seed 42's real terrain measured 377 of 40,962 vertices like this.
     #[test]
-    fn a_cell_with_no_feature_resolves_to_none() {
+    fn a_vertex_with_no_feature_resolves_to_none() {
         let index = VertexFeatureIndex::build(&[]);
         assert!(index.at(Vertex(0)).is_empty());
     }
 
-    /// Cell 3 is covered by both the Volcano and the Landmass that contains
+    /// Vertex 3 is covered by both the Volcano and the Landmass that contains
     /// it. The volcano is more specific (lower salience) and must sort
     /// first -- this is the property `resolve_at` (`windows/worldgen`)
-    /// relies on to answer with `index.at(cell).first()`.
+    /// relies on to answer with `index.at(vertex).first()`.
     #[test]
     fn at_orders_most_specific_first() {
         let feats = test_features();

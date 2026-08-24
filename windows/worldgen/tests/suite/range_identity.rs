@@ -97,14 +97,14 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
 
     let mut surface_nonzero = 0usize;
     let mut confined_nonzero = 0usize;
-    for cell in geo.vertices() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        if surface.at(cell) > 0.0 {
+        if surface.at(vertex) > 0.0 {
             surface_nonzero += 1;
         }
-        if confined.at(cell) > 0.0 {
+        if confined.at(vertex) > 0.0 {
             confined_nonzero += 1;
         }
     }
@@ -112,7 +112,7 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
     assert!(
         confined_nonzero < surface_nonzero / 2,
         "confining a peopled kind to caves must collapse its capacity field: \
-         surface {surface_nonzero} land cells vs confined {confined_nonzero}. \
+         surface {surface_nonzero} land vertices vs confined {confined_nonzero}. \
          Equal counts mean the realm gate does not reach the capacity path — \
          the exact defect this campaign exists to repair."
     );

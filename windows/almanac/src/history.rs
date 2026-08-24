@@ -1,6 +1,6 @@
 //! The legibility surface: read a site's whole deep history back out of the
 //! ledger and render it as prose a person can *read* — the stratigraphy of
-//! occupation layers stacked on one cell (each layer's people, span, tech,
+//! occupation layers stacked on one vertex (each layer's people, span, tech,
 //! function, cause of end, and the ★ threads that tie one layer to the next:
 //! who ended it, and where its founders came from) plus the derived flesh
 //! that lies in the present-day grass (the structures the last community
@@ -31,15 +31,15 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{EntityId, KindId, Seed, Value, Vertex, World};
 
 /// Render a site's stratigraphy stack plus a derived flesh sample, as prose.
-/// A "site" is one Geosphere cell; its stratigraphy is every occupation that
-/// ever sat on it (alive or ruined), deepest/oldest layer first. If the cell
+/// A "site" is one Geosphere vertex; its stratigraphy is every occupation that
+/// ever sat on it (alive or ruined), deepest/oldest layer first. If the vertex
 /// never held an occupation, a single line says so.
 /// type-audit: bare-ok(artifact: return)
 pub fn render_site(world: &World, site: Vertex) -> String {
     let layers = layers_at(world, site);
     if layers.is_empty() {
         return format!(
-            "The clearing at cell {}\n{}\n\nNothing ever settled here. The ground \
+            "The clearing at vertex {}\n{}\n\nNothing ever settled here. The ground \
              keeps no memory of a people.\n",
             site.0,
             "=".repeat(23)
@@ -48,6 +48,10 @@ pub fn render_site(world: &World, site: Vertex) -> String {
 
     let now = present_year(world);
     let mut out = String::new();
+    // RENDERED PROSE, deliberately still "cell" (The Lexicon of Place).
+    // The engine calls this a Vertex now; the almanac must not, because
+    // "vertex" is engine vocabulary and this string is read by a person.
+    // Changing it also moves the committed gallery almanacs.
     let header = format!("The clearing at cell {}", site.0);
     out.push_str(&header);
     out.push('\n');
@@ -194,7 +198,7 @@ fn layers_at(world: &World, site: Vertex) -> Vec<Layer> {
         .filter_map(|f| {
             let entity = f.subject;
             match world.ledger.value_of(entity, hornvale_history::OCC_SITE) {
-                Some(Value::Number(cell)) if *cell as u32 == site.0 => (),
+                Some(Value::Number(vertex)) if *vertex as u32 == site.0 => (),
                 _ => return None,
             }
             let record = record_of(world, entity)?;
@@ -271,7 +275,7 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
         .value_of(entity, hornvale_history::OCC_FOUNDED_FROM)
     {
         Some(Value::Entity(e)) => Founding::From(*e),
-        Some(Value::Number(cell)) => Founding::Genesis(Vertex(*cell as u32)),
+        Some(Value::Number(vertex)) => Founding::Genesis(Vertex(*vertex as u32)),
         _ => Founding::Genesis(site),
     };
 
@@ -557,7 +561,7 @@ fn forebears(world: &World, e: EntityId) -> (String, String, bool) {
         .map(pluralize)
         .unwrap_or_else(|| "settlers".to_string());
     let whence = match number(world, e, hornvale_history::OCC_SITE) {
-        Some(cell) => format!("the clearing at cell {}", cell as u32),
+        Some(vertex) => format!("the clearing at cell {}", vertex as u32),
         None => "a lost place".to_string(),
     };
     let fled = matches!(
@@ -645,7 +649,7 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// Predation (The Tumult) gave `CauseOfEnd::Migrated` a second producer:
 /// `Bake::maybe_raid` closes the *conqueror's* abandoned record with
 /// `Migrated`/[`Ended::Nature`] — it left its poorer land for the prize — and
-/// reopens it on the seized cell. On seed 42 that is the majority of the
+/// reopens it on the seized vertex. On seed 42 that is the majority of the
 /// world's `migrated` records, so rendering all of them as the climate line
 /// narrates three quarters of this world's wars as peaceful departures.
 ///

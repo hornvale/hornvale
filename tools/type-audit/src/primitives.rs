@@ -53,7 +53,7 @@ mod tests {
         assert!(contains_tracked_primitive(&ty("[u8; 4]")));
         // Non-tracked: opaque domain types and bare generics.
         assert!(!contains_tracked_primitive(&ty("Vertex")));
-        assert!(!contains_tracked_primitive(&ty("Vec<Cell>")));
+        assert!(!contains_tracked_primitive(&ty("Vec<Vertex>")));
         assert!(!contains_tracked_primitive(&ty("T")));
         assert!(!contains_tracked_primitive(&ty("Au")));
     }

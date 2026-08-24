@@ -279,7 +279,8 @@ fn the_wear_funnel_is_reproducible() {
             let Some(species) = hornvale_species::species_of(world, id) else {
                 continue;
             };
-            let Some(Value::Number(cell)) = world.ledger.value_of(id, hornvale_settlement::CELL_ID)
+            let Some(Value::Number(vertex)) =
+                world.ledger.value_of(id, hornvale_settlement::VERTEX_ID)
             else {
                 continue;
             };
@@ -290,7 +291,7 @@ fn the_wear_funnel_is_reproducible() {
                 world,
                 &world.seed,
                 &species,
-                Vertex(*cell as u32),
+                Vertex(*vertex as u32),
                 terrain,
                 climate,
                 None,

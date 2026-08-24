@@ -1,22 +1,22 @@
-//! Integration tests for `least_cost`: least-cost cell routing over the
+//! Integration tests for `least_cost`: least-cost vertex routing over the
 //! kernel's deterministic A* (`hornvale_kernel::astar`).
 //!
 //! The test substrate is a real `Geosphere` (there is no way to hand-build a
 //! toy adjacency graph — `Geosphere`'s fields are private and its topology is
 //! always a subdivided icosahedron), so the "cheap corridor vs. expensive
 //! wall" scenario is built by choosing a cost field over `Geosphere::new(1)`
-//! (42 cells) rather than a hand-drawn grid. `Geosphere::new(1)` is fully
-//! deterministic (fixed subdivision of the base icosahedron), so the cell ids
+//! (42 vertices) rather than a hand-drawn grid. `Geosphere::new(1)` is fully
+//! deterministic (fixed subdivision of the base icosahedron), so the vertex ids
 //! used below are stable across runs.
 
 use hornvale_kernel::{Geosphere, Vertex, VertexMap};
 use hornvale_topology::least_cost;
 
-/// The two direct 2-hop cells between `Vertex(0)` and `Vertex(21)` on
+/// The two direct 2-hop vertices between `Vertex(0)` and `Vertex(21)` on
 /// `Geosphere::new(1)` are `Vertex(12)` and `Vertex(20)` — `0`'s and `21`'s
-/// neighbor lists intersect only at those two cells. A cost field that makes
+/// neighbor lists intersect only at those two vertices. A cost field that makes
 /// both very expensive (the "wall") forces `least_cost` onto a longer,
-/// cheaper corridor through cells left at the default cost of 1.
+/// cheaper corridor through vertices left at the default cost of 1.
 fn wall_and_corridor_cost(geo: &Geosphere) -> VertexMap<u64> {
     VertexMap::from_fn(geo, |id| match id {
         Vertex(12) | Vertex(20) => 100,
@@ -32,7 +32,7 @@ fn least_cost_picks_the_cheap_corridor_over_the_expensive_wall() {
         .expect("a corridor around the wall exists");
 
     // The only 2-hop routes (through 12 or 20) cost 100 + 1 = 101; the
-    // cheapest route avoiding the wall costs 4 (four cells at cost 1 each).
+    // cheapest route avoiding the wall costs 4 (four vertices at cost 1 each).
     // If least_cost took "any" path rather than the CHEAPEST, it would
     // return 101, not 4.
     assert_eq!(
@@ -54,8 +54,8 @@ fn least_cost_reports_the_correct_total_cost_along_the_returned_path() {
     let (path, total) =
         least_cost(&geo, &cost, Vertex(0), Vertex(21), 1000).expect("reachable within budget");
 
-    // Recompute the cost independently by summing the per-cell cost of every
-    // cell entered after `from` — this must match astar's own tally exactly.
+    // Recompute the cost independently by summing the per-vertex cost of every
+    // vertex entered after `from` — this must match astar's own tally exactly.
     let recomputed: u64 = path[1..].iter().map(|&c| *cost.get(c)).sum();
     assert_eq!(total, recomputed);
 }
@@ -84,7 +84,7 @@ fn least_cost_is_deterministic_across_repeated_calls() {
 }
 
 #[test]
-fn least_cost_of_a_cell_to_itself_is_the_trivial_zero_cost_path() {
+fn least_cost_of_a_vertex_to_itself_is_the_trivial_zero_cost_path() {
     let geo = Geosphere::new(1);
     let cost = wall_and_corridor_cost(&geo);
     let (path, total) =
@@ -94,7 +94,7 @@ fn least_cost_of_a_cell_to_itself_is_the_trivial_zero_cost_path() {
 }
 
 #[test]
-fn least_cost_skips_impassable_cells_marked_with_u64_max() {
+fn least_cost_skips_impassable_vertices_marked_with_u64_max() {
     // Make the ONLY route (via Vertex(12) or Vertex(20)) impassable rather
     // than merely expensive, and confirm the search still finds the
     // 4-hop corridor without overflowing the cost summation.
@@ -104,7 +104,7 @@ fn least_cost_skips_impassable_cells_marked_with_u64_max() {
         _ => 1,
     });
     let (path, total) = least_cost(&geo, &cost, Vertex(0), Vertex(21), 1000)
-        .expect("a corridor avoiding the impassable cells exists");
+        .expect("a corridor avoiding the impassable vertices exists");
     assert_eq!(total, 4);
     assert!(!path.contains(&Vertex(12)) && !path.contains(&Vertex(20)));
 }

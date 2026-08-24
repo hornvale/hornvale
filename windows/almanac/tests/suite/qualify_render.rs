@@ -15,10 +15,10 @@ use hornvale_almanac::connections::render_connections;
 use hornvale_kernel::{EntityId, Fact, Seed, Value, Vertex, World};
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 
-/// One settlement to plant in the fixture world: which cell it sits on, its
+/// One settlement to plant in the fixture world: which vertex it sits on, its
 /// (possibly colliding) name, its people, its biome, and its coordinate.
 struct Site {
-    cell: u32,
+    vertex: u32,
     name: &'static str,
     people: &'static str,
     biome: &'static str,
@@ -35,7 +35,7 @@ fn world_with(sites: &[Site]) -> World {
             hornvale_settlement::IS_SETTLEMENT,
             "subject is a settlement",
         ),
-        (hornvale_settlement::CELL_ID, "cell id"),
+        (hornvale_settlement::VERTEX_ID, "vertex id"),
         (hornvale_settlement::BIOME, "biome of a place"),
         (
             hornvale_settlement::LATITUDE,
@@ -79,8 +79,8 @@ fn world_with(sites: &[Site]) -> World {
         commit(hornvale_settlement::IS_SETTLEMENT, Value::Flag(true));
         commit(hornvale_kernel::NAME, Value::Text(site.name.to_string()));
         commit(
-            hornvale_settlement::CELL_ID,
-            Value::Number(f64::from(site.cell)),
+            hornvale_settlement::VERTEX_ID,
+            Value::Number(f64::from(site.vertex)),
         );
         commit(
             hornvale_settlement::BIOME,
@@ -99,7 +99,7 @@ fn world_with(sites: &[Site]) -> World {
     world
 }
 
-/// A land route from `from` to each of `to`, on a graph of `size` cells.
+/// A land route from `from` to each of `to`, on a graph of `size` vertices.
 fn routes_from(size: u32, from: u32, to: &[u32]) -> ConnectionGraph {
     let mut graph = ConnectionGraph::new(size as usize);
     for &t in to {
@@ -116,12 +116,12 @@ fn routes_from(size: u32, from: u32, to: &[u32]) -> ConnectionGraph {
 }
 
 /// Two same-named settlements differing in biome, one differently-named
-/// neighbour, and a hub (cell 0, no settlement) whose land routes name all
+/// neighbour, and a hub (vertex 0, no settlement) whose land routes name all
 /// three.
 fn three_neighbours() -> World {
     world_with(&[
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -129,7 +129,7 @@ fn three_neighbours() -> World {
             longitude: -12.25,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Ice-Home",
             people: "kobold",
             biome: "desert",
@@ -137,7 +137,7 @@ fn three_neighbours() -> World {
             longitude: 44.5,
         },
         Site {
-            cell: 3,
+            vertex: 3,
             name: "Sun-Home",
             people: "goblin",
             biome: "taiga",
@@ -213,7 +213,7 @@ fn twins_of_two_different_peoples_are_qualified_by_their_people() {
     // anyway (both taiga), so this is the only rung that can fire.
     let world = world_with(&[
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -221,7 +221,7 @@ fn twins_of_two_different_peoples_are_qualified_by_their_people() {
             longitude: -12.25,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Ice-Home",
             people: "goblin",
             biome: "taiga",
@@ -248,7 +248,7 @@ fn twins_of_two_different_peoples_are_qualified_by_their_people() {
 fn twins_alike_in_people_and_biome_fall_through_to_their_coordinates() {
     let world = world_with(&[
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -256,7 +256,7 @@ fn twins_alike_in_people_and_biome_fall_through_to_their_coordinates() {
             longitude: -12.25,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -277,9 +277,9 @@ fn twins_alike_in_people_and_biome_fall_through_to_their_coordinates() {
 
 #[test]
 fn one_settlement_reached_twice_is_not_an_ambiguity() {
-    // Cell 1 is reachable by both a sea-lane and a land route, so it is named
+    // Vertex 1 is reachable by both a sea-lane and a land route, so it is named
     // twice in the same document -- but it is one place, not two, and must
-    // not be qualified. The contrast half (cell 2's genuine twin) keeps this
+    // not be qualified. The contrast half (vertex 2's genuine twin) keeps this
     // from passing on a tree that never qualifies anything.
     let world = three_neighbours();
     let mut graph = ConnectionGraph::new(4);
@@ -333,7 +333,7 @@ fn the_documents_own_subject_is_qualified_against_its_neighbours() {
     // header above qualified destinations of the same name.
     let world = world_with(&[
         Site {
-            cell: 0,
+            vertex: 0,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -341,7 +341,7 @@ fn the_documents_own_subject_is_qualified_against_its_neighbours() {
             longitude: -12.25,
         },
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "desert",
@@ -349,7 +349,7 @@ fn the_documents_own_subject_is_qualified_against_its_neighbours() {
             longitude: 44.5,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Sun-Home",
             people: "goblin",
             biome: "taiga",

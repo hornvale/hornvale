@@ -361,7 +361,7 @@ fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// The unit northward tangent at a cell, given its unit-sphere `position`
+/// The unit northward tangent at a vertex, given its unit-sphere `position`
 /// and eastward tangent: `normalize(cross(position, east))`, completing the
 /// local (east, north) tangent frame the current components project onto.
 /// Zero wherever `east` is zero (the poles, where east is undefined).
@@ -393,22 +393,22 @@ pub struct SceneContext {
     terrain: GeneratedTerrain,
     /// The derived climate, derived once.
     climate: GeneratedClimate,
-    /// Nearest-cell index over the terrain geosphere. Two indices, not one:
+    /// Nearest-vertex index over the terrain geosphere. Two indices, not one:
     /// terrain and climate each carry their own geosphere, and today both
-    /// happen to share the same cell level, so one index could in principle
+    /// happen to share the same vertex level, so one index could in principle
     /// serve both. Keeping them separate is deliberate defensiveness against
     /// that ever diverging — behavior is identical while the two geospheres
     /// agree.
     terrain_index: NearestVertexIndex,
-    /// Nearest-cell index over the climate geosphere (see `terrain_index` for
+    /// Nearest-vertex index over the climate geosphere (see `terrain_index` for
     /// why the two are kept separate).
     climate_index: NearestVertexIndex,
-    /// The per-cell biome map (`biome_map()` returns by value, so it is built once).
+    /// The per-vertex biome map (`biome_map()` returns by value, so it is built once).
     biomes: VertexMap<Biome>,
 }
 
 impl SceneContext {
-    /// Derive terrain, climate, both nearest-cell indices and the biome map once.
+    /// Derive terrain, climate, both nearest-vertex indices and the biome map once.
     // Named construction site (decision 0092): scene's entry wrapper —
     // sculpts/fits once, shared by every reader built from this context.
     #[allow(clippy::disallowed_methods)]
@@ -515,36 +515,36 @@ pub fn tiles_scene_in(
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let t_cell = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
-            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
-            elevation_m.push(terrain.elevation_at(t_cell).get());
-            ocean.push(terrain.is_ocean(t_cell));
-            water.push(terrain.water_kind_at(t_cell).index());
-            drainage.push(terrain.drainage_at(t_cell));
-            let b = *biomes.get(c_cell);
+            let t_vertex = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
+            let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            elevation_m.push(terrain.elevation_at(t_vertex).get());
+            ocean.push(terrain.is_ocean(t_vertex));
+            water.push(terrain.water_kind_at(t_vertex).index());
+            drainage.push(terrain.drainage_at(t_vertex));
+            let b = *biomes.get(c_vertex);
             let index = catalog
                 .iter()
                 .position(|entry| *entry == b)
                 .expect("every biome is in the catalog") as u16;
             biome.push(index);
-            plate.push(terrain.plate_of(t_cell));
-            unrest.push(terrain.unrest_at(t_cell));
-            t_mean_c.push(climate.mean_temperature_at(c_cell).get());
-            t_swing_c.push(climate.seasonal_swing_at(c_cell));
-            t_diurnal_amp_c.push(climate.diurnal_amp_at(c_cell));
-            let current = climate.current_at(c_cell);
+            plate.push(terrain.plate_of(t_vertex));
+            unrest.push(terrain.unrest_at(t_vertex));
+            t_mean_c.push(climate.mean_temperature_at(c_vertex).get());
+            t_swing_c.push(climate.seasonal_swing_at(c_vertex));
+            t_diurnal_amp_c.push(climate.diurnal_amp_at(c_vertex));
+            let current = climate.current_at(c_vertex);
             let east =
-                hornvale_climate::circulation::wind_east_tangent(climate.geosphere(), c_cell);
-            let north = tangent_north(climate.geosphere().position(c_cell), east);
+                hornvale_climate::circulation::wind_east_tangent(climate.geosphere(), c_vertex);
+            let north = tangent_north(climate.geosphere().position(c_vertex), east);
             current_east.push(dot3(current, east));
             current_north.push(dot3(current, north));
-            moisture.push(climate.moisture_at(c_cell));
-            precip_mm_yr.push(climate.precip_at(c_cell).get());
-            snow_fraction.push(climate.snow_fraction_at(c_cell));
-            precip_regime.push(climate.regime_at(c_cell) as u8);
-            cloud_fraction.push(climate.cloud_fraction_at(c_cell));
-            weather_propensity.push(climate.storm_propensity_at(c_cell));
-            cloud_type.push(climate.cloud_type_at(c_cell, scene_day) as u8);
+            moisture.push(climate.moisture_at(c_vertex));
+            precip_mm_yr.push(climate.precip_at(c_vertex).get());
+            snow_fraction.push(climate.snow_fraction_at(c_vertex));
+            precip_regime.push(climate.regime_at(c_vertex) as u8);
+            cloud_fraction.push(climate.cloud_fraction_at(c_vertex));
+            weather_propensity.push(climate.storm_propensity_at(c_vertex));
+            cloud_type.push(climate.cloud_type_at(c_vertex, scene_day) as u8);
         }
     }
     debug_assert!(
@@ -568,8 +568,8 @@ pub fn tiles_scene_in(
     let waterfalls = terrain
         .waterfalls()
         .iter()
-        .map(|&cell| {
-            let c = terrain.geosphere().coord(cell);
+        .map(|&vertex| {
+            let c = terrain.geosphere().coord(vertex);
             WaterfallPoint {
                 latitude: c.latitude,
                 longitude: c.longitude,
@@ -615,7 +615,7 @@ pub fn tiles_scene_in(
 }
 
 /// Per-tile actual temperature at `day`, °C, on the same lattice as
-/// [`tiles_scene`] — `temperature_at` sampled at each tile's climate cell.
+/// [`tiles_scene`] — `temperature_at` sampled at each tile's climate vertex.
 /// This is the sim's ground truth that a client reconstructs from the
 /// `t_mean_c`/`t_swing_c` layers; the cross-repo contract test compares the
 /// client's reconstruction against these values. Full precision (not
@@ -656,8 +656,8 @@ pub fn temperature_grid_in(
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
-            temperature.push(climate.temperature_at(c_cell, day).get());
+            let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            temperature.push(climate.temperature_at(c_vertex, day).get());
         }
     }
     Ok(temperature)
@@ -1849,8 +1849,8 @@ mod tests {
             let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
             for px in 0..width {
                 let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-                let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
-                let expected = climate.temperature_at(c_cell, day).get();
+                let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
+                let expected = climate.temperature_at(c_vertex, day).get();
                 assert_eq!(grid[i], expected, "tile {i} mismatch at day {day}");
                 i += 1;
             }
@@ -1875,13 +1875,13 @@ mod tests {
             let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
             for px in 0..width {
                 let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-                let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+                let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
                 let diurnal = match climate.regime() {
                     RotationRegime::Locked => 0.0,
                     RotationRegime::Spinning { day_std } => hornvale_climate::diurnal_anomaly(
-                        climate.diurnal_amp_at(c_cell),
-                        climate.geosphere().coord(c_cell).latitude,
-                        climate.geosphere().coord(c_cell).longitude,
+                        climate.diurnal_amp_at(c_vertex),
+                        climate.geosphere().coord(c_vertex).latitude,
+                        climate.geosphere().coord(c_vertex).longitude,
                         obliquity_deg,
                         0.0, // year phase is exactly zero at zero_phase_day, by construction
                         day_fraction,

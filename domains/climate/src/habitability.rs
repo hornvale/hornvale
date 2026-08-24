@@ -12,7 +12,7 @@ const HABITABLE_MAX_C: f64 = 35.0;
 /// Aridity floor: below this moisture there is no reliable liquid water.
 const HABITABLE_MIN_MOISTURE: f64 = 0.2;
 
-/// Whether a cell could host a vale-like settlement.
+/// Whether a vertex could host a vale-like settlement.
 /// type-audit: bare-ok(ratio: moisture), bare-ok(flag: return)
 pub fn is_habitable(
     temp_c: Temperature,
@@ -27,7 +27,7 @@ pub fn is_habitable(
         && moisture >= HABITABLE_MIN_MOISTURE
 }
 
-/// The per-cell habitability mask.
+/// The per-vertex habitability mask.
 /// type-audit: bare-ok(ratio: moisture), bare-ok(flag: return)
 pub fn habitability_map(
     geo: &Geosphere,
@@ -36,17 +36,17 @@ pub fn habitability_map(
     moisture: &VertexMap<f64>,
     sea_level: ReferenceElevation,
 ) -> VertexMap<bool> {
-    VertexMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |vertex| {
         is_habitable(
-            *mean_temp.get(cell),
-            *moisture.get(cell),
-            *elevation.get(cell),
+            *mean_temp.get(vertex),
+            *moisture.get(vertex),
+            *elevation.get(vertex),
             sea_level,
         )
     })
 }
 
-/// The fraction of cells that are habitable.
+/// The fraction of vertices that are habitable.
 /// type-audit: bare-ok(flag: map), bare-ok(ratio: return)
 pub fn habitable_fraction(map: &VertexMap<bool>) -> f64 {
     if map.is_empty() {

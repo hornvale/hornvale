@@ -1,5 +1,5 @@
 //! Topology: the world's derived transport connection graph — a legible,
-//! byte-identical structure over the geosphere's cells (routes, not roads).
+//! byte-identical structure over the geosphere's vertices (routes, not roads).
 #![warn(missing_docs)]
 
 pub mod graph;

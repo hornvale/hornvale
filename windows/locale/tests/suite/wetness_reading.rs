@@ -1,5 +1,5 @@
 //! The Rill, Task 5: `MicroField::wetness` is a **budget and an allocation** —
-//! the climate supply a room's cell receives, redistributed by where the room
+//! the climate supply a room's vertex receives, redistributed by where the room
 //! sits relative to its local watercourse — instead of a fourth axis of
 //! address noise that happens to be called "wetness".
 //!
@@ -442,9 +442,9 @@ fn descending_walks_of_the_required_length_exist() {
 ///
 /// # The obstacle is a scale measurement, not a choice of constant
 ///
-/// A sub-cell valley's terrace/dry edge has median 2.78e-6 rad against a
+/// A sub-vertex valley's terrace/dry edge has median 2.78e-6 rad against a
 /// walk-depth room edge of 2.83e-4 rad, so the rill geometry is about a hundred
-/// times finer than the room that must report it, and the cell-scale moisture
+/// times finer than the room that must report it, and the vertex-scale moisture
 /// field barely moves across a walk.
 ///
 /// # What The Glasshouse changed, and what it deliberately did not
@@ -695,7 +695,7 @@ fn a_walk_gets_damper_as_it_descends() {
 }
 
 /// Whether a room stands inside the **coarse trunk's** valley — the reading the
-/// document already carries, as distinct from the sub-cell branch
+/// document already carries, as distinct from the sub-vertex branch
 /// [`rill_reading`] finds. `channel_bands[3]` is the terrace/dry edge.
 fn inside_a_trunk_band(loc: &Locale) -> bool {
     matches!(

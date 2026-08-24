@@ -105,7 +105,7 @@ const GLACIER_SAFETY_MARGIN: f64 = CONVERGENCE_TOLERANCE * 1000.0;
 /// Whether `year` is certainly a permanent-accumulator case for `substrate`:
 /// every day's sink is certainly zero ([`Substrate::sink_is_certainly_zero`]),
 /// and the total forcing over the year is comfortably above the noise floor
-/// a real "never converges" cell must clear.
+/// a real "never converges" vertex must clear.
 ///
 /// **Why this is safe, and the one case it deliberately excludes.** If every
 /// day's sink is certainly zero, `present` only ever gains (never loses)
@@ -119,10 +119,10 @@ const GLACIER_SAFETY_MARGIN: f64 = CONVERGENCE_TOLERANCE * 1000.0;
 ///   summing non-negative terms is `0.0` only if every term is `0.0`, since
 ///   `Substrate::source` must return a non-negative value), so `spin_up`
 ///   falls back to its exact, unmodified loop — which is cheap for a
-///   trivially-converging cell anyway.
+///   trivially-converging vertex anyway.
 /// - Otherwise some day's `source` is strictly positive, so the *same*
 ///   nonzero forcing is added every single year (the periodic year and the
-///   zero sink never change across years for this cell), never decaying —
+///   zero sink never change across years for this vertex), never decaying —
 ///   there is no mechanism in this substrate family that could shrink it.
 ///   The year-over-year delta at every day position is that same total,
 ///   reordered by which day the comparison starts from; floating-point
@@ -142,7 +142,7 @@ const GLACIER_SAFETY_MARGIN: f64 = CONVERGENCE_TOLERANCE * 1000.0;
 /// comment) and whose `source` does not depend on accumulated state in a
 /// way that could later shrink the annual total — true of every substrate
 /// in this crate today. The campaign that introduced this fingerprinted it
-/// against the unmodified loop across 5 seeds and ~41,000 cells each with an
+/// against the unmodified loop across 5 seeds and ~41,000 vertices each with an
 /// empty diff (see `.superpowers/sdd/glacier-report.md`).
 fn is_a_certain_glacier<S: Substrate + ?Sized>(substrate: &S, year: &[DayContext]) -> bool {
     let mut annual_source = 0.0;
@@ -233,7 +233,7 @@ pub fn spin_up<S: Substrate + ?Sized>(
     }
 }
 
-/// A substrate evaluated over every cell and every day of the converged year
+/// A substrate evaluated over every vertex and every day of the converged year
 /// — derived on demand and **never committed**, exactly like the connection
 /// graph. Computing it is opt-in, so a world that never asks pays nothing and
 /// `GeneratedClimate::generate` is untouched.
@@ -245,7 +245,7 @@ pub struct SubstrateField {
 }
 
 impl SubstrateField {
-    /// Spin `substrate` up against every cell's own periodic year.
+    /// Spin `substrate` up against every vertex's own periodic year.
     pub fn compute<S: Substrate + ?Sized>(
         climate: &crate::provider::GeneratedClimate,
         substrate: &S,
@@ -253,8 +253,8 @@ impl SubstrateField {
         let mut trajectories = Vec::new();
         let mut converged = Vec::new();
         let mut year_days = 0usize;
-        for cell in climate.geosphere().vertices() {
-            let year = climate.year_of_day_contexts(cell);
+        for vertex in climate.geosphere().vertices() {
+            let year = climate.year_of_day_contexts(vertex);
             year_days = year.len();
             let out = spin_up(substrate, &year, CONVERGENCE_TOLERANCE);
             trajectories.push(out.trajectory);
@@ -267,14 +267,14 @@ impl SubstrateField {
         }
     }
 
-    /// Spin two substrates up together, computing each cell's periodic year
+    /// Spin two substrates up together, computing each vertex's periodic year
     /// of [`DayContext`]s **once** and reusing it for both, rather than
     /// once per substrate.
     ///
-    /// `climate.year_of_day_contexts(cell)` is a pure function of
-    /// `(climate, cell)` alone -- it never reads `a` or `b` -- so calling
+    /// `climate.year_of_day_contexts(vertex)` is a pure function of
+    /// `(climate, vertex)` alone -- it never reads `a` or `b` -- so calling
     /// [`Self::compute`] twice (once per substrate) rebuilds the identical
-    /// `Vec<DayContext>` for every cell a second time. This shares that one
+    /// `Vec<DayContext>` for every vertex a second time. This shares that one
     /// build across both spin-ups instead. Each substrate's own
     /// [`spin_up`] call is otherwise byte-for-byte what [`Self::compute`]
     /// would run over the same year, and the two spin-ups do not share any
@@ -291,8 +291,8 @@ impl SubstrateField {
         let mut trajectories_b = Vec::new();
         let mut converged_b = Vec::new();
         let mut year_days = 0usize;
-        for cell in climate.geosphere().vertices() {
-            let year = climate.year_of_day_contexts(cell);
+        for vertex in climate.geosphere().vertices() {
+            let year = climate.year_of_day_contexts(vertex);
             year_days = year.len();
 
             let out_a = spin_up(a, &year, CONVERGENCE_TOLERANCE);
@@ -317,24 +317,24 @@ impl SubstrateField {
         )
     }
 
-    /// The substrate's value at `cell` on `day`, wrapping the year.
+    /// The substrate's value at `vertex` on `day`, wrapping the year.
     /// type-audit: bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
-    pub fn at(&self, cell: Vertex, day: f64) -> f64 {
+    pub fn at(&self, vertex: Vertex, day: f64) -> f64 {
         if self.year_days == 0 {
             return 0.0;
         }
         let idx = (day.floor() as i64).rem_euclid(self.year_days as i64) as usize;
         self.trajectories
-            .get(cell.0 as usize)
+            .get(vertex.0 as usize)
             .and_then(|t| t.get(idx))
             .copied()
             .unwrap_or(0.0)
     }
 
-    /// How many cells never reached a fixed point — the glacier count. A
+    /// How many vertices never reached a fixed point — the glacier count. A
     /// reported quantity, not an error.
     /// type-audit: bare-ok(count: return)
-    pub fn non_convergent_cells(&self) -> usize {
+    pub fn non_convergent_vertices(&self) -> usize {
         self.converged.iter().filter(|c| !**c).count()
     }
 }
@@ -493,17 +493,17 @@ mod tests {
     }
 
     #[test]
-    fn a_cells_year_of_contexts_reproduces_its_annual_climatology() {
+    fn a_vertices_year_of_contexts_reproduces_its_annual_climatology() {
         // The invariant from Task 1, now asserted against REAL worlds rather
         // than a synthetic year - H3 of the preregistration.
         let climate = crate::provider::test_support::sample_climate();
-        for cell in climate.geosphere().vertices().take(64) {
-            let year = climate.year_of_day_contexts(cell);
+        for vertex in climate.geosphere().vertices().take(64) {
+            let year = climate.year_of_day_contexts(vertex);
             let summed: f64 = year.iter().map(|c| c.precip_mm).sum();
-            let annual = climate.precip_at(cell).get();
+            let annual = climate.precip_at(vertex).get();
             assert!(
                 (summed - annual).abs() <= annual.abs() * 1e-6 + 1e-6,
-                "cell {cell:?}: daily precip summed to {summed}, climatology is {annual}"
+                "vertex {vertex:?}: daily precip summed to {summed}, climatology is {annual}"
             );
         }
     }
@@ -513,9 +513,9 @@ mod tests {
         let climate = crate::provider::test_support::sample_climate();
         let a = SubstrateField::compute(&climate, &crate::wetness::DEFAULT_WETNESS);
         let b = SubstrateField::compute(&climate, &crate::wetness::DEFAULT_WETNESS);
-        for cell in climate.geosphere().vertices().take(64) {
+        for vertex in climate.geosphere().vertices().take(64) {
             for day in [0.0, 90.0, 180.0, 270.0] {
-                assert_eq!(a.at(cell, day), b.at(cell, day));
+                assert_eq!(a.at(vertex, day), b.at(vertex, day));
             }
         }
     }
@@ -524,12 +524,12 @@ mod tests {
     fn a_substrate_field_wraps_the_year() {
         let climate = crate::provider::test_support::sample_climate();
         let f = SubstrateField::compute(&climate, &crate::wetness::DEFAULT_WETNESS);
-        let cell = climate
+        let vertex = climate
             .geosphere()
             .vertices()
             .next()
             .expect("non-empty mesh");
         let year = climate.year_length_std();
-        assert_eq!(f.at(cell, 3.0), f.at(cell, 3.0 + year));
+        assert_eq!(f.at(vertex, 3.0), f.at(vertex, 3.0 + year));
     }
 }

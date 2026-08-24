@@ -13,7 +13,7 @@ use crate::water::WaterKind;
 use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, math};
 
 /// A queryable tectonic terrain provider. Owns its Geosphere so queries and
-/// the globe's CellMaps always agree on the cell space — a VertexMap must
+/// the globe's VertexMaps always agree on the vertex space — a VertexMap must
 /// only ever be read with the mesh that built it.
 #[derive(Debug, Clone)]
 pub struct GeneratedTerrain {
@@ -45,13 +45,13 @@ const PREHUMAN_SCAR_OCTAVES: u32 = 4;
 /// compresses variance toward 0.5 (see `crust.rs`), so this is not a small
 /// absolute probability but is still sparse relative to the ancient-crust
 /// population it gates within — at seed 42 it selects 1 of ~1900
-/// ancient-crust cells.
+/// ancient-crust vertices.
 /// type-audit: bare-ok(ratio)
 const PREHUMAN_SCAR_THRESHOLD: f64 = 0.30;
 
 /// Promote a pointwise `Aquifer` reading to `Spring`: `hydrogeology`
-/// classifies one cell's rock, but a spring is not a property of a single
-/// cell, it is a property of a *contact* — "where an aquifer meets the
+/// classifies one vertex's rock, but a spring is not a property of a single
+/// vertex, it is a property of a *contact* — "where an aquifer meets the
 /// surface with flow" (The Witness, Task 5b; decision 0085's precedent for
 /// splitting durable pointwise petrophysics from derived geometry). Any
 /// other pointwise reading passes through unchanged. Free of `Geosphere`/
@@ -59,7 +59,7 @@ const PREHUMAN_SCAR_THRESHOLD: f64 = 0.30;
 /// mirroring the pattern `hydrogeology` itself already uses.
 fn promote_to_spring(
     base: crate::lithology::Hydro,
-    cell_elevation: ReferenceElevation,
+    vertex_elevation: ReferenceElevation,
     neighbors: impl Iterator<Item = (crate::lithology::Hydro, ReferenceElevation)>,
 ) -> crate::lithology::Hydro {
     if base != crate::lithology::Hydro::Aquifer {
@@ -67,7 +67,7 @@ fn promote_to_spring(
     }
     let descending_contact = neighbors.into_iter().any(|(nb_hydro, nb_elevation)| {
         nb_hydro != crate::lithology::Hydro::Aquifer
-            && nb_elevation.total_cmp(cell_elevation) == std::cmp::Ordering::Less
+            && nb_elevation.total_cmp(vertex_elevation) == std::cmp::Ordering::Less
     });
     if descending_contact {
         crate::lithology::Hydro::Spring
@@ -78,13 +78,13 @@ fn promote_to_spring(
 
 impl GeneratedTerrain {
     /// Wrap a genesis outcome with the Geosphere it was generated over.
-    /// Panics (fail fast) if the mesh and the globe disagree on cell count —
+    /// Panics (fail fast) if the mesh and the globe disagree on vertex count —
     /// the caller must pass the same Geosphere it gave `generate`.
     pub fn new(geosphere: Geosphere, outcome: GenesisOutcome) -> GeneratedTerrain {
         assert_eq!(
             geosphere.vertex_count(),
             outcome.globe.elevation.len(),
-            "GeneratedTerrain: geosphere and globe disagree on cell count"
+            "GeneratedTerrain: geosphere and globe disagree on vertex count"
         );
         // Built once here, beside the other genesis-time derivations, not
         // lazily per call (The Ford, Task 5). A pure read over already-
@@ -117,7 +117,7 @@ impl GeneratedTerrain {
         // sea_level`) and because it's exactly what `water::classify`'s
         // `Ocean` arm computes (`elevation < sea_level`, top precedence) —
         // so the two are equivalent, and this avoids a `classify()` call per
-        // cell.
+        // vertex.
         let land = |c: Vertex| *outcome.globe.elevation.get(c) >= outcome.globe.sea_level;
         let total_land = geosphere.vertices().filter(|&c| land(c)).count();
         let total_ocean = geosphere
@@ -150,7 +150,7 @@ impl GeneratedTerrain {
         );
         // SaltLake floor is 1, not the spec's 20 (which yields zero here):
         // `WaterKind::SaltBasin` is a classification (a terminal endorheic
-        // sink), not a threshold on a continuous field, so a 1-cell salt
+        // sink), not a threshold on a continuous field, so a 1-vertex salt
         // basin is a real feature rather than a quantization artifact.
         let salt_lake: Vec<Feature> = landscape::classify(
             &geosphere,
@@ -197,19 +197,19 @@ impl GeneratedTerrain {
         &self.notes
     }
 
-    /// Elevation at a cell, meters (relative to the isostatic reference
+    /// Elevation at a vertex, meters (relative to the isostatic reference
     /// datum — see `hornvale_kernel::ReferenceElevation`).
     pub fn elevation_at(&self, id: Vertex) -> ReferenceElevation {
         *self.globe.elevation.get(id)
     }
 
-    /// Unrest at a cell, in [0, 1].
+    /// Unrest at a vertex, in [0, 1].
     /// type-audit: bare-ok(ratio)
     pub fn unrest_at(&self, id: Vertex) -> f64 {
         *self.globe.unrest.get(id)
     }
 
-    /// The plate a cell belongs to.
+    /// The plate a vertex belongs to.
     /// type-audit: bare-ok(index)
     pub fn plate_of(&self, id: Vertex) -> u32 {
         *self.globe.plate_of.get(id)
@@ -220,72 +220,72 @@ impl GeneratedTerrain {
         self.globe.sea_level
     }
 
-    /// Whether a cell lies strictly below sea level.
+    /// Whether a vertex lies strictly below sea level.
     /// type-audit: bare-ok(flag)
     pub fn is_ocean(&self, id: Vertex) -> bool {
         self.elevation_at(id) < self.globe.sea_level
     }
 
-    /// The strongest cross-plate boundary contact at a cell, if any.
+    /// The strongest cross-plate boundary contact at a vertex, if any.
     pub fn boundary_at(&self, id: Vertex) -> Option<VertexBoundary> {
         *self.globe.boundary.get(id)
     }
 
-    /// The cell nearest a geographic coordinate (degrees), by maximum dot
+    /// The vertex nearest a geographic coordinate (degrees), by maximum dot
     /// product with the coordinate's unit vector; ties break to the lower
-    /// cell id. Inverts the kernel's coord convention — latitude = asin(z),
+    /// vertex id. Inverts the kernel's coord convention — latitude = asin(z),
     /// longitude = atan2(y, x) — so `nearest_vertex(coord(c))` returns `c`.
     /// type-audit: pending(wave-2: latitude), pending(wave-2: longitude)
     pub fn nearest_vertex(&self, latitude: f64, longitude: f64) -> Vertex {
         let target = math::unit_sphere_from_lat_lon(latitude, longitude);
         let mut best = Vertex(0);
         let mut best_dot = f64::NEG_INFINITY;
-        for cell in self.geosphere.vertices() {
-            let d = dot(self.geosphere.position(cell), target);
+        for vertex in self.geosphere.vertices() {
+            let d = dot(self.geosphere.position(vertex), target);
             if d > best_dot {
                 best_dot = d;
-                best = cell;
+                best = vertex;
             }
         }
         best
     }
 
-    /// Flow-accumulation drainage at a cell (upstream land-cell count; 0 on ocean).
+    /// Flow-accumulation drainage at a vertex (upstream land-vertex count; 0 on ocean).
     /// type-audit: bare-ok(count)
     pub fn drainage_at(&self, id: Vertex) -> f64 {
         *self.globe.drainage.get(id)
     }
 
-    /// Whether a cell is an endorheic (interior-draining) land cell.
+    /// Whether a vertex is an endorheic (interior-draining) land vertex.
     /// type-audit: bare-ok(flag)
     pub fn is_endorheic(&self, id: Vertex) -> bool {
         *self.globe.endorheic.get(id)
     }
 
-    /// The water classification (Ocean/SaltBasin/River/DryLand) at a cell.
+    /// The water classification (Ocean/SaltBasin/River/DryLand) at a vertex.
     pub fn water_kind_at(&self, id: Vertex) -> crate::water::WaterKind {
         *self.globe.water_kind.get(id)
     }
 
-    /// Crust thickness at a cell, km.
+    /// Crust thickness at a vertex, km.
     /// type-audit: bare-ok(ratio)
     pub fn crust_thickness_at(&self, id: Vertex) -> f64 {
         *self.globe.crust.get(id)
     }
 
-    /// Winning-craton age at a cell, `[0,1]` (0 on oceanic floor).
+    /// Winning-craton age at a vertex, `[0,1]` (0 on oceanic floor).
     /// type-audit: bare-ok(ratio)
     pub fn crust_age_at(&self, id: Vertex) -> f64 {
         *self.globe.crust_age.get(id)
     }
 
-    /// Whether a cell's crust clears the continental threshold.
+    /// Whether a vertex's crust clears the continental threshold.
     /// type-audit: bare-ok(flag)
     pub fn is_continental_at(&self, id: Vertex) -> bool {
         self.crust_thickness_at(id) >= crate::crust::CONTINENTAL_THRESHOLD_KM
     }
 
-    /// Graph hops to the nearest same-plate boundary cell (`None` = none reachable).
+    /// Graph hops to the nearest same-plate boundary vertex (`None` = none reachable).
     /// type-audit: bare-ok(count)
     pub fn boundary_distance_at(&self, id: Vertex) -> Option<u32> {
         self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
@@ -293,21 +293,21 @@ impl GeneratedTerrain {
 
     /// The nearest reachable same-plate contact — how far, and what kind.
     ///
-    /// [`boundary_at`](Self::boundary_at) answers only for a cell that *is* a
-    /// contact; this answers for any cell, by reading the kind off the boundary
-    /// cell the distance field already attributes as the source. A consumer
+    /// [`boundary_at`](Self::boundary_at) answers only for a vertex that *is* a
+    /// contact; this answers for any vertex, by reading the kind off the boundary
+    /// vertex the distance field already attributes as the source. A consumer
     /// that cares about the stress *regime* rather than mere proximity needs
     /// the kind — a rift and a collision sit the same distance away and do
     /// opposite things to a fracture. The distance field seeds every boundary
-    /// cell with `(0, itself)`, so the kind is always present when the distance
+    /// vertex with `(0, itself)`, so the kind is always present when the distance
     /// is.
     /// type-audit: bare-ok(count: return)
     pub fn nearest_boundary_at(&self, id: Vertex) -> Option<(u32, crate::BoundaryKind)> {
-        let (hops, cell) = (*self.globe.boundary_distance.get(id))?;
-        Some((hops, self.boundary_at(cell)?.kind))
+        let (hops, vertex) = (*self.globe.boundary_distance.get(id))?;
+        Some((hops, self.boundary_at(vertex)?.kind))
     }
 
-    /// Induration/hardness at a cell, `[0,1]` (the Sculpting/Ground seam,
+    /// Induration/hardness at a vertex, `[0,1]` (the Sculpting/Ground seam,
     /// spec §4). Computed before elevation; agrees with `material_at`'s
     /// `induration` axis everywhere.
     /// type-audit: bare-ok(ratio)
@@ -315,12 +315,12 @@ impl GeneratedTerrain {
         *self.globe.induration.get(id)
     }
 
-    /// The material buffer at a cell (The Ground, spec §2).
+    /// The material buffer at a vertex (The Ground, spec §2).
     pub fn material_at(&self, id: Vertex) -> crate::lithology::MaterialBuffer {
         *self.globe.lithology.get(id)
     }
 
-    /// The rock class at a cell (The Ground, spec §4).
+    /// The rock class at a vertex (The Ground, spec §4).
     pub fn rock_at(&self, id: Vertex) -> crate::lithology::RockClass {
         crate::lithology::classify_rock(
             &self.material_at(id),
@@ -331,7 +331,7 @@ impl GeneratedTerrain {
         )
     }
 
-    /// The carve's deposited sediment thickness at a cell, metres (≥ 0;
+    /// The carve's deposited sediment thickness at a vertex, metres (≥ 0;
     /// Sculpting Task 10). Retained on the globe post-carve: repose's
     /// receiver-side gains, routing's floodplain/playa deposit, the marine
     /// wedge/delta fill, and atoll cap material, all summed.
@@ -340,43 +340,43 @@ impl GeneratedTerrain {
         *self.globe.sediment_thickness.get(id)
     }
 
-    /// The carve's net elevation delta at a cell, metres (± — Sculpting
+    /// The carve's net elevation delta at a vertex, metres (± — Sculpting
     /// Task 10): incision subtracts, repose/deposition/wedge/delta/atoll
     /// all add. Already folded into `elevation_at`; retained separately so
-    /// consumers can see how much of a cell's relief the carve moved.
+    /// consumers can see how much of a vertex's relief the carve moved.
     /// type-audit: bare-ok(ratio)
     pub fn carve_delta_at(&self, id: Vertex) -> f64 {
         *self.globe.carve_delta_m.get(id)
     }
 
-    /// The hydrogeologic class at a cell (The Ground, spec §3). `hydrogeology`
+    /// The hydrogeologic class at a vertex (The Ground, spec §3). `hydrogeology`
     /// itself is pointwise matrix petrophysics and never returns `Spring`
     /// (The Witness, Task 5b); this is the one place that promotes an
-    /// `Aquifer` reading to `Spring` when the cell sits at a descending
+    /// `Aquifer` reading to `Spring` when the vertex sits at a descending
     /// contact — see [`promote_to_spring`] and decision 0085 (pointwise
     /// petrophysics is the durable signal, geometric promotion is derived
     /// from it, computed here where the geosphere is in hand).
     pub fn hydro_at(&self, id: Vertex) -> crate::lithology::Hydro {
         let base = crate::lithology::hydrogeology(&self.material_at(id), self.is_ocean(id));
-        let cell_elevation = self.elevation_at(id);
+        let vertex_elevation = self.elevation_at(id);
         let neighbors = self.geosphere.neighbors(id).iter().map(|&nb| {
             let nb_hydro = crate::lithology::hydrogeology(&self.material_at(nb), self.is_ocean(nb));
             (nb_hydro, self.elevation_at(nb))
         });
-        promote_to_spring(base, cell_elevation, neighbors)
+        promote_to_spring(base, vertex_elevation, neighbors)
     }
 
-    /// Cave/karst void-proneness at a cell, `[0,1]` (The Ground, spec §3).
+    /// Cave/karst void-proneness at a vertex, `[0,1]` (The Ground, spec §3).
     /// type-audit: bare-ok(ratio)
     pub fn cave_proneness_at(&self, id: Vertex) -> f64 {
         crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
     }
 
-    /// The cave at a cell, if the fluid-flow point process places one.
+    /// The cave at a vertex, if the fluid-flow point process places one.
     ///
     /// Kind is selected BEFORE existence is tested (`features::cave_process`),
     /// existence is gated on that kind's own proneness against a uniformized
-    /// noise sample, and depth reads the cell's stratigraphic column — the
+    /// noise sample, and depth reads the vertex's stratigraphic column — the
     /// three repairs of The Hollow (spec §3).
     ///
     /// Since The Underworld (spec §4.0) depth is a budget in **metres**
@@ -412,7 +412,7 @@ impl GeneratedTerrain {
         ))
     }
 
-    /// The dominant ore deposit at a cell, if the point process places one.
+    /// The dominant ore deposit at a vertex, if the point process places one.
     pub fn deposit_at(&self, id: Vertex) -> Option<crate::features::Deposit> {
         if self.is_ocean(id) {
             return None;
@@ -446,12 +446,12 @@ impl GeneratedTerrain {
         })
     }
 
-    /// Whether a cell carries a rare pre-human "gate scar": deep crust old
+    /// Whether a vertex carries a rare pre-human "gate scar": deep crust old
     /// enough to have witnessed the pre-human world, plus a hash-noise
     /// presence test firing. Pure and deterministic — no draws, no facts,
     /// no epoch — reuses The Lode's FEATURES noise seed exactly as
     /// [`cave_at`](Self::cave_at)/[`deposit_at`](Self::deposit_at) do, so no
-    /// new stream label is introduced. Ocean cells never qualify (nothing
+    /// new stream label is introduced. Ocean vertices never qualify (nothing
     /// pre-human is legible under open water in this model). This
     /// encapsulates the calibration coupling between the ancient-crust
     /// threshold and terrain's internal presence noise so a caller (e.g.
@@ -475,12 +475,12 @@ impl GeneratedTerrain {
         noise < PREHUMAN_SCAR_THRESHOLD
     }
 
-    /// Whether a cell carries a volcanic **edifice** — the gated island-arc
+    /// Whether a vertex carries a volcanic **edifice** — the gated island-arc
     /// cone the elevation raised there (The Repose, Task 4).
     ///
     /// A derived read, not a second model: it resamples the retained
     /// `streams::ARC_GATE` hash-noise field at the same **source** boundary
-    /// cell `assemble_elevation` sampled (one value per contact, so a whole
+    /// vertex `assemble_elevation` sampled (one value per contact, so a whole
     /// edifice shares it) and hands the result to
     /// [`elevation::edifice_present`](crate::elevation), the very predicate
     /// the island-arc profile arm applies. Pure and deterministic — the gate
@@ -491,14 +491,14 @@ impl GeneratedTerrain {
     ///
     /// `false` everywhere but an island arc's overriding side: a coastal
     /// range's volcanic line shares the ungated collision-belt crest, so the
-    /// shipped elevation holds nothing that separates a volcanic crest cell
+    /// shipped elevation holds nothing that separates a volcanic crest vertex
     /// from a non-volcanic one there (see `elevation::edifice_present`).
     ///
     /// **Read that limit as being about the tectonic LABEL, not about the
     /// shape — a subaerial volcano on a continent-scale landmass is reachable
-    /// today.** Measured on seed 42 at L6 (40,962 cells): of 360 edifice
-    /// cells, **55 stand above sea level**, and they sit on land components
-    /// of 1, 40, 104, 1277, 1842, 1976 and 1994 cells — the four largest of
+    /// today.** Measured on seed 42 at L6 (40,962 vertices): of 360 edifice
+    /// vertices, **55 stand above sea level**, and they sit on land components
+    /// of 1, 40, 104, 1277, 1842, 1976 and 1994 vertices — the four largest of
     /// which are this world's four largest landmasses outright. So what the
     /// paragraph above rules out is `CoastalRange`-labelled volcanism, not a
     /// mountain that erupts over a continent; a campaign wanting the latter
@@ -512,19 +512,19 @@ impl GeneratedTerrain {
         self.edifice_source_at(id).is_some()
     }
 
-    /// The **source contact cell** of the edifice a cell belongs to, or
+    /// The **source contact vertex** of the edifice a vertex belongs to, or
     /// `None` where there is no edifice (The Repose, Task 5).
     ///
     /// This is the identity of one edifice, and it exists because an
-    /// edifice is wider than one cell: the gate is sampled once per
-    /// **contact**, at the source, precisely so every cell attributed to
+    /// edifice is wider than one vertex: the gate is sampled once per
+    /// **contact**, at the source, precisely so every vertex attributed to
     /// that contact shares one value, and the elevation then decays that
-    /// value out to `ARC_EDIFICE_DECAY_CELLS`. Every cell of one contact's
+    /// value out to `ARC_EDIFICE_DECAY_VERTICES`. Every vertex of one contact's
     /// edifice therefore answers with the *same* source, while the query
-    /// cell it was asked about differs — so a consumer that keys identity
-    /// (or a name) on the query cell mints several edifices for one
+    /// vertex it was asked about differs — so a consumer that keys identity
+    /// (or a name) on the query vertex mints several edifices for one
     /// landform. On the canonical seed-42 L6 globe that is 360 edifice
-    /// cells over ~187 **contact cells** — read that as 187 identities, not
+    /// vertices over ~187 **contact vertices** — read that as 187 identities, not
     /// 187 physically separate cones: adjacent contacts along one arc are
     /// common (173 of the 187 have another contact as a same-plate
     /// neighbor), so one continuous volcanic arc resolves to a *chain* of
@@ -545,7 +545,7 @@ impl GeneratedTerrain {
         crate::elevation::edifice_present(contact.kind, arc_side, distance, gate).then_some(source)
     }
 
-    /// The geothermal gradient at a cell (K/km) — the deep's energy base.
+    /// The geothermal gradient at a vertex (K/km) — the deep's energy base.
     pub fn geothermal_gradient_at(&self, id: Vertex) -> crate::strata::GeothermalGradient {
         crate::strata::geothermal_gradient(
             self.crust_thickness_at(id),
@@ -554,7 +554,7 @@ impl GeneratedTerrain {
         )
     }
 
-    /// The cell's stratigraphic column — its vertical dimension and deep-time archive.
+    /// The vertex's stratigraphic column — its vertical dimension and deep-time archive.
     pub fn column_at(&self, id: Vertex) -> crate::strata::StratigraphicColumn {
         let buf = self.material_at(id);
         crate::strata::column(
@@ -568,24 +568,24 @@ impl GeneratedTerrain {
         )
     }
 
-    /// Depth to crystalline basement at a cell, metres.
+    /// Depth to crystalline basement at a vertex, metres.
     /// type-audit: bare-ok(diagnostic-value: return)
     pub fn depth_to_basement_at(&self, id: Vertex) -> f64 {
         self.column_at(id).depth_to_basement_m
     }
 
-    /// Whether the cell's column records a nonconformity (missing time).
+    /// Whether the vertex's column records a nonconformity (missing time).
     /// type-audit: bare-ok(flag: return)
     pub fn unconformity_at(&self, id: Vertex) -> bool {
         self.column_at(id).unconformity
     }
 
-    /// Walk-facing appearance vector at a cell (The Ground, spec §3).
+    /// Walk-facing appearance vector at a vertex (The Ground, spec §3).
     pub fn appearance_at(&self, id: Vertex) -> crate::lithology::Appearance {
         crate::lithology::appearance(&self.material_at(id), self.rock_at(id))
     }
 
-    /// Mineral prospectivity at a cell, `[0,1]` (The Ground, spec §3; the
+    /// Mineral prospectivity at a vertex, `[0,1]` (The Ground, spec §3; the
     /// deferred deposits campaign's down-payment).
     /// type-audit: bare-ok(ratio)
     pub fn prospectivity_at(&self, id: Vertex) -> f64 {
@@ -597,24 +597,24 @@ impl GeneratedTerrain {
     }
 
     /// Waterfall (knickpoint) sites the carve found (Sculpting Task 11, spec
-    /// §5): land cells where a high-drainage watercourse crosses a sharp
+    /// §5): land vertices where a high-drainage watercourse crosses a sharp
     /// PRE-carve induration step. Sorted ascending `Vertex`.
     pub fn waterfalls(&self) -> &[Vertex] {
         &self.globe.waterfall_sites
     }
 
-    /// Cells a river-mouth delta lobe raised above sea level (Sculpting Task
+    /// Vertices a river-mouth delta lobe raised above sea level (Sculpting Task
     /// 9/11, spec §5). Not independently sorted here beyond
     /// `deposit_wedge`'s own ascending-`Vertex` dedup.
     pub fn deltas(&self) -> &[Vertex] {
-        &self.globe.delta_cells
+        &self.globe.delta_vertices
     }
 
     /// Playas: endorheic interior sinks carrying real sediment fill
     /// (Sculpting Task 11, spec §5) — the salt-flat floors the carve's
     /// routing filled toward flat. Computed live rather than stored, since
     /// it is a plain filter over two fields the globe already retains;
-    /// ascending `Vertex` (cell iteration order).
+    /// ascending `Vertex` (vertex iteration order).
     pub fn playas(&self) -> Vec<Vertex> {
         self.geosphere
             .vertices()
@@ -678,7 +678,7 @@ mod tests {
     use crate::pins::TerrainPins;
     use hornvale_kernel::{Geosphere, Seed, Vertex, VertexMap};
 
-    /// The edifice read must name the cells the SHIPPED elevation raised as
+    /// The edifice read must name the vertices the SHIPPED elevation raised as
     /// edifices — one source of truth, never a second opinion.
     ///
     /// The proof is behavioural, and deliberately NOT a comparison against a
@@ -695,13 +695,13 @@ mod tests {
     ///   gate fields must move the elevation, and move it UP on the side that
     ///   calls it an edifice. A wrong seed, a wrong sample position or a
     ///   wrong side desynchronises the verdict from the elevation; an
-    ///   inverted threshold flips on exactly the same cells but lowers them.
+    ///   inverted threshold flips on exactly the same vertices but lowers them.
     /// - **no missed cones** — an elevation that moves where the verdict does
     ///   NOT differ must lie outside the edifice's own decay length. The read
     ///   may narrow the skirt (`edifice_present` says so); it may not miss a
     ///   cone.
     #[test]
-    fn has_edifice_names_the_cells_the_shipped_elevation_raised() {
+    fn has_edifice_names_the_vertices_the_shipped_elevation_raised() {
         let geo = Geosphere::new(5);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
@@ -737,13 +737,13 @@ mod tests {
         // Anchor. `elevation == elevation_pre + carve_delta_m` is a retained
         // identity, but the sum is re-associated on the way there, so this
         // compares at 1e-6 m — nine orders below the edifice signal.
-        for cell in geo.vertices() {
-            let pre = terrain.elevation_at(cell).get() - terrain.carve_delta_at(cell);
+        for vertex in geo.vertices() {
+            let pre = terrain.elevation_at(vertex).get() - terrain.carve_delta_at(vertex);
             assert!(
-                (elev_a.get(cell).get() - pre).abs() < 1e-6,
-                "re-run under the shipped gate seed is not the shipped surface at {cell:?}: \
+                (elev_a.get(vertex).get() - pre).abs() < 1e-6,
+                "re-run under the shipped gate seed is not the shipped surface at {vertex:?}: \
                  {} vs {pre}",
-                elev_a.get(cell).get()
+                elev_a.get(vertex).get()
             );
         }
 
@@ -754,9 +754,9 @@ mod tests {
 
         let mut differing_verdicts = 0_u32;
         let mut moved_elevations = 0_u32;
-        for cell in geo.vertices() {
-            let (a, b) = (elev_a.get(cell).get(), elev_b.get(cell).get());
-            let (ed_a, ed_b) = (terrain.has_edifice(cell), terrain_b.has_edifice(cell));
+        for vertex in geo.vertices() {
+            let (a, b) = (elev_a.get(vertex).get(), elev_b.get(vertex).get());
+            let (ed_a, ed_b) = (terrain.has_edifice(vertex), terrain_b.has_edifice(vertex));
             if ed_a != ed_b {
                 differing_verdicts += 1;
                 let (raised, lowered) = if ed_a { (a, b) } else { (b, a) };
@@ -774,7 +774,7 @@ mod tests {
                 // comparison.
                 assert!(
                     raised > lowered,
-                    "the gate field that calls {cell:?} an edifice does not stand higher \
+                    "the gate field that calls {vertex:?} an edifice does not stand higher \
                      there: {raised} vs {lowered}"
                 );
             }
@@ -782,11 +782,11 @@ mod tests {
                 moved_elevations += 1;
                 if ed_a == ed_b {
                     let hops = terrain
-                        .boundary_distance_at(cell)
-                        .expect("a cell whose elevation the arc gate moved has a boundary");
+                        .boundary_distance_at(vertex)
+                        .expect("a vertex whose elevation the arc gate moved has a boundary");
                     assert!(
-                        f64::from(hops) > crate::elevation::ARC_EDIFICE_DECAY_CELLS,
-                        "the gate moved {cell:?} at {hops} hop(s) — inside the edifice's own \
+                        f64::from(hops) > crate::elevation::ARC_EDIFICE_DECAY_VERTICES,
+                        "the gate moved {vertex:?} at {hops} hop(s) — inside the edifice's own \
                          decay length — and the read did not notice"
                     );
                 }
@@ -794,11 +794,11 @@ mod tests {
         }
         assert!(
             differing_verdicts > 0,
-            "no cell changed its edifice verdict between two gate fields — the test is vacuous"
+            "no vertex changed its edifice verdict between two gate fields — the test is vacuous"
         );
         assert!(
             moved_elevations > differing_verdicts,
-            "expected the gate to move more cells than it renames (the skirt beyond the cone): \
+            "expected the gate to move more vertices than it renames (the skirt beyond the cone): \
              {moved_elevations} moved, {differing_verdicts} renamed"
         );
     }
@@ -808,38 +808,41 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
-        let cell = Vertex(0);
+        let vertex = Vertex(0);
         assert_eq!(
-            terrain.elevation_at(cell),
-            *outcome.globe.elevation.get(cell)
+            terrain.elevation_at(vertex),
+            *outcome.globe.elevation.get(vertex)
         );
-        assert_eq!(terrain.plate_of(cell), *outcome.globe.plate_of.get(cell));
-        assert_eq!(terrain.unrest_at(cell), *outcome.globe.unrest.get(cell));
+        assert_eq!(
+            terrain.plate_of(vertex),
+            *outcome.globe.plate_of.get(vertex)
+        );
+        assert_eq!(terrain.unrest_at(vertex), *outcome.globe.unrest.get(vertex));
         assert_eq!(terrain.sea_level(), outcome.globe.sea_level);
         assert_eq!(
-            terrain.is_ocean(cell),
-            terrain.elevation_at(cell) < terrain.sea_level()
+            terrain.is_ocean(vertex),
+            terrain.elevation_at(vertex) < terrain.sea_level()
         );
         assert_eq!(terrain.geosphere().vertex_count(), geo.vertex_count());
         assert_eq!(terrain.notes(), outcome.notes.as_slice());
     }
 
     #[test]
-    fn nearest_cell_round_trips_cell_coordinates() {
+    fn nearest_vertex_round_trips_vertex_coordinates() {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
-        for cell in [Vertex(0), Vertex(100), Vertex(641)] {
-            let coord = geo.coord(cell);
+        for vertex in [Vertex(0), Vertex(100), Vertex(641)] {
+            let coord = geo.coord(vertex);
             assert_eq!(
                 terrain.nearest_vertex(coord.latitude, coord.longitude),
-                cell
+                vertex
             );
         }
     }
 
     #[test]
-    #[should_panic(expected = "disagree on cell count")]
+    #[should_panic(expected = "disagree on vertex count")]
     fn mismatched_geosphere_fails_fast() {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
@@ -851,10 +854,13 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
-        for cell in geo.vertices() {
-            assert_eq!(terrain.boundary_at(cell), *outcome.globe.boundary.get(cell));
+        for vertex in geo.vertices() {
+            assert_eq!(
+                terrain.boundary_at(vertex),
+                *outcome.globe.boundary.get(vertex)
+            );
         }
-        // At least one cell is a classified boundary on a real globe.
+        // At least one vertex is a classified boundary on a real globe.
         assert!(geo.vertices().any(|c| terrain.boundary_at(c).is_some()));
     }
 
@@ -863,14 +869,17 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
-        for cell in geo.vertices() {
-            assert_eq!(terrain.drainage_at(cell), *outcome.globe.drainage.get(cell));
+        for vertex in geo.vertices() {
             assert_eq!(
-                terrain.is_endorheic(cell),
-                *outcome.globe.endorheic.get(cell)
+                terrain.drainage_at(vertex),
+                *outcome.globe.drainage.get(vertex)
+            );
+            assert_eq!(
+                terrain.is_endorheic(vertex),
+                *outcome.globe.endorheic.get(vertex)
             );
         }
-        // Land cells accumulate at least themselves.
+        // Land vertices accumulate at least themselves.
         let land = geo.vertices().find(|c| !terrain.is_ocean(*c)).unwrap();
         assert!(terrain.drainage_at(land) >= 1.0);
     }
@@ -880,24 +889,24 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
-        for cell in geo.vertices() {
+        for vertex in geo.vertices() {
             assert_eq!(
-                terrain.crust_thickness_at(cell),
-                *outcome.globe.crust.get(cell)
+                terrain.crust_thickness_at(vertex),
+                *outcome.globe.crust.get(vertex)
             );
             assert_eq!(
-                terrain.is_continental_at(cell),
-                *outcome.globe.crust.get(cell) >= crate::crust::CONTINENTAL_THRESHOLD_KM
+                terrain.is_continental_at(vertex),
+                *outcome.globe.crust.get(vertex) >= crate::crust::CONTINENTAL_THRESHOLD_KM
             );
             // Age is 0 on oceanic floor, in [0,1] everywhere.
-            let age = terrain.crust_age_at(cell);
+            let age = terrain.crust_age_at(vertex);
             assert!((0.0..=1.0).contains(&age));
             assert_eq!(
-                terrain.crust_age_at(cell),
-                *outcome.globe.crust_age.get(cell)
+                terrain.crust_age_at(vertex),
+                *outcome.globe.crust_age.get(vertex)
             );
         }
-        // Some cell is within finite graph distance of a boundary.
+        // Some vertex is within finite graph distance of a boundary.
         assert!(
             geo.vertices()
                 .any(|c| terrain.boundary_distance_at(c).is_some())
@@ -914,7 +923,7 @@ mod tests {
             terrain.waterfalls(),
             outcome.globe.waterfall_sites.as_slice()
         );
-        assert_eq!(terrain.deltas(), outcome.globe.delta_cells.as_slice());
+        assert_eq!(terrain.deltas(), outcome.globe.delta_vertices.as_slice());
 
         // playas() is a live filter, not a stored field: check it against
         // the same filter applied directly.
@@ -935,11 +944,11 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
-        for cell in geo.vertices() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 assert!(
-                    !terrain.prehuman_scar_at(cell),
-                    "ocean cells never carry a pre-human scar"
+                    !terrain.prehuman_scar_at(vertex),
+                    "ocean vertices never carry a pre-human scar"
                 );
             }
         }
@@ -965,14 +974,14 @@ mod tests {
         for raw in [1u64, 7, 42] {
             let outcome = generate(Seed(raw), &geo, &TerrainPins::default()).unwrap();
             let terrain = GeneratedTerrain::new(geo.clone(), outcome);
-            for cell in geo.vertices() {
-                let Some(cave) = terrain.cave_at(cell) else {
+            for vertex in geo.vertices() {
+                let Some(cave) = terrain.cave_at(vertex) else {
                     continue;
                 };
-                let column = terrain.column_at(cell);
+                let column = terrain.column_at(vertex);
                 assert!(
                     cave.band_agrees_with_reach(&column),
-                    "seed {raw} cell {cell:?}: band {:?} against a {} m budget, \
+                    "seed {raw} vertex {vertex:?}: band {:?} against a {} m budget, \
                      whose column puts it in {:?}",
                     cave.deepest_horizon,
                     cave.depth_reach_m,
@@ -1001,35 +1010,39 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
-        for cell in geo.vertices() {
-            let expected = if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            let expected = if terrain.is_ocean(vertex) {
                 None
             } else {
                 crate::features::cave_process(
-                    &terrain.material_at(cell),
-                    terrain.drainage_at(cell),
-                    terrain.crust_age_at(cell),
-                    terrain.nearest_boundary_at(cell),
+                    &terrain.material_at(vertex),
+                    terrain.drainage_at(vertex),
+                    terrain.crust_age_at(vertex),
+                    terrain.nearest_boundary_at(vertex),
                 )
                 .and_then(|(kind, proneness)| {
-                    let belt = crate::features::belt_weight(terrain.boundary_distance_at(cell));
+                    let belt = crate::features::belt_weight(terrain.boundary_distance_at(vertex));
                     let prob = crate::features::presence_prob(proneness, belt);
                     let noise = crate::features::uniformize(crate::crust::sphere_fbm01(
                         terrain.globe().features_noise_seed(),
-                        geo.position(cell),
+                        geo.position(vertex),
                         crate::features::CAVE_GATE_FREQ,
                         crate::features::CAVE_GATE_OCTAVES,
                     ));
                     (noise < prob).then(|| {
                         crate::features::Cave::new(
                             kind,
-                            &terrain.material_at(cell),
-                            &terrain.column_at(cell),
+                            &terrain.material_at(vertex),
+                            &terrain.column_at(vertex),
                         )
                     })
                 })
             };
-            assert_eq!(terrain.cave_at(cell), expected, "cell {cell:?} disagrees");
+            assert_eq!(
+                terrain.cave_at(vertex),
+                expected,
+                "vertex {vertex:?} disagrees"
+            );
         }
     }
 
@@ -1038,19 +1051,19 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
-        for cell in geo.vertices() {
-            let expected = !terrain.is_ocean(cell)
-                && terrain.crust_age_at(cell) > ANCIENT_CRUST_AGE
+        for vertex in geo.vertices() {
+            let expected = !terrain.is_ocean(vertex)
+                && terrain.crust_age_at(vertex) > ANCIENT_CRUST_AGE
                 && crate::crust::sphere_fbm01(
                     terrain.globe().features_noise_seed(),
-                    geo.position(cell),
+                    geo.position(vertex),
                     PREHUMAN_SCAR_FREQ,
                     PREHUMAN_SCAR_OCTAVES,
                 ) < PREHUMAN_SCAR_THRESHOLD;
             assert_eq!(
-                terrain.prehuman_scar_at(cell),
+                terrain.prehuman_scar_at(vertex),
                 expected,
-                "cell {cell:?} disagrees with the direct ancient-crust + noise gate"
+                "vertex {vertex:?} disagrees with the direct ancient-crust + noise gate"
             );
         }
     }

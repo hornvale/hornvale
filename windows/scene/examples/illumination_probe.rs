@@ -105,12 +105,12 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
     .expect("colored surrounds scene builds over the flagship band")
 }
 
-/// The corner cell that dominates a room's blend: the highest-weight of the
+/// The corner vertex that dominates a room's blend: the highest-weight of the
 /// three, tie-broken by lowest `Vertex` — the same rule
 /// `windows/locale/src/lib.rs`'s private `dominant_corner` applies (biome,
 /// water, cave all inherit from it), reimplemented here because that helper
 /// is not `pub`.
-fn dominant_cell(weights: &[(hornvale_kernel::Vertex, u64); 3]) -> hornvale_kernel::Vertex {
+fn dominant_vertex(weights: &[(hornvale_kernel::Vertex, u64); 3]) -> hornvale_kernel::Vertex {
     let mut best = weights[0];
     for &candidate in &weights[1..] {
         if candidate.1 > best.1 || (candidate.1 == best.1 && candidate.0 < best.0) {
@@ -120,10 +120,10 @@ fn dominant_cell(weights: &[(hornvale_kernel::Vertex, u64); 3]) -> hornvale_kern
     best.0
 }
 
-/// The highest-relief LAND cell reachable in `scene`'s band, as a
-/// `(Vertex, elevation_m)` pair — `None` if the band has no land cell at
+/// The highest-relief LAND vertex reachable in `scene`'s band, as a
+/// `(Vertex, elevation_m)` pair — `None` if the band has no land vertex at
 /// all (every cell's dominant corner is water).
-fn highest_relief_land_cell(
+fn highest_relief_land_vertex(
     world: &World,
     ctx: &LocaleContext,
     scene: &SurroundsScene,
@@ -138,9 +138,9 @@ fn highest_relief_land_cell(
         let Some(weights) = addr.corner_weights(geo, ctx.nearest_index()) else {
             continue;
         };
-        let dominant = dominant_cell(&weights);
+        let dominant = dominant_vertex(&weights);
         // "Land" here means terrestrial, not "no water feature at all": a
-        // river cell is still ground you can stand relief on, and this
+        // river vertex is still ground you can stand relief on, and this
         // seed's flagship band turns out to run entirely along one (see the
         // task-1 report). Only `Ocean`/`SaltBasin` are non-terrestrial.
         if matches!(
@@ -158,11 +158,11 @@ fn highest_relief_land_cell(
     best
 }
 
-/// The single highest-elevation LAND cell anywhere on the seed-42 globe
+/// The single highest-elevation LAND vertex anywhere on the seed-42 globe
 /// (not restricted to any one walk band) — the widened check §6.1's branch
 /// table calls for when the first, band-restricted sample comes back flat.
-/// Same land predicate as [`highest_relief_land_cell`].
-fn global_highest_relief_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::Vertex, f64) {
+/// Same land predicate as [`highest_relief_land_vertex`].
+fn global_highest_relief_land_vertex(ctx: &LocaleContext) -> (hornvale_kernel::Vertex, f64) {
     let globe = ctx.terrain().globe();
     globe
         .elevation
@@ -175,20 +175,20 @@ fn global_highest_relief_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::Ver
         })
         .map(|(id, elev)| (id, elev.get()))
         .max_by(|(_, a), (_, b)| a.total_cmp(b))
-        .expect("seed 42 has at least one land cell")
+        .expect("seed 42 has at least one land vertex")
 }
 
-/// The land cell whose ANNUAL-MEAN temperature sits closest to the freeze
+/// The land vertex whose ANNUAL-MEAN temperature sits closest to the freeze
 /// line (0 C) — the place a small seasonal swing is most likely to carry a
-/// cell across `is_frozen_at`'s threshold, if the swing can do that
+/// vertex across `is_frozen_at`'s threshold, if the swing can do that
 /// anywhere on this seed. Cheaper than a seed sweep and a sharper test of
 /// "is the seasonal term observable on seed 42 AT ALL" than either extreme
-/// alone: the global peak sampled by [`global_highest_relief_land_cell`]
+/// alone: the global peak sampled by [`global_highest_relief_land_vertex`]
 /// sits so far below freezing (annual mean, not just the sampled days) that
 /// no plausible seasonal amplitude would carry it back above 0 C, so a
 /// year-round "frozen" reading there is uninformative about whether the
 /// term itself is observable.
-fn nearest_to_freezing_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::Vertex, f64) {
+fn nearest_to_freezing_land_vertex(ctx: &LocaleContext) -> (hornvale_kernel::Vertex, f64) {
     let globe = ctx.terrain().globe();
     globe
         .elevation
@@ -201,23 +201,23 @@ fn nearest_to_freezing_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::Verte
         })
         .map(|(id, _)| (id, ctx.climate().mean_temperature_at(id).get()))
         .min_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
-        .expect("seed 42 has at least one land cell")
+        .expect("seed 42 has at least one land vertex")
 }
 
-/// Sample `temperature_at`/`is_frozen_at` at `cell` across 8 evenly spaced
+/// Sample `temperature_at`/`is_frozen_at` at `vertex` across 8 evenly spaced
 /// days of one std year, print each sample, and return
 /// `(min_c, max_c, frozen_count_of_8)`.
 fn sample_year(
     ctx: &LocaleContext,
-    cell: hornvale_kernel::Vertex,
+    vertex: hornvale_kernel::Vertex,
     year_length: f64,
 ) -> (f64, f64, usize) {
     let mut temps = Vec::new();
     let mut frozen_flags = Vec::new();
     for i in 0..8u32 {
         let day = year_length * (i as f64) / 8.0;
-        let temp = ctx.climate().temperature_at(cell, day).get();
-        let frozen = ctx.climate().is_frozen_at(cell, day);
+        let temp = ctx.climate().temperature_at(vertex, day).get();
+        let frozen = ctx.climate().is_frozen_at(vertex, day);
         println!("  day {day:8.2}  temperature_c {temp:8.3}  is_frozen_at {frozen}");
         temps.push(temp);
         frozen_flags.push(frozen);
@@ -236,14 +236,14 @@ fn sample_year(
     (min_t, max_t, frozen_count)
 }
 
-/// Sample `temperature_at`/`is_frozen_at` at `cell` on each of `days`
+/// Sample `temperature_at`/`is_frozen_at` at `vertex` on each of `days`
 /// (arbitrary, not necessarily evenly spaced over a whole year — used both
 /// for a full-year resample and for a dense look at one narrow window),
 /// print every sample, and return `(min_c, day_of_min, frozen_count,
 /// first_frozen_day)`.
 fn sample_days(
     ctx: &LocaleContext,
-    cell: hornvale_kernel::Vertex,
+    vertex: hornvale_kernel::Vertex,
     days: &[f64],
 ) -> (f64, f64, usize, Option<f64>) {
     let mut min_t = f64::INFINITY;
@@ -251,8 +251,8 @@ fn sample_days(
     let mut frozen_count = 0usize;
     let mut first_frozen_day = None;
     for &day in days {
-        let temp = ctx.climate().temperature_at(cell, day).get();
-        let frozen = ctx.climate().is_frozen_at(cell, day);
+        let temp = ctx.climate().temperature_at(vertex, day).get();
+        let frozen = ctx.climate().is_frozen_at(vertex, day);
         println!("  day {day:8.2}  temperature_c {temp:8.3}  is_frozen_at {frozen}");
         if temp < min_t {
             min_t = temp;
@@ -319,7 +319,7 @@ fn h3_band_classification(scene: &SurroundsScene) -> (bool, bool) {
 }
 
 /// Task 6 fix round, Finding 1: "the H1 band is 100% river" widened across
-/// the whole globe, the same way §6.1 widened when one fixed cell was
+/// the whole globe, the same way §6.1 widened when one fixed vertex was
 /// unobservable — is that a property of seed 42, or of settlement siting?
 /// Sweeps a 12 (latitude) x 24 (longitude) grid of arbitrary observer
 /// positions (288 bands, matching the reviewer's own sample size) at the
@@ -463,45 +463,49 @@ fn main() {
     // §6.1 — does seed 42 have a season worth seeing?
     // ---------------------------------------------------------------
     println!(
-        "--- §6.1a: seasonal variation at the highest-relief land cell IN the H1 walk band ---"
+        "--- §6.1a: seasonal variation at the highest-relief land vertex IN the H1 walk band ---"
     );
     let band = baseline_band(&world);
-    match highest_relief_land_cell(&world, &ctx, &band) {
+    match highest_relief_land_vertex(&world, &ctx, &band) {
         None => {
             println!(
-                "no land cell found in the {WALK_BAND_RADIUS}-radius walk band \
+                "no land vertex found in the {WALK_BAND_RADIUS}-radius walk band \
                  (every dominant corner is water) — cannot sample seasonality here"
             );
         }
-        Some((cell, elevation_m)) => {
-            println!("highest-relief land cell in band: {cell:?}, elevation {elevation_m:.1} m");
-            sample_year(&ctx, cell, year_length);
+        Some((vertex, elevation_m)) => {
+            println!(
+                "highest-relief land vertex in band: {vertex:?}, elevation {elevation_m:.1} m"
+            );
+            sample_year(&ctx, vertex, year_length);
         }
     }
     println!();
 
-    // The band above sits entirely within ONE canonical grid cell (a
-    // tropical rainforest river cell) — every one of its 31 rooms shares the
-    // same dominant corner, so "the highest-relief cell in the band" is not
+    // The band above sits entirely within ONE canonical grid vertex (a
+    // tropical rainforest river vertex) — every one of its 31 rooms shares the
+    // same dominant corner, so "the highest-relief vertex in the band" is not
     // a meaningful contrast on this seed. §6.1's branch table calls this out
     // explicitly ("unobservable on this seed -> widen ... before
     // concluding"), so widen within budget: the true global relief maximum
     // on seed 42, still not a seed sweep, but no longer pinned to a flat
-    // river cell.
-    println!("--- §6.1b: widened — the GLOBAL highest-relief land cell on seed {SEED} ---");
-    let (global_cell, global_elev) = global_highest_relief_land_cell(&ctx);
-    println!("global highest-relief land cell: {global_cell:?}, elevation {global_elev:.1} m");
-    sample_year(&ctx, global_cell, year_length);
+    // river vertex.
+    println!("--- §6.1b: widened — the GLOBAL highest-relief land vertex on seed {SEED} ---");
+    let (global_vertex, global_elev) = global_highest_relief_land_vertex(&ctx);
+    println!("global highest-relief land vertex: {global_vertex:?}, elevation {global_elev:.1} m");
+    sample_year(&ctx, global_vertex, year_length);
     println!();
 
     // A second widening: the annual mean at the global relief peak is so far
     // below freezing that "frozen 8/8" there says nothing about whether a
     // seasonal swing can ever cross the threshold on this seed. Find the
-    // land cell whose ANNUAL MEAN sits closest to 0 C instead.
-    println!("--- §6.1c: widened — the land cell nearest the freeze line on its annual MEAN ---");
-    let (marginal_cell, marginal_mean) = nearest_to_freezing_land_cell(&ctx);
-    println!("nearest-to-freezing land cell: {marginal_cell:?}, annual mean {marginal_mean:.3} C");
-    sample_year(&ctx, marginal_cell, year_length);
+    // land vertex whose ANNUAL MEAN sits closest to 0 C instead.
+    println!("--- §6.1c: widened — the land vertex nearest the freeze line on its annual MEAN ---");
+    let (marginal_vertex, marginal_mean) = nearest_to_freezing_land_vertex(&ctx);
+    println!(
+        "nearest-to-freezing land vertex: {marginal_vertex:?}, annual mean {marginal_mean:.3} C"
+    );
+    sample_year(&ctx, marginal_vertex, year_length);
     println!();
 
     // -----------------------------------------------------------------
@@ -510,39 +514,39 @@ fn main() {
     // which a periodic function sampled over only 87.5% of its period
     // does unless the minimum sits in the unsampled 12.5% tail (day
     // 322.05 .. year_length). Resample at higher resolution, on the SAME
-    // cell, to find out whether the tail goes negative (undersampling)
+    // vertex, to find out whether the tail goes negative (undersampling)
     // or the mean/day-path discrepancy is real (a code-level finding).
     // -----------------------------------------------------------------
     println!(
-        "--- §6.1 addendum: cell {marginal_cell:?}, 32 evenly spaced days across the full year ---"
+        "--- §6.1 addendum: vertex {marginal_vertex:?}, 32 evenly spaced days across the full year ---"
     );
     let days_32: Vec<f64> = (0..32).map(|i| year_length * (i as f64) / 32.0).collect();
     let (min_32, min_32_day, frozen_32, first_frozen_32) =
-        sample_days(&ctx, marginal_cell, &days_32);
+        sample_days(&ctx, marginal_vertex, &days_32);
     println!(
         "  min = {min_32:.3} C at day {min_32_day:.2}; frozen {frozen_32}/32; first frozen day = {first_frozen_32:?}"
     );
     println!();
 
     println!(
-        "--- §6.1 addendum: cell {marginal_cell:?}, 16 days densely covering 322 .. {year_length:.2} ---"
+        "--- §6.1 addendum: vertex {marginal_vertex:?}, 16 days densely covering 322 .. {year_length:.2} ---"
     );
     let tail_start = 322.0;
     let days_tail: Vec<f64> = (0..16)
         .map(|i| tail_start + (year_length - tail_start) * (i as f64) / 15.0)
         .collect();
     let (min_tail, min_tail_day, frozen_tail, first_frozen_tail) =
-        sample_days(&ctx, marginal_cell, &days_tail);
+        sample_days(&ctx, marginal_vertex, &days_tail);
     println!(
         "  min = {min_tail:.3} C at day {min_tail_day:.2}; frozen {frozen_tail}/16; first frozen day = {first_frozen_tail:?}"
     );
     println!();
 
     println!(
-        "--- §6.1 addendum: GLOBAL max-elevation cell {global_cell:?}, 32 evenly spaced days across the full year ---"
+        "--- §6.1 addendum: GLOBAL max-elevation vertex {global_vertex:?}, 32 evenly spaced days across the full year ---"
     );
     let (min_g32, min_g32_day, frozen_g32, first_frozen_g32) =
-        sample_days(&ctx, global_cell, &days_32);
+        sample_days(&ctx, global_vertex, &days_32);
     println!(
         "  min = {min_g32:.3} C at day {min_g32_day:.2}; frozen {frozen_g32}/32; first frozen day = {first_frozen_g32:?}"
     );

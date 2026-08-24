@@ -33,10 +33,10 @@
 //! `Horizon::Roots` is documented as "deep crust: hot, high-pressure", and
 //! nobody lives 20 km down — but it decides the campaign, because a
 //! subterranean dwarf must still clear `hornvale_demography::FLOOR` on some
-//! cell of every seed (`non_void_roster`, which admits no allowlist).
+//! vertex of every seed (`non_void_roster`, which admits no allowlist).
 //!
 //! So the question this answers is narrow and load-bearing: **over cave-
-//! bearing land cells, what is the distribution of `deepest_horizon`, and what
+//! bearing land vertices, what is the distribution of `deepest_horizon`, and what
 //! depth in metres does it imply?** If karst and lava-tube caves dominate the
 //! shallow bands, the literal read is safe and deep fracture caves are
 //! correctly uninhabitable — a real selection effect. If `Roots` dominates,
@@ -47,7 +47,7 @@
 //! ## Measured, 2026-08-07, seeds 42 / 7 / 1234
 //!
 //! ```text
-//!   band       share of cave cells        depth p50          depth max
+//!   band       share of cave vertices        depth p50          depth max
 //!              s42     s7    s1234
 //!   Cover    17.5%  43.9%   26.3%             0.0 m          9 - 10 m
 //!   Basement 54.5%  27.2%   40.4%             0.0 m       645 - 1807 m
@@ -58,7 +58,7 @@
 //!     p50      +1045    +1482     +368 m
 //!     p10    -11808   -12892   -12787 m
 //!     min    -13225   -15757   -14762 m
-//!   cave cells above -12,000 m:  91.6%   87.0%   81.7%
+//!   cave vertices above -12,000 m:  91.6%   87.0%   81.7%
 //! ```
 //!
 //! **Two findings, and they are not the same finding.**
@@ -113,7 +113,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 
 /// claim: readout(off-gate, heavy:, prints only, no assertion) — the
 /// `deepest_horizon` distribution and the depths it implies, over the
-/// cave-bearing land cells of seeds 42 / 7 / 1234. This test asserts nothing
+/// cave-bearing land vertices of seeds 42 / 7 / 1234. This test asserts nothing
 /// at all: every check in it is a build/lookup `expect`, and the result is
 /// the printed table (see the module doc, which records it). It is the
 /// measurement that withdrew Task 3b, not a gate on any value.
@@ -159,24 +159,24 @@ fn how_deep_is_a_cave() {
             &regime,
         );
 
-        // Per band: how many cave-bearing land cells reach it, and the depths.
+        // Per band: how many cave-bearing land vertices reach it, and the depths.
         let mut counts: [usize; 5] = [0; 5];
         let mut depths: [Vec<f64>; 5] = Default::default();
-        // The resulting underground elevation, over all cave cells.
+        // The resulting underground elevation, over all cave vertices.
         let mut underground_asl: Vec<f64> = Vec::new();
         let mut land = 0usize;
-        let mut cave_cells = 0usize;
+        let mut cave_vertices = 0usize;
 
-        for cell in geo.vertices() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
             land += 1;
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
-            cave_cells += 1;
-            let column = terrain.column_at(cell);
+            cave_vertices += 1;
+            let column = terrain.column_at(vertex);
             let band = column
                 .bands
                 .iter()
@@ -191,14 +191,14 @@ fn how_deep_is_a_cave() {
             };
             counts[idx] += 1;
             depths[idx].push(band.top_depth_m);
-            let surface_asl = substrate.get(cell).height_asl_m.get();
+            let surface_asl = substrate.get(vertex).height_asl_m.get();
             underground_asl.push(surface_asl - band.top_depth_m);
         }
 
-        println!("\n== seed {seed_value} ==  land {land}  cave-bearing {cave_cells}");
+        println!("\n== seed {seed_value} ==  land {land}  cave-bearing {cave_vertices}");
         println!(
             "  {:<11} {:>7} {:>7}   {:>12} {:>12} {:>12}",
-            "band", "cells", "share", "depth p50", "depth p90", "depth max"
+            "band", "vertices", "share", "depth p50", "depth p90", "depth max"
         );
         for idx in 0..5 {
             if counts[idx] == 0 {
@@ -213,7 +213,7 @@ fn how_deep_is_a_cave() {
             ][idx];
             let mut d = depths[idx].clone();
             d.sort_by(f64::total_cmp);
-            let share = counts[idx] as f64 / cave_cells.max(1) as f64;
+            let share = counts[idx] as f64 / cave_vertices.max(1) as f64;
             println!(
                 "  {:<11} {:>7} {:>6.2}%   {:>12.1} {:>12.1} {:>12.1}",
                 band_name(kind),
@@ -234,15 +234,15 @@ fn how_deep_is_a_cave() {
             underground_asl.first().copied().unwrap_or(f64::NAN),
         );
 
-        // How many cave cells would remain within reach of an elevation curve
+        // How many cave vertices would remain within reach of an elevation curve
         // of the shape the roster actually authors (width 4000 m)? Beyond
         // about 3 sigma from any plausible optimum the curve is numerically
-        // dead, so this counts cells no authored curve could rescue.
+        // dead, so this counts vertices no authored curve could rescue.
         let reachable = underground_asl.iter().filter(|v| **v > -12_000.0).count();
         println!(
-            "  cave cells above -12,000 m (3 sigma of a width-4000 curve centred near 0): \
-             {reachable} / {cave_cells}  ({:.2}%)",
-            reachable as f64 / cave_cells.max(1) as f64 * 100.0
+            "  cave vertices above -12,000 m (3 sigma of a width-4000 curve centred near 0): \
+             {reachable} / {cave_vertices}  ({:.2}%)",
+            reachable as f64 / cave_vertices.max(1) as f64 * 100.0
         );
     }
 }

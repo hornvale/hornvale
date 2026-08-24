@@ -80,30 +80,30 @@ fn present_era_substrate_is_bit_identical_to_the_unparameterised_field() {
             &EraAdjust::present(&terrain),
         );
 
-        for cell in geo.vertices() {
-            let a = direct.get(cell);
-            let b = via_era.get(cell);
+        for vertex in geo.vertices() {
+            let a = direct.get(vertex);
+            let b = via_era.get(vertex);
             // Bit patterns, not `==`: `==` would accept 0.0 for -0.0, and the
             // whole point is that nothing shifted at all.
             assert_eq!(
                 a.temperature_c.to_bits(),
                 b.temperature_c.to_bits(),
-                "seed {seed} cell {cell:?}: temperature moved"
+                "seed {seed} vertex {vertex:?}: temperature moved"
             );
             assert_eq!(
                 a.moisture.to_bits(),
                 b.moisture.to_bits(),
-                "seed {seed} cell {cell:?}: moisture moved"
+                "seed {seed} vertex {vertex:?}: moisture moved"
             );
             assert_eq!(
                 a.insolation.to_bits(),
                 b.insolation.to_bits(),
-                "seed {seed} cell {cell:?}: insolation moved"
+                "seed {seed} vertex {vertex:?}: insolation moved"
             );
             assert_eq!(
                 a.height_asl_m.get().to_bits(),
                 b.height_asl_m.get().to_bits(),
-                "seed {seed} cell {cell:?}: elevation moved"
+                "seed {seed} vertex {vertex:?}: elevation moved"
             );
         }
     }
@@ -132,8 +132,8 @@ fn a_glacial_era_moves_temperature_and_the_shoreline() {
 
     let mut colder = 0usize;
     let mut newly_exposed = 0usize;
-    for cell in geo.vertices() {
-        let (a, b) = (now.get(cell), then.get(cell));
+    for vertex in geo.vertices() {
+        let (a, b) = (now.get(vertex), then.get(vertex));
         if b.temperature_c < a.temperature_c {
             colder += 1;
         }
@@ -146,7 +146,7 @@ fn a_glacial_era_moves_temperature_and_the_shoreline() {
     assert_eq!(
         colder,
         geo.vertex_count(),
-        "every cell should be colder at a -8 C era"
+        "every vertex should be colder at a -8 C era"
     );
     assert!(
         newly_exposed > 0,
@@ -225,11 +225,11 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
         assert_eq!(direct.len(), via_era.len(), "seed {seed}: species count");
         for ((ta, a), (tb, b)) in direct.iter().zip(via_era.iter()) {
             assert_eq!(ta, tb, "seed {seed}: dense index order moved");
-            for cell in geo.vertices() {
+            for vertex in geo.vertices() {
                 assert_eq!(
-                    a.at(cell).to_bits(),
-                    b.at(cell).to_bits(),
-                    "seed {seed} species {ta} cell {cell:?}: capacity moved"
+                    a.at(vertex).to_bits(),
+                    b.at(vertex).to_bits(),
+                    "seed {seed} species {ta} vertex {vertex:?}: capacity moved"
                 );
             }
         }
@@ -238,7 +238,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
 
 /// **The ocean-exclusion guard** (The Tense §3.2, step 2).
 ///
-/// The era habitability mask no longer tests "is this cell land" — that load
+/// The era habitability mask no longer tests "is this vertex land" — that load
 /// moved to `carrying_inputs_at`, which takes `is_land` against the era's own
 /// sea level. So ocean is now excluded *by capacity being zero there*, and
 /// nothing else. The spec named this the most likely place for a silent
@@ -251,7 +251,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
 ///    volume ≥ 0 from ice-free). So an era's sea level never exceeds the
 ///    present's, and ocean-at-era implies ocean-at-present.
 /// 2. Therefore the two supply fields still computed against the *present*
-///    shoreline — mineral and detritus — are zero on any cell that is sea at any
+///    shoreline — mineral and detritus — are zero on any vertex that is sea at any
 ///    era, and no shipped kind weights `MARINE_FORAGE`. Every supply term is
 ///    zero, so capacity is zero.
 ///
@@ -282,7 +282,7 @@ fn ocean_is_never_settleable_at_any_era() {
         // registry.
         //
         // Deliberate, and here it is the STRICTER arm rather than a convenience.
-        // The claim is that capacity is exactly `0.0` on every sea cell at every
+        // The claim is that capacity is exactly `0.0` on every sea vertex at every
         // era. An affinity is a MULTIPLIER in `[0.25, 1.0]`, so threading it
         // could only ever shrink a leak toward zero and hide it; scoring at the
         // unrestricted 1.0 every kind carried before task 4 is the largest
@@ -313,18 +313,18 @@ fn ocean_is_never_settleable_at_any_era() {
                 geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm, &affinity,
             );
             for (tag, cap) in &caps {
-                for cell in geo.vertices() {
+                for vertex in geo.vertices() {
                     // "Sea at this era" is the same predicate `carrying_inputs_at`
                     // uses, spelled out here so the test does not depend on the
                     // private helper.
-                    if terrain.elevation_at(cell) < adjust.sea_level {
+                    if terrain.elevation_at(vertex) < adjust.sea_level {
                         assert_eq!(
-                            cap.at(cell),
+                            cap.at(vertex),
                             0.0,
-                            "seed {seed}, low-stand {drop_m} m, species {tag}, cell {cell:?}: \
-                             capacity {} on a cell that is SEA this era — ocean exclusion has \
+                            "seed {seed}, low-stand {drop_m} m, species {tag}, vertex {vertex:?}: \
+                             capacity {} on a vertex that is SEA this era — ocean exclusion has \
                              leaked, and settlements will appear at sea",
-                            cap.at(cell)
+                            cap.at(vertex)
                         );
                     }
                 }

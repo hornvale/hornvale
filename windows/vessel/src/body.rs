@@ -72,7 +72,7 @@ pub struct Body {
     /// hazard, DERIVED at derivation from its temperature niche (HEAT/COLD) and
     /// metabolic class (UNCANNY) — a cold-adapted creature fears heat, an
     /// elemental does not fear the eldritch. Read by the Danger drive against the
-    /// cell's hazards for per-kind fear.
+    /// room's hazards for per-kind fear.
     pub threat_niche: ThreatNiche,
     /// The species' adult body mass in kilograms (`BiosphereTraits::mass`),
     /// threaded from `biosphere_registry` at derivation beside the metabolic

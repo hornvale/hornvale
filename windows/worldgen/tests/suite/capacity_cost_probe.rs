@@ -1,7 +1,7 @@
 //! Cost probe for the era-varying capacity design. Measurement only.
 //!
-//! The proposed change makes capacity a function of `(species, cell, era)`
-//! rather than `(species, cell)`. `CLIMATE_ERAS` is 25, so the naive reading is
+//! The proposed change makes capacity a function of `(species, vertex, era)`
+//! rather than `(species, vertex)`. `CLIMATE_ERAS` is 25, so the naive reading is
 //! "25x the work", and the design's central risk is whether that is affordable
 //! inside a ~2000-world census.
 //!
@@ -143,7 +143,7 @@ fn cost_of_making_capacity_era_varying() {
     // Deliberate, and cost is the reason rather than physics: this is a TIMING
     // harness, comparing the naive per-era path against the hoisted one, and
     // both arms are handed this same slice. An affinity resolves through
-    // `BiomeAffinity::factor`, a short linear scan per cell per kind, so
+    // `BiomeAffinity::factor`, a short linear scan per vertex per kind, so
     // threading it would add identical work to both arms and shift the absolute
     // milliseconds this probe reports against H4's 1.5x budget without changing
     // the ratio it exists to measure. All-`None` keeps the numbers comparable
@@ -180,11 +180,11 @@ fn cost_of_making_capacity_era_varying() {
     std::hint::black_box(&caps);
 
     // Memory, if every era's field were held at once rather than streamed.
-    let cells = geo.vertex_count();
-    let bytes_one = cells * SETTLERS.len() * std::mem::size_of::<f64>();
+    let vertices = geo.vertex_count();
+    let bytes_one = vertices * SETTLERS.len() * std::mem::size_of::<f64>();
     let bytes_all = bytes_one * CLIMATE_ERAS;
 
-    println!("cells                    {cells}");
+    println!("vertices                    {vertices}");
     println!("species                  {}", SETTLERS.len());
     println!("CLIMATE_ERAS             {CLIMATE_ERAS}");
     println!("substrate_field          {substrate_ms:.1} ms");
@@ -203,7 +203,7 @@ fn cost_of_making_capacity_era_varying() {
     );
     println!(
         "at 300 settling species, one era: {:.1} MB",
-        (cells * 300 * std::mem::size_of::<f64>()) as f64 / 1e6
+        (vertices * 300 * std::mem::size_of::<f64>()) as f64 / 1e6
     );
 }
 
@@ -323,9 +323,9 @@ fn era_invariant_fraction_of_capacity_cost() {
 /// WITHOUT changing a single output byte.
 ///
 /// `annual_mean_insolation` integrates 48 orbital samples with ~9 libm
-/// transcendentals each -- ~430 per cell, ~17.6M per field. It is a pure
+/// transcendentals each -- ~430 per vertex, ~17.6M per field. It is a pure
 /// function of `(latitude, obliquity, insolation_scalar)`, and the latter two are
-/// constant within a world. So if cells SHARE latitudes exactly, the integration
+/// constant within a world. So if vertices SHARE latitudes exactly, the integration
 /// can be memoised on the exact bit pattern: same inputs, same libm calls, same
 /// result, byte-identical output and no epoch.
 #[test]
@@ -375,7 +375,7 @@ fn where_substrate_cost_lives_and_whether_latitudes_repeat() {
     lats.sort_unstable();
     lats.dedup();
     println!("--");
-    println!("cells                  {total}");
+    println!("vertices                  {total}");
     println!("distinct latitudes     {}", lats.len());
     println!(
         "memoisation ratio      {:.1}x   (exact, byte-identical)",
@@ -401,7 +401,7 @@ fn hoisted_era_replay_versus_naive() {
     // Deliberate, and cost is the reason rather than physics: this is a TIMING
     // harness, comparing the naive per-era path against the hoisted one, and
     // both arms are handed this same slice. An affinity resolves through
-    // `BiomeAffinity::factor`, a short linear scan per cell per kind, so
+    // `BiomeAffinity::factor`, a short linear scan per vertex per kind, so
     // threading it would add identical work to both arms and shift the absolute
     // milliseconds this probe reports against H4's 1.5x budget without changing
     // the ratio it exists to measure. All-`None` keeps the numbers comparable

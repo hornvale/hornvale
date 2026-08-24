@@ -30,7 +30,7 @@ impl StreamLabel<'static> {
 }
 
 impl<'a> StreamLabel<'a> {
-    /// A runtime-computed leg — a species name, a settlement's cell id, a
+    /// A runtime-computed leg — a species name, a settlement's vertex id, a
     /// salt. Legitimately dynamic, never centralizable.
     /// type-audit: bare-ok(identifier-text: s)
     pub fn dynamic(s: &'a str) -> Self {

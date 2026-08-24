@@ -1,6 +1,6 @@
 //! A one-off calibration: the distribution of `approach_ease` over habitable
-//! cells, pooled across seeds. Run once, by hand, to set `DEF_SCALE` so the
-//! median cell's defensibility is ~1.0 — i.e. the median world is unchanged
+//! vertices, pooled across seeds. Run once, by hand, to set `DEF_SCALE` so the
+//! median vertex's defensibility is ~1.0 — i.e. the median world is unchanged
 //! and only the extremes of the terrain move. `#[ignore]`d because it is a
 //! measurement, not a gate; it asserts nothing about the result.
 //!
@@ -21,15 +21,15 @@
 //! eras would do exactly that.
 //!
 //! **Task 2d addendum.** Spec amendment 1 (2026-07-30, pre-readout) moved
-//! `defensibility` from a per-cell aggregate to a per-APPROACH read
+//! `defensibility` from a per-vertex aggregate to a per-APPROACH read
 //! (`defensibility(graph, from, to)`, `windows/worldgen/src/history_bake.rs`):
 //! Task 2c found the aggregate was two disjoint regimes with an empty gap
 //! between them, which no single transform can grade. This harness now also
 //! samples the quantity the amended mechanism actually reads: one
 //! `cost_exponent = -ln(best_conductance)` value per ordered `(from, to)`
 //! pair with a traversable edge, both ends restricted to the same
-//! habitable-cell population every prior run used (raids and resettlement
-//! both originate from and land on settled ground; a stray candidate cell in
+//! habitable-vertex population every prior run used (raids and resettlement
+//! both originate from and land on settled ground; a stray candidate vertex in
 //! `best_home`'s ring walk that never becomes a home is not what
 //! `DEF_SCALE` needs to be calibrated against). Parallel edges between the
 //! same pair are deduplicated to their MAXIMUM conductance first — mirroring
@@ -47,15 +47,15 @@ use hornvale_worldgen::{
     build_world_to_with_artifacts, carrying_inputs_of, connection_graph_of,
 };
 
-/// The summed conductance of `cell`'s traversable (`conductance > 0.0`)
+/// The summed conductance of `vertex`'s traversable (`conductance > 0.0`)
 /// edges. Mirrors `history_bake::approach_ease` deliberately: that fn is
 /// private to its module, and a measurement harness is not a reason to make
 /// it `pub` or add a second `#[doc(hidden)] pub` wrapper — this is the
 /// two-line fold over the public `ConnectionGraph::edges` the brief asks
 /// for instead.
-fn approach_ease(graph: &ConnectionGraph, cell: Vertex) -> f64 {
+fn approach_ease(graph: &ConnectionGraph, vertex: Vertex) -> f64 {
     graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .filter(|e| e.conductance > 0.0)
         .map(|e| e.conductance)
@@ -63,14 +63,14 @@ fn approach_ease(graph: &ConnectionGraph, cell: Vertex) -> f64 {
 }
 
 /// Task 2b companion measurement: the single largest conductance among
-/// `cell`'s traversable (`conductance > 0.0`) edges, or `0.0` if it has
+/// `vertex`'s traversable (`conductance > 0.0`) edges, or `0.0` if it has
 /// none. A sum conflates "how many ways in" with "how good the best way in
 /// is" (an attacker uses one approach — Thermopylae is defensible because
 /// its best approach is bad, not because a total is low); this isolates the
 /// latter.
-fn max_approach(graph: &ConnectionGraph, cell: Vertex) -> f64 {
+fn max_approach(graph: &ConnectionGraph, vertex: Vertex) -> f64 {
     graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .filter(|e| e.conductance > 0.0)
         .map(|e| e.conductance)
@@ -78,49 +78,49 @@ fn max_approach(graph: &ConnectionGraph, cell: Vertex) -> f64 {
 }
 
 /// Task 2b companion measurement: how many traversable (`conductance >
-/// 0.0`) edges lead into `cell`. Isolates "how many ways in" from `sum`'s
+/// 0.0`) edges lead into `vertex`. Isolates "how many ways in" from `sum`'s
 /// conflation of that with "how good the best way in is".
-fn approach_count(graph: &ConnectionGraph, cell: Vertex) -> f64 {
+fn approach_count(graph: &ConnectionGraph, vertex: Vertex) -> f64 {
     graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .filter(|e| e.conductance > 0.0)
         .count() as f64
 }
 
 /// Task 2c companion measurement: the single largest conductance among
-/// `cell`'s traversable edges of exactly `kind`, or `0.0` if it has none.
+/// `vertex`'s traversable edges of exactly `kind`, or `0.0` if it has none.
 /// Same shape as [`max_approach`], restricted to one `EdgeKind` — the water/
 /// land split the successor hypothesis needs.
-fn max_approach_of_kind(graph: &ConnectionGraph, cell: Vertex, kind: EdgeKind) -> f64 {
+fn max_approach_of_kind(graph: &ConnectionGraph, vertex: Vertex, kind: EdgeKind) -> f64 {
     graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .filter(|e| e.conductance > 0.0 && e.kind == kind)
         .map(|e| e.conductance)
         .fold(0.0_f64, f64::max)
 }
 
-/// Task 2c: whether `cell` has at least one traversable edge of `kind` —
+/// Task 2c: whether `vertex` has at least one traversable edge of `kind` —
 /// the denominator context for [`max_approach_of_kind`]'s quantiles (a `0.0`
 /// in that series can mean either "has this kind, but it's ocean-touching/
 /// impassable" or "has no edge of this kind at all"; this disambiguates).
-fn has_kind(graph: &ConnectionGraph, cell: Vertex, kind: EdgeKind) -> bool {
+fn has_kind(graph: &ConnectionGraph, vertex: Vertex, kind: EdgeKind) -> bool {
     graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .any(|e| e.conductance > 0.0 && e.kind == kind)
 }
 
 /// Task 2c's cross-tab: the overall-max-supplying edge's `EdgeKind`, and its
-/// conductance — `None` for an isolated cell with no traversable edges at
+/// conductance — `None` for an isolated vertex with no traversable edges at
 /// all (excluded from the cross-tab, not silently bucketed as "low").
 /// `Iterator::max_by` returns the LAST of equal maxima, and `graph.edges`
 /// iterates in deterministic insertion order, so ties resolve
 /// deterministically without a second sort key.
-fn max_approach_with_kind(graph: &ConnectionGraph, cell: Vertex) -> Option<(f64, EdgeKind)> {
+fn max_approach_with_kind(graph: &ConnectionGraph, vertex: Vertex) -> Option<(f64, EdgeKind)> {
     graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .filter(|e| e.conductance > 0.0)
         .map(|e| (e.conductance, e.kind))
@@ -301,27 +301,27 @@ fn print_approach_ease_quantiles() {
 
         let graph = connection_graph_of(&artifacts.world, &GraphConfig::default());
 
-        for (cell, cap) in capacity.iter() {
+        for (vertex, cap) in capacity.iter() {
             if *cap > 0.0 {
                 total_habitable += 1;
-                all.push(approach_ease(&graph, cell));
-                all_max.push(max_approach(&graph, cell));
-                all_count.push(approach_count(&graph, cell));
+                all.push(approach_ease(&graph, vertex));
+                all_max.push(max_approach(&graph, vertex));
+                all_count.push(approach_count(&graph, vertex));
 
-                adjacency_max.push(max_approach_of_kind(&graph, cell, EdgeKind::Adjacency));
-                water_route_max.push(max_approach_of_kind(&graph, cell, EdgeKind::WaterRoute));
-                land_route_max.push(max_approach_of_kind(&graph, cell, EdgeKind::LandRoute));
-                if has_kind(&graph, cell, EdgeKind::Adjacency) {
+                adjacency_max.push(max_approach_of_kind(&graph, vertex, EdgeKind::Adjacency));
+                water_route_max.push(max_approach_of_kind(&graph, vertex, EdgeKind::WaterRoute));
+                land_route_max.push(max_approach_of_kind(&graph, vertex, EdgeKind::LandRoute));
+                if has_kind(&graph, vertex, EdgeKind::Adjacency) {
                     adjacency_present += 1;
                 }
-                if has_kind(&graph, cell, EdgeKind::WaterRoute) {
+                if has_kind(&graph, vertex, EdgeKind::WaterRoute) {
                     water_route_present += 1;
                 }
-                if has_kind(&graph, cell, EdgeKind::LandRoute) {
+                if has_kind(&graph, vertex, EdgeKind::LandRoute) {
                     land_route_present += 1;
                 }
 
-                match max_approach_with_kind(&graph, cell) {
+                match max_approach_with_kind(&graph, vertex) {
                     Some((mx, kind)) if mx >= HIGH_POPULATION => high_tally.bump(kind),
                     Some((mx, kind)) if mx <= LOW_POPULATION => low_tally.bump(kind),
                     Some(_) => {}

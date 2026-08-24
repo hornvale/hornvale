@@ -1,4 +1,4 @@
-//! Paleoclimate genesis facts: summary truths only, never per-cell data. The
+//! Paleoclimate genesis facts: summary truths only, never per-vertex data. The
 //! full strata live on the non-serialized `PaleoRecord`; here we commit the
 //! glacial maximum, the ice extent, one salient fossil shoreline, one refugium,
 //! and the narrative "the frost retreated" so historiography can recount it.
@@ -57,17 +57,17 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     }
 }
 
-/// A short human description of a representative band/refugium cell: the cell
+/// A short human description of a representative band/refugium vertex: the vertex
 /// with the largest latitude magnitude (deterministic; ties → lowest Vertex).
 fn representative(geo: &Geosphere, mask: &hornvale_kernel::VertexMap<bool>) -> Option<String> {
-    let cell = geo.vertices().filter(|c| *mask.get(*c)).max_by(|a, b| {
+    let vertex = geo.vertices().filter(|c| *mask.get(*c)).max_by(|a, b| {
         geo.coord(*a)
             .latitude
             .abs()
             .total_cmp(&geo.coord(*b).latitude.abs())
             .then(b.0.cmp(&a.0))
     })?;
-    let coord = geo.coord(cell);
+    let coord = geo.coord(vertex);
     Some(format!(
         "near {:.0}°, {:.0}°",
         coord.latitude, coord.longitude

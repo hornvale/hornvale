@@ -100,7 +100,7 @@ fn depth_scoped_metrics_match_full_build() {
 ///
 /// Ignored by default: unlike the Astronomy/Terrain-only studies above, an
 /// `"all"` selection evaluates the full ~110-metric registry per world (most
-/// of it Full-rung, several metrics themselves iterating every cell), which
+/// of it Full-rung, several metrics themselves iterating every vertex), which
 /// costs seconds per world even at `Terrain`'s or `Astronomy`'s multiplied-
 /// out share (measured ~15-35s per seed, roster-dependent, with the
 /// terrain/climate/worldgen crates' `opt-level = 2` overrides already

@@ -18,13 +18,13 @@
 //! the claims rest on the *relations* between them, not on laboratory
 //! accuracy.
 //!
-//! ## Which cell a built place is made of
+//! ## Which vertex a built place is made of
 //!
-//! Nothing here resolves a cell — a caller hands one in, and there is one
+//! Nothing here resolves a vertex — a caller hands one in, and there is one
 //! rule for doing so, shared with the biome:
 //!
-//! - a **settlement** carries its own `hornvale_settlement::CELL_ID` fact,
-//!   and that is exactly the cell the composition root read
+//! - a **settlement** carries its own `hornvale_settlement::VERTEX_ID` fact,
+//!   and that is exactly the vertex the composition root read
 //!   `climate.biome_at` at when it committed the settlement's biome, so the
 //!   fact *is* the shared resolution;
 //! - a **room** resolves through `hornvale_locale`'s `dominant_corner`
@@ -96,7 +96,7 @@ pub struct FabricContext {
 pub const DEEP_SOIL_MIN_M: f64 = 1.0;
 
 impl FabricContext {
-    /// Read the ground at `cell`.
+    /// Read the ground at `vertex`.
     ///
     /// **The four flags are read off the biome**, which is already a
     /// classification of temperature × moisture
@@ -109,13 +109,13 @@ impl FabricContext {
     /// regolith axis at all.
     ///
     /// **No land-only shortcut.** Settlements can be marine — founded on
-    /// land that later drowned — so this reads whatever cell it is given,
-    /// and `rock_at` answers for an ocean cell as readily as a land one.
-    pub fn at(terrain: &GeneratedTerrain, climate: &GeneratedClimate, cell: Vertex) -> Self {
-        let biome = climate.biome_at(cell);
-        let material = terrain.material_at(cell);
+    /// land that later drowned — so this reads whatever vertex it is given,
+    /// and `rock_at` answers for an ocean vertex as readily as a land one.
+    pub fn at(terrain: &GeneratedTerrain, climate: &GeneratedClimate, vertex: Vertex) -> Self {
+        let biome = climate.biome_at(vertex);
+        let material = terrain.material_at(vertex);
         FabricContext {
-            rock: terrain.rock_at(cell),
+            rock: terrain.rock_at(vertex),
             deep_soil: material.soil_depth.get() >= DEEP_SOIL_MIN_M,
             material,
             forested: is_forested(biome),

@@ -17,27 +17,27 @@ pub const ASCII_WIDTH: u32 = 72;
 /// type-audit: bare-ok(render-internal)
 pub const ASCII_HEIGHT: u32 = 24;
 
-/// RGB triple for a cell's stratum (ice → white, refugium → green,
+/// RGB triple for a vertex's stratum (ice → white, refugium → green,
 /// shoreline → blue, else → grey), in envelope>refugium>shoreline priority.
-fn color(record: &PaleoRecord, cell: Vertex) -> [u8; 3] {
-    if *record.envelope.get(cell) {
+fn color(record: &PaleoRecord, vertex: Vertex) -> [u8; 3] {
+    if *record.envelope.get(vertex) {
         [235, 235, 245]
-    } else if *record.refugia.get(cell) {
+    } else if *record.refugia.get(vertex) {
         [70, 160, 80]
-    } else if *record.shoreline.get(cell) {
+    } else if *record.shoreline.get(vertex) {
         [70, 110, 200]
     } else {
         [90, 90, 90]
     }
 }
 
-/// ASCII glyph for a cell's stratum.
-fn glyph(record: &PaleoRecord, cell: Vertex) -> char {
-    if *record.envelope.get(cell) {
+/// ASCII glyph for a vertex's stratum.
+fn glyph(record: &PaleoRecord, vertex: Vertex) -> char {
+    if *record.envelope.get(vertex) {
         '#'
-    } else if *record.refugia.get(cell) {
+    } else if *record.refugia.get(vertex) {
         '*'
-    } else if *record.shoreline.get(cell) {
+    } else if *record.shoreline.get(vertex) {
         '~'
     } else {
         '.'
@@ -54,8 +54,8 @@ pub fn paleo_pixels(geo: &Geosphere, record: &PaleoRecord) -> Vec<u8> {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.extend_from_slice(&color(record, cell));
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.extend_from_slice(&color(record, vertex));
         }
     }
     out
@@ -76,8 +76,8 @@ pub fn paleo_ascii(geo: &Geosphere, record: &PaleoRecord) -> String {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
         for px in 0..ASCII_WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(ASCII_WIDTH) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.push(glyph(record, cell));
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.push(glyph(record, vertex));
         }
         out.push('\n');
     }

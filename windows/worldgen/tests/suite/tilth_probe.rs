@@ -181,7 +181,7 @@ fn tilth_derivation_probe() {
         supply.sort_by(f64::total_cmp);
         all_supply.extend(supply.iter().copied());
 
-        // H1 per seed: who wins each land cell under each combination rule?
+        // H1 per seed: who wins each land vertex under each combination rule?
         let mut wins_p = vec![0usize; SETTLERS.len()];
         let mut wins_l = vec![0usize; SETTLERS.len()];
         for &c in &land {
@@ -275,7 +275,7 @@ fn tilth_derivation_probe() {
     // ---- H1, tested as a pure measurement before any production change ----
     // best-fit territory is argmax_sp of eff(c,sp), and the species-blind capacity
     // CANCELS from that argmax (spec §5d), so best-fit depends ONLY on how the
-    // per-species term combines. Compute it both ways over the same cells and the
+    // per-species term combines. Compute it both ways over the same vertices and the
     // attribution is exact: PRODUCT (today) versus LIEBIG MINIMUM (stage 5).
     println!("\n=== H1: does the combination rule redistribute best-fit territory? ===");
     println!(

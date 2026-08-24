@@ -13,7 +13,7 @@
 //! chamber a real depth coordinate, because that depth reaches temperature and
 //! moisture and deliberately not the altitude axis.
 //!
-//! This prints all four terms for rust-monster on cave-bearing cells, surface
+//! This prints all four terms for rust-monster on cave-bearing vertices, surface
 //! against subterranean, and shows the two things that matter together: the
 //! three floored axes move — since The Underworld, in BOTH directions, with
 //! insolation the only one a chamber wins outright, temperature degrading
@@ -69,18 +69,18 @@ fn which_axis_binds_for_a_subterranean_kind() {
     let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
     println!("rust-monster sovereignty floor = {floor_buf:.6}");
 
-    // The Underworld: the chamber reading now depends on the cell's own
+    // The Underworld: the chamber reading now depends on the vertex's own
     // depth, gradient, water table and porosity, so it comes from the one
     // shared derivation rather than from the surface reading alone.
     let subterranean = subterranean_substrate_field(geo, &terrain, &substrate);
 
     let mut shown = 0;
-    for cell in geo.vertices() {
-        if terrain.is_ocean(cell) || terrain.cave_at(cell).is_none() {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) || terrain.cave_at(vertex).is_none() {
             continue;
         }
-        let surf = *substrate.get(cell);
-        let sub = *subterranean.get(cell);
+        let surf = *substrate.get(vertex);
+        let sub = *subterranean.get(vertex);
         for (label, s) in [("surface", surf), ("subterranean", sub)] {
             let t = cn.temperature.eval(s.temperature_c, floor_buf);
             let m = cn.moisture.eval(s.moisture, floor_buf);

@@ -334,7 +334,7 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
     // **What that is NOT caused by.** The width law was not retuned — Task 1
     // measured `channel_half_width` and shipped no recalibration
     // (`CHANNEL_WIDTH_COEFF` is still 8.5e-4), and every one of the four edges
-    // is a fixed multiple of `channel_half_width(drainage, cell_edge)`, so the
+    // is a fixed multiple of `channel_half_width(drainage, vertex_edge)`, so the
     // bands moved only through `drainage`. The cause is therefore the network
     // itself: Task 3 renders every downhill step rather than the top 6.7%, and
     // Task 4 repartitions discharge at branches. Which of those two dominates,
@@ -467,7 +467,7 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
     assert_eq!(
         loc.resolution.grid_resolution_fields,
         ["biome", "cave", "fields.water"],
-        "the three categorical readings taken from the dominant corner cell"
+        "the three categorical readings taken from the dominant corner vertex"
     );
     assert_eq!(
         loc.resolution.channel_resolution_fields,
@@ -488,12 +488,12 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
     // a drift check is not a unit test's reference.
     assert_eq!(
         loc.resolution.grid_level,
-        ctx.terrain().geosphere().level(),
+        ctx.terrain().geosphere().depth(),
         "the disclosed grid level must be the level the terrain was built on"
     );
     assert_eq!(
         loc.resolution.depth_below_grid,
-        room.depth() - ctx.terrain().geosphere().level()
+        room.depth() - ctx.terrain().geosphere().depth()
     );
 
     // Deliberately in NEITHER list, with the reason. The reasons differ, which
@@ -631,7 +631,7 @@ const TERRACE_FLIPS_FLOOR: usize = 700;
 const CROSSINGS_FLOOR: usize = 60;
 /// Crossings whose reach carries at least `WATERFALL_MIN_DRAINAGE`, **within
 /// the population the discharge test assembles**. Measured **8** (10 before the
-/// ranking was de-duplicated by cell, which spent slots on the same trunk
+/// ranking was de-duplicated by vertex, which spent slots on the same trunk
 /// twice; 15 before Task 3; 8 when the doc was first written).
 ///
 /// **READ THIS COUNT'S LIMITATION BEFORE TRUSTING IT.** Since Task 3 the
@@ -639,13 +639,13 @@ const CROSSINGS_FLOOR: usize = 60;
 /// it reads `NotACrossing`, so all eight of these come from the 25 extremes
 /// `transects_with_strongest` injects. The count therefore measures its own
 /// enrichment: it can no longer notice "strong water vanished from the sample",
-/// which is the job it was added to do. [`LOUD_REACH_CELLS_FLOOR`] is what
+/// which is the job it was added to do. [`LOUD_REACH_VERTICES_FLOOR`] is what
 /// notices that now — the injection SELECTS from the network's loud reaches, it
 /// cannot create them — and this stays only as a floor on the universal
 /// assertion having run on something.
 const STRONG_CROSSINGS_FLOOR: usize = 4;
-/// Distinct cells in the whole level-6 seed-42 network carrying at least
-/// `WATERFALL_MIN_DRAINAGE`. Measured **34** (91 vertices, since a trunk cell
+/// Distinct vertices in the whole level-6 seed-42 network carrying at least
+/// `WATERFALL_MIN_DRAINAGE`. Measured **34** (91 vertices, since a trunk vertex
 /// appears once per run that terminates on it).
 ///
 /// This is the floor [`STRONG_CROSSINGS_FLOOR`] used to be before enrichment
@@ -655,7 +655,7 @@ const STRONG_CROSSINGS_FLOOR: usize = 4;
 ///
 /// # THIS FLOOR IS CURRENTLY FIRING, AND IT IS LEFT FIRING ON PURPOSE
 ///
-/// Under decision 0134's terrain epoch, seed 42's loud-cell count fell
+/// Under decision 0134's terrain epoch, seed 42's loud-vertex count fell
 /// **34 -> 16** (network loud vertices 91 of 14,606 -> 58 of 15,360) and
 /// crossings above the threshold fell **8 -> 2**. Both this floor and
 /// [`STRONG_CROSSINGS_FLOOR`] therefore fail, and
@@ -685,11 +685,11 @@ const STRONG_CROSSINGS_FLOOR: usize = 4;
 ///    0106 provenance question about that constant, with the new hypsometry as
 ///    its evidence.
 /// 2. "Worlds produce water strong enough to refuse" is a **census** question in
-///    decision 0093's sense, not a one-world pin. A `loud-reach-cells` metric
+///    decision 0093's sense, not a one-world pin. A `loud-reach-vertices` metric
 ///    would measure the frequency across the generator's distribution; this test
 ///    would then keep only the ordering claim, which is world-independent and
 ///    passes untouched, plus an existence check.
-const LOUD_REACH_CELLS_FLOOR: usize = 17;
+const LOUD_REACH_VERTICES_FLOOR: usize = 17;
 /// Vertices that flip verdict on the step length alone. Measured **146 of 146**
 /// examined after The Rill's Task 3 (96 of 96 before it) — every pair that
 /// reaches the assertion flips, which is what a clause deciding something looks
@@ -772,9 +772,14 @@ fn offset_from(base: [f64; 3], dir: [f64; 3], off: f64) -> [f64; 3] {
 /// anecdote, and a 90% drop rate whose selection mechanism nobody had examined.
 /// Building the step instead of testing for it removes the drop entirely.
 struct Transect {
-    /// The polyline and vertex this transect was taken at — the identity two
-    /// runs at different depths are matched on.
-    vertex: (usize, usize),
+    /// The polyline and the index along it this transect was taken at — the
+    /// identity two runs at different depths are matched on.
+    ///
+    /// Named `polyline_at`, not `vertex`: The Lexicon of Place made `Vertex` a
+    /// mesh vertex, and this struct carries one of those too (`vertex`, below).
+    /// Two different vertices in one struct is exactly the collision that
+    /// campaign existed to remove.
+    polyline_at: (usize, usize),
     /// The room the centreline runs through: the transect's origin, and the
     /// one room guaranteed to be inside its own bands.
     home: Facet,
@@ -783,8 +788,8 @@ struct Transect {
     /// The transected vertex's own band edges (channel/bank, bank/floodplain,
     /// floodplain/terrace, terrace/dry).
     edges: [f64; 4],
-    /// The cell that vertex was placed from — this reach's discharge.
-    cell: Vertex,
+    /// The vertex that vertex was placed from — this reach's discharge.
+    vertex: Vertex,
 }
 
 impl Transect {
@@ -898,11 +903,11 @@ fn transect_at_vertex(ctx: &LocaleContext, i: usize, j: usize, depth: u32) -> Op
     let home = Facet::containing(net.polylines[i].points[j], depth);
     net.bank_reading(home.centroid())?;
     Some(Transect {
-        vertex: (i, j),
+        polyline_at: (i, j),
         steps: home.neighbors(),
         home,
         edges: net.band_edges[i][j],
-        cell: net.run_cells[i][j],
+        vertex: net.run_vertices[i][j],
     })
 }
 
@@ -911,7 +916,7 @@ fn transect_at_vertex(ctx: &LocaleContext, i: usize, j: usize, depth: u32) -> Op
 ///
 /// **Why the stride alone stopped being enough** (The Rill, Task 3). A uniform
 /// stride over vertices was a sample of *rivers* while the network rendered
-/// only cells above `RIVER_MIN_DRAINAGE`. It now renders the whole land flow
+/// only vertices above `RIVER_MIN_DRAINAGE`. It now renders the whole land flow
 /// tree — 14,606 vertices on this world against 883 — and the added reaches are
 /// overwhelmingly headwater creeks, so a 400-sample of it is a sample of
 /// creeks: the strongest reach it happened to contain carried `drainage` 48,
@@ -923,7 +928,7 @@ fn transect_at_vertex(ctx: &LocaleContext, i: usize, j: usize, depth: u32) -> Op
 ///
 /// Deterministic: `total_cmp` on discharge with a `(line, vertex)` tie-break,
 /// and the union is de-duplicated by that same identity. The RANKING is
-/// de-duplicated by **cell** first, because `run_cells` carries a trunk cell
+/// de-duplicated by **vertex** first, because `run_vertices` carries a trunk vertex
 /// once per run terminating on it — ranking vertices gave 25 slots covering
 /// only 13 distinct reaches.
 fn transects_with_strongest(
@@ -934,24 +939,24 @@ fn transects_with_strongest(
     let (mut out, drops, seen) = network_transects(ctx, wanted);
     let depth = walk_depth(ctx);
     let net = ctx.terrain().channels();
-    // ONE SLOT PER DISTINCT CELL, not per vertex. A trunk cell appears in
-    // `run_cells` once for every run that terminates on it, so a naive
+    // ONE SLOT PER DISTINCT VERTEX, not per vertex. A trunk vertex appears in
+    // `run_vertices` once for every run that terminates on it, so a naive
     // vertex-ranking spends its budget on duplicates: measured, the top 25
     // VERTICES by discharge named only **13 distinct reaches**. The first
-    // (line, vertex) seen for a cell is its representative, which is
-    // deterministic because `run_cells` is in build order.
-    let mut seen_cell: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
+    // (line, vertex) seen for a vertex is its representative, which is
+    // deterministic because `run_vertices` is in build order.
+    let mut seen_vertex: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
     let mut ranked: Vec<(f64, usize, usize)> = Vec::new();
-    for (i, cells) in net.run_cells.iter().enumerate() {
-        for (j, &c) in cells.iter().enumerate() {
-            if seen_cell.insert(c.0) {
+    for (i, vertices) in net.run_vertices.iter().enumerate() {
+        for (j, &c) in vertices.iter().enumerate() {
+            if seen_vertex.insert(c.0) {
                 ranked.push((ctx.terrain().drainage_at(c), i, j));
             }
         }
     }
     ranked.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
     let already: std::collections::BTreeSet<(usize, usize)> =
-        out.iter().map(|t| t.vertex).collect();
+        out.iter().map(|t| t.polyline_at).collect();
     for &(_, i, j) in ranked.iter().take(extra) {
         if already.contains(&(i, j)) {
             continue;
@@ -1086,8 +1091,8 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///   the reaches it added are narrower than the ones already there — but it
 ///   moved the discharge distribution underneath it: over the sampled
 ///   transects, `drainage` now runs **min 0, median 2, max 102** (it ran 15 to
-///   146, median 24, when only river cells were rendered; the 0 is a mouth
-///   vertex, whose cell is the sea). So the discharge clause holds on 99.75% of
+///   146, median 24, when only river vertices were rendered; the 0 is a mouth
+///   vertex, whose vertex is the sea). So the discharge clause holds on 99.75% of
 ///   transects rather than 95.0%, and does correspondingly less discriminating.
 ///   The clause is not inert in principle —
 ///   `the_width_clause_binds_when_the_step_shrinks` is the positive control
@@ -1133,7 +1138,7 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///   refusing it is a missed crossing at a known locus; and nothing in the
 ///   reading as it stands can distinguish the two cases, because a reading
 ///   knows only its own winning line. Recovering those crossings would need a
-///   confluence-aware query (`run_cells` states the join topology outright,
+///   confluence-aware query (`run_vertices` states the join topology outright,
 ///   which is why it is published) — not a loosening of this clause.
 /// # THE RILL, TASK 3: THIS WITNESS MOVED AND LOST A BRANCH
 ///
@@ -1188,8 +1193,8 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///    witness anyway.** It is exercised elsewhere, which is the better home:
 ///    `the_discharge_clause_makes_the_strongest_crossing_impassable` asserts
 ///    every loud crossing reads `Impassable` over a deliberately enriched
-///    population, and `LOUD_REACH_CELLS_FLOOR` guards that the world still has
-///    34 loud cells to enrich from.
+///    population, and `LOUD_REACH_VERTICES_FLOOR` guards that the world still has
+///    34 loud vertices to enrich from.
 ///
 /// The loud count, the network total and the stride's expectation are all
 /// printed by this test, so the log carries the arithmetic rather than only
@@ -1349,12 +1354,12 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
             Crossing::NotACrossing => not_a_crossing += 1,
         }
         // The two clauses of §8, evaluated on the reach BEING transected (the
-        // vertex's own edges and cell) rather than on whichever reading a room
+        // vertex's own edges and vertex) rather than on whichever reading a room
         // happened to win. Reported, never asserted on: these attribute the
         // fraction above, they do not define it.
         let step = room_edge(&t.home);
         let narrow = 2.0 * t.edges[0] < step;
-        let quiet = ctx.terrain().drainage_at(t.cell) < WATERFALL_MIN_DRAINAGE;
+        let quiet = ctx.terrain().drainage_at(t.vertex) < WATERFALL_MIN_DRAINAGE;
         loud_reaches += usize::from(!quiet);
         width_clause += usize::from(narrow);
         drainage_clause += usize::from(quiet);
@@ -1381,7 +1386,7 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     // extremes for the 91 loud vertices.
     let network_vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
     let network_loud = net
-        .run_cells
+        .run_vertices
         .iter()
         .flatten()
         .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
@@ -1389,7 +1394,7 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     let loud_expected = usable as f64 * network_loud as f64 / network_vertices.max(1) as f64;
     let mut discharges: Vec<f64> = transects
         .iter()
-        .map(|t| ctx.terrain().drainage_at(t.cell))
+        .map(|t| ctx.terrain().drainage_at(t.vertex))
         .collect();
     discharges.sort_by(f64::total_cmp);
     let (q_min, q_med, q_max) = (
@@ -1499,13 +1504,13 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 /// across is still `Impassable` when the water is strong enough.
 ///
 /// Without this the clause is unguarded: at walk depth the width half holds
-/// everywhere, so deleting `drainage_at(cell) < WATERFALL_MIN_DRAINAGE`
+/// everywhere, so deleting `drainage_at(vertex) < WATERFALL_MIN_DRAINAGE`
 /// promotes every `Impassable` transect to `Fordable` and moves H2-4's fraction
 /// by less than the interval's width — the suite stays green while half the
 /// task's named deliverable is gone.
 ///
 /// **The population is the strided sample PLUS the network's 25 strongest
-/// reaches** (The Rill, Task 3). Once every land cell is rendered, a uniform
+/// reaches** (The Rill, Task 3). Once every land vertex is rendered, a uniform
 /// stride over 14,606 vertices is a sample of headwater creeks — its strongest
 /// reach carried `drainage` 48 against a threshold of 80, and this test went red
 /// for that reason and no other. See `transects_with_strongest` for why naming
@@ -1535,7 +1540,7 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
         .filter_map(|(k, t)| {
             let verdict = t.verdict(&ctx);
             (verdict != Crossing::NotACrossing)
-                .then(|| (ctx.terrain().drainage_at(t.cell), k, verdict))
+                .then(|| (ctx.terrain().drainage_at(t.vertex), k, verdict))
         })
         .collect();
     crossings.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
@@ -1576,13 +1581,13 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
     for t in &transects {
         let verdict = t.verdict(&ctx);
         if verdict != Crossing::NotACrossing
-            && ctx.terrain().drainage_at(t.cell) >= WATERFALL_MIN_DRAINAGE
+            && ctx.terrain().drainage_at(t.vertex) >= WATERFALL_MIN_DRAINAGE
         {
             assert_eq!(
                 verdict,
                 Crossing::Impassable,
                 "a crossing at Q={} reads Fordable",
-                ctx.terrain().drainage_at(t.cell)
+                ctx.terrain().drainage_at(t.vertex)
             );
             strong += 1;
         }
@@ -1594,7 +1599,7 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
     // and still runs: the ordering claim, its straddle anti-vacuity and the
     // universal "every crossing above the threshold is Impassable" are claims
     // about the world's own discharge ordering, not about the floors, and the
-    // epoch did not touch them. `loud_cells` is counted beside them by
+    // epoch did not touch them. `loud_vertices` is counted beside them by
     // `the_loud_reach_population_is_pinned_as_a_witness`.
     println!(
         "crossings above the discharge threshold: {strong} (from a population enriched with the \
@@ -1610,11 +1615,11 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
 /// until The Glasshouse's sea-level epoch. They are the floors that can notice
 /// a *disappearance*: `strong` counts crossings inside a population that test
 /// ENRICHES with the 25 strongest reaches, so it cannot fall while the
-/// enrichment works, and `loud_cells` counts distinct loud cells in the network
+/// enrichment works, and `loud_vertices` counts distinct loud vertices in the network
 /// itself, read off `drainage`, which no sampling choice can inflate.
 ///
 /// **What moved is the world, not the instrument.** A higher sea level shortens
-/// drainage paths and shrinks catchments, so seed 42's loud cells fell 34 → 16
+/// drainage paths and shrinks catchments, so seed 42's loud vertices fell 34 → 16
 /// and strong crossings 8 → 2. `WATERFALL_MIN_DRAINAGE = 80` was calibrated
 /// against pre-epoch catchments and is now measuring a different world at the
 /// old scale. Lowering these floors to 16 and 2 would delete the only
@@ -1628,7 +1633,7 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
 /// `MAP-waterfall-threshold-mis-scaled`. Because an ignored measurement stops
 /// being measured, [`the_loud_reach_population_is_pinned_as_a_witness`] runs
 /// always and pins what the world actually produces now.
-#[ignore = "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud cells fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)"]
+#[ignore = "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud vertices fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)"]
 #[test]
 fn the_world_still_produces_water_loud_enough_to_refuse() {
     let world = world();
@@ -1639,24 +1644,24 @@ fn the_world_still_produces_water_loud_enough_to_refuse() {
     let mut strong = 0usize;
     for t in &transects {
         if t.verdict(&ctx) != Crossing::NotACrossing
-            && ctx.terrain().drainage_at(t.cell) >= WATERFALL_MIN_DRAINAGE
+            && ctx.terrain().drainage_at(t.vertex) >= WATERFALL_MIN_DRAINAGE
         {
             strong += 1;
         }
     }
-    let loud_cells: std::collections::BTreeSet<u32> = net
-        .run_cells
+    let loud_vertices: std::collections::BTreeSet<u32> = net
+        .run_vertices
         .iter()
         .flatten()
         .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
         .map(|c| c.0)
         .collect();
     assert!(
-        loud_cells.len() >= LOUD_REACH_CELLS_FLOOR,
-        "only {} distinct cells in the whole network carry Q >= {WATERFALL_MIN_DRAINAGE} \
+        loud_vertices.len() >= LOUD_REACH_VERTICES_FLOOR,
+        "only {} distinct vertices in the whole network carry Q >= {WATERFALL_MIN_DRAINAGE} \
          (measured 34 pre-epoch) — the world has stopped producing water strong enough to \
          refuse, and no amount of sampling can put it back",
-        loud_cells.len()
+        loud_vertices.len()
     );
     assert!(
         strong >= STRONG_CROSSINGS_FLOOR,
@@ -1677,7 +1682,7 @@ fn the_world_still_produces_water_loud_enough_to_refuse() {
 /// `MAP-waterfall-threshold-mis-scaled` quietly becomes fiction.
 ///
 /// The two integers are pinned separately because they fail differently:
-/// `loud_cells` is a fact about the network (how much loud water exists at
+/// `loud_vertices` is a fact about the network (how much loud water exists at
 /// all) and `strong` is a fact about reachability (how much of it a walker
 /// meets). A correct re-fit of the threshold should move both; a change that
 /// moved only `strong` would be a sampling or transect regression, not the
@@ -1692,28 +1697,28 @@ fn the_loud_reach_population_is_pinned_as_a_witness() {
     let mut strong = 0usize;
     for t in &transects {
         if t.verdict(&ctx) != Crossing::NotACrossing
-            && ctx.terrain().drainage_at(t.cell) >= WATERFALL_MIN_DRAINAGE
+            && ctx.terrain().drainage_at(t.vertex) >= WATERFALL_MIN_DRAINAGE
         {
             strong += 1;
         }
     }
-    let loud_cells: std::collections::BTreeSet<u32> = net
-        .run_cells
+    let loud_vertices: std::collections::BTreeSet<u32> = net
+        .run_vertices
         .iter()
         .flatten()
         .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
         .map(|c| c.0)
         .collect();
     assert_eq!(
-        (loud_cells.len(), strong),
+        (loud_vertices.len(), strong),
         (16, 2),
-        "the post-epoch loud-reach population moved: {} loud cells and {strong} strong \
+        "the post-epoch loud-reach population moved: {} loud vertices and {strong} strong \
          crossings, against the pinned (16, 2). This is NOT a number to update — re-read the \
          catchment scale, then re-state this witness, the #[ignore] reason on \
          the_world_still_produces_water_loud_enough_to_refuse, its roster entry in \
          cli/tests/heavy_tier.rs and the MAP-waterfall-threshold-mis-scaled registry row in the \
          SAME commit.",
-        loud_cells.len()
+        loud_vertices.len()
     );
 }
 
@@ -1750,7 +1755,7 @@ fn the_width_clause_binds_when_the_step_shrinks() {
     // 1600, not the 400 the other tests sample. Once the network renders the
     // whole land flow tree, the qualifying population — reaches whose full
     // width falls BETWEEN the deep step and the shallow one — is a shrinking
-    // fraction of a growing sample: 96 of 400 (24%) when only river cells were
+    // fraction of a growing sample: 96 of 400 (24%) when only river vertices were
     // rendered, 37 of 400 (9%) now, because a headwater creek is narrower than
     // both steps and is filtered out at the `wide >= longest_deep` clause. The
     // rate is the measurement; the count is the anti-vacuity floor, and it is
@@ -1763,12 +1768,12 @@ fn the_width_clause_binds_when_the_step_shrinks() {
     let mut flipped = 0usize;
     let mut examined = 0usize;
     for a in &shallow {
-        let Some(b) = deep.iter().find(|b| b.vertex == a.vertex) else {
+        let Some(b) = deep.iter().find(|b| b.polyline_at == a.polyline_at) else {
             continue;
         };
         // Same reach, so same discharge; require it QUIET, so the discharge
         // clause is satisfied at both depths and cannot be the cause.
-        if ctx.terrain().drainage_at(a.cell) >= WATERFALL_MIN_DRAINAGE {
+        if ctx.terrain().drainage_at(a.vertex) >= WATERFALL_MIN_DRAINAGE {
             continue;
         }
         let wide = 2.0 * a.edges[0];

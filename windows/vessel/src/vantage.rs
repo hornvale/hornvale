@@ -75,14 +75,14 @@ pub fn observable_at(
     let locale = ctx
         .describe_at(position, at, stratum)
         .map_err(VesselError::Locale)?;
-    // The walker's own cell, not the capital's: the sky over *here*, dimmed by
+    // The walker's own vertex, not the capital's: the sky over *here*, dimmed by
     // the weather *here*. (`at` is already this function's WorldTime, so the
-    // cell gets its own name rather than shadowing it.)
-    let cell = ctx
+    // vertex gets its own name rather than shadowing it.)
+    let vertex = ctx
         .terrain()
         .nearest_vertex(locale.latitude, locale.longitude);
     let report =
-        hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate(), Some(cell))
+        hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate(), Some(vertex))
             .map_err(|e| VesselError::Build(e.to_string()))?;
     Ok(Vantage {
         submerged: submerged_in(stratum),

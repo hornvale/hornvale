@@ -6,7 +6,7 @@
 //! `HEALTH_WILD`) never once landed on a creature standing in a room that was
 //! both built and cold, and worried aloud that the joint condition might be
 //! structurally rare — settlements condense onto rivers in temperate bands
-//! (The Confluence), and the coldest cells sit at the poles or altitude,
+//! (The Confluence), and the coldest vertices sit at the poles or altitude,
 //! typically unsettled.
 //!
 //! `cold_built_settlements_are_common_not_rare` (below) answers that worry

@@ -32,9 +32,9 @@
 //! ([`Driver::resolve_world_view`]), active in place of the walk band's own
 //! whenever `self.world_view` is on (`spread::compose`'s own doc: the world
 //! view is a lens over whichever band the character occupies, never a new
-//! band). Either way, the *pointed-at* cell is what gets resolved, not the
+//! band). Either way, the *pointed-at* vertex is what gets resolved, not the
 //! observer's own (an earlier revision of this module resolved the
-//! observer's cell unconditionally — a fix round caught that this made the
+//! observer's vertex unconditionally — a fix round caught that this made the
 //! strip position-invariant while the cursor visibly moved, exactly the "a
 //! wrong name is indistinguishable from a right one" failure the design
 //! spec warns against).
@@ -71,7 +71,7 @@ use crate::mercator::{self, Frame};
 use crate::plate::{self, Window};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{CandidateSource, Cursor, Focus};
-use hornvale_kernel::{Vertex, NearestVertexIndex, FacetId, Seed, Value, World};
+use hornvale_kernel::{FacetId, NearestVertexIndex, Seed, Value, Vertex, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
@@ -93,9 +93,9 @@ use std::collections::BTreeSet;
 const NOTHING_HERE_YET: &str = "nothing here yet";
 
 /// What the strip says when the resolver ran and genuinely found no
-/// individuated feature at the observer's cell — real terrain below every
+/// individuated feature at the observer's vertex — real terrain below every
 /// class's individuation floor, not "nothing there" (seed 42 measured 377
-/// of 40,962 cells like this; spec §3.4).
+/// of 40,962 vertices like this; spec §3.4).
 const UNNAMED_TERRAIN: &str = "unnamed terrain";
 
 /// The fixed, sim-authored prefix `windows/vessel/src/session.rs`'s
@@ -129,7 +129,7 @@ const DELVE_SUCCESS_PREFIX: &str = "You worm down into the dark.";
 /// every resize event, which overwrites `self.plate_height` with the real
 /// number — this constant only covers the brief window before that first
 /// call (fix round 2: an earlier revision used this fixed floor value
-/// unconditionally, which named the wrong cell on any terminal taller than
+/// unconditionally, which named the wrong vertex on any terminal taller than
 /// 24 rows — see the module doc).
 const FLOOR_PLATE_CONTENT_HEIGHT: u16 =
     hornvale_game_core::spread::content_height(hornvale_game_core::MIN_HEIGHT);
@@ -258,11 +258,11 @@ pub struct Driver {
     /// ticks, so every test drives the marquee by calling
     /// [`Driver::tick_marquee`] and no test depends on real time.
     marquee_ticks: u32,
-    /// The world's landscape features, indexed by cell, built once here at
+    /// The world's landscape features, indexed by vertex, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
     /// world's lifetime (`VertexFeatureIndex`'s own doc).
     index: VertexFeatureIndex,
-    /// Nearest-cell lookup over the same `Geosphere` `index` was built from,
+    /// Nearest-vertex lookup over the same `Geosphere` `index` was built from,
     /// built once alongside it — turns the possessed agent's fine-grained
     /// [`hornvale_kernel::Facet`] position into the coarse `Vertex` the
     /// terrain feature index answers for.
@@ -322,7 +322,7 @@ pub struct Driver {
     plate_cache: Option<(PlateKey, hornvale_game_core::Grid)>,
     /// The world's seed, needed to draw a feature's name.
     seed: Seed,
-    /// Every terrain cell the world's ledger commits at least one
+    /// Every terrain vertex the world's ledger commits at least one
     /// settlement nearest to (The Portolan part II, Task 5) — built ONCE
     /// here at `start`, the same "derive once, never per-turn" discipline
     /// `index`/`nearest` already follow. Not itself a discovery record:
@@ -330,11 +330,11 @@ pub struct Driver {
     /// stands, ground truth, always known to the client that draws the
     /// map), gated by [`Self::discovered`] at draw time, never here.
     settlements: BTreeSet<Vertex>,
-    /// Every cell carrying a cave mouth, scanned once here at `start` for
+    /// Every vertex carrying a cave mouth, scanned once here at `start` for
     /// the same reason `settlements` is: `plate::draw_point_sites`
     /// PROJECTS each site rather than asking every screen cell whether its
     /// sample happens to be one, so it needs the roster up front. A
-    /// per-render scan of all 40,962 cells would be the cost the projection
+    /// per-render scan of all 40,962 vertices would be the cost the projection
     /// exists to avoid.
     caves: BTreeSet<Vertex>,
     /// Every walk-band room the possession has stood in this session
@@ -350,7 +350,7 @@ pub struct Driver {
     /// The plate's REAL content height, in grid rows — synced from the live
     /// terminal by [`Driver::resize`] (fix round 2: an earlier revision
     /// used a floor-sized constant unconditionally here, which named the
-    /// wrong cell — see the module doc). Starts at
+    /// wrong vertex — see the module doc). Starts at
     /// [`FLOOR_PLATE_CONTENT_HEIGHT`] before the first real size is known;
     /// `main`'s `play` loop calls `resize` before the first draw, so a
     /// live session never resolves against the stale default.
@@ -614,7 +614,7 @@ impl Driver {
         let nearest = NearestVertexIndex::new(&geo);
 
         // The Portolan part II, Task 5: the point-site roster — every
-        // terrain cell a live settlement's own committed `(latitude,
+        // terrain vertex a live settlement's own committed `(latitude,
         // longitude)` resolves nearest to. Built once here, the same
         // ledger read `h4_locked_worlds_settlements_are_never_in_the_clamp`
         // already exercises dev-only; this is the shipped-path use of it.
@@ -643,7 +643,7 @@ impl Driver {
             .collect();
 
         // The cave roster, scanned once. `cave_at` is a pure read of the
-        // cell's own stratigraphic column, so this is a scan of the mesh
+        // vertex's own stratigraphic column, so this is a scan of the mesh
         // rather than a derivation — and doing it here rather than per
         // render is the whole point of projecting sites instead of
         // sampling for them.
@@ -749,7 +749,7 @@ impl Driver {
     /// view active, also re-clamps the window (its virtual chart's own
     /// size depends on the plate's width, which just changed). With the map
     /// focused, also re-resolves the strip: the cursor's SCREEN position is
-    /// unchanged by a resize, but which real cell that screen position
+    /// unchanged by a resize, but which real vertex that screen position
     /// names can change (the plate's centre moves), so the displayed text
     /// must not go on describing whatever the old size resolved.
     pub fn resize(&mut self, w: u16, h: u16) {
@@ -1297,7 +1297,7 @@ impl Driver {
     ///   step.
     /// - `delta > 0` (zoom IN): with the world view on and already at
     ///   [`plate::MAX_ZOOM`] (the finest rung — one character per terrain
-    ///   cell, decision 0123), turn it OFF, returning to the walk-band
+    ///   vertex, decision 0123), turn it OFF, returning to the walk-band
     ///   chart; with it on and below the ceiling, zoom in one step;
     ///   with it off, do nothing (the walk band has no zoom of its own).
     ///
@@ -1405,7 +1405,7 @@ impl Driver {
 
     /// Recompute `self.strip` for the current band and cursor position. See
     /// the module doc: only the walk band resolves, and it resolves the
-    /// cell the CURSOR points at, not the observer's own — every other band
+    /// vertex the CURSOR points at, not the observer's own — every other band
     /// answers [`NOTHING_HERE_YET`] honestly.
     ///
     /// **Also advances [`Self::redraw_count`], F3's scroll driver.** Every
@@ -1476,7 +1476,7 @@ impl Driver {
     /// specific to the walk band's chart).
     ///
     /// Otherwise: [`NOTHING_HERE_YET`] unless the current snapshot is a
-    /// walk-band scene, in which case the cell the cursor points at
+    /// walk-band scene, in which case the vertex the cursor points at
     /// ([`Self::resolve_walk_band`]; see the module doc for the chain from
     /// a screen position to a `Vertex`) is resolved against the
     /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
@@ -1501,7 +1501,7 @@ impl Driver {
     }
 
     /// Append §3.3's clamp/central-line caption, and F5's resolution
-    /// disclosure when the active zoom covers more than one terrain cell
+    /// disclosure when the active zoom covers more than one terrain vertex
     /// per character, to `base` (the resolved containment chain, or
     /// [`UNNAMED_TERRAIN`]). Unlike the walk band's [`caption`], this runs
     /// UNCONDITIONALLY — the world view carries no sight channel to gate on
@@ -1523,17 +1523,17 @@ impl Driver {
     /// rather than refine a field", applied here to a lost SAMPLE rather
     /// than a lost axis — decision 0142's own rule for a lost axis is the
     /// same shape one level up): at any zoom where one screen character
-    /// stands for more than one real terrain cell, the strip says so,
+    /// stands for more than one real terrain vertex, the strip says so,
     /// rather than reporting with the exact same confident phrasing it
     /// uses once the mesh's own resolution is reached.
     ///
     /// **Derived, never hardcoded.** `plate::virtual_dims` gives the
     /// virtual chart's own cell count at the active zoom; the terrain's
-    /// own cell count ([`hornvale_kernel::Geosphere::vertex_count`]) divided
-    /// by it is the mean number of real terrain cells behind one screen
+    /// own vertex count ([`hornvale_kernel::Geosphere::vertex_count`]) divided
+    /// by it is the mean number of real terrain vertices behind one screen
     /// character — never a second copy of [`plate::MAX_VIRTUAL_WIDTH`],
     /// and never a hand-picked ratio. `None` once that mean is `<= 1`
-    /// (one character names at most one cell, on average — the design
+    /// (one character names at most one vertex, on average — the design
     /// ceiling `plate::MAX_ZOOM`'s own doc states).
     fn resolution_disclosure(&self) -> Option<String> {
         let (plate_w, _) = self.active_plate_dims();
@@ -1542,8 +1542,8 @@ impl Driver {
         if virtual_cells == 0 {
             return None;
         }
-        let terrain_cells = self.geo.vertex_count() as u64;
-        let ratio = terrain_cells as f64 / virtual_cells as f64;
+        let terrain_vertices = self.geo.vertex_count() as u64;
+        let ratio = terrain_vertices as f64 / virtual_cells as f64;
         if ratio <= 1.0 {
             return None;
         }
@@ -1570,9 +1570,9 @@ impl Driver {
     /// harness, not a property of the resolver — the magnitude is
     /// UNMEASURED, not smaller. The kind of disagreement it pointed at is
     /// still real: a player could point at a character drawn `~` and have
-    /// the strip name a real feature on a LAND cell nearest that
+    /// the strip name a real feature on a LAND vertex nearest that
     /// character's exact centre. This method closes that: it can never
-    /// return a cell whose class
+    /// return a vertex whose class
     /// disagrees with what [`plate::draw_with`] would paint at the same
     /// screen position, because it asks the identical vote for the
     /// identical answer, and picks a REPRESENTATIVE of the winning class
@@ -1580,10 +1580,10 @@ impl Driver {
     /// area_majority`'s own doc for why its `(3, 3)` sub-sample is the
     /// same point the earlier single-point query asked for, so this is
     /// strictly more constrained, never coarser.
-    fn world_view_cell(&self) -> hornvale_kernel::Vertex {
+    fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
         let (plate_w, _) = self.active_plate_dims();
         let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
-        let (_ocean, cell) = plate::area_majority(
+        let (_ocean, vertex) = plate::area_majority(
             &self.terrain,
             &self.geo,
             &self.nearest,
@@ -1594,28 +1594,34 @@ impl Driver {
             u32::from(self.cursor.y),
             u32::from(self.cursor.x),
         );
-        cell
+        vertex
     }
 
-    /// The world view's own resolution chain: [`Self::world_view_cell`] to
+    /// The world view's own resolution chain: [`Self::world_view_vertex`] to
     /// the FULL containment chain there (Task 4, Step 1) — every feature at
-    /// the resolved cell, most specific first, each with its class named in
+    /// the resolved vertex, most specific first, each with its class named in
     /// prose (design spec §5).
     fn resolve_world_view(&self) -> Option<String> {
-        let cell_id = self.world_view_cell();
+        let vertex_id = self.world_view_vertex();
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph, &|id| {
-            self.discovered.contains(FeatureId::Extent(id))
-        })
+        resolve_chain_at(
+            &self.index,
+            vertex_id,
+            self.seed,
+            species,
+            ph,
+            morph,
+            &|id| self.discovered.contains(FeatureId::Extent(id)),
+        )
     }
 
     /// The walk band's own resolution chain, cursor position to the full
     /// containment chain (Task 4, Step 1) — every feature at the resolved
-    /// cell, most specific first. `None` at any step means "genuinely
+    /// vertex, most specific first. `None` at any step means "genuinely
     /// nothing individuated there" (no
     /// chart cell occupies the cursor's box, the real scene could not be
     /// re-derived, the room address does not unpack, or the terrain index
-    /// has no feature at the resolved cell) — the caller maps `None` to
+    /// has no feature at the resolved vertex) — the caller maps `None` to
     /// [`UNNAMED_TERRAIN`], never to [`NOTHING_HERE_YET`] (that string is
     /// reserved for a band with no resolver at all, which this is not).
     fn resolve_walk_band(&self, chart: &hornvale_game_core::Chart) -> Option<String> {
@@ -1636,13 +1642,19 @@ impl Driver {
         let real_cell = scene.cells.get(index)?;
         let room = FacetId(real_cell.room).unpack().ok()?;
         let coord = room.coord();
-        let cell_id = self
+        let vertex_id = self
             .nearest
             .nearest(&self.geo, coord.latitude, coord.longitude);
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(&self.index, cell_id, self.seed, species, ph, morph, &|id| {
-            self.discovered.contains(FeatureId::Extent(id))
-        })
+        resolve_chain_at(
+            &self.index,
+            vertex_id,
+            self.seed,
+            species,
+            ph,
+            morph,
+            &|id| self.discovered.contains(FeatureId::Extent(id)),
+        )
     }
 
     /// The current turn's `vessel/session/v2` JSON — what `hornvale-game-
@@ -1738,10 +1750,10 @@ impl Driver {
     ///   struct owns, queried only through [`Self::visited`]/
     ///   [`Self::discovered`]'s own `bool`/reference-returning accessors.
     /// - **Discovered, extent features (§A4b)**: every feature whose
-    ///   extent contains the possession's CURRENT terrain cell is
+    ///   extent contains the possession's CURRENT terrain vertex is
     ///   discovered, by definition ("standing on a volcano IS meeting
     ///   it"). [`VertexFeatureIndex::at`] already returns every such feature
-    ///   at that cell, most-specific-first; ALL of them are recorded, not
+    ///   at that vertex, most-specific-first; ALL of them are recorded, not
     ///   only the first, so standing on a volcano inside a landmass
     ///   discovers both in the same step.
     /// - **Discovered, point sites (§A4b, F9)**: a settlement is
@@ -1759,19 +1771,19 @@ impl Driver {
         self.visited.record(position.clone());
 
         let coord = position.coord();
-        let cell = self
+        let vertex = self
             .nearest
             .nearest(&self.geo, coord.latitude, coord.longitude);
-        for id in self.index.at(cell) {
+        for id in self.index.at(vertex) {
             self.discovered.record(FeatureId::Extent(*id));
         }
 
         if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
             if matches!(snap.spatial, hornvale_game_core::Spatial::Chamber { .. }) {
-                self.discovered.record(FeatureId::Settlement(cell));
+                self.discovered.record(FeatureId::Settlement(vertex));
             }
             if snap.narration.prose.starts_with(DELVE_SUCCESS_PREFIX) {
-                self.discovered.record(FeatureId::Cave(cell));
+                self.discovered.record(FeatureId::Cave(vertex));
             }
         }
     }
@@ -2009,7 +2021,7 @@ mod portolan_tests {
         assert_eq!(
             d.window.zoom,
             plate::MAX_ZOOM,
-            "maximum zoom is one character per terrain cell (decision 0123)"
+            "maximum zoom is one character per terrain vertex (decision 0123)"
         );
         d.apply(Action::Zoom(1));
         assert!(
@@ -2113,8 +2125,8 @@ mod portolan_tests {
     // -- Step 4 / H3: scroll and cursor stay coherent, at MORE THAN ONE
     //    offset and MORE THAN ONE zoom ------------------------------------
 
-    /// H3, the hypothesis at real risk: after scrolling, the cell under the
-    /// cursor must be the cell the window/frame state actually names.
+    /// H3, the hypothesis at real risk: after scrolling, the vertex under the
+    /// cursor must be the vertex the window/frame state actually names.
     ///
     /// **Fix round 1, Finding 1 (reviewer): this reconstruction is NOT an
     /// independent derivation — it calls `active_plate_dims`,
@@ -2125,11 +2137,11 @@ mod portolan_tests {
     /// bug shared by both copies (one living in `virtual_dims`, or in
     /// `move_cursor`'s scroll math). What it DOES catch, and the reason it
     /// is kept rather than deleted: a future edit that reintroduces a
-    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_cell`
+    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_vertex`
     /// alone — a revert-to-no-op mutation of the whole zoom/scroll feature
     /// failed 12 of 15 tests in this module (task report, "behavioural
     /// REDs"), proving this is not vacuous even though it is not
-    /// independent. `the_resolved_cell_matches_the_actually_drawn_glyph_
+    /// independent. `the_resolved_vertex_matches_the_actually_drawn_glyph_
     /// at_fine_zoom` below is the genuine ground-truth check the reviewer
     /// asked for: it reads [`plate::draw_with`]'s ACTUAL rendered grid,
     /// never re-derives the arithmetic.
@@ -2139,7 +2151,7 @@ mod portolan_tests {
     /// test pinned at one offset and one zoom cannot see drift between the
     /// window's own offset and the resolver's.
     #[test]
-    fn the_cell_under_the_cursor_matches_the_window_at_every_zoom_and_offset() {
+    fn the_vertex_under_the_cursor_matches_the_window_at_every_zoom_and_offset() {
         let mut d = test_driver();
         enter_world_view(&mut d);
 
@@ -2154,7 +2166,7 @@ mod portolan_tests {
 
                 let (plate_w, _) = d.active_plate_dims();
                 let (virtual_w, virtual_h) = plate::virtual_dims(d.window(), plate_w);
-                let (_ocean, expected_cell) = plate::area_majority(
+                let (_ocean, expected_vertex) = plate::area_majority(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
@@ -2172,10 +2184,15 @@ mod portolan_tests {
                 // must build the same chain to stay comparable — this test's
                 // own H3 claim (window/cursor state agrees with the
                 // resolver) is orthogonal to how many features get named.
-                let expected =
-                    resolve_chain_at(&d.index, expected_cell, d.seed, species, ph, morph, &|id| {
-                        d.discovered.contains(FeatureId::Extent(id))
-                    });
+                let expected = resolve_chain_at(
+                    &d.index,
+                    expected_vertex,
+                    d.seed,
+                    species,
+                    ph,
+                    morph,
+                    &|id| d.discovered.contains(FeatureId::Extent(id)),
+                );
 
                 let resolved = d.resolve_world_view();
                 assert_eq!(
@@ -2191,7 +2208,7 @@ mod portolan_tests {
     /// The genuine ground-truth check Finding 1 asked for: resolve at the
     /// cursor, then read [`plate::draw_with`]'s ACTUAL rendered grid (via
     /// `Driver::world_plate`, the real production drawing path) at that
-    /// same screen position, and assert the resolved cell's ocean/land
+    /// same screen position, and assert the resolved vertex's ocean/land
     /// class agrees with the drawn glyph. Two genuinely different code
     /// paths — one produces pixels, the other a `Vertex` — cross-checked
     /// against each other's real OUTPUT, not a shared re-derivation of the
@@ -2199,7 +2216,7 @@ mod portolan_tests {
     ///
     /// Run at [`plate::MAX_ZOOM`] (the finest rung), where the 49-vote
     /// majority and the true-centre sample are expected to coincide (one
-    /// terrain cell per character — `plate::SUBSAMPLES_PER_AXIS`'s own
+    /// terrain vertex per character — `plate::SUBSAMPLES_PER_AXIS`'s own
     /// doc), across several offsets: this is the region where the check is
     /// unambiguous, so a failure here means the draw/resolve SEAM itself
     /// has drifted, not merely that a coarse character's footprint
@@ -2209,7 +2226,7 @@ mod portolan_tests {
     /// version of this same comparison, which the Finding 2 fix below
     /// makes an EXACT agreement rather than a measured ratio).
     #[test]
-    fn the_resolved_cell_matches_the_actually_drawn_glyph_at_fine_zoom() {
+    fn the_resolved_vertex_matches_the_actually_drawn_glyph_at_fine_zoom() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         for _ in 0..plate::MAX_ZOOM {
@@ -2237,12 +2254,12 @@ mod portolan_tests {
             );
             let drawn_ocean = grid.get(d.cursor.x, d.cursor.y).and_then(|c| c.glyph) == Some('~');
 
-            let resolved_cell = d.world_view_cell();
-            let resolved_ocean = d.terrain.is_ocean(resolved_cell);
+            let resolved_vertex = d.world_view_vertex();
+            let resolved_ocean = d.terrain.is_ocean(resolved_vertex);
 
             assert_eq!(
                 resolved_ocean, drawn_ocean,
-                "cursor {:?} at zoom {}: the resolver named a cell whose class \
+                "cursor {:?} at zoom {}: the resolver named a vertex whose class \
                  contradicts the actually drawn glyph",
                 d.cursor, d.window.zoom
             );
@@ -2366,7 +2383,7 @@ mod portolan_tests {
         }
     }
 
-    // -- F5, fix round 1: the resolved cell must never contradict the
+    // -- F5, fix round 1: the resolved vertex must never contradict the
     //    drawn glyph (Finding 2) -----------------------------------------
 
     /// F5, RE-MEASURED after the Finding 2 fix (task report fix round 1).
@@ -2381,7 +2398,7 @@ mod portolan_tests {
     /// majority and a single centre-point answer can disagree at a
     /// coastline — was and remains real.
     ///
-    /// The fix ([`Self::world_view_cell`], `plate::area_majority`) makes
+    /// The fix ([`Self::world_view_vertex`], `plate::area_majority`) makes
     /// the resolver ask the SAME 49-point vote the plate draws from, and
     /// pick only a sample of the WINNING class — so agreement is no longer
     /// a measured ratio, it is a GUARANTEE the code's own structure
@@ -2390,7 +2407,7 @@ mod portolan_tests {
     /// something about the fix is wrong and I want to see the number") and
     /// then asserts it is exact, across every cell of the floor plate.
     #[test]
-    fn f5_the_resolved_cell_always_matches_the_drawn_glyph_after_the_fix() {
+    fn f5_the_resolved_vertex_always_matches_the_drawn_glyph_after_the_fix() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         // `world_plate` takes the RAW terminal size — see the fine-zoom
@@ -2407,7 +2424,7 @@ mod portolan_tests {
         let mut total = 0u32;
         for y in 0..plate_h {
             for x in 0..plate_w {
-                let (_ocean, cell) = plate::area_majority(
+                let (_ocean, vertex) = plate::area_majority(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
@@ -2418,7 +2435,7 @@ mod portolan_tests {
                     u32::from(y),
                     u32::from(x),
                 );
-                let resolved_ocean = d.terrain.is_ocean(cell);
+                let resolved_ocean = d.terrain.is_ocean(vertex);
 
                 let drawn_ocean = grid.get(x, y).and_then(|c| c.glyph) == Some('~');
                 total += 1;
@@ -2430,7 +2447,7 @@ mod portolan_tests {
         assert!(total > 0);
         let ratio = f64::from(agree) / f64::from(total);
         println!(
-            "F5 (fix round 1): the resolved cell's class agrees with the drawn 49-vote \
+            "F5 (fix round 1): the resolved vertex's class agrees with the drawn 49-vote \
              majority glyph on {agree}/{total} = {ratio:.4} of the {plate_w}x{plate_h} \
              floor plate at the coarsest zoom (the pre-fix figure once printed here, \
              420/800 = 0.5250, is RETRACTED as measured on a misaligned 32x16-vs-40x20 \
@@ -2439,7 +2456,7 @@ mod portolan_tests {
         assert_eq!(
             agree, total,
             "Finding 2's fix guarantees this by construction: `area_majority` only ever \
-             returns a sample of the WINNING class, so the resolved cell can never \
+             returns a sample of the WINNING class, so the resolved vertex can never \
              disagree with the glyph drawn from that same vote — a non-1.0 ratio here \
              means the fix itself is broken"
         );
@@ -2452,14 +2469,14 @@ mod portolan_tests {
     ///
     /// **Not seed 42's default flagship position** — that position turned
     /// out (found by running this, not by reasoning about it) to resolve
-    /// to a SINGLE-feature cell, "Vngashngatva (a landmass)": the design
+    /// to a SINGLE-feature vertex, "Vngashngatva (a landmass)": the design
     /// spec's own illustrative example text ("Vngashngatva (a volcano),
     /// on Kxsokxkxzhakx (a landmass)", §5) uses the same name for a
     /// volcano that this real seed-42 world gives its landmass — a
     /// coincidence of the example's own invented names, not a fact about
     /// this fixture. So this test SEARCHES the coarsest (whole-planet)
-    /// world view for a real multi-feature cell, through the actual
-    /// `Driver::world_view_cell`/`resolve_chain_at` production path,
+    /// world view for a real multi-feature vertex, through the actual
+    /// `Driver::world_view_vertex`/`resolve_chain_at` production path,
     /// rather than assuming one at a fixed position.
     #[test]
     fn the_strip_carries_the_whole_containment_chain_most_specific_first() {
@@ -2475,25 +2492,25 @@ mod portolan_tests {
         'search: for y in 0..plate_h {
             for x in 0..plate_w {
                 d.cursor = hornvale_game_core::Cursor { x, y };
-                let cell = d.world_view_cell();
-                if d.index.at(cell).len() >= 2 {
-                    found = Some(cell);
+                let vertex = d.world_view_vertex();
+                if d.index.at(vertex).len() >= 2 {
+                    found = Some(vertex);
                     break 'search;
                 }
             }
         }
-        let cell = found.expect(
-            "seed 42's real world has at least one multi-feature cell reachable at the \
+        let vertex = found.expect(
+            "seed 42's real world has at least one multi-feature vertex reachable at the \
              coarsest zoom (the cursor was left at that position by the search above)",
         );
-        let stack: Vec<_> = d.index.at(cell).to_vec();
+        let stack: Vec<_> = d.index.at(vertex).to_vec();
         assert!(
             stack.len() >= 2,
-            "sanity: the found cell is genuinely multi-feature"
+            "sanity: the found vertex is genuinely multi-feature"
         );
 
         // Task 5's real discovery gate means MERELY POINTING the cursor at
-        // `cell` (what the search above does) no longer discovers anything
+        // `vertex` (what the search above does) no longer discovers anything
         // — that is the whole point of the gate (co-location is not
         // discovery, and even the cursor's own gaze is a form of
         // co-location, not encounter). This test's own purpose is the
@@ -2600,10 +2617,10 @@ mod portolan_tests {
 
     // -- Task 4, Step 4 / F5: the resolution disclosure -------------------
 
-    /// F5: at the coarsest zoom (~51 real terrain cells behind every
+    /// F5: at the coarsest zoom (~51 real terrain vertices behind every
     /// character, per `plate::SUBSAMPLES_PER_AXIS`'s own doc), the strip
     /// discloses its resolution; at the finest zoom (one character per
-    /// terrain cell, `plate::MAX_ZOOM`'s own design ceiling), it does not.
+    /// terrain vertex, `plate::MAX_ZOOM`'s own design ceiling), it does not.
     /// A test pinned at one zoom cannot see this requirement at all.
     #[test]
     fn the_resolution_disclosure_fires_at_the_coarsest_zoom_and_not_the_finest() {
@@ -2627,7 +2644,7 @@ mod portolan_tests {
             .expect("the world view always resolves once active");
         assert!(
             !fine.contains("terrain cells"),
-            "the finest zoom is ~one character per cell and must not disclose, got {fine:?}"
+            "the finest zoom is ~one character per vertex and must not disclose, got {fine:?}"
         );
     }
 
@@ -2810,7 +2827,7 @@ mod portolan_tests {
 
     /// H6 — discovery is monotonic: once a feature is discovered, it
     /// stays discovered for the rest of the session, through further real
-    /// turns. The possession's own starting cell discovers whatever
+    /// turns. The possession's own starting vertex discovers whatever
     /// extent features it stands on immediately (§A4b: standing on the
     /// ground IS meeting it) — this test walks several real turns after
     /// that and confirms nothing already known is ever un-known. The
@@ -2822,10 +2839,10 @@ mod portolan_tests {
         let mut d = test_driver();
 
         let start_coord = d.session.position().coord();
-        let start_cell = d
+        let start_vertex = d
             .nearest
             .nearest(&d.geo, start_coord.latitude, start_coord.longitude);
-        let stack: Vec<_> = d.index.at(start_cell).to_vec();
+        let stack: Vec<_> = d.index.at(start_vertex).to_vec();
         assert!(
             !stack.is_empty(),
             "sanity: seed 42's flagship starts within at least one extent feature"
@@ -2834,7 +2851,7 @@ mod portolan_tests {
         for id in &stack {
             assert!(
                 d.discovered.contains(FeatureId::Extent(*id)),
-                "the starting cell's own extent features must be discovered from turn one"
+                "the starting vertex's own extent features must be discovered from turn one"
             );
         }
 
@@ -2850,10 +2867,10 @@ mod portolan_tests {
     }
 
     /// H6b — co-location does not disclose. **The test this task exists
-    /// for.** Seed 42's flagship starts at a cell where `enter` succeeds
+    /// for.** Seed 42's flagship starts at a vertex where `enter` succeeds
     /// immediately (established elsewhere by
     /// `strip_offset_stays_zero_when_the_text_fits_the_plate`) — i.e. a
-    /// real settlement cell — so this needs no hand-built world. The
+    /// real settlement vertex — so this needs no hand-built world. The
     /// possession walks PAST it (several real `go` turns, in and out)
     /// without ever issuing `enter`, and the settlement must stay
     /// undiscovered — checked against the real `Discovered` state AND
@@ -2879,12 +2896,12 @@ mod portolan_tests {
 
         let start = d.session.position();
         let coord = start.coord();
-        let cell = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
+        let vertex = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
         assert!(
-            d.settlements.contains(&cell),
-            "sanity: seed 42's flagship starts at a settlement cell"
+            d.settlements.contains(&vertex),
+            "sanity: seed 42's flagship starts at a settlement vertex"
         );
-        let site = FeatureId::Settlement(cell);
+        let site = FeatureId::Settlement(vertex);
 
         // We were there — `Visited` records the starting room the instant
         // `Driver::start` runs its own initial `refresh`, before any
@@ -2895,7 +2912,7 @@ mod portolan_tests {
         );
         assert!(
             !d.discovered.contains(site),
-            "merely starting at a settlement cell must not discover it"
+            "merely starting at a settlement vertex must not discover it"
         );
 
         // Walk PAST it: several real `go` turns, in and out — never
@@ -2931,17 +2948,19 @@ mod portolan_tests {
         // — proving the negative checks above are not vacuous.
         let mut fresh = test_driver();
         let fresh_coord = fresh.session.position().coord();
-        let fresh_cell =
+        let fresh_vertex =
             fresh
                 .nearest
                 .nearest(&fresh.geo, fresh_coord.latitude, fresh_coord.longitude);
         assert_eq!(
-            fresh_cell, cell,
-            "sanity: two seed-42 flagships start at the identical cell"
+            fresh_vertex, vertex,
+            "sanity: two seed-42 flagships start at the identical vertex"
         );
         fresh.handle("enter");
         assert!(
-            fresh.discovered.contains(FeatureId::Settlement(fresh_cell)),
+            fresh
+                .discovered
+                .contains(FeatureId::Settlement(fresh_vertex)),
             "sanity: `enter` must actually discover the settlement it succeeds at"
         );
 
@@ -2960,7 +2979,7 @@ mod portolan_tests {
         //     own projected position, EVERY rung: still absent.
         //   - at 400x200 (the resolution `plate.rs`'s own
         //     `draw_with_gates_a_point_site_on_discovery` uses, and which
-        //     is enough for a real CAVE cell): still absent.
+        //     is enough for a real CAVE vertex): still absent.
         //   - at 1200x600 -- more than 3x [`plate::MAX_VIRTUAL_WIDTH`],
         //     i.e. finer than any rung this client's zoom ladder ever
         //     reaches: present. ~180s to render, which is why this is a
@@ -2969,7 +2988,7 @@ mod portolan_tests {
         // So THIS settlement -- the seed-42 flagship's own starting
         // site -- is drawable in principle (the paint mechanism is not
         // broken; `point_site_at`'s gate genuinely fires once
-        // `area_majority` ever lands its vote on the exact cell) and
+        // `area_majority` ever lands its vote on the exact vertex) and
         // undrawable in practice, at every resolution this client's own
         // zoom ladder ever reaches. The negative checks earlier in this
         // test are therefore VACUOUS at every rung they cover, for this

@@ -138,8 +138,8 @@ fn map_focus_at_an_unresolved_band_refuses_rather_than_resolving() {
 }
 
 /// The walk band DOES have a resolver (the terrain-feature index, scoped to
-/// the observer's own cell — see `driver.rs`'s module doc for why cursor
-/// motion does not change which cell is queried this campaign). Focusing
+/// the observer's own vertex — see `driver.rs`'s module doc for why cursor
+/// motion does not change which vertex is queried this campaign). Focusing
 /// the map at seed 42's flagship opening position (walk band) must report
 /// a real name, not the unresolved-band refusal — this is what would catch
 /// a regression that accidentally routed every band through the same
@@ -164,7 +164,7 @@ fn map_focus_at_the_walk_band_resolves_a_real_name() {
 }
 
 /// FIX ROUND 1: the cursor must genuinely track. Moving it off the
-/// observer's own box changes the resolved cell, and therefore the strip
+/// observer's own box changes the resolved vertex, and therefore the strip
 /// text, rather than recomputing the same answer regardless of position.
 ///
 /// **Why the covering assertion is "names something" -> "unnamed terrain"
@@ -174,7 +174,7 @@ fn map_focus_at_the_walk_band_resolves_a_real_name() {
 /// terrain `Vertex` as the observer (`Vertex(22195)`, confirmed by
 /// instrumenting `resolve_walk_band` directly) — the visible neighbourhood
 /// spans `distance_rad` on the order of 1e-4 (tens of metres), while
-/// `NearestVertexIndex` snaps onto one of only 40,962 cells tiling the whole
+/// `NearestVertexIndex` snaps onto one of only 40,962 vertices tiling the whole
 /// globe (roughly hundreds of kilometres apart at seed 42's `GLOBE_LEVEL`).
 /// So a walk-band session structurally cannot cross a terrain-feature
 /// boundary within view except by standing within metres of one — a real

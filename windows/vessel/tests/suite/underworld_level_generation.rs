@@ -60,10 +60,10 @@ fn fixture_gradient() -> GeothermalGradient {
 /// below. Same value as `deep_realm_chamber.rs`'s own `DEEP_REACH_M`.
 const REACH_M: f64 = 2000.0;
 
-/// Search cells `0..50` under `seed`/`cave`/`gradient` for one whose lattice
+/// Search vertices `0..50` under `seed`/`cave`/`gradient` for one whose lattice
 /// has a real, *existing* chamber address at every band in `bands` (in any
 /// branch) — existence is sparse (`deep_realm_chamber.rs`'s own
-/// `the_lattice_is_fixed_and_existence_is_sparse`), so not every cell
+/// `the_lattice_is_fixed_and_existence_is_sparse`), so not every vertex
 /// qualifies. Returns one `ChamberAddr` per requested band, in the same
 /// order.
 fn find_addrs_at_bands(
@@ -72,14 +72,14 @@ fn find_addrs_at_bands(
     gradient: GeothermalGradient,
     bands: &[Band],
 ) -> Vec<ChamberAddr> {
-    for raw_cell in 0u32..50 {
-        let cell = Vertex(raw_cell);
+    for raw_vertex in 0u32..50 {
+        let vertex = Vertex(raw_vertex);
         let mut found = Vec::new();
         for &band in bands {
             let mut hit = None;
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let addr = ChamberAddr {
-                    cell,
+                    vertex,
                     band,
                     branch,
                     level: 0,
@@ -102,7 +102,7 @@ fn find_addrs_at_bands(
         }
     }
     panic!(
-        "no cell among 0..50 had chambers existing at every requested band \
+        "no vertex among 0..50 had chambers existing at every requested band \
          {bands:?} under this fixture — widen the search or check the \
          density model"
     );

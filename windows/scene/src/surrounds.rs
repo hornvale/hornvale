@@ -351,7 +351,12 @@ pub struct Sight {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Resolution {
     /// The canonical grid's refinement level.
-    pub grid_level: u32,
+    /// **Frozen wire key, and a `level` that is deliberately NOT `depth`.**
+    /// It is a key of `scene/surrounds/v2`, a cross-repo contract, present in
+    /// every committed surrounds JSON. `Geosphere::level` became
+    /// `Geosphere::depth` in The Lexicon of Place; this did not, and cannot.
+    /// See `book/src/reference/lexicon-of-place.md`.
+    pub grid_level: u32, // lexicon: frozen wire key of scene/surrounds/v2
     /// How many levels below `grid_level` this chart's cells sit. Each level
     /// quarters a cell, so `4^depth_below_grid` rooms share one grid cell.
     pub depth_below_grid: u32,
@@ -1582,9 +1587,9 @@ mod tests {
         let globe = ctx.terrain().globe();
         let sea = globe.sea_level;
 
-        // A land cell whose RAW reading is still negative: raw bands `shelf`, the
+        // A land vertex whose RAW reading is still negative: raw bands `shelf`, the
         // corrected height bands `lowland` or above, so the two disagree. The
-        // majority of seed 42's land qualifies (8162 of 11,066 cells). Lowest
+        // majority of seed 42's land qualifies (8162 of 11,066 vertices). Lowest
         // Vertex wins, for determinism.
         let probe = globe
             .elevation
@@ -1643,7 +1648,7 @@ mod tests {
     }
 
     #[test]
-    fn no_land_cell_bands_as_marine_relief() {
+    fn no_land_vertex_bands_as_marine_relief() {
         // Guards `relief_band`'s THRESHOLD SEMANTICS, and nothing else. It computes
         // its own height and never calls the builder, so it CANNOT detect the
         // original defect — which was the argument the call site passed.
@@ -1652,18 +1657,18 @@ mod tests {
         // bug fully reintroduced. Kept because the thresholds are worth pinning,
         // labelled so nobody mistakes it for the detector.
         //
-        // Stated over CELLS, where the invariant holds by definition: a land cell
-        // IS one with `elevation >= sea_level`, so its height is >= 0 and its band
-        // must be `lowland` or above. Deliberately NOT over rooms — a room's height
-        // is a three-corner blend while its water kind is a point sample of the
-        // dominant corner, so a shoreline room can be dry-land-dominant and still
-        // blend centimetres below sea level (spec §12.4).
+        // Stated over VERTICES, where the invariant holds by definition: a land
+        // vertex IS one with `elevation >= sea_level`, so its height is >= 0 and its
+        // band must be `lowland` or above. Deliberately NOT over rooms — a room's
+        // height is a three-corner blend while its water kind is a point sample of
+        // the dominant corner, so a shoreline room can be dry-land-dominant and
+        // still blend centimetres below sea level (spec §12.4).
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let globe = ctx.terrain().globe();
         let sea = globe.sea_level;
         let mut land = 0usize;
-        for (cell, e) in globe.elevation.iter() {
+        for (vertex, e) in globe.elevation.iter() {
             if e.total_cmp(sea) == std::cmp::Ordering::Less {
                 continue;
             }
@@ -1671,7 +1676,7 @@ mod tests {
             let band = relief_band(e.above(sea));
             assert!(
                 band >= 2,
-                "land cell {cell:?} at {:.1} m ({:.1} m above sea level) banded as {}",
+                "land vertex {vertex:?} at {:.1} m ({:.1} m above sea level) banded as {}",
                 e.get(),
                 e.above(sea).get(),
                 RELIEF_LEGEND[band as usize]
@@ -1679,14 +1684,14 @@ mod tests {
         }
         assert!(
             land > 1000,
-            "seed 42 has substantial land; got {land} cells"
+            "seed 42 has substantial land; got {land} vertices"
         );
     }
 
     /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,99,2026]
     #[test]
     #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
-    fn no_land_cell_bands_as_marine_relief_across_seeds() {
+    fn no_land_vertex_bands_as_marine_relief_across_seeds() {
         for seed in [1u64, 7, 42, 99, 2026] {
             let w = build_world(
                 Seed(seed),
@@ -1699,14 +1704,14 @@ mod tests {
             let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
             let globe = ctx.terrain().globe();
             let sea = globe.sea_level;
-            for (cell, e) in globe.elevation.iter() {
+            for (vertex, e) in globe.elevation.iter() {
                 if e.total_cmp(sea) == std::cmp::Ordering::Less {
                     continue;
                 }
                 let band = relief_band(e.above(sea));
                 assert!(
                     band >= 2,
-                    "seed {seed}: land cell {cell:?} banded as {}",
+                    "seed {seed}: land vertex {vertex:?} banded as {}",
                     RELIEF_LEGEND[band as usize]
                 );
             }
@@ -1910,7 +1915,7 @@ mod tests {
     /// file (e.g. `a_radius_four_neighbourhood_holds_thirty_one_cells`) runs
     /// in the ordinary gate; `cli/tests/heavy_tier.rs`'s `heavy:` token is
     /// reserved for the one test in this file that sweeps multiple seeds
-    /// (`no_land_cell_bands_as_marine_relief_across_seeds`), and tagging a
+    /// (`no_land_vertex_bands_as_marine_relief_across_seeds`), and tagging a
     /// single-world test with it would fail that guard's canonical-string
     /// check anyway.
     #[test]

@@ -234,7 +234,7 @@ mod tests {
             /// type-audit: bare-ok(count)
             pub fn seed_count(octaves: u32, label: &str) -> f64 { 0.0 }
             fn private(x: f64) {}
-            pub fn opaque(cell: Vertex) -> Vertex { cell }
+            pub fn opaque(vertex: Vertex) -> Vertex { vertex }
             "#,
         );
         let items = positions_in_file(&f);
@@ -269,7 +269,7 @@ mod tests {
     fn extracts_tuple_struct_pub_fields_by_index() {
         let f = file(
             r#"
-            /// A cell id.
+            /// A vertex id.
             pub struct Vertex(pub u32);
         "#,
         );

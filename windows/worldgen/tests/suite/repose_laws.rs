@@ -22,7 +22,7 @@
 //!
 //! [`a_sub_window_query_returns_exactly_the_enclosing_windows_events`] is not
 //! a recovery check. It holds the structural claim that makes "narrated
-//! backwards, never forward-simulated" real: the event sequence at a cell is
+//! backwards, never forward-simulated" real: the event sequence at a vertex is
 //! a property of the world, not of the query, so the window is a filter and
 //! never a key.
 //!
@@ -52,7 +52,7 @@ use hornvale_worldgen::hazard::{
 /// The mesh level every test here builds at. Level 5 is the cheapest globe
 /// that carries both a wide unrest range and edifices, and none of these
 /// tests asserts anything about a cone's *extent* (the property that forced
-/// level 6 on `volcano.rs`'s identity tests) — they read one cell at a time.
+/// level 6 on `volcano.rs`'s identity tests) — they read one vertex at a time.
 const LEVEL: u32 = 5;
 
 fn globe_of(seed: Seed) -> (Geosphere, GeneratedTerrain) {
@@ -63,9 +63,9 @@ fn globe_of(seed: Seed) -> (Geosphere, GeneratedTerrain) {
     (geo, terrain)
 }
 
-/// The cell with the shortest seismic interval on the globe — the busiest
+/// The vertex with the shortest seismic interval on the globe — the busiest
 /// ground there is, and the cheapest place to draw a large sample.
-fn busiest_cell(geo: &Geosphere, terrain: &GeneratedTerrain) -> Vertex {
+fn busiest_vertex(geo: &Geosphere, terrain: &GeneratedTerrain) -> Vertex {
     geo.vertices()
         .min_by(|a, b| {
             hazard_at(terrain, *a)
@@ -76,7 +76,7 @@ fn busiest_cell(geo: &Geosphere, terrain: &GeneratedTerrain) -> Vertex {
         .expect("a non-empty globe")
 }
 
-/// The edifice cell with the shortest eruption interval.
+/// The edifice vertex with the shortest eruption interval.
 fn busiest_edifice(geo: &Geosphere, terrain: &GeneratedTerrain) -> Vertex {
     geo.vertices()
         .filter(|c| hazard_at(terrain, *c).volcanic.is_some())
@@ -84,10 +84,10 @@ fn busiest_edifice(geo: &Geosphere, terrain: &GeneratedTerrain) -> Vertex {
         .expect("an edifice on the test globe")
 }
 
-fn volcanic_years(terrain: &GeneratedTerrain, cell: Vertex) -> f64 {
-    hazard_at(terrain, cell)
+fn volcanic_years(terrain: &GeneratedTerrain, vertex: Vertex) -> f64 {
+    hazard_at(terrain, vertex)
         .volcanic
-        .expect("filtered to edifice cells")
+        .expect("filtered to edifice vertices")
         .get()
 }
 
@@ -129,11 +129,11 @@ fn authored_mean(min: f64, max: f64, b: f64) -> f64 {
 fn magnitudes_of(
     seed: Seed,
     terrain: &GeneratedTerrain,
-    cell: Vertex,
+    vertex: Vertex,
     window: (WorldTime, WorldTime),
     kind: HazardEventKind,
 ) -> Vec<f64> {
-    events_in(seed, terrain, cell, window)
+    events_in(seed, terrain, vertex, window)
         .into_iter()
         .filter(|e| e.kind == kind)
         .map(|e| e.magnitude)
@@ -145,7 +145,7 @@ fn magnitudes_of(
 /// A query for a sub-window returns exactly the events of the enclosing
 /// window that fall inside it — same days, same kinds, same magnitudes, same
 /// order. Held over four seeds and, on each, over both the busiest ground and
-/// an edifice cell (so both processes are exercised), against six fixed
+/// an edifice vertex (so both processes are exercised), against six fixed
 /// nested windows — one of them opening before genesis — **and** against
 /// windows cut at days taken from the draw itself.
 ///
@@ -191,14 +191,14 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
     let mut interior_cuts = 0_u32;
     for seed in [42, 43, 44, 45] {
         let (geo, terrain) = globe_of(Seed(seed));
-        for cell in [
-            busiest_cell(&geo, &terrain),
+        for vertex in [
+            busiest_vertex(&geo, &terrain),
             busiest_edifice(&geo, &terrain),
         ] {
-            let all = events_in(Seed(seed), &terrain, cell, outer);
+            let all = events_in(Seed(seed), &terrain, vertex, outer);
             assert!(
                 !all.is_empty(),
-                "seed {seed}: {cell:?} produced no events at all over the outer window"
+                "seed {seed}: {vertex:?} produced no events at all over the outer window"
             );
             // Cuts taken FROM the draw, at an event that shares its block
             // with an earlier one. Only such a cut leaves a block partially
@@ -228,10 +228,10 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
                     .copied()
                     .filter(|e| e.day.day() >= lo && e.day.day() < hi)
                     .collect();
-                let got = events_in(Seed(seed), &terrain, cell, sub);
+                let got = events_in(Seed(seed), &terrain, vertex, sub);
                 assert_eq!(
                     got, expected,
-                    "seed {seed}, {cell:?}, window [{lo}, {hi}): the sub-query is not the \
+                    "seed {seed}, {vertex:?}, window [{lo}, {hi}): the sub-query is not the \
                      enclosing window's events filtered — the window is acting as a key"
                 );
                 checked += u32::from(!expected.is_empty());
@@ -255,7 +255,7 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
 }
 
 /// §6.8's implementation check for seismicity. Draws ~200,000 events at the
-/// busiest cell on a seed-42 globe, fits `b` by maximum likelihood, and
+/// busiest vertex on a seed-42 globe, fits `b` by maximum likelihood, and
 /// compares it to the authored [`B_VALUE`].
 ///
 /// **The law was authored; recovering it says the draw works, not that the
@@ -264,9 +264,9 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
 /// Tolerance arithmetic, so the number is not arbitrary: the MLE's relative
 /// standard error is `1/sqrt(N)`. The single 0.02 band on `b = 1.0` is
 /// therefore two different sigma counts, one per arm — **9σ** at the busiest
-/// cell (N = 200,000, s.e. 0.22%) and **4.5σ** at the quietest (N = 50,000,
+/// vertex (N = 200,000, s.e. 0.22%) and **4.5σ** at the quietest (N = 50,000,
 /// s.e. 0.45%). Quote the weaker arm: this test is a 4.5σ band that happens
-/// to be 9σ on one of its two cells, not a nine-sigma test.
+/// to be 9σ on one of its two vertices, not a nine-sigma test.
 ///
 /// The sample is drawn from the
 /// TRUNCATED law while the estimator is stated for the untruncated one; that
@@ -289,16 +289,17 @@ fn drawn_magnitudes_recover_the_authored_gutenberg_richter_b_value() {
                 .total_cmp(&hazard_at(&terrain, *b).seismic.get())
         })
         .expect("a non-empty globe");
-    for (label, cell, target) in [
-        ("busiest", busiest_cell(&geo, &terrain), 200_000.0),
+    for (label, vertex, target) in [
+        ("busiest", busiest_vertex(&geo, &terrain), 200_000.0),
         ("quietest", quietest, 50_000.0),
     ] {
-        let interval = hazard_at(&terrain, cell).seismic;
+        let interval = hazard_at(&terrain, vertex).seismic;
         let window = window_for(target, interval);
-        let magnitudes = magnitudes_of(Seed(42), &terrain, cell, window, HazardEventKind::Seismic);
+        let magnitudes =
+            magnitudes_of(Seed(42), &terrain, vertex, window, HazardEventKind::Seismic);
         let fitted = gutenberg_richter_b(&magnitudes);
         println!(
-            "{label} cell {cell:?}: interval {:.1} y, {} events, b_fit = {fitted:.5} \
+            "{label} vertex {vertex:?}: interval {:.1} y, {} events, b_fit = {fitted:.5} \
              (authored B_VALUE = {B_VALUE})",
             interval.get(),
             magnitudes.len()
@@ -349,9 +350,9 @@ fn drawn_magnitudes_recover_the_authored_gutenberg_richter_b_value() {
 ///
 /// The relative standard error of the estimator scales as `1/sqrt(N)`. The
 /// 2% band is therefore not one sigma count but three, one per arm: **9σ** at
-/// the busiest cell (N = 200,000, s.e. 0.22%), **6.3σ** at the median
+/// the busiest vertex (N = 200,000, s.e. 0.22%), **6.3σ** at the median
 /// (N = 100,000, 0.32%), and **4.5σ** at the quietest (N = 50,000, 0.45%).
-/// The weakest arm is the one to quote. Held at three cells spanning the
+/// The weakest arm is the one to quote. Held at three vertices spanning the
 /// field's range because a draw that ignored the rate entirely would still
 /// pass at one.
 #[test]
@@ -365,14 +366,14 @@ fn inter_event_times_recover_the_authored_recurrence() {
             .total_cmp(&hazard_at(&terrain, *b).seismic.get())
     });
     let middle = by_interval[by_interval.len() / 2];
-    for (label, cell, target) in [
+    for (label, vertex, target) in [
         ("busiest", by_interval[0], 200_000.0),
         ("median", middle, 100_000.0),
         ("quietest", by_interval[by_interval.len() - 1], 50_000.0),
     ] {
-        let interval = hazard_at(&terrain, cell).seismic;
+        let interval = hazard_at(&terrain, vertex).seismic;
         let window = window_for(target, interval);
-        let days: Vec<f64> = events_in(Seed(42), &terrain, cell, window)
+        let days: Vec<f64> = events_in(Seed(42), &terrain, vertex, window)
             .into_iter()
             .filter(|e| e.kind == HazardEventKind::Seismic)
             .map(|e| e.day.day())
@@ -385,7 +386,7 @@ fn inter_event_times_recover_the_authored_recurrence() {
         let gaps: Vec<f64> = days.windows(2).map(|w| w[1] - w[0]).collect();
         let fitted = Years::from_days(mean(&gaps)).expect("a positive mean gap");
         println!(
-            "{label} cell {cell:?}: {} events, mean interval {:.3} y \
+            "{label} vertex {vertex:?}: {} events, mean interval {:.3} y \
              (authored recurrence {:.3} y)",
             days.len(),
             fitted.get(),
@@ -416,16 +417,22 @@ fn inter_event_times_recover_the_authored_recurrence() {
 #[test]
 fn drawn_eruption_sizes_recover_the_authored_vei_law() {
     let (geo, terrain) = globe_of(Seed(42));
-    let cell = busiest_edifice(&geo, &terrain);
-    let interval = hazard_at(&terrain, cell)
+    let vertex = busiest_edifice(&geo, &terrain);
+    let interval = hazard_at(&terrain, vertex)
         .volcanic
         .expect("the busiest edifice erupts");
     let window = window_for(50_000.0, interval);
-    let sizes = magnitudes_of(Seed(42), &terrain, cell, window, HazardEventKind::Eruption);
+    let sizes = magnitudes_of(
+        Seed(42),
+        &terrain,
+        vertex,
+        window,
+        HazardEventKind::Eruption,
+    );
     let expected = authored_mean(VEI_MIN, VEI_MAX, VEI_B);
     let fitted = mean(&sizes);
     println!(
-        "edifice {cell:?}: interval {:.1} y, {} eruptions, mean VEI = {fitted:.5} \
+        "edifice {vertex:?}: interval {:.1} y, {} eruptions, mean VEI = {fitted:.5} \
          (authored law's closed-form mean = {expected:.5})",
         interval.get(),
         sizes.len()

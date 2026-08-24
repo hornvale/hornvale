@@ -38,7 +38,7 @@
 //! widening `RIVER_REACH` far past its T1 value — but a probe (`git log` /
 //! this campaign's report has the numbers) showed `RIVER_REACH` is *also*
 //! the ruler `river_proximity` (and hence this test's "near a river")
-//! measures against: at `RIVER_REACH = 7`, **90% of all seed-42 land cells**
+//! measures against: at `RIVER_REACH = 7`, **90% of all seed-42 land vertices**
 //! already sit within reach of *some* river, so a high settlement fraction
 //! there mostly reflects ambient land coverage, not real clustering — the
 //! settlement fraction (≈0.91) tracked the ambient land coverage (≈0.90)
@@ -80,7 +80,7 @@
 //! found that threshold condensed only 79 seed-42 settlements under the new
 //! freshwater term (below the [100, 400] sane band;
 //! `settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint`),
-//! and re-fit it to `1.7`. Changing WHICH cells condense into settlements
+//! and re-fit it to `1.7`. Changing WHICH vertices condense into settlements
 //! necessarily perturbs this keystone's fraction too: at `1.7`, seed 42's
 //! committed near-river fraction reads **0.7222** — still clearing
 //! [`PREREGISTERED_MIN`], but with a smaller (if real) margin than 0.7595.
@@ -121,8 +121,8 @@ const BASELINE_42: f64 = 0.5833;
 /// type-audit: bare-ok(ratio)
 const PREREGISTERED_MIN: f64 = 0.7;
 
-/// Fraction of seed `seed`'s generated settlements whose cell sits within
-/// `hornvale_terrain::RIVER_REACH` hops of a `River` cell (a positive
+/// Fraction of seed `seed`'s generated settlements whose vertex sits within
+/// `hornvale_terrain::RIVER_REACH` hops of a `River` vertex (a positive
 /// `river_proximity`). Never authors a settlement's position — builds the
 /// world through the ordinary `build_world` path and measures the whole
 /// generated set (spec 0021, emergent-not-authored).
@@ -150,20 +150,20 @@ fn settlements_near_river_fraction(seed: u64) -> f64 {
     let near = settlements
         .iter()
         .filter(|s| {
-            let cell = match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
+            let vertex = match world.ledger.value_of(s.id, hornvale_settlement::VERTEX_ID) {
                 Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             };
-            *river_prox.get(cell) > 0.0
+            *river_prox.get(vertex) > 0.0
         })
         .count();
     near as f64 / settlements.len() as f64
 }
 
-/// Mean K in cells within river reach is materially higher than the
+/// Mean K in vertices within river reach is materially higher than the
 /// riverless-land mean — the mechanism condensation actually rides. Land
-/// cells are those `!terrain.is_ocean`; "riverless" additionally excludes
-/// cells within reach (`river_proximity == 0.0`).
+/// vertices are those `!terrain.is_ocean`; "riverless" additionally excludes
+/// vertices within reach (`river_proximity == 0.0`).
 #[test]
 fn k_spikes_near_rivers_on_seed_42() {
     let world = build_world(
@@ -187,16 +187,16 @@ fn k_spikes_near_rivers_on_seed_42() {
     let mut near_n = 0usize;
     let mut far_sum = 0.0;
     let mut far_n = 0usize;
-    for cell in geo.vertices() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
         // Freshwater is the term riding proximity; read it back off the
         // committed input rather than re-deriving K here (K also folds
         // temperature/moisture/coastal/hostility, which would dilute the
         // freshwater-specific signal this test targets).
-        let freshwater = inputs.get(cell).freshwater;
-        if *river_prox.get(cell) > 0.0 {
+        let freshwater = inputs.get(vertex).freshwater;
+        if *river_prox.get(vertex) > 0.0 {
             near_sum += freshwater;
             near_n += 1;
         } else {
@@ -204,8 +204,8 @@ fn k_spikes_near_rivers_on_seed_42() {
             far_n += 1;
         }
     }
-    assert!(near_n > 0, "seed 42 has no land cells near a river");
-    assert!(far_n > 0, "seed 42 has no riverless land cells");
+    assert!(near_n > 0, "seed 42 has no land vertices near a river");
+    assert!(far_n > 0, "seed 42 has no riverless land vertices");
     let near_mean = near_sum / near_n as f64;
     let far_mean = far_sum / far_n as f64;
     assert!(
@@ -258,12 +258,12 @@ fn k_biomass_gradient_grounding_holds_after_the_freshwater_repoint() {
             species_carrying_input(*base_inputs.get(c), psych)
         });
         let k = hornvale_demography::carrying_capacity(geo, &inputs);
-        for cell in geo.vertices() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let lat = geo.coord(cell).latitude.abs();
-            let kv = k.at(cell);
+            let lat = geo.coord(vertex).latitude.abs();
+            let kv = k.at(vertex);
             if lat < 30.0 {
                 trop_sum += kv;
                 trop_n += 1;
@@ -273,8 +273,8 @@ fn k_biomass_gradient_grounding_holds_after_the_freshwater_repoint() {
             }
         }
     }
-    assert!(trop_n > 0, "seed 42 has no tropical land cells");
-    assert!(pole_n > 0, "seed 42 has no polar land cells");
+    assert!(trop_n > 0, "seed 42 has no tropical land vertices");
+    assert!(pole_n > 0, "seed 42 has no polar land vertices");
     // Mirrors the Lab metric's floor exactly (`windows/lab/src/metrics.rs`,
     // `capacity-by-abs-latitude`): an exactly-zero polar mean reads as a
     // large-but-bounded ratio, not a division blowup.

@@ -93,7 +93,7 @@
 //! 1. It cannot know `D` before it has candidates, so spec §3.2's loop always
 //!    gathers at a radius **≥** the one used here.
 //! 2. It gathers by **bucket**, not by cap. `L_max/2` is about 0.58 mean
-//!    level-6 cell spacings, so `rho` is sub-cell for every near-channel
+//!    level-6 vertex spacings, so `rho` is sub-vertex for every near-channel
 //!    query, and any bucket grid hands back a 2x2-to-3x3 neighbourhood —
 //!    4-9x the cap's area.
 //!
@@ -131,7 +131,7 @@ const TRANSECT_STEPS: usize = 48;
 const MAX_TRANSECTS: usize = 256;
 
 /// Spec §3.2's theoretical ceiling on the longest channel segment, as a
-/// multiple of the mesh's longest cell-to-neighbour edge.
+/// multiple of the mesh's longest vertex-to-neighbour edge.
 const SEGMENT_CEILING_RATIO: f64 = 1.5;
 
 // ---------------------------------------------------------------------------
@@ -149,7 +149,7 @@ fn probe_world() -> TerrainView {
     let view = TerrainView::build(Seed(SEED), &SkyPins::default())
         .expect("seed 42 builds to the terrain rung");
     assert_eq!(
-        view.terrain.geosphere().level(),
+        view.terrain.geosphere().depth(),
         LEVEL,
         "this probe is only meaningful on the canonical grid"
     );
@@ -226,16 +226,16 @@ fn max_segment_arc(net: &ChannelNetwork) -> f64 {
     worst
 }
 
-/// The mean cell-to-neighbour edge on the mesh — the length scale that decides
-/// whether a cap of radius `rho` is sub-cell.
+/// The mean vertex-to-neighbour edge on the mesh — the length scale that decides
+/// whether a cap of radius `rho` is sub-vertex.
 ///
 /// This is the load-bearing number for how far the measured `k` can be
-/// trusted: `rho = D + L_max/2`, and if `L_max/2` is well under one cell
+/// trusted: `rho = D + L_max/2`, and if `L_max/2` is well under one vertex
 /// spacing then for any near-channel query the cap cannot reach past the
-/// query's own cell and its immediate surroundings. It is measured here rather
+/// query's own vertex and its immediate surroundings. It is measured here rather
 /// than quoted, because everything the report says about the bound between the
 /// measured `k` and a delivered one rests on it.
-fn mean_cell_edge(geo: &Geosphere) -> f64 {
+fn mean_vertex_edge(geo: &Geosphere) -> f64 {
     let mut total = 0.0;
     let mut count = 0usize;
     for id in 0..geo.vertex_count() {
@@ -249,12 +249,12 @@ fn mean_cell_edge(geo: &Geosphere) -> f64 {
     total / count as f64
 }
 
-/// `E_max` — the longest cell-to-neighbour edge on the mesh.
+/// `E_max` — the longest vertex-to-neighbour edge on the mesh.
 ///
 /// `NearestVertexIndex::cover_deg` is private and `Geosphere` exposes no edge
 /// accessor (`domains/terrain/tests/channel_properties.rs:29-33` says so), so
 /// this walks `geo.neighbors` itself.
-fn max_cell_edge(geo: &Geosphere) -> f64 {
+fn max_vertex_edge(geo: &Geosphere) -> f64 {
     let mut worst = 0.0_f64;
     for id in 0..geo.vertex_count() {
         let c = Vertex(id as u32);
@@ -522,7 +522,7 @@ fn assert_sweep_matches_published(view: &TerrainView, sweep: &TranscribedSweep) 
 /// `for s in 1..8` in the shipped metric.
 const JOIN_PROBES: usize = 7;
 
-/// For each cell, the `(line, vertex)` of the run that carries it onward.
+/// For each vertex, the `(line, vertex)` of the run that carries it onward.
 ///
 /// **Read from the network's published `trunk_vertex` index, not rebuilt.**
 /// This was a transcription of the lab's private `lab_run_owner` until Task 5
@@ -551,7 +551,7 @@ struct JoinProbe {
 }
 
 /// Per polyline, the trunk its walk hops onto and the seven probes that hop
-/// issues — `None` where no run claims this run's last cell.
+/// issues — `None` where no run claims this run's last vertex.
 fn join_probes(
     net: &ChannelNetwork,
     owner: &[Option<(usize, usize)>],
@@ -559,8 +559,8 @@ fn join_probes(
 ) -> Vec<Option<Vec<JoinProbe>>> {
     let mut out = Vec::with_capacity(net.polylines.len());
     for line in 0..net.polylines.len() {
-        let last_cell = *net.run_cells[line].last().expect("a run has cells");
-        let Some((trunk, vertex)) = owner[last_cell.0 as usize] else {
+        let last_vertex = *net.run_vertices[line].last().expect("a run has vertices");
+        let Some((trunk, vertex)) = owner[last_vertex.0 as usize] else {
             out.push(None);
             continue;
         };
@@ -601,7 +601,7 @@ struct WalkArm {
 /// `k` of every query they issue.
 ///
 /// The control flow mirrors the shipped loop exactly, including the two
-/// `break`s that stop a walk short: an unowned last cell, and the first probe
+/// `break`s that stop a walk short: an unowned last vertex, and the first probe
 /// that reads anything but `Channel`. Those breaks are why the query
 /// population is predicate-dependent and cannot be enumerated up front.
 fn walk_arm(
@@ -621,16 +621,16 @@ fn walk_arm(
         let mut line = start;
         let mut good = true;
         for _ in 0..=net.polylines.len() {
-            let last_cell = *net.run_cells[line].last().expect("a run has cells");
-            if !continues(last_cell) {
+            let last_vertex = *net.run_vertices[line].last().expect("a run has vertices");
+            if !continues(last_vertex) {
                 break; // reached the sea or a terminal sink
             }
-            let Some((trunk, _)) = owner[last_cell.0 as usize] else {
+            let Some((trunk, _)) = owner[last_vertex.0 as usize] else {
                 good = false;
-                break; // a river cell no run owns: the walk falls out
+                break; // a river vertex no run owns: the walk falls out
             };
             arm.hops += 1;
-            let hop = probes[line].as_ref().expect("owned last cell has probes");
+            let hop = probes[line].as_ref().expect("owned last vertex has probes");
             for probe in hop {
                 arm.k.push(probe.k);
                 if !probe.channel {
@@ -720,17 +720,17 @@ fn the_longest_channel_segment_stays_inside_the_mesh_edge_ceiling() {
     let view = probe_world();
     let net = view.terrain.channels();
     let l_max = max_segment_arc(net);
-    let e_max = max_cell_edge(view.terrain.geosphere());
-    let e_mean = mean_cell_edge(view.terrain.geosphere());
+    let e_max = max_vertex_edge(view.terrain.geosphere());
+    let e_mean = mean_vertex_edge(view.terrain.geosphere());
     println!(
         "L_max = {l_max:.9} rad, E_max = {e_max:.9} rad, ratio = {:.6}",
         l_max / e_max
     );
     // The bound between a measured k and a delivered one (see the module doc's
     // UPPER BOUND section) is exactly this ratio: a cap half-width well under
-    // one cell spacing cannot reach past the query's own neighbourhood.
+    // one vertex spacing cannot reach past the query's own neighbourhood.
     println!(
-        "E_mean = {e_mean:.9} rad; L_max/2 = {:.9} rad = {:.4} mean cell spacings",
+        "E_mean = {e_mean:.9} rad; L_max/2 = {:.9} rad = {:.4} mean vertex spacings",
         l_max / 2.0,
         l_max / 2.0 / e_mean
     );
@@ -782,20 +782,20 @@ fn the_candidate_set_a_capped_query_would_gather() {
     let owner = run_owner(net, view.terrain.geosphere().vertex_count());
     let probes = join_probes(net, &owner, half);
 
-    // The rule this metric shipped until Task 5: continue while the cell
+    // The rule this metric shipped until Task 5: continue while the vertex
     // downstream classifies `River`. Kept as an arm because it is the
     // population every `k` figure before Task 5 was measured over.
-    let superseded = |last_cell: Vertex| match *globe.downhill.get(last_cell) {
+    let superseded = |last_vertex: Vertex| match *globe.downhill.get(last_vertex) {
         Some(next) => matches!(*globe.water_kind.get(next), WaterKind::River),
         None => false,
     };
     // The rule the metric ships now: `ChannelNetwork::build`'s own reach
-    // predicate, which is what decides whether a run continues past a cell.
-    // Task 5 asserts in-crate that this agrees with "a run carries this cell"
-    // on every run's last cell, on all 64 of these worlds.
-    let shipped = |last_cell: Vertex| {
-        !matches!(*globe.water_kind.get(last_cell), WaterKind::Ocean)
-            && globe.downhill.get(last_cell).is_some()
+    // predicate, which is what decides whether a run continues past a vertex.
+    // Task 5 asserts in-crate that this agrees with "a run carries this vertex"
+    // on every run's last vertex, on all 64 of these worlds.
+    let shipped = |last_vertex: Vertex| {
+        !matches!(*globe.water_kind.get(last_vertex), WaterKind::Ocean)
+            && globe.downhill.get(last_vertex).is_some()
     };
 
     for (label, predicate) in [

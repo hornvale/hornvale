@@ -101,7 +101,7 @@ pub enum Notability {
 pub struct Occupation {
     /// The people occupying the site.
     pub people: KindId,
-    /// The Geosphere cell the occupation sits on.
+    /// The Geosphere vertex the occupation sits on.
     pub site: Vertex,
     /// The bake **year** the occupation began.
     ///
@@ -218,7 +218,7 @@ pub fn day_key(x: f64) -> u64 {
 ///
 /// **Total given one invariant this crate does not own**: two layers both
 /// `Founding::Genesis` at the same site carry an *identical* fourth key
-/// (`Genesis` encodes only the site's own cell), so if the (founded, ended,
+/// (`Genesis` encodes only the site's own vertex), so if the (founded, ended,
 /// peak) prefix also ties, the key ties too. That never happens today only
 /// because the bake opens at most one `Genesis` occupation per site
 /// (`windows/worldgen`'s `history_bake.rs`) — a `domains/history` doc leaning
@@ -272,7 +272,7 @@ pub fn layer_key(
         None => (1u8, 0),
     };
     // The fourth key: ancestry, stated materially. `Genesis` keeps encoding
-    // the site's own cell, exactly as before; `From` now orders by the
+    // the site's own vertex, exactly as before; `From` now orders by the
     // PREDECESSOR'S FOUNDING COORDINATES rather than its `EntityId`.
     let (from_rank, from_a, from_b, from_c) = match (r.founded_from, parent) {
         (Founding::Genesis(c), _) => (0u8, u64::from(c.0), 0, 0), // salt-allow: c is a Vertex, not an entity
@@ -318,7 +318,7 @@ pub fn layer_key(
 pub struct FoundingCoords<'a> {
     /// The people who founded, by label.
     pub people: &'a str,
-    /// The cell founded on.
+    /// The vertex founded on.
     pub site: Vertex,
     /// The bake **year** founded — the same unit [`Occupation::founded`]
     /// carries, and it has to be: this struct has two producers,

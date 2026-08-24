@@ -56,7 +56,7 @@ struct Row {
 }
 
 /// A tile-center sample: its coordinate, the climate's diurnal half-range
-/// amplitude there, and whether the underlying terrain cell is ocean.
+/// amplitude there, and whether the underlying terrain vertex is ocean.
 struct Coord {
     latitude: f64,
     longitude: f64,
@@ -94,13 +94,13 @@ fn main() {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(WIDTH) * 360.0 - 180.0;
-            let t_cell = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
-            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            let t_vertex = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
+            let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
             coords.push(Coord {
                 latitude,
                 longitude,
-                amplitude_c: climate.diurnal_amp_at(c_cell),
-                is_ocean: terrain.is_ocean(t_cell),
+                amplitude_c: climate.diurnal_amp_at(c_vertex),
+                is_ocean: terrain.is_ocean(t_vertex),
             });
         }
     }

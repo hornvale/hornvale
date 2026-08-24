@@ -58,7 +58,7 @@ pub fn chamber_interior_of(
     brief: &crate::brief::Brief,
     chamber_index: usize,
 ) -> Interior {
-    let locale = crate::band::truncate_to_walk(chamber, walk_depth);
+    let locale = crate::depth::truncate_to_walk(chamber, walk_depth);
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
     // The brief's own flags are read at the walk band too (`brief_of` truncates
@@ -233,7 +233,7 @@ mod tests {
 
     fn chamber_addr() -> Facet {
         let mut path: Vec<u8> = walk_addr().path;
-        path.extend((0..crate::band::CHAMBER_DEPTH_OFFSET).map(|i| (i % 4) as u8));
+        path.extend((0..crate::depth::CHAMBER_DEPTH_OFFSET).map(|i| (i % 4) as u8));
         Facet { face: 3, path }
     }
 

@@ -1,4 +1,4 @@
-//! Atmospheric circulation: the number of banded overturning cells per
+//! Atmospheric circulation: the number of banded overturning vertices per
 //! hemisphere is a heuristic function of rotation period (thermal-Rossby-
 //! like), and each band carries a prevailing zonal wind. Prograde by
 //! convention (spec §5 model card): equatorial easterly trades, mid-latitude
@@ -22,7 +22,7 @@ pub enum RotationRegime {
     Locked,
 }
 
-/// The number of circulation cells per hemisphere: `None` when tidally
+/// The number of circulation vertices per hemisphere: `None` when tidally
 /// locked; otherwise a step function of the solar day in hours (fast spin →
 /// more, narrower bands). Earth's 24 h day yields exactly 3 (the
 /// calibration point, spec §10).
@@ -68,12 +68,12 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     ]
 }
 
-/// The unit eastward tangent at a cell: `normalize(ẑ × position)`. Zero at
+/// The unit eastward tangent at a vertex: `normalize(ẑ × position)`. Zero at
 /// the poles, where east is undefined (their bands carry no rain-shadow
 /// tracing). Coordinate convention: latitude = asin(z), longitude = atan2(y, x).
 /// type-audit: bare-ok(ratio)
-pub fn wind_east_tangent(geo: &Geosphere, cell: Vertex) -> [f64; 3] {
-    let east = cross([0.0, 0.0, 1.0], geo.position(cell));
+pub fn wind_east_tangent(geo: &Geosphere, vertex: Vertex) -> [f64; 3] {
+    let east = cross([0.0, 0.0, 1.0], geo.position(vertex));
     let len = (east[0] * east[0] + east[1] * east[1] + east[2] * east[2]).sqrt();
     if len < 1e-9 {
         [0.0, 0.0, 0.0]
@@ -82,14 +82,14 @@ pub fn wind_east_tangent(geo: &Geosphere, cell: Vertex) -> [f64; 3] {
     }
 }
 
-/// The prevailing wind direction at a cell: the eastward tangent signed by
+/// The prevailing wind direction at a vertex: the eastward tangent signed by
 /// band. Even (rising) bands blow easterly (`-east`, e.g. equatorial trades);
 /// odd (sinking) bands blow westerly (`+east`, e.g. mid-latitude westerlies).
 /// Zero at the poles.
 /// type-audit: bare-ok(count: bands), bare-ok(ratio: return)
-pub fn prevailing_wind(geo: &Geosphere, cell: Vertex, bands: u32) -> [f64; 3] {
-    let east = wind_east_tangent(geo, cell);
-    let band = band_index(geo.coord(cell).latitude, bands);
+pub fn prevailing_wind(geo: &Geosphere, vertex: Vertex, bands: u32) -> [f64; 3] {
+    let east = wind_east_tangent(geo, vertex);
+    let band = band_index(geo.coord(vertex).latitude, bands);
     let sign = if is_rising_band(band) { -1.0 } else { 1.0 };
     [east[0] * sign, east[1] * sign, east[2] * sign]
 }
@@ -139,8 +139,8 @@ mod tests {
     #[test]
     fn prevailing_wind_is_zonal_tangent_and_reverses_by_band() {
         let geo = Geosphere::new(3);
-        // Some equatorial cell has a nonzero eastward tangent orthogonal to +z.
-        let cell = geo
+        // Some equatorial vertex has a nonzero eastward tangent orthogonal to +z.
+        let vertex = geo
             .vertices()
             .min_by(|a, b| {
                 geo.position(*a)[2]
@@ -148,13 +148,13 @@ mod tests {
                     .total_cmp(&geo.position(*b)[2].abs())
             })
             .unwrap();
-        let east = wind_east_tangent(&geo, cell);
+        let east = wind_east_tangent(&geo, vertex);
         assert!((east[0] * east[0] + east[1] * east[1] + east[2] * east[2]).sqrt() > 0.5);
         // tangent is orthogonal to the local vertical (position)
-        let p = geo.position(cell);
+        let p = geo.position(vertex);
         assert!((east[0] * p[0] + east[1] * p[1] + east[2] * p[2]).abs() < 1e-9);
         // easterly at the equator (even band) points opposite the eastward tangent
-        let wind = prevailing_wind(&geo, cell, 3);
+        let wind = prevailing_wind(&geo, vertex, 3);
         assert!(wind[0] * east[0] + wind[1] * east[1] + wind[2] * east[2] < 0.0);
     }
 }

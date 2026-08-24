@@ -16,19 +16,19 @@
 //!    `(0.25 + 0.75·induration) · belt` with `belt ≥ 1.0`, so even at
 //!    `induration = 0` the relief term survives at a quarter amplitude. No
 //!    argument reaches past it.
-//! 2. Removing any term moves sea level, which moves *which cells are land*.
+//! 2. Removing any term moves sea level, which moves *which vertices are land*.
 //!    [`crate::elevation::derive_sea_level`] is the ocean-fraction
 //!    **percentile** of the elevation distribution, so a before/after land
-//!    mean would be taken over two different cell sets and be confounded by
+//!    mean would be taken over two different vertex sets and be confounded by
 //!    construction.
 //!
 //! So this reads the real terms off the real world instead:
-//! [`crate::elevation::globe_elevation_terms`] rebuilds each cell's
+//! [`crate::elevation::globe_elevation_terms`] rebuilds each vertex's
 //! [`crate::elevation::ElevationTerms`] by calling the same
-//! `cell_elevation_terms` the pipeline calls, and the carve's own net delta is
+//! `vertex_elevation_terms` the pipeline calls, and the carve's own net delta is
 //! taken from the globe's retained `carve_delta_m`. Nothing is reimplemented,
 //! and [`Component::ALL`] is checked against the elevation the pipeline
-//! actually produced on **every land cell of every seed** before a single
+//! actually produced on **every land vertex of every seed** before a single
 //! statistic is reported.
 //!
 //! ## What the decomposition is, and how it corrects the brief
@@ -60,7 +60,7 @@
 //! covariance column says how much of the *land surface's* variation it
 //! explains.
 //!
-//! Statistics are reported twice more: **pooled** over every land cell of
+//! Statistics are reported twice more: **pooled** over every land vertex of
 //! every seed (where sea level varies world to world and therefore carries
 //! variance), and **within-world**, averaged over seeds (where sea level is a
 //! constant and drops out). A term that dominates both is the target.
@@ -107,7 +107,7 @@ const LEVEL: u32 = crate::GLOBE_LEVEL;
 /// are literally the census's own first worlds.
 const SEED_COUNT: u64 = 12;
 
-/// The seven additive components of `elevation − sea_level` on a land cell.
+/// The seven additive components of `elevation − sea_level` on a land vertex.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Component {
     /// Airy isostasy over crust thickness: `ISOSTASY_M_PER_KM · (crust − ref)`.
@@ -155,7 +155,7 @@ impl Component {
 }
 
 /// Mean, standard deviation, and both variance shares for one component over
-/// one sample of land cells.
+/// one sample of land vertices.
 struct Stat {
     /// Component mean, metres.
     mean: f64,
@@ -169,7 +169,7 @@ struct Stat {
     cov_share: f64,
 }
 
-/// One land cell's seven components, in [`Component::ALL`] order.
+/// One land vertex's seven components, in [`Component::ALL`] order.
 type Row = [f64; 7];
 
 /// Every component's [`Stat`] over `rows`, plus the sample's own mean and
@@ -217,8 +217,8 @@ fn statistics(rows: &[Row]) -> ([Stat; 7], f64, f64) {
 }
 
 /// Print one decomposition table.
-fn print_table(title: &str, stats: &[Stat; 7], y_mean: f64, y_var: f64, cells: usize) {
-    println!("\n{title}  (n = {cells} land cells)");
+fn print_table(title: &str, stats: &[Stat; 7], y_mean: f64, y_var: f64, vertices: usize) {
+    println!("\n{title}  (n = {vertices} land vertices)");
     println!(
         "{:<16} {:>12} {:>12} {:>12} {:>12}",
         "component", "mean (m)", "sd (m)", "Var/VarY", "Cov/VarY"
@@ -270,7 +270,7 @@ fn crust_km_at(elevation_m: f64) -> f64 {
 
 /// The attribution readout. Sweeps [`SEED_COUNT`] worlds at [`LEVEL`],
 /// asserts the seven components reconstruct the pipeline's own elevation on
-/// every land cell, and prints the pooled and within-world decompositions.
+/// every land vertex, and prints the pooled and within-world decompositions.
 ///
 /// Cheap enough to stay in the commit gate: **roughly 3–6 s at ordinary load**
 /// for twelve level-6 globes (terrain-only genesis, dev profile optimized since
@@ -292,7 +292,7 @@ fn crust_km_at(elevation_m: f64) -> f64 {
 /// conditional mean crust, and the majors' radius and pair-separation
 /// distributions over the first [`SEED_COUNT`] census seeds; the seed loop
 /// pools a sample rather than hunting one, and the only assertions are the
-/// per-cell conservation guard, the exactness of the covariance shares, and
+/// per-vertex conservation guard, the exactness of the covariance shares, and
 /// relief's zero mean — decision 0093, the
 /// `hollow_readout::report_cave_substrate` shape)
 #[test]
@@ -312,13 +312,13 @@ fn the_land_elevation_terms_attribute_their_variance() {
     // granting.
     let (mut supply_sum, mut threshold_sum, mut land_sum) = (0.0_f64, 0.0_f64, 0.0_f64);
     // THE RETAINED SET (Stage B, the accumulator the audit's §3.5 says is
-    // owed). The cells whose crust clears `CONTINENTAL_THRESHOLD_KM` are
+    // owed). The vertices whose crust clears `CONTINENTAL_THRESHOLD_KM` are
     // exactly the land a world would keep if sea level were re-placed at the
     // isostatic shelf break, so their *conditional mean crust* is the only
     // honest way to turn the 1113 m cut depth into an elevation a fix
-    // recovers. Pooled cell-weighted, the same weighting `mean_land_crust`
+    // recovers. Pooled vertex-weighted, the same weighting `mean_land_crust`
     // uses, so the two are directly comparable.
-    let (mut retained_crust_sum, mut retained_cells) = (0.0_f64, 0_usize);
+    let (mut retained_crust_sum, mut retained_vertices) = (0.0_f64, 0_usize);
     // Craton geometry, majors only — `globe.cratons` excludes microcontinents
     // and terranes by construction (see its field doc), and the variety and
     // crowding numbers below would silently describe a different population
@@ -335,13 +335,13 @@ fn the_land_elevation_terms_attribute_their_variance() {
         let sea = globe.sea_level.get();
         sea_levels.push(sea);
         let mut rows: Vec<Row> = Vec::new();
-        for cell in geo.vertices() {
-            let elevation = globe.elevation.get(cell).get();
+        for vertex in geo.vertices() {
+            let elevation = globe.elevation.get(vertex).get();
             if elevation < sea {
                 continue; // ocean: land is `e >= sea`, matching the metric
             }
-            let t = terms.get(cell);
-            let carve = *globe.carve_delta_m.get(cell);
+            let t = terms.get(vertex);
+            let carve = *globe.carve_delta_m.get(vertex);
             // CONSERVATION. If the components do not re-add to the elevation
             // the pipeline produced, the decomposition is describing some
             // other world and every share below it is void. `total()` is the
@@ -353,26 +353,26 @@ fn the_land_elevation_terms_attribute_their_variance() {
             let reconstructed = t.total() + carve;
             assert!(
                 (reconstructed - elevation).abs() < 1e-9,
-                "seed {seed} cell {cell:?}: components sum to {reconstructed} but the \
+                "seed {seed} vertex {vertex:?}: components sum to {reconstructed} but the \
                  pipeline produced {elevation}"
             );
             rows.push([
                 t.base, t.boundary, t.hotspot, t.relief, t.epsilon, carve, -sea,
             ]);
-            crust_sum += *globe.crust.get(cell);
+            crust_sum += *globe.crust.get(vertex);
             crust_n += 1;
         }
-        assert!(!rows.is_empty(), "seed {seed} has no land cells");
+        assert!(!rows.is_empty(), "seed {seed} has no land vertices");
         supply_sum += crate::crust::continental_supply(&globe.cratons);
         let mut seed_retained = 0_usize;
-        for cell in geo.vertices() {
-            let crust_km = *globe.crust.get(cell);
+        for vertex in geo.vertices() {
+            let crust_km = *globe.crust.get(vertex);
             if crust_km >= crate::crust::CONTINENTAL_THRESHOLD_KM {
                 seed_retained += 1;
                 retained_crust_sum += crust_km;
             }
         }
-        retained_cells += seed_retained;
+        retained_vertices += seed_retained;
         threshold_sum += seed_retained as f64 / globe.crust.len() as f64;
         land_sum += rows.len() as f64 / globe.crust.len() as f64;
         for c in &globe.cratons {
@@ -401,7 +401,7 @@ fn the_land_elevation_terms_attribute_their_variance() {
     let (stats, y_mean, y_var) = statistics(&pooled);
     println!("\n=== land-elevation attribution: {SEED_COUNT} worlds, level {LEVEL} ===");
     print_table(
-        "POOLED over every land cell of every seed",
+        "POOLED over every land vertex of every seed",
         &stats,
         y_mean,
         y_var,
@@ -414,8 +414,8 @@ fn the_land_elevation_terms_attribute_their_variance() {
         print!(" {:>12}", c.label());
     }
     println!();
-    for (seed, mean, cells, shares) in &per_seed {
-        print!("{seed:<6} {mean:>10.2} {cells:>8}");
+    for (seed, mean, vertices, shares) in &per_seed {
+        print!("{seed:<6} {mean:>10.2} {vertices:>8}");
         for s in shares {
             print!(" {s:>12.4}");
         }
@@ -472,7 +472,7 @@ fn the_land_elevation_terms_attribute_their_variance() {
         supply_sum / n
     );
     println!(
-        "  cells actually at or above the continental threshold       {:>8.4}",
+        "  vertices actually at or above the continental threshold       {:>8.4}",
         threshold_sum / n
     );
     println!(
@@ -499,14 +499,14 @@ fn the_land_elevation_terms_attribute_their_variance() {
     // the lowest band of the current land, and removing a band that lies
     // entirely below the mean raises the mean of what remains. The inequality
     // is rigorous; the size of the gap needs this measurement.
-    let retained_mean_crust = retained_crust_sum / retained_cells as f64;
+    let retained_mean_crust = retained_crust_sum / retained_vertices as f64;
     let shelf_break_head_m = crate::elevation::isostatic_m(retained_mean_crust) - shelf_break_m;
     let today_head_m = crate::elevation::isostatic_m(mean_land_crust)
         - crate::elevation::isostatic_m(crust_km_at(mean_sea));
     println!(
-        "\nTHE RETAINED SET (the cells that would still be land if sea level rose to the shelf break)"
+        "\nTHE RETAINED SET (the vertices that would still be land if sea level rose to the shelf break)"
     );
-    println!("  retained cells                                {retained_cells:>10}");
+    println!("  retained vertices                                {retained_vertices:>10}");
     println!("  conditional mean crust over the retained set  {retained_mean_crust:>10.2} km");
     println!("  mean crust over TODAY's land                  {mean_land_crust:>10.2} km");
     println!("  retained land would stand above the shelf break by {shelf_break_head_m:>10.2} m");

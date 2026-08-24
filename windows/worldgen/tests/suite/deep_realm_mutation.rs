@@ -48,7 +48,7 @@ const BAND_LADDER: [Band; 5] = [
 /// K/km — 24.0, the measured median band across the three preregistered seeds
 /// (gradient p50 = 24.419 / 25.004 / 23.082, `underworld_ladder_probe.rs`).
 /// `chamber_exists` gates on the delve ladder, so a budget in metres only
-/// decides a cave's reach once a cell's gradient turns it into a ΔT.
+/// decides a cave's reach once a vertex's gradient turns it into a ΔT.
 fn fixture_gradient() -> GeothermalGradient {
     GeothermalGradient::new(24.0)
 }
@@ -83,7 +83,7 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 }
 
 /// Every chamber address that exists over all five bands **of floor 0** at
-/// `(seed, cell)`, under `cave`'s budget. Walks all five bands regardless of
+/// `(seed, vertex)`, under `cave`'s budget. Walks all five bands regardless of
 /// `cave.deepest_horizon` — `chamber_exists` itself gates on the budget, so a
 /// full walk measures exactly what the budget lets through rather than
 /// baking the ladder's shape into this helper too.
@@ -98,14 +98,14 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 /// cave's count against a shallow one's, an authored budget's against a
 /// fabricated one's — and both arms sample the identical slice under the
 /// identical density, so the comparison is sound and the slice is not a
-/// confound. What this number is NOT is the count of chambers under a cell;
+/// confound. What this number is NOT is the count of chambers under a vertex;
 /// do not read it as one.
-fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: Vertex) -> usize {
+fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, vertex: Vertex) -> usize {
     let mut count = 0usize;
     for &band in &BAND_LADDER {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
-                cell,
+                vertex,
                 band,
                 branch,
                 level: 0,
@@ -118,18 +118,18 @@ fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: Ve
     count
 }
 
-/// The deepest band with at least one existing chamber at `(seed, cell)`
+/// The deepest band with at least one existing chamber at `(seed, vertex)`
 /// under `cave`'s budget, searching **floor 0** for the same reason
 /// [`chamber_count`] does — its callers compare two arms over the identical
 /// slice. `None` if no chamber exists at all. Existence is
-/// sparse (a coin-flip density per address), so an arbitrary probe cell can
+/// sparse (a coin-flip density per address), so an arbitrary probe vertex can
 /// legitimately come back empty; callers that need a guaranteed nonempty
-/// result pick a `(seed, cell)` this is known to return `Some` for.
+/// result pick a `(seed, vertex)` this is known to return `Some` for.
 fn deepest_reached(
     seed: Seed,
     cave: &Cave,
     gradient: GeothermalGradient,
-    cell: Vertex,
+    vertex: Vertex,
 ) -> Option<Band> {
     BAND_LADDER.iter().rev().find_map(|&band| {
         let reached = (0..BRANCHES_PER_SYSTEM).any(|branch| {
@@ -138,7 +138,7 @@ fn deepest_reached(
                 cave,
                 gradient,
                 ChamberAddr {
-                    cell,
+                    vertex,
                     band,
                     branch,
                     level: 0,
@@ -158,7 +158,7 @@ const SHALLOW_REACH_M: f64 = 200.0;
 /// Chosen to land on the top rung under ANY gradient in the physical band —
 /// 1 m is ΔT = 0.015 K at 15 K/km and 0.030 K at 30 K/km, both inside
 /// `Undercroft`'s `[0, 2)` K — so the mutation is a genuine downgrade for
-/// every cell the probe could pick, not only for the one it happens to. The
+/// every vertex the probe could pick, not only for the one it happens to. The
 /// real measured minimum reach is 200 m (`underworld_ladder_probe.rs`,
 /// reach-p10 = 200.0 / 215.3 / 201.7), so no generated cave is anywhere near
 /// it.
@@ -193,7 +193,7 @@ const DEEP_REACH_M: f64 = 2000.0;
 #[test]
 fn a_shallow_cave_has_a_shallow_graph() {
     let seed = Seed(90210);
-    let cell = Vertex(9);
+    let vertex = Vertex(9);
 
     let deep_cave = cave_reaching_m(DEEP_REACH_M);
     let shallow_cave = cave_reaching_m(SHALLOW_REACH_M);
@@ -212,27 +212,27 @@ fn a_shallow_cave_has_a_shallow_graph() {
         Band::Shallows
     );
 
-    let deep = chamber_count(seed, &deep_cave, fixture_gradient(), cell);
-    let shallow = chamber_count(seed, &shallow_cave, fixture_gradient(), cell);
+    let deep = chamber_count(seed, &deep_cave, fixture_gradient(), vertex);
+    let shallow = chamber_count(seed, &shallow_cave, fixture_gradient(), vertex);
     println!(
-        "derivation half (seed {}, cell {}): {DEEP_REACH_M} m budget (Basement) \
+        "derivation half (seed {}, vertex {}): {DEEP_REACH_M} m budget (Basement) \
          = {deep} chambers, {SHALLOW_REACH_M} m budget (Cover) = {shallow} chambers",
-        seed.0, cell.0
+        seed.0, vertex.0
     );
     assert!(
         deep > shallow,
         "the {DEEP_REACH_M} m budget gave {deep}, the {SHALLOW_REACH_M} m budget gave {shallow}"
     );
 
-    // Existence is a coin flip per address, so one (seed, cell) separates the
+    // Existence is a coin flip per address, so one (seed, vertex) separates the
     // two budgets by only a chamber or two — 6 against 5 here. Pooling several
     // seeds makes the claim about the BUDGET rather than about one draw. The
     // retired Roots/Regolith pair differed by three whole bands and did not
     // need this; Basement/Cover differ by one, and does.
     let (mut pooled_deep, mut pooled_shallow) = (0usize, 0usize);
     for raw in [90210u64, 1, 2, 3, 4, 5, 6, 7] {
-        pooled_deep += chamber_count(Seed(raw), &deep_cave, fixture_gradient(), cell);
-        pooled_shallow += chamber_count(Seed(raw), &shallow_cave, fixture_gradient(), cell);
+        pooled_deep += chamber_count(Seed(raw), &deep_cave, fixture_gradient(), vertex);
+        pooled_shallow += chamber_count(Seed(raw), &shallow_cave, fixture_gradient(), vertex);
     }
     println!("  pooled over 8 seeds: deep = {pooled_deep}, shallow = {pooled_shallow}");
     assert!(
@@ -242,7 +242,7 @@ fn a_shallow_cave_has_a_shallow_graph() {
     );
 
     // …and the shallow cave never reaches past its own in-budget rungs.
-    let reached = deepest_reached(seed, &shallow_cave, fixture_gradient(), cell);
+    let reached = deepest_reached(seed, &shallow_cave, fixture_gradient(), vertex);
     assert!(
         matches!(reached, Some(Band::Undercroft) | Some(Band::Shallows)),
         "a Shallows-budget cave reached {reached:?} — either the budget is not \
@@ -251,16 +251,16 @@ fn a_shallow_cave_has_a_shallow_graph() {
 }
 
 /// **The pipeline half.** Builds one real world to `BuildDepth::Terrain`
-/// and reads a real cell's real `Cave` back out through
+/// and reads a real vertex's real `Cave` back out through
 /// `GeneratedTerrain::cave_at` — the exact accessor the shipped consumer
 /// (`windows/vessel`'s `chamber_column_here`) calls before handing the
 /// result to `chamber_at`. This is deliberately NOT a hand-built `Cave`
 /// literal: it is whatever the live generator actually authored for this
-/// cell, at whatever band that happens to be (never `Regolith`, per Task 0).
+/// vertex, at whatever band that happens to be (never `Regolith`, per Task 0).
 ///
 /// The mutation: a **fabricated** copy of that same real cave, with
 /// `depth_reach_m` forced down to [`FABRICATED_REACH_M`] — a budget the
-/// generator did not author for this cell. If chamber_exists (or anything
+/// generator did not author for this vertex. If chamber_exists (or anything
 /// upstream of it) silently substituted a default/constant budget instead of
 /// the one terrain measured, feeding it the *real* cave and the *fabricated*
 /// one would be indistinguishable. It is not: the real, terrain-authored
@@ -287,7 +287,7 @@ fn a_shallow_cave_has_a_shallow_graph() {
 /// vessel calls) rather than a hand-built one, and confirm the mutation
 /// still reddens. Read directly (`windows/vessel/src/session.rs`,
 /// `chamber_column_here` and `delve_at`), the actual call site passes
-/// `terrain.cave_at(cell)`'s result straight through with no intermediate
+/// `terrain.cave_at(vertex)`'s result straight through with no intermediate
 /// reconstruction, so there is no assembly seam left unexercised there —
 /// but that is a code-reading argument, not something this test can assert.
 #[test]
@@ -309,18 +309,18 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
     let seed = artifacts.world.seed;
     let geo = terrain.geosphere();
 
-    let (cell, real_cave) = geo
+    let (vertex, real_cave) = geo
         .vertices()
         .filter(|&c| !terrain.is_ocean(c))
         .find_map(|c| terrain.cave_at(c).map(|cave| (c, cave)))
-        .expect("seed 42 has at least one land cave cell at BuildDepth::Terrain");
+        .expect("seed 42 has at least one land cave vertex at BuildDepth::Terrain");
 
-    let real_gradient = terrain.geothermal_gradient_at(cell);
+    let real_gradient = terrain.geothermal_gradient_at(vertex);
     assert!(
         rung_at_depth(real_cave.depth_reach_m, real_gradient) > Band::Undercroft,
-        "cell {cell:?}'s real cave already sits on the top rung ({} m at {} K/km), \
+        "vertex {vertex:?}'s real cave already sits on the top rung ({} m at {} K/km), \
          so a downgrade to {FABRICATED_REACH_M} m is not a genuine mutation; pick \
-         a different cell/seed",
+         a different vertex/seed",
         real_cave.depth_reach_m,
         real_gradient.get()
     );
@@ -346,7 +346,7 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
         FABRICATED_REACH_M,
     );
     assert!(
-        !fabricated_cave.band_agrees_with_reach(&terrain.column_at(cell)),
+        !fabricated_cave.band_agrees_with_reach(&terrain.column_at(vertex)),
         "the fabrication must actually violate the invariant, or it is not a \
          mutation — real band {:?}, real budget {} m, fabricated budget \
          {FABRICATED_REACH_M} m",
@@ -354,19 +354,19 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
         real_cave.depth_reach_m
     );
 
-    let authored_count = chamber_count(seed, &real_cave, real_gradient, cell);
-    let fabricated_count = chamber_count(seed, &fabricated_cave, real_gradient, cell);
-    let authored_deepest = deepest_reached(seed, &real_cave, real_gradient, cell);
-    let fabricated_deepest = deepest_reached(seed, &fabricated_cave, real_gradient, cell);
+    let authored_count = chamber_count(seed, &real_cave, real_gradient, vertex);
+    let fabricated_count = chamber_count(seed, &fabricated_cave, real_gradient, vertex);
+    let authored_deepest = deepest_reached(seed, &real_cave, real_gradient, vertex);
+    let fabricated_deepest = deepest_reached(seed, &fabricated_cave, real_gradient, vertex);
 
     println!(
-        "pipeline half (seed {}, cell {}): terrain authored depth_reach_m = \
+        "pipeline half (seed {}, vertex {}): terrain authored depth_reach_m = \
          {} m at {} K/km, rung {:?} ({authored_count} chambers, deepest reached \
          {authored_deepest:?}); fabricated {FABRICATED_REACH_M} m downgrade of \
          the SAME cave = {fabricated_count} chambers, deepest reached \
          {fabricated_deepest:?}",
         seed.0,
-        cell.0,
+        vertex.0,
         real_cave.depth_reach_m,
         real_gradient.get(),
         rung_at_depth(real_cave.depth_reach_m, real_gradient)
@@ -383,6 +383,6 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
     assert_ne!(
         authored_deepest, fabricated_deepest,
         "the authored and fabricated budgets reached the same depth at \
-         cell {cell:?} — the mutation did not change anything downstream"
+         vertex {vertex:?} — the mutation did not change anything downstream"
     );
 }

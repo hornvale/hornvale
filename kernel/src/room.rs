@@ -35,7 +35,7 @@ pub struct Facet {
 /// componentwise-minimum barycentric corner (the *lattice base point*) plus
 /// the triangle's orientation. Integer-only, so two rooms on the same base
 /// face have an exact, cross-platform-stable relative offset — this is what
-/// lets a situated chart place cells without a transcendental. `a + b + c`
+/// lets a situated chart place vertices without a transcendental. `a + b + c`
 /// is `scale - 1` for an up triangle and `scale - 2` for a down one.
 /// type-audit: bare-ok(index: a), bare-ok(index: b), bare-ok(index: c), bare-ok(flag: up), bare-ok(count: scale)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -487,7 +487,7 @@ impl Facet {
     /// Great-circle angular distance to `other`'s centroid, in radians.
     /// Pairs with [`Facet::bearing_to`]: together they are a polar
     /// coordinate for `other` about `self`, which is what a client needs
-    /// to place a cell without doing spherical trigonometry itself.
+    /// to place a vertex without doing spherical trigonometry itself.
     /// type-audit: pending(wave-1)
     pub fn distance_rad_to(&self, other: &Facet) -> f64 {
         let a = self.centroid();
@@ -531,28 +531,28 @@ impl Facet {
         [out[0].clone(), out[1].clone(), out[2].clone()]
     }
 
-    /// The room's three canonical-grid corner cells, each with its integer
+    /// The room's three canonical-grid corner vertices, each with its integer
     /// blend weight at the room centroid (numerators over
     /// `D = 3 << (depth - globe_level)`, summing to `D`). `None` if the room is
-    /// coarser than the grid (`depth < geo.level()`).
+    /// coarser than the grid (`depth < geo.depth()`).
     /// type-audit: bare-ok(count: return)
     pub fn corner_weights(
         &self,
         geo: &Geosphere,
         index: &NearestVertexIndex,
     ) -> Option<[(Vertex, u64); 3]> {
-        let gl = geo.level();
+        let gl = geo.depth();
         if self.depth() < gl {
             return None;
         }
         // Ancestor triangle at the globe level: its 3 corner positions (exact
-        // mesh vertices) resolve to CellIds.
+        // mesh vertices) resolve to vertices.
         let anc = Facet {
             face: self.face,
             path: self.path[..gl as usize].to_vec(),
         };
         let corner_pos = anc.corners();
-        let cells = [
+        let vertices = [
             index.nearest_to_position(geo, corner_pos[0]),
             index.nearest_to_position(geo, corner_pos[1]),
             index.nearest_to_position(geo, corner_pos[2]),
@@ -564,9 +564,9 @@ impl Facet {
         debug_assert_eq!(scale, 1i64 << (self.depth() - gl));
         let centroid_num = add(add(tri[0], tri[1]), tri[2]); // sums to 3*scale per axis-total
         Some([
-            (cells[0], centroid_num[0] as u64),
-            (cells[1], centroid_num[1] as u64),
-            (cells[2], centroid_num[2] as u64),
+            (vertices[0], centroid_num[0] as u64),
+            (vertices[1], centroid_num[1] as u64),
+            (vertices[2], centroid_num[2] as u64),
         ])
     }
 }
@@ -738,7 +738,7 @@ impl RoomMeshMemo {
     /// field doc). A read-side consumer that also holds the `(Geosphere,
     /// NearestVertexIndex)` it is ABOUT to read through (e.g. `windows/
     /// locale`'s `LocaleContext`) can still compare this against its own
-    /// `geo.level()` for its OWN parity check, and [`Self::
+    /// `geo.depth()` for its OWN parity check, and [`Self::
     /// corner_weights_lookup`] uses it to complete the store's key.
     /// type-audit: bare-ok(count: return)
     pub fn corner_weights_geo_level(&self) -> Option<u32> {
@@ -781,7 +781,7 @@ impl Facet {
     /// [`RoomMeshMemo`] instead of recomputing the three
     /// [`NearestVertexIndex::nearest_to_position`] scans on every call. Byte-
     /// identical to `corner_weights` by construction (a cache of a pure
-    /// function of `(self, geo.level())` — spec §2.1: `Geosphere::new` takes
+    /// function of `(self, geo.depth())` — spec §2.1: `Geosphere::new` takes
     /// only a level, so two geospheres at the same level are byte-identical
     /// and the level is the only extra key ingredient `corner_weights`
     /// needs) — pinned by `corner_weights_memo_bit_equals_recomputation`
@@ -796,7 +796,7 @@ impl Facet {
         index: &NearestVertexIndex,
         memo: &mut RoomMeshMemo,
     ) -> Option<[(Vertex, u64); 3]> {
-        let level = geo.level();
+        let level = geo.depth();
         let key = (self.clone(), level);
         if let Some(&cached) = memo.corner_weights.get(&key) {
             memo.corner_weights_hits += 1;
@@ -1243,7 +1243,7 @@ mod tests {
             face: 6,
             path: vec![0, 3, 1, 2, 3],
         };
-        let denom: u64 = 3 << (addr.path.len() as u32 - geo.level());
+        let denom: u64 = 3 << (addr.path.len() as u32 - geo.depth());
         let ws = addr.corner_weights(&geo, &index).expect("below the grid");
         let sum: u64 = ws.iter().map(|&(_, w)| w).sum();
         assert_eq!(sum, denom, "weights sum to 3*2^(depth-globe)");
@@ -1266,13 +1266,13 @@ mod tests {
     }
 
     #[test]
-    fn corner_weights_pin_cell_weight_pairing() {
+    fn corner_weights_pin_vertex_weight_pairing() {
         use crate::NearestVertexIndex;
         // A constant field can't catch a transposition (any permutation of the
-        // same weights still blends to the constant). Pin the cell<->weight
+        // same weights still blends to the constant). Pin the vertex<->weight
         // axis directly: the room centroid's barycentric weights ARE its
         // proximity to each corner, so for an asymmetric room the
-        // max-weight corner must be the corner cell nearest the centroid.
+        // max-weight corner must be the corner vertex nearest the centroid.
         let geo = Geosphere::new(3);
         let index = NearestVertexIndex::new(&geo);
         // path biased toward corner 0 the whole way down -> distinct weights,
@@ -1282,9 +1282,9 @@ mod tests {
             path: vec![0, 0, 0, 0, 0],
         };
         let ws = addr.corner_weights(&geo, &index).expect("below the grid");
-        let (max_cell, max_w) = *ws.iter().max_by_key(|&&(_, w)| w).expect("three corners");
-        for &(cell, w) in &ws {
-            if cell != max_cell {
+        let (max_vertex, max_w) = *ws.iter().max_by_key(|&&(_, w)| w).expect("three corners");
+        for &(vertex, w) in &ws {
+            if vertex != max_vertex {
                 assert!(
                     max_w > w,
                     "max weight must be strictly unique for this test to pin anything"
@@ -1293,8 +1293,8 @@ mod tests {
         }
         let nearest = index.nearest_to_position(&geo, addr.centroid());
         assert_eq!(
-            max_cell, nearest,
-            "the max-weight corner cell must be the cell nearest the centroid"
+            max_vertex, nearest,
+            "the max-weight corner vertex must be the vertex nearest the centroid"
         );
     }
 
@@ -1303,15 +1303,15 @@ mod tests {
         use crate::{NearestVertexIndex, Vertex};
         let geo = Geosphere::new(3);
         let index = NearestVertexIndex::new(&geo);
-        // all-0 path keeps a corner at a base vertex (a 5-valent pentagon cell)
+        // all-0 path keeps a corner at a base vertex (a 5-valent pentagon vertex)
         let addr = Facet {
             face: 0,
             path: vec![0, 0, 0, 0, 0],
         };
         let ws = addr.corner_weights(&geo, &index).expect("below the grid");
-        let denom: u64 = 3 << (addr.path.len() as u32 - geo.level());
+        let denom: u64 = 3 << (addr.path.len() as u32 - geo.depth());
         assert_eq!(ws.iter().map(|&(_, w)| w).sum::<u64>(), denom);
-        // the three corner cells are distinct valid ids
+        // the three corner vertices are distinct valid ids
         let ids: BTreeSet<Vertex> = ws.iter().map(|&(c, _)| c).collect();
         assert_eq!(ids.len(), 3);
     }
@@ -1705,7 +1705,7 @@ mod tests {
             path: vec![0],
         };
         assert!(
-            shallow.depth() < geo.level(),
+            shallow.depth() < geo.depth(),
             "this address must be above the grid"
         );
 

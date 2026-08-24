@@ -683,10 +683,10 @@ fn the_water_column_is_a_place_you_can_be() {
     // On the surface: afloat on open water, not standing in the floor's biome.
     assert!(afloat.contains("Open water —"), "{afloat}");
 
-    // A direction this cell ACTUALLY offers, read off the surface `look`
+    // A direction this room ACTUALLY offers, read off the surface `look`
     // before diving. Hardcoding `n` was wrong and The Tense exposed it: the
-    // mesh is triangular, every cell offers one of two exit triads, and the
-    // exit check runs BEFORE the submersion rule — so on a cell without `n`
+    // mesh is triangular, every room offers one of two exit triads, and the
+    // exit check runs BEFORE the submersion rule — so on a room without `n`
     // the reply is "No way n from here." and the lateral-refusal claim below
     // is never reached. The test would have gone green on a refusal it was not
     // testing for, which is worse than the red.
@@ -757,12 +757,12 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
     assert!(up.contains("already at the surface"), "{up}");
 }
 
-/// The Deep Realm, Task 5: at a cell with no cave, `delve` refuses and names
+/// The Deep Realm, Task 5: at a vertex with no cave, `delve` refuses and names
 /// the absence — the first of the outcomes `dive`'s own doc warns a descent
 /// verb must distinguish. The others are exercised in
 /// `windows/vessel/src/session.rs`'s own internal tests
 /// (`delve_has_two_distinguishable_outcomes`), which need a hand-picked cave
-/// cell — a terrain cell spans many walk-band rooms, so a test cannot
+/// vertex — a terrain vertex spans many walk-band rooms, so a test cannot
 /// reliably steer a walk to land on one specific outcome, and only
 /// `session.rs`'s own tests can reach the private `delve_at` seam that
 /// sidesteps needing to.
@@ -776,11 +776,11 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 /// it reddens if a sealed cave ever returns while it still claims two.
 ///
 /// This mirrored `there_is_nothing_to_dive_into_on_dry_land`: the flagship's
-/// own starting cell had no cave, so no walk was needed to observe the
+/// own starting vertex had no cave, so no walk was needed to observe the
 /// refusal.
 ///
 /// **THE SUBJECT MOVED, NOT THE VERB** (decision 0134, 2026-08-14). That was
-/// always a measured contingency about one cell, and the terrain epoch's new
+/// always a measured contingency about one vertex, and the terrain epoch's new
 /// coastlines put a cave under it — a SEALED one, whose entrance resolves to
 /// no chamber. So the public path here now exercises the *sealed* refusal
 /// instead of the *no-cave* refusal. Both are refusals that name what stopped
@@ -796,12 +796,12 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 /// **THE SUBJECT MOVED AGAIN** (The Glasshouse, Stage B Task 4, the
 /// thermostat). The damped, greenhouse-forced insolation baseline
 /// re-places seed 42's settlements a second time this campaign, and the new
-/// flagship's own starting cell has no cave at all — back to the *no-cave*
+/// flagship's own starting vertex has no cave at all — back to the *no-cave*
 /// refusal, the same contingency this comment already names. Still a
 /// refusal that names what stopped you, which is the property this test
 /// holds regardless of which of the two fires.
 #[test]
-fn the_flagships_own_starting_cell_refuses_a_delve_and_names_why() {
+fn the_flagships_own_starting_vertex_refuses_a_delve_and_names_why() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let out = match s.handle("delve") {

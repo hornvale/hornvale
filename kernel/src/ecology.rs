@@ -449,7 +449,7 @@ impl EnvironmentVector {
     }
 }
 
-/// A per-cell **dimensionless suitability** in `[0, 1]`: how well conditions
+/// A per-vertex **dimensionless suitability** in `[0, 1]`: how well conditions
 /// suit a population, carrying no units and no magnitude.
 ///
 /// Distinct from [`CapacityMap`] by decision 0103, which exists because a
@@ -481,13 +481,13 @@ impl SuitabilityMap {
         Ok(Self(values))
     }
 
-    /// Suitability at one cell.
+    /// Suitability at one vertex.
     /// type-audit: bare-ok(ratio: return)
     pub fn at(&self, id: crate::Vertex) -> f64 {
         *self.0.get(id)
     }
 
-    /// The number of cells.
+    /// The number of vertices.
     /// type-audit: bare-ok(count: return)
     pub fn len(&self) -> usize {
         self.0.len()
@@ -500,7 +500,7 @@ impl SuitabilityMap {
     }
 }
 
-/// A per-cell **headcount capacity**: how many individuals a cell supports.
+/// A per-vertex **headcount capacity**: how many individuals a vertex supports.
 /// Has units — it is a population, not a ratio. See [`SuitabilityMap`] for the
 /// distinction and decision 0103 for why it is enforced in the type system.
 /// type-audit: bare-ok(count: element)
@@ -523,13 +523,13 @@ impl CapacityMap {
         Ok(Self(values))
     }
 
-    /// Headcount capacity at one cell.
+    /// Headcount capacity at one vertex.
     /// type-audit: bare-ok(count: return)
     pub fn at(&self, id: crate::Vertex) -> f64 {
         *self.0.get(id)
     }
 
-    /// The number of cells.
+    /// The number of vertices.
     /// type-audit: bare-ok(count: return)
     pub fn len(&self) -> usize {
         self.0.len()
@@ -556,7 +556,7 @@ impl CapacityMap {
         self.0
     }
 
-    /// Scale every cell by a dimensionless factor, staying a capacity. This is
+    /// Scale every vertex by a dimensionless factor, staying a capacity. This is
     /// the shape of `carrying_capacity × SETTLERS_PER_CAPACITY`.
     /// type-audit: bare-ok(ratio: factor)
     pub fn scaled(&self, factor: f64) -> CapacityMap {
@@ -568,7 +568,7 @@ impl CapacityMap {
     /// how decision 0103 makes `capacity := suitability` unwritable.
     ///
     /// # Panics
-    /// If the two maps cover different cell counts — they must come from the
+    /// If the two maps cover different vertex counts — they must come from the
     /// same geosphere.
     pub fn modulated_by(&self, suitability: &SuitabilityMap) -> CapacityMap {
         assert_eq!(

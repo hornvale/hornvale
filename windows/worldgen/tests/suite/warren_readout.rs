@@ -12,10 +12,10 @@
 //! here as the pre-campaign world rather than reverted):
 //!
 //! - **P1 (direction).** Rust-monster's and xorn's mean suitability over
-//!   cave-bearing land cells, before vs after. ASSERTED (aggregate, pooled
+//!   cave-bearing land vertices, before vs after. ASSERTED (aggregate, pooled
 //!   over every seed): rust-monster up substantially, xorn flat within
 //!   noise — the spec's stated prediction.
-//! - **P2 (range collapse).** Count of land cells with non-zero suitability
+//! - **P2 (range collapse).** Count of land vertices with non-zero suitability
 //!   for each kind, before vs after. ASSERTED, per seed: after must never
 //!   exceed before. The plan is explicit that a rise here means "the gate is
 //!   not working: stop and report that" — so this is a real assertion, not a
@@ -89,20 +89,20 @@ fn realm_slice(wc: &WorldComponents) -> Vec<HabitatRealm> {
 #[derive(Default, Clone, Copy)]
 struct KindSeedStats {
     /// Sum of "before" (surface-forced) suitability over cave-bearing land
-    /// cells, this seed.
+    /// vertices, this seed.
     cave_sum_before: f64,
     /// Sum of "after" (live, realm-aware) suitability over the SAME
-    /// cave-bearing land cells.
+    /// cave-bearing land vertices.
     cave_sum_after: f64,
-    /// Count of cave-bearing land cells this seed (the P1 population size).
+    /// Count of cave-bearing land vertices this seed (the P1 population size).
     cave_n: usize,
-    /// Count of ALL land cells with "before" suitability > 0.0 (the P2
+    /// Count of ALL land vertices with "before" suitability > 0.0 (the P2
     /// population size before the gate).
     land_nonzero_before: usize,
-    /// Count of ALL land cells with "after" suitability > 0.0 (P2 after the
+    /// Count of ALL land vertices with "after" suitability > 0.0 (P2 after the
     /// gate).
     land_nonzero_after: usize,
-    /// Total land cell count this seed, for context in the printed table.
+    /// Total land vertex count this seed, for context in the printed table.
     land_n: usize,
 }
 
@@ -216,20 +216,20 @@ fn measure_seed(
         let before_map = &k_before.iter().find(|(t, _)| *t == tag).unwrap().1;
 
         let mut s = KindSeedStats::default();
-        for cell in geo.vertices() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
             s.land_n += 1;
-            let a = *after_map.get(cell);
-            let b = *before_map.get(cell);
+            let a = *after_map.get(vertex);
+            let b = *before_map.get(vertex);
             if a > 0.0 {
                 s.land_nonzero_after += 1;
             }
             if b > 0.0 {
                 s.land_nonzero_before += 1;
             }
-            if terrain.cave_at(cell).is_some() {
+            if terrain.cave_at(vertex).is_some() {
                 s.cave_n += 1;
                 s.cave_sum_after += a;
                 s.cave_sum_before += b;
@@ -306,7 +306,7 @@ fn the_blast_radius_readout() {
     }
 
     // --- P1: direction, pooled over every seed --------------------------
-    println!("\n=== P1 — direction (mean suitability over cave-bearing land cells) ===");
+    println!("\n=== P1 — direction (mean suitability over cave-bearing land vertices) ===");
     println!(
         "{:>6} | {:>12} | {:>12} | {:>12} | {:>12} | {:>8}",
         "seed", "rm_before", "rm_after", "xorn_before", "xorn_after", "cave_n"
@@ -345,7 +345,7 @@ fn the_blast_radius_readout() {
     }
     assert!(
         rm_cave_n_total > 0 && xorn_cave_n_total > 0 && drow_cave_n_total > 0,
-        "the seed sweep must contain cave-bearing land cells"
+        "the seed sweep must contain cave-bearing land vertices"
     );
     let rm_mean_before = rm_before_total / rm_cave_n_total as f64;
     let rm_mean_after = rm_after_total / rm_cave_n_total as f64;
@@ -358,17 +358,17 @@ fn the_blast_radius_readout() {
     let drow_ratio = drow_mean_after / drow_mean_before;
     println!(
         "\nrust-monster: pooled mean before={rm_mean_before:.6} after={rm_mean_after:.6} \
-         ratio={rm_ratio:.3} over {rm_cave_n_total} cave-bearing land cells across {} seeds",
+         ratio={rm_ratio:.3} over {rm_cave_n_total} cave-bearing land vertices across {} seeds",
         rows.len()
     );
     println!(
         "xorn:         pooled mean before={xorn_mean_before:.6} after={xorn_mean_after:.6} \
-         ratio={xorn_ratio:.3} over {xorn_cave_n_total} cave-bearing land cells across {} seeds",
+         ratio={xorn_ratio:.3} over {xorn_cave_n_total} cave-bearing land vertices across {} seeds",
         rows.len()
     );
     println!(
         "drow:         pooled mean before={drow_mean_before:.6} after={drow_mean_after:.6} \
-         ratio={drow_ratio:.3} over {drow_cave_n_total} cave-bearing land cells across {} seeds",
+         ratio={drow_ratio:.3} over {drow_cave_n_total} cave-bearing land vertices across {} seeds",
         rows.len()
     );
     // --- P1 IS FALSIFIED, AND THIS ASSERTS THE FALSIFICATION -------------
@@ -384,7 +384,7 @@ fn the_blast_radius_readout() {
     // calling elevation with floor `0.0`. Its own doc states the consequence:
     // "a floored axis can never bind, so whichever axis is left bare becomes
     // the sole determinant." Measured on rust-monster over seed 42's
-    // cave-bearing cells (`warren_liebig_probe.rs`):
+    // cave-bearing vertices (`warren_liebig_probe.rs`):
     //
     //     surface       temp .6943  moist .6781  insol .4666  elev .2469
     //     subterranean  temp .4673  moist .7551  insol .8399  elev .2469
@@ -401,7 +401,7 @@ fn the_blast_radius_readout() {
     // one axis a chamber wins outright). **Temperature now DEGRADES** — this
     // chamber sits at a depth its gradient warms past rust-monster's cool
     // optimum — and **moisture is now mixed** rather than uniformly better:
-    // over the four cells this probe prints, it rises on two and falls on two,
+    // over the four vertices this probe prints, it rises on two and falls on two,
     // because a chamber high above its water table in tight rock is drier than
     // the surface above it. Going underground is a trade now, not a gift.
     //
@@ -448,7 +448,7 @@ fn the_blast_radius_readout() {
     // the insolation reading improves (.467 -> .840, The Warren's own probe) and
     // the Liebig minimum never sees it, because drow's elevation devotion (0.30)
     // sits below its sovereignty floor (0.424802) and the unfloored elevation
-    // axis is therefore the minimum on every cell. Generalised: a non-lethal
+    // axis is therefore the minimum on every vertex. Generalised: a non-lethal
     // preference cannot matter while an unfloored axis is scarcer.
     //
     // So The Radiation authored the dark half anyway — it is true of the kind —
@@ -471,7 +471,7 @@ fn the_blast_radius_readout() {
     );
 
     // --- P2: range collapse, asserted per seed ---------------------------
-    println!("\n=== P2 — range collapse (land cells with non-zero suitability) ===");
+    println!("\n=== P2 — range collapse (land vertices with non-zero suitability) ===");
     println!(
         "{:>6} | {:>8} | {:>12} | {:>11} | {:>12} | {:>11}",
         "seed", "land_n", "rm_before_nz", "rm_after_nz", "xo_before_nz", "xo_after_nz"
@@ -495,7 +495,7 @@ fn the_blast_radius_readout() {
         );
         assert!(
             rm.land_nonzero_after <= rm.land_nonzero_before,
-            "P2: rust-monster's non-zero land cell count must NOT rise at seed {} \
+            "P2: rust-monster's non-zero land vertex count must NOT rise at seed {} \
              (before={}, after={}) — the plan calls a rise here 'the gate is not working'",
             r.raw_seed,
             rm.land_nonzero_before,
@@ -503,7 +503,7 @@ fn the_blast_radius_readout() {
         );
         assert!(
             xo.land_nonzero_after <= xo.land_nonzero_before,
-            "P2: xorn's non-zero land cell count must NOT rise at seed {} (before={}, after={})",
+            "P2: xorn's non-zero land vertex count must NOT rise at seed {} (before={}, after={})",
             r.raw_seed,
             xo.land_nonzero_before,
             xo.land_nonzero_after
@@ -515,15 +515,15 @@ fn the_blast_radius_readout() {
         land_n_total += rm.land_n;
     }
     println!(
-        "\nrust-monster: {rm_before_nz_total} -> {rm_after_nz_total} non-zero land cells \
-         ({:.1}% -> {:.1}% of {land_n_total} land cells) across {} seeds",
+        "\nrust-monster: {rm_before_nz_total} -> {rm_after_nz_total} non-zero land vertices \
+         ({:.1}% -> {:.1}% of {land_n_total} land vertices) across {} seeds",
         100.0 * rm_before_nz_total as f64 / land_n_total as f64,
         100.0 * rm_after_nz_total as f64 / land_n_total as f64,
         rows.len()
     );
     println!(
-        "xorn:         {xorn_before_nz_total} -> {xorn_after_nz_total} non-zero land cells \
-         ({:.1}% -> {:.1}% of {land_n_total} land cells) across {} seeds",
+        "xorn:         {xorn_before_nz_total} -> {xorn_after_nz_total} non-zero land vertices \
+         ({:.1}% -> {:.1}% of {land_n_total} land vertices) across {} seeds",
         100.0 * xorn_before_nz_total as f64 / land_n_total as f64,
         100.0 * xorn_after_nz_total as f64 / land_n_total as f64,
         rows.len()

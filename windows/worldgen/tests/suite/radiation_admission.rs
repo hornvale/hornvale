@@ -67,7 +67,7 @@ fn every_elf_carries_the_full_peopled_cluster() {
 /// `sovereignty_floor(mass, potency)` and floors elevation by `0.0`. A floored
 /// axis never reads below its floor; the unfloored one peaks at its own
 /// `devotion`. So `elevation.devotion < sovereignty_floor` makes elevation the
-/// Liebig minimum at every cell of every world, and the other three curves
+/// Liebig minimum at every vertex of every world, and the other three curves
 /// contribute exactly nothing — which is what makes a biome-affinity row a
 /// preference the model was THROWING AWAY rather than one it already applies.
 ///
@@ -160,7 +160,7 @@ fn drows_elevation_curve_is_woods_and_says_nothing_about_depth() {
 
 /// The sea elf must actually be able to eat at sea. `marine_forage_supply_field`
 /// keys productivity off the biome class, and a kind with no `MARINE_FORAGE`
-/// weight draws zero supply on every water cell no matter what its affinity
+/// weight draws zero supply on every water vertex no matter what its affinity
 /// says — it would be authored, admitted, and void.
 #[test]
 fn the_sea_elf_draws_on_the_marine_supply_axis() {
@@ -169,7 +169,7 @@ fn the_sea_elf_draws_on_the_marine_supply_axis() {
     assert!(
         sea.niche.weight(hornvale_kernel::MARINE_FORAGE) > 0.0,
         "sea-elf has no MARINE_FORAGE weight, so it draws zero supply on every \
-         ocean cell and its shelf affinity multiplies zero. Killer whale, \
+         ocean vertex and its shelf affinity multiplies zero. Killer whale, \
          giant squid and reef shark are the authoring precedent (all 1.0)."
     );
     for name in ELVES.into_iter().filter(|n| *n != "sea-elf") {

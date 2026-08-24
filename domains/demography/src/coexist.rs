@@ -1,8 +1,8 @@
 //! The overlap-weighted `K^β` coexistence share: the packer's master knob.
 //!
-//! A single cell's carrying capacity `K_s` per species is not the share that
+//! A single vertex's carrying capacity `K_s` per species is not the share that
 //! species actually gets once its niche-overlapping competitors are counted:
-//! [`cell_share`] normalizes each species' `K_s^β` against the
+//! [`vertex_share`] normalizes each species' `K_s^β` against the
 //! overlap-weighted sum of every co-present species' `K_j^β` (an SINR /
 //! multinomial-logit form — each species reads its own denominator, not one
 //! shared pool). The competition-temperature exponent `β` is the whole
@@ -21,12 +21,12 @@ use std::collections::BTreeMap;
 // exponent, chosen by the controller from the task-A16b β-sweep
 // (`windows/worldgen/tests/beta_calibration_sweep.rs`, 13 seeds × 10 β
 // values in [0.1, 6.0], the shipped 4-goblinoid roster). At β=2.0 the mean
-// per-CLAIMED-cell effective diversity (`byproducts.strife`, averaged over
-// habitable cells with Σ density > 0) reads ≈2.4 — a clear dominant with
+// per-CLAIMED-vertex effective diversity (`byproducts.strife`, averaged over
+// habitable vertices with Σ density > 0) reads ≈2.4 — a clear dominant with
 // graded rivals, above winner-take-all monoculture (~1) and below
 // undifferentiated "oatmeal" sharing (~4). The sweep also showed this knob
 // is intentionally WEAK against the shipped roster: near-tied goblinoid
-// carrying capacities keep the claimed-cell diversity in a narrow 2.14-2.53
+// carrying capacities keep the claimed-vertex diversity in a narrow 2.14-2.53
 // band across the entire swept range β∈[0.1, 6.0], so β=2.0 is not a sharp
 // optimum so much as a representative point in a flat response — the dial
 // will bite harder once the Stage-B menagerie adds species with disparate
@@ -42,11 +42,11 @@ pub const BETA: f64 = 2.0;
 /// type-audit: bare-ok(count: FLOOR)
 pub const FLOOR: f64 = 1e-6;
 
-/// The single-cell overlap-weighted coexistence share for every species in
+/// The single-vertex overlap-weighted coexistence share for every species in
 /// `present`.
 ///
 /// `present` is `(species_id, K_s)` — each present species' id and its
-/// (species-specific) carrying capacity at this one cell. `overlap` is the
+/// (species-specific) carrying capacity at this one vertex. `overlap` is the
 /// [`crate::niche::guild_overlap`] matrix: `overlap[&(i, j)]` is the
 /// competition weight `w_ij ∈ [0, 1]` species `i` feels from species `j`
 /// (`w_ii = 1`, `0.0` for any pair the matrix omits).
@@ -77,7 +77,7 @@ pub const FLOOR: f64 = 1e-6;
 /// unreachable from the shipped call site.
 ///
 /// type-audit: bare-ok(count: capacity), bare-ok(index: present), bare-ok(count: present), bare-ok(ratio: overlap), bare-ok(ratio: beta), bare-ok(count: floor), bare-ok(count: return)
-pub fn cell_share(
+pub fn vertex_share(
     capacity: f64,
     present: &[(u32, f64)],
     overlap: &BTreeMap<(u32, u32), f64>,
@@ -94,14 +94,14 @@ pub fn cell_share(
 
     // Precompute K_j^β for every present species once, in the same
     // sorted-id order as `present` (a `Vec` indexed by position rather than
-    // `cell_share_indexed`'s caller, `pack`, keying a `BTreeMap` by id —
+    // `vertex_share_indexed`'s caller, `pack`, keying a `BTreeMap` by id —
     // position order IS sorted-id order here since `present` was just
     // sorted above).
     let powered: Vec<f64> = present.iter().map(|(_, k)| powf(*k, beta)).collect();
 
     // This wrapper's single call is the only consumer of `overlap`, so the
     // dense matrix is built over exactly `present` (no roster to reuse
-    // across cells the way `pack` has) — same values
+    // across vertices the way `pack` has) — same values
     // `overlap.get(&(id_s, id_j)).unwrap_or(0.0)` would read, just
     // materialized once instead of per (s, j) pair below. `overlap_dense`'s
     // rows/columns are in exactly `present`'s position order here, so each
@@ -118,7 +118,7 @@ pub fn cell_share(
         .collect();
     let cols: Vec<usize> = (0..present.len()).collect();
 
-    cell_share_indexed(
+    vertex_share_indexed(
         capacity,
         &present,
         &powered,
@@ -129,7 +129,7 @@ pub fn cell_share(
     )
 }
 
-/// The dense-index engine behind [`cell_share`]: identical arithmetic, same
+/// The dense-index engine behind [`vertex_share`]: identical arithmetic, same
 /// summation order, over pre-materialized structures instead of `BTreeMap`
 /// lookups per `(s, j)` pair — the per-`(s, j)`-pair cost is now pure
 /// integer array indexing (`overlap_dense[cols[i]][cols[j]]`); the one
@@ -137,20 +137,20 @@ pub fn cell_share(
 /// roster row/column) happens once per present species, in the caller that
 /// builds `cols`, not once per pair here.
 ///
-/// `present` is the same sorted `(species_id, K_s)` slice `cell_share`
+/// `present` is the same sorted `(species_id, K_s)` slice `vertex_share`
 /// documents. `powered[i]` is `K_i^β` for `present[i]` (position order is
 /// sorted-id order). `overlap_dense` is a dense materialization of the
 /// `overlap` matrix, which may be sized over a larger roster than `present`
 /// alone (`pack` builds one dense matrix per call, reused across every
-/// cell's `present` subset); `cols[i]` is `present[i]`'s row/column index
+/// vertex's `present` subset); `cols[i]` is `present[i]`'s row/column index
 /// into that matrix, precomputed by the caller (integer-only work — no
 /// float operation touches it). `floor` and `floor_pow` (`floor^β`) are the
-/// two distinct pre-derived quantities `cell_share` itself computes:
+/// two distinct pre-derived quantities `vertex_share` itself computes:
 /// `floor_pow` is the denominator's additive floor term, `floor` is the
 /// separate absence threshold the resulting share is compared against —
 /// passing `floor_pow` for both would silently change which shares are
 /// zeroed, so both are required here.
-fn cell_share_indexed(
+fn vertex_share_indexed(
     capacity: f64,
     present: &[(u32, f64)],
     powered: &[f64],
@@ -189,10 +189,10 @@ const PREY_SUPPORT_COEFF: f64 = 0.2;
 // AUTHORED prior (task A9, 2026-07-14): the top-down shadow multiplier never
 // drops below this floor, so an apex predator suppresses its prey without
 // ever driving it to true zero (extinction is a settlement-scale event this
-// cell-local coupling must not cause on its own).
+// vertex-local coupling must not cause on its own).
 const SHADOW_FLOOR: f64 = 0.1;
 
-/// Bidirectional trophic coupling over one cell's per-species density
+/// Bidirectional trophic coupling over one vertex's per-species density
 /// [`stack`], applied **highest-level-first**: every predator present in
 /// `stack` (i.e. it has a [`crate::niche::predation`] entry) is processed in
 /// descending [`crate::niche::trophic_levels`] order (ties broken by id) so
@@ -222,7 +222,7 @@ const SHADOW_FLOOR: f64 = 0.1;
 ///
 /// Predators absent from `predation`, or whose predator id is absent from
 /// `stack`, are skipped entirely — this function only touches species
-/// actually present in the cell.
+/// actually present in the vertex.
 ///
 /// type-audit: bare-ok(index: stack), bare-ok(index: predation), bare-ok(count: stack), bare-ok(index: levels), bare-ok(ratio: levels), bare-ok(index: carnivore_frac), bare-ok(ratio: carnivore_frac), bare-ok(ratio: shadow)
 pub fn couple_trophic(
@@ -303,23 +303,23 @@ fn carnivore_fraction(species: &[(u32, Mass, ResourceVector)]) -> BTreeMap<u32, 
 }
 
 /// The soft-capacity overflow → emigration-pressure field: how hard crowding
-/// in one cell pushes population toward its neighbours, the field the
+/// in one vertex pushes population toward its neighbours, the field the
 /// history campaign reads for displacement.
 ///
-/// Per cell, the raw overshoot is the logistic excess `max(0, demand -
-/// capacity)` — crowding beyond what the cell's carrying capacity supports;
-/// a cell at or under capacity contributes nothing. That overshoot field is
+/// Per vertex, the raw overshoot is the logistic excess `max(0, demand -
+/// capacity)` — crowding beyond what the vertex's carrying capacity supports;
+/// a vertex at or under capacity contributes nothing. That overshoot field is
 /// then **spilled to neighbours by reusing the existing flow hydrology**
 /// ([`crate::flow::flow`]) rather than a new diffusion kernel: `flow` was
-/// built to route a per-cell quantity up-gradient to its locally-highest
+/// built to route a per-vertex quantity up-gradient to its locally-highest
 /// neighbour and accumulate it there (originally for population climbing the
 /// K-gradient toward attractors); applied to the overshoot field instead of
 /// K, the same up-gradient walk routes crowding pressure toward the
-/// locally-most-crowded cell in its neighbourhood and accumulates it there,
+/// locally-most-crowded vertex in its neighbourhood and accumulates it there,
 /// which is exactly the "spill toward the pressure peak" semantics
-/// emigration pressure needs — a crowded cell's excess concentrates at (and
+/// emigration pressure needs — a crowded vertex's excess concentrates at (and
 /// downstream-accumulates through) local overshoot maxima rather than
-/// vanishing at the cell it originated in. The field returned is that
+/// vanishing at the vertex it originated in. The field returned is that
 /// [`crate::flow::Flow::accumulation`], not the raw overshoot.
 ///
 /// type-audit: bare-ok(count: demand), bare-ok(count: capacity), bare-ok(count: return)
@@ -342,23 +342,23 @@ pub fn emigration_pressure(
 // Re-pin with a provenance-updated comment once a calibration study exists.
 const SHADOW: f64 = 0.3;
 
-/// The assembled per-cell density stack for every species over a `Geosphere`:
+/// The assembled per-vertex density stack for every species over a `Geosphere`:
 /// the end-to-end product of [`pack`], and the surface downstream consumers
 /// (settlement condensation, migration) read.
 ///
 /// type-audit: bare-ok(index: density), bare-ok(count: density), bare-ok(count: emigration_pressure)
 #[derive(Clone, Debug, PartialEq)]
 pub struct CoexistStack {
-    /// Each species' realized per-cell individual density, tagged by species
+    /// Each species' realized per-vertex individual density, tagged by species
     /// id, in the same order as the `species` slice `pack` was called with.
     pub density: Vec<(u32, VertexMap<f64>)>,
     /// The soft-capacity overflow field (see [`emigration_pressure`]),
     /// summed across every species' realized density against the pooled
-    /// per-cell carrying capacity.
+    /// per-vertex carrying capacity.
     pub emigration_pressure: VertexMap<f64>,
 }
 
-/// Assemble the whole per-cell coexistence density stack: the integration
+/// Assemble the whole per-vertex coexistence density stack: the integration
 /// keystone wiring together every prior task in this campaign.
 ///
 /// `per_species_k` is each species' carrying-capacity field `K_s` (one
@@ -366,42 +366,42 @@ pub struct CoexistStack {
 /// `species` is `(species_id, body_mass, niche)` for the same species —
 /// the shared, kernel-level shape [`crate::niche::guild_overlap`],
 /// [`crate::niche::trophic_levels`], and [`crate::niche::predation`] all
-/// project from. `beta` and `floor` pass straight through to [`cell_share`].
+/// project from. `beta` and `floor` pass straight through to [`vertex_share`].
 ///
 /// Wiring, in order:
 /// 1. **Derive once.** `overlap`, `levels`, `predation`, and
 ///    `carnivore_frac` ([`carnivore_fraction`]) depend only on `species`'
-///    niche vectors and masses — never on a cell — so each is computed
-///    exactly once up front, not per cell.
-/// 2. **Per cell** (visiting `geo.vertices()` in ascending `Vertex` order):
-///    - `present` is `(species_id, K_s(cell))` for every species with a
-///      **strictly positive** `K` at this cell, sorted by id — a species
-///      absent from a cell (`K == 0`) contributes nothing to that cell's
-///      competition and is dropped before `cell_share` ever sees it.
-///    - `capacity` is the **sum of `present`'s K values**: the cell's total
+///    niche vectors and masses — never on a vertex — so each is computed
+///    exactly once up front, not per vertex.
+/// 2. **Per vertex** (visiting `geo.vertices()` in ascending `Vertex` order):
+///    - `present` is `(species_id, K_s(vertex))` for every species with a
+///      **strictly positive** `K` at this vertex, sorted by id — a species
+///      absent from a vertex (`K == 0`) contributes nothing to that vertex's
+///      competition and is dropped before `vertex_share` ever sees it.
+///    - `capacity` is the **sum of `present`'s K values**: the vertex's total
 ///      carrying capacity, competitively repartitioned among whichever
 ///      species are actually there, rather than a fixed external cap. This
-///      is also reused, unchanged, as the same cell's contribution to the
+///      is also reused, unchanged, as the same vertex's contribution to the
 ///      `capacity` field step 3 hands `emigration_pressure`, so both
 ///      pressure and share read one consistent notion of "how much this
-///      cell can support."
-///    - `cell_share` turns that `(capacity, present, overlap, beta, floor)`
+///      vertex can support."
+///    - `vertex_share` turns that `(capacity, present, overlap, beta, floor)`
 ///      into an overlap-weighted share per present species.
-///    - Each share is converted from a capacity count to a **per-cell
+///    - Each share is converted from a capacity count to a **per-vertex
 ///      individual density** by dividing by [`home_range`]: a species with
-///      a small home range (many individuals fit in one cell) keeps most of
+///      a small home range (many individuals fit in one vertex) keeps most of
 ///      its share as density; a species with a large home range (an
-///      individual spans many cells) is scaled down to a fractional
-///      per-cell density, since a share of "capacity" is not yet a count of
-///      bodies actually standing in this one cell.
+///      individual spans many vertices) is scaled down to a fractional
+///      per-vertex density, since a share of "capacity" is not yet a count of
+///      bodies actually standing in this one vertex.
 ///    - [`couple_trophic`] then applies the bottom-up cap / top-down shadow
-///      over that cell's density map in place, using the once-derived
+///      over that vertex's density map in place, using the once-derived
 ///      `predation`/`levels`/`carnivore_frac` and the authored [`SHADOW`]
 ///      constant. The bottom-up cap only clamps each predator's
 ///      carnivore-derived density fraction, so an omnivore with no eligible
 ///      prey still survives on its uncapped forage fraction.
-/// 3. **Emigration pressure.** `demand` is each cell's summed post-coupling
-///    density across every species; `capacity` is each cell's summed
+/// 3. **Emigration pressure.** `demand` is each vertex's summed post-coupling
+///    density across every species; `capacity` is each vertex's summed
 ///    present-species `K` (the same quantity computed in step 2, rebuilt as
 ///    a field). [`emigration_pressure`] turns `(demand, capacity)` into the
 ///    spilled crowding-pressure field.
@@ -413,7 +413,7 @@ pub struct CoexistStack {
 /// # Panics
 ///
 /// `species` must contain an entry for every species id present in
-/// `per_species_k` — the per-cell `idx_of[id]` lookup (built from
+/// `per_species_k` — the per-vertex `idx_of[id]` lookup (built from
 /// `species`, translating a present species id to its dense-matrix roster
 /// position) is the first to index on every id `per_species_k` supplies,
 /// and panics if one is missing (the later `masses[&id]` lookup would panic
@@ -421,7 +421,7 @@ pub struct CoexistStack {
 /// matching sets (worldgen builds both from the same species roster) never
 /// hit this; a debug build asserts the precondition explicitly so a
 /// mismatch fails loudly at the call site rather than surfacing as an
-/// opaque panic deep in the per-cell loop.
+/// opaque panic deep in the per-vertex loop.
 ///
 /// type-audit: bare-ok(index: per_species_k), bare-ok(index: species), bare-ok(ratio: beta), bare-ok(count: floor)
 pub fn pack(
@@ -440,7 +440,7 @@ pub fn pack(
     );
 
     // Derive overlap/levels/predation/carnivore_frac exactly once — they
-    // depend only on `species`, never on a cell.
+    // depend only on `species`, never on a vertex.
     let projected_niche: Vec<(u32, ResourceVector)> = species
         .iter()
         .map(|(id, _mass, niche)| (*id, niche.clone()))
@@ -453,19 +453,19 @@ pub fn pack(
 
     // Dense-index `overlap` once per `pack` call, over the full sorted
     // species roster: the species set (and every pairwise overlap weight)
-    // is cell-invariant. `idx_of` maps a species id to its roster position
-    // (row/column index into `overlap_dense`); a cell's `present` is always
+    // is vertex-invariant. `idx_of` maps a species id to its roster position
+    // (row/column index into `overlap_dense`); a vertex's `present` is always
     // a subset of this same roster (see the `debug_assert!` above), so
     // every id it produces resolves here. This does NOT eliminate every
-    // `BTreeMap` lookup from the per-cell loop below: each cell still pays
+    // `BTreeMap` lookup from the per-vertex loop below: each vertex still pays
     // one `idx_of` lookup per PRESENT SPECIES (building `cols`), same as
     // before this hoist existed conceptually — what changes is that the
-    // O(n²) `(s, j)`-pair inner loop inside `cell_share_indexed` no longer
+    // O(n²) `(s, j)`-pair inner loop inside `vertex_share_indexed` no longer
     // does a lookup per pair, only a `cols`-array index (pure integer
-    // work), so the `BTreeMap` cost drops from O(n²) to O(n) per cell.
-    // `floor_pow` is likewise cell-invariant — `cell_share` would recompute
+    // work), so the `BTreeMap` cost drops from O(n²) to O(n) per vertex.
+    // `floor_pow` is likewise vertex-invariant — `vertex_share` would recompute
     // the same `floor^β` value on every call — so it too is hoisted out of
-    // the loop; neither hoist changes *when* the per-cell `weighted_sum`
+    // the loop; neither hoist changes *when* the per-vertex `weighted_sum`
     // folds are computed or in what order, only how many times the
     // roster-level inputs feeding them are (re)computed.
     let roster_ids: Vec<u32> = species.iter().map(|(id, _, _)| *id).collect();
@@ -485,23 +485,23 @@ pub fn pack(
         .collect();
     let floor_pow = powf(floor, beta);
 
-    // Per-cell density maps and capacities, indexed by Vertex in the same
-    // ascending order `Geosphere::cells()` and `VertexMap::from_fn` both use,
+    // Per-vertex density maps and capacities, indexed by Vertex in the same
+    // ascending order `Geosphere::vertices()` and `VertexMap::from_fn` both use,
     // so the later per-species `VertexMap` rebuild reads them back correctly.
-    let mut per_cell_density: Vec<BTreeMap<u32, f64>> = Vec::new();
-    let mut per_cell_capacity: Vec<f64> = Vec::new();
+    let mut per_vertex_density: Vec<BTreeMap<u32, f64>> = Vec::new();
+    let mut per_vertex_capacity: Vec<f64> = Vec::new();
 
-    for cell in geo.vertices() {
+    for vertex in geo.vertices() {
         let mut present: Vec<(u32, f64)> = per_species_k
             .iter()
-            .map(|(id, k)| (*id, *k.get(cell)))
+            .map(|(id, k)| (*id, *k.get(vertex)))
             .filter(|(_, k)| *k > 0.0)
             .collect();
         present.sort_by_key(|(id, _)| *id);
 
         let capacity: f64 = present.iter().map(|(_, k)| *k).sum();
 
-        // Same `powf` calls, same sorted-id order, `cell_share`'s own
+        // Same `powf` calls, same sorted-id order, `vertex_share`'s own
         // precompute would perform — materialized here as a position-Vec
         // the indexed path reads directly instead of re-deriving inside a
         // wrapper call.
@@ -509,11 +509,11 @@ pub fn pack(
 
         // One `idx_of` lookup per present species (integer-only — no float
         // operation touches this), translating each present id to its
-        // roster row/column once so `cell_share_indexed`'s O(n²) inner loop
+        // roster row/column once so `vertex_share_indexed`'s O(n²) inner loop
         // below never repeats the lookup per `(s, j)` pair.
         let cols: Vec<usize> = present.iter().map(|(id, _)| idx_of[id]).collect();
 
-        let shares = cell_share_indexed(
+        let shares = vertex_share_indexed(
             capacity,
             &present,
             &powered,
@@ -538,15 +538,15 @@ pub fn pack(
             SHADOW,
         );
 
-        per_cell_density.push(density);
-        per_cell_capacity.push(capacity);
+        per_vertex_density.push(density);
+        per_vertex_capacity.push(capacity);
     }
 
     let density: Vec<(u32, VertexMap<f64>)> = species
         .iter()
         .map(|(id, _, _)| {
             let map = VertexMap::from_fn(geo, |c| {
-                per_cell_density[c.0 as usize]
+                per_vertex_density[c.0 as usize]
                     .get(id)
                     .copied()
                     .unwrap_or(0.0)
@@ -555,8 +555,8 @@ pub fn pack(
         })
         .collect();
 
-    let demand = VertexMap::from_fn(geo, |c| per_cell_density[c.0 as usize].values().sum());
-    let capacity_field = VertexMap::from_fn(geo, |c| per_cell_capacity[c.0 as usize]);
+    let demand = VertexMap::from_fn(geo, |c| per_vertex_density[c.0 as usize].values().sum());
+    let capacity_field = VertexMap::from_fn(geo, |c| per_vertex_capacity[c.0 as usize]);
     let spillover = emigration_pressure(geo, &demand, &capacity_field);
 
     CoexistStack {
@@ -750,8 +750,8 @@ mod tests {
     fn beta_slides_from_oatmeal_to_monoculture() {
         let overlap = full_overlap(&[0, 1]);
         let present = vec![(0u32, 2.0), (1u32, 1.0)]; // species 0 fitter
-        let low = cell_share(1.0, &present, &overlap, 0.1, 1e-6); // β→0: near-equal
-        let high = cell_share(1.0, &present, &overlap, 20.0, 1e-6); // β→∞: winner-take-all
+        let low = vertex_share(1.0, &present, &overlap, 0.1, 1e-6); // β→0: near-equal
+        let high = vertex_share(1.0, &present, &overlap, 20.0, 1e-6); // β→∞: winner-take-all
         let ratio_low = low[&0] / low[&1];
         assert!(ratio_low < 2.5, "low β shares broadly (oatmeal)");
         assert!(high[&1] < 1e-3 && high[&0] > 0.9, "high β → monoculture");
@@ -839,14 +839,14 @@ mod tests {
 
     #[test]
     fn more_same_guild_competitors_thin_everyone() {
-        let two = cell_share(
+        let two = vertex_share(
             1.0,
             &[(0, 1.0), (1, 1.0)],
             &full_overlap(&[0, 1]),
             4.0,
             1e-9,
         );
-        let three = cell_share(
+        let three = vertex_share(
             1.0,
             &[(0, 1.0), (1, 1.0), (2, 1.0)],
             &full_overlap(&[0, 1, 2]),

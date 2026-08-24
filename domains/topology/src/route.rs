@@ -1,18 +1,18 @@
-//! Least-cost cell routing: a `SearchSpace` over a `Geosphere`'s cell
-//! adjacency, weighted by a per-cell traversal cost, solved by the kernel's
+//! Least-cost vertex routing: a `SearchSpace` over a `Geosphere`'s vertex
+//! adjacency, weighted by a per-vertex traversal cost, solved by the kernel's
 //! deterministic `astar`. This is the pathfinder later domains derive
 //! natural land routes over (a terrain cost field is Task 3; deriving
 //! `ConnectionGraph` edges from it is Task 4) — this module only finds the
-//! least-cost path between two cells.
+//! least-cost path between two vertices.
 
 use hornvale_kernel::{Geosphere, SearchSpace, Vertex, VertexMap, astar};
 use std::collections::BTreeSet;
 
-/// A least-cost search space over `geo`'s cell adjacency: each step from a
-/// cell to one of its neighbors costs `cost`'s value for the destination
-/// cell, and the goal is reaching `goal`.
+/// A least-cost search space over `geo`'s vertex adjacency: each step from a
+/// vertex to one of its neighbors costs `cost`'s value for the destination
+/// vertex, and the goal is reaching `goal`.
 ///
-/// Impassable cells are represented by a per-cell cost of `u64::MAX`; such a
+/// Impassable vertices are represented by a per-vertex cost of `u64::MAX`; such a
 /// neighbor is skipped entirely in `successors` rather than treated as an
 /// ordinary (very expensive) step. This both encodes "cannot enter" and
 /// guards the running cost total against overflow — no path this search
@@ -51,7 +51,7 @@ impl<'a> SearchSpace for VertexRoute<'a> {
         *s == self.goal
     }
 
-    /// `0` — plain Dijkstra rather than a true admissible heuristic. Cell
+    /// `0` — plain Dijkstra rather than a true admissible heuristic. Vertex
     /// cost is a caller-defined, dimensionless traversal weight (Task 3 will
     /// give it terrain meaning), not a physical distance, so there is no
     /// general way to derive a lower bound on remaining cost from geometry
@@ -64,8 +64,8 @@ impl<'a> SearchSpace for VertexRoute<'a> {
     }
 }
 
-/// The least-cost path from `from` to `to` over `geo`'s cell adjacency,
-/// weighted by `cost` (the cost of a step is paid on the cell entered).
+/// The least-cost path from `from` to `to` over `geo`'s vertex adjacency,
+/// weighted by `cost` (the cost of a step is paid on the vertex entered).
 /// Returns the full path `[from, …, to]` (a single-element path if
 /// `from == to`) and its total cost, or `None` if `to` is not reachable from
 /// `from` within `budget` node expansions.
@@ -83,19 +83,19 @@ pub fn least_cost(
     let mut path = Vec::with_capacity(actions.len() + 1);
     path.push(from);
     let mut total = 0u64;
-    for cell in actions {
-        total = total.saturating_add(*cost.get(cell));
-        path.push(cell);
+    for vertex in actions {
+        total = total.saturating_add(*cost.get(vertex));
+        path.push(vertex);
     }
     Some((path, total))
 }
 
 /// The result of a single-source cost sweep from [`least_cost_from`]: every
-/// cell's least-cost total from the sweep's source, plus enough to
-/// reconstruct the optimal path to any cell on demand.
+/// vertex's least-cost total from the sweep's source, plus enough to
+/// reconstruct the optimal path to any vertex on demand.
 ///
 /// **The tie-break is a pure function of the cost field, never of expansion
-/// order.** When two edges reach the same cell at the exact same total cost,
+/// order.** When two edges reach the same vertex at the exact same total cost,
 /// the predecessor is fixed by comparing the two candidate predecessors'
 /// `Vertex` and keeping the lower one — not by which edge the sweep happened
 /// to relax first. This exists because a consumer of `path_to` measures
@@ -107,33 +107,33 @@ pub fn least_cost(
 /// reporting rerouting that never happened — measuring the router instead of
 /// the world.
 pub struct CostSweep {
-    /// The sweep's source cell.
+    /// The sweep's source vertex.
     from: Vertex,
-    /// `dist[cell.0]` is the least-cost total from `from` to `cell`, or
+    /// `dist[vertex.0]` is the least-cost total from `from` to `vertex`, or
     /// `None` if unreachable.
     dist: Vec<Option<u64>>,
-    /// `prev[cell.0]` is the predecessor `cell` was reached from on its
+    /// `prev[vertex.0]` is the predecessor `vertex` was reached from on its
     /// least-cost path, or `None` for `from` itself (which has none) and for
-    /// any unreached cell.
+    /// any unreached vertex.
     prev: Vec<Option<Vertex>>,
 }
 
 impl CostSweep {
-    /// The least-cost total from the sweep's source to `cell`, or `None` if
-    /// `cell` is unreachable. `Some(0)` when `cell` is the source itself.
+    /// The least-cost total from the sweep's source to `vertex`, or `None` if
+    /// `vertex` is unreachable. `Some(0)` when `vertex` is the source itself.
     /// type-audit: bare-ok(count: return)
-    pub fn cost_to(&self, cell: Vertex) -> Option<u64> {
-        self.dist[cell.0 as usize]
+    pub fn cost_to(&self, vertex: Vertex) -> Option<u64> {
+        self.dist[vertex.0 as usize]
     }
 
-    /// The least-cost path from the sweep's source to `cell`, `[from, …,
-    /// cell]` (a single-element path if `cell` is the source), reconstructed
-    /// by walking [`CostSweep`]'s predecessor chain backward from `cell` to
-    /// `from`. `None` if `cell` is unreachable.
-    pub fn path_to(&self, cell: Vertex) -> Option<Vec<Vertex>> {
-        self.dist[cell.0 as usize]?;
-        let mut path = vec![cell];
-        let mut current = cell;
+    /// The least-cost path from the sweep's source to `vertex`, `[from, …,
+    /// vertex]` (a single-element path if `vertex` is the source), reconstructed
+    /// by walking [`CostSweep`]'s predecessor chain backward from `vertex` to
+    /// `from`. `None` if `vertex` is unreachable.
+    pub fn path_to(&self, vertex: Vertex) -> Option<Vec<Vertex>> {
+        self.dist[vertex.0 as usize]?;
+        let mut path = vec![vertex];
+        let mut current = vertex;
         while current != self.from {
             current = self.prev[current.0 as usize]?;
             path.push(current);
@@ -143,12 +143,12 @@ impl CostSweep {
     }
 }
 
-/// Least-cost totals and paths from `from` to **every** cell, in one sweep.
+/// Least-cost totals and paths from `from` to **every** vertex, in one sweep.
 ///
 /// Exactly [`least_cost`]'s cost function evaluated everywhere at once: the
-/// cost of a step is paid on the cell entered, `from` itself costs `0`, and
-/// impassable cells (`u64::MAX`) are skipped in expansion rather than summed.
-/// Unreachable cells report `None` from both [`CostSweep::cost_to`] and
+/// cost of a step is paid on the vertex entered, `from` itself costs `0`, and
+/// impassable vertices (`u64::MAX`) are skipped in expansion rather than summed.
+/// Unreachable vertices report `None` from both [`CostSweep::cost_to`] and
 /// [`CostSweep::path_to`]. There is no node budget — the sweep is bounded by
 /// the mesh, not by a search horizon.
 ///
@@ -171,13 +171,13 @@ pub fn least_cost_from(geo: &Geosphere, cost: &VertexMap<u64>, from: Vertex) -> 
     dist[from.0 as usize] = Some(0);
     frontier.insert((0, from));
 
-    while let Some(&(d, cell)) = frontier.iter().next() {
-        frontier.remove(&(d, cell));
-        // A stale frontier entry: this cell was already settled more cheaply.
-        if dist[cell.0 as usize] != Some(d) {
+    while let Some(&(d, vertex)) = frontier.iter().next() {
+        frontier.remove(&(d, vertex));
+        // A stale frontier entry: this vertex was already settled more cheaply.
+        if dist[vertex.0 as usize] != Some(d) {
             continue;
         }
-        for &next in geo.neighbors(cell) {
+        for &next in geo.neighbors(vertex) {
             let step = *cost.get(next);
             if step == u64::MAX {
                 continue;
@@ -186,22 +186,22 @@ pub fn least_cost_from(geo: &Geosphere, cost: &VertexMap<u64>, from: Vertex) -> 
             match dist[next.0 as usize] {
                 None => {
                     dist[next.0 as usize] = Some(candidate);
-                    prev[next.0 as usize] = Some(cell);
+                    prev[next.0 as usize] = Some(vertex);
                     frontier.insert((candidate, next));
                 }
                 Some(old) if candidate < old => {
                     frontier.remove(&(old, next));
                     dist[next.0 as usize] = Some(candidate);
-                    prev[next.0 as usize] = Some(cell);
+                    prev[next.0 as usize] = Some(vertex);
                     frontier.insert((candidate, next));
                 }
                 Some(old) if candidate == old => {
                     // Exact tie: keep the lower-Vertex predecessor. Pure
                     // function of the cost field — see CostSweep's doc.
                     if let Some(existing) = prev[next.0 as usize]
-                        && cell < existing
+                        && vertex < existing
                     {
-                        prev[next.0 as usize] = Some(cell);
+                        prev[next.0 as usize] = Some(vertex);
                     }
                 }
                 _ => {}
@@ -217,7 +217,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_cell_with_no_impassable_neighbors_lists_every_neighbor() {
+    fn a_vertex_with_no_impassable_neighbors_lists_every_neighbor() {
         let geo = Geosphere::new(0);
         let cost = VertexMap::from_fn(&geo, |_| 1);
         let route = VertexRoute::new(&geo, &cost, Vertex(0));
@@ -248,8 +248,8 @@ mod tests {
         let geo = Geosphere::new(0);
         let cost = VertexMap::from_fn(&geo, |_| 1);
         let route = VertexRoute::new(&geo, &cost, Vertex(0));
-        for cell in geo.vertices() {
-            assert_eq!(route.heuristic(&cell), 0);
+        for vertex in geo.vertices() {
+            assert_eq!(route.heuristic(&vertex), 0);
         }
     }
 
@@ -263,15 +263,15 @@ mod tests {
     }
 
     #[test]
-    fn impassable_cells_are_unreachable_and_do_not_overflow() {
+    fn impassable_vertices_are_unreachable_and_do_not_overflow() {
         let geo = Geosphere::new(0);
         // Everything impassable except the source itself.
         let cost = VertexMap::from_fn(&geo, |c| if c == Vertex(0) { 10 } else { u64::MAX });
         let d = least_cost_from(&geo, &cost, Vertex(0));
         assert_eq!(d.cost_to(Vertex(0)), Some(0));
         for c in geo.vertices().filter(|&c| c != Vertex(0)) {
-            assert_eq!(d.cost_to(c), None, "cell {c:?} should be unreachable");
-            assert_eq!(d.path_to(c), None, "cell {c:?} should have no path");
+            assert_eq!(d.cost_to(c), None, "vertex {c:?} should be unreachable");
+            assert_eq!(d.path_to(c), None, "vertex {c:?} should have no path");
         }
     }
 
@@ -283,10 +283,10 @@ mod tests {
         // plain hop-count agree by accident.
         //
         // This does NOT assert the reconstructed path equals `least_cost`'s
-        // path cell-for-cell — both are optimal, but the two functions break
+        // path vertex-for-vertex — both are optimal, but the two functions break
         // ties differently, so equal paths would be a coincidence and an
         // unequal one would not be a bug. What must hold, and is asserted
-        // below for every cell: reachability agrees, the path is
+        // below for every vertex: reachability agrees, the path is
         // well-formed (starts at the source, ends at `to`, every step is an
         // adjacency), and the path's own summed cost equals `cost_to`'s
         // number — i.e. the reconstructed path is genuinely optimal, not
@@ -336,7 +336,7 @@ mod tests {
     }
 
     #[test]
-    fn a_tie_is_broken_by_the_lower_cell_id_predecessor_not_expansion_order() {
+    fn a_tie_is_broken_by_the_lower_vertex_id_predecessor_not_expansion_order() {
         // `Geosphere::new(0)` is the level-0 icosphere: Vertex(0)'s
         // neighbors are [1, 5, 7, 10, 11] (all at cost 1 under a uniform
         // field), and Vertex(9) is a common neighbor of both Vertex(1) and

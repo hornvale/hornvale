@@ -1,5 +1,5 @@
 //! The terrain traversal-cost field (The Connection Graph, Task 3): a
-//! per-cell integer land-travel cost the natural-land-route pathfinder
+//! per-vertex integer land-travel cost the natural-land-route pathfinder
 //! (`hornvale_topology::route::least_cost`, over `hornvale_kernel::astar`)
 //! plans over. Lives at the `windows/worldgen` composition root because it
 //! reads both terrain (elevation) and climate (biome) -- a domain crate may
@@ -12,8 +12,8 @@
 use hornvale_climate::Biome;
 use hornvale_kernel::{Geosphere, ReferenceElevation, VertexMap};
 
-/// The flat-ground cost paid to enter any passable (non-ocean) cell with
-/// zero slope to every neighbor -- the floor every other passable cell's
+/// The flat-ground cost paid to enter any passable (non-ocean) vertex with
+/// zero slope to every neighbor -- the floor every other passable vertex's
 /// cost is measured above. Coarse-tuned (not census-calibrated): the graph
 /// derivation (Task 4) and its consumers only need the relative ordering
 /// (flat cheap, steep dear, ocean impassable), so a precise real-world
@@ -30,10 +30,10 @@ pub const BASE_COST: u64 = 10;
 /// type-audit: bare-ok(ratio)
 const SLOPE_SCALE: f64 = 1.0;
 
-/// Per-cell integer land-traversal cost: [`BASE_COST`] plus a slope term (the
-/// largest absolute elevation gap from a cell to any one of its neighbors,
+/// Per-vertex integer land-traversal cost: [`BASE_COST`] plus a slope term (the
+/// largest absolute elevation gap from a vertex to any one of its neighbors,
 /// scaled by [`SLOPE_SCALE`] and truncated to an integer), rising steeply
-/// for peaks and escarpments. Ocean cells (`biome`'s marine classification,
+/// for peaks and escarpments. Ocean vertices (`biome`'s marine classification,
 /// `Biome::is_marine`) are impassable to land travel: `u64::MAX`, entered
 /// nowhere and skipped by `hornvale_topology::route::VertexRoute` rather than
 /// summed as an ordinary (very expensive) step.
@@ -51,13 +51,13 @@ pub fn traversal_cost(
     elevation: &VertexMap<ReferenceElevation>,
     biome: &VertexMap<Biome>,
 ) -> VertexMap<u64> {
-    VertexMap::from_fn(geo, |cell| {
-        if biome.get(cell).is_marine() {
+    VertexMap::from_fn(geo, |vertex| {
+        if biome.get(vertex).is_marine() {
             return u64::MAX;
         }
 
-        let here = elevation.get(cell).get();
-        let max_gap = geo.neighbors(cell).iter().fold(0.0_f64, |acc, &n| {
+        let here = elevation.get(vertex).get();
+        let max_gap = geo.neighbors(vertex).iter().fold(0.0_f64, |acc, &n| {
             let gap = (elevation.get(n).get() - here).abs();
             if gap.total_cmp(&acc).is_gt() {
                 gap
@@ -70,8 +70,8 @@ pub fn traversal_cost(
     })
 }
 
-/// Per-cell land-traversal cost at a given sea level: identical to
-/// [`traversal_cost`] except a cell is ocean (`u64::MAX`) iff its elevation is
+/// Per-vertex land-traversal cost at a given sea level: identical to
+/// [`traversal_cost`] except a vertex is ocean (`u64::MAX`) iff its elevation is
 /// below `sea_level`, rather than by present biome. This is the era-aware cost
 /// The Sundering's moving sea plans over — at a glacial low-stand the exposed
 /// shelf drops below `u64::MAX` and becomes a passable land bridge.
@@ -81,12 +81,12 @@ pub fn traversal_cost_at(
     elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
 ) -> VertexMap<u64> {
-    VertexMap::from_fn(geo, |cell| {
-        let here = elevation.get(cell).get();
+    VertexMap::from_fn(geo, |vertex| {
+        let here = elevation.get(vertex).get();
         if here < sea_level.get() {
             return u64::MAX;
         }
-        let max_gap = geo.neighbors(cell).iter().fold(0.0_f64, |acc, &n| {
+        let max_gap = geo.neighbors(vertex).iter().fold(0.0_f64, |acc, &n| {
             let gap = (elevation.get(n).get() - here).abs();
             if gap.total_cmp(&acc).is_gt() {
                 gap
@@ -113,8 +113,8 @@ mod tests {
         let elevation = VertexMap::from_fn(&geo, |_| e(100.0));
         let biome = VertexMap::from_fn(&geo, |_| Biome::TemperateGrassland);
         let cost = traversal_cost(&geo, &elevation, &biome);
-        for cell in geo.vertices() {
-            assert_eq!(*cost.get(cell), BASE_COST);
+        for vertex in geo.vertices() {
+            assert_eq!(*cost.get(vertex), BASE_COST);
         }
     }
 
@@ -128,19 +128,19 @@ mod tests {
         {
             let biome = VertexMap::from_fn(&geo, |_| marine);
             let cost = traversal_cost(&geo, &elevation, &biome);
-            for cell in geo.vertices() {
-                assert_eq!(*cost.get(cell), u64::MAX, "{marine:?} must be impassable");
+            for vertex in geo.vertices() {
+                assert_eq!(*cost.get(vertex), u64::MAX, "{marine:?} must be impassable");
             }
         }
     }
 
     #[test]
-    fn a_lone_high_cell_costs_more_than_the_flat_base_cost() {
+    fn a_lone_high_vertex_costs_more_than_the_flat_base_cost() {
         // Gap is symmetric across an edge, so a peak's immediate neighbor can
         // register the same gap magnitude (the peak is the tallest thing in
         // ITS neighborhood too) -- this asserts the slope term is genuinely
         // added on the peak itself, rather than comparing it to a neighbor
-        // that may tie it. The peak-vs-isolated-flat-cell comparison is
+        // that may tie it. The peak-vs-isolated-flat-vertex comparison is
         // covered properly in `windows/worldgen/tests/traversal.rs`, where
         // the flat region is built far enough from the peak to be unaffected
         // by it.

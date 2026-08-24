@@ -32,7 +32,7 @@ const FOUNDED_YEAR: f64 = 500.0;
 /// The bake year the fixture world's history closes at.
 const NOW_YEAR: f64 = 2000.0;
 
-/// A world holding exactly one **living** gnoll occupation at cell 1400,
+/// A world holding exactly one **living** gnoll occupation at vertex 1400,
 /// founded in year 500, with the present committed at year 2000 — every time
 /// value crossed into days on the way in, as the real emit does.
 ///

@@ -165,20 +165,20 @@ fn substrate_order(a: &Substrate, b: &Substrate) -> std::cmp::Ordering {
 /// If you want heterogeneity, count categories — the length of this `Vec` is
 /// dominated by grade sampling, not by material variety.
 ///
-/// Walks every land cell of `terrain`'s Geosphere and lands a substrate for
+/// Walks every land vertex of `terrain`'s Geosphere and lands a substrate for
 /// each geological source present — the bedrock ([`substrate_of_rock`]), the
 /// climate-coupled soil ([`substrate_of_soil`], via [`crate::soil_of`]), and
 /// any ore deposit ([`substrate_of_commodity`], via [`crate::deposit_of`]) —
-/// plus living matter ([`substrate_of_life`]) wherever the cell is
+/// plus living matter ([`substrate_of_life`]) wherever the vertex is
 /// habitable (`climate`'s habitability mask: the existing "could host a
 /// vale-like settlement" signal, reused here as this campaign's biosphere-
-/// presence proxy rather than authoring a new one). Ocean cells contribute
+/// presence proxy rather than authoring a new one). Ocean vertices contribute
 /// nothing — The Reagent's inventories are terrestrial, matching the
 /// terrestrial-supply frame the rest of the composition root already uses.
 ///
 /// Deduplicated and sorted by [`substrate_order`] so the result is
 /// deterministic — the same seed's terrain/climate always walks the same
-/// cells in the same order, and the sort removes any dependence on that
+/// vertices in the same order, and the sort removes any dependence on that
 /// walk order besides — and directly comparable between worlds.
 pub fn substances_of_world(
     terrain: &GeneratedTerrain,
@@ -187,16 +187,16 @@ pub fn substances_of_world(
     let geo = terrain.geosphere();
     let soils = crate::soil_of(terrain, climate, geo);
     let mut substances: Vec<Substrate> = Vec::new();
-    for cell in geo.vertices() {
-        if terrain.is_ocean(cell) {
+    for vertex in geo.vertices() {
+        if terrain.is_ocean(vertex) {
             continue;
         }
-        substances.push(substrate_of_rock(terrain.rock_at(cell)));
-        substances.push(substrate_of_soil(*soils.get(cell)));
-        if let Some(deposit) = crate::deposit_of(terrain, climate, geo, cell) {
+        substances.push(substrate_of_rock(terrain.rock_at(vertex)));
+        substances.push(substrate_of_soil(*soils.get(vertex)));
+        if let Some(deposit) = crate::deposit_of(terrain, climate, geo, vertex) {
             substances.push(substrate_of_commodity(deposit.commodity, deposit.grade));
         }
-        if *climate.habitability().get(cell) {
+        if *climate.habitability().get(vertex) {
             substances.push(substrate_of_life());
         }
     }
@@ -525,11 +525,11 @@ mod tests {
     /// generous (e.g. `grind-stone`'s malleability <= 0.3 admits nearly
     /// every rock; `dissolve-salt` is admitted by ordinary Aridisol soil,
     /// not only evaporite), and a default-size globe has thousands of land
-    /// cells — enough that essentially every world's soil/rock/climate
+    /// vertices — enough that essentially every world's soil/rock/climate
     /// variety alone saturates the whole table regardless of seed. So
     /// production-set divergence needs a world small enough that this
     /// saturation does NOT happen: [`sparse_terrain_pins`] pins a small,
-    /// mostly-ocean globe (few land cells, few plates), and at THAT
+    /// mostly-ocean globe (few land vertices, few plates), and at THAT
     /// configuration seeds do diverge — a minority reach all 7 while the rest
     /// miss `dissolve-salt`, because their particular small landmass never
     /// rolls evaporite rock or arid-enough soil. Pins are held fixed and

@@ -3,7 +3,7 @@
 //! Measurement only. The delve ladder (spec §4.1) places its rungs at
 //! temperature offsets above the surface datum rather than at round metres,
 //! so the rung table cannot be authored until the distribution of
-//! (depth, gradient) over cave-bearing cells is known. This probe prints it.
+//! (depth, gradient) over cave-bearing vertices is known. This probe prints it.
 //!
 //! It asserts nothing. Every check is a build/lookup `expect`; the result is
 //! the printed table. Recorded into the module doc when it has been run.
@@ -145,7 +145,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 
 /// claim: readout(off-gate, heavy:, prints only, no assertion) — the joint
 /// distribution of cave depth and geothermal gradient over cave-bearing land
-/// cells, expressed as ΔT above the surface datum. The input to spec §4.1's
+/// vertices, expressed as ΔT above the surface datum. The input to spec §4.1's
 /// rung table; not a gate on any value.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
@@ -177,14 +177,14 @@ fn how_hot_is_a_cave() {
         let mut gradients: Vec<f64> = Vec::new();
         let mut band_hist = [0usize; 5];
 
-        for cell in geo.vertices() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
-            let gradient = terrain.geothermal_gradient_at(cell).get();
+            let gradient = terrain.geothermal_gradient_at(vertex).get();
             gradients.push(gradient);
             let band_index = match cave.deepest_horizon {
                 Horizon::Regolith => 0,
@@ -195,7 +195,7 @@ fn how_hot_is_a_cave() {
             };
             band_hist[band_index] += 1;
             // ΔT at the cave's deepest reach: its depth budget in metres
-            // (Task 1b), converted to km, times this cell's gradient.
+            // (Task 1b), converted to km, times this vertex's gradient.
             reaches.push(cave.depth_reach_m);
             dt_samples.push(gradient * (cave.depth_reach_m / 1000.0));
             // The band-top coordinate, kept as an in-run control: the column's
@@ -205,7 +205,7 @@ fn how_hot_is_a_cave() {
             // shows is the narrower, still-live claim: a band top is not a
             // depth quantity even when the band is right. The pre-1b table in
             // this module's doc is the actual before-reading.
-            let column = terrain.column_at(cell);
+            let column = terrain.column_at(vertex);
             dt_band_samples.push(gradient * (column.bands[band_index].top_depth_m / 1000.0));
         }
 
@@ -239,7 +239,7 @@ fn how_hot_is_a_cave() {
                 pct(&dt_samples, q)
             );
         }
-        // How many cave cells fall in each candidate band of the spec's
+        // How many cave vertices fall in each candidate band of the spec's
         // ILLUSTRATIVE table. Printed so the real boundaries can be chosen
         // against a distribution rather than against the illustration.
         for (lo, hi) in [(0.0, 2.0), (2.0, 10.0), (10.0, 25.0), (25.0, 50.0)] {
@@ -355,14 +355,14 @@ fn how_lumpy_is_the_delta_t_distribution() {
 
         let mut dt: Vec<f64> = Vec::new();
         let mut reaches: Vec<f64> = Vec::new();
-        for cell in geo.vertices() {
-            if terrain.is_ocean(cell) {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
                 continue;
             }
-            let Some(cave) = terrain.cave_at(cell) else {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
-            let gradient = terrain.geothermal_gradient_at(cell).get();
+            let gradient = terrain.geothermal_gradient_at(vertex).get();
             reaches.push(cave.depth_reach_m);
             dt.push(gradient * (cave.depth_reach_m / 1000.0));
         }

@@ -49,11 +49,16 @@ const GRID_RESOLUTION_FIELDS: [&str; 3] = ["biome", "cave", "fields.water"];
 const CHANNEL_RESOLUTION_FIELDS: [&str; 1] = ["channel_bands"];
 
 /// One placed exotic site, rendered for a reader.
-/// type-audit: bare-ok(index: cell), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), bare-ok(prose: descriptor)
+/// type-audit: bare-ok(index: vertex), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), bare-ok(prose: descriptor)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct StrangeSiteRow {
-    /// Canonical-grid cell index.
-    pub cell: u32,
+    /// Canonical-grid vertex index.
+    ///
+    /// **Wire name frozen at `cell`** (decision 0246): it is a key of
+    /// `locale/room/v2`, present in every committed locale JSON and in
+    /// `tests/fixtures/pre-stage-2-rooms.jsonl`.
+    #[serde(rename = "cell")]
+    pub vertex: u32,
     /// Site latitude, degrees (quantized).
     pub latitude: f64,
     /// Site longitude, degrees (quantized).
@@ -83,7 +88,7 @@ pub struct Locale {
     pub latitude: f64,
     /// Centroid longitude, degrees (quantized).
     pub longitude: f64,
-    /// Inherited biome name (max-weight corner cell).
+    /// Inherited biome name (max-weight corner vertex).
     pub biome: String,
     /// The same inherited biome, as the `hornvale_climate::Biome` enum
     /// `biome`'s prose string was rendered from. `#[serde(skip)]`: this
@@ -96,13 +101,13 @@ pub struct Locale {
     pub biome_kind: Biome,
     /// Blended continuous fields.
     pub fields: LocaleFields,
-    /// The three canonical-grid corner cells and their integer weights.
+    /// The three canonical-grid corner vertices and their integer weights.
     pub corners: Vec<VertexWeight>,
     /// The strangeness overlay: descriptor, negation vector, and magnitude.
     pub regime: Regime,
     /// Base + vertical exits.
     pub exits: Vec<Exit>,
-    /// The cave at the room's dominant corner (max-weight cell), if the
+    /// The cave at the room's dominant corner (max-weight vertex), if the
     /// terrain places one there — categorical, inherited, never blended,
     /// the same rule `fields.water` and `biome` follow (see
     /// [`dominant_corner`]). Appended after `exits` rather than inserted, so
@@ -139,7 +144,7 @@ pub struct Locale {
     ///
     /// **These edges are DISCHARGE-DEPENDENT**, and that asymmetry is the
     /// whole argument for storing a quantity beside them. The edges derive
-    /// from the reach's discharge, gradient and local cell spacing
+    /// from the reach's discharge, gradient and local vertex spacing
     /// (`hornvale_terrain::channel::band_edges`), so under a seasonality this
     /// campaign deliberately leaves open they move with the flood: the same
     /// room is bank in one season and channel in another **without moving**.
@@ -150,7 +155,7 @@ pub struct Locale {
     /// call, so the pair can never disagree about which reach it describes.
     #[serde(serialize_with = "serialize_opt_quantized_array")]
     pub channel_bands: Option<[f64; 4]>,
-    /// Which of this document's fields are decided at canonical-cell
+    /// Which of this document's fields are decided at canonical-vertex
     /// resolution and which at channel resolution (decision 0123).
     pub resolution: Resolution,
 }
@@ -160,7 +165,7 @@ pub struct Locale {
 ///
 /// **Why a room says this at all.** A room at walking depth sits six
 /// refinement levels below the canonical grid, so a field decided per grid
-/// cell is necessarily identical across all `4^6 = 4096` rooms in that cell —
+/// vertex is necessarily identical across all `4^6 = 4096` rooms in that vertex —
 /// and now that the same document also carries a channel reading, it holds
 /// fields at *three* different grains at once. Without this block a reader has
 /// to guess which, and the last two campaigns' worth of diagnosis went into a
@@ -186,14 +191,14 @@ pub struct Resolution {
     /// The canonical grid's refinement level.
     pub grid_level: u32,
     /// How many levels below `grid_level` this room sits. Each level quarters
-    /// a cell, so `4^depth_below_grid` rooms share one grid cell.
+    /// a vertex, so `4^depth_below_grid` rooms share one grid vertex.
     pub depth_below_grid: u32,
     /// The names of this document's fields that are decided at canonical-grid
     /// resolution and therefore cannot vary below it, in stable order.
     ///
     /// Exactly `["biome", "cave", "fields.water"]` — the three categorical
-    /// readings taken from the room's dominant corner cell (see
-    /// [`dominant_corner`]), which is one grid cell and never a blend.
+    /// readings taken from the room's dominant corner vertex (see
+    /// [`dominant_corner`]), which is one grid vertex and never a blend.
     ///
     /// Four families are deliberately absent, and the reasons differ, which is
     /// the test of whether a list like this means anything:
@@ -204,7 +209,7 @@ pub struct Resolution {
     ///   place, and a reader never mistakes one for a flattened measurement.
     /// - **The blended continuous fields** (`fields.temperature_c`,
     ///   `fields.moisture`, `fields.elevation_m`, `fields.height_asl_m`) —
-    ///   these are integer-barycentric means of three corner cells with
+    ///   these are integer-barycentric means of three corner vertices with
     ///   per-room weights, so they genuinely vary room by room. Listing them
     ///   would be false.
     /// - **`regime`** — mixed granularity, so 0123 rule 3 says list it in
@@ -224,10 +229,10 @@ pub struct Resolution {
     pub grid_resolution_fields: Vec<String>,
     /// The names of this document's fields decided at **channel** resolution
     /// — the nearest vertex of the nearest river polyline, which is neither
-    /// the canonical cell nor the room — in stable order.
+    /// the canonical vertex nor the room — in stable order.
     ///
     /// Exactly `["channel_bands"]`. The band edges are a per-vertex property
-    /// of a reach (its discharge, gradient and local cell spacing), so every
+    /// of a reach (its discharge, gradient and local vertex spacing), so every
     /// room whose nearest vertex is the same vertex reads the same four
     /// numbers, and a walker sees them step rather than slide.
     ///
@@ -241,18 +246,23 @@ pub struct Resolution {
     pub channel_resolution_fields: Vec<String>,
 }
 
-/// A canonical-grid corner cell and its integer blend weight.
-/// type-audit: bare-ok(index: cell), bare-ok(count: weight)
+/// A canonical-grid corner vertex and its integer blend weight.
+/// type-audit: bare-ok(index: vertex), bare-ok(count: weight)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct VertexWeight {
-    /// Canonical-grid cell index.
-    pub cell: u32,
+    /// Canonical-grid vertex index.
+    ///
+    /// **Wire name frozen at `cell`** (decision 0246): it is a key of
+    /// `locale/room/v2`, present in every committed locale JSON and in
+    /// `tests/fixtures/pre-stage-2-rooms.jsonl`.
+    #[serde(rename = "cell")]
+    pub vertex: u32,
     /// Integer weight (numerator over the summed denominator).
     pub weight: u64,
 }
 
 /// The blended continuous fields at the room centroid (weighted mean of the
-/// three corner cells; quantized at emit).
+/// three corner vertices; quantized at emit).
 /// type-audit: pending(wave-2: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LocaleFields {
@@ -277,7 +287,7 @@ pub struct LocaleFields {
     /// [`dominant_corner`] is evaluated per ROOM, over that room's own three
     /// corner weights, so this is *categorical nearest-neighbour
     /// interpolation* — the correct method for a nominal field — and not a
-    /// value copied down from one cell to all 4^6 rooms inside it. The field
+    /// value copied down from one vertex to all 4^6 rooms inside it. The field
     /// does look flat across a narrow view, but that is the interpolation
     /// stencil being wider than the view rather than a defect in the field.
     ///
@@ -287,7 +297,7 @@ pub struct LocaleFields {
     /// of `classify(drainage)` over the corners — it deletes the thin channels
     /// and shrank seed 42's fresh water at walking depth by 29%. Contrast
     /// `height_asl_m`'s relief bands, which may band a blend because relief is
-    /// *ordinal*: a blend moves an ordinal value at most one band. Sub-cell
+    /// *ordinal*: a blend moves an ordinal value at most one band. Sub-vertex
     /// water needs a flow graph, not a re-reading of this field. `WaterKind`
     /// lives in the terrain domain crate, which (decision 0002) depends on
     /// nothing but the kernel, so it cannot derive `Serialize` itself; this
@@ -401,12 +411,12 @@ pub struct LocaleContext {
     budget: StrangenessBudget,
 }
 
-/// The corner cell a room's *categorical* readings come from: the greatest
+/// The corner vertex a room's *categorical* readings come from: the greatest
 /// blend weight, tie-broken to the lowest `Vertex`.
 ///
 /// One rule, one caller-visible consequence: every categorical field a room
 /// reports — biome, water kind, substrate, and (since The Pigment) the rock
-/// whose reflectance the colour layer reads — names the same cell. Splitting
+/// whose reflectance the colour layer reads — names the same vertex. Splitting
 /// this would let a room be described as granite lowland and drawn in
 /// basalt grey.
 fn dominant_corner(weights: &[(Vertex, u64); 3]) -> (Vertex, u64) {
@@ -466,7 +476,7 @@ pub fn room_edge(addr: &Facet) -> f64 {
 }
 
 impl LocaleContext {
-    /// Build the coarse world (climate + terrain + nearest-cell index) once.
+    /// Build the coarse world (climate + terrain + nearest-vertex index) once.
     /// The sanctioned entry point for any caller that has not already
     /// sculpted terrain/climate itself — derives them once here and
     /// delegates to [`Self::build_from`] (the book-entry-point pattern: a
@@ -500,7 +510,7 @@ impl LocaleContext {
         climate: &GeneratedClimate,
     ) -> LocaleContext {
         let index = NearestVertexIndex::new(climate.geosphere());
-        let globe_level = climate.geosphere().level();
+        let globe_level = climate.geosphere().depth();
         let budget = StrangenessBudget::build(world.seed, climate, terrain);
         LocaleContext {
             seed: world.seed,
@@ -532,8 +542,8 @@ impl LocaleContext {
         &self.climate
     }
 
-    /// The cached nearest-cell index — the reuse seam for a caller that must
-    /// resolve an address to a cell itself (the same role `terrain()` plays for
+    /// The cached nearest-vertex index — the reuse seam for a caller that must
+    /// resolve an address to a vertex itself (the same role `terrain()` plays for
     /// the terrain provider). Building a second index would duplicate a
     /// structure this context exists to hold once.
     pub fn nearest_index(&self) -> &NearestVertexIndex {
@@ -555,13 +565,13 @@ impl LocaleContext {
         self.strange_sites()
             .into_iter()
             .map(|s| {
-                let cell = Vertex(s.cell);
-                let coord = self.climate.geosphere().coord(cell);
+                let vertex = Vertex(s.vertex);
+                let coord = self.climate.geosphere().coord(vertex);
                 StrangeSiteRow {
-                    cell: s.cell,
+                    vertex: s.vertex,
                     latitude: quantize(coord.latitude),
                     longitude: quantize(coord.longitude),
-                    biome: biome_prose_name(self.climate.biome_at(cell)).to_string(),
+                    biome: biome_prose_name(self.climate.biome_at(vertex)).to_string(),
                     // `exotic_clause` reads only energy/kingdom/endemic, and a
                     // StrangeSite carries no substrate of its own (substrate is
                     // the ROOM's, from its derived regime), so `Ordinary` here
@@ -592,7 +602,7 @@ impl LocaleContext {
     /// along, so this is an accessor, not a new derivation, and it stores
     /// nothing.
     ///
-    /// The cell is the same *categorical* corner [`LocaleContext::describe`]
+    /// The vertex is the same *categorical* corner [`LocaleContext::describe`]
     /// takes its biome and water kind from (max blend weight, tie-break
     /// lowest `Vertex` — the shared `dominant_corner`), never a blend of the
     /// three: rock class is categorical, and averaging granite with basalt
@@ -600,7 +610,7 @@ impl LocaleContext {
     /// makes the colour and the prose agree about which ground a room
     /// stands on.
     ///
-    /// `micro` is the room's own sub-cell [`MicroField`] (`describe`'s
+    /// `micro` is the room's own sub-vertex [`MicroField`] (`describe`'s
     /// `Locale::regime.micro` on a `Locale` already built for this address,
     /// or [`crate::surface`]'s doc for why a *second* `describe` call is the
     /// wrong way to get one) and `at` is when to read the seasonal cover
@@ -638,9 +648,9 @@ impl LocaleContext {
         let weights = addr
             .corner_weights(geo, &self.index)
             .ok_or(LocaleError::AboveGrid)?;
-        let cell = dominant_corner(&weights).0;
-        let buffer = self.terrain.material_at(cell);
-        let rock = self.terrain.rock_at(cell);
+        let vertex = dominant_corner(&weights).0;
+        let buffer = self.terrain.material_at(vertex);
+        let rock = self.terrain.rock_at(vertex);
         let mineral = hornvale_terrain::lithology::reflectance(&buffer, rock);
         // `(1.0 - covered)` below is only "the mineral's share of the
         // ground" if `mineral.weights()` already sums to `1.0` — but
@@ -663,7 +673,7 @@ impl LocaleContext {
              mineral mixture; domains/terrain changed its own weight convention and this \
              composition needs to change with it"
         );
-        let cover = surface::cover_weights(&self.climate, cell, micro, at);
+        let cover = surface::cover_weights(&self.climate, vertex, micro, at);
         let covered: f64 = cover.iter().map(|(_, w)| w).sum();
         let mut components: Vec<hornvale_kernel::color::Reflectance> =
             mineral.components().to_vec();
@@ -681,9 +691,9 @@ impl LocaleContext {
     }
 
     /// The dominant surface cover class at `addr` on `at`, modulated by this
-    /// room's own sub-cell `micro` field — the categorical read
+    /// room's own sub-vertex `micro` field — the categorical read
     /// [`surface::cover_class_at`] computes, resolved from the same
-    /// dominant corner [`Self::reflectance_mixture_at`] uses, so a cell's
+    /// dominant corner [`Self::reflectance_mixture_at`] uses, so a vertex's
     /// `cover` always names the ground its `color` was actually drawn from
     /// (Task 9).
     pub fn cover_class_at(
@@ -696,14 +706,14 @@ impl LocaleContext {
         let weights = addr
             .corner_weights(geo, &self.index)
             .ok_or(LocaleError::AboveGrid)?;
-        let cell = dominant_corner(&weights).0;
-        Ok(surface::cover_class_at(&self.climate, cell, micro, at))
+        let vertex = dominant_corner(&weights).0;
+        Ok(surface::cover_class_at(&self.climate, vertex, micro, at))
     }
 
-    /// The water column at a marine cell: every stratum from the sunlit water
+    /// The water column at a marine vertex: every stratum from the sunlit water
     /// down to the one the sea floor sits in, shallowest first. Empty on land.
     ///
-    /// A cell's floor decides how deep its water goes — 50 m of water over a
+    /// A vertex's floor decides how deep its water goes — 50 m of water over a
     /// reef holds only the epipelagic, while 3,000 m holds three layers. This
     /// is the list a diver descends.
     ///
@@ -713,27 +723,27 @@ impl LocaleContext {
     /// could not silently diverge). The non-water guard stays here rather
     /// than moving into `strata_at`: this method answers "what water is
     /// there to descend through", so on land the answer is `Vec::new()`, not
-    /// climate's `[Surface]` (its answer for a *land* cell's own one-stratum
+    /// climate's `[Surface]` (its answer for a *land* vertex's own one-stratum
     /// ladder — a different question this method never asks).
-    pub fn water_column_at(&self, cell: Vertex) -> Vec<Stratum> {
-        if self.climate.biome_expr_at(cell).realm != Realm::WATERWORLD {
+    pub fn water_column_at(&self, vertex: Vertex) -> Vec<Stratum> {
+        if self.climate.biome_expr_at(vertex).realm != Realm::WATERWORLD {
             return Vec::new();
         }
-        self.climate.strata_at(cell)
+        self.climate.strata_at(vertex)
     }
 
-    /// The biome expression at `cell` as seen from `stratum`. At the sea floor
-    /// this is the cell's own community — a reef, a vent, a kelp forest. Above
+    /// The biome expression at `vertex` as seen from `stratum`. At the sea floor
+    /// this is the vertex's own community — a reef, a vent, a kelp forest. Above
     /// it there is only open water: the community lives on the floor, and
     /// floating a thousand metres over a reef is not being at the reef.
     ///
     /// Delegates to [`GeneratedClimate::biome_expr_at_stratum`] for every
-    /// stratum on the cell's own realm ladder at or above its floor (the
+    /// stratum on the vertex's own realm ladder at or above its floor (the
     /// in-column cases). **The fallback below is live, not dead code**: the
     /// stratum a caller passes here does not provably always resolve to a
-    /// cell whose column it is in-bounds for — `windows/vessel/src/
+    /// vertex whose column it is in-bounds for — `windows/vessel/src/
     /// session.rs`'s `column_here()` (the source of a possessed session's
-    /// `submerged` stratum) picks its cell via
+    /// `submerged` stratum) picks its vertex via
     /// `corners.iter().max_by_key(|c| c.weight)`, which is Rust's
     /// last-element-wins tie-break, while this window's own
     /// `dominant_corner` (used by the two `describe_*` callers at `:763`/
@@ -745,10 +755,10 @@ impl LocaleContext {
     /// stratum but `Surface`) is rock, and this answers open water. Kept
     /// byte-for-byte because The Fathom may not move behaviour; see
     /// followup F-10.
-    pub fn expr_at_stratum(&self, cell: Vertex, stratum: Stratum) -> BiomeExpr {
-        let expr = self.climate.biome_expr_at(cell);
+    pub fn expr_at_stratum(&self, vertex: Vertex, stratum: Stratum) -> BiomeExpr {
+        let expr = self.climate.biome_expr_at(vertex);
         self.climate
-            .biome_expr_at_stratum(cell, stratum)
+            .biome_expr_at_stratum(vertex, stratum)
             .unwrap_or(BiomeExpr {
                 realm: expr.realm,
                 formation: Formation::OpenWater,
@@ -841,7 +851,7 @@ impl LocaleContext {
             debug_assert!(
                 cache
                     .corner_weights_geo_level()
-                    .is_none_or(|level| level == geo.level()),
+                    .is_none_or(|level| level == geo.depth()),
                 "RoomMeshMemo read against a geosphere at a different level than it was \
                  filled with — a Facet alone does not name which (Geosphere, \
                  NearestVertexIndex) resolved it, so reading a cache built for a different \
@@ -882,7 +892,7 @@ impl LocaleContext {
         };
         let elevation_m = blend(&|c| self.terrain.globe().elevation.get(c).get());
         // `from_metres`, not a subtraction: the left operand is a three-corner
-        // BLEND, not any single cell's reading, so there is no pair of
+        // BLEND, not any single vertex's reading, so there is no pair of
         // `ReferenceElevation`s here to subtract. Derived from the already-
         // quantized `elevation_m` and a quantized sea level so that the value
         // emitted and the band computed from it agree exactly with what a
@@ -902,8 +912,8 @@ impl LocaleContext {
             None => self.climate.biome_expr_at(best.0),
         };
         // Wetness is a budget and an allocation (The Rill, R-7/R-8): the
-        // climate supply this room's cells receive, redistributed by where the
-        // room sits relative to its own sub-cell watercourse. Grounded only
+        // climate supply this room's vertices receive, redistributed by where the
+        // room sits relative to its own sub-vertex watercourse. Grounded only
         // where the axis means ground wetness — at sea the same axis is the
         // set of the current, on ice it is snow cover, and in the rock column
         // it is seep, and a river's proximity governs none of those.
@@ -965,7 +975,7 @@ impl LocaleContext {
             corners: weights
                 .iter()
                 .map(|&(c, w)| VertexWeight {
-                    cell: c.0,
+                    vertex: c.0,
                     weight: w,
                 })
                 .collect(),
@@ -977,7 +987,7 @@ impl LocaleContext {
             resolution: Resolution {
                 grid_level: self.globe_level,
                 // Non-negative by construction: `corner_weights` returned
-                // `Some`, which it only does when `depth >= geo.level()`.
+                // `Some`, which it only does when `depth >= geo.depth()`.
                 depth_below_grid: addr.depth() - self.globe_level,
                 grid_resolution_fields: GRID_RESOLUTION_FIELDS
                     .iter()
@@ -1026,7 +1036,7 @@ impl LocaleContext {
     /// confidently; refusing it is a missed crossing at a known and nameable
     /// locus, and a reading cannot distinguish the two on its own, since it
     /// knows only its own winning line. A confluence-aware query would need
-    /// `ChannelNetwork::run_cells`, which states the join topology outright —
+    /// `ChannelNetwork::run_vertices`, which states the join topology outright —
     /// loosening this clause is not the way to it.
     ///
     /// Clause 3 is not belt-and-braces, and dropping it was a real draft of
@@ -1098,7 +1108,7 @@ impl LocaleContext {
         let step = room_edge(a).min(room_edge(b));
         let wadeable = |r: &hornvale_terrain::channel::BankReading| {
             2.0 * r.band_edges[0] < step
-                && self.terrain.drainage_at(r.cell)
+                && self.terrain.drainage_at(r.vertex)
                     < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
         };
         if [ra, rb].iter().filter(|r| interpretable(r)).all(wadeable) {
@@ -1147,10 +1157,10 @@ impl LocaleContext {
     }
 
     /// The room's PER-DAY temperature at `at`, °C — the diurnal+seasonal
-    /// signal a thermal drive senses at its own cell, distinct from
+    /// signal a thermal drive senses at its own vertex, distinct from
     /// [`describe`](Self::describe)'s annual-MEAN `temperature_c` render field
     /// (left untouched, so the walk/almanac stay byte-identical). Blends the
-    /// three corner cells' [`GeneratedClimate::temperature_at`] by the SAME
+    /// three corner vertices' [`GeneratedClimate::temperature_at`] by the SAME
     /// integer barycentric weights `describe` uses for the mean. Full
     /// precision — this is a compute-path read, never a serialization
     /// boundary, so it is NOT quantized (quantize-at-emit-only). `None` for a
@@ -1194,12 +1204,12 @@ impl LocaleContext {
     /// The room's material food PRODUCTIVITY in `[0, 1]` — a Miami-model
     /// net-primary-productivity proxy over the climate, the food-value field
     /// the drive layer's hunger drive reads (The Provender). Blends the three
-    /// corner cells' annual-mean temperature and moisture by the SAME integer
+    /// corner vertices' annual-mean temperature and moisture by the SAME integer
     /// barycentric weights [`describe`](Self::describe) uses, then takes the
     /// Liebig minimum of a triangular temperature response and moisture — the
     /// same NPP proxy demography's carrying-capacity uses, computed here from
     /// this context's own climate rather than depending up into demography (a
-    /// sibling consumer, not required to match it bit-for-bit; it grades cells
+    /// sibling consumer, not required to match it bit-for-bit; it grades vertices
     /// for a hungry forager, it does not set population). Full precision — a
     /// compute-path read, never a serialization boundary, so NOT quantized.
     /// `None` for a room the canonical grid does not cover (the caller supplies
@@ -1240,7 +1250,7 @@ impl LocaleContext {
         miami_npp(temp, moisture)
     }
 
-    /// Corner-blend an externally-supplied per-cell `field` (over the canonical
+    /// Corner-blend an externally-supplied per-vertex `field` (over the canonical
     /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
     /// `hazards_at` use, generalized so a caller can sample a field this context
     /// does not itself hold. The Quarry injects `worldgen::predator_pressure_from`
@@ -1285,10 +1295,10 @@ impl LocaleContext {
     /// The room's THREAT in `[0, 1]` — the hazard field the danger drive flees
     /// (The Dread, split per-axis by The Bane) as `(uncanny, heat, cold)`, each
     /// in `[0, 1]`: the **uncanny** (a placed exotic site's normalized strangeness
-    /// — the "cursed ground"), and **heat**/**cold** — how far the cell's
+    /// — the "cursed ground"), and **heat**/**cold** — how far the vertex's
     /// annual-mean temperature is *above* a hot-danger threshold / *below* a
     /// cold-danger one, graded up to the lethal extreme (the deep ice, the molten
-    /// waste). Reads the dominant corner cell's placed regime (like
+    /// waste). Reads the dominant corner vertex's placed regime (like
     /// [`describe`](Self::describe) picks its biome) and a corner-blended mean
     /// temperature. Full precision — a compute-path read, never a serialization
     /// boundary, so NOT quantized. `None` for a room the canonical grid does not
@@ -1319,7 +1329,7 @@ impl LocaleContext {
     /// The shared tail of [`Self::hazards_at`]/[`Self::hazards_at_cached`] (the-waymark
     /// fix round, round 2).
     fn hazards_with_weights(&self, weights: [(Vertex, u64); 3]) -> (f64, f64, f64) {
-        // The dominant corner cell (max weight, tie-break lowest Vertex) — the
+        // The dominant corner vertex (max weight, tie-break lowest Vertex) — the
         // same pick `describe` uses for the categorical biome/regime.
         let mut best = weights[0];
         for &cand in &weights[1..] {
@@ -1347,13 +1357,13 @@ impl LocaleContext {
     }
 }
 
-/// The annual-mean temperature (°C) at/below which a cell's COLD becomes a hazard
+/// The annual-mean temperature (°C) at/below which a vertex's COLD becomes a hazard
 /// (The Bane) — graded from here down to [`LETHAL_COLD_C`]. Above the coldest
 /// species niche, so ordinary cold is thermal discomfort (thermal's job), not
 /// dread.
 const COLD_DANGER_C: f64 = -20.0;
 
-/// The annual-mean temperature (°C) at/above which a cell's HEAT becomes a hazard
+/// The annual-mean temperature (°C) at/above which a vertex's HEAT becomes a hazard
 /// (The Bane) — graded from here up to [`LETHAL_HEAT_C`].
 const HOT_DANGER_C: f64 = 40.0;
 
@@ -1595,12 +1605,12 @@ mod tests {
     /// is documented as explicitly unnormalized, so nothing outside
     /// `domains/terrain` enforces that sum. This is the swept check the
     /// composition site's own `debug_assert!` comment points to: real
-    /// generated terrain, several seeds, many cells, not hand-built
+    /// generated terrain, several seeds, many vertices, not hand-built
     /// buffers — so a change to `lithology::reflectance`'s weight formula
     /// (not just an out-of-range input) is what this is watching for.
     ///
     /// claim: invariant(forall-seed) — the mineral-weights-sum-to-one
-    /// property is asserted for every (seed, cell) pair swept, not sampled
+    /// property is asserted for every (seed, vertex) pair swept, not sampled
     /// to find one instance of it.
     #[allow(clippy::disallowed_methods)] // named construction site (decision 0092)
     #[test]
@@ -1611,21 +1621,21 @@ mod tests {
             let terrain = terrain_of(&world).expect("terrain sculpts");
             let geo = terrain.geosphere();
             for i in (0..geo.vertex_count() as u32).step_by(53) {
-                let cell = Vertex(i);
-                let buffer = terrain.material_at(cell);
-                let rock = terrain.rock_at(cell);
+                let vertex = Vertex(i);
+                let buffer = terrain.material_at(vertex);
+                let rock = terrain.rock_at(vertex);
                 let mineral = hornvale_terrain::lithology::reflectance(&buffer, rock);
                 let sum: f64 = mineral.weights().iter().sum();
                 assert!(
                     (sum - 1.0).abs() < 1e-6,
-                    "seed {seed} cell {cell:?}: mineral weights summed to {sum}, not ~1.0"
+                    "seed {seed} vertex {vertex:?}: mineral weights summed to {sum}, not ~1.0"
                 );
                 checked += 1;
             }
         }
         assert!(
             checked > 500,
-            "too few (seed, cell) pairs swept to trust this check; got {checked}"
+            "too few (seed, vertex) pairs swept to trust this check; got {checked}"
         );
     }
 
@@ -1677,8 +1687,8 @@ mod tests {
         for r in &rows {
             assert!(
                 !r.descriptor.is_empty(),
-                "cell {} is placed as exotic but reads as nothing",
-                r.cell
+                "vertex {} is placed as exotic but reads as nothing",
+                r.vertex
             );
             assert!(!r.biome.is_empty());
             assert!((-90.0..=90.0).contains(&r.latitude), "lat {}", r.latitude);
@@ -1700,7 +1710,7 @@ mod tests {
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
         let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
-        // elevation blends three real cells; the value must be finite.
+        // elevation blends three real vertices; the value must be finite.
         assert!(loc.fields.elevation_m.is_finite());
         assert!(loc.fields.temperature_c.is_finite());
         assert_eq!(loc.schema, ROOM_SCHEMA);
@@ -1760,19 +1770,19 @@ mod tests {
         );
     }
 
-    /// The Grain, Task 3: a room's `cave` must name the same cell `biome`
+    /// The Grain, Task 3: a room's `cave` must name the same vertex `biome`
     /// and `water` do — the dominant corner, never a blend.
     ///
-    /// A direct aim at a cave cell's own canonical-grid position does not
-    /// reliably land that cell as the resolved address's dominant corner
-    /// (the room mesh's nearest-cell resolution does not coincide with the
-    /// geosphere's own cell centroids closely enough to guarantee it), so
+    /// A direct aim at a cave vertex's own canonical-grid position does not
+    /// reliably land that vertex as the resolved address's dominant corner
+    /// (the room mesh's nearest-vertex resolution does not coincide with the
+    /// geosphere's own vertex centroids closely enough to guarantee it), so
     /// this uses the same directional-sweep idiom as
-    /// `describe_and_reflectance_agree_on_one_dominant_cell` and
+    /// `describe_and_reflectance_agree_on_one_dominant_vertex` and
     /// `locale_water_field_varies_and_includes_fresh_water_on_seed_42`:
     /// scan a deterministic spread of directions, and for each resolved
     /// address's ACTUAL dominant corner (not a guess), check whether the
-    /// terrain places a cave there. Seed 42 has 628 of 11 066 land cells
+    /// terrain places a cave there. Seed 42 has 628 of 11 066 land vertices
     /// carrying a cave (~5.7%, confirmed by a throwaway probe), so a 2000-
     /// direction sweep finds one reliably.
     #[test]
@@ -1837,7 +1847,7 @@ mod tests {
         // world at a fixed deep address. Values captured from a known-good run.
         // We pin the platform-EXACT quantities only: the quantized blended
         // temperature (byte-identical cross-platform) and the corner
-        // (cell, weight) pairs (pure integer barycentric numerators — the
+        // (vertex, weight) pairs (pure integer barycentric numerators — the
         // inheritance-selection inputs). The biome NAME is a depth-band
         // classification thresholded on host-libm transcendentals (elevation +
         // a percentile sea_level), i.e. the cross-platform-divergence class CI
@@ -1873,15 +1883,15 @@ mod tests {
             loc.corners,
             vec![
                 VertexWeight {
-                    cell: 3799,
+                    vertex: 3799,
                     weight: 46
                 },
                 VertexWeight {
-                    cell: 15109,
+                    vertex: 15109,
                     weight: 16
                 },
                 VertexWeight {
-                    cell: 15099,
+                    vertex: 15099,
                     weight: 130
                 },
             ]
@@ -1917,7 +1927,7 @@ mod tests {
 
     /// H4 (The Grain, Task 2): `dominant_corner`'s own doc claims every
     /// categorical field a room reports -- biome, water kind, substrate, and
-    /// the rock the colour layer reads -- names the same cell. Nothing
+    /// the rock the colour layer reads -- names the same vertex. Nothing
     /// checked that before this test, and a reverted campaign (`dd523ab2`,
     /// reverted at `76068e6a`) split it silently: it stayed green through
     /// 3350 tests while water alone moved to a non-dominant reading.
@@ -1932,19 +1942,19 @@ mod tests {
     /// campaign's Task 2b.** `reflectance_at`/`reflectance_mixture_at` now
     /// compose a surface cover layer above the mineral mixture
     /// (`surface::cover_weights`), so `reflectance_at(addr)` no longer
-    /// equals the bare mineral reflectance of the dominant cell whenever
-    /// anything covers it — legitimately: a forested cell reads green now,
+    /// equals the bare mineral reflectance of the dominant vertex whenever
+    /// anything covers it — legitimately: a forested vertex reads green now,
     /// not granite-grey, and that is the whole point of this campaign. The
     /// exact byte-identity assertion this test used to make (colour layer's
     /// rock == recomputed mineral reflectance) still holds, but only where
-    /// `covered == 0.0` — an uncovered cell (open water, unfrozen, since
+    /// `covered == 0.0` — an uncovered vertex (open water, unfrozen, since
     /// `on_land` gates vegetation/sand-silt and freezing gates snow) has no
     /// cover layer to disturb it. `bare_checked` is the positive control
     /// that this narrowed subset is not empty (see the memory note "an
     /// empty diff needs a positive control" — a vacuously-true narrowed
     /// assertion would be worse than no assertion at all).
     #[test]
-    fn describe_and_reflectance_agree_on_one_dominant_cell() {
+    fn describe_and_reflectance_agree_on_one_dominant_vertex() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let geo = ctx.climate.geosphere();
@@ -1961,22 +1971,22 @@ mod tests {
             let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
                 continue;
             };
-            let expected_cell = dominant_corner(&weights).0;
+            let expected_vertex = dominant_corner(&weights).0;
             let locale = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
 
             assert_eq!(
                 locale.biome_kind,
-                ctx.climate.biome_at(expected_cell),
+                ctx.climate.biome_at(expected_vertex),
                 "biome must name the dominant corner at {addr:?}"
             );
             assert_eq!(
                 locale.fields.water,
-                *ctx.terrain.globe().water_kind.get(expected_cell),
+                *ctx.terrain.globe().water_kind.get(expected_vertex),
                 "water kind must name the dominant corner at {addr:?}"
             );
             assert_eq!(
                 locale.regime.negations.substrate,
-                crate::substrate::substrate_at(&ctx.climate, &ctx.terrain, expected_cell),
+                crate::substrate::substrate_at(&ctx.climate, &ctx.terrain, expected_vertex),
                 "substrate must name the dominant corner at {addr:?}"
             );
 
@@ -1984,13 +1994,13 @@ mod tests {
             let reflectance = ctx
                 .reflectance_at(&addr, &micro, WorldTime::GENESIS)
                 .unwrap();
-            let buffer = ctx.terrain.material_at(expected_cell);
-            let rock = ctx.terrain.rock_at(expected_cell);
+            let buffer = ctx.terrain.material_at(expected_vertex);
+            let rock = ctx.terrain.rock_at(expected_vertex);
             let expected_reflectance =
                 hornvale_terrain::lithology::reflectance(&buffer, rock).integrate();
             let cover = crate::surface::cover_weights(
                 &ctx.climate,
-                expected_cell,
+                expected_vertex,
                 &micro,
                 WorldTime::GENESIS,
             );
@@ -2022,32 +2032,32 @@ mod tests {
     /// **Not `max_by_key(|c| c.weight)`**, which returns the LAST maximum on a
     /// tie. Three equal weights are common enough on this mesh that the two
     /// rules disagree in practice, and a test that used `max_by_key` compared
-    /// against a cell production never chose — passing for a reason unrelated
+    /// against a vertex production never chose — passing for a reason unrelated
     /// to what it claimed to measure. (Two paths in `windows/vessel` still
-    /// resolve a cell that way; that divergence is recorded and unfixed.)
+    /// resolve a vertex that way; that divergence is recorded and unfixed.)
     fn dominant_of(loc: &Locale) -> Vertex {
         let w: [(Vertex, u64); 3] = [
-            (Vertex(loc.corners[0].cell), loc.corners[0].weight),
-            (Vertex(loc.corners[1].cell), loc.corners[1].weight),
-            (Vertex(loc.corners[2].cell), loc.corners[2].weight),
+            (Vertex(loc.corners[0].vertex), loc.corners[0].weight),
+            (Vertex(loc.corners[1].vertex), loc.corners[1].weight),
+            (Vertex(loc.corners[2].vertex), loc.corners[2].weight),
         ];
         dominant_corner(&w).0
     }
 
-    /// Rooms spread across the WHOLE of `cell`'s dual region, at `depth` — one
-    /// fan of samples running from near the cell's centre out towards each of
+    /// Rooms spread across the WHOLE of `vertex`'s dual region, at `depth` — one
+    /// fan of samples running from near the vertex's centre out towards each of
     /// its neighbours.
     ///
     /// **Not a contiguous BFS neighbourhood, and the difference is the whole
-    /// point.** A conservation claim is about a cell, and a radius-4 patch
+    /// point.** A conservation claim is about a vertex, and a radius-4 patch
     /// covers about 1/132 of one; across a patch that small the three-corner
     /// blend of a terrain statistic moves ~2%, so a patch cannot see the
-    /// variation that a cell-wide aggregate must account for. Fanning outward
+    /// variation that a vertex-wide aggregate must account for. Fanning outward
     /// instead sweeps the neighbour's blend weight from nearly 0 to nearly 1/3,
-    /// which is the range that actually exists inside the cell.
+    /// which is the range that actually exists inside the vertex.
     ///
-    /// **No sample is a cell centre, and none lies on the arc between two of
-    /// them.** Rooms and cells subdivide the *same* icosphere, so a level-6 cell
+    /// **No sample is a vertex centre, and none lies on the arc between two of
+    /// them.** Rooms and vertices subdivide the *same* icosphere, so a level-6 vertex
     /// centre is also an exact corner of the level-12 room lattice, and the arc
     /// between two adjacent centres is an exact edge path of it.
     /// `Facet::containing`'s spherical point-in-triangle test straddles on
@@ -2059,12 +2069,16 @@ mod tests {
     /// it claimed.** Hence `t` never reaches 0, and every sample carries a
     /// small off-lattice third component (`SKEW`) to leave the arc. `containing`
     /// is sound for ordinary points; it is lattice coincidences that degenerate.
-    fn rooms_across_cell(geo: &hornvale_kernel::Geosphere, cell: Vertex, depth: u32) -> Vec<Facet> {
-        /// Off-lattice third component. Small enough not to move which cell
+    fn rooms_across_vertex(
+        geo: &hornvale_kernel::Geosphere,
+        vertex: Vertex,
+        depth: u32,
+    ) -> Vec<Facet> {
+        /// Off-lattice third component. Small enough not to move which vertex
         /// owns the sample, large enough to leave the arc.
         const SKEW: f64 = 0.031;
-        let a = geo.position(cell);
-        let ns = geo.neighbors(cell);
+        let a = geo.position(vertex);
+        let ns = geo.neighbors(vertex);
         let mut out = Vec::new();
         for i in 0..ns.len() {
             let b = geo.position(ns[i]);
@@ -2089,7 +2103,7 @@ mod tests {
     /// The plurality water kind of a room set, tie-broken to the lowest
     /// `WaterKind::index()` so the answer cannot vary between runs. This is the
     /// "aggregate" in H5's sense: what a coarse observer would conclude the
-    /// cell's water is, told only what its rooms report.
+    /// vertex's water is, told only what its rooms report.
     fn plurality(kinds: &[WaterKind]) -> WaterKind {
         let mut tally: std::collections::BTreeMap<u8, (usize, WaterKind)> = Default::default();
         for k in kinds {
@@ -2106,7 +2120,7 @@ mod tests {
             .1
     }
 
-    /// How many canonical cells the conservation scan below covers, in each of
+    /// How many canonical vertices the conservation scan below covers, in each of
     /// its two halves. Capped because the scan pays a `describe` per room.
     ///
     /// The scan takes two samples deliberately. A **stride** over `Vertex`
@@ -2116,22 +2130,22 @@ mod tests {
     /// dry land, where a threshold on a blend agrees with the partition almost
     /// everywhere, so a stride alone would leave the tripwire arm unable to
     /// fire for a reason that has nothing to do with the criterion.
-    const CONSERVATION_CELLS: usize = 40;
+    const CONSERVATION_VERTICES: usize = 40;
 
     /// **H5 (The Grain) — the conservation criterion, and the only test in this
     /// file written for a mechanism that does not exist yet.**
     ///
-    /// The claim: aggregating room-level water back over a canonical cell
-    /// reproduces that cell's own water kind. Nearest-corner assignment
+    /// The claim: aggregating room-level water back over a canonical vertex
+    /// reproduces that vertex's own water kind. Nearest-corner assignment
     /// satisfies it *by construction* — every room whose dominant corner is
-    /// cell `C` reports `C`'s water kind, so the aggregate is unanimous — which
+    /// vertex `C` reports `C`'s water kind, so the aggregate is unanimous — which
     /// is precisely why this test is cheap and precisely why it is worth
     /// having. It is a **tripwire for a future mechanism** (`MAP-64`'s flow
     /// graph, or anything else that tries to put water somewhere in particular
-    /// inside a cell), not a discovery about today's code.
+    /// inside a vertex), not a discovery about today's code.
     ///
     /// Why write down something that holds trivially: a campaign built a
-    /// sub-cell water mechanism that passed both of its preregistered
+    /// sub-vertex water mechanism that passed both of its preregistered
     /// hypotheses and the whole 3350-test suite, and it was illegal — it
     /// deleted 29% of seed 42's fresh water at walking depth. Both hypotheses
     /// asked about *local variation*; the violated property was *global
@@ -2140,7 +2154,7 @@ mod tests {
     ///
     /// **It asserts the strong form (unanimity), not merely the aggregate.**
     /// A plurality-only criterion would still permit deleting a category from a
-    /// minority of cells, which is exactly the 29% loss — a thin river is a
+    /// minority of vertices, which is exactly the 29% loss — a thin river is a
     /// minority landform everywhere it exists. Unanimity implies the aggregate;
     /// the aggregate does not imply unanimity.
     ///
@@ -2154,16 +2168,16 @@ mod tests {
     /// anything, which is the failure mode the campaign that wrote it spent
     /// itself diagnosing.
     ///
-    /// **Measured on seed 42** over 80 cells and 2151 rooms: the partition
+    /// **Measured on seed 42** over 80 vertices and 2151 rooms: the partition
     /// conserves on every one, while the reverted mechanism breaks the aggregate
-    /// form on **11 of 80 cells** and unanimity on **27 of 80**. The first draft
-    /// of this test sampled a radius-4 BFS patch per cell and the tripwire arm
-    /// found **0 of 44** — across 1/132 of a cell the blend barely moves, so the
+    /// form on **11 of 80 vertices** and unanimity on **27 of 80**. The first draft
+    /// of this test sampled a radius-4 BFS patch per vertex and the tripwire arm
+    /// found **0 of 44** — across 1/132 of a vertex the blend barely moves, so the
     /// scan could not see what it was built to catch. That near miss is why the
-    /// sampling is a cell-wide fan and why the second arm exists at all: a
+    /// sampling is a vertex-wide fan and why the second arm exists at all: a
     /// tripwire nobody has watched trip is a comment.
     #[test]
-    fn room_water_is_conserved_when_aggregated_over_a_canonical_cell() {
+    fn room_water_is_conserved_when_aggregated_over_a_canonical_vertex() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let geo = ctx.climate().geosphere();
@@ -2172,54 +2186,54 @@ mod tests {
         let sea_level_m = quantize(globe.sea_level.get());
 
         let all: Vec<Vertex> = geo.vertices().collect();
-        let stride = (all.len() / CONSERVATION_CELLS).max(1);
+        let stride = (all.len() / CONSERVATION_VERTICES).max(1);
         let mut scan: Vec<Vertex> = all
             .iter()
             .copied()
             .step_by(stride)
-            .take(CONSERVATION_CELLS)
+            .take(CONSERVATION_VERTICES)
             .chain(
                 all.iter()
                     .copied()
                     .filter(|c| *globe.water_kind.get(*c) == WaterKind::River)
-                    .take(CONSERVATION_CELLS),
+                    .take(CONSERVATION_VERTICES),
             )
             .collect();
         scan.sort_by_key(|c| c.0);
         scan.dedup();
 
-        let mut cells_checked = 0usize;
+        let mut vertices_checked = 0usize;
         let mut rooms_checked = 0usize;
         // Violations the REVERTED blended-threshold mechanism would cause,
         // counted at both strengths so the failure message can say which.
         let mut simulated_aggregate_violations = 0usize;
         let mut simulated_unanimity_violations = 0usize;
 
-        for cell in scan {
-            let expected = *globe.water_kind.get(cell);
+        for vertex in scan {
+            let expected = *globe.water_kind.get(vertex);
 
             let mut simulated: Vec<WaterKind> = Vec::new();
-            let mut rooms_in_cell = 0usize;
-            for addr in rooms_across_cell(geo, cell, depth) {
+            let mut rooms_in_vertex = 0usize;
+            for addr in rooms_across_vertex(geo, vertex, depth) {
                 let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS) else {
                     continue;
                 };
                 let dominant = dominant_of(&loc);
-                // Only the rooms this cell actually owns. A radius-4 patch can
-                // straddle a cell boundary, and a room on the other side of it
-                // is a different cell's business.
-                if dominant != cell {
+                // Only the rooms this vertex actually owns. A radius-4 patch can
+                // straddle a vertex boundary, and a room on the other side of it
+                // is a different vertex's business.
+                if dominant != vertex {
                     continue;
                 }
-                rooms_in_cell += 1;
+                rooms_in_vertex += 1;
                 rooms_checked += 1;
 
                 // THE CONSERVATION CLAIM, in its strong form.
                 assert_eq!(
                     loc.fields.water, expected,
-                    "room {:?} is owned by cell {} but reports {:?} where the cell itself is \
-                     {:?}; sub-cell water has stopped conserving its cell's kind",
-                    addr, cell.0, loc.fields.water, expected
+                    "room {:?} is owned by vertex {} but reports {:?} where the vertex itself is \
+                     {:?}; sub-vertex water has stopped conserving its vertex's kind",
+                    addr, vertex.0, loc.fields.water, expected
                 );
 
                 // The reverted mechanism, reconstructed: classify from the
@@ -2230,7 +2244,7 @@ mod tests {
                 let drainage_blend: f64 = loc
                     .corners
                     .iter()
-                    .map(|c| c.weight as f64 * *globe.drainage.get(Vertex(c.cell)))
+                    .map(|c| c.weight as f64 * *globe.drainage.get(Vertex(c.vertex)))
                     .sum::<f64>()
                     / denom;
                 let is_terminal_sink =
@@ -2244,10 +2258,10 @@ mod tests {
                 ));
             }
 
-            if rooms_in_cell == 0 {
+            if rooms_in_vertex == 0 {
                 continue;
             }
-            cells_checked += 1;
+            vertices_checked += 1;
             if plurality(&simulated) != expected {
                 simulated_aggregate_violations += 1;
             }
@@ -2257,8 +2271,8 @@ mod tests {
         }
 
         assert!(
-            cells_checked > 20 && rooms_checked > 200,
-            "only {cells_checked} cells / {rooms_checked} rooms resolved; the scan is too thin \
+            vertices_checked > 20 && rooms_checked > 200,
+            "only {vertices_checked} vertices / {rooms_checked} rooms resolved; the scan is too thin \
              to trust either arm"
         );
 
@@ -2267,7 +2281,7 @@ mod tests {
         assert!(
             simulated_aggregate_violations > 0,
             "the reverted blended-threshold mechanism violated conservation on \
-             {simulated_aggregate_violations} of {cells_checked} cells by aggregate and \
+             {simulated_aggregate_violations} of {vertices_checked} vertices by aggregate and \
              {simulated_unanimity_violations} by unanimity — an aggregate count of zero means \
              THIS TEST CANNOT DETECT the mechanism it was written to catch, and the criterion \
              needs strengthening rather than the assertion relaxing"
@@ -2505,7 +2519,7 @@ mod tests {
         // moment a `_cached` reader consults it against `ctx`'s real one.
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let real_level = ctx.climate().geosphere().level();
+        let real_level = ctx.climate().geosphere().depth();
         let other_level = real_level + 1;
         let fake_geo = hornvale_kernel::Geosphere::new(other_level);
         let fake_index = NearestVertexIndex::new(&fake_geo);

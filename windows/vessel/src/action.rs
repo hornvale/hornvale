@@ -20,7 +20,7 @@ pub enum Action {
     /// Rest / sleep (precondition: at home; effect: fatigue reset) — The
     /// Slumber's discharge action, the fatigue analogue of `Drink`.
     Rest,
-    /// Eat / graze (precondition: standing on a cell rich enough to feed;
+    /// Eat / graze (precondition: standing on a room rich enough to feed;
     /// effect: hunger reset) — The Provender's discharge action, the hunger
     /// analogue of `Drink`.
     Eat,
@@ -351,14 +351,14 @@ pub struct PlanState {
 }
 
 /// The extra `MoveTo` cost the planners charge for stepping INTO a
-/// remembered-dangerous cell (The Haunt): a finite detour budget over the
+/// remembered-dangerous room (The Haunt): a finite detour budget over the
 /// baseline edge cost of `1`, so the A* routes AROUND remembered-bad ground
 /// whenever a detour is cheaper than the penalty, yet still braves it when the
 /// detour would exceed the penalty (survival-override for free — the finite cost
 /// IS the override, never a wall). Deliberately SMALL (decision-ledger #4): the
 /// planners run Dijkstra-mode (`heuristic() == 0`, budget `PLAN_BUDGET` node
 /// expansions), so a LARGE penalty makes A* exhaust its budget exploring the
-/// cost-radius around a chokepoint remembered cell and return `None` — the
+/// cost-radius around a chokepoint remembered room and return `None` — the
 /// creature freezes instead of detouring (the over-avoidance failure; `20` froze
 /// ~900 seed-42 fauna). `5` keeps the cost-radius within budget so avoidance is
 /// graceful (the seed-42 possession `stirred` count barely moves — a handful of
@@ -383,7 +383,7 @@ fn move_cost(n: &Facet, avoid: &std::collections::BTreeSet<Facet>) -> u64 {
 pub struct GoapSpace<'a> {
     /// The water room the `Drink` action requires.
     pub water: Facet,
-    /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
+    /// The remembered-dangerous rooms to route around (The Haunt) — a `MoveTo`
     /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
     pub avoid: &'a std::collections::BTreeSet<Facet>,
 }
@@ -456,7 +456,7 @@ pub fn plan_to_water(
 /// A navigation-only space (the home-return goal — no Drink): goal is arrival.
 struct NavSpace<'a> {
     dest: Facet,
-    /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
+    /// The remembered-dangerous rooms to route around (The Haunt) — a `MoveTo`
     /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
     avoid: &'a std::collections::BTreeSet<Facet>,
 }

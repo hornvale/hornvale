@@ -1,11 +1,11 @@
 //! Integration test for `connection_graph` (The Connection Graph, Task 4):
 //! assembles water routes and bounded land routes from real geography over a
-//! small fixture world built on a real `Geosphere::new(1)` (42 cells, its
+//! small fixture world built on a real `Geosphere::new(1)` (42 vertices, its
 //! fields are private so there is no hand-built toy-grid constructor -- see
 //! `domains/topology/tests/route.rs` and `windows/worldgen/tests/
 //! traversal.rs` for the same pattern).
 //!
-//! The fixture (all cell ids picked by dumping the level-1 mesh's real
+//! The fixture (all vertex ids picked by dumping the level-1 mesh's real
 //! adjacency and verifying costs with `least_cost` directly, exactly as
 //! Task 2's and Task 3's own fixtures were built):
 //!
@@ -13,15 +13,15 @@
 //!   whose only non-ocean neighbor is `Vertex(28)`, the sole isthmus back to
 //!   the mainland (`s3`'s other four neighbors, `29`/`37`/`38`/`39`, are all
 //!   ocean -- a hard bottleneck, not a probabilistic one: `least_cost`'s
-//!   search space skips an ocean cell entirely as a successor, so there is
+//!   search space skips an ocean vertex entirely as a successor, so there is
 //!   no way off the peninsula except through `28`). `28` is elevated to
 //!   5000m above its neighbors -- "the peak" -- so the one path off the
 //!   peninsula costs far more than any reasonable corridor ceiling.
 //! - A **low pass**: `s1` (`Vertex(9)`) and `s2` (`Vertex(41)`) are direct
 //!   mesh neighbors over flat terrain -- a trivial, cheap corridor.
 //! - A **bay**: a separate "polar sea" (`Vertex(25)`, disconnected from the
-//!   peninsula's ocean cells) borders both `coast_west` (`Vertex(4)`) and
-//!   `coast_east` (`Vertex(5)`). The current at the sea cell is built (from
+//!   peninsula's ocean vertices) borders both `coast_west` (`Vertex(4)`) and
+//!   `coast_east` (`Vertex(5)`). The current at the sea vertex is built (from
 //!   real `geo.position` values, not a hand-picked vector) to point toward
 //!   `coast_east`, so a trace launched from `coast_west`'s marine neighbor
 //!   reaches `coast_east` in one step.
@@ -62,7 +62,7 @@ fn coast_east() -> Vertex {
 }
 
 /// The fixture world's fields, bundled to keep `fixture`'s signature legible:
-/// the mesh, elevation, biome, ocean-current, and settlement-cell inputs
+/// the mesh, elevation, biome, ocean-current, and settlement-vertex inputs
 /// `connection_graph` takes.
 type Fixture = (
     Geosphere,
@@ -73,7 +73,7 @@ type Fixture = (
 );
 
 fn fixture() -> Fixture {
-    let geo = Geosphere::new(1); // 42 cells
+    let geo = Geosphere::new(1); // 42 vertices
 
     // The peninsula-isolating sea (surrounds `s3` except for the isthmus)
     // plus the separate polar sea (the bay's water route). Verified
@@ -201,7 +201,7 @@ fn no_land_route_crosses_the_peak() {
 }
 
 /// The light in-gate half of the cost gate (The Connection Graph, Task 5):
-/// on this fixture's small pinned world (`Geosphere::new(1)`, 42 cells, 3
+/// on this fixture's small pinned world (`Geosphere::new(1)`, 42 vertices, 3
 /// settlements), the land-route attempt count -- settlement pairs within
 /// `cfg().land_route_radius` hops, exactly what `add_land_routes` would run
 /// `least_cost` on -- must stay a small constant. This runs in `make gate`
@@ -230,7 +230,7 @@ fn land_route_attempts_are_bounded_on_the_fixture() {
 fn a_shelf_joins_two_uplands_only_at_the_glacial_low_stand() {
     use hornvale_worldgen::graph_derive::connection_graph_at;
     let geo = Geosphere::new(1);
-    // Two upland blobs (+100 m) around cells 0 and 30; the two-ring boundary
+    // Two upland blobs (+100 m) around vertices 0 and 30; the two-ring boundary
     // between them sits on a shelf at -50 m (ocean at present, land at -120 m).
     let ring2 = |seed: Vertex| {
         let mut s = std::collections::BTreeSet::new();
@@ -298,12 +298,12 @@ fn the_graph_is_deterministic_across_rebuilds() {
     let config = cfg();
     let a = connection_graph(&geo, &elevation, &biome, &current, &settlements, &config);
     let b = connection_graph(&geo, &elevation, &biome, &current, &settlements, &config);
-    for cell in geo.vertices() {
+    for vertex in geo.vertices() {
         assert_eq!(
-            a.edges(cell),
-            b.edges(cell),
-            "cell {} edges diverged across rebuilds",
-            cell.0
+            a.edges(vertex),
+            b.edges(vertex),
+            "vertex {} edges diverged across rebuilds",
+            vertex.0
         );
     }
 }

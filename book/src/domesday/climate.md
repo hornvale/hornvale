@@ -20,7 +20,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `dominant-land-biome`
 
-The most common land biome by cell count, kebab-case
+The most common land biome by vertex count, kebab-case
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -37,7 +37,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `dominant-soil-order`
 
-The most common land soil order by cell count, spec §4's soil taxonomy (The Ground); Absent on a landless world
+The most common land soil order by vertex count, spec §4's soil taxonomy (The Ground); Absent on a landless world
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -47,7 +47,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `fertile-land-fraction`
 
-Fraction of land cells whose soil fertility's grain-suitability exceeds 0.6 (The Ground, spec §3/§4)
+Fraction of land vertices whose soil fertility's grain-suitability exceeds 0.6 (The Ground, spec §3/§4)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -57,7 +57,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `habitable-fraction`
 
-Fraction of cells that are habitable (land, water, tolerable season)
+Fraction of vertices that are habitable (land, water, tolerable season)
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -67,7 +67,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `mean-land-temperature-c`
 
-Annual-mean temperature averaged over land cells, °C; Absent if the world has no land
+Annual-mean temperature averaged over land vertices, °C; Absent if the world has no land
 
 n = 1000 present, 0 absent (of 1000 worlds)
 

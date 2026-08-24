@@ -1,20 +1,20 @@
 //! Population flow-accumulation over the carrying-capacity field: the terrain
 //! `drainage` algorithm with the gradient flipped — people climb the K-gradient
-//! as water descends elevation. Each land cell routes to its highest-K
-//! neighbour; a cell with no higher neighbour is an attractor. Draws nothing;
+//! as water descends elevation. Each land vertex routes to its highest-K
+//! neighbour; a vertex with no higher neighbour is an attractor. Draws nothing;
 //! integer-and-comparison only (K's transcendentals are already spent).
 
 use hornvale_kernel::{Geosphere, Vertex, VertexMap};
 
-/// The flow field: per-cell accumulated population budget and the attractor
-/// (sink) each cell's up-gradient path terminates at.
+/// The flow field: per-vertex accumulated population budget and the attractor
+/// (sink) each vertex's up-gradient path terminates at.
 /// type-audit: bare-ok(count: accumulation)
 #[derive(Debug, Clone)]
 pub struct Flow {
-    /// Accumulated K: `accumulation[c]` = sum of K over all cells whose
+    /// Accumulated K: `accumulation[c]` = sum of K over all vertices whose
     /// up-gradient path passes through `c` (including `c`).
     pub accumulation: VertexMap<f64>,
-    /// The attractor sink each cell drains to (`None` iff `K(c) == 0`).
+    /// The attractor sink each vertex drains to (`None` iff `K(c) == 0`).
     pub attractor: VertexMap<Option<Vertex>>,
 }
 
@@ -22,16 +22,16 @@ pub struct Flow {
 /// type-audit: bare-ok(count: k)
 pub fn flow(geo: &Geosphere, k: &VertexMap<f64>) -> Flow {
     let n = geo.vertex_count();
-    // Up-gradient target per cell: strictly-highest-K neighbour, ties to the
-    // higher Vertex. `None` = zero-K cell or a local maximum (an attractor).
+    // Up-gradient target per vertex: strictly-highest-K neighbour, ties to the
+    // higher Vertex. `None` = zero-K vertex or a local maximum (an attractor).
     //
-    // The tie-break baseline is the cell's OWN id, not the best neighbour
+    // The tie-break baseline is the vertex's OWN id, not the best neighbour
     // found so far: on an exact K-plateau (e.g. a uniform region), comparing
     // only against the running `best` lets two neighbours with equal K each
     // pick the other (whichever is scanned first "wins" locally), producing
     // a 2-cycle that the memoised path-trace below loops on forever. Seeding
     // `best_id` at `c.0` makes `(K, id)` a strict total order across all
-    // cells, so every routed edge strictly increases in that order and no
+    // vertices, so every routed edge strictly increases in that order and no
     // cycle can form.
     let mut up: Vec<Option<Vertex>> = vec![None; n];
     for c in geo.vertices() {
@@ -53,7 +53,7 @@ pub fn flow(geo: &Geosphere, k: &VertexMap<f64>) -> Flow {
         up[c.0 as usize] = best;
     }
 
-    // Terminal attractor per cell: follow `up` to a sink, memoised (bounded n).
+    // Terminal attractor per vertex: follow `up` to a sink, memoised (bounded n).
     let mut term: Vec<Option<Vertex>> = vec![None; n];
     for start in geo.vertices() {
         if *k.get(start) <= 0.0 || term[start.0 as usize].is_some() {
@@ -82,7 +82,7 @@ pub fn flow(geo: &Geosphere, k: &VertexMap<f64>) -> Flow {
         }
     }
 
-    // Accumulate: each cell adds its own K to every cell on its up-path.
+    // Accumulate: each vertex adds its own K to every vertex on its up-path.
     let mut acc = vec![0.0f64; n];
     for start in geo.vertices() {
         let kv = *k.get(start);
@@ -115,12 +115,12 @@ mod tests {
     #[test]
     fn accumulation_conserves_k_over_attractors() {
         let geo = Geosphere::new(3);
-        // A smooth bump: K peaks at cell 0, falls with distance.
+        // A smooth bump: K peaks at vertex 0, falls with distance.
         let peak = geo.position(Vertex(0));
         let k = VertexMap::from_fn(&geo, |c| {
             let p = geo.position(c);
             let dot = p[0] * peak[0] + p[1] * peak[1] + p[2] * peak[2];
-            dot.max(0.0) // 0..1, peaks at cell 0
+            dot.max(0.0) // 0..1, peaks at vertex 0
         });
         let f = flow(&geo, &k);
         // Total K equals total accumulation collected at attractor sinks.
@@ -137,13 +137,13 @@ mod tests {
     }
 
     #[test]
-    fn zero_k_cell_has_no_attractor() {
+    fn zero_k_vertex_has_no_attractor() {
         let geo = Geosphere::new(2);
         let k = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 1.0 });
         let f = flow(&geo, &k);
         assert!(
             f.attractor.get(Vertex(0)).is_none(),
-            "a zero-K cell drains nowhere"
+            "a zero-K vertex drains nowhere"
         );
     }
 }

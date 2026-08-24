@@ -17,11 +17,11 @@ use hornvale_kernel::{NearestVertexIndex, VertexMap, World};
 /// MAP_WIDTH`): residue sites are sparse point features (like the terrain
 /// Lode lens's caves/deposits), so a coarse raster already shows clusters
 /// cleanly, and keeping it coarse keeps [`residue_pixels`]'s per-pixel color
-/// lookup cheap regardless of how expensive computing a cell's palimpsest is.
+/// lookup cheap regardless of how expensive computing a vertex's palimpsest is.
 /// type-audit: bare-ok(render-internal)
 pub const MAP_WIDTH: u32 = 256;
 
-/// Muted base color for a cell with no residue at all: a flat slate,
+/// Muted base color for a vertex with no residue at all: a flat slate,
 /// deliberately low-key so the kind/valence palette below reads clearly
 /// against it (the same convention as terrain's `features_pixels` ocean/land
 /// base).
@@ -51,7 +51,7 @@ fn vestige_color(kind: VestigeKind, valence: Valence) -> [u8; 3] {
     }
 }
 
-/// The most-dreaded layer in a cell's palimpsest stack, if any: the vestige
+/// The most-dreaded layer in a vertex's palimpsest stack, if any: the vestige
 /// with the highest `dread` (the one a wanderer would sense most strongly).
 /// Ties keep the first-encountered (oldest, per [`vestiges_at`]'s ordering)
 /// layer, so the pick is deterministic without depending on `total_cmp`'s own
@@ -66,20 +66,20 @@ fn most_dread(stack: &[Vestige]) -> Option<&Vestige> {
     best
 }
 
-/// Raw RGB pixels of the equirectangular residue map: each cell's color is
+/// Raw RGB pixels of the equirectangular residue map: each vertex's color is
 /// computed once ([`vestige_color`] of its [`most_dread`] layer, or
 /// [`EMPTY_BASE`] where the palimpsest is empty) over the geosphere's actual
-/// cells, then the pixel grid looks each pixel's nearest cell up in that
-/// precomputed table. Computing per-cell first (not per pixel, as
+/// vertices, then the pixel grid looks each pixel's nearest vertex up in that
+/// precomputed table. Computing per-vertex first (not per pixel, as
 /// `NearestVertexIndex`-based lenses elsewhere do) matters here because
 /// `vestiges_at` rescans the ledger's committed occupation history on every
 /// call — so this builds the whole palimpsest field with one scan via
-/// [`vestiges_field`] and then reads each cell's stack out of it, keeping the
-/// cost independent of both [`MAP_WIDTH`] and the number of cells scanned.
+/// [`vestiges_field`] and then reads each vertex's stack out of it, keeping the
+/// cost independent of both [`MAP_WIDTH`] and the number of vertices scanned.
 fn residue_pixels(world: &World, terrain: &hornvale_terrain::GeneratedTerrain) -> Vec<u8> {
     let geo = terrain.geosphere();
     let field = vestiges_field(world, terrain);
-    let colors = VertexMap::from_fn(geo, |cell| match most_dread(field.get(cell)) {
+    let colors = VertexMap::from_fn(geo, |vertex| match most_dread(field.get(vertex)) {
         Some(v) => vestige_color(v.kind, v.valence),
         None => EMPTY_BASE,
     });
@@ -90,15 +90,15 @@ fn residue_pixels(world: &World, terrain: &hornvale_terrain::GeneratedTerrain) -
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.extend_from_slice(colors.get(cell));
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.extend_from_slice(colors.get(vertex));
         }
     }
     out
 }
 
 /// Render the world's residue palimpsest as an equirectangular PNG lens (The
-/// Vestige): each cell's most-dread layer's kind/valence color, a muted base
+/// Vestige): each vertex's most-dread layer's kind/valence color, a muted base
 /// where no residue sits. Same world, same bytes — `vestiges_at` is a pure
 /// derived read of committed history and terrain, no draws and no mutation.
 /// Reconstructs terrain via [`terrain_of`] (the single construction site)

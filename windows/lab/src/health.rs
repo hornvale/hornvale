@@ -154,7 +154,7 @@ pub fn run_simulation(
         // One primary-afraid memo for this tick's reads: `ledger` is fixed across
         // them, so an emitter's `(entity, day)` fear verdict — folded by EVERY
         // creature's `believed_hazard` (The Phantom) — is re-derived once, not
-        // once per creature per cell. Byte-identical: a cache of a pure function
+        // once per creature per room. Byte-identical: a cache of a pure function
         // over a fixed ledger (see `PrimaryAfraidMemo`).
         let mut afraid_memo = PrimaryAfraidMemo::new();
         for (i, npc) in npcs.iter().enumerate() {

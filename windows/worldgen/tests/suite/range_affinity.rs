@@ -100,7 +100,7 @@ fn gnoll_tag(wc: &hornvale_worldgen::WorldComponents) -> usize {
 /// passed if `None` resolved to "multiply by 0.5" instead of "multiply by
 /// 1.0", because both calls would have multiplied by 0.5 identically. Its own
 /// `compared > 0` anti-vacuity guard couldn't catch this either: it counted
-/// how many cells were compared, not whether the comparison was capable of
+/// how many vertices were compared, not whether the comparison was capable of
 /// discriminating anything.
 ///
 /// Fixed to make the real claim, split into two parts against a shared
@@ -156,14 +156,14 @@ fn an_absent_affinity_is_bit_identical() {
     let varied = gnoll_k(&non_uniform);
 
     // (1) The real "absent == no-op" claim: `None` and an explicit 1.0
-    // no-op must be bit-identical at every cell.
+    // no-op must be bit-identical at every vertex.
     let mut compared = 0usize;
-    for cell in geo.vertices() {
+    for vertex in geo.vertices() {
         assert_eq!(
-            absent.get(cell).to_bits(),
-            explicit.get(cell).to_bits(),
+            absent.get(vertex).to_bits(),
+            explicit.get(vertex).to_bits(),
             "an absent affinity must be bit-identical to an explicit 1.0 \
-             no-op at {cell:?}"
+             no-op at {vertex:?}"
         );
         compared += 1;
     }
@@ -173,11 +173,11 @@ fn an_absent_affinity_is_bit_identical() {
     // affinity must move the result away from BOTH baselines.
     let mut moved_from_absent = 0usize;
     let mut moved_from_explicit = 0usize;
-    for cell in geo.vertices() {
-        if varied.get(cell).to_bits() != absent.get(cell).to_bits() {
+    for vertex in geo.vertices() {
+        if varied.get(vertex).to_bits() != absent.get(vertex).to_bits() {
             moved_from_absent += 1;
         }
-        if varied.get(cell).to_bits() != explicit.get(cell).to_bits() {
+        if varied.get(vertex).to_bits() != explicit.get(vertex).to_bits() {
             moved_from_explicit += 1;
         }
     }
@@ -243,19 +243,19 @@ fn a_declared_affinity_multiplies_outside_the_minimum() {
     let biome = climate.biome_map();
 
     let mut moved = 0usize;
-    for cell in geo.vertices() {
-        let f = if biome.get(cell).name() == "desert" {
+    for vertex in geo.vertices() {
+        let f = if biome.get(vertex).name() == "desert" {
             1.0
         } else {
             0.25
         };
-        let expected = kb.get(cell) * f;
+        let expected = kb.get(vertex) * f;
         assert_eq!(
-            kw.get(cell).to_bits(),
+            kw.get(vertex).to_bits(),
             expected.to_bits(),
-            "affinity must apply as a plain factor outside the minimum at {cell:?}"
+            "affinity must apply as a plain factor outside the minimum at {vertex:?}"
         );
-        if kw.get(cell).to_bits() != kb.get(cell).to_bits() {
+        if kw.get(vertex).to_bits() != kb.get(vertex).to_bits() {
             moved += 1;
         }
     }
@@ -263,7 +263,7 @@ fn a_declared_affinity_multiplies_outside_the_minimum() {
     // trivially satisfied and proves nothing.
     assert!(
         moved > 0,
-        "the declared affinity must actually change some cell, or this test is vacuous"
+        "the declared affinity must actually change some vertex, or this test is vacuous"
     );
 }
 
@@ -307,14 +307,14 @@ fn the_affinity_reaches_the_capacity_path_too() {
     let with = caps(&declared);
 
     let mut moved = 0usize;
-    for cell in geo.vertices() {
-        if base.at(cell).to_bits() != with.at(cell).to_bits() {
+    for vertex in geo.vertices() {
+        if base.at(vertex).to_bits() != with.at(vertex).to_bits() {
             moved += 1;
         }
     }
     assert!(
         moved > 0,
         "the affinity must reach the CAPACITY path, not only the readout — \
-         zero moved cells is exactly the defect this campaign exists to repair"
+         zero moved vertices is exactly the defect this campaign exists to repair"
     );
 }

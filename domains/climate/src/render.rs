@@ -1,7 +1,7 @@
 //! Deterministic biome-map renders: an equirectangular PNG and a 72×24
 //! ASCII map, recolored from the elevation-map tradition. Same biome field,
 //! same bytes — a changed artifact in review means changed behavior.
-//! Pixel→cell lookup uses the kernel's `NearestVertexIndex` (a latitude-band
+//! Pixel→vertex lookup uses the kernel's `NearestVertexIndex` (a latitude-band
 //! index, 30 bands of 6°), the same projection the elevation renderer uses.
 
 use crate::biome::Biome;
@@ -29,8 +29,8 @@ pub fn biome_pixels(geo: &Geosphere, biomes: &VertexMap<Biome>) -> Vec<u8> {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.extend_from_slice(&biomes.get(cell).color());
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.extend_from_slice(&biomes.get(vertex).color());
         }
     }
     out
@@ -52,8 +52,8 @@ pub fn biome_ascii(geo: &Geosphere, biomes: &VertexMap<Biome>) -> String {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
         for px in 0..ASCII_WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(ASCII_WIDTH) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.push(biomes.get(cell).glyph());
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.push(biomes.get(vertex).glyph());
         }
         out.push('\n');
     }

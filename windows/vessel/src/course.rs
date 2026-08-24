@@ -57,7 +57,7 @@ pub fn rhumb_advance(from: GeoCoord, bearing_deg: f64, delta_rad: f64) -> GeoCoo
 /// Squared and un-rooted deliberately: it is MONOTONIC in the angle, so it
 /// orders candidates identically to a great-circle distance while avoiding
 /// both a `sqrt` and an `acos`. `acos` near zero loses precision badly, and
-/// adjacent cells are exactly the near-zero case.
+/// adjacent rooms are exactly the near-zero case.
 fn chord_sq(a: [f64; 3], b: [f64; 3]) -> f64 {
     let (dx, dy, dz) = (a[0] - b[0], a[1] - b[1], a[2] - b[2]);
     dx * dx + dy * dy + dz * dz
@@ -139,8 +139,8 @@ pub fn bearing_of(c: Compass) -> f64 {
 
 /// A held bearing and the point dead reckoning has carried the walker to.
 ///
-/// `reckoned` is NOT a cell. It advances exactly along the rhumb and is
-/// never snapped to the cell the walker actually landed on — that is the
+/// `reckoned` is NOT a room. It advances exactly along the rhumb and is
+/// never snapped to the room the walker actually landed on — that is the
 /// whole mechanism. Snapping it would reduce this to picking the
 /// nearest-bearing neighbour each step, whose error is a random walk.
 /// type-audit: pending(wave-3: bearing_deg)
@@ -148,7 +148,7 @@ pub fn bearing_of(c: Compass) -> f64 {
 pub struct Course {
     /// Degrees clockwise from north; one of the eight canonical bearings.
     pub bearing_deg: f64,
-    /// Where exact dead reckoning has arrived, independent of any cell.
+    /// Where exact dead reckoning has arrived, independent of any room.
     pub reckoned: GeoCoord,
 }
 
@@ -347,7 +347,7 @@ mod tests {
     // depth is the literal 12 (walk depth on the canonical grid: globe level
     // 6 + 6), matching `agent::walk_depth`'s own documented default.
 
-    /// A step length is positive, and small — adjacent cells at walk depth are
+    /// A step length is positive, and small — adjacent rooms at walk depth are
     /// a tiny fraction of a radian apart. An implementation that returned a
     /// CHORD rather than an ANGLE would also be positive and small, so the
     /// upper bound alone does not discriminate; the neighbour-distance
@@ -394,7 +394,7 @@ mod tests {
         );
     }
 
-    /// Resolution returns one of the three edge-neighbours and never the cell
+    /// Resolution returns one of the three edge-neighbours and never the room
     /// itself — a target that happens to land nearest the observer's own
     /// centroid must still produce a MOVE.
     ///

@@ -43,7 +43,7 @@ use hornvale_worldgen::{
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
 
-/// The viability floor below which a cell's K is ecological noise rather
+/// The viability floor below which a vertex's K is ecological noise rather
 /// than presence — [`hornvale_demography::FLOOR`], unchanged. Task 4 reuses
 /// this identical value; two different floors would let a kind pass one
 /// test and fail the other.
@@ -122,11 +122,11 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
         .collect();
 
     // Accumulated across every seed in the sweep, keyed by (kind, biome).
-    // `occupied_k`: the K values of cells at/above the viability floor (the
+    // `occupied_k`: the K values of vertices at/above the viability floor (the
     // presence distribution mean_k/p50_k/p95_k are computed over).
     // `biome_k_sum`: this biome's total K for the kind, unfiltered by the
     // floor (the numerator of `share_of_kind_k` — a biome's fraction of the
-    // kind's total carrying capacity, not merely its occupied-cell count).
+    // kind's total carrying capacity, not merely its occupied-vertex count).
     // `kind_k_total`: the kind's world total K, unfiltered (the denominator).
     let mut occupied_k: BTreeMap<(&'static str, &'static str), Vec<f64>> = BTreeMap::new();
     let mut biome_k_sum: BTreeMap<(&'static str, &'static str), f64> = BTreeMap::new();
@@ -165,10 +165,10 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
 
         for (tag, k) in &ks {
             let kind = kinds[*tag as usize].0;
-            for cell in geo.vertices() {
-                let v = *k.get(cell);
+            for vertex in geo.vertices() {
+                let v = *k.get(vertex);
                 *kind_k_total.entry(kind).or_insert(0.0) += v;
-                let biome = biome_map.get(cell).name();
+                let biome = biome_map.get(vertex).name();
                 *biome_k_sum.entry((kind, biome)).or_insert(0.0) += v;
                 if v >= VIABILITY_FLOOR {
                     occupied_k.entry((kind, biome)).or_default().push(v);
@@ -400,7 +400,7 @@ fn regenerate_occupancy_readout() {
 ///   - **True.** The floor computed *inside* `per_species_suitability` is
 ///     discarded. Every occupant of this registry has `elevation.devotion` below
 ///     its floor, so the unfloored elevation term is `tolerance_liebig`'s
-///     minimum at every cell and the floor never enters the product.
+///     minimum at every vertex and the floor never enters the product.
 ///   - **False as a statement about mass.** The same `sovereignty_floor` sets
 ///     each affinity row's LEVEL — `biome_affinity_registry` builds every row as
 ///     `BiomeAffinity::from_preferences(floor_of(kind), …)` — and the affinity
@@ -492,7 +492,7 @@ fn regenerate_occupancy_readout() {
 ///   names precisely these two kinds: "A sparse two-row store. Its occupants
 ///   are the two kinds The Deep Realm re-authored for darkness and damp and
 ///   then left being scored against sunlight." (`rust-monster,alpine` alone
-///   falls 83081 → 5586 occupied cells.)
+///   falls 83081 → 5586 occupied vertices.)
 /// - **326 of the 350 rows shared between the two fixtures are
 ///   byte-identical.** Attributing this drift to the three new dwarves alone
 ///   would be the +36 only, and would miss the 24 changed rows entirely — the
@@ -546,7 +546,7 @@ fn regenerate_occupancy_readout() {
 /// went stale is the more useful thing.
 ///
 /// - *Presence, still not dominance.* A people authored explicitly for hot-arid
-///   desert once had **zero** desert occupancy. It holds **5498** desert cells
+///   desert once had **zero** desert occupancy. It holds **5498** desert vertices
 ///   now — a figure unmoved by either 2026-08-10 regeneration, since the
 ///   viability floor is far below every factor in play. Declaring its affinity
 ///   lifted desert's share of its world total K from **0.0052262188** (the
@@ -573,7 +573,7 @@ fn regenerate_occupancy_readout() {
 ///   `mean_k` ordering shifted by one place. A number can go stale by the world
 ///   improving.
 ///
-///   *What a still earlier version said:* "3793 desert cells", share "0.0097",
+///   *What a still earlier version said:* "3793 desert vertices", share "0.0097",
 ///   "smallest share of any biome it reaches — 11th of 11", and
 ///   "`giant-scorpion` still tops the region". All four were true of a fixture
 ///   four regenerations back. **Note the trap in the second of them**: that

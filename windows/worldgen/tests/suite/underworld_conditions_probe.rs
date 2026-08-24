@@ -10,7 +10,7 @@
 //!    `hornvale_worldgen::chamber_moisture_at_reach` so the table below is
 //!    regenerable rather than transcribed.
 //! 2. **The readout** (`what_does_a_chamber_read`): the temperature and
-//!    moisture a chamber actually reads over every cave-bearing land cell of
+//!    moisture a chamber actually reads over every cave-bearing land vertex of
 //!    the three preregistered seeds, and whether two chambers can be told
 //!    apart at all — which is the question the whole campaign turns on.
 //!
@@ -22,7 +22,7 @@
 //! > Choose the candidate that leaves the vadose population **spread** rather
 //! > than piled against either end of the axis — formally, the candidate
 //! > minimising `max(share within 0.02 of the dry floor, share within 0.02 of
-//! > saturation)` over the pooled vadose cells of the three seeds, tie-broken
+//! > saturation)` over the pooled vadose vertices of the three seeds, tie-broken
 //! > by the larger `p90 − p10` spread.
 //!
 //! The criterion is *not* "make the deep habitable" or "put the median near
@@ -59,7 +59,7 @@
 //!
 //! ## Measured 2026-08-17, seeds 42 / 7 / 1234
 //!
-//! ### The sweep (pooled vadose cells, n = 775)
+//! ### The sweep (pooled vadose vertices, n = 775)
 //!
 //! ```text
 //!   rise above table m  p10=47.3 p25=111.3 p50=219.4 p75=349.2 p90=464.1 max=1095.7
@@ -144,10 +144,10 @@
 //!
 //! The pair count rose from **691 → 807, 1323 → 1483, 1030 → 1172** (+16.8 /
 //! +12.1 / +13.8%). The control is not a second world: before this task a
-//! chamber read `(that cell's own surface temperature, SUBTERRANEAN_MOISTURE)`,
+//! chamber read `(that vertex's own surface temperature, SUBTERRANEAN_MOISTURE)`,
 //! so with moisture constant the pre-change pair count is exactly the number
 //! of distinct surface temperatures, computed here from the same field on the
-//! same worlds. **The surface temperature already varied per cell, so the
+//! same worlds. **The surface temperature already varied per vertex, so the
 //! "before" figure was never 1**, and the sentence "807/874 carry a distinct
 //! reading where before there was one value" — which this file, the task
 //! report and spec §4.3 all carried — is wrong. A real but modest rise is what
@@ -195,10 +195,10 @@
 //! task.** The whole worldgen suite stayed green across Task 5 — not because
 //! nothing changed, but because `tolerance_liebig` floors temperature,
 //! moisture and insolation by the sovereignty floor while calling elevation
-//! with floor `0.0`, so on a cave-bearing cell the unfloored elevation term is
+//! with floor `0.0`, so on a cave-bearing vertex the unfloored elevation term is
 //! the minimum and the other three cannot bind. `warren_readout`'s P1 tripwire
 //! measures `ratio = 1.000` for rust-monster, xorn and drow before and after
-//! (pooled means 0.039860 / 0.015078 / 0.029498 over 40,362 cave-bearing cells
+//! (pooled means 0.039860 / 0.015078 / 0.029498 over 40,362 cave-bearing vertices
 //! across 25 seeds, unchanged to six figures). The `drow niche fit` column in
 //! the readout above is the RAW four-axis product, not the Liebig minimum, so
 //! it is the right instrument for "does the reading differ" and the wrong one
@@ -212,7 +212,7 @@
 //! 0.061 below against 0.039 / 0.032 / 0.036 above. The axis doing that work is
 //! insolation, not moisture or temperature: drow's authored optimum is 0.02 at
 //! width 0.10 and a chamber reads exactly 0.0, so the surface term is crushed
-//! on nearly every land cell whatever the heat below does. Worth stating
+//! on nearly every land vertex whatever the heat below does. Worth stating
 //! plainly because it is the opposite of the naive expectation from finding 3,
 //! and because it means the collapsed light axis spec §4.4 preregisters as a
 //! *finding* is simultaneously the strongest signal a subterranean kind has.
@@ -275,23 +275,23 @@ fn distinct(values: &[f64], unit: f64) -> usize {
     seen.len()
 }
 
-/// One seed's cave-bearing land cells, as `(surface, chamber)` substrate pairs
+/// One seed's cave-bearing land vertices, as `(surface, chamber)` substrate pairs
 /// plus the hydrology inputs the sweep needs to re-evaluate moisture at other
 /// calibrations.
-struct CaveCells {
-    /// The surface reading at each cave-bearing cell.
+struct CaveVertices {
+    /// The surface reading at each cave-bearing vertex.
     surface: Vec<Substrate>,
-    /// The chamber reading at the same cells, at the SHIPPED calibration.
+    /// The chamber reading at the same vertices, at the SHIPPED calibration.
     chamber: Vec<Substrate>,
-    /// `(depth_m, water_table_m, porosity)` at the same cells — the three
+    /// `(depth_m, water_table_m, porosity)` at the same vertices — the three
     /// arguments `chamber_moisture_at_reach` needs.
     hydrology: Vec<(f64, f64, f64)>,
 }
 
 /// Build `seed` to `BuildDepth::Terrain` and collect its cave-bearing land
-/// cells. `Terrain` is the shallowest rung carrying what this reads, matching
+/// vertices. `Terrain` is the shallowest rung carrying what this reads, matching
 /// `underworld_water_table_probe`'s own fixture.
-fn cave_cells(seed_value: u64, wc: &WorldComponents) -> CaveCells {
+fn cave_vertices(seed_value: u64, wc: &WorldComponents) -> CaveVertices {
     let seed = hornvale_kernel::Seed(seed_value);
     let artifacts = build_world_to_with_artifacts(
         seed,
@@ -320,24 +320,24 @@ fn cave_cells(seed_value: u64, wc: &WorldComponents) -> CaveCells {
     );
     let chamber_field = subterranean_substrate_field(geo, &terrain, &surface_field);
 
-    let mut out = CaveCells {
+    let mut out = CaveVertices {
         surface: Vec::new(),
         chamber: Vec::new(),
         hydrology: Vec::new(),
     };
-    for cell in geo.vertices() {
-        let Some(cave) = terrain.cave_at(cell) else {
+    for vertex in geo.vertices() {
+        let Some(cave) = terrain.cave_at(vertex) else {
             continue;
         };
-        let s = *surface_field.get(cell);
-        let porosity = terrain.material_at(cell).porosity;
+        let s = *surface_field.get(vertex);
+        let porosity = terrain.material_at(vertex).porosity;
         let water_table_m = hornvale_terrain::water_table_depth_m(
-            terrain.drainage_at(cell),
+            terrain.drainage_at(vertex),
             porosity,
             s.height_asl_m.get(),
         );
         out.surface.push(s);
-        out.chamber.push(*chamber_field.get(cell));
+        out.chamber.push(*chamber_field.get(vertex));
         out.hydrology
             .push((cave.depth_reach_m, water_table_m, porosity));
     }
@@ -376,14 +376,14 @@ const LIVE_GUARD_SEED: u64 = 42;
 #[test]
 fn the_live_substrate_field_carries_depth() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-    let cells = cave_cells(LIVE_GUARD_SEED, &wc);
-    let n = cells.chamber.len();
+    let vertices = cave_vertices(LIVE_GUARD_SEED, &wc);
+    let n = vertices.chamber.len();
     assert!(n > 0, "seed {LIVE_GUARD_SEED} has no caves");
 
-    let mut delta_t: Vec<f64> = cells
+    let mut delta_t: Vec<f64> = vertices
         .chamber
         .iter()
-        .zip(&cells.surface)
+        .zip(&vertices.surface)
         .map(|(c, s)| c.temperature_c - s.temperature_c)
         .collect();
     delta_t.sort_by(f64::total_cmp);
@@ -395,11 +395,11 @@ fn the_live_substrate_field_carries_depth() {
     );
 
     // And the half a constant depth would pass: deeper caves must be hotter.
-    let mut by_reach: Vec<(f64, f64)> = cells
+    let mut by_reach: Vec<(f64, f64)> = vertices
         .hydrology
         .iter()
-        .zip(&cells.surface)
-        .zip(&cells.chamber)
+        .zip(&vertices.surface)
+        .zip(&vertices.chamber)
         .map(|((hydro, s), c)| (hydro.0, c.temperature_c - s.temperature_c))
         .collect();
     by_reach.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -425,13 +425,13 @@ fn the_live_substrate_field_carries_depth() {
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn how_far_does_the_seepage_reach() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-    // Pool the three seeds' VADOSE cells: the criterion is about the shape of
+    // Pool the three seeds' VADOSE vertices: the criterion is about the shape of
     // the population the constant applies to, and that population is the union
     // of the worlds, not any one of them.
     let mut vadose: Vec<(f64, f64, f64)> = Vec::new();
     for seed_value in SEEDS {
-        let cells = cave_cells(seed_value, &wc);
-        for &(depth_m, table_m, porosity) in &cells.hydrology {
+        let vertices = cave_vertices(seed_value, &wc);
+        for &(depth_m, table_m, porosity) in &vertices.hydrology {
             if !hornvale_terrain::is_phreatic(depth_m, table_m) {
                 vadose.push((depth_m, table_m, porosity));
             }
@@ -439,7 +439,7 @@ fn how_far_does_the_seepage_reach() {
     }
     assert!(
         vadose.len() > 100,
-        "too few vadose cells ({}) to calibrate against",
+        "too few vadose vertices ({}) to calibrate against",
         vadose.len()
     );
     // The inputs the constant is calibrated against, printed BEFORE the sweep:
@@ -451,7 +451,7 @@ fn how_far_does_the_seepage_reach() {
     rises.sort_by(f64::total_cmp);
     porosities.sort_by(f64::total_cmp);
     println!(
-        "\n=== SEEPAGE_REACH_M sweep (pooled vadose cells, n = {}) ===",
+        "\n=== SEEPAGE_REACH_M sweep (pooled vadose vertices, n = {}) ===",
         vadose.len()
     );
     println!(
@@ -547,7 +547,7 @@ fn how_far_does_the_seepage_reach() {
 
 /// claim: readout(off-gate, heavy:, prints the distribution, asserts only that
 /// chambers are distinguishable at all) — what a chamber reads over every
-/// cave-bearing land cell of the three preregistered seeds.
+/// cave-bearing land vertex of the three preregistered seeds.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn what_does_a_chamber_read() {
@@ -566,23 +566,23 @@ fn what_does_a_chamber_read() {
     };
 
     for seed_value in SEEDS {
-        let cells = cave_cells(seed_value, &wc);
-        let n = cells.chamber.len();
+        let vertices = cave_vertices(seed_value, &wc);
+        let n = vertices.chamber.len();
         assert!(n > 0, "seed {seed_value} has no caves");
 
-        let mut chamber_t: Vec<f64> = cells.chamber.iter().map(|s| s.temperature_c).collect();
-        let mut surface_t: Vec<f64> = cells.surface.iter().map(|s| s.temperature_c).collect();
-        let mut delta_t: Vec<f64> = cells
+        let mut chamber_t: Vec<f64> = vertices.chamber.iter().map(|s| s.temperature_c).collect();
+        let mut surface_t: Vec<f64> = vertices.surface.iter().map(|s| s.temperature_c).collect();
+        let mut delta_t: Vec<f64> = vertices
             .chamber
             .iter()
-            .zip(&cells.surface)
+            .zip(&vertices.surface)
             .map(|(c, s)| c.temperature_c - s.temperature_c)
             .collect();
-        let all_moisture: Vec<f64> = cells.chamber.iter().map(|s| s.moisture).collect();
-        let mut vadose_moisture: Vec<f64> = cells
+        let all_moisture: Vec<f64> = vertices.chamber.iter().map(|s| s.moisture).collect();
+        let mut vadose_moisture: Vec<f64> = vertices
             .chamber
             .iter()
-            .zip(&cells.hydrology)
+            .zip(&vertices.hydrology)
             .filter(|(_, hydro)| !hornvale_terrain::is_phreatic(hydro.0, hydro.1))
             .map(|(s, _)| s.moisture)
             .collect();
@@ -598,8 +598,8 @@ fn what_does_a_chamber_read() {
         //
         // AND ITS CONTROL, which the first version of this probe did not take
         // and which made its headline wrong. The PRE-CHANGE chamber reading
-        // was `(that cell's own surface temperature, SUBTERRANEAN_MOISTURE)` —
-        // the temperature already varied per cell, so the "before" count was
+        // was `(that vertex's own surface temperature, SUBTERRANEAN_MOISTURE)` —
+        // the temperature already varied per vertex, so the "before" count was
         // never 1. With moisture constant, the pre-change pair count is
         // exactly the number of distinct surface temperatures at the same
         // bucket width, computable here from the surface field the probe
@@ -615,7 +615,7 @@ fn what_does_a_chamber_read() {
             i64,
             std::collections::BTreeSet<(i64, i64)>,
         > = std::collections::BTreeMap::new();
-        for (c, s) in cells.chamber.iter().zip(&cells.surface) {
+        for (c, s) in vertices.chamber.iter().zip(&vertices.surface) {
             let pair = (
                 (c.temperature_c * 100.0).round() as i64,
                 (c.moisture * 1000.0).round() as i64,
@@ -631,12 +631,12 @@ fn what_does_a_chamber_read() {
         let control_pairs = distinct(&surface_t, 0.01);
         let informative_buckets = by_surface.values().filter(|set| set.len() > 1).count();
 
-        let surface_fit: f64 = cells.surface.iter().map(fit).sum::<f64>() / n as f64;
-        let chamber_fit: f64 = cells.chamber.iter().map(fit).sum::<f64>() / n as f64;
-        let better_below = cells
+        let surface_fit: f64 = vertices.surface.iter().map(fit).sum::<f64>() / n as f64;
+        let chamber_fit: f64 = vertices.chamber.iter().map(fit).sum::<f64>() / n as f64;
+        let better_below = vertices
             .chamber
             .iter()
-            .zip(&cells.surface)
+            .zip(&vertices.surface)
             .filter(|(c, s)| fit(c) > fit(s))
             .count();
 
@@ -720,7 +720,7 @@ fn what_does_a_chamber_read() {
         // in directly, so they never see the live path stop supplying one.
         // These two assertions are the ones that go red for it.
         //
-        // First: a chamber is warmer than the cell above it, everywhere. A
+        // First: a chamber is warmer than the vertex above it, everywhere. A
         // p10 above 1 K cannot be satisfied by a world where the geothermal
         // term has been disconnected.
         assert!(
@@ -734,11 +734,11 @@ fn what_does_a_chamber_read() {
         // offset: sort the columns by how far their caves reach and compare
         // the deepest tenth against the shallowest tenth. A model that added a
         // constant warming would pass the assertion above and fail this one.
-        let mut by_reach: Vec<(f64, f64)> = cells
+        let mut by_reach: Vec<(f64, f64)> = vertices
             .hydrology
             .iter()
-            .zip(&cells.surface)
-            .zip(&cells.chamber)
+            .zip(&vertices.surface)
+            .zip(&vertices.chamber)
             .map(|((hydro, s), c)| (hydro.0, c.temperature_c - s.temperature_c))
             .collect();
         by_reach.sort_by(|a, b| a.0.total_cmp(&b.0));

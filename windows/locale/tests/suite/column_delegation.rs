@@ -7,15 +7,15 @@
 //!
 //! - **The before-arm held, ONCE, and is now spent.**
 //!   `fixtures/column_before.txt` was captured on the unmodified,
-//!   pre-delegation methods (81 seed-42 cells, every `Stratum` variant per
-//!   cell); re-running the identical capture against the delegating code and
+//!   pre-delegation methods (81 seed-42 vertices, every `Stratum` variant per
+//!   vertex); re-running the identical capture against the delegating code and
 //!   diffing byte-for-byte was the only honest way to show nothing moved.
 //!   That proof was made at `aadf5920` and cannot be re-made — decision
 //!   0131's terrain epoch moved the world the sample is drawn from, the
 //!   fixture was regenerated, and what remains is a drift tripwire rather
 //!   than cross-refactor evidence. See `the_sampled_column_is_byte_stable`.
 //! - **The two derivations agree wherever both are defined** — exhaustively,
-//!   over all 40,962 cells, not just the fixture's 81-cell sample.
+//!   over all 40,962 vertices, not just the fixture's 81-vertex sample.
 //! - **A regression guard against de-delegation**, also exhaustive. Read the
 //!   doc comment on `agreement_is_not_proof_of_delegation` below before
 //!   trusting this test more than it can support: it is not the positive
@@ -53,23 +53,23 @@ fn world() -> World {
     World::new(Seed(42))
 }
 
-/// Regenerates the fixture's exact text (same stride rule, same cell order,
+/// Regenerates the fixture's exact text (same stride rule, same vertex order,
 /// same `{:?}` formatting) against whatever `LocaleContext` is compiled in —
 /// i.e. against the CURRENT code. Sharing this with the original capture
 /// procedure (not re-deriving the stride independently) is what makes the
 /// comparison meaningful: any drift in the text is a drift in what the two
-/// methods answer, not in how the test samples cells.
+/// methods answer, not in how the test samples vertices.
 fn regenerate(ctx: &LocaleContext) -> String {
     let vertex_count = ctx.climate().geosphere().vertex_count();
     let stride = (vertex_count / 80).max(1);
     let mut out = String::new();
     for id in (0..vertex_count).step_by(stride) {
-        let cell = Vertex(id as u32);
-        let col = ctx.water_column_at(cell);
-        writeln!(out, "CELL {id} COLUMN {col:?}").unwrap();
+        let vertex = Vertex(id as u32);
+        let col = ctx.water_column_at(vertex);
+        writeln!(out, "VERTEX {id} COLUMN {col:?}").unwrap();
         for s in ALL_STRATA {
-            let expr = ctx.expr_at_stratum(cell, s);
-            writeln!(out, "CELL {id} STRATUM {s:?} EXPR {expr:?}").unwrap();
+            let expr = ctx.expr_at_stratum(vertex, s);
+            writeln!(out, "VERTEX {id} STRATUM {s:?} EXPR {expr:?}").unwrap();
         }
     }
     out
@@ -84,15 +84,15 @@ fn regenerate(ctx: &LocaleContext) -> String {
 /// and holds; it is a fact about `aadf5920..` and cannot be re-made.
 ///
 /// The Glasshouse's terrain epoch then moved every coastline, so the sampled
-/// cells' water columns legitimately changed, and the fixture was regenerated.
+/// vertices' water columns legitimately changed, and the fixture was regenerated.
 /// From here it compares the current derivation against itself across time —
 /// which the module doc above is right to say "would prove nothing" about a
-/// REFACTOR. It is still worth keeping as a cheap drift tripwire on 81 cells
+/// REFACTOR. It is still worth keeping as a cheap drift tripwire on 81 vertices
 /// × 11 strata, but read it as that and not as evidence about The Fathom.
 ///
 /// **The ongoing guard is claim 2, not this one.** The exhaustive agreement
 /// between `expr_at_stratum` and `climate.biome_expr_at_stratum` over all
-/// 40,962 cells is what actually holds the delegation in place, it is
+/// 40,962 vertices is what actually holds the delegation in place, it is
 /// world-independent, and it passed through this epoch untouched. A future
 /// campaign that needs a true before-arm here must capture a fresh one before
 /// its own change, exactly as The Fathom did.
@@ -107,7 +107,7 @@ fn regenerate(ctx: &LocaleContext) -> String {
 /// mechanism.** `k` settled at 0.30 after the Stage B regeneration above, so
 /// the climate field moved once more. Until now this test told its reader to
 /// "regenerate the fixture" and shipped **no way to do it** — the fixture is
-/// 81 cells x 11 strata and hand-editing it is not a procedure. It now honours
+/// 81 vertices x 11 strata and hand-editing it is not a procedure. It now honours
 /// `REBASELINE=1` exactly as `hornvale_kernel::golden` does, and is listed in
 /// `make rebaseline-goldens`, so the instruction in the failure message is one
 /// a reader can actually follow. Setting the variable is deliberate
@@ -136,9 +136,9 @@ fn the_sampled_column_is_byte_stable() {
 }
 
 /// Claim 2 — the two derivations agree wherever both are defined: for every
-/// cell and every in-column stratum (at or above the cell's own floor),
-/// `expr_at_stratum(cell, s)` equals `climate.biome_expr_at_stratum(cell,
-/// s).unwrap()`. Exhaustive over the whole 40,962-cell globe, not just the
+/// vertex and every in-column stratum (at or above the vertex's own floor),
+/// `expr_at_stratum(vertex, s)` equals `climate.biome_expr_at_stratum(vertex,
+/// s).unwrap()`. Exhaustive over the whole 40,962-vertex globe, not just the
 /// fixture's sample.
 ///
 /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
@@ -151,29 +151,29 @@ fn expr_at_stratum_agrees_with_climate_in_column() {
     let vertex_count = climate.geosphere().vertex_count();
     let mut checked = 0usize;
     for id in 0..vertex_count {
-        let cell = Vertex(id as u32);
-        let e = climate.biome_expr_at(cell);
+        let vertex = Vertex(id as u32);
+        let e = climate.biome_expr_at(vertex);
         let ladder = e.realm.strata();
         let floor = ladder
             .iter()
             .position(|s| *s == e.stratum)
-            .expect("a cell's stratum is on its own realm's ladder");
+            .expect("a vertex's stratum is on its own realm's ladder");
         for &s in &ladder[..=floor] {
-            let got = ctx.expr_at_stratum(cell, s);
-            let want = climate.biome_expr_at_stratum(cell, s).unwrap();
-            assert_eq!(got, want, "cell {id} stratum {s:?}");
+            let got = ctx.expr_at_stratum(vertex, s);
+            let want = climate.biome_expr_at_stratum(vertex, s).unwrap();
+            assert_eq!(got, want, "vertex {id} stratum {s:?}");
             checked += 1;
         }
     }
-    assert!(checked > 0, "the sweep must exercise at least one cell");
+    assert!(checked > 0, "the sweep must exercise at least one vertex");
 }
 
 /// Claim 3, as the task brief asks for it — `water_column_at` and
-/// `climate.strata_at` agree on every water cell, exhaustively.
+/// `climate.strata_at` agree on every water vertex, exhaustively.
 ///
 /// **This is NOT the positive control the brief wanted, and the report says
 /// so.** `water_column_at`'s water-realm branch is, post-delegation, the
-/// single expression `self.climate.strata_at(cell)` — so this assertion is
+/// single expression `self.climate.strata_at(vertex)` — so this assertion is
 /// true by construction from the source it is checking, for the same reason
 /// [`expr_at_stratum_agrees_with_climate_in_column`] is: both compare a
 /// delegating wrapper's output to the callee it delegates to, and a
@@ -181,30 +181,30 @@ fn expr_at_stratum_agrees_with_climate_in_column() {
 /// in this world (or any world) can make it fail while the delegation
 /// stands, so it is not evidence that duplication was replaced — only
 /// reading the diff in `windows/locale/src/lib.rs` is. What this test *is*
-/// good for: an exhaustive (all 40,962 cells, not the fixture's 81-cell
+/// good for: an exhaustive (all 40,962 vertices, not the fixture's 81-vertex
 /// sample) regression guard against a future edit that reintroduces an
 /// independent, silently-diverging hand-rolled column derivation here.
 #[test]
-fn water_column_at_agrees_with_climate_strata_at_on_every_water_cell() {
+fn water_column_at_agrees_with_climate_strata_at_on_every_water_vertex() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let climate = ctx.climate();
     let vertex_count = climate.geosphere().vertex_count();
-    let mut water_cells = 0usize;
+    let mut water_vertices = 0usize;
     for id in 0..vertex_count {
-        let cell = Vertex(id as u32);
-        if climate.biome_expr_at(cell).realm != Realm::WATERWORLD {
+        let vertex = Vertex(id as u32);
+        if climate.biome_expr_at(vertex).realm != Realm::WATERWORLD {
             continue;
         }
-        water_cells += 1;
+        water_vertices += 1;
         assert_eq!(
-            ctx.water_column_at(cell),
-            climate.strata_at(cell),
-            "cell {id}"
+            ctx.water_column_at(vertex),
+            climate.strata_at(vertex),
+            "vertex {id}"
         );
     }
     assert!(
-        water_cells > 0,
-        "the sweep must find at least one water cell"
+        water_vertices > 0,
+        "the sweep must find at least one water vertex"
     );
 }

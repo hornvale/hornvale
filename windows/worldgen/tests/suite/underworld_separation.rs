@@ -61,7 +61,7 @@
 //! `tolerance_liebig` floors temperature/moisture/insolation at
 //! `sovereignty_floor(mass, potency)` and passes elevation a literal `0.0`, so
 //! a kind whose elevation devotion sits below its own floor is the Liebig
-//! minimum on elevation at **every** cell and no chamber condition can reach
+//! minimum on elevation at **every** vertex and no chamber condition can reach
 //! its score. Drow sits at devotion 0.30 against a floor of 0.424802, which is
 //! why `warren_readout`'s tripwire read ratio = 1.000 before and after Task 5.
 //! Both candidates here are authored above their floor, and the assertion
@@ -238,14 +238,14 @@
 //!
 //! **The finding, and it is not the one the campaign expected.** The delve
 //! seating multiplier — the only factor this campaign's Task 8 built — has no
-//! quartile at all: four or five distinct values with 284–879 cells tied at
+//! quartile at all: four or five distinct values with 284–879 vertices tied at
 //! the boundary on every seed, spec §5's predicted failure mode arriving
 //! exactly as written. The condition niches alone separate the two kinds
 //! essentially completely on the two seeds where the statistic is defined, and
 //! composing the multiplier on top *raises* overlap toward 16%, pulling the
 //! kinds slightly back together.
 //!
-//! **Seed 1234's condition-niche cell is UNDEFINED, not 0.0%**, and the
+//! **Seed 1234's condition-niche vertex is UNDEFINED, not 0.0%**, and the
 //! three-seed range is therefore "0.0–0.5% on two of three seeds", never
 //! "0.0–0.5%" flat. See the scope note on the control below: the unscaled arm
 //! is **not** depth-free — it reads `subterranean_substrate`, which routes
@@ -264,7 +264,7 @@
 //! 1234             1180      1255        1
 //! ```
 //!
-//! **862–1579 distinct values** over 874–1681 cave-bearing cells. The unscaled
+//! **862–1579 distinct values** over 874–1681 cave-bearing vertices. The unscaled
 //! arm is similarly rich (862 / 1510 / 1177 mountain, 870 / 1578 / 1255
 //! duergar, boundary tie 1 except seed 1234's duergar at 12); the multiplier
 //! arm is the tie-dense one, at four or five values.
@@ -279,7 +279,7 @@
 //! ```
 //!
 //! `Bake::maybe_raid` resolves the target through `rung_for(pidx, n)`, which
-//! is **per cell, not per people** — so "the two kinds have different modal
+//! is **per vertex, not per people** — so "the two kinds have different modal
 //! rungs" does not imply "they can never meet". Measured rather than inferred
 //! from the modes: on 7.9–13.5% of shared cave-bearing columns the two
 //! candidates would have been able to interact. An overlap that *had* cleared
@@ -342,7 +342,7 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 const VIABILITY_FLOOR: f64 = hornvale_demography::FLOOR;
 
 /// H2's preregistered minimum overlap between the two kinds' top-quartile
-/// cells. Frozen in spec §5 before this file existed; it is a MINIMUM, because
+/// vertices. Frozen in spec §5 before this file existed; it is a MINIMUM, because
 /// the degenerate pass here is total separation rather than collision.
 const H2_MIN_OVERLAP: f64 = 0.20;
 
@@ -371,7 +371,7 @@ const H2_MIN_OVERLAP: f64 = 0.20;
 /// `devotion` is `0.70` against a `sovereignty_floor` of ≈0.4498 at 72.0 kg, a
 /// margin of ≈0.25 — the same shape `desert_dwarf_condition_niche` uses (0.70
 /// against 0.443252) and for the same measured reason. Below the floor,
-/// elevation would be the Liebig minimum on every cell and the chamber
+/// elevation would be the Liebig minimum on every vertex and the chamber
 /// conditions Task 5 made vary would be unreachable.
 ///
 /// `width` is deliberately **wide** — 2600 m against the three surviving
@@ -615,7 +615,7 @@ fn the_candidate_fit_tables_and_the_elevation_precondition() {
             devotion > floor,
             "{name} is authored with devotion_elev {devotion} at or below its own \
              sovereignty floor {floor}: elevation would be the Liebig minimum on \
-             EVERY cell and this campaign's whole depth apparatus would be \
+             EVERY vertex and this campaign's whole depth apparatus would be \
              invisible to it (spec §4.3's amendment)"
         );
     }
@@ -639,7 +639,7 @@ fn the_candidate_fit_tables_and_the_elevation_precondition() {
                 .iter()
                 .map(|r| chamber_fit(&niche, kind, *r))
                 .collect();
-            let cells: String = fits
+            let vertices: String = fits
                 .iter()
                 .map(|f| f.map_or("         --".into(), |v| format!("{v:>11.4}")))
                 .collect();
@@ -654,7 +654,7 @@ fn the_candidate_fit_tables_and_the_elevation_precondition() {
                     Some((_br, bv)) if v.total_cmp(&bv).is_gt() => Some((r, v)),
                     other => other,
                 });
-            println!("  {name:<15} {:<14}{cells}", kind.name());
+            println!("  {name:<15} {:<14}{vertices}", kind.name());
             match argmax {
                 Some((r, v)) => println!("      argmax {r:?} ({v:.4})"),
                 None => println!("      argmax NONE — the corpus scores no rung here"),
@@ -663,13 +663,13 @@ fn the_candidate_fit_tables_and_the_elevation_precondition() {
     }
 }
 
-/// One kind's per-cell readings on one seed: everything the hypotheses below
+/// One kind's per-vertex readings on one seed: everything the hypotheses below
 /// are computed from, taken in a single pass so the seating and the capacity
-/// cannot disagree about which cells they describe.
+/// cannot disagree about which vertices they describe.
 struct KindReadings {
-    /// The seated rung at every cave-bearing land cell, in cell order.
+    /// The seated rung at every cave-bearing land vertex, in vertex order.
     seated: Vec<(Vertex, Band)>,
-    /// The seating-scaled capacity at every cave-bearing land cell — what the
+    /// The seating-scaled capacity at every cave-bearing land vertex — what the
     /// deep-history bake actually reasons in.
     capacity: Vec<(Vertex, f64)>,
     /// The **unscaled** capacity — the same field before the seat's multiplier
@@ -694,8 +694,8 @@ fn rank_descending(mut rows: Vec<(Vertex, f64)>) -> Vec<(Vertex, f64)> {
     rows
 }
 
-/// The top-quartile cell set of a descending ranking, together with the tie
-/// evidence spec §5 requires: the boundary value, how many cells share it, and
+/// The top-quartile vertex set of a descending ranking, together with the tie
+/// evidence spec §5 requires: the boundary value, how many vertices share it, and
 /// whether the boundary falls **inside** that tie.
 ///
 /// A boundary inside a tie means the quartile's membership was decided by the
@@ -703,13 +703,13 @@ fn rank_descending(mut rows: Vec<(Vertex, f64)>) -> Vec<(Vertex, f64)> {
 /// that the overlap is then **undefined and must be reported as undefined,
 /// never computed**.
 struct Quartile {
-    /// The cells above the boundary.
-    cells: BTreeSet<u32>,
+    /// The vertices above the boundary.
+    vertices: BTreeSet<u32>,
     /// The capacity value at the boundary.
     boundary: f64,
-    /// How many cells in the whole ranking carry exactly that value.
+    /// How many vertices in the whole ranking carry exactly that value.
     tie_size: usize,
-    /// Whether the boundary splits that tie — some tied cells in, some out.
+    /// Whether the boundary splits that tie — some tied vertices in, some out.
     boundary_splits_a_tie: bool,
     /// How many distinct capacity values the whole ranking carries.
     distinct_values: usize,
@@ -719,7 +719,7 @@ struct Quartile {
 fn top_quartile(ranked: &[(Vertex, f64)]) -> Quartile {
     let n = ranked.len();
     let take = n / 4;
-    let cells: BTreeSet<u32> = ranked.iter().take(take).map(|(c, _)| c.0).collect();
+    let vertices: BTreeSet<u32> = ranked.iter().take(take).map(|(c, _)| c.0).collect();
     let boundary = if take == 0 {
         f64::NAN
     } else {
@@ -735,7 +735,7 @@ fn top_quartile(ranked: &[(Vertex, f64)]) -> Quartile {
         take > 0 && take < n && ranked[take].1.to_bits() == boundary.to_bits();
     let distinct_values: BTreeSet<u64> = ranked.iter().map(|(_, v)| v.to_bits()).collect();
     Quartile {
-        cells,
+        vertices,
         boundary,
         tie_size,
         boundary_splits_a_tie,
@@ -761,7 +761,7 @@ fn modal<K: Copy + Ord>(hist: &BTreeMap<K, usize>) -> Option<(K, usize)> {
 /// campaign's own discipline: H2's floor failing is a preregistered, legitimate
 /// outcome under which the two kinds are simply not authored, so a red here
 /// would misreport a finding as a defect. What it does assert is that the
-/// instrument is not vacuous — every seed must carry cave-bearing cells, and
+/// instrument is not vacuous — every seed must carry cave-bearing vertices, and
 /// each candidate must produce a seating over them — because a readout over an
 /// empty population satisfies every clause below perfectly.
 #[test]
@@ -813,16 +813,16 @@ fn the_separation_readout() {
         // --------------------------------------------------------------
         let mut chamber_hist: BTreeMap<usize, usize> = BTreeMap::new();
         let mut caves = 0usize;
-        for cell in geo.vertices() {
-            let Some(cave) = terrain.cave_at(cell) else {
+        for vertex in geo.vertices() {
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
             caves += 1;
-            let gradient = terrain.geothermal_gradient_at(cell);
+            let gradient = terrain.geothermal_gradient_at(vertex);
             for (rank, &band) in ladder.iter().enumerate() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     let addr = ChamberAddr {
-                        cell,
+                        vertex,
                         band,
                         branch,
                         level: 0,
@@ -835,7 +835,7 @@ fn the_separation_readout() {
         }
         assert!(
             caves > 0,
-            "seed {seed_value} has no cave-bearing cell — every clause below \
+            "seed {seed_value} has no cave-bearing vertex — every clause below \
              would be vacuously satisfied"
         );
         let chambers: usize = chamber_hist.values().sum();
@@ -902,22 +902,22 @@ fn the_separation_readout() {
             let mut capacity_unscaled = Vec::new();
             let mut multiplier = Vec::new();
             let mut suitability_max = 0.0f64;
-            for cell in geo.vertices() {
-                if terrain.cave_at(cell).is_none() {
+            for vertex in geo.vertices() {
+                if terrain.cave_at(vertex).is_none() {
                     continue;
                 }
-                seated.push((cell, *seating.rung.get(cell)));
+                seated.push((vertex, *seating.rung.get(vertex)));
                 // The realm-aware capacity the bake reads: the dimensional
                 // field, scaled by the seat's own multiplier. Reproduced here
                 // exactly as `bake_history_from` composes it.
-                capacity.push((cell, cap.at(cell) * seating.multiplier.get(cell)));
-                capacity_unscaled.push((cell, cap.at(cell)));
-                multiplier.push((cell, *seating.multiplier.get(cell)));
-                suitability_max = suitability_max.max(*suit.get(cell));
+                capacity.push((vertex, cap.at(vertex) * seating.multiplier.get(vertex)));
+                capacity_unscaled.push((vertex, cap.at(vertex)));
+                multiplier.push((vertex, *seating.multiplier.get(vertex)));
+                suitability_max = suitability_max.max(*suit.get(vertex));
             }
             assert!(
                 !seated.is_empty(),
-                "seed {seed_value}: {name} was seated at no cell at all"
+                "seed {seed_value}: {name} was seated at no vertex at all"
             );
             readings.push((
                 name,
@@ -983,7 +983,7 @@ fn the_separation_readout() {
         // --------------------------------------------------------------
         // H2's overlap, guarded by its tie evidence.
         // --------------------------------------------------------------
-        println!("-- H2 overlap: the top-quartile cells --");
+        println!("-- H2 overlap: the top-quartile vertices --");
         let quartiles: Vec<(&'static str, Quartile)> = readings
             .iter()
             .map(|(name, r)| {
@@ -993,9 +993,9 @@ fn the_separation_readout() {
             .collect();
         for (name, q) in &quartiles {
             println!(
-                "  {name:<15} quartile {:>6} cells  boundary {:.6e}  tie at boundary {:>6}  \
+                "  {name:<15} quartile {:>6} vertices  boundary {:.6e}  tie at boundary {:>6}  \
                  distinct capacity values {:>6}  boundary splits a tie: {}",
-                q.cells.len(),
+                q.vertices.len(),
                 q.boundary,
                 q.tie_size,
                 q.distinct_values,
@@ -1007,16 +1007,16 @@ fn the_separation_readout() {
             if a.1.boundary_splits_a_tie || b.1.boundary_splits_a_tie {
                 println!(
                     "  H2 overlap: UNDEFINED — the quartile boundary falls inside a tie \
-                     ({} / {} cells share it), so membership was decided by the tie-break \
+                     ({} / {} vertices share it), so membership was decided by the tie-break \
                      rather than by any measured quantity. Spec §5: report undefined, \
                      never compute.",
                     a.1.tie_size, b.1.tie_size
                 );
             } else {
-                let inter = a.1.cells.intersection(&b.1.cells).count();
-                let union = a.1.cells.union(&b.1.cells).count();
-                let share_a = inter as f64 / a.1.cells.len().max(1) as f64;
-                let share_b = inter as f64 / b.1.cells.len().max(1) as f64;
+                let inter = a.1.vertices.intersection(&b.1.vertices).count();
+                let union = a.1.vertices.union(&b.1.vertices).count();
+                let share_a = inter as f64 / a.1.vertices.len().max(1) as f64;
+                let share_b = inter as f64 / b.1.vertices.len().max(1) as f64;
                 let jaccard = inter as f64 / union.max(1) as f64;
                 println!(
                     "  H2 overlap: |A n B| = {inter}  share of {} = {:.1}%  share of {} = {:.1}%  \
@@ -1075,8 +1075,8 @@ fn the_separation_readout() {
         // the modal rungs (spec §5 requires this task to state whether it
         // suppresses H2's one-family clause).
         //
-        // `Bake::maybe_raid` resolves the target cell through
-        // `rung_for(raider_pidx, n)`, which is PER CELL, not per people. So
+        // `Bake::maybe_raid` resolves the target vertex through
+        // `rung_for(raider_pidx, n)`, which is PER VERTEX, not per people. So
         // "the two kinds have different modal rungs" does NOT imply "the two
         // kinds can never meet": they meet wherever they happen to seat at the
         // SAME rung in the same column, which the modal rung cannot tell you.
@@ -1088,8 +1088,12 @@ fn the_separation_readout() {
             let mut same = 0usize;
             let mut total = 0usize;
             let mut by_rung: BTreeMap<usize, usize> = BTreeMap::new();
-            for ((cell_a, rung_a), (cell_b, rung_b)) in a.1.seated.iter().zip(b.1.seated.iter()) {
-                debug_assert_eq!(cell_a, cell_b, "the two seatings walk the same cells");
+            for ((vertex_a, rung_a), (vertex_b, rung_b)) in a.1.seated.iter().zip(b.1.seated.iter())
+            {
+                debug_assert_eq!(
+                    vertex_a, vertex_b,
+                    "the two seatings walk the same vertices"
+                );
                 total += 1;
                 if rung_a == rung_b {
                     same += 1;
@@ -1144,8 +1148,8 @@ fn the_separation_readout() {
             if split || qs.len() != 2 {
                 println!("  {label:<34} overlap UNDEFINED (boundary inside a tie)  {detail}");
             } else {
-                let inter = qs[0].1.cells.intersection(&qs[1].1.cells).count();
-                let share = inter as f64 / qs[0].1.cells.len().max(1) as f64;
+                let inter = qs[0].1.vertices.intersection(&qs[1].1.vertices).count();
+                let share = inter as f64 / qs[0].1.vertices.len().max(1) as f64;
                 println!(
                     "  {label:<34} overlap {:.1}%  |A n B| = {inter}  {detail}",
                     share * 100.0
@@ -1162,17 +1166,17 @@ fn the_separation_readout() {
         for (name, _, niche) in &cands {
             let mut works = 0usize;
             let mut total = 0usize;
-            for cell in geo.vertices() {
-                let Some(cave) = terrain.cave_at(cell) else {
+            for vertex in geo.vertices() {
+                let Some(cave) = terrain.cave_at(vertex) else {
                     continue;
                 };
                 let table = water_table_depth_m(
-                    terrain.drainage_at(cell),
-                    terrain.material_at(cell).porosity,
-                    terrain.elevation_at(cell).get() - sea,
+                    terrain.drainage_at(vertex),
+                    terrain.material_at(vertex).porosity,
+                    terrain.elevation_at(vertex).get() - sea,
                 );
                 if let Some(seat) =
-                    seat_at(niche, &cave, terrain.geothermal_gradient_at(cell), table)
+                    seat_at(niche, &cave, terrain.geothermal_gradient_at(vertex), table)
                 {
                     total += 1;
                     if seat.works {

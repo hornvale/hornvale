@@ -22,7 +22,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Tuning knobs for the carve (engine A). Global constants only —
 /// heterogeneity comes from fields (spec §5).
-/// type-audit: pending(wave-2: incision_k_m), bare-ok(ratio: area_exponent), bare-ok(ratio: slope_exponent), bare-ok(count: area_ref), pending(wave-2: slope_ref_m), pending(wave-2: max_incision_m), pending(wave-2: repose_drop_m), bare-ok(count: repose_sweeps), pending(wave-2: deposit_slope_m), bare-ok(ratio: deposit_fraction), pending(wave-2: wedge_freeboard_m), bare-ok(count: wedge_reach_passive), bare-ok(count: wedge_reach_active), bare-ok(count: delta_count), pending(wave-2: delta_height_m), pending(wave-2: atoll_freeboard_m), pending(wave-2: atoll_max_depth_m), pending(wave-2: atoll_max_abs_lat), pending(wave-2: wave_cut_m), pending(wave-2: wave_cut_floor_m), bare-ok(count: barrier_supply_per_cell), pending(wave-2: barrier_height_m)
+/// type-audit: pending(wave-2: incision_k_m), bare-ok(ratio: area_exponent), bare-ok(ratio: slope_exponent), bare-ok(count: area_ref), pending(wave-2: slope_ref_m), pending(wave-2: max_incision_m), pending(wave-2: repose_drop_m), bare-ok(count: repose_sweeps), pending(wave-2: deposit_slope_m), bare-ok(ratio: deposit_fraction), pending(wave-2: wedge_freeboard_m), bare-ok(count: wedge_reach_passive), bare-ok(count: wedge_reach_active), bare-ok(count: delta_count), pending(wave-2: delta_height_m), pending(wave-2: atoll_freeboard_m), pending(wave-2: atoll_max_depth_m), pending(wave-2: atoll_max_abs_lat), pending(wave-2: wave_cut_m), pending(wave-2: wave_cut_floor_m), bare-ok(count: barrier_supply_per_vertex), pending(wave-2: barrier_height_m)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CarveParams {
     /// Peak incision scale, meters (the stream-power prefactor `k`).
@@ -32,19 +32,19 @@ pub struct CarveParams {
     /// Slope exponent `n` in `(S/S0)^n`.
     pub slope_exponent: f64,
     /// Drainage normalization `A0` (drainage-field units: upstream
-    /// land-cell count, per [`crate::drainage::drainage_field`]).
+    /// land-vertex count, per [`crate::drainage::drainage_field`]).
     pub area_ref: f64,
     /// Slope normalization `S0`, meters of drop per graph hop.
     pub slope_ref_m: f64,
-    /// Hard cap on a single cell's incision depth, meters.
+    /// Hard cap on a single vertex's incision depth, meters.
     pub max_incision_m: f64,
-    /// Critical inter-cell elevation drop above which hillslope repose
+    /// Critical inter-vertex elevation drop above which hillslope repose
     /// acts, meters.
     pub repose_drop_m: f64,
     /// Fixed count of repose relaxation sweeps (never iterated to a
     /// convergence criterion — determinism wants a fixed budget).
     pub repose_sweeps: u32,
-    /// Inter-cell slope, meters per hop, flatter than which deposition
+    /// Inter-vertex slope, meters per hop, flatter than which deposition
     /// occurs (Task 8: the deposition half of engine A).
     pub deposit_slope_m: f64,
     /// Fraction of transported material deposited per flat hop (Task 8).
@@ -72,11 +72,11 @@ pub struct CarveParams {
     /// Maximum absolute latitude eligible for an atoll rim, radians
     /// (Task 9).
     pub atoll_max_abs_lat: f64,
-    /// Peak wave-cut depth scale, meters, for a fully-exposed coast cell
+    /// Peak wave-cut depth scale, meters, for a fully-exposed coast vertex
     /// of unit erodibility (the wave-cut coastal-erosion term, spec §5/
     /// §12's banked extension activated by ledgers #6+#7). Read it as an
-    /// epoch's planation capacity at cell scale, not a literal wave
-    /// height: a coast cell is ~10^2 km wide at the canonical grids, and
+    /// epoch's planation capacity at vertex scale, not a literal wave
+    /// height: a coast vertex is ~10^2 km wide at the canonical grids, and
     /// the default was chosen from data against the single-craton shelf
     /// floor (the worst sweep seed needs ~1000 to plane its craton-rim
     /// cliffs into a platform; 600 leaves it below the 0.05 floor) —
@@ -85,21 +85,21 @@ pub struct CarveParams {
     /// cuts ~40 m.
     pub wave_cut_m: f64,
     /// Depth below sea level, meters, past which a wave cut never lowers
-    /// a coast cell — the wave-cut platform floor.
+    /// a coast vertex — the wave-cut platform floor.
     pub wave_cut_floor_m: f64,
-    /// Supply cost, in the shared mouth-volume proxy, of one barrier cell
+    /// Supply cost, in the shared mouth-volume proxy, of one barrier vertex
     /// (tuning iteration 4, ledger #9, spec §5's banked spit/barrier
-    /// extension): a budget on the COUNT of cells [`raise_barriers`] may
+    /// extension): a budget on the COUNT of vertices [`raise_barriers`] may
     /// raise, read off the total exported volume of every PASSIVE-margin
     /// mouth (river + wave) — "no supply, no barrier". A proxy, not a
     /// second withdrawal against `deposit_wedge`'s already-closed books
     /// (see that function's own doc).
-    pub barrier_supply_per_cell: f64,
+    pub barrier_supply_per_vertex: f64,
     /// Barrier-bar crest height above the sea level [`raise_barriers`] is
     /// given, meters (tuning iteration 4): small — a bar sits just clear of
     /// the waterline, not a coastal ridge. Chosen small enough that the
     /// bounded solve→trim→solve sequence's typical (post-wedge) DOWNWARD
-    /// sea-level shift (ruling #5c, ledger #4) leaves every barrier cell
+    /// sea-level shift (ruling #5c, ledger #4) leaves every barrier vertex
     /// comfortably above the final `sea_level` once the sea-trim exempts
     /// it (like a delta lobe).
     pub barrier_height_m: f64,
@@ -128,13 +128,13 @@ impl Default for CarveParams {
             atoll_max_abs_lat: 0.6,
             wave_cut_m: 1000.0,
             wave_cut_floor_m: 30.0,
-            barrier_supply_per_cell: 400.0,
+            barrier_supply_per_vertex: 400.0,
             barrier_height_m: 3.0,
         }
     }
 }
 
-/// The per-cell plate/margin geometry the carve stages share: each cell's
+/// The per-vertex plate/margin geometry the carve stages share: each vertex's
 /// margin polarity, its plate boundary (if any), and its owning plate.
 /// These three maps are derived together from the plate set and thread as a
 /// unit through `carve` → `deposit_wedge`/`raise_barriers`, so they ride as
@@ -143,11 +143,11 @@ impl Default for CarveParams {
 /// type-audit: bare-ok(index: plate_of)
 #[derive(Clone, Copy)]
 pub struct MarginGeometry<'a> {
-    /// Passive/active margin polarity per cell.
+    /// Passive/active margin polarity per vertex.
     pub margins: &'a VertexMap<MarginPolarity>,
-    /// Plate boundary at each cell, if any.
+    /// Plate boundary at each vertex, if any.
     pub boundary: &'a VertexMap<Option<VertexBoundary>>,
-    /// Owning plate id per cell.
+    /// Owning plate id per vertex.
     pub plate_of: &'a VertexMap<u32>,
 }
 
@@ -156,8 +156,8 @@ pub struct MarginGeometry<'a> {
 /// `sediment_thickness_m`, `eroded_total_m3`, and `deposited_total_m3` from
 /// incision + repose alone; [`carve`] (Task 9) folds routing's floodplain/
 /// playa deposit and the marine wedge/delta/atoll contributions on top of
-/// that same struct by assignment, and fills `mouths`, `delta_cells`,
-/// `atoll_cells`, and `ocean_loss_m3` — every field is `pub`, so later tasks
+/// that same struct by assignment, and fills `mouths`, `delta_vertices`,
+/// `atoll_vertices`, and `ocean_loss_m3` — every field is `pub`, so later tasks
 /// extend a built `CarveDelta` rather than widening a constructor's
 /// argument list. `waterfall_sites` stays empty until Task 11.
 /// type-audit: pending(wave-2: delta_m), pending(wave-2: sediment_thickness_m), pending(wave-2: mouths), pending(wave-2: eroded_total_m3), pending(wave-2: deposited_total_m3), pending(wave-2: ocean_loss_m3)
@@ -173,8 +173,8 @@ pub struct CarveDelta {
     /// River mouths and their exported sediment volume, sorted by volume
     /// descending (`Vertex` tiebreak). Filled by [`carve`] (Task 9).
     pub mouths: Vec<(Vertex, f64)>,
-    /// Total eroded volume proxy — a cell-area-weighted volume proxy
-    /// (Σ depth, one unit per cell) — summing stream-power incision,
+    /// Total eroded volume proxy — a vertex-area-weighted volume proxy
+    /// (Σ depth, one unit per vertex) — summing stream-power incision,
     /// hillslope repose's donor-side losses, and atoll volume (a paired
     /// biogenic source, spec §5: carbonate grown in place books on both
     /// sides of the ledger).
@@ -187,18 +187,18 @@ pub struct CarveDelta {
     /// shelf overflow). Always `0.0` until Task 9 routes incision's eroded
     /// material seaward.
     pub ocean_loss_m3: f64,
-    /// Cells a river-mouth delta lobe raised above sea level (Task 9).
+    /// Vertices a river-mouth delta lobe raised above sea level (Task 9).
     /// Empty until [`carve`] runs.
-    pub delta_cells: Vec<Vertex>,
-    /// Cells an atoll rim capped (Task 9). Empty until [`carve`] runs; feeds
+    pub delta_vertices: Vec<Vertex>,
+    /// Vertices an atoll rim capped (Task 9). Empty until [`carve`] runs; feeds
     /// lithology's carbonate override (Task 10).
-    pub atoll_cells: Vec<Vertex>,
-    /// Cells a barrier bar raised above sea level (tuning iteration 4,
+    pub atoll_vertices: Vec<Vertex>,
+    /// Vertices a barrier bar raised above sea level (tuning iteration 4,
     /// ledger #9, spec §5's banked spit/barrier extension). Empty until
-    /// [`carve`] runs. Like `delta_cells`, exempt from the sea-trim
+    /// [`carve`] runs. Like `delta_vertices`, exempt from the sea-trim
     /// ([`trim_to_sea`]) — meant to stay subaerial past the final re-solve.
-    pub barrier_cells: Vec<Vertex>,
-    /// Waterfall (knickpoint) sites the carve found (spec §5): land cells
+    pub barrier_vertices: Vec<Vertex>,
+    /// Waterfall (knickpoint) sites the carve found (spec §5): land vertices
     /// where a high-drainage watercourse crosses a sharp induration step,
     /// evaluated on the PRE-carve surface — "where the carve worked
     /// hardest against contrast". Sorted ascending `Vertex`. Filled by
@@ -243,9 +243,9 @@ impl CarveDelta {
             eroded_total_m3,
             deposited_total_m3,
             ocean_loss_m3: 0.0,
-            delta_cells: Vec::new(),
-            atoll_cells: Vec::new(),
-            barrier_cells: Vec::new(),
+            delta_vertices: Vec::new(),
+            atoll_vertices: Vec::new(),
+            barrier_vertices: Vec::new(),
             waterfall_sites: Vec::new(),
         }
     }
@@ -262,29 +262,29 @@ pub enum Provenance {
     Process,
 }
 
-/// Minimum drainage (upstream land-cell count) a cell must carry to be
+/// Minimum drainage (upstream land-vertex count) a vertex must carry to be
 /// waterfall-eligible: a knickpoint needs a real watercourse, not a
 /// trickle. Spec §5's chosen threshold.
 /// type-audit: bare-ok(count)
 pub const WATERFALL_MIN_DRAINAGE: f64 = 80.0;
 
 /// Minimum induration drop, in induration units `[0,1]`, from a candidate
-/// waterfall cell down to its downhill neighbor: the hard lip over the
+/// waterfall vertex down to its downhill neighbor: the hard lip over the
 /// soft plunge pool that makes the step a knickpoint rather than an
 /// ordinary slope. Spec §5's chosen threshold.
 /// type-audit: bare-ok(ratio)
 pub const WATERFALL_INDURATION_STEP: f64 = 0.35;
 
 /// Waterfall (knickpoint) detection (spec §5, "derived point observations"):
-/// a land cell whose drainage exceeds `WATERFALL_MIN_DRAINAGE` and whose
+/// a land vertex whose drainage exceeds `WATERFALL_MIN_DRAINAGE` and whose
 /// downhill neighbor is softer by more than `WATERFALL_INDURATION_STEP` in
 /// induration terms — a hard lip over a soft plunge pool, exactly where the
-/// carve worked hardest against a contrast. A cell with no downhill target
+/// carve worked hardest against a contrast. A vertex with no downhill target
 /// (a local minimum) is never a waterfall. Land-only: `elevation` and
-/// `sea_level` gate the source cell; the downhill target's induration is
+/// `sea_level` gate the source vertex; the downhill target's induration is
 /// read regardless of its own land/ocean status (a river dropping straight
 /// into the sea over resistant rock is a real waterfall). Output sorted
-/// ascending `Vertex` (cell iteration is already ascending; sorted
+/// ascending `Vertex` (vertex iteration is already ascending; sorted
 /// defensively, matching the house style elsewhere in this module).
 /// type-audit: bare-ok(count: drainage), bare-ok(ratio: induration)
 pub fn find_waterfalls(
@@ -299,7 +299,7 @@ pub fn find_waterfalls(
         .vertices()
         .filter(|&c| {
             if *elevation.get(c) < sea_level {
-                return false; // land cells only
+                return false; // land vertices only
             }
             if *drainage.get(c) < WATERFALL_MIN_DRAINAGE {
                 return false;
@@ -324,11 +324,11 @@ pub const REROUTE_TOP_RIVERS: usize = 20;
 /// The A→B→C escalation diagnostic (spec §8, preregistered so "see if it
 /// looks good" is a number — a permanent census column): the flux-weighted
 /// fraction of a world's [`REROUTE_TOP_RIVERS`] largest rivers' mainstem
-/// cells whose downhill target changed across the carve.
+/// vertices whose downhill target changed across the carve.
 ///
-/// **Rivers**: the top `n_rivers` PRE-carve mouths — land cells whose
+/// **Rivers**: the top `n_rivers` PRE-carve mouths — land vertices whose
 /// pre-carve downhill target is ocean (`pre_drainage.get(target) == 0.0`;
-/// ocean cells always carry exactly `0.0` and land cells always `>= 1.0`,
+/// ocean vertices always carry exactly `0.0` and land vertices always `>= 1.0`,
 /// by [`crate::drainage::drainage_field`]'s own construction) — ranked by
 /// the mouth's own pre-carve drainage (a river's mouth carries its whole
 /// watershed's flux, so ranking mouths by their own drainage ranks the
@@ -336,20 +336,20 @@ pub const REROUTE_TOP_RIVERS: usize = 20;
 /// proxy the plan preregistered.
 ///
 /// **Mainstem**: for each mouth, the path is built by walking UPSTREAM from
-/// the mouth, at each step following the predecessor (a cell whose
-/// pre-carve downhill target is the current cell) with the highest
+/// the mouth, at each step following the predecessor (a vertex whose
+/// pre-carve downhill target is the current vertex) with the highest
 /// pre-carve drainage — `Vertex`-ascending tiebreak — until a headwater (no
 /// predecessor) is reached. That walk, reversed, is exactly "the farthest
-/// upstream max-drainage cell down via pre-carve downhill" the plan
+/// upstream max-drainage vertex down via pre-carve downhill" the plan
 /// specifies (the two descriptions name the same edges, walked in opposite
 /// directions).
 ///
-/// **Divergence**: for every cell on a mouth's path (headwater through the
-/// mouth itself, inclusive — always at least one cell, the mouth), the
+/// **Divergence**: for every vertex on a mouth's path (headwater through the
+/// mouth itself, inclusive — always at least one vertex, the mouth), the
 /// PRE-carve downhill target (`pre_downhill`) is compared against the
 /// POST-carve one (`post_downhill`) at the same `Vertex`; they differ when
 /// the `Option<Vertex>` values differ. A mouth's score is the fraction of
-/// its path cells that diverged; the returned value is the mean of every
+/// its path vertices that diverged; the returned value is the mean of every
 /// scored mouth's score, weighted by the mouth's own pre-carve drainage
 /// flux. `0.0` when there are no pre-carve mouths at all (a landless or
 /// fully endorheic world).
@@ -385,7 +385,7 @@ pub fn rerouted_flow_fraction(
     }
     let n = geo.vertex_count();
 
-    // Reverse of `pre_downhill`: every land cell whose pre-carve downhill
+    // Reverse of `pre_downhill`: every land vertex whose pre-carve downhill
     // target is `t` is a predecessor of `t`.
     let mut predecessors: Vec<Vec<Vertex>> = vec![Vec::new(); n];
     for c in geo.vertices() {
@@ -459,7 +459,7 @@ pub fn erodibility(induration: f64, carbonate: f64) -> f64 {
 }
 
 /// Stream-power incision along the provisional drainage tree: depth =
-/// `k * (A/A0)^m * (S/S0)^n * erodibility`, capped, land-only (a cell
+/// `k * (A/A0)^m * (S/S0)^n * erodibility`, capped, land-only (a vertex
 /// below sea level always returns `0.0` — the ocean floor is not this
 /// module's business). The slope term takes the max drop to a LAND
 /// neighbor only — channel slope, not the cliff face (ledger #6): coastal
@@ -478,13 +478,13 @@ pub fn carve_incision(
     carbonate: &VertexMap<f64>,
     params: &CarveParams,
 ) -> VertexMap<f64> {
-    VertexMap::from_fn(geo, |cell| {
-        if *elevation.get(cell) < sea_level {
+    VertexMap::from_fn(geo, |vertex| {
+        if *elevation.get(vertex) < sea_level {
             return 0.0;
         }
-        let here = elevation.get(cell).get();
+        let here = elevation.get(vertex).get();
         let drop = geo
-            .neighbors(cell)
+            .neighbors(vertex)
             .iter()
             .filter(|n| *elevation.get(**n) >= sea_level)
             .map(|n| here - elevation.get(*n).get())
@@ -492,30 +492,32 @@ pub fn carve_incision(
         if drop <= 0.0 {
             return 0.0; // local minimum: deposition country, Task 8
         }
-        let a = (*drainage.get(cell) / params.area_ref).max(0.0);
+        let a = (*drainage.get(vertex) / params.area_ref).max(0.0);
         let s = drop / params.slope_ref_m;
         let power = math::powf(a, params.area_exponent) * math::powf(s, params.slope_exponent);
-        -(params.incision_k_m * power * erodibility(*induration.get(cell), *carbonate.get(cell)))
-            .min(params.max_incision_m)
+        -(params.incision_k_m
+            * power
+            * erodibility(*induration.get(vertex), *carbonate.get(vertex)))
+        .min(params.max_incision_m)
     })
 }
 
 /// Fixed-sweep angle-of-repose relaxation: `params.repose_sweeps` Jacobi-
-/// style sweeps over land cells. Each sweep computes every cell's outgoing
+/// style sweeps over land vertices. Each sweep computes every vertex's outgoing
 /// moves against the *previous* sweep's elevation and applies them only at
 /// the sweep's end — order-independent within a sweep, hence deterministic
-/// and symmetric regardless of cell iteration order (still ascending
-/// `Vertex`, per house style). For each land cell and each of its lower
-/// land neighbors whose inter-cell drop exceeds `params.repose_drop_m`, a
-/// quarter of the excess drop moves from the high cell to the low one.
-/// Ocean cells, and any land-cell edge touching one, are skipped entirely
+/// and symmetric regardless of vertex iteration order (still ascending
+/// `Vertex`, per house style). For each land vertex and each of its lower
+/// land neighbors whose inter-vertex drop exceeds `params.repose_drop_m`, a
+/// quarter of the excess drop moves from the high vertex to the low one.
+/// Ocean vertices, and any land-vertex edge touching one, are skipped entirely
 /// — sea cliffs are real; only inland slopes relax. Mass-conserving by
 /// construction: every subtraction has a matching addition, so the
 /// returned map sums to (approximately) zero.
 ///
 /// **Deviation from the brief's abbreviated signature:** the brief's
 /// interface stub lists three parameters, but its own prose requires
-/// "ocean cells... skipped" — undecidable without a land/ocean threshold.
+/// "ocean vertices... skipped" — undecidable without a land/ocean threshold.
 /// `sea_level` is therefore a fourth, explicit parameter here rather than
 /// smuggled through `CarveParams` (which the brief pins to exactly its
 /// listed fields) or inferred from the reference-elevation datum (0 m is
@@ -558,20 +560,20 @@ pub fn apply_repose(
 }
 
 /// Wave-cut coastal erosion (spec §5/§12's banked extension, activated by
-/// ledgers #6+#7 once the shoreline band demanded it): for each LAND cell
+/// ledgers #6+#7 once the shoreline band demanded it): for each LAND vertex
 /// with at least one ocean neighbor (land/ocean by the `sea_level` passed
 /// in, on the post-repose surface), `exposure = ocean_neighbors /
 /// total_neighbors` and `cut = wave_cut_m * erodibility * exposure`,
-/// capped so the cell never ends below `sea_level - wave_cut_floor_m`
+/// capped so the vertex never ends below `sea_level - wave_cut_floor_m`
 /// (the wave-cut platform floor). Differential crenulation is the point:
-/// soft/exposed coasts cut into bays — and a cut cell's former neighbors
+/// soft/exposed coasts cut into bays — and a cut vertex's former neighbors
 /// become more sheltered in the NEXT epoch, so the process is
 /// self-limiting — while hard headlands stand and low-exposure inlets
-/// (rias) survive. Ocean cells and landlocked cells return `0.0`.
+/// (rias) survive. Ocean vertices and landlocked vertices return `0.0`.
 ///
-/// Returns `(cut_m, micro_mouths)`: `cut_m` is the per-cell cut (≤ 0,
-/// coast land cells only); `micro_mouths` lists every cut cell with its
-/// eroded volume proxy (Σ depth, one cell-area unit per cell — the
+/// Returns `(cut_m, micro_mouths)`: `cut_m` is the per-vertex cut (≤ 0,
+/// coast land vertices only); `micro_mouths` lists every cut vertex with its
+/// eroded volume proxy (Σ depth, one vertex-area unit per vertex — the
 /// carve's own volume convention), sorted volume-descending (`Vertex`
 /// ascending tiebreak). The caller merges these micro-mouths into the
 /// wedge's mouth list — wave material feeds the shelf supply through the
@@ -587,18 +589,20 @@ pub fn wave_erosion(
 ) -> (VertexMap<f64>, Vec<(Vertex, f64)>) {
     let is_ocean = |c: Vertex| *elevation_after_repose.get(c) < sea_level;
     let floor = sea_level.get() - params.wave_cut_floor_m;
-    let cut_m = VertexMap::from_fn(geo, |cell| {
-        if is_ocean(cell) {
+    let cut_m = VertexMap::from_fn(geo, |vertex| {
+        if is_ocean(vertex) {
             return 0.0;
         }
-        let neighbors = geo.neighbors(cell);
+        let neighbors = geo.neighbors(vertex);
         let ocean_neighbors = neighbors.iter().filter(|n| is_ocean(**n)).count();
         if ocean_neighbors == 0 {
             return 0.0;
         }
         let exposure = ocean_neighbors as f64 / neighbors.len() as f64;
-        let allowed = (elevation_after_repose.get(cell).get() - floor).max(0.0);
-        -(params.wave_cut_m * erodibility(*induration.get(cell), *carbonate.get(cell)) * exposure)
+        let allowed = (elevation_after_repose.get(vertex).get() - floor).max(0.0);
+        -(params.wave_cut_m
+            * erodibility(*induration.get(vertex), *carbonate.get(vertex))
+            * exposure)
             .min(allowed)
     });
     let mut micro_mouths: Vec<(Vertex, f64)> = cut_m
@@ -612,18 +616,18 @@ pub fn wave_erosion(
 
 /// Route eroded volume down the drainage tree: deposit on flats, fill
 /// endorheic sinks toward playa floors, and export the rest at each
-/// coastal outlet ("mouth"). Land cells only, processed in **descending
+/// coastal outlet ("mouth"). Land vertices only, processed in **descending
 /// elevation order** (`total_cmp`, `Vertex` ascending tiebreak) — the
-/// downhill forest guarantees every upstream cell is processed before its
+/// downhill forest guarantees every upstream vertex is processed before its
 /// downstream target, so a single forward sweep suffices (no iteration to
 /// convergence).
 ///
-/// Per cell: `flux = -incision[cell] + inflow` (inflow already accumulated
-/// from upstream cells processed earlier in the sweep). If the cell has a
+/// Per vertex: `flux = -incision[vertex] + inflow` (inflow already accumulated
+/// from upstream vertices processed earlier in the sweep). If the vertex has a
 /// downhill target and its own steepest neighbor drop is flatter than
 /// `params.deposit_slope_m`, a `params.deposit_fraction` share of `flux`
 /// deposits here first. The remainder then follows `downhill`: onto a land
-/// cell, it becomes that cell's inflow; onto the ocean, the *source* cell
+/// vertex, it becomes that vertex's inflow; onto the ocean, the *source* vertex
 /// (the coastal outlet) is a river mouth and the flux is exported. With no
 /// downhill target at all (a local minimum) the flat-fraction step is
 /// skipped entirely — there is no "remainder to pass downhill", so ALL
@@ -635,7 +639,7 @@ pub fn wave_erosion(
 ///
 /// Returns `(deposit_m, mouths, ocean_loss)`: `deposit_m` is the
 /// non-negative floodplain/playa deposition thickness; `mouths` lists each
-/// river-mouth land cell with its exported volume, sorted by volume
+/// river-mouth land vertex with its exported volume, sorted by volume
 /// descending (`Vertex` ascending tiebreak); `ocean_loss` is the playa
 /// overflow only — the marine wedge (Task 9) adds to it separately.
 /// type-audit: pending(wave-2: incision), bare-ok(flag: endorheic), pending(wave-2: return)
@@ -693,7 +697,7 @@ pub fn route_sediment(
                 flux[target.0 as usize] += flux[idx];
             }
             Some(_ocean_target) => {
-                // This cell is the coastal outlet: a river mouth.
+                // This vertex is the coastal outlet: a river mouth.
                 mouths_acc[idx] += flux[idx];
             }
             None => {
@@ -730,7 +734,7 @@ pub fn route_sediment(
 }
 
 /// Coastal sediment wedge (Task 9, spec §5): spread each river mouth's
-/// exported volume across nearby ocean cells, offshore-reach set by the
+/// exported volume across nearby ocean vertices, offshore-reach set by the
 /// mouth's own land-margin polarity, then — for the top-`params.delta_count`
 /// mouths by volume — carve a discrete subaerial delta lobe out of that same
 /// export before it ever reaches the ordinary spread. Both contributions
@@ -738,9 +742,9 @@ pub fn route_sediment(
 /// sediment too, only piled high enough to clear the waterline.
 ///
 /// **Deviation from the brief's two-tuple return**: the brief's interface
-/// stub returns `(VertexMap<f64>, f64)`. `CarveDelta::delta_cells` needs to
-/// know exactly which cells a lobe raised; deriving that after the fact
-/// from "did this cell cross sea level" would only be sound because
+/// stub returns `(VertexMap<f64>, f64)`. `CarveDelta::delta_vertices` needs to
+/// know exactly which vertices a lobe raised; deriving that after the fact
+/// from "did this vertex cross sea level" would only be sound because
 /// `wedge_freeboard_m` happens to keep the ordinary wedge strictly below
 /// sea level — a fragile inference tied to a tunable default rather than a
 /// fact this function enforces. Returning the list directly (a third tuple
@@ -750,23 +754,23 @@ pub fn route_sediment(
 /// Mechanics, per mouth (processed volume-descending, `Vertex` ascending
 /// tiebreak — re-sorted defensively even though `route_sediment` already
 /// returns them that way):
-/// - **Delta** (top-K only): the mouth cell itself (hop 0) plus its
-///   adjacent ocean cells (hop 1) each have a target elevation
+/// - **Delta** (top-K only): the mouth vertex itself (hop 0) plus its
+///   adjacent ocean vertices (hop 1) each have a target elevation
 ///   `sea_level + delta_height_m * exp(-hop)`. The volume needed to raise
-///   every target cell to its own target, summed, is debited from the
+///   every target vertex to its own target, summed, is debited from the
 ///   mouth's export before the wedge spread runs; if the export is short,
-///   every target cell's raise scales down by the same ratio (a
-///   proportionally lower lobe, never minting mass) and only cells that
-///   still clear sea level after scaling are recorded in `delta_cells`.
-///   These hop-1 cells are then excluded from this mouth's own wedge BFS
-///   below — the two mechanisms never double-fill one cell.
-/// - **Wedge**: BFS over ocean cells from the mouth's (non-delta) adjacent
-///   ocean cells, frontier expansion in ascending `Vertex` order, depth-
+///   every target vertex's raise scales down by the same ratio (a
+///   proportionally lower lobe, never minting mass) and only vertices that
+///   still clear sea level after scaling are recorded in `delta_vertices`.
+///   These hop-1 vertices are then excluded from this mouth's own wedge BFS
+///   below — the two mechanisms never double-fill one vertex.
+/// - **Wedge**: BFS over ocean vertices from the mouth's (non-delta) adjacent
+///   ocean vertices, frontier expansion in ascending `Vertex` order, depth-
 ///   limited to `wedge_reach_active` hops on an active-margin mouth or
 ///   `wedge_reach_passive` otherwise (`margins.get(mouth)`; Oceanic/
-///   Interior treated as passive). Every reachable cell (trench cells
+///   Interior treated as passive). Every reachable vertex (trench vertices
 ///   included) gets a weight `exp(-hops/1.5)`; the mouth's remaining
-///   export splits across them proportional to weight. A trench cell —
+///   export splits across them proportional to weight. A trench vertex —
 ///   the whole oceanic side of a `CoastalRange` contact (an Andean margin
 ///   carries no offshore arc, so its entire seaward flank is the trench;
 ///   a5ba274 adjudication), or the SUBDUCTING side only of an `IslandArc`
@@ -775,19 +779,19 @@ pub fn route_sediment(
 ///   contact.other_plate`) — has zero fill capacity — modeled as an
 ///   ordinary cap of `0.0` rather than a hard BFS wall, so its computed
 ///   share flows through the same cap-overflow machinery every other
-///   capped cell uses — and blocks further BFS propagation past it (the
-///   trench is a barrier, not a permeable cell). Each cell's
+///   capped vertex uses — and blocks further BFS propagation past it (the
+///   trench is a barrier, not a permeable vertex). Each vertex's
 ///   cap is the shelf freeboard headroom *remaining after every earlier
 ///   mouth in this same call* (`cap_m` reads the shared `fill` buffer), so
-///   two mouths whose reach overlaps one shelf cell can never jointly
-///   overtop it. Overflow beyond a cell's cap redistributes, in one more
-///   pass, proportional to weight among cells that were not capped in the
+///   two mouths whose reach overlaps one shelf vertex can never jointly
+///   overtop it. Overflow beyond a vertex's cap redistributes, in one more
+///   pass, proportional to weight among vertices that were not capped in the
 ///   first pass; whatever still doesn't fit is `ocean_loss` (no third
 ///   pass).
 ///
 /// **Delta eligibility (ledger #7):** `mouths` may mix river mouths with
 /// the wave term's micro-mouths; the top-K lobe walk counts only mouths in
-/// `delta_eligible` (the river-mouth cells) — wave cells are never deltas,
+/// `delta_eligible` (the river-mouth vertices) — wave vertices are never deltas,
 /// however large their volume. Every mouth, eligible or not, still takes
 /// the ordinary wedge spread.
 ///
@@ -810,7 +814,7 @@ pub fn deposit_wedge(
     let is_ocean = |c: Vertex| *elevation.get(c) < sea_level;
     // The trench is the SUBDUCTING side only: a CoastalRange contact's
     // whole oceanic side (no offshore arc on an Andean margin; a5ba274
-    // adjudication), or an IslandArc cell on the non-arc side — the side
+    // adjudication), or an IslandArc vertex on the non-arc side — the side
     // test replicates `elevation.rs`'s `arc_side = plate.id >
     // contact.other_plate` (a plate's `id` equals its index, so
     // `plate_of` carries it directly); `arc_side` true is the overriding
@@ -825,7 +829,7 @@ pub fn deposit_wedge(
     };
     // Headroom below the shelf cap, meters, net of whatever this call has
     // already filled at `c` (by an earlier mouth, or this mouth's own
-    // pass-1 share) — never negative. Trench cells get none at all.
+    // pass-1 share) — never negative. Trench vertices get none at all.
     let cap_m = |c: Vertex, fill: &[f64]| -> f64 {
         if is_trench(c) {
             return 0.0;
@@ -836,7 +840,7 @@ pub fn deposit_wedge(
 
     let mut fill = vec![0.0_f64; n];
     let mut ocean_loss = 0.0_f64;
-    let mut delta_cells: Vec<Vertex> = Vec::new();
+    let mut delta_vertices: Vec<Vertex> = Vec::new();
 
     let mut sorted_mouths: Vec<(Vertex, f64)> = mouths.to_vec();
     sorted_mouths.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.0.cmp(&b.0.0)));
@@ -854,9 +858,9 @@ pub fn deposit_wedge(
         if delta_eligible.contains(&mouth) {
             eligible_seen += 1;
         }
-        let mut lobe_cells: Vec<Vertex> = Vec::new();
+        let mut lobe_vertices: Vec<Vertex> = Vec::new();
         if grows_delta {
-            lobe_cells.push(mouth); // hop 0
+            lobe_vertices.push(mouth); // hop 0
             let mut ring: Vec<Vertex> = geo
                 .neighbors(mouth)
                 .iter()
@@ -864,11 +868,11 @@ pub fn deposit_wedge(
                 .filter(|&c| is_ocean(c))
                 .collect();
             ring.sort_by_key(|c| c.0);
-            lobe_cells.extend(ring); // hop 1
+            lobe_vertices.extend(ring); // hop 1
 
             let target_of =
                 |hop: u32| sea_level.get() + params.delta_height_m * math::exp(-(hop as f64));
-            let needed: Vec<f64> = lobe_cells
+            let needed: Vec<f64> = lobe_vertices
                 .iter()
                 .enumerate()
                 .map(|(i, &c)| {
@@ -879,14 +883,14 @@ pub fn deposit_wedge(
             let total_needed: f64 = needed.iter().sum();
             if total_needed > 0.0 {
                 let ratio = (remaining / total_needed).min(1.0);
-                for (&c, &need) in lobe_cells.iter().zip(needed.iter()) {
+                for (&c, &need) in lobe_vertices.iter().zip(needed.iter()) {
                     let raise = ratio * need;
                     if raise <= 0.0 {
                         continue;
                     }
                     fill[c.0 as usize] += raise;
                     if elevation.get(c).get() + fill[c.0 as usize] >= sea_level.get() {
-                        delta_cells.push(c);
+                        delta_vertices.push(c);
                     }
                 }
                 remaining -= ratio * total_needed;
@@ -907,11 +911,11 @@ pub fn deposit_wedge(
             continue;
         }
 
-        // Hop-1 cells already claimed by this mouth's own delta lobe are
-        // off-limits to its wedge BFS (the mouth cell itself, hop 0, was
+        // Hop-1 vertices already claimed by this mouth's own delta lobe are
+        // off-limits to its wedge BFS (the mouth vertex itself, hop 0, was
         // never ocean, so it was never wedge-eligible anyway).
         let exclude: std::collections::BTreeSet<Vertex> =
-            lobe_cells.iter().skip(1).copied().collect();
+            lobe_vertices.iter().skip(1).copied().collect();
 
         let mut visited = vec![false; n];
         let mut hop_of: Vec<u32> = vec![0; n];
@@ -1004,9 +1008,9 @@ pub fn deposit_wedge(
     }
 
     let marine_deposit = VertexMap::from_fn(geo, |c| fill[c.0 as usize]);
-    delta_cells.sort_by_key(|c| c.0);
-    delta_cells.dedup();
-    (marine_deposit, delta_cells, ocean_loss)
+    delta_vertices.sort_by_key(|c| c.0);
+    delta_vertices.dedup();
+    (marine_deposit, delta_vertices, ocean_loss)
 }
 
 /// Barrier islands and lagoons (tuning iteration 4, ledger #9; spec §5's
@@ -1018,32 +1022,32 @@ pub fn deposit_wedge(
 /// (`elevation_after_wedge`), BEFORE atolls (see [`carve`]'s composition).
 ///
 /// **Candidate rule, chosen by the edge arithmetic**: raising an ocean
-/// cell to land flips every one of its edges in the perimeter sum — a
+/// vertex to land flips every one of its edges in the perimeter sum — a
 /// land neighbor's edge is REMOVED (land/ocean becomes land/land) while an
 /// ocean neighbor's edge is ADDED (ocean/ocean becomes land/ocean) — so a
-/// cell with `L` land neighbors and `O` ocean neighbors changes the raw
+/// vertex with `L` land neighbors and `O` ocean neighbors changes the raw
 /// perimeter by `O - L`. An **attached** spit-end (`L == 1`) nets `O - 1`;
-/// a **detached** cell (`L == 0`, ocean on every side) nets the full `O`
+/// a **detached** vertex (`L == 0`, ocean on every side) nets the full `O`
 /// (a whole 5- or 6-edge ring) — strictly more. So the candidate pool is
-/// detached: ocean cells with ZERO land neighbors of their own, that touch
-/// at least one ORDINARY coastal-fringe ocean cell (one hop from land) —
-/// i.e. exactly two hops from the mainland, with that fringe cell
+/// detached: ocean vertices with ZERO land neighbors of their own, that touch
+/// at least one ORDINARY coastal-fringe ocean vertex (one hop from land) —
+/// i.e. exactly two hops from the mainland, with that fringe vertex
 /// surviving untouched as the lagoon between barrier and shore. The
-/// fringe cell's own land neighbor(s) gate margin polarity (`Passive`
+/// fringe vertex's own land neighbor(s) gate margin polarity (`Passive`
 /// only — spec's "recognized longshore extension" is a passive-margin
 /// phenomenon on Earth too) and exclude the trench and any river-mouth
 /// delta lobe (never restyled as a barrier).
 ///
-/// **Alternating selection**: eligible cells are walked in ascending
+/// **Alternating selection**: eligible vertices are walked in ascending
 /// `Vertex` order (the coastal-walk convention every other carve stage
-/// uses) and every OTHER one is skipped. Raising every eligible cell in a
+/// uses) and every OTHER one is skipped. Raising every eligible vertex in a
 /// row would weld a solid offshore wall whose interior land-land edges are
 /// wasted perimeter — exactly the ordinary-coastline problem this
 /// mechanism exists to avoid, and it would reduce `P` relative to a porous
 /// chain.
 ///
-/// **Supply gate**: a budget in raised CELLS (not the raise volume
-/// itself) — `total_passive_supply / params.barrier_supply_per_cell`,
+/// **Supply gate**: a budget in raised VERTICES (not the raise volume
+/// itself) — `total_passive_supply / params.barrier_supply_per_vertex`,
 /// floored — where `total_passive_supply` sums the exported volume of
 /// every PASSIVE-margin mouth in `mouths` (the same merged river+wave list
 /// [`deposit_wedge`] already fully spent into shelf fill or ocean loss).
@@ -1056,13 +1060,13 @@ pub fn deposit_wedge(
 /// tier-aware mass balance): real sediment (longshore drift is a genuine
 /// process), gated rather than metered exactly.
 ///
-/// Each selected cell raises to `sea_level + params.barrier_height_m`
+/// Each selected vertex raises to `sea_level + params.barrier_height_m`
 /// (never down — every candidate starts below `sea_level` by
 /// construction, so the raise is always positive). Returns
-/// `(fill, barrier_cells, volume_used)`, `barrier_cells` sorted ascending
+/// `(fill, barrier_vertices, volume_used)`, `barrier_vertices` sorted ascending
 /// `Vertex`; the caller ([`carve`]) folds `fill` into
 /// `elevation_after_wedge` before atolls cap, and the sea-trim
-/// ([`trim_to_sea`]) must exempt `barrier_cells` like `delta_cells` — a
+/// ([`trim_to_sea`]) must exempt `barrier_vertices` like `delta_vertices` — a
 /// barrier is meant to stay subaerial past the final re-solve.
 /// type-audit: pending(wave-2: mouths), pending(wave-2: return)
 pub fn raise_barriers(
@@ -1070,7 +1074,7 @@ pub fn raise_barriers(
     elevation_after_wedge: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     geom: MarginGeometry,
-    delta_cells: &BTreeSet<Vertex>,
+    delta_vertices: &BTreeSet<Vertex>,
     mouths: &[(Vertex, f64)],
     params: &CarveParams,
 ) -> (VertexMap<f64>, Vec<Vertex>, f64) {
@@ -1092,7 +1096,7 @@ pub fn raise_barriers(
         None => false,
     };
 
-    // Ordinary coastal fringe: ocean cells with >= 1 land neighbor. These
+    // Ordinary coastal fringe: ocean vertices with >= 1 land neighbor. These
     // stay ocean — the lagoon between the mainland and any barrier raised
     // beyond them.
     let fringe: BTreeSet<Vertex> = geo
@@ -1101,13 +1105,13 @@ pub fn raise_barriers(
         .collect();
 
     // Detached candidates: ocean, zero land neighbors of their own, and
-    // adjacent to at least one fringe cell whose own land neighbor is on
+    // adjacent to at least one fringe vertex whose own land neighbor is on
     // a Passive margin — a genuine two-hops-from-the-mainland barrier
-    // site, not an arbitrary open-ocean cell.
+    // site, not an arbitrary open-ocean vertex.
     let mut candidates: Vec<Vertex> = geo
         .vertices()
         .filter(|&c| {
-            if !is_ocean(c) || is_trench(c) || delta_cells.contains(&c) {
+            if !is_ocean(c) || is_trench(c) || delta_vertices.contains(&c) {
                 return false;
             }
             if geo.neighbors(c).iter().any(|&nb| !is_ocean(nb)) {
@@ -1116,7 +1120,7 @@ pub fn raise_barriers(
             geo.neighbors(c).iter().any(|&nb| {
                 fringe.contains(&nb)
                     && !is_trench(nb)
-                    && !delta_cells.contains(&nb)
+                    && !delta_vertices.contains(&nb)
                     && geo.neighbors(nb).iter().any(|&land| {
                         !is_ocean(land) && *margins.get(land) == MarginPolarity::Passive
                     })
@@ -1125,36 +1129,36 @@ pub fn raise_barriers(
         .collect();
     candidates.sort_by_key(|c| c.0);
 
-    // Alternating selection: every OTHER eligible cell, in the coastal
+    // Alternating selection: every OTHER eligible vertex, in the coastal
     // walk's Vertex order.
     let spaced: Vec<Vertex> = candidates.into_iter().step_by(2).collect();
 
-    // Supply gate: budget in cells, from PASSIVE-margin mouths only (the
+    // Supply gate: budget in vertices, from PASSIVE-margin mouths only (the
     // river+wave exports `deposit_wedge` already fully spent).
     let total_passive_supply: f64 = mouths
         .iter()
         .filter(|(m, _)| *margins.get(*m) == MarginPolarity::Passive)
         .map(|(_, v)| v)
         .sum();
-    let budget = if params.barrier_supply_per_cell > 0.0 {
-        (total_passive_supply / params.barrier_supply_per_cell).floor() as usize
+    let budget = if params.barrier_supply_per_vertex > 0.0 {
+        (total_passive_supply / params.barrier_supply_per_vertex).floor() as usize
     } else {
         0
     };
 
-    let barrier_cells: Vec<Vertex> = spaced.into_iter().take(budget).collect();
+    let barrier_vertices: Vec<Vertex> = spaced.into_iter().take(budget).collect();
 
     let target = sea_level.get() + params.barrier_height_m;
     let mut fill = vec![0.0_f64; geo.vertex_count()];
     let mut volume_used = 0.0_f64;
-    for &c in &barrier_cells {
+    for &c in &barrier_vertices {
         let raise = (target - elevation_after_wedge.get(c).get()).max(0.0);
         fill[c.0 as usize] = raise;
         volume_used += raise;
     }
 
     let raised = VertexMap::from_fn(geo, |c| fill[c.0 as usize]);
-    (raised, barrier_cells, volume_used)
+    (raised, barrier_vertices, volume_used)
 }
 
 /// Atoll caps (Task 9, spec §5): warm, shallow-submerged trail seamounts
@@ -1162,12 +1166,12 @@ pub fn raise_barriers(
 /// the sea level this function is GIVEN; the wired pipeline (Task 10)
 /// passes the provisional pre-carve sea level. Since tuning iteration 4
 /// (ledger #9), `carve`'s composition folds [`raise_barriers`]'s fill in
-/// BEFORE this runs, so a seamount whose nearest cell a barrier already
+/// BEFORE this runs, so a seamount whose nearest vertex a barrier already
 /// raised reads as already-at-or-above-cap and is skipped — no double
 /// counting, no separate exclusion needed here. The gap that opened when
-/// the post-carve re-solve landed lower (composed atoll cells reading as
+/// the post-carve re-solve landed lower (composed atoll vertices reading as
 /// emergent) is now closed by the sea-trim ([`trim_to_sea`], ruling #5c):
-/// `globe::generate` re-caps every atoll cell to the re-solved
+/// `globe::generate` re-caps every atoll vertex to the re-solved
 /// `sea_1 - atoll_freeboard_m` between its two solves, leaving only the
 /// second solve's residual (only `>= 0` is structural; staying
 /// `<= wedge_freeboard_m` is EMPIRICAL — max observed 39.957 m across a
@@ -1175,12 +1179,12 @@ pub fn raise_barriers(
 /// tuning must re-verify it). Only trail
 /// entries with `age_index >= 2` are old enough to have drifted off the
 /// live hotspot dome and cooled into reef-building range; each maps to its
-/// nearest cell (no interpolation — a seamount and a grid cell are both
-/// point features at this resolution), and each cell caps at most once
-/// (a later seamount mapping to an already-capped cell is skipped).
+/// nearest vertex (no interpolation — a seamount and a grid vertex are both
+/// point features at this resolution), and each vertex caps at most once
+/// (a later seamount mapping to an already-capped vertex is skipped).
 ///
 /// **Deviation from the brief's single-`VertexMap` return**: as with
-/// `deposit_wedge`, `CarveDelta::atoll_cells` needs the exact cell list,
+/// `deposit_wedge`, `CarveDelta::atoll_vertices` needs the exact vertex list,
 /// not a value re-derived from the fill map after the fact — returning it
 /// directly is the explicit, boring choice.
 /// type-audit: pending(wave-2: return)
@@ -1198,32 +1202,32 @@ pub fn cap_atolls(
 
     let mut fill = vec![0.0_f64; n];
     let mut done = vec![false; n];
-    let mut atoll_cells: Vec<Vertex> = Vec::new();
+    let mut atoll_vertices: Vec<Vertex> = Vec::new();
 
     for seamount in trail_seamounts {
         if seamount.age_index < 2 {
             continue;
         }
-        let cell = index.nearest_to_position(geo, seamount.position);
-        if done[cell.0 as usize] {
+        let vertex = index.nearest_to_position(geo, seamount.position);
+        if done[vertex.0 as usize] {
             continue;
         }
-        let e = elevation.get(cell).get();
+        let e = elevation.get(vertex).get();
         if e >= cap || e < floor {
             continue; // at/above the cap already, or too deep to reef-cap
         }
-        let lat = math::asin(geo.position(cell)[2].clamp(-1.0, 1.0)).abs();
+        let lat = math::asin(geo.position(vertex)[2].clamp(-1.0, 1.0)).abs();
         if lat >= params.atoll_max_abs_lat {
             continue;
         }
-        fill[cell.0 as usize] = cap - e;
-        done[cell.0 as usize] = true;
-        atoll_cells.push(cell);
+        fill[vertex.0 as usize] = cap - e;
+        done[vertex.0 as usize] = true;
+        atoll_vertices.push(vertex);
     }
 
-    atoll_cells.sort_by_key(|c| c.0);
+    atoll_vertices.sort_by_key(|c| c.0);
     let raised = VertexMap::from_fn(geo, |c| fill[c.0 as usize]);
-    (raised, atoll_cells)
+    (raised, atoll_vertices)
 }
 
 /// The sea-trim (ruling #5c, the re-cap after re-solve): once the carved
@@ -1234,17 +1238,17 @@ pub fn cap_atolls(
 /// ~`wedge_freeboard_m` below it, so uncorrected fill reads shallower (or,
 /// for atolls, emergent) relative to the resolved sea. Pure and one-shot:
 ///
-/// - every wedge-raised marine cell trims down to
+/// - every wedge-raised marine vertex trims down to
 ///   `sea_1 - wedge_freeboard_m`. Marine membership is the classification
 ///   the wedge DEPOSITED under: ocean by `sea_pre` against the PRE-carve
 ///   elevation, carrying deposited sediment. It is deliberately NOT the
 ///   carved-elevation-vs-`sea_1` test (review Critical 1): a wedge-filled
-///   cell already emergent relative to `sea_1` is exactly the class this
+///   vertex already emergent relative to `sea_1` is exactly the class this
 ///   trim exists to re-cap, and the final-elevation test exempted it;
-/// - every atoll cell trims down to `sea_1 - atoll_freeboard_m` (its own,
+/// - every atoll vertex trims down to `sea_1 - atoll_freeboard_m` (its own,
 ///   shallower freeboard — a reef breaks closer to the surface than the
 ///   shelf does);
-/// - delta lobes and barrier cells are EXEMPT (subaerial by design —
+/// - delta lobes and barrier vertices are EXEMPT (subaerial by design —
 ///   tuning iteration 4, ledger #9, treats a barrier bar exactly like a
 ///   delta lobe here: meant to stay above the final sea level, not
 ///   re-capped toward it);
@@ -1253,10 +1257,10 @@ pub fn cap_atolls(
 /// - a natural shallow bank (no sediment) is untouched: only what the
 ///   carve raised is re-capped.
 ///
-/// Returns the per-cell trim delta (each entry `<= 0`; the caller applies
+/// Returns the per-vertex trim delta (each entry `<= 0`; the caller applies
 /// it to elevation AND sediment together, the sediment floored at 0) and
 /// the trimmed volume proxy (Σ of the trims' magnitudes, one unit area per
-/// cell — the same volume convention every other carve book uses), which
+/// vertex — the same volume convention every other carve book uses), which
 /// the caller books as oceanic loss at the generate level.
 /// type-audit: pending(wave-2: sediment_thickness), pending(wave-2: return)
 #[allow(clippy::too_many_arguments)]
@@ -1265,9 +1269,9 @@ pub fn trim_to_sea(
     elevation: &VertexMap<ReferenceElevation>,
     elevation_pre: &VertexMap<ReferenceElevation>,
     sediment_thickness: &VertexMap<f64>,
-    delta_cells: &[Vertex],
-    atoll_cells: &[Vertex],
-    barrier_cells: &[Vertex],
+    delta_vertices: &[Vertex],
+    atoll_vertices: &[Vertex],
+    barrier_vertices: &[Vertex],
     sea_pre: ReferenceElevation,
     sea_1: ReferenceElevation,
     params: &CarveParams,
@@ -1276,18 +1280,18 @@ pub fn trim_to_sea(
     let atoll_cap = sea_1.get() - params.atoll_freeboard_m;
     let mut trimmed_volume = 0.0_f64;
     let trim = VertexMap::from_fn(geo, |c| {
-        if delta_cells.contains(&c) || barrier_cells.contains(&c) {
+        if delta_vertices.contains(&c) || barrier_vertices.contains(&c) {
             return 0.0;
         }
         let e = elevation.get(c).get();
         // Marine membership is the classification the wedge DEPOSITED
         // under — ocean by sea_pre against the PRE-carve elevation — never
         // the carved-elevation-vs-sea_1 test (review Critical 1: that test
-        // exempted exactly the emergent wedge-filled cells this trim
-        // exists to re-cap; 233 such cells measured across a 120-world
+        // exempted exactly the emergent wedge-filled vertices this trim
+        // exists to re-cap; 233 such vertices measured across a 120-world
         // sweep, seed 34 L4 alone holding 40 at sea level under 49-344 m
         // of wedge sediment).
-        let cap = if atoll_cells.contains(&c) {
+        let cap = if atoll_vertices.contains(&c) {
             atoll_cap
         } else if *elevation_pre.get(c) < sea_pre && *sediment_thickness.get(c) > 0.0 {
             wedge_cap
@@ -1304,10 +1308,10 @@ pub fn trim_to_sea(
 /// The full engine-A carve (spec §2 seam): incision → repose (on
 /// elevation+incision) → routing → wave-cut (on elevation+incision+repose;
 /// ledgers #6+#7) → wedge (mouth list = river mouths + wave micro-mouths)
-/// → deltas (river mouths ONLY take the top-K lobes — wave cells are not
+/// → deltas (river mouths ONLY take the top-K lobes — wave vertices are not
 /// deltas) → barriers (on elevation+wedge; tuning iteration 4, ledger #9)
 /// → atolls (on elevation+wedge+barriers, so a reef caps the seabed the
-/// wedge and any barrier already built — the composed atoll cell ends
+/// wedge and any barrier already built — the composed atoll vertex ends
 /// exactly at `sea_level - atoll_freeboard_m`, never above it), composed
 /// into one `CarveDelta`. Wired into `globe::generate` since Task 10,
 /// followed there by the sea-trim ([`trim_to_sea`], ruling #5c) —
@@ -1385,7 +1389,7 @@ pub fn carve(
     );
 
     // Merge river mouths with the wave micro-mouths (volumes summed where
-    // a cell is both), re-sorted per the volume-desc/Vertex-asc convention;
+    // a vertex is both), re-sorted per the volume-desc/Vertex-asc convention;
     // only river mouths stay delta-eligible.
     let mut merged: BTreeMap<Vertex, f64> = BTreeMap::new();
     for &(c, v) in mouths.iter().chain(wave_mouths.iter()) {
@@ -1393,15 +1397,15 @@ pub fn carve(
     }
     let mut all_mouths: Vec<(Vertex, f64)> = merged.into_iter().collect();
     all_mouths.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.0.cmp(&b.0.0)));
-    let river_mouth_cells: BTreeSet<Vertex> = mouths.iter().map(|(c, _)| *c).collect();
+    let river_mouth_vertices: BTreeSet<Vertex> = mouths.iter().map(|(c, _)| *c).collect();
 
-    let (marine_deposit, delta_cells, wedge_ocean_loss) = deposit_wedge(
+    let (marine_deposit, delta_vertices, wedge_ocean_loss) = deposit_wedge(
         geo,
         elevation,
         sea_level,
         &all_mouths,
         geom,
-        &river_mouth_cells,
+        &river_mouth_vertices,
         params,
     );
     // Barriers (tuning iteration 4, ledger #9), on the surface the wedge
@@ -1412,13 +1416,13 @@ pub fn carve(
         ReferenceElevation::new(elevation.get(c).get() + *marine_deposit.get(c))
             .expect("elevation plus wedge fill is finite")
     });
-    let delta_cell_set: BTreeSet<Vertex> = delta_cells.iter().copied().collect();
-    let (barrier_fill, barrier_cells, barrier_volume) = raise_barriers(
+    let delta_vertex_set: BTreeSet<Vertex> = delta_vertices.iter().copied().collect();
+    let (barrier_fill, barrier_vertices, barrier_volume) = raise_barriers(
         geo,
         &elevation_after_wedge,
         sea_level,
         geom,
-        &delta_cell_set,
+        &delta_vertex_set,
         &all_mouths,
         params,
     );
@@ -1433,7 +1437,7 @@ pub fn carve(
         ReferenceElevation::new(elevation_after_wedge.get(c).get() + *barrier_fill.get(c))
             .expect("elevation plus barrier fill is finite")
     });
-    let (atoll_fill, atoll_cells) = cap_atolls(
+    let (atoll_fill, atoll_vertices) = cap_atolls(
         geo,
         &elevation_after_barriers,
         sea_level,
@@ -1468,9 +1472,9 @@ pub fn carve(
     delta.deposited_total_m3 += routing_total + marine_total + barrier_volume + atoll_total;
     delta.ocean_loss_m3 += routing_ocean_loss + wedge_ocean_loss;
     delta.eroded_total_m3 += wave_total + barrier_volume + atoll_total;
-    delta.delta_cells = delta_cells;
-    delta.atoll_cells = atoll_cells;
-    delta.barrier_cells = barrier_cells;
+    delta.delta_vertices = delta_vertices;
+    delta.atoll_vertices = atoll_vertices;
+    delta.barrier_vertices = barrier_vertices;
     // delta.waterfall_sites was already set above, from the pre-carve fields.
 
     delta
@@ -1497,7 +1501,7 @@ mod tests {
     use super::*;
     use hornvale_kernel::{Geosphere, Seed};
 
-    /// Maximum land-to-land inter-cell drop over the whole globe, under a
+    /// Maximum land-to-land inter-vertex drop over the whole globe, under a
     /// caller-supplied elevation function (lets the repose test compare
     /// "before" and "after" without building two full `VertexMap`s).
     fn max_land_drop(
@@ -1587,7 +1591,7 @@ mod tests {
         let total: f64 = adjusted.iter().map(|(_, d)| *d).sum();
         assert!(total.abs() < 1e-6, "repose created/destroyed mass: {total}");
 
-        // After applying, the maximum land-land inter-cell drop must not
+        // After applying, the maximum land-land inter-vertex drop must not
         // have grown; if a violation of the critical drop existed before,
         // it must have strictly shrunk (a fixed sweep count needn't
         // eliminate every violation, only reduce it).
@@ -1705,7 +1709,7 @@ mod tests {
         // The rim cap binds the WHOLE sink deposit, not an installment:
         // review of the first cut measured a seed-42/L4 endorheic sink
         // taking a 385.082 m uncapped flat-fraction installment against
-        // only 16.574 m of rim headroom. Every downhill-None land cell's
+        // only 16.574 m of rim headroom. Every downhill-None land vertex's
         // total deposit must respect fill-toward-flat, never-overtop.
         // Seed re-pinned 42 → 3 for tuning iteration 1 (ledger #6,
         // land-only incision slope): the carved seed-42/L4 surface now has
@@ -1773,21 +1777,21 @@ mod tests {
         // own retained outputs instead.
         // Seed re-pinned 42 → 3 for tuning iteration 1 (ledger #6,
         // land-only incision slope): reduced coastal incision shrinks
-        // wedge export, so fewer cells reach the trim cap to be tied —
-        // seed 42's tied block fell to 15 cells (post-change survey over
+        // wedge export, so fewer vertices reach the trim cap to be tied —
+        // seed 42's tied block fell to 15 vertices (post-change survey over
         // seeds [42, 1, 7, 99, 2, 3, 5, 11]: at-top 15/1/32/34/1/56/20/12).
-        // Seed 3 (56 tied cells) kept the wide-tied-block signature through
+        // Seed 3 (56 tied vertices) kept the wide-tied-block signature through
         // iteration 2. Re-pinned 3 → 42 for tuning iteration 3
         // (RELIEF_FREQUENCY 48→8): the coarser, resolved relief octave
-        // reshuffles which cells hit the exact trim cap; seed 3 fell to 2
-        // tied cells (post-change survey over [42, 1, 7, 99, 2, 3, 5, 11, 4,
+        // reshuffles which vertices hit the exact trim cap; seed 3 fell to 2
+        // tied vertices (post-change survey over [42, 1, 7, 99, 2, 3, 5, 11, 4,
         // 6, 8, 9, 10, 12, 13, 20, 25]: at-top 57/4/115/98/3/2/67/63/113/65/
-        // 84/2/79/148/100/1/1). Seed 42 (57 tied cells) is back in front —
+        // 84/2/79/148/100/1/1). Seed 42 (57 tied vertices) is back in front —
         // the signature stays seed-dependent, not universal.
         //
         // Re-pinned 42 → 12 for decision 0137 (the craton rescale's exact
         // solve, clamp 0.8, and the assembly repair). New coastlines move
-        // which cells reach the exact trim cap; seed 42 fell to 1 tied cell.
+        // which vertices reach the exact trim cap; seed 42 fell to 1 tied vertex.
         // Post-change survey over the SAME seed list, in the same order:
         // at-top 1/38/3/8/2/24/21/9/1/22/21/1/24/40/36/6/6. Seed 12 (40) now
         // leads, with seeds 1 (38) and 13 (36) also clearing the floor of 25.
@@ -1796,24 +1800,24 @@ mod tests {
         // 40), so the floor of 25 is a materially tighter fit than it was —
         // it survives on three seeds rather than eleven. What the assert
         // still means is unchanged: a wide tied block exists, so the trim cap
-        // is a shared exact value rather than a per-cell coincidence.
+        // is a shared exact value rather than a per-vertex coincidence.
         let geo = Geosphere::new(4);
         let outcome =
             crate::globe::generate(Seed(12), &geo, &crate::pins::TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let p = CarveParams::default();
         // Shelf mode, post-trim: every non-delta, non-atoll marine
-        // sediment cell was re-capped by `trim_to_sea` to exactly
+        // sediment vertex was re-capped by `trim_to_sea` to exactly
         // `sea_1 - wedge_freeboard_m` (or already sat below it), where
         // sea_1 is generate's first (pre-trim) solve. The final sea level
         // (the second solve) lands at or below sea_1 (structural: the trim
-        // only lowers cells), and staying within `wedge_freeboard_m` of it
+        // only lowers vertices), and staying within `wedge_freeboard_m` of it
         // is EMPIRICAL — max observed shift 39.957 m across a 120-world
         // review sweep (worst margin 0.043 m; L4 residuals 20-38 m across
         // seeds [1, 7, 42, 99]); freeboard/shelf tuning must re-verify.
         // The structural signature this asserts: a WIDE TIED BLOCK — the
         // trimmed shelf top is one exact shared elevation carried by many
-        // cells, and it is the maximum of the marine sediment surface.
+        // vertices, and it is the maximum of the marine sediment surface.
         // The exact sea_final-relative bound lives in
         // `trim_recaps_hold_after_the_final_solve`
         // (tests/carve_properties.rs), which recomputes sea_1 and uses the
@@ -1821,14 +1825,14 @@ mod tests {
         let mut shelf: Vec<f64> = Vec::new();
         for (c, dep) in g.sediment_thickness.iter() {
             let e = g.elevation.get(c).get();
-            // Atoll cells are excluded alongside delta cells: an atoll's
+            // Atoll vertices are excluded alongside delta vertices: an atoll's
             // own freeboard (default 5 m) is deliberately shallower than
-            // the wedge's (default 40 m), so an atoll cell legitimately
+            // the wedge's (default 40 m), so an atoll vertex legitimately
             // sits above the shelf block.
             if e < g.sea_level.get()
                 && *dep > 0.0
-                && !g.delta_cells.contains(&c)
-                && !g.atoll_cells.contains(&c)
+                && !g.delta_vertices.contains(&c)
+                && !g.atoll_vertices.contains(&c)
             {
                 shelf.push(e);
             }
@@ -1838,7 +1842,7 @@ mod tests {
         let at_top = shelf.iter().filter(|&&e| e == top).count();
         assert!(
             at_top >= 25,
-            "the trimmed shelf top is not a wide tied block: only {at_top} cells at {top}"
+            "the trimmed shelf top is not a wide tied block: only {at_top} vertices at {top}"
         );
         // The block top stays submerged (within wedge_freeboard_m of the
         // final cap, per the empirical residual bound above — re-verify on
@@ -1854,15 +1858,15 @@ mod tests {
         // the pre-carve one, so a real lobe stands comfortably above the
         // floor here — the generous allowance still catches a
         // genuinely-never-built delta (hundreds of meters down).
-        // `delta_cells` is a CELL list, not a lobe list (each top-K mouth
-        // can raise itself plus adjacent hop-1 ocean cells — see
+        // `delta_vertices` is a VERTEX list, not a lobe list (each top-K mouth
+        // can raise itself plus adjacent hop-1 ocean vertices — see
         // `deposit_wedge`'s doc and the census delta-count metric): the
         // old `<= delta_count` bound conflated the two and only passed on
         // seed 42 by luck. Bound per the metric contract: mouth + up to
-        // two raised neighbors per lobe (probe max 9 cells over 100 seeds).
-        assert!(g.delta_cells.len() as u32 <= 3 * p.delta_count);
+        // two raised neighbors per lobe (probe max 9 vertices over 100 seeds).
+        assert!(g.delta_vertices.len() as u32 <= 3 * p.delta_count);
         let delta_floor = g.sea_level.get() - p.delta_height_m - p.wedge_freeboard_m - 1.0;
-        for c in &g.delta_cells {
+        for c in &g.delta_vertices {
             assert!(
                 g.elevation.get(*c).get() >= delta_floor,
                 "delta lobe stayed submerged: {} vs floor {}",
@@ -1877,10 +1881,10 @@ mod tests {
         // overshoot (the bug class this ceiling was written against:
         // Vertex(1965) once composed to sea_level + 222 m).
         let atoll_ceiling = g.sea_level.get() - p.atoll_freeboard_m + p.wedge_freeboard_m + 1e-6;
-        for c in &g.atoll_cells {
+        for c in &g.atoll_vertices {
             assert!(
                 g.elevation.get(*c).get() <= atoll_ceiling,
-                "atoll cell {} above the trim ceiling: {} vs {}",
+                "atoll vertex {} above the trim ceiling: {} vs {}",
                 c.0,
                 g.elevation.get(*c).get(),
                 atoll_ceiling
@@ -1891,7 +1895,7 @@ mod tests {
     #[test]
     fn wave_cut_is_differential_floored_and_exports_its_volume() {
         // Synthetic probe for the wave-cut term (ledgers #6+#7): an islet
-        // (every neighbor ocean, exposure 1.0) versus a patch-edge cell
+        // (every neighbor ocean, exposure 1.0) versus a patch-edge vertex
         // (some neighbors land, exposure < 1.0), soft vs hard rock, the
         // never-below-the-floor cap, and volume export as micro-mouths.
         let geo = Geosphere::new(3);
@@ -1914,7 +1918,7 @@ mod tests {
         let soft = VertexMap::from_fn(&geo, |_| 0.0);
         let hard = VertexMap::from_fn(&geo, |_| 1.0);
         let no_carbonate = VertexMap::from_fn(&geo, |_| 0.0);
-        // A deliberately small scale so neither probe cell hits the
+        // A deliberately small scale so neither probe vertex hits the
         // elevation cap — this test pins the FORMULA's differential
         // structure; the default's magnitude is the batteries' business.
         let p = CarveParams {
@@ -1924,7 +1928,7 @@ mod tests {
 
         let (cut_soft, mouths_soft) = wave_erosion(&geo, &elevation, sea, &soft, &no_carbonate, &p);
         // Exposure differentiates: the islet cuts deeper than any
-        // patch-edge cell; the sheltered patch center (zero ocean
+        // patch-edge vertex; the sheltered patch center (zero ocean
         // neighbors) does not cut at all.
         let edge = geo.neighbors(patch_center)[0];
         assert!(
@@ -1934,17 +1938,17 @@ mod tests {
             cut_soft.get(edge)
         );
         assert_eq!(*cut_soft.get(patch_center), 0.0, "sheltered center cut");
-        // Ocean cells never cut.
+        // Ocean vertices never cut.
         for (c, d) in cut_soft.iter() {
             if *elevation.get(c) < sea {
-                assert_eq!(*d, 0.0, "ocean cell {} cut", c.0);
+                assert_eq!(*d, 0.0, "ocean vertex {} cut", c.0);
             }
-            // The floor binds every CUT cell: no cut lowers a cell below
+            // The floor binds every CUT vertex: no cut lowers a vertex below
             // sea - wave_cut_floor_m (uncut ocean sits below it already).
             if *d < 0.0 {
                 assert!(
                     elevation.get(c).get() + *d >= sea.get() - p.wave_cut_floor_m - 1e-9,
-                    "cell {} cut below the wave floor",
+                    "vertex {} cut below the wave floor",
                     c.0
                 );
             }
@@ -1957,7 +1961,7 @@ mod tests {
             cut_hard.get(islet),
             cut_soft.get(islet)
         );
-        // Micro-mouths: every cut cell exports exactly its |cut| as
+        // Micro-mouths: every cut vertex exports exactly its |cut| as
         // volume, sorted volume-descending, Vertex-ascending tiebreak.
         let cut_total: f64 = cut_soft.iter().map(|(_, d)| -*d).sum();
         let export_total: f64 = mouths_soft.iter().map(|(_, v)| v).sum();
@@ -1999,8 +2003,8 @@ mod tests {
         let wave = Vertex(geo.vertex_count() as u32 - 1);
         assert!(!geo.neighbors(river).contains(&wave));
         // Shallow (-20 m) ocean so the river's 1,000-unit export can raise
-        // its hop-1 lobe cells above sea level (a -500 m floor would leave
-        // every lobe cell submerged and the assertion vacuous).
+        // its hop-1 lobe vertices above sea level (a -500 m floor would leave
+        // every lobe vertex submerged and the assertion vacuous).
         let elevation = VertexMap::from_fn(&geo, |c| {
             if c == river || c == wave {
                 ReferenceElevation::new(50.0).unwrap()
@@ -2018,7 +2022,7 @@ mod tests {
         // The wave mouth carries 10x the river mouth's volume.
         let mouths = vec![(wave, 10_000.0), (river, 1_000.0)];
         let eligible: BTreeSet<Vertex> = [river].into_iter().collect();
-        let (_, delta_cells, _) = deposit_wedge(
+        let (_, delta_vertices, _) = deposit_wedge(
             &geo,
             &elevation,
             sea,
@@ -2032,26 +2036,26 @@ mod tests {
             &p,
         );
         assert!(
-            !delta_cells.is_empty(),
+            !delta_vertices.is_empty(),
             "the river mouth is top-1 among eligible mouths and must grow its lobe"
         );
-        for c in &delta_cells {
+        for c in &delta_vertices {
             assert!(
                 *c == river || geo.neighbors(river).contains(c),
-                "delta cell {} does not belong to the river mouth's lobe",
+                "delta vertex {} does not belong to the river mouth's lobe",
                 c.0
             );
         }
     }
 
     #[test]
-    fn trench_cells_get_zero_reach_and_their_share_is_lost() {
+    fn trench_vertices_get_zero_reach_and_their_share_is_lost() {
         // Synthetic probe: every one of a single mouth's ocean neighbors
         // sits on the SUBDUCTING side of an island-arc boundary (own plate
         // 0 vs other_plate 1: arc_side false → trench). With every
-        // reachable cell capped at zero and nowhere uncapped to
+        // reachable vertex capped at zero and nowhere uncapped to
         // redistribute to, the mouth's whole export must land in
-        // ocean_loss, and no trench cell may receive any fill.
+        // ocean_loss, and no trench vertex may receive any fill.
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
         let mouth = Vertex(0);
@@ -2077,7 +2081,7 @@ mod tests {
         };
         let mouths = vec![(mouth, 1000.0)];
         let no_deltas = BTreeSet::new();
-        let (marine_deposit, delta_cells, ocean_loss) = deposit_wedge(
+        let (marine_deposit, delta_vertices, ocean_loss) = deposit_wedge(
             &geo,
             &elevation,
             sea,
@@ -2090,27 +2094,27 @@ mod tests {
             &no_deltas,
             &p,
         );
-        assert!(delta_cells.is_empty());
+        assert!(delta_vertices.is_empty());
         for &nb in geo.neighbors(mouth) {
             assert_eq!(
                 *marine_deposit.get(nb),
                 0.0,
-                "trench cell {} got fill",
+                "trench vertex {} got fill",
                 nb.0
             );
         }
         assert!(
             (ocean_loss - 1000.0).abs() < 1e-6,
-            "every reachable cell is a trench: the whole export must be lost, got {ocean_loss}"
+            "every reachable vertex is a trench: the whole export must be lost, got {ocean_loss}"
         );
     }
 
     #[test]
     fn island_arc_trench_takes_only_the_subducting_side() {
         // Same island-arc contact everywhere, but the mouth's ocean
-        // neighbors are split between the two plates: cells on plate 2
+        // neighbors are split between the two plates: vertices on plate 2
         // (arc_side: 2 > 1, the overriding plate) must receive normal
-        // wedge fill; cells on plate 0 (0 <= 1, the subducting plate) are
+        // wedge fill; vertices on plate 0 (0 <= 1, the subducting plate) are
         // the trench and must receive none.
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
@@ -2139,7 +2143,7 @@ mod tests {
         };
         let mouths = vec![(mouth, 1000.0)];
         let no_deltas = BTreeSet::new();
-        let (marine_deposit, _delta_cells, _ocean_loss) = deposit_wedge(
+        let (marine_deposit, _delta_vertices, _ocean_loss) = deposit_wedge(
             &geo,
             &elevation,
             sea,
@@ -2157,7 +2161,7 @@ mod tests {
             if *plate_of.get(nb) > 1 {
                 assert!(
                     *marine_deposit.get(nb) > 0.0,
-                    "overriding-side cell {} got no wedge fill",
+                    "overriding-side vertex {} got no wedge fill",
                     nb.0
                 );
                 overriding_filled += 1;
@@ -2165,7 +2169,7 @@ mod tests {
                 assert_eq!(
                     *marine_deposit.get(nb),
                     0.0,
-                    "subducting-side cell {} got fill",
+                    "subducting-side vertex {} got fill",
                     nb.0
                 );
             }
@@ -2203,8 +2207,8 @@ mod tests {
                 age_index: 1,
             },
         ];
-        let (fill, atoll_cells) = cap_atolls(&geo, &elevation, sea, &seamounts, &p);
-        assert_eq!(atoll_cells, vec![target]);
+        let (fill, atoll_vertices) = cap_atolls(&geo, &elevation, sea, &seamounts, &p);
+        assert_eq!(atoll_vertices, vec![target]);
         let expected = sea.get() - p.atoll_freeboard_m - elevation.get(target).get();
         assert!((*fill.get(target) - expected).abs() < 1e-9);
         for c in geo.vertices() {
@@ -2226,15 +2230,15 @@ mod tests {
         sea: ReferenceElevation,
     ) -> f64 {
         let mut perimeter = 0.0_f64;
-        for cell in geo.vertices() {
-            let land = *elevation.get(cell) >= sea;
-            for &neighbor in geo.neighbors(cell) {
-                if neighbor.0 <= cell.0 {
+        for vertex in geo.vertices() {
+            let land = *elevation.get(vertex) >= sea;
+            for &neighbor in geo.neighbors(vertex) {
+                if neighbor.0 <= vertex.0 {
                     continue;
                 }
                 let neighbor_land = *elevation.get(neighbor) >= sea;
                 if land != neighbor_land {
-                    let a = geo.position(cell);
+                    let a = geo.position(vertex);
                     let b = geo.position(neighbor);
                     let angle =
                         math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0));
@@ -2245,10 +2249,10 @@ mod tests {
         perimeter
     }
 
-    /// Shared scaffold for the barrier tests below: a single land cell
+    /// Shared scaffold for the barrier tests below: a single land vertex
     /// (`Vertex(0)`) on an otherwise all-ocean globe, plus a real,
     /// mesh-derived detached candidate two hops out (the ledger #9
-    /// diagnostic's "isolated offshore cell" case) — asserted, not
+    /// diagnostic's "isolated offshore vertex" case) — asserted, not
     /// assumed, so a mesh-generation change fails loudly here instead of
     /// silently degrading the tests below.
     struct BarrierScaffold {
@@ -2257,7 +2261,7 @@ mod tests {
         elevation: VertexMap<ReferenceElevation>,
         land: Vertex,
         /// A real detached candidate (zero land neighbors, two hops from
-        /// `land` via a fringe cell) that the candidate rule must accept
+        /// `land` via a fringe vertex) that the candidate rule must accept
         /// when the fringe's land neighbor is Passive.
         detached_candidate: Vertex,
     }
@@ -2297,9 +2301,9 @@ mod tests {
     #[test]
     fn barrier_candidate_gains_exactly_its_ring_of_new_perimeter_edges() {
         // Candidate-rule edge arithmetic (ledger #9's diagnostic): raising
-        // a DETACHED ocean cell (zero land neighbors) to land removes no
+        // a DETACHED ocean vertex (zero land neighbors) to land removes no
         // land/ocean edges (it had none) and adds one for every one of its
-        // own neighbors — a full ring, the maximal per-cell gain the
+        // own neighbors — a full ring, the maximal per-vertex gain the
         // diagnostic identified.
         let s = barrier_scaffold();
         let margins = VertexMap::from_fn(&s.geo, |_| MarginPolarity::Passive);
@@ -2312,7 +2316,7 @@ mod tests {
         let mouths = vec![(s.land, 1_000_000.0)];
         let p = CarveParams::default();
 
-        let (fill, barrier_cells, volume) = raise_barriers(
+        let (fill, barrier_vertices, volume) = raise_barriers(
             &s.geo,
             &s.elevation,
             s.sea,
@@ -2326,14 +2330,14 @@ mod tests {
             &p,
         );
         assert!(
-            barrier_cells.contains(&s.detached_candidate),
-            "the detached candidate {} must be an eligible barrier cell (candidates: {:?})",
+            barrier_vertices.contains(&s.detached_candidate),
+            "the detached candidate {} must be an eligible barrier vertex (candidates: {:?})",
             s.detached_candidate.0,
-            barrier_cells.iter().map(|c| c.0).collect::<Vec<_>>()
+            barrier_vertices.iter().map(|c| c.0).collect::<Vec<_>>()
         );
         assert!(volume > 0.0);
 
-        // Isolate the edge arithmetic to this ONE cell: raise it alone
+        // Isolate the edge arithmetic to this ONE vertex: raise it alone
         // (not the whole selected set, which may include others) and
         // compare raw perimeter before/after.
         let before = raw_perimeter(&s.geo, &s.elevation, s.sea);
@@ -2371,7 +2375,7 @@ mod tests {
     #[test]
     fn barrier_supply_gate_blocks_with_no_passive_mouth_volume() {
         // Supply-gated (ledger #9): with zero exported volume from any
-        // PASSIVE-margin mouth, the budget is zero and no cell is raised,
+        // PASSIVE-margin mouth, the budget is zero and no vertex is raised,
         // even though the geometry/margin candidate rule is otherwise
         // satisfied identically to the test above.
         let s = barrier_scaffold();
@@ -2381,7 +2385,7 @@ mod tests {
         let no_deltas = BTreeSet::new();
         let p = CarveParams::default();
 
-        let (fill, barrier_cells, volume) = raise_barriers(
+        let (fill, barrier_vertices, volume) = raise_barriers(
             &s.geo,
             &s.elevation,
             s.sea,
@@ -2395,9 +2399,9 @@ mod tests {
             &p,
         );
         assert!(
-            barrier_cells.is_empty(),
+            barrier_vertices.is_empty(),
             "no supply must mean no barrier: {:?}",
-            barrier_cells.iter().map(|c| c.0).collect::<Vec<_>>()
+            barrier_vertices.iter().map(|c| c.0).collect::<Vec<_>>()
         );
         assert_eq!(volume, 0.0);
         assert!(fill.iter().all(|(_, f)| *f == 0.0));
@@ -2408,7 +2412,7 @@ mod tests {
         // Passive margins only (ledger #9; spec's "recognized longshore
         // extension" is a passive-margin phenomenon): the same scaffold
         // and ample supply as the acceptance test above, but the coast
-        // land cell sits on an ACTIVE margin — the detached candidate must
+        // land vertex sits on an ACTIVE margin — the detached candidate must
         // now be rejected.
         let s = barrier_scaffold();
         let margins = VertexMap::from_fn(&s.geo, |c| {
@@ -2421,7 +2425,7 @@ mod tests {
         let boundary = VertexMap::from_fn(&s.geo, |_| None);
         let plate_of = VertexMap::from_fn(&s.geo, |_| 0u32);
         let no_deltas = BTreeSet::new();
-        // Supply comes from a DIFFERENT, ordinary Passive-margin cell —
+        // Supply comes from a DIFFERENT, ordinary Passive-margin vertex —
         // ample budget exists, so a rejection here can only be the
         // candidate rule's own margin check, not the supply gate (which
         // the previous test already covers in isolation).
@@ -2441,7 +2445,7 @@ mod tests {
             "the supply must be real so the supply gate is not the reason for rejection"
         );
 
-        let (_, barrier_cells, _) = raise_barriers(
+        let (_, barrier_vertices, _) = raise_barriers(
             &s.geo,
             &s.elevation,
             s.sea,
@@ -2455,9 +2459,9 @@ mod tests {
             &p,
         );
         assert!(
-            !barrier_cells.contains(&s.detached_candidate),
+            !barrier_vertices.contains(&s.detached_candidate),
             "an Active-margin coast must never grow a barrier: {:?}",
-            barrier_cells.iter().map(|c| c.0).collect::<Vec<_>>()
+            barrier_vertices.iter().map(|c| c.0).collect::<Vec<_>>()
         );
     }
 
@@ -2530,12 +2534,12 @@ mod tests {
         // 1..=20, `WATERFALL_MIN_DRAINAGE`/`WATERFALL_INDURATION_STEP` at
         // their brief-specified defaults) — at `Geosphere::new(5)` the
         // largest watershed on any of the 20 worlds tops out at 85 upstream
-        // land cells (`WATERFALL_MIN_DRAINAGE` is 80), leaving at most one
-        // drainage-eligible candidate cell per world and ZERO waterfalls
+        // land vertices (`WATERFALL_MIN_DRAINAGE` is 80), leaving at most one
+        // drainage-eligible candidate vertex per world and ZERO waterfalls
         // across the whole sweep: the induration-step threshold has
         // essentially no candidate population to act on. At the canonical
-        // `Geosphere::new(6)` (`GLOBE_LEVEL`, ~4x the cells) the same
-        // watersheds resolve to a max drainage of 126-353 land cells,
+        // `Geosphere::new(6)` (`GLOBE_LEVEL`, ~4x the vertices) the same
+        // watersheds resolve to a max drainage of 126-353 land vertices,
         // 15-77 candidates per world, and seeds 3/5/8 alone (well inside
         // 1..=8) each clear the induration step. L5's watershed resolution
         // is simply too coarse for these thresholds to ever fire — a real
@@ -2566,7 +2570,7 @@ mod tests {
         let (drainage, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
         let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
         // Feed the same drainage/downhill/sea-level in as both "pre" and
-        // "post": no cell's downhill target can possibly differ from
+        // "post": no vertex's downhill target can possibly differ from
         // itself, so every mouth's path scores zero regardless of its
         // weight.
         let fraction = rerouted_flow_fraction(
@@ -2605,7 +2609,7 @@ mod tests {
 
     #[test]
     fn reroute_fraction_detects_a_synthetic_reroute() {
-        // A tiny synthetic 4-cell chain (using real neighbor structure from
+        // A tiny synthetic 4-vertex chain (using real neighbor structure from
         // a level-2 geosphere is overkill for a targeted probe, so this
         // borrows two real mouths from a generated world and swaps their
         // post-carve downhill targets to guarantee full divergence,
@@ -2639,14 +2643,14 @@ mod tests {
         // A post-carve downhill vector identical to pre-carve except the
         // mouth itself now points to a different neighbor (still land, so
         // the "differs" test fires deterministically without needing a
-        // second real ocean cell nearby).
+        // second real ocean vertex nearby).
         let mut post_downhill = downhill.clone();
         let alt = geo
             .neighbors(mouth)
             .iter()
             .copied()
             .find(|&n| Some(n) != downhill[mouth.0 as usize])
-            .expect("a geosphere cell has more than one neighbor");
+            .expect("a geosphere vertex has more than one neighbor");
         post_downhill[mouth.0 as usize] = Some(alt);
 
         let fraction = rerouted_flow_fraction(
@@ -2668,55 +2672,55 @@ mod tests {
     #[test]
     fn trim_recaps_marine_fill_to_the_resolved_sea_level() {
         // Ruling #5c (the re-cap after re-solve): every wedge-raised marine
-        // cell — marine under the classification the wedge DEPOSITED with,
+        // vertex — marine under the classification the wedge DEPOSITED with,
         // i.e. ocean by sea_pre, NOT by its carved elevation (an emergent
-        // cell the wedge filled to or above sea_1 is exactly the class the
+        // vertex the wedge filled to or above sea_1 is exactly the class the
         // ruling exists to fix — review Critical 1) — trims to
-        // sea_1 - wedge_freeboard_m, every atoll cell to
+        // sea_1 - wedge_freeboard_m, every atoll vertex to
         // sea_1 - atoll_freeboard_m; delta lobes and LAND-by-sea_pre
         // sediment (floodplain/playa) are exempt; natural shallow banks
-        // (no sediment) are untouched; a trimmed cell's sediment shrinks
+        // (no sediment) are untouched; a trimmed vertex's sediment shrinks
         // by the same meters, floored at 0.
         let geo = Geosphere::new(2);
         let p = CarveParams::default();
         let sea_pre = ReferenceElevation::new(5.0).unwrap();
         let sea_1 = ReferenceElevation::new(0.0).unwrap();
-        let wedge_cell = Vertex(1); // ocean-by-sea_pre, sediment, above the wedge cap
-        let atoll_cell = Vertex(2); // atoll, above the atoll cap
-        let delta_cell = Vertex(3); // delta lobe, subaerial: exempt
-        let playa_cell = Vertex(4); // LAND-by-sea_pre sediment: exempt
-        let bank_cell = Vertex(5); // ocean, shallow, NO sediment: untouched
-        let emergent_cell = Vertex(6); // ocean-by-sea_pre, wedge-filled to ABOVE sea_1
+        let wedge_vertex = Vertex(1); // ocean-by-sea_pre, sediment, above the wedge cap
+        let atoll_vertex = Vertex(2); // atoll, above the atoll cap
+        let delta_vertex = Vertex(3); // delta lobe, subaerial: exempt
+        let playa_vertex = Vertex(4); // LAND-by-sea_pre sediment: exempt
+        let bank_vertex = Vertex(5); // ocean, shallow, NO sediment: untouched
+        let emergent_vertex = Vertex(6); // ocean-by-sea_pre, wedge-filled to ABOVE sea_1
         let elevation_pre = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(match c {
-                c if c == wedge_cell => -20.0,
-                c if c == atoll_cell => -30.0,
-                c if c == delta_cell => -20.0,
-                c if c == playa_cell => 6.0,
-                c if c == bank_cell => -10.0,
-                c if c == emergent_cell => -20.0,
+                c if c == wedge_vertex => -20.0,
+                c if c == atoll_vertex => -30.0,
+                c if c == delta_vertex => -20.0,
+                c if c == playa_vertex => 6.0,
+                c if c == bank_vertex => -10.0,
+                c if c == emergent_vertex => -20.0,
                 _ => -500.0,
             })
             .unwrap()
         });
         let elevation = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(match c {
-                c if c == wedge_cell => -10.0,
-                c if c == atoll_cell => -1.0,
-                c if c == delta_cell => 10.0,
-                c if c == playa_cell => 6.0,
-                c if c == bank_cell => -10.0,
-                c if c == emergent_cell => 3.0,
+                c if c == wedge_vertex => -10.0,
+                c if c == atoll_vertex => -1.0,
+                c if c == delta_vertex => 10.0,
+                c if c == playa_vertex => 6.0,
+                c if c == bank_vertex => -10.0,
+                c if c == emergent_vertex => 3.0,
                 _ => -500.0,
             })
             .unwrap()
         });
         let sediment = VertexMap::from_fn(&geo, |c| match c {
-            c if c == wedge_cell => 5.0,
-            c if c == atoll_cell => 6.0,
-            c if c == delta_cell => 8.0,
-            c if c == playa_cell => 6.0,
-            c if c == emergent_cell => 50.0,
+            c if c == wedge_vertex => 5.0,
+            c if c == atoll_vertex => 6.0,
+            c if c == delta_vertex => 8.0,
+            c if c == playa_vertex => 6.0,
+            c if c == emergent_vertex => 50.0,
             _ => 0.0,
         });
         let (trim, volume) = trim_to_sea(
@@ -2724,44 +2728,44 @@ mod tests {
             &elevation,
             &elevation_pre,
             &sediment,
-            &[delta_cell],
-            &[atoll_cell],
+            &[delta_vertex],
+            &[atoll_vertex],
             &[],
             sea_pre,
             sea_1,
             &p,
         );
-        // Wedge cell: re-capped to exactly sea_1 - wedge_freeboard_m.
+        // Wedge vertex: re-capped to exactly sea_1 - wedge_freeboard_m.
         assert_eq!(
-            elevation.get(wedge_cell).get() + trim.get(wedge_cell),
+            elevation.get(wedge_vertex).get() + trim.get(wedge_vertex),
             sea_1.get() - p.wedge_freeboard_m
         );
         // Its sediment shrinks by the same meters, floored at 0 (the trim
         // here, 30 m, exceeds its 5 m of sediment).
         assert_eq!(
-            (*sediment.get(wedge_cell) + *trim.get(wedge_cell)).max(0.0),
+            (*sediment.get(wedge_vertex) + *trim.get(wedge_vertex)).max(0.0),
             0.0
         );
-        // The EMERGENT cell (review Critical 1): carved elevation +3 sits
+        // The EMERGENT vertex (review Critical 1): carved elevation +3 sits
         // above sea_1, but it was ocean when the wedge deposited (pre
         // elevation -20 < sea_pre) and carries wedge sediment — it MUST be
-        // re-capped like any other wedge cell, to exactly
+        // re-capped like any other wedge vertex, to exactly
         // sea_1 - wedge_freeboard_m.
         assert_eq!(
-            elevation.get(emergent_cell).get() + trim.get(emergent_cell),
+            elevation.get(emergent_vertex).get() + trim.get(emergent_vertex),
             sea_1.get() - p.wedge_freeboard_m,
-            "emergent wedge-filled cell escaped the trim"
+            "emergent wedge-filled vertex escaped the trim"
         );
-        // Atoll cell: re-capped to exactly sea_1 - atoll_freeboard_m.
+        // Atoll vertex: re-capped to exactly sea_1 - atoll_freeboard_m.
         assert_eq!(
-            elevation.get(atoll_cell).get() + trim.get(atoll_cell),
+            elevation.get(atoll_vertex).get() + trim.get(atoll_vertex),
             sea_1.get() - p.atoll_freeboard_m
         );
         // Delta lobe, land playa, and the natural sediment-free bank are
         // all untouched.
-        assert_eq!(*trim.get(delta_cell), 0.0);
-        assert_eq!(*trim.get(playa_cell), 0.0);
-        assert_eq!(*trim.get(bank_cell), 0.0);
+        assert_eq!(*trim.get(delta_vertex), 0.0);
+        assert_eq!(*trim.get(playa_vertex), 0.0);
+        assert_eq!(*trim.get(bank_vertex), 0.0);
         // Every trim is <= 0, and the trimmed volume books their sum:
         // wedge -10 -> -40 is 30 m; emergent +3 -> -40 is 43 m; atoll
         // -1 -> -5 is 4 m.

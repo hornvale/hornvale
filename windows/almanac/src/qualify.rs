@@ -182,7 +182,7 @@ fn plural(people: &str) -> String {
 
 /// A coordinate as prose: `"61.5°N, 12.2°W"`. One decimal degree, chosen
 /// against a measurement rather than a guess: over seeds 42, 1, 7, 21, 99,
-/// 404 and 777 (953 settlements) no two settlements share a cell, and the
+/// 404 and 777 (953 settlements) no two settlements share a vertex, and the
 /// closest pair anywhere differs by 0.764° on at least one axis — 7.6× the
 /// grain rendered here. So this rung separates in practice, and did so in
 /// every one of those seeds' documents.
@@ -208,33 +208,33 @@ fn coordinate_phrase(latitude: f64, longitude: f64) -> String {
 /// The prose labels for every site one document names, qualified only where
 /// that document is genuinely ambiguous.
 ///
-/// Build one per rendered document from the roster of cells it will name
-/// ([`SiteLabels::for_document`]), then ask it for each cell's label
+/// Build one per rendered document from the roster of vertices it will name
+/// ([`SiteLabels::for_document`]), then ask it for each vertex's label
 /// ([`SiteLabels::label`]). Building it once per document rather than
-/// resolving each cell independently is what makes the qualification
+/// resolving each vertex independently is what makes the qualification
 /// document-scoped at all — and it also costs one ledger scan instead of one
-/// per named cell.
+/// per named vertex.
 pub struct SiteLabels {
-    /// Cell → the label that document should print for it. A cell holding no
-    /// settlement is absent; [`SiteLabels::label`] renders it as a bare cell
+    /// Vertex → the label that document should print for it. A vertex holding no
+    /// settlement is absent; [`SiteLabels::label`] renders it as a bare vertex
     /// id.
     labels: BTreeMap<Vertex, String>,
 }
 
 impl SiteLabels {
-    /// Resolve the labels for a document that will name `cells`.
+    /// Resolve the labels for a document that will name `vertices`.
     ///
-    /// `cells` is a roster, not a sequence: duplicates are collapsed, because
+    /// `vertices` is a roster, not a sequence: duplicates are collapsed, because
     /// naming one place twice (a neighbour reachable by both a sea-lane and a
     /// land route, say) is not an ambiguity. Order does not matter.
     ///
-    /// Cells holding no settlement are left out — they render as bare cell
-    /// ids and cannot collide. Where two settlements claim the same cell, the
+    /// Vertices holding no settlement are left out — they render as bare vertex
+    /// ids and cannot collide. Where two settlements claim the same vertex, the
     /// first in ledger commit order wins; that has not been observed in any
     /// generated world sampled (953 settlements over seven seeds, all on
-    /// distinct cells), so this is defence, not a path anything walks.
-    pub fn for_document(world: &World, cells: &[Vertex]) -> SiteLabels {
-        let lines: Vec<(Vertex, String)> = cells.iter().map(|&c| (c, String::new())).collect();
+    /// distinct vertices), so this is defence, not a path anything walks.
+    pub fn for_document(world: &World, vertices: &[Vertex]) -> SiteLabels {
+        let lines: Vec<(Vertex, String)> = vertices.iter().map(|&c| (c, String::new())).collect();
         SiteLabels::for_lines(world, &lines)
     }
 
@@ -263,7 +263,7 @@ impl SiteLabels {
     /// [`separating_rung`] rejects it. That is why the Land list can never
     /// produce `- **Roa (taiga)** — taiga`.
     ///
-    /// A cell appearing more than once keeps its first `also_shown`; that
+    /// A vertex appearing more than once keeps its first `also_shown`; that
     /// would be a caller printing one place on two different lines, which
     /// neither caller does.
     /// type-audit: bare-ok(prose: lines)
@@ -271,20 +271,20 @@ impl SiteLabels {
         let roster: BTreeSet<Vertex> = lines.iter().map(|(c, _)| *c).collect();
         let facts = site_facts(world, &roster);
         let mut context: BTreeMap<Vertex, &str> = BTreeMap::new();
-        for (cell, shown) in lines {
-            context.entry(*cell).or_insert(shown.as_str());
+        for (vertex, shown) in lines {
+            context.entry(*vertex).or_insert(shown.as_str());
         }
 
         // Group by (name, rest of the line). `BTreeMap` keyed by that pair
         // gives a deterministic group order and a deterministic membership
-        // order (the roster is already ascending by cell).
+        // order (the roster is already ascending by vertex).
         let mut groups: BTreeMap<(&str, &str), Vec<Vertex>> = BTreeMap::new();
-        for (cell, site) in &facts {
-            let shown = context.get(cell).copied().unwrap_or("");
+        for (vertex, site) in &facts {
+            let shown = context.get(vertex).copied().unwrap_or("");
             groups
                 .entry((site.name.as_str(), shown))
                 .or_default()
-                .push(*cell);
+                .push(*vertex);
         }
 
         let mut labels = BTreeMap::new();
@@ -296,8 +296,8 @@ impl SiteLabels {
             }
             match separating_rung(&facts, &group) {
                 Some(rendered) => {
-                    for (cell, label) in group.iter().zip(rendered) {
-                        labels.insert(*cell, label);
+                    for (vertex, label) in group.iter().zip(rendered) {
+                        labels.insert(*vertex, label);
                     }
                 }
                 // No rung separates this group — every member agrees on
@@ -305,8 +305,8 @@ impl SiteLabels {
                 // the honest outcome: a qualifier that does not qualify only
                 // costs characters, and 0024 forbids the counter that would.
                 None => {
-                    for cell in &group {
-                        labels.insert(*cell, name.to_string());
+                    for vertex in &group {
+                        labels.insert(*vertex, name.to_string());
                     }
                 }
             }
@@ -314,8 +314,8 @@ impl SiteLabels {
         SiteLabels { labels }
     }
 
-    /// The label this document should print for `cell`: its settlement's
-    /// name, or `"cell N"` when the cell holds no settlement.
+    /// The label this document should print for `vertex`: its settlement's
+    /// name, or `"vertex N"` when the vertex holds no settlement.
     ///
     /// The name carries a qualifier only if this document names another
     /// settlement of the same name — and, deliberately, not always even
@@ -327,15 +327,15 @@ impl SiteLabels {
     /// arise in the worlds sampled, where the coordinate rung always
     /// separates.)
     ///
-    /// A cell outside the roster the labels were built for also renders as a
-    /// bare cell id — a caller that names a site it did not declare gets an
+    /// A vertex outside the roster the labels were built for also renders as a
+    /// bare vertex id — a caller that names a site it did not declare gets an
     /// honest, unqualifiable label rather than a silently unqualified name.
     /// type-audit: bare-ok(prose: return)
-    pub fn label(&self, cell: Vertex) -> String {
+    pub fn label(&self, vertex: Vertex) -> String {
         self.labels
-            .get(&cell)
+            .get(&vertex)
             .cloned()
-            .unwrap_or_else(|| format!("cell {}", cell.0))
+            .unwrap_or_else(|| format!("cell {}", vertex.0))
     }
 }
 
@@ -351,30 +351,30 @@ fn separating_rung(facts: &BTreeMap<Vertex, SiteFacts>, group: &[Vertex]) -> Opt
     RUNGS.iter().find_map(|rung| {
         let rendered: Vec<String> = group
             .iter()
-            .map(|cell| rung.apply(&facts[cell]))
+            .map(|vertex| rung.apply(&facts[vertex]))
             .collect::<Option<Vec<String>>>()?;
         let distinct: BTreeSet<&String> = rendered.iter().collect();
         (distinct.len() == group.len()).then_some(rendered)
     })
 }
 
-/// Read the site facts of every settlement standing on a cell in `roster`,
-/// in one pass over the settlement roster rather than one pass per cell.
+/// Read the site facts of every settlement standing on a vertex in `roster`,
+/// in one pass over the settlement roster rather than one pass per vertex.
 fn site_facts(world: &World, roster: &BTreeSet<Vertex>) -> BTreeMap<Vertex, SiteFacts> {
     let mut out: BTreeMap<Vertex, SiteFacts> = BTreeMap::new();
     for settlement in hornvale_settlement::all_settlements(world) {
         let Some(Value::Number(n)) = world
             .ledger
-            .value_of(settlement.id, hornvale_settlement::CELL_ID)
+            .value_of(settlement.id, hornvale_settlement::VERTEX_ID)
         else {
             continue;
         };
-        let cell = Vertex(*n as u32);
-        if !roster.contains(&cell) || out.contains_key(&cell) {
+        let vertex = Vertex(*n as u32);
+        if !roster.contains(&vertex) || out.contains_key(&vertex) {
             continue;
         }
         out.insert(
-            cell,
+            vertex,
             SiteFacts {
                 name: settlement.name,
                 people: hornvale_species::species_of(world, settlement.id),

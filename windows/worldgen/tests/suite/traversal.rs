@@ -1,11 +1,11 @@
-//! Integration tests for `traversal_cost`: the per-cell terrain
+//! Integration tests for `traversal_cost`: the per-vertex terrain
 //! traversal-cost field the natural-land-route pathfinder
 //! (`hornvale_topology::route`) plans over.
 //!
 //! The test substrate is a real `Geosphere` (its fields are private, so there
 //! is no toy-grid constructor — see `domains/topology/tests/route.rs` and
 //! `windows/worldgen/tests/history_bake.rs` for the same pattern) built at
-//! `Geosphere::new(1)` (42 cells, fully deterministic).
+//! `Geosphere::new(1)` (42 vertices, fully deterministic).
 
 use hornvale_climate::Biome;
 use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, VertexMap};
@@ -19,11 +19,11 @@ fn e(m: f64) -> ReferenceElevation {
 /// A fixture over `Geosphere::new(1)` with three disjoint, non-adjacent
 /// regions of interest:
 ///
-/// - `peak`: a very high cell surrounded by much lower neighbors (a large
+/// - `peak`: a very high vertex surrounded by much lower neighbors (a large
 ///   elevation gap on every side) -- the steep case.
-/// - `flat`: a cell whose neighbors sit at the exact same elevation as it --
+/// - `flat`: a vertex whose neighbors sit at the exact same elevation as it --
 ///   zero slope, the lowland case.
-/// - `ocean`: a marine-biome cell -- impassable to land travel regardless of
+/// - `ocean`: a marine-biome vertex -- impassable to land travel regardless of
 ///   its elevation.
 ///
 /// The one overlap that would matter (`peak` sitting inside `flat`'s
@@ -37,7 +37,7 @@ fn fixture() -> (
     VertexMap<ReferenceElevation>,
     VertexMap<Biome>,
 ) {
-    let geo = Geosphere::new(1); // 42 cells
+    let geo = Geosphere::new(1); // 42 vertices
 
     let peak = Vertex(0);
     let flat = Vertex(3);
@@ -50,7 +50,7 @@ fn fixture() -> (
     // gap: `peak` must not be one of `flat`'s neighbors (adjacency is
     // symmetric, so checking one direction is enough) -- otherwise the
     // elevation closure below would assign `flat`'s own neighbor ring the
-    // peak's height instead of the flat height, and the flat cell would no
+    // peak's height instead of the flat height, and the flat vertex would no
     // longer read a zero-slope cost. `ocean`'s cost is driven entirely by its
     // biome (checked before elevation), so it needs no such isolation: it is
     // measured correctly regardless of any neighbor-set overlap.
@@ -81,7 +81,7 @@ fn fixture() -> (
 }
 
 #[test]
-fn a_flat_lowland_cell_reads_the_base_cost() {
+fn a_flat_lowland_vertex_reads_the_base_cost() {
     let (geo, _peak, flat, _ocean, elevation, biome) = fixture();
     let cost = traversal_cost(&geo, &elevation, &biome);
     // Zero slope: the field reduces to exactly the base cost.
@@ -89,7 +89,7 @@ fn a_flat_lowland_cell_reads_the_base_cost() {
 }
 
 #[test]
-fn a_steep_peak_reads_a_strictly_higher_cost_than_the_flat_cell() {
+fn a_steep_peak_reads_a_strictly_higher_cost_than_the_flat_vertex() {
     let (geo, peak, flat, _ocean, elevation, biome) = fixture();
     let cost = traversal_cost(&geo, &elevation, &biome);
     assert!(
@@ -101,7 +101,7 @@ fn a_steep_peak_reads_a_strictly_higher_cost_than_the_flat_cell() {
 }
 
 #[test]
-fn an_ocean_cell_is_impassable() {
+fn an_ocean_vertex_is_impassable() {
     let (geo, _peak, _flat, ocean, elevation, biome) = fixture();
     let cost = traversal_cost(&geo, &elevation, &biome);
     assert_eq!(*cost.get(ocean), u64::MAX);
@@ -112,13 +112,13 @@ fn the_field_is_deterministic_across_rebuilds() {
     let (geo, _peak, _flat, _ocean, elevation, biome) = fixture();
     let a = traversal_cost(&geo, &elevation, &biome);
     let b = traversal_cost(&geo, &elevation, &biome);
-    for cell in geo.vertices() {
-        assert_eq!(*a.get(cell), *b.get(cell));
+    for vertex in geo.vertices() {
+        assert_eq!(*a.get(vertex), *b.get(vertex));
     }
 }
 
 #[test]
-fn a_shelf_cell_is_ocean_at_present_but_a_bridge_at_glacial_low_stand() {
+fn a_shelf_vertex_is_ocean_at_present_but_a_bridge_at_glacial_low_stand() {
     let geo = Geosphere::new(1);
     let shelf = Vertex(5);
     // shelf sits at -50 m; everything else is upland at +100 m.

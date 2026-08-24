@@ -75,7 +75,7 @@ fn a_young_migrated_goblin_hamlet_leaves_a_doll() {
     // Nathan's call, 2026-07-21, archaeological-realism: climate abandonment
     // (the real world's dominant end) is not the clean sweep an "orderly
     // departure" once modelled. A young, hamlet-scale people who walk away
-    // from a failing cell leave modest personal residue behind — the
+    // from a failing vertex leave modest personal residue behind — the
     // abandoned clearing with a lost doll is precisely the vision.
     let mut occ = burned_goblin_village();
     occ.core.cause = Some(CauseOfEnd::Migrated);

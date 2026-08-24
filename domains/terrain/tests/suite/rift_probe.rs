@@ -19,15 +19,15 @@ use std::collections::BTreeSet;
 /// mechanisms, it is not a census).
 const PROBE_SEEDS: u64 = 20;
 
-/// Flip a cell to just-above-sea land or just-below-sea ocean (± 1.0 m) in a
-/// mutable per-cell elevation copy. `VertexMap` itself has no in-place
+/// Flip a vertex to just-above-sea land or just-below-sea ocean (± 1.0 m) in a
+/// mutable per-vertex elevation copy. `VertexMap` itself has no in-place
 /// mutation (by design — see `hornvale_kernel::geosphere`), so injections
 /// work over a plain `Vec<ReferenceElevation>` indexed by `Vertex.0`
-/// (ascending, dense, one entry per cell) and get rebuilt into a `VertexMap`
+/// (ascending, dense, one entry per vertex) and get rebuilt into a `VertexMap`
 /// via `VertexMap::from_fn` once the injection is complete.
-fn flip(copy: &mut [ReferenceElevation], cell: Vertex, above: bool, sea: f64) {
+fn flip(copy: &mut [ReferenceElevation], vertex: Vertex, above: bool, sea: f64) {
     let delta = if above { 1.0 } else { -1.0 };
-    copy[cell.0 as usize] = ReferenceElevation::new(sea + delta).expect("sea ± 1.0 m is finite");
+    copy[vertex.0 as usize] = ReferenceElevation::new(sea + delta).expect("sea ± 1.0 m is finite");
 }
 
 /// A fresh mutable copy of `elevation`, indexed by `Vertex.0`.
@@ -40,8 +40,8 @@ fn to_vertex_map(geo: &Geosphere, copy: &[ReferenceElevation]) -> VertexMap<Refe
     VertexMap::from_fn(geo, |c| copy[c.0 as usize])
 }
 
-/// Ocean cells with at least one land neighbor, ascending `Vertex`.
-fn coastal_ocean_cells(
+/// Ocean vertices with at least one land neighbor, ascending `Vertex`.
+fn coastal_ocean_vertices(
     geo: &Geosphere,
     elevation: &VertexMap<ReferenceElevation>,
     sea: ReferenceElevation,
@@ -53,8 +53,8 @@ fn coastal_ocean_cells(
         .collect()
 }
 
-/// Land cells with at least one ocean neighbor, ascending `Vertex`.
-fn coastal_land_cells(
+/// Land vertices with at least one ocean neighbor, ascending `Vertex`.
+fn coastal_land_vertices(
     geo: &Geosphere,
     elevation: &VertexMap<ReferenceElevation>,
     sea: ReferenceElevation,
@@ -67,8 +67,8 @@ fn coastal_land_cells(
 }
 
 /// Rift-shoulder sliver strings (spec §5): flip a swept fraction `f` of
-/// coastal ocean cells to just-above-sea land. Candidates are the coastal
-/// ocean cells in ascending `Vertex` order; every `k`-th (`k = ceil(1/f)`)
+/// coastal ocean vertices to just-above-sea land. Candidates are the coastal
+/// ocean vertices in ascending `Vertex` order; every `k`-th (`k = ceil(1/f)`)
 /// is flipped, skipping any candidate whose neighbor was already flipped
 /// this pass — the strings stay alternating, never adjacent, matching real
 /// rift-shoulder slivers (Seychelles, Jan Mayen) rather than a solid new
@@ -79,32 +79,32 @@ fn inject_slivers(
     sea: ReferenceElevation,
     f: f64,
 ) -> VertexMap<ReferenceElevation> {
-    let candidates = coastal_ocean_cells(geo, elevation, sea);
+    let candidates = coastal_ocean_vertices(geo, elevation, sea);
     let k = (1.0 / f).ceil() as usize;
     let mut flipped: BTreeSet<Vertex> = BTreeSet::new();
-    for (i, &cell) in candidates.iter().enumerate() {
+    for (i, &vertex) in candidates.iter().enumerate() {
         if i % k != 0 {
             continue;
         }
-        if geo.neighbors(cell).iter().any(|n| flipped.contains(n)) {
+        if geo.neighbors(vertex).iter().any(|n| flipped.contains(n)) {
             continue;
         }
-        flipped.insert(cell);
+        flipped.insert(vertex);
     }
     let mut copy = copy_elevation(elevation);
     let sea_m = sea.get();
-    for cell in &flipped {
-        flip(&mut copy, *cell, true, sea_m);
+    for vertex in &flipped {
+        flip(&mut copy, *vertex, true, sea_m);
     }
     to_vertex_map(geo, &copy)
 }
 
 /// Failed rift arms / aulacogens (spec §5): from `n_arms` evenly-spaced
-/// coastal land cells (every `m`-th in the coastal-land list, ascending
+/// coastal land vertices (every `m`-th in the coastal-land list, ascending
 /// `Vertex`, `m = max(1, len / n_arms)`), walk inland via the
-/// highest-(pre-injection-)elevation unvisited neighbor for `depth` cells
-/// total (including the coastal starting cell), flipping every visited cell
-/// to just-below-sea ocean — a 1-cell-wide bay running from the coast into
+/// highest-(pre-injection-)elevation unvisited neighbor for `depth` vertices
+/// total (including the coastal starting vertex), flipping every visited vertex
+/// to just-below-sea ocean — a 1-vertex-wide bay running from the coast into
 /// the craton's interior.
 fn inject_arms(
     geo: &Geosphere,
@@ -113,7 +113,7 @@ fn inject_arms(
     n_arms: usize,
     depth: usize,
 ) -> VertexMap<ReferenceElevation> {
-    let coastal_land = coastal_land_cells(geo, elevation, sea);
+    let coastal_land = coastal_land_vertices(geo, elevation, sea);
     let mut copy = copy_elevation(elevation);
     let sea_m = sea.get();
     if coastal_land.is_empty() || depth == 0 {
@@ -153,30 +153,30 @@ fn inject_arms(
 
 /// Fracture-line crenulation (spec §5): re-runs Sculpting's parity
 /// experiment (Census of Coasts III's supersession note) — for a swept
-/// fraction `f` of coastal land cells (every `k`-th, ascending `Vertex`,
+/// fraction `f` of coastal land vertices (every `k`-th, ascending `Vertex`,
 /// `k = ceil(1/f)`), flip to just-below-sea ocean: single-hex alternation
 /// along the existing coast, no neighbor-skip guard (unlike slivers) since
-/// the mechanism itself IS the single-cell-scale alternation.
+/// the mechanism itself IS the single-vertex-scale alternation.
 fn inject_crenulation(
     geo: &Geosphere,
     elevation: &VertexMap<ReferenceElevation>,
     sea: ReferenceElevation,
     f: f64,
 ) -> VertexMap<ReferenceElevation> {
-    let candidates = coastal_land_cells(geo, elevation, sea);
+    let candidates = coastal_land_vertices(geo, elevation, sea);
     let k = (1.0 / f).ceil() as usize;
     let mut copy = copy_elevation(elevation);
     let sea_m = sea.get();
-    for (i, &cell) in candidates.iter().enumerate() {
+    for (i, &vertex) in candidates.iter().enumerate() {
         if i % k == 0 {
-            flip(&mut copy, cell, false, sea_m);
+            flip(&mut copy, vertex, false, sea_m);
         }
     }
     to_vertex_map(geo, &copy)
 }
 
 /// Post-carve coastal fit-degradation proxy (spec §6, ledger #10, unbanded):
-/// over cells that are coastal under the FINAL (post-carve) elevation
+/// over vertices that are coastal under the FINAL (post-carve) elevation
 /// reading, the fraction whose land/ocean classification differs between
 /// the pre-carve reading (`elevation - carve_delta_m`) and the final
 /// reading, both judged against the same final sea level — how much of the
@@ -190,17 +190,17 @@ fn fit_degradation(
     let sea_m = sea.get();
     let mut coastal = 0usize;
     let mut flipped = 0usize;
-    for cell in geo.vertices() {
-        let post_land = *elevation.get(cell) >= sea;
+    for vertex in geo.vertices() {
+        let post_land = *elevation.get(vertex) >= sea;
         let is_coastal = geo
-            .neighbors(cell)
+            .neighbors(vertex)
             .iter()
             .any(|&n| (*elevation.get(n) >= sea) != post_land);
         if !is_coastal {
             continue;
         }
         coastal += 1;
-        let pre_elev_m = elevation.get(cell).get() - *carve_delta_m.get(cell);
+        let pre_elev_m = elevation.get(vertex).get() - *carve_delta_m.get(vertex);
         let pre_land = pre_elev_m >= sea_m;
         if pre_land != post_land {
             flipped += 1;

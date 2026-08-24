@@ -138,7 +138,7 @@ fn isolation_predicts_divergence() {
         "no isolated landmass hosts a proper subset of peoples: {:?}",
         masses
             .iter()
-            .map(|m| (m.cells.len(), m.peoples.len()))
+            .map(|m| (m.vertices.len(), m.peoples.len()))
             .collect::<Vec<_>>()
     );
 }

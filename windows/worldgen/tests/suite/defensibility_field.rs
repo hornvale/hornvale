@@ -77,7 +77,7 @@ fn the_median_approach_is_exactly_neutral() {
 
 #[test]
 fn parallel_edges_resolve_by_maximum_conductance() {
-    // 6.7% of real cells carry an Adjacency AND a LandRoute to the same
+    // 6.7% of real vertices carry an Adjacency AND a LandRoute to the same
     // neighbour (Task 2b). An attacker uses the EASIEST road, so the max wins.
     // A `min` would over-defend and a `sum` would double-count.
     let both = link(&[(EdgeKind::Adjacency, 0.001), (EdgeKind::LandRoute, 0.02)]);
@@ -98,12 +98,12 @@ fn defensibility_is_deterministic_across_recomputation() {
     }
 }
 
-// --- The Contour (Task 4, round 2): the per-cell weakest-point view. ---
+// --- The Contour (Task 4, round 2): the per-vertex weakest-point view. ---
 
 #[test]
 fn weakest_point_defensibility_is_the_minimum_over_distinct_approaches() {
-    // A 3-node star: cell 0 approaches hub 2 by an easy water lane (low
-    // defensibility), cell 1 approaches the SAME hub by a dear, near-
+    // A 3-node star: vertex 0 approaches hub 2 by an easy water lane (low
+    // defensibility), vertex 1 approaches the SAME hub by a dear, near-
     // impassable adjacency (high defensibility). The weakest point is the
     // EASY approach — the minimum, not the maximum or a blend of the two.
     let mut g = ConnectionGraph::new(3);
@@ -142,7 +142,7 @@ fn weakest_point_defensibility_is_the_minimum_over_distinct_approaches() {
 fn weakest_point_defensibility_ignores_a_parallel_easier_route_between_the_same_pair() {
     // Two neighbours, 0 and 1, both reach hub 2. Neighbour 0 additionally
     // carries a second, easier PARALLEL route to 2 (mirroring the 6.7% of
-    // real cells with an Adjacency+LandRoute pair). `defensibility` already
+    // real vertices with an Adjacency+LandRoute pair). `defensibility` already
     // resolves that parallel pair by MAXIMUM conductance (the easier of the
     // two roads to 0 wins); this view must then take the MINIMUM across the
     // two DISTINCT neighbours 0 and 1, not re-apply a minimum inside the
@@ -180,7 +180,7 @@ fn weakest_point_defensibility_ignores_a_parallel_easier_route_between_the_same_
 
 #[test]
 fn weakest_point_defensibility_is_def_max_with_no_traversable_approach() {
-    // An isolated cell (no edges at all) reads exactly as maximally defended
+    // An isolated vertex (no edges at all) reads exactly as maximally defended
     // as `defensibility` itself reads a nonexistent link — the same ceiling,
     // read without hard-coding its value here.
     let isolated = ConnectionGraph::new(1);
@@ -188,6 +188,6 @@ fn weakest_point_defensibility_is_def_max_with_no_traversable_approach() {
     assert_eq!(
         weakest_point_defensibility(&isolated, Vertex(0)),
         defensibility(&no_edge_at_all, Vertex(0), Vertex(1)),
-        "an unreachable cell must read as maximally (vacuously) defended"
+        "an unreachable vertex must read as maximally (vacuously) defended"
     );
 }

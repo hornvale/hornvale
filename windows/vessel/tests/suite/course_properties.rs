@@ -4,7 +4,7 @@
 //!
 //! The seam most worth an explicit assertion. Losing the non-re-seeding line
 //! in `Session::go` silently reduces the campaign to the stateless variant —
-//! re-seed the reckoned point from the landed cell every step — while every
+//! re-seed the reckoned point from the landed room every step — while every
 //! Task 3 test stays green. This file is what makes that regression loud.
 //!
 //! **Revised after review.** Three findings from the first round changed
@@ -105,13 +105,13 @@ const MERIDIAN_EPSILON_DEG: f64 = 1e-9;
 ///
 /// **Required, not optional — verified live on review, not theoretical.**
 /// [`walk_band_addr`] sits 9.3 milli-degrees from the antimeridian, and its
-/// walked cell lands on longitude exactly `180.0` on roughly half of its
+/// walked room lands on longitude exactly `180.0` on roughly half of its
 /// steps. A naive `(a - b).abs()` happens to survive at THIS address only
-/// because both the meridian and every landed cell stay on the same side of
+/// because both the meridian and every landed room stay on the same side of
 /// the ±180 seam — but the identical computation blows up without warning
 /// one step away: the face-16 mirror of this address (same latitude, same
 /// local geometry, meridian on the NEGATIVE side of the seam while its
-/// landed cells still read `+180.0`) measured `off / delta = 32816.853` from
+/// landed rooms still read `+180.0`) measured `off / delta = 32816.853` from
 /// the unwrapped subtraction alone, against `0.851` from the wrapped one —
 /// four orders of magnitude, entirely an artifact of the seam, nothing to do
 /// with dead reckoning or lattice geometry. Folding here is what makes the
@@ -123,7 +123,7 @@ fn wrapped_lon_diff_deg(a: f64, b: f64) -> f64 {
 }
 
 /// THE POSITIVE CONTROL. A memoryless walk — re-seeding the reckoned point
-/// from the cell just landed on, every step — copies the cell's zig-zagging
+/// from the room just landed on, every step — copies the room's zig-zagging
 /// longitude into the course, so on a due-north bearing it MUST leave its
 /// meridian by more than [`MERIDIAN_EPSILON_DEG`]. If this test ever passes
 /// on a difference no bigger than that tolerance, H1 below is vacuous and
@@ -142,7 +142,7 @@ fn a_memoryless_walk_leaves_the_meridian_that_h1_pins() {
 
     for _ in 0..40 {
         let delta = step_length_rad(&position);
-        // The defect being controlled for: re-seed from the landed cell.
+        // The defect being controlled for: re-seed from the landed room.
         let reckoned = rhumb_advance(position.coord(), 0.0, delta);
         position = nearest_neighbour(&position, reckoned);
         if (reckoned.longitude - meridian).abs() > MERIDIAN_EPSILON_DEG {
@@ -168,7 +168,7 @@ fn a_memoryless_walk_leaves_the_meridian_that_h1_pins() {
 ///
 /// **The cross-track bound (second assertion) is a LATTICE-QUANTIZATION
 /// property, not a dead-reckoning one, and it is FALSE IN GENERAL.**
-/// Confirmed on review: the walked cell's distance from the meridian is
+/// Confirmed on review: the walked room's distance from the meridian is
 /// unbounded over a long enough walk — growing roughly 0.086 step-lengths
 /// per step at some addresses, reaching 172x a single step by 2,000 steps.
 /// It depends on the LOCAL TRIAD'S ALIGNMENT around the walker, not on
@@ -188,7 +188,7 @@ fn a_memoryless_walk_leaves_the_meridian_that_h1_pins() {
 /// that address's triad is in before concluding anything.
 ///
 /// FIRES WHEN (first assertion only): the reckoned point is re-seeded from
-/// the landed cell — whose longitude zig-zags, and gets copied in. The
+/// the landed room — whose longitude zig-zags, and gets copied in. The
 /// second assertion fires on re-seeding too (re-seeded drift is far larger
 /// than even the unbounded-regime's per-step bias), but is not a clean
 /// re-seed detector on its own — the first assertion is.
@@ -207,11 +207,11 @@ fn a_due_north_course_never_leaves_its_meridian() {
         assert!(
             (reckoned.longitude - meridian).abs() < MERIDIAN_EPSILON_DEG,
             "step {step}: the reckoned point left its meridian (diff {}) — \
-             the course was re-seeded from a cell",
+             the course was re-seeded from a room",
             reckoned.longitude - meridian
         );
 
-        // The cell may lag ALONG the meridian (it only has three neighbours
+        // The room may lag ALONG the meridian (it only has three neighbours
         // to choose from) but must not wander OFF it by more than a step —
         // true at THIS address's triad, not in general; see the doc above.
         let off = wrapped_lon_diff_deg(position.coord().longitude, meridian)
@@ -220,7 +220,7 @@ fn a_due_north_course_never_leaves_its_meridian() {
             * math::cos(position.coord().latitude.to_radians());
         assert!(
             off <= delta,
-            "step {step}: cell is {off} rad off the meridian, bound {delta}"
+            "step {step}: room is {off} rad off the meridian, bound {delta}"
         );
     }
 }
@@ -236,7 +236,7 @@ fn a_due_north_course_never_leaves_its_meridian() {
 /// instead of carrying it forward) and re-running: EVERY test in this file
 /// still passed, including that one, because any two consecutive steps
 /// produce two different reckoned points whether carried or re-seeded — the
-/// same "reckoned != cell" trap the brief's own box calls out for H1's
+/// same "reckoned != room" trap the brief's own box calls out for H1's
 /// control, one level up at the session boundary.
 ///
 /// The discriminator that DOES fire: on a due-EAST course, latitude is the
@@ -247,11 +247,11 @@ fn a_due_north_course_never_leaves_its_meridian() {
 /// implementation (diff `0e0`, no epsilon needed — unlike H1's longitude
 /// check, latitude here never passes through `normalize_lon`'s modulo
 /// chain), and differ by `-2.135740410107445e-4` under the re-seeding
-/// mutation — a landed cell's own latitude wobbling in from the lattice,
+/// mutation — a landed room's own latitude wobbling in from the lattice,
 /// five orders of magnitude past any float noise. That is the actual
 /// re-seed signature; the brief's inequality check could not see it.
 ///
-/// FIRES WHEN: `go` re-seeds `reckoned` from the landed cell every step.
+/// FIRES WHEN: `go` re-seeds `reckoned` from the landed room every step.
 #[test]
 fn a_repeated_direction_continues_the_course_and_a_new_one_reseeds_it() {
     let world = common::build(42).expect("seed 42 builds");
@@ -268,7 +268,7 @@ fn a_repeated_direction_continues_the_course_and_a_new_one_reseeds_it() {
     assert_eq!(
         second.reckoned.latitude, first.reckoned.latitude,
         "a due-east course must hold latitude exactly — it moved, so the \
-         course was re-seeded from the landed cell instead of carried"
+         course was re-seeded from the landed room instead of carried"
     );
 
     s.handle("go n");
@@ -488,7 +488,7 @@ fn bearing_based_resolution_escapes_the_fixed_priority_attractor() {
     );
 }
 
-/// Every compass point moves the possession, from any walk-band cell.
+/// Every compass point moves the possession, from any walk-band room.
 /// There is no lateral passability model: `go` checks nothing about the
 /// destination's biome or water, and `exits_of` filters nothing, so a
 /// marine room is as walkable as any other. Task 1 confirmed this by
@@ -496,9 +496,9 @@ fn bearing_based_resolution_escapes_the_fixed_priority_attractor() {
 /// did not cause itself.
 ///
 /// **Strengthened to its preregistered shape (spec §7, final review F3).**
-/// This shipped at one seed, at most nine cells along one eastward
+/// This shipped at one seed, at most nine rooms along one eastward
 /// trajectory — an order of magnitude under H2's frozen text ("at least 200
-/// walk-band cells across at least 8 seeds"), and reduced on exactly the
+/// walk-band rooms across at least 8 seeds"), and reduced on exactly the
 /// axis (`≥8 seeds`) the spec pre-emptively defended: "one world is an
 /// anecdote, and a triangle's orientation is exactly the kind of property a
 /// single trajectory can fail to vary." The reduction shipped unrecorded;
@@ -509,15 +509,15 @@ fn bearing_based_resolution_escapes_the_fixed_priority_attractor() {
 /// measured.
 ///
 /// Now the first 8 seeds that build (the same search discipline as
-/// `common::world_where`) times 26 cells each = 208 walk-band cells, both
+/// `common::world_where`) times 26 rooms each = 208 walk-band rooms, both
 /// bounds cleared. Measured cost on this
-/// Mac: **27.6 s** for an identically-shaped 200-cell/8-seed probe (see the
+/// Mac: **27.6 s** for an identically-shaped 200-room/8-seed probe (see the
 /// campaign's fix-final-review report) — cheap enough to live in the suite
 /// outright, so there is no §7.2 reduction to record. It is not in the
 /// sub-floor roster (course_properties.rs has none), so `gate-commit` never
 /// pays for it; the stage/merge tier does.
 ///
-/// **Why one session per seed, not one per (cell, direction) as the reduced
+/// **Why one session per seed, not one per (room, direction) as the reduced
 /// version had.** `Session::start` pays for a fresh `WorldContext` (terrain
 /// sculpt, climate fit, demography fit) every call — ~920 ms measured, the
 /// dominant cost by two orders of magnitude. `Session::start_in` over one
@@ -535,7 +535,7 @@ fn bearing_based_resolution_escapes_the_fixed_priority_attractor() {
 ///
 /// claim: invariant(forall-seed) — H2 is universally quantified over the
 /// sample: every one of the eight compass points must resolve to a
-/// neighbour from every sampled walk-band cell, across the first 8 seeds
+/// neighbour from every sampled walk-band room, across the first 8 seeds
 /// that build (decision 0093).
 #[test]
 fn no_lateral_refusal_survives_anywhere_on_the_walk_band() {
@@ -547,12 +547,12 @@ fn no_lateral_refusal_survives_anywhere_on_the_walk_band() {
     /// How many distinct, successfully-built seeds H2 needs — the spec's own
     /// floor.
     const H2_SEEDS_WANTED: usize = 8;
-    /// Walk-band cells sampled per seed. `H2_SEEDS_WANTED * H2_CELLS_PER_SEED`
-    /// (208) clears the spec's 200-cell floor with a small margin.
-    const H2_CELLS_PER_SEED: usize = 26;
+    /// Walk-band rooms sampled per seed. `H2_SEEDS_WANTED * H2_ROOMS_PER_SEED`
+    /// (208) clears the spec's 200-room floor with a small margin.
+    const H2_ROOMS_PER_SEED: usize = 26;
 
     let mut seeds_tried = 0usize;
-    let mut total_cells = 0usize;
+    let mut total_rooms = 0usize;
     for seed in H2_SEED_RANGE {
         if seeds_tried >= H2_SEEDS_WANTED {
             break;
@@ -567,28 +567,28 @@ fn no_lateral_refusal_survives_anywhere_on_the_walk_band() {
             continue;
         };
         seeds_tried += 1;
-        for cell in 0..H2_CELLS_PER_SEED {
+        for room in 0..H2_ROOMS_PER_SEED {
             match s.handle("go e") {
                 Turn::Out(t) => assert!(
                     !t.contains("No way"),
-                    "seed {seed}, advancing to cell {cell}: go e refused: {t}"
+                    "seed {seed}, advancing to room {room}: go e refused: {t}"
                 ),
                 Turn::Released(t) => panic!("seed {seed}: go e released the possession: {t}"),
             }
-            total_cells += 1;
+            total_rooms += 1;
             for dir in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
                 let text = match s.handle(dir) {
                     Turn::Out(t) => t,
                     Turn::Released(t) => {
-                        panic!("seed {seed}, cell {cell}: {dir} released the possession: {t}")
+                        panic!("seed {seed}, room {room}: {dir} released the possession: {t}")
                     }
                 };
                 assert!(
                     !text.contains("No way"),
-                    "seed {seed}, cell {cell}: {dir} refused: {text}"
+                    "seed {seed}, room {room}: {dir} refused: {text}"
                 );
                 // Undo the probe so the next direction (and the next
-                // advance) starts from the same cell, not wherever the
+                // advance) starts from the same room, not wherever the
                 // probe landed.
                 s.handle("back");
             }
@@ -600,7 +600,7 @@ fn no_lateral_refusal_survives_anywhere_on_the_walk_band() {
          H2 needs at least {H2_SEEDS_WANTED}"
     );
     assert!(
-        total_cells >= 200,
-        "sampled only {total_cells} walk-band cells — H2 needs at least 200"
+        total_rooms >= 200,
+        "sampled only {total_rooms} walk-band rooms — H2 needs at least 200"
     );
 }

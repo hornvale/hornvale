@@ -36,12 +36,12 @@ use std::collections::{BTreeMap, BTreeSet};
 /// from this battery are therefore a new baseline, never a delta against 59.8%.
 const BATTERY: [u64; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
 
-/// A river is named only if its catchment reaches this many cells (spec §3,
+/// A river is named only if its catchment reaches this many vertices (spec §3,
 /// Item 3 — "the naming tier is catchment size, not mouth drainage").
 const RIVER_MIN_CATCHMENT: usize = 24;
 
-/// A landmass is named only if it reaches this many cells (spec §3, Item 2).
-const LANDMASS_MIN_CELLS: usize = 20;
+/// A landmass is named only if it reaches this many vertices (spec §3, Item 2).
+const LANDMASS_MIN_VERTICES: usize = 20;
 
 /// One settlement, reduced to what the measurement needs.
 struct Site {
@@ -51,8 +51,8 @@ struct Site {
     river: Option<u32>,
 }
 
-/// Connected components of non-ocean cells, each keyed by the lowest cell id
-/// it contains — the spec's `LandmassId`, simulated. Returns a per-cell map
+/// Connected components of non-ocean vertices, each keyed by the lowest vertex id
+/// it contains — the spec's `LandmassId`, simulated. Returns a per-vertex map
 /// of component key, and the component sizes.
 fn landmasses(
     terrain: &hornvale_terrain::GeneratedTerrain,
@@ -65,9 +65,9 @@ fn landmasses(
         if terrain.is_ocean(start) || component[start.0 as usize].is_some() {
             continue;
         }
-        // Flood fill. The key is the lowest cell id in the component, which
+        // Flood fill. The key is the lowest vertex id in the component, which
         // `start` already is: `geo.vertices()` walks in ascending id order, so
-        // the first unvisited land cell of a component is its minimum.
+        // the first unvisited land vertex of a component is its minimum.
         let key = start.0;
         let mut stack = vec![start];
         component[start.0 as usize] = Some(key);
@@ -92,9 +92,9 @@ fn landmasses(
     (map, sizes)
 }
 
-/// The flow forest's terminal cell per land cell — the spec's `RiverId`,
-/// simulated. A river's identity is the ocean cell it empties into or the
-/// interior minimum it dies in. Returns the per-cell terminal and the
+/// The flow forest's terminal vertex per land vertex — the spec's `RiverId`,
+/// simulated. A river's identity is the ocean vertex it empties into or the
+/// interior minimum it dies in. Returns the per-vertex terminal and the
 /// catchment size per terminal.
 fn rivers(
     terrain: &hornvale_terrain::GeneratedTerrain,
@@ -102,7 +102,7 @@ fn rivers(
     let geo = terrain.geosphere();
     let n = geo.vertex_count();
     let sea = terrain.sea_level();
-    // Downhill pointer per land cell, mirroring `drainage::downhill_targets`:
+    // Downhill pointer per land vertex, mirroring `drainage::downhill_targets`:
     // the strictly-lowest neighbor, `None` at a local minimum or on ocean.
     let mut downhill: Vec<Option<Vertex>> = vec![None; n];
     for c in geo.vertices() {
@@ -121,7 +121,7 @@ fn rivers(
         }
         downhill[c.0 as usize] = best;
     }
-    // Walk each land cell to its terminal, memoizing.
+    // Walk each land vertex to its terminal, memoizing.
     let mut terminal: Vec<Option<u32>> = vec![None; n];
     for c in geo.vertices() {
         if terrain.elevation_at(c) < sea || terminal[c.0 as usize].is_some() {
@@ -157,7 +157,7 @@ fn rivers(
 
 /// Validate the simulated individuation against the counts the spec reports
 /// for seed 42 (§3: 30 landmass components, 14 at or above
-/// [`LANDMASS_MIN_CELLS`]; 115 rivers at catchment >= 24). If these disagree,
+/// [`LANDMASS_MIN_VERTICES`]; 115 rivers at catchment >= 24). If these disagree,
 /// every downstream number here is suspect — so this prints them rather than
 /// leaving the flow-forest walk unchecked.
 /// claim: structural(seed: 42) — off-gate measurement: builds one world to
@@ -182,7 +182,10 @@ fn watershed_individuation_matches_the_spec_counts() {
         .expect("terrain rung sculpts terrain");
     let (_, sizes) = landmasses(terrain);
     let (_, catchments) = rivers(terrain);
-    let named_lm = sizes.values().filter(|&&s| s >= LANDMASS_MIN_CELLS).count();
+    let named_lm = sizes
+        .values()
+        .filter(|&&s| s >= LANDMASS_MIN_VERTICES)
+        .count();
     let named_rv = catchments
         .values()
         .filter(|&&c| c >= RIVER_MIN_CATCHMENT)
@@ -191,8 +194,8 @@ fn watershed_individuation_matches_the_spec_counts() {
     big.sort_unstable_by(|a, b| b.cmp(a));
     println!("\n== individuation at seed 42, vs the spec's stated counts ==");
     println!("landmass components:  {}  (spec says 30)", sizes.len());
-    println!("named (>= {LANDMASS_MIN_CELLS} cells): {named_lm}  (spec says 14)");
-    println!("components >= 100 cells: {big:?}");
+    println!("named (>= {LANDMASS_MIN_VERTICES} vertices): {named_lm}  (spec says 14)");
+    println!("components >= 100 vertices: {big:?}");
     println!("(spec says [1994, 1976, 1842, 1277, 907, 874, 831, 703, 356, 104])");
     println!("named rivers (catchment >= {RIVER_MIN_CATCHMENT}): {named_rv}  (spec says 115)");
     let endorheic = catchments
@@ -218,8 +221,8 @@ fn sites_for(seed: u64) -> Vec<Site> {
     let world = &built.world;
     let terrain = built.terrain.as_ref().expect("full build sculpts terrain");
 
-    let (cell_landmass, landmass_sizes) = landmasses(terrain);
-    let (cell_river, catchments) = rivers(terrain);
+    let (vertex_landmass, landmass_sizes) = landmasses(terrain);
+    let (vertex_river, catchments) = rivers(terrain);
 
     world
         .ledger
@@ -231,17 +234,18 @@ fn sites_for(seed: u64) -> Vec<Site> {
                 .ledger
                 .text_of(id, hornvale_kernel::NAME_GLOSS)?
                 .to_string();
-            let Value::Number(cell) = world.ledger.value_of(id, hornvale_settlement::CELL_ID)?
+            let Value::Number(vertex) =
+                world.ledger.value_of(id, hornvale_settlement::VERTEX_ID)?
             else {
                 return None;
             };
-            let cell = *cell as u32;
-            let landmass = cell_landmass
-                .get(&cell)
+            let vertex = *vertex as u32;
+            let landmass = vertex_landmass
+                .get(&vertex)
                 .copied()
-                .filter(|k| landmass_sizes.get(k).copied().unwrap_or(0) >= LANDMASS_MIN_CELLS);
-            let river = cell_river
-                .get(&cell)
+                .filter(|k| landmass_sizes.get(k).copied().unwrap_or(0) >= LANDMASS_MIN_VERTICES);
+            let river = vertex_river
+                .get(&vertex)
                 .copied()
                 .filter(|t| catchments.get(t).copied().unwrap_or(0) >= RIVER_MIN_CATCHMENT);
             Some(Site {

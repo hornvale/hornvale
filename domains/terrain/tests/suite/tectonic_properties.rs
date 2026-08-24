@@ -1,5 +1,5 @@
 //! The tectonic property battery (Campaign 3 spec §12): pin isolation, plus
-//! the N-seed invariant sweep (one-plate-per-cell, boundary agreement,
+//! the N-seed invariant sweep (one-plate-per-vertex, boundary agreement,
 //! elevation envelope, ocean-fraction tolerance, determinism, and the
 //! convergent-vs-interior elevation contrast).
 
@@ -239,19 +239,19 @@ fn every_default_globe_satisfies_every_invariant() {
             "seed {seed}: plate count {plate_count}"
         );
         assert_eq!(globe.plate_of.len(), geo.vertex_count());
-        for (cell, plate) in globe.plate_of.iter() {
+        for (vertex, plate) in globe.plate_of.iter() {
             assert!(
                 (*plate as usize) < globe.plates.len(),
-                "seed {seed}: cell {} in nonexistent plate {plate}",
-                cell.0
+                "seed {seed}: vertex {} in nonexistent plate {plate}",
+                vertex.0
             );
         }
-        for (cell, e) in globe.elevation.iter() {
+        for (vertex, e) in globe.elevation.iter() {
             let e = e.get();
             assert!(
                 e.is_finite() && (-12000.0..=12000.0).contains(&e),
-                "seed {seed}: cell {} elevation {e} out of envelope",
-                cell.0
+                "seed {seed}: vertex {} elevation {e} out of envelope",
+                vertex.0
             );
         }
         for (_, u) in globe.unrest.iter() {
@@ -355,8 +355,8 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
         let pins = TerrainPins::default();
         let globe = generate(Seed(seed), &geo, &pins).unwrap().globe;
         let distances = boundary_distance(&geo, &globe.plate_of, &globe.boundary);
-        for (cell, contact) in globe.boundary.iter() {
-            let continental = *globe.crust.get(cell) >= CONTINENTAL_THRESHOLD_KM;
+        for (vertex, contact) in globe.boundary.iter() {
+            let continental = *globe.crust.get(vertex) >= CONTINENTAL_THRESHOLD_KM;
             match contact {
                 Some(c)
                     if continental
@@ -365,14 +365,14 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
                             BoundaryKind::ContinentalCollision | BoundaryKind::CoastalRange
                         ) =>
                 {
-                    uplifted.push(globe.elevation.get(cell).get());
+                    uplifted.push(globe.elevation.get(vertex).get());
                 }
                 None => {
                     if continental
-                        && let Some((distance, _)) = distances.get(cell)
+                        && let Some((distance, _)) = distances.get(vertex)
                         && *distance >= 6
                     {
-                        interior.push(globe.elevation.get(cell).get());
+                        interior.push(globe.elevation.get(vertex).get());
                     }
                 }
                 _ => {}
@@ -695,13 +695,13 @@ fn default_world_carries_a_rift_history() {
 fn the_clip_reshapes_real_coastlines_on_seed_42() {
     // Real-world exercise of the wiring (spec §3): on seed 42's actual
     // generated globe, the seam clip must change the continental
-    // classification of at least one cell versus the same craton/terrane set
+    // classification of at least one vertex versus the same craton/terrane set
     // built WITHOUT a rift. This is the honest, robust variant of the
     // "coastal pair straddles a seam curve" check — reconstructing the field
-    // with and without the clip and diffing `continental_at` over every cell
+    // with and without the clip and diffing `continental_at` over every vertex
     // directly exercises the clip on real drawn geometry, without the
     // brittleness of bisecting a seam curve and hoping a sampled forward
-    // image happens to land in a differently-classified cell.
+    // image happens to land in a differently-classified vertex.
     use hornvale_terrain::crust::CrustField;
     let geo = Geosphere::new(5);
     let g = &generate(Seed(42), &geo, &TerrainPins::default())
@@ -726,7 +726,7 @@ fn the_clip_reshapes_real_coastlines_on_seed_42() {
         .count();
     assert!(
         flips > 0,
-        "the seam clip changed no cell's continental classification on seed 42 — \
+        "the seam clip changed no vertex's continental classification on seed 42 — \
          the rift is not shaping real coastlines"
     );
 }
@@ -742,11 +742,11 @@ fn the_column_is_deterministic() {
         geo.clone(),
         generate(Seed(42), &geo, &TerrainPins::default()).unwrap(),
     );
-    for cell in geo.vertices() {
-        assert_eq!(a.column_at(cell), b.column_at(cell));
+    for vertex in geo.vertices() {
+        assert_eq!(a.column_at(vertex), b.column_at(vertex));
         assert_eq!(
-            a.geothermal_gradient_at(cell),
-            b.geothermal_gradient_at(cell)
+            a.geothermal_gradient_at(vertex),
+            b.geothermal_gradient_at(vertex)
         );
     }
 }
@@ -764,8 +764,8 @@ fn the_column_is_a_pure_projection_unperturbed_by_pins() {
         ..TerrainPins::default()
     };
     let pinned = GeneratedTerrain::new(geo.clone(), generate(Seed(42), &geo, &pins).unwrap());
-    for cell in geo.vertices() {
-        assert_eq!(base.column_at(cell), pinned.column_at(cell));
+    for vertex in geo.vertices() {
+        assert_eq!(base.column_at(vertex), pinned.column_at(vertex));
     }
 }
 
@@ -836,7 +836,7 @@ fn channel_seed_is_the_derived_leaf_and_matches_the_old_internal_derivation() {
 /// and followed neither convention).
 ///
 /// Why this is a gap and not a hole: the arc gate IS covered end-to-end, by
-/// `provider.rs`'s `has_edifice_names_the_cells_the_shipped_elevation_raised`,
+/// `provider.rs`'s `has_edifice_names_the_vertices_the_shipped_elevation_raised`,
 /// which re-runs `assemble_elevation` under a deliberately different gate
 /// seed. That test would catch a gate seed that stopped being derived from
 /// the terrain root. It would NOT catch the leaf colliding with a sibling
@@ -854,8 +854,8 @@ fn features_are_a_pure_pin_invariant_projection() {
         ..TerrainPins::default()
     };
     let pinned = GeneratedTerrain::new(geo.clone(), generate(Seed(42), &geo, &pins).unwrap());
-    for cell in geo.vertices() {
-        assert_eq!(base.cave_at(cell), pinned.cave_at(cell));
-        assert_eq!(base.deposit_at(cell), pinned.deposit_at(cell));
+    for vertex in geo.vertices() {
+        assert_eq!(base.cave_at(vertex), pinned.cave_at(vertex));
+        assert_eq!(base.deposit_at(vertex), pinned.deposit_at(vertex));
     }
 }

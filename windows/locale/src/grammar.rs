@@ -281,7 +281,7 @@ fn ground_of(substrate: Substrate) -> hornvale_climate::GroundKind {
 /// The table moved to `domains/climate` in The Toponym, but its order and
 /// weights are the ones this draw has always seen, so the descriptor a room
 /// renders is unchanged. The entry carries its variant, which is what a
-/// settlement is named for — drawn separately, at cell scale.
+/// settlement is named for — drawn separately, at vertex scale.
 fn draw_variety(
     room: Seed,
     formation: Formation,

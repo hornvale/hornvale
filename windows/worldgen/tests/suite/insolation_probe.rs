@@ -10,7 +10,7 @@
 //!
 //! ## The corrected formula (spec §3)
 //!
-//! For a Locked world, per cell: `insolation = insolation_scalar *
+//! For a Locked world, per vertex: `insolation = insolation_scalar *
 //! substellar_cosine(position).max(0.0)` — Lambert cosine law, night side
 //! floored at 0. This mirrors the branch `hornvale_climate::temperature`
 //! and `hornvale_climate::moisture` already take on `RotationRegime::
@@ -37,8 +37,8 @@
 //!    `WorldComponents`, since only settling species found cultures and thus
 //!    presiding religions; fauna in the wider menagerie never do).
 //! 4. Find the world-dominant peopled species (highest total K over
-//!    habitable cells) and the cell where ITS K is maximal; classify that
-//!    cell by `substellar_cosine`.
+//!    habitable vertices) and the vertex where ITS K is maximal; classify that
+//!    vertex by `substellar_cosine`.
 //!
 //! ## The sentiment proxy (accepted, stated openly)
 //!
@@ -81,7 +81,7 @@ const MIN_LOCKED: usize = 8;
 
 /// Terminator-ring half-width on `substellar_cosine` for the probe's
 /// headline statistic: `|cos_theta| <= TERMINATOR_HEADLINE_HALF_WIDTH` at
-/// the dominant species' K-argmax cell (brief point 4: "`|cos| <= ~0.3`").
+/// the dominant species' K-argmax vertex (brief point 4: "`|cos| <= ~0.3`").
 const TERMINATOR_HEADLINE_HALF_WIDTH: f64 = 0.3;
 
 /// Is this seed's rotation regime `Locked`? Built at the cheapest depth
@@ -128,8 +128,8 @@ fn locked_seeds(wc: &WorldComponents) -> Vec<u64> {
 /// cosine off the substellar point, night side floored at `0.0`. The
 /// fixed contract every implementation of the SKY-24 fix must satisfy.
 fn corrected_locked_insolation(geo: &Geosphere, insolation_scalar: f64) -> VertexMap<f64> {
-    VertexMap::from_fn(geo, |cell| {
-        let cos_theta = substellar_cosine(geo.position(cell));
+    VertexMap::from_fn(geo, |vertex| {
+        let cos_theta = substellar_cosine(geo.position(vertex));
         insolation_scalar * cos_theta.max(0.0)
     })
 }
@@ -161,10 +161,10 @@ fn substrate_with_corrected_insolation(
         &RotationRegime::Locked,
     );
     let corrected_insolation = corrected_locked_insolation(geo, insolation_scalar);
-    VertexMap::from_fn(geo, |cell| {
-        let s = *shipped.get(cell);
+    VertexMap::from_fn(geo, |vertex| {
+        let s = *shipped.get(vertex);
         Substrate {
-            insolation: *corrected_insolation.get(cell),
+            insolation: *corrected_insolation.get(vertex),
             ..s
         }
     })
@@ -191,9 +191,9 @@ fn niche_k_over(
                 .sum();
             let floor_buf = hornvale_kernel::sovereignty_floor(def.mass, def.potency);
             let cn = &def.condition_niche;
-            let k = VertexMap::from_fn(geo, |cell| {
-                let s = substrate.get(cell);
-                let supply = base_carrying.get(cell) * total_uptake;
+            let k = VertexMap::from_fn(geo, |vertex| {
+                let s = substrate.get(vertex);
+                let supply = base_carrying.get(vertex) * total_uptake;
                 let saturated = supply / (1.0 + supply);
                 saturated
                     * cn.temperature.eval(s.temperature_c, floor_buf)
@@ -246,7 +246,7 @@ impl PeakZone {
 }
 
 /// One locked seed's measurement: the world-dominant peopled species
-/// (highest total K over habitable cells), its K-argmax cell's
+/// (highest total K over habitable vertices), its K-argmax vertex's
 /// `substellar_cosine`, and the resulting [`PeakZone`].
 #[derive(Debug)]
 struct SeedRow {
@@ -317,7 +317,7 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
     let habitable = climate.habitability();
 
     // The world-dominant species: highest total K summed over habitable
-    // cells. Ties broken by kind-name order (ascending `tag` index matches
+    // vertices. Ties broken by kind-name order (ascending `tag` index matches
     // `peopled`'s — itself the peopled biosphere set in ascending `KindId`,
     // i.e. registry/alphabetical, order, so a tie is already deterministic
     // without an explicit tiebreak; the `max_by` below keeps the FIRST
@@ -342,12 +342,12 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
         .expect("dominant_tag came from per_species_k itself");
     let dominant_species = peopled_kinds[dominant_tag as usize].0.0;
 
-    let peak_cell = geo
+    let peak_vertex = geo
         .vertices()
         .filter(|c| *habitable.get(*c))
         .max_by(|a, b| dominant_k.get(*a).total_cmp(dominant_k.get(*b)))
-        .expect("at least one habitable cell exists");
-    let peak_cos_theta = substellar_cosine(geo.position(peak_cell));
+        .expect("at least one habitable vertex exists");
+    let peak_cos_theta = substellar_cosine(geo.position(peak_vertex));
 
     SeedRow {
         seed,

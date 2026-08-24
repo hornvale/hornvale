@@ -109,7 +109,7 @@ pub struct MicroField {
 pub struct Regime {
     /// The negation vector.
     pub negations: Negations,
-    /// The sub-cell micro-field.
+    /// The sub-vertex micro-field.
     pub micro: MicroField,
     /// The rendered descriptor prose.
     pub descriptor: String,

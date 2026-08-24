@@ -23,20 +23,20 @@
 //!
 //! # THE DENOMINATORS, STATED RATHER THAN IMPLIED
 //!
-//! - A **cave system** is a cave-bearing LAND cell, exactly as
+//! - A **cave system** is a cave-bearing LAND vertex, exactly as
 //!   [`termination_probe`](super::termination_probe) defines it: terrain
-//!   reports at most one `Cave` per cell, ocean cells are excluded explicitly
+//!   reports at most one `Cave` per vertex, ocean vertices are excluded explicitly
 //!   and counted separately, and every "share of systems" below has
-//!   cave-bearing land cells as its denominator.
+//!   cave-bearing land vertices as its denominator.
 //! - A **branch** is a realized branch column of a system's **canonical
-//!   lattice**, `(cell, entrance 0)`. `entrance_mouth`'s own doc states the
-//!   rule this follows: *"The system's canonical lattice is `(cell, entrance
+//!   lattice**, `(vertex, entrance 0)`. `entrance_mouth`'s own doc states the
+//!   rule this follows: *"The system's canonical lattice is `(vertex, entrance
 //!   0)` and every mouth addresses INTO it"* — entrances are apertures into one
 //!   graph, not separate lattices. So the branch population is
-//!   `branch_count_of(seed, cell, 0)` columns per system, and every "share of
+//!   `branch_count_of(seed, vertex, 0)` columns per system, and every "share of
 //!   branches" has that population as its denominator.
 //! - **Branch count was measured per ENTRANCE and reported per SYSTEM**, and
-//!   these were different distributions. `branch_count_of(seed, cell, entrance)`
+//!   these were different distributions. `branch_count_of(seed, vertex, entrance)`
 //!   was keyed per entrance, so a system with three entrances each drawing one
 //!   branch had a per-system total of 3 while every draw came out 1. **C.1's
 //!   mode-must-be-1 gate was applied to the per-entrance draw** — the quantity
@@ -46,7 +46,7 @@
 //! **CORRECTION (The Drift, Task 5): the paragraph above describes the
 //! pre-Task-5 mechanism and this file's `read_system` no longer matches it
 //! literally.** `branch_count_of` dropped `entrance` from its key entirely
-//! (amendment A.3) — it is now keyed on `(cell, band)`, not `(cell,
+//! (amendment A.3) — it is now keyed on `(vertex, band)`, not `(vertex,
 //! entrance)`. The measured-vs-reported distinction survives in spirit (a
 //! per-BAND draw is still gated by C.1, and a per-system total is still
 //! reported beside it, ungated), but "per entrance" below should be read as
@@ -65,7 +65,7 @@
 //! # THE ACCEPTED ASYMMETRY THIS PROBE INHERITS (PRE-TASK-5 PROSE, UNVERIFIED
 //! AGAINST THE CURRENT CODE)
 //!
-//! `chamber_exists` gates `branch` against `branch_count_of(cell,
+//! `chamber_exists` gates `branch` against `branch_count_of(vertex,
 //! addr.entrance)` — entrance N's own drawn width — while `entrance_mouth`
 //! picks its side branch from entrance 0's. Task 5 recorded that as accepted,
 //! not an oversight. The consequence here: reachability is walked over
@@ -275,8 +275,8 @@
 //!
 //! Wall time for the whole probe (three `BuildDepth::Terrain` worlds, the
 //! lattice scan and the reachability walk): **1.13 s**, warm tree. Population:
-//! 3,821 cave systems over 42,299 land cells, 6,136 realized branch columns,
-//! 0 ocean-cell caves.
+//! 3,821 cave systems over 42,299 land vertices, 6,136 realized branch columns,
+//! 0 ocean-vertex caves.
 //!
 //! ## THE HEADLINE: §4.3 IS NOT FAILED. The campaign did produce variety.
 //!
@@ -650,10 +650,10 @@
 //! `branches > 0`, and `absorb` inserts a joint entry for every branch, so it
 //! could not fail unless the assertion in front of it already had: the table
 //! this file calls "the campaign's product" had no guard of its own, and an
-//! empty *cell* passed trivially. It is now guarded by two clauses that can
+//! empty *vertex* passed trivially. It is now guarded by two clauses that can
 //! each fail with `branches > 0` — the table must occupy at least two distinct
 //! terminating bands (a table entirely in the `(none)` column, or piled into
-//! one band, is degenerate), and every character must occupy at least one cell
+//! one band, is degenerate), and every character must occupy at least one vertex
 //! with a realized band.
 //!
 //! **The headline was unasserted too**; see [`NADIR_WALK_RATE_FLOOR`].
@@ -1027,7 +1027,7 @@ fn classify_nadir_gate(rate: f64) -> NadirGateVerdict {
 /// One realized branch column of one system's canonical lattice.
 struct BranchReading {
     /// The branch's character, read at `Band::Undercroft` (The Drift, Task
-    /// 5 — `character_of(seed, cell, Band::Undercroft, branch)`; see
+    /// 5 — `character_of(seed, vertex, Band::Undercroft, branch)`; see
     /// `read_system`'s own comment for why that reference band).
     character: Character,
     /// The branch's barrier state — the derived default, unpinned.
@@ -1135,7 +1135,7 @@ fn reachable_union(
 /// Read one cave system through the shipped entry points only.
 fn read_system(
     seed: Seed,
-    cell: Vertex,
+    vertex: Vertex,
     cave: &Cave,
     gradient: GeothermalGradient,
     bands: &[(u8, Band)],
@@ -1145,7 +1145,7 @@ fn read_system(
     let underdeep = rank_of(Band::Underdeep);
     let nadir = rank_of(Band::Nadir);
 
-    let entrances = entrance_count(seed, cell);
+    let entrances = entrance_count(seed, vertex);
     // **The Drift, Task 5**: `branch_count_of` no longer varies by entrance
     // (that concept is gone — `entrance` dropped out of its key), it varies
     // by BAND. `branch_counts` reads one entry per habitation band instead
@@ -1154,7 +1154,7 @@ fn read_system(
     // population changed shape.
     let branch_counts: Vec<u8> = bands
         .iter()
-        .map(|&(_, rung)| branch_count_of(seed, cell, rung))
+        .map(|&(_, rung)| branch_count_of(seed, vertex, rung))
         .collect();
     let branch_total: u32 = branch_counts.iter().map(|&c| u32::from(c)).sum();
 
@@ -1163,7 +1163,7 @@ fn read_system(
     // `entrance_mouth` itself now uses (see its doc) and the closest
     // available analogue to the pre-Drift "entrance 0's own count", since
     // there is no longer a single system-wide width to read.
-    let width = branch_count_of(seed, cell, Band::Undercroft);
+    let width = branch_count_of(seed, vertex, Band::Undercroft);
 
     // Reachability: seed every OPEN mouth into one shared walk. `chamber_at`
     // is the readout's openness test but needs a stratum column; the
@@ -1175,13 +1175,13 @@ fn read_system(
     // that used to ride inside `ChamberAddr::entrance` is now explicit here.
     let all_mouths: Vec<(u8, ChamberAddr)> = (0..entrances)
         .map(|e| {
-            let m = entrance_mouth(seed, cell, e);
+            let m = entrance_mouth(seed, vertex, e);
             let band =
                 Band::from_rank(m.band).expect("entrance_mouth only names a habitation rank");
             (
                 e,
                 ChamberAddr {
-                    cell,
+                    vertex,
                     branch: m.branch,
                     band,
                     level: m.floor,
@@ -1298,11 +1298,11 @@ fn read_system(
         if rank > deepest {
             break;
         }
-        for branch in 0..branch_count_of(seed, cell, rung) {
+        for branch in 0..branch_count_of(seed, vertex, rung) {
             total_floors += u32::from(levels_in_branch(
                 seed,
                 RunAddr {
-                    cell,
+                    vertex,
                     branch,
                     band: rung,
                 },
@@ -1321,7 +1321,7 @@ fn read_system(
                 break;
             }
             let run = RunAddr {
-                cell,
+                vertex,
                 branch,
                 band: rung,
             };
@@ -1335,7 +1335,7 @@ fn read_system(
                     cave,
                     gradient,
                     ChamberAddr {
-                        cell,
+                        vertex,
                         branch,
                         band: rung,
                         level,
@@ -1351,12 +1351,12 @@ fn read_system(
         // character and barrier are now per-`(band, branch)` (The Drift,
         // Task 5), and a single summary row per branch needs one band to
         // report against.
-        let character = character_of(seed, cell, Band::Undercroft, branch);
+        let character = character_of(seed, vertex, Band::Undercroft, branch);
         branches.push(BranchReading {
             character,
             barrier: barrier_of(
                 seed,
-                cell,
+                vertex,
                 Band::Undercroft,
                 branch,
                 &BarrierPins::default(),
@@ -1390,17 +1390,17 @@ fn read_system(
 /// Everything this probe tallies, per seed and pooled.
 #[derive(Default)]
 struct Tallies {
-    /// Cave-bearing land cells — the system denominator.
+    /// Cave-bearing land vertices — the system denominator.
     systems: usize,
-    /// Ocean cells carrying a cave, excluded and counted so the choice is
+    /// Ocean vertices carrying a cave, excluded and counted so the choice is
     /// visible rather than implied.
     ocean_caves: usize,
-    /// **Every** land cell, cave-bearing or not — the population [`systems`]
-    /// is drawn FROM, not a disjoint remainder. `land_cells - systems` is the
+    /// **Every** land vertex, cave-bearing or not — the population [`systems`]
+    /// is drawn FROM, not a disjoint remainder. `land_vertices - systems` is the
     /// cave-free half; the two printed numbers must never be added.
     ///
     /// [`systems`]: Tallies::systems
-    land_cells: usize,
+    land_vertices: usize,
     /// Realized branch columns of every canonical lattice — the branch
     /// denominator.
     branches: usize,
@@ -1555,7 +1555,7 @@ impl Tallies {
     fn merge(&mut self, other: &Tallies) {
         self.systems += other.systems;
         self.ocean_caves += other.ocean_caves;
-        self.land_cells += other.land_cells;
+        self.land_vertices += other.land_vertices;
         self.branches += other.branches;
         for (k, v) in &other.branch_count_per_band {
             *self.branch_count_per_band.entry(*k).or_default() += v;
@@ -1627,12 +1627,12 @@ impl Tallies {
         self.depths.sort_unstable();
         self.totals.sort_unstable();
         println!(
-            "\n== {label} ==  land cells {} (OF WHICH cave-bearing: {} — the two are \
-             nested, never summed; {} land cells carry no cave)  realized branches {}  \
-             (ocean cells carrying a cave: {}, excluded)",
-            self.land_cells,
+            "\n== {label} ==  land vertices {} (OF WHICH cave-bearing: {} — the two are \
+             nested, never summed; {} land vertices carry no cave)  realized branches {}  \
+             (ocean vertices carrying a cave: {}, excluded)",
+            self.land_vertices,
             self.systems,
-            self.land_cells.saturating_sub(self.systems),
+            self.land_vertices.saturating_sub(self.systems),
             self.branches,
             self.ocean_caves
         );
@@ -1871,16 +1871,16 @@ impl Tallies {
             "character", "Undercroft", "Shallows", "Deeps", "Underdeep", "Nadir", "(none)"
         );
         for c in CHARACTERS {
-            let mut cells: Vec<String> = Vec::new();
+            let mut vertices: Vec<String> = Vec::new();
             for &(rank, _) in &habitation_bands() {
                 let n = self.joint.get(&(*c, Some(rank))).copied().unwrap_or(0);
-                cells.push(format!("{n:>10}"));
+                vertices.push(format!("{n:>10}"));
             }
-            cells.push(format!(
+            vertices.push(format!(
                 "{:>10}",
                 self.joint.get(&(*c, None)).copied().unwrap_or(0)
             ));
-            println!("     {:<15} {}", format!("{c:?}"), cells.join(" "));
+            println!("     {:<15} {}", format!("{c:?}"), vertices.join(" "));
         }
         println!(
             "     (row totals are the character shares above; band words: {})",
@@ -1993,19 +1993,19 @@ fn did_the_stope_solve_the_oatmeal_problem() {
         let geo = terrain.geosphere();
 
         let mut t = Tallies::default();
-        for cell in geo.vertices() {
-            if terrain.is_ocean(cell) {
-                if terrain.cave_at(cell).is_some() {
+        for vertex in geo.vertices() {
+            if terrain.is_ocean(vertex) {
+                if terrain.cave_at(vertex).is_some() {
                     t.ocean_caves += 1;
                 }
                 continue;
             }
-            t.land_cells += 1;
-            let Some(cave) = terrain.cave_at(cell) else {
+            t.land_vertices += 1;
+            let Some(cave) = terrain.cave_at(vertex) else {
                 continue;
             };
-            let gradient = terrain.geothermal_gradient_at(cell);
-            let sys = read_system(seed, cell, &cave, gradient, &bands);
+            let gradient = terrain.geothermal_gradient_at(vertex);
+            let sys = read_system(seed, vertex, &cave, gradient, &bands);
             t.absorb(&sys);
         }
 
@@ -2078,7 +2078,7 @@ fn did_the_stope_solve_the_oatmeal_problem() {
                 .sum();
             assert!(
                 realized > 0,
-                "seed {seed_value}: {c:?} occupies no cell of the joint table with \
+                "seed {seed_value}: {c:?} occupies no vertex of the joint table with \
                  a realized terminating band — its whole row is `(none)`, so the \
                  table says nothing about where that character bottoms out"
             );

@@ -172,7 +172,7 @@ pub fn genesis_systems() -> CapabilitySchema {
                 hornvale_settlement::BIOME,
                 hornvale_settlement::IS_SETTLEMENT,
                 hornvale_settlement::POPULATION,
-                hornvale_settlement::CELL_ID,
+                hornvale_settlement::VERTEX_ID,
                 hornvale_settlement::LATITUDE,
                 hornvale_settlement::LONGITUDE,
                 hornvale_kernel::NAME_GLOSS,

@@ -11,7 +11,7 @@ use hornvale_history::record::{
 use hornvale_kernel::{EntityId, KindId, Seed, Vertex, World, WorldTime};
 use hornvale_worldgen::{
     BakeId, BakeOccupation, History, SkyChoice, TributeRelation, build_world, emit_history,
-    occupation_records, occupations_at, occupations_by_cell, ruins_of_people, territories,
+    occupation_records, occupations_at, occupations_by_vertex, ruins_of_people, territories,
 };
 use std::collections::BTreeMap;
 
@@ -225,10 +225,10 @@ fn territories_group_alive_occupations_by_people() {
     let t = territories(&w);
     assert_eq!(t.get(&KindId("goblin")).unwrap(), &[Vertex(0)].into());
     assert_eq!(t.get(&KindId("kobold")).unwrap(), &[Vertex(2)].into());
-    // Dead occupations never contribute a cell to any territory.
-    let all_cells: std::collections::BTreeSet<Vertex> = t.values().flatten().copied().collect();
-    assert!(!all_cells.contains(&Vertex(1)));
-    assert!(!all_cells.contains(&Vertex(3)));
+    // Dead occupations never contribute a vertex to any territory.
+    let all_vertices: std::collections::BTreeSet<Vertex> = t.values().flatten().copied().collect();
+    assert!(!all_vertices.contains(&Vertex(1)));
+    assert!(!all_vertices.contains(&Vertex(3)));
 }
 
 #[test]
@@ -407,7 +407,7 @@ fn occupation_records_round_trip_every_committed_field() {
     let alive_goblin = recs
         .iter()
         .find(|r| r.core.site == Vertex(0))
-        .expect("alive goblin at cell 0");
+        .expect("alive goblin at vertex 0");
     assert_eq!(alive_goblin.core.people, KindId("goblin"));
     assert_eq!(alive_goblin.core.founded, 0.0);
     assert_eq!(alive_goblin.core.ended, None);
@@ -422,7 +422,7 @@ fn occupation_records_round_trip_every_committed_field() {
     let starved_goblin = recs
         .iter()
         .find(|r| r.core.site == Vertex(1))
-        .expect("starved goblin at cell 1");
+        .expect("starved goblin at vertex 1");
     assert_eq!(starved_goblin.core.ended, Some(100.0));
     assert_eq!(starved_goblin.core.cause, Some(CauseOfEnd::Famine));
     assert_eq!(starved_goblin.core.notability, Notability::Backwater);
@@ -430,14 +430,14 @@ fn occupation_records_round_trip_every_committed_field() {
     let alive_kobold = recs
         .iter()
         .find(|r| r.core.site == Vertex(2))
-        .expect("alive kobold at cell 2");
+        .expect("alive kobold at vertex 2");
     assert_eq!(alive_kobold.core.people, KindId("kobold"));
     assert_eq!(alive_kobold.core.founded, 50.0);
 
     let fled_goblin = recs
         .iter()
         .find(|r| r.core.site == Vertex(3))
-        .expect("fled goblin at cell 3");
+        .expect("fled goblin at vertex 3");
     assert_eq!(fled_goblin.core.ended, Some(60.0));
     assert_eq!(fled_goblin.core.cause, Some(CauseOfEnd::Fled));
     // The ★ threads: `founded-from` resolves to the starved ruin's own
@@ -524,7 +524,7 @@ fn commit_occupations(w: &mut World, records: Vec<BakeOccupation>) -> Vec<Entity
 
 #[test]
 fn same_day_layers_order_by_material_facts_not_mint_order() {
-    // Three occupations of one cell, founded the same day. The one that
+    // Three occupations of one vertex, founded the same day. The one that
     // ended FIRST lies deepest. The one still alive (`ended: None`) is the
     // TOP layer, not the bottom — getting that backward inverts the
     // stratigraphy for every site with a survivor. Mint order is
@@ -609,11 +609,11 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // correct output, not a defect to be broken").
     //
     // Measured on the live corpus: 5 tying pairs total -- 4 at seed 42 (a
-    // same-day hobgoblin founder/flee chain at cell 29352, three
+    // same-day hobgoblin founder/flee chain at vertex 29352, three
     // occupations each `founded == ended == 1650.0` whose distinct
     // predecessors happen to share identical founding coordinates, plus one
-    // more such pair at cell 29653), 0 at seed 7, 1 at seed 1000 (a
-    // same-day gnoll chain at cell 6536). A different count means the key's
+    // more such pair at vertex 29653), 0 at seed 7, 1 at seed 1000 (a
+    // same-day gnoll chain at vertex 6536). A different count means the key's
     // tie conditions changed and needs re-reading, not a bumped number.
     //
     // What this test still asserts, and always will: a tie is never a BUG.
@@ -630,7 +630,7 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // hobgoblin founder/flee chain no longer ties), 1 at seed 7 (newly
     // ties), 2 at seed 1000 (the gnoll chain still ties, plus one more).
     // Re-read, not assumed: this task's own diff touches no code this test
-    // exercises (`layer_key`, `legacy_layer_key`, `occupations_by_cell` are
+    // exercises (`layer_key`, `legacy_layer_key`, `occupations_by_vertex` are
     // all outside `domains/language`), so the movement is entirely a
     // consequence of human's biosphere/niche rows redeciding settlement
     // placement, the same class of collateral this file's own history
@@ -644,7 +644,7 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // seed 42, 0 at seed 7 (the pair that newly tied under The Generalist no
     // longer does), 1 at seed 1000. Re-read rather than assumed, by the same
     // argument as above: Task 4's diff touches `Bake::takes_the_initiative` and
-    // its plumbing, not `layer_key`/`legacy_layer_key`/`occupations_by_cell`,
+    // its plumbing, not `layer_key`/`legacy_layer_key`/`occupations_by_vertex`,
     // so the key's tie CONDITIONS are untouched and only the corpus they run
     // over moved. The per-tie assertions inside the loop — the invariant this
     // test actually defends — all still hold; it is the corroborating count
@@ -661,7 +661,7 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
         )
         .expect("builds");
         let coords = coords_by_id(&occupation_records(&w));
-        for (cell, occs) in occupations_by_cell(&w) {
+        for (vertex, occs) in occupations_by_vertex(&w) {
             for i in 0..occs.len() {
                 for j in (i + 1)..occs.len() {
                     pairs += 1;
@@ -674,11 +674,11 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
                         assert_eq!(
                             (a.core.founded, a.core.ended, a.core.peak_population),
                             (b.core.founded, b.core.ended, b.core.peak_population),
-                            "seed {seed}, cell {cell:?}: tie without matching own material facts"
+                            "seed {seed}, vertex {vertex:?}: tie without matching own material facts"
                         );
                         assert_eq!(
                             pa, pb,
-                            "seed {seed}, cell {cell:?}: tie without matching predecessor coordinates"
+                            "seed {seed}, vertex {vertex:?}: tie without matching predecessor coordinates"
                         );
                     }
                 }
@@ -868,8 +868,8 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// The Keeping step B re-pin (2026-08-04, on main): `CarryingInput.habitable`
 /// decomposed to `is_land`, opening the arid/very-hot bands to low capacity.
 /// Main measured 42 -> 1, 7 -> 6, 1000 -> 0 on ITS side of the fork; seed 7
-/// gained the most newly-reachable ground (3,126 cells, 16.4% of its land,
-/// against 0.6% on seed 42), so more of its cells carry stacked occupations for
+/// gained the most newly-reachable ground (3,126 vertices, 16.4% of its land,
+/// against 0.6% on seed 42), so more of its vertices carry stacked occupations for
 /// the fourth key to reorder.
 ///
 /// MERGE re-pin (2026-08-04, main absorbed into the-tolerance): both changes
@@ -877,13 +877,13 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// (0/2/1) nor main's (1/6/0) — RE-MEASURED on the merged tree: **42 -> 0,
 /// 7 -> 0, 1000 -> 1**. The CLAIM is unchanged and is still the one The Salt
 /// froze: the material fourth key barely moves the stratigraphy — here a single
-/// restacking site across three worlds of ~19k land cells each, which is
+/// restacking site across three worlds of ~19k land vertices each, which is
 /// "barely" a fortiori.
 ///
 /// The Tense re-pin (2026-08-05): capacity gained an era axis, redeciding
 /// settlement survival once more, and the counts move **0/0/1 -> 0/1/0**. The
 /// TOTAL is unchanged at a single restacking site across three worlds of ~19k
-/// land cells each, so the claim this test exists for -- the material fourth
+/// land vertices each, so the claim this test exists for -- the material fourth
 /// key barely moves the stratigraphy -- is exactly as true and as "barely".
 /// Only the witness moved, from seed 1000 to seed 7.
 ///
@@ -914,7 +914,7 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// material fourth key from a dead one; at 1/0/1 the measurement discriminates
 /// again, on two independent worlds rather than one. The CLAIM this test was
 /// frozen for is unchanged and still true: two restacking sites across three
-/// worlds of ~19k land cells each is "barely" by any reading.
+/// worlds of ~19k land vertices each is "barely" by any reading.
 ///
 /// **THE RADIATION (C2d, 2026-08-10): the witness is GONE AGAIN — 1/0/1 ->
 /// 0/0/0.** Six new settling peoples redecide settlement survival on all three
@@ -946,7 +946,7 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 ///
 /// - The claim this test is named and frozen for is "*the material fourth key
 ///   BARELY moves the stratigraphy*". Two restacking sites across three worlds
-///   of ~19k land cells each is "barely" by any reading, and the claim is if
+///   of ~19k land vertices each is "barely" by any reading, and the claim is if
 ///   anything better served at 1/0/1 than at 0/0/0.
 /// - "Never moves" was never asserted. The paragraphs above record this
 ///   quantity reading 0/0/1, 0/1/0, 0/0/0, 1/0/1 and 0/0/0 across five prior
@@ -996,12 +996,12 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
             &Default::default(),
         )
         .expect("builds");
-        let by_cell = occupations_by_cell(&w);
-        let changed = by_cell
+        let by_vertex = occupations_by_vertex(&w);
+        let changed = by_vertex
             .values()
             .filter(|group| group.len() > 1)
             .filter(|group| {
-                // Today's order is what `occupations_by_cell` returns (the
+                // Today's order is what `occupations_by_vertex` returns (the
                 // new, material fourth key). Compare against a re-sort keyed
                 // on the PREDECESSOR'S ENTITY ID -- the key this task
                 // removes.
@@ -1027,7 +1027,7 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     //
     // THE GLASSHOUSE re-pin, Stage B Task 4: [0, 1, 1] -> [3, 0, 0]. The
     // thermostat re-placed every settlement a second time this campaign. The
-    // TOTAL moves from 2 to 3 — still "barely" against ~19k land cells per
+    // TOTAL moves from 2 to 3 — still "barely" against ~19k land vertices per
     // world — and concentrates entirely on seed 42 this time (7 and 1000 both
     // lose their one restacking site). A three-seed count of 0, 1 or 3 stays
     // the same existence-claim-near-a-threshold reading the paragraphs above
@@ -1039,7 +1039,7 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // TOTAL falls from 3 to 1, so the claim this test is frozen for — that
     // the material fourth key BARELY moves the stratigraphy — is not merely
     // intact but better supported than at any reading since The Delvers: one
-    // restacking site in three worlds, against ~19k land cells each. A re-pin
+    // restacking site in three worlds, against ~19k land vertices each. A re-pin
     // that STRENGTHENS its own claim deserves the same scepticism as one that
     // weakens it, so note what has not changed: this is still a three-seed
     // existence claim near a threshold (decision 0097), the doc comment above
@@ -1063,14 +1063,14 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // carefully": DO NOT NARRATE A WITNESS'S VALUE. Record what it is, record
     // what moved it, and leave the claim's health to the claim's own evidence.
     // A total of 4 is no more "worse" for `barely moves` than 1 was "better".
-    // Both are small against ~19k land cells per world, and three seeds cannot
+    // Both are small against ~19k land vertices per world, and three seeds cannot
     // distinguish 1 from 4 in any case (decision 0097's existence-claim-near-
     // a-threshold reading, which is what the sweep-widening advice above is
     // for). Post-unblinding re-measure, declared per decision 0016.
     //
     // THE UNDERWORLD re-pin, Task 8 (spec §4.6's node-index re-key):
     // [1, 2, 1] -> [0, 0, 0], total 4 -> 0. Taking drow out of the competition
-    // for surface cells re-placed settlements a fifth time and left no site in
+    // for surface vertices re-placed settlements a fifth time and left no site in
     // any of the three worlds where the material fourth key reorders the
     // stratigraphy at all. Recorded, not narrated, per the paragraph above:
     // zero is no more "better" for `barely moves` than 4 was "worse", and

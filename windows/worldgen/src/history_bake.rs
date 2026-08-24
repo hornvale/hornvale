@@ -40,14 +40,14 @@ use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet};
 
-/// The conductance-positive graph neighbours of `cell` (`conductance > 0.0` —
+/// The conductance-positive graph neighbours of `vertex` (`conductance > 0.0` —
 /// ocean-touching adjacency edges are stored at exactly 0.0). Ascending and
 /// deduplicated, matching `Geosphere::neighbors`' contract so the rerouted
 /// BFS/scans stay deterministic. On an all-land graph this equals
-/// `geo.neighbors(cell)`.
-fn traversable_neighbors(graph: &ConnectionGraph, cell: Vertex) -> Vec<Vertex> {
+/// `geo.neighbors(vertex)`.
+fn traversable_neighbors(graph: &ConnectionGraph, vertex: Vertex) -> Vec<Vertex> {
     let mut ns: Vec<Vertex> = graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .filter(|e| e.conductance > 0.0)
         .map(|e| e.to)
@@ -57,7 +57,7 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: Vertex) -> Vec<Vertex> {
     ns
 }
 
-/// The aggregate ease of reaching `cell`: the summed `conductance` of every
+/// The aggregate ease of reaching `vertex`: the summed `conductance` of every
 /// traversable edge into it (`conductance > 0.0` — ocean-touching adjacency
 /// edges are stored at exactly 0.0 and are not routes). Higher means more,
 /// and easier, ways in.
@@ -65,7 +65,7 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: Vertex) -> Vec<Vertex> {
 /// A pure function of the graph, with no time, seed, or bake state in it,
 /// which is what makes [`defensibility`] recomputable and testable. The
 /// graph is per-era, so this is too: a glacial low-stand that exposes a land
-/// bridge raises the ease of every cell it reaches.
+/// bridge raises the ease of every vertex it reaches.
 ///
 /// The `conductance > 0.0` filter is intent-documenting, not behaviourally
 /// load-bearing for this sum: `conductance` is never negative by domain
@@ -81,9 +81,9 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: Vertex) -> Vec<Vertex> {
 /// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
 /// module's tests until it lands.
 #[allow(dead_code)]
-fn approach_ease(graph: &ConnectionGraph, cell: Vertex) -> f64 {
+fn approach_ease(graph: &ConnectionGraph, vertex: Vertex) -> f64 {
     graph
-        .edges(cell)
+        .edges(vertex)
         .iter()
         .filter(|e| e.conductance > 0.0)
         .map(|e| e.conductance)
@@ -117,14 +117,14 @@ const DEF_SCALE: f64 = 1.0;
 /// route between them. A multiplier on the HOLDER's side of the dominance
 /// test — the second contest axis (decision 0096 clause 1).
 ///
-/// Reads the approach rather than the cell because the calibration found
+/// Reads the approach rather than the vertex because the calibration found
 /// approach ease is two disjoint regimes — water-connected and land-only —
 /// which no single transform over an aggregate can grade (spec §2.3a). A raid
 /// arrives along one route, and what shelters the defender is the resistance
 /// of that route.
 ///
 /// Parallel edges resolve by MAXIMUM conductance: an attacker takes the
-/// easiest road, which is also why this cannot double-count the 6.7% of cells
+/// easiest road, which is also why this cannot double-count the 6.7% of vertices
 /// carrying duplicate `to` values.
 ///
 /// Pure in `(graph, from, to)` — no seed, no time, no bake state — so it
@@ -155,13 +155,13 @@ pub fn defensibility_for_test(graph: &ConnectionGraph, from: Vertex, to: Vertex)
     defensibility(graph, from, to)
 }
 
-/// The per-cell VIEW over [`defensibility`] (spec §2.4): the MINIMUM of
-/// `defensibility(graph, from, cell)` over every `from` with a traversable
-/// approach into `cell` — its weakest point, the quantity Ammann's envelope
+/// The per-vertex VIEW over [`defensibility`] (spec §2.4): the MINIMUM of
+/// `defensibility(graph, from, vertex)` over every `from` with a traversable
+/// approach into `vertex` — its weakest point, the quantity Ammann's envelope
 /// model cares about. A place is only as defensible as its worst way in,
 /// which is the same principle the mechanism itself applies from the other
 /// end: `defensibility` resolves PARALLEL edges between the same pair of
-/// cells by MAXIMUM conductance (an attacker always takes the easiest of
+/// vertices by MAXIMUM conductance (an attacker always takes the easiest of
 /// several roads to the SAME neighbour); this view takes the MINIMUM across
 /// DISTINCT neighbours (a defender cannot choose which of several different
 /// approaches an attacker picks). Two ends of one principle.
@@ -170,31 +170,31 @@ pub fn defensibility_for_test(graph: &ConnectionGraph, from: Vertex, to: Vertex)
 /// reads it (raiding still resolves per-edge, per spec §2.3a's finding that
 /// no single aggregate grades both the water-connected and land-only
 /// regimes), and it draws no seed and consumes no stream — pure in
-/// `(graph, cell)`. Built for the almanac and for M4
+/// `(graph, vertex)`. Built for the almanac and for M4
 /// (`defensibility-capacity-rank-corr`), per spec §2.4.
 ///
 /// `DEF_MAX` — the same ceiling `defensibility` itself returns for a
-/// nonexistent or wholly impassable link — for a cell with NO traversable
-/// approach at all: an unreachable cell cannot be attacked, so it reads as
+/// nonexistent or wholly impassable link — for a vertex with NO traversable
+/// approach at all: an unreachable vertex cannot be attacked, so it reads as
 /// maximally (vacuously) defended rather than undefined.
 ///
-/// Reads `cell`'s own edge list rather than scanning every node in the graph
+/// Reads `vertex`'s own edge list rather than scanning every node in the graph
 /// for one pointing in: `ConnectionGraph::add_edge` mirrors every edge onto
 /// both endpoints with the SAME conductance (its own doc comment), so this
-/// graph is genuinely undirected, and `defensibility(graph, from, cell)` —
+/// graph is genuinely undirected, and `defensibility(graph, from, vertex)` —
 /// which internally reads `graph.edges(from)` — always agrees with the
-/// matching entry already sitting in `graph.edges(cell)`. No reverse-
+/// matching entry already sitting in `graph.edges(vertex)`. No reverse-
 /// adjacency index is needed to enumerate "every `from` with an edge into
-/// `cell`"; `traversable_neighbors(graph, cell)` already is that set.
+/// `vertex`"; `traversable_neighbors(graph, vertex)` already is that set.
 /// type-audit: bare-ok(ratio: return)
-pub fn weakest_point_defensibility(graph: &ConnectionGraph, cell: Vertex) -> f64 {
-    let approaches = traversable_neighbors(graph, cell);
+pub fn weakest_point_defensibility(graph: &ConnectionGraph, vertex: Vertex) -> f64 {
+    let approaches = traversable_neighbors(graph, vertex);
     if approaches.is_empty() {
         return DEF_MAX;
     }
     approaches
         .into_iter()
-        .map(|from| defensibility(graph, from, cell))
+        .map(|from| defensibility(graph, from, vertex))
         .fold(f64::INFINITY, f64::min)
 }
 
@@ -202,12 +202,12 @@ pub fn weakest_point_defensibility(graph: &ConnectionGraph, cell: Vertex) -> f64
 /// kept an explicit constant so the pressure formula reads as the algorithm.
 const NEED: f64 = 1.0;
 /// Base per-epoch growth rate, damped logistically by `(1 - pressure)` so a
-/// community asymptotes at its cell's effective capacity. Crowding is a growth
+/// community asymptotes at its vertex's effective capacity. Crowding is a growth
 /// term only: it no longer starts fights (The Tumult), it merely decides how
 /// big a community gets and, past `COLLAPSE_PRESSURE`, whether it starves.
 const GROWTH_RATE: f64 = 0.2;
 /// Fraction of a community's population that survives an orderly migration to
-/// a new cell (the rest is lost on the journey).
+/// a new vertex (the rest is lost on the journey).
 const MIGRATE_SURVIVAL: f64 = 0.9;
 /// How much stronger a raider must be than its target to attack (the dominance
 /// margin). A save-format constant: changing it re-fights every world's
@@ -222,7 +222,7 @@ const WAR_LOSS: f64 = 0.3;
 /// Population below which a broken, displaced remnant dies out rather than
 /// cascading further — the avalanche cutoff, and the second dissipation.
 const VIABLE_MIN: f64 = 2.0;
-/// How much more a HELD cell is worth than an empty cell of equal effective
+/// How much more a HELD vertex is worth than an empty vertex of equal effective
 /// capacity, to a people looking for a home (spec §4.1): pioneering unknown
 /// ground is a gamble, a rival's holding comes already made to work. This is
 /// the only term in the model that *increases* conflict — every inhibition in
@@ -289,8 +289,8 @@ const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// demography calibration (`windows/lab/tests/gathering_calibration.rs`) can
 /// express its world-scale population ceiling, which since The Tumult reads
 /// `Σ peak_pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY ×
-/// Σ suitability(OCCUPIED cells)` — a sum of committed per-record *peaks*
-/// over exactly the cells the live settlements sit on, not instantaneous
+/// Σ suitability(OCCUPIED vertices)` — a sum of committed per-record *peaks*
+/// over exactly the vertices the live settlements sit on, not instantaneous
 /// population over the whole world. That gate's own doc comment is the
 /// authority on what the inequality does and does not establish (it is a
 /// runaway detector, not a per-community bound); do not restate it here.
@@ -307,7 +307,7 @@ const STORE_WEIGHT: f64 = 0.5;
 /// The fraction of a community's stores that survives each epoch — a hoard is
 /// not immortal.
 const STORE_DECAY: f64 = 0.95;
-/// The share of a subordinate cell's effective capacity a patron demands per
+/// The share of a subordinate vertex's effective capacity a patron demands per
 /// epoch. The dominant taxes what it can SEE — the land, never the granary
 /// (spec §4.2's information asymmetry). A save-format constant: changing it
 /// re-fights every world's history.
@@ -327,7 +327,7 @@ const STORE_DECAY: f64 = 0.95;
 /// itself is pinned by
 /// `the_assessment_can_actually_bind_against_the_logistic_ceiling`.
 const ASSESS_RATE: f64 = 0.025;
-/// The ceiling on an assessment, as a multiple of the subordinate cell's
+/// The ceiling on an assessment, as a multiple of the subordinate vertex's
 /// effective capacity: no patron may demand more than the land could ever
 /// produce (spec §4.5's divergence bound). It does not bind at the moment a
 /// relation forms — `ASSESS_RATE` is well under it — but it is the bound the
@@ -499,11 +499,11 @@ fn crash_basin_fraction() -> f64 {
     (1.0 - discriminant.sqrt()) / 2.0
 }
 
-/// Candidate cells (highest-capacity habitable of the earliest era) the
+/// Candidate vertices (highest-capacity habitable of the earliest era) the
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
 /// community count so every people finds its own vacant sites rather than
 /// being starved by peoples seeded before it.
-const GENESIS_TOP_CELLS: usize = 64;
+const GENESIS_TOP_VERTICES: usize = 64;
 /// Fewest / most proto-sites a single people seeds (drawn per people).
 const GENESIS_SITES_MIN: u32 = 2;
 /// Most proto-sites a single people seeds (inclusive upper bound of the draw).
@@ -514,9 +514,9 @@ const GENESIS_POP: f64 = 10.0;
 const DAUGHTER_POP: f64 = 8.0;
 /// How strongly river proximity sharpens site selection (Task 5b). Genesis
 /// candidate ranking and daughter founding — the two paths that OPEN new
-/// occupations — score a cell by `capacity * (1.0 + RIVER_SITE_WEIGHT *
+/// occupations — score a vertex by `capacity * (1.0 + RIVER_SITE_WEIGHT *
 /// river_proximity)` (proximity in `[0, 1]`, ~1 on a river, ~0 far from one),
-/// so a river-adjacent cell outbids an equally-fertile one away from water.
+/// so a river-adjacent vertex outbids an equally-fertile one away from water.
 ///
 /// This restores The Confluence's shipped property — settlements condensing
 /// near fresh water — which the epoch (Task 5a) diluted: 5a's daughters
@@ -751,7 +751,7 @@ pub struct BakeCensus {
     /// Daughter-founding events (a comfortable community spawned a daughter).
     pub founded: u64,
     /// Migration events — an ORDERLY, self-directed move. Two paths reach it:
-    /// a community relocated off a cell the era turned hostile, and (spec
+    /// a community relocated off a vertex the era turned hostile, and (spec
     /// §4.3d) a vassal that walked away from a patron whose demand it would
     /// not go on paying. Both are leavings, so both belong here and neither
     /// belongs in `fled`, which means *driven off by a raider* and nothing
@@ -766,7 +766,7 @@ pub struct BakeCensus {
     /// Collapse events (a community starved out — Famine).
     pub collapsed: u64,
     /// Resettle events (a displaced community refounded on a vacant habitable
-    /// cell). Counted at every depth of a relaxation, not only at its head: a
+    /// vertex). Counted at every depth of a relaxation, not only at its head: a
     /// cascade's terminal roller reaches vacant ground exactly as a first-hop
     /// one does, and is a resettle by the same reading.
     pub resettled: u64,
@@ -917,13 +917,13 @@ struct Community {
     /// Denormalised from `records[record].core.people` deliberately. Every
     /// capacity read needs it, including inside [`Bake::best_home`]'s ring scan,
     /// and `kernel/CLAUDE.md`'s rule is that a dense index is a `Vec` position,
-    /// not a map key: a `BTreeMap<KindId, _>` lookup per cell per ring would be
+    /// not a map key: a `BTreeMap<KindId, _>` lookup per vertex per ring would be
     /// a hot-path regression. The `KindId` remains the durable identity and the
     /// only thing ever serialized (decision 0015); this is a per-build handle.
     people_idx: usize,
-    /// The cell this community currently occupies.
+    /// The vertex this community currently occupies.
     site: Vertex,
-    /// The rung of the delve ladder this community occupies **in that cell**
+    /// The rung of the delve ladder this community occupies **in that vertex**
     /// (The Underworld, spec §4.6). `Band::Surface` for a surface people
     /// — the overworld is a rung of the same ladder, not the absence of one.
     ///
@@ -934,7 +934,7 @@ struct Community {
     /// re-derives it at the new seat).
     ///
     /// **Live bake state only.** No occupation record carries a rung and none
-    /// should: it is a pure function of `(people, cell)` through the seating,
+    /// should: it is a pure function of `(people, vertex)` through the seating,
     /// so committing it would add a save-format surface for a value that can
     /// be re-derived exactly — which is what
     /// [`crate::delve_seating::made_chambers`] does.
@@ -978,7 +978,7 @@ struct Tribute {
     /// Index into `Bake::communities` of the patron.
     patron: usize,
     /// What the patron currently demands per epoch — set from what it can SEE
-    /// (the subordinate's cell), never from what the subordinate has
+    /// (the subordinate's vertex), never from what the subordinate has
     /// (spec §4.2). Clamped to `[0, eff_capacity × ASSESS_MAX]`. Read by
     /// [`Bake::collect_tribute`], which pays out the lesser of this and what
     /// the subordinate holds above `FARM_FLOOR` (spec §4.2b): the demand is
@@ -1059,10 +1059,10 @@ impl CarriedPortfolio {
 /// only what is takeable differs.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Spoil {
-    /// The cell is worth more: an immobile prize, takeable only by occupying
+    /// The vertex is worth more: an immobile prize, takeable only by occupying
     /// it. The raid evicts and seizes (the shipped path).
     Evict,
-    /// The cell is no better, but the people are productive: a mobile prize,
+    /// The vertex is no better, but the people are productive: a mobile prize,
     /// takeable repeatedly without displacing anyone. The raid subordinates.
     Subordinate,
 }
@@ -1077,7 +1077,7 @@ impl Spoil {
     /// candidate already outranks every subordination candidate on value
     /// alone. It is stated because the ordering is a *decision*, and a future
     /// classification that admits an equal-value eviction must not have that
-    /// decision fall to whichever cell the neighbour walk happened to visit
+    /// decision fall to whichever vertex the neighbour walk happened to visit
     /// first.
     fn rank(self) -> u8 {
         match self {
@@ -1100,7 +1100,7 @@ struct Bake<'a> {
     cur_graph: usize,
     /// **Per-people** headcount capacity, one field per entry of `peoples` and
     /// indexed by the same position (`Community::people_idx`). This replaced a
-    /// single species-blind `VertexMap<f64>` (The Tilth): a cell's worth is a
+    /// single species-blind `VertexMap<f64>` (The Tilth): a vertex's worth is a
     /// property of the *pairing* of ground and people, not of the ground alone,
     /// so gnoll's arid optimum and kobold's high band are no longer read
     /// through one field that calls both marginal.
@@ -1122,11 +1122,11 @@ struct Bake<'a> {
     /// [`Bake::open`] can resolve a `KindId` to its dense index once, at the only
     /// place a community is created, rather than in the ring-scan hot paths.
     peoples: &'a [KindId],
-    /// Per-cell proximity to fresh flowing water in `[0, 1]` (~1 on a river,
+    /// Per-vertex proximity to fresh flowing water in `[0, 1]` (~1 on a river,
     /// ~0 far from one). Biases all three site-picking paths toward water so
     /// settlements condense near rivers (Task 5b, restoring The Confluence).
     river_prox: &'a VertexMap<f64>,
-    /// Cells habitable through the glacial maximum (migration preference).
+    /// Vertices habitable through the glacial maximum (migration preference).
     refugia: &'a VertexMap<bool>,
     /// The world's seed, kept so [`Bake::open`] can derive each community's
     /// own disposition draw. It is NOT another dynamics stream: the draw hangs
@@ -1151,28 +1151,28 @@ struct Bake<'a> {
     records: Vec<BakeOccupation>,
     /// Every community's live state, in commit order (dead ones retained).
     communities: Vec<Community>,
-    /// The single alive community per occupied **place** — a cell *and* a rung
+    /// The single alive community per occupied **place** — a vertex *and* a rung
     /// of the delve ladder (the scan≡index invariant). Decision 0102's
     /// relaxation, ratified twelve days before this campaign executed it.
     ///
     /// **Surface density is unchanged, and that is structural rather than
-    /// hoped for**: `Band::Surface` is one rung, so `(cell, Surface)` is
-    /// one key, so a cell still holds exactly one surface community. What the
+    /// hoped for**: `Band::Surface` is one rung, so `(vertex, Surface)` is
+    /// one key, so a vertex still holds exactly one surface community. What the
     /// wider key buys is the two things a `BTreeMap<Vertex, _>` could not
     /// express — an underworld community no longer competes with the surface
-    /// one for a cell's single slot, and two underworld communities at
+    /// one for a vertex's single slot, and two underworld communities at
     /// different rungs can share a column (spec §4.6).
     ///
     /// The rung is never `None`. `Band` carries an explicit `Surface`
     /// variant precisely so the type is total and no reader can mistake "no
     /// rung recorded" for "the overworld".
     node_index: BTreeMap<(Vertex, Band), usize>,
-    /// Where each people sits in the delve ladder, per cell — one entry per
+    /// Where each people sits in the delve ladder, per vertex — one entry per
     /// entry of `peoples`, in the same order, exactly as `caps_by_era`'s
     /// slices are. Borrowed off the composition root, which is the only layer
     /// that may read terrain and the species registries together.
     ///
-    /// A surface people's seating is `Surface` at every cell, which makes the
+    /// A surface people's seating is `Surface` at every vertex, which makes the
     /// re-key inert for it.
     seating: &'a [VertexMap<Band>],
     /// Next entity id to mint (never reused).
@@ -1240,33 +1240,33 @@ struct Bake<'a> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Relocation {
     /// Found a home (possibly by displacing occupants); `cascade` = the number
-    /// of occupied cells this relocation displaced (0 = reached vacant land).
+    /// of occupied vertices this relocation displaced (0 = reached vacant land).
     Settled {
-        /// Occupied cells displaced to reach this home (0 = vacant land).
+        /// Occupied vertices displaced to reach this home (0 = vacant land).
         cascade: u32,
     },
-    /// Vanished — no vacant cell and no occupied cell reachable (an isolated
+    /// Vanished — no vacant vertex and no occupied vertex reachable (an isolated
     /// remnant), or truncated at the depth cap.
     Lost,
 }
 
-/// One scored option in [`Bake::best_home`]'s single comparison: the cell, what
+/// One scored option in [`Bake::best_home`]'s single comparison: the vertex, what
 /// it is worth to a homeless people (the settled premium already applied when
 /// it is held), the strength defending it, and its holder if it has one.
 #[derive(Clone, Copy, Debug)]
 struct HomeOption {
-    /// The cell being scored.
-    cell: Vertex,
+    /// The vertex being scored.
+    vertex: Vertex,
     /// Its worth to a homeless people — `eff_capacity`, times
-    /// `1 + SETTLED_PREMIUM` when the cell is held.
+    /// `1 + SETTLED_PREMIUM` when the vertex is held.
     score: f64,
-    /// The strength defending it (0.0 when the cell is vacant).
+    /// The strength defending it (0.0 when the vertex is vacant).
     defender: f64,
     /// The community holding it, if any — `None` is vacant land.
     holder: Option<usize>,
 }
 
-/// The river-proximity suitability multiplier for a cell (Task 5b): a cell on
+/// The river-proximity suitability multiplier for a vertex (Task 5b): a vertex on
 /// a river (`prox` ≈ 1) is `1.0 + RIVER_SITE_WEIGHT` times as attractive as one
 /// far from water (`prox` ≈ 0). Full precision; used to bias all three
 /// site-picking paths toward fresh water.
@@ -1364,15 +1364,15 @@ impl<'a> Bake<'a> {
     }
 
     /// The one exclusion that is **not** a relation between a species and a
-    /// cell: ice. A glacier is not a niche disagreement — nothing negotiates
+    /// vertex: ice. A glacier is not a niche disagreement — nothing negotiates
     /// with a kilometre of it — so it stays species-blind, and it is the only
     /// thing left here that is.
     ///
     /// **The thermal habitability test is gone** (The Tense, step 4). It asked
-    /// "is this cell habitable" with no *for whom*, against a global
+    /// "is this vertex habitable" with no *for whom*, against a global
     /// `FREEZE_C = -10 °C`, which is a glaciation snowline borrowed for a
     /// question it cannot answer. Habitability is a relation between a species
-    /// and a cell; decision 0103 established that for capacity, and this was the
+    /// and a vertex; decision 0103 established that for capacity, and this was the
     /// last place the species-blind form survived. Cold ground is now *poor* —
     /// each species' own temperature response scores it — rather than *forbidden*
     /// to everyone alike.
@@ -1387,57 +1387,57 @@ impl<'a> Bake<'a> {
     /// exactly the conflation just removed. The term is kept because ice is the
     /// right *kind* of exclusion to be species-blind, so a future campaign that
     /// models real glaciation has the seam it needs.
-    fn factor(era: &EraClimate, cell: Vertex) -> f64 {
-        if *era.ice.get(cell) { 0.0 } else { 1.0 }
+    fn factor(era: &EraClimate, vertex: Vertex) -> f64 {
+        if *era.ice.get(vertex) { 0.0 } else { 1.0 }
     }
 
-    /// What a cell is worth **to one people** this era: that people's headcount
+    /// What a vertex is worth **to one people** this era: that people's headcount
     /// capacity there, gated by the era masks.
     ///
     /// `pidx` is a dense index into `caps` (a [`Community::people_idx`]), never a
     /// `KindId` — see that field for why the lookup is resolved at `open` time.
-    fn eff_capacity(&self, era: &EraClimate, cell: Vertex, pidx: usize) -> f64 {
-        self.caps_now()[pidx].at(cell) * Self::factor(era, cell)
+    fn eff_capacity(&self, era: &EraClimate, vertex: Vertex, pidx: usize) -> f64 {
+        self.caps_now()[pidx].at(vertex) * Self::factor(era, vertex)
     }
 
-    /// Whether a cell can receive a settler **of this people** this era: admitted
+    /// Whether a vertex can receive a settler **of this people** this era: admitted
     /// by the era masks, worth something to *them*, and not already held.
     ///
     /// The middle condition is new with The Tilth and is the point of the rewire.
     /// The old species-blind predicate answered "is this ground habitable", so a
-    /// people could be routed onto a cell that cannot feed it — and, worse, the
+    /// people could be routed onto a vertex that cannot feed it — and, worse, the
     /// value it was then judged on came from a field that knew nothing about who
-    /// was standing there. A cell where this people has no capacity is not a
+    /// was standing there. A vertex where this people has no capacity is not a
     /// refuge for them, whatever it is for someone else.
-    fn vacant_for(&self, era: &EraClimate, cell: Vertex, pidx: usize) -> bool {
-        Self::factor(era, cell) > 0.0
-            && self.caps_now()[pidx].at(cell) > 0.0
+    fn vacant_for(&self, era: &EraClimate, vertex: Vertex, pidx: usize) -> bool {
+        Self::factor(era, vertex) > 0.0
+            && self.caps_now()[pidx].at(vertex) > 0.0
             && !self
                 .node_index
-                .contains_key(&(cell, self.rung_for(pidx, cell)))
+                .contains_key(&(vertex, self.rung_for(pidx, vertex)))
     }
 
-    /// The rung **this people** would occupy in **this cell** — the place half
+    /// The rung **this people** would occupy in **this vertex** — the place half
     /// of every node-index key (spec §4.6).
     ///
-    /// A place is a cell and a rung, and which rung depends on who is asking:
-    /// a surface people's answer is `Surface` in every cell, and a
+    /// A place is a vertex and a rung, and which rung depends on who is asking:
+    /// a surface people's answer is `Surface` in every vertex, and a
     /// subterranean one's is whichever rung of that column's cave its niche
     /// scores best (`crate::delve_seating::seat_at`). That asymmetry is the
     /// whole point — it is what lets a drow hall and a human town stand over
     /// one another without either evicting the other.
     ///
     /// Resolved through the seating rather than off the community, because
-    /// every caller here is asking about a cell the asker does **not** yet
+    /// every caller here is asking about a vertex the asker does **not** yet
     /// occupy: which rung would I be on if I went there.
-    fn rung_for(&self, pidx: usize, cell: Vertex) -> Band {
-        *self.seating[pidx].get(cell)
+    fn rung_for(&self, pidx: usize, vertex: Vertex) -> Band {
+        *self.seating[pidx].get(vertex)
     }
 
     /// Walk the era graph outward from `from` in breadth-first **rings** and
     /// stop at the first ring `pick` finds something in. Ring `d` is exactly
-    /// the set of cells at graph distance `d` from `from`; `from` itself is
-    /// never offered. Traversal passes *through* cells `pick` rejects, so a
+    /// the set of vertices at graph distance `d` from `from`; `from` itself is
+    /// never offered. Traversal passes *through* vertices `pick` rejects, so a
     /// people whose whole neighbourhood is unusable still reaches the ring
     /// beyond it — this is a widening search, not a one-ring scan.
     ///
@@ -1446,7 +1446,7 @@ impl<'a> Bake<'a> {
     /// `pick` as an ascending, deduplicated `Vertex` slice, so neither the
     /// discovery order within a ring nor the order edges were added can reach
     /// the result. `pick` is still responsible for a total order among the
-    /// cells of the one ring it accepts.
+    /// vertices of the one ring it accepts.
     ///
     /// This is the file's nearest-first idiom, shared by the two searches that
     /// need it — [`Bake::nearest_dest`] (a migrant's refuge) and
@@ -1461,7 +1461,7 @@ impl<'a> Bake<'a> {
         let mut frontier: Vec<Vertex> = vec![from];
         while !frontier.is_empty() {
             // A BTreeSet, so the ring reaches `pick` in ascending Vertex order
-            // however its cells were discovered.
+            // however its vertices were discovered.
             let mut ring: BTreeSet<Vertex> = BTreeSet::new();
             for &c in &frontier {
                 for n in traversable_neighbors(self.cur(), c) {
@@ -1479,15 +1479,15 @@ impl<'a> Bake<'a> {
         None
     }
 
-    /// The nearest cell to `from` (excluding `from` itself) that can receive a
+    /// The nearest vertex to `from` (excluding `from` itself) that can receive a
     /// settler **of this people**, by breadth-first hop distance. Within the
-    /// nearest layer, refugial cells win over non-refugial, then river-adjacent,
+    /// nearest layer, refugial vertices win over non-refugial, then river-adjacent,
     /// then lowest `Vertex` — a total, deterministic order. `None` if the whole
     /// reachable graph is full or worthless to them.
     ///
     /// The ordering deliberately still does **not** rank by capacity: a migrant
     /// flees to the nearest *survivable* refuge, and survivability is now the
-    /// `vacant_for` filter's job (it excludes cells where this people has no
+    /// `vacant_for` filter's job (it excludes vertices where this people has no
     /// capacity at all). Making the tie-break prefer richer ground would turn a
     /// flight into an optimisation, which is [`Bake::best_home`]'s rule, not
     /// this one's.
@@ -1524,20 +1524,20 @@ impl<'a> Bake<'a> {
     /// within that ring. Within a ring:
     ///
     /// Every score below is `eff_capacity` **for the rolling people** (The
-    /// Tilth): the comparison is what this people could make of each cell, not
-    /// what the cell is worth in the abstract. The species-blind field this
-    /// replaced could not decide *who* wins a cell at all — it entered every
+    /// Tilth): the comparison is what this people could make of each vertex, not
+    /// what the vertex is worth in the abstract. The species-blind field this
+    /// replaced could not decide *who* wins a vertex at all — it entered every
     /// candidate's score identically and cancelled out of the `argmax` — so a
     /// per-people term is the only thing that can express a niche disagreement.
     ///
-    /// - a **vacant** admissible cell scores that people's effective capacity;
-    /// - a **held** admissible cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
+    /// - a **vacant** admissible vertex scores that people's effective capacity;
+    /// - a **held** admissible vertex scores `eff_capacity × (1 + SETTLED_PREMIUM)`
     ///   — proven ground is worth more — and is admissible only when the roller
     ///   clears `RAID_MARGIN` over its holder, only when the roller could still
     ///   seat itself after the war it would have to fight (`can_fight`), and
     ///   only when spec §4.2a's inhibitions ([`Bake::takes_the_initiative`],
     ///   [`Bake::has_spoils`]) do not veto it;
-    /// - a cell the era's mask has made uninhabitable is worth nothing to
+    /// - a vertex the era's mask has made uninhabitable is worth nothing to
     ///   anybody and is not an option at all.
     ///
     /// The best score in the accepted ring wins, tie-broken by the WEAKEST
@@ -1548,9 +1548,9 @@ impl<'a> Bake<'a> {
     ///
     /// **Locality is part of the rule** (spec §4.3): "re-enters the raid rule"
     /// inherits the raid rule's *neighbourhood* as well as its comparison, so
-    /// the settled premium decides between a vacant and a held cell **at the
+    /// the settled premium decides between a vacant and a held vertex **at the
     /// same distance** — the only place it should decide — and a remnant never
-    /// crosses a continent for a marginally better cell. It is nonetheless a
+    /// crosses a continent for a marginally better vertex. It is nonetheless a
     /// *widening* search ([`Bake::nearest_ring`]): a people whose whole
     /// neighbourhood is full or hostile still migrates as far as it must.
     ///
@@ -1616,12 +1616,12 @@ impl<'a> Bake<'a> {
                     Some(b) => score
                         .total_cmp(&b.score) // the MOST valuable home
                         .then(b.defender.total_cmp(&defender)) // among equals, the WEAKEST held
-                        .then(b.cell.cmp(&n)) // then the lowest Vertex
+                        .then(b.vertex.cmp(&n)) // then the lowest Vertex
                         .is_gt(),
                 };
                 if better {
                     best = Some(HomeOption {
-                        cell: n,
+                        vertex: n,
                         score,
                         defender,
                         holder,
@@ -1639,7 +1639,7 @@ impl<'a> Bake<'a> {
     /// its specific forebear, not the lineage ancestor — `lineage` stays
     /// reserved for the `open` lineage argument). Returns the outcome:
     /// [`Relocation::Settled`] (with the cascade size — the number of OCCUPIED
-    /// cells this relocation displaced, 0 if it took vacant land) or
+    /// vertices this relocation displaced, 0 if it took vacant land) or
     /// [`Relocation::Lost`] (the remnant died, nothing was admissible, or the
     /// depth cap truncated the chain).
     ///
@@ -1724,7 +1724,7 @@ impl<'a> Bake<'a> {
             // Vacant land won the comparison — no conflict, settle there.
             let new_idx = self.open(
                 people,
-                home.cell,
+                home.vertex,
                 year,
                 pop,
                 Founding::From(predecessor),
@@ -1765,7 +1765,7 @@ impl<'a> Bake<'a> {
             )
         };
         // The homeless people takes the victim's site (open BEFORE close so
-        // node_index[(home.cell, the roller's rung there)] points at the new
+        // node_index[(home.vertex, the roller's rung there)] points at the new
         // occupant; close then sees the PLACE already re-indexed and does not
         // free it).
         //
@@ -1773,11 +1773,11 @@ impl<'a> Bake<'a> {
         // that sequencing sound under spec §4.6's wider key: `best_home` found
         // this holder by looking up `(n, rung_for(pidx, n))` for THIS people,
         // and the `open` below re-derives the rung from the same people and the
-        // same cell. A holder on another rung of the same column was never a
+        // same vertex. A holder on another rung of the same column was never a
         // candidate and is untouched.
         let new_idx = self.open(
             people,
-            home.cell,
+            home.vertex,
             year,
             pop * (1.0 - WAR_LOSS),
             Founding::From(predecessor),
@@ -1788,7 +1788,7 @@ impl<'a> Bake<'a> {
         // The roller keeps the vassals it holds; the victim keeps the vassals
         // IT holds and loses its own lord, because being driven off is a
         // relocation and a relocating community drops its obligation (spec
-        // §4.3e's asymmetry). So a roller that conquers its own vassal's cell
+        // §4.3e's asymmetry). So a roller that conquers its own vassal's vertex
         // loses that vassal: the entry re-keyed here is dissolved two lines
         // later by the victim's `close`, exactly as it would be for a vassal
         // that fled of its own accord. The order of these two lines no longer
@@ -1810,7 +1810,7 @@ impl<'a> Bake<'a> {
             v_lineage,
             v_id,
             v_offset,
-            home.cell,
+            home.vertex,
             era,
             year,
             depth + 1,
@@ -1946,7 +1946,7 @@ impl<'a> Bake<'a> {
     ///
     /// The information asymmetry costs nothing because it is already
     /// structural: the dominant assesses what it can SEE (the subordinate
-    /// cell's `eff_capacity`, which land tax has always been levied on) while
+    /// vertex's `eff_capacity`, which land tax has always been levied on) while
     /// the subordinate hands over out of what it HAS (`population`). Those are
     /// two different numbers already, and the gap is the subordinate's to
     /// manage.
@@ -2056,7 +2056,7 @@ impl<'a> Bake<'a> {
     }
 
     /// The stock a patron of this people steers its vassal toward — the
-    /// setpoint the demand aims at (spec §4.3a), read off the vassal's cell
+    /// setpoint the demand aims at (spec §4.3a), read off the vassal's vertex
     /// (`eff`, what the patron can SEE) and the patron's own horizon.
     ///
     /// **This is renewable-resource economics, and the vassal's logistic
@@ -2080,7 +2080,7 @@ impl<'a> Bake<'a> {
     /// carry `2 × FARM_FLOOR`, the interpolation would put the setpoint
     /// *below* the floor and a patron steering to it would reach through the
     /// one bound spec §8.3 does not permit crossing, so the result is raised
-    /// back to the floor. The clamp binds only on marginal cells; on any cell
+    /// back to the floor. The clamp binds only on marginal vertices; on any vertex
     /// whose capacity supports twice the floor the raw interpolation already
     /// sits above it.
     ///
@@ -2090,7 +2090,7 @@ impl<'a> Bake<'a> {
     /// floor than a quiet patron of the same people (spec §4.3c). At
     /// `others == 0` the term vanishes and this is exactly §4.3a's rule.
     ///
-    /// Reads the patron's **people**, the subordinate's **cell**, and a
+    /// Reads the patron's **people**, the subordinate's **vertex**, and a
     /// **count snapshotted before the collection pass** — none of them moving
     /// across that pass — so [`Bake::collect_tribute`]'s order-independence
     /// survives this term. Nothing here reads the patron's `stores` or
@@ -2103,7 +2103,7 @@ impl<'a> Bake<'a> {
     }
 
     /// The smallest community a patron of this people will accept as a vassal,
-    /// read off the vassal's cell (`eff`) and the patron's own horizon — spec
+    /// read off the vassal's vertex (`eff`) and the patron's own horizon — spec
     /// §4.3b, the same discount rate applied one step earlier, to the decision
     /// to subordinate *at all*.
     ///
@@ -2178,7 +2178,7 @@ impl<'a> Bake<'a> {
     /// of acquisition instead of the moment of collection, and it is measured
     /// rather than special-cased away.
     ///
-    /// Reads the raider's **people**, the target's **cell**, and how many
+    /// Reads the raider's **people**, the target's **vertex**, and how many
     /// vassals the raider holds — the last read ONCE, above the candidate walk
     /// in [`Bake::maybe_raid`], since nothing in that walk mutates the relation
     /// table. It reads no population of the patron's and no stores, so it
@@ -2190,9 +2190,9 @@ impl<'a> Bake<'a> {
 
     /// Whether a community is worth raiding at all — spec §4.2a's **no-spoils**
     /// inhibition, the momentary one. A community whose pressure has reached
-    /// `NO_SPOILS_PRESSURE` is already consuming its cell's whole effective
+    /// `NO_SPOILS_PRESSURE` is already consuming its vertex's whole effective
     /// yield: there is no surplus to seize, so it is not a candidate however
-    /// weak it is and however rich its ground. A cell the era has made
+    /// weak it is and however rich its ground. A vertex the era has made
     /// worthless (`eff_capacity == 0.0`) has no spoils either, by the same
     /// reading.
     ///
@@ -2207,13 +2207,13 @@ impl<'a> Bake<'a> {
             && self.pressure_of(idx, era) < NO_SPOILS_PRESSURE
     }
 
-    /// A community's crowding pressure on its cell this era: population
+    /// A community's crowding pressure on its vertex this era: population
     /// against effective capacity, scaled by per-capita need. Reads
     /// `population` only — `stores` must never enter this term, or a
     /// successful extractor would starve itself on its own tribute (spec
     /// §4.2a).
     /// Pressure is read against the capacity of the people actually standing
-    /// there (The Tilth): the same cell crowds a people whose niche it suits
+    /// there (The Tilth): the same vertex crowds a people whose niche it suits
     /// less than one it does not, which is what makes the same ground
     /// sustainable for one and ruinous for another.
     fn pressure_of(&self, idx: usize, era: &EraClimate) -> f64 {
@@ -2271,7 +2271,7 @@ impl<'a> Bake<'a> {
         self.records.push(record);
         let community_idx = self.communities.len();
         let people_idx = self.people_idx_of(people);
-        // The place, not just the cell (spec §4.6). Resolved here, at the one
+        // The place, not just the vertex (spec §4.6). Resolved here, at the one
         // point a community comes into being, so a community's rung is fixed
         // for its whole life and a relocation — which is a `close` and a fresh
         // `open` — re-derives it at the seat it actually moved to.
@@ -2300,7 +2300,7 @@ impl<'a> Bake<'a> {
     }
 
     /// Close a community's record: mark it dead, stamp the ending, free its
-    /// cell from the one-alive-per-site index, and dissolve every tribute
+    /// vertex from the one-alive-per-site index, and dissolve every tribute
     /// relation it was party to.
     ///
     /// **Dissolution is a coherence floor, not a feature** (spec §4.4): a
@@ -2425,7 +2425,7 @@ impl<'a> Bake<'a> {
     ///
     /// **A vassal that is not alive is dropped.** Two cases reach that: it
     /// genuinely died, and it is itself mid-relocation (a patron that conquers
-    /// its own vassal's cell drives that vassal onto the road, and the road has
+    /// its own vassal's vertex drives that vassal onto the road, and the road has
     /// not ended when this re-key runs). Dropping is the safe reading of both —
     /// `tribute` holds community *indices*, so re-keying onto a closed
     /// community would leave a dangling index, the silent corruption spec §4.4
@@ -2482,7 +2482,7 @@ impl<'a> Bake<'a> {
     }
 
     /// Each patron collects from each of its subordinates: it demands what its
-    /// assessment says (set from the cell it can SEE) and receives what the
+    /// assessment says (set from the vertex it can SEE) and receives what the
     /// subordinate hands over — paid from **that epoch's growth and, beyond it,
     /// from the standing stock down to the patron's own setpoint** (spec
     /// §4.2b, §4.3a):
@@ -2643,11 +2643,11 @@ impl<'a> Bake<'a> {
             // The line the reach stops at is the patron's SETPOINT, not the
             // bare floor (spec §4.3a's amendment 4). It is read off the
             // patron's people — its authored horizon — and the subordinate's
-            // cell, the two things a patron brings to the relation and can
+            // vertex, the two things a patron brings to the relation and can
             // see; `target_stock` carries the derivation. Both are immutable
             // across a collection pass, so the order-independence this method
             // documents below survives the new term.
-            // The SUBORDINATE'S capacity on its own cell, not the patron's
+            // The SUBORDINATE'S capacity on its own vertex, not the patron's
             // reading of that ground (The Tilth). A land tax is bounded by what
             // the land yields to the people working it; valuing the vassal's
             // fields through the lord's niche would let a patron whose own niche
@@ -2810,7 +2810,7 @@ impl<'a> Bake<'a> {
         }
     }
 
-    /// A vassal whose burden crossed `FLIGHT_BURDEN` walks off its cell —
+    /// A vassal whose burden crossed `FLIGHT_BURDEN` walks off its vertex —
     /// spec §4.3d's **flight**. It is *leaving*, not being driven off: the
     /// occupation closes as `CauseOfEnd::Migrated` by `Ended::Nature`, exactly
     /// as a climate migration does, and the event is tallied as a `migrated`
@@ -2875,9 +2875,9 @@ impl<'a> Bake<'a> {
             return false; // too small to survive leaving: it endures instead
         }
         let people = self.records[record].core.people;
-        // Close BEFORE relocating so the cell it is abandoning is free — a
+        // Close BEFORE relocating so the vertex it is abandoning is free — a
         // people must not be able to flee onto its own site, and `close` frees
-        // the cell only when this community is the one indexed there. Lift the
+        // the vertex only when this community is the one indexed there. Lift the
         // PORTFOLIO first — a leaver that was itself a lord keeps its own
         // vassals — while its own obligation is deliberately left in the table
         // for the `close` below to dissolve. That is what makes a flight an
@@ -2952,7 +2952,7 @@ impl<'a> Bake<'a> {
     ///
     /// Crowding is not a conflict trigger (The Tumult): it feeds the logistic
     /// growth term and, past `COLLAPSE_PRESSURE`, starves the community. A
-    /// cell turned hostile evicts its community to a vacant refuge or kills
+    /// vertex turned hostile evicts its community to a vacant refuge or kills
     /// it — a climate eviction never starts a fight, and never cascades.
     fn step_community(&mut self, idx: usize, era: &EraClimate, year: f64) {
         if !self.communities[idx].alive {
@@ -2971,14 +2971,14 @@ impl<'a> Bake<'a> {
         // inertness it was written to catch.
         //
         // The trigger is now unsustainable **pressure**, and it subsumes the old
-        // one: `pressure_of` divides by `eff`, so a zero-capacity cell yields
+        // one: `pressure_of` divides by `eff`, so a zero-capacity vertex yields
         // `+inf` and still routes here. Below this line the behaviour is
         // unchanged — walk to the nearest refuge this people can actually live
         // on, and starve where there is none.
         //
         // The result is that "the cold drove them on" survives the mask's
         // deletion, but as a consequence of the land going poor rather than of a
-        // constant declaring the cell uninhabitable to everyone alike.
+        // constant declaring the vertex uninhabitable to everyone alike.
         let pressure = self.pressure_of(idx, era);
         if pressure >= COLLAPSE_PRESSURE {
             let (record, pop, lineage, offset, migrant_id) = {
@@ -3046,23 +3046,23 @@ impl<'a> Bake<'a> {
     /// interacting, and each can only ever *reduce* conflict. See
     /// [`Bake::has_spoils`].
     ///
-    /// Value is [`Bake::eff_capacity`], never raw capacity: what a cell is
+    /// Value is [`Bake::eff_capacity`], never raw capacity: what a vertex is
     /// worth to a conqueror is what it will actually yield under this era's
     /// ice/habitability mask. Reading raw capacity would let a community on
-    /// good land covet a neighbour whose cell just turned hostile — abandoning
+    /// good land covet a neighbour whose vertex just turned hostile — abandoning
     /// a living site for ground worth nothing, preferentially at exactly the
     /// era-mask flips displacement is measured on. Since `maybe_raid` only runs
     /// for a raider whose own effective capacity is non-zero, requiring the
     /// prize to be strictly *more* valuable also excludes every zero-factor
-    /// cell for free.
+    /// vertex for free.
     ///
     /// **Which outcome fires is the mobility of the prize** (spec §4.1):
     ///
-    /// - `Spoil::Evict` — the target's cell is worth MORE this era
+    /// - `Spoil::Evict` — the target's vertex is worth MORE this era
     ///   (covetousness). An immobile prize is takeable only by *occupying* it,
     ///   so the raid evicts and seizes. This is the shipped path, below,
     ///   unchanged.
-    /// - `Spoil::Subordinate` — the cell is no better, but the target is
+    /// - `Spoil::Subordinate` — the vertex is no better, but the target is
     ///   productive (`has_spoils`, i.e. it has growth headroom, which is the
     ///   inverse of the no-spoils veto and composes with it for free). Its
     ///   people and their product are a MOBILE prize, takeable repeatedly
@@ -3073,7 +3073,7 @@ impl<'a> Bake<'a> {
     /// shipped rule `continue`d on `t_val <= raider_val`, so a strong community
     /// ignored a poorer neighbour outright. Under tribute a neighbour whose
     /// *land* is no prize but whose *people* are productive is worth milking,
-    /// and a dominant grows **without changing cell** — the accumulation term
+    /// and a dominant grows **without changing vertex** — the accumulation term
     /// The Tumult's sub-critical measurement said the model was missing. One
     /// scan finds the best target of either kind; there is no second pass.
     ///
@@ -3114,13 +3114,13 @@ impl<'a> Bake<'a> {
     ///
     /// On the eviction branch the outcome is **conquest of immobile land**, not
     /// plunder (spec §4.3).
-    /// The prize is the cell: war destroys `WAR_LOSS` of *each* side's
+    /// The prize is the vertex: war destroys `WAR_LOSS` of *each* side's
     /// population, the raider abandons its own poorer site (`Migrated`,
     /// `Ended::Nature` — an orderly, self-directed move) and reopens on the
-    /// seized cell, and the loser is driven off on EVERY raid (`Fled`,
+    /// seized vertex, and the loser is driven off on EVERY raid (`Fled`,
     /// `ended_by = By(raider)`), rolling downhill via [`Bake::relocate`] with
     /// whatever strength it has left. Taking *people* would be captives, an
-    /// explicit spec §9 non-goal. The raider's old cell falls vacant — it left
+    /// explicit spec §9 non-goal. The raider's old vertex falls vacant — it left
     /// its poor land for the prize — and is therefore itself a candidate
     /// refuge for the remnant it just displaced.
     ///
@@ -3173,7 +3173,7 @@ impl<'a> Bake<'a> {
             .values()
             .filter(|tr| tr.patron == raider)
             .count();
-        // (target index, that cell's value, the target's strength, its cell,
+        // (target index, that vertex's value, the target's strength, its vertex,
         //  and how a raid on it would resolve)
         let mut best: Option<(usize, f64, f64, Vertex, Spoil)> = None;
         for n in traversable_neighbors(self.cur(), raider_site) {
@@ -3266,20 +3266,20 @@ impl<'a> Bake<'a> {
         // and nothing between it and its old site can observe the move.)
         match kind {
             Spoil::Subordinate => {
-                // The mobile prize: the target keeps its cell, its people and
+                // The mobile prize: the target keeps its vertex, its people and
                 // its life, and begins paying. NOTHING here touches
                 // `node_index` — subordination moves nobody, so the
                 // one-alive-per-site invariant is untouched by construction
                 // rather than by careful sequencing.
                 //
-                // The assessment reads the SUBORDINATE'S CELL, never its
+                // The assessment reads the SUBORDINATE'S VERTEX, never its
                 // granary: land tax is assessed on area precisely because the
                 // granary cannot be seen (spec §4.2). A second bid overwrites,
                 // which IS the patronage transfer — `tribute` is keyed by the
                 // subordinate, so one patron per community is structural.
                 // Assessed on what the ground yields TO ITS OCCUPANT, matching
                 // `collect_tribute`'s `sub_eff` (The Tilth). The subordinate keeps
-                // its cell in this branch, so the tax base is its own capacity
+                // its vertex in this branch, so the tax base is its own capacity
                 // there; reading it through the new patron's niche would set a
                 // demand the vassal's fields were never able to meet.
                 let target_pidx = self.communities[target].people_idx;
@@ -3364,10 +3364,10 @@ impl<'a> Bake<'a> {
         let loser_pop = self.communities[target].population;
 
         // Sequence the index bookkeeping so the one-alive-per-site invariant
-        // holds at every step and no cell ever points at a dead community.
-        // `close` frees a cell only when the closing community is the one
+        // holds at every step and no vertex ever points at a dead community.
+        // `close` frees a vertex only when the closing community is the one
         // indexed there, so closing BOTH sides first leaves the raider's old
-        // cell vacant (it left) and the prize vacant, and the `open` that
+        // vertex vacant (it left) and the prize vacant, and the `open` that
         // follows re-indexes the prize onto its new, living occupant.
         //
         // Both sides are RELOCATING, not dying, so both lift the vassals they
@@ -3376,7 +3376,7 @@ impl<'a> Bake<'a> {
         // role-asymmetric, so a raider that was somebody's vassal buys its
         // freedom with the move, and so does the loser it drives off. The
         // raider's lift runs first so that a patron conquering its own
-        // vassal's cell moves that entry out as the patron's portfolio rather
+        // vassal's vertex moves that entry out as the patron's portfolio rather
         // than leaving it to be found twice — one carrier, never two.
         let raider_carried = self.lift_portfolio(raider);
         let loser_carried = self.lift_portfolio(target);
@@ -3576,11 +3576,11 @@ pub fn bake(
     };
 
     // 1. Seed the ancient world at each people's OWN best ground — one alive
-    //    community per site. Each people's pool is its top `GENESIS_TOP_CELLS`
-    //    cells by ITS river-weighted capacity, which is kept well above the
+    //    community per site. Each people's pool is its top `GENESIS_TOP_VERTICES`
+    //    vertices by ITS river-weighted capacity, which is kept well above the
     //    per-people genesis count so every people finds vacant proto-sites even
     //    after the peoples before it have taken theirs. Each people draws from
-    //    the cells still vacant when its turn comes, retrying past a collision
+    //    the vertices still vacant when its turn comes, retrying past a collision
     //    rather than wasting the draw, so its `count` sites really do open.
     let earliest = eras
         .iter()
@@ -3602,9 +3602,9 @@ pub fn bake(
         // cut of this rewire kept one species-blind ranking here, on the argument
         // that "where is the good land" is a fair question to ask of the ground
         // alone. It is not, once a people can only live in its niche: the top 64
-        // cells by bare productivity are lowland river cells, so **kobold — whose
+        // vertices by bare productivity are lowland river vertices, so **kobold — whose
         // only discriminating axis is elevation, with a hard 0.0 floor, and whose
-        // ground is the >3000 m band — was seeded entirely onto cells worth zero
+        // ground is the >3000 m band — was seeded entirely onto vertices worth zero
         // to it, evicted in the first epoch, and vanished from the world.**
         // `species_worlds::default_world_carries_all_four_peoples_with_their_own_flagships`
         // caught it ("kobold must hold at least one settlement"); nothing about
@@ -3622,14 +3622,14 @@ pub fn bake(
             })
             .collect();
         // Rank by river-weighted capacity IN THIS PEOPLE'S UNITS (Task 5b's river
-        // bias, preserved): a river-adjacent cell outranks an equally-fertile one
+        // bias, preserved): a river-adjacent vertex outranks an equally-fertile one
         // far from water. Tie-broken by lowest Vertex — total and deterministic.
         pool.sort_by(|a, b| {
             let sa = bake.caps_now()[pidx].at(*a) * river_factor(*river_prox.get(*a));
             let sb = bake.caps_now()[pidx].at(*b) * river_factor(*river_prox.get(*b));
             sb.total_cmp(&sa).then(a.cmp(b))
         });
-        pool.truncate(GENESIS_TOP_CELLS);
+        pool.truncate(GENESIS_TOP_VERTICES);
         let mut opened = 0;
         while opened < count && !pool.is_empty() {
             let pick = pstream.range_u32(0, pool.len() as u32 - 1) as usize;
@@ -3830,7 +3830,7 @@ mod tests {
     }
 
     #[test]
-    fn approach_ease_is_zero_for_an_isolated_cell() {
+    fn approach_ease_is_zero_for_an_isolated_vertex() {
         use hornvale_topology::ConnectionGraph;
         let g = ConnectionGraph::new(2);
         assert_eq!(approach_ease(&g, Vertex(0)), 0.0);
@@ -3843,11 +3843,11 @@ mod tests {
     /// file's helper.
     fn full_land_graph(geo: &Geosphere) -> ConnectionGraph {
         let mut g = ConnectionGraph::new(geo.vertex_count());
-        for cell in geo.vertices() {
-            for &n in geo.neighbors(cell) {
-                if n.0 > cell.0 {
+        for vertex in geo.vertices() {
+            for &n in geo.neighbors(vertex) {
+                if n.0 > vertex.0 {
                     g.add_edge(
-                        cell,
+                        vertex,
                         Edge {
                             to: n,
                             kind: EdgeKind::Adjacency,
@@ -3907,7 +3907,7 @@ mod tests {
             tally: BakeCensus::default(),
         };
 
-        // Genesis: R1 opens at cell 5. A genesis community is its own
+        // Genesis: R1 opens at vertex 5. A genesis community is its own
         // lineage root.
         let r1_idx = bake.open(
             people,
@@ -3986,7 +3986,7 @@ mod tests {
     }
 
     /// The owned inputs a hand-built [`Bake`] borrows, over `Geosphere::new(1)`
-    /// with a full-land graph and every cell habitable in the single era.
+    /// with a full-land graph and every vertex habitable in the single era.
     /// `capacity_of` paints the value gradient the conflict tests need.
     /// [`cascade_world`]'s owned inputs. Named because the capacity term became
     /// `[era][people]` with The Tense and the bare tuple stopped being readable.
@@ -4016,10 +4016,10 @@ mod tests {
         (geo, graphs, capacity, river_prox, refugia, era)
     }
 
-    /// Marginal land in [`cascade_world`] — a cell worth taking only when
+    /// Marginal land in [`cascade_world`] — a vertex worth taking only when
     /// nothing better is admissible.
     const POOR: f64 = 10.0;
-    /// Prime land in [`cascade_world`] — ten times a poor cell's worth.
+    /// Prime land in [`cascade_world`] — ten times a poor vertex's worth.
     const RICH: f64 = 100.0;
 
     /// The roster a hand-built [`Bake`] is given: every settling people, so any
@@ -4120,10 +4120,10 @@ mod tests {
     }
 
     /// The seating a hand-built [`Bake`] is given by default: every people in
-    /// [`all_settlers`] on the `Surface` rung at every cell.
+    /// [`all_settlers`] on the `Surface` rung at every vertex.
     ///
     /// This is the pre-campaign world, restated in the wider key. Every test
-    /// written before spec §4.6 keys `(cell, Surface)` and behaves exactly as
+    /// written before spec §4.6 keys `(vertex, Surface)` and behaves exactly as
     /// it did against a `BTreeMap<Vertex, _>` — which is what makes those
     /// tests, unchanged, the re-key's surface-invariance evidence rather than
     /// a set of expectations that had to be re-pinned.
@@ -4232,7 +4232,7 @@ mod tests {
         }
     }
 
-    /// A uniform, fully habitable [`EraClimate`] at `day` over a one-cell
+    /// A uniform, fully habitable [`EraClimate`] at `day` over a one-vertex
     /// world — the frame the store test's fixture is built on.
     fn era_at(day: f64) -> EraClimate {
         use hornvale_kernel::ReferenceElevation;
@@ -4249,7 +4249,7 @@ mod tests {
     #[test]
     fn stores_raise_strength_but_never_pressure() {
         // A hand-built Bake with one genesis community (population 10) on a
-        // one-cell, fully-habitable world, built from owned locals the test
+        // one-vertex, fully-habitable world, built from owned locals the test
         // borrows — the file's own fixture idiom (cf. `cascade_world`), not a
         // leaked `'static`. Give it stores and confirm:
         //   (a) strength rises with stores
@@ -4296,7 +4296,7 @@ mod tests {
         // be taken. Two defects this catches: the term wired to the ATTACKER's
         // side, and `from`/`to` transposed (the graph is mirrored, so a
         // transposition compiles and mostly works — it fails exactly when the
-        // two cells' parallel-edge sets differ).
+        // two vertices' parallel-edge sets differ).
         use hornvale_kernel::ReferenceElevation;
 
         let geo = Geosphere::new(1);
@@ -4304,7 +4304,7 @@ mod tests {
         let neighbors = geo.neighbors(raider_site);
         assert!(
             neighbors.len() >= 2,
-            "fixture precondition: the raider's cell needs at least two neighbours"
+            "fixture precondition: the raider's vertex needs at least two neighbours"
         );
         let easy = neighbors[0];
         let hard = neighbors[1];
@@ -4816,7 +4816,7 @@ mod tests {
         // So this drives the bake's own epoch loop by hand — `begin_epoch`,
         // every alive community through `step_community`, then
         // `collect_tribute` — over a value-flat world: uniform capacity, so no
-        // cell is ever worth more than its neighbour, every raid the real rule
+        // vertex is ever worth more than its neighbour, every raid the real rule
         // resolves is a subordination, and (asserted below) no war, eviction or
         // famine fires. `grow` and `collect_tribute` are then the ONLY two
         // things that move a population, so a population at the floor is
@@ -4955,7 +4955,7 @@ mod tests {
         );
         assert_eq!(
             bake.tally.migrated, 0,
-            "no cell turns hostile here: a migration would confound the floor"
+            "no vertex turns hostile here: a migration would confound the floor"
         );
     }
 
@@ -5078,7 +5078,7 @@ mod tests {
         );
         assert_eq!(
             bake.tally.migrated, 0,
-            "no cell turns hostile here: a migration would confound the bleed"
+            "no vertex turns hostile here: a migration would confound the bleed"
         );
         assert_eq!(
             bake.tally.collapsed, 0,
@@ -5268,7 +5268,7 @@ mod tests {
             );
             assert_eq!(
                 bake.tally.migrated, 0,
-                "no cell turns hostile here: a migration would confound the reading"
+                "no vertex turns hostile here: a migration would confound the reading"
             );
             assert_eq!(
                 bake.tally.collapsed, 0,
@@ -5315,7 +5315,7 @@ mod tests {
         // nothing: "the generational patron declined" passes trivially on a
         // fixture where no raid was possible at all, and "the immediate patron
         // took it" says nothing about foresight. Same world, same pair, same
-        // populations, same cells, same stream; the ONLY difference between the
+        // populations, same vertices, same stream; the ONLY difference between the
         // arms is the patron people's authored `time_horizon`.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         /// The immediate patron's horizon — bugbear's authored value. The
@@ -5550,7 +5550,7 @@ mod tests {
             let ring = geo.neighbors(Vertex(0));
             assert!(
                 ring.len() > EXTRAS,
-                "precondition: the patron's cell must have room for {EXTRAS} further vassals \
+                "precondition: the patron's vertex must have room for {EXTRAS} further vassals \
                  beside the focus one ({} neighbours)",
                 ring.len()
             );
@@ -5886,7 +5886,7 @@ mod tests {
             .expect("the fleeing people must be standing somewhere else — it left, it did not die");
         assert_ne!(
             bake.communities[arrived].site, far,
-            "…on a different cell from the one it abandoned"
+            "…on a different vertex from the one it abandoned"
         );
         assert_eq!(
             bake.tribute.get(&arrived).map(|t| t.patron),
@@ -5905,7 +5905,7 @@ mod tests {
             bake.communities[patron].alive
                 && bake.communities[patron].site == Vertex(0)
                 && bake.communities[patron].stores > 0.0,
-            "the patron keeps its cell and what it already collected: it loses the stream, \
+            "the patron keeps its vertex and what it already collected: it loses the stream, \
              not the hoard — the flight is not a raid on it"
         );
 
@@ -5929,9 +5929,9 @@ mod tests {
         // false.
         //
         // The shape that reaches it: a vassal with a real reason to leave and
-        // **nowhere admissible to go**. Only two cells in this world are
+        // **nowhere admissible to go**. Only two vertices in this world are
         // habitable at all — the patron's and the vassal's — so once the
-        // vassal's own cell is closed behind it (`from` is never offered to
+        // vassal's own vertex is closed behind it (`from` is never offered to
         // `best_home`) the whole map is either worthless or held by a lord it
         // cannot beat. The road ends nowhere.
         //
@@ -5943,14 +5943,14 @@ mod tests {
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let far = geo.neighbors(Vertex(0))[0];
-        // The whole world is dead ground except the two cells this fixture
+        // The whole world is dead ground except the two vertices this fixture
         // occupies. Since The Tilth that is said in CAPACITY, not in a mask:
-        // `vacant_for` admits a cell only where this people's capacity is
-        // positive, so a zero-capacity cell is never a candidate. This fixture
+        // `vacant_for` admits a vertex only where this people's capacity is
+        // positive, so a zero-capacity vertex is never a candidate. This fixture
         // used to build the same dead ground out of `EraClimate.habitable`,
         // which `Bake::factor` no longer reads — the mask went inert and the
         // road silently led somewhere, so the test was measuring a successful
-        // flight. Habitability is a relation between a people and a cell now,
+        // flight. Habitability is a relation between a people and a vertex now,
         // and a fixture that wants unusable ground has to say so in that
         // language.
         let capacity = caps_from_fn(&geo, |c| {
@@ -5976,7 +5976,7 @@ mod tests {
         /// test nothing).
         const VASSAL_POP: f64 = 20.0;
         /// The patron's people — over `VASSAL_POP × RAID_MARGIN`, so the vassal
-        /// can neither revolt nor take the one other habitable cell in the
+        /// can neither revolt nor take the one other habitable vertex in the
         /// world by force.
         const PATRON_POP: f64 = 40.0;
         /// The standing demand: above `FLIGHT_BURDEN` of what the vassal holds
@@ -6095,7 +6095,7 @@ mod tests {
         // "The table shrank" is satisfiable by a bug that drops relations
         // wholesale, so freedom is asserted from both ends: the entry is gone,
         // AND the patron collects nothing further from a vassal that is still
-        // alive, still on its cell, and still growing. The epoch it revolts in
+        // alive, still on its vertex, and still growing. The epoch it revolts in
         // it is not milked either — spec §4.3d's revolt is tested BEFORE
         // collection, so a community strong enough to refuse does refuse.
         //
@@ -6109,7 +6109,7 @@ mod tests {
         /// The patron's population while it still holds the whip hand.
         const PATRON_POP: f64 = 40.0;
         /// What the patron is left with after the world breaks it (a war, a
-        /// famine, a cell the ice took) — chosen so the vassal clears
+        /// famine, a vertex the ice took) — chosen so the vassal clears
         /// `RAID_MARGIN` over it and not by an inch: nothing in this file
         /// moves it there, the test does, because *why* the balance swung is
         /// not what this rule reads.
@@ -6213,7 +6213,7 @@ mod tests {
         );
         assert!(
             bake.communities[sub].alive && bake.communities[sub].site == far,
-            "the vassal is FREE, not dead: it keeps its people and its cell (a revolt is not \
+            "the vassal is FREE, not dead: it keeps its people and its vertex (a revolt is not \
              an eviction)"
         );
         assert!(
@@ -6282,7 +6282,7 @@ mod tests {
         // Arithmetic, all Neolithic (weight 1.0) in year 0:
         //   patron   40 pop + 20 stores          → strength 40 + 0.5×20 = 50
         //   attacker 100 pop on POORER land      → 100 > 50 × RAID_MARGIN = 75, and
-        //                                          the patron's cell is worth more,
+        //                                          the patron's vertex is worth more,
         //                                          so the raid EVICTS
         //   patron after the war                 → 40 × (1 − WAR_LOSS) = 28, and the
         //                                          hoard dies with the old community
@@ -6294,11 +6294,11 @@ mod tests {
         let (geo, graphs, capacity, river_prox, refugia, era) = {
             let geo = Geosphere::new(1);
             let ring = geo.neighbors(Vertex(0));
-            let (seat, vassal_cell) = (ring[0], ring[1]);
+            let (seat, vassal_vertex) = (ring[0], ring[1]);
             cascade_world(move |c| match c {
                 Vertex(0) => 200.0,      // the patron's prize land — the reason it is raided
                 c if c == seat => 150.0, // the attacker's poorer holding, vacated by its win
-                c if c == vassal_cell => 60.0, // enough that the vassal is no husk
+                c if c == vassal_vertex => 60.0, // enough that the vassal is no husk
                 _ => POOR,
             })
         };
@@ -6317,7 +6317,7 @@ mod tests {
         const VASSAL_POP: f64 = 43.0;
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let ring = geo.neighbors(Vertex(0));
-        let (seat, vassal_cell) = (ring[0], ring[1]);
+        let (seat, vassal_vertex) = (ring[0], ring[1]);
         let patron = bake.open(
             KindId("goblin"),
             Vertex(0),
@@ -6331,10 +6331,10 @@ mod tests {
         let patron_lineage = bake.communities[patron].lineage;
         let vassal = bake.open(
             KindId("kobold"),
-            vassal_cell,
+            vassal_vertex,
             0.0,
             VASSAL_POP,
-            Founding::Genesis(vassal_cell),
+            Founding::Genesis(vassal_vertex),
             None,
             0.0,
         );
@@ -6389,7 +6389,7 @@ mod tests {
         );
         assert!(
             !bake.communities[patron].alive,
-            "precondition: the patron must have LOST its cell — this test is about what \
+            "precondition: the patron must have LOST its vertex — this test is about what \
              survives being beaten, not about being left alone"
         );
         let rec = &bake.records[bake.communities[patron].record];
@@ -6410,7 +6410,7 @@ mod tests {
         assert_ne!(
             bake.communities[reseated].site,
             Vertex(0),
-            "…on a different cell from the one it lost"
+            "…on a different vertex from the one it lost"
         );
 
         // (b) It still holds its vassal, and it is the SAME relation — not one
@@ -6474,8 +6474,8 @@ mod tests {
         );
         assert!(
             bake.communities[vassal].alive
-                && bake.communities[vassal].site == vassal_cell
-                && bake.node_index.get(&(vassal_cell, Band::Surface)) == Some(&vassal),
+                && bake.communities[vassal].site == vassal_vertex
+                && bake.node_index.get(&(vassal_vertex, Band::Surface)) == Some(&vassal),
             "the vassal itself never moved — only its lord did"
         );
 
@@ -6545,7 +6545,7 @@ mod tests {
         // Arithmetic, all Neolithic (weight 1.0) in year 0:
         //   lord     40 pop + 20 stores       → strength 40 + 0.5×20 = 50
         //   attacker 100 pop on POORER land   → 100 > 50 × RAID_MARGIN = 75, and
-        //                                       the lord's cell is worth more, so
+        //                                       the lord's vertex is worth more, so
         //                                       the raid EVICTS
         //   lord after the war                → 40 × (1 − WAR_LOSS) = 28, hoard lost
         //   each vassal 20 pop, no stores     → 28 ≤ 20 × RAID_MARGIN = 30, so the
@@ -6557,12 +6557,12 @@ mod tests {
         let (geo, graphs, capacity, river_prox, refugia, era) = {
             let geo = Geosphere::new(1);
             let ring = geo.neighbors(Vertex(0));
-            let (seat, stayer_cell, runaway_cell) = (ring[0], ring[1], ring[2]);
+            let (seat, stayer_vertex, runaway_vertex) = (ring[0], ring[1], ring[2]);
             cascade_world(move |c| match c {
-                Vertex(0) => 200.0,            // the lord's prize land
-                c if c == seat => 150.0,       // the attacker's poorer holding
-                c if c == stayer_cell => 60.0, // enough that neither vassal is a husk
-                c if c == runaway_cell => 60.0,
+                Vertex(0) => 200.0,              // the lord's prize land
+                c if c == seat => 150.0,         // the attacker's poorer holding
+                c if c == stayer_vertex => 60.0, // enough that neither vassal is a husk
+                c if c == runaway_vertex => 60.0,
                 _ => POOR,
             })
         };
@@ -6575,7 +6575,7 @@ mod tests {
         /// `RAID_MARGIN`, so the raid is certain.
         const ATTACKER_POP: f64 = 100.0;
         /// Each vassal's people. Small enough not to revolt against the beaten
-        /// lord, large enough that the beaten lord cannot take its cell on the
+        /// lord, large enough that the beaten lord cannot take its vertex on the
         /// road and that the road is survivable once the demand is paid.
         const VASSAL_POP: f64 = 20.0;
         /// The demand that drives the runaway out: above `FLIGHT_BURDEN` of
@@ -6585,7 +6585,7 @@ mod tests {
         const LIGHT_DEMAND: f64 = 1.0;
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let ring = geo.neighbors(Vertex(0));
-        let (seat, stayer_cell, runaway_cell) = (ring[0], ring[1], ring[2]);
+        let (seat, stayer_vertex, runaway_vertex) = (ring[0], ring[1], ring[2]);
         let lord = bake.open(
             KindId("goblin"),
             Vertex(0),
@@ -6599,19 +6599,19 @@ mod tests {
         let lord_lineage = bake.communities[lord].lineage;
         let stayer = bake.open(
             KindId("kobold"),
-            stayer_cell,
+            stayer_vertex,
             0.0,
             VASSAL_POP,
-            Founding::Genesis(stayer_cell),
+            Founding::Genesis(stayer_vertex),
             None,
             0.0,
         );
         let runaway = bake.open(
             KindId("bugbear"),
-            runaway_cell,
+            runaway_vertex,
             0.0,
             VASSAL_POP,
-            Founding::Genesis(runaway_cell),
+            Founding::Genesis(runaway_vertex),
             None,
             0.0,
         );
@@ -6656,7 +6656,7 @@ mod tests {
         );
         assert!(
             !bake.communities[lord].alive,
-            "precondition: the lord must have LOST its cell — this arm is about what \
+            "precondition: the lord must have LOST its vertex — this arm is about what \
              survives being beaten"
         );
         let reseated = bake
@@ -6798,7 +6798,7 @@ mod tests {
     fn the_low_root_is_exactly_where_the_opening_demand_stops_being_payable() {
         // `crash_basin_fraction` is derived, never written down, so what needs
         // pinning is the ALGEBRA and not the number: at that fraction of a
-        // cell's capacity the vassal's logistic increment exactly equals the
+        // vertex's capacity the vassal's logistic increment exactly equals the
         // opening demand, and a hair below it the demand wins. A value pinned
         // as 0.1464 would survive any error in the derivation; this does not.
         let x = crash_basin_fraction();
@@ -6838,7 +6838,7 @@ mod tests {
         // one this campaign never proposed.
         //
         // Same too-small target as the decline test, same generational patron;
-        // only the raider's own cell is poorer, which is what turns the prize
+        // only the raider's own vertex is poorer, which is what turns the prize
         // from a mobile one into an immobile one.
         let (geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == Vertex(0) { POOR } else { RICH });
@@ -6949,7 +6949,7 @@ mod tests {
         // its own: on land too poor to carry `2 × FARM_FLOOR`, `eff/2` sits
         // BELOW the floor, the bracket goes negative, and a long-horizon
         // patron would steer its vassal to a setpoint under the one bound
-        // tribute may never cross. Marginal cells are exactly where a farmed
+        // tribute may never cross. Marginal vertices are exactly where a farmed
         // community is least able to survive it.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
@@ -6966,7 +6966,7 @@ mod tests {
         let marginal = FARM_FLOOR;
         assert!(
             marginal / 2.0 < FARM_FLOOR,
-            "precondition: this cell's MSY ({}) must sit below the floor ({FARM_FLOOR}), or the \
+            "precondition: this vertex's MSY ({}) must sit below the floor ({FARM_FLOOR}), or the \
              clamp is not being exercised",
             marginal / 2.0
         );
@@ -6975,12 +6975,12 @@ mod tests {
             FARM_FLOOR.to_bits(),
             "a setpoint on marginal land must be raised back to the floor, never left below it"
         );
-        // A dead cell (an era has made it worthless) is the degenerate case of
+        // A dead vertex (an era has made it worthless) is the degenerate case of
         // the same thing.
         assert_eq!(
             bake.target_stock(KindId("goblin"), 0, 0.0).to_bits(),
             FARM_FLOOR.to_bits(),
-            "and a cell the era has killed must not put the setpoint at zero"
+            "and a vertex the era has killed must not put the setpoint at zero"
         );
     }
 
@@ -6989,13 +6989,13 @@ mod tests {
         // The mobile prize (spec §4.1): the raid takes the people's product,
         // not their ground, so nobody moves, nobody dies, and — the invariant
         // that matters — `node_index` is not touched at all. A subordination
-        // that quietly re-indexed a cell would break the one-alive-per-site
+        // that quietly re-indexed a vertex would break the one-alive-per-site
         // invariant in a way no census field would show.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let far = geo.neighbors(Vertex(0))[0];
 
-        // Equal-value cells (the world is value-flat), so `t_val > raider_val`
+        // Equal-value vertices (the world is value-flat), so `t_val > raider_val`
         // is FALSE and the shipped eviction path cannot fire. A big raider, a
         // small but far-from-capacity — i.e. productive — neighbour.
         let raider = bake.open(
@@ -7027,11 +7027,11 @@ mod tests {
             .expect("a relation formed");
         assert_eq!(t.patron, raider, "the raider must be the patron");
         // Pinned exactly, not to a slack band: `ASSESS_RATE` of the
-        // SUBORDINATE cell's effective capacity, which here is `RICH` (the
+        // SUBORDINATE vertex's effective capacity, which here is `RICH` (the
         // era mask is 1.0 everywhere and the clamp does not bind). A band of
         // `(0, RICH × ASSESS_MAX]` would pass for any rate in `(0, 0.5]`.
-        // Which cell is read is bound by
-        // `the_assessment_reads_the_subordinates_cell_not_the_raiders`, since
+        // Which vertex is read is bound by
+        // `the_assessment_reads_the_subordinates_vertex_not_the_raiders`, since
         // this world is value-flat and cannot distinguish the two.
         assert_eq!(
             t.assessment.to_bits(),
@@ -7066,7 +7066,7 @@ mod tests {
         );
     }
 
-    /// Three cells in a line — `x ~ y ~ z`, with `x` and `z` **not** adjacent
+    /// Three vertices in a line — `x ~ y ~ z`, with `x` and `z` **not** adjacent
     /// — deterministically chosen (lowest ids first) and asserted rather than
     /// hoped for: on a triangle every community would see every other and
     /// neither depth guard could be exercised in isolation.
@@ -7222,10 +7222,10 @@ mod tests {
     /// A raider on prime land beside a subordinate on marginal land, plus the
     /// two indices. The value asymmetry is the point: `Subordinate` requires
     /// `t_val <= raider_val`, so a *poorer* target is legal, and it is the only
-    /// shape that can tell "reads the subordinate's cell" from "reads the
+    /// shape that can tell "reads the subordinate's vertex" from "reads the
     /// raider's" — which spec §4.2's information asymmetry turns on.
     #[test]
-    fn the_assessment_reads_the_subordinates_cell_not_the_raiders() {
+    fn the_assessment_reads_the_subordinates_vertex_not_the_raiders() {
         let (geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == Vertex(0) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -7240,7 +7240,7 @@ mod tests {
             None,
             0.0,
         );
-        // Population 5 on a cell worth 10: pressure 0.5, so it is productive
+        // Population 5 on a vertex worth 10: pressure 0.5, so it is productive
         // (`has_spoils`) and beatable, but its ground is worth a tenth of the
         // raider's — no eviction motive at all.
         let target = bake.open(
@@ -7407,10 +7407,10 @@ mod tests {
     /// GROWTH_RATE)² × SHOCK > 1` a community shocked every other epoch still
     /// recovers, so what the long run measures is the controller's stability
     /// and not a population dying of the disturbance itself. A harsher blow
-    /// (0.6, tried first) empties the cell whatever the assessment does.
+    /// (0.6, tried first) empties the vertex whatever the assessment does.
     ///
     /// It stands in for the population movers a one-pair fixture cannot fire —
-    /// a war loss (`WAR_LOSS`, 0.3), a famine, a cell turned hostile.
+    /// a war loss (`WAR_LOSS`, 0.3), a famine, a vertex turned hostile.
     ///
     /// **It was load-bearing before amendment 3 and is merely a disturbance
     /// after it.** Under the superseded cap a remittance could not exceed the
@@ -7818,7 +7818,7 @@ mod tests {
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let ring = geo.neighbors(Vertex(0));
-        let (incumbent_cell, rival_cell) = (ring[0], ring[1]);
+        let (incumbent_vertex, rival_vertex) = (ring[0], ring[1]);
 
         let target = bake.open(
             KindId("goblin"),
@@ -7831,20 +7831,20 @@ mod tests {
         );
         let incumbent = bake.open(
             KindId("kobold"),
-            incumbent_cell,
+            incumbent_vertex,
             0.0,
             20.0,
-            Founding::Genesis(incumbent_cell),
+            Founding::Genesis(incumbent_vertex),
             None,
             0.0,
         );
         // 80 clears 20 × RAID_MARGIN comfortably: this bid qualifies.
         let rival = bake.open(
             KindId("bugbear"),
-            rival_cell,
+            rival_vertex,
             0.0,
             80.0,
-            Founding::Genesis(rival_cell),
+            Founding::Genesis(rival_vertex),
             None,
             0.0,
         );
@@ -7881,7 +7881,7 @@ mod tests {
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let ring = geo.neighbors(Vertex(0));
-        let (incumbent_cell, rival_cell) = (ring[0], ring[1]);
+        let (incumbent_vertex, rival_vertex) = (ring[0], ring[1]);
 
         let target = bake.open(
             KindId("goblin"),
@@ -7894,19 +7894,19 @@ mod tests {
         );
         let incumbent = bake.open(
             KindId("kobold"),
-            incumbent_cell,
+            incumbent_vertex,
             0.0,
             20.0,
-            Founding::Genesis(incumbent_cell),
+            Founding::Genesis(incumbent_vertex),
             None,
             0.0,
         );
         let rival = bake.open(
             KindId("bugbear"),
-            rival_cell,
+            rival_vertex,
             0.0,
             25.0,
-            Founding::Genesis(rival_cell),
+            Founding::Genesis(rival_vertex),
             None,
             0.0,
         );
@@ -7999,7 +7999,7 @@ mod tests {
         let (geo, graphs, capacity, river_prox, refugia, _era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let ring = geo.neighbors(Vertex(0));
-        let (cell_a, cell_b) = (ring[0], ring[1]);
+        let (vertex_a, vertex_b) = (ring[0], ring[1]);
 
         let patron = bake.open(
             KindId("goblin"),
@@ -8012,19 +8012,19 @@ mod tests {
         );
         let sub_a = bake.open(
             KindId("kobold"),
-            cell_a,
+            vertex_a,
             0.0,
             10.0,
-            Founding::Genesis(cell_a),
+            Founding::Genesis(vertex_a),
             None,
             0.0,
         );
         let sub_b = bake.open(
             KindId("bugbear"),
-            cell_b,
+            vertex_b,
             0.0,
             10.0,
-            Founding::Genesis(cell_b),
+            Founding::Genesis(vertex_b),
             None,
             0.0,
         );
@@ -8065,17 +8065,17 @@ mod tests {
             "the freed subordinate must survive its patron"
         );
         assert_eq!(
-            bake.node_index.get(&(cell_b, Band::Surface)),
+            bake.node_index.get(&(vertex_b, Band::Surface)),
             Some(&sub_b),
-            "the freed subordinate keeps its cell"
+            "the freed subordinate keeps its vertex"
         );
     }
 
     #[test]
-    fn a_roller_takes_the_rich_held_cell_over_the_marginal_vacant_one() {
+    fn a_roller_takes_the_rich_held_vertex_over_the_marginal_vacant_one() {
         // Spec §4.3's amended rule, and the whole reason Task 1 measured a
         // structurally-zero branching ratio: a displaced people compares every
-        // reachable cell in ONE pass. A rich cell held by a beatable neighbour
+        // reachable vertex in ONE pass. A rich vertex held by a beatable neighbour
         // outbids marginal vacant land, so the roller preys rather than
         // pioneering — and the holder it evicts rolls onward. Under the
         // vacant-first rule this returns `cascade: 0` and no cascade is ever
@@ -8084,8 +8084,8 @@ mod tests {
             cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
-        // A weak community sits on the one rich cell; a strong people is
-        // driven off cell 0 (poor land) and must find a home.
+        // A weak community sits on the one rich vertex; a strong people is
+        // driven off vertex 0 (poor land) and must find a home.
         let holder = bake.open(
             KindId("goblin"),
             Vertex(20),
@@ -8126,19 +8126,19 @@ mod tests {
         assert_eq!(
             outcome,
             Relocation::Settled { cascade: 1 },
-            "the roller must displace the rich cell's holder, not settle marginal vacant land"
+            "the roller must displace the rich vertex's holder, not settle marginal vacant land"
         );
 
-        // The rich cell is now held by the roller's people, at its post-war
+        // The rich vertex is now held by the roller's people, at its post-war
         // population, and the holder is dead and driven off.
         let seated = *bake
             .node_index
             .get(&(Vertex(20), Band::Surface))
-            .expect("the rich cell must be occupied");
+            .expect("the rich vertex must be occupied");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
             KindId("kobold"),
-            "the roller must be the one seated on the rich cell"
+            "the roller must be the one seated on the rich vertex"
         );
         assert!(
             (bake.communities[seated].population - 50.0 * (1.0 - WAR_LOSS)).abs() < 1e-9,
@@ -8184,12 +8184,12 @@ mod tests {
         // resettle — restoring the old call-site increment alongside the new
         // one makes this read 2.
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(Vertex(0))[0];
+        let target_vertex = probe.neighbors(Vertex(0))[0];
         let (_geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+            cascade_world(|c| if c == target_vertex { 110.0 } else { 100.0 });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         // A strong raider on land worth less than its neighbour's, and a fed,
-        // beatable target holding the better cell.
+        // beatable target holding the better vertex.
         let raider = bake.open(
             KindId("kobold"),
             Vertex(0),
@@ -8201,10 +8201,10 @@ mod tests {
         );
         bake.open(
             KindId("goblin"),
-            target_cell,
+            target_vertex,
             0.0,
             50.0,
-            Founding::Genesis(target_cell),
+            Founding::Genesis(target_vertex),
             None,
             0.0,
         );
@@ -8238,14 +8238,14 @@ mod tests {
         // prey, or the guard would be a blanket ban on weak conquerors rather
         // than the viability rule it is. Both halves are asserted, so the test
         // pins where the threshold sits and not merely that one exists.
-        let take_the_rich_cell = |roller_pop: f64| {
+        let take_the_rich_vertex = |roller_pop: f64| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
                 cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
-            // A very weak holder sits on the one rich cell: beatable by even a
+            // A very weak holder sits on the one rich vertex: beatable by even a
             // sub-viable roller (`RAID_MARGIN` clears at strength 1.5+), and
-            // far enough below its cell's capacity to have spoils worth taking.
+            // far enough below its vertex's capacity to have spoils worth taking.
             bake.open(
                 KindId("goblin"),
                 Vertex(20),
@@ -8285,15 +8285,15 @@ mod tests {
             let seated = *bake
                 .node_index
                 .get(&(Vertex(20), Band::Surface))
-                .expect("the rich cell is occupied either way");
+                .expect("the rich vertex is occupied either way");
             let holder_people = bake.records[bake.communities[seated].record].core.people;
             (outcome, holder_people)
         };
 
         // Inside the band: 2.5 clears `VIABLE_MIN` but 2.5 × 0.7 = 1.75 does
         // not, so held ground never enters the option set. It pioneers onto
-        // marginal vacant land and the goblins keep the rich cell.
-        let (outcome, holder) = take_the_rich_cell(2.5);
+        // marginal vacant land and the goblins keep the rich vertex.
+        let (outcome, holder) = take_the_rich_vertex(2.5);
         assert_eq!(
             outcome,
             Relocation::Settled { cascade: 0 },
@@ -8302,39 +8302,39 @@ mod tests {
         assert_eq!(
             holder,
             KindId("goblin"),
-            "the rich cell must not have changed hands: a sub-viable conqueror \
+            "the rich vertex must not have changed hands: a sub-viable conqueror \
              would hold it as a remnant this model already calls dead"
         );
 
         // Just above it: 2.9 × 0.7 = 2.03 clears `VIABLE_MIN`, so the very same
         // world resolves the other way. Without this half the assertion above
         // would also pass if the guard vetoed every weak roller outright.
-        let (outcome, holder) = take_the_rich_cell(2.9);
+        let (outcome, holder) = take_the_rich_vertex(2.9);
         assert_eq!(
             outcome,
             Relocation::Settled { cascade: 1 },
-            "a roller that CAN survive winning still takes the rich held cell"
+            "a roller that CAN survive winning still takes the rich held vertex"
         );
         assert_eq!(
             holder,
             KindId("kobold"),
-            "the rich cell must have changed hands just above the threshold"
+            "the rich vertex must have changed hands just above the threshold"
         );
     }
 
     #[test]
-    fn the_settled_premium_makes_a_held_cell_outbid_an_equal_vacant_one() {
+    fn the_settled_premium_makes_a_held_vertex_outbid_an_equal_vacant_one() {
         // The only term in the model that RAISES conflict (spec §4.1): a held
-        // cell is worth more than an empty cell of equal capacity, because a
+        // vertex is worth more than an empty vertex of equal capacity, because a
         // rival's holding comes already made to work. With the premium at 0
-        // the roller takes the equally-rich EMPTY cell (no defender) and the
+        // the roller takes the equally-rich EMPTY vertex (no defender) and the
         // branching ratio collapses again.
         //
-        // Cells 18 and 20 are BOTH direct neighbours of cell 0 — the same ring.
+        // Vertices 18 and 20 are BOTH direct neighbours of vertex 0 — the same ring.
         // That is deliberate and is the whole point of spec §4.3's locality
-        // clause: the premium decides between a vacant and a held cell *at the
+        // clause: the premium decides between a vacant and a held vertex *at the
         // same distance*, which is the only place it should decide. Put the
-        // empty rich cell further out and distance, not the premium, would be
+        // empty rich vertex further out and distance, not the premium, would be
         // doing the work.
         let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|c| {
             if c == Vertex(20) || c == Vertex(18) {
@@ -8345,9 +8345,9 @@ mod tests {
         });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
-        // Cell 20 is rich AND held by a beatable community; cell 18 is rich
+        // Vertex 20 is rich AND held by a beatable community; vertex 18 is rich
         // and empty. Equal capacity — only the premium separates them. (The
-        // fixture named cell 30 before the locality fix reshaped it onto the
+        // fixture named vertex 30 before the locality fix reshaped it onto the
         // same ring; the comment lagged. Final review F-6.)
         bake.open(
             KindId("goblin"),
@@ -8389,12 +8389,12 @@ mod tests {
         assert_eq!(
             outcome,
             Relocation::Settled { cascade: 1 },
-            "the premium must make the HELD rich cell outbid the equally-rich empty one"
+            "the premium must make the HELD rich vertex outbid the equally-rich empty one"
         );
         let seated = *bake
             .node_index
             .get(&(Vertex(20), Band::Surface))
-            .expect("the held rich cell must have changed hands");
+            .expect("the held rich vertex must have changed hands");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
             KindId("kobold")
@@ -8405,11 +8405,11 @@ mod tests {
     fn a_roller_takes_a_near_home_over_a_richer_distant_one() {
         // Spec §4.3's locality clause. The scan stops at the FIRST ring that
         // offers anything admissible, so a remnant never crosses a landmass
-        // for a better cell: ten times the capacity, three hops away, loses to
+        // for a better vertex: ten times the capacity, three hops away, loses to
         // marginal land next door. Against an unrestricted scan over the whole
         // connected component this test fails — the roller seats itself on
         // Vertex(30) instead, and the occupied set of a real world drifts
-        // toward the globe's high-capacity cells.
+        // toward the globe's high-capacity vertices.
         let (geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == Vertex(30) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -8457,7 +8457,7 @@ mod tests {
             geo.neighbors(Vertex(0)).contains(&seat),
             "the roller must settle in the nearest ring, not cross the world for Vertex(30): sat on {seat:?}"
         );
-        // Within that ring every cell is equally poor and equally undefended,
+        // Within that ring every vertex is equally poor and equally undefended,
         // so the Vertex tie-break decides — a total, deterministic order.
         assert_eq!(seat, Vertex(12), "the ring's tie-break must be total");
     }
@@ -8474,7 +8474,7 @@ mod tests {
         // the globally lowest `Vertex`, which sits a ring further out again.)
         //
         // "Unusable" is said in CAPACITY, not in a mask. `vacant_for` admits a
-        // cell only where this people's capacity is positive; the two inner
+        // vertex only where this people's capacity is positive; the two inner
         // rings are worth nothing to the roller, so it walks past them. This
         // fixture used to block them with `EraClimate.habitable`, which
         // `Bake::factor` no longer reads — the mask went inert and the roller
@@ -8534,7 +8534,7 @@ mod tests {
     fn a_weak_roller_flees_to_the_empties_instead_of_preying() {
         // The emergent half of spec §4.3: there is no `if migrating else
         // raiding` branch. A remnant too weak to clear the dominance margin
-        // never sees the held cell in its option set at all, so it pioneers —
+        // never sees the held vertex in its option set at all, so it pioneers —
         // the same one rule, a different outcome.
         let (_geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
@@ -8566,7 +8566,7 @@ mod tests {
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
-        // Strength 3.0 does not clear 5.0 × RAID_MARGIN, so cell 20 is not an
+        // Strength 3.0 does not clear 5.0 × RAID_MARGIN, so vertex 20 is not an
         // option however rich it is.
         let outcome = bake.relocate_holding_nothing(
             KindId("kobold"),
@@ -8597,7 +8597,7 @@ mod tests {
         assert_eq!((bake.tally.raided, bake.tally.fled), (0, 0));
     }
 
-    /// The three cells of [`a_cascade_runs_three_hops_and_dies_of_dissipation`]'s
+    /// The three vertices of [`a_cascade_runs_three_hops_and_dies_of_dissipation`]'s
     /// strength ladder, in the order the chain takes them. Each is a `Geosphere::new(1)`
     /// neighbour of the one before it, and all three are neighbours of `Vertex(0)`
     /// (the origin the first roller is driven off), so every hop finds its
@@ -8624,7 +8624,7 @@ mod tests {
         // The fixture is a descending strength ladder on `LADDER`: each holder
         // is beatable by the remnant the hop before it produced, and by nobody
         // weaker. Capacity picks the route (each rung is worth far more than
-        // the POOR vacant land around it, so the held cell always outbids
+        // the POOR vacant land around it, so the held vertex always outbids
         // pioneering within the ring), and population picks how far the chain
         // gets. Arithmetic, all at Neolithic weight 1.0 in year 0:
         //
@@ -8645,7 +8645,7 @@ mod tests {
             let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|c| match c {
                 // Descending prizes. Each is worth more than POOR × (1 +
                 // SETTLED_PREMIUM), so a held rung always outbids the vacant
-                // cells sharing its ring — and each exceeds its holder's
+                // vertices sharing its ring — and each exceeds its holder's
                 // population, so no rung is a spoils-less husk.
                 c if c == LADDER[0] => 200.0,
                 c if c == LADDER[1] => 100.0,
@@ -8658,8 +8658,16 @@ mod tests {
                 (KindId("hobgoblin"), 20.0),
                 (TERMINAL, weakest),
             ];
-            for (&cell, &(people, pop)) in LADDER.iter().zip(holders.iter()) {
-                bake.open(people, cell, 0.0, pop, Founding::Genesis(cell), None, 0.0);
+            for (&vertex, &(people, pop)) in LADDER.iter().zip(holders.iter()) {
+                bake.open(
+                    people,
+                    vertex,
+                    0.0,
+                    pop,
+                    Founding::Genesis(vertex),
+                    None,
+                    0.0,
+                );
             }
             let roller = bake.open(
                 KindId("kobold"),
@@ -8692,9 +8700,9 @@ mod tests {
             // before it dies with this closure's frame: the outcome, the
             // tallies, who ended up seated on each rung, and whether the
             // bottom of the ladder is still anywhere in the world.
-            let seated = LADDER.map(|cell| {
+            let seated = LADDER.map(|vertex| {
                 bake.node_index
-                    .get(&(cell, Band::Surface))
+                    .get(&(vertex, Band::Surface))
                     .map(|&i| bake.records[bake.communities[i].record].core.people)
             });
             let terminal_survived = bake
@@ -8875,10 +8883,10 @@ mod tests {
         // is the ONLY thing that differs, and the fed arm proves the fixture
         // really does reach a raid.
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(Vertex(0))[0];
+        let target_vertex = probe.neighbors(Vertex(0))[0];
         let raid_with_target_pop = |target_pop: f64| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
-                cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+                cascade_world(|c| if c == target_vertex { 110.0 } else { 100.0 });
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
             // The raider: strong, on land worth less than its neighbour's.
             let raider = bake.open(
@@ -8892,10 +8900,10 @@ mod tests {
             );
             bake.open(
                 KindId("goblin"),
-                target_cell,
+                target_vertex,
                 0.0,
                 target_pop,
-                Founding::Genesis(target_cell),
+                Founding::Genesis(target_vertex),
                 None,
                 0.0,
             );
@@ -8997,10 +9005,10 @@ mod tests {
         // claim of `two_settlements_of_one_people_can_differ_in_raiding`; this
         // test's job is still the veto itself.
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(Vertex(0))[0];
+        let target_vertex = probe.neighbors(Vertex(0))[0];
         let raid_with_disposition = |disposition: BTreeMap<KindId, f64>| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
-                cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+                cascade_world(|c| if c == target_vertex { 110.0 } else { 100.0 });
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, &disposition);
             let raider = bake.open(
                 KindId("kobold"),
@@ -9013,10 +9021,10 @@ mod tests {
             );
             bake.open(
                 KindId("goblin"),
-                target_cell,
+                target_vertex,
                 0.0,
                 50.0,
-                Founding::Genesis(target_cell),
+                Founding::Genesis(target_vertex),
                 None,
                 0.0,
             );
@@ -9061,7 +9069,7 @@ mod tests {
     #[test]
     fn two_settlements_of_one_people_can_differ_in_raiding() {
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(Vertex(0))[0];
+        let target_vertex = probe.neighbors(Vertex(0))[0];
         // Authored exactly AT the gate, so a symmetric spread puts roughly half
         // the draws on each side of it and the test is not fishing for a rare
         // tail.
@@ -9069,7 +9077,7 @@ mod tests {
         let spread: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.3)].into_iter().collect();
         let raided_when_founded_in = |spread: &BTreeMap<KindId, f64>, founded: f64| -> u64 {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
-                cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+                cascade_world(|c| if c == target_vertex { 110.0 } else { 100.0 });
             let mut bake =
                 hand_bake_spread(&graphs, &capacity, &river_prox, &refugia, &authored, spread);
             let raider = bake.open(
@@ -9083,10 +9091,10 @@ mod tests {
             );
             bake.open(
                 KindId("goblin"),
-                target_cell,
+                target_vertex,
                 founded,
                 50.0,
-                Founding::Genesis(target_cell),
+                Founding::Genesis(target_vertex),
                 None,
                 0.0,
             );
@@ -9217,34 +9225,34 @@ mod tests {
     // Spec §4.6. The three properties the wider key exists to have, each
     // written so that it can only pass for the right reason: the first fails
     // if the surface stops being one rung, the second and third fail if the
-    // key collapses back to a cell.
+    // key collapses back to a vertex.
 
-    /// The place the three tests below settle on. Any cell would do — the
-    /// index is keyed on the pair, not on the cell's identity — and naming it
+    /// The place the three tests below settle on. Any vertex would do — the
+    /// index is keyed on the pair, not on the vertex's identity — and naming it
     /// once keeps the three readable.
     const COLUMN: Vertex = Vertex(0);
 
-    /// How many alive communities the index holds in one cell, across every
+    /// How many alive communities the index holds in one vertex, across every
     /// rung. The quantity "surface density" and "two at different rungs" are
     /// both statements about, counted off the index rather than off a scan so
     /// the assertion is about the thing the bake actually consults.
-    fn held_in_column(bake: &Bake<'_>, cell: Vertex) -> Vec<(Band, usize)> {
+    fn held_in_column(bake: &Bake<'_>, vertex: Vertex) -> Vec<(Band, usize)> {
         bake.node_index
             .iter()
-            .filter(|((c, _), _)| *c == cell)
+            .filter(|((c, _), _)| *c == vertex)
             .map(|((_, rung), idx)| (*rung, *idx))
             .collect()
     }
 
     /// Spec §4.6: "Surface density is unchanged — `Surface` is a single rung,
-    /// so a cell still holds one surface community."
+    /// so a vertex still holds one surface community."
     ///
-    /// Two surface peoples, one cell. The first seats; the second must find it
+    /// Two surface peoples, one vertex. The first seats; the second must find it
     /// occupied. This is the assertion that fails if `Surface` ever stops
     /// being a single rung — give the two peoples different surface keys and
     /// `vacant_for` starts answering `true` and the column holds two.
     #[test]
-    fn a_cell_still_holds_exactly_one_surface_community() {
+    fn a_vertex_still_holds_exactly_one_surface_community() {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| 100.0);
@@ -9273,7 +9281,7 @@ mod tests {
 
         assert!(
             !bake.vacant_for(&era, COLUMN, kobold),
-            "a second SURFACE people must find the cell taken — one rung, one slot"
+            "a second SURFACE people must find the vertex taken — one rung, one slot"
         );
         assert!(
             !bake.vacant_for(&era, COLUMN, goblin),
@@ -9288,9 +9296,9 @@ mod tests {
 
     /// The defect decision 0102 named and this task removes: a
     /// `BTreeMap<Vertex, _>` cannot hold two polities, so an underworld
-    /// community could only settle a cell by evicting whoever lived overhead.
+    /// community could only settle a vertex by evicting whoever lived overhead.
     ///
-    /// Same cell, same era, two peoples — one seated on the surface and one in
+    /// Same vertex, same era, two peoples — one seated on the surface and one in
     /// the Deeps. Both must live, and each must still exclude its own rung.
     #[test]
     fn a_subterranean_community_no_longer_displaces_a_surface_one() {

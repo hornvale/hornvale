@@ -43,7 +43,7 @@ use std::collections::BTreeMap;
 /// anywhere in this campaign.
 /// type-audit: bare-ok(count: magnitude), bare-ok(identifier-text: names)
 pub struct Entry {
-    /// The cell a label is drawn at (`hornvale_terrain::landscape::Feature::anchor`).
+    /// The vertex a label is drawn at (`hornvale_terrain::landscape::Feature::anchor`).
     pub anchor: Vertex,
     /// The integer scalar ranking this feature within its class.
     pub magnitude: u32,
@@ -120,6 +120,10 @@ pub fn render(seed: u64, cap: usize, per_class: &[(FeatureClass, usize, Vec<Entr
             doc.push_str("(none)\n\n");
             continue;
         }
+        // RENDERED PROSE, deliberately still "cell" (The Lexicon of Place).
+        // The engine calls this a Vertex now; the almanac must not, because
+        // "vertex" is engine vocabulary and this string is read by a person.
+        // Changing it also moves the committed gallery almanacs.
         doc.push_str("| # | cell | magnitude | names |\n");
         doc.push_str("|---|---|---|---|\n");
         for (rank, entry) in entries.iter().enumerate() {

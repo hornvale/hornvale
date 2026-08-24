@@ -11,8 +11,8 @@ use hornvale_kernel::{Geosphere, Vertex, VertexMap};
 /// type-audit: pending(wave-3: position), bare-ok(count: population)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Condensation {
-    /// The attractor cell the settlement sits on.
-    pub cell: Vertex,
+    /// The attractor vertex the settlement sits on.
+    pub vertex: Vertex,
     /// Unit-sphere position.
     pub position: [f64; 3],
     /// Catchment population (= flow accumulation at the attractor).
@@ -29,16 +29,16 @@ pub fn condense(geo: &Geosphere, k: &VertexMap<f64>, threshold: f64) -> Vec<Cond
         .filter(|c| f.attractor.get(*c).is_some_and(|a| a == *c))
         .map(|c| (c, *f.accumulation.get(c)))
         .filter(|(_, pop)| *pop >= threshold)
-        .map(|(cell, population)| Condensation {
-            cell,
-            position: geo.position(cell),
+        .map(|(vertex, population)| Condensation {
+            vertex,
+            position: geo.position(vertex),
             population,
         })
         .collect();
     nodes.sort_by(|a, b| {
         b.population
             .total_cmp(&a.population)
-            .then(a.cell.0.cmp(&b.cell.0))
+            .then(a.vertex.0.cmp(&b.vertex.0))
     });
     nodes
 }

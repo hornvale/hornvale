@@ -16,42 +16,42 @@ use hornvale_kernel::{Geosphere, ReferenceElevation, Seed, Vertex, VertexMap, ma
 /// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration), pending(wave-2: sediment_thickness), pending(wave-2: carve_delta_m), bare-ok(ratio: carve_reroute_fraction), pending(wave-2: trim_ocean_loss_m3)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
-    /// Plate index per cell (an index into `plates`).
+    /// Plate index per vertex (an index into `plates`).
     pub plate_of: VertexMap<u32>,
-    /// Crust thickness per cell, in kilometers (bare f64 under the
+    /// Crust thickness per vertex, in kilometers (bare f64 under the
     /// `crust-km-convention` type-audit waiver, its own family's future
     /// wave — see decision 0044's roadmap). The field's own `CrustKm`
-    /// newtype validates at construction; the per-cell sample here is a
+    /// newtype validates at construction; the per-vertex sample here is a
     /// plain `f64` because it feeds bulk numeric assembly, not a single
     /// validated boundary crossing.
     pub crust: VertexMap<f64>,
-    /// Winning-craton age per cell, in `[0, 1]` (0 on oceanic floor). Sampled
+    /// Winning-craton age per vertex, in `[0, 1]` (0 on oceanic floor). Sampled
     /// from the same `CrustField` `crust` was, at genesis; never serialized.
     pub crust_age: VertexMap<f64>,
-    /// Elevation per cell, relative to the isostatic reference datum (see
+    /// Elevation per vertex, relative to the isostatic reference datum (see
     /// `hornvale_kernel::ReferenceElevation`).
     pub elevation: VertexMap<ReferenceElevation>,
-    /// Unrest per cell, in [0, 1]. Banked for future consumers (spec §15).
+    /// Unrest per vertex, in [0, 1]. Banked for future consumers (spec §15).
     pub unrest: VertexMap<f64>,
-    /// Sea level: cells strictly below it are ocean.
+    /// Sea level: vertices strictly below it are ocean.
     pub sea_level: ReferenceElevation,
     /// The plates, indexed by `plate_of`'s values.
     pub plates: Vec<Plate>,
-    /// The strongest cross-plate boundary contact per cell (`None` for plate
+    /// The strongest cross-plate boundary contact per vertex (`None` for plate
     /// interiors). Recomputed at genesis, never serialized; consumed by
     /// marine biomes via the composition root (spec §6).
     pub boundary: VertexMap<Option<VertexBoundary>>,
-    /// Flow-accumulation drainage per cell (upstream land-cell count; 0 on
+    /// Flow-accumulation drainage per vertex (upstream land-vertex count; 0 on
     /// ocean). Recomputed at genesis, never serialized.
     pub drainage: VertexMap<f64>,
-    /// Endorheic mask: land cells whose downhill path never reaches the sea.
+    /// Endorheic mask: land vertices whose downhill path never reaches the sea.
     pub endorheic: VertexMap<bool>,
-    /// Salt/fresh water classification per cell (The Freshet). Recomputed at
+    /// Salt/fresh water classification per vertex (The Freshet). Recomputed at
     /// genesis, never serialized; a pure projection over drainage/endorheic.
     pub water_kind: VertexMap<WaterKind>,
-    /// Post-carve downhill target per cell — the flow graph `water_field`
+    /// Post-carve downhill target per vertex — the flow graph `water_field`
     /// classifies against, retained so the channel network can read it on
-    /// every query. `None` on ocean cells and at terminal sinks. Recomputed
+    /// every query. `None` on ocean vertices and at terminal sinks. Recomputed
     /// at genesis, never serialized.
     pub downhill: VertexMap<Option<Vertex>>,
     /// The drawn craton set this globe's crust field was built from
@@ -70,11 +70,11 @@ pub struct TectonicGlobe {
     /// `cratons`, but kept in a separate list here so `cratons` keeps
     /// meaning "majors only". Recomputed at genesis, never serialized.
     pub microcontinents: Vec<Craton>,
-    /// Graph distance from each cell to the nearest same-plate boundary
-    /// cell, with that boundary attributed. Recomputed at genesis, never
+    /// Graph distance from each vertex to the nearest same-plate boundary
+    /// vertex, with that boundary attributed. Recomputed at genesis, never
     /// serialized. `None` = no reachable same-plate boundary.
     pub boundary_distance: VertexMap<Option<(u32, Vertex)>>,
-    /// Induration/hardness per cell, `[0,1]` (the Sculpting/Ground seam,
+    /// Induration/hardness per vertex, `[0,1]` (the Sculpting/Ground seam,
     /// spec §4). Computed before elevation from crust age,
     /// continental-vs-oceanic, and boundary proximity — a pure function, no
     /// new draws — so a later elevation carve can read hardness before it
@@ -89,46 +89,46 @@ pub struct TectonicGlobe {
     /// genesis (from the existing hotspot draws — no new draws), never
     /// serialized.
     pub trail_seamounts: Vec<TrailSeamount>,
-    /// Deposited sediment thickness per cell, metres (≥ 0; the carve,
+    /// Deposited sediment thickness per vertex, metres (≥ 0; the carve,
     /// Sculpting spec §5/§2 stage 8): repose's receiver-side gains,
     /// routing's floodplain/playa deposit, the marine wedge/delta fill, and
     /// atoll cap material, all summed — NET of the sea-trim (ruling #5c: a
-    /// trimmed cell's sediment shrinks by the trimmed meters, floored at
+    /// trimmed vertex's sediment shrinks by the trimmed meters, floored at
     /// 0). Feeds `lithology`'s `soil_depth` and the `Alluvium` gate (see
     /// `crate::lithology::soil_depth_at` / `classify_rock`). Recomputed at
     /// genesis, never serialized.
     pub sediment_thickness: VertexMap<f64>,
-    /// The generate-level net elevation delta per cell, metres (± —
+    /// The generate-level net elevation delta per vertex, metres (± —
     /// incision subtracts, repose/deposition/wedge/delta/atoll all add,
     /// the sea-trim of ruling #5c subtracts again): the full carve + trim
     /// composition, so `elevation == elevation_pre + carve_delta_m` is an
-    /// identity. Retained so consumers can see how much of a cell's relief
+    /// identity. Retained so consumers can see how much of a vertex's relief
     /// the carve moved. Recomputed at genesis, never serialized.
     pub carve_delta_m: VertexMap<f64>,
-    /// Cells a river-mouth delta lobe raised above sea level (the carve,
+    /// Vertices a river-mouth delta lobe raised above sea level (the carve,
     /// Sculpting Task 9). Recomputed at genesis, never serialized.
-    pub delta_cells: Vec<Vertex>,
-    /// Cells an atoll rim capped over a drowned seamount (the carve,
-    /// Sculpting Task 9); `assemble_material` overrides these cells'
+    pub delta_vertices: Vec<Vertex>,
+    /// Vertices an atoll rim capped over a drowned seamount (the carve,
+    /// Sculpting Task 9); `assemble_material` overrides these vertices'
     /// carbonate to a reef-building high value regardless of the ordinary
     /// shallow-shelf test. Recomputed at genesis, never serialized.
-    pub atoll_cells: Vec<Vertex>,
-    /// Cells a barrier bar raised above sea level (the carve, tuning
+    pub atoll_vertices: Vec<Vertex>,
+    /// Vertices a barrier bar raised above sea level (the carve, tuning
     /// iteration 4, ledger #9; spec §5's banked spit/barrier extension).
-    /// Exempt from the sea-trim like `delta_cells`. No lithology override
+    /// Exempt from the sea-trim like `delta_vertices`. No lithology override
     /// yet (a barrier reads as the generic buffer this campaign — a
     /// followup register item, unconsolidated-sand coupling deferred).
     /// Recomputed at genesis, never serialized.
-    pub barrier_cells: Vec<Vertex>,
+    pub barrier_vertices: Vec<Vertex>,
     /// Waterfall (knickpoint) sites the carve found (Sculpting Task 11, spec
-    /// §5): land cells where a high-drainage watercourse crosses a sharp
+    /// §5): land vertices where a high-drainage watercourse crosses a sharp
     /// PRE-carve induration step. Sorted ascending `Vertex`. Recomputed at
     /// genesis, never serialized.
     pub waterfall_sites: Vec<Vertex>,
     /// The A→B→C escalation diagnostic (Sculpting Task 12, spec §8,
     /// preregistered — a permanent census column): the flux-weighted
     /// fraction of this world's [`crate::carve::REROUTE_TOP_RIVERS`]
-    /// largest pre-carve rivers' mainstem cells whose downhill target
+    /// largest pre-carve rivers' mainstem vertices whose downhill target
     /// changed across the carve (see
     /// [`crate::carve::rerouted_flow_fraction`]). Diagnostic-only —
     /// recomputed at genesis, never serialized. Preregistered thresholds:
@@ -139,7 +139,7 @@ pub struct TectonicGlobe {
     pub carve_reroute_fraction: f64,
     /// The sea-trim's booked oceanic loss (ruling #5c): the total volume
     /// proxy `trim_to_sea` removed re-capping marine fill against `sea_1`
-    /// (Σ of the per-cell trims' magnitudes, one unit area per cell — the
+    /// (Σ of the per-vertex trims' magnitudes, one unit area per vertex — the
     /// same volume convention every other carve book uses). Generate-level
     /// composition is carve + trim, so the composed books are the carve's
     /// own totals plus this loss (asserted by
@@ -147,10 +147,10 @@ pub struct TectonicGlobe {
     /// tests/carve_properties.rs). Recomputed at genesis, never
     /// serialized.
     pub trim_ocean_loss_m3: f64,
-    /// The material buffer per cell (The Ground, spec §2). Recomputed at
+    /// The material buffer per vertex (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
     pub lithology: VertexMap<crate::lithology::MaterialBuffer>,
-    /// Seed for lithology sub-cell patchiness hash-noise. Hash-noise only —
+    /// Seed for lithology sub-vertex patchiness hash-noise. Hash-noise only —
     /// never consumed as a `Stream`, so it carries no draw-order/save-format
     /// contract (see `streams::LITHOLOGY`).
     pub lithology_seed: Seed,
@@ -174,7 +174,7 @@ pub struct TectonicGlobe {
     /// never consumed as a `Stream`, so the read costs no draw and carries
     /// no draw-order/save-format contract.
     pub arc_gate_seed: Seed,
-    /// Hash-noise seed for the sub-cell catchment partition (The Rill, Tier 2):
+    /// Hash-noise seed for the sub-vertex catchment partition (The Rill, Tier 2):
     /// `terrain_seed.derive(streams::RILL_PARTITION)`, already the derived leg
     /// — a leaf exactly like `channel_seed`, for exactly the same reason.
     /// `branch::rills_of` takes it directly rather than deriving it again, so
@@ -188,7 +188,7 @@ pub struct TectonicGlobe {
 }
 
 impl TectonicGlobe {
-    /// Seed for lithology sub-cell hash-noise (no stream draws — hash-noise
+    /// Seed for lithology sub-vertex hash-noise (no stream draws — hash-noise
     /// only, like `coast-render`/`plate-edge`).
     pub fn lithology_noise_seed(&self) -> Seed {
         self.lithology_seed
@@ -206,7 +206,7 @@ impl TectonicGlobe {
     }
 
     /// The already-derived `streams::RILL_PARTITION` hash-noise seed
-    /// `branch.rs` uses directly for the sub-cell catchment partition.
+    /// `branch.rs` uses directly for the sub-vertex catchment partition.
     pub fn rill_partition_seed(&self) -> Seed {
         self.rill_seed
     }
@@ -304,9 +304,9 @@ pub fn generate(
     // Continental mask, derived from `crust_map` rather than a third full
     // field-sampling pass: `CrustField::continental_at(p)` is definitionally
     // `thickness_at(p).get() >= CONTINENTAL_THRESHOLD_KM`, and `crust_map`
-    // already holds `thickness_at(position(c)).get()` per cell, so this
+    // already holds `thickness_at(position(c)).get()` per vertex, so this
     // comparison is byte-identical to sampling the field again — it just
-    // deletes one of the three per-cell field passes `generate` used to pay
+    // deletes one of the three per-vertex field passes `generate` used to pay
     // (Nathan-authorized during the Task 6 perf recovery, with the epoch's
     // marginal near-seam clip cost recorded alongside the deletion).
     let continental = VertexMap::from_fn(geosphere, |c| {
@@ -401,9 +401,9 @@ pub fn generate(
     //
     // Solve 1: sea level on the carved surface.
     let sea_1 = elevation::derive_sea_level(&elevation_carved, effective_ocean);
-    // Trim: re-cap the carve's marine fill against sea_1 (cells the wedge
+    // Trim: re-cap the carve's marine fill against sea_1 (vertices the wedge
     // deposited on — ocean by sea_pre, the classification the carve ran
-    // with — to sea_1 - wedge_freeboard_m; atoll cells to
+    // with — to sea_1 - wedge_freeboard_m; atoll vertices to
     // sea_1 - atoll_freeboard_m; delta lobes exempt). Generate-level
     // composition = carve + trim: the trim applies to elevation AND
     // sediment together (sediment floored at 0), and the trimmed volume is
@@ -418,9 +418,9 @@ pub fn generate(
         &elevation_carved,
         &elevation_pre,
         &cd.sediment_thickness_m,
-        &cd.delta_cells,
-        &cd.atoll_cells,
-        &cd.barrier_cells,
+        &cd.delta_vertices,
+        &cd.atoll_vertices,
+        &cd.barrier_vertices,
         sea_pre,
         sea_1,
         &carve_params,
@@ -435,7 +435,7 @@ pub fn generate(
     // Solve 2 (final): sea level on the trimmed surface. The second solve
     // typically lands a little BELOW sea_1 (the trimmed shelf block that
     // straddled sea_1's rank slides out from under it). Only `shift >= 0`
-    // is structural (the trim only lowers cells); the residual staying
+    // is structural (the trim only lowers vertices); the residual staying
     // `<= wedge_freeboard_m` is EMPIRICAL — max observed 39.957 m across a
     // 120-world review sweep (L4/L5/L6 × seeds 1..=40, worst margin
     // 0.043 m at L5 seed 18) — so tuning that changes the freeboards or
@@ -493,7 +493,9 @@ pub fn generate(
     }
     let empty = populated.iter().filter(|p| !**p).count();
     if empty > 0 {
-        notes.push(format!("{empty} plate(s) hold no cells at this resolution"));
+        notes.push(format!(
+            "{empty} plate(s) hold no vertices at this resolution"
+        ));
     }
     if boundary_map.iter().all(|(_, b)| b.is_none()) {
         notes.push("no plate boundaries at this resolution".to_string());
@@ -562,9 +564,9 @@ pub fn generate(
         // (carve + trim), so `elevation == elevation_pre + carve_delta_m`
         // stays an identity for consumers.
         carve_delta_m: VertexMap::from_fn(geosphere, |c| *cd.delta_m.get(c) + *trim_delta.get(c)),
-        delta_cells: cd.delta_cells,
-        atoll_cells: cd.atoll_cells,
-        barrier_cells: cd.barrier_cells,
+        delta_vertices: cd.delta_vertices,
+        atoll_vertices: cd.atoll_vertices,
+        barrier_vertices: cd.barrier_vertices,
         waterfall_sites: cd.waterfall_sites,
         carve_reroute_fraction,
         trim_ocean_loss_m3,
@@ -587,18 +589,18 @@ pub fn generate(
 pub struct GlobeSummary {
     /// How many plates the globe drew (or was pinned to).
     pub plate_count: u32,
-    /// Achieved ocean fraction: cells strictly below sea level, over all cells.
+    /// Achieved ocean fraction: vertices strictly below sea level, over all vertices.
     pub ocean_fraction: f64,
     /// Sea level, meters.
     pub sea_level_m: f64,
-    /// Highest cell elevation, meters.
+    /// Highest vertex elevation, meters.
     pub highest_elevation_m: f64,
 }
 
 /// Summarize a globe's headline numbers. Deterministic: iteration is in
-/// ascending cell order and elevations are finite.
+/// ascending vertex order and elevations are finite.
 pub fn summarize(globe: &TectonicGlobe) -> GlobeSummary {
-    let ocean_cells = globe
+    let ocean_vertices = globe
         .elevation
         .iter()
         .filter(|(_, e)| **e < globe.sea_level)
@@ -610,7 +612,7 @@ pub fn summarize(globe: &TectonicGlobe) -> GlobeSummary {
         .fold(f64::NEG_INFINITY, f64::max);
     GlobeSummary {
         plate_count: globe.plates.len() as u32,
-        ocean_fraction: ocean_cells as f64 / globe.elevation.len() as f64,
+        ocean_fraction: ocean_vertices as f64 / globe.elevation.len() as f64,
         sea_level_m: globe.sea_level.get(),
         highest_elevation_m: highest,
     }
@@ -627,17 +629,20 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let g = &outcome.globe;
-        // Every land cell either has a downhill target or is a terminal sink.
+        // Every land vertex either has a downhill target or is a terminal sink.
         let mut with_target = 0usize;
         for c in geo.vertices() {
             if *g.elevation.get(c) < g.sea_level {
                 // ocean: no downhill target
-                assert!(g.downhill.get(c).is_none(), "ocean cell {c:?} has a target");
+                assert!(
+                    g.downhill.get(c).is_none(),
+                    "ocean vertex {c:?} has a target"
+                );
             } else if g.downhill.get(c).is_some() {
                 with_target += 1;
             }
         }
-        assert!(with_target > 0, "no land cell has a downhill target");
+        assert!(with_target > 0, "no land vertex has a downhill target");
     }
 
     #[test]
@@ -650,7 +655,7 @@ mod tests {
         let g = &outcome.globe;
         let fresh = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
         for c in geo.vertices() {
-            assert_eq!(*g.downhill.get(c), fresh[c.0 as usize], "cell {c:?}");
+            assert_eq!(*g.downhill.get(c), fresh[c.0 as usize], "vertex {c:?}");
         }
     }
 
@@ -658,11 +663,11 @@ mod tests {
     fn induration_field_matches_the_assembled_buffer() {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        for cell in geo.vertices() {
+        for vertex in geo.vertices() {
             assert_eq!(
-                *outcome.globe.induration.get(cell),
-                outcome.globe.lithology.get(cell).induration,
-                "seam and buffer disagree at {cell:?}"
+                *outcome.globe.induration.get(vertex),
+                outcome.globe.lithology.get(vertex).induration,
+                "seam and buffer disagree at {vertex:?}"
             );
         }
     }
@@ -758,7 +763,7 @@ mod tests {
         let geo = Geosphere::new(5);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let g = &outcome.globe;
-        // Shelf: some ocean cells sit in the near-sea band the wedge builds.
+        // Shelf: some ocean vertices sit in the near-sea band the wedge builds.
         let band = g
             .elevation
             .iter()
@@ -768,14 +773,14 @@ mod tests {
             })
             .count();
         assert!(band > 0, "no near-sea-level marine band");
-        // Final drainage was computed on the final surface: every land cell's
+        // Final drainage was computed on the final surface: every land vertex's
         // downhill neighbor relationship is consistent with final elevations.
         // (drainage_field already guarantees this; assert its determinism:)
         let (d2, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
         assert_eq!(g.drainage, d2);
         // Sediment field is retained and non-negative.
         assert!(g.sediment_thickness.iter().all(|(_, s)| *s >= 0.0));
-        // Soil depth reads real sediment: on the max-sediment land cell,
+        // Soil depth reads real sediment: on the max-sediment land vertex,
         // soil depth is positive.
         let (c, _) = g
             .sediment_thickness

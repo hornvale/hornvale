@@ -51,7 +51,7 @@ fn full_depth_produces_both() {
     assert!(a.climate.is_some(), "full build builds climate");
 }
 
-/// Project a terrain onto the per-cell fields metrics actually read, so two
+/// Project a terrain onto the per-vertex fields metrics actually read, so two
 /// terrains can be compared without `PartialEq` on the provider itself
 /// (`GeneratedTerrain` derives only `Debug, Clone`). `VertexMap` DOES derive
 /// `PartialEq`, which is what makes this comparison exact rather than

@@ -1,18 +1,23 @@
-//! The band notation (Rose Window metaplan §1b.3) in code. A place's BAND is a
-//! function of its address depth: the walk band is the ~1.7 km locale a body
-//! commits to, the chamber band is the ~3.3 m place inside a structure.
+//! Arithmetic on refinement DEPTH — where chambers sit ([`chamber_depth`]) and
+//! how to get back up to the walk band ([`truncate_to_walk`]) before reading
+//! any walk-band-keyed datum.
 //!
-//! An address below the walk band is IDENTITY, NOT SHAPE (§1b.3 law 3): its
-//! triangle geometry means nothing, and connectivity comes from the structure's
-//! own graph.
+//! **This module is named `depth`, not `band`, and the rename is the point**
+//! (The Lexicon of Place). It holds no `Band` type and never did — the kernel's
+//! `Band` is the cave ladder, a different thing entirely, and a module here
+//! called `band` claimed a word that belongs to it. Everything in this file is
+//! a function of a [`Facet`]'s path length, which is depth.
 //!
-//! What this module holds is therefore only ARITHMETIC on depths: where chambers
-//! sit ([`chamber_depth`]) and how to get back up to the walk band
-//! ([`truncate_to_walk`]) before reading any walk-band-keyed datum. It
-//! deliberately holds no `Band` enum and no `band_of(addr)` classifier: the
-//! question the session actually asks is "am I inside a structure?", which is
-//! session state (`Session::inside`), not a property an address can answer. An
-//! address at chamber depth is a chamber only because a structure put one there.
+//! The band notation (Rose Window metaplan §1b.3) is still what the depths
+//! MEAN: the walk band is the ~1.7 km locale a body commits to, the chamber
+//! band is the ~3.3 m place inside a structure. An address below the walk band
+//! is IDENTITY, NOT SHAPE (§1b.3 law 3) — its triangle geometry means nothing,
+//! and connectivity comes from the structure's own graph.
+//!
+//! There is deliberately no `band_of(addr)` classifier: the question a session
+//! actually asks is "am I inside a structure?", which is session state
+//! (`Session::inside`), not a property an address can answer. An address at
+//! chamber depth is a chamber only because a structure put one there.
 
 use hornvale_kernel::Facet;
 

@@ -1,6 +1,6 @@
 //! Deterministic debug render of a carrying-capacity field: a fixed-size
 //! ASCII density map. Follows `paleoclimate::render`'s pattern exactly (same
-//! `NearestVertexIndex` projection, same fixed-grid/one-glyph-per-cell shape,
+//! `NearestVertexIndex` projection, same fixed-grid/one-glyph-per-vertex shape,
 //! same `String` return, one trailing newline per row) — bucketing K into a
 //! discrete glyph ramp is the render-time analogue of that module's discrete
 //! stratum glyphs, so no float ever crosses into the emitted text and there
@@ -25,8 +25,8 @@ fn max_k(geo: &Geosphere, k: &VertexMap<f64>) -> f64 {
         .fold(0.0_f64, |acc, v| acc.max(v))
 }
 
-/// Bucket a cell's K into a glyph on the ramp, scaled against the field's
-/// densest cell (`peak`). A non-positive peak (an empty field) renders as
+/// Bucket a vertex's K into a glyph on the ramp, scaled against the field's
+/// densest vertex (`peak`). A non-positive peak (an empty field) renders as
 /// all-blank.
 fn glyph(k: f64, peak: f64) -> char {
     if peak <= 0.0 {
@@ -39,7 +39,7 @@ fn glyph(k: f64, peak: f64) -> char {
 }
 
 /// 72×24 ASCII density map of a carrying-capacity field, one newline per row,
-/// darkest glyph at the field's densest cell. See module docs for the render
+/// darkest glyph at the field's densest vertex. See module docs for the render
 /// pattern this matches.
 /// type-audit: bare-ok(artifact)
 pub fn density_ppm(geo: &Geosphere, k: &VertexMap<f64>) -> String {
@@ -50,8 +50,8 @@ pub fn density_ppm(geo: &Geosphere, k: &VertexMap<f64>) -> String {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(DENSITY_HEIGHT) * 180.0;
         for px in 0..DENSITY_WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(DENSITY_WIDTH) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.push(glyph(*k.get(cell), peak));
+            let vertex = index.nearest(geo, latitude, longitude);
+            out.push(glyph(*k.get(vertex), peak));
         }
         out.push('\n');
     }
@@ -78,7 +78,7 @@ pub fn stack_density_ppm(
 
 /// 72×24 ASCII density map of the [`crate::byproducts::strife`] field
 /// (inverse-Herfindahl composition evenness): darkest glyph at the most
-/// evenly-contested cell. Thin wrapper over [`density_ppm`] — `strife` is
+/// evenly-contested vertex. Thin wrapper over [`density_ppm`] — `strife` is
 /// already the same `VertexMap<f64>` shape.
 /// type-audit: bare-ok(artifact)
 pub fn strife_ppm(geo: &Geosphere, strife: &VertexMap<f64>) -> String {
@@ -86,7 +86,7 @@ pub fn strife_ppm(geo: &Geosphere, strife: &VertexMap<f64>) -> String {
 }
 
 /// 72×24 ASCII density map of one species' [`crate::byproducts::refugia`]
-/// field (its realized density in cells where the world's dominant species
+/// field (its realized density in vertices where the world's dominant species
 /// falls below the viability floor): darkest glyph at its strongest
 /// stronghold. Thin wrapper over [`density_ppm`] — a `refugia` entry is
 /// already the same `VertexMap<f64>` shape.
@@ -130,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn the_peak_cell_renders_as_the_densest_glyph() {
+    fn the_peak_vertex_renders_as_the_densest_glyph() {
         let geo = Geosphere::new(4);
         let k = bump_k(&geo);
         let a = density_ppm(&geo, &k);

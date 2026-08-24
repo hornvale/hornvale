@@ -2,9 +2,9 @@
 //! the `strongest()` triple-recompute (`thickness_at`, `age_at`,
 //! `continental_at` on `CrustField`) a material share of the terrain stage?
 //! Stays in-domain (no worldgen dep) — it rebuilds the same `CrustField`
-//! `hornvale_terrain::generate` builds internally, then reads every cell
+//! `hornvale_terrain::generate` builds internally, then reads every vertex
 //! through all three craton-sweeping readers, the worst case if a future
-//! consumer read all three per cell.
+//! consumer read all three per vertex.
 //!
 //! Run: `cargo run -p hornvale-terrain --example profile_terrain -- [SAMPLE]`
 //! (SAMPLE defaults to 8 seeds starting at 0.)
@@ -39,7 +39,7 @@ fn main() {
         gen_secs += t0.elapsed().as_secs_f64();
 
         // Rebuild the same CrustField `generate` assembles internally
-        // (same seed derivation, same craton draw), then read every cell
+        // (same seed derivation, same craton draw), then read every vertex
         // through all three craton-sweeping readers.
         let terrain_seed = world_seed.derive(streams::ROOT);
         let mut notes = Vec::new();
@@ -50,8 +50,8 @@ fn main() {
         #[allow(clippy::disallowed_types)]
         let t1 = Instant::now();
         let mut sink = 0.0_f64;
-        for cell in geo.vertices() {
-            let p = geo.position(cell);
+        for vertex in geo.vertices() {
+            let p = geo.position(vertex);
             sink += field.thickness_at(p).get();
             sink += field.age_at(p);
             sink += if field.continental_at(p) { 1.0 } else { 0.0 };
@@ -62,7 +62,7 @@ fn main() {
     println!("terrain profile over {sample} seeds:");
     println!("  generate             {gen_secs:8.3}s");
     println!(
-        "  triple per-cell read {triple_secs:8.3}s  ({:.1}% of generate)",
+        "  triple per-vertex read {triple_secs:8.3}s  ({:.1}% of generate)",
         if gen_secs > 0.0 {
             100.0 * triple_secs / gen_secs
         } else {

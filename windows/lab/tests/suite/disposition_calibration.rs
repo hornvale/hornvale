@@ -7,7 +7,7 @@
 //! hypothesis, `kobold_flagships_are_less_coastal_than_goblin_flagships`
 //! (`tests/calibration.rs`, spec §9.1). It claimed that the kobold — the cool
 //! highlander, staked to an elevation niche far from the fertile coast —
-//! should carry its flagship on a *less coastal* cell than the lowland-
+//! should carry its flagship on a *less coastal* vertex than the lowland-
 //! tolerant goblin does. **This epoch falsified it**, and the investigation
 //! that followed (`.superpowers/sdd/coastal-inversion-investigation.md`)
 //! found the hypothesis was never testable in the first place:
@@ -28,7 +28,7 @@
 //!   re-selection artifact**, not a relocation: `flagship_of` resolves the
 //!   *oldest surviving* occupation, and a raid closes the raider's own record
 //!   (`Migrated`) and reopens it at the back of the list. 100 % of the coastal
-//!   movement lived in the worlds where the flagship cell *changed*; where it
+//!   movement lived in the worlds where the flagship vertex *changed*; where it
 //!   did not change the rate was byte-identical before and after.
 //!
 //! Nobody should re-derive that hypothesis. The direction was never the
@@ -385,7 +385,7 @@ const MIN_RATE_SPAN: f64 = 0.05;
 /// Per-people flagship-re-selection rates over seeds `1..=SAMPLE`: the
 /// fraction of worlds in which a people's flagship — the oldest occupation
 /// still alive at `now`, which is exactly what `flagship_of` resolves — sits
-/// on a DIFFERENT cell from that people's first-drawn genesis proto-site.
+/// on a DIFFERENT vertex from that people's first-drawn genesis proto-site.
 ///
 /// Read straight off the bake's own `History.records`, which are in commit
 /// order: genesis opens every people's proto-sites first, so the first record
@@ -753,11 +753,11 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// **THE ATTRIBUTION IS NOT DECISION 0145, AND THIS WAS WORTH MEASURING
 /// RATHER THAN ASSUMING.** The campaign re-keyed the history bake's node index
 /// from `Vertex` to `(Vertex, Band)` (one community per *place*, not per
-/// cell), which is the change that most obviously touches settlement placement,
+/// vertex), which is the change that most obviously touches settlement placement,
 /// and the expectation carried into this re-read was that it caused the fall.
 /// It does not. Neutralising the re-key alone — `Bake::rung_for` forced to
-/// `Band::Surface`, which makes every node-index key `(cell, Surface)` and
-/// so restores the old one-per-cell semantics exactly, with the rest of the
+/// `Band::Surface`, which makes every node-index key `(vertex, Surface)` and
+/// so restores the old one-per-vertex semantics exactly, with the rest of the
 /// campaign intact — reads **10/60**, which is *further* from main's 14/60,
 /// not nearer it:
 ///

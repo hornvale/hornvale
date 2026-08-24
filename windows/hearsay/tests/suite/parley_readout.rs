@@ -113,11 +113,11 @@ const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 ///
 /// **WHY, AND THE ATTRIBUTION IS NOT THE OBVIOUS ONE.** The Underworld re-keyed
 /// the history bake's node index from `Vertex` to `(Vertex, Band)` —
-/// decision 0145, one community per *place* rather than per cell — which is the
+/// decision 0145, one community per *place* rather than per vertex — which is the
 /// change that most visibly touches settlement placement, and the natural
 /// reading is that it accounts for the move. It does not. Neutralising it
 /// alone (`Bake::rung_for` forced to `Band::Surface`, which makes every
-/// node-index key `(cell, Surface)` and so restores the old one-per-cell
+/// node-index key `(vertex, Surface)` and so restores the old one-per-vertex
 /// semantics exactly, with everything else about the campaign intact) reads:
 ///
 /// ```text

@@ -16,7 +16,7 @@
 //! is confined to settlement names.
 
 use crate::facets::{Formation, Stratum};
-use crate::streams::VARIANT_CELL;
+use crate::streams::VARIANT_VERTEX;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Vertex};
 
@@ -327,7 +327,7 @@ pub struct VariantEntry {
     pub prose: &'static str,
 }
 
-/// The substrate a cell's ground is made of, as the variant pool distinguishes
+/// The substrate a vertex's ground is made of, as the variant pool distinguishes
 /// it. Mirrors `locale`'s own substrate classes; passed in so this table can
 /// live below the window that computes it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -732,21 +732,21 @@ pub fn variant_pool(
         // No named sub-types yet: the cave formations get a variant pool of
         // their own once something distinguishes karst/lava-tube/fracture
         // interiors by prose. An empty pool is the documented "not yet"
-        // (`variant_at_cell` already treats an empty pool as `None`).
+        // (`variant_at_vertex` already treats an empty pool as `None`).
         (Formation::KarstCave | Formation::LavaTube | Formation::FractureCave, _) => &[],
     }
 }
 
-/// The characteristic variant of a whole CELL — what a settlement there is
+/// The characteristic variant of a whole VERTEX — what a settlement there is
 /// named for.
 ///
 /// Distinct from the per-room draw the prose uses: a settlement occupies a
-/// cell, and a room is one of some four thousand within it, so "the variant at
+/// vertex, and a room is one of some four thousand within it, so "the variant at
 /// a settlement" is otherwise undefined. Its own stream label, so it perturbs
 /// nothing that existed before it.
-pub fn variant_at_cell(
+pub fn variant_at_vertex(
     seed: Seed,
-    cell: Vertex,
+    vertex: Vertex,
     formation: Formation,
     stratum: Stratum,
     ground: GroundKind,
@@ -757,8 +757,8 @@ pub fn variant_at_cell(
     }
     let weights: Vec<f64> = pool.iter().map(|e| e.weight).collect();
     let i = seed
-        .derive(VARIANT_CELL)
-        .derive(StreamLabel::dynamic(&cell.0.to_string()))
+        .derive(VARIANT_VERTEX)
+        .derive(StreamLabel::dynamic(&vertex.0.to_string()))
         .stream()
         .weighted_index(&weights)?;
     Some(pool[i].variant)

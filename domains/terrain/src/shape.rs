@@ -19,8 +19,8 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// Shoreline development index `D = L / (2 sqrt(pi A))`: coastline length
 /// over the circumference of the circle with the land's area. 1 is
 /// maximally compact; fjorded coasts score several times that. Estimators:
-/// cell area is the equal-area approximation `4 pi / N`; the shared edge
-/// between two neighboring cells is approximated as their center distance
+/// vertex area is the equal-area approximation `4 pi / N`; the shared edge
+/// between two neighboring vertices is approximated as their center distance
 /// over sqrt(3) (the regular-hexagon dual). `None` when the mask has no
 /// land or no shoreline. This is the estimator core: [`shoreline_development`]
 /// derives a mask from elevation and delegates here, so both share exactly
@@ -29,22 +29,22 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// unchanged core).
 /// type-audit: bare-ok(flag: land), bare-ok(ratio: return)
 pub fn shoreline_development_of_mask(geo: &Geosphere, land: &VertexMap<bool>) -> Option<f64> {
-    let cell_area = 4.0 * std::f64::consts::PI / geo.vertex_count() as f64;
+    let vertex_area = 4.0 * std::f64::consts::PI / geo.vertex_count() as f64;
     let mut land_area = 0.0;
     let mut shoreline = 0.0;
-    for cell in geo.vertices() {
-        let is_land = *land.get(cell);
+    for vertex in geo.vertices() {
+        let is_land = *land.get(vertex);
         if is_land {
-            land_area += cell_area;
+            land_area += vertex_area;
         }
-        for &neighbor in geo.neighbors(cell) {
+        for &neighbor in geo.neighbors(vertex) {
             // Each unordered pair once.
-            if neighbor.0 <= cell.0 {
+            if neighbor.0 <= vertex.0 {
                 continue;
             }
             let neighbor_land = *land.get(neighbor);
             if is_land != neighbor_land {
-                shoreline += angle(geo.position(cell), geo.position(neighbor)) / 3f64.sqrt();
+                shoreline += angle(geo.position(vertex), geo.position(neighbor)) / 3f64.sqrt();
             }
         }
     }
@@ -55,7 +55,7 @@ pub fn shoreline_development_of_mask(geo: &Geosphere, land: &VertexMap<bool>) ->
 }
 
 /// Shoreline development index over an elevation field: derives the land
-/// mask (`elevation >= sea_level`, per cell, ascending) and delegates to
+/// mask (`elevation >= sea_level`, per vertex, ascending) and delegates to
 /// [`shoreline_development_of_mask`] — the estimator formula itself never
 /// changes mid-family (Census II discipline). `None` when the globe has no
 /// land or no shoreline.
@@ -69,7 +69,7 @@ pub fn shoreline_development(
     shoreline_development_of_mask(geo, &land)
 }
 
-/// Fraction of all cells within [`SHELF_BAND_M`] of sea level — Earth's
+/// Fraction of all vertices within [`SHELF_BAND_M`] of sea level — Earth's
 /// hypsometry keeps a populated shelf here; a cliff-coast generator does
 /// not.
 /// type-audit: bare-ok(ratio: return)
@@ -84,8 +84,8 @@ pub fn shelf_fraction(
     within as f64 / elevation.len() as f64
 }
 
-/// Shelf area relative to land area: cells within [`SHELF_BAND_M`] of sea
-/// level (both sides of it), over cells at or above sea level. The
+/// Shelf area relative to land area: vertices within [`SHELF_BAND_M`] of sea
+/// level (both sides of it), over vertices at or above sea level. The
 /// whole-sphere `shelf_fraction` silently assumes an Earth-scale land
 /// fraction — a small-continent world can carry a proportionally healthy
 /// shelf while clearing only a sliver of the sphere (decision 0053's
@@ -148,8 +148,8 @@ pub fn hypsometric_bimodality(
     Some((mean_land - mean_ocean).abs() / denominator)
 }
 
-/// Sizes (cell counts) of connected land components, descending. BFS in
-/// ascending cell-id order — fully deterministic. Empty when there is no
+/// Sizes (vertex counts) of connected land components, descending. BFS in
+/// ascending vertex-id order — fully deterministic. Empty when there is no
 /// land.
 /// type-audit: bare-ok(count: return)
 pub fn land_component_sizes(
@@ -194,7 +194,7 @@ mod tests {
     use super::*;
     use hornvale_kernel::{Geosphere, ReferenceElevation, VertexMap};
 
-    /// Land where the cell's z-coordinate clears `z_min` — a polar cap.
+    /// Land where the vertex's z-coordinate clears `z_min` — a polar cap.
     fn cap_elevation(geo: &Geosphere, z_min: f64) -> VertexMap<ReferenceElevation> {
         VertexMap::from_fn(geo, |c| {
             let m = if geo.position(c)[2] >= z_min {

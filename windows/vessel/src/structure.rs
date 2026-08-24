@@ -6,8 +6,8 @@
 //! address is identity, not shape (law 3), so two chambers being triangle
 //! neighbours means nothing and is not consulted.
 
-use crate::band::chamber_depth;
 use crate::brief::Brief;
+use crate::depth::chamber_depth;
 use crate::streams::ROOM_CHAMBERS;
 use hornvale_kernel::{Facet, Seed};
 

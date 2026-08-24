@@ -19,13 +19,13 @@
 //!   a `BakeId` key would close a feedback loop through the RNG.
 //! - **The bare committed `cell-id` — necessary but not sufficient, and the
 //!   reason is checked below rather than asserted.** The bake's `node_index`
-//!   holds one *alive* community per cell, so a bare cell key separates the
+//!   holds one *alive* community per vertex, so a bare vertex key separates the
 //!   settlements standing at `now` — and nothing more. `Bake::vacant_habitable`
-//!   excludes only cells an *alive* community holds, so a dead community's cell
+//!   excludes only vertices an *alive* community holds, so a dead community's vertex
 //!   is re-settleable; and `Bake::relocate`'s conquest path opens the raider's
-//!   record at the victim's cell in the very year the victim's record closes.
+//!   record at the victim's vertex in the very year the victim's record closes.
 //!   Successive occupations of one site are different settlements, and a bare
-//!   cell key would hand them one and the same mind.
+//!   vertex key would hand them one and the same mind.
 //!   `the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape`
 //!   measures the real population — and also records the pair's own measured
 //!   limit, which is that it is unique among ALIVE settlements but not over
@@ -107,7 +107,7 @@ fn synthetic_settlement(
         (hornvale_history::OCC_FOUNDED, Value::Number(founded_day)),
         (hornvale_settlement::IS_SETTLEMENT, Value::Flag(true)),
         (
-            hornvale_settlement::CELL_ID,
+            hornvale_settlement::VERTEX_ID,
             Value::Number(f64::from(site.0)),
         ),
     ] {
@@ -174,12 +174,12 @@ fn the_draw_moves_with_both_halves_of_its_key() {
 
     assert_ne!(
         base, by_site,
-        "the same people founded in a different cell drew the same mind — the \
+        "the same people founded in a different vertex drew the same mind — the \
          site half of the key is not reaching the stream"
     );
     assert_ne!(
         base, by_year,
-        "the same people founded in the same cell in a different year drew the \
+        "the same people founded in the same vertex in a different year drew the \
          same mind — the founding-year half of the key is not reaching the \
          stream. This is the half that separates a RELOCATED community from \
          its predecessor."
@@ -389,10 +389,10 @@ fn a_zero_dispersion_people_draws_its_authored_vector_exactly() {
     .collect();
 
     for year in [0, 725, 2000] {
-        for cell in [0u32, 1, 4242] {
+        for vertex in [0u32, 1, 4242] {
             let drawn = people_disposition(
                 Seed(42),
-                Vertex(cell),
+                Vertex(vertex),
                 year,
                 "test-kind",
                 &psyche,
@@ -401,7 +401,7 @@ fn a_zero_dispersion_people_draws_its_authored_vector_exactly() {
             .expect("the fixture kind carries a mind");
             assert_eq!(
                 drawn, mean,
-                "zero dispersion must be the identity, but cell {cell} year \
+                "zero dispersion must be the identity, but vertex {vertex} year \
                  {year} moved off the authored vector"
             );
         }
@@ -416,11 +416,11 @@ fn every_drawn_dimension_stays_inside_the_unit_interval() {
     let psyche = hornvale_species::psyche_registry();
     let dispersion = hornvale_species::dispersion_registry();
     for (kind, _) in psyche.iter() {
-        for cell in 0u32..400 {
+        for vertex in 0u32..400 {
             let drawn = people_disposition(
                 Seed(42),
-                Vertex(cell),
-                i64::from(cell) * 5,
+                Vertex(vertex),
+                i64::from(vertex) * 5,
                 kind.0,
                 &psyche,
                 &dispersion,
@@ -433,7 +433,7 @@ fn every_drawn_dimension_stays_inside_the_unit_interval() {
             ] {
                 assert!(
                     (0.0..=1.0).contains(&v),
-                    "{} drew {axis} = {v} at cell {cell}, outside [0, 1]",
+                    "{} drew {axis} = {v} at vertex {vertex}, outside [0, 1]",
                     kind.0
                 );
             }
@@ -461,9 +461,16 @@ fn the_three_mind_dimensions_are_drawn_independently() {
          re-pick the witness kind if the roster changed"
     );
     let mut off_diagonal = 0;
-    for cell in 0u32..64 {
-        let drawn = people_disposition(Seed(42), Vertex(cell), 100, "goblin", &psyche, &dispersion)
-            .expect("goblin has a mind");
+    for vertex in 0u32..64 {
+        let drawn = people_disposition(
+            Seed(42),
+            Vertex(vertex),
+            100,
+            "goblin",
+            &psyche,
+            &dispersion,
+        )
+        .expect("goblin has a mind");
         if drawn.threat_response != drawn.deliberation_latency
             || drawn.deliberation_latency != drawn.time_horizon
         {
@@ -504,7 +511,7 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 ///
 /// 1. **The key is reachable on both sides.** Every occupation record commits
 ///    `occ-site` and `occ-founded`; every *alive* one additionally commits the
-///    settlement-side `cell-id`, and the two always name the same cell.
+///    settlement-side `cell-id`, and the two always name the same vertex.
 /// 2. ~~**Among alive settlements the key is unique**~~ — **FALSIFIED
 ///    2026-08-17 (The Underworld, Task 9). See the disclosure below.** It was
 ///    true when written, and the premise it rested on has since been removed
@@ -516,12 +523,12 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 ///    most one alive record and at least one **zero-tenure** record — a
 ///    community that opened and closed inside a single epoch, which is what
 ///    `Bake::relocate`'s conquest path produces when it opens the raider's
-///    record at the victim's cell in the same year the victim's record closes.
+///    record at the victim's vertex in the same year the victim's record closes.
 ///
 /// The open question this hands to Task 4: a zero-tenure transient and the
 /// record that displaced it share a key, so they would share a drawn mind. No
 /// two *simultaneously alive* communities ever do (`Bake.node_index` holds one
-/// alive community per cell), so the raid gate cannot see two live communities
+/// alive community per vertex), so the raid gate cannot see two live communities
 /// with one disposition — but it can see a transient inherit its successor's.
 /// Whether that matters is a question about the raid gate, and it is
 /// deliberately left to the task that owns it rather than resolved here by
@@ -529,15 +536,15 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 ///
 /// # FINDING 2 IS FALSIFIED, AND THE PARENTHESIS ABOVE IS WHY
 ///
-/// **`Bake.node_index` no longer holds one alive community per cell.** The
+/// **`Bake.node_index` no longer holds one alive community per vertex.** The
 /// Underworld's Task 8 re-keyed it on `(Vertex, Band)` (spec §4.6), for
 /// the stated purpose of letting an underworld community and a surface one
 /// share a column. `settlement/disposition/v1`'s draw key is `(site,
 /// founded-year)` and carries no rung, so the moment two peoples at different
-/// rungs found in one cell in one year, they share a key — and finding 2's
+/// rungs found in one vertex in one year, they share a key — and finding 2's
 /// entire justification was the parenthesised premise that they could not.
 ///
-/// **Measured, not reasoned:** seed 1, cell 16317, founding year 91313 —
+/// **Measured, not reasoned:** seed 1, vertex 16317, founding year 91313 —
 /// `bugbear` (surface) and `drow` (subterranean), both alive, one draw key,
 /// therefore one drawn `MindVector` between them. Two standing settlements
 /// report the same mind, which is exactly what finding 2's failure message has
@@ -567,7 +574,7 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 /// count would rot immediately, and deleting the check would lose the guard.
 /// What is asserted instead is the exact shape the re-key permits and nothing
 /// wider: **every colliding alive group must contain at most one SURFACE
-/// people.** Two surface peoples sharing a key would mean one cell holding two
+/// people.** Two surface peoples sharing a key would mean one vertex holding two
 /// alive surface communities, which `node_index` still forbids at the
 /// `Surface` rung and which no campaign has licensed — so that failure is
 /// still caught, loudly, while the one Task 8 licensed is recorded as a known
@@ -638,10 +645,10 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
                 _ => None,
             };
             // FINDING 1: where both the occupation-side site and the
-            // settlement-side cell exist they must name the same cell — the
+            // settlement-side vertex exist they must name the same vertex — the
             // wrapper reads `cell-id`, the bake holds `site`, and they are one
             // key only if they agree.
-            let alive = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
+            let alive = match world.ledger.value_of(id, hornvale_settlement::VERTEX_ID) {
                 Some(Value::Number(n)) => {
                     assert_eq!(
                         site, *n as u32,
@@ -677,7 +684,7 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
         // contract broke and nothing about where, and this assertion's whole
         // value is telling the next reader which column to look at — a
         // `(site, founded-year)` collision among alive records is a claim
-        // about one cell, and the peoples standing on it are the diagnosis.
+        // about one vertex, and the peoples standing on it are the diagnosis.
         let collisions: Vec<((u32, i64), Vec<String>)> = {
             let mut by_key: std::collections::BTreeMap<(u32, i64), Vec<String>> =
                 std::collections::BTreeMap::new();
@@ -692,10 +699,10 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
         };
         // FINDING 2, in the form that survives Task 8's re-key — see this
         // test's own disclosure. A collision between two SURFACE peoples would
-        // mean one cell holding two alive surface communities, which
+        // mean one vertex holding two alive surface communities, which
         // `node_index` still forbids; a collision that includes a subterranean
         // people is the documented consequence of keying the index on
-        // `(cell, rung)` while the draw key carries no rung.
+        // `(vertex, rung)` while the draw key carries no rung.
         // `KindId` is `&'static str`-backed and the ledger hands back owned
         // `String`s, so the realm is resolved by matching the registry's own
         // spelling rather than by minting a `KindId` from ledger text. A name
@@ -717,7 +724,7 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
                 surface.len() <= 1,
                 "seed {seed}: draw key {key:?} is shared by more than one SURFACE \
                  people ({surface:?}) — `Bake.node_index` still admits exactly one \
-                 alive community per (cell, Surface), so this is a NEW collision \
+                 alive community per (vertex, Surface), so this is a NEW collision \
                  shape and not the one Task 8's re-key licensed. Full group: \
                  {peoples:?}"
             );
@@ -744,7 +751,7 @@ fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
             // The alive-count clause that used to sit here — "at most one
             // alive record per group" — is finding 2 restated over all
             // records, and it is falsified for the reason this test's own
-            // disclosure gives: `node_index` is keyed on `(cell, rung)` since
+            // disclosure gives: `node_index` is keyed on `(vertex, rung)` since
             // Task 8, so one column can hold a live surface community and a
             // live underworld one. The surviving shape is asserted above, by
             // realm, over the alive records alone.

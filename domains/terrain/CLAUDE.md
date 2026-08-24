@@ -8,9 +8,9 @@ biome classification, the coastlines, and every downstream census. Read
 
 ## The pipeline (who feeds whom)
 
-- `plates.rs` — plate skeleton + `assign_plates` (per-cell, edge-noised).
+- `plates.rs` — plate skeleton + `assign_plates` (per-vertex, edge-noised).
 - `crust.rs` — drawn cratons, the stateless crust fields, `CrustField` +
-  `strongest` (the per-cell winning-craton query). `sphere_fbm01` /
+  `strongest` (the per-vertex winning-craton query). `sphere_fbm01` /
   `SphereFbm` live here.
 - `rift.rs` — rift-and-fit: seams, clipping (`clip_over_seams`,
   `seam_side`). Gated to run only near seams.
@@ -34,7 +34,7 @@ biome classification, the coastlines, and every downstream census. Read
   accumulation order — verify with the artifact drift check, not just tests.
 - **`SphereFbm`/`Fbm` are byte-identical to the free functions by
   construction** (same derived seeds, same accumulation order). If you add a
-  per-cell noise consumer, build the sampler once above the loop.
+  per-vertex noise consumer, build the sampler once above the loop.
 - **Calibration constants** (`REBALANCE_GAIN`, `wave_cut_m`, `LOBE_*`,
   `CarveParams` defaults) were chosen from data sweeps against worst-case
   seeds (decision 0057). Their values are load-bearing; changing one is a

@@ -249,7 +249,7 @@ struct Settlement {
     seed: u64,
     /// The people occupying the site.
     people: KindId,
-    /// The Geosphere cell the occupation sits on.
+    /// The Geosphere vertex the occupation sits on.
     site: Vertex,
     /// The founding year, reduced through `occupation_draw_key`.
     founded_key: i64,
@@ -543,12 +543,12 @@ fn every_zeroed_draw_is_the_authored_location() {
     let (locations, _) = authored(&wc);
     for (people, &location) in &locations {
         for year in [0i64, 25, 725, 1975, 2000] {
-            for cell in [0u32, 7, 4242, 65_535] {
+            for vertex in [0u32, 7, 4242, 65_535] {
                 assert_eq!(
-                    drawn_threat_response(Seed(42), Vertex(cell), year, location, 0.0),
+                    drawn_threat_response(Seed(42), Vertex(vertex), year, location, 0.0),
                     location,
-                    "{}: spread 0 moved the draw off the authored location at cell \
-                     {cell}, year {year}",
+                    "{}: spread 0 moved the draw off the authored location at vertex \
+                     {vertex}, year {year}",
                     people.0
                 );
             }

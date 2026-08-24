@@ -3,10 +3,10 @@
 //! **Why this module exists.** Before The Underworld,
 //! `grep -rn "water_table\|phreatic\|vadose" --include=*.rs domains/ windows/`
 //! returned nothing (spec §3.7): every column in every world was implicitly
-//! dry at every depth, so the habitable window of a wet karst cell and of a dry
-//! craton cell were the same window. This module splits a column at a derived
+//! dry at every depth, so the habitable window of a wet karst vertex and of a dry
+//! craton vertex were the same window. This module splits a column at a derived
 //! depth — **vadose** (air-filled, walkable) above it, **phreatic** (flooded)
-//! below — and the depth varies by cell, which is the whole point.
+//! below — and the depth varies by vertex, which is the whole point.
 //!
 //! It exists to produce two things. A *habitable window* that differs by place,
 //! and **sumps**: a chamber below the table, which the passage graph later
@@ -39,7 +39,7 @@
 //!   can move water (`transmissivity`). Either being zero means nowhere to
 //!   drain to, or no way to get there.
 //! - **Recharge**, `wetness(drainage)`. Flow accumulation is the count of land
-//!   cells upstream, so it is the model's own measure of how much water passes
+//!   vertices upstream, so it is the model's own measure of how much water passes
 //!   through this column.
 //!
 //! ### Two datums fix the two scales, and neither is a knob
@@ -179,7 +179,7 @@ pub const ARABIKA_POROSITY: f64 = 0.819;
 /// The drainage coordinate the vadose datum is instantiated at. A massif's
 /// entrance plateau is a *recharge* area by definition — water enters there and
 /// leaves underground — so it carries essentially no upslope contributing area.
-/// `1.0` is the smallest accumulation a land cell can have (itself).
+/// `1.0` is the smallest accumulation a land vertex can have (itself).
 #[cfg(test)]
 const ARABIKA_DRAINAGE: f64 = 1.0;
 
@@ -234,7 +234,7 @@ const RECHARGE_RISE_M: f64 = 411.7;
 /// permeable side and lose the aquitards entirely.
 ///
 /// **The span is authored at two orders, not thirteen**, because `porosity` is
-/// a cell-scale matrix property rather than a conductivity: it does not carry
+/// a vertex-scale matrix property rather than a conductivity: it does not carry
 /// fracture permeability, which is most of that thirteen-order spread. Two
 /// orders across the full `[0, 1]` axis works out to about **35×** across the
 /// porosity the model actually produces on cave-bearing land — measured at
@@ -296,13 +296,13 @@ const RELIEF_HALF_M: f64 = 8848.0;
 /// The scale (m) over which the relief term is smoothed through sea level.
 ///
 /// **Authored, and it exists to avoid an atom.** The physically obvious form is
-/// `max(height_asl_m, 0.0)`, which is exact but puts every land cell at or
+/// `max(height_asl_m, 0.0)`, which is exact but puts every land vertex at or
 /// below sea level on one identical value. A softplus of the same shape is
 /// monotone, smooth, strictly positive, and agrees with the clamp to within a
 /// metre by ~200 m of elevation, so it buys atom-freedom for nothing.
 ///
 /// **It is NOT a negligible knob, and an earlier draft of this comment claimed
-/// it was.** The carve's marine trim pins a large population of land cells to
+/// it was.** The carve's marine trim pins a large population of land vertices to
 /// *exactly* sea level — the probe measures **16.4–18.6% of cave-bearing
 /// columns at `height_asl_m == 0.0`** — and for those columns the drawdown term
 /// is directly proportional to this constant. Swept over a 20× range with
@@ -322,7 +322,7 @@ const RELIEF_HALF_M: f64 = 8848.0;
 /// than used to choose.
 ///
 /// **Re-run after the §4.2.1 recalibration, and it had to be.** The correction
-/// changed `relief(0)` by roughly 10× (0.0415 → 0.0039), and cells at exactly
+/// changed `relief(0)` by roughly 10× (0.0415 → 0.0039), and vertices at exactly
 /// sea level are this constant's entire population, so the earlier sweep was
 /// measuring a term that no longer exists. Its rows were 39.7/54.3/49.1,
 /// 29.9/45.5/42.5 and 19.6/36.5/32.9 — close enough to the current ones that
@@ -340,7 +340,7 @@ const RELIEF_SOFT_M: f64 = 50.0;
 /// Flow accumulation at which the recharge term reaches half its maximum.
 ///
 /// **Not authored — it is [`crate::RIVER_MIN_DRAINAGE`]**, the accumulation at
-/// which `crate::water::classify` already declares a cell to carry a river. A
+/// which `crate::water::classify` already declares a vertex to carry a river. A
 /// perennial river *is* the water table intersecting the ground, so the one
 /// place this model already commits to saying "surface water lives here" is
 /// the right half-saturation point for "the table is close to the surface".
@@ -435,7 +435,7 @@ fn softplus(x: f64) -> f64 {
 
 /// How much head this column has to drain with, in `(0, 1)`: a smoothed
 /// height above sea level, divided by that height plus [`RELIEF_HALF_M`].
-/// Sea level is the regional base level at a ~110 km cell, so a column at it
+/// Sea level is the regional base level at a ~110 km vertex, so a column at it
 /// has almost nowhere to shed water to and a column a kilometre above it has
 /// most of the head it will ever get.
 fn relief(height_asl_m: f64) -> f64 {
@@ -452,7 +452,7 @@ fn transmissivity(porosity: f64) -> f64 {
 
 /// How much water arrives from upslope, in `[0, 1)`, half-saturating at
 /// [`DRAINAGE_HALF`]. Negative accumulations are not a state the field can
-/// reach (it counts cells); the guard is there so the function is total, not
+/// reach (it counts vertices); the guard is there so the function is total, not
 /// because a caller is expected to use it.
 fn wetness(drainage: f64) -> f64 {
     let flow = drainage.max(0.0);
@@ -462,7 +462,7 @@ fn wetness(drainage: f64) -> f64 {
 /// Depth below the ground surface (m) at which this column becomes saturated:
 /// vadose above, phreatic below.
 ///
-/// `drainage` is a flow accumulation — the upstream land-cell count
+/// `drainage` is a flow accumulation — the upstream land-vertex count
 /// `crate::drainage::drainage_field` produces, not a normalised ratio;
 /// `porosity` is the `[0, 1]` matrix porosity from
 /// [`crate::lithology::MaterialBuffer`]; `height_asl_m` is metres above sea
@@ -628,7 +628,7 @@ mod tests {
     /// A drowned column is the state the floor exists to express, and the one
     /// H3 counts: nothing below the ground is walkable.
     #[test]
-    fn a_river_cell_at_sea_level_is_drowned_from_the_surface() {
+    fn a_river_vertex_at_sea_level_is_drowned_from_the_surface() {
         let d = water_table_depth_m(RIVER_MIN_DRAINAGE * 10.0, 0.46, 0.0);
         assert_eq!(d, 0.0, "a well-watered sea-level column should be drowned");
         assert!(

@@ -14,7 +14,7 @@ use hornvale_almanac::connections::{render_connections, render_overview};
 use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 
-/// Five cells: 0-1 a sea-lane, 0-2 a land route (both real natural routes),
+/// Five vertices: 0-1 a sea-lane, 0-2 a land route (both real natural routes),
 /// and a separate 3-4 pair connected only to each other -- a smaller region,
 /// cut off from the 0/1/2 region.
 fn fixture_graph() -> ConnectionGraph {
@@ -64,7 +64,7 @@ fn a_site_with_a_water_and_land_route_names_both() {
 fn a_site_in_the_smaller_region_reads_as_cut_off() {
     let world = fixture_world();
     let graph = fixture_graph();
-    // Cell 3's region ({3, 4}, size 2) is smaller than cell 0's region
+    // Vertex 3's region ({3, 4}, size 2) is smaller than vertex 0's region
     // ({0, 1, 2}, size 3) -- it must read as isolated.
     let text = render_connections(&world, Vertex(3), &graph);
     assert!(
@@ -103,14 +103,14 @@ fn a_site_with_no_routes_at_all_says_so_honestly() {
     let text = render_connections(&world, Vertex(4), &graph);
     assert!(
         !text.contains("linked by sea-lane"),
-        "cell 4 must not be claimed to have a sea-lane of its own:\n{text}"
+        "vertex 4 must not be claimed to have a sea-lane of its own:\n{text}"
     );
-    // It still must read as cut off (same small region as cell 3).
+    // It still must read as cut off (same small region as vertex 3).
     assert!(text.contains("cut off"), "{text}");
 }
 
 #[test]
-fn a_known_settlement_name_stands_in_for_a_bare_cell_id() {
+fn a_known_settlement_name_stands_in_for_a_bare_vertex_id() {
     let mut world = fixture_world();
     world
         .registry
@@ -118,7 +118,7 @@ fn a_known_settlement_name_stands_in_for_a_bare_cell_id() {
         .unwrap();
     world
         .registry
-        .register_predicate(hornvale_settlement::CELL_ID, true, "cell id")
+        .register_predicate(hornvale_settlement::VERTEX_ID, true, "vertex id")
         .unwrap();
     // `NAME` is already registered by `World::new`; re-registering an
     // identical definition is idempotent (`register_predicate`'s contract).
@@ -160,7 +160,7 @@ fn a_known_settlement_name_stands_in_for_a_bare_cell_id() {
         .ledger
         .commit(
             fact(
-                hornvale_settlement::CELL_ID,
+                hornvale_settlement::VERTEX_ID,
                 hornvale_kernel::Value::Number(1.0),
             ),
             &registry,
@@ -171,11 +171,11 @@ fn a_known_settlement_name_stands_in_for_a_bare_cell_id() {
     let text = render_connections(&world, Vertex(0), &graph);
     assert!(
         text.contains("Harrowgate"),
-        "a named settlement replaces its bare cell id:\n{text}"
+        "a named settlement replaces its bare vertex id:\n{text}"
     );
     assert!(
-        !text.contains("cell 1"),
-        "the named endpoint must not also show as a bare cell id:\n{text}"
+        !text.contains("vertex 1"),
+        "the named endpoint must not also show as a bare vertex id:\n{text}"
     );
 }
 

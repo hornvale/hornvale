@@ -13,18 +13,18 @@ use hornvale_terrain::GeneratedTerrain;
 pub(crate) fn substrate_at(
     climate: &GeneratedClimate,
     terrain: &GeneratedTerrain,
-    cell: Vertex,
+    vertex: Vertex,
 ) -> Substrate {
     let globe = terrain.globe();
-    let elevation = quantize(globe.elevation.get(cell).get());
+    let elevation = quantize(globe.elevation.get(vertex).get());
     let sea_level = quantize(globe.sea_level.get());
     if elevation <= sea_level {
-        // Underwater cells keep the ordinary substrate; marine biomes carry
+        // Underwater vertices keep the ordinary substrate; marine biomes carry
         // their own identity via the base biome.
         return Substrate::Ordinary;
     }
-    let unrest = quantize(*globe.unrest.get(cell));
-    let moisture = quantize(climate.moisture_at(cell));
+    let unrest = quantize(*globe.unrest.get(vertex));
+    let moisture = quantize(climate.moisture_at(vertex));
     let relief = quantize(elevation - sea_level);
 
     // Volcanic: high tectonic unrest → basalt (high relief) or ash (low).
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn substrate_is_deterministic_and_total() {
-        // Every cell resolves to a substrate; twice-sampled is identical.
+        // Every vertex resolves to a substrate; twice-sampled is identical.
         let w = World::new(hornvale_kernel::Seed(42));
         let climate = climate_of(&w).unwrap();
         let terrain = terrain_of(&w).unwrap();
@@ -72,8 +72,8 @@ mod tests {
     }
 
     #[test]
-    fn high_unrest_cells_read_volcanic() {
-        // Every high-unrest land cell reads Basaltic or Ashen (a total
+    fn high_unrest_vertices_read_volcanic() {
+        // Every high-unrest land vertex reads Basaltic or Ashen (a total
         // implication — never vacuously misleading).
         let w = World::new(hornvale_kernel::Seed(42));
         let climate = climate_of(&w).unwrap();
@@ -89,7 +89,7 @@ mod tests {
                         substrate_at(&climate, &terrain, c),
                         Substrate::Basaltic | Substrate::Ashen
                     ),
-                    "high-unrest land cell {c:?} must read volcanic"
+                    "high-unrest land vertex {c:?} must read volcanic"
                 );
             }
         }

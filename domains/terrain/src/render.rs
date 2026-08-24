@@ -1,9 +1,9 @@
 //! Deterministic map renders in the First Light tradition: an
 //! equirectangular PNG elevation map (decision 0018) and an ASCII map for
 //! the REPL. Same globe, same seed, same bytes — a changed artifact in
-//! review means changed behavior. Pixel→cell lookup uses the kernel's
+//! review means changed behavior. Pixel→vertex lookup uses the kernel's
 //! `NearestVertexIndex` (a latitude-band index, 30 bands of 6°): the nearest
-//! cell center at level ≥ 4 is within ~2.5°, so the pixel's band plus both
+//! vertex center at level ≥ 4 is within ~2.5°, so the pixel's band plus both
 //! neighbors always contains it.
 
 use crate::features::{CaveKind, Commodity};
@@ -60,10 +60,10 @@ fn coast_noise(noise_seed: Seed, p: [f64; 3]) -> f64 {
     2.0 * mean - 1.0
 }
 
-/// Gaussian-weighted elevation over the nearest cell and its neighbors —
-/// the refinement's prior, a convex combination of nearby cell values.
-/// The weight width is half the nearest cell's mean neighbor spacing, so
-/// candidates entering or leaving the set as the nearest cell flips carry
+/// Gaussian-weighted elevation over the nearest vertex and its neighbors —
+/// the refinement's prior, a convex combination of nearby vertex values.
+/// The weight width is half the nearest vertex's mean neighbor spacing, so
+/// candidates entering or leaving the set as the nearest vertex flips carry
 /// negligible weight (no visible seams).
 fn interpolated_elevation(
     geo: &Geosphere,
@@ -83,10 +83,10 @@ fn interpolated_elevation(
     let sigma = spacing / 2.0;
     let mut weighted = 0.0;
     let mut total = 0.0;
-    for cell in std::iter::once(nearest).chain(neighbors.iter().copied()) {
-        let theta = angle(p, geo.position(cell));
+    for vertex in std::iter::once(nearest).chain(neighbors.iter().copied()) {
+        let theta = angle(p, geo.position(vertex));
         let weight = math::exp(-(theta * theta) / (sigma * sigma));
-        weighted += weight * globe.elevation.get(cell).get();
+        weighted += weight * globe.elevation.get(vertex).get();
         total += weight;
     }
     weighted / total
@@ -117,7 +117,7 @@ fn refined_elevation(
     interp + COAST_AMP_M * envelope * coast_noise(noise_seed, direction(latitude, longitude))
 }
 
-/// Color a cell by elevation relative to sea level: ocean blues deepen with
+/// Color a vertex by elevation relative to sea level: ocean blues deepen with
 /// depth; land climbs green → tan → brown → white.
 fn color(elevation_m: f64, sea_level_m: f64) -> [u8; 3] {
     fn lerp(a: [u8; 3], b: [u8; 3], t: f64) -> [u8; 3] {
@@ -149,7 +149,7 @@ fn color(elevation_m: f64, sea_level_m: f64) -> [u8; 3] {
 /// lat/lon center (row-major, top row first, longitude −180 → 180 across,
 /// latitude 90 → −90 down) and packs the resulting RGB triples. Both
 /// `elevation_png` (a refined per-pixel elevation sample) and
-/// `lithology_png` (a nearest-cell rock class) share this loop; only the
+/// `lithology_png` (a nearest-vertex rock class) share this loop; only the
 /// per-pixel sampling differs.
 fn rasterize(width: u32, height: u32, mut pixel: impl FnMut(f64, f64) -> [u8; 3]) -> Vec<u8> {
     let mut out = Vec::with_capacity((width * height * 3) as usize);
@@ -164,7 +164,7 @@ fn rasterize(width: u32, height: u32, mut pixel: impl FnMut(f64, f64) -> [u8; 3]
 }
 
 /// Raw RGB pixels of the equirectangular elevation map. Pixels are
-/// coastal-noise-refined from the world seed, not raw cell values — see
+/// coastal-noise-refined from the world seed, not raw vertex values — see
 /// `refined_elevation`.
 fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
@@ -216,19 +216,19 @@ fn rock_color(rock: RockClass) -> [u8; 3] {
     }
 }
 
-/// Raw RGB pixels of the equirectangular lithology map: nearest-cell rock
+/// Raw RGB pixels of the equirectangular lithology map: nearest-vertex rock
 /// class, no interpolation (rock class is categorical, unlike elevation).
 fn lithology_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
-        let cell = index.nearest(geo, latitude, longitude);
+        let vertex = index.nearest(geo, latitude, longitude);
         let rock = crate::lithology::classify_rock(
-            globe.lithology.get(cell),
-            *globe.drainage.get(cell),
-            *globe.endorheic.get(cell),
-            *globe.elevation.get(cell) < globe.sea_level,
-            *globe.sediment_thickness.get(cell),
+            globe.lithology.get(vertex),
+            *globe.drainage.get(vertex),
+            *globe.endorheic.get(vertex),
+            *globe.elevation.get(vertex) < globe.sea_level,
+            *globe.sediment_thickness.get(vertex),
         );
         rock_color(rock)
     })
@@ -246,7 +246,7 @@ pub fn lithology_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
 /// Measured over seed 42 at `GLOBE_LEVEL`: `carve_delta_m`'s 1st/99th
 /// percentiles sit at roughly ∓250 m while its extremes reach ∓2000 m —
 /// scaling to the extremes would wash out the ordinary case, so this caps
-/// at the percentile range instead; the rare cell beyond it simply
+/// at the percentile range instead; the rare vertex beyond it simply
 /// saturates to the palette's most intense red/blue.
 const SEDIMENT_LENS_SCALE_M: f64 = 300.0;
 
@@ -276,14 +276,14 @@ fn sediment_color(delta_m: f64) -> [u8; 3] {
 }
 
 /// Raw RGB pixels of the equirectangular sediment/carve-delta map:
-/// nearest-cell `carve_delta_m` (categorical-resolution debug lens, no
+/// nearest-vertex `carve_delta_m` (categorical-resolution debug lens, no
 /// coastal-noise refinement — same convention as `lithology_pixels`).
 fn sediment_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
-        let cell = index.nearest(geo, latitude, longitude);
-        sediment_color(*globe.carve_delta_m.get(cell))
+        let vertex = index.nearest(geo, latitude, longitude);
+        sediment_color(*globe.carve_delta_m.get(vertex))
     })
 }
 
@@ -312,17 +312,17 @@ fn column_color(depth_m: f64) -> [u8; 3] {
 }
 
 /// Raw RGB pixels of the equirectangular column (depth-to-basement) map:
-/// nearest-cell `depth_to_basement` (categorical-resolution debug lens, no
+/// nearest-vertex `depth_to_basement` (categorical-resolution debug lens, no
 /// coastal-noise refinement — same convention as `lithology_pixels`).
 fn column_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
-        let cell = index.nearest(geo, latitude, longitude);
-        let buf = globe.lithology.get(cell);
+        let vertex = index.nearest(geo, latitude, longitude);
+        let buf = globe.lithology.get(vertex);
         let dtb = crate::strata::depth_to_basement(
             buf.soil_depth.get(),
-            *globe.sediment_thickness.get(cell),
+            *globe.sediment_thickness.get(vertex),
         );
         column_color(dtb)
     })
@@ -366,14 +366,14 @@ fn cave_color(kind: CaveKind) -> [u8; 3] {
     }
 }
 
-/// Muted base color for a cell with no located feature: a flat slate-blue
+/// Muted base color for a vertex with no located feature: a flat slate-blue
 /// for ocean, a flat sage for land — deliberately low-key so the commodity
 /// and cave-kind colors read clearly against it.
 const FEATURES_OCEAN_BASE: [u8; 3] = [60, 80, 100];
 /// See [`FEATURES_OCEAN_BASE`].
 const FEATURES_LAND_BASE: [u8; 3] = [90, 100, 80];
 
-/// Raw RGB pixels of the equirectangular features map: the nearest cell's
+/// Raw RGB pixels of the equirectangular features map: the nearest vertex's
 /// deposit (colored by commodity) where the point process places one, else
 /// its cave (colored by kind) where one is placed, else a muted ocean/land
 /// base — categorical-resolution, no coastal-noise refinement (same
@@ -383,12 +383,12 @@ fn features_pixels(terrain: &GeneratedTerrain) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
-        let cell = index.nearest(geo, latitude, longitude);
-        if let Some(deposit) = terrain.deposit_at(cell) {
+        let vertex = index.nearest(geo, latitude, longitude);
+        if let Some(deposit) = terrain.deposit_at(vertex) {
             commodity_color(deposit.commodity)
-        } else if let Some(cave) = terrain.cave_at(cell) {
+        } else if let Some(cave) = terrain.cave_at(vertex) {
             cave_color(cave.kind)
-        } else if terrain.is_ocean(cell) {
+        } else if terrain.is_ocean(vertex) {
             FEATURES_OCEAN_BASE
         } else {
             FEATURES_LAND_BASE
@@ -419,8 +419,8 @@ pub fn elevation_ascii(geo: &Geosphere, globe: &TectonicGlobe) -> String {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
         for px in 0..ASCII_WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(ASCII_WIDTH) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            let height = *globe.elevation.get(cell) - globe.sea_level;
+            let vertex = index.nearest(geo, latitude, longitude);
+            let height = *globe.elevation.get(vertex) - globe.sea_level;
             out.push(if height < 0.0 {
                 '~'
             } else if height < 500.0 {

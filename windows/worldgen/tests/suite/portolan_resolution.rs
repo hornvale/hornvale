@@ -1,4 +1,4 @@
-//! The Portolan's preregistered H2 (Task 4): "the same cell resolves to the
+//! The Portolan's preregistered H2 (Task 4): "the same vertex resolves to the
 //! same name on repeat visits within a session, and across a rebuild of the
 //! world from its seed." Falsified by any variation, which would mean
 //! [`FeatureClass::salience`]'s ordering is not actually total in practice —
@@ -36,8 +36,8 @@
 //! docstring calls out ("total order -- every pair must disagree") without
 //! anything upstream of this file exercising it against `build`'s actual
 //! sort. `VertexFeatureIndex::build` (`domains/terrain/src/landscape.rs`)
-//! sorts each cell's stack by `(id.class.salience(), *id)` — salience
-//! first, the full `FeatureId` (class then canonical cell) as a
+//! sorts each vertex's stack by `(id.class.salience(), *id)` — salience
+//! first, the full `FeatureId` (class then canonical vertex) as a
 //! never-tying secondary key — so today's implementation is already immune
 //! to this; this file exists to keep it that way and to name the concrete
 //! defect a regression here would be.
@@ -98,16 +98,16 @@ fn build_seed_42_from_scratch(seed: Seed) -> (Geosphere, Vec<Feature>, VertexFea
 }
 
 /// The literal H2 reading from the brief: build seed 42 twice from scratch,
-/// resolve every cell in both, assert the answers are identical.
+/// resolve every vertex in both, assert the answers are identical.
 ///
 /// **Could this test have failed?** Only via a pre-existing determinism bug
 /// upstream of this file (a banned nondeterministic collection, a leaked
 /// iteration order, a stray platform transcendental) — not via anything
 /// this file targets on purpose. It is included because the brief asks for
 /// it directly and it does add one real check for free: a fixed, printed
-/// positive-control count (40,585 of 40,962 cells resolve, the figure this
+/// positive-control count (40,585 of 40,962 vertices resolve, the figure this
 /// campaign has measured and recorded since Task 3) rules out the
-/// vacuous-pass shape where every cell resolves to `None` in both builds
+/// vacuous-pass shape where every vertex resolves to `None` in both builds
 /// and the loop below trivially agrees.
 #[test]
 fn seed_42_resolution_is_stable_across_an_independent_rebuild() {
@@ -125,12 +125,12 @@ fn seed_42_resolution_is_stable_across_an_independent_rebuild() {
     let mut resolved = 0usize;
     let mut checked = 0usize;
 
-    for cell in geo_a.vertices() {
-        let a = resolve_at(&index_a, cell, seed, PEOPLE, &ph, &morph);
-        let b = resolve_at(&index_b, cell, seed, PEOPLE, &ph, &morph);
+    for vertex in geo_a.vertices() {
+        let a = resolve_at(&index_a, vertex, seed, PEOPLE, &ph, &morph);
+        let b = resolve_at(&index_b, vertex, seed, PEOPLE, &ph, &morph);
         assert_eq!(
             a, b,
-            "cell {cell:?} resolved differently across an independent rebuild: {a:?} vs {b:?}"
+            "vertex {vertex:?} resolved differently across an independent rebuild: {a:?} vs {b:?}"
         );
         if a.is_some() {
             resolved += 1;
@@ -138,7 +138,9 @@ fn seed_42_resolution_is_stable_across_an_independent_rebuild() {
         checked += 1;
     }
 
-    println!("H2 (rebuild): seed 42, level {LEVEL}, {checked} cells checked, {resolved} resolved");
+    println!(
+        "H2 (rebuild): seed 42, level {LEVEL}, {checked} vertices checked, {resolved} resolved"
+    );
 
     // Positive control: the exact seed-42 shape this campaign has measured
     // and recorded (module doc, Task 3's CLAUDE.md summary). A build that
@@ -147,18 +149,18 @@ fn seed_42_resolution_is_stable_across_an_independent_rebuild() {
     // as a failure.
     assert_eq!(
         checked, 40_962,
-        "seed 42 at level {LEVEL} should have 40,962 cells"
+        "seed 42 at level {LEVEL} should have 40,962 vertices"
     );
     assert_eq!(
         resolved, 40_585,
-        "seed 42 should resolve 40,585 of 40,962 cells (measured, Task 3)"
+        "seed 42 should resolve 40,585 of 40,962 vertices (measured, Task 3)"
     );
 }
 
 /// The test that actually has teeth: `VertexFeatureIndex::build` fed the same
 /// feature set in three different orders — forward, fully reversed, and a
 /// halves-interleaved shuffle that shares no simple positional relationship
-/// with either — must produce byte-identical per-cell stacks.
+/// with either — must produce byte-identical per-vertex stacks.
 ///
 /// Determinism does not give this away for free: a *given* call to `build`
 /// is guaranteed to be internally deterministic (same input, same output,
@@ -215,40 +217,40 @@ fn seed_42_index_order_is_independent_of_build_input_order() {
     assert_eq!(interleaved.len(), features.len());
     let interleaved_index = VertexFeatureIndex::build(&interleaved);
 
-    let mut multi_feature_cells = 0usize;
+    let mut multi_feature_vertices = 0usize;
     let mut checked = 0usize;
 
-    for cell in geo.vertices() {
-        let want = forward.at(cell);
+    for vertex in geo.vertices() {
+        let want = forward.at(vertex);
         assert_eq!(
-            reversed_index.at(cell),
+            reversed_index.at(vertex),
             want,
-            "cell {cell:?}: reversing VertexFeatureIndex::build's input order changed the resolved stack"
+            "vertex {vertex:?}: reversing VertexFeatureIndex::build's input order changed the resolved stack"
         );
         assert_eq!(
-            interleaved_index.at(cell),
+            interleaved_index.at(vertex),
             want,
-            "cell {cell:?}: interleaving VertexFeatureIndex::build's input order changed the resolved stack"
+            "vertex {vertex:?}: interleaving VertexFeatureIndex::build's input order changed the resolved stack"
         );
         if want.len() > 1 {
-            multi_feature_cells += 1;
+            multi_feature_vertices += 1;
         }
         checked += 1;
     }
 
     println!(
-        "H2 (permuted build order): seed 42, level {LEVEL}, {checked} cells checked, \
-         {multi_feature_cells} multi-feature cells (where a tie-break actually fires)"
+        "H2 (permuted build order): seed 42, level {LEVEL}, {checked} vertices checked, \
+         {multi_feature_vertices} multi-feature vertices (where a tie-break actually fires)"
     );
 
-    // Positive control: this assertion only has teeth where a cell's stack
-    // has more than one entry (a single-feature cell's "order" is trivial
+    // Positive control: this assertion only has teeth where a vertex's stack
+    // has more than one entry (a single-feature vertex's "order" is trivial
     // regardless of tie-break behaviour). Pin the count so a future change
-    // that collapsed every cell to at most one feature would not silently
+    // that collapsed every vertex to at most one feature would not silently
     // turn this into a vacuous pass.
     assert!(
-        multi_feature_cells > 1_000,
-        "expected thousands of multi-feature cells at seed 42 (containment is common — \
-         volcanoes sit inside landmasses, landmasses inside nothing, etc.); got {multi_feature_cells}"
+        multi_feature_vertices > 1_000,
+        "expected thousands of multi-feature vertices at seed 42 (containment is common — \
+         volcanoes sit inside landmasses, landmasses inside nothing, etc.); got {multi_feature_vertices}"
     );
 }

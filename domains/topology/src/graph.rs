@@ -1,5 +1,5 @@
 //! The connection graph: an undirected adjacency structure over the
-//! geosphere's cells, carrying natural travel routes (never built roads —
+//! geosphere's vertices, carrying natural travel routes (never built roads —
 //! see `EdgeKind`) and their reachability under a conductance threshold.
 
 use hornvale_kernel::Vertex;
@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 /// variant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EdgeKind {
-    /// Two cells share a mesh boundary (bare terrain adjacency).
+    /// Two vertices share a mesh boundary (bare terrain adjacency).
     Adjacency,
     /// A navigable water connection (river or coastal corridor).
     WaterRoute,
@@ -18,12 +18,12 @@ pub enum EdgeKind {
     LandRoute,
 }
 
-/// One directed half of an undirected connection between two cells.
+/// One directed half of an undirected connection between two vertices.
 /// `ConnectionGraph::add_edge` stores both halves.
 /// type-audit: bare-ok(ratio: conductance)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Edge {
-    /// The cell this edge leads to.
+    /// The vertex this edge leads to.
     pub to: Vertex,
     /// What kind of natural route this edge represents.
     pub kind: EdgeKind,
@@ -34,7 +34,7 @@ pub struct Edge {
 }
 
 /// The world's derived transport topology: an undirected graph over
-/// `Vertex`, backed by a per-cell adjacency `Vec` indexed by `Vertex`. The
+/// `Vertex`, backed by a per-vertex adjacency `Vec` indexed by `Vertex`. The
 /// node set is the dense `0..node_count`, so a `Vec` indexes in O(1) and
 /// iterates in ascending-`Vertex` order — the same determinism a `BTreeMap`
 /// gave (no dependence on hash seed or insertion order), without the per-key
@@ -45,11 +45,11 @@ pub struct ConnectionGraph {
 }
 
 impl ConnectionGraph {
-    /// Build an empty graph over `node_count` cells, `Vertex(0)` through
+    /// Build an empty graph over `node_count` vertices, `Vertex(0)` through
     /// `Vertex(node_count - 1)`, each starting with no edges.
     /// type-audit: bare-ok(count: node_count)
     pub fn new(node_count: usize) -> Self {
-        // Reserve each adjacency list up front. A geosphere cell has 5-6
+        // Reserve each adjacency list up front. A geosphere vertex has 5-6
         // neighbours and `add_edge` appends to BOTH endpoints, so a list that
         // starts empty reallocates ~4 times (1->2->4->8) on its way to its
         // final length — 40,962 nodes' worth of realloc traffic per graph,
@@ -92,7 +92,7 @@ impl ConnectionGraph {
     }
 
     /// Scale every stored directed edge's conductance in place: `factor` is
-    /// called once per entry in every cell's adjacency list (so a symmetric
+    /// called once per entry in every vertex's adjacency list (so a symmetric
     /// pair -- the two mirrored halves `add_edge` inserted -- is visited
     /// once from each side, each time with `from` set to whichever endpoint
     /// owns that entry). A caller that wants the same multiplier regardless

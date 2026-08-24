@@ -2,7 +2,7 @@
 //! field (`crate::moisture`) and annual-mean temperature into an Earth-ranged
 //! mm/yr total, a snow fraction, and a seasonal regime label. Kept pure (no
 //! `Geosphere`/`VertexMap`) so each is unit-tested without building a world;
-//! the provider (`crate::provider`) precomputes them per cell and exposes
+//! the provider (`crate::provider`) precomputes them per vertex and exposes
 //! `precip_at`/`snow_fraction_at`/`regime_at`.
 
 use crate::circulation::is_rising_band;
@@ -52,7 +52,7 @@ pub enum PrecipRegime {
     Monsoon,
 }
 
-/// Classify the seasonal precipitation regime at a cell from its circulation
+/// Classify the seasonal precipitation regime at a vertex from its circulation
 /// band, continentality, and hemisphere. A documented heuristic (spec §5
 /// model card), not a simulated monsoon circulation:
 /// - The equatorial rising belt (`band == 0`) is `Uniform` — its ITCZ
@@ -87,7 +87,7 @@ pub fn precip_regime(band: u32, continentality: f64, hemisphere_sign: f64) -> Pr
 /// Baseline cloud fraction contributed regardless of uplift or band (a
 /// diagnostic floor: even flat, sinking terrain shows some cloud when moist).
 const CLOUD_BASE: f64 = 0.3;
-/// Additional contribution when the cell sits in a rising circulation band
+/// Additional contribution when the vertex sits in a rising circulation band
 /// (convective cloud from the same ascent that makes those bands wet).
 const CLOUD_RISING: f64 = 0.3;
 /// Orographic-uplift coefficient, scaled by `uplift_m / CLOUD_UPLIFT_SCALE_M`
@@ -98,7 +98,7 @@ const CLOUD_UPLIFT_K: f64 = 0.6;
 /// Elevation scale (m) normalizing uplift for the cloud-fraction term.
 const CLOUD_UPLIFT_SCALE_M: f64 = 3000.0;
 
-/// Diagnostic cloud fraction at a cell, `[0, 1]`: **feeds nothing** (no
+/// Diagnostic cloud fraction at a vertex, `[0, 1]`: **feeds nothing** (no
 /// insolation or temperature term reads it) — a readable field only, one
 /// data point short of a full cloud model (spec §5 declared approximation).
 /// Monotone increasing in `moisture` and in `uplift_m`; higher in a rising
@@ -130,14 +130,14 @@ pub fn daily_weight(state: WeatherState) -> f64 {
     }
 }
 
-/// One day's precipitation in mm, as this day's share of the cell's annual
+/// One day's precipitation in mm, as this day's share of the vertex's annual
 /// climatology. `weight_sum` is the sum of [`daily_weight`] over every day of
-/// the cell's year, so summing this over that year reproduces `annual`
+/// the vertex's year, so summing this over that year reproduces `annual`
 /// exactly — the "coarse constrains fine" contract with [`precip_mm_yr`].
 ///
-/// `weight_sum == 0.0` (a cell whose sky is never wetter than `Fair` all
-/// year) would otherwise divide by zero and silently discard the cell's
-/// climatological rainfall. Such a cell falls back to a uniform spread:
+/// `weight_sum == 0.0` (a vertex whose sky is never wetter than `Fair` all
+/// year) would otherwise divide by zero and silently discard the vertex's
+/// climatological rainfall. Such a vertex falls back to a uniform spread:
 /// the annual total is preserved, delivered thinly across every day.
 /// type-audit: bare-ok(ratio: weight), bare-ok(ratio: weight_sum), bare-ok(count: year_days), bare-ok(diagnostic-value: return)
 pub fn daily_precip_mm(annual: Precipitation, weight: f64, weight_sum: f64, year_days: f64) -> f64 {
@@ -333,8 +333,8 @@ mod tests {
     }
 
     #[test]
-    fn a_perpetually_clear_cell_still_receives_its_annual_total() {
-        // The zero-weight-sum edge case: a cell whose sky is never wet would
+    fn a_perpetually_clear_vertex_still_receives_its_annual_total() {
+        // The zero-weight-sum edge case: a vertex whose sky is never wet would
         // divide by zero and silently LOSE its climatological rainfall. The
         // honest fallback is uniform — preserve the total, spread it thin.
         let annual = Precipitation::new(120.0).expect("valid");
@@ -344,7 +344,7 @@ mod tests {
             .sum();
         assert!(
             (total - annual.get()).abs() < 1e-6,
-            "a never-wet cell lost its annual total: got {total}"
+            "a never-wet vertex lost its annual total: got {total}"
         );
     }
 }

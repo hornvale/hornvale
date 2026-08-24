@@ -36,7 +36,7 @@ impl CaveKind {
     }
 }
 
-/// A located cave at a cell.
+/// A located cave at a vertex.
 ///
 /// **Carries a derived-field invariant:** `deepest_horizon ==
 /// band_at_depth(column, depth_reach_m)`. The depth coordinate is the metre
@@ -125,7 +125,7 @@ impl CaveKind {
 pub struct Cave {
     /// Which process opened it.
     pub kind: CaveKind,
-    /// The deepest band of the cell's column the void penetrates — *derived
+    /// The deepest band of the vertex's column the void penetrates — *derived
     /// from* `depth_reach_m`, not the depth coordinate itself (spec §4.0).
     pub deepest_horizon: Horizon,
     /// How far below the surface the void actually reaches, in metres
@@ -236,11 +236,11 @@ pub fn lavatube_proneness(buf: &MaterialBuffer, crust_age: f64) -> f64 {
     (mafic * extrusive * youth).clamp(0.0, 1.0)
 }
 
-/// Reach, in cells, of the actively-deforming belt around a plate contact —
+/// Reach, in vertices, of the actively-deforming belt around a plate contact —
 /// the distance beyond which a contact contributes no fault-void stress.
 ///
-/// A cell is ~110 km across at `GLOBE_LEVEL` (6: 40 962 cells on a globe of
-/// Earth's area), so this is ~165 km: the contact cell at full stress and its
+/// A vertex is ~110 km across at `GLOBE_LEVEL` (6: 40 962 vertices on a globe of
+/// Earth's area), so this is ~165 km: the contact vertex at full stress and its
 /// immediate neighbour at a third. That is the scale of an active fault
 /// system's damage belt — the San Andreas system is ~100–200 km wide — and it
 /// is deliberately narrower than `lithology::OROGEN_REACH` (4 hops, ~440 km),
@@ -274,7 +274,7 @@ const FRACTURE_DILATION_COMPRESSIONAL: f64 = 0.15;
 ///   bends and dilational jogs: a real but minority fraction of the trace.
 /// - **Compressional** (`ContinentalCollision`, `CoastalRange`, `IslandArc`) —
 ///   horizontal shortening squeezes fractures shut. Not zero: thrust-stack
-///   voids exist, and the model's coarsest interpretation of a contact cell
+///   voids exist, and the model's coarsest interpretation of a contact vertex
 ///   spans settings. But small.
 ///
 /// This is the term that keeps `Fracture` from being a background process
@@ -292,7 +292,7 @@ pub fn fracture_dilation(kind: BoundaryKind) -> f64 {
     }
 }
 
-/// Fault-void stress at a cell, `[0,1]`, from the nearest same-plate contact:
+/// Fault-void stress at a vertex, `[0,1]`, from the nearest same-plate contact:
 /// how far away it is, tapering linearly to zero at
 /// [`FRACTURE_STRESS_REACH`], times how much void that contact's regime leaves
 /// open ([`fracture_dilation`]). Zero in a cratonic interior with no reachable
@@ -304,9 +304,9 @@ pub fn fracture_dilation(kind: BoundaryKind) -> f64 {
 /// *belt* concentrates an ore province that also exists, thinly, in the
 /// interior. A fault void is not a concentration of a background process; it
 /// requires a fault. `boundary_distance` is this model's only proxy for fault
-/// density, and a cell with no reachable same-plate boundary has, by that
+/// density, and a vertex with no reachable same-plate boundary has, by that
 /// proxy, no fault to host a void. Reading a floored weight as stress credits
-/// every cratonic-interior cell with a third of the stress of a plate contact,
+/// every cratonic-interior vertex with a third of the stress of a plate contact,
 /// which makes distance from a fault inexpressible — a term that cannot fall
 /// below 0.3 cannot say "far from any fault".
 ///
@@ -368,7 +368,7 @@ pub fn fracture_proneness(
     (stress * competent).clamp(0.0, 1.0)
 }
 
-/// The void-opening process this cell's rock best supports, with that
+/// The void-opening process this vertex's rock best supports, with that
 /// process's own proneness — `None` where no process operates.
 ///
 /// **Kind is chosen BEFORE existence is tested**, mirroring [`deposit_kind`].
@@ -409,7 +409,7 @@ pub fn cave_process(
     if best.1 <= 0.0 { None } else { Some(best) }
 }
 
-/// The deepest band a cave of this kind penetrates, given the cell's column.
+/// The deepest band a cave of this kind penetrates, given the vertex's column.
 ///
 /// **This is now a LOOKUP, not a derivation** (The Underworld, spec §4.0). The
 /// depth coordinate is [`crate::cave_depth::cave_depth_reach_m`]'s budget in
@@ -459,7 +459,7 @@ pub fn band_at_depth(column: &crate::strata::StratigraphicColumn, depth_m: f64) 
 /// Lineament proximity weight: features cluster into belts near plate contacts.
 /// `hops` is boundary distance (fewer = closer); `None` = cratonic interior,
 /// which is the floor — boundaries only *raise* the weight above it, so a
-/// far-from-boundary cell never scores below the interior (the `.max` floor).
+/// far-from-boundary vertex never scores below the interior (the `.max` floor).
 /// type-audit: bare-ok(count: hops), bare-ok(ratio: return)
 pub fn belt_weight(hops: Option<u32>) -> f64 {
     const INTERIOR_FLOOR: f64 = 0.3;
@@ -600,7 +600,7 @@ pub struct Deposit {
     pub tonnage: f64,
 }
 
-/// The dominant deposit family for a cell, from rock + tectonic setting.
+/// The dominant deposit family for a vertex, from rock + tectonic setting.
 /// Areal ores (iron/salt/coal) project directly from the rock class; the point
 /// ores read the setting. Returns `None` where nothing is prospective.
 /// type-audit: bare-ok(flag: endorheic), bare-ok(ratio: crust_age)
@@ -765,7 +765,7 @@ mod tests {
     }
 
     #[test]
-    fn a_cell_supporting_no_process_hosts_no_cave() {
+    fn a_vertex_supporting_no_process_hosts_no_cave() {
         // Nothing to dissolve, fully felsic (no tube), and incompetent rock ON a
         // plate contact — so the fracture term is zeroed by the rock rather than
         // by the (also-sufficient) absence of a boundary, which would make the
@@ -794,7 +794,7 @@ mod tests {
     /// the cover into the basement.
     #[test]
     fn a_plate_contact_can_host_a_fault_void_and_a_deep_one() {
-        // Hard rock fully overprinted by the orogen it sits in — the exact cell
+        // Hard rock fully overprinted by the orogen it sits in — the exact vertex
         // the old formula scored at zero.
         let mut contact = buf(0.0, 0.7);
         contact.induration = 0.9;
@@ -845,7 +845,7 @@ mod tests {
             0.0
         );
 
-        // A cell with no reachable boundary hosts no fault void however hard
+        // A vertex with no reachable boundary hosts no fault void however hard
         // its rock is.
         let mut hard = buf(0.0, 0.7);
         hard.induration = 1.0;
@@ -1041,10 +1041,10 @@ mod tests {
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let terrain = GeneratedTerrain::new(geo.clone(), outcome);
             let noise_seed = terrain.globe().features_noise_seed();
-            for cell in geo.vertices() {
+            for vertex in geo.vertices() {
                 let raw = crate::crust::sphere_fbm01(
                     noise_seed,
-                    geo.position(cell),
+                    geo.position(vertex),
                     CAVE_GATE_FREQ,
                     CAVE_GATE_OCTAVES,
                 );
@@ -1068,7 +1068,7 @@ mod tests {
     fn belt_weight_is_higher_near_lineaments() {
         assert!(belt_weight(Some(0)) > belt_weight(Some(8)));
         assert!(belt_weight(Some(8)) > belt_weight(None));
-        // Far-from-boundary cells never dip below the cratonic-interior floor
+        // Far-from-boundary vertices never dip below the cratonic-interior floor
         // (max boundary distance is ~49 hops at GLOBE_LEVEL 6).
         assert!(belt_weight(Some(30)) >= belt_weight(None));
         assert!(belt_weight(Some(49)) >= belt_weight(None));

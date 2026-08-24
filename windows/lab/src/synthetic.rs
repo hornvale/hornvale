@@ -23,8 +23,8 @@
 //!   away from both — the one construction the geometry allows.
 //! - **A heat wave that passes** — a creature ON its water (thirst stays
 //!   serviceable, so it never itself distresses) but gripped by a blistering
-//!   thermal cell with no kinder neighbour: comfort is unservable and it Holds
-//!   in `Frustrated` while the wave lasts, then the wave breaks, the cell cools
+//!   thermal room with no kinder neighbour: comfort is unservable and it Holds
+//!   in `Frustrated` while the wave lasts, then the wave breaks, the room cools
 //!   into its niche, and it returns to `Content` — the spike-recover pattern.
 //!   (A permanent hostile climate would read chronic; the recovery is the
 //!   wave's end, sampled cleanly because the drive model's mid-cycle drinks are
@@ -48,7 +48,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// per-room temperatures (°C). Elevation is uniform (`INFINITY`, the
 /// undescribable-room convention) — the scenarios all give their creatures a
 /// water belief, so the ignorant-exploration path that reads elevation never
-/// fires. Unplanted temperatures read `INFINITY` → thermal urgency `0` (a cell
+/// fires. Unplanted temperatures read `INFINITY` → thermal urgency `0` (a room
 /// with no temperature registers no discomfort), so a scenario that plants no
 /// temperatures is thermally silent and exercises thirst alone.
 ///
@@ -165,15 +165,15 @@ const MILD_NICHE: ConditionResponse = ConditionResponse {
 };
 
 /// A narrow-tolerance niche for the thermally-stricken creature: a small band
-/// around a cool optimum, so a hot planted cell reads far past tolerance.
+/// around a cool optimum, so a hot planted room reads far past tolerance.
 const COOL_NICHE: ConditionResponse = ConditionResponse {
     optimum: 15.0,
     width: 5.0,
     devotion: 0.5,
 };
 
-/// A blistering planted cell temperature (°C) — far past `COOL_NICHE`'s
-/// tolerance, so thermal urgency pins to its ceiling and the cell is
+/// A blistering planted room temperature (°C) — far past `COOL_NICHE`'s
+/// tolerance, so thermal urgency pins to its ceiling and the room is
 /// unlivable.
 const BLISTERING_C: f64 = 60.0;
 
@@ -199,7 +199,7 @@ const HOT_WASTE_C: f64 = 45.0;
 /// this bounds the run just under `CHRONIC_TICKS`.
 const WAVE_BREAKS_DAY: f64 = 6.0;
 
-/// The comfortable temperature (°C) a planted cell reads once the wave has
+/// The comfortable temperature (°C) a planted room reads once the wave has
 /// broken — inside `COOL_NICHE`'s band, so thermal urgency falls to `0`.
 const AFTER_WAVE_C: f64 = 15.0;
 
@@ -321,7 +321,7 @@ pub fn stranded_from_known_water() -> Scenario {
 }
 
 /// **Stranded in a hot waste** → the same stranding as
-/// [`stranded_from_known_water`], but the exile cell is hot-but-livable
+/// [`stranded_from_known_water`], but the exile room is hot-but-livable
 /// (`HOT_WASTE_C`, inside a heat-adapted niche so thermal stays quiet). The
 /// Kindling's heat coupling quickens the endotherm's dehydration, so it crosses
 /// into thirst-distress SOONER than the temperate stranding — the coupling,
@@ -373,9 +373,9 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
 /// **A heat wave that passes** → a `Frustrated` spike that recovers (by-cause
 /// thermal, the recovery signal). The creature sits ON its spring, so thirst
 /// stays serviceable (it drinks and resets) and never itself distresses; but a
-/// blistering wave grips its cell and every neighbour with no kinder step, so
+/// blistering wave grips its room and every neighbour with no kinder step, so
 /// while it lasts the creature Holds in thermal `Frustrated`. When the wave
-/// breaks (day `WAVE_BREAKS_DAY`) the cell cools into its niche, comfort is met,
+/// breaks (day `WAVE_BREAKS_DAY`) the room cools into its niche, comfort is met,
 /// and the creature returns to `Content` — a distress spike, chronic-length yet
 /// recovered, produced end-to-end rather than typed by hand.
 pub fn a_heat_wave_that_passes() -> Scenario {
@@ -413,8 +413,8 @@ pub fn a_heat_wave_that_passes() -> Scenario {
 /// hunger), the hunger analogue of [`stranded_from_known_water`]. The creature
 /// sits ON its home spring, so thirst stays serviceable (it drinks and resets,
 /// never itself distressing — the same isolation the heat-wave scenario uses);
-/// but its cell and every neighbour are barren (food-value `0`), so once hunger
-/// crosses its `act` there is no cell rich enough to eat and no richer
+/// but its room and every neighbour are barren (food-value `0`), so once hunger
+/// crosses its `act` there is no room rich enough to eat and no richer
 /// neighbour to forage toward: hunger — a survival drive — Holds unserviced and
 /// the creature starves, distress attributed to hunger, produced end-to-end by
 /// the real sim (The Provender). Proves hunger enters the drive competition and
@@ -428,7 +428,7 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
     ledger
         .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
-    // The spring and its three neighbours are all barren — no cell feeds the
+    // The spring and its three neighbours are all barren — no room feeds the
     // creature and no neighbour is richer, so hunger has no affordance and it
     // Holds (a local food pit, the hunger twin of the heat-wave's thermal pit).
     let mut forage = BTreeMap::new();
@@ -452,7 +452,7 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
 /// **A creature cornered by dread** → sustained danger distress (by-cause
 /// danger), the fear analogue of the food desert and heat wave (The Dread). The
 /// creature sits ON its home spring, so thirst stays serviceable (it drinks and
-/// resets, never itself distressing); but its cell and every neighbour are
+/// resets, never itself distressing); but its room and every neighbour are
 /// maximally uncanny (threat `1.0`), so danger — a survival drive — is engaged
 /// with nowhere safer to flee (a local dread-pit, the twin of the heat wave's
 /// thermal pit), and the creature Holds in danger-`Frustrated`. Proves the fifth

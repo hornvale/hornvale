@@ -297,7 +297,7 @@ verbs:
                    the bare direction works on its own too
   dive             descend a layer of the water column; 'surface' comes back
   surface          rise a layer, and at the top return to the open air
-  delve            descend into the cave at this cell, if the rock admits
+  delve            descend into the cave here, if the rock admits
                    one; 'climb' comes back
   climb            return to the surface from underground
   enter [way]      step inside what is built here; once inside, 'enter further
@@ -638,7 +638,7 @@ pub struct Session<'w> {
     /// other than out of doors at ground level.
     submerged: Option<hornvale_climate::Stratum>,
     /// The chamber the possession has descended into within the cave lattice
-    /// beneath this cell, if any (The Deep Realm, Task 5). `None` is the
+    /// beneath this vertex, if any (The Deep Realm, Task 5). `None` is the
     /// surface. Mirrors `submerged`: the whole resolved value is carried
     /// rather than just an address, so `climb` and a later `look` never need
     /// to re-derive it (`chamber_at` is pure and would return the same
@@ -2370,18 +2370,18 @@ impl<'w> Session<'w> {
         };
         self.wctx
             .ctx
-            .water_column_at(hornvale_kernel::Vertex(cw.cell))
+            .water_column_at(hornvale_kernel::Vertex(cw.vertex))
     }
 
-    /// The cave at the cell the possession stands on, if the terrain places
+    /// The cave at the vertex the possession stands on, if the terrain places
     /// one there — mirrors `column_here`: both resolve the same fuzzy
-    /// corner-weighted cell under the possession and ask "is there a medium
-    /// here to descend into," one for water, one for rock. `None` on a cell
+    /// corner-weighted vertex under the possession and ask "is there a medium
+    /// here to descend into," one for water, one for rock. `None` on a vertex
     /// with no cave, or before terrain built at all.
     ///
     /// Returns the resolved [`hornvale_kernel::Vertex`] alongside the cave
     /// rather than the bare `Cave` `column_here` analogy would suggest:
-    /// addressing a chamber (`ChamberAddr`) needs the cell, where a water
+    /// addressing a chamber (`ChamberAddr`) needs the vertex, where a water
     /// stratum needs no address at all, so the caller needs both.
     fn chamber_column_here(&self) -> Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)> {
         let terrain = self.wctx.terrain.as_ref()?;
@@ -2395,8 +2395,8 @@ impl<'w> Session<'w> {
         )
         .ok()?;
         let cw = v.locale.corners.iter().max_by_key(|c| c.weight)?;
-        let cell = hornvale_kernel::Vertex(cw.cell);
-        terrain.cave_at(cell).map(|cave| (cell, cave))
+        let vertex = hornvale_kernel::Vertex(cw.vertex);
+        terrain.cave_at(vertex).map(|cave| (vertex, cave))
     }
 
     /// Descend one layer of the water column.
@@ -2452,7 +2452,7 @@ impl<'w> Session<'w> {
         }
     }
 
-    /// Descend into the cave at this cell's entrance chamber (The Deep
+    /// Descend into the cave at this vertex's entrance chamber (The Deep
     /// Realm, Task 5).
     ///
     /// Mirrors `dive`, but with an extra outcome `dive` never needed — TWO
@@ -2460,7 +2460,7 @@ impl<'w> Session<'w> {
     /// happens when a refusal doesn't name what stopped you: it reads as a
     /// parse failure rather than a fact about the world. So each outcome
     /// below is named:
-    ///   1. no cave at this cell at all — say so;
+    ///   1. no cave at this vertex at all — say so;
     ///   2. a chamber — descend, and say what the rock here is.
     ///
     /// # THE THIRD OUTCOME WAS REMOVED, AND THE CODE STILL CARRIES ITS ARM
@@ -2505,8 +2505,8 @@ impl<'w> Session<'w> {
     ///
     /// Split out for the same reason [`Self::delve_at`] was, one level up: the
     /// no-cave branch used to be reachable from a test only by the flagship's
-    /// own starting cell happening to be cave-free, and decision 0134's
-    /// terrain epoch put a sealed cave under that cell and falsified the
+    /// own starting vertex happening to be cave-free, and decision 0134's
+    /// terrain epoch put a sealed cave under that vertex and falsified the
     /// contingency. Production still reaches this exactly one way, through
     /// `delve` with `chamber_column_here()`, so nothing about the verb's
     /// behaviour moved.
@@ -2514,32 +2514,32 @@ impl<'w> Session<'w> {
         &mut self,
         column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
     ) -> Turn {
-        let Some((cell, cave)) = column else {
+        let Some((vertex, cave)) = column else {
             return Turn::Out("There is no cave here to delve into.".to_string());
         };
-        self.delve_at(cell, cave)
+        self.delve_at(vertex, cave)
     }
 
-    /// The outcome of delving at a KNOWN cell and cave — split out of
+    /// The outcome of delving at a KNOWN vertex and cave — split out of
     /// [`Self::delve`] so the sealed-vs-open decision can be exercised
-    /// directly against a hand-picked cell (this campaign's own unit
+    /// directly against a hand-picked vertex (this campaign's own unit
     /// coverage) without steering the possession there first. Steering is
     /// impractical to do from a test: `chamber_column_here` resolves the
-    /// possession's terrain cell through the same fuzzy corner-weighted walk-
-    /// band lookup `column_here` uses, and a terrain cell spans many, many
-    /// walk-band rooms, so hitting one particular cell by walking is not
+    /// possession's terrain vertex through the same fuzzy corner-weighted walk-
+    /// band lookup `column_here` uses, and a terrain vertex spans many, many
+    /// walk-band rooms, so hitting one particular vertex by walking is not
     /// something a test should depend on landing.
     ///
     /// **The parenthesis this used to carry — "let alone one with a SEALED
     /// cave specifically, ~48.5% of caves per Task 3's measurement" — is
     /// dead twice over.** The Drift deleted the existence coin that produced
     /// the 48.5%, so the sealed population is now 0 of 48,316 caves over
-    /// thirty worlds; and there is consequently no sealed cell to steer to at
+    /// thirty worlds; and there is consequently no sealed vertex to steer to at
     /// all. The seam is still worth having for the reason its first sentence
     /// gives, and it is what restricted passage will be tested through.
-    fn delve_at(&mut self, cell: hornvale_kernel::Vertex, cave: hornvale_terrain::Cave) -> Turn {
+    fn delve_at(&mut self, vertex: hornvale_kernel::Vertex, cave: hornvale_terrain::Cave) -> Turn {
         let addr = hornvale_worldgen::chamber::ChamberAddr {
-            cell,
+            vertex,
             band: hornvale_kernel::Band::Undercroft,
             branch: 0,
             level: 0,
@@ -2547,15 +2547,15 @@ impl<'w> Session<'w> {
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
         // The chamber lattice is placed by HEAT since `chamber/v2` (spec
         // §4.1), so the same cave reaches a different distance down it
-        // depending on the cell's gradient, and a chamber's stratum is read
-        // off that cell's own column. Both come from the same terrain handle
+        // depending on the vertex's gradient, and a chamber's stratum is read
+        // off that vertex's own column. Both come from the same terrain handle
         // `chamber_column_here` already resolved the cave through, so no
         // second, independently-chosen lookup is introduced here.
         let Some(terrain) = self.wctx.terrain.as_ref() else {
             return Turn::Out("There is no cave here to delve into.".to_string());
         };
-        let gradient = terrain.geothermal_gradient_at(cell);
-        let column = terrain.column_at(cell);
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        let column = terrain.column_at(vertex);
         match hornvale_worldgen::chamber::chamber_at(
             self.world.seed,
             &cave,
@@ -2661,7 +2661,7 @@ impl<'w> Session<'w> {
     /// The full room rendering: room id, prose, ways on.
     fn describe_here(&self) -> Result<String, VesselError> {
         // Unsubmerged over water, the possession is AFLOAT — on the surface,
-        // not down among whatever lives on the floor. Rendering the cell's own
+        // not down among whatever lives on the floor. Rendering the room's own
         // expression there would put a walker "in" a coral reef while they are
         // still a thousand metres above it, which is the distinction the depth
         // band exists to draw.
@@ -2683,7 +2683,7 @@ impl<'w> Session<'w> {
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
         // direction (`SUBMERGED_LATERAL_REFUSAL`) — the walk-band mesh's own
-        // laterals do not reach a submerged cell at all. Claiming "no
+        // laterals do not reach a submerged room at all. Claiming "no
         // direction here is closed" there would be false the instant the
         // player tried one, which is exactly the class of defect decision
         // 0141 exists to remove. `Ways on: surface.` mirrors
@@ -2886,7 +2886,7 @@ impl<'w> Session<'w> {
         }
         let brief = self.brief_here();
         let Some(structure) = crate::structure::structure_at(
-            &crate::band::truncate_to_walk(&self.position(), self.walk_depth()),
+            &crate::depth::truncate_to_walk(&self.position(), self.walk_depth()),
             &brief,
             self.world.seed,
             self.walk_depth(),
@@ -3314,17 +3314,18 @@ impl<'w> Session<'w> {
     /// it, and a placement keyed differently from the plan it is placed into would
     /// be a silent second world.
     fn frame_seed(&self, structure: &crate::structure::Structure) -> Seed {
-        crate::band::truncate_to_walk(&structure.threshold, self.walk_depth()).seed(self.world.seed)
+        crate::depth::truncate_to_walk(&structure.threshold, self.walk_depth())
+            .seed(self.world.seed)
     }
 
     /// The ground the building the possession stands in is built from (The
     /// Lantern, spec §3), or `None` above the canonical grid.
     ///
-    /// **One context for the whole structure**: a building sits on one cell of
+    /// **One context for the whole structure**: a building sits on one vertex of
     /// the geosphere, so its stone comes from one bedrock however many chambers
     /// it has.
     ///
-    /// The cell is `brief::containing_cell`'s — greatest blend weight, tie-broken
+    /// The vertex is `brief::containing_vertex`'s — greatest blend weight, tie-broken
     /// to the lowest `Vertex` — which is the SAME rule `brief_of` selects the
     /// building's own brief with and the same one `hornvale_locale`'s
     /// `dominant_corner` takes a room's biome, water and substrate from. Shared,
@@ -3338,10 +3339,10 @@ impl<'w> Session<'w> {
         // The possession's own position is already walk-band (`Inside` records
         // descent, `Agent::position` does not move), so this truncation is a
         // no-op today. Stated anyway, because `brief_of` truncates identically
-        // before its own `containing_cell` call and two readings of one cell
+        // before its own `containing_vertex` call and two readings of one vertex
         // that agree only by accident are what this method exists not to be.
-        let locale = crate::band::truncate_to_walk(&self.position(), self.walk_depth());
-        let cell = crate::brief::containing_cell(
+        let locale = crate::depth::truncate_to_walk(&self.position(), self.walk_depth());
+        let vertex = crate::brief::containing_vertex(
             &locale,
             self.wctx.ctx.climate().geosphere(),
             self.wctx.ctx.nearest_index(),
@@ -3349,7 +3350,7 @@ impl<'w> Session<'w> {
         Some(crate::fabric::FabricContext::at(
             self.wctx.ctx.terrain(),
             self.wctx.ctx.climate(),
-            cell,
+            vertex,
         ))
     }
 
@@ -5156,14 +5157,14 @@ mod tests {
     }
 
     /// H2. Every one of the eight compass points moves the possession from a
-    /// walk-band cell. This is the campaign's central claim and the whole of
+    /// walk-band room. This is the campaign's central claim and the whole of
     /// the availability half of the defect.
     ///
     /// FIRES WHEN: `go` reverts to exact-matching one of the three exits.
     #[test]
     fn every_compass_point_moves_the_possession() {
         // ONE world, eight sessions. Each direction must resolve from the same
-        // starting cell, so the session is fresh per direction — but genesis is
+        // starting room, so the session is fresh per direction — but genesis is
         // far too expensive to repeat eight times, so the world is not.
         let world = world_at(42).expect("seed 42 builds");
         for dir in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
@@ -5609,7 +5610,7 @@ mod tests {
                 let mut path = base.path.clone();
                 path.extend(std::iter::repeat_n(
                     0u8,
-                    crate::band::CHAMBER_DEPTH_OFFSET as usize,
+                    crate::depth::CHAMBER_DEPTH_OFFSET as usize,
                 ));
                 let last = path.len() - 1;
                 path[last] = i as u8;
@@ -6234,17 +6235,17 @@ mod tests {
         );
     }
 
-    /// Every cave-bearing cell in `terrain`, paired with whether its entrance
+    /// Every cave-bearing vertex in `terrain`, paired with whether its entrance
     /// address (`branch = 0, band = 0, floor = 0`) resolves to a chamber.
     /// Scans the terrain directly (`GeneratedTerrain::cave_at`) rather than
-    /// steering a walk there: a terrain cell spans many walk-band rooms
+    /// steering a walk there: a terrain vertex spans many walk-band rooms
     /// (measured while developing The Deep Realm — dozens to low hundreds of
-    /// `go` steps per terrain-cell crossing), so a walk cannot be relied on
-    /// to land on a chosen cell. Direct scanning is what
+    /// `go` steps per terrain-vertex crossing), so a walk cannot be relied on
+    /// to land on a chosen vertex. Direct scanning is what
     /// `windows/worldgen/tests/deep_realm_substrate.rs` (Task 0) and
     /// `deep_realm_chamber.rs` (Tasks 2-3) already do for the same reason.
     ///
-    /// Shared by [`find_open_cave_cell`] (which stops at the first open hit)
+    /// Shared by [`find_open_cave_vertex`] (which stops at the first open hit)
     /// and `delve_has_two_distinguishable_outcomes`'s exhaustive sealed-cave
     /// scan (The Drift, Task 3b), which does not stop early — one derivation
     /// for both, so the two can never quietly disagree about what "sealed"
@@ -6254,13 +6255,13 @@ mod tests {
         seed: Seed,
     ) -> impl Iterator<Item = (hornvale_kernel::Vertex, hornvale_terrain::Cave, bool)> + 'a {
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
-        terrain.geosphere().vertices().filter_map(move |cell| {
-            if terrain.is_ocean(cell) {
+        terrain.geosphere().vertices().filter_map(move |vertex| {
+            if terrain.is_ocean(vertex) {
                 return None;
             }
-            let cave = terrain.cave_at(cell)?;
+            let cave = terrain.cave_at(vertex)?;
             let addr = hornvale_worldgen::chamber::ChamberAddr {
-                cell,
+                vertex,
                 band: hornvale_kernel::Band::Undercroft,
                 branch: 0,
                 level: 0,
@@ -6268,17 +6269,17 @@ mod tests {
             let is_open = hornvale_worldgen::chamber::chamber_at(
                 seed,
                 &cave,
-                terrain.geothermal_gradient_at(cell),
-                &terrain.column_at(cell),
+                terrain.geothermal_gradient_at(vertex),
+                &terrain.column_at(vertex),
                 addr,
                 &overrides,
             )
             .is_some();
-            Some((cell, cave, is_open))
+            Some((vertex, cave, is_open))
         })
     }
 
-    /// The first cave-bearing cell this seed's terrain places whose entrance
+    /// The first cave-bearing vertex this seed's terrain places whose entrance
     /// chamber is realized. Until The Drift (Task 1) deleted
     /// `chamber_exists`'s 50% existence coin, this function also took a
     /// `want_open` flag and could be asked for the SEALED counterpart
@@ -6286,12 +6287,12 @@ mod tests {
     /// (`delve_has_two_distinguishable_outcomes`'s doc comment records why),
     /// so the flag is gone rather than kept as a parameter nothing ever
     /// satisfies.
-    fn find_open_cave_cell(
+    fn find_open_cave_vertex(
         terrain: &hornvale_terrain::GeneratedTerrain,
         seed: Seed,
     ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
         cave_entrance_states(terrain, seed)
-            .find_map(|(cell, cave, is_open)| is_open.then_some((cell, cave)))
+            .find_map(|(vertex, cave, is_open)| is_open.then_some((vertex, cave)))
             .unwrap_or_else(|| {
                 panic!(
                     "no open cave found in seed 42's terrain — the fixture no longer has \
@@ -6334,7 +6335,7 @@ mod tests {
     /// assertion is two-directional, the discipline `seam-guard`'s
     /// STALE-DECL verdict names: a one-directional acknowledgement
     /// ("sealed doesn't happen") can only ever be satisfied, so it rots.
-    /// The scan below re-checks every cave-bearing cell in the fixture on
+    /// The scan below re-checks every cave-bearing vertex in the fixture on
     /// every run and FAILS the moment a sealed cave becomes possible again
     /// while this test still claims two outcomes — forcing whoever ships
     /// restricted passage to come rename this test back, rather than
@@ -6351,8 +6352,8 @@ mod tests {
 
         // Outcome 1: no cave at all — asserted through `delve_column(None)`,
         // the branch production reaches when `chamber_column_here` finds
-        // nothing. This read the flagship's own STARTING CELL until decision
-        // 0131, a convenience resting on the contingency that that one cell
+        // nothing. This read the flagship's own STARTING VERTEX until decision
+        // 0131, a convenience resting on the contingency that that one vertex
         // happened to be cave-free; the terrain epoch put a cave under it and
         // falsified that. The other outcome is found by scanning rather than
         // assumed, so this brings outcome 1 into line with it and leaves the
@@ -6368,8 +6369,8 @@ mod tests {
         );
 
         // Outcome 2: a chamber — descend, and `climb` returns.
-        let (open_cell, open_cave) = find_open_cave_cell(&terrain, world.seed);
-        let open = match session.delve_at(open_cell, open_cave) {
+        let (open_vertex, open_cave) = find_open_cave_vertex(&terrain, world.seed);
+        let open = match session.delve_at(open_vertex, open_cave) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
         };
@@ -6394,10 +6395,10 @@ mod tests {
         );
 
         // The retired third outcome must STAY retired, loudly. Scan every
-        // cave-bearing cell's entrance address in the fixture terrain and
+        // cave-bearing vertex's entrance address in the fixture terrain and
         // assert none of them resolves SEALED. Scoped to this one seed
         // rather than a multi-seed panel: the exhaustive scan already
-        // touches every cave-bearing cell this fixture has, and building
+        // touches every cave-bearing vertex this fixture has, and building
         // further whole worlds to widen it would push this test toward the
         // heavy tier `the_drift_reachability_baseline`
         // (`windows/worldgen/tests/suite/drift_reach_probe.rs`) already
@@ -6411,22 +6412,22 @@ mod tests {
         // connected.
         let mut caves_examined = 0usize;
         let mut sealed: Vec<hornvale_kernel::Vertex> = Vec::new();
-        for (cell, _cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+        for (vertex, _cave, is_open) in cave_entrance_states(&terrain, world.seed) {
             caves_examined += 1;
             if !is_open {
-                sealed.push(cell);
+                sealed.push(vertex);
             }
         }
         assert!(
             caves_examined > 0,
             "non-vacuous guard: seed 42's terrain must contain at least one \
-             cave-bearing cell, or the sealed-cave scan below would pass by \
+             cave-bearing vertex, or the sealed-cave scan below would pass by \
              finding nothing rather than by finding the world connected"
         );
         assert!(
             sealed.is_empty(),
-            "a SEALED cave exists again ({} of {caves_examined} cave-bearing cells \
-             examined, e.g. cell {:?}) — restricted passage has landed. Restore the \
+            "a SEALED cave exists again ({} of {caves_examined} cave-bearing vertices \
+             examined, e.g. vertex {:?}) — restricted passage has landed. Restore the \
              third `delve_at` outcome this test used to assert, rename it back to \
              `delve_has_three_distinguishable_outcomes`, and update its doc comment; \
              do not leave a two-outcome claim standing once a sealed cave is possible \
@@ -6465,8 +6466,8 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (open_cell, open_cave) = find_open_cave_cell(&terrain, world.seed);
-        let out = match session.delve_at(open_cell, open_cave) {
+        let (open_vertex, open_cave) = find_open_cave_vertex(&terrain, world.seed);
+        let out = match session.delve_at(open_vertex, open_cave) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
         };
@@ -6509,8 +6510,8 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (cell, cave) = find_open_cave_cell(&terrain, world.seed);
-        session.delve_at(cell, cave);
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
         assert!(
             session.underground.is_some(),
             "the fixture must have descended"
@@ -6556,8 +6557,8 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (cell, cave) = find_open_cave_cell(&terrain, world.seed);
-        session.delve_at(cell, cave);
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        session.delve_at(vertex, cave);
         assert!(
             session.underground.is_some(),
             "the fixture must have descended"
@@ -6614,8 +6615,8 @@ mod tests {
             .terrain
             .clone()
             .expect("seed 42 builds terrain");
-        let (cell, cave) = find_open_cave_cell(&terrain, world.seed);
-        let shown = match session.delve_at(cell, cave) {
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+        let shown = match session.delve_at(vertex, cave) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
         };

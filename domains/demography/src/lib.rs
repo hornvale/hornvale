@@ -1,7 +1,7 @@
 //! Hornvale demography domain: a carrying-capacity field derived from climate
 //! and terrain, and the flow-condensation that reads discrete settlements off
 //! it as conserved attractors of a population flow. Kernel-only: the
-//! composition root supplies each cell's bare climate/terrain inputs; this
+//! composition root supplies each vertex's bare climate/terrain inputs; this
 //! crate never imports a climate or terrain crate.
 //!
 //! Condensation is the same field-to-fact projection the codebase performs
@@ -58,7 +58,7 @@ pub struct DemographyReport {
     /// species that founded them. **This is what worldgen consumes** —
     /// unchanged by the additive fields below.
     pub settlements: Vec<(Condensation, u32)>,
-    /// The overlap-weighted, trophically-coupled per-cell density stack —
+    /// The overlap-weighted, trophically-coupled per-vertex density stack —
     /// [`coexist::pack`]'s output. Additive: not yet consumed by worldgen.
     pub stack: coexist::CoexistStack,
     /// Settlements condensed off `stack` (mass-weighted, composition-aware).

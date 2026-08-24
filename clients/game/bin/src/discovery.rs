@@ -8,7 +8,7 @@
 //! > visited Mesa Verde."
 //!
 //! - **[`Visited`] answers "where have I been?"** — a property of the
-//!   possession's own walk-band CELLS (rooms). It reuses
+//!   possession's own walk-band ROOMS. It reuses
 //!   `windows/vessel/src/purview.rs`'s own fog predicate SHAPE — an
 //!   ancestor test over [`Facet::path`], upward-only by construction —
 //!   rather than inventing a second notion of visitedness. That module's
@@ -19,9 +19,9 @@
 //!   FEATURES, and it is never derived from [`Visited`]. Spec §A4b's two
 //!   kinds: an **extent feature** (the ground itself — landmass, sea,
 //!   river, salt lake, volcano; `hornvale_terrain::landscape::FeatureId`)
-//!   is discovered by entering any cell of its extent, because the ground
+//!   is discovered by entering any vertex of its extent, because the ground
 //!   and the feature are the same object there. A **point site**
-//!   (settlement, cave mouth) is a thing standing AT a cell, not the cell
+//!   (settlement, cave mouth) is a thing standing AT a vertex, not the vertex
 //!   itself, so co-location buys nothing — it is discovered only by
 //!   encountering the thing.
 //!
@@ -43,7 +43,7 @@
 //! already flowing rather than needing to add the write path too.
 //! Recorded as `CLIENT-world-map-visitedness-is-unwired`.
 
-use hornvale_kernel::{Vertex, Facet};
+use hornvale_kernel::{Facet, Vertex};
 use std::collections::BTreeSet;
 
 /// Every walk-band room the possession has stood in this session — the raw
@@ -80,7 +80,7 @@ impl Visited {
     /// "consider the cell visited but not the village. As zoom levels
     /// increase, you should be able to pick out what you have and have not
     /// visited accurately." Lowering `rung` only ever coarsens the query —
-    /// walking one fine room lights every coarser cell that contains it and
+    /// walking one fine room lights every coarser room that contains it and
     /// **no sibling** (a different branch at the same depth never matches
     /// the truncated-path equality test below).
     pub fn contains_at_rung(&self, addr: &Facet, rung: u32) -> bool {
@@ -105,17 +105,17 @@ pub enum FeatureId {
     /// SAME identity `windows/worldgen`'s `ChainLink`/`resolve_chain_at`
     /// already carry.
     Extent(hornvale_terrain::landscape::FeatureId),
-    /// A settlement, keyed to the terrain cell its committed
+    /// A settlement, keyed to the terrain vertex its committed
     /// latitude/longitude resolves nearest to (`NearestVertexIndex::nearest`)
-    /// — the same canonical-cell keying
+    /// — the same canonical-vertex keying
     /// `hornvale_terrain::landscape::FeatureId` already uses for an extent
     /// feature's own identity, so two settlements can never collide unless
-    /// they share a nearest cell (in which case they are, for this map's
+    /// they share a nearest vertex (in which case they are, for this map's
     /// purposes, the same point).
     Settlement(Vertex),
-    /// A cave mouth, keyed to the terrain cell it occupies
+    /// A cave mouth, keyed to the terrain vertex it occupies
     /// (`hornvale_terrain::GeneratedTerrain::cave_at`'s own key — one cave
-    /// per cell, by that function's own contract).
+    /// per vertex, by that function's own contract).
     Cave(Vertex),
 }
 
@@ -226,14 +226,14 @@ mod tests {
     }
 
     /// The three site kinds are genuinely distinct identities even when
-    /// their underlying cell coincides — a settlement and a cave at the
+    /// their underlying vertex coincides — a settlement and a cave at the
     /// same `Vertex` are two different discoverable things.
     #[test]
-    fn site_kinds_at_the_same_cell_are_distinct() {
+    fn site_kinds_at_the_same_vertex_are_distinct() {
         let mut d = Discovered::default();
-        let cell = Vertex(7);
-        d.record(FeatureId::Settlement(cell));
-        assert!(d.contains(FeatureId::Settlement(cell)));
-        assert!(!d.contains(FeatureId::Cave(cell)));
+        let vertex = Vertex(7);
+        d.record(FeatureId::Settlement(vertex));
+        assert!(d.contains(FeatureId::Settlement(vertex)));
+        assert!(!d.contains(FeatureId::Cave(vertex)));
     }
 }
