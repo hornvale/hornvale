@@ -2387,3 +2387,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T15:25:51Z | gate-commit | 104.873 | 59.550 | 33.264 | 0.89 | 0 | 5cba6dada | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T15:29:51Z | gate-commit | 89.814 | 56.805 | 30.628 | 0.97 | 0 | 9ad5911a3 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T16:54:37Z | gate-commit | 89.785 | 56.140 | 30.330 | 0.96 | 0 | 06da80171 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:45:41Z | rebaseline | 165.322 | 255.076 | 18.200 | 1.65 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:53:06Z | gate-commit | 204.531 | 159.747 | 94.522 | 1.24 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:55:21Z | vessel-check | 40.435 | 52.910 | 4.370 | 1.42 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:56:13Z | vessel-check | 33.351 | 25.252 | 4.189 | 0.88 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T17:57:30Z | world-check | 71.083 | 71.274 | 7.964 | 1.11 | 0 | 49e8c3e20 | campaign/the-escapement | ambrose | 12 |

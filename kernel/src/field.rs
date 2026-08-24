@@ -137,17 +137,37 @@ impl WorldTime {
 
 impl std::ops::Sub for WorldTime {
     type Output = crate::units::TickSpan;
+    /// Checked: `from_ticks` is infallible and accepts any `i64`, so two
+    /// instants near the representable edges (Ruling 11) can differ by more
+    /// ticks than `i64` holds. An unchecked subtraction would wrap silently
+    /// in release — the worst failure class this kernel has, a world that
+    /// looks valid and disagrees with itself — so this panics loudly instead.
     fn sub(self, rhs: WorldTime) -> crate::units::TickSpan {
-        crate::units::TickSpan(self.ticks - rhs.ticks)
+        let ticks = self.ticks.checked_sub(rhs.ticks).unwrap_or_else(|| {
+            panic!(
+                "WorldTime subtraction overflowed i64 ticks: {} - {} \
+                 (minuend instant ticks minus subtrahend instant ticks)",
+                self.ticks, rhs.ticks
+            )
+        });
+        crate::units::TickSpan(ticks)
     }
 }
 
 impl std::ops::Add<crate::units::TickSpan> for WorldTime {
     type Output = WorldTime;
+    /// Checked, for the same reason as `Sub` above: an instant plus a span
+    /// can be constructed to overflow `i64`, and a silent wraparound would
+    /// produce an instant that is not the instant it claims to be.
     fn add(self, rhs: crate::units::TickSpan) -> WorldTime {
-        WorldTime {
-            ticks: self.ticks + rhs.0,
-        }
+        let ticks = self.ticks.checked_add(rhs.0).unwrap_or_else(|| {
+            panic!(
+                "WorldTime + TickSpan overflowed i64 ticks: {} + {} \
+                 (instant ticks plus span ticks)",
+                self.ticks, rhs.0
+            )
+        });
+        WorldTime { ticks }
     }
 }
 
@@ -342,6 +362,25 @@ mod tests {
             a.ticks(),
             "add is the inverse of sub"
         );
+    }
+
+    /// Ruling 11: `from_ticks` is infallible and accepts any `i64`, so
+    /// `from_ticks(i64::MIN) - from_ticks(i64::MAX)` is constructible and its
+    /// true difference does not fit in an `i64` span. Unchecked, this wraps
+    /// silently in release; checked, it panics loudly in both profiles.
+    #[test]
+    #[should_panic(expected = "WorldTime subtraction overflowed i64 ticks")]
+    fn subtracting_instants_panics_rather_than_wrapping_at_the_i64_boundary() {
+        let _ = WorldTime::from_ticks(i64::MIN) - WorldTime::from_ticks(i64::MAX);
+    }
+
+    /// The `Add` twin of the above: an instant already at `i64::MAX` plus any
+    /// positive span cannot be represented, and must panic rather than wrap
+    /// to a negative instant.
+    #[test]
+    #[should_panic(expected = "WorldTime + TickSpan overflowed i64 ticks")]
+    fn adding_a_span_panics_rather_than_wrapping_at_the_i64_boundary() {
+        let _ = WorldTime::from_ticks(i64::MAX) + crate::units::TickSpan::from_ticks(1);
     }
 
     /// An exact integer representation is what makes `Eq`/`Ord`/`Hash`
