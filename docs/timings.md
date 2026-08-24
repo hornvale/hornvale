@@ -2371,3 +2371,4 @@ this file never invents a measured value it does not hold.
 | 2026-08-24T15:29:49Z | gate-commit | 34.747 | 118.595 | 11.722 | 3.75 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T15:31:07Z | quick | 18.142 | 15.492 | 2.166 | 0.97 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T15:31:44Z | gate-commit | 31.780 | 31.499 | 7.667 | 1.23 | 0 | 76765b594 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T16:45:02Z | quick | 39.241 | 45.806 | 35.167 | 2.06 | 0 | 9fdbe4b0e | campaign/the-granary | MacBookPro | 10 |
