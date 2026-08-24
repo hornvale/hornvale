@@ -2338,6 +2338,28 @@ pub enum TrophicMode {
     Absent,
 }
 
+/// Whether this describes something with **no metabolism at all** — the
+/// question four separate sites ask, in two crates, with no shared name
+/// (spec §4.3). That is the same drift that produced the mixed enum this
+/// campaign split.
+///
+/// **THE DIRECTION THIS RELIES ON, STATED.** It reads the thermal axis alone,
+/// so it is correct only while `ThermalStrategy::Absent` and
+/// `TrophicMode::Absent` occur together and never apart. The type admits
+/// twelve pairs where that is false (spec §4.4). What enforces it is
+/// `tests/suite/metabolic_pairs.rs`'s sanctioned-pair table, which consults
+/// every kind's pair on every commit-gate run. If that table is ever relaxed
+/// to admit a `(Absent, …)` pair with a live trophic mode, this function is
+/// the first place that goes wrong.
+///
+/// A two-axis signature was specified and is not available: every one of the
+/// four call sites holds a `ThermalStrategy` and nothing else, because `Body`
+/// carries only the axis the vessel layer reads.
+/// type-audit: bare-ok(flag: return)
+pub fn is_ametabolic(thermal: ThermalStrategy) -> bool {
+    thermal == ThermalStrategy::Absent
+}
+
 /// How a kind's time-law quantities are scheduled against its mass (The Long
 /// Age, spec §3). Mass and [`ThermalStrategy`] are the other two inputs to the
 /// same law; this is the third, and it is the only one that is a free
@@ -5652,6 +5674,25 @@ mod tests {
     use super::*;
     use hornvale_kernel::test_lineage;
     use hornvale_kernel::{Fact, Seed};
+
+    /// The predicate reads the THERMAL axis alone, because no caller holds
+    /// the other one (spec §4.3, corrected after Task 4). What makes that
+    /// safe is the sanctioned-pair table, not this function — so assert the
+    /// discrimination it DOES provide, and do not pretend to a check it
+    /// cannot make.
+    #[test]
+    fn is_ametabolic_is_true_only_for_the_absent_thermal_strategy() {
+        use super::{ThermalStrategy as T, is_ametabolic};
+        assert!(is_ametabolic(T::Absent));
+        assert!(!is_ametabolic(T::Endothermic));
+        assert!(!is_ametabolic(T::Ectothermic));
+        assert!(
+            !is_ametabolic(T::Unmodelled),
+            "Unmodelled means a metabolism nobody has modelled, NOT the \
+             absence of one — collapsing the two is the exact conflation this \
+             campaign split the enum to remove"
+        );
+    }
 
     #[test]
     fn bio2_adds_no_stream_label() {

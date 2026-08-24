@@ -323,7 +323,7 @@ fn derive_threat_niche(
 ) -> ThreatNiche {
     let optimum = temperature_niche.optimum;
     ThreatNiche {
-        uncanny: if matches!(class, ThermalStrategy::Absent) {
+        uncanny: if hornvale_species::is_ametabolic(class) {
             0.0
         } else {
             1.0
@@ -3826,7 +3826,7 @@ pub fn affect_of_memo_occupied(
     // ONLY consumer of a home plan, and it is never pushed onto `drives` for
     // an ametabolic creature — see `decide_step`'s identical gate for the
     // full rationale.
-    let ametabolic = matches!(npc.thermal_strategy, ThermalStrategy::Absent);
+    let ametabolic = hornvale_species::is_ametabolic(npc.thermal_strategy);
     // Affiliation (The Belonging): loneliness + the home-step, read from the
     // cross-tick cache instead of an unconditional `plan_to_room` (the-waymark,
     // Task 4) — precomputed once so the drive's urgency stays O(1) either way.
@@ -4381,7 +4381,7 @@ fn decide_step(
     // call itself (not merely caching its result) is the "lazy AND cached"
     // half of the campaign spec's Stage 3 clause — an ametabolic creature now
     // never even touches the cache, let alone runs a search.
-    let ametabolic = matches!(npc.thermal_strategy, ThermalStrategy::Absent);
+    let ametabolic = hornvale_species::is_ametabolic(npc.thermal_strategy);
     let social = if ametabolic {
         Social {
             loneliness: 0.0,

@@ -2,7 +2,7 @@
 //! life-history from body mass and metabolic class. Universal exponents;
 //! per-class coefficients. No draws, no world state — see the design spec.
 
-use crate::{LifeSchedule, ThermalStrategy};
+use crate::{LifeSchedule, ThermalStrategy, is_ametabolic};
 use hornvale_kernel::{Mass, Years, math};
 
 // Exponents (discovered; spec §4).
@@ -142,7 +142,7 @@ fn pace_of_life(mass: Mass, class: ThermalStrategy, schedule: LifeSchedule) -> f
 pub fn life_history(mass: Mass, class: ThermalStrategy, schedule: LifeSchedule) -> LifeHistory {
     let bmr = basal_metabolic_rate_w(mass, class);
     let pace = pace_of_life(mass, class, schedule);
-    if class == ThermalStrategy::Absent {
+    if is_ametabolic(class) {
         return LifeHistory {
             basal_metabolic_rate_w: bmr,
             lifespan: None,
