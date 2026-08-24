@@ -15,6 +15,8 @@ mod biome_affinity;
 mod coverage;
 #[path = "suite/instance_lens.rs"]
 mod instance_lens;
+#[path = "suite/life_history_golden.rs"]
+mod life_history_golden;
 #[path = "suite/potency_assay.rs"]
 mod potency_assay;
 #[path = "suite/social_form.rs"]
