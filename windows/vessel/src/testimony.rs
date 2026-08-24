@@ -29,7 +29,14 @@ use hornvale_language::{GapReason, LexEntry, Lexicon, WordViews};
 /// `tests/common` module, and this mapping is one match arm either way).
 /// Exhaustive by construction: an unmatched future `AffectLabel` variant
 /// fails to compile until it is named here.
-fn concept_id(label: AffectLabel) -> &'static str {
+///
+/// `pub(crate)` (The Confidant, Task 6): `windows/vessel/src/session.rs`'s
+/// `ask` verb reads it back to gloss whichever concept a testimony actually
+/// REPORTS (`FeltStateWord::Direct`'s implicit concept, or `Nearest`'s own
+/// `reported_as`) into the same short id `hornvale_language`'s Common
+/// vocabulary derives a word from — never the true label a divergent
+/// testimony must not leak.
+pub(crate) fn concept_id(label: AffectLabel) -> &'static str {
     match label {
         AffectLabel::Content => "content",
         AffectLabel::Eager => "eager",
