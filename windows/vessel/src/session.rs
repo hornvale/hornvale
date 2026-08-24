@@ -156,9 +156,18 @@ fn advanced_by(day: WorldTime, days: f64) -> Result<WorldTime, String> {
         .checked_add(span.ticks())
         .map(WorldTime::from_ticks)
         .ok_or_else(|| {
+            // Names the SUM, and both of its operands, because that is what
+            // failed: `days` was already accepted as representable by the
+            // crossing above, so blaming it here would send a reader looking at
+            // a valid number (fix round 1, code review Minor 7). This text is
+            // deliberately DISTINCT from the crossing's own rejection, so a
+            // test can tell the two arms apart — they were indistinguishable by
+            // message, which is why the accumulation arm sat uncovered while a
+            // test appeared to exercise it.
             format!(
-                "error: {days} is not a valid quantity of standard days: \
-                 outside the representable tick range"
+                "error: advancing day {} by {days} standard days leaves the \
+                 representable tick range",
+                day.as_std_days()
             )
         })
 }
@@ -5074,13 +5083,22 @@ mod tests {
         // (`i64::MAX / TICKS_PER_STD_DAY` is ~9.22e13 days; `f64::MAX` is
         // ~1.80e308) — so two constructible `WorldTime`s can never sum to
         // `f64::MAX`, let alone overflow it to infinity: overflow-to-infinity
-        // is no longer reachable through this accumulation at all. "outside the
-        // representable tick range" is what fires instead, from the exact
-        // same `Err` arm of the exact same `from_std_days` call, so the
-        // invariant this test exists for — a construction failure inside
-        // `wait`'s accumulation routes through `wait`'s own error channel,
-        // never a panic, and never releases the session — is still fully
-        // exercised. Starting from `WorldTime::GENESIS` (day 0.0) and
+        // is no longer reachable through this accumulation at all.
+        //
+        // **WHICH ARM THIS TEST REACHES, stated exactly** (fix round 1, code
+        // review Important 2). An earlier version of this comment claimed the
+        // rejection came "from the exact same `Err` arm of the exact same
+        // `from_std_days` call" as before. That is no longer true, and the
+        // claim was hiding a coverage hole: post-flip the INCREMENT and the SUM
+        // are checked by two different calls in `advanced_by` —
+        // `TickSpan::from_std_days`'s range check, then `i64::checked_add` —
+        // and waiting `f64::MAX` from genesis is rejected by the FIRST, before
+        // any accumulation happens. So this test covers the crossing, not the
+        // accumulation; `wait_routes_a_tick_overflow_in_the_accumulation`
+        // covers the other arm. What this one still proves, and what it exists
+        // for, is the ROUTING: a construction failure inside `wait` returns
+        // through `wait`'s own error channel, never a panic and never a
+        // release. Starting from `WorldTime::GENESIS` (day 0.0) and
         // waiting `f64::MAX` days is now the adversarial case itself,
         // closer to The Ell's original "a single `wait 1e308`" than the
         // old setup's hand-built `f64::MAX` starting day, and it needs no
@@ -5101,6 +5119,97 @@ mod tests {
             ),
             Turn::Released(_) => panic!("a rejected wait must not release the session"),
         }
+    }
+
+    #[test]
+    fn wait_routes_a_tick_overflow_in_the_accumulation() {
+        // THE ARM THE TEST ABOVE DOES NOT REACH (fix round 1, code review
+        // Important 2). `advanced_by` checks the increment and the sum
+        // separately, and only an increment that PASSES the range check can
+        // exercise the sum's `checked_add`. Here the increment is tiny and
+        // obviously valid — 20 ticks — while the session's clock already sits
+        // ten ticks below `i64::MAX`, so the SUM is what fails. That is the
+        // accumulation The Ell's finding was about, now with an integer failure
+        // mode instead of an `f64` one, and it asserts the half the unit test
+        // below cannot: that the overflow routes through `wait`'s OWN error
+        // channel rather than panicking or releasing the session.
+        //
+        // **Starting near the ceiling rather than accumulating up to it is a
+        // COST decision, and it was measured, not guessed.** The obvious
+        // spelling — successive `wait`s until the sum overflows — costs a full
+        // drive tick per wait over an enormous window, and the cost tracks the
+        // total simulated span rather than the number of waits: ten `wait
+        // 1e13`s measured 49.2 s and two `wait 9e13`s measured 41.8 s, against
+        // 4.7 s for `Session::start` plus one rejected wait. This spelling pays
+        // only that 4.7 s floor, because the window it simulates is 20 ticks
+        // wide. Asserted on the SUM's own message, which is deliberately
+        // distinct from the increment's: while both arms read "outside the
+        // representable tick range" no test could tell which one it had
+        // reached, and this arm had zero coverage while appearing to have some.
+        let world = seam_world();
+        let near_ceiling = WorldTime::from_ticks(i64::MAX - 10);
+        let (mut session, _) = Session::start(
+            &world,
+            &PossessOpts {
+                day: near_ceiling,
+                ..PossessOpts::default()
+            },
+        )
+        .unwrap();
+
+        // The increment is valid on its own — so what fails below is the sum.
+        let increment = WorldTime::from_ticks(20).as_std_days();
+        assert!(
+            advanced_by(WorldTime::GENESIS, increment).is_ok(),
+            "a 20-tick increment must be representable, or this test proves nothing"
+        );
+
+        match session.wait(&increment.to_string(), Perceiving::Body) {
+            Turn::Out(msg) => assert!(
+                msg.contains("leaves the representable tick range"),
+                "expected the ACCUMULATION arm's message, got: {msg}"
+            ),
+            Turn::Released(_) => panic!("a rejected wait must not release the session"),
+        }
+    }
+
+    /// The accumulation guard at the unit level: both arms of [`advanced_by`]
+    /// and the boundary between them. The two `wait` tests above prove the
+    /// ROUTING; this proves the arithmetic — in particular that an overflow is
+    /// an `Err`, not a debug panic and not a silent release-build wraparound.
+    #[test]
+    fn advanced_by_checks_the_increment_and_the_sum_separately() {
+        // An ordinary advance is exact on the lattice.
+        let day = WorldTime::from_std_days(1.5).expect("finite");
+        assert_eq!(
+            advanced_by(day, 0.25).expect("representable").ticks(),
+            175_000
+        );
+
+        // Arm one: the INCREMENT is unrepresentable, named by the crossing.
+        let e = advanced_by(WorldTime::GENESIS, f64::MAX).expect_err("f64::MAX is out of range");
+        assert!(e.contains("outside the representable tick range"), "{e}");
+        assert!(advanced_by(WorldTime::GENESIS, f64::NAN).is_err(), "NaN");
+
+        // Arm two: the increment is fine and the SUM overflows — named
+        // distinctly, so the two arms are not confusable by message.
+        let near = WorldTime::from_ticks(i64::MAX - 10);
+        let e = advanced_by(near, 1.0).expect_err("the sum must overflow i64");
+        assert!(e.contains("leaves the representable tick range"), "{e}");
+        assert!(
+            !e.contains("is not a valid quantity"),
+            "the overflow arm must not borrow the increment arm's wording: {e}"
+        );
+
+        // The boundary itself: landing exactly on `i64::MAX` still succeeds, so
+        // the guard rejects overflow rather than merely being conservative.
+        let one_short = WorldTime::from_ticks(i64::MAX - 1);
+        assert_eq!(
+            advanced_by(one_short, WorldTime::from_ticks(1).as_std_days())
+                .expect("exactly reaching i64::MAX is representable")
+                .ticks(),
+            i64::MAX
+        );
     }
 
     #[test]
@@ -6261,42 +6370,32 @@ mod tests {
     }
 
     /// Commit an `agent-at` putting `who` in `room` as of the session's current
-    /// day, then move the session's clock to the day the LEDGER actually
-    /// stored.
+    /// day.
     ///
-    /// **The second half is the whole reason this helper exists.**
-    /// `Ledger::commit` quantizes a fact's day to 8 significant digits
-    /// (decision 0033), and that rounding can go UP: measured,
-    /// `quantize(1.5117199997382882) == 1.5117200000000000` — strictly LATER
+    /// **This helper used to carry a clock-nudging second half, and The
+    /// Escapement (decision 0186) deleted the defect it compensated for.**
+    /// `Ledger::commit` quantized a fact's day to 8 significant digits and that
+    /// rounding could go UP — measured then,
+    /// `quantize(1.5117199997382882) == 1.5117200000000000`, strictly LATER
     /// than the day handed in. `latest_committed_position` selects on
-    /// `f.day <= t`, so a fact committed at `now` and read back at `now` is
-    /// invisible, and the fixture silently describes a creature that never
-    /// moved. Both callers below construct exactly that shape, and both went
-    /// red the moment `enter` began charging time and left the session on a
-    /// day with more than eight significant digits (Task 7 fix round, B1).
+    /// `f.day <= t`, so a fact committed at `now` was invisible when read back
+    /// at `now`, and the fixture silently described a creature that never
+    /// moved. The repair was to advance the session to whatever the ledger
+    /// actually stored.
     ///
-    /// Advancing by those few ULP is the honest fixture repair: it puts the
-    /// session at the moment the ledger records, which is what a test
-    /// asserting on that record means. It is **not** a fix for the general
-    /// edge — any caller that commits at `now` and reads at `now` still has
-    /// it, `Session::wait`'s own tick included — and that is recorded as a
-    /// finding rather than papered over here.
+    /// A `WorldTime` is an exact `i64` tick count now and `commit` canonicalizes
+    /// no day at all, so what is stored IS what was handed in: the comparison
+    /// `stored > session.day` could never again be true, and the compensation
+    /// was deleted rather than left as a permanent no-op with a live-sounding
+    /// rationale. This is the paired deletion spec §1 asks the second merger to
+    /// make — a workaround outliving its cause, the same shape as The Hand's
+    /// `quantize(t.day())`.
     fn place_agent_now(session: &mut Session<'_>, who: EntityId, room: &RoomAddr) {
         let fact = crate::liveness::place_agent(who, room, session.day);
         session
             .ledger
             .commit(fact, &session.registry)
             .expect("agent-at is registered");
-        let stored = session
-            .ledger
-            .find(AGENT_AT)
-            .filter(|f| f.subject == who)
-            .last()
-            .and_then(|f| f.day)
-            .expect("the fact just committed carries the day it was committed at");
-        if stored > session.day {
-            session.day = stored;
-        }
     }
 
     /// The marks this session's snapshot draws.

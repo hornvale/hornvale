@@ -884,7 +884,7 @@ hornvale-kernel::hornvale_kernel$ecology::tests::the_environment_basis_ids_are_a
 hornvale-kernel::hornvale_kernel$ecology::tests::zero_vector_is_legal_and_overlaps_nothing
 hornvale-kernel::hornvale_kernel$fact_index::tests::interner_round_trips
 hornvale-kernel::hornvale_kernel$fact_index::tests::objkey_orders_numbers_by_total_cmp_and_ranks_variants
-hornvale-kernel::hornvale_kernel$field::tests::a_world_time_cannot_be_built_from_a_non_finite_value
+hornvale-kernel::hornvale_kernel$field::tests::a_world_time_cannot_be_built_from_a_non_finite_number_of_days
 hornvale-kernel::hornvale_kernel$field::tests::a_world_time_may_be_negative_because_a_day_is_a_point_not_a_duration
 hornvale-kernel::hornvale_kernel$field::tests::constant_field_returns_its_value_everywhere
 hornvale-kernel::hornvale_kernel$field::tests::constant_field_works_for_non_numeric_types

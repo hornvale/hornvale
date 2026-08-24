@@ -999,8 +999,10 @@ pub fn believed_water(
 /// `frozen`, and `run_simulation` (the lab's headless sim) builds one per tick
 /// for its post-tick affect reads. This collapses the dominant within-tick
 /// re-derivation to O(roster × distinct-days) while keeping the verdict provably
-/// identical to a fresh `affect_of` (day quantized to its bit pattern, which
-/// recurs exactly across the `agent-at` days that key it).
+/// identical to a fresh `affect_of` (the day is an exact tick count, which
+/// recurs exactly across the `agent-at` days that key it — see the field docs
+/// below; this read "quantized to its bit pattern" until The Escapement,
+/// decision 0186, made the key the instant itself).
 ///
 /// It also caches the per-time EMITTER SCAN — which roster members could ever
 /// raise an alarm and where, plus their position timelines — since that scan is

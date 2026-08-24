@@ -490,12 +490,23 @@ fn process_events(
         let block_start = block as f64 * BLOCK_DAYS;
         // `next_f64()` is in [0, 1), so a day belongs to its own block by
         // construction — with one theoretical exception, recorded rather than
-        // guarded: for a large `block`, `block_start + u * BLOCK_DAYS` can
-        // round up to exactly the next block's start, putting the event in a
-        // block that did not draw it. It needs `u` within an ulp of 1 (P ~
-        // 1e-15 per event) and costs, at worst, one event landing a moment
-        // early. A guard would be a branch on every event of every query to
-        // move an event by one ulp.
+        // guarded. A draw close enough to the block's end rounds up onto
+        // exactly the next block's start tick, putting the event in a block
+        // that did not draw it.
+        //
+        // **The mechanism and the number both changed with the tick lattice**
+        // (The Escapement). It used to need `u` within an ULP of 1, at
+        // P ~ 1e-15 per event; rounding at the draw replaces that with
+        // round-to-nearest-tick, so ANY draw within half a tick (5e-6 days) of
+        // the block end lands there: `P ≈ 5e-6 / 365_250 ≈ 1.4e-11` per event,
+        // ~4 orders of magnitude likelier. Still negligible, and still cheaper
+        // to record than to guard — a guard would be a branch on every event of
+        // every query.
+        //
+        // The consequence is also marginally worse than "one event landing a
+        // moment early": a query window opening exactly on that block boundary
+        // does not iterate the block that produced the event, so the sub-window
+        // law has a (vanishing) counterexample it did not have before.
         //
         // **ONE DOMAIN PER COMPARISON** (spec §2.1, The Escapement). The
         // continuous draw crosses onto the tick lattice HERE, at the draw, and
@@ -600,7 +611,15 @@ pub fn events_in(
     // Stable, so the tie-break on a shared day is seismic-before-eruption by
     // construction (the seismic events were pushed first) — deterministic
     // without a second sort key.
-    events.sort_by(|a, b| a.day.as_std_days().total_cmp(&b.day.as_std_days()));
+    //
+    // Ordered on the LATTICE, not through `f64` — and by `sort_by_key`, which is
+    // the exact form spec §3.2 named (fix round 1, code review Minor 1). This
+    // read `as_std_days().total_cmp(...)`: behaviourally identical below 2^53
+    // ticks, where ticks→`f64` is lossless, but it re-entered the continuous
+    // domain to order two integers, and ABOVE that horizon (~2.47e8 years) two
+    // distinct ticks would compare equal and the sort would silently stop being
+    // a total order on the values it holds.
+    events.sort_by_key(|e| e.day);
     events
 }
 
