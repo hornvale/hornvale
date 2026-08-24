@@ -138,7 +138,9 @@ pub struct Cursor {
 /// `strip`, when `Some`, is drawn as the map strip beneath the plate
 /// (see `strip::draw`); the row it occupies is reserved either way (see
 /// `spread`'s module doc), so a caller that starts passing `Some` never
-/// resizes the plate a second time.
+/// resizes the plate a second time. `strip_offset` is the character offset
+/// the strip's own window starts at (F3 — never a clock; see
+/// `strip::draw`'s doc), unused when `strip` is `None`.
 ///
 /// `echo`, when `Some`, is the most recently SUBMITTED line, drawn above the
 /// command row (see `entry::draw`'s doc for the ask-then-answer layout and
@@ -155,9 +157,17 @@ pub struct Cursor {
 /// either figure: `render_with` still refuses anything smaller than
 /// [`MIN_WIDTH`]×[`MIN_HEIGHT`], strip present or not.
 ///
+/// `world_plate`, when `Some`, is an already-rendered whole-world Mercator
+/// plate drawn INSTEAD OF the band's own plate — see [`spread::compose`]'s
+/// doc for what that does and does not touch.
+///
 /// Fails if `json` does not parse, or if the requested grid is smaller
 /// than the monochrome floor ([`MIN_WIDTH`] by [`MIN_HEIGHT`]).
-#[allow(clippy::too_many_arguments)] // `hint` (Task 9) pushed this to 9, mirroring `entry::draw`'s own allow — see that function's doc for why splitting the parameters would hide more than it clarifies
+// `echo` (Task 3) pushed this to 8, `world_plate` (The Portolan part II,
+// Task 2) to 9, `strip_offset` (Task 4, F3) to 10, `hint` (The Lexicon,
+// Task 9) to 11 — mirroring `entry::draw`'s own allow; see that function's
+// doc for why splitting the parameters would hide more than it clarifies
+#[allow(clippy::too_many_arguments)]
 pub fn render_with(
     json: &str,
     w: u16,
@@ -167,13 +177,26 @@ pub fn render_with(
     line: CommandLine<'_>,
     strip: Option<&str>,
     echo: Option<&str>,
+    world_plate: Option<&Grid>,
+    strip_offset: u16,
     hint: Option<&entry::Hint<'_>>,
 ) -> Result<(Grid, Option<(u16, u16)>), Error> {
     if w < MIN_WIDTH || h < MIN_HEIGHT {
         return Err(Error::TooSmall { w, h });
     }
     let snapshot = Snapshot::parse(json)?;
-    let (grid, caret) = spread::compose(&snapshot, w, h, strip, focus, line, echo, hint);
+    let (grid, caret) = spread::compose(
+        &snapshot,
+        w,
+        h,
+        strip,
+        focus,
+        line,
+        echo,
+        world_plate,
+        strip_offset,
+        hint,
+    );
     // ONE hardware cursor, so its location IS the focus indicator: with
     // `Focus::Cli` it is the caret in the entry pane; with `Focus::Map`,
     // the map cursor on the plate — never both, though a mode may claim no
@@ -214,6 +237,8 @@ pub fn render(json: &str, w: u16, h: u16) -> Result<Grid, Error> {
         CommandLine::default(),
         None,
         None,
+        None,
+        0,
         None,
     )
     .map(|(grid, _)| grid)
@@ -304,6 +329,8 @@ mod tests {
             Some("Vngashngatva"),
             None,
             None,
+            0,
+            None,
         )
         .expect("renders at the floor");
         assert_eq!(grid.width(), 80);
@@ -319,7 +346,9 @@ mod tests {
                     CommandLine::default(),
                     None,
                     None,
-                    None
+                    None,
+                    0,
+                    None,
                 ),
                 Err(Error::TooSmall { .. })
             ),
@@ -347,6 +376,8 @@ mod tests {
             None,
             None,
             None,
+            0,
+            None,
         )
         .expect("renders");
         let (with, some_at) = render_with(
@@ -358,6 +389,8 @@ mod tests {
             CommandLine::default(),
             None,
             None,
+            None,
+            0,
             None,
         )
         .expect("renders");
@@ -402,6 +435,8 @@ mod tests {
             None,
             None,
             None,
+            0,
+            None,
         )
         .expect("renders");
         assert_eq!(
@@ -432,6 +467,8 @@ mod tests {
             },
             None,
             None,
+            None,
+            0,
             None,
         )
         .expect("renders");

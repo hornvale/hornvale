@@ -60,6 +60,43 @@ pub const fn content_height(h: u16) -> u16 {
     h.saturating_sub(RESERVED_ROWS)
 }
 
+/// How many plate COLUMNS a Mercator character spans per ROW. A terminal
+/// glyph reads roughly twice as tall as it is wide, so a projection that is
+/// square in its own coordinate space (The Portolan part II spec §4.1) needs
+/// twice as many columns as rows to read as square on screen. Matches
+/// `windows/worldgen/examples/portolan_spike.rs`'s own `GLYPH_ASPECT`
+/// (`2.0`, deleted at this campaign's close -- git history at
+/// `0292de87f^`) — `pub` so `bin` derives the plate's HEIGHT from this
+/// SAME ratio
+/// (`world_plate_width(w, h) / GLYPH_ASPECT`) rather than hardcoding a
+/// second `2`, the same one-source-of-truth reason [`world_plate_width`]
+/// itself is exposed rather than recomputed.
+pub const GLYPH_ASPECT: u16 = 2;
+
+/// The world plate's width while the map is focused, for a `w`-by-`h`
+/// terminal: the largest Mercator (aspect [`GLYPH_ASPECT`]:1) that fits
+/// BOTH the terminal's width and [`content_height`], never stretched past
+/// either — the smaller of `w` itself and `GLYPH_ASPECT * content_height(h)`.
+/// When the height bound is smaller, the plate is narrower than the full
+/// terminal and the entry pane keeps the remainder; when the width bound is
+/// smaller, the plate claims every column and the resulting Mercator is
+/// shorter than `content_height(h)` — letterboxed, not stretched (see
+/// `bin`'s `Driver::world_plate`, which derives the matching height from
+/// this same number rather than a second copy of the fit).
+///
+/// `pub` for the same reason [`content_height`] is: [`compose`] uses this
+/// number to size the plate region it draws into, and `bin`'s driver needs
+/// the SAME number to size the [`Grid`] it hands back — not a second,
+/// possibly-diverging copy of this fit. [`content_height`]'s own doc
+/// records why: two callers computing "the plate's content height"
+/// independently is exactly the shape that let a fixed-height assumption
+/// silently name the wrong cell at any non-floor terminal size. A second
+/// copy of the width formula reproduces that defect on the other axis.
+pub const fn world_plate_width(w: u16, h: u16) -> u16 {
+    let by_height = content_height(h).saturating_mul(GLYPH_ASPECT);
+    if by_height <= w { by_height } else { w }
+}
+
 /// Copy every non-blank cell of `src` into `dst`, offset by `origin`.
 /// Blank cells are skipped rather than overwriting whatever `dst` already
 /// carries there, so drawing order between panes never matters.
@@ -82,16 +119,46 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// outdoors, the chamber-band floor plan indoors — the register switches
 /// picture, never prose. `strip` is the map strip's text (see `strip.rs`),
 /// `None` unless the map is focused — either way the row beneath the plate
-/// is reserved (see the module doc). `line` is
+/// is reserved (see the module doc). `strip_offset` is the character
+/// offset [`crate::strip::draw`] starts at (F3 — see that function's own
+/// doc for why this is never a clock); it is unused when `strip` is
+/// `None`, so a caller with nothing to scroll may pass `0`. `line` is
 /// the command line's contents, drawn into the entry pane regardless of
 /// `focus` — only whether its caret is *reported* depends on focus, never
 /// whether its text is drawn (see `entry::draw`'s doc). `echo` is the most
 /// recently SUBMITTED line, drawn above the command row (see `entry::draw`'s
 /// doc for the ask-then-answer layout and why that row is reserved).
+///
 /// `hint` is the pending tab-completion ambiguity, drawn beneath the
 /// command row when present (see [`crate::entry::Hint`] — the stem bold as
 /// typed, the suggested remainder normal, overlong lists collapsing to an
 /// honest "… +N more" count).
+///
+/// `world_plate`, when `Some`, is an already-rendered whole-world Mercator
+/// plate (The Portolan part II, `bin`'s own `plate::draw` -- `core` carries
+/// no hornvale crate, so it cannot draw the plate itself) drawn into the
+/// plate region INSTEAD OF the walk-band chart or the chamber-band floor
+/// plan: the world view is a lens over whichever band the character
+/// occupies, not a new band, so the character's own position in the
+/// snapshot is untouched either way. `None` draws the band's own plate
+/// exactly as before this parameter existed.
+///
+/// **The plate's width is focus-dependent (The Portolan part II, Task 3a).**
+/// With [`crate::Focus::Map`] focused AND a `world_plate` supplied, the
+/// plate claims [`world_plate_width`] columns — up to the terminal's own
+/// width, per that function's fit — rather than the old fixed
+/// [`PLATE_WIDTH`]; every other combination (any other focus, or no
+/// `world_plate` at all) keeps [`PLATE_WIDTH`] unchanged, so a caller-
+/// supplied plate wider than the old fixed width is CLIPPED, never
+/// stretched into, outside `Focus::Map`. This is computed exactly once,
+/// here — see [`world_plate_width`]'s own doc for why a second copy
+/// elsewhere would reproduce a defect this campaign already fixed once, on
+/// the height axis.
+// `echo` (Task 3) pushed this to 7, `world_plate` (The Portolan part II,
+// Task 2) to 8, `strip_offset` (Task 4, F3) to 9 — mirroring `render_with`'s
+// own allow, which this function's own parameter list mirrors one-for-one
+// plus `snapshot`
+#[allow(clippy::too_many_arguments)]
 pub fn compose(
     snapshot: &crate::Snapshot,
     w: u16,
@@ -100,17 +167,27 @@ pub fn compose(
     focus: crate::Focus,
     line: crate::CommandLine<'_>,
     echo: Option<&str>,
+    world_plate: Option<&Grid>,
+    strip_offset: u16,
     hint: Option<&crate::entry::Hint<'_>>,
 ) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
-    let plate_width = PLATE_WIDTH.min(w);
+    let plate_width = if focus == crate::Focus::Map && world_plate.is_some() {
+        world_plate_width(w, h)
+    } else {
+        PLATE_WIDTH
+    }
+    .min(w);
     let entry_width = w.saturating_sub(plate_width);
 
     let mut plate = Grid::new(plate_width, content_height);
-    match &snapshot.spatial {
-        Spatial::Walk { chart } => crate::chart::draw(chart, &mut plate, (0, 0)),
-        Spatial::Chamber { plan } => crate::plan::draw(plan, &mut plate, (0, 0)),
+    match world_plate {
+        Some(world) => blit(world, &mut plate, (0, 0)),
+        None => match &snapshot.spatial {
+            Spatial::Walk { chart } => crate::chart::draw(chart, &mut plate, (0, 0)),
+            Spatial::Chamber { plan } => crate::plan::draw(plan, &mut plate, (0, 0)),
+        },
     }
     blit(&plate, &mut page, (0, 0));
 
@@ -127,7 +204,13 @@ pub fn compose(
     );
 
     if let Some(text) = strip {
-        crate::strip::draw(text, &mut page, (0, content_height), plate_width);
+        crate::strip::draw(
+            text,
+            &mut page,
+            (0, content_height),
+            plate_width,
+            strip_offset,
+        );
     }
 
     let endpaper_row = h.saturating_sub(2);
@@ -161,6 +244,8 @@ mod tests {
             crate::CommandLine::default(),
             None,
             None,
+            0,
+            None,
         );
         assert_eq!(g.width(), 80);
         assert_eq!(g.height(), 24);
@@ -189,6 +274,8 @@ mod tests {
                 crate::CommandLine::default(),
                 None,
                 None,
+                0,
+                None,
             );
             let text = g.to_plain_text();
             let plate_has_ink = text
@@ -214,6 +301,8 @@ mod tests {
             crate::CommandLine::default(),
             None,
             None,
+            0,
+            None,
         );
         let text = g.to_plain_text();
         let strip_row = text.lines().nth(20).unwrap();
@@ -225,6 +314,58 @@ mod tests {
         assert!(
             past_plate.trim().is_empty(),
             "the strip must not bleed into the entry's columns"
+        );
+    }
+
+    /// `compose` must actually HAND `strip_offset` to `strip::draw`, not
+    /// merely accept it — a text long enough to scroll shows a different
+    /// window at a nonzero offset.
+    #[test]
+    fn compose_threads_strip_offset_through_to_the_drawn_window() {
+        let s = crate::Snapshot::parse(WALK_FIXTURE).unwrap();
+        // Distinguishable characters, not a repeated one: scrolling an
+        // all-`z` string would look identical at every offset and the
+        // assertion below would pass vacuously.
+        let long: String = (0..200).map(|i| (b'a' + (i % 26) as u8) as char).collect();
+        let (head_grid, _) = compose(
+            &s,
+            80,
+            24,
+            Some(&long),
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            None,
+            0,
+            None,
+        );
+        let (scrolled_grid, _) = compose(
+            &s,
+            80,
+            24,
+            Some(&long),
+            crate::Focus::Cli,
+            crate::CommandLine::default(),
+            None,
+            None,
+            5,
+            None,
+        );
+        let head_row = head_grid
+            .to_plain_text()
+            .lines()
+            .nth(20)
+            .unwrap()
+            .to_string();
+        let scrolled_row = scrolled_grid
+            .to_plain_text()
+            .lines()
+            .nth(20)
+            .unwrap()
+            .to_string();
+        assert_ne!(
+            head_row, scrolled_row,
+            "compose must pass strip_offset through, not silently drop it"
         );
     }
 }
