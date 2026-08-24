@@ -1178,7 +1178,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -2558,7 +2557,6 @@ hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_
 hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_rests_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
-hornvale-vessel::hornvale_vessel$liveness::tests::the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe
 hornvale-vessel::hornvale_vessel$liveness::tests::the_predator_weight_derives_from_carnivory
 hornvale-vessel::hornvale_vessel$liveness::tests::the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip
 hornvale-vessel::hornvale_vessel$liveness::tests::the_shudder_is_felt_on_the_phantom_then_discharged_then_disproven
@@ -2625,11 +2623,11 @@ hornvale-vessel::hornvale_vessel$underworld_level::region::tests::never_exceeds_
 hornvale-vessel::hornvale_vessel$underworld_level::tests::a_sump_gets_a_flooded_region_a_made_chamber_never_does
 hornvale-vessel::hornvale_vessel$underworld_level::tests::chamber_origin_is_never_mutated_by_geometry
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_cell_of_the_extent_has_a_kind
-hornvale-vessel::hornvale_vessel$underworld_level::tests::every_character_engine_keeps_every_level_connected
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_level_but_the_first_has_stairs_up_every_level_has_stairs_down
 hornvale-vessel::hornvale_vessel$underworld_level::tests::every_walkable_cell_is_reachable_from_every_other
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generate_descent_produces_one_level_per_rung
 hornvale-vessel::hornvale_vessel$underworld_level::tests::generation_is_deterministic
+hornvale-vessel::hornvale_vessel$underworld_level::tests::made_chambers_lean_worked_found_chambers_lean_natural
 hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_down_and_stairs_up_never_share_a_cell
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
@@ -2854,6 +2852,9 @@ hornvale-worldgen::hornvale_worldgen$render::tests::every_kind_valence_pair_has_
 hornvale-worldgen::hornvale_worldgen$render::tests::most_dread_picks_the_highest_dread_layer_breaking_ties_first
 hornvale-worldgen::hornvale_worldgen$render::tests::venerated_and_forgotten_read_distinctly_within_a_kind
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_empty_index_resolves_to_none
+hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_inner_link_does_not_borrow_the_outer_links_name
+hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_outer_link_keeps_its_class_but_loses_its_name
+hornvale-worldgen::hornvale_worldgen$resolve::tests::format_chain_of_no_links_is_none
 hornvale-worldgen::hornvale_worldgen$schedule::tests::a_dependency_violating_order_is_rejected
 hornvale-worldgen::hornvale_worldgen$schedule::tests::derived_schedule_is_pinned
 hornvale-worldgen::hornvale_worldgen$schedule::tests::genesis_declarations_pass_the_single_writer_check
