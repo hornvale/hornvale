@@ -4,7 +4,7 @@
 //! composes both into a coloured [`hornvale_scene::SurroundsScene`], but
 //! neither knows the other exists.
 
-use crate::Agent;
+use crate::body::Body;
 use hornvale_astronomy::{Calendar, StdDays};
 use hornvale_kernel::color::{BANDS, Illuminant, Observer};
 use hornvale_kernel::{World, WorldTime};
@@ -31,18 +31,19 @@ pub enum Eyes {
     Off,
 }
 
-/// Resolve `eyes` against `agent` to the [`Observer`] a chart should be
-/// coloured through and the name [`hornvale_scene::Sight::observer`] should
-/// carry. `None` for [`Eyes::Off`] (decline the observer step) and for a
-/// [`Eyes::Named`] name [`hornvale_worldgen::observer::observer_named`] does
-/// not recognize — generation never guesses (spec §4.6): an unknown name
-/// colours nothing rather than falling back to a default eye.
+/// Resolve `eyes` against `npc` (the driven body) to the [`Observer`] a chart
+/// should be coloured through and the name
+/// [`hornvale_scene::Sight::observer`] should carry. `None` for
+/// [`Eyes::Off`] (decline the observer step) and for a [`Eyes::Named`] name
+/// [`hornvale_worldgen::observer::observer_named`] does not recognize —
+/// generation never guesses (spec §4.6): an unknown name colours nothing
+/// rather than falling back to a default eye.
 /// type-audit: bare-ok(identifier-text: return)
-pub fn resolve(eyes: &Eyes, agent: &Agent) -> Option<(Observer, String)> {
+pub fn resolve(eyes: &Eyes, npc: &Body) -> Option<(Observer, String)> {
     match eyes {
         Eyes::Own => Some((
-            hornvale_worldgen::observer::observer_for(&agent.perception),
-            agent.species.clone(),
+            hornvale_worldgen::observer::observer_for(&npc.perception),
+            npc.species.clone(),
         )),
         Eyes::Named(name) => hornvale_worldgen::observer::observer_named(name)
             .map(|observer| (observer, name.clone())),

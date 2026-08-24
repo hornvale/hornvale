@@ -21,16 +21,15 @@ No direction here is closed; the nearest ground lies E, NW, SW.
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > !npcs
-7 NPC(s) derived this session:
-  [1] bugbear of Doaba
-  [2] hobgoblin of Noaba
-  [3] hobgoblin of Na
-  [4] a wild rust-monster
-  [5] a wild xorn
-  [6] a wild otyugh
-  [7] a wild carrion-crawler
+6 NPC(s) derived this session:
+  [1] hobgoblin of Noaba
+  [2] hobgoblin of Na
+  [3] a wild rust-monster
+  [4] a wild xorn
+  [5] a wild otyugh
+  [6] a wild carrion-crawler
 > needs
-The bugbear of Doaba seems content.
+No one else is here to read.
 > wait 5
 Time passes; the world keeps its shape.
 > look
@@ -38,23 +37,23 @@ Time passes; the world keeps its shape.
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Doaba settles down to rest.
+No one else is here to read.
 > wait 1
-Time passes. You sense movement nearby (11 stirred).
+Time passes. You sense movement nearby (9 stirred).
 > look
 [room 896860167, day 6]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Doaba settles down to rest.
+No one else is here to read.
 > wait 1
-Time passes. You sense movement nearby (1 stirred).
+Time passes; the world keeps its shape.
 > look
 [room 896860167, day 7]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Doaba grows restless.
+No one else is here to read.
 > !why hobgoblin
 hobgoblin of Noaba:
 - canonical name of an entity: hobgoblin of Noaba (asserted by the-quickening)
@@ -62,13 +61,13 @@ hobgoblin of Noaba:
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (192 stirred).
+Time passes. You sense movement nearby (154 stirred).
 > look
 [room 896860167, day 97]
 Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Doaba casts about for water.
+No one else is here to read.
 > release
 You let go.
 ```

@@ -37,8 +37,9 @@ use hornvale_kernel::{
     RoomAddr, WorldTime,
 };
 use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, EATEN, Hazards, Npc, RESTED, Terrain, ThreatNiche, place_agent,
+    AGENT_AT, DRANK, EATEN, Hazards, RESTED, Terrain, ThreatNiche, place_agent,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -112,7 +113,7 @@ pub struct Scenario {
     /// The registry, with `agent-at`/`drank` registered (as a live session does).
     pub registry: ConceptRegistry,
     /// The creatures the scenario strands or boxes in.
-    pub npcs: Vec<Npc>,
+    pub npcs: Vec<Body>,
     /// The planted terrain field they inhabit.
     pub terrain: SyntheticTerrain,
 }
@@ -210,8 +211,8 @@ fn creature(
     resource: RoomAddr,
     species: &str,
     niche: ConditionResponse,
-) -> Npc {
-    Npc {
+) -> Body {
+    Body {
         entity,
         home,
         resource,
@@ -227,7 +228,7 @@ fn creature(
         niche: ResourceVector::new(&[(PLANT_FORAGE, 0.5), (ANIMAL_PREY, 0.5)])
             .expect("the omnivore niche is valid"),
         // Steady boldness (The Mettle) — the inert baseline; a scenario probing
-        // the dial overrides it via struct-update (`Npc { boldness, ..creature }`).
+        // the dial overrides it via struct-update (`Body { boldness, ..creature }`).
         boldness: 0.5,
         // A mortal threat niche (The Bane): dreads the uncanny (weight 1, the
         // axis the dread scenarios plant), neutral heat/cold. A scenario probing
@@ -242,6 +243,17 @@ fn creature(
         // planted scenario's timings are the creature-independent baseline.
         mass_kg: hornvale_vessel::clock::REFERENCE_MASS_KG,
         label: species.to_string(),
+        // The Hand: a synthetic body still needs the two fields a derived one
+        // carries. There is no world here, so there is genuinely no
+        // settlement (`None`, not a fabricated one — see The Hand's Finding
+        // 2), and the perception agrees with the activity cycle set above,
+        // which is all any scenario reads.
+        village: None,
+        perception: hornvale_species::PerceptionVector {
+            activity: ActivityCycle::Diurnal,
+            night_vision: 0.5,
+            sky_attention: 0.5,
+        },
     }
 }
 
@@ -514,7 +526,7 @@ pub fn dread_pit_steady_vs_bold() -> Scenario {
         "kobold",
         MILD_NICHE,
     );
-    let bold = Npc {
+    let bold = Body {
         boldness: 0.9,
         ..creature(
             bold_e,
@@ -689,7 +701,7 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
             "kobold",
             MILD_NICHE,
         ),
-        Npc {
+        Body {
             metabolic_class: MetabolicClass::Ametabolic,
             ..creature(knower, station.clone(), station, "goblin", MILD_NICHE)
         },

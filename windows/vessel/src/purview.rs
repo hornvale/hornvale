@@ -4,15 +4,16 @@
 //! projection already absorbs on every visit, so a possession that draws the
 //! chart is byte-identical to one that never does.
 
+use crate::body::Body;
 use crate::eyes::Eyes;
-use crate::{Agent, Knowledge, VesselError, liveness};
+use crate::{Knowledge, VesselError, liveness};
 use hornvale_astronomy::Calendar;
 use hornvale_kernel::{Ledger, RoomAddr, RoomId, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_scene::{Mark, Sight, SurroundsScene, surrounds_scene_colored_in, surrounds_scene_in};
 
 /// The chart's sense radius, in BFS rings. A constant this slice; the seam
-/// for a per-species radius is `Agent::perception` (EXP-3), untouched here.
+/// for a per-species radius is `Body::perception` (EXP-3), untouched here.
 /// type-audit: bare-ok(count)
 pub const PURVIEW_RADIUS: u32 = 4;
 
@@ -80,11 +81,17 @@ pub fn purview_scene(
     ctx: &LocaleContext,
     position: &RoomAddr,
     knowledge: &Knowledge,
-    npcs: &[liveness::Npc],
+    // `&[&Body]`, not `&[Body]` (The Hand, Task 4 fix round 1): this
+    // function's only caller (`Session::purview_through`) now sources this
+    // from `other_bodies`, which returns borrows into the session's own
+    // roster rather than a contiguous owned slice, since `driven` can name
+    // any index. This is the function's only call site in the workspace,
+    // so widening it costs nothing elsewhere.
+    npcs: &[&Body],
     ledger: &Ledger,
     at: WorldTime,
     zoom_out: u32,
-    agent: &Agent,
+    agent: &Body,
     eyes: &Eyes,
     calendar: Option<&Calendar>,
 ) -> Result<SurroundsScene, VesselError> {
@@ -256,7 +263,7 @@ mod tests {
             .filter(|(x, y)| x.color != y.color)
             .count();
         // If the flagship species IS human, the two are legitimately identical.
-        let species = a.agent().species.clone();
+        let species = a.driven_body().species.clone();
         if species == "human" {
             assert_eq!(
                 differ, 0,
@@ -383,7 +390,7 @@ mod tests {
     fn a_room_walked_and_left_becomes_remembered() {
         let w = world();
         let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-        let start = session.agent().position.pack().unwrap().0;
+        let start = session.position().pack().unwrap().0;
         // Walk far enough that the start room leaves the sense radius.
         for _ in 0..(PURVIEW_RADIUS + 1) {
             let way = session.ways().first().map(|(c, _)| format!("{c:?}"));
@@ -435,7 +442,7 @@ mod tests {
     fn zooming_out_does_not_move_the_agents_declared_sun_altitude() {
         let w = world();
         let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-        let position = session.agent().position.clone();
+        let position = session.position();
         let zoom_out = 4;
 
         // Anti-vacuity: the coarsened chart centre must actually sit at a
@@ -478,10 +485,20 @@ mod tests {
         );
     }
 
+    /// **The Hand, Task 3 finding (docs/retrospectives/the-hand.md).** Before this task,
+    /// `derive_npcs`'s home-settlement body was a SEPARATE `Agent` twin that
+    /// always started in the possessed body's own room — the duplicate Task
+    /// 2 proved and this task deletes. With it gone, nothing derived starts
+    /// within [`PURVIEW_RADIUS`] of a fresh flagship possession by default
+    /// (confirmed live at seed 42: `map` shows zero agent marks in the walk
+    /// band at turn 0), so fix round 1 places `bodies()[1]` explicitly
+    /// through the test seam (`Session::place_creature_at_me`) rather than
+    /// asserting a precondition the campaign's premise falsifies on its own.
     #[test]
     fn an_agent_mark_stands_on_a_cell() {
         let w = world();
-        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        session.place_creature_at_me(session.bodies()[1].entity);
         let s = session.purview(0).unwrap();
         let agents: usize = s
             .cells

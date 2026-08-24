@@ -55,9 +55,9 @@
 //! reproduces `tests/fixtures/submerged-before-arm.json` byte-for-byte.
 
 use hornvale_climate::{Realm, Stratum};
-use hornvale_kernel::{Seed, WorldTime};
+use hornvale_kernel::{EntityId, Seed, WorldTime};
 use hornvale_locale::LocaleContext;
-use hornvale_vessel::{mint_flagship, observable_at};
+use hornvale_vessel::observable_at;
 
 /// A byte-for-byte transcription of `vantage.rs:64`'s current inline
 /// predicate. Not itself "the code under test" — `capture_before_arm` checks
@@ -108,7 +108,14 @@ fn capture_before_arm() {
     // position `windows/vessel/tests/fixtures/session-seed-42.json` was
     // taken from (The Quire). `submerged` does not vary with position, so one
     // real position stands in for "positions from the session fixtures".
-    let agent = mint_flagship(&world, &ctx).expect("seed 42 has a flagship");
+    // Built via `body_at` rather than the pre-Hand `mint_flagship` (The
+    // Hand, Task 3): `body_at` wants an already-minted entity, and this
+    // harness never commits, so the placeholder is discarded exactly as
+    // `agent::mint_at` used to discard it.
+    let village = hornvale_settlement::village_info(&world).expect("seed 42 has a flagship");
+    let placeholder = EntityId::new(1).expect("1 is a valid nonzero entity id");
+    let npc = hornvale_vessel::liveness::body_at(&world, &ctx, &village, placeholder);
+    let position = npc.home.clone();
 
     let mut rows: Vec<Row> = Vec::new();
 
@@ -117,7 +124,7 @@ fn capture_before_arm() {
     // doc): OVERWORLD (Surface) and WATERWORLD (the water column). Each row
     // cross-checks live execution against the transcription.
     rows.push({
-        let v = observable_at(&world, &ctx, &agent, WorldTime::GENESIS, None)
+        let v = observable_at(&world, &ctx, &npc, &position, WorldTime::GENESIS, None)
             .expect("observable_at(None) succeeds");
         assert_eq!(
             v.submerged,
@@ -136,7 +143,7 @@ fn capture_before_arm() {
         (Realm::WATERWORLD, "waterworld"),
     ] {
         for st in realm.strata() {
-            let v = observable_at(&world, &ctx, &agent, WorldTime::GENESIS, Some(*st))
+            let v = observable_at(&world, &ctx, &npc, &position, WorldTime::GENESIS, Some(*st))
                 .unwrap_or_else(|e| panic!("observable_at({st:?}) failed: {e}"));
             assert_eq!(
                 v.submerged,

@@ -82,16 +82,18 @@ pub struct SessionSnapshot {
 /// type-audit: bare-ok(index: agent), bare-ok(index: room), bare-ok(count: population), bare-ok(identifier-text: species), bare-ok(identifier-text: settlement)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SelfChannel {
-    /// The agent's deterministic minted id. Serializes as a decimal
-    /// **string**, not a JSON number: JSON has no int64 type, and this is a
-    /// uniform 64-bit draw (`AgentId`) that routinely exceeds the 2^53 a JS
+    /// The driven body's own stable identity: its ledger `EntityId` (The
+    /// Hand, Task 3 — no longer a separately-minted `AgentId`). Serializes
+    /// as a decimal **string**, not a JSON number: JSON has no int64 type,
+    /// and a lineage-derived `NonZeroU64` can still exceed the 2^53 a JS
     /// `number` can hold losslessly (see `u64_as_decimal_string`). The Rust
     /// type stays `u64`; only the emitted JSON shape differs.
     #[serde(serialize_with = "u64_as_decimal_string")]
     pub agent: u64,
     /// The species whose perception this agent carries.
     pub species: String,
-    /// The settlement the agent was minted from.
+    /// The settlement the agent belongs to, or a neutral fallback for one
+    /// with none.
     pub settlement: String,
     /// How many live there.
     pub population: u32,
@@ -277,9 +279,11 @@ mod tests {
         )
         .expect("seed 42 builds");
         let ctx = LocaleContext::build(&world).expect("the locale context builds");
-        let agent = crate::mint_flagship(&world, &ctx).expect("seed 42 has a settlement");
+        let village = hornvale_settlement::village_info(&world).expect("seed 42 has a settlement");
+        let entity = hornvale_kernel::EntityId::new(1).expect("1 is a valid nonzero entity id");
+        let npc = crate::liveness::body_at(&world, &ctx, &village, entity);
         ctx.describe(
-            &agent.position,
+            &npc.home,
             WorldTime::new(0.5).expect("a day value is finite"),
         )
         .expect("the minted position describes")

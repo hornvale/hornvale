@@ -5,7 +5,7 @@ use hornvale::{
     audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems, tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
-use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
+use hornvale_kernel::{EntityId, RoomAddr, RoomId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
@@ -37,11 +37,17 @@ usage:
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
                                             [--lens off|lantern]
                                             [--target flagship|most-populous-settlement]
+                                            [--creature <ID>]
                                             [--snapshot <PATH>]
                                             walk a frozen world as its flagship settler
-                                            (--target most-populous-settlement instead mints the
-                                            agent at the world's most-populous settlement; both
-                                            targets MINT — neither adopts an existing creature);
+                                            (--target most-populous-settlement instead drives the
+                                            agent at the world's most-populous settlement; --creature
+                                            drives a specific already-derived roster member by its
+                                            ledger entity id, settled or wild — mutually exclusive
+                                            with --target, and an id outside the derived roster fails
+                                            loudly rather than falling back to the flagship. None of
+                                            the three MINTS: all select an already-derived body
+                                            (The Hand, Task 3/4));
                                             --out saves the played world (the world remembers)
                                             (--lens filters the DRAWN chamber plan's colour for
                                             legibility: 'lantern' expands the crushed dark end of a
@@ -579,11 +585,33 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     // Which settlement the commanded agent is minted at (The Quire, Task 2).
     // Fails loudly on an unknown value — the project fails loudly, it does not
     // fall back silently.
-    let target = match flag_value(args, "--target") {
-        None => hornvale_vessel::PossessTarget::Flagship,
-        Some("flagship") => hornvale_vessel::PossessTarget::Flagship,
-        Some("most-populous-settlement") => hornvale_vessel::PossessTarget::MostPopulousSettlement,
-        Some(other) => {
+    // `--creature` (The Hand, Task 4) names any already-derived roster
+    // member by its ledger entity id, so it is mutually exclusive with
+    // `--target`, which names a settlement instead — fails loudly rather
+    // than guessing which one the caller meant.
+    let target = match (flag_value(args, "--target"), flag_value(args, "--creature")) {
+        (Some(_), Some(_)) => {
+            return Err(
+                "--target and --creature are mutually exclusive: --target names a \
+                 settlement to derive the roster around, --creature names a specific \
+                 already-derived roster member to drive"
+                    .to_string(),
+            );
+        }
+        (None, Some(id)) => {
+            let raw: u64 = id
+                .parse()
+                .map_err(|e| format!("--creature must be a nonzero u64 entity id: {e}"))?;
+            let entity = EntityId::new(raw)
+                .ok_or_else(|| "--creature must be a nonzero u64 entity id".to_string())?;
+            hornvale_vessel::PossessTarget::Creature(entity)
+        }
+        (None, None) => hornvale_vessel::PossessTarget::Flagship,
+        (Some("flagship"), None) => hornvale_vessel::PossessTarget::Flagship,
+        (Some("most-populous-settlement"), None) => {
+            hornvale_vessel::PossessTarget::MostPopulousSettlement
+        }
+        (Some(other), None) => {
             return Err(format!(
                 "--target: unknown target '{other}'; known targets: flagship, \
                  most-populous-settlement"

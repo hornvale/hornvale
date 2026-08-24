@@ -93,7 +93,7 @@ fn terminal_size() -> std::io::Result<(u16, u16)> {
 /// so `Driver` owns it and this function reads it back through the small
 /// accessors rather than threading a second mutable buffer through the
 /// loop.
-fn redraw(term: &term::Term, driver: &Driver) -> std::io::Result<()> {
+fn redraw(term: &term::Term, driver: &mut Driver) -> std::io::Result<()> {
     let (w, h) = terminal_size()?;
     let json = driver.snapshot();
     let text = driver.line_text();
@@ -153,7 +153,7 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
 
     let (w, h) = terminal_size()?;
     driver.resize(w, h);
-    redraw(term, driver)?;
+    redraw(term, &mut *driver)?;
     loop {
         match read()? {
             Event::Key(key) => {
@@ -162,7 +162,7 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
                     continue;
                 }
                 let released = driver.apply(action);
-                redraw(term, driver)?;
+                redraw(term, &mut *driver)?;
                 if released {
                     return Ok(());
                 }
@@ -170,7 +170,7 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
             Event::Resize(_, _) => {
                 let (w, h) = terminal_size()?;
                 driver.resize(w, h);
-                redraw(term, driver)?;
+                redraw(term, &mut *driver)?;
             }
             _ => {}
         }
