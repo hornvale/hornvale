@@ -309,6 +309,17 @@ const STORE_WEIGHT: f64 = 0.5;
 /// The fraction of a community's stores that survives each epoch — a hoard is
 /// not immortal.
 const STORE_DECAY: f64 = 0.95;
+
+/// The sub-year grain at which a community's granary integrates (The Granary
+/// T3, spec §3.2–3.4). Twelve phases ≈ monthly resolution: coarse enough that
+/// the epoch loop's cost stays negligible (twelve curve samples per community
+/// per epoch, no draws), fine enough that the seasonal surplus/deficit split —
+/// harvest banking against winter draw-down — is resolved. Task 4 stamps raid
+/// and founding timestamps at `year + phase / PHASES_PER_YEAR`, so the same
+/// const names both grains. Not itself a save-format constant: it changes
+/// intra-year timing only, and the annual totals it redistributes are pinned
+/// by test (`a_growth_year_nets_zero_on_the_granary`).
+const PHASES_PER_YEAR: usize = 12;
 /// The share of a subordinate cell's effective capacity a patron demands per
 /// epoch. The dominant taxes what it can SEE — the land, never the granary
 /// (spec §4.2's information asymmetry). A save-format constant: changing it
@@ -981,9 +992,8 @@ struct Community {
     /// cell → biome class through the composition root's map), so committing
     /// it would add a save-format surface for a value that can be re-derived
     /// exactly. No draws feed it; determinism is untouched.
-    /// Read today only by the curve tests; the seasonal production dynamics
-    /// consume it in the next task.
-    #[allow(dead_code)]
+    /// Consumed by [`Bake::integrate_stores`], which samples it once per epoch
+    /// to weight the sub-year accrual phases (The Granary T3).
     curve: Curve,
 }
 
@@ -1102,6 +1112,42 @@ impl Spoil {
             Spoil::Subordinate => 0,
         }
     }
+}
+
+/// The normalized share of a community's annual production each sub-year
+/// phase accrues (The Granary T3): the harvest curve sampled once per phase at
+/// ascending day-of-year (`phase × DAYS_PER_YEAR / PHASES_PER_YEAR`, day 0 the
+/// climate module's northern spring equinox), then renormalized to sum to one.
+/// Normalization is what makes the redistribution claim exact — summed accrual
+/// equals the annual increment to float tolerance regardless of amplitude or
+/// hemisphere — so a zero total (unreachable for any authored curve, whose
+/// growing half always covers several samples) falls back to uniform rather
+/// than dividing by zero.
+fn phase_shares(curve: Curve) -> [f64; PHASES_PER_YEAR] {
+    let day_width = hornvale_kernel::units::Years::DAYS_PER_YEAR / PHASES_PER_YEAR as f64;
+    let mut raw = [0.0; PHASES_PER_YEAR];
+    let mut total = 0.0;
+    for (p, slot) in raw.iter_mut().enumerate() {
+        let w = curve.at(p as f64 * day_width);
+        *slot = w;
+        total += w;
+    }
+    if total <= 0.0 {
+        return [1.0 / PHASES_PER_YEAR as f64; PHASES_PER_YEAR];
+    }
+    let mut shares = [0.0; PHASES_PER_YEAR];
+    for (r, s) in raw.iter().zip(shares.iter_mut()) {
+        *s = r / total;
+    }
+    shares
+}
+
+/// One phase of granary integration: accrual lands, consumption bleeds, and
+/// the stock clamps at zero — a granary cannot go negative, it simply runs out
+/// (spec §3.2 "stores clamp at zero; the starvation path is exercised, not
+/// invented").
+fn store_phase_step(stores: f64, accrual: f64, consumption: f64) -> f64 {
+    (stores + accrual - consumption).max(0.0)
 }
 
 /// The mutable bake state: records, live communities, the one-alive-per-site
@@ -3073,6 +3119,36 @@ impl<'a> Bake<'a> {
         }
     }
 
+    /// Integrate one community's granary across the sub-year phases of its
+    /// annual cycle (The Granary T3, spec §3.2). The epoch's logistic growth
+    /// increment IS the year's production: it is split across
+    /// [`PHASES_PER_YEAR`] phases by the community's harvest curve (shares
+    /// normalized to one, so the curve redistributes WHEN food arrives, never
+    /// HOW MUCH — pinned by test), and consumption bleeds that same annual
+    /// produce back EVENLY, phase by phase. The net is therefore zero over a
+    /// growth year: the granary banks only the seasonal timing surplus,
+    /// swelling through harvest and drawing down through winter, exactly as a
+    /// store fed seasonally but eaten daily would. A shrinking year (negative
+    /// increment) accrues negatively and consumes nothing extra — a pure
+    /// draw-down of reserves. The stock clamps at zero every phase; a
+    /// community whose curve is empty in the lean half starves its granary
+    /// mid-year even in a good year, which is the depletion signal Task 4's
+    /// phase-stamped raids key on.
+    ///
+    /// Determinism: pure float arithmetic over a fixed ascending phase order,
+    /// no draws, no maps. Demography is untouched — population already moved
+    /// before this runs; only stores gain intra-year resolution.
+    fn integrate_stores(&mut self, idx: usize, annual_production: f64) {
+        let shares = phase_shares(self.communities[idx].curve);
+        let consumption = annual_production.max(0.0) / PHASES_PER_YEAR as f64;
+        let mut stores = self.communities[idx].stores;
+        // Ascending phase order — spec §3.4's fixed processing order.
+        for &share in shares.iter() {
+            stores = store_phase_step(stores, share * annual_production, consumption);
+        }
+        self.communities[idx].stores = stores;
+    }
+
     /// Opportunistic predation (The Tumult), now resolving **two outcomes**
     /// decided by the mobility of the prize (The Tithe, spec §4.1): a
     /// community raids the reachable occupied neighbour whose strength it can
@@ -3490,6 +3566,10 @@ impl<'a> Bake<'a> {
         // an under-collection with no symptom. `begin_epoch` zeroes the buffer,
         // so nothing carries across epochs.
         self.epoch_growth[idx] += increment;
+        // The Granary T3: the same increment, integrated over the sub-year
+        // phases of the harvest curve into running stores (spec §3.2). Runs
+        // after decay, so decay keeps its per-epoch meaning unchanged.
+        self.integrate_stores(idx, increment);
         self.touch(idx, year);
         self.tally.grew += 1;
 
@@ -3775,6 +3855,7 @@ pub fn bake(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_culture::BiomeClass;
     use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
     use std::cmp::Ordering;
 
@@ -4485,6 +4566,194 @@ mod tests {
             before_pressure.to_bits(),
             after_pressure.to_bits(),
             "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
+    }
+
+    /// The redistribution contract's first half (The Granary T3, spec §3.3).
+    /// claim: invariant(the twelve phase shares are non-negative and sum to one for every
+    /// authored curve shape — both hemispheres, the equator, and several
+    /// biome amplitudes — which is exactly what makes summed phase accrual
+    /// equal the annual increment regardless of amplitude or hemisphere.
+    #[test]
+    fn phase_shares_sum_to_one_across_curves() {
+        for lat in [60.0, 45.0, 0.0, -45.0, -60.0] {
+            for biome in [
+                BiomeClass::Forest,
+                BiomeClass::Grassland,
+                BiomeClass::Arid,
+                BiomeClass::Cold,
+                BiomeClass::Barren,
+            ] {
+                let shares = phase_shares(Curve::new(LatDeg::new(lat).unwrap(), biome));
+                assert_eq!(shares.len(), PHASES_PER_YEAR);
+                let total: f64 = shares.iter().sum();
+                assert!(
+                    (total - 1.0).abs() < 1e-9,
+                    "shares must sum to one at lat {lat} biome {biome:?}: {total}"
+                );
+                assert!(
+                    shares.iter().all(|&s| s >= 0.0),
+                    "negative share at lat {lat} biome {biome:?}: {shares:?}"
+                );
+                // Ascending day-of-year sampling: the share nearest the
+                // harvest peak must be the largest (every authored curve has
+                // a single annual maximum inside the growing half).
+                let peak_phase = (shares
+                    .iter()
+                    .enumerate()
+                    .max_by(|(_, a), (_, b)| a.total_cmp(b))
+                    .map(|(i, _)| i)
+                    .unwrap()) as f64;
+                let peak_day = Curve::new(LatDeg::new(lat).unwrap(), biome).peak_day_of_year();
+                let year = hornvale_kernel::units::Years::DAYS_PER_YEAR;
+                let expected_peak =
+                    (peak_day / (year / PHASES_PER_YEAR as f64)).floor() % PHASES_PER_YEAR as f64;
+                let dist = (peak_phase - expected_peak).rem_euclid(PHASES_PER_YEAR as f64);
+                assert!(
+                    dist <= 1.5,
+                    "argmax share phase {peak_phase} not beside harvest peak day {peak_day} \
+                     (expected phase ~{expected_peak}) at lat {lat}"
+                );
+            }
+        }
+    }
+
+    /// THE LOAD-BEARING INVARIANT (The Granary T3): with the clamp never
+    /// reached, integrating an annual increment over twelve phases leaves
+    /// stores unchanged — accrual sums to the increment and consumption bleeds
+    /// the same total back, so the curve redistributes WHEN food arrives,
+    /// never HOW MUCH. A shrinking year draws down by exactly its increment.
+    /// Scripted on a hand-built Bake; `integrate_stores` is compared against
+    /// the same loop written out here so any change to phase order or the
+    /// per-phase step shows up as a bit mismatch.
+    #[test]
+    fn granary_integration_preserves_the_annual_increment() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            10.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+
+        // A growth year: stores end where they started.
+        bake.communities[0].stores = 1000.0;
+        bake.integrate_stores(0, 37.5);
+        assert!(
+            (bake.communities[0].stores - 1000.0).abs() < 1e-8,
+            "a growth year must net zero on stores, got {}",
+            bake.communities[0].stores
+        );
+
+        // A shrinking year: pure draw-down by exactly the negative increment.
+        bake.communities[0].stores = 1000.0;
+        bake.integrate_stores(0, -25.0);
+        assert!(
+            (bake.communities[0].stores - 975.0).abs() < 1e-8,
+            "a shrinking year must draw down by its increment, got {}",
+            bake.communities[0].stores
+        );
+
+        // Bit-exact against the mirrored loop: ascending phases, accrue
+        // share × annual, bleed annual/12, clamp at zero.
+        bake.communities[0].stores = 1000.0;
+        let shares = phase_shares(bake.communities[0].curve);
+        let mut mirrored = 1000.0;
+        for &share in shares.iter() {
+            mirrored = store_phase_step(mirrored, share * 37.5, 37.5 / PHASES_PER_YEAR as f64);
+        }
+        bake.integrate_stores(0, 37.5);
+        assert_eq!(
+            bake.communities[0].stores.to_bits(),
+            mirrored.to_bits(),
+            "integrate_stores diverged from the scripted mirror loop"
+        );
+
+        // Same mirror discipline through the CLAMP: entering the year nearly
+        // empty in this community's lean half, some phase bottoms out at
+        // zero, so the final stock depends on the per-phase ACCRUAL SHAPE,
+        // not just its sum — a redistribution bug (e.g. accrual ignoring the
+        // curve) cannot hide behind the net-zero identity here.
+        bake.communities[0].curve = Curve::new(LatDeg::new(-55.0).unwrap(), BiomeClass::Grassland);
+        bake.communities[0].stores = 1.0;
+        let southern_shares = phase_shares(bake.communities[0].curve);
+        let mut clamped_mirror = 1.0;
+        let mut unclamped = 1.0;
+        let mut trough: f64 = 1.0;
+        for &share in southern_shares.iter() {
+            unclamped += share * 40.0 - 40.0 / PHASES_PER_YEAR as f64;
+            trough = trough.min(unclamped);
+            clamped_mirror =
+                store_phase_step(clamped_mirror, share * 40.0, 40.0 / PHASES_PER_YEAR as f64);
+        }
+        bake.integrate_stores(0, 40.0);
+        assert!(trough < 0.0, "scenario must cross zero mid-year");
+        assert_eq!(
+            bake.communities[0].stores.to_bits(),
+            clamped_mirror.to_bits(),
+            "integrate_stores diverged from the mirrored loop across the clamp"
+        );
+    }
+
+    /// The starvation path (spec §3.2): starting near empty entering the lean
+    /// half of its curve, a community's consumption drains the granary below
+    /// zero before harvest lands — the stock CLAMPS there rather than going
+    /// negative, ending the year above where an unclamped ledger would sit.
+    /// This mid-year depletion signal is what Task 4's phase-stamped raids
+    /// key on.
+    #[test]
+    fn granary_clamps_at_zero_through_the_lean_half() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            10.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+
+        // A far-southern community: day 0 (the climate module's northern
+        // spring equinox) sits in its lean half, so early phases bleed
+        // consumption with little or no accrual.
+        bake.communities[0].curve = Curve::new(LatDeg::new(-55.0).unwrap(), BiomeClass::Grassland);
+        let production = 40.0;
+        bake.communities[0].stores = 1.0;
+        bake.integrate_stores(0, production);
+        let final_stores = bake.communities[0].stores;
+
+        // Mirror the year WITHOUT the clamp to prove the lean half actually
+        // drives the granary below zero (starvation occurs) and that the
+        // clamp is what kept the stock whole.
+        let shares = phase_shares(bake.communities[0].curve);
+        let mut unclamped = 1.0;
+        let mut dipped_below_zero = false;
+        for &share in shares.iter() {
+            unclamped += share * production - production / PHASES_PER_YEAR as f64;
+            dipped_below_zero |= unclamped < 0.0;
+        }
+        assert!(
+            dipped_below_zero,
+            "scenario must starve mid-year: unclamped trough was non-negative"
+        );
+        assert!(final_stores >= 0.0, "stores went negative: {final_stores}");
+        assert!(
+            final_stores > unclamped,
+            "clamp never fired: clamped {final_stores} ≤ unclamped {unclamped}"
         );
     }
 

@@ -10538,6 +10538,16 @@ mod tests {
         // order of magnitude for that cause. Post-unblinding re-measure,
         // declared per decision 0016.
         //
+        // THE GRANARY (Task 3): 346 -> 310, and the three counts above are
+        // UNCHANGED at 145 for the fourth campaign running. Stores now
+        // integrate the harvest curve over twelve sub-year phases, so a
+        // community's strength — which stores feed — varies within the year,
+        // moving raid outcomes and hence settlement volume; the peopled ROSTER
+        // does not move, which is why the pantheon and the two derived counts
+        // do not. Fewer settlements survive seed 42's re-contested ground, so
+        // fewer names are glossed. Post-unblinding re-measure, declared per
+        // decision 0016.
+        //
         // THE UNDERWORLD (Task 9, the genus join): 317 -> 346, and the three
         // counts above are UNCHANGED at 145 for the third campaign running.
         // Same lever as Task 8's entry, moved a second time: `chamber_fit`
@@ -10550,7 +10560,7 @@ mod tests {
         // settlement VOLUME again — this time upward. The peopled ROSTER is
         // untouched, which is again why the pantheon and the three counts do
         // not move. Post-unblinding re-measure, declared per decision 0016.
-        assert_eq!(count("name-gloss"), 346);
+        assert_eq!(count("name-gloss"), 310);
     }
 
     #[test]

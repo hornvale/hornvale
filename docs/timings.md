@@ -2321,9 +2321,15 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-23T19:20:15Z | quick | 12.704 | 22.705 | 12.299 | 2.76 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:21:25Z | quick | 19.265 | 36.785 | 16.498 | 2.77 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:22:18Z | quick | 17.271 | 23.812 | 12.534 | 2.10 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
-| 2026-08-23T19:22:46Z | quick | 13.:00 | 10.530 | 0.305 | 0.83 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T19:22:46Z | quick | 13.000 | 10.530 | 0.305 | 0.83 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:26:37Z | quick | 20.765 | 11.273 | 0.367 | 0.56 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:28:08Z | gate-commit | 78.271 | 334.468 | 24.713 | 4.59 | 0 | ecda35e7f | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:34:35Z | quick | 56.291 | 41.639 | 20.636 | 1.11 | 0 | a243e8e40 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:35:46Z | gate-commit | 66.412 | 70.541 | 31.264 | 1.53 | 0 | a243e8e40 | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-23T19:53:52Z | quick | 50.382 | 27.487 | 11.954 | 0.78 | 0 | 43f4ac4f8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T20:02:58Z | quick | 67.988 | 25.459 | 10.313 | 0.53 | 0 | 43f4ac4f8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-23T20:04:42Z | gate-commit | 79.111 | 60.491 | 30.264 | 1.15 | 0 | 43f4ac4f8 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:57:22Z | quick | 1.763 | 1.558 | 0.100 | 0.94 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:57:30Z | quick | 3.811 | 3.771 | 0.536 | 1.13 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:58:18Z | quick | 12.816 | 27.676 | 20.516 | 3.76 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T00:58:56Z | quick | 19.311 | 35.185 | 13.347 | 2.51 | 0 | 07c948b94 | campaign/the-granary | MacBookPro | 10 |
