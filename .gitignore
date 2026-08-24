@@ -68,3 +68,16 @@ book/src/laboratory/generated/the-ford-probe/
 # copies FROM, and the script deletes it after each arm. Ignored so a run
 # cannot dirty the tree the script's own clean-tree guard reads.
 book/src/laboratory/generated/gnomon-injection/
+
+# The `pi` harness's per-machine working state — settings, npm scratch, and a
+# workflow phase file (`"currentPhase": "execute"`). It is MACHINE state, not
+# shared configuration: this checkout carries 62 such files while only three
+# were ever committed, and two of those three differed from the local copy the
+# moment they landed, so tracking them means every machine fights over them.
+#
+# Committed by hand in 54d4f9f44 and reverted here. Worth knowing HOW it
+# reached main, because no local guard could have stopped it and none can:
+# it was authored through the GitHub web UI (a `users.noreply.github.com`
+# identity), and `scripts/hooks/pre-push` — decision 0139's enforcement — runs
+# on the pusher's machine. A commit made in a browser never touches one.
+.pi/

@@ -2606,3 +2606,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T20:44:21Z | gate-commit | 19.884 | 47.420 | 12.162 | 3.00 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T21:10:23Z | rebaseline | 57.868 | 242.100 | 11.589 | 4.38 | 0 | bb1163cda | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T21:30:34Z | gate-commit | 43.531 | 78.005 | 55.835 | 3.07 | 0 | 2cd6f5e79 | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T17:21:14Z | sluice:artifacts | 61.261 | 551.758 | 20.220 | 9.34 | 0 | f274278a5 |  | lefford | 40 |
+| 2026-08-24T17:21:54Z | sluice:outboard | 39.890 | 24.890 | 38.764 | 1.60 | 0 | 06a9a77d2 |  | lefford | 40 |
+| 2026-08-24T17:27:59Z | sluice:gate | 365.233 | 10363.058 | 363.865 | 29.37 | 0 | a25091fd4 |  | lefford | 40 |
+| 2026-08-24T18:04:30Z | gate-commit | 120.159 | 1867.698 | 179.725 | 17.04 | 0 | 66b3ce381 | fix/gitignore-pi | lefford | 40 |
+| 2026-08-24T18:05:55Z | sluice:artifacts | 62.150 | 547.410 | 22.006 | 9.16 | 0 | 1ef760fad |  | lefford | 40 |
+| 2026-08-24T18:06:35Z | sluice:outboard | 39.070 | 24.484 | 38.130 | 1.60 | 0 | a8c4d956d |  | lefford | 40 |
+| 2026-08-24T18:12:49Z | sluice:gate | 374.825 | 10384.171 | 367.906 | 28.69 | 0 | 941938956 |  | lefford | 40 |
+| 2026-08-24T18:19:44Z | sluice:clients | 414.662 | 5191.040 | 73.323 | 12.70 | 0 | 0240b5055 |  | lefford | 40 |
