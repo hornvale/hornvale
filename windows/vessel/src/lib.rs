@@ -28,6 +28,7 @@ mod session;
 pub mod snapshot;
 pub mod streams;
 pub mod structure;
+pub mod testimony;
 pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};

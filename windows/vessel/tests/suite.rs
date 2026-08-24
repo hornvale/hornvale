@@ -69,6 +69,8 @@ mod session_snapshot;
 mod submerged;
 #[path = "suite/submerged_before_arm.rs"]
 mod submerged_before_arm;
+#[path = "suite/testimony.rs"]
+mod testimony;
 #[path = "suite/the_blocking.rs"]
 mod the_blocking;
 #[path = "suite/the_first_mark.rs"]
