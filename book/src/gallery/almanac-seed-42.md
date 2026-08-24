@@ -64,7 +64,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Tabash** — savanna
 - **Xoroxora** — alpine
 - **Szooṅgaṅ (35.6°N, 138.3°E)** — temperate-grassland
-- **Sajatqashak** — temperate-forest
+- **Poogpao** — temperate-forest
 - **Dagga** — temperate-forest
 - **Raaxora (18.3°N, 124.0°E)** — temperate-forest
 - **Tataneno** — temperate-forest
@@ -83,10 +83,10 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Rogdoo (25.0°N, 13.6°E)** — temperate-forest
 - **Goo (26.0°N, 13.7°E)** — temperate-forest
 - **Rekorore** — temperate-forest
-- **Rogdoo (25.0°N, 13.6°E)** — temperate-forest
-- **Goo (26.0°N, 13.7°E)** — temperate-forest
+- **Koto** — temperate-forest
+- **Bago** — temperate-forest
 - **Bagoneoboeqa** — temperate-forest
-- **Naabee (26.6°N, 14.8°E)** — temperate-forest
+- **Pogsro** — temperate-forest
 - **Teesduṅdee** — temperate-forest
 - **Ṅoṅ** — tundra
 - **Nenoo (15.4°S, 44.9°W)** — temperate-forest
@@ -135,7 +135,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Qashak** — tropical-rainforest
 - **Banang'kanabnabag** — shrubland
 - **Take** — tropical-seasonal-forest
-- **Roaggaorao (23.4°N, 12.4°E)** — temperate-forest
+- **Bago** — temperate-forest
 - **Qata (18.0°S, 44.5°W)** — temperate-forest
 - **Raepa** — temperate-forest
 - **Rorora (29.0°N, 143.7°W)** — temperate-forest
@@ -145,7 +145,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Bodoqadago** — tropical-rainforest
 - **Bodoqaqado (5.1°S, 145.7°W)** — tropical-rainforest
 - **Qado (4.6°S, 143.2°W)** — tropical-rainforest
-- **Goo (24.4°N, 12.5°E)** — temperate-forest
+- **Nabote** — temperate-forest
 - **Xoxa (29.2°N, 146.0°W)** — temperate-forest
 - **Gabash (16.8°N, 128.6°E)** — temperate-forest
 - **Qashak** — shrubland
@@ -172,7 +172,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Bago (10.0°S, 60.6°W)** — tropical-rainforest
 - **Gaoda (17.7°N, 138.5°E)** — tropical-rainforest
 - **Xoora (28.6°N, 147.1°W)** — temperate-forest
-- **Daggaro** — tropical-seasonal-forest
+- **Gaoda** — tropical-seasonal-forest
 - **Bagobodoqa** — tropical-rainforest
 - **Banang (33.5°S, 154.4°W)** — temperate-grassland
 - **Xaora (27.2°N, 142.6°W)** — temperate-forest
@@ -190,7 +190,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Xaxaro (28.1°N, 148.3°W)** — temperate-forest
 - **Bote (26.4°N, 12.7°E)** — temperate-forest
 - **Qada (10.9°S, 57.8°W)** — tropical-seasonal-forest
-- **Gaoggoo** — tropical-rainforest
+- **Doaba** — tropical-rainforest
 - **Qada** — tropical-rainforest
 - **Bodoqadoaba** — tropical-rainforest
 - **Kamabbamagmabash** — temperate-forest
@@ -200,10 +200,10 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Perepero** — temperate-forest
 - **Qashak (34.7°S, 154.5°W)** — temperate-grassland
 - **Bodoqa (25.1°N, 152.9°E)** — temperate-forest
-- **Roggo** — tropical-seasonal-forest
+- **Bodoqagodo** — tropical-seasonal-forest
 - **Neoboqato** — temperate-forest
 - **Doabagada (5.7°S, 146.6°W)** — tropical-rainforest
-- **Roa** — temperate-forest
+- **Mabash'mabas** — temperate-forest
 - **Doo (3.5°S, 141.5°W)** — tropical-seasonal-forest
 - **Roggogogsro** — tropical-seasonal-forest
 - **Mabash (15.8°N, 128.9°E)** — temperate-forest
@@ -215,14 +215,14 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Bagodo (23.5°N, 150.1°E)** — tropical-seasonal-forest
 - **Da (24.1°N, 149.2°E)** — temperate-forest
 - **Doodo** — tropical-seasonal-forest
-- **Dogžraorogšroo** — tropical-seasonal-forest
+- **Genobobeqa** — tropical-seasonal-forest
 - **Doo (4.0°S, 147.4°W)** — tropical-seasonal-forest
 - **Raaxorarora** — temperate-forest
 - **Doodobodoqa** — tropical-seasonal-forest
 - **Gaoda (4.1°S, 140.7°W)** — tropical-seasonal-forest
 - **Xororororo** — taiga
 - **Doo (24.6°N, 152.0°E)** — tropical-seasonal-forest
-- **Poo** — temperate-forest
+- **Qashakshabas** — temperate-forest
 - **Bodoqagada** — tropical-seasonal-forest
 - **Roaggaorao (12.6°N, 132.8°E)** — tropical-seasonal-forest
 - **Daadoo** — temperate-forest
@@ -237,7 +237,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Na (14.4°S, 44.6°W)** — temperate-forest
 - **Da (27.5°N, 149.2°E)** — temperate-forest
 - **Qashak of the hill-dwarfs** — temperate-forest
-- **Poorogdoo** — temperate-forest
+- **Šromdeemoo** — temperate-forest
 - **Bagona** — temperate-forest
 - **Bago (17.1°S, 42.3°W)** — temperate-forest
 - **Gaodabodoqa** — tropical-seasonal-forest
@@ -260,7 +260,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Qobao** — temperate-forest
 - **Bagogada** — tropical-seasonal-forest
 - **Bodo (21.6°N, 142.9°E)** — temperate-forest
-- **Roggogogsro** — tropical-seasonal-forest
+- **Šromgo** — tropical-seasonal-forest
 - **Roaro (32.0°N, 149.3°W)** — tundra
 - **Boba (23.8°N, 11.4°E)** — temperate-forest
 - **Qeba** — temperate-forest
@@ -345,7 +345,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Roora (19.3°N, 120.5°E)** — temperate-forest
 - **Dodo (24.8°N, 148.3°E)** — temperate-forest
 - **Bodo (25.3°N, 147.2°E)** — temperate-forest
-- **Roaggaorao (12.6°N, 132.8°E)** — tropical-seasonal-forest
+- **Domžreo** — tropical-seasonal-forest
 - **Doodoqaga** — temperate-forest
 - **Gaoda (14.3°S, 77.8°W)** — tropical-rainforest
 - **Qado (17.2°S, 80.2°W)** — tropical-rainforest
@@ -375,7 +375,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Bagodo** — shrubland
 - **Sraošreammaedomžreo** — tropical-seasonal-forest
 - **Doodoqa (15.1°S, 63.3°W)** — tropical-seasonal-forest
-- **Rogdoo (14.6°N, 132.3°E)** — temperate-forest
+- **Sabakqashak** — temperate-forest
 - **Raaxora (26.4°N, 139.3°W)** — temperate-forest
 - **Raaxora (27.5°N, 139.2°W)** — temperate-forest
 - **Bagoqado** — tropical-rainforest
@@ -390,9 +390,9 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Bodoqadobo** — tropical-seasonal-forest
 - **Gooṅšzoeṅszoaṅ (34.6°N, 101.1°E)** — temperate-grassland
 - **Poṅžzeṅ (33.7°N, 101.6°E)** — temperate-grassland
-- **Goo (15.6°N, 132.1°E)** — temperate-forest
-- **Dagga** — temperate-forest
-- **Goarao** — temperate-forest
+- **Sajatqashak** — temperate-forest
+- **Sraomoadoomdo** — temperate-forest
+- **Moogo** — temperate-forest
 - **Sajat** — temperate-forest
 - **Mabash'sajat** — temperate-forest
 - **Raxaroro** — tundra
@@ -420,7 +420,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Xao (29.5°N, 142.5°W)** — temperate-forest
 - **Xaoraxa** — temperate-forest
 - **Bodoqa (22.5°N, 148.3°E)** — tropical-seasonal-forest
-- **Rogsrobo** — tropical-seasonal-forest
+- **Gosraošreammae** — tropical-seasonal-forest
 - **Dabododo** — temperate-forest
 - **Doabadodoqa** — tropical-seasonal-forest
 - **Do (19.0°S, 74.5°W)** — shrubland
@@ -497,7 +497,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Bodoqa (13.2°S, 63.7°W)** — tropical-rainforest
 - **Da (13.8°S, 61.8°W)** — temperate-forest
 - **Bodoqa (12.9°S, 61.5°W)** — tropical-seasonal-forest
-- **Roaggaorao (12.5°S, 60.4°W)** — temperate-forest
+- **Dodo** — temperate-forest
 - **Raaxora (17.5°N, 126.3°E)** — temperate-forest
 - **Raaxora (17.2°N, 127.5°E)** — temperate-forest
 - **Roora (18.2°N, 127.2°E)** — temperate-forest

@@ -128,14 +128,14 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Gaoda (20.0°N, 144.0°E)** — tropical-rainforest
 - **Panang** — shrubland
 - **Boṅsroaṅšroaṅṅaoṅsraoṅ** — tundra
-- **Gogšra** — temperate-forest
+- **Shaban** — temperate-forest
 - **Naabeena** — temperate-forest
 - **Sraošreammae** — temperate-forest
 - **Ṅuṅsdatuṅsdu** — temperate-forest
 - **Xoarorore** — temperate-forest
 - **Reko** — temperate-forest
 - **Bodo (27.9°S, 36.3°W)** — temperate-forest
-- **Rogdoorogga** — temperate-forest
+- **Nabash'kanabnabag** — temperate-forest
 - **Tuṅsdu** — temperate-forest
 - **Sduṅdee** — temperate-forest
 - **Bataqjagaj** — tropical-rainforest
@@ -333,7 +333,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Xo (21.8°N, 3.1°E)** — temperate-forest
 - **Bobeqabago** — tropical-rainforest
 - **Gaobodo** — temperate-forest
-- **Goo (22.4°N, 4.1°W)** — temperate-forest
+- **Roorora** — temperate-forest
 - **Nadash** — temperate-forest
 - **Xoxa (27.3°N, 110.9°E)** — temperate-forest
 - **Bodoqagododa** — temperate-forest
