@@ -2575,3 +2575,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T21:44:02Z | gate-commit | 150.591 | 63.551 | 33.039 | 0.64 | 0 | e6f7e654d | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-24T22:03:38Z | gate-commit | 643.406 | 1506.526 | 221.706 | 2.69 | 0 | 0f207e959 | campaign/the-tailrace | ambrose | 12 |
 | 2026-08-24T22:06:33Z | gate-commit | 129.892 | 62.831 | 34.531 | 0.75 | 0 | 0f207e959 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:26:01Z | gate-commit | 349.026 | 156.639 | 153.920 | 0.89 | 0 | ff709d8bf | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:29:26Z | gate-commit | 131.903 | 64.195 | 33.279 | 0.74 | 0 | ff709d8bf | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:42:10Z | gate-commit | 281.869 | 149.648 | 166.403 | 1.12 | 0 | 9b9c2f476 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:44:56Z | gate-commit | 144.112 | 60.675 | 32.808 | 0.65 | 0 | 9b9c2f476 | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:55:25Z | gate-commit | 368.488 | 152.543 | 149.712 | 0.82 | 0 | 6a49aa78e | campaign/the-tailrace | ambrose | 12 |
+| 2026-08-24T22:57:47Z | gate-commit | 124.814 | 60.740 | 28.613 | 0.72 | 0 | 6a49aa78e | campaign/the-tailrace | ambrose | 12 |
