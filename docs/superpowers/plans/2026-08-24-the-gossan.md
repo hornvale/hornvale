@@ -49,6 +49,18 @@ for `Endotherm`, `Ectotherm` and `Autotroph`, and is **already in
 does **not** cover `Ametabolic`. Task 2 adds that one case; Task 3 updates the
 spec.
 
+**C-3. This plan's own text overstates when a new test starts guarding, and
+the wording is left standing deliberately.** Two places below — around the
+`TrophicMode` and `is_ametabolic` doc comments this plan specifies — say a
+guard is consulted "on every commit-gate run". That was corrected in the
+shipped code and in the spec by the final review's finding I-3: a test with no
+recorded baseline duration is excluded from the commit gate until a green
+chamber run records one. **The plan keeps its original wording because a plan
+is a record of what was planned**, and rewriting it would falsify the history
+this campaign spent five plan defects learning to read. Do not copy that
+phrasing forward — the shipped doc comments are the current text, not this
+file.
+
 ## A hazard the executor must know about
 
 **A new test is NOT in `gate-commit`.** `docs/timings/subfloor-roster.tsv`
