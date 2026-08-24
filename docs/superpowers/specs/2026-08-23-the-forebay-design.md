@@ -236,6 +236,56 @@ conclusive: a future campaign with access to `agent_scaling.rs` (once
 `windows/vessel` frees) should still take the real reading before treating
 this as settled.
 
+### 4.2 The probe is a negative control, and the profile already carried the verdict
+
+Two corrections to §4.1, made by the controller on review. Neither changes the
+headline; both change what is load-bearing under it, which matters more.
+
+**The 96.2% is arithmetically a restatement of the probe's own walk width.**
+Nothing evicts in this store, so every miss is a *first touch* and the miss
+count IS the number of distinct keys the run ever touched. The hit rate is
+therefore exactly `1 - distinct/total`:
+
+```
+  1 - 1665/44000 = 0.962159        <- and 0.9622 is what the probe printed
+```
+
+So "96.2%" says "this walk visited 1,665 distinct rooms in 44,000 lookups,"
+which is a direct consequence of choosing 5 settlement anchors and a bounded
+10-step walk. Widening the walk moves the number wherever you like:
+
+```
+  distinct   1665 -> 0.962      distinct  11000 -> 0.750
+  distinct   5000 -> 0.886      distinct  22000 -> 0.500
+```
+
+A number that a parameter choice sets cannot, on its own, decide a headline.
+
+**And it does not have to, because the profile already decided it — more
+directly and on the real workload.** `agent_scaling.rs` hoists the memo across
+all 20 ticks (`:375`, above the loop), so The Leat's profile measured a run
+whose cache was **already warm**, and `scan_at` was *still* 13.4%. A warm cache
+still costing 13.4% is miss-bound **by direct observation**, with no synthetic
+distribution involved. That is the evidence for headline two, and it was in
+hand before this task started; §6.5 simply never drew the inference.
+
+**What the probe is actually worth, then: a negative control.** It rules out
+the competing explanation — that the memo is broken, never hits, and the 13.4%
+is a cache that does not work. It does not, and 96.2% under a reuse-friendly
+pattern is how we know. Framed that way the probe earns its place and stops
+overreaching, and the two figures in §4.1's table stop looking like two
+independent confirmations: the probe calls `corner_weights_memo` and
+`neighbors_memo` in lockstep on every visit (`:167`-`:173`), so they are one
+measurement over one key sequence, printed twice.
+
+**Consequence for the campaign, unchanged in direction and firmer in
+grounding.** The store is built for generality per §6.6, not to retire today's
+13.4%; the residual is miss-bound; and the honest follow-up is a faster
+`scan_at` or a reachable-set prefill. A future campaign with access to
+`agent_scaling.rs` should still take the real hit-rate reading — not to settle
+the headline, which the profile settles, but because the *distinct-rooms-per-
+tick* count is the number that would size a prefill.
+
 A second, cheaper instrument finding to confirm: `agent_scaling.rs` clones the
 whole memo every tick (`let mesh_snapshot = mesh_memo.clone();`) to satisfy a
 borrow. With `malloc`+`memcpy` at 33.3% of that bench, a full `BTreeMap` clone

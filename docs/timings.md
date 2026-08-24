@@ -2357,3 +2357,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T00:01:44Z | sluice:gate | 405.025 | 10955.894 | 449.294 | 28.16 | 0 | c43dafe6e |  | lefford | 40 |
 | 2026-08-24T00:08:07Z | sluice:clients | 383.207 | 3450.336 | 46.161 | 9.12 | 0 | 91dc00fbc |  | lefford | 40 |
 | 2026-08-24T01:46:04Z | gate-commit | 547.659 | 1403.535 | 174.780 | 2.88 | 0 | 45a037860 | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T01:52:41Z | gate-commit | 115.070 | 65.693 | 37.752 | 0.90 | 0 | d8fbabd71 | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T02:03:00Z | gate-commit | 56.478 | 62.730 | 47.859 | 1.96 | 0 | d8fbabd71 | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T02:15:06Z | gate-commit | 691.973 | 1515.236 | 172.510 | 2.44 | 0 | d8fbabd71 | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T02:18:34Z | rebaseline | 160.701 | 267.353 | 19.098 | 1.78 | 0 | d8fbabd71 | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T02:21:13Z | gate-commit | 115.722 | 67.518 | 39.936 | 0.93 | 0 | d8fbabd71 | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T02:28:17Z | gate-commit | 63.842 | 48.458 | 19.548 | 1.07 | 0 | 7f24ce368 | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T02:29:37Z | gate-commit | 52.989 | 36.236 | 12.224 | 0.91 | 0 | 7f24ce368 | campaign/the-forebay | ambrose | 12 |
