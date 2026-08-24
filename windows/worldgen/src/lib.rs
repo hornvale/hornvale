@@ -2093,8 +2093,14 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 /// drawn UP it): the coexistence-stack density of **mobile-beast, non-carnivore**
 /// species — the herbivores and omnivore-beasts a carnivore hunts. Peoples are
 /// excluded from the v1 prey base (a carnivore is drawn to the WILD, not toward
-/// settlements — the acute-hunt tier owns predators-stalk-towns), and autotrophs
-/// are excluded (a plant is not a carnivore's prey). Realized density, not
+/// settlements — the acute-hunt tier owns predators-stalk-towns), and
+/// PHOTOTROPHS are excluded (a plant is not a carnivore's prey) — asked of the
+/// TROPHIC axis, which is the axis that question is about. THE GOSSAN's field
+/// split first routed this through `ThermalStrategy::Unmodelled`, which is
+/// today the same three kinds but is a coincidence with an expiry date: when
+/// BIO-autotroph-physics gives the autotrophs a real thermal model they stop
+/// being `Unmodelled` and would have re-entered the prey base silently.
+/// Realized density, not
 /// capacity, so it concentrates on genuine wild prey ground (the same honesty
 /// `predator_pressure_from` paid for). Normalized to `[0, 1]` by its own maximum.
 /// Derived from the committed demography stack — no seed, no epoch, byte-identical
@@ -2113,8 +2119,8 @@ pub fn prey_pressure_from(
     let geo = terrain.geosphere();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
-    // rooted `Autotroph`, and not itself prey-dominant (`ANIMAL_PREY <=
-    // threshold`).
+    // rooted phototroph (`trophic_mode != Phototrophic`), and not itself
+    // prey-dominant (`ANIMAL_PREY <= threshold`).
     let prey: std::collections::BTreeSet<u32> = wc
         .biosphere
         .iter()
@@ -2122,10 +2128,7 @@ pub fn prey_pressure_from(
         .filter(|(_, (_kind, bio))| {
             bio.niche.weight(hornvale_kernel::ANIMAL_PREY) <= CARNIVORE_THRESHOLD
                 && bio.social_form != hornvale_species::SocialForm::Settled
-                && !matches!(
-                    bio.thermal_strategy,
-                    hornvale_species::ThermalStrategy::Unmodelled
-                )
+                && bio.trophic_mode != hornvale_species::TrophicMode::Phototrophic
         })
         .map(|(i, _)| i as u32)
         .collect();

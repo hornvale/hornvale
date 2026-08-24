@@ -2306,13 +2306,21 @@ pub enum ThermalStrategy {
 
 /// Where a species gets its energy — the **supply** axis.
 ///
-/// Split out of `MetabolicClass` by THE GOSSAN, and **nothing reads it
-/// yet**: making a chemotroph expressible is the whole of that campaign, and
-/// giving this axis a consumer is rung 2 of the Underworld Larder.
+/// Split out of `MetabolicClass` by THE GOSSAN. Making a chemotroph
+/// expressible is the whole of that campaign, and giving this axis a
+/// SECOND consumer is rung 2 of the Underworld Larder.
+///
+/// **It has one production reader already**, acquired the moment the axis
+/// existed: `hornvale_worldgen::prey_pressure_from` excludes phototrophs from
+/// the prey base ("a plant is not a carnivore's prey") and asks
+/// `trophic_mode == Phototrophic` to do it. That question was being asked of
+/// the metabolic enum, and briefly of `ThermalStrategy::Unmodelled`, for want
+/// of anywhere better to ask it — which is precisely the conflation this
+/// split removes.
 ///
 /// An axis nobody reads is how `MetabolicClass` rotted, so the guard in
-/// `tests/suite/metabolic_pairs.rs` is a genuine reader of every kind's value
-/// on every commit-gate run, not merely a widening check.
+/// `tests/suite/metabolic_pairs.rs` is additionally a genuine reader of every
+/// kind's value on every commit-gate run, not merely a widening check.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TrophicMode {
     /// Eats other organisms — prey, detritus, or their remains.
@@ -3176,9 +3184,11 @@ pub struct BiosphereTraits {
     /// How this species regulates body temperature — the axis life-history
     /// allometry reads (spec BIO-2).
     pub thermal_strategy: ThermalStrategy,
-    /// Where this species gets its energy. **Nothing reads this yet** (THE
-    /// GOSSAN); `tests/suite/metabolic_pairs.rs` is its only consumer and
-    /// exists so the axis cannot rot the way `MetabolicClass` did.
+    /// Where this species gets its energy (THE GOSSAN). Read in production by
+    /// `hornvale_worldgen::prey_pressure_from`, which excludes phototrophs
+    /// from the prey base; `tests/suite/metabolic_pairs.rs` reads every kind's
+    /// value on every commit-gate run so the axis cannot rot the way
+    /// `MetabolicClass` did.
     pub trophic_mode: TrophicMode,
     /// The species' ecological niche: a sparse utilization profile over the
     /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
