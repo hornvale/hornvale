@@ -162,6 +162,27 @@ dimension (2.17 across 100→200 agents). It is recorded as
   boundary, so the merge is the branch's first meeting with main. That is the
   cadence CLAUDE.md asks for, missed — recorded here per the closing skill
   rather than discovered at the merge.
+- **The absorption is what found a broken build, and no gate could have.**
+  This campaign deleted `Session::agent` when `Npc` and `Agent` merged.
+  `clients/game/bin` called it — one site at the branch tip, five after main
+  landed Portolan II's four more — and **nothing in the project compiles that
+  crate**. It depends on `hornvale-vessel` *by path* while sitting outside the
+  cargo workspace, so `cargo check --workspace`, `gate-commit` and a full
+  `nextest run --workspace` all build vessel and never build its consumer.
+  With no CI since decision 0125, `make game-check` is the only thing that
+  would have caught it, and it is in no gate rung (it costs 303 s, which is
+  presumably why). The break would have reached main.
+
+  The general shape is worth more than the instance: **a green gate says
+  nothing about a consumer the gate does not compile.** Decision 0125 named
+  three coverage gaps at ratification and The Staff closed the `clients/atlas`
+  one; this is the same gap in a different client, and it stayed open because
+  nobody had removed a public API that a path-dependent client used. Recorded
+  as F-H8.
+- **A red run wrote a green-looking row.** The failing `game-check` recorded
+  itself in `docs/timings.md` indistinguishably from a passing one, because
+  the ledger has no exit-code column. The row was dropped by hand. Second
+  witness for a gap already in memory (F-H9).
 - **Two commit messages had to be rewritten** because backticks in a
   `git commit` heredoc execute: command output and a stray `EOF` were spliced
   into a permanent record. Free to fix only because the branch was unpushed.
