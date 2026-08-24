@@ -129,6 +129,21 @@ impl<K: Ord + Clone, V: Clone> Derived<K, V> {
         }
     }
 
+    /// A read-only, `&self`-compatible peek at `key`'s [`Validity::Pure`]
+    /// entry, counting neither a hit nor a miss (the-forebay Task 3: a
+    /// caller holding only a shared reference — e.g. `RoomMeshMemo::
+    /// corner_weights_lookup`'s own `&self`-only consumer — can consult
+    /// this without the `&mut self` [`Self::get`] needs to count). `None`
+    /// on a miss, on no entry, or on a resident [`Validity::Ledger`] entry,
+    /// which only [`Self::get_at`]'s ledger context can judge — a plain
+    /// consult is never the right way to read one of those.
+    pub(crate) fn peek(&self, key: &K) -> Option<&V> {
+        match self.entries.get(key) {
+            Some((value, Validity::Pure)) => Some(value),
+            _ => None,
+        }
+    }
+
     /// The validity-aware read: consult the store for `key` as of a ledger
     /// whose length is now `current_position`, where `touched_since` names
     /// the [`DepKey`] of every fact committed since the entry's own

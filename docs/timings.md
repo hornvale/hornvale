@@ -2370,3 +2370,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T02:56:32Z | gate-commit | 122.483 | 87.424 | 106.510 | 1.58 | 0 | 5463cb83e | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T02:58:04Z | gate-commit | 49.669 | 35.847 | 12.058 | 0.96 | 0 | 5463cb83e | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T02:59:38Z | gate-commit | 49.112 | 35.354 | 12.155 | 0.97 | 0 | 5463cb83e | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T03:11:34Z | rebaseline | 50.696 | 202.241 | 7.021 | 4.13 | 0 | 86ef4991c | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T03:12:32Z | gate-commit | 2.677 | 2.228 | 0.595 | 1.05 | 0 | 86ef4991c | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T03:16:25Z | gate-commit | 157.098 | 409.763 | 107.118 | 3.29 | 0 | 86ef4991c | campaign/the-forebay | ambrose | 12 |
+| 2026-08-24T03:17:29Z | rebaseline | 50.698 | 206.049 | 7.070 | 4.20 | 0 | 86ef4991c | campaign/the-forebay | ambrose | 12 |
