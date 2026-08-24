@@ -65,7 +65,9 @@ pub struct PeopleTraits {
     /// `hornvale_species::reproductive_tempo`.
     pub thermal_strategy: ThermalStrategy,
     /// Trophic mode, carried through from the biosphere component. **Nothing
-    /// reads it yet** (THE GOSSAN) — see [`hornvale_species::TrophicMode`].
+    /// in this crate reads it** (THE GOSSAN) — see
+    /// [`hornvale_species::TrophicMode`], which has a production reader in
+    /// `hornvale_worldgen`.
     pub trophic_mode: TrophicMode,
     /// Life-history pacing, feeding `Reproductive` the same way.
     pub schedule: LifeSchedule,

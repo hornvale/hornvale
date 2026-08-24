@@ -1009,9 +1009,13 @@ pub fn detritus_supply_field(
 /// `KelpForest`, then the sunlit `Epipelagic`, falling through the aphotic
 /// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
 /// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
-/// productive: a real vent community is CHEMOTROPHIC, which is a metabolic
-/// class the enum does not have (BIO-chemotrophy), so making it productive here would
-/// feed vent biomass to photosynthesis-based consumers.
+/// productive: a real vent community is CHEMOTROPHIC. THE GOSSAN — rung 1 of
+/// BIO-chemotrophy — shipped `hornvale_species::TrophicMode::Chemotrophic`, so
+/// the vocabulary now EXISTS; what does not exist yet is a kind that carries it
+/// or an energy field to feed one. This field is a PHOTOSYNTHESIS supply, and
+/// making the vent productive on it would feed vent biomass to
+/// photosynthesis-based consumers. The fix is rung 2's own chemotrophic
+/// supply field, not a number raised here.
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn marine_forage_supply_field(
     geo: &Geosphere,
@@ -2158,7 +2162,7 @@ pub fn prey_pressure_from(
 /// From [`demography_report_from`]'s coexistence-stack settlements (the per-cell
 /// density condensations), keeps those whose DOMINANT species is a mobile beast —
 /// *not* a settling people (`social_form != Settled`) and *not*
-/// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
+/// a rooted phototroph (a plant is placed but never an *agent* that walks and
 /// flees) — then takes the densest concentration of each DISTINCT species (a herd
 /// leader, a lone apex; not five of the same twig-blight) up to `k`, by biomass.
 /// Deterministic (mass-descending, label tie-break) and seed-free. Encapsulates
@@ -2187,7 +2191,7 @@ pub fn wild_concentrations_from(
     let is_mobile_beast = |label: &str| -> bool {
         // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
         // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
-        // `Sessile`, a rooted `Autotroph` that is placed but never agentified).
+        // `Sessile`, a rooted phototroph that is placed but never agentified).
         //
         // …and not a SEA creature. The Vacancy opened the ocean to the habitat
         // model, but the walk layer this feeds is a terrestrial surface game:
@@ -6246,7 +6250,8 @@ const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
 /// never speaks and is inert at `SETTLED`. Total over `SocialForm`.
 fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_language::CascadeRegime {
     // `life_history` is the honest source: it returns `None` for an
-    // `Ametabolic` kind, which has no mass-derived lifespan at all. The bare
+    // ametabolic kind (`ThermalStrategy::Absent`), which has no mass-derived
+    // lifespan at all. The bare
     // `lifespan` call this used to make returned a number for a construct
     // (xorn: 64.97 yr) that the model says does not exist.
     let long_lived = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule)
@@ -11064,7 +11069,7 @@ mod tests {
 
     #[test]
     fn an_ametabolic_kind_is_never_asked_for_a_lifespan() {
-        // xorn is Ametabolic: life_history reports no lifespan at all, yet the
+        // xorn is ametabolic: life_history reports no lifespan at all, yet the
         // bare allometry returns 64.97 yr for its mass. The regime must not be
         // decided by that number. Solitary + no lifespan banks at SETTLED.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");

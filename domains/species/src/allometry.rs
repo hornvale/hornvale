@@ -103,21 +103,26 @@ pub fn reproductive_tempo(mass: Mass, class: ThermalStrategy, schedule: LifeSche
 const GENERATION_FRACTION: f64 = 0.3;
 
 /// A species' derived life-history profile (spec §5). Computed on demand from
-/// the biosphere component — never stored. Biological fields are `None` for `Ametabolic`
-/// (a construct has no mass-derived life-history); `pace_of_life` is a
+/// the biosphere component — never stored. Biological fields are `None` for an
+/// ametabolic species (`ThermalStrategy::Absent` — a construct has no
+/// mass-derived life-history); `pace_of_life` is a
 /// size-derived position defined for anything with mass.
 /// type-audit: bare-ok(ratio: basal_metabolic_rate_w), bare-ok(ratio: reproductive_tempo), bare-ok(ratio: pace_of_life)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LifeHistory {
-    /// Reference-temperature basal metabolic rate, watts; 0.0 if `Ametabolic`.
+    /// Reference-temperature basal metabolic rate, watts; 0.0 if ametabolic
+    /// (`ThermalStrategy::Absent`).
     pub basal_metabolic_rate_w: f64,
-    /// Maximum lifespan; `None` if `Ametabolic`.
+    /// Maximum lifespan; `None` if ametabolic (`ThermalStrategy::Absent`).
     pub lifespan: Option<Years>,
-    /// Age at first reproduction; `None` if `Ametabolic`.
+    /// Age at first reproduction; `None` if ametabolic
+    /// (`ThermalStrategy::Absent`).
     pub age_at_maturity: Option<Years>,
-    /// Reproductive output on the r–K axis, 0 fast … 1 slow; `None` if `Ametabolic`.
+    /// Reproductive output on the r–K axis, 0 fast … 1 slow; `None` if
+    /// ametabolic (`ThermalStrategy::Absent`).
     pub reproductive_tempo: Option<f64>,
-    /// Generation length (MEM-7's handle); `None` if `Ametabolic`.
+    /// Generation length (MEM-7's handle); `None` if ametabolic
+    /// (`ThermalStrategy::Absent`).
     pub generation_length: Option<Years>,
     /// Overall life-history speed, 0 fast … 1 slow; absolute f(log mass).
     pub pace_of_life: f64,

@@ -67,3 +67,49 @@ fn chemotrophic_is_declared_and_unwitnessed() {
          one — the declaration and the roster have drifted apart"
     );
 }
+
+/// **THE PROPERTY THE PAIR GUARD SILENTLY RESTS ON.**
+///
+/// `every_kind_carries_a_sanctioned_pair` looks like it constrains both axes.
+/// It only constrains the trophic one *because* no two `SANCTIONED` rows share
+/// a thermal value: with the thermal keys distinct, a kind's thermal strategy
+/// determines at most one admissible row, so the table pins its `trophic_mode`.
+/// The moment two rows share a thermal key, that determination is gone and a
+/// kind may swap between them freely — the pair guard, the coverage table and
+/// the life-history golden all stay GREEN while the trophic axis moves. That
+/// was demonstrated by mutation, not argued: adding `(Unmodelled, Chemotrophic)`
+/// and flipping `treant` to `Chemotrophic` was caught only by
+/// `chemotrophic_is_declared_and_unwitnessed` — the one test rung 2 exists to
+/// delete.
+///
+/// So this test asserts the structural property out loud, in the
+/// direction-naming discipline `is_ametabolic`'s doc uses. It is EXPECTED to
+/// redden at rung 2, and its failure message says what to do about it.
+#[test]
+fn sanctioned_thermal_keys_are_pairwise_distinct() {
+    for (i, (t_i, m_i)) in SANCTIONED.iter().enumerate() {
+        for (t_j, m_j) in SANCTIONED.iter().skip(i + 1) {
+            assert!(
+                t_i != t_j,
+                "SANCTIONED admits {t_i:?} with BOTH {m_i:?} and {m_j:?}. The pair \
+                 table constrains the TROPHIC axis only while each thermal value \
+                 appears at most once — that is what makes a kind's thermal \
+                 strategy determine its sanctioned trophic mode. With this thermal \
+                 key duplicated, a kind can move between {m_i:?} and {m_j:?} and \
+                 `every_kind_carries_a_sanctioned_pair`, \
+                 `metabolic_class_coverage_matches_the_table` and the life-history \
+                 golden all stay green. RUNG 2 OF THE UNDERWORLD LARDER IS THE EDIT \
+                 THAT BREAKS THIS: adding a Chemotrophic row reuses a thermal value. \
+                 When it lands, do not simply delete this test — replace it with a \
+                 direct per-kind pin on `trophic_mode`, because that is the guard \
+                 this property was standing in for."
+            );
+        }
+    }
+    assert_eq!(
+        SANCTIONED.len(),
+        4,
+        "rung 1 declares four sanctioned pairs; if this count moved, re-read this \
+         test's doc before adjusting the number"
+    );
+}

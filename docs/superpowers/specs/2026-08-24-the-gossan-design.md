@@ -207,8 +207,15 @@ failure.
 
 **§4.4's pair table is what stops the recurrence, and that is its real job.**
 It is not merely a guard against the 16-vs-4 widening — it is a READER. Every
-kind's `TrophicMode` is consulted by an assertion on every commit-gate run, so
-a value that stops being true reddens instead of rotting quietly. The
+kind's `TrophicMode` is consulted by an assertion, so a value that stops being
+true reddens instead of rotting quietly. **Where it runs, stated exactly:** in
+the workspace suite from the moment it lands, and in the commit gate only once
+a green chamber run records its baseline duration into
+`docs/timings/subfloor-roster.tsv` — that roster selects the sub-floor tier by
+exact test name and excludes any test it has never timed, so a new test is
+outside `gate-commit` on the commit that introduces it. (The drive pin of §5.2
+is a different case and its claim there is correct: it is an EXISTING test
+already in the roster.) The
 `Declared`/`Witnessed` assertion on `Chemotrophic` does the same for the
 variant that has no kind at all. Stating this converts a property the design
 had by luck into one it has on purpose.

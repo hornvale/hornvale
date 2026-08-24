@@ -247,15 +247,15 @@ impl Hazards {
 /// hazard, the fear twin of the diet `ResourceVector`. Derived from what the
 /// creature already is: the HEAT/COLD weights from its temperature niche (a
 /// creature fears the extreme away from its comfort optimum), the UNCANNY weight
-/// from its metabolic class (a mortal fears the eldritch; an Ametabolic elemental
-/// IS eldritch and does not). v1 weights are `≥ 0` (differential FEAR — a
+/// from its thermal strategy (a mortal fears the eldritch; an ametabolic
+/// elemental IS eldritch and does not). v1 weights are `≥ 0` (differential FEAR — a
 /// creature can be *fearless* of a hazard, weight `0`); NEGATIVE weights (true
 /// *attraction* — drawn to the hazard) are the reserved approach shore, shared
 /// with The Mettle's reckless pole.
 /// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold), bare-ok(ratio: predator)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThreatNiche {
-    /// Dread of the UNCANNY (`1` mortal, `0` an Ametabolic elemental).
+    /// Dread of the UNCANNY (`1` mortal, `0` an ametabolic elemental).
     pub uncanny: f64,
     /// Dread of HEAT (high for the cold-adapted).
     pub heat: f64,
@@ -294,8 +294,9 @@ const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 /// Derive a creature's [`ThreatNiche`] from what it already is (The Bane — no
 /// fresh authoring): the HEAT/COLD weights from its temperature-niche optimum (a
 /// creature dreads the extreme AWAY from its comfort — cold-adapted fears heat,
-/// heat-adapted fears cold), and the UNCANNY weight from its metabolic class (a
-/// metabolising mortal fears the eldritch, weight `1`; an `Ametabolic` creature —
+/// heat-adapted fears cold), and the UNCANNY weight from its thermal strategy (a
+/// metabolising mortal fears the eldritch, weight `1`; an ametabolic creature
+/// (`ThermalStrategy::Absent`) —
 /// a construct, an elemental like the xorn — IS eldritch and does not, weight
 /// `0`). v1 weights are `≥ 0` (differential fear; the reserved negative-weight
 /// attraction is the approach shore).
@@ -774,10 +775,10 @@ const ECTOTHERM_K: f64 = 1.5;
 const ECTOTHERM_FLOOR: f64 = 0.2;
 
 /// The per-day thirst (dehydration) RATE at ambient temperature `temp` (°C) for
-/// a creature of metabolic `class` — The Kindling's coupling of heat to the
-/// survival drive (spec §3). Endotherms sweat (base below thermoneutral,
+/// a creature of thermal-strategy `class` — The Kindling's coupling of heat to
+/// the survival drive (spec §3). Endotherms sweat (base below thermoneutral,
 /// accelerating above — heat-only); ectotherms track ambient (CAP-1's
-/// principle: symmetric, floored); autotrophs are flat (a deferred seam). An
+/// principle: symmetric, floored); `Unmodelled` is flat (a deferred seam). An
 /// unreadable cell (non-finite temperature — undescribable/unplanted) couples
 /// as neutral (base rate), mirroring the thermal drive's `is_finite` guard.
 fn rise_at(temp: f64, class: ThermalStrategy, p: &DriveParams) -> f64 {
@@ -877,7 +878,7 @@ fn integrate_thirst(
 
 /// The drive at `t`: the temperature-coupled thirst path integral (The
 /// Kindling) over `entity`'s committed occupancy since its last drink, at its
-/// metabolic `class`. Reduces to the old flat `rise × elapsed` at a
+/// thermal-strategy `class`. Reduces to the old flat `rise × elapsed` at a
 /// thermoneutral (or unreadable) climate. DRIVE == FOLD — over `drank` (the
 /// reset) and `agent-at` (the occupancy).
 /// type-audit: bare-ok(ratio: return)
@@ -2401,7 +2402,7 @@ fn forage_step(
 
 /// The hunger at `t`: the temperature-coupled metabolic-burn path integral (The
 /// Kindling machinery, reused) over `entity`'s committed occupancy since its
-/// last meal, at its metabolic `class` — the structural twin of thirst's
+/// last meal, at its thermal-strategy `class` — the structural twin of thirst's
 /// [`drive_at`], folding `eaten` (the reset) and `agent-at` (the occupancy)
 /// with the `HUNGER` params. HUNGER == FOLD, so the tick and `affect_of`
 /// compute it identically.
@@ -3002,7 +3003,7 @@ struct HomeNavState {
 /// spec, "the scaling stake").
 ///
 /// Also gates the search itself, not only its cache: `decide_step` only calls
-/// `home_nav` for a non-`Ametabolic` creature (plan-time verification (a) —
+/// `home_nav` for a non-ametabolic creature (plan-time verification (a) —
 /// the Social drive, the plan's only consumer, is never pushed onto an
 /// ametabolic creature's `drives` vec — "lazy AND cached" per the campaign
 /// spec's Stage 3 clause).
@@ -3709,7 +3710,7 @@ pub fn affect_of_memo(
 /// budget-1000 search from `decide_step`'s own, since this is a stateless
 /// re-derivation of felt state, not the live decision. Reads the Social
 /// drive's feature from the caller-owned cache instead, gated on
-/// non-`Ametabolic` exactly as `decide_step`'s own gate is (see that
+/// non-ametabolic exactly as `decide_step`'s own gate is (see that
 /// function's doc). Sharing IS safe across the two consumers: a cache hit
 /// requires an EXACT `(pos, avoid)` match regardless of who asked, so this
 /// can only ever save a search, never answer one incorrectly.
@@ -3814,7 +3815,7 @@ pub fn affect_of_memo_occupied(
         // bandless replay — gives termination, byte-identity, and no contagion.
         dread: Some(&memory.dread),
     };
-    // The metabolism gate (The Kindling): an Ametabolic creature has no
+    // The metabolism gate (The Kindling): an ametabolic creature has no
     // homeostatic drives at all — it neither thirsts, thermoregulates, tires
     // (The Slumber), hungers (The Provender), fears (The Dread — a construct
     // does not flinch), nor pines for company (The Belonging), so it reads
@@ -5555,7 +5556,7 @@ pub fn body_at(
         .map(|p| p.threat_response)
         .unwrap_or(BOLDNESS_STEADY);
     // The threat niche (The Bane): derived from the temperature niche +
-    // metabolic class already on hand — no fresh authoring.
+    // thermal strategy already on hand — no fresh authoring.
     let threat_niche = derive_threat_niche(&temperature_niche, thermal_strategy, &niche);
     // The same perception vector a possessed body resolves — an unresolved
     // species falls back to the manikin's neutral perception, the same way
@@ -7444,7 +7445,7 @@ mod tests {
         };
         // Not two buckets but a graded spread across the mass band — the spec's
         // own acceptance prediction (§8), and the reason tempo is derived from
-        // continuous mass rather than the four-valued metabolic class.
+        // continuous mass rather than the four-valued thermal strategy.
         let walked: Vec<(f64, usize)> = [1.0_f64, 70.0, 5_000.0, 100_000.0]
             .into_iter()
             .map(|m| (m, moves(m)))
@@ -8291,8 +8292,17 @@ mod tests {
             (rise_at(-100.0, Ectothermic, &p) - base * ECTOTHERM_FLOOR).abs() < 1e-12,
             "but never below the floor"
         );
-        // Unmodelled flat; an unreadable cell couples as neutral.
+        // Unmodelled flat, in BOTH directions. The heat side alone is what C1
+        // mutated, so a cold-side (torpor-shaped) defect on `Unmodelled` —
+        // giving it the ectotherm's floored, symmetric response — would have
+        // slipped past a heat-only pin. Both sides, or the branch is only half
+        // held.
         assert!((rise_at(80.0, Unmodelled, &p) - base).abs() < 1e-12);
+        assert!(
+            (rise_at(-100.0, Unmodelled, &p) - base).abs() < 1e-12,
+            "deep cold does not slow an Unmodelled creature either"
+        );
+        // An unreadable cell (non-finite temperature) couples as neutral.
         assert!((rise_at(f64::INFINITY, Endothermic, &p) - base).abs() < 1e-12);
         // Absent flat, in BOTH directions. `rise_at` never reaches here in
         // production (a construct has no thirst drive) and the arm is kept
@@ -11094,7 +11104,7 @@ mod tests {
     #[test]
     fn the_threat_niche_is_derived_from_nature() {
         // THE BANE: HEAT/COLD derive from the temperature optimum, UNCANNY from
-        // the metabolic class.
+        // the thermal strategy.
         let cold_adapted = ConditionResponse {
             optimum: -10.0,
             width: 20.0,
@@ -11119,7 +11129,7 @@ mod tests {
         // for COLD.
         assert!(cold.heat > warm.heat, "the cold-adapted fear heat more");
         assert!(warm.cold > cold.cold, "the warm-adapted fear cold more");
-        // A mortal fears the uncanny; an Ametabolic elemental does not.
+        // A mortal fears the uncanny; an ametabolic elemental does not.
         assert_eq!(cold.uncanny, 1.0, "a mortal fears the eldritch");
         let elemental = derive_threat_niche(
             &cold_adapted,
@@ -11390,7 +11400,7 @@ mod tests {
 
     #[test]
     fn an_ametabolic_creature_is_never_lonely() {
-        // THE METABOLISM GATE, social edge (The Belonging): an Ametabolic
+        // THE METABOLISM GATE, social edge (The Belonging): an ametabolic
         // creature carries no social drive — placed far from home it still reads
         // Content, where a metabolizer would head home.
         let home = raddr(1.0);
@@ -12573,7 +12583,7 @@ mod tests {
 
     #[test]
     fn an_ametabolic_creature_has_no_drives_and_never_distresses() {
-        // THE METABOLISM GATE (The Kindling): an Ametabolic creature
+        // THE METABOLISM GATE (The Kindling): an ametabolic creature
         // (construct/undead/elemental) has no homeostatic drives, so even
         // parched-long in a blistering cell it reads Content — never thirst,
         // never distress. A metabolizer in the same spot is wrecked.
@@ -12634,7 +12644,7 @@ mod tests {
 
     #[test]
     fn an_ametabolic_creature_does_not_flinch_at_a_hazard() {
-        // THE METABOLISM GATE, danger edge (The Dread): an Ametabolic creature
+        // THE METABOLISM GATE, danger edge (The Dread): an ametabolic creature
         // (a construct) carries no danger drive — surrounded by lethal threat it
         // still reads Content, where a metabolizer recoils.
         let home = raddr(1.0);

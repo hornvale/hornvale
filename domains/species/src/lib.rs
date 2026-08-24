@@ -2320,7 +2320,10 @@ pub enum ThermalStrategy {
 ///
 /// An axis nobody reads is how `MetabolicClass` rotted, so the guard in
 /// `tests/suite/metabolic_pairs.rs` is additionally a genuine reader of every
-/// kind's value on every commit-gate run, not merely a widening check.
+/// kind's value, not merely a widening check. It runs in the WORKSPACE SUITE
+/// today; it joins the commit gate once a green chamber run records its
+/// baseline duration into `docs/timings/subfloor-roster.tsv`, which selects the
+/// sub-floor tier by exact test name and excludes a test it has never timed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TrophicMode {
     /// Eats other organisms — prey, detritus, or their remains.
@@ -2345,10 +2348,16 @@ pub enum TrophicMode {
 ///
 /// **THE DIRECTION THIS RELIES ON, STATED.** It reads the thermal axis alone,
 /// so it is correct only while `ThermalStrategy::Absent` and
-/// `TrophicMode::Absent` occur together and never apart. The type admits
-/// twelve pairs where that is false (spec §4.4). What enforces it is
-/// `tests/suite/metabolic_pairs.rs`'s sanctioned-pair table, which consults
-/// every kind's pair on every commit-gate run. If that table is ever relaxed
+/// `TrophicMode::Absent` occur together and never apart. The type admits **six**
+/// pairs where that is false — three `(Absent, <live trophic mode>)` and three
+/// `(<live thermal strategy>, Absent)` (spec §4.4). Keep that number distinct
+/// from the **twelve** UNSANCTIONED pairs (16 combinations less the 4
+/// sanctioned rows): twelve is what the pair table refuses, six is what would
+/// break *this function*, and only the second is the direction stated here.
+/// What enforces it is `tests/suite/metabolic_pairs.rs`'s sanctioned-pair
+/// table, which consults every kind's pair in the workspace suite — and in the
+/// commit gate once a green chamber run records its baseline duration into
+/// `docs/timings/subfloor-roster.tsv`. If that table is ever relaxed
 /// to admit a `(Absent, …)` pair with a live trophic mode, this function is
 /// the first place that goes wrong.
 ///
@@ -3209,8 +3218,9 @@ pub struct BiosphereTraits {
     /// Where this species gets its energy (THE GOSSAN). Read in production by
     /// `hornvale_worldgen::prey_pressure_from`, which excludes phototrophs
     /// from the prey base; `tests/suite/metabolic_pairs.rs` reads every kind's
-    /// value on every commit-gate run so the axis cannot rot the way
-    /// `MetabolicClass` did.
+    /// value in the workspace suite — and in the commit gate once a green
+    /// chamber run records its baseline duration — so the axis cannot rot the
+    /// way `MetabolicClass` did.
     pub trophic_mode: TrophicMode,
     /// The species' ecological niche: a sparse utilization profile over the
     /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
@@ -3414,7 +3424,8 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
                 schedule: LifeSchedule::Allometric,
-                // Ametabolic, burrows through stone: lives IN the substrate,
+                // Ametabolic (both axes `Absent`), burrows through stone:
+                // lives IN the substrate,
                 // not on it. rust-monster shares the pure-MINERAL niche but
                 // stays Terrestrial — it walks the surface eating metal.
             },
