@@ -679,6 +679,15 @@ pub struct Session<'w> {
     /// resolution — never a second, drift-prone derivation. Read back by
     /// [`Self::driven_affect`].
     driven_affect: Option<Affect>,
+    /// The driven body's own arbitration's discarded ranks as of the most
+    /// recent `!wait` (The Confidant, Task 5) — the OTHER drives that were
+    /// active but not pursued, empty before the first one. Set alongside
+    /// `driven_affect`, by the SAME [`Self::wait`] call into
+    /// [`DriveMovements::step_one_with_controller`], from the SAME
+    /// resolution — never a second, drift-prone derivation. This is the
+    /// residue [`Self::driven_affect`] itself never carries: read back by
+    /// [`Self::suppressed_drives`].
+    driven_suppressed: Vec<DriveKind>,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -1049,6 +1058,7 @@ impl<'w> Session<'w> {
             home_nav_cache: HomeNavCache::new(),
             driven_mode: None,
             driven_affect: None,
+            driven_suppressed: Vec::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -1110,6 +1120,18 @@ impl<'w> Session<'w> {
     /// `None` before the first `!wait`.
     pub fn driven_affect(&self) -> Option<AffectLabel> {
         self.driven_affect.map(|affect| affect.label)
+    }
+
+    /// The driven body's own arbitration's discarded ranks, as of the most
+    /// recent `!wait` tick (The Confidant, Task 5) — the SAME resolution
+    /// [`Self::driven_affect`] reads, its OTHER active drives rather than
+    /// its winner. This is the residue the creature cannot introspect: a
+    /// host-facing utterance must draw from [`Self::driven_affect`] alone,
+    /// and nothing routes this accessor's contents into one, by
+    /// construction. Empty before the first `!wait`, and also whenever no
+    /// other drive was active alongside the pursued one.
+    pub fn suppressed_drives(&self) -> &[DriveKind] {
+        &self.driven_suppressed
     }
 
     /// The accumulated knowledge (read-only).
@@ -3994,15 +4016,17 @@ impl<'w> Session<'w> {
         // cannot coexist with the `&mut self.mesh_memo`/`&mut
         // self.home_nav_cache` borrows this call needs.
         let driven_npc = self.driven_body().clone();
-        let (_driven_facts, driven_mode, driven_affect) = sys.step_one_with_controller(
-            &self.ledger,
-            &driven_npc,
-            &mut self.mesh_memo,
-            &mut self.home_nav_cache,
-            &mut PlayerController::new(),
-        );
+        let (_driven_facts, driven_mode, driven_affect, driven_suppressed) = sys
+            .step_one_with_controller(
+                &self.ledger,
+                &driven_npc,
+                &mut self.mesh_memo,
+                &mut self.home_nav_cache,
+                &mut PlayerController::new(),
+            );
         self.driven_mode = Some(driven_mode);
         self.driven_affect = Some(driven_affect);
+        self.driven_suppressed = driven_suppressed;
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();

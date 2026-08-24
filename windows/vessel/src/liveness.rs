@@ -1638,6 +1638,14 @@ pub struct Resolution {
     pub mode: Mode,
     /// The felt state this decision expresses.
     pub affect: Affect,
+    /// The other drives arbitration found ACTIVE this decision but did not
+    /// pursue (The Confidant, Task 5) — the discarded ranks `affect`/
+    /// `object` never carry, kept here rather than dropped so a caller can
+    /// retrieve them. This is the residue the creature itself cannot
+    /// introspect: a host-facing utterance (the lexicon lookup,
+    /// `windows/vessel/src/testimony.rs`) must draw from `affect` alone,
+    /// never from this field.
+    pub suppressed: Vec<DriveKind>,
 }
 
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
@@ -3325,6 +3333,10 @@ pub fn arbitrate(
                 label: AffectLabel::Helpless,
                 object: Some(DriveKind::Thirst),
             },
+            // The short-circuit bypasses per-drive threshold engagement
+            // entirely (no `active` vector is ever computed on this path),
+            // so there are no OTHER ranks to have discarded this decision.
+            suppressed: Vec::new(),
         };
     }
 
@@ -3391,12 +3403,16 @@ pub fn arbitrate(
                 intent: feature.first_step.map(Intent::Do).unwrap_or(Intent::Hold),
                 mode: Mode::Homing,
                 affect,
+                // `active` is all-false on this path by construction (the
+                // guard above), so nothing was discarded.
+                suppressed: Vec::new(),
             };
         }
         return Resolution {
             intent: Intent::Hold,
             mode: Mode::Idle,
             affect,
+            suppressed: Vec::new(),
         };
     }
 
@@ -3475,6 +3491,19 @@ pub fn arbitrate(
         _ => loudest,
     };
     let pursued_kind = drives[pursued].kind();
+
+    // Arbitration's own discarded ranks (The Confidant, Task 5): every OTHER
+    // drive that crossed its own engagement threshold this decision but lost
+    // the contest for `pursued` — computed from the same `active`/
+    // `pursued_kind` this resolution already derived, not a second pass.
+    // THE FILTER: excludes `pursued_kind` itself, which is what keeps the
+    // winner and its residue disjoint — see `Resolution::suppressed`'s own
+    // doc for why nothing downstream may fold this back into `affect`/
+    // `object`.
+    let suppressed: Vec<DriveKind> = (0..drives.len())
+        .filter(|&i| active[i] && drives[i].kind() != pursued_kind)
+        .map(|i| drives[i].kind())
+        .collect();
 
     // Weight each active drive: the pursued drive at 1, every other active
     // drive at `latency` (grab 0 ↔ weigh 1). Then utility = weighted sum.
@@ -3575,6 +3604,7 @@ pub fn arbitrate(
                 label,
                 object,
             },
+            suppressed: suppressed.clone(),
         }
     } else {
         // Blocked: no candidate reduces the drive. With a KNOWN target it cannot
@@ -3595,6 +3625,7 @@ pub fn arbitrate(
                 label,
                 object,
             },
+            suppressed,
         }
     }
 }
@@ -4937,6 +4968,12 @@ struct WalkState {
     /// `st.day == from.day() < to.day()` after `catch_up` returns, and the
     /// loop's own guard is `st.day > self.to.day()`).
     affect: Affect,
+    /// The same resolution's discarded ranks (The Confidant, Task 5) —
+    /// alongside `affect`, a pure per-decision read overwritten every
+    /// `advance_one` iteration, never hysteresis. See that field's own doc
+    /// for why the placeholder `begin` seeds this with is always overwritten
+    /// before any caller reads it back.
+    suppressed: Vec<DriveKind>,
     /// The derived interior of the room at `pos` (The Threshold) — the anchor
     /// graph `Thermal`'s within-room branch routes over, and the graph the
     /// creature's `Occupancy` entry indexes into. Re-derived every time `pos`
@@ -5006,6 +5043,9 @@ impl WalkState {
             label: AffectLabel::Content,
             object: None,
         };
+        // A placeholder (nothing suppressed) — see the field's own doc for
+        // why this is always overwritten before any caller reads it back.
+        let suppressed = Vec::new();
         WalkState {
             pos,
             day,
@@ -5017,6 +5057,7 @@ impl WalkState {
             steps,
             mode,
             affect,
+            suppressed,
             interior,
         }
     }
@@ -5105,6 +5146,12 @@ impl<'a> DriveMovements<'a> {
         // recorded alongside `mode` from the identical computation, never a
         // second derivation — see `Resolution`'s own doc.
         st.affect = resolution.affect;
+        // The same resolution's discarded ranks (The Confidant, Task 5):
+        // recorded alongside `affect` from the identical computation, never
+        // a second derivation. `resolution` is still borrowed below
+        // (`controller.intend`), so this clones rather than moving the field
+        // out of it.
+        st.suppressed = resolution.suppressed.clone();
         // THE CONTROLLER SEAM (The Hand, Task 5 fix round 1, spec §3.3): the
         // walk arbitrates UNCONDITIONALLY, above — `resolution` is the body's
         // own felt state (mode, affect) and what its own drives would do,
@@ -5325,13 +5372,15 @@ impl<'a> DriveMovements<'a> {
     /// [`crate::controller::PlayerController`] with nothing queued — see that
     /// controller's own doc for why nothing here ever double-moves a body the
     /// player drives through the verb loop), the LAST commitment mode its own
-    /// arbitration reached this call, and the [`Affect`] that SAME resolution
+    /// arbitration reached this call, the [`Affect`] that SAME resolution
     /// carried (The Confidant, Task 2) — the host's felt state, independent
-    /// of whether the controller let it act on it. `advance_one`'s loop
-    /// always runs at least once whenever any time has elapsed (see
-    /// [`WalkState`]'s own `affect` field doc), so the returned `Affect`
-    /// always reflects a live decision this call made, never `begin`'s
-    /// placeholder.
+    /// of whether the controller let it act on it — and that SAME
+    /// resolution's discarded ranks (The Confidant, Task 5): the drives that
+    /// were active but not pursued, present so a caller can retrieve them
+    /// without a second arbitration. `advance_one`'s loop always runs at
+    /// least once whenever any time has elapsed (see [`WalkState`]'s own
+    /// `affect` field doc), so both always reflect a live decision this call
+    /// made, never `begin`'s placeholders.
     pub(crate) fn step_one_with_controller(
         &self,
         frozen: &Ledger,
@@ -5339,7 +5388,7 @@ impl<'a> DriveMovements<'a> {
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
         controller: &mut dyn Controller,
-    ) -> (Vec<Fact>, Mode, Affect) {
+    ) -> (Vec<Fact>, Mode, Affect, Vec<DriveKind>) {
         let band = [body.clone()];
         let mut occupancy = Occupancy::default();
         let mut afraid_memo = PrimaryAfraidMemo::new();
@@ -5429,7 +5478,7 @@ impl<'a> DriveMovements<'a> {
             home_nav_cache,
             controller,
         ) {}
-        (out, st.mode, st.affect)
+        (out, st.mode, st.affect, st.suppressed)
     }
 }
 
@@ -8712,7 +8761,7 @@ mod tests {
             terrain: &t,
         };
 
-        let (default_facts, _mode, _affect) = sys.step_one_with_controller(
+        let (default_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8725,7 +8774,7 @@ mod tests {
              (which wants water) — it must act: {default_facts:?}"
         );
 
-        let (player_facts, _mode, _affect) = sys.step_one_with_controller(
+        let (player_facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -8802,7 +8851,7 @@ mod tests {
         };
         let mut player = PlayerController::new();
         player.queue(Action::Drink);
-        let (facts, _mode, _affect) = sys.step_one_with_controller(
+        let (facts, _mode, _affect, _suppressed) = sys.step_one_with_controller(
             &ledger,
             &npc,
             &mut RoomMeshMemo::new(),
@@ -12313,6 +12362,85 @@ mod tests {
         assert_ne!(grab, weigh, "psychology alone changed the resolution");
         // Grab committed to the loudest drive (thermal).
         assert_eq!(gm, Mode::Pursuing(DriveKind::Thermal));
+    }
+
+    #[test]
+    fn arbitration_reports_only_the_dominant_drive_and_keeps_the_suppressed_one_retrievable() {
+        // THE COGNITIVE GAP (The Confidant, Task 5). The SAME two-drive
+        // conflict `grab_and_weigh_resolve_the_same_conflict_differently`
+        // pins above: thirst moderately active (eager_thirst, drive 0.5),
+        // thermal severely active (freezing home) and the louder single
+        // need. Under grab psychology (latency 0.0) arbitration commits to
+        // Thermal alone — `mode`/`affect.object` name only it. Thirst stays
+        // genuinely ACTIVE (it crosses its own engagement threshold) but
+        // loses the contest for `pursued`; this is the residue the creature
+        // itself cannot introspect. It must still be retrievable through
+        // `Resolution::suppressed` — the accessor this task introduces —
+        // even though nothing about `mode`/`affect` ever names it.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let warm = ns[0].clone(); // pure warmth (loudest single relief)
+        let both = ns[1].clone(); // water + moderate warmth
+        let cold = ns[2].clone();
+        let day = WorldTime::GENESIS;
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0), // urgency 1.0 (capped 0.6)
+            (warm.clone(), 18.0),  // thermal serv 1.0
+            (both.clone(), 6.0),   // urgency 0.5 → thermal serv 0.5
+            (cold.clone(), -20.0),
+        ]);
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
+            fatigue: 0.0,
+            believed_water: Some(both.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step: None,
+        };
+        let thirst = Thirst {
+            params: eager_thirst(),
+        };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+            interior: None,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let resolution = arb(
+            &view,
+            &home,
+            &drives,
+            0.0,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            resolution.mode,
+            Mode::Pursuing(DriveKind::Thermal),
+            "grab commits to the loudest single need, thermal: {resolution:?}"
+        );
+        assert_eq!(
+            resolution.affect.object,
+            Some(DriveKind::Thermal),
+            "what the host's felt state is ABOUT is the pursued drive alone: \
+             {resolution:?}"
+        );
+        assert_eq!(
+            resolution.suppressed,
+            vec![DriveKind::Thirst],
+            "thirst was genuinely active this decision and lost the contest \
+             for `pursued` — it must be retrievable through \
+             Resolution::suppressed: {resolution:?}"
+        );
+        assert!(
+            !resolution.suppressed.contains(&DriveKind::Thermal),
+            "the pursued drive must never also appear as suppressed — the \
+             two are disjoint by construction: {resolution:?}"
+        );
     }
 
     #[test]

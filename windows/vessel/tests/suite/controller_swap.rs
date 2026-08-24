@@ -260,3 +260,39 @@ fn a_driven_bodys_early_affect_depends_on_which_seeds_population_not_merely_elap
          reading each body's own real state"
     );
 }
+
+/// **The cognitive gap, at the Session boundary this time** (The Confidant,
+/// Task 5). Seed 7's flagship body, waited 30 days from a fresh session,
+/// arbitrates to `AffectLabel::Eager` while its own Fatigue drive stays
+/// genuinely ACTIVE and unpursued — checked directly (stable across single
+/// calls of 5, 10, 30, 100 and 200 days). This is a real two-drive conflict
+/// the world actually produces, not a constructed one:
+/// `driven_affect` reports the winner alone (a SPECIFIC value, not the
+/// exhaustive-over-all-six-variants trap `AffectLabel`'s enum invites); the
+/// loser is retrievable only through `suppressed_drives`, which nothing
+/// routes into what the host says.
+#[test]
+fn the_driven_bodys_suppressed_drive_is_retrievable_but_absent_from_what_it_says() {
+    let world = world_at_seed(7);
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    assert_eq!(
+        s.suppressed_drives(),
+        &[] as &[DriveKind],
+        "before the first !wait there has been no arbitration to discard \
+         anything from"
+    );
+    s.handle("!wait 30");
+    let affect = s.driven_affect().expect("a driven body has a felt state");
+    assert_eq!(
+        affect,
+        AffectLabel::Eager,
+        "the driven body's own arbitration produced: {affect:?}"
+    );
+    assert_eq!(
+        s.suppressed_drives(),
+        &[DriveKind::Fatigue],
+        "fatigue is genuinely active alongside the pursued drive this tick \
+         and must stay retrievable through suppressed_drives, absent from \
+         driven_affect's single label"
+    );
+}
