@@ -96,6 +96,26 @@
 //! exactly these counts", which is what it asserts, and not as "no other seed
 //! in 0–2999 drops a founder", which it does not.
 //!
+//! **The Granary asked whether the tail can retire, and the answer is NO —
+//! measured, not argued (Task 6, 2026-08-24).** T4's day-grain founding stamps
+//! were the hypothesis: if the raided founding and its same-year successor
+//! now differ in `founded`, the post-founding tail is redundant and
+//! `founder_handle` could collapse to its identity key. The tail-less handle
+//! swept seeds 0–2999 (`BuildDepth::Settlements`, default pins, this tree
+//! post-T4, 974 s — see `granary_tail_less_sweep_writes_its_counts` below):
+//! **2261 colliding worlds, 5039 founders lost** — against 3 in 3000 with the
+//! shipped key on the same placement epoch. The identity key alone had
+//! already measured 732/1000 pre-Granary; the day-grain stamps do not
+//! separate the twins because **the twinning is same-phase**: a raided
+//! founding and the community that took from it are founded in the same
+//! phase-resolution pass, so they share the finer timestamp as well as the
+//! year. Only a post-founding fact can tell them apart, which is what the
+//! tail folds. Verdict per the plan's branch table (>0 collisions):
+//! `founder_handle` in `domains/history/src/flesh.rs` stays exactly as it
+//! is. The cost is accepted knowingly: every future recomputation of
+//! `ended`/`peak_population` still forces an epoch under the save-format
+//! contract, forever.
+//!
 //! What this battery pins:
 //!
 //! 1. **liveness** — the seeds that used to die build to `Full` depth, which is
@@ -440,6 +460,13 @@ fn a_dropped_founder_is_not_backfilled() {
 /// Results are printed and written to
 /// `CARGO_TARGET_TMPDIR/tail-sweep-results.txt` so the counts survive the
 /// run and can be read back into this file's prose by whoever pays for it.
+///
+/// **THE SWEEP HAS BEEN RUN — 2026-08-24, this tree post-T4 (HEAD
+/// eeaa011fd), 974 s wall, ten threads.** Result: 2261 colliding worlds,
+/// 5039 founders lost, positives across most of the range (the full seed
+/// list is in the written report). That is the measurement behind the
+/// module header's verdict that the discrimination tail stays; re-running
+/// is only needed after the next settlement-replacing epoch.
 ///
 /// claim: structural() — a measurement harness, not an assertion battery:
 /// everything it learns lands in prose, never in a pinned value.

@@ -125,6 +125,16 @@ Below the table is no better a home, because `timed.sh` appends new rows with
 `>> "$LEDGER"` — anything at the file's end is overtaken by the next run. So
 the preamble is the only position that survives both Markdown and the writer.
 
+**The Granary T6 tail-less founder sweep (2026-08-24, `campaign/the-granary`,
+MacBookPro, ten threads) — wall 974 s**, run as the `#[ignore]`d harness
+`granary_tail_less_sweep_writes_its_counts` in
+`windows/worldgen/tests/suite/founder_collision.rs` over seeds 0–2999 at
+`BuildDepth::Settlements`. Result: 2261 colliding worlds, 5039 founders lost
+under the identity-only handle — the discrimination tail stays. Full report
+written to that test's `CARGO_TARGET_TMPDIR/tail-sweep-results.txt`; only the
+wall time is ledgered here because the harness is not `timed.sh`-wrapped and
+this file never invents a measured value it does not hold.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -2348,3 +2358,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T14:15:14Z | quick | 2.320 | 1.761 | 0.111 | 0.81 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T14:15:21Z | quick | 2.350 | 1.777 | 0.115 | 0.81 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
 | 2026-08-24T14:15:43Z | quick | 16.524 | 12.875 | 0.566 | 0.81 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:16:27Z | gate-commit | 38.119 | 87.604 | 14.369 | 2.68 | 0 | eeaa011fd | campaign/the-granary | MacBookPro | 10 |
+| 2026-08-24T14:34:38Z | quick | 12.249 | 11.219 | 0.503 | 0.96 | 0 | cb6ab95bd | campaign/the-granary | MacBookPro | 10 |
