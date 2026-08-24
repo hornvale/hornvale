@@ -2272,9 +2272,13 @@ pub enum MetabolicClass {
     /// **Documented intent, not shipped behaviour.** A phototroph's basal rate
     /// is physically SURFACE/area-limited, so §4's universal ¾ mass exponent
     /// should not apply to it. It nonetheless does: [`crate::allometry`] gives
-    /// this class `B0_ENDOTHERM` and a pace multiplier of 1.0, so the two
-    /// shipped autotrophs (treant, twig-blight) are computed exactly as
-    /// endotherms of the same mass. The class was witnessed by The Menagerie
+    /// this class `B0_ENDOTHERM` and a pace multiplier of 1.0, so the three
+    /// shipped autotrophs (treant, twig-blight, shrieker) are computed
+    /// exactly as endotherms of the same mass. (It said TWO until THE GOSSAN
+    /// counted them: `shrieker` was added later and this line was not
+    /// updated. `shrieker` is also a fungus and so not a phototroph at all —
+    /// a corpus error left standing on purpose, because a data fix inside a
+    /// structural rename hides both.) The class was witnessed by The Menagerie
     /// without the modelling decision ever being made, and this doc claimed
     /// "unused seam" for three campaigns after it stopped being one.
     ///
@@ -2289,6 +2293,134 @@ pub enum MetabolicClass {
     /// No metabolism (construct/undead analogue). Has no life-history: the
     /// biological traits are `None`. Unused seam.
     Ametabolic,
+}
+
+/// How a species regulates body temperature — the **demand** axis, and the
+/// only one allometry reads.
+///
+/// Split out of [`MetabolicClass`] by THE GOSSAN. That enum conflated this
+/// with the supply axis ([`TrophicMode`]): its own doc says its job is to
+/// select B₀ and the pace multiplier, and `Autotroph` — a supply value —
+/// ended up grouped with `Endotherm` in `basal_metabolic_rate_w` because
+/// allometry had nothing else to do with it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ThermalStrategy {
+    /// Warm-blooded (mammal/bird analogue): high, temperature-stable basal rate.
+    Endothermic,
+    /// Cold-blooded (reptile/amphibian analogue): ~1/8 the basal rate; longer
+    /// life per kg. Realized rate couples to ambient temperature.
+    Ectothermic,
+    /// Has a metabolism; its thermal behaviour is **not modelled**.
+    ///
+    /// Not a placeholder — it names a distinction shipped code already made
+    /// and had no word for. `basal_metabolic_rate_w` groups the old
+    /// `Autotroph` with `Endotherm`; `rise_at` groups it with `Ametabolic`.
+    /// No single existing value preserves both, so the honest answer is a
+    /// value that says the modelling call was never made. That call is
+    /// tracked as BIO-autotroph-physics and is deliberately not this
+    /// campaign's.
+    Unmodelled,
+    /// No metabolism at all (construct/undead analogue): no life-history.
+    ///
+    /// Named `Absent` rather than `None` because
+    /// `rise_at_couples_heat_to_thirst_per_metabolic_class` glob-imports this
+    /// enum's variants, where a `None` would collide with `Option::None`.
+    Absent,
+}
+
+/// Where a species gets its energy — the **supply** axis.
+///
+/// Split out of [`MetabolicClass`] by THE GOSSAN, and **nothing reads it
+/// yet**: making a chemotroph expressible is the whole of that campaign, and
+/// giving this axis a consumer is rung 2 of the Underworld Larder.
+///
+/// An axis nobody reads is how [`MetabolicClass`] rotted, so the guard in
+/// `tests/suite/metabolic_pairs.rs` is a genuine reader of every kind's value
+/// on every commit-gate run, not merely a widening check.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TrophicMode {
+    /// Eats other organisms — prey, detritus, or their remains.
+    Heterotrophic,
+    /// Energy from light (plant-folk/fungal analogue).
+    Phototrophic,
+    /// Energy from chemical gradients in rock or water — a hydrothermal vent
+    /// community, and the underworld's only possible productive base.
+    ///
+    /// **Declared, not witnessed:** no kind carries it, and
+    /// `tests/suite/metabolic_pairs.rs` asserts exactly that. Rung 2's
+    /// success condition is that this assertion has to change.
+    Chemotrophic,
+    /// No metabolism at all. See [`ThermalStrategy::Absent`] for the naming.
+    Absent,
+}
+
+impl MetabolicClass {
+    /// This class as the two axes it conflates (spec §4.2). The map is
+    /// injective, which is what makes THE GOSSAN's byte-identity structural
+    /// rather than argued.
+    pub fn split(self) -> (ThermalStrategy, TrophicMode) {
+        match self {
+            MetabolicClass::Endotherm => (ThermalStrategy::Endothermic, TrophicMode::Heterotrophic),
+            MetabolicClass::Ectotherm => (ThermalStrategy::Ectothermic, TrophicMode::Heterotrophic),
+            MetabolicClass::Autotroph => (ThermalStrategy::Unmodelled, TrophicMode::Phototrophic),
+            MetabolicClass::Ametabolic => (ThermalStrategy::Absent, TrophicMode::Absent),
+        }
+    }
+}
+
+#[cfg(test)]
+mod gossan_split_tests {
+    use super::{MetabolicClass, ThermalStrategy, TrophicMode};
+
+    /// The four old variants map onto four distinct pairs, and the map is
+    /// INJECTIVE. If two old variants collapsed to one pair, the split would
+    /// silently merge two behaviours — which is exactly the failure
+    /// `ThermalStrategy::Unmodelled` was added to prevent.
+    #[test]
+    fn the_split_is_injective_over_every_old_variant() {
+        let all = [
+            MetabolicClass::Endotherm,
+            MetabolicClass::Ectotherm,
+            MetabolicClass::Autotroph,
+            MetabolicClass::Ametabolic,
+        ];
+        let mut seen: Vec<(ThermalStrategy, TrophicMode)> = Vec::new();
+        for c in all {
+            let pair = c.split();
+            assert!(
+                !seen.contains(&pair),
+                "{c:?} maps to {pair:?}, which another variant already claims — \
+                 the split is not injective and two behaviours have merged"
+            );
+            seen.push(pair);
+        }
+        assert_eq!(seen.len(), 4);
+    }
+
+    /// The specific mapping of spec §4.2, asserted rather than merely
+    /// implemented. `Autotroph -> Unmodelled` is the load-bearing row: it is
+    /// NOT `Endothermic`, because `rise_at` groups `Autotroph` with
+    /// `Ametabolic` while `basal_metabolic_rate_w` groups it with `Endotherm`,
+    /// so no single existing value preserves both.
+    #[test]
+    fn the_split_matches_the_specs_table() {
+        assert_eq!(
+            MetabolicClass::Endotherm.split(),
+            (ThermalStrategy::Endothermic, TrophicMode::Heterotrophic)
+        );
+        assert_eq!(
+            MetabolicClass::Ectotherm.split(),
+            (ThermalStrategy::Ectothermic, TrophicMode::Heterotrophic)
+        );
+        assert_eq!(
+            MetabolicClass::Autotroph.split(),
+            (ThermalStrategy::Unmodelled, TrophicMode::Phototrophic)
+        );
+        assert_eq!(
+            MetabolicClass::Ametabolic.split(),
+            (ThermalStrategy::Absent, TrophicMode::Absent)
+        );
+    }
 }
 
 /// How a kind's time-law quantities are scheduled against its mass (The Long

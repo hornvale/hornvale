@@ -75,14 +75,19 @@ ThermalStrategy          TrophicMode
   Endothermic              Heterotrophic
   Ectothermic              Phototrophic
   Unmodelled               Chemotrophic
-  None                     None
+  Absent                   Absent
 ```
 
 `Unmodelled` means *has a metabolism; its thermal behaviour is not modelled*.
-It is distinct from `None` (*has no metabolism*), and the distinction is
+It is distinct from `Absent` (*has no metabolism*), and the distinction is
 already load-bearing in shipped code — `Ametabolic => return 0.0` versus
 `Autotroph => B0_ENDOTHERM` — it simply had no name. Naming it is what makes
 §3.3's disagreement expressible instead of forced.
+
+**`Absent`, not `None`.** The plan found that
+`rise_at_couples_heat_to_thirst_per_metabolic_class` glob-imports the enum's
+variants (`use MetabolicClass::*;`), where a `None` variant collides with
+`Option::None`. The name changed before any code was written.
 
 ### 4.2 The mapping is bijective
 
@@ -90,7 +95,7 @@ already load-bearing in shipped code — `Ametabolic => return 0.0` versus
 Endotherm   ->  (Endothermic, Heterotrophic)
 Ectotherm   ->  (Ectothermic, Heterotrophic)
 Autotroph   ->  (Unmodelled,  Phototrophic)
-Ametabolic  ->  (None,        None)
+Ametabolic  ->  (Absent,      Absent)
 ```
 
 **Byte-identity is therefore structural, not argued.** Every existing `match`
@@ -188,6 +193,11 @@ instrument pointed at nothing.
 1. THE SPECIES GOLDEN   every kind x every life-history quantity
    covers  pace_multiplier, basal_metabolic_rate_w, life_history
 2. THE DRIVE PIN        rise_at across the four thermal values
+                        ALREADY EXISTS as `rise_at_couples_heat_to_thirst_
+                        per_metabolic_class`, and is already in the subfloor
+                        roster, so it already runs every commit. It covered
+                        Endotherm/Ectotherm/Autotroph and NOT Ametabolic;
+                        the campaign extends it rather than building it.
    covers  the liveness reader and the four matches! sites
 ```
 
