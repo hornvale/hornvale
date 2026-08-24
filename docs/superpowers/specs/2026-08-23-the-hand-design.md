@@ -258,6 +258,28 @@ that contradicts the analysis above and is a finding, not a rebaseline.
    a facts-per-tick count before and after; if it moves, the analysis is wrong
    and that is a finding.
 
+   > **Amended at close (The Hand, Task 5). The prediction held; the mechanism
+   > named above is not the one operating, and the measurement cannot tell the
+   > difference.** Measured 0.25 facts/body/tick before and after, identical to
+   > the fact — so the rate did not move, as predicted. But it did not move
+   > because `Hold` commits nothing. `Session::wait` discards the driven walk's
+   > emitted facts **unconditionally**, so the rate is flat whatever the
+   > controller answers: forcing `intend` to return `Intent::Do(Action::Rest)`
+   > leaves the guarding test green. The discard is correct and deliberate —
+   > the player's verbs are what the body *does*, while the walk supplies what
+   > the host *wants*, and committing both would give a possessed body two
+   > competing sources of position — but it makes the "commits on `Do`, nothing
+   > on `Hold`" argument **untestable in this design**, not confirmed by it.
+   >
+   > This measurement was run twice and was vacuous both times for two
+   > *different* reasons: first against an implementation that never touched
+   > the ledger at all, then against one whose facts are discarded before
+   > reaching it. A third run was declined rather than staged until it produced
+   > a number that looked like agreement. What the flat rate does license is
+   > the narrower claim the arc actually needs: **routing a possessed body
+   > through the tick costs no committed facts.** That is true, and it is what
+   > risk #2 was for.
+
 3. **`AgentId` removal touches a save-format contract.** Any world already
    carrying a played session's facts keys them on the old identity. The epoch
    covers it, but the change must be deliberate and recorded, not incidental.

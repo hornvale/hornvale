@@ -198,3 +198,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0171](0171-a-players-acts-are-not-filtered-out-of-a-saved-world.md) | A player's acts are not filtered out of a saved played world | Accepted |
 | [0172](0172-a-concept-with-no-possible-referent-is-an-extradiegetic-gap.md) | A concept with no possible referent is lexicalised as an extradiegetic gap | Accepted |
 | [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
+| [0226](0226-a-possessed-host-is-co-present-not-displaced.md) | A possessed host is co-present, not displaced | Accepted |
+| [0227](0227-possession-selects-a-body-it-does-not-mint-one.md) | Possession selects a body; it does not mint one | Accepted |
+| [0228](0228-a-controller-is-a-parameter-of-the-tick.md) | A controller is a parameter of the tick, not a property of the body | Accepted |
+| [0229](0229-one-body-type.md) | One body type | Accepted |
