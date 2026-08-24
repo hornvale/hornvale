@@ -194,13 +194,26 @@ Write one `probe_*_us` function per fold, each timing `FOLD_REPS` back-to-back c
 
 Extend `Band` with one field per fold plus its normalised twin, following the existing `fold_us`/`norm_fold_us` pair exactly.
 
-- [ ] **Step 3: Report each fold's own elasticity**
+- [ ] **Step 3: Add a `drank`-per-agent-per-tick column, and ground `RESET_EVERY`**
+
+Task 1's review left one Important finding this task closes. `fold_depth_sweep.rs` uses `RESET_EVERY = 20` postings between `drank` facts and claims that regime is "comparable to production", and a synthetic bench structurally cannot ground that — it knows its own cadence by construction. This bench can.
+
+Add a column reporting **`drank` facts per agent per tick** for the probe agent, alongside the existing `folded/a`. The ratio `folded-per-tick / drank-per-tick` **is** production's postings-per-drink, which is `S` — the quantity `RESET_EVERY` is guessing at.
+
+Then, in your report, compare it to 20 and say which of these you found:
+- the real ratio is near 20 → `fold_depth_sweep.rs`'s periodic regime is well chosen; say so and the finding closes.
+- the real ratio is materially different → say the number. `fold_depth_sweep.rs`'s SHAPE claim survives either way (it measures how cost scales with H at bounded S), but its absolute magnitudes are then taken at the wrong S, and that belongs in the report and in spec §4.
+- the probe agent never drinks in 200 ticks → then `S` is unbounded for it and the single-reset regime is the production regime for that agent, which would be a significant finding. Report it loudly rather than picking a different agent to get a nicer answer.
+
+Do not edit `fold_depth_sweep.rs` in this task — report the number and let the controller route it.
+
+- [ ] **Step 4: Report each fold's own elasticity**
 
 Print one row per fold: its µs/call at the first and last warm band, its `k`, its `r²`, and its elasticity against **the probe agent's own history** (the existing `probe_history` column). Reuse `report_affine`.
 
 The elasticity is the attribution: a fold at ~1.0 walks history, a fold at ~0.0 does not. Print the six absolute µs/call values at the final band too — a fold can be history-proportional and still cheap, and stage 4's gate is about *material* share, not about the exponent alone.
 
-- [ ] **Step 4: Run it and read the result**
+- [ ] **Step 5: Run it and read the result**
 
 ```bash
 cargo fmt -p hornvale-vessel
@@ -210,7 +223,7 @@ cargo run --release -p hornvale-vessel --example session_length_scaling
 
 Record the six-fold table in your report. Wall time on this box is noisy — read the elasticities and the relative magnitudes, and say so rather than quoting a magnitude as if it were stable.
 
-- [ ] **Step 5: Write the attribution into the spec and answer stage 4's gate**
+- [ ] **Step 6: Write the attribution into the spec and answer stage 4's gate**
 
 Add a subsection to §4, "Attribution across the six folds": the table, and one sentence per fold on whether it carries a material share.
 
@@ -220,7 +233,7 @@ Then answer stage 4's gate explicitly, with one of:
 
 Also record in §4 that the attribution came from **direct timing rather than a profile**, and why: a sampling profile cannot distinguish a fold that was inlined into its caller from one that is free, and a missing symbol is not a zero measurement. Direct timing has a known call count and no symbolication step.
 
-- [ ] **Step 6: Gate and commit**
+- [ ] **Step 7: Gate and commit**
 
 ```bash
 cargo fmt
