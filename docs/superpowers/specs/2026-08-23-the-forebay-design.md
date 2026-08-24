@@ -1,4 +1,4 @@
-# The Forebay — one store for derived values, three validity classes
+# The Forebay — one store for derived values, and the key is the validity
 
 **Campaign**: The Forebay (the Penstock program, the campaign after The Leat)
 **Date**: 2026-08-23
@@ -55,14 +55,18 @@ instruments; it leaves a **seam** where the budget goes and does not fill it.
 stage 5's job. Everything here is §2a — strictly invisible, and its
 invisibility is the property the test battery attacks.
 
-## 2. The correction the code forced: three validity classes, not two
+## 2. The correction the code forced: the key IS the validity
 
-§6.6 tabulates two classes of derived value, world-derived and
-ledger-derived. Reading the existing memo, there are **three**, and the third
-is the one already shipping.
+This section replaced an earlier draft that claimed three validity classes
+with `corner_weights` as the world-scoped one. **Reading the constructors
+killed that**, and the replacement is simpler. The draft is recorded here
+rather than quietly deleted because the mistake is the instructive part: it
+came from trusting a doc comment's prose over the type it documents.
 
-`RoomMeshMemo` (`kernel/src/room.rs`) holds two maps whose invalidation rules
-its own doc comments already distinguish:
+### 2.1 `corner_weights` is not world-scoped, and the guard on it is total
+
+`RoomMeshMemo` holds two maps whose invalidation rules its doc comments
+distinguish:
 
 - `neighbors: BTreeMap<RoomAddr, [RoomAddr; 3]>` — *"Pure geometry, no
   external dependency, so this half never goes stale regardless of which world
@@ -70,41 +74,74 @@ its own doc comments already distinguish:
 - `corner_weights: BTreeMap<RoomAddr, Option<[(CellId, u64); 3]>>` — valid
   only *"for the ONE `(geo, index)` pair this memo is used with."*
 
-Those are different rules, in one struct, distinguished only by prose. The
-generalization is a **validity key per entry**:
+The second comment implies a world. The types say otherwise:
 
 ```
-  class        valid for                        key            invalidated by
-  ---------    -----------------------------    ------------   -----------------
-  Universal    every world, forever             ()             nothing
-  World        one world (one geo+index pair)   WorldStamp     nothing, in-world
-  Ledger       a ledger prefix                  (pos, deps)    a later fact
-                                                               touching deps
+kernel/src/geosphere.rs:223   pub fn new(level: u32) -> Geosphere      <- only ctor
+kernel/src/geosphere.rs:375   pub fn new(geo: &Geosphere) -> NearestCellIndex
 ```
 
-Storage is identical across all three; **only the validity check differs** —
-which is §6.6's thesis, refined by one row. `Universal` is not a degenerate
-`World`: a `Universal` entry is *shareable across worlds*, which is a
-capability the census (thousands of worlds, one process) can use and a
-`World`-stamped entry cannot.
+`Geosphere::new` takes **a level and nothing else**, and `grep -n Seed
+kernel/src/geosphere.rs` returns nothing — the file has no notion of a seed.
+`positions`, `coords` and `neighbors` are all derived by subdividing the base
+icosahedron `level` times. `NearestCellIndex` is derived purely from the
+geosphere. So the whole `(geo, index)` pair is **determined by `level`**, and
+two geospheres at the same level are byte-identical.
 
-**This is a correctness win, not only a refactor.** `corner_weights`'s
-world-scoping is enforced today by a `debug_assert_eq!` on the *first* geo
-level ever inserted — its own doc admits it is *"Not a full fix — two
-different geospheres at the SAME level would not be caught"*, and it compiles
-out of release builds entirely. Promoting that to a real `WorldStamp` checked
-on every read makes the guard total and release-active.
+Two consequences, and the second is a documentation defect:
 
-### 2.1 `WorldStamp` — what identifies a world
+1. **`corner_weights` is a pure function of `(RoomAddr, level)`.** It is not
+   world-scoped at all. Nothing about a seed, a world, or a ledger enters it.
+2. **The existing `debug_assert_eq!` guard is TOTAL, not partial.** Its own
+   doc says *"Not a full fix — two different geospheres at the SAME level
+   would not be caught"* — but that case cannot produce a wrong answer,
+   because two geospheres at the same level are the same geosphere. The
+   comment understates its own guarantee, and a reader (this one) built a
+   whole design section on believing it.
 
-The stamp must be cheap to compare, deterministic, and must distinguish two
-geospheres at the same level (which the current guard cannot). Task 3 fixes
-the composition; the constraint is that it derives from data the store's
-caller already holds — no new plumbing, no wall-clock, no counter — and that
-two stamps comparing equal implies the two worlds agree on every value the
-`World` class caches. If no such cheap total discriminant exists, the honest
-fallback is to keep the partial guard and *say* it is partial in the type's
-name, rather than name it a stamp and imply totality.
+### 2.2 So there are two classes, split at key-completeness
+
+Once the level is admitted into the key, the three-class table collapses:
+
+```
+  class      the value is                        invalidated by
+  --------   ---------------------------------   -----------------------------
+  Pure       a pure function of its key          nothing, ever
+  Ledger     a fold over a ledger prefix         a later fact touching its deps
+```
+
+`neighbors` is Pure with key `RoomAddr`. `corner_weights` is Pure with key
+`(RoomAddr, level)`. A seed-dependent derivation — `domains/terrain/`'s
+`rills_of` / `rill_reading`, which really do resolve from a `Seed`
+(`CatchmentCut::Drawn(Seed)`) and which the profile puts at ~5% — is Pure with
+a key that happens to contain a `Seed`. **"World-derived" is not a third
+class; it is Pure with the world's identity in the key.**
+
+This is §6.6's thesis — *"the storage is identical; only the invalidation
+policy differs"* — arrived at more cheaply than §6.6 expected. There is only
+one policy question, and it is binary.
+
+### 2.3 What the store therefore contributes: key-completeness as an obligation
+
+If a Pure entry never invalidates, the only way it can be wrong is an
+**incomplete key** — a value cached under a key that does not determine it.
+That is precisely the bug the geo-aliasing comment warns about in prose, and
+precisely what a `debug_assert` compiled out of release cannot enforce.
+
+So the store's real contribution is not a lifecycle. It is making
+key-completeness a **typed obligation**: a shape declares its key type, the
+key carries every parameter the derivation reads, and the property battery
+(§5) checks the value against a recomputation *through the same key*. A
+derivation that reads something absent from its key fails that test. Today
+that obligation is discharged by careful prose in three separate doc comments,
+one of which is provably wrong about its own strength.
+
+**Consequence for scope, stated plainly: this campaign has no `Ledger`-class
+tenant.** The 0.04% figure means there is no hot ledger-derived derivation to
+migrate, and §6.5's N×M argument is about a workload that has not arrived. The
+`Ledger` class therefore ships **tested but untenanted** — built because §6.6
+directs generality, honest about having no current occupant. That is a
+deliberate YAGNI exception, and §10 carries the falsifier for it.
 
 ## 3. Shape
 
@@ -175,10 +212,12 @@ is closed.
 
 **Chaos-eviction (adversarial).** §7 rung 3, and buildable *without* a budget:
 a harness that drops entries at every legal opportunity and asserts output is
-byte-identical. This is what strict invisibility (§2a) buys, and it is the
-reason invisibility is a capability rather than only a restriction. It is also
-the test that would have caught the geo-aliasing hole the current
-`debug_assert` leaves open.
+byte-identical. This is what strict invisibility (metaplan §2a) buys, and it is
+the reason invisibility is a capability rather than only a restriction. For a
+`Pure` shape it is also the **key-completeness test of §2.3**: dropping an
+entry forces a recomputation through the declared key alone, so a derivation
+reading anything the key does not carry diverges. That is the mechanised form
+of the obligation three doc comments currently carry in prose.
 
 **Cached absence stays distinct from "not looked up yet."** The existing
 `corner_weights_lookup` returns `Option<Option<…>>` precisely to draw this
@@ -330,20 +369,23 @@ Three corrections to the governing document, each carrying its evidence:
 
 From the reserved block 0206–0215.
 
-1. **A derived value carries its own validity key, and there are three
-   classes** — universal, world-scoped, ledger-scoped. One store, three
-   checks. (§2; refines §6.6, which named two.)
+1. **A derived value's key must be complete, and completeness is what the
+   store enforces.** Two classes only — `Pure` (a pure function of its key,
+   never invalidated) and `Ledger` (a fold over a prefix, invalidated when a
+   later fact touches its deps). "World-derived" is `Pure` with the world's
+   identity in the key, not a third class. (§2.2, §2.3; refines §6.6, which
+   named two classes but drew the line in a different place.)
 2. **The derived store is generic per value shape, never heterogeneous** —
    because `TypeId` ordering is not build-stable and byte-identity forbids an
    unstable iteration order under a cache. (§3)
-3. Possibly: **`WorldStamp` totality** — whether a cheap total world
-   discriminant exists, or the guard stays admittedly partial. Task 3
-   decides; it is a decision only if the answer is "partial, and named so."
-   (§2.1)
+3. **`corner_weights`'s level guard is total, and its doc comment is wrong to
+   call itself partial.** Small, but it is a determinism-adjacent claim in the
+   kernel and the next reader deserves the corrected version. (§2.1)
 
 ## 9. In / out
 
-**In:** the `Derived` store; the three validity classes; the `WorldStamp`;
+**In:** the `Derived` store; the two validity classes and the
+key-completeness obligation;
 migrating `RoomMeshMemo` onto it behind an unchanged public API; the hit/miss/
 invalidation counters; CACHE ≡ RECOMPUTE and chaos-eviction; Task 0's two
 bash 3.2 fixes and the two-half check that would have caught either; the
@@ -363,10 +405,17 @@ Task 1 may name but this campaign does not build. Serialization of anything
   arrived. It still ships (§4), but §11's falsifier-2 — "measured reuse before
   eviction is low" — would be live for the first time with real numbers, and
   stage 3 must open against them.
-- **No cheap total `WorldStamp` exists.** Then the geo-aliasing guard cannot
-  be promoted to release-active totality, decision 3 records the partiality,
-  and the correctness half of §2's win shrinks to the `Universal`/`World`
-  split alone.
+- **The `Ledger` class ships untenanted and stays that way.** It has no
+  occupant today (0.04%), and it is built on §6.5's projection that belief or
+  the social graph will make it hot. If the campaign after next still finds no
+  tenant, that class was speculative generality and should be deleted rather
+  than maintained — §11's falsifier-2 with a different subject. Name it now so
+  a later campaign can act on it without re-litigating §6.6.
+
+- **A Pure shape turns out to read something its key cannot carry.** Then
+  key-completeness is not expressible for that shape and §2.3's obligation
+  degrades to the doc-comment discipline it was meant to replace. The battery
+  in §5 is what would surface it.
 - **Task 0's construct grep is unbounded in practice.** If the bash-4+ grep
   turns up many violations rather than the one the scan found, the check would
   land red and be disabled — the failure mode the metaplan's own seam-guard
