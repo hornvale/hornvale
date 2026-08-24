@@ -532,7 +532,7 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 /// # FINDING 2 IS FALSIFIED, AND THE PARENTHESIS ABOVE IS WHY
 ///
 /// **`Bake.node_index` no longer holds one alive community per cell.** The
-/// Underworld's Task 8 re-keyed it on `(CellId, DelveRung)` (spec §4.6), for
+/// Underworld's Task 8 re-keyed it on `(CellId, Band)` (spec §4.6), for
 /// the stated purpose of letting an underworld community and a surface one
 /// share a column. `settlement/disposition/v1`'s draw key is `(site,
 /// founded-year)` and carries no rung, so the moment two peoples at different

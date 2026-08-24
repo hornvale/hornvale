@@ -205,3 +205,12 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0190](0190-a-reachability-trace-is-not-closed-by-finding-one-funnel.md) | A reachability trace is not closed by finding one funnel | Accepted |
 | [0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md) | A map's frame is a fact about the world, and a view of the world is a lens | Accepted |
 | [0197](0197-co-location-is-not-discovery.md) | Co-location is not discovery | Accepted |
+| [0206](0206-a-derived-values-key-is-its-validity.md) | A derived value's key is its validity | Accepted |
+| [0207](0207-the-derived-store-is-generic-per-shape.md) | The derived store is generic per value shape, never heterogeneous | Accepted |
+| [0208](0208-completing-the-key-retired-the-level-guard.md) | Completing `corner_weights`'s key retired its level guard | Accepted |
+| [0216](0216-the-depth-band-roster-is-a-kernel-type.md) | The depth-band roster is a kernel type, and moving it is not an epoch | Accepted |
+| [0226](0226-a-possessed-host-is-co-present-not-displaced.md) | A possessed host is co-present, not displaced | Accepted |
+| [0227](0227-possession-selects-a-body-it-does-not-mint-one.md) | Possession selects a body; it does not mint one | Accepted |
+| [0228](0228-a-controller-is-a-parameter-of-the-tick.md) | A controller is a parameter of the tick, not a property of the body | Accepted |
+| [0229](0229-one-body-type.md) | One body type | Accepted |
+| [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Accepted |

@@ -2,6 +2,13 @@
 # scripts/test-worktree-freshness.sh — a worktree must never serve a binary
 # compiled under a different path.
 #
+# BASH 3.2 FOOTGUN: do not put an apostrophe inside a comment that sits
+# inside a `$(...)` command substitution. macOS ships bash 3.2.57 as
+# `/bin/bash`, and 3.2 mis-parses an apostrophe there as opening a quoted
+# string, failing far below the real cause (`scripts/check-bash32.sh` catches
+# this class; see its header for the reduced repro). Write around the
+# apostrophe instead — this file already had two.
+#
 # Usage: test-worktree-freshness.sh [old-path]
 #
 #   old-path (optional) — an EXTRA path to check artifacts against, beyond
@@ -99,7 +106,7 @@ others="$(
         | grep -vxF "$root" \
         | while IFS= read -r w; do
             # STRING PREFIX, NOT PATH ANCESTRY. The comment above diagnoses
-            # this correctly — "the main checkout's own path is a literal
+            # this correctly — "the path of the main checkout is a literal
             # PREFIX" — and then the test implemented was `"$w"/*`, which is
             # narrower than the diagnosis: it requires a SLASH after $w, so it
             # catches the nested case (<main>/.claude/worktrees/<name>) and
@@ -109,8 +116,9 @@ others="$(
             # `<main>-<something>` — /…/hornvale-heavy-wt beside /…/hornvale —
             # and `grep -lF /…/hornvale` matches every artifact that bakes its
             # OWN path, because the shorter name is a substring of the longer.
-            # Measured before the fix: 653 hits in hornvale-heavy-wt's own
-            # deps/, every single one its own CARGO_MANIFEST_DIR, verified by
+            # Measured before the fix: 653 hits in the deps/ of
+            # hornvale-heavy-wt itself, every single one its own
+            # CARGO_MANIFEST_DIR, verified by
             # extracting the matched strings — not one referenced a foreign
             # tree. The check was red by default in every sibling worktree.
             #

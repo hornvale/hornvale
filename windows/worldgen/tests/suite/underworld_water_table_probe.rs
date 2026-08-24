@@ -168,9 +168,10 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
+use hornvale_kernel::Band;
 use hornvale_terrain::{
-    ARABIKA_POROSITY, DelveRung, TerrainPins, delta_t_range_of, earth_table_depth_m, is_phreatic,
-    rungs, water_table_depth_m,
+    ARABIKA_POROSITY, TerrainPins, delta_t_range_of, earth_table_depth_m, is_phreatic, rungs,
+    water_table_depth_m,
 };
 use hornvale_worldgen::chamber::{ChamberOrigin, is_sump};
 use hornvale_worldgen::{
@@ -298,11 +299,7 @@ fn the_water_table_is_not_degenerate() {
                 wholly_vadose += 1;
             }
             let gradient = terrain.geothermal_gradient_at(cell).get();
-            for (index, rung) in rungs()
-                .iter()
-                .filter(|r| **r != DelveRung::Surface)
-                .enumerate()
-            {
+            for (index, rung) in rungs().iter().filter(|r| **r != Band::Surface).enumerate() {
                 // The rung's own top, the depth `chamber.rs` places a chamber
                 // at: its ΔT floor divided by this cell's gradient.
                 let top_m = 1000.0 * delta_t_range_of(*rung).0 / gradient;
@@ -433,11 +430,7 @@ fn the_water_table_is_not_degenerate() {
             pct(&vadose_fraction, 0.90)
         );
 
-        for (index, rung) in rungs()
-            .iter()
-            .filter(|r| **r != DelveRung::Surface)
-            .enumerate()
-        {
+        for (index, rung) in rungs().iter().filter(|r| **r != Band::Surface).enumerate() {
             let reached = rung_reached[index];
             let vadose = rung_vadose[index];
             let share = if reached == 0 {
@@ -567,7 +560,7 @@ fn how_far_does_the_dryness_gain_reach() {
                 if table == 0.0 {
                     drowned += 1;
                 }
-                for (ri, rung) in [DelveRung::Deeps, DelveRung::Underdeep, DelveRung::Nadir]
+                for (ri, rung) in [Band::Deeps, Band::Underdeep, Band::Nadir]
                     .iter()
                     .enumerate()
                 {

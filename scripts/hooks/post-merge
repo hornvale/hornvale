@@ -72,7 +72,10 @@ cd "$repo_root"
 paths_file='docs/generated-paths.txt'
 [[ -f "$paths_file" ]] || exit 0
 
-mapfile -t generated < <(grep -v '^#' "$paths_file" | grep -v '^[[:space:]]*$')
+generated=()
+while IFS= read -r line; do
+    generated+=("$line")
+done < <(grep -v '^#' "$paths_file" | grep -v '^[[:space:]]*$')
 [[ ${#generated[@]} -gt 0 ]] || exit 0
 
 # ORIG_HEAD is the pre-merge tip; the range is what this merge brought in.

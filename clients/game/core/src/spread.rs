@@ -129,6 +129,11 @@ fn blit(src: &Grid, dst: &mut Grid, origin: (u16, u16)) {
 /// recently SUBMITTED line, drawn above the command row (see `entry::draw`'s
 /// doc for the ask-then-answer layout and why that row is reserved).
 ///
+/// `hint` is the pending tab-completion ambiguity, drawn beneath the
+/// command row when present (see [`crate::entry::Hint`] — the stem bold as
+/// typed, the suggested remainder normal, overlong lists collapsing to an
+/// honest "… +N more" count).
+///
 /// `world_plate`, when `Some`, is an already-rendered whole-world Mercator
 /// plate (The Portolan part II, `bin`'s own `plate::draw` -- `core` carries
 /// no hornvale crate, so it cannot draw the plate itself) drawn into the
@@ -164,6 +169,7 @@ pub fn compose(
     echo: Option<&str>,
     world_plate: Option<&Grid>,
     strip_offset: u16,
+    hint: Option<&crate::entry::Hint<'_>>,
 ) -> (Grid, Option<(u16, u16)>) {
     let mut page = Grid::new(w, h);
     let content_height = content_height(h);
@@ -194,6 +200,7 @@ pub fn compose(
         focus,
         line,
         echo,
+        hint,
     );
 
     if let Some(text) = strip {
@@ -238,6 +245,7 @@ mod tests {
             None,
             None,
             0,
+            None,
         );
         assert_eq!(g.width(), 80);
         assert_eq!(g.height(), 24);
@@ -267,6 +275,7 @@ mod tests {
                 None,
                 None,
                 0,
+                None,
             );
             let text = g.to_plain_text();
             let plate_has_ink = text
@@ -293,6 +302,7 @@ mod tests {
             None,
             None,
             0,
+            None,
         );
         let text = g.to_plain_text();
         let strip_row = text.lines().nth(20).unwrap();
@@ -327,6 +337,7 @@ mod tests {
             None,
             None,
             0,
+            None,
         );
         let (scrolled_grid, _) = compose(
             &s,
@@ -338,6 +349,7 @@ mod tests {
             None,
             None,
             5,
+            None,
         );
         let head_row = head_grid
             .to_plain_text()

@@ -419,16 +419,16 @@ instance of that pattern, not the first.
 Strangler-fig; each stage shippable, reversible, and measurement-gated on the
 one before it.
 
-| # | campaign | delivers | gate to enter |
-|---|----------|----------|---------------|
-| **1** | **The call sites and the instruments** | the `liveness.rs` fix; a public indexed (subject, predicate) multi-fact query; facts-per-agent-per-tick as a deterministic gated counter; an agent-scaling bench (N agents × T ticks → ticks/s, bytes/agent, and the query/plan/commit split); a synthetic-world generator that reaches large entity counts without paying genesis | — |
-| 2 | Views on the unindexed axes | `place`- and `day`-keyed views; VIEW ≡ SCAN battery; chaos-eviction harness | stage 1 shows locality queries are a real share of tick cost |
-| 3 | The derived-component layer | fan-out materialization, position-versioned, tombstones; reuse-before-eviction instrumented | stage 2's measured reuse ratio justifies the memory |
-| 4 | The lifecycle | count budget, two-tier eviction, hysteresis | stage 3 shows the rebuild pass actually dominates |
-| 5 | The condensation boundary | the observable half: condense/dissolve as a pure function; the field/entity fidelity study | stages 2–4, plus a Lab study design |
-| 6 | Row width | predicate interning, provenance interning-or-drop | measured — plausibly a larger memory win than all of 2–4 |
-| 7 | **Log bounding** | a fact-lifetime mechanism: what may leave the log, and how the seed plus the surviving prefix still re-derives the world | stage 1's facts-per-agent-per-tick counter shows a long session accumulates without bound |
-| 8 | Storage tier (deferred) | decision 0037's address-prefix partition, disk paging, segment merging | 0037's own condition: a long-running deployment measures a ledger that will not fit |
+| # | campaign | delivers | gate to enter | verdict (2026-08-23) |
+|---|----------|----------|---------------|-----------------------|
+| **1** | **The call sites and the instruments** | the `liveness.rs` fix; a public indexed (subject, predicate) multi-fact query; facts-per-agent-per-tick as a deterministic gated counter; an agent-scaling bench (N agents × T ticks → ticks/s, bytes/agent, and the query/plan/commit split); a synthetic-world generator that reaches large entity counts without paying genesis | — | — |
+| 2 | Views on the unindexed axes | `place`- and `day`-keyed views; VIEW ≡ SCAN battery; chaos-eviction harness | stage 1 shows locality queries are a real share of tick cost | **NOT ENTERABLE** — §6.5 measured ledger queries at 0.04% of a tick, not a real share |
+| 3 | The derived-component layer | fan-out materialization, position-versioned, tombstones; reuse-before-eviction instrumented | stage 2's measured reuse ratio justifies the memory | — |
+| 4 | The lifecycle | count budget, two-tier eviction, hysteresis | stage 3 shows the rebuild pass actually dominates | — |
+| 5 | The condensation boundary | the observable half: condense/dissolve as a pure function; the field/entity fidelity study | stages 2–4, plus a Lab study design | — |
+| 6 | Row width | predicate interning, provenance interning-or-drop | measured — plausibly a larger memory win than all of 2–4 | — |
+| 7 | **Log bounding** | a fact-lifetime mechanism: what may leave the log, and how the seed plus the surviving prefix still re-derives the world | stage 1's facts-per-agent-per-tick counter shows a long session accumulates without bound | **DEFERRED ON AVAILABILITY, NOT MERIT** — the gate is met (§6.1) and §6.3 calls this "the one item in this program with no alternative," but it lives entirely in `windows/vessel/src/liveness.rs`, held off twice over: `campaign/the-hand` holds off `windows/vessel/` and `windows/lab/`, and The Escapement's Task 9 is mid-sweep of 53 `.day()` sites in that same file. Recommended next the moment vessel frees. |
+| 8 | Storage tier (deferred) | decision 0037's address-prefix partition, disk paging, segment merging | 0037's own condition: a long-running deployment measures a ledger that will not fit | — |
 
 **Stage 7 is not part of stage 8, and separating them is a correction this
 plan needed.** "LSM machinery" reads as one deferred bundle, but decomposing
@@ -714,6 +714,17 @@ the residual stops being "everything else" and becomes attributed. Until then,
 treat §6.2's falsifier-1 verdict as **UNSETTLED**, not as the go-ahead it is
 phrased as.
 
+**RESOLVED by §6.5, added directly below this section in the same commit
+(`06a07efcc`) — a reader following this paragraph today would re-run a
+measurement already taken.** The profile times the A\* path exactly as
+prescribed: **5.3%** of the `agent_scaling` bench. That settles §11's
+falsifier-1 in the direction §6.2 originally recorded, but on firmer
+grounds — planning does **not** dominate tick cost. The large per-agent-tick
+constant this section is alarmed about is real, but it lives in derived
+geometry (`NearestCellIndex::scan_at`, 13.4%) and the allocator
+(`malloc`+`memcpy`, 33.3%), not in GOAP search. Nothing here should send a
+later campaign back to "time the A\* path" — that experiment has been run.
+
 **Why this matters beyond bookkeeping.** A per-agent-tick cost of ~6–9 ms
 puts roughly 100–170 agents in a 1 s tick budget, before the content gets
 richer — and richer content is the whole direction of travel. Whatever the
@@ -740,6 +751,18 @@ A session start is **genesis-bound**; a long tick loop is bound by derived
 *geometry* and by the **allocator**. 93% of `scan_at` arrives via
 `RoomAddr::corner_weights` from the drive stack — `TOOL-24`'s open lever #1,
 independently reached.
+
+**The 13.4% survived a harness-artifact challenge — a finding that lived only
+in commit `06a07efcc`'s message until now.** The bench originally built its
+terrain with `LocaleTerrain::new`, which hard-codes `cache: None` — a
+configuration `Session` never actually runs. That shape is visible in the
+harness, and it should raise the same doubt in the next reader that it raised
+here: is `scan_at`'s cost a real cost, or an artifact of benching a
+misconfigured terrain? Wiring in the cache production actually passes moved
+`scan_at` only from 14.9% to 13.4%, so the harness-artifact hypothesis was
+wrong and the cost is real. The remaining divergence (`Session` also
+prefills the memo once per tick, which the bench does not) is a documented
+lower bound on the gap rather than a guess.
 
 **THE 0.04% IS TRUE AND MUST NOT BE USED TO RETIRE STAGES 3–5.** An earlier
 draft of this section did exactly that, and Nathan refused it correctly. The
@@ -768,12 +791,29 @@ specialised to whichever derivation happens to be hot this month.
 
 | | **world-derived** | **ledger-derived** |
 |---|---|---|
-| examples | `corner_weights`, terrain branch geometry | belief, social edges, positions, plans |
+| examples | `domains/terrain`'s `rills_of`/`rill_reading`, terrain branch geometry | belief, social edges, positions, plans |
 | a pure function of | (seed, place) | the ledger prefix |
 | invalidation | **never**, within a world | when a later fact touches the dependency set |
 | eviction | memory pressure only | pressure, or dependency touched |
-| hot **today** | yes, ~18% of a tick | no, 0.04% |
+| hot **today** | yes, ~5% of a tick | no, 0.04% |
 | hot in the **mature sim** | unchanged | the N×M term above |
+
+**Corrected 2026-08-23 (The Forebay, decision 0206): `corner_weights` was the
+wrong example for the left column, and its absence here is not an oversight.**
+It is not seed-scoped at all — `Geosphere::new` takes only a level, and two
+geospheres at the same level are byte-identical, so `corner_weights` is a
+pure function of `(RoomAddr, level)` with no world identity in its key
+whatsoever. It is `Pure` in decision 0206's terms, but it is not an instance
+of *this table's* "world-derived" category, which this section defined as
+keyed by `(seed, place)`. The genuine seed-keyed tenant that belongs here is
+`domains/terrain`'s `rills_of`/`rill_reading`, which resolve from a `Seed` via
+`CatchmentCut::Drawn` — roughly 5% of the `agent_scaling` profile (§6.5),
+and unmigrated onto the `Derived` store The Forebay built. Decision 0206
+formalises the split this table gestures at: two classes, `Pure` (a pure
+function of its key, never invalidated) and `Ledger` (a fold over a ledger
+prefix), drawn at **key-completeness** rather than at provenance —
+"world-derived" is `Pure` with the world's identity folded into the key, not
+a distinct mechanism from geometry that needs no world identity at all.
 
 The storage is identical; **only the invalidation policy differs**. A store
 built for the left column alone is a geometry memo and will need replacing. A
@@ -787,6 +827,49 @@ the larger prize.** 33% of the bench is `malloc`+`memcpy`. Caching a value
 avoids recomputing it; handing back a slice of a dense array avoids
 *allocating* it. §1's "iterated as an array" clause was written as a
 performance nicety and the profile suggests it is the main event.
+
+### 6.7 SHIPPED, 2026-08-23 (The Forebay): the residual 13.4% is miss-bound, established by the profile
+
+The campaign this section's own direction motivated (§6.6) shipped
+`kernel/src/derived.rs`'s `Derived<K, V>` and migrated `RoomMeshMemo` onto it
+(decisions 0206–0208). Its own headline question — does the migration retire
+a real share of `scan_at`'s 13.4%, or is the store built for a workload that
+has not arrived yet — needed a hit-rate reading nothing in the tree
+provided. The wire route to `campaign/the-hand` (the owner of
+`agent_scaling.rs`) expired unanswered, and a board `ask` went unanswered
+through the task's end, so the number came from a kernel-side synthetic
+probe (`kernel/examples/room_mesh_memo_hitrate.rs`) rather than from the real
+bench: **96.2%** hit rate under a locality-shaped synthetic walk.
+
+**That number is weaker evidence than it looks, and the campaign said so of
+itself.** With nothing evicting, the hit rate is arithmetically
+`1 - distinct/total` — a restatement of the probe's own walk width, not an
+independent confirmation. The probe is a negative control (it rules out "the
+memo is broken and never hits"), not a measurement of `agent_scaling.rs`.
+
+**The number that actually settles it was already in hand, in this
+section's own profile, and nobody had drawn the inference.**
+`agent_scaling.rs` hoists `mesh_memo` above its tick loop (`:375`), so §6.5's
+13.4% was measured against an **already-warm** cache — every tick after the
+first reuses whatever the walk revisited. A warm cache that still costs
+13.4% is miss-bound by direct observation on the real workload, with no
+synthetic distribution involved. §6.5 stated the figure without drawing this
+inference; The Forebay draws it now, retroactively, as this section's own
+correction.
+
+**Consequence for a later campaign.** The store ships regardless (§6.6's
+direction is generality, not a claim on today's 13.4%), and the honest
+follow-up for the residual is a **faster `scan_at`**, or a **reachable-set
+prefill** — not a cache lifecycle, since the memo already has one and misses
+persist under it. The number that would size a prefill is
+**distinct-rooms-per-tick**, not a hit rate; a future campaign with access to
+`agent_scaling.rs` should read that directly rather than re-deriving it from
+a synthetic probe, once `windows/vessel` frees. A second, cheaper-to-confirm
+finding from the same instrument: `agent_scaling.rs` clones the whole memo
+every tick (`let mesh_snapshot = mesh_memo.clone();`) to satisfy a borrow,
+and `malloc`+`memcpy` at 33.3% of the bench makes that full-`BTreeMap` clone
+a candidate contributor in its own right — a property of the harness, not of
+the sim, and worth measuring before concluding either way.
 
 ## 7. The standing gate
 
