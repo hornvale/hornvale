@@ -398,6 +398,7 @@
 - [The Hand](./chronicle/the-hand.md)
 - [The Mirror](./chronicle/the-mirror.md)
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
+- [The Forebay](./chronicle/the-forebay.md)
 
 # Appendix: The Frontier
 
