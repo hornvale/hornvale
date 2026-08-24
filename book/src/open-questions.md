@@ -1974,6 +1974,29 @@ something establishes the column can move; a join is evidence only if something
 establishes it discriminates; **a declaration is evidence about the world only
 if something reads it.**
 
+**[The Portolan, part II](./chronicle/the-portolan-world-map.md) (2026-08-23)
+adds the first declared exception to the redaction boundary's own claim, and
+the bet survives it narrowed rather than broken.** The Panes scored "the
+channel carries semantic content, never a picture — cells, not glyphs" and
+"both panes are pure functions of one snapshot" as structural facts. The
+world map pane is neither: `bin` renders a whole-planet `Grid` — a picture —
+directly from `hornvale-terrain`/`hornvale-worldgen` state the snapshot
+document never carries and never could (a planet does not fit in a per-turn
+document), and hands it to `core` as caller-supplied content the crate
+cannot verify, the same category `Source::Look` already established for one
+feature name at a time and now generalised to an entire rendered chart. So
+the true claim was narrower than scored: not "no pane may see a picture,"
+but "a picture crossing into `core` is a declared exception carrying its own
+honesty discipline," and this campaign is the second instance of that
+exception rather than the first violation of the rule. What the bet's
+determinism half still buys was tested directly rather than assumed: H7
+(this campaign's own preregistered measurement) ran two identically-seeded
+possessions, one additionally exercising the whole map — zoom, scroll,
+re-centre, resolution — between every real turn, and their
+`vessel/session/v2` snapshots came back byte-identical by construction. A
+caller-supplied picture can bypass the wire's content guarantee; it still
+cannot become a hidden writer.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,

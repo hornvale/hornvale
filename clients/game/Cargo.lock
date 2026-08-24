@@ -176,6 +176,7 @@ dependencies = [
  "hornvale-game-core",
  "hornvale-kernel",
  "hornvale-language",
+ "hornvale-settlement",
  "hornvale-terrain",
  "hornvale-vessel",
  "hornvale-worldgen",

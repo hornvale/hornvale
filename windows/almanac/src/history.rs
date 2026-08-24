@@ -323,7 +323,10 @@ fn number(world: &World, entity: EntityId, predicate: &str) -> Option<f64> {
 /// shared is `Years::DAYS_PER_YEAR` rather than the function.
 ///
 /// Not registered with `tools/seam-guard`: it shares a name with worldgen's
-/// helper, which the tool cannot disambiguate. See that function's doc.
+/// helper, which the tool cannot disambiguate. See that function's doc. The
+/// guard this seam has instead is structural: the mirror-parity tests at the
+/// bottom of this file compare both halves of the crossing (this window's and
+/// the composition root's) on the same ledger, so drift here turns red there.
 fn bake_year_of_ledger_day(day: f64) -> f64 {
     day / hornvale_kernel::Years::DAYS_PER_YEAR
 }
@@ -1092,6 +1095,141 @@ fn capitalize(s: String) -> String {
 mod tests {
     use super::*;
     use hornvale_kernel::Fact;
+
+    // ---- the mirror guard (registry row TOOL-almanac-mirror-day-crossing) --
+    //
+    // [`bake_year_of_ledger_day`] and [`present_year`] above are a deliberate
+    // duplicate of `windows/worldgen::history_emit`'s helpers: this window
+    // cannot depend on the composition root, so the crossing exists twice on
+    // purpose — and duplicated-on-purpose logic drifts silently, because
+    // nothing compared the two halves. The Ballast fixed a day-crossing defect
+    // on the worldgen side and could not audit this mirror from there; these
+    // tests ARE the audit, standing. They dev-depend on `hornvale-worldgen`
+    // (the hearsay precedent: dev-only, never a runtime edge) and assert the
+    // two halves agree on the same ledger.
+    use hornvale_worldgen::{BakeId, BakeOccupation, History, emit_history, emit_now};
+
+    /// A bake-local handle for the hand-built fixture below.
+    fn bid(n: u64) -> BakeId {
+        BakeId(n)
+    }
+
+    /// One bake record with neutral defaults, only what varies spelled out.
+    fn mirror_record(
+        community: u64,
+        people: &'static str,
+        site: u32,
+        founded: f64,
+    ) -> BakeOccupation {
+        BakeOccupation {
+            core: Occupation {
+                people: KindId(people),
+                site: CellId(site),
+                founded,
+                ended: None,
+                peak_population: 50,
+                tech: TechHorizon::Neolithic,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: None,
+                notability: Notability::Common,
+            },
+            community: bid(community),
+            lineage: bid(community),
+            founded_from: Founding::Genesis(CellId(site)),
+            ended_by: Ended::Nature,
+        }
+    }
+
+    /// A real composition-root bake committed onto a fresh ledger: one alive
+    /// kobold occupation and one goblin ruin (ended bake year 150), present
+    /// frame bake year 200. `with_now` selects which arm of [`present_year`]
+    /// runs — the trusted `history-now` fact, or the pre-T8 fallback that
+    /// approximates the present as the latest occupation event.
+    fn baked_world(with_now: bool) -> World {
+        let mut w = World::new(Seed(42));
+        hornvale_history::register_concepts(&mut w.registry).unwrap();
+        hornvale_settlement::register_concepts(&mut w.registry).unwrap();
+        let mut starved = mirror_record(2, "goblin", 1, 0.0);
+        starved.core.ended = Some(150.0);
+        starved.core.cause = Some(CauseOfEnd::Famine);
+        let alive = mirror_record(1, "kobold", 0, 50.0);
+        let h = History::new(vec![alive, starved], 200.0);
+        emit_history(&mut w, &h).unwrap();
+        if with_now {
+            let subject = EntityId::new(1).expect("nonzero");
+            emit_now(&mut w, subject, 200.0).unwrap();
+        }
+        w
+    }
+
+    /// The two halves must AGREE: whatever this window's private
+    /// [`present_year`] reads off the ledger, the composition root's original
+    /// reads the same number, through both of the mirror's arms (the
+    /// `history-now` fast path AND the latest-event fallback).
+    #[test]
+    fn the_present_year_mirror_matches_the_composition_roots() {
+        for with_now in [true, false] {
+            let w = baked_world(with_now);
+            assert_eq!(
+                present_year(&w),
+                hornvale_worldgen::present_year(&w),
+                "the almanac mirror and worldgen's present_year disagree \
+                 (with_now = {with_now}) — duplicated-on-purpose logic drifted"
+            );
+        }
+    }
+
+    /// And agreement is not enough on its own — if BOTH halves ever drifted
+    /// identically, the parity test above would stay green while every ruin
+    /// age in every world moved. This pins the unit directly: the present is
+    /// bake year 200, not the ledger day 73,050 (`200 × Years::DAYS_PER_YEAR`)
+    /// a dropped crossing would leak through. Exact equality holds because
+    /// the fixture's years are chosen to survive the round trip
+    /// (`year × 365.25 ÷ 365.25` is exact for these values).
+    #[test]
+    fn the_mirror_reads_a_bake_year_not_a_ledger_day() {
+        let w = baked_world(true);
+        assert_eq!(
+            present_year(&w),
+            200.0,
+            "present_year returned a ledger DAY where a bake YEAR belongs — \
+             the crossing was dropped somewhere upstream"
+        );
+    }
+
+    /// The decoder half of the mirror: this window's private [`record_of`]
+    /// and the composition root's `occupation_records` must reconstruct the
+    /// SAME years from the same facts. Catches a dropped or doubled crossing
+    /// in either `occ-founded` read (the parity fixture's ruin ended at bake
+    /// year 150 = 54,787.5 ledger days, so a unit slip cannot pass by
+    /// coincidence).
+    #[test]
+    fn the_mirror_decoder_agrees_with_the_composition_roots() {
+        let w = baked_world(true);
+        let expected = hornvale_worldgen::occupation_records(&w);
+        assert_eq!(expected.len(), 2, "fixture sanity: two occupations baked");
+        for theirs in &expected {
+            let mine = record_of(&w, theirs.id).unwrap_or_else(|| {
+                panic!(
+                    "the almanac decoder could not reconstruct occupation {} \
+                     that worldgen's decoder read fine",
+                    theirs.id.0
+                )
+            });
+            assert_eq!(
+                mine.core.founded, theirs.core.founded,
+                "occ-founded decodes to different years on either side of the \
+                 mirror — a dropped or doubled day-crossing"
+            );
+            assert_eq!(
+                mine.core.ended, theirs.core.ended,
+                "occ-ended decodes to different years on either side of the \
+                 mirror — a dropped or doubled day-crossing"
+            );
+        }
+    }
 
     /// A minimal occupation core: only `site` varies between the two
     /// fixtures below, and neither `founding_sentence` nor

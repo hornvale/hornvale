@@ -18,3 +18,10 @@ hornvale-religion = { path = "../../domains/religion" }
 hornvale-species = { path = "../../domains/species" }
 hornvale-topology = { path = "../../domains/topology" }
 hornvale-language = { path = "../../domains/language" }
+
+[dev-dependencies]
+# DEV-only (the hearsay precedent): the mirror-parity tests in src/history.rs
+# compare this window's private day-crossing decoders against the
+# composition root's originals, which this window must not depend on at
+# runtime.
+hornvale-worldgen = { path = "../worldgen" }

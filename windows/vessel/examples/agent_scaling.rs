@@ -88,6 +88,23 @@
 //! it is not reproducible across runs or allocators the way a fact's actual
 //! byte length is.
 //!
+//! ## The harness must pass the cache production passes
+//!
+//! An earlier version built its terrain with `LocaleTerrain::new(ctx)`, which
+//! hard-codes `cache: None`. `Session` passes `Some(&self.mesh_memo)` at every
+//! construction site, so the bench was measuring a configuration the game
+//! never runs: every drive's terrain read re-resolved room->cell through a
+//! full `NearestCellIndex` scan. A profile blamed 14.9% of the whole run on
+//! `scan_at`, and the obvious conclusion -- that the number was a harness
+//! artifact -- was WRONG. Wiring the cache in moved it only 14.9% -> 13.4%.
+//! The cost is real; the missing cache was about a tenth of it.
+//!
+//! What this still does NOT replicate: `Session` also PREFILLS the memo each
+//! tick from the creatures' positions and their neighbours before taking the
+//! snapshot. This version only accumulates across ticks, so tick 0 is cold and
+//! the measured benefit of the cache is a LOWER bound. A production claim
+//! wants `possess --script`, not this bench.
+//!
 //! ## Measured
 //!
 //! Date: 2026-08-22. Box: `ambrose` (`hostname -s`). Profile: `--release`.
@@ -354,7 +371,6 @@ fn run_rung(
     let npcs = derive_npcs(world, ctx, &mut ledger, agents, home_settlement);
     let n = npcs.len();
 
-    let terrain = LocaleTerrain::new(ctx);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
     let mut day = WorldTime::new(0.5).expect("0.5 is finite");
@@ -366,6 +382,22 @@ fn run_rung(
     for _ in 0..TICKS {
         let from = day;
         day = WorldTime::new(day.day() + 1.0).expect("day advance stays finite");
+        // THE CACHE PRODUCTION ALWAYS PASSES. `LocaleTerrain::new` hard-codes
+        // `cache: None`, so every drive's terrain read re-resolves room->cell
+        // through a full `NearestCellIndex` scan — which a profile of the
+        // previous version attributed 15% of the whole run to, an artifact of
+        // this harness rather than a property of the sim. `Session` passes
+        // `Some(&self.mesh_memo)` at every construction site; so does this now.
+        // A read-only SNAPSHOT, for the same borrow reason session.rs gives:
+        // `terrain` needs a shared reference while `step_with_occupancy` needs
+        // `&mut` on the original in the same call.
+        //
+        // NOT a full replication of production: `Session` also PREFILLS the
+        // memo each tick from the creatures' positions and their neighbours.
+        // This only accumulates across ticks, so tick 0 is cold and the
+        // measured benefit is a LOWER bound on what the cache is worth.
+        let mesh_snapshot = mesh_memo.clone();
+        let terrain = LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_snapshot));
         let sys = DriveMovements {
             npcs: npcs.clone(),
             from,
