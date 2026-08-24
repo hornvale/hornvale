@@ -233,9 +233,20 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 /// `BRANCHES_PER_SYSTEM * LEVELS_PER_BRANCH_CEILING * 3` (bands `0..=2`,
 /// `Undercroft..=Deeps`) — constant across every seed — while the number of
 /// addresses that EXIST is strictly less than that, and differs seed to seed.
-/// The loop stops one rung short of the fixture's own budget on purpose: every
-/// address it probes is in budget, so a `false` from `chamber_exists` can only
-/// mean the draw refused it, never that the gate did.
+/// The loop stops one rung short of the fixture's own budget on purpose:
+/// every address it probes is in budget, so the depth gate is excluded by
+/// construction and a `false` from `chamber_exists` isolates the remaining
+/// gates.
+///
+/// **The sentence this replaces read "a `false` can only mean the DRAW
+/// refused it, never that the gate did" — and it is now exactly inverted.**
+/// The Drift's spec §4.1 deleted the per-address existence draw, so within
+/// the budget a `false` can ONLY be a gate: the drawn branch width
+/// (`branch_count_of`) or the run's drawn length (`levels_in_branch`). The
+/// guard itself never depended on which, and remains sound — sparsity is
+/// still real and still seed-varying, because both surviving gates are drawn
+/// per `(cell, band)` and per run. Only the explanation was pointing at
+/// machinery that no longer exists.
 ///
 /// **The floor axis is swept, and it has to be** (The Stope, `chamber/v3`).
 /// This test's subject IS the lattice's size, so enumerating one floor and

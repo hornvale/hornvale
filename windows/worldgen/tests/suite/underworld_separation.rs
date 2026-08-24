@@ -108,6 +108,41 @@
 //! counts moved by −0.04 / +0.06 / −0.68%, which is a re-draw at the same
 //! `EXISTENCE_DENSITY`, not a change of reach.
 //!
+//! # THE H1 TABLE ABOVE IS PRE-DRIFT. RE-MEASURED 2026-08-23:
+//!
+//! ```text
+//! seed    caves  chambers   Undercroft  Shallows    Deeps  Underdeep  Nadir     worst rung
+//!   42      874      4512        30.6%     27.4%    24.6%       9.9%     7.6%        30.6%
+//!    7     1681      9353        28.6%     26.9%    17.5%      14.9%    12.1%        28.6%
+//! 1234     1266      7372        26.8%     25.1%    22.0%      14.2%    11.9%        26.8%
+//! ```
+//!
+//! **The verdict is unchanged — 5 of 5 rungs on every seed, worst share
+//! 30.6% against a 70% ceiling — and the counts fell about 20%.** The word
+//! `EXISTENCE_DENSITY` in the paragraph above names a constant that **no
+//! longer exists**: The Drift's spec §4.1 deleted the per-address existence
+//! coin outright rather than lowering it, so "a re-draw at the same
+//! `EXISTENCE_DENSITY`" is a sentence about a mechanism the tree does not
+//! have. It is left standing because it is a correct account of what happened
+//! between `chamber/v2` and `chamber/v3`, which is what it was written to
+//! explain — but it must not be read forward.
+//!
+//! **Why the counts FELL when the campaign made the underworld bigger.** Two
+//! changes push opposite ways and the second is larger. Deleting the coin
+//! roughly doubles what a realized branch contains; amendment A.3 then
+//! dropped `entrance` from the lattice, collapsing what had been one private
+//! sublattice per entrance into one shared lattice per system. This table is
+//! a floor-0 slice, where the coin never mattered much (every band's frozen
+//! range bottoms out at 1, so floor 0 exists in every run that exists), so it
+//! sees the collapse almost undiluted. Amendment A.5 states the general rule:
+//! **absolute chamber counts are not comparable across The Drift.** The
+//! comparable quantity is the per-system reachable share, and it is 100.00%.
+//!
+//! The remaining per-address filter is `branch < branch_count_of(..)`, whose
+//! authored weights give a mean width of 1.60 against `BRANCHES_PER_SYSTEM`
+//! of 4 — so realized-over-addressable now sits at 0.400 where it used to sit
+//! at the coin's 0.500, which is the whole of the ~20% drop.
+//!
 //! **Nothing else in this readout moved, and that is a finding rather than a
 //! coincidence.** Every H2 figure below — seated-rung histograms, the quartile
 //! overlap, the Jaccards, the distinct-value counts, `maybe_raid`'s

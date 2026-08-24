@@ -142,11 +142,13 @@
 //!   `Tallies::reachable` counted only the entrance level's component — false
 //!   even when it was written (amendment C.4, The Stope, already made level
 //!   a real adjacency axis) and load-bearing false after The Drift: seed 42
-//!   reads `reachable == chambers == 30272`. Severing just the band-descent
-//!   step drops that to 5,569, which is what proves the connection is real
-//!   rather than a coincidence of the walk never being asked to use it. See
-//!   `reachability_is_reported_and_is_at_most_existence`'s own doc for the
-//!   measured account.
+//!   reads `reachable == chambers == 30537`. Severing just the band-descent
+//!   step drops that to 4,148 while `chambers` stands still, which is what
+//!   proves the connection is real rather than a coincidence of the walk
+//!   never being asked to use it. That equality is now ASSERTED rather than
+//!   reported — see `reachability_is_reported_and_equals_existence`'s own
+//!   doc for why the `<=` it replaced could not fail, and why this file is
+//!   where it had to be fixed.
 //!
 //! **Cost.** One `BuildDepth::Terrain` world per seed, and a scan of the
 //! lattice over cave-bearing land cells. See `scripts/regenerate-artifacts.sh`
@@ -246,15 +248,33 @@ const TRANSECT_SYSTEMS: usize = 3;
 /// to hide a gate that stopped gating.
 const GLYPH_EXISTS: char = '#';
 
-/// The glyph for a floor inside its run's drawn length that the existence draw
-/// refused.
+/// The glyph for a floor inside its run's drawn length that was refused
+/// anyway — by the rock's own depth budget, which is the one gate left that
+/// can do it.
+///
+/// **It used to mean "the existence draw refused it", and that draw is
+/// gone** (The Drift, spec §4.1). `chamber_exists` now admits every address
+/// inside its five structural gates, so within a run's drawn length the only
+/// remaining refusal is `band > rung_rank(rung_at_depth(..))` — a cave whose
+/// depth budget stops short of this band. The glyph is kept, and kept
+/// distinct from [`GLYPH_PAST_RUN`] and [`GLYPH_PAST_BRANCH`], because the
+/// three refusals still have three different causes.
 const GLYPH_REFUSED: char = '.';
 
 /// The glyph for a floor **past** its run's drawn length — inside the
 /// lattice's own ceiling, so this readout still asks about it, and refused.
-/// A gate that stopped gating turns roughly half of these into
-/// [`GLYPH_EXISTS`], which is exactly the movement review's mutation proved
-/// the first version of this module could not produce.
+/// A gate that stopped gating turns these into [`GLYPH_EXISTS`], which is
+/// exactly the movement review's mutation proved the first version of this
+/// module could not produce.
+///
+/// **"Roughly half of these" was right and is now wrong, and the direction
+/// matters: this readout got MORE sensitive, not less.** The old sentence
+/// was counting on the 0.5 per-address existence coin surviving the run gate
+/// as well, so a broken run gate exposed a floor that then had only even
+/// odds of showing up as `#`. The Drift deleted that coin (spec §4.1), so a
+/// run gate that stopped gating now turns **every** one of these into
+/// [`GLYPH_EXISTS`]. The mutation this glyph exists to be caught by moves
+/// twice as much of the artifact as it did when the claim was written.
 const GLYPH_PAST_RUN: char = '_';
 
 /// The glyph for a floor of a **branch its system never realized** — past
@@ -1070,26 +1090,68 @@ mod tests {
         );
     }
 
-    /// **Reachability is reported, is nonzero, and is AT MOST existence** —
-    /// the quantity amendment C.4 moves, and the one an existence count
-    /// cannot see.
+    /// **Reachability is reported, is nonzero, and EQUALS existence** — the
+    /// campaign's headline, asserted in the one place a merge actually runs.
     ///
-    /// **No longer asserted STRICT, and that is a real finding, not a
-    /// loosened check.** This test's doc used to claim `passages_from` "does
-    /// not treat `floor` as an adjacency axis yet" — stale even before The
-    /// Drift, since amendment C.4 (The Stope) already made the vertical axis
-    /// a sequence. What actually kept `reachable < chambers` true before The
-    /// Drift was that every mouth still addressed into its OWN entrance's
-    /// private sublattice; on seed 42 that gap is now closed —
-    /// `reachable == chambers == 30272` measured after amendment A.3 dropped
-    /// `entrance` from the address and every mouth started seeding the SAME
-    /// shared, fully-connected lattice. Full reachability is therefore a
-    /// legitimate outcome now, not a broken gate. `reachable > chambers`
-    /// would still be the "walk or gate is broken" signal — a walk cannot
-    /// discover more than exists — so that is the direction this test still
-    /// treats as a red.
+    /// # THIS WAS `<=`, AND `<=` COULD NOT FAIL
+    ///
+    /// `reachable` is [`reachable_union`]'s flood fill: it seeds only on
+    /// mouths that `chamber_at` already admitted, and expands only through
+    /// `passages_from`, which retains its candidates on `chamber_exists`.
+    /// `chambers` counts exactly the addresses `chamber_at` admits. So
+    /// `reachable` is a **subset of** `chambers` by construction, and
+    /// `reachable <= chambers` is a theorem about the code rather than a
+    /// claim about the world — true under every possible connectivity
+    /// defect, including a walk that reaches nothing but its own doorways.
+    /// The `reachable > 0` guard above it excludes only the empty case.
+    ///
+    /// **Why that mattered enough to change behaviour at the close of a
+    /// campaign.** The strong form of this claim lives in
+    /// `stope_variety_probe.rs` and in `drift_reach_probe.rs`'s gated arms,
+    /// and both are `heavy`-tier; decision 0148 took the heavy tier off the
+    /// merge queue's phase list. This test is not heavy — it runs in the
+    /// merge's `gate` phase on every landing — so with `<=` here, **nothing
+    /// on any schedule asserted that underworld reachability is 100%**. The
+    /// campaign's own product had no gate that could notice it regressing.
+    ///
+    /// # WHY EQUALITY IS THE RIGHT CLAIM, NOT A CONVENIENT ONE
+    ///
+    /// It is entailed, not observed. Deleting the existence coin (spec §4.1)
+    /// makes every address inside `chamber_exists`'s five structural gates
+    /// exist; §4.5's two by-construction guarantees make every branch descend
+    /// and every branch below the top have a parent; amendment E's third
+    /// makes every top-band branch named by an aperture. Together those put
+    /// the whole of a system's lattice in one component containing its own
+    /// entrances. Seed 42 reads `reachable == chambers == 30537`, and the
+    /// other two panel seeds read 59,227 and 48,294 the same way.
+    ///
+    /// An earlier version of this doc quoted **30,272** — the figure measured
+    /// between Tasks 4 and 5, before the three per-branch draws were re-keyed
+    /// on band. `drift_reach_probe.rs` records the move; this file did not,
+    /// which is the ordinary way a number in prose goes stale.
+    ///
+    /// # IT FIRES
+    ///
+    /// Proved rather than argued, and re-measured when this assertion was
+    /// strengthened: neutralising the band-descent step in `passages_from`
+    /// (so a run's bottom level offers no child below) takes seed 42's
+    /// reachable count to **4,148 of 30,537** and reddens here with a real
+    /// assertion failure, not a compile error. `chambers` does not move under
+    /// that mutation, which is what makes the two sides separate
+    /// computations rather than one quantity compared with itself.
+    ///
+    /// The module doc above carried **5,569** for this same severing, and it
+    /// was not re-taken after Task 7 rewired the descent rule onto the drawn
+    /// band-transition edges. 4,148 is the measured figure on the finished
+    /// world.
+    ///
+    /// **What would legitimately move it** — and the only things that should:
+    /// `descents_from`'s edge draw, `passages_from`'s vertical or lateral
+    /// rules, `entrance_mouth`'s landing, `aperture_count_at`'s width floor
+    /// (amendment E.2's construction), or a return of a per-address existence
+    /// draw. A move with none of those touched is a connectivity defect.
     #[test]
-    fn reachability_is_reported_and_is_at_most_existence() {
+    fn reachability_is_reported_and_equals_existence() {
         let seed = Seed(42);
         let text = render_underworld(seed, &terrain_for(seed));
         let reachable: usize = text
@@ -1113,11 +1175,23 @@ mod tests {
             "no chamber is reachable from any entrance, so the reachability \
              figure witnesses nothing"
         );
-        assert!(
-            reachable <= chambers,
-            "reachable ({reachable}) exceeds existence ({chambers}) — a walk \
-             cannot discover more chambers than exist, so this means the \
-             graph walk or the existence gate is broken"
+        assert_eq!(
+            reachable, chambers,
+            "seed 42's underworld is no longer wholly reachable from its own \
+             entrances: the walk reaches {reachable} of {chambers} chambers. \
+             Since The Drift (spec §4.1, §4.5 and amendment E) these two are \
+             equal by construction, and this is the ONLY assertion of that on \
+             the merge queue's schedule — the strong forms in \
+             `stope_variety_probe` and `drift_reach_probe` are heavy-tier and \
+             decision 0148 took heavy off the merge phases. Four things move \
+             this legitimately: `descents_from`'s band-transition edge draw, \
+             `passages_from`'s vertical or lateral rules, where \
+             `entrance_mouth` lands a door, and `aperture_count_at`'s width \
+             floor (amendment E.2's construction). A move with none of those \
+             touched is a connectivity defect, not a figure to re-baseline. \
+             `reachable` GREATER than `chambers` cannot happen at all — the \
+             walk seeds on `chamber_at` and expands through `chamber_exists` \
+             — so a red here always means the walk fell short."
         );
     }
 

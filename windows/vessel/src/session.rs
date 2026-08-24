@@ -2109,18 +2109,39 @@ impl<'w> Session<'w> {
     /// Descend into the cave at this cell's entrance chamber (The Deep
     /// Realm, Task 5).
     ///
-    /// Mirrors `dive`, but the chamber lattice has a THIRD outcome `dive`
-    /// never needed. Task 3 measured that even where a cave exists, its own
-    /// entrance address (`branch = 0, band = 0, floor = 0`) resolves to an actual chamber
-    /// only 51.5% of the time — spec §3.4 rung 0, `Sealed`: "the void exists
-    /// and is unreachable," a real chamber a later dig could find, not a
-    /// defect. `dive`'s own doc warns what happens when a refusal doesn't
-    /// name what stopped you: it reads as a parse failure rather than a fact
-    /// about the world. So each of the three outcomes below is named:
+    /// Mirrors `dive`, but with an extra outcome `dive` never needed — TWO
+    /// today, and it was THREE until The Drift. `dive`'s own doc warns what
+    /// happens when a refusal doesn't name what stopped you: it reads as a
+    /// parse failure rather than a fact about the world. So each outcome
+    /// below is named:
     ///   1. no cave at this cell at all — say so;
-    ///   2. a cave, but its entrance resolves to nothing — say it is
-    ///      SEALED, not that there is simply nothing here;
-    ///   3. a chamber — descend, and say what the rock here is.
+    ///   2. a chamber — descend, and say what the rock here is.
+    ///
+    /// # THE THIRD OUTCOME WAS REMOVED, AND THE CODE STILL CARRIES ITS ARM
+    ///
+    /// A cave used to be **SEALED** when its own entrance address
+    /// (`branch = 0, band = Undercroft, level = 0`) resolved to no chamber —
+    /// spec §3.4 rung 0, *"the void exists and is unreachable"*, a real
+    /// chamber a later dig could find rather than a defect. The Deep Realm's
+    /// Task 3 measured that a cave's entrance resolved to an actual chamber
+    /// only **51.5%** of the time, which is the 0.5 per-address existence
+    /// coin showing through.
+    ///
+    /// **The Drift deleted that coin** (spec §4.1), and a sealed cave is now
+    /// **impossible rather than rare**: every cave in shape realizes
+    /// chambers, measured `systems_with_open_mouth == systems` on all three
+    /// panel seeds (874/874, 1681/1681, 1266/1266) and 0 of 48,316 caves
+    /// sealed over thirty worlds. Nathan's ruling (spec amendment B) was to
+    /// accept two outcomes and build **restricted passage** later — locked
+    /// doors, collapses magic can clear, boss encounters, and the rare
+    /// chamber that stays lost with something worth finding
+    /// (`MAP-restricted-passage`).
+    ///
+    /// The sealed branch below is therefore **live code on an unreachable
+    /// path**, kept deliberately: it is what restricted passage will speak
+    /// through, and `delve_has_two_distinguishable_outcomes` reddens the
+    /// moment a sealed cave becomes possible again while that test still
+    /// claims two.
     fn delve(&mut self) -> Turn {
         if self.inside.is_some() {
             return Turn::Out("There is no rock to delve into in here.".to_string());
@@ -2160,9 +2181,16 @@ impl<'w> Session<'w> {
     /// impractical to do from a test: `chamber_column_here` resolves the
     /// possession's terrain cell through the same fuzzy corner-weighted walk-
     /// band lookup `column_here` uses, and a terrain cell spans many, many
-    /// walk-band rooms, so hitting one particular cell (let alone one with a
-    /// SEALED cave specifically, ~48.5% of caves per Task 3's measurement)
-    /// by walking is not something a test should depend on landing.
+    /// walk-band rooms, so hitting one particular cell by walking is not
+    /// something a test should depend on landing.
+    ///
+    /// **The parenthesis this used to carry — "let alone one with a SEALED
+    /// cave specifically, ~48.5% of caves per Task 3's measurement" — is
+    /// dead twice over.** The Drift deleted the existence coin that produced
+    /// the 48.5%, so the sealed population is now 0 of 48,316 caves over
+    /// thirty worlds; and there is consequently no sealed cell to steer to at
+    /// all. The seam is still worth having for the reason its first sentence
+    /// gives, and it is what restricted passage will be tested through.
     fn delve_at(&mut self, cell: hornvale_kernel::CellId, cave: hornvale_terrain::Cave) -> Turn {
         let addr = hornvale_worldgen::chamber::ChamberAddr {
             cell,

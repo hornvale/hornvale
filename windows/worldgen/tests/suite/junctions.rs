@@ -55,10 +55,15 @@ use hornvale_worldgen::character::{bands_of, character_at};
 /// globe.
 const LEVEL: u32 = 6;
 
-/// How many systems `the_projection_ignores_branch_and_level` walks
-/// in full. A cost bound, not a claim about the population — that test's own
-/// doc says why, and its non-vacuity assertion fails if this is ever set so
-/// low that nothing is checked.
+/// How many systems [`the_projection_ignores_level`] walks in full. A cost
+/// bound, not a claim about the population — that test's own doc says why,
+/// and its non-vacuity assertion fails if this is ever set so low that
+/// nothing is checked.
+///
+/// (It cited `the_projection_ignores_branch_and_level` until Task 9's review.
+/// That name was real — minted by Task 4, retired by Task 7 when `branch`
+/// stopped being ignored — but a doc citing a symbol the tree no longer has
+/// sends a reader looking for a test that is not there.)
 const PROJECTION_SYSTEMS: usize = 40;
 
 /// Seed-42 terrain built through the ordinary genesis path — the same
@@ -327,9 +332,9 @@ fn nowhere_has_no_junctions() {
 ///
 /// **`branch` was on this list until The Drift's Task 7 and is not any
 /// more** (spec §4.6), which is why this test was renamed rather than
-/// edited: `the_projection_ignores_branch_and_level` names a property that
-/// is now false, and a test whose name asserts the opposite of what it
-/// checks is worse than no test. The branch half has its own test below,
+/// edited: its former name, `the_projection_ignores_branch_and_level`, names
+/// a property that is now false, and a test whose name asserts the opposite
+/// of what it checks is worse than no test. The branch half has its own test below,
 /// `the_projection_is_scoped_to_the_branch`, which demands the two actually
 /// disagree somewhere.
 ///

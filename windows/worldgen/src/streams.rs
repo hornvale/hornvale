@@ -84,16 +84,31 @@ hornvale_kernel::stream_labels! {
     /// rather than landing silently under `/v1`. `chamber/run-floors/v1` is
     /// retired and must never be reused.
     ///
-    /// **A SEPARATE ROOT LEG FROM [`CHAMBER`], AND THAT IS THE COLLISION
-    /// ARGUMENT.** A run key (`cell/branch/band`) is a strict prefix of a
-    /// chamber key (`cell/branch/band/level`), so the two strings can never
-    /// be equal — but prefix-inequality is a property of today's spelling,
-    /// and a later campaign that made `level` optional in the key would
-    /// break it silently. Deriving the run draw under its own permanent
-    /// label instead means the two dynamic legs hang off **different parent
-    /// seeds**, so even a byte-identical key string yields a different
-    /// stream. `the_run_leg_and_the_chamber_leg_cannot_collide` in
-    /// `crate::chamber` asserts exactly that, on the same string.
+    /// **A SEPARATE ROOT LEG, AND SINCE TASK 5 THAT IS THE WHOLE OF THE
+    /// COLLISION ARGUMENT RATHER THAN A BELT-AND-BRACES HALF OF IT.**
+    ///
+    /// This doc used to rest the argument on prefixes: a run key
+    /// (`cell/branch/band`) is a strict prefix of a chamber key
+    /// (`cell/branch/band/level`), so the two strings can never be equal, and
+    /// the separate parent was the durable backstop for a later campaign that
+    /// made `level` optional. **The prefix half is still true of [`CHAMBER`]
+    /// and is no longer the interesting case.** After The Drift's Task 5
+    /// re-keyed the per-branch draws on band, `chamber::run_key` and
+    /// `character::band_branch_key` both format `cell/branch/rung_name(band)`
+    /// — **byte-identical strings, not a prefix relation.** They were
+    /// different shapes before that task; nothing announced that they had
+    /// converged.
+    ///
+    /// So `RUN_FLOORS`, [`BRANCH_CHARACTER`] and [`BRANCH_BARRIER`] are three
+    /// legs deriving from the *same* dynamic key, and the only thing keeping
+    /// their three draws apart is that they hang off **different parent
+    /// seeds**. That is sound — and it means the parent separation is now
+    /// load-bearing rather than defensive, so re-parenting any of these legs
+    /// is a save-format change even if no key string moves.
+    /// `the_run_leg_and_the_chamber_leg_cannot_collide` in `crate::chamber`
+    /// asserts the parent property directly, by handing the same string to
+    /// both legs; `the_run_draw_travels_the_run_floors_leg_and_not_the_chamber_leg`
+    /// is what holds the shipped path to it.
     ///
     /// What else changes with this leg: before it every in-budget run
     /// admitted all [`crate::chamber::LEVELS_PER_BRANCH_CEILING`] levels, and
