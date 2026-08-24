@@ -402,6 +402,7 @@
 - [The Portolan, part II — the world map](./chronicle/the-portolan-world-map.md)
 - [The Forebay](./chronicle/the-forebay.md)
 - [The Lexicon of Place](./chronicle/the-lexicon-of-place.md)
+- [The Word](./chronicle/the-word.md)
 
 # Appendix: The Frontier
 
