@@ -835,11 +835,12 @@ mod tests {
         // Each fact line is tagged with the domain that asserted it. Under The
         // Living Community epoch the flagship settlement's
         // is-settlement/population/cell-id facts are committed by the
-        // deep-history bake (tag "(history/bake/v2)" since The Contour bumped
-        // the label — decision 0006, an epoch suffix, never a rename) rather
-        // than the settlement domain.
+        // deep-history bake (tag "(history/bake/vN)" — The Contour bumped the
+        // label to v2, The Granary to v3; decision 0006, an epoch suffix,
+        // never a rename) rather than the settlement domain. Match the prefix
+        // so the next epoch suffix doesn't repeat this edit.
         assert!(
-            out.contains("(history/bake/v2)") || out.contains("(terrain)"),
+            out.contains("(history/bake/") || out.contains("(terrain)"),
             "expected a domain-tagged fact line for {subject:?}: {out}"
         );
     }

@@ -5196,7 +5196,7 @@ const RAID_FLOOR: usize = 5;
 /// whether that phase falls in the DEPLETED half of the victim site's
 /// authored harvest curve. The curve is keyed exactly as [`Bake`] keys it at
 /// open — latitude off the geosphere, coarse biome class off the climate's
-/// biome map — via the same public [`crate::harvest::Curve`] the bake
+/// biome map — via the same public [`hornvale_worldgen::harvest::Curve`] the bake
 /// consumes, so these columns measure the seasonality the granary actually
 /// integrates. Records without a raid hand or an end stamp contribute
 /// nothing; a site whose latitude or biome cannot key a curve contributes
