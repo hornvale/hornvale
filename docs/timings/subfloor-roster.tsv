@@ -2690,6 +2690,7 @@ hornvale-worldgen::hornvale_worldgen$chamber::tests::every_branch_has_at_least_o
 hornvale-worldgen::hornvale_worldgen$chamber::tests::every_component_of_the_band_descent_key_is_load_bearing
 hornvale-worldgen::hornvale_worldgen$chamber::tests::every_component_of_the_run_key_is_load_bearing
 hornvale-worldgen::hornvale_worldgen$chamber::tests::every_rung_has_a_distinct_spelling
+hornvale-worldgen::hornvale_worldgen$chamber::tests::every_top_band_branch_is_named_by_an_entrance
 hornvale-worldgen::hornvale_worldgen$chamber::tests::made_is_absorbing_over_every_default_and_override_combination
 hornvale-worldgen::hornvale_worldgen$chamber::tests::no_passage_is_a_sideways_step_between_branches
 hornvale-worldgen::hornvale_worldgen$chamber::tests::nothing_descends_from_the_bottom_or_the_top_of_the_ladder

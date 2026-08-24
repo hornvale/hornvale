@@ -857,28 +857,65 @@ pub struct EntranceMouth {
     pub floor: u8,
 }
 
-/// How many apertures one cave system opens to the surface (C.3) — derived,
-/// not carried: terrain's cave model has no aperture count, so the plural
-/// lives here at the composition root.
+/// How many apertures one cave system opens to the surface (C.3, amended by
+/// spec E.2) — derived, not carried: terrain's cave model has no aperture
+/// count, so the plural lives here at the composition root.
 ///
-/// Weighted hard toward 1 (70% one entrance, then 20% / 7% / 3%), mirroring
-/// C.1's shape judgement for branches: mostly one door, occasionally more.
-/// These weights are the initial authoring choice, stated here and measured
-/// by `some_system_draws_more_than_one_entrance` and the panel artifact —
-/// they were not fitted to land a distribution, and must not be retuned to
-/// move one.
+/// # IT IS NO LONGER A FREE DRAW, AND THAT IS AMENDMENT E.2's WHOLE COST
+///
+/// The aperture set is the **union of two sets**, deduplicated by index the
+/// way [`descent_edges`] dedups its own union of two surjections:
+///
+/// * a GUARANTEED set — one aperture per branch the top band realizes, so
+///   that every top-band branch is named by a door (E.2); and
+/// * a FREE set, whose size is the weighted draw this leg has always taken:
+///   70% one aperture, then 20% / 7% / 3%.
+///
+/// The first `width` indices serve both sets at once, so a system opens
+/// `max(free, width)` apertures. A system with fewer apertures than top-band
+/// branches could not satisfy E.2 at all, which is why the count can no
+/// longer be independent of the width.
+///
+/// The weights are unchanged and are still the initial authoring choice —
+/// they were not fitted to land a distribution and must not be retuned to
+/// move one — but the SHIPPED distribution is now those weights taken
+/// pointwise-maximum against [`crate::character::branch_count_of`]'s, so
+/// `some_system_draws_more_than_one_entrance` and the panel artifact measure
+/// the composition rather than the weights alone.
 ///
 /// Keyed on the SYSTEM's cell alone under [`crate::streams::ENTRANCE_COUNT`]
 /// — no entrance index, because the count is a fact about the system as a
 /// whole and an entrance index cannot be named before this draw answers.
+///
+/// **Epoch v2** (spec E.4): the leg's answer is the FREE set's size, not the
+/// system's aperture count — a different quantity under an unchanged key,
+/// which is exactly the case an epoch exists to record. See
+/// [`crate::streams::ENTRANCE_COUNT`].
 /// type-audit: bare-ok(count: return)
 pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
+    aperture_count_at(seed, cell, top_band_width(seed, cell))
+}
+
+/// The top band's drawn branch width — the ONE read [`entrance_count`] and
+/// [`entrance_mouth`] share, so the two can never disagree about how many
+/// branches there are to cover.
+fn top_band_width(seed: Seed, cell: CellId) -> u8 {
+    crate::character::branch_count_of(seed, cell, top_band())
+}
+
+/// [`entrance_count`] at an **explicitly given** top-band width — the seam
+/// spec amendment E.2's guarantee is asserted through, exactly as
+/// [`descent_edges`] takes both band widths as parameters rather than
+/// reading them. A guarantee constructed over every width the lattice admits
+/// is a guarantee; the same guarantee found absent on a seed panel is
+/// evidence about that panel (spec §6).
+fn aperture_count_at(seed: Seed, cell: CellId, width: u8) -> u8 {
     let r = seed
         .derive(crate::streams::ENTRANCE_COUNT)
         .derive(StreamLabel::dynamic(&format!("{}", cell.0)))
         .stream()
         .next_f64();
-    if r < 0.70 {
+    let free = if r < 0.70 {
         1
     } else if r < 0.90 {
         2
@@ -886,7 +923,11 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
         3
     } else {
         4
-    }
+    };
+    // The union, deduplicated by index: the first `width` apertures are both
+    // the guaranteed set and the head of the free set, so the system opens
+    // whichever of the two is larger. No loop, no repair, no order.
+    free.max(width)
 }
 
 /// Which level of the system's lattice one entrance opens into (C.3).
@@ -898,12 +939,23 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
 /// address every existing caller already uses.
 ///
 /// **EVERY MOUTH NOW LANDS IN THE TOP HABITATION BAND, AT LEVEL 0** (The
-/// Drift, spec §4.6). Entrance 0 takes branch 0; every other entrance draws
-/// one side branch of that band (uniform over
-/// `1..branch_count_of(cell, top)`; a width-one band has none, so its extra
-/// doors fall back to the head — two doors into the same hall, a legitimate
-/// C.3 reading). A door is a hole in the ground: it opens on the shallowest
-/// thing under it, and everything deeper is reached by walking.
+/// Drift, spec §4.6). A door is a hole in the ground: it opens on the
+/// shallowest thing under it, and everything deeper is reached by walking.
+///
+/// **AND EVERY BRANCH OF THAT BAND IS NAMED BY ONE** (Task 7b, spec
+/// amendment E.2). Apertures `0..width` share out the band's `width`
+/// branches bijectively — index 0 takes the head, the rest draw from what is
+/// left ([`shared_out_branch`]) — and [`entrance_count`] never returns fewer
+/// than `width`, so the mouth-to-branch map is SURJECTIVE by construction.
+/// Apertures beyond `width` draw a side branch freely on top, uniform over
+/// `1..width`; a width-one band has no side branch at all, so its extra doors
+/// fall back to the head — two doors into the same hall, a legitimate C.3
+/// reading.
+///
+/// The alternative — draw freely, then add mouths until every branch is
+/// covered — is rejected for E.3's reason and §4.5's: a repair pass's answer
+/// depends on the order the shortfalls were noticed in, which is a
+/// determinism hazard before it is an inelegance.
 ///
 /// # THIS RETIRES A LIVE DEFECT, AND THE DEFECT WAS HALF OF ALL SIDE DOORS
 ///
@@ -929,37 +981,137 @@ pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
 /// Undercroft, moves every door without an edit here.
 ///
 /// Keyed on the entrance's place `(cell, entrance index)` under
-/// [`crate::streams::ENTRANCE_MOUTH`] (decision 0102). The draw itself is
-/// unchanged by this task — same leg, same key, same range — so a side
-/// door's BRANCH is the branch it was before; only where that branch is
-/// entered has moved.
+/// [`crate::streams::ENTRANCE_MOUTH`] (decision 0102), **with the role that
+/// place is playing appended** — see [`mouth_key`].
+///
+/// **Epoch v2** (spec E.4): the key gained that role word and the
+/// sharing-out draw ranges over a shrinking pool rather than over the side
+/// branches, so both the key and the meaning moved. Every door in every
+/// world moves with them.
 /// type-audit: bare-ok(index: entrance)
 pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
-    const HEAD: EntranceMouth = EntranceMouth {
-        branch: 0,
-        band: 0,
-        floor: 0,
-    };
-    if entrance == 0 {
-        return HEAD;
-    }
-    let top = top_band();
-    let branches = crate::character::branch_count_of(seed, cell, top);
-    if branches <= 1 {
-        // No side branch exists to open into: this door joins the head.
-        return HEAD;
-    }
-    let mut stream = seed
-        .derive(crate::streams::ENTRANCE_MOUTH)
-        .derive(StreamLabel::dynamic(&format!("{}/{}", cell.0, entrance)))
-        .stream();
-    let picked = stream.range_u32(1, u32::from(branches - 1));
-    let branch = u8::try_from(picked).expect("range_u32(1, branches-1) fits a u8");
     EntranceMouth {
-        branch,
-        band: rung_rank(top).expect("a habitation band always has a rank"),
+        branch: aperture_branch_at(seed, cell, entrance, top_band_width(seed, cell)),
+        band: rung_rank(top_band()).expect("a habitation band always has a rank"),
         floor: 0,
     }
+}
+
+/// [`entrance_mouth`]'s branch at an **explicitly given** top-band width —
+/// [`aperture_count_at`]'s twin, and the other half of the seam E.2's
+/// guarantee is constructed over.
+///
+/// The two aperture sets [`entrance_count`] unions are separated here by
+/// index, and nothing else decides which is which:
+///
+/// * `0` is the main line's head by definition, with no draw;
+/// * `1..width` are the GUARANTEED apertures, which share out the remaining
+///   side branches one each ([`shared_out_branch`]) — so apertures
+///   `0..width` name branches `0..width` bijectively, and E.2 holds by
+///   construction rather than by a coverage check;
+/// * `width..` are the FREE apertures, each drawing a side branch on its
+///   own, independently and possibly onto a branch another door already
+///   opens on.
+fn aperture_branch_at(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+    if entrance == 0 || width <= 1 {
+        // Entrance 0 is the main line's head by definition; and where no
+        // side branch exists to open into, every other door joins it — a
+        // width-one band is entered by the head alone, which satisfies E.2
+        // trivially.
+        return 0;
+    }
+    if entrance < width {
+        return shared_out_branch(seed, cell, entrance, width);
+    }
+    let picked = seed
+        .derive(crate::streams::ENTRANCE_MOUTH)
+        .derive(StreamLabel::dynamic(&mouth_key(
+            cell,
+            entrance,
+            ApertureRole::Free,
+        )))
+        .stream()
+        .range_u32(1, u32::from(width - 1));
+    u8::try_from(picked).expect("range_u32(1, width-1) fits a u8")
+}
+
+/// Which side branch one of the GUARANTEED apertures takes: aperture
+/// `1..width` draws from the branches `1..width` that the apertures before it
+/// have not already spoken for.
+///
+/// **This is a permutation, drawn — not an assignment, and not a repair.**
+/// Which door opens on which branch is still a fact about the world; what is
+/// no longer possible is for two doors to take the same branch and leave a
+/// third unentered. The draw ORDER is the aperture INDEX, a fixed coordinate
+/// of the lattice, so the answer for one aperture is the same whoever asks
+/// and in whatever order (decision 0102) — unlike a draw-then-patch, whose
+/// answer would depend on which shortfall a repair pass noticed first.
+///
+/// The pool cannot run dry: it starts at `width - 1` branches and the caller
+/// guarantees `entrance < width`, so step `e` still has `width - e >= 1`
+/// left. `expect` states that rather than masking it.
+fn shared_out_branch(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+    debug_assert!(
+        entrance >= 1 && entrance < width,
+        "shared_out_branch is for the guaranteed apertures only"
+    );
+    let mut pool: Vec<u8> = (1..width).collect();
+    let mut taken = 0u8;
+    for e in 1..=entrance {
+        let last = u32::try_from(pool.len())
+            .expect("the pool is at most BRANCHES_PER_SYSTEM wide")
+            .checked_sub(1)
+            .expect("entrance < width leaves a branch unspoken-for at every step");
+        let picked = seed
+            .derive(crate::streams::ENTRANCE_MOUTH)
+            .derive(StreamLabel::dynamic(&mouth_key(
+                cell,
+                e,
+                ApertureRole::Share,
+            )))
+            .stream()
+            .range_u32(0, last);
+        let index = usize::try_from(picked).expect("range_u32(0, len-1) indexes the pool");
+        taken = pool.remove(index);
+    }
+    taken
+}
+
+/// Which of the two questions one aperture's mouth draw asks — the word its
+/// key ends with, the discipline [`DescentRole`] already applies to a band
+/// transition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ApertureRole {
+    /// One of the apertures sharing out the top band's branches one each:
+    /// the draw indexes the branches not yet spoken for.
+    Share,
+    /// An aperture beyond that sharing-out: the draw names any side branch,
+    /// freely and independently.
+    Free,
+}
+
+impl ApertureRole {
+    /// The word this role is spelled by in an entrance-mouth key.
+    fn word(self) -> &'static str {
+        match self {
+            ApertureRole::Share => "share",
+            ApertureRole::Free => "free",
+        }
+    }
+}
+
+/// The one place the `chamber/entrance-mouth/v2` key is spelled — the
+/// aperture's place (cell, index) with its role appended, and its own
+/// save-format contract.
+///
+/// **The role is a question, not an ordinal** — the same argument
+/// [`descent_key`] makes. The two draws range over different populations (a
+/// shrinking pool of unspoken-for branches; every side branch), and whether
+/// a given index asks one or the other depends on the top band's width, so
+/// one key answering both would mean one stream serving two questions at two
+/// widths. Spelling the role out makes them different keys instead.
+fn mouth_key(cell: CellId, entrance: u8, role: ApertureRole) -> String {
+    format!("{}/{entrance}/{}", cell.0, role.word())
 }
 
 /// The shallowest habitation band — where every entrance lands (spec §4.6).
@@ -2836,10 +2988,21 @@ mod tests {
     /// band, so `band` and `floor` are no longer drawn at all. Cells 9 and
     /// 31 were already `0/0` (the head, and a width-one fallback), which is
     /// why they do not move.
+    ///
+    /// **Re-baselined a THIRD time by Task 7b** (spec amendment E.2), and
+    /// this time BOTH legs moved, because both took an epoch — a new label
+    /// is a new parent seed, so every raw draw is different even where the
+    /// dynamic key reads the same. Counts: 1/2/3/1 became 2/4/1/2. Mouths:
+    /// cell 6 is a width-FOUR system, so its three side doors now share out
+    /// branches 3, 2 and 1 — a drawn permutation, not an assignment, which
+    /// is why aperture 1 does not simply take branch 1. Cells 31 and 17 are
+    /// width-one and keep the head. Cell 6's aperture 2 is pinned as well as
+    /// its aperture 1: a single row could be satisfied by a plain
+    /// `branch = entrance` map, and two of them from the same system cannot.
     #[test]
     fn the_entrance_draws_are_byte_pinned_for_known_keys() {
         let seed = Seed(42);
-        for (cell, expected) in [(9u32, 1u8), (6, 2), (17, 3), (5, 1)] {
+        for (cell, expected) in [(9u32, 2u8), (6, 4), (17, 1), (5, 2)] {
             assert_eq!(
                 entrance_count(seed, CellId(cell)),
                 expected,
@@ -2860,7 +3023,16 @@ mod tests {
                 6,
                 1,
                 EntranceMouth {
-                    branch: 1,
+                    branch: 3,
+                    band: 0,
+                    floor: 0,
+                },
+            ),
+            (
+                6,
+                2,
+                EntranceMouth {
+                    branch: 2,
                     band: 0,
                     floor: 0,
                 },
@@ -2896,13 +3068,23 @@ mod tests {
     /// the Task 2/3 pattern. Arm 1: the shipped answer equals its declared
     /// leg everywhere probed. Arm 2: it differs from at least one sibling
     /// leg somewhere, so arm 1 cannot pass under a re-parented draw.
+    ///
+    /// **Both halves re-derive the COMPOSITION now, not the draw alone**
+    /// (Task 7b, spec E.2). The shipped count is the leg's free draw raised
+    /// to the top band's width, and the shipped mouth for aperture 1 is an
+    /// index into the pool of unspoken-for branches; a witness that
+    /// re-derived only the raw draw would be comparing two different
+    /// quantities and would fail for a reason that has nothing to do with
+    /// which leg the draw travelled.
     #[test]
     fn each_entrance_draw_travels_its_own_leg_and_not_a_siblings() {
         let seed = Seed(90210);
         // --- entrance count ---
         let mut count_disagreed = false;
         for c in 0u32..40 {
-            let shipped = entrance_count(seed, CellId(c));
+            let cell = CellId(c);
+            let width = crate::character::branch_count_of(seed, cell, top_band());
+            let shipped = entrance_count(seed, cell);
             let own = seed
                 .derive(crate::streams::ENTRANCE_COUNT)
                 .derive(StreamLabel::dynamic(&format!("{}", c)))
@@ -2910,7 +3092,7 @@ mod tests {
                 .next_f64();
             assert_eq!(
                 shipped,
-                count_from_raw(own),
+                count_from_raw(own).max(width),
                 "entrance_count does not travel the ENTRANCE_COUNT leg at cell {c}"
             );
             let sibling = seed
@@ -2918,7 +3100,7 @@ mod tests {
                 .derive(StreamLabel::dynamic(&format!("{}/0", c)))
                 .stream()
                 .next_f64();
-            if count_from_raw(sibling) != shipped {
+            if count_from_raw(sibling).max(width) != shipped {
                 count_disagreed = true;
             }
         }
@@ -2930,23 +3112,28 @@ mod tests {
         // --- entrance mouth ---
         let mut mouth_disagreed = false;
         for c in 0u32..200 {
-            if entrance_count(seed, CellId(c)) < 2 {
-                continue;
-            }
+            let cell = CellId(c);
             // A width-two system cannot disagree: its single side branch is
             // the only thing either leg could pick. Only a wider system
-            // discriminates the legs.
-            if crate::character::branch_count_of(seed, CellId(c), Band::Undercroft) < 3 {
+            // discriminates the legs. Aperture 1 is a `share` draw at every
+            // width above one, and `entrance_count` now guarantees it
+            // exists there, so no count filter is needed.
+            let width = crate::character::branch_count_of(seed, cell, top_band());
+            if width < 3 {
                 continue;
             }
-            let shipped = entrance_mouth(seed, CellId(c), 1);
+            let shipped = entrance_mouth(seed, cell, 1);
             let own = seed
                 .derive(crate::streams::ENTRANCE_MOUTH)
-                .derive(StreamLabel::dynamic(&format!("{}/1", c)))
+                .derive(StreamLabel::dynamic(&mouth_key(
+                    cell,
+                    1,
+                    ApertureRole::Share,
+                )))
                 .stream();
             assert_eq!(
                 Some(shipped),
-                mouth_from_raw(seed, CellId(c), own),
+                mouth_from_raw(seed, cell, own),
                 "entrance_mouth does not travel the ENTRANCE_MOUTH leg at cell {c}"
             );
             // The sibling leg was `BRANCH_ROOT` until The Drift's Task 7
@@ -2955,9 +3142,13 @@ mod tests {
             // arm 1 cannot pass by luck under a re-parented draw.
             let sib = seed
                 .derive(crate::streams::ENTRANCE_COUNT)
-                .derive(StreamLabel::dynamic(&format!("{}/1", c)))
+                .derive(StreamLabel::dynamic(&mouth_key(
+                    cell,
+                    1,
+                    ApertureRole::Share,
+                )))
                 .stream();
-            if Some(shipped) != mouth_from_raw(seed, CellId(c), sib) {
+            if Some(shipped) != mouth_from_raw(seed, cell, sib) {
                 mouth_disagreed = true;
             }
         }
@@ -2979,10 +3170,16 @@ mod tests {
         }
     }
 
-    /// Re-derives the mouth from a caller-supplied first-draw stream — the
-    /// leg witness's comparison half. The side-branch pick comes from the
-    /// given stream; where it lands is not drawn at all any more (The Drift,
-    /// Task 7: every mouth opens at level 0 of the top habitation band).
+    /// Re-derives **aperture 1's** mouth from a caller-supplied first-draw
+    /// stream — the leg witness's comparison half. Where a mouth lands is not
+    /// drawn at all any more (The Drift, Task 7: every mouth opens at level 0
+    /// of the top habitation band), so only the branch comes from the stream.
+    ///
+    /// Aperture 1 is the FIRST of the sharing-out apertures (Task 7b), whose
+    /// pool is still the whole side-branch range `1..width` — nothing has
+    /// been removed from it yet — so the draw indexes `0..width - 1` and the
+    /// branch is one more than the index. That equivalence holds for
+    /// aperture 1 alone, which is why this helper takes no aperture index.
     fn mouth_from_raw(
         seed: Seed,
         cell: CellId,
@@ -2999,13 +3196,63 @@ mod tests {
                 floor: 0,
             });
         }
-        let picked = stream.range_u32(1, u32::from(branches - 1));
-        let branch = u8::try_from(picked).ok()?;
+        let index = stream.range_u32(0, u32::from(branches - 2));
+        let branch = u8::try_from(index + 1).ok()?;
         Some(EntranceMouth {
             branch,
             band: rung_rank(top)?,
             floor: 0,
         })
+    }
+
+    // --- Task 7b: the top band is entered (spec amendment E.2) ---
+
+    /// The branches every aperture of one system opens on, at an
+    /// **explicitly given** top-band width — the seam E.2's guarantee is
+    /// asserted through, the way §4.5's two are asserted through
+    /// [`descent_edges_for`].
+    ///
+    /// A one-line composition of the two shipped width-parameterised halves,
+    /// because the probed path must be the shipped path: a test-only
+    /// reimplementation would assert a guarantee about code no world runs.
+    fn aperture_branches_at(seed: Seed, cell: CellId, width: u8) -> std::collections::BTreeSet<u8> {
+        (0..aperture_count_at(seed, cell, width))
+            .map(|entrance| aperture_branch_at(seed, cell, entrance, width))
+            .collect()
+    }
+
+    /// GUARANTEE 3 (spec amendment E.2): **every branch in the top band is
+    /// named by at least one entrance.**
+    ///
+    /// §4.5's second guarantee — every branch has a parent — is *vacuous* at
+    /// the top band, which has no band above it to hang from. So a top-band
+    /// branch no door landed on, and that no lower branch links back to, was
+    /// orphaned: measured at 120 of seed 42's 123 unreached levels, all in
+    /// branches with no open mouth. With this third guarantee the three
+    /// together make a system's whole lattice one reachable component by
+    /// construction.
+    ///
+    /// **Constructed over every width the top band can realize**, and over
+    /// several cells, for the reason [`every_branch_has_at_least_one_parent`]
+    /// states: `branch_count_of` is weighted 60% toward width 1, where this
+    /// guarantee is trivial, so a seed-panel scan would spend nearly all its
+    /// evidence on the one case that cannot fail.
+    #[test]
+    fn every_top_band_branch_is_named_by_an_entrance() {
+        let seed = Seed(42);
+        for cell in [0u32, 5, 6, 7, 9, 17, 31, 4096] {
+            for width in 1..=BRANCHES_PER_SYSTEM {
+                let named = aperture_branches_at(seed, CellId(cell), width);
+                for branch in 0..width {
+                    assert!(
+                        named.contains(&branch),
+                        "cell {cell}, top-band width {width}: branch {branch} is named \
+                         by no entrance, so nothing enters it and everything hanging \
+                         beneath it is orphaned (spec amendment E.2). Named: {named:?}"
+                    );
+                }
+            }
+        }
     }
 
     // --- Band-transition edges (The Drift, Task 6; spec §4.5) ---

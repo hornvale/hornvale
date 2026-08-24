@@ -156,14 +156,42 @@ hornvale_kernel::stream_labels! {
     /// [`RUN_FLOORS`]'s doc states: additive, perturbs no existing draw,
     /// and the `/v1` epoch discipline applies to any later re-shaping of
     /// the key.
-    ENTRANCE_COUNT = "chamber/entrance-count/v1" => "how many surface apertures one cave system opens, keyed on cell";
-    /// Which floor of the system's lattice one entrance opens into (The
-    /// Stope, Task 5; amendment C.3) — main-line floor 0, or a branch's
-    /// root floor (C.2). Keyed on the ENTRANCE's place: cell and entrance
+    ///
+    /// **Epoch v2 (The Drift, Task 7b, spec amendment E.2/E.4).** The KEY is
+    /// unchanged — still the system's cell alone — and the epoch is real
+    /// anyway, because what the leg ANSWERS changed. It used to be the
+    /// system's aperture count outright; it is now the size of the FREE
+    /// aperture set only, which `crate::chamber::entrance_count` then takes
+    /// pointwise-maximum against the top band's drawn branch width so that
+    /// every top-band branch is named by a door (E.2). A system with fewer
+    /// apertures than top-band branches cannot satisfy that guarantee, so
+    /// the count can no longer be independent of the width. One key, two
+    /// different quantities across the boundary, is precisely the
+    /// discontinuity an epoch records — and unlike `CHAMBER` (amendment A.6,
+    /// which stays at v3 because nothing derives from it) this is a live
+    /// production leg that every world reads. `chamber/entrance-count/v1` is
+    /// retired and must never be reused.
+    ENTRANCE_COUNT = "chamber/entrance-count/v2" => "how large one cave system's FREE aperture set is, keyed on cell (the shipped count is this raised to the top band's branch width)";
+    /// Which branch of the top habitation band one aperture opens on (The
+    /// Stope, Task 5, amendment C.3; re-shaped by The Drift, Task 7b,
+    /// amendment E.2). Keyed on the APERTURE's place — cell and aperture
     /// index, a place in the fixed lattice and never a generation ordinal
-    /// (decision 0102). Same separate-root-leg and `/v1` discipline as
-    /// [`ENTRANCE_COUNT`].
-    ENTRANCE_MOUTH = "chamber/entrance-mouth/v1" => "which floor of the lattice one entrance opens into, keyed on (cell, entrance)";
+    /// (decision 0102) — **plus the role that place is playing**. Same
+    /// separate-root-leg discipline as [`ENTRANCE_COUNT`].
+    ///
+    /// **Epoch v2 (The Drift, Task 7b, spec amendment E.2/E.4)**, and here
+    /// both halves moved. The key gained a role word (`share` / `free`, the
+    /// discipline [`BAND_DESCENT`] already applies to a band transition),
+    /// and the two roles range over different populations: a `share` draw
+    /// indexes the branches not yet spoken for by a lower-indexed aperture —
+    /// which is what makes apertures `0..width` a bijection onto branches
+    /// `0..width`, and E.2 true by construction — while a `free` draw names
+    /// any side branch, as every mouth draw did before this task. Whether a
+    /// given index asks one question or the other depends on the top band's
+    /// width, so ONE key would have served two questions at two widths; the
+    /// role word is what keeps them apart. `chamber/entrance-mouth/v1` is
+    /// retired and must never be reused.
+    ENTRANCE_MOUTH = "chamber/entrance-mouth/v2" => "which top-band branch one aperture opens on, keyed on (cell, aperture, role)";
     /// Which branches of an adjacent band a branch connects to (The Drift,
     /// Task 6; spec §4.5) — the edges descent actually travels, drawn so
     /// that "every branch above has a child" and "every branch below has a

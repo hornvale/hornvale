@@ -224,7 +224,7 @@
 //!
 //! # MEASURED VALUES — AFTER TASK 7, 2026-08-23 (the descent rule rewritten
 //! # onto the band-transition edges; the lateral rule deleted; entrances
-//! # landed in top-band branches — spec §4.6) — THE CURRENT TREE
+//! # landed in top-band branches — spec §4.6)
 //!
 //! ```text
 //! seed 42
@@ -291,6 +291,70 @@
 //! reported here because it is real and has a mechanism, not because it
 //! breaches anything.
 //!
+//! # MEASURED VALUES — AFTER TASK 7b, 2026-08-23 (every top-band branch is
+//! # named by an entrance — spec amendment E.2) — THE CURRENT TREE
+//!
+//! ```text
+//! seed 42
+//!   systems 874    levels 30537   reachable 30537   entrances 1626 drawn / 1626 open
+//!   systems with an open mouth 874
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (30537 of 30537)
+//!   levels per system            mean 34.94   p10 8   median 34   p90 60
+//!   systems below 100%           0 of 874 = 0.00%
+//!   unreached levels by band     none
+//!   side mouths off their band's width  0 of 543 = 0.00%
+//! seed 7
+//!   systems 1681   levels 59227   reachable 59227   entrances 3177 drawn / 3177 open
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (59227 of 59227)
+//!   systems below 100%           0 of 1681 = 0.00%
+//!   unreached levels by band     none
+//!   side mouths off their band's width  0 of 1065 = 0.00%
+//! seed 1234
+//!   systems 1266   levels 48294   reachable 48294   entrances 2331 drawn / 2331 open
+//!   per-system reachable share   p10 100.00%   median 100.00%   p90 100.00%
+//!   whole-world reachable share  100.00%   (48294 of 48294)
+//!   systems below 100%           0 of 1266 = 0.00%
+//!   unreached levels by band     none
+//!   side mouths off their band's width  0 of 749 = 0.00%
+//! ```
+//!
+//! **The residual is ZERO, which is the number amendment E.4 said in advance
+//! it would be.** Task 7's review had already measured that forcing an
+//! entrance onto every top-band branch takes the unreached count to 0 on all
+//! three seeds; this is that lever pulled, and it lands on the predicted
+//! value rather than near it. The band histogram is EMPTY on every seed —
+//! not merely small — so there is no residual left to attribute.
+//!
+//! **The gated arm is amendment D's, and it reads 0.00%.** The share of
+//! systems below 100% reachable goes 3.09 / 2.08 / 2.21% -> 0.00 / 0.00 /
+//! 0.00%, against an intent arm of 0%. p10 and the median are context only
+//! here: amendment D established that both are structurally blind to a
+//! defect affecting under ~10% of systems, which is exactly the size this
+//! one was, and they read 100.00% before this task as well as after it.
+//!
+//! **`levels` did not move on any seed** (30537 / 59227 / 48294, identical
+//! to Task 7's) — `chamber_exists` is untouched again, so the denominator is
+//! byte-for-byte the one Task 7 left and the reachability movement is not
+//! confounded with a population change.
+//!
+//! **Apertures rose 32 / 33 / 29%** — 1229 -> 1626, 2382 -> 3177, 1813 ->
+//! 2331 — and that is E.2's stated cost rather than a side effect. A system
+//! opens `max(free draw, top-band width)` doors now, because a system with
+//! fewer doors than top-band branches cannot name them all. Every drawn
+//! mouth is still open (`drawn == open` on all three seeds), which Task 7
+//! established and this task preserves.
+//!
+//! **Every number in the block moved because both entrance legs took an
+//! epoch** (`chamber/entrance-count/v2`, `chamber/entrance-mouth/v2`), so
+//! the counts and mouths are drawn from new parent seeds. The rise above is
+//! therefore the sum of the epoch's reshuffle and the width floor, not the
+//! floor alone; the floor is what makes the reachability result true by
+//! construction, and the guarantee is asserted over constructed widths in
+//! `chamber::tests::every_top_band_branch_is_named_by_an_entrance` rather
+//! than inferred from these three seeds.
+//!
 //! Wall time for the whole probe (three `BuildDepth::Terrain` worlds and
 //! ~1.6M `chamber_exists` calls) is ~1.5 s in the optimized test profile.
 //! It is `#[ignore]`d anyway, with the same reason every live-worldgen battery
@@ -330,7 +394,7 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// triple the committed witness `docs/audits/underworld-lattice-seed-panel.md`
 /// renders, re-baselined once already.
 ///
-/// **Pinned as an equality on purpose, and it has now broken three times,
+/// **Pinned as an equality on purpose, and it has now broken five times,
 /// exactly as designed.** Before Task 1 landed this held `(21328, 1496,
 /// 511)` — spec §1's opening figure. Task 1 (spec §4.1) deleted
 /// `chamber_exists`'s existence coin and moved it to `(42820, 39140, 1101)`.
@@ -360,6 +424,17 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// records all four movements in full, with the band histogram that
 /// establishes the third one's mechanism.
 ///
+/// **Task 7b (spec amendment E.2) moved it a FIFTH time, to `(30537, 30537,
+/// 1626)`.** `levels` stayed put for the second task running — `chamber_
+/// exists` is untouched — so the two numbers that moved are again this
+/// task's own. `reachable` ROSE by the 123 Task 7 lost, back to exactly
+/// `levels`: every top-band branch is now named by an entrance, which was
+/// the one thing §4.5's guarantee pair could not say, and with it a
+/// system's whole lattice is one reachable component by construction.
+/// `open entrances` rose 1229 -> 1626 because a system opens at least as
+/// many doors as its top band has branches, and because both entrance legs
+/// took an epoch and are therefore drawn from new parent seeds.
+///
 /// A move from any OTHER cause from here on — a terrain change, a stream
 /// relabelling, a lattice constant — is a determinism finding, and this
 /// equality still catches that.
@@ -367,7 +442,7 @@ const SEEDS: [u64; 3] = [42, 7, 1234];
 /// A band was considered and rejected: this is not a noisy statistic but a
 /// deterministic count over a fixed seed, and a band around a deterministic
 /// count only buys room for an undetected change.
-const SEED_42_BASELINE: (usize, usize, usize) = (30537, 30414, 1229);
+const SEED_42_BASELINE: (usize, usize, usize) = (30537, 30537, 1626);
 
 /// The habitation band ranks, ascending — **derived from the delve ladder**
 /// through the shipped [`rung_rank`], never restated as a literal range.
@@ -891,6 +966,23 @@ fn the_drift_reachability_baseline() {
             summary.drawn_side_mouths > 0,
             "seed {seed}: no side-branch mouth was drawn at all, so the zero \
              above is vacuous"
+        );
+        // AMENDMENT D's GATED ARM, asserted rather than printed (Task 7b).
+        // Its intent is 0% and amendment E.2 is what makes that arm
+        // reachable rather than aspirational: every top-band branch is named
+        // by an entrance, every branch descends (§4.5), every branch below
+        // has a parent (§4.5), so a system's lattice is one component. The
+        // denominator is asserted non-empty above, so this zero is a real
+        // zero and not an empty corpus. A red here says a system somewhere
+        // cannot reach part of its own underworld — a finding about the
+        // guarantee set, not a bound to widen.
+        assert_eq!(
+            summary.systems_below_full, 0,
+            "seed {seed}: {} of {} systems with an open mouth reach less than \
+             100% of their own levels. Amendment D's gated arm is 0% and E.2 \
+             is supposed to make it structural — see \
+             `chamber::every_top_band_branch_is_named_by_an_entrance`",
+            summary.systems_below_full, summary.systems_with_open_mouth
         );
         assert!(
             summary.open_entrances <= summary.drawn_entrances,

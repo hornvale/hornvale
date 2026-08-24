@@ -421,15 +421,38 @@ mod tests {
                 "chamber/branch-character v2",
                 "chamber/branch-count v2",
                 // The two Task 5 entrance legs (amendment C.3): how many
-                // apertures a system opens, and which floor each opens into.
-                // Both additive NEW labels at v1, both keyed on stable
+                // apertures a system opens, and which branch each opens on.
+                // Both were additive NEW labels at v1, both keyed on stable
                 // lattice places (cell; cell + entrance index). See
                 // `windows/worldgen/src/streams.rs`'s ENTRANCE_COUNT /
-                // ENTRANCE_MOUTH. **Unaffected by The Drift**: an entrance
-                // survives amendment A.3 as exactly this — which aperture a
-                // player used — so these two legs keep their v1 keys.
-                "chamber/entrance-count v1",
-                "chamber/entrance-mouth v1",
+                // ENTRANCE_MOUTH.
+                //
+                // **The Drift Task 7b bumps BOTH to v2** (spec amendment
+                // E.2/E.4). §4.5's "every branch has a parent" is vacuous at
+                // the TOP band, which has no band above it, so a top-band
+                // branch no door landed on was orphaned along with
+                // everything hanging beneath it — 120 of seed 42's 123
+                // unreached levels. E.2 closes it by construction: every
+                // top-band branch is named by an aperture. That costs both
+                // legs a real discontinuity, and they are different ones:
+                //
+                //   - `entrance-count` keeps its key and changes its ANSWER
+                //     — it now supplies the size of the FREE aperture set,
+                //     which the shipped count raises to the top band's
+                //     branch width. One key, two different quantities across
+                //     the boundary.
+                //   - `entrance-mouth` changes its KEY as well, gaining a
+                //     `share`/`free` role word, because the sharing-out draw
+                //     indexes a shrinking pool of unspoken-for branches
+                //     while the free draw names any side branch. One key
+                //     would have served two questions at two widths.
+                //
+                // Neither is an empty epoch (A.6's refusal): both are live
+                // production legs every world derives every aperture from.
+                // `chamber/entrance-count/v1` and `chamber/entrance-mouth/v1`
+                // are retired and never reused.
+                "chamber/entrance-count v2",
+                "chamber/entrance-mouth v2",
                 "chamber/run-floors v2",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
