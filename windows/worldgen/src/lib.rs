@@ -1009,9 +1009,13 @@ pub fn detritus_supply_field(
 /// `KelpForest`, then the sunlit `Epipelagic`, falling through the aphotic
 /// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
 /// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
-/// productive: a real vent community is CHEMOTROPHIC, which is a metabolic
-/// class the enum does not have (BIO-chemotrophy), so making it productive here would
-/// feed vent biomass to photosynthesis-based consumers.
+/// productive: a real vent community is CHEMOTROPHIC. THE GOSSAN — rung 1 of
+/// BIO-chemotrophy — shipped `hornvale_species::TrophicMode::Chemotrophic`, so
+/// the vocabulary now EXISTS; what does not exist yet is a kind that carries it
+/// or an energy field to feed one. This field is a PHOTOSYNTHESIS supply, and
+/// making the vent productive on it would feed vent biomass to
+/// photosynthesis-based consumers. The fix is rung 2's own chemotrophic
+/// supply field, not a number raised here.
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn marine_forage_supply_field(
     geo: &Geosphere,
@@ -2102,8 +2106,14 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::VertexMap<f64>, B
 /// drawn UP it): the coexistence-stack density of **mobile-beast, non-carnivore**
 /// species — the herbivores and omnivore-beasts a carnivore hunts. Peoples are
 /// excluded from the v1 prey base (a carnivore is drawn to the WILD, not toward
-/// settlements — the acute-hunt tier owns predators-stalk-towns), and autotrophs
-/// are excluded (a plant is not a carnivore's prey). Realized density, not
+/// settlements — the acute-hunt tier owns predators-stalk-towns), and
+/// PHOTOTROPHS are excluded (a plant is not a carnivore's prey) — asked of the
+/// TROPHIC axis, which is the axis that question is about. THE GOSSAN's field
+/// split first routed this through `ThermalStrategy::Unmodelled`, which is
+/// today the same three kinds but is a coincidence with an expiry date: when
+/// BIO-autotroph-physics gives the autotrophs a real thermal model they stop
+/// being `Unmodelled` and would have re-entered the prey base silently.
+/// Realized density, not
 /// capacity, so it concentrates on genuine wild prey ground (the same honesty
 /// `predator_pressure_from` paid for). Normalized to `[0, 1]` by its own maximum.
 /// Derived from the committed demography stack — no seed, no epoch, byte-identical
@@ -2122,8 +2132,8 @@ pub fn prey_pressure_from(
     let geo = terrain.geosphere();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
-    // rooted `Autotroph`, and not itself prey-dominant (`ANIMAL_PREY <=
-    // threshold`).
+    // rooted phototroph (`trophic_mode != Phototrophic`), and not itself
+    // prey-dominant (`ANIMAL_PREY <= threshold`).
     let prey: std::collections::BTreeSet<u32> = wc
         .biosphere
         .iter()
@@ -2131,10 +2141,7 @@ pub fn prey_pressure_from(
         .filter(|(_, (_kind, bio))| {
             bio.niche.weight(hornvale_kernel::ANIMAL_PREY) <= CARNIVORE_THRESHOLD
                 && bio.social_form != hornvale_species::SocialForm::Settled
-                && !matches!(
-                    bio.metabolic_class,
-                    hornvale_species::MetabolicClass::Autotroph
-                )
+                && bio.trophic_mode != hornvale_species::TrophicMode::Phototrophic
         })
         .map(|(i, _)| i as u32)
         .collect();
@@ -2164,7 +2171,7 @@ pub fn prey_pressure_from(
 /// From [`demography_report_from`]'s coexistence-stack settlements (the per-vertex
 /// density condensations), keeps those whose DOMINANT species is a mobile beast —
 /// *not* a settling people (`social_form != Settled`) and *not*
-/// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
+/// a rooted phototroph (a plant is placed but never an *agent* that walks and
 /// flees) — then takes the densest concentration of each DISTINCT species (a herd
 /// leader, a lone apex; not five of the same twig-blight) up to `k`, by biomass.
 /// Deterministic (mass-descending, label tie-break) and seed-free. Encapsulates
@@ -2193,7 +2200,7 @@ pub fn wild_concentrations_from(
     let is_mobile_beast = |label: &str| -> bool {
         // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
         // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
-        // `Sessile`, a rooted `Autotroph` that is placed but never agentified).
+        // `Sessile`, a rooted phototroph that is placed but never agentified).
         //
         // …and not a SEA creature. The Vacancy opened the ocean to the habitat
         // model, but the walk layer this feeds is a terrestrial surface game:
@@ -6325,10 +6332,11 @@ const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
 /// never speaks and is inert at `SETTLED`. Total over `SocialForm`.
 fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_language::CascadeRegime {
     // `life_history` is the honest source: it returns `None` for an
-    // `Ametabolic` kind, which has no mass-derived lifespan at all. The bare
+    // ametabolic kind (`ThermalStrategy::Absent`), which has no mass-derived
+    // lifespan at all. The bare
     // `lifespan` call this used to make returned a number for a construct
     // (xorn: 64.97 yr) that the model says does not exist.
-    let long_lived = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+    let long_lived = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule)
         .lifespan
         .is_some_and(|l| l.get() >= LIFESPAN_THRESHOLD_YEARS);
     match bio.social_form {
@@ -11133,7 +11141,7 @@ mod tests {
         assert!(
             hornvale_species::lifespan(
                 long_lived.mass,
-                long_lived.metabolic_class,
+                long_lived.thermal_strategy,
                 long_lived.schedule
             )
             .get()
@@ -11149,14 +11157,14 @@ mod tests {
 
     #[test]
     fn an_ametabolic_kind_is_never_asked_for_a_lifespan() {
-        // xorn is Ametabolic: life_history reports no lifespan at all, yet the
+        // xorn is ametabolic: life_history reports no lifespan at all, yet the
         // bare allometry returns 64.97 yr for its mass. The regime must not be
         // decided by that number. Solitary + no lifespan banks at SETTLED.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         let xorn = wc.biosphere.get_by_label("xorn").expect("xorn has a row");
         assert_eq!(
-            xorn.metabolic_class,
-            hornvale_species::MetabolicClass::Ametabolic
+            xorn.thermal_strategy,
+            hornvale_species::ThermalStrategy::Absent
         );
         assert_eq!(
             cascade_regime_of(xorn),

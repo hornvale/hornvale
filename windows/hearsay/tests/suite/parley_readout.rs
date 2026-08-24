@@ -434,7 +434,7 @@ fn read_world(led: &Ledger, components: &hornvale_worldgen::WorldComponents) -> 
         let Some(bio) = components.biosphere.get_by_label(people) else {
             continue;
         };
-        let life = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule);
+        let life = hornvale_species::life_history(bio.mass, bio.thermal_strategy, bio.schedule);
         let to_days = |years: hornvale_kernel::Years| StdDays::new(years.get() * year_days).ok();
         durations.insert(
             people,

@@ -27,8 +27,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_kernel::{Mass, ResourceVector};
 use hornvale_language::speech::{ArticulationVector, articulation_registry};
 use hornvale_species::{
-    BiosphereTraits, ConditionNiche, HabitatRealm, LifeSchedule, MetabolicClass, MindVector,
-    PerceptionVector, SocietyVector, biosphere_registry, habitat_realm_registry,
+    BiosphereTraits, ConditionNiche, HabitatRealm, LifeSchedule, MindVector, PerceptionVector,
+    SocietyVector, ThermalStrategy, TrophicMode, biosphere_registry, habitat_realm_registry,
     perception_registry, psyche_registry, society_registry,
 };
 
@@ -58,12 +58,17 @@ pub struct PeopleTraits {
     /// The four-axis environmental condition-tolerance profile, feeding
     /// `ConditionNiche`.
     pub condition_niche: ConditionNiche,
-    /// Adult body mass, feeding `SizeThreat` and (with `metabolic_class`
+    /// Adult body mass, feeding `SizeThreat` and (with `thermal_strategy`
     /// and `schedule`) `Reproductive`.
     pub mass: Mass,
-    /// Metabolic strategy, feeding `Reproductive` via
+    /// Thermal strategy, feeding `Reproductive` via
     /// `hornvale_species::reproductive_tempo`.
-    pub metabolic_class: MetabolicClass,
+    pub thermal_strategy: ThermalStrategy,
+    /// Trophic mode, carried through from the biosphere component. **Nothing
+    /// in this crate reads it** (THE GOSSAN) — see
+    /// [`hornvale_species::TrophicMode`], which has a production reader in
+    /// `hornvale_worldgen`.
+    pub trophic_mode: TrophicMode,
     /// Life-history pacing, feeding `Reproductive` the same way.
     pub schedule: LifeSchedule,
     /// Social-organization vector, feeding `Sociality`.
@@ -132,7 +137,8 @@ pub fn catalog() -> BTreeMap<PeopleId, PeopleTraits> {
                 niche: bio.niche.clone(),
                 condition_niche: bio.condition_niche,
                 mass: bio.mass,
-                metabolic_class: bio.metabolic_class,
+                thermal_strategy: bio.thermal_strategy,
+                trophic_mode: bio.trophic_mode,
                 schedule: bio.schedule,
                 society: *society
                     .get(id)
