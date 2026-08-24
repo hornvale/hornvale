@@ -186,6 +186,14 @@ hornvale_kernel::stream_labels! {
     /// which stays at v3 because nothing derives from it) this is a live
     /// production leg that every world reads. `chamber/entrance-count/v1` is
     /// retired and must never be reused.
+    ///
+    /// **Do not generalize this to "any downstream meaning change bumps the
+    /// leg".** This was a close call made cheap by circumstance:
+    /// `entrance-mouth` moved regardless, so every world's apertures were
+    /// moving anyway and the bump cost no additional stability. Had
+    /// `entrance-count` been the *only* leg in play, an epoch that reshuffles
+    /// every world purely to record a meaning change happening one level
+    /// above the label would have deserved a harder look.
     ENTRANCE_COUNT = "chamber/entrance-count/v2" => "how large one cave system's FREE aperture set is, keyed on cell (the shipped count is this raised to the top band's branch width)";
     /// Which branch of the top habitation band one aperture opens on (The
     /// Stope, Task 5, amendment C.3; re-shaped by The Drift, Task 7b,

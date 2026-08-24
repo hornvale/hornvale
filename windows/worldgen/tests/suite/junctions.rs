@@ -44,8 +44,8 @@
 use hornvale_kernel::{Band, CellId, Geosphere, Seed};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::chamber::{
-    BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
-    junctions_at, rung_rank,
+    BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, junctions_at,
+    rung_rank,
 };
 use hornvale_worldgen::character::{bands_of, character_at};
 
@@ -389,9 +389,8 @@ fn the_projection_ignores_level() {
 ///
 /// So it demands an actual disagreement somewhere on the panel: two existing
 /// addresses of ONE system at ONE band, differing only in `branch`, whose
-/// junction sets differ. `entrance_count` is walked here only to keep the
-/// sweep's shape comparable with the other panel tests — an entrance is not
-/// an address axis (amendment A.3).
+/// junction sets differ. An entrance is not an address axis (amendment A.3),
+/// so `entrance_count` plays no part in the sweep below.
 ///
 /// The reason a disagreement must exist is structural rather than
 /// statistical: `branch_count_of` and `character_of` are both keyed on
@@ -408,7 +407,6 @@ fn the_projection_is_scoped_to_the_branch() {
             continue;
         };
         let gradient = terrain.geothermal_gradient_at(cell);
-        let _apertures = entrance_count(Seed(42), cell);
         for &(_, rung) in &habitation_bands() {
             let base = canonical(cell, rung, 0);
             if !chamber_exists(Seed(42), &cave, gradient, base) {

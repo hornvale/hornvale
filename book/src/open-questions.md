@@ -2031,6 +2031,16 @@ for the campaign's decision record and is not world-derived at all. Every
 almanac, the elevation map, every laboratory study, the Domesday survey and
 the client fixtures are byte-identical.
 
+A stronger instrument confirms the same null, measured after the paragraph
+above was written: the once-per-campaign census refresh ran on the canonical
+box at `fb2ef7ecd` (`docs/timings.md`, row stamped 2026-08-24T12:05:18Z,
+904.554 s) and **zero goldens moved** — 1,000 worlds, 0 refusals, 226 charts
+and 450 charts republished with no value changed. Verified non-vacuously:
+both `rows.csv` were rewritten by that run (mtimes minutes old, 1001 lines
+each) and came out byte-identical to committed. Six seed-derivation epochs
+relocated every chamber in every world and the 1,000-world census did not
+move.
+
 So the seating axis still takes the four or five distinct values The Underworld
 measured, and a campaign that made the underworld *connected* contributed
 nothing to it — for the same structural reason the campaign that made it

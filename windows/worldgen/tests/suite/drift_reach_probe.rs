@@ -766,6 +766,21 @@ const RETIRED_QUANTILE_REPORT_FLOOR: f64 = 0.50;
 ///   two arms are complements, and this is why the ratchet is not redundant
 ///   with D's;
 /// * any change to `passages_from`'s edge set.
+///
+/// # WHAT MOVING IT WOULD BREAK
+///
+/// R3's defect class — a system drawing zero apertures — leaves its levels
+/// unreachable but also drops the system itself out of
+/// `systems_with_open_mouth`, amendment D's own denominator. That is why R3
+/// is invisible to amendment D's gated arm (the bullet above) and it is also
+/// why loosening THIS floor is not a safe compensating move: §6's whole-world
+/// arm (`>= 90%`), amendment D's per-system arm and this ratchet all read the
+/// affected world through denominators R3 shrinks in step, so widening any
+/// one of the three to "tolerate" a mouth-less system widens all three at
+/// once, for the same reason. Closing that blind spot for good needs a
+/// standing assertion this module does not yet have —
+/// `summary.systems_with_open_mouth == summary.systems` — asserted in
+/// addition to, not instead of, this floor.
 const WORLD_SHARE_FLOOR: f64 = 1.0;
 
 /// Amendment D.3's table — **the gated per-system arm**, and the third

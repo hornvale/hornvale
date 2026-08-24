@@ -153,8 +153,18 @@ plausible.
 `a_runs_levels_are_contiguous` — the test the whole campaign rests on — has
 never appeared in the roster, because a test with no recorded baseline duration
 is excluded on purpose (coverage is the stage gate's job). It self-heals when a
-green stage gate rewrites the roster. **Verify that it did rather than assuming
-it will.**
+green stage gate rewrites the roster. **Verified, and the answer is negative.**
+The chamber's `gate` phase did rewrite the roster (commit `bb6da9248`,
+"regenerate after gate"), and it added exactly three entries —
+`domesday::detect::tests::findings_are_sorted_by_detector_then_metric`,
+`liveness::tests::the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe`,
+and `underworld_level::tests::every_character_engine_keeps_every_level_connected`
+— none of them this campaign's. `a_runs_levels_are_contiguous` is still absent
+from `docs/timings/subfloor-roster.tsv`. The self-heal mechanism works; it
+simply has not yet had a green stage gate run that exercised this specific
+test with a recordable duration. Do not assume the instruction above was
+satisfied by inference — it was checked directly, by grepping the committed
+roster.
 
 ## Three corrections the controller repeated upward before they were checked
 
@@ -180,6 +190,16 @@ Recorded because two of them had already been relayed once as fact.
 The pattern across all three: a claim that is *directionally* right and
 numerically or mechanically wrong survives relay, because nobody re-derives a
 sentence that already sounds correct.
+
+## A campaign's strongest assertion can live in a tier the merge never runs
+
+The general form of the *"the ratchet closes it"* correction above (commit
+`8958cbb26`): the campaign put its strongest assertions in the tier a merge
+does not run, and left the merge-gated file holding a tautology. Decision
+0148's trade — taking `seam-guard` and `heavy` off the merge phase list
+because the two were 80.5% of a merge's wall time — is sound; this is its
+bill. Whatever a campaign wants defended *at a merge* must be asserted
+somewhere that is not `heavy`.
 
 ## The three things review caught by running rather than reading
 
@@ -270,6 +290,22 @@ looking for, committed by the task that went looking for them.
 The instrument thread in the same chapter *does* gain a corner — the
 three-blind-statistics finding above — because "replace the statistic again" is
 the wrong lesson and the chapter is where that gets said.
+
+## Deferred: three stale `test-baseline-*.tsv` rows, left for their own hosts
+
+`docs/timings/test-baseline-{lefford,ambrose,MacBookPro}.tsv` each still carry
+a row for `delve_has_three_distinguishable_outcomes`, renamed by Task 3b. Task
+9 deliberately left all three: each file is another machine's own measurement
+record (a test's *duration* varies by host even though its *identity* in the
+subfloor roster does not — see the root `CLAUDE.md`'s "NOT one file per
+canonical host" note), so editing them from this worktree would be writing a
+number nobody measured on that box. The mechanism that resolves it needs no
+hand edit: `apply_hysteresis` (`windows/lab/src/timings.rs`) builds its output
+by mapping over the **current** run's rows, so an id present only in
+`previous` (the committed baseline) is dropped rather than carried forward.
+Each stale row self-heals on that host's own next green gate — lefford's on
+its next stage gate or merge, ambrose's and the MacBookPro's on their own next
+local `gate-commit` — with no action required here.
 
 ## What went right
 
