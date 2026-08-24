@@ -415,3 +415,37 @@ group `Autotroph` differently, so the naive split silently changes behaviour)
 came from reading the reader inventory the blast-radius probe produced, and it
 is the reason `Unmodelled` exists. §5.1's instrument-coverage measurement is
 why this campaign builds its own goldens rather than trusting the drift check.
+
+
+---
+
+# COMPLETE, 2026-08-24
+
+Merged as rung 1 of the Underworld Larder. Chronicle:
+`book/src/chronicle/the-gossan.md`. Retrospective:
+`docs/retrospectives/the-gossan.md`.
+
+**The claim held.** `domains/species/tests/fixtures/life-history-all-kinds.txt`
+has ONE commit in its entire history — Task 1's capture — across 221 changed
+sites in 34 files and 7 crates, and it survived absorbing 32 commits of `main`
+at the close unchanged.
+
+**Two corrections this document owes its readers**, both found after §5 was
+written:
+
+- **§3.1's original site count was a floor read as a total.** Corrected in
+  place, with the reason: a `cargo check` that fails early has enumerated
+  nothing.
+- **§5.1 over-generalised its own vacuity argument.** It correctly showed the
+  LIFE-HISTORY half of the artifact surface is blind to this change, then
+  concluded the artifacts as a whole were. That is false: the committed seed-42
+  session fixtures (`clients/game/core/tests/fixtures/`) cover
+  `prey_pressure_from`, the trophic axis's only production reader, and neither
+  campaign instrument touches them. The conclusion cost the campaign an
+  instrument it already had, and `make rebaseline`'s drift check moving zero
+  bytes is a second, independent line of evidence for the central claim.
+
+**`BIO-chemotrophy` is deliberately NOT flipped to `shipped`.** What shipped is
+the variant; what that row promises — "a chemotrophic biome's carrying capacity
+never traces back to the star" — is rungs 2 and 3. Its Where cell now points at
+the chronicle. The status is the owner's call.

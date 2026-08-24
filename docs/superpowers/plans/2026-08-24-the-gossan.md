@@ -1230,3 +1230,19 @@ this campaign has two instruments instead of one."
 - [ ] Retrospective in `docs/retrospectives/the-gossan.md`, promoting `.superpowers/sdd/followups.md` F-1..F-5 before the worktree is swept.
 - [ ] `BIO-chemotrophy` flipped `raw` → `shipped` with its Where cell pointing at the chronicle. **Nathan's call, not the executor's** — a moved status is his.
 - [ ] `make sluice-stage` at the Task 4/5 boundary, and `make sluice` to merge.
+
+
+---
+
+# COMPLETE, 2026-08-24
+
+All seven tasks executed, each reviewed; one fix round on Task 4; one
+whole-branch review returning six Important and five Minor findings, all
+addressed in a single fix wave and verified by one scoped re-review.
+
+**Read this plan knowing it contains six defects of its own**, enumerated in
+`docs/retrospectives/the-gossan.md`. Three are the same shape — an imperative
+with an assertion hidden inside it. The corrected text is in place with the
+reasoning beside it, EXCEPT the "on every commit-gate run" wording flagged in
+correction C-3 above, which is left standing on purpose because a plan is a
+record of what was planned.
