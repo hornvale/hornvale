@@ -3,7 +3,7 @@
 //! `cave_at` had never had a consumer when this battery was first written, so
 //! its distribution had never been checked against anything. This battery is
 //! the campaign's gate: if caves are vanishingly rare, or almost none reach
-//! past [`BandKind::Regolith`], the underworld is a scattering of shallow
+//! past [`Horizon::Regolith`], the underworld is a scattering of shallow
 //! pockets and the campaign reports that and stops.
 //!
 //! ## The substrate moved under this instrument, and what that changed
@@ -12,8 +12,8 @@
 //! stopped the campaign: 0.26% of land, one `CaveKind`, one depth band, 3 of
 //! 30 worlds caveless. The Hollow then repaired that model, and in doing so
 //! **changed the type this battery reads**: `Cave::depth_reach_bands` (a
-//! `u32` count, nominally `1..=4`) became [`Cave::deepest_band`] (a
-//! [`BandKind`], five named variants `Regolith..Underneath`). That is a type
+//! `u32` count, nominally `1..=4`) became [`Cave::deepest_horizon`] (a
+//! [`Horizon`], five named variants `Regolith..Underneath`). That is a type
 //! change, not a rename — a band derived from a column cannot reproduce a
 //! count derived from a ratio.
 //!
@@ -35,7 +35,7 @@
 //! here and the deepest-band fraction is reported beside it as a ceiling
 //! check.
 //!
-//! [`BandKind::Underneath`] is reported explicitly and separately: it is a
+//! [`Horizon::Underneath`] is reported explicitly and separately: it is a
 //! fifth band that the plan's Task 1 `UNDERDARK` ladder
 //! (`Regolith/Cover/Basement/Roots`) does not include. A nonzero count is a
 //! finding for Task 1, not a gate result.
@@ -60,11 +60,10 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Geosphere, Seed, Value};
+use hornvale_kernel::{Band, CellId, Geosphere, Seed, Value};
 use hornvale_settlement::CELL_ID;
 use hornvale_terrain::{
-    BandKind, Cave, CaveKind, DelveRung, GeneratedTerrain, GeothermalGradient, TerrainPins,
-    rung_at_depth,
+    Cave, CaveKind, GeneratedTerrain, GeothermalGradient, Horizon, TerrainPins, rung_at_depth,
 };
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
@@ -74,20 +73,20 @@ use std::collections::{BTreeSet, VecDeque};
 
 const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
-/// The five [`BandKind`] variants in declaration order, top to bottom. The
+/// The five [`Horizon`] variants in declaration order, top to bottom. The
 /// band histogram is indexed by position in this array, so a new variant
 /// added to the enum reddens [`band_index`]'s exhaustive match rather than
 /// silently landing in a neighbour's bucket.
 const BAND_NAMES: [&str; 5] = ["Regolith", "Cover", "Basement", "Roots", "Underneath"];
 
 /// Position of `band` in [`BAND_NAMES`]. Exhaustive by construction.
-fn band_index(band: BandKind) -> usize {
+fn band_index(band: Horizon) -> usize {
     match band {
-        BandKind::Regolith => 0,
-        BandKind::Cover => 1,
-        BandKind::Basement => 2,
-        BandKind::Roots => 3,
-        BandKind::Underneath => 4,
+        Horizon::Regolith => 0,
+        Horizon::Cover => 1,
+        Horizon::Basement => 2,
+        Horizon::Roots => 3,
+        Horizon::Underneath => 4,
     }
 }
 
@@ -96,25 +95,25 @@ fn band_index(band: BandKind) -> usize {
 /// the axis the chamber-count breakdown below must bucket on. [`BAND_NAMES`]
 /// is still used, unchanged, for the cave-substrate histogram: that one is
 /// asking the archive question ("which rock does this void reach"), which is
-/// still `BandKind`'s job and was never the gate's.
+/// still `Horizon`'s job and was never the gate's.
 const RUNG_NAMES: [&str; 5] = ["Undercroft", "Shallows", "Deeps", "Underdeep", "Nadir"];
 
 /// Position of `rung` in [`RUNG_NAMES`]. `Surface` is not a habitation rung
 /// and [`rung_at_depth`] never returns it, so it has no bucket; the arm
 /// panics rather than folding the overworld into `Undercroft`.
-fn rung_index(rung: DelveRung) -> usize {
+fn rung_index(rung: Band) -> usize {
     match rung {
-        DelveRung::Surface => panic!("Surface is not a habitation rung and has no lattice bucket"),
-        DelveRung::Undercroft => 0,
-        DelveRung::Shallows => 1,
-        DelveRung::Deeps => 2,
-        DelveRung::Underdeep => 3,
-        DelveRung::Nadir => 4,
+        Band::Surface => panic!("Surface is not a habitation rung and has no lattice bucket"),
+        Band::Undercroft => 0,
+        Band::Shallows => 1,
+        Band::Deeps => 2,
+        Band::Underdeep => 3,
+        Band::Nadir => 4,
     }
 }
 
 /// One seed's measured cave substrate: land/cave cell counts, the
-/// [`Cave::deepest_band`] histogram (indexed by [`band_index`]), the
+/// [`Cave::deepest_horizon`] histogram (indexed by [`band_index`]), the
 /// `CaveKind` breakdown, and the clustering split (cave cells with >=1
 /// neighbouring cave, vs. none).
 struct SeedReport {
@@ -173,7 +172,7 @@ fn measure_one(seed: Seed) -> SeedReport {
         land_cells += 1;
         if let Some(cave) = terrain.cave_at(cell) {
             cave_cells += 1;
-            band_histogram[band_index(cave.deepest_band)] += 1;
+            band_histogram[band_index(cave.deepest_horizon)] += 1;
             match cave.kind {
                 CaveKind::Karst => kind_karst += 1,
                 CaveKind::LavaTube => kind_lava_tube += 1,
@@ -265,7 +264,7 @@ fn report_cave_substrate() {
     for (idx, name) in BAND_NAMES.iter().enumerate() {
         let count = total_hist[idx];
         println!(
-            "2. deepest_band={name}: {count} caves ({:.6} of caves)",
+            "2. deepest_horizon={name}: {count} caves ({:.6} of caves)",
             count as f64 / total_caves as f64
         );
     }
@@ -368,7 +367,11 @@ fn report_cave_substrate() {
 //    has a narrow relative spread by construction — structurally close to
 //    spec §7's falsification ("nothing about it differs by place"). This is
 //    tested, not assumed: measured mean/sd/CV are printed beside the
-//    theoretical Binomial values for every band that occurs.
+//    theoretical Binomial values for every band that occurs. **The coin was
+//    deleted by The Drift (spec §4.1) and this prediction is falsified; it is
+//    kept unretuned and the gap is printed on every run — see
+//    [`PREDICTED_EXISTENCE_DENSITY`]'s own doc for the measurement and for
+//    what actually produces the narrow spread now.**
 // 3. The depth-weld breakdown (ledger #16, `MAP-cave-depth-weld`). The same
 //    per-band grouping used for (2) is C2a's first real evidence for or
 //    against splitting the weld: uniform WITHIN a band but differing BETWEEN
@@ -446,6 +449,39 @@ const N_RADII: usize = 5;
 /// not a tunable: if the measured spread disagrees with the Binomial this
 /// constant predicts, that is a finding about the model, not a cue to edit
 /// this line.
+///
+/// # FALSIFIED BY THE DRIFT (spec §4.1, 2026-08-23) — AND NOT RETUNED
+///
+/// **The mechanism this constant names no longer exists.** `chamber_exists`'s
+/// sixth gate — `chamber_stream(..).next_f64() < EXISTENCE_DENSITY` — was
+/// deleted outright, not lowered, because it was punching random holes through
+/// a contiguous shape the five gates above it had already specified. So the
+/// per-address existence rate is not a coin any more, and the Binomial printed
+/// beside every measured row below is a prediction from a deleted model.
+///
+/// **The constant is left at 0.5 deliberately.** Editing it to agree with the
+/// measurement would be retuning a frozen prediction after unblinding, which
+/// is the thing preregistration exists to stop; the honest act is to record
+/// the falsification and keep printing both numbers so the gap is visible on
+/// every run. Measured 2026-08-23 over 30 seeds, floor-0 slice:
+///
+/// ```text
+///   rung        in-budget addrs   measured mean   predicted Bin(n, 0.5)
+///   Undercroft         4              1.6114            2.0000
+///   Shallows           8              3.1950            4.0000
+///   Deeps             12              4.7882            6.0000
+///   Underdeep         16              6.3664            8.0000
+///   Nadir             20              7.9912           10.0000
+/// ```
+///
+/// **The measured ratio is 0.403 / 0.399 / 0.399 / 0.398 / 0.400 — flat, and
+/// it is an authored constant rather than a draw.** With the coin gone the
+/// only per-address filter left at floor 0 is `branch < branch_count_of(..)`,
+/// and `branch_count_of`'s authored weights give a mean width of 1.60 against
+/// `BRANCHES_PER_SYSTEM = 4`, i.e. exactly **0.400**. The narrow relative
+/// spread the original prediction was reaching for survives; its *cause* is
+/// now a branch-width draw, not a coin flip, and a reader taking 0.5 as a
+/// description of shipped behaviour would be wrong by a fifth.
 /// type-audit: bare-ok(ratio)
 const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 
@@ -457,7 +493,7 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 ///
 /// **`_per_floor` is in the name because this is NOT the lattice's size, and
 /// after The Stope (`chamber/v3`) the two differ by a factor of
-/// `FLOORS_PER_RUN_CEILING`.** Before that campaign a band held one point per
+/// `LEVELS_PER_BRANCH_CEILING`.** Before that campaign a band held one point per
 /// branch and the distinction did not exist. It is a name rather than a
 /// comment because the misreading is inheritable: a later task reaching for
 /// "how big is the address space" would find this function, and the number it
@@ -470,7 +506,7 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 ///
 /// That density used to hold on **any** subset of the lattice, which is what
 /// this doc said. It no longer does: `chamber_exists` now refuses any floor at
-/// or past its run's drawn count (`chamber::floors_in_run`), so the marginal
+/// or past its run's drawn count (`chamber::levels_in_branch`), so the marginal
 /// existence probability of an arbitrary address is `0.5 × P(floor < the run's
 /// drawn count)` — well under 0.5, and varying by band. **Floor 0 is the one
 /// slice where the old reading survives**, because every band's frozen range
@@ -482,8 +518,8 @@ const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 /// prediction for a reason that has nothing to do with `EXISTENCE_DENSITY`.
 /// Widening this is no longer a cost question.
 ///
-/// **This used to be indexed by `band_index(cave.deepest_band)`**, because the
-/// gate used to be `addr.band <= band_rank(cave.deepest_band)`. The arithmetic
+/// **This used to be indexed by `band_index(cave.deepest_horizon)`**, because the
+/// gate used to be `addr.band <= band_rank(cave.deepest_horizon)`. The arithmetic
 /// is unchanged and the input is not: `chamber/v2` re-pointed the lattice's
 /// depth axis at the delve ladder, so bucketing on the stratigraphic band
 /// would now compare a measured count against a prediction for a different
@@ -496,7 +532,7 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 /// `(seed, cell)`, gated by `cave`'s own measured depth budget.
 ///
 /// **Floor 0, not the whole lattice** (The Stope, `chamber/v3`): the lattice
-/// admits `FLOORS_PER_RUN_CEILING` floors per run, so this walks 1/20 of the
+/// admits `LEVELS_PER_BRANCH_CEILING` floors per run, so this walks 1/20 of the
 /// address space. That is the right sample for what it feeds — and after Task
 /// 2's per-run draw it is the ONLY floor that still is, because floor 0 is the
 /// one every run admits; see [`addresses_in_budget_per_floor`] for why any
@@ -511,14 +547,13 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 /// aperture per cave cell (see `ChamberAddr::entrance`'s own doc).
 fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
-    for band in 0..RUNG_NAMES.len() as u8 {
+    for &band in Band::habitation() {
         for branch in 0..BRANCHES_PER_SYSTEM {
             let addr = ChamberAddr {
                 cell,
-                entrance: 0,
                 band,
                 branch,
-                floor: 0,
+                level: 0,
             };
             if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
@@ -534,6 +569,14 @@ fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell:
 /// chamber` measures) holds no chamber: spec §3.4 rung 0, `Sealed` — "the
 /// void exists and is unreachable." Task 5's `delve` refuses such a cave by
 /// naming it sealed rather than claiming there is nothing there.
+///
+/// **This returns `false` for every cave in every world since The Drift**
+/// (spec §4.1 and amendment B): a cave was sealed when its chambers lost
+/// their existence coin flips, and with the coin deleted every cave in shape
+/// realizes chambers. Measured 0 of 48,316 over 30 seeds. The predicate is
+/// kept rather than deleted because restricted passage is owed work
+/// (`MAP-restricted-passage`) and this is the instrument that will report it
+/// returning; a constant `false` today is a measurement, not dead code.
 fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> bool {
     !chamber_exists(
         seed,
@@ -541,10 +584,9 @@ fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId
         gradient,
         ChamberAddr {
             cell,
-            entrance: 0,
-            band: 0,
+            band: Band::Undercroft,
             branch: 0,
-            floor: 0,
+            level: 0,
         },
     )
 }
@@ -692,10 +734,10 @@ struct T8SeedReport {
     land_cells: usize,
     /// `(chamber_count, delve_rung, sealed)` — one entry per land cell that
     /// carries a cave. The middle element is the **gate's own axis**: it was
-    /// `deepest_band` while the gate was `band_rank`, and became the cave's
+    /// `deepest_horizon` while the gate was `band_rank`, and became the cave's
     /// delve rung when `chamber/v2` re-pointed the lattice, so the
     /// count-versus-prediction breakdown keeps comparing like with like.
-    cave_cells: Vec<(usize, DelveRung, bool)>,
+    cave_cells: Vec<(usize, Band, bool)>,
     /// Chamber count for EVERY land cell, cave or not (0 where there is no
     /// cave) — H2's own literal wording, reported so its zero-weighting can
     /// be attributed correctly rather than assumed.
@@ -714,7 +756,7 @@ struct T8SeedReport {
 /// places a flagship (`BuildDepth`'s own doc: "…plus settlement placement,
 /// naming, and glosses") — and measures Task 8's whole readout in one build:
 /// H2's chamber distribution (per cave AND per cell), the depth-weld's
-/// per-band breakdown (via each cave's own `deepest_band`), and
+/// per-band breakdown (via each cave's own `deepest_horizon`), and
 /// reachability from the flagship start. Terrain facts are a byte-identical
 /// prefix of the `BuildDepth::Terrain` build Task 0 uses (`BuildDepth`'s own
 /// doc), so this changes nothing about what Task 0 measured — it only adds
@@ -750,7 +792,7 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
 
     let mut land_cells = 0usize;
     let mut land_cell_ids: Vec<CellId> = Vec::new();
-    let mut cave_cells: Vec<(usize, DelveRung, bool)> = Vec::new();
+    let mut cave_cells: Vec<(usize, Band, bool)> = Vec::new();
     let mut per_cell_counts: Vec<usize> = Vec::new();
     let mut non_sealed: BTreeSet<CellId> = BTreeSet::new();
 
@@ -878,8 +920,9 @@ fn report_h2_depth_weld_and_reachability() {
     // ---- together — both read off the same per-band grouping. -------------
     println!();
     println!(
-        "== EXISTENCE_DENSITY = {PREDICTED_EXISTENCE_DENSITY} prediction (narrow relative \
-         spread, a coin flip per address) vs. the measured depth-weld breakdown, by delve rung =="
+        "== EXISTENCE_DENSITY = {PREDICTED_EXISTENCE_DENSITY} prediction — FALSIFIED by The \
+         Drift (spec §4.1 deleted the coin; see PREDICTED_EXISTENCE_DENSITY's doc), kept \
+         unretuned beside the measurement — vs. the measured depth-weld breakdown, by delve rung =="
     );
     let mut band_bucket_total = 0usize;
     for (idx, name) in RUNG_NAMES.iter().enumerate() {
@@ -975,7 +1018,9 @@ fn report_h2_depth_weld_and_reachability() {
         .count();
     println!();
     println!(
-        "== Sealed fraction (ledger #23): {total_sealed}/{total_caves} = {:.4} (predicted ~0.485) ==",
+        "== Sealed fraction (ledger #23): {total_sealed}/{total_caves} = {:.4} — the ~0.485 this \
+         ledger predicted is FALSIFIED: The Drift deleted the existence coin, so a sealed cave is \
+         IMPOSSIBLE rather than rare, and the descent verb lost an outcome (spec amendment B) ==",
         total_sealed as f64 / total_caves.max(1) as f64
     );
 

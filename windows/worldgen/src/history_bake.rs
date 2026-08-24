@@ -35,9 +35,8 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, CellMap, Geosphere, KindId, Seed, Stream};
+use hornvale_kernel::{Band, CellId, CellMap, Geosphere, KindId, Seed, Stream};
 use hornvale_paleoclimate::EraClimate;
-use hornvale_terrain::DelveRung;
 use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -925,7 +924,7 @@ struct Community {
     /// The cell this community currently occupies.
     site: CellId,
     /// The rung of the delve ladder this community occupies **in that cell**
-    /// (The Underworld, spec §4.6). `DelveRung::Surface` for a surface people
+    /// (The Underworld, spec §4.6). `Band::Surface` for a surface people
     /// — the overworld is a rung of the same ladder, not the absence of one.
     ///
     /// Denormalised from `Bake::seating[people_idx]` at [`Bake::open`], for
@@ -939,7 +938,7 @@ struct Community {
     /// so committing it would add a save-format surface for a value that can
     /// be re-derived exactly — which is what
     /// [`crate::delve_seating::made_chambers`] does.
-    rung: DelveRung,
+    rung: Band,
     /// The community's own entity handle.
     id: BakeId,
     /// The lineage this community continues (inherited by daughters/refounds).
@@ -1157,17 +1156,17 @@ struct Bake<'a> {
     /// relaxation, ratified twelve days before this campaign executed it.
     ///
     /// **Surface density is unchanged, and that is structural rather than
-    /// hoped for**: `DelveRung::Surface` is one rung, so `(cell, Surface)` is
+    /// hoped for**: `Band::Surface` is one rung, so `(cell, Surface)` is
     /// one key, so a cell still holds exactly one surface community. What the
     /// wider key buys is the two things a `BTreeMap<CellId, _>` could not
     /// express — an underworld community no longer competes with the surface
     /// one for a cell's single slot, and two underworld communities at
     /// different rungs can share a column (spec §4.6).
     ///
-    /// The rung is never `None`. `DelveRung` carries an explicit `Surface`
+    /// The rung is never `None`. `Band` carries an explicit `Surface`
     /// variant precisely so the type is total and no reader can mistake "no
     /// rung recorded" for "the overworld".
-    node_index: BTreeMap<(CellId, DelveRung), usize>,
+    node_index: BTreeMap<(CellId, Band), usize>,
     /// Where each people sits in the delve ladder, per cell — one entry per
     /// entry of `peoples`, in the same order, exactly as `caps_by_era`'s
     /// slices are. Borrowed off the composition root, which is the only layer
@@ -1175,7 +1174,7 @@ struct Bake<'a> {
     ///
     /// A surface people's seating is `Surface` at every cell, which makes the
     /// re-key inert for it.
-    seating: &'a [CellMap<DelveRung>],
+    seating: &'a [CellMap<Band>],
     /// Next entity id to mint (never reused).
     next_id: u64,
     /// The epoch-dynamics random stream (drawn sequentially in commit order).
@@ -1431,7 +1430,7 @@ impl<'a> Bake<'a> {
     /// Resolved through the seating rather than off the community, because
     /// every caller here is asking about a cell the asker does **not** yet
     /// occupy: which rung would I be on if I went there.
-    fn rung_for(&self, pidx: usize, cell: CellId) -> DelveRung {
+    fn rung_for(&self, pidx: usize, cell: CellId) -> Band {
         *self.seating[pidx].get(cell)
     }
 
@@ -3524,7 +3523,7 @@ pub fn bake(
     eras: &[EraClimate],
     refugia: &CellMap<bool>,
     peoples: &[KindId],
-    seating: &[CellMap<DelveRung>],
+    seating: &[CellMap<Band>],
     cfg: &BakeConfig,
     graphs: &[ConnectionGraph],
 ) -> History {
@@ -4132,13 +4131,13 @@ mod tests {
     /// `Geosphere::new(1)` is every fixture's globe in this module; a
     /// `OnceLock` keeps the maps borrowable at `'static` without each fixture
     /// having to own them.
-    fn surface_seating() -> &'static [CellMap<DelveRung>] {
-        static S: std::sync::OnceLock<Vec<CellMap<DelveRung>>> = std::sync::OnceLock::new();
+    fn surface_seating() -> &'static [CellMap<Band>] {
+        static S: std::sync::OnceLock<Vec<CellMap<Band>>> = std::sync::OnceLock::new();
         S.get_or_init(|| {
             let geo = Geosphere::new(1);
             all_settlers()
                 .iter()
-                .map(|_| CellMap::from_fn(&geo, |_| DelveRung::Surface))
+                .map(|_| CellMap::from_fn(&geo, |_| Band::Surface))
                 .collect()
         })
     }
@@ -4149,7 +4148,7 @@ mod tests {
     ///
     /// Owned rather than `'static`, because the whole point is that it varies
     /// per test.
-    fn seating_with(rungs: &[(KindId, DelveRung)]) -> Vec<CellMap<DelveRung>> {
+    fn seating_with(rungs: &[(KindId, Band)]) -> Vec<CellMap<Band>> {
         let geo = Geosphere::new(1);
         all_settlers()
             .iter()
@@ -4157,7 +4156,7 @@ mod tests {
                 let rung = rungs
                     .iter()
                     .find(|(k, _)| k == people)
-                    .map_or(DelveRung::Surface, |(_, r)| *r);
+                    .map_or(Band::Surface, |(_, r)| *r);
                 CellMap::from_fn(&geo, |_| rung)
             })
             .collect()
@@ -4171,7 +4170,7 @@ mod tests {
         caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
-        seating: &'a [CellMap<DelveRung>],
+        seating: &'a [CellMap<Band>],
     ) -> Bake<'a> {
         let mut bake = hand_bake_spread(
             graphs,
@@ -6476,7 +6475,7 @@ mod tests {
         assert!(
             bake.communities[vassal].alive
                 && bake.communities[vassal].site == vassal_cell
-                && bake.node_index.get(&(vassal_cell, DelveRung::Surface)) == Some(&vassal),
+                && bake.node_index.get(&(vassal_cell, Band::Surface)) == Some(&vassal),
             "the vassal itself never moved — only its lord did"
         );
 
@@ -8066,7 +8065,7 @@ mod tests {
             "the freed subordinate must survive its patron"
         );
         assert_eq!(
-            bake.node_index.get(&(cell_b, DelveRung::Surface)),
+            bake.node_index.get(&(cell_b, Band::Surface)),
             Some(&sub_b),
             "the freed subordinate keeps its cell"
         );
@@ -8134,7 +8133,7 @@ mod tests {
         // population, and the holder is dead and driven off.
         let seated = *bake
             .node_index
-            .get(&(CellId(20), DelveRung::Surface))
+            .get(&(CellId(20), Band::Surface))
             .expect("the rich cell must be occupied");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
@@ -8285,7 +8284,7 @@ mod tests {
             );
             let seated = *bake
                 .node_index
-                .get(&(CellId(20), DelveRung::Surface))
+                .get(&(CellId(20), Band::Surface))
                 .expect("the rich cell is occupied either way");
             let holder_people = bake.records[bake.communities[seated].record].core.people;
             (outcome, holder_people)
@@ -8394,7 +8393,7 @@ mod tests {
         );
         let seated = *bake
             .node_index
-            .get(&(CellId(20), DelveRung::Surface))
+            .get(&(CellId(20), Band::Surface))
             .expect("the held rich cell must have changed hands");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
@@ -8589,7 +8588,7 @@ mod tests {
         assert_eq!(
             bake.communities[*bake
                 .node_index
-                .get(&(CellId(20), DelveRung::Surface))
+                .get(&(CellId(20), Band::Surface))
                 .expect("still held")]
             .id,
             holder_id,
@@ -8695,7 +8694,7 @@ mod tests {
             // bottom of the ladder is still anywhere in the world.
             let seated = LADDER.map(|cell| {
                 bake.node_index
-                    .get(&(cell, DelveRung::Surface))
+                    .get(&(cell, Band::Surface))
                     .map(|&i| bake.records[bake.communities[i].record].core.people)
             });
             let terminal_survived = bake
@@ -9229,7 +9228,7 @@ mod tests {
     /// rung. The quantity "surface density" and "two at different rungs" are
     /// both statements about, counted off the index rather than off a scan so
     /// the assertion is about the thing the bake actually consults.
-    fn held_in_column(bake: &Bake<'_>, cell: CellId) -> Vec<(DelveRung, usize)> {
+    fn held_in_column(bake: &Bake<'_>, cell: CellId) -> Vec<(Band, usize)> {
         bake.node_index
             .iter()
             .filter(|((c, _), _)| *c == cell)
@@ -9282,7 +9281,7 @@ mod tests {
         );
         assert_eq!(
             held_in_column(&bake, COLUMN),
-            vec![(DelveRung::Surface, 0)],
+            vec![(Band::Surface, 0)],
             "exactly one community in the column, and it is on the surface rung"
         );
     }
@@ -9300,7 +9299,7 @@ mod tests {
         let capacity = caps_from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
-        let seating = seating_with(&[(KindId("kobold"), DelveRung::Deeps)]);
+        let seating = seating_with(&[(KindId("kobold"), Band::Deeps)]);
         let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
         let era = era_at(0.0);
 
@@ -9335,10 +9334,7 @@ mod tests {
         );
         assert_eq!(
             held_in_column(&bake, COLUMN),
-            vec![
-                (DelveRung::Surface, goblin_idx),
-                (DelveRung::Deeps, kobold_idx),
-            ],
+            vec![(Band::Surface, goblin_idx), (Band::Deeps, kobold_idx),],
             "one community per rung, two rungs, one column"
         );
         assert!(
@@ -9362,9 +9358,9 @@ mod tests {
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let seating = seating_with(&[
-            (KindId("kobold"), DelveRung::Deeps),
-            (KindId("goblin"), DelveRung::Nadir),
-            (KindId("bugbear"), DelveRung::Deeps),
+            (KindId("kobold"), Band::Deeps),
+            (KindId("goblin"), Band::Nadir),
+            (KindId("bugbear"), Band::Deeps),
         ]);
         let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
         let era = era_at(0.0);
@@ -9394,7 +9390,7 @@ mod tests {
         );
         assert_eq!(
             held_in_column(&bake, COLUMN),
-            vec![(DelveRung::Deeps, deep), (DelveRung::Nadir, deeper)],
+            vec![(Band::Deeps, deep), (Band::Nadir, deeper)],
             "two underworld communities, two rungs, one column"
         );
 

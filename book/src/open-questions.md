@@ -590,6 +590,41 @@ runs with the eye off. It is the self-scorability floor in an unfamiliar
 costume: a capability can be built, measured, correct, and **unobservable
 through every artifact the project checks itself with**.
 
+A fifteenth campaign contributes the thread's first entry about *what to do
+after* a check is found unable to fire, and the answer is not the obvious one.
+[The Drift](./chronicle/the-drift.md) (2026-08-23) replaced its preregistered
+per-system gate **twice**. The median was replaced because a branch-severing
+mutation left it at exactly 100.00% on all three seeds — most systems have one
+branch, so a median over that population cannot see a defect that severs
+*between* branches. Its replacement, p10, was replaced because two *real*
+defects left it at exactly 100.00% too, and this time the blindness is
+arithmetic rather than circumstantial: `pct(sorted, 0.10)` at n = 874 reads
+index 87, only 27 systems sat below ceiling, so the statistic could not have
+read anything else. A quantile at *q* has no resolution until roughly *q* of
+the population sits below it.
+
+**The transferable half is how the first replacement was justified.** p10 was
+chosen on the strength of a mutation that moved it 100% → 35.14%, which proves
+p10 *can* move — under a mutation whose population share was never measured and
+which plainly exceeded the only region where p10 has resolution at all. So the
+floor gains a sixth question, asked of any instrument swapped in for one that
+could not fire: **has the replacement been validated against the defect class
+the original was blind to, at the population share that class actually has?**
+Validating against a large-population mutation and concluding "it moves"
+repeats the original error with a different constant.
+
+**And the campaign then declined to replace a third time, which is the part
+worth carrying.** The arm that shipped was *also* found blind to something — a
+system with no open entrance leaves its denominator while its levels stay in
+the whole-world count. The distinction that stops this becoming an infinite
+regress: the first two statistics could not fail against **their own class**,
+and this one can, demonstrably. What it is blind to is a class the
+preregistration assigned to the **other** arm on purpose, so the complement was
+designed in rather than discovered, and folding the two denominators together
+to close the gap would destroy the split the spec's own text demands.
+**Complementing beats replacing**, and a practice that only ever swaps the
+statistic will eventually swap away a working instrument.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -2001,6 +2036,55 @@ re-centre, resolution — between every real turn, and their
 `vessel/session/v2` snapshots came back byte-identical by construction. A
 caller-supplied picture can bypass the wire's content guarantee; it still
 cannot become a hidden writer.
+
+*Re-scored again by [The Drift](./chronicle/the-drift.md) (2026-08-23), which
+is the strongest available test of the paragraph above and confirms it.*
+
+**The bet does not move, and this time the null has teeth.** The Stope argued
+that adding places underground does not add resolution to the quantity that
+places peoples, because the two are disjoint derivations — an argument made
+from one campaign's evidence. The Drift is the case that would break it if it
+were breakable. It deleted a draw, added a draw, dropped a field from the
+chamber address, bumped six seed-derivation labels and retired a seventh; every
+chamber in every world relocated for the second time in three days; and
+underworld reachability went from **7.0% to 100.00%** on all three panel seeds,
+which is the largest single change to what is *usable* underground the project
+has made. Across the whole campaign exactly **four** drift-checked artifacts
+moved, and only **three** of them derive from a world: the stream manifest
+(the labels themselves), the type-audit report, and the underworld witness
+page — plus `docs/digest/decisions-in-force.md`, which gained one index line
+for the campaign's decision record and is not world-derived at all. Every
+almanac, the elevation map, every laboratory study, the Domesday survey and
+the client fixtures are byte-identical.
+
+A stronger instrument confirms the same null, measured after the paragraph
+above was written: the once-per-campaign census refresh ran on the canonical
+box at `fb2ef7ecd` (`docs/timings.md`, row stamped 2026-08-24T12:05:18Z,
+904.554 s) and **zero goldens moved** — 1,000 worlds, 0 refusals, 226 charts
+and 450 charts republished with no value changed. Verified non-vacuously:
+both `rows.csv` were rewritten by that run (mtimes minutes old, 1001 lines
+each) and came out byte-identical to committed. Six seed-derivation epochs
+relocated every chamber in every world and the 1,000-world census did not
+move.
+
+So the seating axis still takes the four or five distinct values The Underworld
+measured, and a campaign that made the underworld *connected* contributed
+nothing to it — for the same structural reason the campaign that made it
+*large* contributed nothing. **A derivation that never asks a question is
+unmoved by any answer to it**, and the two instances together make that a
+property of the seam rather than an accident of either campaign. A campaign
+that wants depth to discriminate has to widen the seating derivation; the
+underworld beneath it can be rebuilt entirely without touching the score.
+
+**One half moves toward the bet, in the same direction The Stope's did.** The
+per-branch character axis is now attached to something a player can actually
+walk. Before this campaign a branch's character described a run of levels most
+of which were unreachable from any entrance, and the share of a system's levels
+reachable from its own doors sat at 11–13% at the median; it is 100% now, with
+the unreached-by-band histogram empty on every seed. That still does not place
+a people and nothing that places a people consults it — but the standing
+precondition since The Delvers has been the underworld *being declared as
+places*, and a place nobody can reach is a weaker candidate than one they can.
 
 ## Precedented but nontrivial (moderate confidence)
 

@@ -16,7 +16,7 @@
 //! `MaterialBuffer::porosity`, and height above sea level. No draws, no
 //! committed facts, so it cannot perturb stream consumption order (a
 //! save-format contract) and adds nothing to the ledger. It takes no
-//! [`crate::DelveRung`]: the table is a property of the column, and the ladder
+//! [`hornvale_kernel::Band`]: the table is a property of the column, and the ladder
 //! reads it rather than the other way round.
 //!
 //! ## The derivation
