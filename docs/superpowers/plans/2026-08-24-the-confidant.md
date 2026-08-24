@@ -33,6 +33,18 @@ player's knowledge as `heard`, which is already outside the ground-truth check.
 - Renaming a test is a commit-gate change: `docs/timings/subfloor-roster.tsv`
   selects by EXACT name and a stale id drops tests silently.
 
+## A probe this plan prescribed, which is BLIND (Task 1's finding)
+
+Do not verify a concept-registry change by building seed 42 and diffing the
+JSON. That instrument reports IDENTICAL for every input: an unregistered probe
+concept never reaches `concept_epoch`, because `concept_epoch` is consulted
+only for names already in the world's concept registry (`register_all`), which
+is independent of `EPOCH_COHORTS`. Task 1 caught this ONLY because it ran a
+positive control and the control also came back empty.
+
+The right instrument drives `assign_proto_roots_with_epoch` directly, as
+`domains/language/tests/suite/accession_properties.rs` does.
+
 ## A note on this plan's code blocks
 
 Where a signature is quoted below it was **read from the tree** and is exact.
