@@ -3,7 +3,7 @@
 **Program:** The Penstock (`docs/superpowers/specs/2026-08-22-the-penstock-metaplan.md`), stage 7.
 **Branch:** `campaign/the-tailrace`, from `origin/main` @ `c39444ba6`.
 **Decision block:** 0236–0245.
-**Status:** awaiting G3.
+**Status:** G3 approved 2026-08-24. Planning.
 
 ---
 
@@ -405,12 +405,17 @@ into this campaign's headline.
 
 Numbered from the reserved block at ratification.
 
-1. **A fold advances; it is not invalidated** — the distinction between the
+1. **Stage 7 is three stages, and their order is forced** — 7a the read side,
+   7b the typed intention, 7c fact lifetime. Ratified at G3, 2026-08-24. The
+   ordering is not a preference: 7c is unsafe while anything folds raw history,
+   and 7b precedes 7c because the per-step `provenance` is rendered prose, so
+   dropping steps first is a fidelity cut. Amends the metaplan's §6 stage table.
+2. **A fold advances; it is not invalidated** — the distinction between the
    incremental-fold primitive and `Derived`'s memo, and the rule that a
    dependency touched every tick makes a memo useless by construction.
-2. **The reset event is the checkpoint** — a past-position read is served from
+3. **The reset event is the checkpoint** — a past-position read is served from
    the last reset at or before it, which is what bounds the three drives.
-3. Possibly: **the trail's provenance is content**, recording why 7c is gated
+4. Possibly: **the trail's provenance is content**, recording why 7c is gated
    behind 7b rather than being reachable directly. This may be better as a
    `see-also` on `MEM-1` than a decision of its own.
 
