@@ -102,6 +102,24 @@ fn v2_bytes_are_pinned() {
 }
 
 #[test]
+fn noun_kind_rides_the_wire_additively() {
+    // The Lexicon Task 2: `NounEntry` carries a coarse kind for
+    // completion-capable clients. Additive on `vessel/session/v2` — serde
+    // default keeps older mirrors loading — and rendered as the lowercase tag
+    // of `NounKind`. The first noun a fresh snapshot narrates is the biome
+    // descriptor, which focalize tags `Place`.
+    let world = world();
+    let (session, _) = Session::start(&world, &opts()).unwrap();
+    let json = snapshot_json(&session.snapshot().unwrap());
+    let v: serde_json::Value = serde_json::from_str(&json).expect("a snapshot parses");
+    assert_eq!(
+        v["narration"]["nouns"][0]["kind"].as_str(),
+        Some("place"),
+        "nouns must carry their coarse kind on the wire: {json:.200}"
+    );
+}
+
+#[test]
 fn the_schema_tag_is_the_one_every_client_pins() {
     // Asserted on the BYTES and against a literal, not against
     // `SESSION_SCHEMA`: the constant and the wire agreeing is tautological,

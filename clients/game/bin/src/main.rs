@@ -101,6 +101,20 @@ fn redraw(term: &term::Term, driver: &mut Driver) -> std::io::Result<()> {
         text: &text,
         caret: driver.caret(),
     };
+    // Rebuild the renderer's borrowed `Hint` view from the driver's owned
+    // pair; both bindings live to the end of this function, so the borrows
+    // outlive the `render_with` call below.
+    let hint_parts = driver.hint_parts();
+    let matches: Vec<&str> = hint_parts
+        .as_ref()
+        .map(|(_, m)| m.iter().map(String::as_str).collect())
+        .unwrap_or_default();
+    let hint = hint_parts
+        .as_ref()
+        .map(|(s, _)| hornvale_game_core::entry::Hint {
+            stem: s.as_str(),
+            matches: &matches,
+        });
     // The Portolan part II, Task 3a: the world view's activation is
     // `Driver`'s own decision, not re-derived here — `Driver::
     // world_plate_for_redraw`'s doc explains why (fix round 1: an earlier
@@ -121,6 +135,7 @@ fn redraw(term: &term::Term, driver: &mut Driver) -> std::io::Result<()> {
         driver.echo(),
         world_plate.as_ref(),
         driver.strip_offset(),
+        hint.as_ref(),
     ) {
         Ok((grid, cursor)) => term.draw(&grid, cursor),
         Err(e) => term.draw_text(&format!("render error: {e}")),
