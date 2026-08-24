@@ -318,7 +318,22 @@ Then `git add kernel/src/room.rs` and commit.
 
 - [ ] **Step 6: Take the measurement — location depends on The Hand's answer**
 
-The counters are pure kernel and touch nobody. The **readout** is the coordination point: the natural site is `windows/vessel/examples/agent_scaling.rs`'s existing report, inside `campaign/the-hand`'s hold-off. A question was sent to the live `hornvale-e2` session before this plan was written.
+The counters are pure kernel and touch nobody. The **readout** is the coordination point: the natural site is `windows/vessel/examples/agent_scaling.rs`'s existing report, inside `campaign/the-hand`'s hold-off.
+
+**The wire route was tried and FAILED.** A message went to the live
+`hornvale-e2` session and **expired unapproved** — it never reached that
+session's Claude at all. So the durable channel is the board, and the question
+now lives there:
+
+```
+make board  # thread=forebay-memo-hitrate-readout, kind=ask, post f62af82f2
+```
+
+It is synced to `origin`, so The Hand sees it at its next session start. Check
+for a reply with `make board-sync && make board` before choosing a branch
+below — **do not** re-try the wire; an unapproved cross-session message is not
+a channel you can rely on, and CLAUDE.md's own rule is that the board reaches
+where the wire cannot.
 
 **Branch table — read the answer, then take exactly one branch:**
 
@@ -327,7 +342,7 @@ The counters are pure kernel and touch nobody. The **readout** is the coordinati
 | "I'll carry it" | Hand over the four accessor names. Take **no** vessel edit. Record that the number arrives after The Hand lands, and leave the spec's headline question OPEN rather than answered. |
 | "land it first, I'll absorb" | Add the four counters to the bench's existing report block as its own commit, ~4 lines, no other change. Run it and record the hit rate. |
 | "wait for me" | Same as "I'll carry it". |
-| no reply by the time Tasks 2-3 are done | Fall back to a **kernel-side** probe over a synthetic `RoomAddr` walk in `kernel/examples/`, and state plainly that the distribution is synthetic and therefore a weaker instrument than the bench. Do NOT edit vessel on silence. |
+| no reply by the time Tasks 2-3 are done | **This is now the expected branch, not the unlikely one** — the wire failed and a board `ask` waits on another host's session cadence. Fall back to a **kernel-side** probe over a synthetic `RoomAddr` walk in `kernel/examples/`, and state plainly in the spec that the distribution is synthetic and therefore a weaker instrument than the bench. Do NOT edit vessel on silence. |
 
 Whichever branch runs, record the number and its provenance in the spec's instrument table (naming which of the two headlines it selects), and post a board `reply` so the coordination becomes precedent instead of evaporating.
 
