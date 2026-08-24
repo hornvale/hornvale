@@ -8731,9 +8731,14 @@ mod tests {
     /// `decide_step`'s own resolution: the body drinks, exactly as it would
     /// with no controller in the loop at all — this is what proves every
     /// existing NPC's committed trail is unperturbed by this task.
-    /// `PlayerController` must HOLD it — nothing committed — regardless of
-    /// what the body's own arbitration wants, which is spec §5.2's "commits
-    /// on `Do`, nothing on `Hold`" argument made mechanical. Swap
+    /// `PlayerController` must HOLD it — returning no action — regardless of
+    /// what the body's own arbitration wants. Scope this claim carefully: at
+    /// THIS unit's level the `Hold` is what leaves the returned fact vector
+    /// empty, but in the live session the driven walk's facts are discarded
+    /// unconditionally (`Session::wait`), so there the DISCARD and not the
+    /// `Hold` is what keeps the ledger clean. Spec §5.2's "commits on `Do`,
+    /// nothing on `Hold`" wording described the session level and was
+    /// withdrawn for it (The Hand, Task 5); do not re-import it here. Swap
     /// `DefaultController` for `PlayerController` in the first call (or vice
     /// versa) and one of the two assertions below reddens; that swap is
     /// exactly what a session-level test cannot always force (seed 42's own

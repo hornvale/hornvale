@@ -400,7 +400,7 @@ fn the_objective_needs_reads_a_creature_the_body_cannot_sense() {
     let companion = s.bodies()[1].entity;
     assert!(
         s.place_creature_out_of_my_sight(companion),
-        "precondition: the entered chamber must have a cell outside its own          shadowcast to place `{hidden}` on"
+        "precondition: the entered chamber must have a cell outside its own shadowcast to place `{hidden}` on"
     );
     let subjective = out(&mut s, "needs");
     let objective = out(&mut s, "!needs");
@@ -411,15 +411,15 @@ fn the_objective_needs_reads_a_creature_the_body_cannot_sense() {
     );
     assert!(
         !subjective.contains(&hidden),
-        "precondition: bare `needs` must withhold `{hidden}` — that is the gate          this pair exists to discriminate. Got: {subjective}"
+        "precondition: bare `needs` must withhold `{hidden}` — that is the gate this pair exists to discriminate. Got: {subjective}"
     );
     assert!(
         objective.contains(&hidden),
-        "`!needs` must read the felt state of `{hidden}`, who is standing here but          beyond the body's sight. Got: {objective}"
+        "`!needs` must read the felt state of `{hidden}`, who is standing here but beyond the body's sight. Got: {objective}"
     );
     assert_ne!(
         subjective, objective,
-        "`!needs` must not be an alias for `needs` — it takes the sight gate to          its permissive limit"
+        "`!needs` must not be an alias for `needs` — it takes the sight gate to its permissive limit"
     );
 }
 
@@ -439,7 +439,7 @@ fn the_objective_examine_answers_for_a_creature_the_body_cannot_sense() {
     let companion = s.bodies()[1].entity;
     assert!(
         s.place_creature_out_of_my_sight(companion),
-        "precondition: the entered chamber must have a cell outside its own          shadowcast to place `{hidden}` on"
+        "precondition: the entered chamber must have a cell outside its own shadowcast to place `{hidden}` on"
     );
     let subjective = out(&mut s, &format!("examine {hidden}"));
     let objective = out(&mut s, &format!("!examine {hidden}"));
@@ -451,11 +451,11 @@ fn the_objective_examine_answers_for_a_creature_the_body_cannot_sense() {
     assert_eq!(
         subjective,
         format!("You see no {hidden} here."),
-        "precondition: bare `examine` must refuse a creature sight withheld, in          the band's own absence wording"
+        "precondition: bare `examine` must refuse a creature sight withheld, in the band's own absence wording"
     );
     assert!(
         objective.contains(&hidden) && objective.contains("alive and moving"),
-        "`!examine` must answer with the creature's own datum — the SAME sentence          the chart's legend gives, never a second wording. Got: {objective}"
+        "`!examine` must answer with the creature's own datum — the SAME sentence the chart's legend gives, never a second wording. Got: {objective}"
     );
     assert_ne!(
         subjective, objective,
@@ -487,7 +487,7 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     let companion = s.bodies()[wild_idx].entity;
     assert!(
         s.place_creature_out_of_my_sight(companion),
-        "precondition: the entered chamber must have a cell outside its own          shadowcast to place `{hidden}` on"
+        "precondition: the entered chamber must have a cell outside its own shadowcast to place `{hidden}` on"
     );
     let subjective = out(&mut s, "wait");
 
@@ -503,11 +503,11 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     );
     assert!(
         !subjective.contains(&hidden),
-        "precondition: bare `wait` must drop the departure of `{hidden}`, whom          the body never saw. Got: {subjective}"
+        "precondition: bare `wait` must drop the departure of `{hidden}`, whom the body never saw. Got: {subjective}"
     );
     assert!(
         objective.contains("You watch") && objective.contains(&hidden),
-        "`!wait` must narrate `{hidden}` leaving — the departure the body could          not witness. Got: {objective}"
+        "`!wait` must narrate `{hidden}` leaving — the departure the body could not witness. Got: {objective}"
     );
     assert_ne!(
         subjective, objective,
