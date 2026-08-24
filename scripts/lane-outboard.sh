@@ -42,6 +42,17 @@ run() {
 run "tools/board"      env -u GIT_DIR -u GIT_INDEX_FILE cargo test --manifest-path tools/board/Cargo.toml
 run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml
 run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
+# tools/seam-guard was the one dev-tool crate whose own suite nothing ran, so a
+# test added to it was a comment — and it turned out to hide 31 pre-existing
+# tests as well as the new ones. GIT_DIR/GIT_INDEX_FILE are scrubbed here as
+# they are for tools/board above, but note this is now DEFENCE IN DEPTH rather
+# than the actual protection: both the tests and `tree_is_clean_in` itself
+# scrub the git environment internally, because `-C <dir>` does not override
+# `GIT_DIR` and a test that only survives when its RUNNER is careful is unsafe
+# the first time someone runs it by hand. That is not hypothetical — it
+# happened on 2026-08-23 and put a junk commit and a wrong `user.email` into
+# this checkout.
+run "tools/seam-guard" env -u GIT_DIR -u GIT_INDEX_FILE cargo test --manifest-path tools/seam-guard/Cargo.toml
 # THE QUEUE'S OWN SUITE, which until now was run by NOBODY. `test-sluice.sh`
 # was referenced only from prose — no make target, no set, no phase — so the
 # 151 property tests guarding the merge queue ran only when someone
