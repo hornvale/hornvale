@@ -195,6 +195,38 @@ valence × arousal, so the ordering is authored there, not invented here.
 
 ---
 
+## Task 4b: A culture can actually hold a feeling-word
+
+**This task exists because Task 4 found the mechanism is unreachable.**
+`exposure_of_impl` (`windows/worldgen/src/lib.rs`) never touches
+`felt_state_pack()`, so every felt-state concept falls through its catch-all
+Gap for every real generated culture. Without this task the lexical gap ships
+untested by any world and Task 7's metrics read 0 for all fifteen peoples.
+
+**The rule must DERIVE, not be authored** — spec §5.1. If a table says which
+people lacks which feeling-word, then measuring the distribution of deficiency
+recovers that table, which is circular. Derive exposure from vectors already
+authored for other reasons — `MindVector` (`threat_response`,
+`deliberation_latency`, `time_horizon`) and `SocietyVector`
+(`domains/species/src/lib.rs`) — so the deficiency distribution is a
+consequence rather than a premise.
+
+- [ ] **Step 1: Read `exposure_of_impl`** and how an existing pack earns
+  `Steeped` / `KnowsOf` / `Unknown`. Follow that shape exactly.
+- [ ] **Step 2: Write the failing test first** — two authored peoples whose
+  vectors differ produce different felt-state exposure. Behavioural red.
+- [ ] **Step 3: Derive the rule** from the vectors. Keep it simple and state
+  the mapping in a doc comment; a reader must be able to see why a people
+  with a given psychology has or lacks a given word.
+- [ ] **Step 4: Report the DISTRIBUTION across all fifteen peoples**, not a
+  summary. **A uniform result is a finding, not a pass** — if every people
+  ends up with the same exposure, the mapping is degenerate and you should say
+  so rather than proceed.
+- [ ] **Step 5: Drift.** New exposures change lexicons, so words appear where
+  there were gaps. `make rebaseline` THEN `make rebaseline-goldens`. Existing
+  words for OTHER concepts must not move — if one does, STOP and report.
+- [ ] **Step 6: `make gate-commit`, commit** with regenerated artifacts.
+
 ## Task 5: The cognitive gap — bounded introspection
 
 **Verified property:** arbitration ranks drives and keeps the winner; the
