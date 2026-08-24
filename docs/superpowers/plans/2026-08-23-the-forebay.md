@@ -31,7 +31,7 @@ Two guards are broken on macOS's bash 3.2 **on `origin/main` today**, and they f
 
 **Files:**
 - Create: `scripts/check-bash32.sh`
-- Modify: `scripts/test-worktree-freshness.sh` (three comments at `:102`, `:112`, `:138`)
+- Modify: `scripts/test-worktree-freshness.sh` (two comments, at `:102` and `:112` — verified; `:138` is outside every substitution and must NOT be touched)
 - Modify: `scripts/hooks/post-merge:75`
 - Modify: `scripts/hooks/pre-commit` (wire the check in)
 
@@ -137,15 +137,32 @@ Expected: non-zero. `PARSE FAILS` for `scripts/test-worktree-freshness.sh`; `BAS
 
 - [ ] **Step 4: Fix the parse failure**
 
-The three offending comments sit inside one `$(...)`. The possessive apostrophe is the only thing bash chokes on. Read each line first and reword to preserve its meaning:
+**Exactly two lines cause it — 102 and 112 — and NOT 138.** The controller
+verified this empirically rather than reasoning about it, because an earlier
+draft of this plan asserted three lines and was wrong:
+
+```
+$ python3 -c "…strip apostrophes on 102 and 112 only…"
+$ /bin/bash -n t2.sh && echo CLEAN
+CLEAN
+```
+
+Both offending lines sit inside the one `$(...)` that opens at `:96`
+(`others="$(`). Line 138's "git's still-stale registry" is outside every
+substitution, so bash never parses it as code and it needs no change. The
+possessive apostrophe is the only thing bash chokes on.
 
 ```
 scripts/test-worktree-freshness.sh:102   "the main checkout's own path ..."   -> reword without the apostrophe
 scripts/test-worktree-freshness.sh:112   "hornvale-heavy-wt's own"            -> reword without the apostrophe
-scripts/test-worktree-freshness.sh:138   "git's still-stale registry"         -> reword without the apostrophe
 ```
 
-Add a line to the file's header noting that an apostrophe inside a `$(...)` comment breaks bash 3.2, so the next editor does not reintroduce one.
+Read each line and reword to preserve its meaning — do not blind-substitute.
+Leave `:138` alone; changing it would be noise in the diff, and a reviewer
+would reasonably ask why.
+
+Add a line to the file's header noting that an apostrophe inside a `$(...)`
+comment breaks bash 3.2, so the next editor does not reintroduce one.
 
 - [ ] **Step 5: Fix the runtime failure**
 
