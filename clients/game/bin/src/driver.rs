@@ -1,5 +1,5 @@
 //! The driver: the one place in `hornvale-game` allowed to know `Session`,
-//! `Agent`, or `WorldContext` exist.
+//! `Body`, or `WorldContext` exist.
 //!
 //! The architecture rule this module exists to hold (The Quire spec section
 //! 6): **the driver drives across the linker; everything displayed comes
@@ -21,7 +21,7 @@
 //! screen-position struct and the resolved text is a plain name, the same
 //! category of thing `snapshot()`'s narration prose already is — so this
 //! does not reopen the containment described above; it is still true that
-//! no `Agent`/`Knowledge`/`WorldContext` value ever crosses out.
+//! no `Body`/`Knowledge`/`WorldContext` value ever crosses out.
 //!
 //! **Resolution genuinely tracks the cursor.** Spec §3.1 assigns the cursor
 //! query to `bin`; §9 defers "the chamber / delve resolvers" (session-level
@@ -495,8 +495,7 @@ impl Driver {
         // The possessed agent's species, phonology and morphology — needed
         // to draw a feature's name (`resolve_at`), resolved once since the
         // agent's species is fixed for the session.
-        let agent = session.agent();
-        let species = agent.species.clone();
+        let species = session.driven_body().species.clone();
         let wc = WorldComponents::assemble().map_err(DriverError::Genesis)?;
         let ph = language_of_in(world_ref, &wc, &species);
         let mind = wc
@@ -1363,10 +1362,10 @@ impl Driver {
     /// `discovery` module's own doc:
     ///
     /// - **Visited (§A4a)**: record the possession's own walk-band room.
-    ///   Reading `session.agent()` here is licensed — `Driver` is
+    ///   Reading `session.position()` here is licensed — `Driver` is
     ///   documented as "the one place in `hornvale-game` allowed to know
-    ///   `Session`, `Agent`, or `WorldContext` exist" (the module doc); what
-    ///   this method never does is let a `RoomAddr`/`Agent` VALUE escape
+    ///   `Session`, `Body`, or `WorldContext` exist" (the module doc); what
+    ///   this method never does is let a `RoomAddr`/`Body` VALUE escape
     ///   `Driver` itself — `visited`/`discovered` are plain fields this
     ///   struct owns, queried only through [`Self::visited`]/
     ///   [`Self::discovered`]'s own `bool`/reference-returning accessors.
@@ -1388,7 +1387,7 @@ impl Driver {
     ///   it. Both checks read `self.cached`, the same plain JSON string
     ///   every other client read already uses.
     fn update_discovery(&mut self) {
-        let position = self.session.agent().position.clone();
+        let position = self.session.position();
         self.visited.record(position.clone());
 
         let coord = position.coord();
@@ -2392,7 +2391,7 @@ mod portolan_tests {
     fn h6_discovery_is_monotonic() {
         let mut d = test_driver();
 
-        let start_coord = d.session.agent().position.coord();
+        let start_coord = d.session.position().coord();
         let start_cell = d
             .nearest
             .nearest(&d.geo, start_coord.latitude, start_coord.longitude);
@@ -2448,7 +2447,7 @@ mod portolan_tests {
     fn h6b_co_location_does_not_disclose_a_settlement() {
         let mut d = test_driver();
 
-        let start = d.session.agent().position.clone();
+        let start = d.session.position();
         let coord = start.coord();
         let cell = d.nearest.nearest(&d.geo, coord.latitude, coord.longitude);
         assert!(
@@ -2501,7 +2500,7 @@ mod portolan_tests {
         // from this exact starting position DOES discover the settlement
         // — proving the negative checks above are not vacuous.
         let mut fresh = test_driver();
-        let fresh_coord = fresh.session.agent().position.coord();
+        let fresh_coord = fresh.session.position().coord();
         let fresh_cell =
             fresh
                 .nearest
@@ -2560,7 +2559,7 @@ mod portolan_tests {
     /// identical real turns and never touches the map at all.
     /// `Visited`/`Discovered` never call into `self.session` except
     /// through accessors the client already reads elsewhere
-    /// (`session.agent()`), so this is expected to hold by construction —
+    /// (`session.position()`), so this is expected to hold by construction —
     /// this test is the preregistered evidence, not a tuning knob. A
     /// difference here is a STOP (spec Amendment 1's own H7 doc), not
     /// something to patch.

@@ -200,3 +200,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0176](0176-the-chamber-address-gains-a-floor-and-sunless-becomes-nadir.md) | The chamber address gains a floor, and `Sunless` becomes `Nadir`, on one `chamber/v3` epoch | Accepted |
 | [0196](0196-a-map-is-a-fact-about-the-world-and-a-view-is-a-lens.md) | A map's frame is a fact about the world, and a view of the world is a lens | Accepted |
 | [0197](0197-co-location-is-not-discovery.md) | Co-location is not discovery | Accepted |
+| [0226](0226-a-possessed-host-is-co-present-not-displaced.md) | A possessed host is co-present, not displaced | Accepted |
+| [0227](0227-possession-selects-a-body-it-does-not-mint-one.md) | Possession selects a body; it does not mint one | Accepted |
+| [0228](0228-a-controller-is-a-parameter-of-the-tick.md) | A controller is a parameter of the tick, not a property of the body | Accepted |
+| [0229](0229-one-body-type.md) | One body type | Accepted |
+| [0230](0230-a-query-bound-is-quantized-to-read-a-quantized-store.md) | A query bound is quantized to read a quantized store | Accepted |

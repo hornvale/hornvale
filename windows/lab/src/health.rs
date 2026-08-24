@@ -15,9 +15,10 @@
 
 use hornvale_kernel::{Ledger, RoomMeshMemo, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
+use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Npc, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied,
+    LocaleTerrain, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied,
     agent_position, built_rooms, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
@@ -90,7 +91,7 @@ fn is_distress(label: AffectLabel) -> bool {
 pub fn run_simulation(
     seed_ledger: &Ledger,
     registry: &hornvale_kernel::ConceptRegistry,
-    npcs: &[Npc],
+    npcs: &[Body],
     terrain: &dyn Terrain,
     ticks: usize,
     day_length_std: Option<f64>,
@@ -193,7 +194,7 @@ pub fn run_simulation(
 pub fn run_simulation_with_locale(
     seed_ledger: &Ledger,
     registry: &hornvale_kernel::ConceptRegistry,
-    npcs: &[Npc],
+    npcs: &[Body],
     ctx: &LocaleContext,
     calendar: Option<&hornvale_astronomy::Calendar>,
     predator: Option<&hornvale_kernel::CellMap<f64>>,

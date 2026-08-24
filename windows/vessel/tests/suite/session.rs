@@ -43,7 +43,7 @@ fn possession_opens_with_a_focalized_description() {
 fn go_moves_and_back_retraces() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let home = s.agent().position.clone();
+    let home = s.position();
     // find a real direction from the current room's ways-on
     let ways = match s.handle("look") {
         Turn::Out(t) => t,
@@ -67,9 +67,9 @@ fn go_moves_and_back_retraces() {
         Turn::Out(t) => assert!(t.contains("[room ")),
         _ => panic!("go must not release"),
     }
-    assert_ne!(s.agent().position, home, "go moved");
+    assert_ne!(s.position(), home, "go moved");
     s.handle("back");
-    assert_eq!(s.agent().position, home, "back retraces");
+    assert_eq!(s.position(), home, "back retraces");
 }
 
 /// The refusal is DIRECTIONAL as of The Lintel: coarse-ward (`exit`, toward
@@ -82,13 +82,13 @@ fn go_moves_and_back_retraces() {
 fn the_coarse_ward_exit_refuses_diegetically() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let before = s.agent().position.clone();
+    let before = s.position();
     let out = match s.handle("exit") {
         Turn::Out(t) => t,
         _ => panic!("exit must not release"),
     };
     assert!(out.contains("grain of the world"), "diegetic refusal");
-    assert_eq!(s.agent().position, before, "no movement");
+    assert_eq!(s.position(), before, "no movement");
 }
 
 /// Descending must never move the WALK-band position: the band change lives in
@@ -99,7 +99,7 @@ fn the_coarse_ward_exit_refuses_diegetically() {
 fn entering_leaves_the_walk_band_position_alone() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let before = s.agent().position.clone();
+    let before = s.position();
     let reply = match s.handle("enter") {
         Turn::Out(t) => t,
         _ => panic!("enter must not release"),
@@ -114,12 +114,12 @@ fn entering_leaves_the_walk_band_position_alone() {
         "the flagship's own locale is built, so this must actually descend: {reply:?}"
     );
     assert_eq!(
-        s.agent().position,
+        s.position(),
         before,
         "the possession's walk-band position is untouched by descent"
     );
     s.handle("out");
-    assert_eq!(s.agent().position, before);
+    assert_eq!(s.position(), before);
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
     let world = seam_world();
     let (mut s, opening) = Session::start(&world, &opts()).unwrap();
     assert!(opening.contains("day 0"));
-    let home = s.agent().position.pack().unwrap().0;
+    let home = s.position().pack().unwrap().0;
     let out = match s.handle("wait 90") {
         Turn::Out(t) => t,
         _ => panic!("wait must not release"),
@@ -161,7 +161,7 @@ fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
         _ => panic!("look must not release"),
     }
     assert_eq!(
-        s.agent().position.pack().unwrap().0,
+        s.position().pack().unwrap().0,
         home,
         "waiting does not move the possessed agent"
     );
@@ -823,7 +823,7 @@ fn the_eyes_verb_reports_whose_eyes_and_what_the_projection_drops() {
         Turn::Out(t) => t,
         Turn::Released(_) => panic!("!eyes must not release"),
     };
-    let species = s.agent().species.clone();
+    let species = s.driven_body().species.clone();
     assert!(
         out.contains(&species),
         "the report must name whose eyes: {out}"
@@ -841,7 +841,7 @@ fn eyes_switches_the_chart_and_an_unknown_name_lists_the_roster() {
     let before = s.purview(0).unwrap();
     s.handle("!eyes kobold");
     let after = s.purview(0).unwrap();
-    if s.agent().species != "kobold" {
+    if s.driven_body().species != "kobold" {
         assert_ne!(
             before.cells.iter().map(|c| c.color).collect::<Vec<_>>(),
             after.cells.iter().map(|c| c.color).collect::<Vec<_>>(),
