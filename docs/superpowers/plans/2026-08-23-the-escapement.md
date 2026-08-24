@@ -80,6 +80,23 @@ in vessel anyway.
 Phase A delivers **no user-visible value** — it is preparation, and that is
 fine. Its job is to get 332 mechanical renames out of the risky commit.
 
+### Three crates outside the workspace break invisibly — and the plan never named them
+
+`Cargo.toml`'s `exclude` list keeps these out of the workspace, so
+`gate-commit`'s workspace clippy does NOT build them, and a break here is
+silent until someone runs their own command. Measured on this branch:
+
+| crate | hornvale deps | `WorldTime` refs | what checks it |
+|---|---|---|---|
+| `tools/digest` | 1 | 1 (`src/store.rs:164`) | **nothing** — `cargo test --manifest-path tools/digest/Cargo.toml`, by hand only |
+| `clients/vessel/wasm` | 4 | 2 | `make vessel-check` |
+| `clients/game/bin` | 5 | 1 | the `clients` set / `make world-check` |
+
+`tools/digest` is the dangerous one: CLAUDE.md states plainly that none of the
+gates build it, and there has been no CI since decision 0125, so the only thing
+that would ever catch it is a person remembering. Port all three in the Phase A
+sweep and run each crate's own check.
+
 ### Phase B — the representation flip. One commit. Gated on The Hand.
 
 Flip the field to `i64`, derive `Ord`/`Eq`/`Hash`, delete the shims, and in the
