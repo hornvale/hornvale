@@ -605,7 +605,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_kernel::{Band, Seed, Vertex};
 use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins, rungs};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, entrance_count,
@@ -1038,7 +1038,7 @@ struct SystemReach {
 /// Read one cave system through the shipped entry points only.
 fn read_system(
     seed: Seed,
-    cell: CellId,
+    cell: Vertex,
     cave: &Cave,
     gradient: GeothermalGradient,
     ranks: &[u8],
@@ -1369,7 +1369,7 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
         branches_per_realized_band: BTreeMap::new(),
     };
 
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         // `cave_at` refuses an ocean cell as its first act, so the ocean test
         // is a COUNT of a case that never carries a cave today, not a guard
         // the walk depends on — and the day it does carry one, the artifact

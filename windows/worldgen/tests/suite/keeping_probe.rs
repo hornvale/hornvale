@@ -124,7 +124,7 @@
 // takes for the same reason.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_kernel::CellMap;
+use hornvale_kernel::VertexMap;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
     SETTLERS_PER_CAPACITY, SettlementPins, SkyChoice, build_world, carrying_inputs_of, climate_of,
@@ -244,7 +244,7 @@ fn probe_seed(seed: u64) {
         &affinity,
     );
     let tag_of = |name: &str| -> u32 { names.iter().position(|n| *n == name).unwrap() as u32 };
-    let k_of = |tag: u32| -> &CellMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
+    let k_of = |tag: u32| -> &VertexMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
 
     // The bake's own capacity field, verbatim from `bake_history_from`. K is a
     // dimensionless factor in [0,1]; this is what carries the headcount units.
@@ -253,10 +253,10 @@ fn probe_seed(seed: u64) {
     // `scaled` keeps this a capacity by construction (decision 0103).
     let capacity = base.scaled(SETTLERS_PER_CAPACITY);
     // eff_capacity as the rewired bake would compute it: base x per-species K.
-    let eff = |c: hornvale_kernel::CellId, tag: u32| -> f64 { capacity.at(c) * *k_of(tag).get(c) };
+    let eff = |c: hornvale_kernel::Vertex, tag: u32| -> f64 { capacity.at(c) * *k_of(tag).get(c) };
 
     let sea = terrain.sea_level();
-    let cells: Vec<_> = geo.cells().collect();
+    let cells: Vec<_> = geo.vertices().collect();
     let land: Vec<_> = cells
         .iter()
         .copied()
@@ -400,7 +400,7 @@ fn probe_seed(seed: u64) {
 
     // THE HEADROOM, correctly posed: cells someone could live on that today's
     // gate excludes, and cells the gate admits that nobody could live on anyway.
-    let is_hab = |c: hornvale_kernel::CellId| -> bool {
+    let is_hab = |c: hornvale_kernel::Vertex| -> bool {
         hornvale_climate::is_habitable(
             climate.mean_temperature_at(c),
             climate.moisture_at(c),

@@ -52,7 +52,7 @@
 
 use hornvale_kernel::test_lineage;
 use hornvale_kernel::{
-    CellId, ComponentStore, EntityId, Fact, KindId, Seed, Value, World, WorldTime,
+    ComponentStore, EntityId, Fact, KindId, Seed, Value, Vertex, World, WorldTime,
 };
 use hornvale_species::{Dispersion, MindVector};
 use std::collections::BTreeMap;
@@ -74,7 +74,7 @@ const BAKE_EPOCH_YEARS: f64 = 25.0;
 /// is.
 fn synthetic_settlement(
     filler: usize,
-    site: CellId,
+    site: Vertex,
     founded: f64,
     people: &str,
 ) -> (World, EntityId) {
@@ -141,8 +141,8 @@ fn synthetic_settlement(
 /// the two worlds hold the same settlement at genuinely different ids.
 #[test]
 fn a_settlements_disposition_survives_an_earlier_entity_being_minted() {
-    let (early, early_id) = synthetic_settlement(0, CellId(4242), 725.0, "human");
-    let (late, late_id) = synthetic_settlement(37, CellId(4242), 725.0, "human");
+    let (early, early_id) = synthetic_settlement(0, Vertex(4242), 725.0, "human");
+    let (late, late_id) = synthetic_settlement(37, Vertex(4242), 725.0, "human");
     assert_ne!(
         early_id, late_id,
         "the fixture must actually place the settlement at two different ids, \
@@ -164,9 +164,9 @@ fn a_settlements_disposition_survives_an_earlier_entity_being_minted() {
 /// that ignored its key entirely would pass the test above trivially.
 #[test]
 fn the_draw_moves_with_both_halves_of_its_key() {
-    let (base, base_id) = synthetic_settlement(0, CellId(4242), 725.0, "human");
-    let (other_site, other_site_id) = synthetic_settlement(0, CellId(4243), 725.0, "human");
-    let (other_year, other_year_id) = synthetic_settlement(0, CellId(4242), 750.0, "human");
+    let (base, base_id) = synthetic_settlement(0, Vertex(4242), 725.0, "human");
+    let (other_site, other_site_id) = synthetic_settlement(0, Vertex(4243), 725.0, "human");
+    let (other_year, other_year_id) = synthetic_settlement(0, Vertex(4242), 750.0, "human");
 
     let base = settlement_disposition(&base, base_id).expect("human carries a mind");
     let by_site = settlement_disposition(&other_site, other_site_id).expect("human carries a mind");
@@ -200,7 +200,7 @@ fn the_draw_moves_with_both_halves_of_its_key() {
 fn the_year_key_survives_the_ledger_crossing_and_its_quantization() {
     let mut year = BAKE_START_YEAR;
     while year <= BAKE_END_YEAR {
-        let (world, id) = synthetic_settlement(0, CellId(1234), year, "human");
+        let (world, id) = synthetic_settlement(0, Vertex(1234), year, "human");
         let committed = match world.ledger.value_of(id, hornvale_history::OCC_FOUNDED) {
             Some(Value::Number(n)) => *n,
             other => panic!("occ-founded must commit as a number, got {other:?}"),
@@ -225,7 +225,7 @@ fn the_bake_side_key_path_and_the_ledger_side_wrapper_agree() {
     let mut year = BAKE_START_YEAR;
     while year <= BAKE_END_YEAR {
         for people in ["human", "goblin", "gnoll", "hobgoblin", "kobold", "bugbear"] {
-            let site = CellId(4242 + (year as u32));
+            let site = Vertex(4242 + (year as u32));
             let (world, id) = synthetic_settlement(3, site, year, people);
             let via_ledger =
                 settlement_disposition(&world, id).expect("every settling people carries a mind");
@@ -272,7 +272,7 @@ fn the_gate_side_scalar_is_the_full_draws_threat_response() {
     let mut year = BAKE_START_YEAR;
     while year <= BAKE_END_YEAR {
         for people in ["human", "goblin", "gnoll", "hobgoblin", "kobold", "bugbear"] {
-            let site = CellId(97 + (year as u32));
+            let site = Vertex(97 + (year as u32));
             let key = occupation_draw_key(year);
             let full = people_disposition(Seed(7), site, key, people, &psyche, &dispersion)
                 .expect("every settling people carries a mind");
@@ -337,7 +337,7 @@ fn the_draw_is_byte_pinned_for_a_known_key() {
     let dispersion = hornvale_species::dispersion_registry();
 
     assert_eq!(
-        people_disposition(Seed(42), CellId(1234), 725, "human", &psyche, &dispersion)
+        people_disposition(Seed(42), Vertex(1234), 725, "human", &psyche, &dispersion)
             .expect("human carries a mind"),
         MindVector {
             threat_response: 0.243_024_837_524_210_17,
@@ -351,7 +351,7 @@ fn the_draw_is_byte_pinned_for_a_known_key() {
     );
 
     assert_eq!(
-        people_disposition(Seed(42), CellId(1234), 725, "bugbear", &psyche, &dispersion)
+        people_disposition(Seed(42), Vertex(1234), 725, "bugbear", &psyche, &dispersion)
             .expect("bugbear carries a mind"),
         MindVector {
             threat_response: 0.653_157_050_013_834_4,
@@ -392,7 +392,7 @@ fn a_zero_dispersion_people_draws_its_authored_vector_exactly() {
         for cell in [0u32, 1, 4242] {
             let drawn = people_disposition(
                 Seed(42),
-                CellId(cell),
+                Vertex(cell),
                 year,
                 "test-kind",
                 &psyche,
@@ -419,7 +419,7 @@ fn every_drawn_dimension_stays_inside_the_unit_interval() {
         for cell in 0u32..400 {
             let drawn = people_disposition(
                 Seed(42),
-                CellId(cell),
+                Vertex(cell),
                 i64::from(cell) * 5,
                 kind.0,
                 &psyche,
@@ -462,7 +462,7 @@ fn the_three_mind_dimensions_are_drawn_independently() {
     );
     let mut off_diagonal = 0;
     for cell in 0u32..64 {
-        let drawn = people_disposition(Seed(42), CellId(cell), 100, "goblin", &psyche, &dispersion)
+        let drawn = people_disposition(Seed(42), Vertex(cell), 100, "goblin", &psyche, &dispersion)
             .expect("goblin has a mind");
         if drawn.threat_response != drawn.deliberation_latency
             || drawn.deliberation_latency != drawn.time_horizon
@@ -481,14 +481,14 @@ fn the_three_mind_dimensions_are_drawn_independently() {
 /// so rather than inventing the manikin.
 #[test]
 fn a_people_with_no_authored_mind_has_no_disposition() {
-    let (world, id) = synthetic_settlement(0, CellId(7), 100.0, "not-a-people");
+    let (world, id) = synthetic_settlement(0, Vertex(7), 100.0, "not-a-people");
     assert_eq!(settlement_disposition(&world, id), None);
 }
 
 /// An entity that is not an occupation carries neither half of the key.
 #[test]
 fn an_entity_that_is_not_an_occupation_has_no_disposition() {
-    let (mut world, _) = synthetic_settlement(0, CellId(7), 100.0, "human");
+    let (mut world, _) = synthetic_settlement(0, Vertex(7), 100.0, "human");
     let bare = world
         .ledger
         .mint_entity(test_lineage(world.ledger.entity_count() as u16));
@@ -530,7 +530,7 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 /// # FINDING 2 IS FALSIFIED, AND THE PARENTHESIS ABOVE IS WHY
 ///
 /// **`Bake.node_index` no longer holds one alive community per cell.** The
-/// Underworld's Task 8 re-keyed it on `(CellId, Band)` (spec §4.6), for
+/// Underworld's Task 8 re-keyed it on `(Vertex, Band)` (spec §4.6), for
 /// the stated purpose of letting an underworld community and a surface one
 /// share a column. `settlement/disposition/v1`'s draw key is `(site,
 /// founded-year)` and carries no rung, so the moment two peoples at different

@@ -10,7 +10,7 @@
 
 use hornvale_kernel::color::standard_observer;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
-use hornvale_kernel::{RoomAddr, RoomId, Seed, Value, World, WorldTime};
+use hornvale_kernel::{Facet, FacetId, Seed, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_scene::{Sight, SurroundsScene, surrounds_scene, surrounds_scene_colored_in};
 use hornvale_terrain::water::WaterKind;
@@ -75,7 +75,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
         _ => panic!("flagship settlement has no longitude fact"),
     };
     let depth = ctx.globe_level() + 6;
-    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+    let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
 
     let star = hornvale_astronomy::star::generate_star(
         world.seed.derive(hornvale_astronomy::streams::ROOT),
@@ -106,11 +106,11 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
 }
 
 /// The corner cell that dominates a room's blend: the highest-weight of the
-/// three, tie-broken by lowest `CellId` — the same rule
+/// three, tie-broken by lowest `Vertex` — the same rule
 /// `windows/locale/src/lib.rs`'s private `dominant_corner` applies (biome,
 /// water, cave all inherit from it), reimplemented here because that helper
 /// is not `pub`.
-fn dominant_cell(weights: &[(hornvale_kernel::CellId, u64); 3]) -> hornvale_kernel::CellId {
+fn dominant_cell(weights: &[(hornvale_kernel::Vertex, u64); 3]) -> hornvale_kernel::Vertex {
     let mut best = weights[0];
     for &candidate in &weights[1..] {
         if candidate.1 > best.1 || (candidate.1 == best.1 && candidate.0 < best.0) {
@@ -121,17 +121,17 @@ fn dominant_cell(weights: &[(hornvale_kernel::CellId, u64); 3]) -> hornvale_kern
 }
 
 /// The highest-relief LAND cell reachable in `scene`'s band, as a
-/// `(CellId, elevation_m)` pair — `None` if the band has no land cell at
+/// `(Vertex, elevation_m)` pair — `None` if the band has no land cell at
 /// all (every cell's dominant corner is water).
 fn highest_relief_land_cell(
     world: &World,
     ctx: &LocaleContext,
     scene: &SurroundsScene,
-) -> Option<(hornvale_kernel::CellId, f64)> {
+) -> Option<(hornvale_kernel::Vertex, f64)> {
     let geo = ctx.climate().geosphere();
-    let mut best: Option<(hornvale_kernel::CellId, f64)> = None;
+    let mut best: Option<(hornvale_kernel::Vertex, f64)> = None;
     for cell in &scene.cells {
-        let addr = match RoomId(cell.room).unpack() {
+        let addr = match FacetId(cell.room).unpack() {
             Ok(addr) => addr,
             Err(_) => continue,
         };
@@ -162,7 +162,7 @@ fn highest_relief_land_cell(
 /// (not restricted to any one walk band) — the widened check §6.1's branch
 /// table calls for when the first, band-restricted sample comes back flat.
 /// Same land predicate as [`highest_relief_land_cell`].
-fn global_highest_relief_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::CellId, f64) {
+fn global_highest_relief_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::Vertex, f64) {
     let globe = ctx.terrain().globe();
     globe
         .elevation
@@ -188,7 +188,7 @@ fn global_highest_relief_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::Cel
 /// no plausible seasonal amplitude would carry it back above 0 C, so a
 /// year-round "frozen" reading there is uninformative about whether the
 /// term itself is observable.
-fn nearest_to_freezing_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::CellId, f64) {
+fn nearest_to_freezing_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::Vertex, f64) {
     let globe = ctx.terrain().globe();
     globe
         .elevation
@@ -209,7 +209,7 @@ fn nearest_to_freezing_land_cell(ctx: &LocaleContext) -> (hornvale_kernel::CellI
 /// `(min_c, max_c, frozen_count_of_8)`.
 fn sample_year(
     ctx: &LocaleContext,
-    cell: hornvale_kernel::CellId,
+    cell: hornvale_kernel::Vertex,
     year_length: f64,
 ) -> (f64, f64, usize) {
     let mut temps = Vec::new();
@@ -243,7 +243,7 @@ fn sample_year(
 /// first_frozen_day)`.
 fn sample_days(
     ctx: &LocaleContext,
-    cell: hornvale_kernel::CellId,
+    cell: hornvale_kernel::Vertex,
     days: &[f64],
 ) -> (f64, f64, usize, Option<f64>) {
     let mut min_t = f64::INFINITY;
@@ -341,7 +341,7 @@ fn h3_real_band_sweep(world: &World) -> (usize, usize, Option<(f64, f64)>) {
         let lat = -82.5 + 15.0 * lat_i as f64;
         for lon_i in 0..24i64 {
             let lon = -180.0 + 15.0 * lon_i as f64;
-            let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+            let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
             let Ok(scene) = surrounds_scene_colored_in(
                 world,
                 &ctx,
@@ -403,7 +403,7 @@ fn flagship_band_colour_counts(world: &World) -> Option<(usize, usize, usize)> {
         _ => return None,
     };
     let depth = ctx.globe_level() + 6;
-    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+    let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
     let star = hornvale_astronomy::star::generate_star(
         world.seed.derive(hornvale_astronomy::streams::ROOT),
     );
@@ -567,7 +567,7 @@ fn main() {
         &Default::default(),
     )
     .expect("seed 1 builds");
-    let observer = RoomAddr::containing(unit_sphere_from_lat_lon(0.0, 0.0), 6);
+    let observer = Facet::containing(unit_sphere_from_lat_lon(0.0, 0.0), 6);
     let committed_scene = surrounds_scene(
         &seed1_world,
         &observer,
@@ -595,13 +595,13 @@ fn main() {
     // changes what `color` means.
     // ---------------------------------------------------------------
     println!("--- §7/H1: bedrock baseline over the seed-42 walk band ---");
-    let cell_count = band.cells.len();
+    let vertex_count = band.cells.len();
     let distinct_colors: BTreeSet<Option<[u8; 3]>> = band.cells.iter().map(|c| c.color).collect();
-    println!("cells.len() = {cell_count}");
+    println!("cells.len() = {vertex_count}");
     println!("distinct color count = {}", distinct_colors.len());
     println!(
         "(H1 floor for later tasks: strictly greater than {}; \
-         H1 ceiling: strictly less than {cell_count})",
+         H1 ceiling: strictly less than {vertex_count})",
         distinct_colors.len()
     );
     println!();

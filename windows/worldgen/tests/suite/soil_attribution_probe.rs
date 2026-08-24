@@ -147,7 +147,7 @@ fn attribute(seed: u64, wc: &WorldComponents) -> Option<WorldAttribution> {
     let mut shipped: std::collections::BTreeMap<SoilOrder, usize> =
         std::collections::BTreeMap::new();
 
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }

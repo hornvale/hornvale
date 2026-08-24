@@ -7,7 +7,7 @@
 //!   cargo run --manifest-path tools/earth-mask/Cargo.toml --release \
 //!     > book/src/laboratory/generated/earth-mask-l6/rows.csv
 
-use hornvale_kernel::{CellMap, Geosphere, quantize};
+use hornvale_kernel::{Geosphere, VertexMap, quantize};
 use hornvale_terrain::GLOBE_LEVEL;
 use hornvale_terrain::shape::shoreline_development_of_mask;
 use std::path::Path;
@@ -20,13 +20,13 @@ use std::path::Path;
 /// Earth anchor") derives from.
 const D_EARTH_L6: f64 = 8.2106747;
 
-/// Load the committed `cell,land` fixture (ascending `CellId`) into a
-/// `CellMap<bool>` sized to `geo`. Plain hand-rolled CSV parsing (two
+/// Load the committed `cell,land` fixture (ascending `Vertex`) into a
+/// `VertexMap<bool>` sized to `geo`. Plain hand-rolled CSV parsing (two
 /// columns, no quoting needed) rather than pulling in a CSV crate — this
 /// is the same discipline the rest of the workspace uses for its own
 /// generated-fixture readers.
-fn load_land_mask(geo: &Geosphere, csv: &str) -> CellMap<bool> {
-    let mut land_by_cell = vec![false; geo.cell_count()];
+fn load_land_mask(geo: &Geosphere, csv: &str) -> VertexMap<bool> {
+    let mut land_by_cell = vec![false; geo.vertex_count()];
     for line in csv.lines().skip(1) {
         if line.is_empty() {
             continue;
@@ -44,7 +44,7 @@ fn load_land_mask(geo: &Geosphere, csv: &str) -> CellMap<bool> {
             .expect("land column is 0 or 1");
         land_by_cell[cell as usize] = land != 0;
     }
-    CellMap::from_fn(geo, |c| land_by_cell[c.0 as usize])
+    VertexMap::from_fn(geo, |c| land_by_cell[c.0 as usize])
 }
 
 #[test]

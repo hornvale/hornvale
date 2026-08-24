@@ -20,31 +20,31 @@
 //! 171 -- deleted at this campaign's close, git history at `0292de87f^`)
 //! — reused rather than invented — even though the cell-lookup
 //! mechanism underneath it is not: `glyph_for` asked
-//! [`hornvale_terrain::GeneratedTerrain::nearest_cell`], an O(cell count)
+//! [`hornvale_terrain::GeneratedTerrain::nearest_vertex`], an O(cell count)
 //! brute-force scan the spike didn't have to care about (it renders three
 //! static frames and exits). This module asks
-//! [`hornvale_kernel::NearestCellIndex`] instead — the real-code idiom
+//! [`hornvale_kernel::NearestVertexIndex`] instead — the real-code idiom
 //! `bin/src/driver.rs` already established for exactly this "screen
 //! position to nearest terrain cell" query
-//! (`Driver::resolve_walk_band`) — and `NearestCellIndex::nearest`'s own
+//! (`Driver::resolve_walk_band`) — and `NearestVertexIndex::nearest`'s own
 //! doc guarantees it returns the bit-identical cell the brute-force scan
-//! would (same max dot product, same first-in-CellId-order tie-break), so
+//! would (same max dot product, same first-in-Vertex-order tie-break), so
 //! this is a performance choice, not a behavioural one.
 //!
 //! **The index is built ONCE by the caller and passed in, never rebuilt
 //! per call.** Fix round 1's other half: point sampling already made a
-//! per-call `NearestCellIndex::new(geo)` (~200ms by the task report's own
+//! per-call `NearestVertexIndex::new(geo)` (~200ms by the task report's own
 //! measurement) wasteful, and area sampling multiplies the per-cell query
 //! count by [`SUBSAMPLES_PER_AXIS`] squared, so rebuilding it inside
 //! `draw_with` on every redraw (Task 3 wires this into the live redraw
 //! path) would have compounded a wasteful cost into a much larger one.
-//! `driver.rs` already builds its own `NearestCellIndex` once, at
+//! `driver.rs` already builds its own `NearestVertexIndex` once, at
 //! `Driver::start`, and reuses it for the session's lifetime
 //! (`self.nearest`) — this module follows the same idiom rather than
 //! caching one internally.
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex};
+use hornvale_kernel::{Vertex, Geosphere, NearestVertexIndex};
 use hornvale_terrain::GeneratedTerrain;
 use std::collections::BTreeSet;
 
@@ -247,13 +247,13 @@ const SUBSAMPLES_PER_AXIS: u32 = 7;
 pub fn draw(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     f: &Frame,
     win: &Window,
     w: u16,
     h: u16,
-    settlements: &BTreeSet<CellId>,
-    caves: &BTreeSet<CellId>,
+    settlements: &BTreeSet<Vertex>,
+    caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
 ) -> Grid {
     let colour_allowed = Ink::from_wire(Some([0, 0, 0])) != Ink::Plain;
@@ -279,7 +279,7 @@ pub fn draw(
 /// The Chroma's fix round `389d498de` established the need for — threaded
 /// tests mutating `NO_COLOR` under each other).
 ///
-/// `index` must be built over the SAME `geo` (`NearestCellIndex::new(geo)`
+/// `index` must be built over the SAME `geo` (`NearestVertexIndex::new(geo)`
 /// — see the module doc for why it is a caller-owned parameter rather
 /// than being built or cached here).
 ///
@@ -333,14 +333,14 @@ pub fn draw(
 pub fn draw_with(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     f: &Frame,
     win: &Window,
     w: u16,
     h: u16,
     colour_allowed: bool,
-    settlements: &BTreeSet<CellId>,
-    caves: &BTreeSet<CellId>,
+    settlements: &BTreeSet<Vertex>,
+    caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
 ) -> Grid {
     let mut grid = Grid::new(w, h);
@@ -423,15 +423,15 @@ fn draw_point_sites(
     w: u16,
     h: u16,
     colour_allowed: bool,
-    settlements: &BTreeSet<CellId>,
-    caves: &BTreeSet<CellId>,
+    settlements: &BTreeSet<Vertex>,
+    caves: &BTreeSet<Vertex>,
     discovered: &Discovered,
     grid: &mut Grid,
 ) {
     let width = u32::from(w);
     let height = u32::from(h);
 
-    let place = |cell: CellId, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
+    let place = |cell: Vertex, id: FeatureId, glyph: char, color: [u8; 3], grid: &mut Grid| {
         if !discovered.contains(id) {
             return;
         }
@@ -485,7 +485,7 @@ fn draw_point_sites(
 /// player is looking at).
 ///
 /// Returns whether the majority is ocean, and the [`hornvale_kernel::
-/// CellId`] of the MAJORITY-class sample nearest the screen cell's own
+/// Vertex`] of the MAJORITY-class sample nearest the screen cell's own
 /// true centre — the `(3, 3)` sub-sample, since [`SUBSAMPLES_PER_AXIS`]
 /// is odd (`7`) and index `3` of `0..7` is the exact centre. That
 /// sub-sample's own `unproject` call is provably identical to a direct
@@ -508,14 +508,14 @@ fn draw_point_sites(
 pub(crate) fn area_majority(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     f: &Frame,
     win: &Window,
     virtual_w: u32,
     virtual_h: u32,
     row: u32,
     col: u32,
-) -> (bool, hornvale_kernel::CellId) {
+) -> (bool, hornvale_kernel::Vertex) {
     let plate_row = win.origin_row + row;
     let plate_col = win.origin_col + col;
     let sub_width = virtual_w * SUBSAMPLES_PER_AXIS;
@@ -523,7 +523,7 @@ pub(crate) fn area_majority(
 
     let mut land_votes = 0u32;
     let mut ocean_votes = 0u32;
-    let mut samples: Vec<(u32, u32, bool, hornvale_kernel::CellId)> =
+    let mut samples: Vec<(u32, u32, bool, hornvale_kernel::Vertex)> =
         Vec::with_capacity((SUBSAMPLES_PER_AXIS * SUBSAMPLES_PER_AXIS) as usize);
     for i in 0..SUBSAMPLES_PER_AXIS {
         for j in 0..SUBSAMPLES_PER_AXIS {
@@ -590,7 +590,7 @@ mod tests {
     #[test]
     fn a_settlement_outranks_a_cave_on_the_same_cell() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -601,7 +601,7 @@ mod tests {
         let (vw, vh) = virtual_dims(&win, w);
 
         let shared = geo
-            .cells()
+            .vertices()
             .find(|&c| {
                 let g = geo.coord(c);
                 crate::mercator::project(&f, g.latitude, g.longitude, vw, vh)
@@ -609,7 +609,7 @@ mod tests {
             })
             .expect("some cell projects on-plate");
 
-        let both: BTreeSet<CellId> = std::iter::once(shared).collect();
+        let both: BTreeSet<Vertex> = std::iter::once(shared).collect();
         let mut discovered = Discovered::default();
         discovered.record(FeatureId::Settlement(shared));
         discovered.record(FeatureId::Cave(shared));
@@ -650,7 +650,7 @@ mod tests {
     #[test]
     fn a_cave_that_wins_no_vote_is_still_drawn() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -661,8 +661,8 @@ mod tests {
         let (vw, vh) = virtual_dims(&win, w);
 
         // Every cave cell, and the screen cell each projects into.
-        let caves: BTreeSet<CellId> = (0..geo.cell_count())
-            .map(|i| CellId(i as u32))
+        let caves: BTreeSet<Vertex> = (0..geo.vertex_count())
+            .map(|i| Vertex(i as u32))
             .filter(|&c| terrain.cave_at(c).is_some())
             .collect();
         assert!(!caves.is_empty(), "seed 42 must have caves to test with");
@@ -714,7 +714,7 @@ mod tests {
     #[test]
     fn the_plate_fits_the_eighty_by_twenty_four_floor_exactly() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -751,7 +751,7 @@ mod tests {
     #[test]
     fn a_land_cell_tints_when_colour_is_allowed_and_is_plain_when_it_is_not() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -822,7 +822,7 @@ mod tests {
     #[test]
     fn at_a_fine_enough_window_area_majority_agrees_with_point_sampling() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -896,7 +896,7 @@ mod tests {
     #[test]
     fn draw_with_gates_a_point_site_on_discovery() {
         let (terrain, geo) = test_world();
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let f = crate::mercator::frame_for(false);
         let win = Window {
             zoom: 0,
@@ -904,14 +904,14 @@ mod tests {
             origin_row: 0,
         };
         let cave_cell = geo
-            .cells()
+            .vertices()
             .find(|&c| terrain.cave_at(c).is_some())
             .expect("seed 42 at GLOBE_LEVEL has at least one cave cell");
         let settlements = BTreeSet::new();
         // The cave roster this test's subject must be IN — sites are
         // PROJECTED from the roster now, not sampled for, so an empty
         // roster would make this test vacuous rather than failing.
-        let caves: BTreeSet<CellId> = std::iter::once(cave_cell).collect();
+        let caves: BTreeSet<Vertex> = std::iter::once(cave_cell).collect();
         let (w, h) = (400u16, 200u16);
         let (virtual_w, virtual_h) = virtual_dims(&win, w);
 

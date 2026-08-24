@@ -64,7 +64,7 @@
 //! for it.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed, Stream, Years};
+use hornvale_kernel::{Seed, Stream, Vertex, Years};
 use hornvale_language::{GeneratedName, MorphOptions, NameKind, Namer, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 
@@ -114,7 +114,7 @@ pub struct Volcano {
     /// cell of the cone resolves here, so two neighbouring cells of one
     /// mountain are one mountain. Never the cell a caller happened to ask
     /// about; see the module docs.
-    pub source: CellId,
+    pub source: Vertex,
     /// Mean interval between eruptions, read from the hazard field at the
     /// source (never a fresh draw — one source of truth for how often the
     /// mountain acts).
@@ -130,14 +130,14 @@ pub struct Volcano {
 /// style in every world, and is an epoch, not a cleanup. Spelled out here in
 /// one place — the `cell/` prefix says what the number is, so a future key
 /// that needed a second component could not silently collide with today's.
-fn volcano_key(source: CellId) -> String {
+fn volcano_key(source: Vertex) -> String {
     format!("cell/{}", source.0)
 }
 
 /// The stream a volcano's own derivations draw from: [`volcano_key`]
 /// composed under [`crate::streams::VOLCANO`], following `chamber_stream`'s
 /// composed-label pattern one module over.
-fn volcano_stream(seed: Seed, source: CellId) -> Stream {
+fn volcano_stream(seed: Seed, source: Vertex) -> Stream {
     seed.derive(crate::streams::VOLCANO)
         .derive(StreamLabel::dynamic(&volcano_key(source)))
         .stream()
@@ -160,7 +160,7 @@ fn volcano_stream(seed: Seed, source: CellId) -> Stream {
 /// cell admits the source a fortiori.
 /// `an_edifices_source_is_itself_an_edifice` asserts that over a whole globe
 /// rather than leaving it to this paragraph.
-pub fn volcano_at(seed: Seed, terrain: &GeneratedTerrain, cell: CellId) -> Option<Volcano> {
+pub fn volcano_at(seed: Seed, terrain: &GeneratedTerrain, cell: Vertex) -> Option<Volcano> {
     let source = terrain.edifice_source_at(cell)?;
     let recurrence = crate::hazard::hazard_at(terrain, source)
         .volcanic
@@ -233,9 +233,9 @@ mod tests {
 
     /// Every edifice cell on the globe, grouped by the source contact that
     /// identifies its cone.
-    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<CellId, Vec<CellId>> {
-        let mut cones: BTreeMap<CellId, Vec<CellId>> = BTreeMap::new();
-        for cell in geo.cells() {
+    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<Vertex, Vec<Vertex>> {
+        let mut cones: BTreeMap<Vertex, Vec<Vertex>> = BTreeMap::new();
+        for cell in geo.vertices() {
             if let Some(source) = terrain.edifice_source_at(cell) {
                 cones.entry(source).or_default().push(cell);
             }
@@ -281,7 +281,7 @@ mod tests {
     fn multi_cell_cones(
         geo: &Geosphere,
         terrain: &GeneratedTerrain,
-    ) -> BTreeMap<CellId, Vec<CellId>> {
+    ) -> BTreeMap<Vertex, Vec<Vertex>> {
         let cones = cones(geo, terrain);
         let multi = cones.values().filter(|cells| cells.len() > 1).count();
         assert!(
@@ -356,8 +356,8 @@ mod tests {
     /// remedy, so this test asserts a BUDGET, not zero collisions.
     ///
     /// **Measured, not guessed:** at seed 42, `species = "aeldrin"`, 208
-    /// volcanoes draw 207 distinct names — one pair (`CellId(13124)` and
-    /// `CellId(28635)`) shares `"Zharji"`, the worst collision group is
+    /// volcanoes draw 207 distinct names — one pair (`Vertex(13124)` and
+    /// `Vertex(28635)`) shares `"Zharji"`, the worst collision group is
     /// size 2. The budget below (at most 5 duplicated names, no group
     /// larger than 3) gives headroom for ordinary seed-to-seed birthday-
     /// problem noise while staying far too tight for a REAL regression to
@@ -386,7 +386,7 @@ mod tests {
             all_cones.len() > 1,
             "fewer than two volcanoes on the test globe — distinctness is untestable here"
         );
-        let mut seen: BTreeMap<String, Vec<CellId>> = BTreeMap::new();
+        let mut seen: BTreeMap<String, Vec<Vertex>> = BTreeMap::new();
         for source in all_cones.keys() {
             let volcano = volcano_at(Seed(42), &terrain, *source).expect("an edifice cell");
             let name = volcano_name(Seed(42), &volcano, "aeldrin", &ph, &morph).roman;
@@ -461,7 +461,7 @@ mod tests {
         let (geo, terrain_a) = globe();
         let (_, terrain_b) = globe();
         let mut checked = 0_u32;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let a = volcano_at(Seed(42), &terrain_a, cell);
             let b = volcano_at(Seed(42), &terrain_b, cell);
             assert_eq!(
@@ -483,7 +483,7 @@ mod tests {
         let (geo, terrain) = globe();
         let mut differing = 0_u32;
         let mut total = 0_u32;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let Some(here) = volcano_at(Seed(42), &terrain, cell) else {
                 continue;
             };
@@ -513,7 +513,7 @@ mod tests {
         let (geo, terrain) = globe();
         let mut effusive = 0_u32;
         let mut explosive = 0_u32;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             match volcano_at(Seed(42), &terrain, cell).map(|v| v.style) {
                 Some(EruptionStyle::Effusive) => effusive += 1,
                 Some(EruptionStyle::Explosive) => explosive += 1,
@@ -538,7 +538,7 @@ mod tests {
     fn one_volcano_carries_a_different_name_in_each_language() {
         let (geo, terrain) = globe();
         let volcano = geo
-            .cells()
+            .vertices()
             .find_map(|c| volcano_at(Seed(42), &terrain, c))
             .expect("a volcano on the test globe");
         let morph = morph();
@@ -557,7 +557,7 @@ mod tests {
     fn a_volcanos_name_is_stable_for_one_people() {
         let (geo, terrain) = globe();
         let volcano = geo
-            .cells()
+            .vertices()
             .find_map(|c| volcano_at(Seed(42), &terrain, c))
             .expect("a volcano on the test globe");
         let ph = phonology("aeldrin");
@@ -577,7 +577,7 @@ mod tests {
     /// guard `chamber_key` carries.
     #[test]
     fn the_volcano_key_spelling_is_pinned() {
-        assert_eq!(volcano_key(CellId(0)), "cell/0");
-        assert_eq!(volcano_key(CellId(4127)), "cell/4127");
+        assert_eq!(volcano_key(Vertex(0)), "cell/0");
+        assert_eq!(volcano_key(Vertex(4127)), "cell/4127");
     }
 }

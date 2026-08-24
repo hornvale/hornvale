@@ -33,8 +33,8 @@
 use crate::health::{AffectTrace, run_simulation};
 use hornvale_kernel::ecology::ConditionResponse;
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, Lineage, PLANT_FORAGE, ResourceVector,
-    RoomAddr, WorldTime,
+    ANIMAL_PREY, ConceptRegistry, EntityId, Facet, Ledger, Lineage, PLANT_FORAGE, ResourceVector,
+    WorldTime,
 };
 use hornvale_species::{ActivityCycle, MetabolicClass};
 use hornvale_vessel::body::Body;
@@ -59,27 +59,27 @@ use std::collections::{BTreeMap, BTreeSet};
 /// climate.
 #[derive(Default)]
 pub struct SyntheticTerrain {
-    fresh: BTreeSet<RoomAddr>,
-    temps: BTreeMap<RoomAddr, f64>,
+    fresh: BTreeSet<Facet>,
+    temps: BTreeMap<Facet, f64>,
     calm_after: Option<(f64, f64)>,
     /// Per-room food productivity (The Provender); rooms without an entry read
     /// `DEFAULT_FORAGE` (fed) — so a scenario that plants none feeds its
     /// creatures and hunger stays quiet, exactly as it does for the vessel
     /// tests' `PlantedTerrain`.
-    forage: BTreeMap<RoomAddr, f64>,
+    forage: BTreeMap<Facet, f64>,
     /// Per-room threat (The Dread); rooms without an entry read `0.0` (safe) —
     /// so a scenario that plants none is danger-free and fear stays quiet.
-    threat: BTreeMap<RoomAddr, f64>,
+    threat: BTreeMap<Facet, f64>,
 }
 
 impl Terrain for SyntheticTerrain {
-    fn elevation(&self, _room: &RoomAddr) -> f64 {
+    fn elevation(&self, _room: &Facet) -> f64 {
         f64::INFINITY
     }
-    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+    fn is_fresh_water(&self, room: &Facet) -> bool {
         self.fresh.contains(room)
     }
-    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64 {
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
         match self.temps.get(room) {
             None => f64::INFINITY,
             Some(&hot) => match self.calm_after {
@@ -88,11 +88,11 @@ impl Terrain for SyntheticTerrain {
             },
         }
     }
-    fn forage_value(&self, room: &RoomAddr) -> f64 {
+    fn forage_value(&self, room: &Facet) -> f64 {
         // `DEFAULT_FORAGE` (1.0) where unplanted, matching `PlantedTerrain`.
         self.forage.get(room).copied().unwrap_or(1.0)
     }
-    fn hazards(&self, room: &RoomAddr) -> Hazards {
+    fn hazards(&self, room: &Facet) -> Hazards {
         // The planted scalar maps to the UNCANNY axis (The Bane) — a mortal
         // niche weights UNCANNY `1`, so the dread scenarios read as before.
         Hazards {
@@ -207,8 +207,8 @@ const AFTER_WAVE_C: f64 = 15.0;
 /// ones (activity, label) at sane defaults.
 fn creature(
     entity: EntityId,
-    home: RoomAddr,
-    resource: RoomAddr,
+    home: Facet,
+    resource: Facet,
     species: &str,
     niche: ConditionResponse,
 ) -> Body {
@@ -275,10 +275,10 @@ fn synthetic_creature(n: u16) -> Lineage<'static> {
 /// uniform-cost search exhausts its 1000-node budget long before crossing the
 /// mesh): `.0` sits on water and serves as a home a belief can anchor to, `.1`
 /// is where a creature is stranded from it.
-fn water_and_a_far_exile() -> (RoomAddr, RoomAddr) {
+fn water_and_a_far_exile() -> (Facet, Facet) {
     (
-        RoomAddr::containing([1.0, 0.0, 0.0], 6),
-        RoomAddr::containing([-1.0, 0.05, 0.05], 6),
+        Facet::containing([1.0, 0.0, 0.0], 6),
+        Facet::containing([-1.0, 0.05, 0.05], 6),
     )
 }
 
@@ -379,7 +379,7 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
 /// and the creature returns to `Content` — a distress spike, chronic-length yet
 /// recovered, produced end-to-end rather than typed by hand.
 pub fn a_heat_wave_that_passes() -> Scenario {
-    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let spring = Facet::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
@@ -420,7 +420,7 @@ pub fn a_heat_wave_that_passes() -> Scenario {
 /// the real sim (The Provender). Proves hunger enters the drive competition and
 /// the by-cause reduction separates it.
 pub fn a_forager_in_a_food_desert() -> Scenario {
-    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let spring = Facet::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
@@ -458,7 +458,7 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
 /// thermal pit), and the creature Holds in danger-`Frustrated`. Proves the fifth
 /// drive enters the competition and the by-cause reduction separates fear.
 pub fn a_creature_cornered_by_dread() -> Scenario {
-    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let spring = Facet::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
@@ -494,15 +494,15 @@ pub fn a_creature_cornered_by_dread() -> Scenario {
 /// creature reads danger distress the bold one does not — the dial, end to end.
 /// Returns `(steady_trace_index 0, bold_trace_index 1)` in the scenario's npcs.
 pub fn dread_pit_steady_vs_bold() -> Scenario {
-    let steady_spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let steady_spring = Facet::containing([1.0, 0.0, 0.0], 6);
     // A distinct, far spring for the bold creature (its own separate dread-pit).
-    let bold_spring = RoomAddr::containing([-1.0, 0.05, 0.05], 6);
+    let bold_spring = Facet::containing([-1.0, 0.05, 0.05], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
     let mut threat = BTreeMap::new();
     let mut fresh = BTreeSet::new();
     let mut next_creature: u16 = 0;
-    let mut mint_pit = |ledger: &mut Ledger, spring: &RoomAddr| {
+    let mut mint_pit = |ledger: &mut Ledger, spring: &Facet| {
         // Two creatures share this ledger, so each needs its own ordinal —
         // reusing 0 would (correctly) trip the mint-time collision assert.
         let e = ledger.mint_entity(synthetic_creature(next_creature));

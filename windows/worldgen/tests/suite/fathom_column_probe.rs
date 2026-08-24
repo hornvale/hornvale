@@ -36,7 +36,7 @@
 use std::collections::BTreeMap;
 
 use hornvale_climate::{Formation, GeneratedClimate, Realm, Stratum};
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, climate_of,
 };
@@ -65,8 +65,8 @@ fn seed_42_climate() -> GeneratedClimate {
 /// clause 3 identically.
 fn ocean_column_heights(climate: &GeneratedClimate) -> BTreeMap<usize, usize> {
     let mut heights: BTreeMap<usize, usize> = BTreeMap::new();
-    for i in 0..climate.geosphere().cell_count() {
-        let cell = CellId(i as u32);
+    for i in 0..climate.geosphere().vertex_count() {
+        let cell = Vertex(i as u32);
         if climate.biome_expr_at(cell).realm == Realm::WATERWORLD {
             let h = climate.strata_at(cell).len();
             heights.entry(h).and_modify(|n| *n += 1).or_insert(1);
@@ -169,7 +169,7 @@ fn h1_clause_3_single_rung_share_preregistered_not_met() {
 ///
 /// **CONFIRMED, strongly.** Measured on seed 42: 9,695 `SeaIce` cells total
 /// (the denominator is non-empty, so H-2 is measurable), and **8,916 of them
-/// (91.96%) sit below the epipelagic** — example cell `CellId(4)` at
+/// (91.96%) sit below the epipelagic** — example cell `Vertex(4)` at
 /// `Stratum::Bathypelagic`. This is not a marginal artifact: nearly all sea
 /// ice in the model is filed at depth, because `classify_marine_expr` reads
 /// only surface temperature while `stratum` is read from the floor, and the
@@ -184,9 +184,9 @@ fn h2_sea_ice_below_the_epipelagic() {
 
     let mut sea_ice_total = 0usize;
     let mut below_epipelagic = 0usize;
-    let mut example: Option<(CellId, Stratum)> = None;
-    for i in 0..climate.geosphere().cell_count() {
-        let cell = CellId(i as u32);
+    let mut example: Option<(Vertex, Stratum)> = None;
+    for i in 0..climate.geosphere().vertex_count() {
+        let cell = Vertex(i as u32);
         let expr = climate.biome_expr_at(cell);
         if expr.formation == Formation::SeaIce {
             sea_ice_total += 1;

@@ -177,7 +177,7 @@ fn how_hot_is_a_cave() {
         let mut gradients: Vec<f64> = Vec::new();
         let mut band_hist = [0usize; 5];
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }
@@ -355,7 +355,7 @@ fn how_lumpy_is_the_delta_t_distribution() {
 
         let mut dt: Vec<f64> = Vec::new();
         let mut reaches: Vec<f64> = Vec::new();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

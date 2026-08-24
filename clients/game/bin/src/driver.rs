@@ -39,7 +39,7 @@
 //! wrong name is indistinguishable from a right one" failure the design
 //! spec warns against).
 //!
-//! The chain from a screen position to a [`hornvale_kernel::CellId`]:
+//! The chain from a screen position to a [`hornvale_kernel::Vertex`]:
 //! [`hornvale_game_core::chart::cell_at`] (new, shared with `draw` via a
 //! common `boxes_of` helper — never a second copy of the projection) finds
 //! which wire [`hornvale_game_core::ChartCell`] occupies the cursor's box
@@ -51,12 +51,12 @@
 //! makes for the walk band) and indexing into its `cells` at that same
 //! position names the identical real cell — no float matching, no new
 //! trigonometry. That real cell's `room: u64` unpacks
-//! ([`hornvale_kernel::RoomId::unpack`]) to a real
-//! [`hornvale_kernel::RoomAddr`], whose [`hornvale_kernel::RoomAddr::coord`]
-//! feeds the same `NearestCellIndex` lookup already used for the observer.
+//! ([`hornvale_kernel::FacetId::unpack`]) to a real
+//! [`hornvale_kernel::Facet`], whose [`hornvale_kernel::Facet::coord`]
+//! feeds the same `NearestVertexIndex` lookup already used for the observer.
 //!
-//! No new geometry was written for this: `RoomId::unpack`, `RoomAddr::coord`
-//! and `NearestCellIndex::nearest` all already existed: `kernel::room` has
+//! No new geometry was written for this: `FacetId::unpack`, `Facet::coord`
+//! and `NearestVertexIndex::nearest` all already existed: `kernel::room` has
 //! no inverse of `bearing_to`/`distance_rad_to` (a destination from an
 //! origin, a bearing and a distance), so this deliberately does not need
 //! one — the index-into-a-freshly-rebuilt-scene route reaches the same
@@ -71,11 +71,11 @@ use crate::mercator::{self, Frame};
 use crate::plate::{self, Window};
 use hornvale_astronomy::SkyPins;
 use hornvale_game_core::{CandidateSource, Cursor, Focus};
-use hornvale_kernel::{CellId, NearestCellIndex, RoomId, Seed, Value, World};
+use hornvale_kernel::{Vertex, NearestVertexIndex, FacetId, Seed, Value, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::TerrainPins;
-use hornvale_terrain::landscape::CellFeatureIndex;
+use hornvale_terrain::landscape::VertexFeatureIndex;
 use hornvale_vessel::{
     PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
@@ -168,7 +168,7 @@ impl std::error::Error for DriverError {}
 /// as correct as this key is complete.
 ///
 /// **Deliberately absent, because they are fixed for the process:** the
-/// terrain, the `Geosphere`, the `NearestCellIndex`, the settlement roster
+/// terrain, the `Geosphere`, the `NearestVertexIndex`, the settlement roster
 /// (built once in `start`) and `colour_allowed` (resolved from `NO_COLOR`
 /// once per render by `plate::draw`, which cannot change under a running
 /// process). If any of those ever becomes mutable, it belongs here.
@@ -260,13 +260,13 @@ pub struct Driver {
     marquee_ticks: u32,
     /// The world's landscape features, indexed by cell, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
-    /// world's lifetime (`CellFeatureIndex`'s own doc).
-    index: CellFeatureIndex,
+    /// world's lifetime (`VertexFeatureIndex`'s own doc).
+    index: VertexFeatureIndex,
     /// Nearest-cell lookup over the same `Geosphere` `index` was built from,
     /// built once alongside it — turns the possessed agent's fine-grained
-    /// [`hornvale_kernel::RoomAddr`] position into the coarse `CellId` the
+    /// [`hornvale_kernel::Facet`] position into the coarse `Vertex` the
     /// terrain feature index answers for.
-    nearest: NearestCellIndex,
+    nearest: NearestVertexIndex,
     /// The world's `Geosphere`, held for `nearest`'s queries.
     geo: hornvale_kernel::Geosphere,
     /// The world's reconstructed tectonic terrain, held so the world plate
@@ -329,14 +329,14 @@ pub struct Driver {
     /// this is the plate's own point-site ROSTER (where a settlement
     /// stands, ground truth, always known to the client that draws the
     /// map), gated by [`Self::discovered`] at draw time, never here.
-    settlements: BTreeSet<CellId>,
+    settlements: BTreeSet<Vertex>,
     /// Every cell carrying a cave mouth, scanned once here at `start` for
     /// the same reason `settlements` is: `plate::draw_point_sites`
     /// PROJECTS each site rather than asking every screen cell whether its
     /// sample happens to be one, so it needs the roster up front. A
     /// per-render scan of all 40,962 cells would be the cost the projection
     /// exists to avoid.
-    caves: BTreeSet<CellId>,
+    caves: BTreeSet<Vertex>,
     /// Every walk-band room the possession has stood in this session
     /// (spec Amendment 1 §A4a: "where have I been"). Never consulted by
     /// [`Self::discovered`] and never consults it — see `discovery`'s
@@ -552,7 +552,7 @@ impl Driver {
     /// `target`.
     // Named construction site (decision 0092): `terrain_of` re-derives the
     // tectonic globe once here, at world load, to build the Portolan's
-    // terrain-feature index — never per-turn (see `CellFeatureIndex`'s doc).
+    // terrain-feature index — never per-turn (see `VertexFeatureIndex`'s doc).
     #[allow(clippy::disallowed_methods)]
     pub fn start(seed: u64, target: PossessTarget) -> Result<Driver, DriverError> {
         let world = build_world(
@@ -602,7 +602,7 @@ impl Driver {
         // per its own doc), so the snapshot read below already has it.
 
         // The Portolan: the terrain-feature index, built once here (never
-        // per-turn — see the module doc and `CellFeatureIndex`'s own).
+        // per-turn — see the module doc and `VertexFeatureIndex`'s own).
         // `terrain_of` re-derives `GeneratedTerrain` deterministically from
         // the world's committed seed and pin facts — the same
         // reconstruction idiom `sky_of`/the CLI's `map` command use, not a
@@ -610,8 +610,8 @@ impl Driver {
         let terrain = terrain_of(world_ref).map_err(DriverError::Genesis)?;
         let geo = terrain.geosphere().clone();
         let features = gazetteer_features(world_ref.seed, &geo, &terrain);
-        let index = CellFeatureIndex::build(&features);
-        let nearest = NearestCellIndex::new(&geo);
+        let index = VertexFeatureIndex::build(&features);
+        let nearest = NearestVertexIndex::new(&geo);
 
         // The Portolan part II, Task 5: the point-site roster — every
         // terrain cell a live settlement's own committed `(latitude,
@@ -620,7 +620,7 @@ impl Driver {
         // already exercises dev-only; this is the shipped-path use of it.
         // Ground truth, never gated — [`plate::draw_with`] is where
         // `discovered` decides whether a member of this set is ever drawn.
-        let settlements: BTreeSet<CellId> = world_ref
+        let settlements: BTreeSet<Vertex> = world_ref
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
             .filter_map(|fact| {
@@ -647,8 +647,8 @@ impl Driver {
         // rather than a derivation — and doing it here rather than per
         // render is the whole point of projecting sites instead of
         // sampling for them.
-        let caves: BTreeSet<CellId> = (0..geo.cell_count())
-            .map(|i| CellId(i as u32))
+        let caves: BTreeSet<Vertex> = (0..geo.vertex_count())
+            .map(|i| Vertex(i as u32))
             .filter(|&c| terrain.cave_at(c).is_some())
             .collect();
 
@@ -1478,7 +1478,7 @@ impl Driver {
     /// Otherwise: [`NOTHING_HERE_YET`] unless the current snapshot is a
     /// walk-band scene, in which case the cell the cursor points at
     /// ([`Self::resolve_walk_band`]; see the module doc for the chain from
-    /// a screen position to a `CellId`) is resolved against the
+    /// a screen position to a `Vertex`) is resolved against the
     /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
     /// empty at any step.
     fn resolve(&self) -> String {
@@ -1529,7 +1529,7 @@ impl Driver {
     ///
     /// **Derived, never hardcoded.** `plate::virtual_dims` gives the
     /// virtual chart's own cell count at the active zoom; the terrain's
-    /// own cell count ([`hornvale_kernel::Geosphere::cell_count`]) divided
+    /// own cell count ([`hornvale_kernel::Geosphere::vertex_count`]) divided
     /// by it is the mean number of real terrain cells behind one screen
     /// character — never a second copy of [`plate::MAX_VIRTUAL_WIDTH`],
     /// and never a hand-picked ratio. `None` once that mean is `<= 1`
@@ -1542,7 +1542,7 @@ impl Driver {
         if virtual_cells == 0 {
             return None;
         }
-        let terrain_cells = self.geo.cell_count() as u64;
+        let terrain_cells = self.geo.vertex_count() as u64;
         let ratio = terrain_cells as f64 / virtual_cells as f64;
         if ratio <= 1.0 {
             return None;
@@ -1553,7 +1553,7 @@ impl Driver {
         ))
     }
 
-    /// The world view's own resolved [`hornvale_kernel::CellId`] at the
+    /// The world view's own resolved [`hornvale_kernel::Vertex`] at the
     /// cursor's current screen position — `plate::area_majority`, the
     /// SAME 49-point vote [`plate::draw_with`] itself paints from (one
     /// source of truth; see that function's own doc), asked for the
@@ -1580,7 +1580,7 @@ impl Driver {
     /// area_majority`'s own doc for why its `(3, 3)` sub-sample is the
     /// same point the earlier single-point query asked for, so this is
     /// strictly more constrained, never coarser.
-    fn world_view_cell(&self) -> hornvale_kernel::CellId {
+    fn world_view_cell(&self) -> hornvale_kernel::Vertex {
         let (plate_w, _) = self.active_plate_dims();
         let (virtual_w, virtual_h) = plate::virtual_dims(&self.window, plate_w);
         let (_ocean, cell) = plate::area_majority(
@@ -1634,7 +1634,7 @@ impl Driver {
         // identical cell.
         let scene = self.session.purview(0).ok()?;
         let real_cell = scene.cells.get(index)?;
-        let room = RoomId(real_cell.room).unpack().ok()?;
+        let room = FacetId(real_cell.room).unpack().ok()?;
         let coord = room.coord();
         let cell_id = self
             .nearest
@@ -1733,14 +1733,14 @@ impl Driver {
     ///   Reading `session.position()` here is licensed — `Driver` is
     ///   documented as "the one place in `hornvale-game` allowed to know
     ///   `Session`, `Body`, or `WorldContext` exist" (the module doc); what
-    ///   this method never does is let a `RoomAddr`/`Body` VALUE escape
+    ///   this method never does is let a `Facet`/`Body` VALUE escape
     ///   `Driver` itself — `visited`/`discovered` are plain fields this
     ///   struct owns, queried only through [`Self::visited`]/
     ///   [`Self::discovered`]'s own `bool`/reference-returning accessors.
     /// - **Discovered, extent features (§A4b)**: every feature whose
     ///   extent contains the possession's CURRENT terrain cell is
     ///   discovered, by definition ("standing on a volcano IS meeting
-    ///   it"). [`CellFeatureIndex::at`] already returns every such feature
+    ///   it"). [`VertexFeatureIndex::at`] already returns every such feature
     ///   at that cell, most-specific-first; ALL of them are recorded, not
     ///   only the first, so standing on a volcano inside a landmass
     ///   discovers both in the same step.
@@ -1941,7 +1941,7 @@ mod portolan_tests {
         let _ = d.world_plate_for_redraw(104, 56);
         let n = d.plate_renders();
         d.discovered_mut_for_test()
-            .record(crate::discovery::FeatureId::Settlement(CellId(1)));
+            .record(crate::discovery::FeatureId::Settlement(Vertex(1)));
         let _ = d.world_plate_for_redraw(104, 56);
         assert!(d.plate_renders() > n, "a new discovery must re-render");
     }
@@ -2193,7 +2193,7 @@ mod portolan_tests {
     /// `Driver::world_plate`, the real production drawing path) at that
     /// same screen position, and assert the resolved cell's ocean/land
     /// class agrees with the drawn glyph. Two genuinely different code
-    /// paths — one produces pixels, the other a `CellId` — cross-checked
+    /// paths — one produces pixels, the other a `Vertex` — cross-checked
     /// against each other's real OUTPUT, not a shared re-derivation of the
     /// same arithmetic.
     ///
@@ -2471,7 +2471,7 @@ mod portolan_tests {
         );
 
         let (plate_w, plate_h) = d.active_plate_dims();
-        let mut found: Option<hornvale_kernel::CellId> = None;
+        let mut found: Option<hornvale_kernel::Vertex> = None;
         'search: for y in 0..plate_h {
             for x in 0..plate_w {
                 d.cursor = hornvale_game_core::Cursor { x, y };

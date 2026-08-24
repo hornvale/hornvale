@@ -19,7 +19,7 @@
 use crate::crust::SphereFbm;
 use crate::globe::TectonicGlobe;
 use crate::water::WaterKind;
-use hornvale_kernel::{CellId, Geosphere, Seed, SphericalPolyline, band, math};
+use hornvale_kernel::{Geosphere, Seed, SphericalPolyline, Vertex, band, math};
 use std::collections::BTreeSet;
 
 /// Where a point sits across a channel, outward from the centreline. The
@@ -202,7 +202,7 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// hexagonal tiling of cells of area `A` has nearest-neighbour spacing
 /// `d = √(2/√3)·√A = 1.0746·√A`. That is geometric necessity, not a fitted
 /// coincidence — which is what makes it safe to build on. Measured over the
-/// real mesh, `cell_spacing / √(4π/cell_count)` is **1.078208 / 1.078231 /
+/// real mesh, `cell_spacing / √(4π/vertex_count)` is **1.078208 / 1.078231 /
 /// 1.078237 / 1.078238** at levels 4 / 5 / 6 / 7: constant to five figures
 /// across a 64× change of resolution, and 0.34% above the planar value
 /// because of the twelve pentagons and the curvature. So
@@ -252,9 +252,9 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// 0.1716%** — a prediction stated against the centroid figure sets the target
 /// an order of magnitude low.
 ///
-/// Mind the denominators when re-measuring: a [`hornvale_kernel::RoomAddr`] is
+/// Mind the denominators when re-measuring: a [`hornvale_kernel::Facet`] is
 /// a **face** of the icosphere (`20·4^depth` of them) while
-/// [`Geosphere::cell_count`] is its **dual** (`10·4^level + 2`), so the two
+/// [`Geosphere::vertex_count`] is its **dual** (`10·4^level + 2`), so the two
 /// counts differ by ~2x and mixing them has already produced one spurious
 /// factor-of-two disagreement between two measurements of this quantity.
 ///
@@ -262,7 +262,7 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// level**. There is no [`Geosphere`] to ask below cell scale — level 12 would
 /// be `10·4¹² + 2 = 167,772,162` cells — so a subdivision cannot obtain its
 /// spacing by building a finer globe. It must derive the spacing from
-/// [`hornvale_kernel::RoomAddr::corners`], which returns the three unit-sphere
+/// [`hornvale_kernel::Facet::corners`], which returns the three unit-sphere
 /// corners of a room's own triangle at its own depth, and accumulate drainage
 /// in those same sub-triangle units. Take the two from different depths and
 /// the cancellation above is exactly what breaks.
@@ -351,7 +351,7 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// expressed in the same cell units. Two definitions of "the local spacing"
 /// would be two levels, which is exactly the pairing trap
 /// [`channel_half_width`]'s doc names.
-pub(crate) fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
+pub(crate) fn cell_spacing(geo: &Geosphere, c: Vertex) -> f64 {
     let neighbors = geo.neighbors(c);
     if neighbors.is_empty() {
         return 0.0;
@@ -368,7 +368,7 @@ pub(crate) fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
 /// `pub(crate)` for `branch.rs`, for the reason [`cell_spacing`] is: a branch
 /// takes its confinement from the cell it is a share of, so that a rill in a
 /// gorge has no floodplain for the same reason the trunk beside it has none.
-pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> f64 {
+pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: Vertex) -> f64 {
     let Some(target) = *globe.downhill.get(c) else {
         return 0.0;
     };
@@ -390,7 +390,7 @@ pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> 
 #[derive(Clone, Debug)]
 pub struct ChannelNetwork {
     /// One polyline per maximal downhill run of reaches, in build order
-    /// (ascending head `CellId`). A tributary's run ends *on* the cell where
+    /// (ascending head `Vertex`). A tributary's run ends *on* the cell where
     /// it joins its trunk, and `build`'s explicit **confluence repair** pass
     /// then places that mouth vertex exactly on the trunk's own vertex for
     /// that cell, so the network is geometrically connected.
@@ -439,7 +439,7 @@ pub struct ChannelNetwork {
     /// place. The cell correspondence states the topology outright, which is
     /// what a longitudinal-connectivity measurement needs if it is not to be
     /// measuring its own guess.
-    pub run_cells: Vec<Vec<CellId>>,
+    pub run_cells: Vec<Vec<Vertex>>,
     /// The meander displacement field. Derived once and reused for every
     /// vertex (the `Fbm` derive-once pattern), and — the point of it being a
     /// field at all — **continuous in position**, so a walker crosses a band
@@ -447,7 +447,7 @@ pub struct ChannelNetwork {
     meander: SphereFbm,
     /// Per cell, the `(polyline, vertex)` of the run that **claimed** it and
     /// continued past it — the inverse of `run_cells`, as a dense `Vec` over
-    /// the `CellId` index. `None` for a cell no run continues past: an ocean
+    /// the `Vertex` index. `None` for a cell no run continues past: an ocean
     /// cell, or the outlet at a real mouth.
     ///
     /// Private and read through [`ChannelNetwork::trunk_vertex`]. It is an
@@ -754,7 +754,7 @@ pub struct BankReading {
     /// terminal vertex**, where the cell is the non-river outlet and the
     /// edges are the last river cell's (see [`ChannelNetwork::band_edges`]).
     /// A caller reading this cell's own drainage at a mouth reads the sea's.
-    pub cell: CellId,
+    pub cell: Vertex,
     /// The winning polyline's index in [`ChannelNetwork::polylines`] — the
     /// same index [`ChannelNetwork::nearest_line`] reports. An in-process
     /// handle, **never serialized**: two readings are about the same channel
@@ -779,7 +779,7 @@ impl BankReading {
 impl ChannelNetwork {
     /// Build the network from a generated globe.
     ///
-    /// Walks every **reach** in ascending `CellId` order — a reach being a land
+    /// Walks every **reach** in ascending `Vertex` order — a reach being a land
     /// cell with somewhere to send its water — starting runs at *heads* (reaches
     /// no other reach drains into) and following `downhill` to the sea, a
     /// terminal sink, or an already-claimed trunk. **A run includes the cell it
@@ -825,14 +825,14 @@ impl ChannelNetwork {
         // `elevation < sea_level`. The `downhill` half excludes terminal sinks,
         // which is what keeps a salt basin an OUTLET a run drains into rather
         // than a reach that drains onward — it has nowhere to drain onward to.
-        let is_reach = |c: CellId| {
+        let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         };
 
-        // In-degree within the reach subgraph, as a dense Vec (CellId is a
+        // In-degree within the reach subgraph, as a dense Vec (Vertex is a
         // dense 0..N index — kernel/CLAUDE.md).
-        let mut has_inflow = vec![false; geo.cell_count()];
-        for c in geo.cells() {
+        let mut has_inflow = vec![false; geo.vertex_count()];
+        for c in geo.vertices() {
             if !is_reach(c) {
                 continue;
             }
@@ -841,14 +841,14 @@ impl ChannelNetwork {
             }
         }
 
-        let mut claimed: BTreeSet<CellId> = BTreeSet::new();
-        let mut runs: Vec<Vec<CellId>> = Vec::new();
+        let mut claimed: BTreeSet<Vertex> = BTreeSet::new();
+        let mut runs: Vec<Vec<Vertex>> = Vec::new();
         // Pass 0 starts only at heads, so a run is maximal upstream. Pass 1
         // sweeps anything still unclaimed: the downhill graph is strictly
         // descending and therefore acyclic, so pass 1 should find nothing —
         // it is here so the walk is total regardless.
         for heads_only in [true, false] {
-            for c in geo.cells() {
+            for c in geo.vertices() {
                 if !is_reach(c) || claimed.contains(&c) {
                     continue;
                 }
@@ -995,7 +995,7 @@ impl ChannelNetwork {
         // Order-independent by construction: only final vertices are moved and
         // only non-final vertices are read, so no relocation can be the source
         // of another.
-        let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
+        let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.vertex_count()];
         for (i, run) in runs.iter().enumerate() {
             for (j, &c) in run.iter().enumerate() {
                 if j + 1 < run.len() {
@@ -1019,7 +1019,7 @@ impl ChannelNetwork {
         // functional (one claiming run per cell) by
         // `tests/rill_properties.rs`'s R-4 rather than here, where a panic in
         // genesis would be the wrong instrument.
-        let mut trunk_vertex: Vec<Option<(u32, u32)>> = vec![None; geo.cell_count()];
+        let mut trunk_vertex: Vec<Option<(u32, u32)>> = vec![None; geo.vertex_count()];
         for (i, run) in runs.iter().enumerate() {
             for (j, &c) in run.iter().enumerate() {
                 if j + 1 < run.len() && trunk_vertex[c.0 as usize].is_none() {
@@ -1048,7 +1048,7 @@ impl ChannelNetwork {
     fn assemble(
         polylines: Vec<SphericalPolyline>,
         band_edges: Vec<Vec<[f64; 4]>>,
-        run_cells: Vec<Vec<CellId>>,
+        run_cells: Vec<Vec<Vertex>>,
         meander: SphereFbm,
         trunk_vertex: Vec<Option<(u32, u32)>>,
     ) -> ChannelNetwork {
@@ -1071,7 +1071,7 @@ impl ChannelNetwork {
     /// always the next one downstream. **An in-process handle, never
     /// serialized**, for the reason [`BankReading::line`] gives.
     /// type-audit: bare-ok(index: return)
-    pub fn trunk_vertex(&self, cell: CellId) -> Option<(usize, usize)> {
+    pub fn trunk_vertex(&self, cell: Vertex) -> Option<(usize, usize)> {
         // `get` rather than an index: a network built by hand for a test
         // carries no index at all, and "this cell has no trunk" is the right
         // answer there rather than a panic.
@@ -1493,13 +1493,13 @@ mod tests {
                 points: points.clone(),
             }],
             vec![vec![edges; points.len()]],
-            vec![(0..points.len() as u32).map(CellId).collect()],
+            vec![(0..points.len() as u32).map(Vertex).collect()],
             SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         )
@@ -1519,15 +1519,15 @@ mod tests {
             ],
             vec![vec![edges; first_len], vec![edges; second_len]],
             vec![
-                (0..first_len as u32).map(CellId).collect(),
-                (0..second_len as u32).map(CellId).collect(),
+                (0..first_len as u32).map(Vertex).collect(),
+                (0..second_len as u32).map(Vertex).collect(),
             ],
             SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         )
@@ -1706,7 +1706,7 @@ mod tests {
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         );
@@ -1884,9 +1884,9 @@ mod tests {
             // `O(positions x radii x lines x vertices)`, and a fixed stride
             // would make level 7 sixteen times level 5's cost for no extra
             // coverage of the window formula.
-            let stride = (geo.cell_count() / CAP_COVERAGE_POSITIONS).max(1);
+            let stride = (geo.vertex_count() / CAP_COVERAGE_POSITIONS).max(1);
             let mut positions: Vec<[f64; 3]> = geo
-                .cells()
+                .vertices()
                 .step_by(stride)
                 .map(|c| geo.position(c))
                 .collect();
@@ -2001,7 +2001,7 @@ mod tests {
             let band = lines.iter().map(|l| vec![edges; l.len()]).collect();
             let cells = lines
                 .iter()
-                .map(|l| (0..l.len() as u32).map(CellId).collect())
+                .map(|l| (0..l.len() as u32).map(Vertex).collect())
                 .collect();
             ChannelNetwork::assemble(
                 lines
@@ -2307,7 +2307,7 @@ mod tests {
             unit(1.0, 0.5, 0.0),
             unit(0.5, 1.0, 0.0),
         ];
-        let run_cells = vec![(0..points.len() as u32).map(CellId).collect()];
+        let run_cells = vec![(0..points.len() as u32).map(Vertex).collect()];
         let net = ChannelNetwork::assemble(
             vec![SphericalPolyline { points }],
             vec![vec![
@@ -2321,7 +2321,7 @@ mod tests {
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
-            // These hand-built networks have no `CellId` domain to index, and
+            // These hand-built networks have no `Vertex` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
             Vec::new(),
         );
@@ -2391,7 +2391,7 @@ mod tests {
                 ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
             // The same owner map `build` uses, rebuilt from the published
             // `run_cells` rather than from anything private.
-            let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
+            let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.vertex_count()];
             for (i, run) in net.run_cells.iter().enumerate() {
                 for (j, &c) in run.iter().enumerate() {
                     if j + 1 < run.len() {
@@ -2478,8 +2478,8 @@ mod tests {
         // Every river cell is covered by the network: it sits inside the
         // channel band of the polyline it belongs to, or is one of the
         // dropped isolated singletons.
-        let on_line: BTreeSet<CellId> = geo
-            .cells()
+        let on_line: BTreeSet<Vertex> = geo
+            .vertices()
             .filter(|&c| {
                 matches!(*outcome.globe.water_kind.get(c), WaterKind::River)
                     && matches!(net.transverse_at(geo.position(c)).0, Transverse::Channel)

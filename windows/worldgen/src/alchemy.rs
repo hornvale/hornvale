@@ -187,7 +187,7 @@ pub fn substances_of_world(
     let geo = terrain.geosphere();
     let soils = crate::soil_of(terrain, climate, geo);
     let mut substances: Vec<Substrate> = Vec::new();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }

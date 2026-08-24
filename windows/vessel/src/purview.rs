@@ -8,7 +8,7 @@ use crate::body::Body;
 use crate::eyes::Eyes;
 use crate::{Knowledge, VesselError, liveness};
 use hornvale_astronomy::Calendar;
-use hornvale_kernel::{Ledger, RoomAddr, RoomId, World, WorldTime};
+use hornvale_kernel::{Facet, FacetId, Ledger, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_scene::{Mark, Sight, SurroundsScene, surrounds_scene_colored_in, surrounds_scene_in};
 
@@ -54,10 +54,10 @@ pub(crate) fn creature_datum(label: &str, species: &str) -> String {
 /// independent copies is exactly how a footer and a chart end up disagreeing
 /// about which room is centred (see the-purview's Task 6 fix wave).
 /// type-audit: bare-ok(count: zoom_out)
-pub fn chart_centre(position: &RoomAddr, zoom_out: u32) -> RoomAddr {
+pub fn chart_centre(position: &Facet, zoom_out: u32) -> Facet {
     let depth = position.depth();
     let keep = depth.saturating_sub(zoom_out) as usize;
-    RoomAddr {
+    Facet {
         face: position.face,
         path: position.path[..keep.min(position.path.len())].to_vec(),
     }
@@ -79,7 +79,7 @@ pub fn chart_centre(position: &RoomAddr, zoom_out: u32) -> RoomAddr {
 pub fn purview_scene(
     world: &World,
     ctx: &LocaleContext,
-    position: &RoomAddr,
+    position: &Facet,
     knowledge: &Knowledge,
     // `&[&Body]`, not `&[Body]` (The Hand, Task 4 fix round 1): this
     // function's only caller (`Session::purview_through`) now sources this
@@ -140,12 +140,12 @@ pub fn purview_scene(
     };
 
     // Every room this session has walked, as an address.
-    let walked: Vec<RoomAddr> = knowledge
+    let walked: Vec<Facet> = knowledge
         .0
         .keys()
         .filter_map(|k| k.strip_prefix(crate::knowledge::LOCALE_KEY_PREFIX))
         .filter_map(|id| id.parse::<u64>().ok())
-        .filter_map(|id| RoomId(id).unpack().ok())
+        .filter_map(|id| FacetId(id).unpack().ok())
         .collect();
 
     // Where each NPC stands right now — the derived-view read (The
@@ -155,7 +155,7 @@ pub fn purview_scene(
     let mut agent_marks: Vec<(u64, Mark)> = Vec::new();
     for npc in npcs {
         let at_room = liveness::agent_position(ledger, npc, at);
-        let shown = RoomAddr {
+        let shown = Facet {
             face: at_room.face,
             path: at_room.path[..keep.min(at_room.path.len())].to_vec(),
         };
@@ -175,7 +175,7 @@ pub fn purview_scene(
         // The fog: a cell not currently sensed, but walked (or containing a
         // walked descendant at a coarser rung), is memory.
         if cell.state != "here" {
-            let Ok(addr) = RoomId(cell.room).unpack() else {
+            let Ok(addr) = FacetId(cell.room).unpack() else {
                 continue;
             };
             let remembered = walked.iter().any(|w| {

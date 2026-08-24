@@ -670,7 +670,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_demography::stack_condense::HeadcountRender;
-use hornvale_kernel::{CellId, KindId, Seed, World, quantize};
+use hornvale_kernel::{KindId, Seed, Vertex, World, quantize};
 use hornvale_worldgen::{
     ChannelMask, SettlementPins, SkyChoice, WorldComponents, build_world_from_components,
     climate_from, demography_report_from, demography_report_from_masked, generation_length_of,
@@ -803,7 +803,7 @@ fn world_of(seed: u64, wc: &WorldComponents) -> World {
 /// above the isostatic datum: `terrain.sea_level()` on seed 42 is
 /// -2,936.17 m, and the two disagree on thousands of cells — the exact trap
 /// `waterline_probe.rs`'s correction header documents.
-fn band_of(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> &'static str {
+fn band_of(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> &'static str {
     let above = terrain.elevation_at(cell).get() - terrain.sea_level().get();
     let mut chosen = BANDS[0].0;
     for (label, lower) in BANDS {
@@ -967,13 +967,13 @@ fn exposure_rows_masked(
             geo,
             &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
         );
-        let is_settleable = |cell: CellId| !terrain.is_ocean(cell) && capacity.at(cell) > 0.0;
+        let is_settleable = |cell: Vertex| !terrain.is_ocean(cell) && capacity.at(cell) > 0.0;
 
         // This seed's settleable-land unrest distribution, sorted once and
         // reused for every decile lookup below (land cells AND settlements
         // alike) — `decile_of`'s contract.
         let mut sorted_unrest: Vec<f64> = geo
-            .cells()
+            .vertices()
             .filter(|&c| is_settleable(c))
             .map(|c| terrain.unrest_at(c))
             .collect();
@@ -981,7 +981,7 @@ fn exposure_rows_masked(
 
         let soils = hornvale_worldgen::soil_of(&terrain, &climate, geo);
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if !is_settleable(cell) {
                 continue;
             }
@@ -1427,7 +1427,7 @@ fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
             geo,
             &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
         );
-        let is_settleable = |cell: CellId| !terrain.is_ocean(cell) && capacity.at(cell) > 0.0;
+        let is_settleable = |cell: Vertex| !terrain.is_ocean(cell) && capacity.at(cell) > 0.0;
         let report = demography_report_from(&world, &wc, &terrain, &climate)
             .expect("demography report reconstructs");
         settleable_only_total += report
@@ -1520,7 +1520,7 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
 
         // Application point 1: the unrest hostility penalty.
         let inputs = hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let expected = terrain.unrest_at(cell).clamp(0.0, 1.0);
             assert_eq!(
                 inputs.get(cell).hostility.to_bits(),
@@ -1543,7 +1543,7 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
         // `1.0` pass.
         for scale in [1.0_f64, 2.5] {
             let mineral = hornvale_worldgen::mineral_supply_field(geo, &terrain, scale);
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 let expected = if terrain.is_ocean(cell) {
                     0.0
                 } else {
@@ -1588,7 +1588,7 @@ fn attractor_cells_of(
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
     mask: ChannelMask,
-) -> Vec<CellId> {
+) -> Vec<Vertex> {
     demography_report_from_masked(world, wc, terrain, climate, mask)
         .expect("demography report reconstructs")
         .stack_settlements
@@ -1706,7 +1706,7 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
             geo,
             &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
         );
-        let is_settleable = |cell: &CellId| !terrain.is_ocean(*cell) && capacity.at(*cell) > 0.0;
+        let is_settleable = |cell: &Vertex| !terrain.is_ocean(*cell) && capacity.at(*cell) > 0.0;
 
         // One entry per settlement; `cells_of` derives the occupied-cell set.
         let base_v = attractor_cells_of(&world, &wc, &terrain, &climate, ChannelMask::NONE);
@@ -1717,13 +1717,13 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
         // SETTLEMENT counts (not cell counts) on the settleable-land
         // population — the only quantity that can support a "created or
         // destroyed" claim. See [`attractor_cells_of`].
-        let settlements_in = |v: &[CellId]| v.iter().filter(|c| is_settleable(c)).count() as i64;
+        let settlements_in = |v: &[Vertex]| v.iter().filter(|c| is_settleable(c)).count() as i64;
         per_seed_settlement_delta_a.push(settlements_in(&a_v) - settlements_in(&base_v));
 
-        let base: BTreeSet<CellId> = base_v.iter().copied().collect();
-        let a: BTreeSet<CellId> = a_v.iter().copied().collect();
-        let b: BTreeSet<CellId> = b_v.iter().copied().collect();
-        let ab: BTreeSet<CellId> = ab_v.iter().copied().collect();
+        let base: BTreeSet<Vertex> = base_v.iter().copied().collect();
+        let a: BTreeSet<Vertex> = a_v.iter().copied().collect();
+        let b: BTreeSet<Vertex> = b_v.iter().copied().collect();
+        let ab: BTreeSet<Vertex> = ab_v.iter().copied().collect();
 
         base_all += base.len();
         base_settleable += base.iter().filter(|c| is_settleable(c)).count();
@@ -1878,9 +1878,9 @@ impl std::ops::AddAssign for Movement {
 /// One seed's [`Movement`] of `arm` against `base`, both sides filtered by
 /// the same `keep` predicate.
 fn movement_of(
-    base: &BTreeSet<CellId>,
-    arm: &BTreeSet<CellId>,
-    keep: &impl Fn(&CellId) -> bool,
+    base: &BTreeSet<Vertex>,
+    arm: &BTreeSet<Vertex>,
+    keep: &impl Fn(&Vertex) -> bool,
 ) -> Movement {
     Movement {
         vacated: base.difference(arm).filter(|c| keep(c)).count(),
@@ -2028,7 +2028,7 @@ const SOIL_SPELLINGS: [&str; 4] = [
 /// Swept the other eight entries for the same wrapper/body shape when this
 /// was fixed. `substrate_field` was the only delegator: `forage_supply_field`,
 /// `prey_supply_field`, `detritus_supply_field` and
-/// `marine_forage_supply_field` each hold their own `CellMap::from_fn` body,
+/// `marine_forage_supply_field` each hold their own `VertexMap::from_fn` body,
 /// and the four mask rungs hold theirs. **Re-run that sweep if you add an
 /// entry** — a name here is worth only the body it actually points at.
 const SITING_CHAIN: [&str; 10] = [

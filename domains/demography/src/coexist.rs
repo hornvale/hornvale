@@ -14,7 +14,7 @@
 use crate::footprint::home_range;
 use crate::niche::{guild_overlap, predation, trophic_levels};
 use hornvale_kernel::math::powf;
-use hornvale_kernel::{ANIMAL_PREY, CellMap, Geosphere, Mass, ResourceVector, v1_basis};
+use hornvale_kernel::{ANIMAL_PREY, Geosphere, Mass, ResourceVector, VertexMap, v1_basis};
 use std::collections::BTreeMap;
 
 // CALIBRATED (coexistence-stack, task A16): the competition-temperature
@@ -325,10 +325,10 @@ fn carnivore_fraction(species: &[(u32, Mass, ResourceVector)]) -> BTreeMap<u32, 
 /// type-audit: bare-ok(count: demand), bare-ok(count: capacity), bare-ok(count: return)
 pub fn emigration_pressure(
     geo: &Geosphere,
-    demand: &CellMap<f64>,
-    capacity: &CellMap<f64>,
-) -> CellMap<f64> {
-    let overshoot = CellMap::from_fn(geo, |c| (demand.get(c) - capacity.get(c)).max(0.0));
+    demand: &VertexMap<f64>,
+    capacity: &VertexMap<f64>,
+) -> VertexMap<f64> {
+    let overshoot = VertexMap::from_fn(geo, |c| (demand.get(c) - capacity.get(c)).max(0.0));
     crate::flow::flow(geo, &overshoot).accumulation
 }
 
@@ -351,18 +351,18 @@ const SHADOW: f64 = 0.3;
 pub struct CoexistStack {
     /// Each species' realized per-cell individual density, tagged by species
     /// id, in the same order as the `species` slice `pack` was called with.
-    pub density: Vec<(u32, CellMap<f64>)>,
+    pub density: Vec<(u32, VertexMap<f64>)>,
     /// The soft-capacity overflow field (see [`emigration_pressure`]),
     /// summed across every species' realized density against the pooled
     /// per-cell carrying capacity.
-    pub emigration_pressure: CellMap<f64>,
+    pub emigration_pressure: VertexMap<f64>,
 }
 
 /// Assemble the whole per-cell coexistence density stack: the integration
 /// keystone wiring together every prior task in this campaign.
 ///
 /// `per_species_k` is each species' carrying-capacity field `K_s` (one
-/// `CellMap` per species id, e.g. from [`crate::carrying_capacity`]).
+/// `VertexMap` per species id, e.g. from [`crate::carrying_capacity`]).
 /// `species` is `(species_id, body_mass, niche)` for the same species —
 /// the shared, kernel-level shape [`crate::niche::guild_overlap`],
 /// [`crate::niche::trophic_levels`], and [`crate::niche::predation`] all
@@ -373,7 +373,7 @@ pub struct CoexistStack {
 ///    `carnivore_frac` ([`carnivore_fraction`]) depend only on `species`'
 ///    niche vectors and masses — never on a cell — so each is computed
 ///    exactly once up front, not per cell.
-/// 2. **Per cell** (visiting `geo.cells()` in ascending `CellId` order):
+/// 2. **Per cell** (visiting `geo.vertices()` in ascending `Vertex` order):
 ///    - `present` is `(species_id, K_s(cell))` for every species with a
 ///      **strictly positive** `K` at this cell, sorted by id — a species
 ///      absent from a cell (`K == 0`) contributes nothing to that cell's
@@ -426,7 +426,7 @@ pub struct CoexistStack {
 /// type-audit: bare-ok(index: per_species_k), bare-ok(index: species), bare-ok(ratio: beta), bare-ok(count: floor)
 pub fn pack(
     geo: &Geosphere,
-    per_species_k: &[(u32, CellMap<f64>)],
+    per_species_k: &[(u32, VertexMap<f64>)],
     species: &[(u32, Mass, ResourceVector)],
     beta: f64,
     floor: f64,
@@ -485,13 +485,13 @@ pub fn pack(
         .collect();
     let floor_pow = powf(floor, beta);
 
-    // Per-cell density maps and capacities, indexed by CellId in the same
-    // ascending order `Geosphere::cells()` and `CellMap::from_fn` both use,
-    // so the later per-species `CellMap` rebuild reads them back correctly.
+    // Per-cell density maps and capacities, indexed by Vertex in the same
+    // ascending order `Geosphere::cells()` and `VertexMap::from_fn` both use,
+    // so the later per-species `VertexMap` rebuild reads them back correctly.
     let mut per_cell_density: Vec<BTreeMap<u32, f64>> = Vec::new();
     let mut per_cell_capacity: Vec<f64> = Vec::new();
 
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let mut present: Vec<(u32, f64)> = per_species_k
             .iter()
             .map(|(id, k)| (*id, *k.get(cell)))
@@ -542,10 +542,10 @@ pub fn pack(
         per_cell_capacity.push(capacity);
     }
 
-    let density: Vec<(u32, CellMap<f64>)> = species
+    let density: Vec<(u32, VertexMap<f64>)> = species
         .iter()
         .map(|(id, _, _)| {
-            let map = CellMap::from_fn(geo, |c| {
+            let map = VertexMap::from_fn(geo, |c| {
                 per_cell_density[c.0 as usize]
                     .get(id)
                     .copied()
@@ -555,8 +555,8 @@ pub fn pack(
         })
         .collect();
 
-    let demand = CellMap::from_fn(geo, |c| per_cell_density[c.0 as usize].values().sum());
-    let capacity_field = CellMap::from_fn(geo, |c| per_cell_capacity[c.0 as usize]);
+    let demand = VertexMap::from_fn(geo, |c| per_cell_density[c.0 as usize].values().sum());
+    let capacity_field = VertexMap::from_fn(geo, |c| per_cell_capacity[c.0 as usize]);
     let spillover = emigration_pressure(geo, &demand, &capacity_field);
 
     CoexistStack {
@@ -568,21 +568,21 @@ pub fn pack(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::CellId;
+    use hornvale_kernel::Vertex;
 
     #[test]
     fn overflow_is_zero_under_capacity_and_positive_when_crowded() {
         let geo = Geosphere::new(3);
-        let cap = CellMap::from_fn(&geo, |_| 1.0);
-        let under = CellMap::from_fn(&geo, |_| 0.5);
-        let over = CellMap::from_fn(&geo, |c| if c.0 == 0 { 5.0 } else { 0.5 });
+        let cap = VertexMap::from_fn(&geo, |_| 1.0);
+        let under = VertexMap::from_fn(&geo, |_| 0.5);
+        let over = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 5.0 } else { 0.5 });
         let p_under = emigration_pressure(&geo, &under, &cap);
         let p_over = emigration_pressure(&geo, &over, &cap);
         assert!(
-            geo.cells().all(|c| *p_under.get(c) == 0.0),
+            geo.vertices().all(|c| *p_under.get(c) == 0.0),
             "no pressure under capacity"
         );
-        assert!(*p_over.get(CellId(0)) > 0.0, "crowding makes pressure");
+        assert!(*p_over.get(Vertex(0)) > 0.0, "crowding makes pressure");
     }
 
     #[test]
@@ -762,8 +762,8 @@ mod tests {
         use hornvale_kernel::{Mass, PLANT_FORAGE, ResourceVector};
 
         let geo = Geosphere::new(3);
-        let k0 = CellMap::from_fn(&geo, |_| 1.0);
-        let k1 = CellMap::from_fn(&geo, |_| 0.6);
+        let k0 = VertexMap::from_fn(&geo, |_| 1.0);
+        let k1 = VertexMap::from_fn(&geo, |_| 0.6);
         let per = vec![(0u32, k0), (1u32, k1)];
         let sp = vec![
             (
@@ -780,7 +780,7 @@ mod tests {
         let a = pack(&geo, &per, &sp, 4.0, 1e-6);
         let b = pack(&geo, &per, &sp, 4.0, 1e-6);
         assert_eq!(a.density, b.density, "byte-identical repack");
-        let c = geo.cells().next().unwrap();
+        let c = geo.vertices().next().unwrap();
         let d0 = a.density.iter().find(|(t, _)| *t == 0).unwrap().1.get(c);
         let d1 = a.density.iter().find(|(t, _)| *t == 1).unwrap().1.get(c);
         assert!(
@@ -801,13 +801,13 @@ mod tests {
         use hornvale_kernel::{Mass, PLANT_FORAGE, ResourceVector};
 
         let geo = Geosphere::new(3);
-        let half = geo.cells().count() as u32 / 2;
+        let half = geo.vertices().count() as u32 / 2;
         // Anti-correlated K: species 0 rich in the low-index hemisphere,
         // species 1 in the high-index hemisphere. Identical niche + mass ⇒
         // pure competition, equal grain, so any spatial variation in the
         // resulting composition is the K^β share's doing, nothing else.
-        let k0 = CellMap::from_fn(&geo, |c| if c.0 < half { 1.0 } else { 0.2 });
-        let k1 = CellMap::from_fn(&geo, |c| if c.0 < half { 0.2 } else { 1.0 });
+        let k0 = VertexMap::from_fn(&geo, |c| if c.0 < half { 1.0 } else { 0.2 });
+        let k1 = VertexMap::from_fn(&geo, |c| if c.0 < half { 0.2 } else { 1.0 });
         let per = vec![(0u32, k0), (1u32, k1)];
         let sp = vec![
             (
@@ -825,8 +825,8 @@ mod tests {
         let d0 = &stack.density.iter().find(|(t, _)| *t == 0).unwrap().1;
         let d1 = &stack.density.iter().find(|(t, _)| *t == 1).unwrap().1;
 
-        let north = CellId(0);
-        let south = CellId(geo.cells().count() as u32 - 1);
+        let north = Vertex(0);
+        let south = Vertex(geo.vertices().count() as u32 - 1);
         assert!(
             *d0.get(north) > *d1.get(north),
             "species 0 dominates its own stronghold (composition is not spatially constant)"

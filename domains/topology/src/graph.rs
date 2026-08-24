@@ -2,7 +2,7 @@
 //! geosphere's cells, carrying natural travel routes (never built roads —
 //! see `EdgeKind`) and their reachability under a conductance threshold.
 
-use hornvale_kernel::CellId;
+use hornvale_kernel::Vertex;
 use std::collections::BTreeSet;
 
 /// The kind of natural route an edge represents. These are derived from
@@ -24,7 +24,7 @@ pub enum EdgeKind {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Edge {
     /// The cell this edge leads to.
-    pub to: CellId,
+    pub to: Vertex,
     /// What kind of natural route this edge represents.
     pub kind: EdgeKind,
     /// Dimensionless ease-of-travel: higher is easier. Compared against a
@@ -34,9 +34,9 @@ pub struct Edge {
 }
 
 /// The world's derived transport topology: an undirected graph over
-/// `CellId`, backed by a per-cell adjacency `Vec` indexed by `CellId`. The
+/// `Vertex`, backed by a per-cell adjacency `Vec` indexed by `Vertex`. The
 /// node set is the dense `0..node_count`, so a `Vec` indexes in O(1) and
-/// iterates in ascending-`CellId` order — the same determinism a `BTreeMap`
+/// iterates in ascending-`Vertex` order — the same determinism a `BTreeMap`
 /// gave (no dependence on hash seed or insertion order), without the per-key
 /// tree traversal or per-node allocation.
 #[derive(Clone, Debug)]
@@ -45,8 +45,8 @@ pub struct ConnectionGraph {
 }
 
 impl ConnectionGraph {
-    /// Build an empty graph over `node_count` cells, `CellId(0)` through
-    /// `CellId(node_count - 1)`, each starting with no edges.
+    /// Build an empty graph over `node_count` cells, `Vertex(0)` through
+    /// `Vertex(node_count - 1)`, each starting with no edges.
     /// type-audit: bare-ok(count: node_count)
     pub fn new(node_count: usize) -> Self {
         // Reserve each adjacency list up front. A geosphere cell has 5-6
@@ -65,7 +65,7 @@ impl ConnectionGraph {
     /// Add an undirected edge: `edge` is appended to `from`'s adjacency
     /// list, and its mirror (pointing back to `from`, same kind and
     /// conductance) is appended to `edge.to`'s list.
-    pub fn add_edge(&mut self, from: CellId, edge: Edge) {
+    pub fn add_edge(&mut self, from: Vertex, edge: Edge) {
         let to = edge.to;
         let mirror = Edge {
             to: from,
@@ -78,17 +78,17 @@ impl ConnectionGraph {
 
     /// The edges leaving `from`, in insertion order. Empty (not absent) for
     /// a node with no edges yet.
-    pub fn edges(&self, from: CellId) -> &[Edge] {
+    pub fn edges(&self, from: Vertex) -> &[Edge] {
         self.adjacency
             .get(from.0 as usize)
             .map(Vec::as_slice)
             .unwrap_or(&[])
     }
 
-    /// Every node currently in the graph, in ascending `CellId` order (the
+    /// Every node currently in the graph, in ascending `Vertex` order (the
     /// `Vec` index order).
-    pub fn nodes(&self) -> impl Iterator<Item = CellId> + '_ {
-        (0..self.adjacency.len() as u32).map(CellId)
+    pub fn nodes(&self) -> impl Iterator<Item = Vertex> + '_ {
+        (0..self.adjacency.len() as u32).map(Vertex)
     }
 
     /// Scale every stored directed edge's conductance in place: `factor` is
@@ -100,9 +100,9 @@ impl ConnectionGraph {
     /// endpoints (e.g. their mean) before calling this -- kept generic
     /// here so this crate never has to know what "weather" or "season"
     /// means; the caller (the composition root) owns that meaning.
-    pub fn scale_conductance(&mut self, mut factor: impl FnMut(CellId, &Edge) -> f64) {
+    pub fn scale_conductance(&mut self, mut factor: impl FnMut(Vertex, &Edge) -> f64) {
         for (idx, edges) in self.adjacency.iter_mut().enumerate() {
-            let from = CellId(idx as u32);
+            let from = Vertex(idx as u32);
             for edge in edges.iter_mut() {
                 let f = factor(from, edge);
                 edge.conductance *= f;
@@ -111,13 +111,13 @@ impl ConnectionGraph {
     }
 
     /// Connected components over edges whose `conductance >= min_conductance`.
-    /// Each component is a `BTreeSet<CellId>`; the returned `Vec` is ordered
-    /// by each component's minimum `CellId`, so the result is deterministic
+    /// Each component is a `BTreeSet<Vertex>`; the returned `Vec` is ordered
+    /// by each component's minimum `Vertex`, so the result is deterministic
     /// regardless of edge-insertion order.
     /// type-audit: bare-ok(ratio: min_conductance)
-    pub fn reachable_regions(&self, min_conductance: f64) -> Vec<BTreeSet<CellId>> {
-        let mut unvisited: BTreeSet<CellId> = self.nodes().collect();
-        let mut components: Vec<BTreeSet<CellId>> = Vec::new();
+    pub fn reachable_regions(&self, min_conductance: f64) -> Vec<BTreeSet<Vertex>> {
+        let mut unvisited: BTreeSet<Vertex> = self.nodes().collect();
+        let mut components: Vec<BTreeSet<Vertex>> = Vec::new();
 
         while let Some(&start) = unvisited.iter().next() {
             let mut component = BTreeSet::new();

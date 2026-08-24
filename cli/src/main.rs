@@ -5,7 +5,7 @@ use hornvale::{
     audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems, tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
-use hornvale_kernel::{EntityId, RoomAddr, RoomId, Seed, World, WorldTime, math};
+use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
@@ -419,7 +419,7 @@ fn cmd_history(args: &[String]) -> Result<(), String> {
         .map_err(|_| format!("history: bad --site '{raw}' (must be a non-negative cell index)"))?;
     print!(
         "{}",
-        hornvale_almanac::history::render_site(&world, hornvale_kernel::CellId(cell))
+        hornvale_almanac::history::render_site(&world, hornvale_kernel::Vertex(cell))
     );
     Ok(())
 }
@@ -450,7 +450,7 @@ fn cmd_connections(args: &[String]) -> Result<(), String> {
         "{}",
         hornvale_almanac::connections::render_connections(
             &world,
-            hornvale_kernel::CellId(cell),
+            hornvale_kernel::Vertex(cell),
             &graph
         )
     );
@@ -2006,7 +2006,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     let id = raw
                         .parse::<u64>()
                         .map_err(|e| format!("--room must be a packed room id: {e}"))?;
-                    RoomId(id)
+                    FacetId(id)
                         .unpack()
                         .map_err(|e| format!("--room {id} is not a room id: {e:?}"))?
                 }
@@ -2116,7 +2116,7 @@ fn settlement_room(
     world: &World,
     id: hornvale_kernel::EntityId,
     depth: u32,
-) -> Result<RoomAddr, String> {
+) -> Result<Facet, String> {
     let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
         Some(hornvale_kernel::Value::Number(n)) => *n,
         _ => return Err("the settlement has no latitude fact".to_string()),
@@ -2125,7 +2125,7 @@ fn settlement_room(
         Some(hornvale_kernel::Value::Number(n)) => *n,
         _ => return Err("the settlement has no longitude fact".to_string()),
     };
-    Ok(RoomAddr::containing(
+    Ok(Facet::containing(
         math::unit_sphere_from_lat_lon(lat, lon),
         depth,
     ))
@@ -2170,7 +2170,7 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
 
     let addr = if let Some(id) = flag_value(args, "--room") {
         let raw: u64 = id.parse().map_err(|_| format!("bad --room id: {id}"))?;
-        RoomId(raw)
+        FacetId(raw)
             .unpack()
             .map_err(|e| format!("invalid room id: {e:?}"))?
     } else if let Some(at) = flag_value(args, "--at") {
@@ -2182,7 +2182,7 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
             .trim()
             .parse()
             .map_err(|_| "bad longitude".to_string())?;
-        RoomAddr::containing(math::unit_sphere_from_lat_lon(lat, lon), depth)
+        Facet::containing(math::unit_sphere_from_lat_lon(lat, lon), depth)
     } else {
         return Err("provide --at LAT,LON or --room ID".to_string());
     };
@@ -2272,7 +2272,7 @@ fn cmd_locale_sample(
     println!("{:<24} {:>11}  descriptor", "biome", "strangeness");
     for i in 0..n {
         let position = fibonacci_sphere_point(i, n);
-        let addr = RoomAddr::containing(position, depth);
+        let addr = Facet::containing(position, depth);
         let locale = ctx
             .describe(&addr, WorldTime::GENESIS)
             .map_err(|e| e.to_string())?;

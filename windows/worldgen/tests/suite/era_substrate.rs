@@ -80,7 +80,7 @@ fn present_era_substrate_is_bit_identical_to_the_unparameterised_field() {
             &EraAdjust::present(&terrain),
         );
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let a = direct.get(cell);
             let b = via_era.get(cell);
             // Bit patterns, not `==`: `==` would accept 0.0 for -0.0, and the
@@ -132,7 +132,7 @@ fn a_glacial_era_moves_temperature_and_the_shoreline() {
 
     let mut colder = 0usize;
     let mut newly_exposed = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let (a, b) = (now.get(cell), then.get(cell));
         if b.temperature_c < a.temperature_c {
             colder += 1;
@@ -145,7 +145,7 @@ fn a_glacial_era_moves_temperature_and_the_shoreline() {
     }
     assert_eq!(
         colder,
-        geo.cell_count(),
+        geo.vertex_count(),
         "every cell should be colder at a -8 C era"
     );
     assert!(
@@ -225,7 +225,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
         assert_eq!(direct.len(), via_era.len(), "seed {seed}: species count");
         for ((ta, a), (tb, b)) in direct.iter().zip(via_era.iter()) {
             assert_eq!(ta, tb, "seed {seed}: dense index order moved");
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 assert_eq!(
                     a.at(cell).to_bits(),
                     b.at(cell).to_bits(),
@@ -313,7 +313,7 @@ fn ocean_is_never_settleable_at_any_era() {
                 geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm, &affinity,
             );
             for (tag, cap) in &caps {
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     // "Sea at this era" is the same predicate `carrying_inputs_at`
                     // uses, spelled out here so the test does not depend on the
                     // private helper.

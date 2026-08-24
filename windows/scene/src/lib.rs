@@ -10,7 +10,7 @@
 #![warn(missing_docs)]
 
 use hornvale_climate::{Biome, GeneratedClimate};
-use hornvale_kernel::{CellMap, NearestCellIndex, Seed, World};
+use hornvale_kernel::{NearestVertexIndex, Seed, VertexMap, World};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 
@@ -61,7 +61,7 @@ pub enum SceneError {
     /// Surrounds query: `radius` must be 0..=MAX_SURROUNDS_RADIUS.
     SurroundsRadiusOutOfRange(u32),
     /// Surrounds query: a neighbourhood cell's address could not be packed
-    /// to a room id (see `RoomAddr::pack`); the `RoomAddrError` debug is
+    /// to a room id (see `Facet::pack`); the `FacetError` debug is
     /// carried. Mirrors `LocaleError::Unaddressable` — fail fast rather
     /// than mint a meaningless `room: 0`.
     SurroundsUnaddressable(String),
@@ -399,12 +399,12 @@ pub struct SceneContext {
     /// serve both. Keeping them separate is deliberate defensiveness against
     /// that ever diverging — behavior is identical while the two geospheres
     /// agree.
-    terrain_index: NearestCellIndex,
+    terrain_index: NearestVertexIndex,
     /// Nearest-cell index over the climate geosphere (see `terrain_index` for
     /// why the two are kept separate).
-    climate_index: NearestCellIndex,
+    climate_index: NearestVertexIndex,
     /// The per-cell biome map (`biome_map()` returns by value, so it is built once).
-    biomes: CellMap<Biome>,
+    biomes: VertexMap<Biome>,
 }
 
 impl SceneContext {
@@ -417,8 +417,8 @@ impl SceneContext {
             hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
         let climate = hornvale_worldgen::climate_from(world, &terrain)
             .map_err(|e| SceneError::Build(e.to_string()))?;
-        let terrain_index = NearestCellIndex::new(terrain.geosphere());
-        let climate_index = NearestCellIndex::new(climate.geosphere());
+        let terrain_index = NearestVertexIndex::new(terrain.geosphere());
+        let climate_index = NearestVertexIndex::new(climate.geosphere());
         let biomes = climate.biome_map();
         Ok(SceneContext {
             seed: world.seed,
@@ -1836,7 +1836,7 @@ mod tests {
         let width = 32;
         let height = width / 2;
         let climate = climate_of(&world).expect("climate builds");
-        let climate_index = NearestCellIndex::new(climate.geosphere());
+        let climate_index = NearestVertexIndex::new(climate.geosphere());
         let day = 91.3;
         let grid = temperature_grid(&world, width, day).expect("grid builds");
         assert_eq!(grid.len(), (width * height) as usize);

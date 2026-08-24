@@ -6,7 +6,7 @@
 //! functions inside `session.rs`. Wiring these functions into the `go` verb
 //! is a later task's job, not this module's.
 
-use hornvale_kernel::{GeoCoord, RoomAddr, math};
+use hornvale_kernel::{Facet, GeoCoord, math};
 use hornvale_locale::Compass;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
@@ -82,7 +82,7 @@ fn angle_between_coords(a: GeoCoord, b: GeoCoord) -> f64 {
 /// its own. A constant would silently become a tuned number the first time
 /// the walk band moved.
 /// type-audit: bare-ok(ratio: return)
-pub fn step_length_rad(addr: &RoomAddr) -> f64 {
+pub fn step_length_rad(addr: &Facet) -> f64 {
     let here = addr.coord();
     let ns = addr.neighbors();
     let total: f64 = ns
@@ -98,9 +98,9 @@ pub fn step_length_rad(addr: &RoomAddr) -> f64 {
 /// the order `neighbors()` happens to return. `total_cmp` rather than
 /// `partial_cmp`: float ordering in this project is total and deterministic
 /// by rule.
-pub fn nearest_neighbour(position: &RoomAddr, target: GeoCoord) -> RoomAddr {
+pub fn nearest_neighbour(position: &Facet, target: GeoCoord) -> Facet {
     let t = math::unit_sphere_from_lat_lon(target.latitude, target.longitude);
-    let mut best: Option<(f64, u64, RoomAddr)> = None;
+    let mut best: Option<(f64, u64, Facet)> = None;
     for n in position.neighbors() {
         let c = n.coord();
         let d = chord_sq(math::unit_sphere_from_lat_lon(c.latitude, c.longitude), t);
@@ -113,7 +113,7 @@ pub fn nearest_neighbour(position: &RoomAddr, target: GeoCoord) -> RoomAddr {
             best = Some((d, key, n));
         }
     }
-    // `RoomAddr::neighbors` returns a fixed-size `[RoomAddr; 3]`, so the
+    // `Facet::neighbors` returns a fixed-size `[Facet; 3]`, so the
     // loop always runs three times and `best` is always `Some`.
     best.expect("a room always has three edge-neighbours").2
 }
@@ -341,7 +341,7 @@ mod tests {
         assert!(moved_in_longitude, "the course froze instead of winding");
     }
 
-    // These need a real `RoomAddr`, so they build one from a known face and
+    // These need a real `Facet`, so they build one from a known face and
     // path rather than a world. `walk_depth` (in the `agent` module) needs a
     // `LocaleContext`, which a pure unit test cannot cheaply build, so the
     // depth is the literal 12 (walk depth on the canonical grid: globe level
@@ -354,7 +354,7 @@ mod tests {
     /// agreement below is what does.
     #[test]
     fn a_step_length_is_positive_and_sub_radian() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };
@@ -377,7 +377,7 @@ mod tests {
     /// averaging all three, or divides by the wrong count.
     #[test]
     fn a_step_length_is_the_mean_of_its_three_neighbour_distances() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };
@@ -401,7 +401,7 @@ mod tests {
     /// FIRES WHEN: the candidate list includes `position`.
     #[test]
     fn resolution_always_returns_a_neighbour_never_the_cell_itself() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };
@@ -416,7 +416,7 @@ mod tests {
     /// sign would pass every "returns a neighbour" test above.
     #[test]
     fn aiming_at_a_neighbours_centroid_resolves_to_that_neighbour() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 12],
         };

@@ -305,7 +305,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, ComponentStore, Seed, Value};
+use hornvale_kernel::{ComponentStore, Seed, Value, Vertex};
 use hornvale_species::BiomeAffinity;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
@@ -438,7 +438,7 @@ fn tally(seed: u64, arm: Arm, species: &str) -> Tally {
             .ledger
             .value_of(fact.subject, hornvale_settlement::CELL_ID)
         {
-            Some(Value::Number(n)) => CellId(*n as u32),
+            Some(Value::Number(n)) => Vertex(*n as u32),
             _ => panic!("a committed settlement must carry a cell-id"),
         };
         t.total += 1;
@@ -613,7 +613,7 @@ fn gnoll_mean_correlation(seed: u64, arm: Arm) -> (f64, Vec<(String, f64)>) {
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
     let column = |name: &str| -> Vec<f64> {
         let idx = roster
             .iter()

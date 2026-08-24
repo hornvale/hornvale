@@ -27,7 +27,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_kernel::{Band, Seed, Vertex};
 use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, StratigraphicColumn};
 use hornvale_vessel::{Cell, Level, LevelCellKind, generate_descent};
 use hornvale_worldgen::chamber::{
@@ -73,7 +73,7 @@ fn find_addrs_at_bands(
     bands: &[Band],
 ) -> Vec<ChamberAddr> {
     for raw_cell in 0u32..50 {
-        let cell = CellId(raw_cell);
+        let cell = Vertex(raw_cell);
         let mut found = Vec::new();
         for &band in bands {
             let mut hit = None;

@@ -60,7 +60,7 @@
 
 use hornvale_astronomy::{Rotation, SkyPins};
 use hornvale_climate::{RotationRegime, substellar_cosine};
-use hornvale_kernel::{CellMap, Geosphere, Seed};
+use hornvale_kernel::{Geosphere, Seed, VertexMap};
 use hornvale_species::BiosphereTraits;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
@@ -127,8 +127,8 @@ fn locked_seeds(wc: &WorldComponents) -> Vec<u64> {
 /// The corrected Locked insolation field (spec §3), synthetic: Lambert
 /// cosine off the substellar point, night side floored at `0.0`. The
 /// fixed contract every implementation of the SKY-24 fix must satisfy.
-fn corrected_locked_insolation(geo: &Geosphere, insolation_scalar: f64) -> CellMap<f64> {
-    CellMap::from_fn(geo, |cell| {
+fn corrected_locked_insolation(geo: &Geosphere, insolation_scalar: f64) -> VertexMap<f64> {
+    VertexMap::from_fn(geo, |cell| {
         let cos_theta = substellar_cosine(geo.position(cell));
         insolation_scalar * cos_theta.max(0.0)
     })
@@ -146,7 +146,7 @@ fn substrate_with_corrected_insolation(
     climate: &hornvale_climate::GeneratedClimate,
     obliquity_deg: f64,
     insolation_scalar: f64,
-) -> CellMap<Substrate> {
+) -> VertexMap<Substrate> {
     // This probe only ever runs on seeds `measure_seed` has already asserted
     // are `Rotation::Locked` (see its `assert!` above the call site below);
     // `shipped`'s insolation term is discarded and replaced wholesale by
@@ -161,7 +161,7 @@ fn substrate_with_corrected_insolation(
         &RotationRegime::Locked,
     );
     let corrected_insolation = corrected_locked_insolation(geo, insolation_scalar);
-    CellMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |cell| {
         let s = *shipped.get(cell);
         Substrate {
             insolation: *corrected_insolation.get(cell),
@@ -177,10 +177,10 @@ fn substrate_with_corrected_insolation(
 /// seam this probe needs and `per_species_suitability` does not expose.
 fn niche_k_over(
     geo: &Geosphere,
-    base_carrying: &CellMap<f64>,
-    substrate: &CellMap<Substrate>,
+    base_carrying: &VertexMap<f64>,
+    substrate: &VertexMap<Substrate>,
     species_set: &[&BiosphereTraits],
-) -> Vec<(u32, CellMap<f64>)> {
+) -> Vec<(u32, VertexMap<f64>)> {
     species_set
         .iter()
         .enumerate()
@@ -191,7 +191,7 @@ fn niche_k_over(
                 .sum();
             let floor_buf = hornvale_kernel::sovereignty_floor(def.mass, def.potency);
             let cn = &def.condition_niche;
-            let k = CellMap::from_fn(geo, |cell| {
+            let k = VertexMap::from_fn(geo, |cell| {
                 let s = substrate.get(cell);
                 let supply = base_carrying.get(cell) * total_uptake;
                 let saturated = supply / (1.0 + supply);
@@ -313,7 +313,7 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
         .filter(|(k, _)| wc.psyche.contains(k))
         .collect();
     let peopled: Vec<&BiosphereTraits> = peopled_kinds.iter().map(|(_, bio)| *bio).collect();
-    let per_species_k = niche_k_over(geo, base_carrying.as_cell_map(), &substrate, &peopled);
+    let per_species_k = niche_k_over(geo, base_carrying.as_vertex_map(), &substrate, &peopled);
     let habitable = climate.habitability();
 
     // The world-dominant species: highest total K summed over habitable
@@ -326,7 +326,7 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
         .iter()
         .map(|(tag, k)| {
             let total: f64 = geo
-                .cells()
+                .vertices()
                 .filter(|c| *habitable.get(*c))
                 .map(|c| *k.get(c))
                 .sum();
@@ -343,7 +343,7 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
     let dominant_species = peopled_kinds[dominant_tag as usize].0.0;
 
     let peak_cell = geo
-        .cells()
+        .vertices()
         .filter(|c| *habitable.get(*c))
         .max_by(|a, b| dominant_k.get(*a).total_cmp(dominant_k.get(*b)))
         .expect("at least one habitable cell exists");

@@ -423,7 +423,7 @@ struct HistoryPlacement {
     /// Build-local `species_set` index of this settlement's people.
     tag: usize,
     /// The Geosphere cell the settlement sits on.
-    cell: hornvale_kernel::CellId,
+    cell: hornvale_kernel::Vertex,
     /// The settlement's committed population (the occupation's peak).
     population: u32,
 }
@@ -543,7 +543,7 @@ pub fn terrain_of(world: &World) -> Result<GeneratedTerrain, BuildError> {
 /// Map a terrain boundary contact to the seafloor feature climate consumes
 /// (only ocean cells use it): ocean–ocean convergent arcs become trenches;
 /// oceanic ridges become vent-bearing ridges; everything else is featureless.
-fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> SeafloorFeature {
+fn seafloor_feature(boundary: Option<hornvale_terrain::VertexBoundary>) -> SeafloorFeature {
     use hornvale_terrain::BoundaryKind;
     match boundary.map(|b| b.kind) {
         Some(BoundaryKind::IslandArc) => SeafloorFeature::Trench,
@@ -677,7 +677,7 @@ pub fn carrying_inputs_of(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+) -> hornvale_kernel::VertexMap<hornvale_demography::CarryingInput> {
     carrying_inputs_at(
         geo,
         terrain,
@@ -722,18 +722,18 @@ pub fn carrying_inputs_at(
     climate: &GeneratedClimate,
     adjust: &EraAdjust,
     mask: ChannelMask,
-) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+) -> hornvale_kernel::VertexMap<hornvale_demography::CarryingInput> {
     debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
-    let is_ocean_at = |c: hornvale_kernel::CellId| terrain.elevation_at(c) < adjust.sea_level;
+    let is_ocean_at = |c: hornvale_kernel::Vertex| terrain.elevation_at(c) < adjust.sea_level;
 
     // The Confluence: freshwater rides proximity to the real river network,
     // not a smooth drainage/moisture proxy — so K spikes near rivers and
     // settlements condense there (emergent). A moisture floor keeps
     // riverless-but-wet regions habitable.
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let water_kind = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    hornvale_kernel::VertexMap::from_fn(geo, |cell| {
         let coastal = geo.neighbors(cell).iter().any(|n| is_ocean_at(*n));
         let moisture = climate.moisture_at(cell);
         // Seawater is not freshwater: coastal access is priced by the
@@ -785,8 +785,8 @@ pub fn soil_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     geo: &Geosphere,
-) -> hornvale_kernel::CellMap<hornvale_terrain::SoilOrder> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+) -> hornvale_kernel::VertexMap<hornvale_terrain::SoilOrder> {
+    hornvale_kernel::VertexMap::from_fn(geo, |cell| {
         let mat = terrain.material_at(cell);
         let here = terrain.elevation_at(cell).get();
         let slope = geo
@@ -812,7 +812,7 @@ pub fn deposit_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     geo: &Geosphere,
-    cell: hornvale_kernel::CellId,
+    cell: hornvale_kernel::Vertex,
 ) -> Option<Deposit> {
     if let Some(d) = terrain.deposit_at(cell) {
         return Some(d); // a primary/areal deposit wins
@@ -946,9 +946,9 @@ const FORAGE_FRACTION: f64 = 0.5;
 /// type-audit: bare-ok(count: base_carrying), bare-ok(count: return)
 pub fn forage_supply_field(
     geo: &Geosphere,
-    base_carrying: &hornvale_kernel::CellMap<f64>,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
+    base_carrying: &hornvale_kernel::VertexMap<f64>,
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
 }
 
 /// Fraction of grazable forage that becomes prey biomass available to a
@@ -973,9 +973,9 @@ const PREY_FRACTION: f64 = 0.1;
 /// type-audit: bare-ok(count: forage), bare-ok(count: return)
 pub fn prey_supply_field(
     geo: &Geosphere,
-    forage: &hornvale_kernel::CellMap<f64>,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| forage.get(c) * PREY_FRACTION)
+    forage: &hornvale_kernel::VertexMap<f64>,
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| forage.get(c) * PREY_FRACTION)
 }
 
 /// The `DETRITUS` supply field (The Tumult): [`DETRITUS_AMBIENT`] on land,
@@ -987,8 +987,8 @@ pub fn prey_supply_field(
 pub fn detritus_supply_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         if terrain.is_ocean(c) {
             0.0
         } else {
@@ -1018,9 +1018,9 @@ pub fn marine_forage_supply_field(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     scale: f64,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     let biome = climate.biome_map();
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         if !terrain.is_ocean(c) {
             return 0.0;
         }
@@ -1060,7 +1060,7 @@ pub fn mineral_supply_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     scale: f64,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     mineral_supply_field_masked(geo, terrain, scale, ChannelMask::NONE)
 }
 
@@ -1087,9 +1087,9 @@ pub fn mineral_supply_field_masked(
     terrain: &GeneratedTerrain,
     scale: f64,
     mask: ChannelMask,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         if terrain.is_ocean(c) {
             0.0
         } else if mask.mineral_unrest {
@@ -1416,7 +1416,7 @@ pub fn per_species_suitability(
     species_biosphere: &[&hornvale_species::BiosphereTraits],
     species_realm: &[hornvale_species::HabitatRealm],
     species_affinity: &[Option<hornvale_species::BiomeAffinity>],
-) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+) -> Vec<(u32, hornvale_kernel::VertexMap<f64>)> {
     per_species_suitability_masked(
         geo,
         terrain,
@@ -1461,7 +1461,7 @@ pub fn per_species_suitability_masked(
     species_realm: &[hornvale_species::HabitatRealm],
     species_affinity: &[Option<hornvale_species::BiomeAffinity>],
     mask: ChannelMask,
-) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+) -> Vec<(u32, hornvale_kernel::VertexMap<f64>)> {
     debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
     debug_assert_eq!(
         species_realm.len(),
@@ -1497,7 +1497,7 @@ pub fn per_species_suitability_masked(
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
     let mineral = mineral_supply_field_masked(geo, terrain, MINERAL_SUPPLY_SCALE, mask);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
     let prey = prey_supply_field(geo, &forage);
@@ -1523,7 +1523,7 @@ pub fn per_species_suitability_masked(
                 .get(tag)
                 .copied()
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
-            let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+            let k = hornvale_kernel::VertexMap::from_fn(geo, |cell| {
                 // The Warren: which realm's substrate this kind is scored
                 // against, and — for a subterranean kind only — whether the
                 // cell actually holds a cave at all. A `Surface` kind's
@@ -1704,13 +1704,13 @@ pub struct EraInvariantSupply {
     /// Annual-mean insolation per cell — ~100% of the pipeline's cost, and a
     /// pure function of latitude and obliquity, neither of which the era series
     /// varies.
-    pub insolation: hornvale_kernel::CellMap<f64>,
+    pub insolation: hornvale_kernel::VertexMap<f64>,
     /// Mineral supply — terrain only.
-    pub mineral: hornvale_kernel::CellMap<f64>,
+    pub mineral: hornvale_kernel::VertexMap<f64>,
     /// Detritus supply — terrain only.
-    pub detritus: hornvale_kernel::CellMap<f64>,
+    pub detritus: hornvale_kernel::VertexMap<f64>,
     /// Marine forage supply — see the caveat above.
-    pub marine: hornvale_kernel::CellMap<f64>,
+    pub marine: hornvale_kernel::VertexMap<f64>,
 }
 
 impl EraInvariantSupply {
@@ -1790,7 +1790,7 @@ pub fn per_species_capacity_at(
     // and since The Underworld, through the same shared derivation, so the
     // two paths cannot disagree about a chamber's depth or hydrology.
     let subterranean = subterranean_substrate_field(geo, terrain, &substrate);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
     // The Range, carried to the capacity path: the biome at every cell,
     // hoisted exactly as `per_species_suitability` hoists it.
@@ -1816,7 +1816,7 @@ pub fn per_species_capacity_at(
             // Loop-invariant, as in `per_species_suitability` above: six
             // `BTreeMap` reads per species instead of six per cell per species.
             let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
-            let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+            let raw = hornvale_kernel::VertexMap::from_fn(geo, |cell| {
                 // The Warren: which realm's substrate this kind is scored
                 // against, and — for a subterranean kind only — whether the
                 // cell actually holds a cave at all. A `Surface` kind's
@@ -2026,7 +2026,7 @@ pub fn predator_pressure_from(
     wc: &WorldComponents,
     terrain: &hornvale_terrain::GeneratedTerrain,
     report: &hornvale_demography::DemographyReport,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     let geo = terrain.geosphere();
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
     // build-local dense index the stack uses), for prey-dominant diets.
@@ -2040,18 +2040,18 @@ pub fn predator_pressure_from(
         .map(|(i, _)| i as u32)
         .collect();
     // Sum carnivore REALIZED density (the stack) per cell.
-    let carnivore_density: Vec<&hornvale_kernel::CellMap<f64>> = report
+    let carnivore_density: Vec<&hornvale_kernel::VertexMap<f64>> = report
         .stack
         .density
         .iter()
         .filter(|(tag, _)| carnivore.contains(tag))
         .map(|(_, d)| d)
         .collect();
-    let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    let raw = hornvale_kernel::VertexMap::from_fn(geo, |cell| {
         carnivore_density.iter().map(|d| *d.get(cell)).sum::<f64>()
     });
     let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    hornvale_kernel::VertexMap::from_fn(geo, |cell| {
         if max > 0.0 {
             (*raw.get(cell) / max).clamp(0.0, 1.0)
         } else {
@@ -2077,10 +2077,10 @@ pub fn predator_pressure_from(
 // Named construction site (decision 0092): reconstructs terrain for its own
 // readout.
 #[allow(clippy::disallowed_methods)]
-pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::VertexMap<f64>, BuildError> {
     let terrain = terrain_of(world)?;
     let field = vestiges_field(world, &terrain);
-    Ok(hornvale_kernel::CellMap::from_fn(
+    Ok(hornvale_kernel::VertexMap::from_fn(
         terrain.geosphere(),
         |cell| field.get(cell).iter().map(|v| v.dread).fold(0.0, f64::max),
     ))
@@ -2109,7 +2109,7 @@ pub fn prey_pressure_from(
     wc: &WorldComponents,
     terrain: &hornvale_terrain::GeneratedTerrain,
     report: &hornvale_demography::DemographyReport,
-) -> hornvale_kernel::CellMap<f64> {
+) -> hornvale_kernel::VertexMap<f64> {
     let geo = terrain.geosphere();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
@@ -2130,18 +2130,18 @@ pub fn prey_pressure_from(
         .map(|(i, _)| i as u32)
         .collect();
     // Sum prey-base REALIZED density (the stack) per cell.
-    let prey_density: Vec<&hornvale_kernel::CellMap<f64>> = report
+    let prey_density: Vec<&hornvale_kernel::VertexMap<f64>> = report
         .stack
         .density
         .iter()
         .filter(|(tag, _)| prey.contains(tag))
         .map(|(_, d)| d)
         .collect();
-    let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    let raw = hornvale_kernel::VertexMap::from_fn(geo, |cell| {
         prey_density.iter().map(|d| *d.get(cell)).sum::<f64>()
     });
     let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    hornvale_kernel::VertexMap::from_fn(geo, |cell| {
         if max > 0.0 {
             (*raw.get(cell) / max).clamp(0.0, 1.0)
         } else {
@@ -2384,8 +2384,9 @@ pub fn climate_from(
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;
-    let seafloor =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
+    let seafloor = hornvale_kernel::VertexMap::from_fn(geo, |cell| {
+        seafloor_feature(terrain.boundary_at(cell))
+    });
     let (insolation, obliquity_deg, regime, year_length_std, year_phase_offset) =
         stellar_inputs(&sky);
     Ok(GeneratedClimate::generate(&ClimateInputs {
@@ -2492,7 +2493,7 @@ pub fn substrate_field(
     obliquity_deg: f64,
     insolation_scalar: f64,
     regime: &RotationRegime,
-) -> hornvale_kernel::CellMap<Substrate> {
+) -> hornvale_kernel::VertexMap<Substrate> {
     let insolation = insolation_field(geo, obliquity_deg, insolation_scalar, regime);
     substrate_field_at(
         geo,
@@ -2526,8 +2527,8 @@ pub fn insolation_field(
     obliquity_deg: f64,
     insolation_scalar: f64,
     regime: &RotationRegime,
-) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| match regime {
+) -> hornvale_kernel::VertexMap<f64> {
+    hornvale_kernel::VertexMap::from_fn(geo, |cell| match regime {
         RotationRegime::Spinning { .. } => {
             annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
         }
@@ -2578,10 +2579,10 @@ pub fn substrate_field_at(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-    insolation: &hornvale_kernel::CellMap<f64>,
+    insolation: &hornvale_kernel::VertexMap<f64>,
     adjust: &EraAdjust,
-) -> hornvale_kernel::CellMap<Substrate> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
+) -> hornvale_kernel::VertexMap<Substrate> {
+    hornvale_kernel::VertexMap::from_fn(geo, |cell| Substrate {
         temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
         moisture: climate.moisture_at(cell),
         // Hoisted, not recomputed per cell: insolation is era-INVARIANT and
@@ -2709,7 +2710,7 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 /// rather than this function growing a second, redundant depth coordinate that
 /// could disagree with the first.
 ///
-/// **That advice was written naming spec §4.6's `(CellId, Rung)` re-key as the
+/// **That advice was written naming spec §4.6's `(Vertex, Rung)` re-key as the
 /// obvious caller, and the re-key shipped without taking it.** Task 8
 /// ([`delve_seating`]) needs a depth per rung and uses the rung's **top**
 /// (`delta_t_range_of(rung).0`), matching `chamber`'s `stratum_at` so the
@@ -2916,7 +2917,7 @@ pub fn chamber_moisture_at_reach(
 ///
 /// **A per-rung substrate is still deferred, and this doc used to defer it to
 /// a task that has since shipped without doing it.** Spec §4.6's
-/// `(CellId, Rung)` re-key landed (Task 8, [`delve_seating`]); it re-keyed the
+/// `(Vertex, Rung)` re-key landed (Task 8, [`delve_seating`]); it re-keyed the
 /// node index and added **no** per-rung substrate at all. This field is still
 /// evaluated once per cell at `depth_reach_m`, and
 /// [`delve_seating::chamber_fit`] scores a rung against the corpus rather than
@@ -2942,9 +2943,9 @@ pub fn chamber_moisture_at_reach(
 pub fn subterranean_substrate_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-    surface: &hornvale_kernel::CellMap<Substrate>,
-) -> hornvale_kernel::CellMap<Substrate> {
-    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    surface: &hornvale_kernel::VertexMap<Substrate>,
+) -> hornvale_kernel::VertexMap<Substrate> {
+    hornvale_kernel::VertexMap::from_fn(geo, |cell| {
         let s = *surface.get(cell);
         let porosity = terrain.material_at(cell).porosity;
         let water_table_m = hornvale_terrain::water_table_depth_m(
@@ -3003,9 +3004,9 @@ struct EraContext<'a> {
     /// The shared geosphere (terrain's, reused for climate's grid).
     geo: &'a Geosphere,
     /// Present relief; elevation does not change across eras.
-    elevation: &'a hornvale_kernel::CellMap<ReferenceElevation>,
+    elevation: &'a hornvale_kernel::VertexMap<ReferenceElevation>,
     /// Seafloor feature per cell, derived once from terrain's boundaries.
-    seafloor: &'a hornvale_kernel::CellMap<SeafloorFeature>,
+    seafloor: &'a hornvale_kernel::VertexMap<SeafloorFeature>,
     /// Insolation relative to Earth, from the world's sky (constant per world).
     insolation: f64,
     /// The world's rotation regime (constant per world).
@@ -3020,7 +3021,7 @@ struct EraContext<'a> {
     /// `paleoclimate_of`'s present-temperature field against [`FREEZE_C`],
     /// no albedo offset) — the baseline every era's advance is measured
     /// against.
-    present_ice: &'a hornvale_kernel::CellMap<bool>,
+    present_ice: &'a hornvale_kernel::VertexMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
     freeze: Temperature,
     /// The world seed — threaded through so `glacial_maximum_habitable`'s
@@ -3085,7 +3086,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
     // production path for combining the two, together with `Sub` —
     // decision 0008).
     let era_temperature =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *mean_temp.get(c) + inputs.temp_offset);
+        hornvale_kernel::VertexMap::from_fn(geo, |c| *mean_temp.get(c) + inputs.temp_offset);
     // Ice is diagnosed against an ABSOLUTE snowline (`ctx.freeze`), not an
     // anomaly, so the same global cooling offset produces a spatially
     // structured mask (high latitudes ice first) rather than an all-or-
@@ -3102,17 +3103,17 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
     let era_ice =
         hornvale_paleoclimate::glaciated(geo, elevation, &era_temperature, ctx.freeze, sea_level);
     let advance =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *era_ice.get(c) && !*ctx.present_ice.get(c));
+        hornvale_kernel::VertexMap::from_fn(geo, |c| *era_ice.get(c) && !*ctx.present_ice.get(c));
     // This same `advance` mask is both summarized into `ice_fraction` below
     // and stored on the returned `EraClimate` unchanged, so
     // `strata::extract`'s envelope (an OR-union of every era's `ice` field)
     // can never disagree with `ice_fraction` about which cells this era
     // advanced — one mask, two consumers.
     let land = geo
-        .cells()
+        .vertices()
         .filter(|c| *elevation.get(*c) >= sea_level)
         .count();
-    let advanced = geo.cells().filter(|c| *advance.get(*c)).count();
+    let advanced = geo.vertices().filter(|c| *advance.get(*c)).count();
     let ice_fraction = if land == 0 {
         0.0
     } else {
@@ -3123,7 +3124,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
         ice: advance,
         // Placeholder — see the doc comment above. Filled in for the
         // glacial-maximum era only, by `glacial_maximum_habitable`.
-        habitable: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+        habitable: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
         sea_level,
         ice_fraction,
     }
@@ -3139,7 +3140,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
 fn glacial_maximum_habitable(
     ctx: &EraContext,
     inputs: &EraInputs,
-) -> hornvale_kernel::CellMap<bool> {
+) -> hornvale_kernel::VertexMap<bool> {
     let geo = ctx.geo;
     let elevation = ctx.elevation;
     let sea_level = inputs.sea_level;
@@ -3156,10 +3157,10 @@ fn glacial_maximum_habitable(
         seed: ctx.seed,
         greenhouse_forcing_k: ctx.greenhouse_forcing_k,
     });
-    let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
+    let era_temperature = hornvale_kernel::VertexMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
     });
-    hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::VertexMap::from_fn(geo, |c| {
         hornvale_climate::is_habitable(
             *era_temperature.get(c),
             climate.moisture_at(c),
@@ -3207,8 +3208,9 @@ pub fn paleoclimate_from(
     };
     let forcing = &system.forcing;
 
-    let seafloor =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
+    let seafloor = hornvale_kernel::VertexMap::from_fn(geo, |cell| {
+        seafloor_feature(terrain.boundary_at(cell))
+    });
     // `mean_temperature` (used just below, for the present, and inside
     // `climate_at_era` for every other era) does not read obliquity at all
     // — only the seasonal-swing/moisture terms do, and neither the ice
@@ -3231,7 +3233,7 @@ pub fn paleoclimate_from(
     // (astronomy's forcing contract), the same value `stellar_inputs`
     // returns, so this reproduces `climate_of`'s present reading
     // byte-for-byte with no full regeneration at all. Already a
-    // `CellMap<Temperature>`, so no wrapping is needed before `glaciated`.
+    // `VertexMap<Temperature>`, so no wrapping is needed before `glaciated`.
     let present_temperature = hornvale_climate::temperature::mean_temperature(
         geo,
         &elevation,
@@ -3415,7 +3417,7 @@ fn bake_eras(
     // asserted, not trusted — `era_substrate.rs::ocean_is_never_settleable_at_any_era`.
     let livable_mask = |sea_level: ReferenceElevation,
                         offset: hornvale_kernel::TempAnomaly|
-     -> hornvale_kernel::CellMap<bool> {
+     -> hornvale_kernel::VertexMap<bool> {
         let mean = hornvale_climate::temperature::mean_temperature(
             geo,
             &elevation,
@@ -3424,7 +3426,7 @@ fn bake_eras(
             &regime,
             greenhouse_forcing,
         );
-        hornvale_kernel::CellMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
+        hornvale_kernel::VertexMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
     };
 
     // No forcing to replay (constant sky) → one present-era mask, no swing.
@@ -3436,7 +3438,7 @@ fn bake_eras(
         return Ok((
             vec![EraClimate {
                 day: cfg.start_year,
-                ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+                ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
                 habitable,
                 sea_level: present_sea_level,
                 ice_fraction: 0.0,
@@ -3484,7 +3486,7 @@ fn bake_eras(
             + (e as f64) * (cfg.end_year - cfg.start_year) / (CLIMATE_ERAS as f64 - 1.0);
         eras.push(EraClimate {
             day: bake_day,
-            ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+            ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
             habitable,
             sea_level,
             ice_fraction: 0.0,
@@ -3581,15 +3583,15 @@ fn diurnal_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) ->
             .fold(f64::MIN, f64::max)
     };
 
-    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
-    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
-    for cell in geo.cells() {
+    let mut driest: Option<(hornvale_kernel::Vertex, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::Vertex, f64)> = None;
+    for cell in geo.vertices() {
         let amp = climate.diurnal_amp_at(cell);
         if terrain.is_ocean(cell) {
             // Genuinely open ocean is the MINIMUM-amplitude ocean cell — a
             // coastal cell's nontrivial continentality still gives it a
             // small-but-nonzero swing, understating the "small" claim.
-            // `geo.cells()` is in CellId order, so `amp < best` (strict)
+            // `geo.vertices()` is in Vertex order, so `amp < best` (strict)
             // keeps the first-seen cell on ties, a deterministic tie-break.
             if ocean.is_none_or(|(_, best)| amp < best) {
                 ocean = Some((cell, amp));
@@ -3661,7 +3663,7 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 /// The seas' headline line for the almanac's Land section (The Gyre, spec
 /// companion to The Turning): the dominant offshore current direction at a
 /// coastal ocean sample site — the first ordinary coastal-fringe ocean cell
-/// (>= 1 land neighbor, `CellId` order, the same coastal-walk convention
+/// (>= 1 land neighbor, `Vertex` order, the same coastal-walk convention
 /// `domains/terrain`'s carve stage uses) carrying a nonzero current. Empty
 /// for tidally locked worlds (no circulation bands to drive a current) and
 /// for worlds with no such site (landless, or a coast whose current
@@ -3681,7 +3683,7 @@ pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
 /// climate (The Single Sculpt). Byte-identical to `seas_lines`.
 fn seas_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if !terrain.is_ocean(cell) {
             continue;
         }
@@ -3750,13 +3752,13 @@ pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
 fn rains_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
 
-    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
-    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
-    for cell in geo.cells() {
+    let mut driest: Option<(hornvale_kernel::Vertex, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::Vertex, f64)> = None;
+    for cell in geo.vertices() {
         let amp = climate.diurnal_amp_at(cell);
         if terrain.is_ocean(cell) {
             // Same tie-break convention as `diurnal_lines`: strict `<`
-            // keeps the first-seen (lowest `CellId`) cell on ties.
+            // keeps the first-seen (lowest `Vertex`) cell on ties.
             if ocean.is_none_or(|(_, best)| amp < best) {
                 ocean = Some((cell, amp));
             }
@@ -3789,7 +3791,7 @@ const REGIME_FLOOR_MM: f64 = 50.0;
 /// (rain/snow), and — above the arid floor, where it means something — the
 /// seasonal regime word (see [`rains_lines`] and [`REGIME_FLOOR_MM`]).
 /// type-audit: bare-ok(prose: site), bare-ok(prose: return)
-fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::CellId) -> String {
+fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::Vertex) -> String {
     let mm = climate.precip_at(cell).get();
     let phase = precip_phase_word(climate.snow_fraction_at(cell));
     // "about 0 mm" reads oddly for a cell that rounds to nothing; name the
@@ -3846,9 +3848,9 @@ pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
 fn firmament_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
 
-    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
-    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
-    for cell in geo.cells() {
+    let mut driest: Option<(hornvale_kernel::Vertex, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::Vertex, f64)> = None;
+    for cell in geo.vertices() {
         let amp = climate.diurnal_amp_at(cell);
         if terrain.is_ocean(cell) {
             if ocean.is_none_or(|(_, best)| amp < best) {
@@ -3876,7 +3878,7 @@ fn firmament_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) 
 fn weather_line_for(
     site: &str,
     climate: &GeneratedClimate,
-    cell: hornvale_kernel::CellId,
+    cell: hornvale_kernel::Vertex,
 ) -> String {
     let state = climate.weather_at(cell, 0.0);
     let cloud = climate.cloud_type_at(cell, 0.0);
@@ -4061,7 +4063,7 @@ fn ground_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> 
         std::collections::BTreeMap::new();
     let (mut land, mut karst, mut andosol) = (0usize, 0usize, 0usize);
     let mut salt_flats = false;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -4130,7 +4132,7 @@ pub fn deep_lines_from(
     let geo = terrain.geosphere();
     let (mut land, mut dtb_sum, mut gaps) = (0usize, 0.0f64, 0usize);
     let (mut grad_min, mut grad_max) = (f64::INFINITY, f64::NEG_INFINITY);
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if !terrain.is_ocean(cell) {
             land += 1;
             dtb_sum += terrain.depth_to_basement_at(cell);
@@ -4162,7 +4164,7 @@ pub fn deep_lines_from(
     // Optional deep-time refinement: glaciated strata recorded in the cover.
     let paleo = paleoclimate_from(world, terrain)?;
     if paleo.max_ice_fraction > 0.0 {
-        let iced = geo.cells().filter(|c| *paleo.envelope.get(*c)).count();
+        let iced = geo.vertices().filter(|c| *paleo.envelope.get(*c)).count();
         lines.push(format!(
             "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
         ));
@@ -4189,7 +4191,7 @@ pub fn lode_lines_from(
     let (mut land, mut cave_land, mut ore_land, mut colocated) = (0usize, 0usize, 0usize, 0usize);
     let mut commodities: std::collections::BTreeMap<Commodity, usize> =
         std::collections::BTreeMap::new();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -4281,7 +4283,7 @@ pub fn vestige_lines_from(
         (0usize, 0usize, 0usize, 0usize);
     let (mut venerated, mut forgotten) = (0usize, 0usize);
     let mut hazard_counts = [0usize; 6];
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -4390,7 +4392,7 @@ fn water_lines_from(terrain: &GeneratedTerrain) -> Vec<String> {
     let geo = terrain.geosphere();
     let globe = terrain.globe();
     let (mut land, mut fresh) = (0usize, 0usize);
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -4617,7 +4619,7 @@ fn occlusion_lens_at(
     let Ok(terrain) = terrain_of(world) else {
         return PerceptionLens::identity();
     };
-    let cell = terrain.nearest_cell(coord.latitude, coord.longitude);
+    let cell = terrain.nearest_vertex(coord.latitude, coord.longitude);
     let (lens, _) = occlusion(
         climate.weather_at(cell, day),
         climate.cloud_type_at(cell, day),
@@ -5390,7 +5392,7 @@ fn placed_species(world: &World) -> std::collections::BTreeSet<String> {
 
 /// The Geosphere cells a species has settled: every committed settlement
 /// `peopled-by` this species, read back by its `cell-id` fact.
-fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
+fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::Vertex> {
     world
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
@@ -5400,7 +5402,7 @@ fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
                 .ledger
                 .value_of(f.subject, hornvale_settlement::CELL_ID)
             {
-                Some(Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                Some(Value::Number(n)) => Some(hornvale_kernel::Vertex(*n as u32)),
                 _ => None,
             }
         })
@@ -5414,15 +5416,15 @@ fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
 /// settled cell.
 fn within_hops(
     geo: &Geosphere,
-    start: hornvale_kernel::CellId,
+    start: hornvale_kernel::Vertex,
     max_hops: u32,
-    pred: impl Fn(hornvale_kernel::CellId) -> bool,
+    pred: impl Fn(hornvale_kernel::Vertex) -> bool,
 ) -> bool {
     use std::collections::BTreeSet;
     if pred(start) {
         return true;
     }
-    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    let mut visited: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
     visited.insert(start);
     let mut frontier = vec![start];
     for _ in 0..max_hops {
@@ -5452,11 +5454,11 @@ fn within_hops(
 fn landmass_size_capped(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-    start: hornvale_kernel::CellId,
+    start: hornvale_kernel::Vertex,
     cap: usize,
 ) -> usize {
     use std::collections::BTreeSet;
-    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    let mut visited: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
     visited.insert(start);
     let mut frontier = vec![start];
     // The cap check lives entirely in the inner early return — once
@@ -5501,7 +5503,7 @@ const ISLAND_CELL_CAP: usize = 200;
 /// (looping over a species' whole settled history) and
 /// [`settlement_site_concepts`] (checking one settlement's own cell) — the
 /// single definition of "is this cell a river."
-fn is_river_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_river_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
 }
 
@@ -5510,7 +5512,7 @@ fn is_river_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> b
 /// runs shallow enough to cross" read literally: a river cell whose flow
 /// hasn't reached waterfall-scale drainage is, by definition, the class
 /// this slice models as fordable.
-fn is_ford_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_ford_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     is_river_cell(terrain, cell)
         && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
 }
@@ -5545,7 +5547,7 @@ fn is_ford_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 /// islets/headlands at very low land-degree. Full table in the Task 4
 /// report. Shared by `exposure_of_impl` and [`settlement_site_concepts`] —
 /// the single definition of "is this cell a hill."
-fn is_hill_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_hill_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
     let sea_level = terrain.sea_level().get();
     let here = terrain.elevation_at(cell).get();
@@ -5560,7 +5562,7 @@ fn is_hill_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 /// minimum over the full, sea-level-clamped neighbor ring. See that
 /// function's doc comment for the two-round history behind the clamp. The
 /// single definition of "is this cell a valley," shared the same way.
-fn is_valley_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_valley_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
     let sea_level = terrain.sea_level().get();
     let here = terrain.elevation_at(cell).get();
@@ -5579,7 +5581,7 @@ fn is_valley_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> 
 /// accumulating runoff above the median but below the river threshold is
 /// genuinely damper than ordinary dry land without yet being a channel.
 /// The single definition of "is this cell a marsh," shared the same way.
-fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
         && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
 }
@@ -5600,7 +5602,7 @@ fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> b
 /// non-`Aquifer` neighbour), so `spring` is the independent signal it was
 /// always meant to be rather than `river` partitioned by rock type. The
 /// single definition of "is this cell a spring," shared the same way.
-fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     terrain.hydro_at(cell) == hornvale_terrain::Hydro::Spring
 }
 
@@ -5612,7 +5614,7 @@ fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> 
 /// components) runs 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 4, 4, 7, 13, 22, 32,
 /// 40, 66, 104, then jumps to 356 and up. The single definition of "is this
 /// cell an island," shared the same way.
-fn is_island_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_island_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
     landmass_size_capped(geo, terrain, cell, ISLAND_CELL_CAP) <= ISLAND_CELL_CAP
 }
@@ -5621,7 +5623,7 @@ fn is_island_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> 
 /// PLACE, not the water (`sea` covers the water; toponymy wants the
 /// former, cosmology the latter). The single definition of "is this cell
 /// coastal," shared the same way.
-fn is_coast_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_coast_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
     within_hops(geo, cell, 2, |c| terrain.is_ocean(c))
 }
@@ -5632,7 +5634,7 @@ fn is_coast_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> b
 /// freshwater through-flow lake reads as `River`, so [`is_river_cell`]
 /// already covers that case). The single definition of "is this cell near
 /// a lake," shared the same way.
-fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::Vertex) -> bool {
     let geo = terrain.geosphere();
     within_hops(geo, cell, 2, |c| {
         terrain.water_kind_at(c) == hornvale_terrain::WaterKind::SaltBasin
@@ -5758,7 +5760,7 @@ fn exposure_of_impl(
     world: &World,
     wc: &WorldComponents,
     name: &'static str,
-    settled: &[hornvale_kernel::CellId],
+    settled: &[hornvale_kernel::Vertex],
     coexisting: &std::collections::BTreeSet<String>,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
@@ -6605,7 +6607,7 @@ pub fn deity_site_concepts(
 /// one — `kind_concept` reads the registry's own roster.
 fn predecessor_people(
     world: &World,
-    cell: hornvale_kernel::CellId,
+    cell: hornvale_kernel::Vertex,
     current: &str,
 ) -> Option<&'static str> {
     let mut earliest: Option<(f64, String)> = None;
@@ -6728,7 +6730,7 @@ pub fn settlement_site_concepts(
     world: &World,
     seed: &Seed,
     species: &str,
-    cell: hornvale_kernel::CellId,
+    cell: hornvale_kernel::Vertex,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     presiding: Option<&'static str>,
@@ -7107,7 +7109,7 @@ fn bake_history_from(
     // `per_species_capacity`. Decision 0103's point, arrived at: a capacity is a
     // property of a people on a cell, and the blind field could not express that
     // however it was scaled.
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let water_kind = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
@@ -7273,7 +7275,7 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.time_horizon)))
         .collect();
-    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
+    let current = hornvale_kernel::VertexMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
         .iter()
@@ -7288,7 +7290,7 @@ fn bake_history_from(
             )
         })
         .collect();
-    let seating_rungs: Vec<hornvale_kernel::CellMap<hornvale_kernel::Band>> =
+    let seating_rungs: Vec<hornvale_kernel::VertexMap<hornvale_kernel::Band>> =
         seatings.into_iter().map(|s| s.rung).collect();
     Ok(history_bake::bake(
         seed,
@@ -7321,9 +7323,9 @@ fn bake_history_from(
 fn scale_capacity(
     geo: &Geosphere,
     capacity: &hornvale_kernel::ecology::CapacityMap,
-    multiplier: &hornvale_kernel::CellMap<f64>,
+    multiplier: &hornvale_kernel::VertexMap<f64>,
 ) -> hornvale_kernel::ecology::CapacityMap {
-    hornvale_kernel::ecology::CapacityMap::new(hornvale_kernel::CellMap::from_fn(geo, |c| {
+    hornvale_kernel::ecology::CapacityMap::new(hornvale_kernel::VertexMap::from_fn(geo, |c| {
         capacity.at(c) * multiplier.get(c)
     }))
     .expect("a validated capacity scaled by a [0, 1] seating multiplier stays valid")
@@ -7601,7 +7603,7 @@ fn build_to(
     // released before those passes commit again. Commit order (records order,
     // alive filtered) is deterministic, so this vec is stable across builds.
     let placements: Vec<HistoryPlacement> = {
-        let raw: Vec<(EntityId, String, hornvale_kernel::CellId, u32)> = world
+        let raw: Vec<(EntityId, String, hornvale_kernel::Vertex, u32)> = world
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
             .map(|f| f.subject)
@@ -7612,7 +7614,7 @@ fn build_to(
                     .expect("a history settlement carries occ-people")
                     .to_string();
                 let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
-                    Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                    Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
                     _ => unreachable!("a history settlement carries a numeric cell-id"),
                 };
                 let population = match world.ledger.value_of(id, hornvale_settlement::POPULATION)
@@ -7682,7 +7684,7 @@ fn build_to(
         // emitted. `exposure_of_impl` alone owns the "coexisting counts only
         // once the querying species has settled" rule; `coexisting_now` spans
         // every people that placed any alive settlement this build.
-        let settled_now: Vec<hornvale_kernel::CellId> = placements
+        let settled_now: Vec<hornvale_kernel::Vertex> = placements
             .iter()
             .filter(|s| s.tag == tag)
             .map(|s| s.cell)
@@ -7778,7 +7780,7 @@ fn build_to(
         id: EntityId,
         species: &'static str,
         salt: u64,
-        cell: hornvale_kernel::CellId,
+        cell: hornvale_kernel::Vertex,
         latitude: f64,
         longitude: f64,
         concepts: Vec<&'static str>,
@@ -8830,7 +8832,7 @@ pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildErro
 /// The canonical-grid cell of the world's flagship settlement, if it has one.
 /// `None` for a settlement-less world — seed 123 generates one, and its sky is
 /// honestly placeless rather than cell 0's by accident.
-fn flagship_cell(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_kernel::CellId> {
+fn flagship_cell(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_kernel::Vertex> {
     hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
@@ -8840,7 +8842,7 @@ fn flagship_cell(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_k
                 .is_some()
         })
         .and_then(|p| place_coord(world, p.id))
-        .map(|c| terrain.nearest_cell(c.latitude, c.longitude))
+        .map(|c| terrain.nearest_vertex(c.latitude, c.longitude))
 }
 
 /// The sky report given already-derived terrain and climate — the reuse seam
@@ -8857,7 +8859,7 @@ pub fn sky_report_from(
     time: WorldTime,
     _terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
-    at: Option<hornvale_kernel::CellId>,
+    at: Option<hornvale_kernel::Vertex>,
 ) -> Result<SkyReport, BuildError> {
     let Some(cell) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
@@ -9399,7 +9401,7 @@ pub fn rendered_beliefs(
 /// almanac section that names every settlement in the world at once.
 ///
 /// The almanac window cannot build these itself: `PlaceInfo` carries an
-/// `EntityId` but no `CellId`, `AlmanacContext` holds no `&World`, and a
+/// `EntityId` but no `Vertex`, `AlmanacContext` holds no `&World`, and a
 /// window may not reach back to this root. So the root resolves each place
 /// to its cell and hands the finished labels over.
 ///
@@ -9419,16 +9421,16 @@ pub fn rendered_beliefs(
 /// type-audit: bare-ok(prose: return)
 fn land_list_labels(world: &World) -> Vec<String> {
     let places = hornvale_terrain::places(world);
-    let cells: Vec<Option<hornvale_kernel::CellId>> = places
+    let cells: Vec<Option<hornvale_kernel::Vertex>> = places
         .iter()
         .map(
             |p| match world.ledger.value_of(p.id, hornvale_settlement::CELL_ID) {
-                Some(hornvale_kernel::Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                Some(hornvale_kernel::Value::Number(n)) => Some(hornvale_kernel::Vertex(*n as u32)),
                 _ => None,
             },
         )
         .collect();
-    let lines: Vec<(hornvale_kernel::CellId, String)> = places
+    let lines: Vec<(hornvale_kernel::Vertex, String)> = places
         .iter()
         .zip(&cells)
         .filter_map(|(p, cell)| Some(((*cell)?, p.biome.clone())))
@@ -10554,7 +10556,7 @@ mod tests {
         let climate = climate_from(&world, &terrain).unwrap();
         let day = WorldTime::GENESIS;
         let mut seen = std::collections::BTreeSet::new();
-        for cell in terrain.geosphere().cells().take(400) {
+        for cell in terrain.geosphere().vertices().take(400) {
             let r = sky_report_from(&world, day, &terrain, &climate, Some(cell)).unwrap();
             seen.insert(r.description);
         }
@@ -11129,7 +11131,7 @@ mod tests {
 
         // The most-dreaded cell that carries any vestige at all.
         //
-        // SEARCHED, not pinned. This read `CellId(21966)` — the single
+        // SEARCHED, not pinned. This read `Vertex(21966)` — the single
         // pre-human gate-scar cell `vestige.rs` had pinned, whose stack's only
         // layer is breached + forgotten at dread 0.9. The terrain epoch of
         // decision 0134 turned that cell to ocean, and seed 42 now carries NO
@@ -11153,7 +11155,7 @@ mod tests {
         let geo = terrain.geosphere();
         let stacks = crate::vestige::vestiges_field(&world, &terrain);
         let haunted_cell = geo
-            .cells()
+            .vertices()
             .filter(|&c| !stacks.get(c).is_empty())
             .max_by(|&x, &y| a.get(x).total_cmp(a.get(y)))
             .expect("some cell in a seed-42 world carries a vestige");
@@ -11165,7 +11167,7 @@ mod tests {
         // A genuinely empty-stack cell: land or ocean, no pre-human scar, no
         // occupation ever founded there.
         let empty_cell = geo
-            .cells()
+            .vertices()
             .find(|&cell| stacks.get(cell).is_empty())
             .expect("some cell in a seed-42 world has no vestige at all");
 
@@ -12970,7 +12972,7 @@ mod tests {
     fn constant_sky_world_still_has_a_climate() {
         let world = constant(42);
         let climate = climate_of(&world).unwrap();
-        assert!(climate.geosphere().cell_count() > 0);
+        assert!(climate.geosphere().vertex_count() > 0);
     }
 
     #[test]
@@ -12982,7 +12984,7 @@ mod tests {
         let geo = terrain.geosphere();
         let soil = soil_of(&terrain, &climate, geo);
         let land_orders: BTreeSet<_> = geo
-            .cells()
+            .vertices()
             .filter(|c| !terrain.is_ocean(*c))
             .map(|c| *soil.get(c))
             .collect();
@@ -13011,7 +13013,7 @@ mod tests {
         let geo = terrain.geosphere();
         let mut saw_primary_passthrough = false;
         let mut saw_laterite_overlay = false;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 assert_eq!(deposit_of(&terrain, &climate, geo, cell), None);
                 continue;
@@ -13060,12 +13062,12 @@ mod tests {
 
     /// The flagship's cell, read back from its committed `CELL_ID` fact
     /// (independent of `placements`, which build_world already consumed).
-    fn flagship_cell(world: &World, village_id: EntityId) -> hornvale_kernel::CellId {
+    fn flagship_cell(world: &World, village_id: EntityId) -> hornvale_kernel::Vertex {
         match world
             .ledger
             .value_of(village_id, hornvale_settlement::CELL_ID)
         {
-            Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+            Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
             _ => panic!("flagship has no cell-id fact"),
         }
     }
@@ -13691,7 +13693,7 @@ mod tests {
             };
             checked_any = true;
             let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
                 _ => panic!("a settlement carries a numeric cell-id"),
             };
             let species = hornvale_species::species_of(&world, id)
@@ -13763,7 +13765,7 @@ mod tests {
         for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
             let id = f.subject;
             let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                Some(Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
                 _ => panic!("a settlement carries a numeric cell-id"),
             };
             let species = hornvale_species::species_of(&world, id)
@@ -13837,7 +13839,7 @@ mod tests {
             else {
                 continue;
             };
-            let cell = hornvale_kernel::CellId(*n as u32);
+            let cell = hornvale_kernel::Vertex(*n as u32);
             let Some(species) = hornvale_species::species_of(&world, id) else {
                 continue;
             };
@@ -14126,7 +14128,7 @@ mod tests {
             insolation_scalar,
             &regime,
         );
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let s = field.get(cell);
             assert!(s.temperature_c.is_finite());
             assert!((0.0..=1.0).contains(&s.moisture));
@@ -14148,7 +14150,7 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let geo = terrain.geosphere();
         let marine = marine_forage_supply_field(geo, &terrain, &climate, MARINE_SUPPLY_SCALE);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if !terrain.is_ocean(cell) {
                 assert_eq!(
                     *marine.get(cell),
@@ -14158,7 +14160,7 @@ mod tests {
             }
         }
         assert!(
-            geo.cells()
+            geo.vertices()
                 .filter(|&c| terrain.is_ocean(c))
                 .any(|c| *marine.get(c) > 0.0),
             "at least one ocean cell must have positive marine supply, or the \
@@ -14267,7 +14269,7 @@ mod tests {
         let mut substellar = None;
         let mut antistellar = None;
         let mut terminator = None;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let cos = hornvale_climate::substellar_cosine(geo.position(cell));
             if substellar.map(|(_, best)| cos > best).unwrap_or(true) {
                 substellar = Some((cell, cos));
@@ -14333,7 +14335,7 @@ mod tests {
             insolation_scalar,
             &regime,
         );
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let expected =
                 annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar);
             assert_eq!(
@@ -14388,7 +14390,7 @@ mod tests {
         // Over cells where both are positive, the ratio k_cool/k_warm is NOT
         // constant — the direct refutation of flat-NPP proportionality.
         let mut ratios: Vec<f64> = geo
-            .cells()
+            .vertices()
             .filter_map(|c| {
                 let (a, b) = (*k_cool.get(c), *k_warm.get(c));
                 (a > 0.0 && b > 0.0).then_some(a / b)
@@ -14435,7 +14437,7 @@ mod tests {
             &realm,
             &affinity,
         );
-        let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        let land: Vec<_> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
         // THE GLASSHOUSE re-pin (Stage B, decision 0134): 11_066 -> 11_283.
         // The craton rescale delivers its budget, so seed 42's ocean fraction
         // falls slightly and the land mask grows by 217 cells (+1.96%). This is
@@ -14445,7 +14447,7 @@ mod tests {
         // Post-unblinding re-measure, declared per decision 0016.
         assert_eq!(land.len(), 11_283, "P5's land-cell count (spec §1)");
 
-        let undominated: Vec<hornvale_kernel::CellId> = land
+        let undominated: Vec<hornvale_kernel::Vertex> = land
             .iter()
             .copied()
             .filter(|&c| !ks.iter().any(|(_, k)| *k.get(c) > 0.0))
@@ -14613,7 +14615,7 @@ mod tests {
         // tie-break to the lowest species id.
         let mut dominant_counts: std::collections::BTreeMap<u32, usize> =
             std::collections::BTreeMap::new();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let mut best: Option<(u32, f64)> = None;
             for (id, density) in &report.stack.density {
                 let d = *density.get(cell);

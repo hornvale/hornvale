@@ -182,7 +182,7 @@ impl Sub for ReferenceElevation {
 /// An absolute temperature, degrees Celsius.
 ///
 /// Distinguished at the type level from [`TempAnomaly`] (decision 0008):
-/// the two were previously both bare `CellMap<f64>`, and code has twice
+/// the two were previously both bare `VertexMap<f64>`, and code has twice
 /// mixed up "absolute reading" with "difference from present" when feeding
 /// the same function. A `Temperature` is a reading; it cannot be compared to a
 /// threshold meant for a difference, because there is no such comparison —

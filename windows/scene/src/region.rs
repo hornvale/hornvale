@@ -6,7 +6,7 @@
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
 use crate::{SceneContext, SceneError, WaterfallPoint};
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, World};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Vertex, World};
 use serde::Serialize;
 
 /// Deepest addressable quadtree level (the client clamps its own to ~18; this
@@ -168,11 +168,15 @@ fn barycentric(p: [f64; 3], a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> (f64, f64,
 /// so cross-platform byte-identical. Exact at a cell centre. Degrades to
 /// nearest-cell `(c, 1.0)` if no fan triangle contains `s` (a measure-zero
 /// safety net, not a normal path).
-fn triangle_weights(geo: &Geosphere, index: &NearestCellIndex, s: [f64; 3]) -> [(CellId, f64); 3] {
+fn triangle_weights(
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    s: [f64; 3],
+) -> [(Vertex, f64); 3] {
     let c = index.nearest_to_position(geo, s);
     let pc = geo.position(c);
     let neigh = geo.neighbors(c);
-    let mut best: Option<([(CellId, f64); 3], f64)> = None;
+    let mut best: Option<([(Vertex, f64); 3], f64)> = None;
     for (i, &a) in neigh.iter().enumerate() {
         for &b in &neigh[i + 1..] {
             // Only adjacent neighbour pairs form a real fan triangle.
@@ -213,9 +217,9 @@ fn triangle_weights(geo: &Geosphere, index: &NearestCellIndex, s: [f64; 3]) -> [
 /// Barycentrically interpolate a per-cell scalar at `s`.
 fn interp(
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     s: [f64; 3],
-    value: impl Fn(CellId) -> f64,
+    value: impl Fn(Vertex) -> f64,
 ) -> f64 {
     triangle_weights(geo, index, s)
         .iter()
@@ -640,8 +644,8 @@ mod tests {
     #[test]
     fn weights_are_exact_at_a_cell_center() {
         let geo = Geosphere::new(4);
-        let index = NearestCellIndex::new(&geo);
-        for cell in geo.cells().take(50) {
+        let index = NearestVertexIndex::new(&geo);
+        for cell in geo.vertices().take(50) {
             let s = geo.position(cell);
             let w = triangle_weights(&geo, &index, s);
             // The cell carries essentially all the weight; the sum is 1.
@@ -658,10 +662,10 @@ mod tests {
     #[test]
     fn weights_are_a_partition_of_unity_off_center() {
         let geo = Geosphere::new(4);
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         // A point between two cell centers.
-        let a = geo.position(CellId(20));
-        let b = geo.position(geo.neighbors(CellId(20))[0]);
+        let a = geo.position(Vertex(20));
+        let b = geo.position(geo.neighbors(Vertex(20))[0]);
         let mid = {
             let m = [
                 (a[0] + b[0]) / 2.0,
@@ -683,9 +687,9 @@ mod tests {
     #[test]
     fn interp_at_a_cell_center_returns_that_cells_value() {
         let geo = Geosphere::new(4);
-        let index = NearestCellIndex::new(&geo);
-        let value = |c: CellId| c.0 as f64; // an arbitrary per-cell scalar
-        for cell in geo.cells().take(50) {
+        let index = NearestVertexIndex::new(&geo);
+        let value = |c: Vertex| c.0 as f64; // an arbitrary per-cell scalar
+        for cell in geo.vertices().take(50) {
             let got = interp(&geo, &index, geo.position(cell), value);
             assert!((got - cell.0 as f64).abs() < 1e-6, "cell {cell:?}: {got}");
         }
@@ -723,7 +727,7 @@ mod tests {
         let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
         let river_cell = terrain
             .geosphere()
-            .cells()
+            .vertices()
             .find(|&c| terrain.water_kind_at(c) == hornvale_terrain::WaterKind::River)
             .expect("seed 44 has river cells (see the tiles_scene sibling test)");
         let pos = terrain.geosphere().position(river_cell);
@@ -792,7 +796,7 @@ mod tests {
     fn discrete_layers_match_nearest_cell() {
         let w = gen42();
         let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
-        let index = NearestCellIndex::new(terrain.geosphere());
+        let index = NearestVertexIndex::new(terrain.geosphere());
         let a = RegionAddr {
             face: 2,
             level: 2,
@@ -838,7 +842,7 @@ mod tests {
         // actually happening (guards against a silent fallback to nearest-cell).
         let w = gen42();
         let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
-        let index = NearestCellIndex::new(terrain.geosphere());
+        let index = NearestVertexIndex::new(terrain.geosphere());
         let addr = RegionAddr {
             face: 0,
             level: 4,
@@ -868,7 +872,7 @@ mod tests {
     /// amplitude field happens to be).
     fn interp_diurnal(
         climate: &hornvale_climate::GeneratedClimate,
-        c_index: &NearestCellIndex,
+        c_index: &NearestVertexIndex,
         s: [f64; 3],
         obliquity_deg: f64,
         year_phase: f64,
@@ -903,7 +907,7 @@ mod tests {
         // The provider values, at full precision (pre-quantization), from an
         // independent rebuild of the layers.
         let climate = climate_of(&w).unwrap();
-        let c_index = NearestCellIndex::new(climate.geosphere());
+        let c_index = NearestVertexIndex::new(climate.geosphere());
         let addr = RegionAddr {
             face,
             level,
@@ -961,7 +965,7 @@ mod tests {
         let offset = climate.year_phase_offset();
         let obliquity_deg = climate.obliquity_deg();
         let zero_phase_day = (-offset).rem_euclid(1.0) * period;
-        let c_index = NearestCellIndex::new(climate.geosphere());
+        let c_index = NearestVertexIndex::new(climate.geosphere());
         let addr = RegionAddr {
             face: 0,
             level: 3,

@@ -173,7 +173,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Ended};
-use hornvale_kernel::{CellId, KindId, Seed};
+use hornvale_kernel::{KindId, Seed, Vertex};
 use hornvale_species::Dispersion;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::disposition::{drawn_threat_response, occupation_draw_key};
@@ -250,7 +250,7 @@ struct Settlement {
     /// The people occupying the site.
     people: KindId,
     /// The Geosphere cell the occupation sits on.
-    site: CellId,
+    site: Vertex,
     /// The founding year, reduced through `occupation_draw_key`.
     founded_key: i64,
 }
@@ -545,7 +545,7 @@ fn every_zeroed_draw_is_the_authored_location() {
         for year in [0i64, 25, 725, 1975, 2000] {
             for cell in [0u32, 7, 4242, 65_535] {
                 assert_eq!(
-                    drawn_threat_response(Seed(42), CellId(cell), year, location, 0.0),
+                    drawn_threat_response(Seed(42), Vertex(cell), year, location, 0.0),
                     location,
                     "{}: spread 0 moved the draw off the authored location at cell \
                      {cell}, year {year}",

@@ -9,7 +9,7 @@
 //! for `WATERFALL_MIN_DRAINAGE` to ever fire — see that test's own doc).
 
 use hornvale_kernel::{
-    CellId, CellMap, Geosphere, NearestCellIndex, ReferenceElevation, Seed, math,
+    Geosphere, NearestVertexIndex, ReferenceElevation, Seed, Vertex, VertexMap, math,
 };
 use hornvale_terrain::carve::{CarveDelta, CarveParams, MarginGeometry, carve, carve_incision};
 use hornvale_terrain::{
@@ -47,14 +47,14 @@ struct Rebuilt {
     /// world actually is.
     outcome: GenesisOutcome,
     /// Elevation BEFORE the carve (stage 5 of spec §2).
-    elevation_pre: CellMap<ReferenceElevation>,
+    elevation_pre: VertexMap<ReferenceElevation>,
     /// Sea level resolved against the pre-carve surface (spec §2 stage 5).
     sea_pre: ReferenceElevation,
     /// Provisional (pre-carve) drainage field.
-    drainage_pre: CellMap<f64>,
+    drainage_pre: VertexMap<f64>,
     /// Carbonate content per cell, read off the generated globe's lithology
     /// buffer (see the struct doc's divergence caveat).
-    carbonate: CellMap<f64>,
+    carbonate: VertexMap<f64>,
     /// A freshly-composed `CarveDelta` from one `carve()` call on the
     /// pre-carve inputs above — carries the mass-balance totals
     /// `TectonicGlobe` does not retain.
@@ -76,7 +76,8 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
         elevation::resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut notes);
     let supply = crust::continental_supply(&g.cratons);
     let effective_ocean = elevation::effective_ocean_target(ocean_target, supply, &mut notes);
-    let continental = CellMap::from_fn(geo, |c| *g.crust.get(c) >= crust::CONTINENTAL_THRESHOLD_KM);
+    let continental =
+        VertexMap::from_fn(geo, |c| *g.crust.get(c) >= crust::CONTINENTAL_THRESHOLD_KM);
     let elevation_pre = elevation::generate_elevation(
         terrain_seed,
         geo,
@@ -92,8 +93,8 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
     let sea_pre = elevation::derive_sea_level(&elevation_pre, effective_ocean);
     let (drainage_pre, endorheic_pre) = drainage::drainage_field(geo, &elevation_pre, sea_pre);
     let downhill = drainage::downhill_targets(geo, &elevation_pre, sea_pre);
-    let carbonate = CellMap::from_fn(geo, |c| g.lithology.get(c).carbonate);
-    let margins: CellMap<MarginPolarity> = CellMap::from_fn(geo, |c| g.lithology.get(c).margin);
+    let carbonate = VertexMap::from_fn(geo, |c| g.lithology.get(c).carbonate);
+    let margins: VertexMap<MarginPolarity> = VertexMap::from_fn(geo, |c| g.lithology.get(c).margin);
     let delta = carve(
         geo,
         &elevation_pre,
@@ -111,7 +112,7 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
         &g.trail_seamounts,
         &CarveParams::default(),
     );
-    let carved = CellMap::from_fn(geo, |c| {
+    let carved = VertexMap::from_fn(geo, |c| {
         ReferenceElevation::new(elevation_pre.get(c).get() + delta.delta_m.get(c))
             .expect("carved elevation finite")
     });
@@ -195,7 +196,7 @@ fn spearman(x: &[f64], y: &[f64]) -> f64 {
 /// Connected-component count of `cells` under the geosphere's neighbor
 /// adjacency, restricted to `cells` itself. Local copy of `elevation.rs`'s
 /// own test-local `count_components` (same cross-layer reason as `median`).
-fn count_components(geo: &Geosphere, cells: &std::collections::BTreeSet<CellId>) -> usize {
+fn count_components(geo: &Geosphere, cells: &std::collections::BTreeSet<Vertex>) -> usize {
     let mut unvisited = cells.clone();
     let mut components = 0;
     while let Some(&start) = unvisited.iter().next() {
@@ -215,7 +216,7 @@ fn count_components(geo: &Geosphere, cells: &std::collections::BTreeSet<CellId>)
 
 /// Shelf width (spec §8) from a single coast land cell: hops seaward, each
 /// hop stepping to the current cell's shallowest ocean neighbor
-/// (`CellId`-ascending tiebreak), until a stepped-to cell's depth first
+/// (`Vertex`-ascending tiebreak), until a stepped-to cell's depth first
 /// exceeds `cap_depth_m`, or 8 hops are spent. Local copy of the census
 /// metric's own `shelf_width_hops` (`windows/lab/src/metrics.rs`), adapted
 /// to read a `TectonicGlobe` directly instead of a `TerrainView` (same
@@ -223,13 +224,13 @@ fn count_components(geo: &Geosphere, cells: &std::collections::BTreeSet<CellId>)
 fn shelf_width_hops(
     geo: &Geosphere,
     globe: &hornvale_terrain::TectonicGlobe,
-    coast: CellId,
+    coast: Vertex,
     cap_depth_m: f64,
 ) -> u32 {
-    let is_ocean = |c: CellId| *globe.elevation.get(c) < globe.sea_level;
+    let is_ocean = |c: Vertex| *globe.elevation.get(c) < globe.sea_level;
     let mut cur = coast;
     for hop in 1..=8u32 {
-        let mut candidates: Vec<CellId> = geo
+        let mut candidates: Vec<Vertex> = geo
             .neighbors(cur)
             .iter()
             .copied()
@@ -354,7 +355,7 @@ fn harder_rock_cuts_less() {
     let p = CarveParams::default();
     // Max drop to a LAND neighbor — the slope the incision law itself uses
     // post-ledger-#6 (see `carve_incision`'s doc).
-    let land_drop = |c: CellId| -> f64 {
+    let land_drop = |c: Vertex| -> f64 {
         let here = rebuilt.elevation_pre.get(c).get();
         geo.neighbors(c)
             .iter()
@@ -362,8 +363,8 @@ fn harder_rock_cuts_less() {
             .map(|nb| here - rebuilt.elevation_pre.get(*nb).get())
             .fold(0.0_f64, f64::max)
     };
-    let mut land: Vec<CellId> = geo
-        .cells()
+    let mut land: Vec<Vertex> = geo
+        .vertices()
         .filter(|&c| *rebuilt.elevation_pre.get(c) >= rebuilt.sea_pre && land_drop(c) > 0.0)
         .collect();
     assert!(
@@ -421,7 +422,7 @@ fn atolls_only_on_warm_submerged_seamounts() {
     for seed in [1u64, 7, 42, 99] {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
         let g = &outcome.globe;
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let ceiling =
             g.sea_level.get() - params.atoll_freeboard_m + params.wedge_freeboard_m + 1e-6;
         let floor = g.sea_level.get() - params.atoll_max_depth_m - params.wedge_freeboard_m - 1.0;
@@ -606,7 +607,7 @@ fn generate_level_books_account_for_every_eroded_unit() {
         let rebuilt = rebuild(seed, &geo);
         let g = &rebuilt.outcome.globe;
         let d = &rebuilt.delta;
-        let carved = CellMap::from_fn(&geo, |c| {
+        let carved = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(rebuilt.elevation_pre.get(c).get() + d.delta_m.get(c))
                 .expect("carved elevation finite")
         });
@@ -705,8 +706,8 @@ fn arcs_are_discrete() {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
         let g = &outcome.globe;
-        let arc_land: std::collections::BTreeSet<CellId> = geo
-            .cells()
+        let arc_land: std::collections::BTreeSet<Vertex> = geo
+            .vertices()
             .filter(|&c| {
                 matches!(
                     g.boundary.get(c).map(|b| b.kind),
@@ -760,7 +761,7 @@ fn shelf_width_asymmetry() {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
         let g = &outcome.globe;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if *g.elevation.get(cell) < g.sea_level {
                 continue;
             }
@@ -805,7 +806,10 @@ fn shelf_width_asymmetry() {
 }
 
 /// Fraction of a globe's cells strictly below `sea_level`.
-fn flooded_fraction(elevation: &CellMap<ReferenceElevation>, sea_level: ReferenceElevation) -> f64 {
+fn flooded_fraction(
+    elevation: &VertexMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+) -> f64 {
     let n = elevation.len() as f64;
     let below = elevation.iter().filter(|(_, e)| **e < sea_level).count();
     below as f64 / n

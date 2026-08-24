@@ -4,7 +4,7 @@
 
 use crate::Vantage;
 use hornvale_book::{LineError, parse_line};
-use hornvale_kernel::{RoomId, Value, World, WorldTime};
+use hornvale_kernel::{FacetId, Value, World, WorldTime};
 use hornvale_language::clause::ParseContext;
 use hornvale_locale::LocaleContext;
 use hornvale_species::PerceptionVector;
@@ -26,7 +26,7 @@ pub struct Knowledge(pub BTreeMap<String, String>);
 /// The first path segment of a locale knowledge key — `room/<packed FacetId>`.
 ///
 /// **FROZEN WIRE VALUE (The Lexicon of Place, spec §5).** The campaign that
-/// renamed `RoomAddr` to `Facet` deliberately did NOT rename this, and no
+/// renamed `Facet` to `Facet` deliberately did NOT rename this, and no
 /// later campaign may: the key is serialized into session snapshots that
 /// `clients/game` reads back, so the string is a wire contract, not an
 /// internal convention.
@@ -167,7 +167,7 @@ pub fn knowledge_is_subset(
         match parts.as_slice() {
             [segment, id] if *segment == LOCALE_KEY_SEGMENT => {
                 let raw: u64 = id.parse().map_err(|_| format!("bad room key {key}"))?;
-                let addr = RoomId(raw).unpack().map_err(|e| format!("{key}: {e:?}"))?;
+                let addr = FacetId(raw).unpack().map_err(|e| format!("{key}: {e:?}"))?;
                 let truth = ctx.describe(&addr, at).map_err(|e| format!("{key}: {e}"))?;
                 let truth = serde_json::to_string(&truth).expect("locale serializes");
                 if truth != *value {
@@ -230,7 +230,7 @@ mod tests {
     fn seam_body(
         world: &World,
         ctx: &LocaleContext,
-    ) -> (crate::body::Body, hornvale_kernel::RoomAddr) {
+    ) -> (crate::body::Body, hornvale_kernel::Facet) {
         let village = hornvale_settlement::village_info(world).expect("seed 42 has a flagship");
         let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
         let npc = crate::liveness::body_at(world, ctx, &village, entity);

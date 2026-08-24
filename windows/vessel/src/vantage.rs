@@ -3,7 +3,7 @@
 
 use crate::VesselError;
 use crate::body::Body;
-use hornvale_kernel::{RoomAddr, World, WorldTime};
+use hornvale_kernel::{Facet, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext};
 use hornvale_settlement::VillageInfo;
 
@@ -35,7 +35,7 @@ pub fn observable(
     world: &World,
     ctx: &LocaleContext,
     npc: &Body,
-    position: &RoomAddr,
+    position: &Facet,
     at: WorldTime,
 ) -> Result<Vantage, VesselError> {
     observable_at(world, ctx, npc, position, at, None)
@@ -68,7 +68,7 @@ pub fn observable_at(
     world: &World,
     ctx: &LocaleContext,
     npc: &Body,
-    position: &RoomAddr,
+    position: &Facet,
     at: WorldTime,
     stratum: Option<hornvale_climate::Stratum>,
 ) -> Result<Vantage, VesselError> {
@@ -80,7 +80,7 @@ pub fn observable_at(
     // cell gets its own name rather than shadowing it.)
     let cell = ctx
         .terrain()
-        .nearest_cell(locale.latitude, locale.longitude);
+        .nearest_vertex(locale.latitude, locale.longitude);
     let report =
         hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate(), Some(cell))
             .map_err(|e| VesselError::Build(e.to_string()))?;

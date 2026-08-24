@@ -112,7 +112,7 @@ const BASELINE_MUTUALLY_EXCLUSIVE_12: usize = 15;
 /// ```
 ///
 /// **WHY, AND THE ATTRIBUTION IS NOT THE OBVIOUS ONE.** The Underworld re-keyed
-/// the history bake's node index from `CellId` to `(CellId, Band)` —
+/// the history bake's node index from `Vertex` to `(Vertex, Band)` —
 /// decision 0145, one community per *place* rather than per cell — which is the
 /// change that most visibly touches settlement placement, and the natural
 /// reading is that it accounts for the move. It does not. Neutralising it

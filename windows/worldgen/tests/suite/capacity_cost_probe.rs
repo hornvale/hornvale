@@ -180,7 +180,7 @@ fn cost_of_making_capacity_era_varying() {
     std::hint::black_box(&caps);
 
     // Memory, if every era's field were held at once rather than streamed.
-    let cells = geo.cell_count();
+    let cells = geo.vertex_count();
     let bytes_one = cells * SETTLERS.len() * std::mem::size_of::<f64>();
     let bytes_all = bytes_one * CLIMATE_ERAS;
 
@@ -264,7 +264,7 @@ fn era_invariant_fraction_of_capacity_cost() {
             &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate)
         )
     );
-    let base = carrying.as_cell_map();
+    let base = carrying.as_vertex_map();
     let (_, t_forage, forage) = timed!(
         "forage_supply_field",
         hornvale_worldgen::forage_supply_field(geo, base)
@@ -343,11 +343,11 @@ fn where_substrate_cost_lives_and_whether_latitudes_repeat() {
         }};
     }
 
-    let t_temp = ms!(hornvale_kernel::CellMap::from_fn(geo, |c| climate
+    let t_temp = ms!(hornvale_kernel::VertexMap::from_fn(geo, |c| climate
         .mean_temperature_at(c)
         .get()));
-    let t_moist = ms!(hornvale_kernel::CellMap::from_fn(geo, |c| climate.moisture_at(c)));
-    let t_insol = ms!(hornvale_kernel::CellMap::from_fn(geo, |c| {
+    let t_moist = ms!(hornvale_kernel::VertexMap::from_fn(geo, |c| climate.moisture_at(c)));
+    let t_insol = ms!(hornvale_kernel::VertexMap::from_fn(geo, |c| {
         hornvale_worldgen::annual_mean_insolation(
             geo.coord(c).latitude,
             obliquity_deg,
@@ -355,7 +355,7 @@ fn where_substrate_cost_lives_and_whether_latitudes_repeat() {
         )
     }));
     let sea = terrain.sea_level();
-    let t_elev = ms!(hornvale_kernel::CellMap::from_fn(geo, |c| terrain
+    let t_elev = ms!(hornvale_kernel::VertexMap::from_fn(geo, |c| terrain
         .elevation_at(c)
         - sea));
 
@@ -368,7 +368,7 @@ fn where_substrate_cost_lives_and_whether_latitudes_repeat() {
     // Do latitudes repeat exactly? Keyed on the bit pattern, so "exactly" means
     // bit-for-bit -- the only kind of sharing a byte-identity guarantee allows.
     let mut lats: Vec<u64> = geo
-        .cells()
+        .vertices()
         .map(|c| geo.coord(c).latitude.to_bits())
         .collect();
     let total = lats.len();

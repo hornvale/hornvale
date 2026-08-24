@@ -109,7 +109,7 @@ fn tilth_derivation_probe() {
         };
 
         let wc = WorldComponents::assemble().unwrap();
-        let land: Vec<_> = geo.cells().filter(|c| !terrain.is_ocean(*c)).collect();
+        let land: Vec<_> = geo.vertices().filter(|c| !terrain.is_ocean(*c)).collect();
 
         // (1) moisture over land
         let mut moisture: Vec<f64> = land.iter().map(|c| climate.moisture_at(*c)).collect();
@@ -145,7 +145,7 @@ fn tilth_derivation_probe() {
             insolation_scalar,
             &regime,
         );
-        let base = capacity.as_cell_map();
+        let base = capacity.as_vertex_map();
         let forage = hornvale_worldgen::forage_supply_field(geo, base);
         let mineral = hornvale_worldgen::mineral_supply_field(geo, &terrain, MINERAL_SUPPLY_SCALE);
         let detritus = hornvale_worldgen::detritus_supply_field(geo, &terrain);

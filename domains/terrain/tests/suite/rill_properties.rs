@@ -41,7 +41,7 @@
 //! relative difference, so the failure distinguishes "no longer scale-free"
 //! from "scale-free, no longer bit-exact".
 
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, RoomAddr, Seed};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex};
 use hornvale_terrain::{
     CatchmentCut, ChannelNetwork, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_CELL_MAX,
     RIVER_MIN_DRAINAGE, TerrainPins, WaterKind, band_edges, cell_catchment, channel_half_width,
@@ -295,7 +295,7 @@ const MIN_OUTLET_RUNS: usize = 3_500;
 /// could not simply keep asking about `River`: once every land cell is
 /// rendered, most confluences happen on cells that classify `DryLand`, and the
 /// old first clause caught them and demanded borrowed geometry of a vertex
-/// that is entitled to its own. It failed on seed 42 run 76 at `CellId(12678)`
+/// that is entitled to its own. It failed on seed 42 run 76 at `Vertex(12678)`
 /// for exactly that reason.
 ///
 /// The third clause reads the *owner* map — a cell some run carries as a
@@ -322,7 +322,7 @@ fn every_run_reaches_its_outlet() {
         // The run that CLAIMED each cell and continued past it, rebuilt from
         // the published `run_cells` rather than from anything private — the
         // same map `build`'s confluence repair keys on.
-        let mut owner: Vec<Option<usize>> = vec![None; geo.cell_count()];
+        let mut owner: Vec<Option<usize>> = vec![None; geo.vertex_count()];
         for (i, cells) in net.run_cells.iter().enumerate() {
             for (j, &c) in cells.iter().enumerate() {
                 if j + 1 < cells.len() {
@@ -343,12 +343,12 @@ fn every_run_reaches_its_outlet() {
         // walks on — restated here from committed state rather than read off
         // the network, so the classification below is not the object under
         // test's own opinion of itself.
-        let is_reach = |c: CellId| {
+        let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         };
 
         for (i, cells) in net.run_cells.iter().enumerate() {
-            let last: CellId = *cells.last().expect("a run has at least two cells");
+            let last: Vertex = *cells.last().expect("a run has at least two cells");
             if !is_reach(last) {
                 outlet_runs += 1;
                 // THE BORROWED MOUTH GEOMETRY, as a property. `band_edges` is
@@ -424,7 +424,7 @@ fn every_run_reaches_its_outlet() {
 // ---------------------------------------------------------------------------
 
 /// The rendered edge set: every consecutive pair of cells in every run, as raw
-/// `CellId` values. This is the network's topology stated as a relation, which
+/// `Vertex` values. This is the network's topology stated as a relation, which
 /// is the form the flow tree it is a rendering of also takes — so the two are
 /// directly comparable without either side re-deriving the other's
 /// construction.
@@ -477,7 +477,7 @@ fn the_network_renders_every_river_cells_downhill_edge() {
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
         let rendered = rendered_edges(&net);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if !matches!(*globe.water_kind.get(c), WaterKind::River) {
                 continue;
             }
@@ -536,12 +536,12 @@ fn the_network_renders_the_whole_flow_tree() {
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
 
-        let is_land = |c: CellId| *globe.elevation.get(c) >= globe.sea_level;
+        let is_land = |c: Vertex| *globe.elevation.get(c) >= globe.sea_level;
         // The reference flow tree, straight off committed state. Not one cell
         // of it comes from `net`.
         let mut flow_tree: BTreeSet<(u32, u32)> = BTreeSet::new();
-        let mut land_cells: Vec<CellId> = Vec::new();
-        for c in geo.cells() {
+        let mut land_cells: Vec<Vertex> = Vec::new();
+        for c in geo.vertices() {
             if !is_land(c) {
                 continue;
             }
@@ -572,7 +572,7 @@ fn the_network_renders_the_whole_flow_tree() {
         );
         land_edges_checked += flow_tree.len();
 
-        let covered: BTreeSet<CellId> = net.run_cells.iter().flatten().copied().collect();
+        let covered: BTreeSet<Vertex> = net.run_cells.iter().flatten().copied().collect();
         for &c in &land_cells {
             if covered.contains(&c) {
                 continue;
@@ -750,7 +750,7 @@ const MIN_COMPOSED_REACHES: usize = 20_000;
 /// stopped. Panics rather than looping if the relation cycles — both relations
 /// this is applied to are strictly descending and therefore acyclic, and a
 /// cycle would otherwise hang the suite rather than fail it.
-fn terminus(start: CellId, bound: usize, step: impl Fn(CellId) -> Option<CellId>) -> CellId {
+fn terminus(start: Vertex, bound: usize, step: impl Fn(Vertex) -> Option<Vertex>) -> Vertex {
     let mut current = start;
     for _ in 0..bound {
         match step(current) {
@@ -787,12 +787,12 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
         let globe = &outcome.globe;
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
-        let is_reach = |c: CellId| {
+        let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         };
 
         // The rendered relation, from the published run structure alone.
-        let mut next: Vec<Option<CellId>> = vec![None; geo.cell_count()];
+        let mut next: Vec<Option<Vertex>> = vec![None; geo.vertex_count()];
         for (i, run) in net.run_cells.iter().enumerate() {
             for (j, &c) in run.iter().enumerate() {
                 if j + 1 == run.len() {
@@ -808,10 +808,10 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
             }
         }
 
-        let bound = geo.cell_count();
+        let bound = geo.vertex_count();
         let mut seed_total = 0usize;
         let mut seed_agreed = 0usize;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if !is_reach(c) {
                 continue;
             }
@@ -855,7 +855,7 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
 // construction turned out to do.
 // ---------------------------------------------------------------------------
 
-/// Coarse cells sampled per seed, by stride over the whole `CellId` ordering so
+/// Coarse cells sampled per seed, by stride over the whole `Vertex` ordering so
 /// the sample crosses every latitude rather than one cap.
 ///
 /// **The population is one cell's whole partition, and the figure is
@@ -883,11 +883,11 @@ const MIN_PARTITIONED_CELLS: usize = 100;
 const MIN_ATTACHMENTS: usize = 300_000;
 
 /// The reach cells of one seed, sampled by stride.
-fn sampled_cells(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Vec<CellId> {
-    let stride = (geo.cell_count() / CELL_SAMPLE).max(1);
-    (0..geo.cell_count())
+fn sampled_cells(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Vec<Vertex> {
+    let stride = (geo.vertex_count() / CELL_SAMPLE).max(1);
+    (0..geo.vertex_count())
         .step_by(stride)
-        .map(|i| CellId(i as u32))
+        .map(|i| Vertex(i as u32))
         .filter(|&c| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         })
@@ -927,8 +927,8 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
         let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
 
         // Who drains into whom, for the coarse identity below.
-        let mut inflow = vec![0.0_f64; geo.cell_count()];
-        for c in geo.cells() {
+        let mut inflow = vec![0.0_f64; geo.vertex_count()];
+        for c in geo.vertices() {
             if let Some(t) = *globe.downhill.get(c) {
                 inflow[t.0 as usize] += *globe.drainage.get(c);
             }
@@ -1296,7 +1296,7 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
     let mut reading_worst = 0.0_f64;
     for level in ANCHOR_LEVELS {
         let geo = Geosphere::new(level);
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let unit = cell_catchment(&geo);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed generates");
         let globe = &outcome.globe;
@@ -1308,8 +1308,8 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
         // a spacing that answered for the wrong depth is invisible to every
         // ratio. A globe-level room's three corners ARE three cells, so its
         // three edges are three cell-to-cell separations — read here off
-        // `Geosphere::position` alone, with `RoomAddr::corners` nowhere in it.
-        let face = RoomAddr {
+        // `Geosphere::position` alone, with `Facet::corners` nowhere in it.
+        let face = Facet {
             face: 3,
             path: vec![1; level as usize],
         };
@@ -1425,7 +1425,7 @@ fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
 
 /// A room of `depth` inside `face`, by taking child 0 the rest of the way
 /// down — any descendant will do, since only its spacing is read.
-fn room_of_depth(face: &RoomAddr, depth: u32) -> RoomAddr {
+fn room_of_depth(face: &Facet, depth: u32) -> Facet {
     let mut room = face.clone();
     while room.depth() < depth {
         room = room.child(0).expect("depth is below the cap");

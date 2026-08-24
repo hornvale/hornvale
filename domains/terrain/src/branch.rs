@@ -18,7 +18,7 @@
 //!
 //! An earlier Tier 2 lifted the coarse flow graph onto the room mesh and
 //! routed a direction out of every room. `Geosphere` cells are the icosphere's
-//! **vertices** and a [`RoomAddr`] is a **face**; a `downhill` edge joins two
+//! **vertices** and a [`Facet`] is a **face**; a `downhill` edge joins two
 //! adjacent vertices and an edge is shared by exactly two faces, so a coarse
 //! flow edge runs **along a room's boundary and never through it**. That lift
 //! had to be invented, and what it cost was measured on three worlds: 26-31%
@@ -130,7 +130,7 @@
 use crate::channel::{ChannelNetwork, band_edges, cell_spacing, local_slope};
 use crate::globe::TectonicGlobe;
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, RoomAddr, Seed, math};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex, math};
 
 /// The finest catchment the branch network resolves, in steradians: the mean
 /// area of one walk-depth room, `4π / (20·4¹²)`.
@@ -208,7 +208,7 @@ pub struct Rill {
     /// attached, directly or through its ancestors, to this cell's trunk, so
     /// the coarse cell its water ultimately reaches is the one this cell's
     /// trunk chain reaches (R-4).
-    pub cell: CellId,
+    pub cell: Vertex,
     /// How many bisections deep in the partition this branch is; `0` for the
     /// two parts the cell's own catchment first divides into.
     pub depth: u32,
@@ -246,7 +246,7 @@ pub struct RillReading {
     /// necessarily the cell nearest the query position: a cell's square region
     /// is a same-area proxy for its real one, so the two disagree near a
     /// shared corner.
-    pub cell: CellId,
+    pub cell: Vertex,
 }
 
 /// Where a catchment divides between its two parts.
@@ -279,7 +279,7 @@ impl CatchmentCut {
     /// bit per bisection, so it is the *path* through the partition rather
     /// than a serial number, and it is stable under any change to the order
     /// the partition is walked in.
-    fn cut(&self, cell: CellId, code: u64) -> u64 {
+    fn cut(&self, cell: Vertex, code: u64) -> u64 {
         let fraction = match self {
             CatchmentCut::Even => 0.5,
             CatchmentCut::Drawn(seed) => {
@@ -295,7 +295,7 @@ impl CatchmentCut {
     /// product shifted back down — the shift is by a power of two, so it is a
     /// truncation and not a rounding — and the second is the remainder, so
     /// nothing is created or lost at any depth.
-    fn divide(&self, cell: CellId, code: u64, share: u64) -> (u64, u64) {
+    fn divide(&self, cell: Vertex, code: u64, share: u64) -> (u64, u64) {
         let first = (((share as u128) * (self.cut(cell, code) as u128)) >> CUT_BITS) as u64;
         // `share − first`, and never `share`: the second part is the REMAINDER.
         // Returning the parent's whole share here is the defect this comment
@@ -317,7 +317,7 @@ impl CatchmentCut {
 /// trunk vertex already makes.
 /// type-audit: pending(wave-1: return)
 pub fn cell_catchment(geo: &Geosphere) -> f64 {
-    4.0 * std::f64::consts::PI / geo.cell_count() as f64
+    4.0 * std::f64::consts::PI / geo.vertex_count() as f64
 }
 
 /// The room's own angular spacing, radians: the mean of the three arc lengths
@@ -333,7 +333,7 @@ pub fn cell_catchment(geo: &Geosphere) -> f64 {
 /// absolutely against [`Geosphere::position`], because a parent/child ratio
 /// cannot see a spacing derived one level off — the factor cancels.
 /// type-audit: pending(wave-1: return)
-pub fn room_spacing(addr: &RoomAddr) -> f64 {
+pub fn room_spacing(addr: &Facet) -> f64 {
     let [a, b, c] = addr.corners();
     (angle(a, b) + angle(b, c) + angle(c, a)) / 3.0
 }
@@ -509,7 +509,7 @@ fn distance_to(chain: Chain, p: [f64; 2]) -> f64 {
 /// from its own centre to the nearest point on its parent's line, which is
 /// what "the direction is inherited" means concretely — nothing computes a
 /// direction for a part; it flows into the thing it is joined to.
-fn parts(node: &Node, cell: CellId, unit: f64, cut: &CatchmentCut) -> Option<[Node; 2]> {
+fn parts(node: &Node, cell: Vertex, unit: f64, cut: &CatchmentCut) -> Option<[Node; 2]> {
     if area_of(node.share, unit) <= RILL_MIN_CATCHMENT || node.depth >= MAX_PARTITION_DEPTH {
         return None;
     }
@@ -549,7 +549,7 @@ fn area_of(share: u64, unit: f64) -> f64 {
 /// displaced line a walker actually finds — the same lesson The Ford's
 /// confluence repair paid for, where a shared cell was mistaken for a shared
 /// point.
-fn trunk_stretch(cell: CellId, net: &ChannelNetwork, geo: &Geosphere) -> Option<(Frame, Chain)> {
+fn trunk_stretch(cell: Vertex, net: &ChannelNetwork, geo: &Geosphere) -> Option<(Frame, Chain)> {
     let (line, j) = net.trunk_vertex(cell)?;
     let points = &net.polylines[line].points;
     let here = points[j];
@@ -649,7 +649,7 @@ pub const RILLS_PER_CELL_MAX: usize = 1 << 15;
 /// whole share, so the partition neither shrank nor conserved, and one call
 /// reached 269 million nodes and 23.7 GB before the kernel killed the box.
 pub fn rills_of(
-    cell: CellId,
+    cell: Vertex,
     net: &ChannelNetwork,
     geo: &Geosphere,
     cut: &CatchmentCut,
@@ -705,7 +705,7 @@ pub fn rills_of(
 /// The descent is split out from [`nearest_rill`] precisely so the claim could
 /// be made checkable rather than left as prose.
 fn descend_to_nearest(
-    cell: CellId,
+    cell: Vertex,
     start: Node,
     unit: f64,
     cut: &CatchmentCut,
@@ -747,7 +747,7 @@ fn descend_to_nearest(
 ///
 /// The frame and the root; the search itself is [`descend_to_nearest`].
 fn nearest_rill(
-    cell: CellId,
+    cell: Vertex,
     position: [f64; 3],
     net: &ChannelNetwork,
     geo: &Geosphere,
@@ -774,7 +774,7 @@ fn nearest_rill(
 /// `tests::an_exact_tie_between_candidate_cells_is_kept_by_the_first_offered`.
 /// Allocation-free on purpose — the shipped call is one `once` and one slice
 /// iterator, exactly the two loops this replaces.
-fn rill_candidates(here: CellId, geo: &Geosphere) -> impl Iterator<Item = CellId> + '_ {
+fn rill_candidates(here: Vertex, geo: &Geosphere) -> impl Iterator<Item = Vertex> + '_ {
     core::iter::once(here).chain(geo.neighbors(here).iter().copied())
 }
 
@@ -788,10 +788,10 @@ fn rill_candidates(here: CellId, geo: &Geosphere) -> impl Iterator<Item = CellId
 /// equidistant candidate instead, and the reading that results feeds
 /// `grounded_wetness` and so `micro.wetness`, which is emitted.
 fn nearest_offered(
-    candidates: impl Iterator<Item = CellId>,
-    mut measure: impl FnMut(CellId) -> Option<(f64, f64)>,
-) -> Option<(f64, f64, CellId)> {
-    let mut best: Option<(f64, f64, CellId)> = None;
+    candidates: impl Iterator<Item = Vertex>,
+    mut measure: impl FnMut(Vertex) -> Option<(f64, f64)>,
+) -> Option<(f64, f64, Vertex)> {
+    let mut best: Option<(f64, f64, Vertex)> = None;
     for candidate in candidates {
         if let Some((distance, catchment)) = measure(candidate)
             && best.is_none_or(|(d, _, _)| distance < d)
@@ -845,7 +845,7 @@ pub fn rill_reading(
     net: &ChannelNetwork,
     globe: &TectonicGlobe,
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     cut: &CatchmentCut,
 ) -> Option<RillReading> {
     let here = index.nearest_to_position(geo, position);
@@ -896,8 +896,8 @@ mod tests {
         let geo = Geosphere::new(1);
         // A pentagon (5 neighbours) and a hexagon (6), because the candidate
         // count is not fixed and neither should the assertion be.
-        for here in [CellId(0), CellId(20)] {
-            let offered: Vec<CellId> = rill_candidates(here, &geo).collect();
+        for here in [Vertex(0), Vertex(20)] {
+            let offered: Vec<Vertex> = rill_candidates(here, &geo).collect();
             assert_eq!(offered[0], here, "`here` is no longer offered first");
             assert_eq!(
                 &offered[1..],
@@ -989,7 +989,7 @@ mod tests {
     /// depends only on the cell, the cut and the unit area, never on the
     /// trunk geometry, which enters only as the line a branch's mouth is
     /// projected onto. So a synthetic stretch measures the real node count.
-    fn walk(cell: CellId, unit: f64, cut: &CatchmentCut) -> Partition {
+    fn walk(cell: Vertex, unit: f64, cut: &CatchmentCut) -> Partition {
         let half = 0.5 * unit.sqrt();
         let stretch: Chain = [[-half, 0.0], [0.0, 0.0], [half, 0.0]];
         let mut out = Partition {
@@ -1037,7 +1037,7 @@ mod tests {
     fn one_cells_partition_is_bounded_in_nodes() {
         let geo = Geosphere::new(PROBE_LEVEL);
         let unit = cell_catchment(&geo);
-        let cells = [CellId(0), CellId(1), CellId(4_099), CellId(20_481)];
+        let cells = [Vertex(0), Vertex(1), Vertex(4_099), Vertex(20_481)];
         let mut worst = 0usize;
         for cell in cells {
             for (name, cut) in [
@@ -1110,7 +1110,7 @@ mod tests {
     /// bounded by depth, and nothing is materialised — the walk carries one
     /// running minimum.
     fn exhaustive_nearest(
-        cell: CellId,
+        cell: Vertex,
         start: Node,
         unit: f64,
         cut: &CatchmentCut,
@@ -1194,7 +1194,7 @@ mod tests {
         // (queries, disagreements, worst excess in room edges), inside the
         // catchment square and outside it.
         let mut arm = [(0usize, 0usize, 0.0_f64); 2];
-        for cell in [CellId(0), CellId(4_099), CellId(20_481)] {
+        for cell in [Vertex(0), Vertex(4_099), Vertex(20_481)] {
             for cut in [CatchmentCut::Even, CatchmentCut::Drawn(Seed(42))] {
                 // A 9x9 lattice over 1.5x the square, so the outer ring sits
                 // outside the catchment entirely.
@@ -1273,7 +1273,7 @@ mod tests {
     fn one_cells_leaves_hold_the_whole_exactly() {
         let geo = Geosphere::new(PROBE_LEVEL);
         let unit = cell_catchment(&geo);
-        for cell in [CellId(0), CellId(4_099), CellId(20_481)] {
+        for cell in [Vertex(0), Vertex(4_099), Vertex(20_481)] {
             for cut in [CatchmentCut::Even, CatchmentCut::Drawn(Seed(42))] {
                 let p = walk(cell, unit, &cut);
                 assert!(!p.capped, "{cell:?}: the walk hit its ceiling");

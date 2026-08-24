@@ -2,7 +2,7 @@
 //! equirectangular PNG elevation map (decision 0018) and an ASCII map for
 //! the REPL. Same globe, same seed, same bytes — a changed artifact in
 //! review means changed behavior. Pixel→cell lookup uses the kernel's
-//! `NearestCellIndex` (a latitude-band index, 30 bands of 6°): the nearest
+//! `NearestVertexIndex` (a latitude-band index, 30 bands of 6°): the nearest
 //! cell center at level ≥ 4 is within ~2.5°, so the pixel's band plus both
 //! neighbors always contains it.
 
@@ -11,7 +11,7 @@ use crate::globe::TectonicGlobe;
 use crate::lithology::RockClass;
 use crate::provider::GeneratedTerrain;
 use crate::streams;
-use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, math, noise};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, Seed, math, noise};
 
 /// Raster image width in pixels; the image is equirectangular, so height is
 /// `MAP_WIDTH / 2`. 1024×512; pixel ≈ 0.35°, fine enough to show the
@@ -67,7 +67,7 @@ fn coast_noise(noise_seed: Seed, p: [f64; 3]) -> f64 {
 /// negligible weight (no visible seams).
 fn interpolated_elevation(
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     globe: &TectonicGlobe,
     latitude: f64,
     longitude: f64,
@@ -102,7 +102,7 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// spec §3). Identical to the prior beyond three envelope widths.
 fn refined_elevation(
     geo: &Geosphere,
-    index: &NearestCellIndex,
+    index: &NearestVertexIndex,
     globe: &TectonicGlobe,
     noise_seed: Seed,
     latitude: f64,
@@ -168,7 +168,7 @@ fn rasterize(width: u32, height: u32, mut pixel: impl FnMut(f64, f64) -> [u8; 3]
 /// `refined_elevation`.
 fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     let noise_seed = world_seed
         .derive(streams::ROOT)
         .derive(streams::COAST_RENDER);
@@ -220,7 +220,7 @@ fn rock_color(rock: RockClass) -> [u8; 3] {
 /// class, no interpolation (rock class is categorical, unlike elevation).
 fn lithology_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
         let cell = index.nearest(geo, latitude, longitude);
         let rock = crate::lithology::classify_rock(
@@ -280,7 +280,7 @@ fn sediment_color(delta_m: f64) -> [u8; 3] {
 /// coastal-noise refinement — same convention as `lithology_pixels`).
 fn sediment_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
         let cell = index.nearest(geo, latitude, longitude);
         sediment_color(*globe.carve_delta_m.get(cell))
@@ -316,7 +316,7 @@ fn column_color(depth_m: f64) -> [u8; 3] {
 /// coastal-noise refinement — same convention as `lithology_pixels`).
 fn column_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
         let cell = index.nearest(geo, latitude, longitude);
         let buf = globe.lithology.get(cell);
@@ -381,7 +381,7 @@ const FEATURES_LAND_BASE: [u8; 3] = [90, 100, 80];
 fn features_pixels(terrain: &GeneratedTerrain) -> Vec<u8> {
     let geo = terrain.geosphere();
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     rasterize(width, height, |latitude, longitude| {
         let cell = index.nearest(geo, latitude, longitude);
         if let Some(deposit) = terrain.deposit_at(cell) {
@@ -413,7 +413,7 @@ pub fn features_png(terrain: &GeneratedTerrain) -> Vec<u8> {
 /// hills, '^' mountains, 'A' high peaks. One newline per row.
 /// type-audit: bare-ok(artifact)
 pub fn elevation_ascii(geo: &Geosphere, globe: &TectonicGlobe) -> String {
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     let mut out = String::with_capacity(((ASCII_WIDTH + 1) * ASCII_HEIGHT) as usize);
     for py in 0..ASCII_HEIGHT {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
@@ -640,7 +640,7 @@ mod tests {
             let globe = generate(Seed(seed), &geo, &TerrainPins::default())
                 .unwrap()
                 .globe;
-            let index = NearestCellIndex::new(&geo);
+            let index = NearestVertexIndex::new(&geo);
             let noise_seed = Seed(seed)
                 .derive(crate::streams::ROOT)
                 .derive(crate::streams::COAST_RENDER);
@@ -675,7 +675,7 @@ mod tests {
         let globe = generate(Seed(7), &geo, &TerrainPins::default())
             .unwrap()
             .globe;
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         for (latitude, longitude) in [(0.0, 0.0), (45.5, -120.25), (-67.0, 13.0), (89.0, 179.0)] {
             let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);
             let nearest = index.nearest(&geo, latitude, longitude);

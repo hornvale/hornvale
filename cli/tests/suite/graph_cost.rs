@@ -148,11 +148,11 @@ fn connection_graph_cost_is_bounded_on_seed_42() {
     let settlements = hornvale_settlement::all_settlements(&world);
     let terrain = terrain_of(&world).expect("world was built with terrain");
     let geo = terrain.geosphere();
-    let cells: Vec<hornvale_kernel::CellId> = settlements
+    let cells: Vec<hornvale_kernel::Vertex> = settlements
         .iter()
         .map(
             |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(hornvale_kernel::Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                Some(hornvale_kernel::Value::Number(n)) => hornvale_kernel::Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             },
         )

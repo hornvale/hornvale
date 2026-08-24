@@ -97,7 +97,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed, Value};
+use hornvale_kernel::{Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, WorldComponents, build_world, carrying_inputs_of,
@@ -143,7 +143,7 @@ fn settlements_near_river_fraction(seed: u64) -> f64 {
 
     let terrain = terrain_of(&world).expect("terrain reconstructs from the committed pins");
     let geo = terrain.geosphere();
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let water_kind = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
 
@@ -151,7 +151,7 @@ fn settlements_near_river_fraction(seed: u64) -> f64 {
         .iter()
         .filter(|s| {
             let cell = match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             };
             *river_prox.get(cell) > 0.0
@@ -179,7 +179,7 @@ fn k_spikes_near_rivers_on_seed_42() {
     let geo = terrain.geosphere();
     let inputs = carrying_inputs_of(geo, &terrain, &climate);
 
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let water_kind = hornvale_kernel::VertexMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
 
@@ -187,7 +187,7 @@ fn k_spikes_near_rivers_on_seed_42() {
     let mut near_n = 0usize;
     let mut far_sum = 0.0;
     let mut far_n = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -254,11 +254,11 @@ fn k_biomass_gradient_grounding_holds_after_the_freshwater_repoint() {
         {
             continue;
         }
-        let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+        let inputs = hornvale_kernel::VertexMap::from_fn(geo, |c| {
             species_carrying_input(*base_inputs.get(c), psych)
         });
         let k = hornvale_demography::carrying_capacity(geo, &inputs);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

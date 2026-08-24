@@ -119,7 +119,7 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
     let mut surface_total = 0.0;
     let mut subterranean_total = 0.0;
     let mut n = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -311,7 +311,7 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
     let mut live_total = 0.0;
     let mut surface_total = 0.0;
     let mut n = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) || terrain.cave_at(cell).is_none() {
             continue;
         }

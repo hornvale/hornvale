@@ -97,7 +97,7 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
 
     let mut surface_nonzero = 0usize;
     let mut confined_nonzero = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }

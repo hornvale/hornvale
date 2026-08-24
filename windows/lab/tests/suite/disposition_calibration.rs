@@ -752,7 +752,7 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 ///
 /// **THE ATTRIBUTION IS NOT DECISION 0145, AND THIS WAS WORTH MEASURING
 /// RATHER THAN ASSUMING.** The campaign re-keyed the history bake's node index
-/// from `CellId` to `(CellId, Band)` (one community per *place*, not per
+/// from `Vertex` to `(Vertex, Band)` (one community per *place*, not per
 /// cell), which is the change that most obviously touches settlement placement,
 /// and the expectation carried into this re-read was that it caused the fall.
 /// It does not. Neutralising the re-key alone — `Bake::rung_for` forced to

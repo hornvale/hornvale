@@ -4,7 +4,7 @@
 //! cell of its own plate.
 
 use crate::plates::{Plate, dot, norm, normalize, scale, sub, velocity_at};
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{Geosphere, Vertex, VertexMap};
 use std::collections::VecDeque;
 
 /// How two plates meet.
@@ -29,7 +29,7 @@ pub enum BoundaryKind {
 /// A cell's strongest cross-plate contact.
 /// type-audit: bare-ok(ratio: magnitude), bare-ok(index: other_plate)
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct CellBoundary {
+pub struct VertexBoundary {
     /// The classified kind of the strongest contact.
     pub kind: BoundaryKind,
     /// Absolute closing (or opening) speed of that contact, model units
@@ -56,13 +56,13 @@ const TRANSFORM_THRESHOLD: f64 = 0.25;
 /// type-audit: bare-ok(flag: continental_a), bare-ok(flag: continental_b)
 pub fn classify_contact(
     geo: &Geosphere,
-    a: CellId,
-    b: CellId,
+    a: Vertex,
+    b: Vertex,
     plate_a: &Plate,
     plate_b: &Plate,
     continental_a: bool,
     continental_b: bool,
-) -> CellBoundary {
+) -> VertexBoundary {
     let pa = geo.position(a);
     let pb = geo.position(b);
     let mid = normalize([pa[0] + pb[0], pa[1] + pb[1], pa[2] + pb[2]]);
@@ -73,7 +73,7 @@ pub fn classify_contact(
     let closing = dot(relative, toward);
     let other_plate = plate_b.id;
     if speed < 1e-12 || closing.abs() < TRANSFORM_THRESHOLD * speed {
-        return CellBoundary {
+        return VertexBoundary {
             kind: BoundaryKind::Transform,
             magnitude: closing.abs(),
             other_plate,
@@ -91,7 +91,7 @@ pub fn classify_contact(
             _ => BoundaryKind::OceanicRidge,
         }
     };
-    CellBoundary {
+    VertexBoundary {
         kind,
         magnitude: closing.abs(),
         other_plate,
@@ -107,13 +107,13 @@ pub fn classify_contact(
 /// type-audit: bare-ok(index: plate_of), bare-ok(flag: continental)
 pub fn boundary_field(
     geo: &Geosphere,
-    plate_of: &CellMap<u32>,
+    plate_of: &VertexMap<u32>,
     plates: &[Plate],
-    continental: &CellMap<bool>,
-) -> CellMap<Option<CellBoundary>> {
-    CellMap::from_fn(geo, |cell| {
+    continental: &VertexMap<bool>,
+) -> VertexMap<Option<VertexBoundary>> {
+    VertexMap::from_fn(geo, |cell| {
         let my_plate = *plate_of.get(cell);
-        let mut best: Option<CellBoundary> = None;
+        let mut best: Option<VertexBoundary> = None;
         for &neighbor in geo.neighbors(cell) {
             let other = *plate_of.get(neighbor);
             if other == my_plate {
@@ -162,12 +162,12 @@ pub fn boundary_field(
 /// type-audit: bare-ok(index: plate_of), bare-ok(count: return)
 pub fn boundary_distance(
     geo: &Geosphere,
-    plate_of: &CellMap<u32>,
-    boundaries: &CellMap<Option<CellBoundary>>,
-) -> CellMap<Option<(u32, CellId)>> {
-    let mut result: Vec<Option<(u32, CellId)>> = vec![None; geo.cell_count()];
+    plate_of: &VertexMap<u32>,
+    boundaries: &VertexMap<Option<VertexBoundary>>,
+) -> VertexMap<Option<(u32, Vertex)>> {
+    let mut result: Vec<Option<(u32, Vertex)>> = vec![None; geo.vertex_count()];
     let mut queue = VecDeque::new();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if boundaries.get(cell).is_some() {
             result[cell.0 as usize] = Some((0, cell));
             queue.push_back(cell);
@@ -186,7 +186,7 @@ pub fn boundary_distance(
             }
         }
     }
-    CellMap::from_fn(geo, |cell| result[cell.0 as usize])
+    VertexMap::from_fn(geo, |cell| result[cell.0 as usize])
 }
 
 #[cfg(test)]
@@ -194,7 +194,7 @@ mod tests {
     use super::*;
     use crate::plates::{Plate, assign_plates};
     use crate::streams;
-    use hornvale_kernel::{CellMap, Geosphere, Seed};
+    use hornvale_kernel::{Geosphere, Seed, VertexMap};
 
     /// Two hemisphere plates spinning against each other: convergent where
     /// y < 0, divergent where y > 0, transform near x = ±1. Continental
@@ -221,8 +221,8 @@ mod tests {
     }
 
     /// Every cell continental — mirrors the old `continental: true` plates.
-    fn all_continental(geo: &Geosphere) -> CellMap<bool> {
-        CellMap::from_fn(geo, |_| true)
+    fn all_continental(geo: &Geosphere) -> VertexMap<bool> {
+        VertexMap::from_fn(geo, |_| true)
     }
 
     #[test]
@@ -255,7 +255,7 @@ mod tests {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
         let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
-        for a in geo.cells() {
+        for a in geo.vertices() {
             for &b in geo.neighbors(a) {
                 let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
                 if pa == pb {
@@ -296,7 +296,7 @@ mod tests {
         // hemisphere plates also produce divergent and transform contacts,
         // which this test isn't exercising.
         let (a, b) = geo
-            .cells()
+            .vertices()
             .into_iter()
             .find_map(|cell| {
                 let mine = *plate_of.get(cell);

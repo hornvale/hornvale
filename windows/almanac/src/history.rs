@@ -28,14 +28,14 @@ use hornvale_history::record::{
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, EntityId, KindId, Seed, Value, World};
+use hornvale_kernel::{EntityId, KindId, Seed, Value, Vertex, World};
 
 /// Render a site's stratigraphy stack plus a derived flesh sample, as prose.
 /// A "site" is one Geosphere cell; its stratigraphy is every occupation that
 /// ever sat on it (alive or ruined), deepest/oldest layer first. If the cell
 /// never held an occupation, a single line says so.
 /// type-audit: bare-ok(artifact: return)
-pub fn render_site(world: &World, site: CellId) -> String {
+pub fn render_site(world: &World, site: Vertex) -> String {
     let layers = layers_at(world, site);
     if layers.is_empty() {
         return format!(
@@ -187,7 +187,7 @@ struct Layer {
 /// directions and by `windows/worldgen/tests/history_emit.rs`'s
 /// `occupation_records_round_trip_every_committed_field`, which checks the
 /// lifted decoder against every `Value` shape `emit_history` commits.
-fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
+fn layers_at(world: &World, site: Vertex) -> Vec<Layer> {
     let mut layers: Vec<Layer> = world
         .ledger
         .find(hornvale_history::IS_OCCUPATION)
@@ -238,7 +238,7 @@ fn founding_coords_of(world: &World, e: EntityId) -> Option<FoundingCoords<'stat
 fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
     let people = resolve_people(people_label)?;
-    let site = CellId(number(world, entity, hornvale_history::OCC_SITE)? as u32);
+    let site = Vertex(number(world, entity, hornvale_history::OCC_SITE)? as u32);
     // Days on the ledger, years in an `Occupation` — see
     // [`bake_year_of_ledger_day`] for why the flesh derivation depends on this.
     let founded = bake_year_of_ledger_day(number(world, entity, hornvale_history::OCC_FOUNDED)?);
@@ -271,7 +271,7 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
         .value_of(entity, hornvale_history::OCC_FOUNDED_FROM)
     {
         Some(Value::Entity(e)) => Founding::From(*e),
-        Some(Value::Number(cell)) => Founding::Genesis(CellId(*cell as u32)),
+        Some(Value::Number(cell)) => Founding::Genesis(Vertex(*cell as u32)),
         _ => Founding::Genesis(site),
     };
 
@@ -1124,7 +1124,7 @@ mod tests {
         BakeOccupation {
             core: Occupation {
                 people: KindId(people),
-                site: CellId(site),
+                site: Vertex(site),
                 founded,
                 ended: None,
                 peak_population: 50,
@@ -1137,7 +1137,7 @@ mod tests {
             },
             community: bid(community),
             lineage: bid(community),
-            founded_from: Founding::Genesis(CellId(site)),
+            founded_from: Founding::Genesis(Vertex(site)),
             ended_by: Ended::Nature,
         }
     }
@@ -1234,7 +1234,7 @@ mod tests {
     /// A minimal occupation core: only `site` varies between the two
     /// fixtures below, and neither `founding_sentence` nor
     /// `remembered_founder` reads anything else about it.
-    fn core(site: CellId) -> Occupation {
+    fn core(site: Vertex) -> Occupation {
         Occupation {
             people: KindId("goblin"),
             site,
@@ -1250,7 +1250,7 @@ mod tests {
         }
     }
 
-    fn record(id: EntityId, site: CellId) -> OccupationRecord {
+    fn record(id: EntityId, site: Vertex) -> OccupationRecord {
         OccupationRecord {
             core: core(site),
             id,
@@ -1323,8 +1323,8 @@ mod tests {
             100.0,
         );
 
-        let named = founding_sentence(&world, &record(remembered, CellId(1)));
-        let silent = founding_sentence(&world, &record(unremembered, CellId(2)));
+        let named = founding_sentence(&world, &record(remembered, Vertex(1)));
+        let silent = founding_sentence(&world, &record(unremembered, Vertex(2)));
 
         assert!(
             named.contains(" was founded by Borga"),

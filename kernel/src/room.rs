@@ -11,10 +11,10 @@ use crate::geosphere::{base_data, normalize, slerp_mid};
 use crate::math;
 use crate::seed::StreamLabel;
 use crate::streams::{ROOM_CHILD, ROOM_FACE};
-use crate::{CellId, Geosphere, NearestCellIndex};
+use crate::{Geosphere, NearestVertexIndex, Vertex};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// The deepest path a `RoomId` can pack: 5 face bits + 1 sentinel + 2*29 digit
+/// The deepest path a `FacetId` can pack: 5 face bits + 1 sentinel + 2*29 digit
 /// bits = 64. Useful room scale is ~L16-20 (an L18 room edge is ~27 m).
 /// type-audit: bare-ok(count)
 pub const MAX_DEPTH: usize = 29;
@@ -24,7 +24,7 @@ pub const MAX_DEPTH: usize = 29;
 /// is independent of the world's canonical globe level.
 /// type-audit: bare-ok(index: face), bare-ok(index: path)
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RoomAddr {
+pub struct Facet {
     /// Which of the 20 base icosahedron faces (0..20).
     pub face: u8,
     /// Child index (0..4) at each refinement, from the base face down.
@@ -52,25 +52,25 @@ pub struct FaceLattice {
     pub scale: i64,
 }
 
-/// Packed, serialized form of a `RoomAddr` — a frozen save-format contract.
+/// Packed, serialized form of a `Facet` — a frozen save-format contract.
 /// Layout: bits `[0,5)` = face; bits `[5,64)` = a leading-1 sentinel then 2
 /// bits per digit, root digit first.
 /// type-audit: bare-ok(constructor-edge)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RoomId(pub u64);
+pub struct FacetId(pub u64);
 
-/// Why a `RoomAddr` could not be packed.
+/// Why a `Facet` could not be packed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RoomAddrError {
+pub enum FacetError {
     /// `path.len()` exceeds `MAX_DEPTH`, so it will not fit a `u64`.
     DepthExceedsCap,
     /// A path digit was not a child index in `0..4`, or `face >= 20`.
     Invalid,
 }
 
-/// Why a `u64` is not a valid `RoomId`.
+/// Why a `u64` is not a valid `FacetId`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RoomIdError {
+pub enum FacetIdError {
     /// The face field is not a base face (`>= 20`), or the sentinel is missing.
     Malformed,
 }
@@ -162,7 +162,7 @@ fn child_at_scale(r: [Bary; 3], digit: u8) -> [Bary; 3] {
 /// Decode a barycentric triple (at `scale = 2^depth`) on `face` back to a path,
 /// by top-down containment: at each level pick the child whose triangle
 /// contains the target centroid. Integer-only.
-fn decode(face: u8, tri: [Bary; 3], scale: i64) -> RoomAddr {
+fn decode(face: u8, tri: [Bary; 3], scale: i64) -> Facet {
     let depth = scale.trailing_zeros();
     let g3 = add(add(tri[0], tri[1]), tri[2]); // 3 * centroid, at scale `scale`
     let mut region: [Bary; 3] = [[scale, 0, 0], [0, scale, 0], [0, 0, scale]];
@@ -183,7 +183,7 @@ fn decode(face: u8, tri: [Bary; 3], scale: i64) -> RoomAddr {
         region = child_at_scale(region, digit);
         path.push(digit);
     }
-    RoomAddr { face, path }
+    Facet { face, path }
 }
 
 /// Face-independent identity of a triangle corner. Two rooms are edge-adjacent
@@ -296,7 +296,7 @@ fn base_edge_faces() -> &'static BTreeMap<(u32, u32), [u8; 2]> {
     })
 }
 
-impl RoomAddr {
+impl Facet {
     /// Refinement depth = path length.
     /// type-audit: bare-ok(count)
     pub fn depth(&self) -> u32 {
@@ -322,32 +322,32 @@ impl RoomAddr {
         }
     }
 
-    /// Pack to the `u64` `RoomId` contract. Fails past `MAX_DEPTH`.
-    pub fn pack(&self) -> Result<RoomId, RoomAddrError> {
+    /// Pack to the `u64` `FacetId` contract. Fails past `MAX_DEPTH`.
+    pub fn pack(&self) -> Result<FacetId, FacetError> {
         if self.path.len() > MAX_DEPTH {
-            return Err(RoomAddrError::DepthExceedsCap);
+            return Err(FacetError::DepthExceedsCap);
         }
         if self.face >= 20 || self.path.iter().any(|&d| d >= 4) {
-            return Err(RoomAddrError::Invalid);
+            return Err(FacetError::Invalid);
         }
         let mut pathword: u64 = 1; // sentinel
         for &d in &self.path {
             pathword = (pathword << 2) | u64::from(d);
         }
-        Ok(RoomId((pathword << 5) | u64::from(self.face)))
+        Ok(FacetId((pathword << 5) | u64::from(self.face)))
     }
 }
 
-impl RoomId {
-    /// Unpack to a `RoomAddr`. Validates the face and the sentinel; not total.
-    pub fn unpack(&self) -> Result<RoomAddr, RoomIdError> {
+impl FacetId {
+    /// Unpack to a `Facet`. Validates the face and the sentinel; not total.
+    pub fn unpack(&self) -> Result<Facet, FacetIdError> {
         let face = (self.0 & 0x1F) as u8;
         if face >= 20 {
-            return Err(RoomIdError::Malformed);
+            return Err(FacetIdError::Malformed);
         }
         let pathword = self.0 >> 5;
         if pathword == 0 {
-            return Err(RoomIdError::Malformed);
+            return Err(FacetIdError::Malformed);
         }
         let top = 63 - pathword.leading_zeros(); // index of the sentinel bit = 2*len
         let len = (top / 2) as usize;
@@ -355,11 +355,11 @@ impl RoomId {
         for i in (0..len).rev() {
             path.push(((pathword >> (2 * i)) & 0b11) as u8);
         }
-        Ok(RoomAddr { face, path })
+        Ok(Facet { face, path })
     }
 }
 
-impl RoomAddr {
+impl Facet {
     /// The three unit-sphere corner positions of the room's triangle, in the
     /// mesh's corner order. Byte-identical to the same face in
     /// `Geosphere::new(self.path.len())`.
@@ -395,14 +395,14 @@ impl RoomAddr {
 
     /// The room at `depth` whose spherical triangle contains `position`.
     /// PRESENTATION-SIDE: resolves a float coordinate to an integer address
-    /// (float→address, the same determinism class as `NearestCellIndex::nearest`).
+    /// (float→address, the same determinism class as `NearestVertexIndex::nearest`).
     /// Not an identity path — a boundary-straddling position may resolve to
     /// adjacent rooms on different platforms; a room's content stays
     /// integer-exact once addressed. Descends by the same `slerp_mid` midpoints
     /// and child order as `corners`, so `containing(r.centroid(), r.depth()) == r`
     /// for interior rooms.
     /// type-audit: pending(wave-1)
-    pub fn containing(position: [f64; 3], depth: u32) -> RoomAddr {
+    pub fn containing(position: [f64; 3], depth: u32) -> Facet {
         let p = normalize(position);
         let (verts, faces) = base_data();
         // 1. the base face whose spherical triangle contains p (fallback:
@@ -456,7 +456,7 @@ impl RoomAddr {
             v = children[d as usize];
             path.push(d);
         }
-        RoomAddr { face, path }
+        Facet { face, path }
     }
 
     /// The geographic coordinate of the centroid (matches `Geosphere::coord`).
@@ -472,7 +472,7 @@ impl RoomAddr {
     /// Great-circle initial azimuth (degrees, clockwise from north) from this
     /// room's centroid to `other`'s. For rendering and exit-naming only.
     /// type-audit: pending(wave-1)
-    pub fn bearing_to(&self, other: &RoomAddr) -> f64 {
+    pub fn bearing_to(&self, other: &Facet) -> f64 {
         let a = self.coord();
         let b = other.coord();
         let (lat1, lat2) = (a.latitude.to_radians(), b.latitude.to_radians());
@@ -485,11 +485,11 @@ impl RoomAddr {
     }
 
     /// Great-circle angular distance to `other`'s centroid, in radians.
-    /// Pairs with [`RoomAddr::bearing_to`]: together they are a polar
+    /// Pairs with [`Facet::bearing_to`]: together they are a polar
     /// coordinate for `other` about `self`, which is what a client needs
     /// to place a cell without doing spherical trigonometry itself.
     /// type-audit: pending(wave-1)
-    pub fn distance_rad_to(&self, other: &RoomAddr) -> f64 {
+    pub fn distance_rad_to(&self, other: &Facet) -> f64 {
         let a = self.centroid();
         let b = other.centroid();
         let dot = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0);
@@ -500,12 +500,12 @@ impl RoomAddr {
     /// graph). `neighbor[i]` is across the edge opposite corner `i` (between
     /// corners `(i+1)%3` and `(i+2)%3`). Integer-only; passability and overlay
     /// edges are higher layers and never enter here.
-    pub fn neighbors(&self) -> [RoomAddr; 3] {
+    pub fn neighbors(&self) -> [Facet; 3] {
         let (scale, tri) = bary_triple(&self.path);
         let h = scale >> self.path.len(); // = 1; edge step at this depth
         let (_v, faces) = base_data();
         let g = faces[self.face as usize];
-        let mut out: Vec<RoomAddr> = Vec::with_capacity(3);
+        let mut out: Vec<Facet> = Vec::with_capacity(3);
         // neighbor[n] is across the edge OPPOSITE corner n, so the excluded
         // corner k == n: tuples ordered (i,j,k) with k = 0, 1, 2.
         for (i, j, k) in [(1usize, 2, 0), (2, 0, 1), (0, 1, 2)] {
@@ -539,15 +539,15 @@ impl RoomAddr {
     pub fn corner_weights(
         &self,
         geo: &Geosphere,
-        index: &NearestCellIndex,
-    ) -> Option<[(CellId, u64); 3]> {
+        index: &NearestVertexIndex,
+    ) -> Option<[(Vertex, u64); 3]> {
         let gl = geo.level();
         if self.depth() < gl {
             return None;
         }
         // Ancestor triangle at the globe level: its 3 corner positions (exact
         // mesh vertices) resolve to CellIds.
-        let anc = RoomAddr {
+        let anc = Facet {
             face: self.face,
             path: self.path[..gl as usize].to_vec(),
         };
@@ -571,15 +571,15 @@ impl RoomAddr {
     }
 }
 
-impl RoomAddr {
+impl Facet {
     /// The containing room one level coarser, or `None` at a base face.
-    pub fn parent(&self) -> Option<RoomAddr> {
+    pub fn parent(&self) -> Option<Facet> {
         if self.path.is_empty() {
             return None;
         }
         let mut path = self.path.clone();
         path.pop();
-        Some(RoomAddr {
+        Some(Facet {
             face: self.face,
             path,
         })
@@ -587,16 +587,16 @@ impl RoomAddr {
 
     /// Descend into child `digit` (0..4). Fails past `MAX_DEPTH` or on a bad digit.
     /// type-audit: bare-ok(index)
-    pub fn child(&self, digit: u8) -> Result<RoomAddr, RoomAddrError> {
+    pub fn child(&self, digit: u8) -> Result<Facet, FacetError> {
         if digit >= 4 {
-            return Err(RoomAddrError::Invalid);
+            return Err(FacetError::Invalid);
         }
         if self.path.len() >= MAX_DEPTH {
-            return Err(RoomAddrError::DepthExceedsCap);
+            return Err(FacetError::DepthExceedsCap);
         }
         let mut path = self.path.clone();
         path.push(digit);
-        Ok(RoomAddr {
+        Ok(Facet {
             face: self.face,
             path,
         })
@@ -604,12 +604,12 @@ impl RoomAddr {
 
     /// The containing room at coarser `depth`, or `None` if `depth > self.depth()`.
     /// type-audit: bare-ok(count)
-    pub fn ancestor(&self, depth: u32) -> Option<RoomAddr> {
+    pub fn ancestor(&self, depth: u32) -> Option<Facet> {
         let d = depth as usize;
         if d > self.path.len() {
             return None;
         }
-        Some(RoomAddr {
+        Some(Facet {
             face: self.face,
             path: self.path[..d].to_vec(),
         })
@@ -630,18 +630,18 @@ impl RoomAddr {
     }
 }
 
-/// The `corner_weights` half's store shape: `(RoomAddr, Geosphere::level())`
-/// keys onto [`RoomAddr::corner_weights`] results. A private alias only
+/// The `corner_weights` half's store shape: `(Facet, Geosphere::level())`
+/// keys onto [`Facet::corner_weights`] results. A private alias only
 /// because the raw nested type trips clippy's `type_complexity` lint on the
 /// [`RoomMeshMemo`] field below — it names nothing beyond its own expansion.
-type CornerWeightsStore = Derived<(RoomAddr, u32), Option<[(CellId, u64); 3]>>;
+type CornerWeightsStore = Derived<(Facet, u32), Option<[(Vertex, u64); 3]>>;
 
-/// A session-lived cache of [`RoomAddr::corner_weights`] and
-/// [`RoomAddr::neighbors`] results, keyed by the room they were computed for
+/// A session-lived cache of [`Facet::corner_weights`] and
+/// [`Facet::neighbors`] results, keyed by the room they were computed for
 /// (the-waymark, Task 3), backed by [`crate::derived::Derived`] (the-forebay
 /// Task 3). Both are `Validity::Pure` — pure functions of a KEY that names
 /// every parameter the derivation reads: geometry alone for `neighbors`
-/// (key: `RoomAddr`), and `(RoomAddr, Geosphere::level())` for
+/// (key: `Facet`), and `(Facet, Geosphere::level())` for
 /// `corner_weights`, since `Geosphere::new` takes a level and nothing else
 /// (spec §2.1) — so two geospheres at the same level are byte-identical and
 /// the level is the only thing that needs to join the key. Caching either is
@@ -654,22 +654,22 @@ type CornerWeightsStore = Derived<(RoomAddr, u32), Option<[(CellId, u64); 3]>>;
 /// reads.
 #[derive(Debug, Default, Clone)]
 pub struct RoomMeshMemo {
-    /// `(RoomAddr, level) -> corner_weights(geo, index)`. The level enters
+    /// `(Facet, level) -> corner_weights(geo, index)`. The level enters
     /// the key (spec §2.1/§2.1b) precisely because `corner_weights` is a
-    /// pure function of `(RoomAddr, Geosphere::level())` and nothing else —
+    /// pure function of `(Facet, Geosphere::level())` and nothing else —
     /// so one memo may now legitimately serve more than one globe level:
     /// two different keys, two correct answers, never an aliasing footgun.
-    /// That is a capability gain over the memo's earlier `RoomAddr`-only
+    /// That is a capability gain over the memo's earlier `Facet`-only
     /// key, which could not tell two levels apart at all.
     corner_weights: CornerWeightsStore,
-    /// `RoomAddr -> neighbors()`. Pure geometry, no external dependency, so
+    /// `Facet -> neighbors()`. Pure geometry, no external dependency, so
     /// this half never goes stale regardless of which world it is reused
     /// across.
-    neighbors: Derived<RoomAddr, [RoomAddr; 3]>,
+    neighbors: Derived<Facet, [Facet; 3]>,
     /// The `Geosphere::level()` of the FIRST `corner_weights` entry ever
     /// inserted — never updated after that. `None` until the first insert.
     /// Read-path plumbing for [`Self::corner_weights_lookup`] (which takes
-    /// only a `RoomAddr` and so needs a level from somewhere to complete the
+    /// only a `Facet` and so needs a level from somewhere to complete the
     /// key) and for a caller such as `windows/locale`'s own read-side parity
     /// check against its live `Geosphere`. No longer a write-path aliasing
     /// guard (the-forebay Task 3, spec §2.1b): completing the key retired
@@ -710,22 +710,22 @@ impl RoomMeshMemo {
     }
 
     /// A read-only consult of the `corner_weights` half: `None` on a cache
-    /// miss (the caller falls through to a fresh [`RoomAddr::corner_weights`]
+    /// miss (the caller falls through to a fresh [`Facet::corner_weights`]
     /// call), `Some(inner)` on a hit, where `inner` is the memoized
     /// `corner_weights` result itself (which can legitimately be `None` for
     /// an above-the-grid room — that is a cached ABSENCE, distinct from "not
-    /// looked up yet"). The read-only sibling of [`RoomAddr::
+    /// looked up yet"). The read-only sibling of [`Facet::
     /// corner_weights_memo`]: this one takes `&self` (a caller who only
     /// holds a SHARED reference — e.g. a prefilled cache embedded in a
     /// `&self`-only reader — can still consult it, just never fill a miss).
-    /// Its single argument stays a bare `RoomAddr`, so the level half of the
+    /// Its single argument stays a bare `Facet`, so the level half of the
     /// store's key comes from [`Self::corner_weights_geo_level`] instead —
     /// `None` (not-looked-up) when this memo has never been filled at all.
     /// Reads via [`crate::derived::Derived::peek`], never [`crate::
     /// derived::Derived::get`]: this is a shared-reference consult, not a
     /// cache hit, so it must count neither a hit nor a miss.
     /// type-audit: bare-ok(count: return)
-    pub fn corner_weights_lookup(&self, addr: &RoomAddr) -> Option<Option<[(CellId, u64); 3]>> {
+    pub fn corner_weights_lookup(&self, addr: &Facet) -> Option<Option<[(Vertex, u64); 3]>> {
         let level = self.corner_weights_geo_level?;
         self.corner_weights.peek(&(addr.clone(), level)).copied()
     }
@@ -736,7 +736,7 @@ impl RoomMeshMemo {
     /// insert even if a later insert uses a different level (the-forebay
     /// Task 3: mixing levels through one memo is now legitimate — see the
     /// field doc). A read-side consumer that also holds the `(Geosphere,
-    /// NearestCellIndex)` it is ABOUT to read through (e.g. `windows/
+    /// NearestVertexIndex)` it is ABOUT to read through (e.g. `windows/
     /// locale`'s `LocaleContext`) can still compare this against its own
     /// `geo.level()` for its OWN parity check, and [`Self::
     /// corner_weights_lookup`] uses it to complete the store's key.
@@ -776,10 +776,10 @@ impl RoomMeshMemo {
     }
 }
 
-impl RoomAddr {
+impl Facet {
     /// [`Self::corner_weights`], consulting/filling a caller-owned
     /// [`RoomMeshMemo`] instead of recomputing the three
-    /// [`NearestCellIndex::nearest_to_position`] scans on every call. Byte-
+    /// [`NearestVertexIndex::nearest_to_position`] scans on every call. Byte-
     /// identical to `corner_weights` by construction (a cache of a pure
     /// function of `(self, geo.level())` — spec §2.1: `Geosphere::new` takes
     /// only a level, so two geospheres at the same level are byte-identical
@@ -793,9 +793,9 @@ impl RoomAddr {
     pub fn corner_weights_memo(
         &self,
         geo: &Geosphere,
-        index: &NearestCellIndex,
+        index: &NearestVertexIndex,
         memo: &mut RoomMeshMemo,
-    ) -> Option<[(CellId, u64); 3]> {
+    ) -> Option<[(Vertex, u64); 3]> {
         let level = geo.level();
         let key = (self.clone(), level);
         if let Some(&cached) = memo.corner_weights.get(&key) {
@@ -816,7 +816,7 @@ impl RoomAddr {
     /// on every call. Byte-identical to `neighbors` by construction (a cache
     /// of a pure function of `self`) — pinned by
     /// `neighbors_memo_bit_equals_recomputation` below.
-    pub fn neighbors_memo(&self, memo: &mut RoomMeshMemo) -> [RoomAddr; 3] {
+    pub fn neighbors_memo(&self, memo: &mut RoomMeshMemo) -> [Facet; 3] {
         if let Some(cached) = memo.neighbors.get(self) {
             memo.neighbors_hits += 1;
             return cached.clone();
@@ -837,7 +837,7 @@ mod tests {
 
     #[test]
     fn vertical_verbs_compose() {
-        let a = RoomAddr {
+        let a = Facet {
             face: 4,
             path: vec![1, 2, 3],
         };
@@ -846,26 +846,26 @@ mod tests {
         assert_eq!(child.parent(), Some(a.clone()));
         assert_eq!(
             a.ancestor(1),
-            Some(RoomAddr {
+            Some(Facet {
                 face: 4,
                 path: vec![1]
             })
         );
         assert_eq!(
-            RoomAddr {
+            Facet {
                 face: 4,
                 path: vec![]
             }
             .parent(),
             None
         );
-        assert_eq!(a.child(4), Err(RoomAddrError::Invalid));
+        assert_eq!(a.child(4), Err(FacetError::Invalid));
     }
 
     #[test]
     fn room_seed_is_deterministic_and_hierarchical() {
         let world = Seed(42);
-        let a = RoomAddr {
+        let a = Facet {
             face: 3,
             path: vec![0, 1, 2],
         };
@@ -931,11 +931,11 @@ mod tests {
         }
     }
 
-    // Enumerate every RoomAddr at depth `level` by DFS over child digits.
-    fn all_addrs(level: u32) -> Vec<RoomAddr> {
+    // Enumerate every Facet at depth `level` by DFS over child digits.
+    fn all_addrs(level: u32) -> Vec<Facet> {
         let mut out = Vec::new();
         for face in 0..20u8 {
-            let mut stack = vec![RoomAddr { face, path: vec![] }];
+            let mut stack = vec![Facet { face, path: vec![] }];
             while let Some(a) = stack.pop() {
                 if a.path.len() as u32 == level {
                     out.push(a);
@@ -943,7 +943,7 @@ mod tests {
                     for d in 0..4u8 {
                         let mut p = a.path.clone();
                         p.push(d);
-                        stack.push(RoomAddr {
+                        stack.push(Facet {
                             face: a.face,
                             path: p,
                         });
@@ -954,14 +954,14 @@ mod tests {
         out
     }
 
-    // Test oracle: replicate subdivide carrying (RoomAddr, [gvert;3]) per face.
-    fn reference_mesh(level: u32) -> (Vec<[f64; 3]>, Vec<RoomAddr>, Vec<[u32; 3]>) {
+    // Test oracle: replicate subdivide carrying (Facet, [gvert;3]) per face.
+    fn reference_mesh(level: u32) -> (Vec<[f64; 3]>, Vec<Facet>, Vec<[u32; 3]>) {
         use crate::geosphere::slerp_mid;
         use std::collections::BTreeMap;
         let (verts, faces) = base_data().clone();
         let mut positions = verts;
-        let mut addrs: Vec<RoomAddr> = (0..faces.len() as u8)
-            .map(|f| RoomAddr {
+        let mut addrs: Vec<Facet> = (0..faces.len() as u8)
+            .map(|f| Facet {
                 face: f,
                 path: vec![],
             })
@@ -994,7 +994,7 @@ mod tests {
                 ] {
                     let mut p = addr.path.clone();
                     p.push(digit);
-                    na.push(RoomAddr {
+                    na.push(Facet {
                         face: addr.face,
                         path: p,
                     });
@@ -1010,15 +1010,15 @@ mod tests {
     #[test]
     fn lazy_geometry_is_byte_identical_to_geosphere() {
         // Build a reference mesh by replicating subdivide while tracking, per
-        // face, its (RoomAddr, [global vertex index; 3]); then compare lazy
+        // face, its (Facet, [global vertex index; 3]); then compare lazy
         // corners against the mesh's own vertex positions. See helper below.
         let level = 5u32;
         let (positions, face_addrs, face_gverts) = reference_mesh(level);
         let geo = Geosphere::new(level);
         // 1. the replica equals Geosphere byte-for-byte (trust transfer)
-        assert_eq!(positions.len(), geo.cell_count());
+        assert_eq!(positions.len(), geo.vertex_count());
         for (id, &pos) in positions.iter().enumerate() {
-            assert_eq!(pos, geo.position(crate::CellId(id as u32)));
+            assert_eq!(pos, geo.position(crate::Vertex(id as u32)));
         }
         // 2. lazy corners equal the mesh vertices for every face
         for (addr, gverts) in face_addrs.iter().zip(face_gverts.iter()) {
@@ -1034,7 +1034,7 @@ mod tests {
 
     #[test]
     fn geometry_is_deterministic() {
-        let a = RoomAddr {
+        let a = Facet {
             face: 11,
             path: vec![0, 3, 1, 2, 3, 0],
         };
@@ -1044,11 +1044,11 @@ mod tests {
 
     #[test]
     fn bearing_is_in_range() {
-        let a = RoomAddr {
+        let a = Facet {
             face: 0,
             path: vec![0, 1, 2],
         };
-        let b = RoomAddr {
+        let b = Facet {
             face: 0,
             path: vec![3, 3, 3],
         };
@@ -1074,8 +1074,8 @@ mod tests {
         // avoids the rotation-not-inversion pathology entirely and resolves
         // to exact antipodal rooms already at a shallow depth (4), which is
         // why it was chosen over bumping the axis-aligned pair's depth.
-        let a = RoomAddr::containing([0.3, 0.4, 0.866], 4);
-        let b = RoomAddr::containing([-0.3, -0.4, -0.866], 4);
+        let a = Facet::containing([0.3, 0.4, 0.866], 4);
+        let b = Facet::containing([-0.3, -0.4, -0.866], 4);
         assert_eq!(a.distance_rad_to(&a), 0.0);
         assert!((a.distance_rad_to(&b) - std::f64::consts::PI).abs() < 1e-9);
     }
@@ -1105,7 +1105,7 @@ mod tests {
         let level = 3u32;
         let addrs = all_addrs(level);
         // Every 37th pair (to keep the test fast) across the full address set.
-        let pairs: Vec<(&RoomAddr, &RoomAddr)> = addrs
+        let pairs: Vec<(&Facet, &Facet)> = addrs
             .iter()
             .enumerate()
             .flat_map(|(i, a)| addrs.iter().skip(i + 1).step_by(37).map(move |b| (a, b)))
@@ -1123,19 +1123,19 @@ mod tests {
     #[test]
     fn roomid_round_trips() {
         let cases = [
-            RoomAddr {
+            Facet {
                 face: 0,
                 path: vec![],
             },
-            RoomAddr {
+            Facet {
                 face: 19,
                 path: vec![3],
             },
-            RoomAddr {
+            Facet {
                 face: 7,
                 path: vec![0, 1, 2, 3, 0, 1, 2],
             },
-            RoomAddr {
+            Facet {
                 face: 3,
                 path: vec![3; MAX_DEPTH],
             },
@@ -1152,17 +1152,17 @@ mod tests {
 
     #[test]
     fn pack_rejects_over_cap() {
-        let too_deep = RoomAddr {
+        let too_deep = Facet {
             face: 0,
             path: vec![0; MAX_DEPTH + 1],
         };
-        assert_eq!(too_deep.pack(), Err(RoomAddrError::DepthExceedsCap));
+        assert_eq!(too_deep.pack(), Err(FacetError::DepthExceedsCap));
     }
 
     #[test]
     fn unpack_rejects_malformed() {
-        assert_eq!(RoomId(20).unpack(), Err(RoomIdError::Malformed)); // face 20, no path
-        assert_eq!(RoomId(0).unpack(), Err(RoomIdError::Malformed)); // face 0, pathword 0
+        assert_eq!(FacetId(20).unpack(), Err(FacetIdError::Malformed)); // face 20, no path
+        assert_eq!(FacetId(0).unpack(), Err(FacetIdError::Malformed)); // face 0, pathword 0
     }
 
     #[test]
@@ -1177,30 +1177,30 @@ mod tests {
     #[test]
     fn pack_rejects_invalid() {
         assert_eq!(
-            RoomAddr {
+            Facet {
                 face: 20,
                 path: vec![]
             }
             .pack(),
-            Err(RoomAddrError::Invalid)
+            Err(FacetError::Invalid)
         );
         assert_eq!(
-            RoomAddr {
+            Facet {
                 face: 0,
                 path: vec![4]
             }
             .pack(),
-            Err(RoomAddrError::Invalid)
+            Err(FacetError::Invalid)
         );
     }
 
     #[test]
     fn adjacency_is_mutual_and_ternary() {
         let addrs = all_addrs(4);
-        let present: BTreeSet<RoomAddr> = addrs.iter().cloned().collect();
+        let present: BTreeSet<Facet> = addrs.iter().cloned().collect();
         for addr in &addrs {
             let ns = addr.neighbors();
-            let uniq: BTreeSet<&RoomAddr> = ns.iter().collect();
+            let uniq: BTreeSet<&Facet> = ns.iter().collect();
             assert_eq!(
                 uniq.len(),
                 3,
@@ -1219,7 +1219,7 @@ mod tests {
     #[test]
     fn corner_at_pentagon_vertex_walks() {
         // The all-0 path keeps a corner at a base icosahedron vertex (5-valent).
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0; 5],
         };
@@ -1235,11 +1235,11 @@ mod tests {
 
     #[test]
     fn corner_weights_sum_and_blend() {
-        use crate::{CellMap, NearestCellIndex};
+        use crate::{NearestVertexIndex, VertexMap};
         let geo = Geosphere::new(3); // globe level 3 for a cheap test
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         // a room several levels below the grid
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 6,
             path: vec![0, 3, 1, 2, 3],
         };
@@ -1248,7 +1248,7 @@ mod tests {
         let sum: u64 = ws.iter().map(|&(_, w)| w).sum();
         assert_eq!(sum, denom, "weights sum to 3*2^(depth-globe)");
         // a constant field blends to the constant
-        let field = CellMap::from_fn(&geo, |_| 5.0f64);
+        let field = VertexMap::from_fn(&geo, |_| 5.0f64);
         let blended: f64 = ws
             .iter()
             .map(|&(c, w)| (w as f64 / denom as f64) * field.get(c))
@@ -1258,7 +1258,7 @@ mod tests {
             "constant field blends to the constant"
         );
         // above the grid -> None
-        let coarse = RoomAddr {
+        let coarse = Facet {
             face: 6,
             path: vec![0, 3],
         };
@@ -1267,17 +1267,17 @@ mod tests {
 
     #[test]
     fn corner_weights_pin_cell_weight_pairing() {
-        use crate::NearestCellIndex;
+        use crate::NearestVertexIndex;
         // A constant field can't catch a transposition (any permutation of the
         // same weights still blends to the constant). Pin the cell<->weight
         // axis directly: the room centroid's barycentric weights ARE its
         // proximity to each corner, so for an asymmetric room the
         // max-weight corner must be the corner cell nearest the centroid.
         let geo = Geosphere::new(3);
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         // path biased toward corner 0 the whole way down -> distinct weights,
         // corner 0 dominates.
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0, 0, 0, 0, 0],
         };
@@ -1300,11 +1300,11 @@ mod tests {
 
     #[test]
     fn inheritance_at_a_pentagon_corner() {
-        use crate::{CellId, NearestCellIndex};
+        use crate::{NearestVertexIndex, Vertex};
         let geo = Geosphere::new(3);
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         // all-0 path keeps a corner at a base vertex (a 5-valent pentagon cell)
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![0, 0, 0, 0, 0],
         };
@@ -1312,7 +1312,7 @@ mod tests {
         let denom: u64 = 3 << (addr.path.len() as u32 - geo.level());
         assert_eq!(ws.iter().map(|&(_, w)| w).sum::<u64>(), denom);
         // the three corner cells are distinct valid ids
-        let ids: BTreeSet<CellId> = ws.iter().map(|&(c, _)| c).collect();
+        let ids: BTreeSet<Vertex> = ws.iter().map(|&(c, _)| c).collect();
         assert_eq!(ids.len(), 3);
     }
 
@@ -1348,7 +1348,7 @@ mod tests {
         for depth in [1u32, 2, 3] {
             for face in 0..20u8 {
                 // enumerate all rooms at `depth` on this face
-                let mut stack = vec![RoomAddr { face, path: vec![] }];
+                let mut stack = vec![Facet { face, path: vec![] }];
                 for _ in 0..depth {
                     let mut next = Vec::new();
                     for a in stack {
@@ -1359,7 +1359,7 @@ mod tests {
                     stack = next;
                 }
                 for room in stack {
-                    let got = RoomAddr::containing(room.centroid(), depth);
+                    let got = Facet::containing(room.centroid(), depth);
                     assert_eq!(got, room, "centroid of {room:?} resolved to {got:?}");
                 }
             }
@@ -1368,14 +1368,14 @@ mod tests {
 
     #[test]
     fn containing_at_depth_zero_is_the_base_face() {
-        let room = RoomAddr {
+        let room = Facet {
             face: 7,
             path: vec![1, 2],
         };
-        let got = RoomAddr::containing(room.centroid(), 0);
+        let got = Facet::containing(room.centroid(), 0);
         assert_eq!(
             got,
-            RoomAddr {
+            Facet {
                 face: 7,
                 path: vec![]
             }
@@ -1384,7 +1384,7 @@ mod tests {
 
     #[test]
     fn the_base_face_is_a_single_up_triangle() {
-        let root = RoomAddr {
+        let root = Facet {
             face: 3,
             path: vec![],
         };
@@ -1403,7 +1403,7 @@ mod tests {
         // Child digits 0..3 subdivide a triangle into three corner children (up)
         // and one central child (down).
         for digit in 0..3u8 {
-            let r = RoomAddr {
+            let r = Facet {
                 face: 0,
                 path: vec![digit],
             };
@@ -1411,7 +1411,7 @@ mod tests {
             assert!(l.up, "corner child {digit} keeps the parent's orientation");
             assert_eq!(l.a + l.b + l.c, l.scale - 1);
         }
-        let centre = RoomAddr {
+        let centre = Facet {
             face: 0,
             path: vec![3],
         };
@@ -1424,7 +1424,7 @@ mod tests {
     fn edge_neighbours_are_lattice_adjacent() {
         // A room deep inside a base face: all three neighbours share its face,
         // and each differs from it by exactly one unit on exactly one axis.
-        let room = RoomAddr {
+        let room = Facet {
             face: 0,
             path: vec![3, 0, 3, 1, 3, 2],
         };
@@ -1452,7 +1452,7 @@ mod tests {
     #[test]
     fn the_lattice_scale_matches_the_depth() {
         for depth in 0..8u32 {
-            let r = RoomAddr {
+            let r = Facet {
                 face: 11,
                 path: vec![2; depth as usize],
             };
@@ -1487,11 +1487,11 @@ mod tests {
         // insert exactly one entry, and distinct rooms accumulate one entry
         // each (private-field check, same module).
         let mut memo = RoomMeshMemo::new();
-        let a = RoomAddr {
+        let a = Facet {
             face: 3,
             path: vec![1, 2],
         };
-        let b = RoomAddr {
+        let b = Facet {
             face: 7,
             path: vec![0, 3, 1],
         };
@@ -1509,14 +1509,14 @@ mod tests {
 
     #[test]
     fn corner_weights_memo_bit_equals_recomputation() {
-        use crate::NearestCellIndex;
+        use crate::NearestVertexIndex;
         // Same exact-equality pin as `neighbors_memo`, over both grid-covered
         // and above-the-grid (`None`) rooms, at a couple of globe levels —
         // `corner_weights` is exact-integer too (weights are barycentric
         // numerators over `3 << depth`), so no ULP concern here either.
         for globe_level in [2u32, 3] {
             let geo = Geosphere::new(globe_level);
-            let index = NearestCellIndex::new(&geo);
+            let index = NearestVertexIndex::new(&geo);
             let mut memo = RoomMeshMemo::new();
             for level in [globe_level, globe_level + 1, globe_level + 2] {
                 for addr in all_addrs(level) {
@@ -1540,15 +1540,15 @@ mod tests {
 
     #[test]
     fn corner_weights_memo_actually_memoizes() {
-        use crate::NearestCellIndex;
+        use crate::NearestVertexIndex;
         let geo = Geosphere::new(3);
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let mut memo = RoomMeshMemo::new();
-        let a = RoomAddr {
+        let a = Facet {
             face: 2,
             path: vec![0, 3, 1, 2, 3],
         };
-        let b = RoomAddr {
+        let b = Facet {
             face: 9,
             path: vec![1, 1, 1, 1, 1],
         };
@@ -1570,20 +1570,20 @@ mod tests {
 
     #[test]
     fn corner_weights_lookup_distinguishes_miss_from_a_cached_none() {
-        use crate::NearestCellIndex;
+        use crate::NearestVertexIndex;
         // Above-the-grid `None` and "never looked up" must read differently
         // through the read-only lookup — a `_cached` consumer (Task 3 fix
         // round, Finding 1) that only checks "is there a Some inner value"
         // would otherwise treat a cached above-grid `None` as a miss and
         // recompute forever, defeating the whole point of prefilling it.
         let geo = Geosphere::new(3);
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
         let mut memo = RoomMeshMemo::new();
-        let above_grid = RoomAddr {
+        let above_grid = Facet {
             face: 0,
             path: vec![1],
         };
-        let below_grid = RoomAddr {
+        let below_grid = Facet {
             face: 0,
             path: vec![0, 3, 1, 2, 3],
         };
@@ -1614,12 +1614,12 @@ mod tests {
 
     #[test]
     fn corner_weights_memo_serves_two_globe_levels_correctly() {
-        use crate::NearestCellIndex;
+        use crate::NearestVertexIndex;
         // The-forebay Task 3, spec §2.1b: this test REPLACES
         // `corner_weights_memo_asserts_against_geo_level_aliasing`, which
         // required a `should_panic` on exactly this scenario (one memo fed
         // from two different `Geosphere` levels). That guard existed because
-        // the OLD key (`RoomAddr` alone) could not tell two levels apart —
+        // the OLD key (`Facet` alone) could not tell two levels apart —
         // completing the key with the level (spec §2.1: `Geosphere::new`
         // takes a level and nothing else, so the level determines the whole
         // `(geo, index)` pair) turns "two levels" into "two different keys",
@@ -1628,15 +1628,15 @@ mod tests {
         // one memo answers correctly for EACH level, and neither insert
         // disturbs the other.
         let geo_a = Geosphere::new(2);
-        let index_a = NearestCellIndex::new(&geo_a);
+        let index_a = NearestVertexIndex::new(&geo_a);
         let geo_b = Geosphere::new(3);
-        let index_b = NearestCellIndex::new(&geo_b);
+        let index_b = NearestVertexIndex::new(&geo_b);
         let mut memo = RoomMeshMemo::new();
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 5,
             path: vec![0, 3, 1, 2, 3],
         };
-        let other = RoomAddr {
+        let other = Facet {
             face: 6,
             path: vec![1, 0, 3, 1, 2, 3],
         };
@@ -1667,8 +1667,8 @@ mod tests {
     #[test]
     fn memo_counts_hits_and_misses_separately_per_half() {
         let geo = Geosphere::new(3);
-        let index = NearestCellIndex::new(&geo);
-        let addr = RoomAddr {
+        let index = NearestVertexIndex::new(&geo);
+        let addr = Facet {
             face: 0,
             path: vec![0, 0, 0],
         };
@@ -1699,8 +1699,8 @@ mod tests {
         // exists to draw, and a counter that got it wrong would report a
         // permanently cold cache for every above-the-grid room.
         let geo = Geosphere::new(5);
-        let index = NearestCellIndex::new(&geo);
-        let shallow = RoomAddr {
+        let index = NearestVertexIndex::new(&geo);
+        let shallow = Facet {
             face: 0,
             path: vec![0],
         };
@@ -1742,17 +1742,17 @@ mod tests {
         let _ = RoomMeshMemo::default();
 
         let geo = Geosphere::new(3);
-        let index = NearestCellIndex::new(&geo);
-        let addr = RoomAddr {
+        let index = NearestVertexIndex::new(&geo);
+        let addr = Facet {
             face: 0,
             path: vec![0, 0, 0],
         };
 
-        let _: Option<[(CellId, u64); 3]> = addr.corner_weights(&geo, &index);
-        let _: Option<[(CellId, u64); 3]> = addr.corner_weights_memo(&geo, &index, &mut memo);
-        let _: [RoomAddr; 3] = addr.neighbors();
-        let _: [RoomAddr; 3] = addr.neighbors_memo(&mut memo);
-        let _: Option<Option<[(CellId, u64); 3]>> = memo.corner_weights_lookup(&addr);
+        let _: Option<[(Vertex, u64); 3]> = addr.corner_weights(&geo, &index);
+        let _: Option<[(Vertex, u64); 3]> = addr.corner_weights_memo(&geo, &index, &mut memo);
+        let _: [Facet; 3] = addr.neighbors();
+        let _: [Facet; 3] = addr.neighbors_memo(&mut memo);
+        let _: Option<Option<[(Vertex, u64); 3]>> = memo.corner_weights_lookup(&addr);
         let _: Option<u32> = memo.corner_weights_geo_level();
         let _: (u64, u64) = (memo.corner_weights_hits(), memo.corner_weights_misses());
         let _: (u64, u64) = (memo.neighbors_hits(), memo.neighbors_misses());

@@ -43,7 +43,7 @@
 //! what the bake does.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, ComponentStore, EntityId, KindId, Seed, Stream, Value, World};
+use hornvale_kernel::{ComponentStore, EntityId, KindId, Seed, Stream, Value, Vertex, World};
 use hornvale_species::{Dispersion, MindVector};
 
 /// Half-width of a symmetric uniform offset with unit standard deviation:
@@ -90,7 +90,7 @@ pub fn occupation_draw_key(founded: f64) -> i64 {
 /// here, so the leg-string format (`"{site}/{founded_year}"`) is written once
 /// and cannot drift between the two entry points; `the_draw_is_byte_pinned_
 /// for_a_known_key` pins the format itself.
-fn draw_stream(seed: Seed, site: CellId, founded_year: i64) -> Stream {
+fn draw_stream(seed: Seed, site: Vertex, founded_year: i64) -> Stream {
     // The dynamic leg IS the key: site and founding year, joined. Composed
     // under the flat `settlement/disposition/v1` root exactly as the deity
     // stream composes its per-settlement leg.
@@ -142,7 +142,7 @@ fn perturb(stream: &mut Stream, location: f64, spread: f64) -> f64 {
 /// type-audit: bare-ok(count: founded_year), bare-ok(ratio: location), bare-ok(ratio: spread), bare-ok(ratio: return)
 pub fn drawn_threat_response(
     seed: Seed,
-    site: CellId,
+    site: Vertex,
     founded_year: i64,
     location: f64,
     spread: f64,
@@ -351,7 +351,7 @@ pub fn drawn_threat_response(
 /// type-audit: bare-ok(count: founded_year), bare-ok(identifier-text: people)
 pub fn people_disposition(
     seed: Seed,
-    site: CellId,
+    site: Vertex,
     founded_year: i64,
     people: &str,
     psyche: &ComponentStore<KindId, MindVector>,
@@ -389,7 +389,7 @@ pub fn settlement_disposition(world: &World, settlement: EntityId) -> Option<Min
         .ledger
         .value_of(settlement, hornvale_settlement::CELL_ID)?
     {
-        Value::Number(n) => CellId(*n as u32),
+        Value::Number(n) => Vertex(*n as u32),
         _ => return None,
     };
     let founded = match world
@@ -466,7 +466,7 @@ mod tests {
         let mut sum = 0.0;
         let mut sum_sq = 0.0;
         for cell in 0..n {
-            let v = people_disposition(Seed(42), CellId(cell), 0, "probe", &psyche, &dispersion)
+            let v = people_disposition(Seed(42), Vertex(cell), 0, "probe", &psyche, &dispersion)
                 .expect("the probe kind carries a mind")
                 .threat_response;
             assert!(

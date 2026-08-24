@@ -232,7 +232,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, ComponentStore, KindId, Seed, Value};
+use hornvale_kernel::{ComponentStore, KindId, Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
@@ -531,7 +531,7 @@ fn read_world(seed: u64, arm: Arm) -> WorldRead {
             .ledger
             .value_of(fact.subject, hornvale_settlement::CELL_ID)
         {
-            Some(Value::Number(n)) => CellId(*n as u32),
+            Some(Value::Number(n)) => Vertex(*n as u32),
             _ => panic!("a committed settlement must carry a cell-id"),
         };
         sited.push(Sited {
@@ -672,7 +672,7 @@ fn fields(seed: u64, arm: Arm) -> Fields {
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
     let columns: Vec<Vec<f64>> = (0..roster.len())
         .map(|idx| {
             let (_, k) = per_species

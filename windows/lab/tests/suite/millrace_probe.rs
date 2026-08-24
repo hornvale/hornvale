@@ -108,7 +108,7 @@
 //! queries the candidate set is at most half the network). Both are printed.
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Geosphere, Seed, SphericalPolyline, math};
+use hornvale_kernel::{Geosphere, Seed, SphericalPolyline, Vertex, math};
 use hornvale_lab::{Extractor, MetricValue, TerrainView, registry};
 use hornvale_terrain::{
     WaterKind,
@@ -238,8 +238,8 @@ fn max_segment_arc(net: &ChannelNetwork) -> f64 {
 fn mean_cell_edge(geo: &Geosphere) -> f64 {
     let mut total = 0.0;
     let mut count = 0usize;
-    for id in 0..geo.cell_count() {
-        let c = CellId(id as u32);
+    for id in 0..geo.vertex_count() {
+        let c = Vertex(id as u32);
         let p = geo.position(c);
         for &n in geo.neighbors(c) {
             total += angle(p, geo.position(n));
@@ -251,13 +251,13 @@ fn mean_cell_edge(geo: &Geosphere) -> f64 {
 
 /// `E_max` — the longest cell-to-neighbour edge on the mesh.
 ///
-/// `NearestCellIndex::cover_deg` is private and `Geosphere` exposes no edge
+/// `NearestVertexIndex::cover_deg` is private and `Geosphere` exposes no edge
 /// accessor (`domains/terrain/tests/channel_properties.rs:29-33` says so), so
 /// this walks `geo.neighbors` itself.
 fn max_cell_edge(geo: &Geosphere) -> f64 {
     let mut worst = 0.0_f64;
-    for id in 0..geo.cell_count() {
-        let c = CellId(id as u32);
+    for id in 0..geo.vertex_count() {
+        let c = Vertex(id as u32);
         let p = geo.position(c);
         for &n in geo.neighbors(c) {
             worst = worst.max(angle(p, geo.position(n)));
@@ -529,9 +529,9 @@ const JOIN_PROBES: usize = 7;
 /// made the metric itself read the published accessor; the two rebuilds are
 /// not identical (one keeps the first claiming run, the other the last), so
 /// with the metric no longer rebuilding, neither does this.
-fn run_owner(net: &ChannelNetwork, cell_count: usize) -> Vec<Option<(usize, usize)>> {
-    (0..cell_count)
-        .map(|i| net.trunk_vertex(CellId(i as u32)))
+fn run_owner(net: &ChannelNetwork, vertex_count: usize) -> Vec<Option<(usize, usize)>> {
+    (0..vertex_count)
+        .map(|i| net.trunk_vertex(Vertex(i as u32)))
         .collect()
 }
 
@@ -608,7 +608,7 @@ fn walk_arm(
     net: &ChannelNetwork,
     owner: &[Option<(usize, usize)>],
     probes: &[Option<Vec<JoinProbe>>],
-    continues: &dyn Fn(CellId) -> bool,
+    continues: &dyn Fn(Vertex) -> bool,
 ) -> WalkArm {
     let mut arm = WalkArm {
         k: Vec::new(),
@@ -779,13 +779,13 @@ fn the_candidate_set_a_capped_query_would_gather() {
     print_distribution("band transects", &mut transect_k, lines);
 
     // --- population 2: the join probes, under both predicates --------------
-    let owner = run_owner(net, view.terrain.geosphere().cell_count());
+    let owner = run_owner(net, view.terrain.geosphere().vertex_count());
     let probes = join_probes(net, &owner, half);
 
     // The rule this metric shipped until Task 5: continue while the cell
     // downstream classifies `River`. Kept as an arm because it is the
     // population every `k` figure before Task 5 was measured over.
-    let superseded = |last_cell: CellId| match *globe.downhill.get(last_cell) {
+    let superseded = |last_cell: Vertex| match *globe.downhill.get(last_cell) {
         Some(next) => matches!(*globe.water_kind.get(next), WaterKind::River),
         None => false,
     };
@@ -793,7 +793,7 @@ fn the_candidate_set_a_capped_query_would_gather() {
     // predicate, which is what decides whether a run continues past a cell.
     // Task 5 asserts in-crate that this agrees with "a run carries this cell"
     // on every run's last cell, on all 64 of these worlds.
-    let shipped = |last_cell: CellId| {
+    let shipped = |last_cell: Vertex| {
         !matches!(*globe.water_kind.get(last_cell), WaterKind::Ocean)
             && globe.downhill.get(last_cell).is_some()
     };
@@ -801,11 +801,11 @@ fn the_candidate_set_a_capped_query_would_gather() {
     for (label, predicate) in [
         (
             "superseded WaterKind::River",
-            &superseded as &dyn Fn(CellId) -> bool,
+            &superseded as &dyn Fn(Vertex) -> bool,
         ),
         (
             "shipped reach predicate",
-            &shipped as &dyn Fn(CellId) -> bool,
+            &shipped as &dyn Fn(Vertex) -> bool,
         ),
     ] {
         let mut arm = walk_arm(net, &owner, &probes, predicate);

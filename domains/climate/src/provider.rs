@@ -1,6 +1,6 @@
 //! The tier-1 climate provider: temperature, moisture, and the derived biome
 //! and habitability fields over the shared Geosphere. Consumes an elevation
-//! `CellMap` and scalar stellar inputs — never a terrain or astronomy type —
+//! `VertexMap` and scalar stellar inputs — never a terrain or astronomy type —
 //! so climate stays kernel-only (spec §3). Recomputed on demand, never
 //! serialized.
 
@@ -23,8 +23,8 @@ use crate::temperature::{
 use crate::weather::{CloudType, WeatherState};
 use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
 use hornvale_kernel::{
-    CellId, CellMap, Fbm, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource,
-    Phenomenon, Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue, math,
+    Fbm, Geosphere, NearestVertexIndex, ObserverContext, PhenomenaSource, Phenomenon,
+    Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue, Vertex, VertexMap, math,
 };
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -34,11 +34,11 @@ pub struct ClimateInputs<'a> {
     /// The shared globe mesh.
     pub geosphere: &'a Geosphere,
     /// Elevation per cell, meters.
-    pub elevation: &'a CellMap<ReferenceElevation>,
+    pub elevation: &'a VertexMap<ReferenceElevation>,
     /// Sea level, meters.
     pub sea_level: ReferenceElevation,
     /// Seafloor tectonic features per cell (mapped from terrain boundaries).
-    pub seafloor: &'a CellMap<SeafloorFeature>,
+    pub seafloor: &'a VertexMap<SeafloorFeature>,
     /// Stellar insolation relative to Earth (L / d², solar units / AU²).
     pub insolation: f64,
     /// Axial tilt, degrees.
@@ -66,24 +66,24 @@ pub struct ClimateInputs<'a> {
 }
 
 /// The tier-1 climate: derived temperature/moisture/biome/habitability over
-/// the globe. Owns its mesh so every query and CellMap agree on the cell
+/// the globe. Owns its mesh so every query and VertexMap agree on the cell
 /// space. Recomputed on demand, never serialized.
 #[derive(Debug, Clone)]
 pub struct GeneratedClimate {
     geosphere: Geosphere,
     /// Latitude-bucketed cell index, built once at construction so `phenomena`
     /// resolves an observer's cell without rebuilding it (O(cells)) per call.
-    nearest_cell: NearestCellIndex,
-    elevation: CellMap<ReferenceElevation>,
+    nearest_vertex: NearestVertexIndex,
+    elevation: VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    mean_temp: CellMap<Temperature>,
-    moisture: CellMap<f64>,
-    diurnal_amp: CellMap<f64>,
-    precip: CellMap<Precipitation>,
-    snow_fraction: CellMap<f64>,
-    precip_regime: CellMap<PrecipRegime>,
-    cloud_fraction: CellMap<f64>,
-    weather_propensity: CellMap<f64>,
+    mean_temp: VertexMap<Temperature>,
+    moisture: VertexMap<f64>,
+    diurnal_amp: VertexMap<f64>,
+    precip: VertexMap<Precipitation>,
+    snow_fraction: VertexMap<f64>,
+    precip_regime: VertexMap<PrecipRegime>,
+    cloud_fraction: VertexMap<f64>,
+    weather_propensity: VertexMap<f64>,
     /// The weather-phase Fbm sampler, built once from the world's derived
     /// weather seed (the derive-once pattern) rather than reconstructed on
     /// every `weather_at`/`cloud_type_at` call — see `weather::weather_fbm`'s
@@ -101,10 +101,10 @@ pub struct GeneratedClimate {
     /// `Spinning` branch; sized to the same `days` count that function uses,
     /// so every index `0..days` it reads is in bounds.
     seasonal_sine: Vec<f64>,
-    current: CellMap<[f64; 3]>,
-    biome: CellMap<Biome>,
-    biome_expr: CellMap<BiomeExpr>,
-    habitability: CellMap<bool>,
+    current: VertexMap<[f64; 3]>,
+    biome: VertexMap<Biome>,
+    biome_expr: VertexMap<BiomeExpr>,
+    habitability: VertexMap<bool>,
     band_count: Option<u32>,
     obliquity_deg: f64,
     year_length_std: f64,
@@ -118,9 +118,9 @@ pub struct GeneratedClimate {
 /// mean direction to its land neighbors).
 fn is_upwelling(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    cell: CellId,
+    cell: Vertex,
     bands: Option<u32>,
 ) -> bool {
     if *elevation.get(cell) >= sea_level {
@@ -178,8 +178,8 @@ fn seasonal_sine_table(days: usize, year_length: f64, year_phase_offset: f64) ->
 /// (tidally locked: no meaningful prevailing-wind direction) yield `0.0`.
 fn local_uplift_m(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
-    cell: CellId,
+    elevation: &VertexMap<ReferenceElevation>,
+    cell: Vertex,
     bands: Option<u32>,
 ) -> f64 {
     let Some(bands) = bands else { return 0.0 };
@@ -206,9 +206,9 @@ impl GeneratedClimate {
         let moisture = moisture_field(geo, inputs.elevation, inputs.sea_level, &inputs.regime);
         let diurnal_amp =
             diurnal_amplitude_field(geo, inputs.elevation, inputs.sea_level, &moisture);
-        let precip = CellMap::from_fn(geo, |cell| precip_mm_yr(*moisture.get(cell)));
-        let snow_frac = CellMap::from_fn(geo, |cell| snow_fraction(mean_temp.get(cell).get()));
-        let precip_regime_field = CellMap::from_fn(geo, |cell| {
+        let precip = VertexMap::from_fn(geo, |cell| precip_mm_yr(*moisture.get(cell)));
+        let snow_frac = VertexMap::from_fn(geo, |cell| snow_fraction(mean_temp.get(cell).get()));
+        let precip_regime_field = VertexMap::from_fn(geo, |cell| {
             let band = band_count
                 .map(|bands| band_index(geo.coord(cell).latitude, bands))
                 .unwrap_or(0);
@@ -216,7 +216,7 @@ impl GeneratedClimate {
             let hemisphere_sign = geo.coord(cell).latitude.signum();
             precip_regime(band, cont, hemisphere_sign)
         });
-        let cloud_frac = CellMap::from_fn(geo, |cell| {
+        let cloud_frac = VertexMap::from_fn(geo, |cell| {
             let band = band_count
                 .map(|bands| band_index(geo.coord(cell).latitude, bands))
                 .unwrap_or(0);
@@ -225,8 +225,8 @@ impl GeneratedClimate {
             cloud_fraction(*moisture.get(cell), uplift, rising)
         });
         let sea_level = inputs.sea_level;
-        let is_ocean = |cell: CellId| *inputs.elevation.get(cell) < sea_level;
-        let weather_propensity = CellMap::from_fn(geo, |cell| {
+        let is_ocean = |cell: Vertex| *inputs.elevation.get(cell) < sea_level;
+        let weather_propensity = VertexMap::from_fn(geo, |cell| {
             let band = band_count
                 .map(|bands| band_index(geo.coord(cell).latitude, bands))
                 .unwrap_or(0);
@@ -244,7 +244,7 @@ impl GeneratedClimate {
         // The faceted expression is the truth; the legacy `Biome` map is
         // derived from it in the same pass, so the two views cannot diverge and
         // neither costs an extra classification.
-        let biome_expr = CellMap::from_fn(geo, |cell| {
+        let biome_expr = VertexMap::from_fn(geo, |cell| {
             let temp = *mean_temp.get(cell);
             let upwell = is_upwelling(geo, inputs.elevation, inputs.sea_level, cell, band_count);
             biome::classify_expr(
@@ -258,7 +258,7 @@ impl GeneratedClimate {
                 upwell,
             )
         });
-        let biome = CellMap::from_fn(geo, |cell| biome_expr.get(cell).biome());
+        let biome = VertexMap::from_fn(geo, |cell| biome_expr.get(cell).biome());
         let habitability = habitability::habitability_map(
             geo,
             inputs.elevation,
@@ -268,7 +268,7 @@ impl GeneratedClimate {
         );
         GeneratedClimate {
             geosphere: geo.clone(),
-            nearest_cell: NearestCellIndex::new(geo),
+            nearest_vertex: NearestVertexIndex::new(geo),
             elevation: inputs.elevation.clone(),
             sea_level: inputs.sea_level,
             mean_temp,
@@ -315,12 +315,12 @@ impl GeneratedClimate {
         matches!(self.regime, RotationRegime::Locked)
     }
     /// Annual-mean temperature at a cell, °C.
-    pub fn mean_temperature_at(&self, cell: CellId) -> Temperature {
+    pub fn mean_temperature_at(&self, cell: Vertex) -> Temperature {
         *self.mean_temp.get(cell)
     }
     /// Temperature at a cell on a given day, °C (mean plus the seasonal term).
     /// type-audit: pending(wave-2: day)
-    pub fn temperature_at(&self, cell: CellId, day: f64) -> Temperature {
+    pub fn temperature_at(&self, cell: Vertex, day: f64) -> Temperature {
         temperature_at(
             &self.mean_temp,
             &self.diurnal_amp,
@@ -376,7 +376,7 @@ impl GeneratedClimate {
     /// which this factors: `temperature_at(cell, day) == mean + swing ·
     /// sin(τ · frac(day / year_length_std))`.
     /// type-audit: bare-ok(diagnostic-value: return)
-    pub fn seasonal_swing_at(&self, cell: CellId) -> f64 {
+    pub fn seasonal_swing_at(&self, cell: Vertex) -> f64 {
         match self.regime {
             RotationRegime::Locked => 0.0,
             RotationRegime::Spinning { .. } => {
@@ -398,24 +398,24 @@ impl GeneratedClimate {
 
     /// Moisture at a cell, `[0, 1]`.
     /// type-audit: bare-ok(ratio)
-    pub fn moisture_at(&self, cell: CellId) -> f64 {
+    pub fn moisture_at(&self, cell: Vertex) -> f64 {
         *self.moisture.get(cell)
     }
     /// Annual precipitation at a cell, mm/yr — the moisture field mapped
     /// into an Earth-ranged total (see [`crate::precipitation::precip_mm_yr`]).
-    pub fn precip_at(&self, cell: CellId) -> Precipitation {
+    pub fn precip_at(&self, cell: Vertex) -> Precipitation {
         *self.precip.get(cell)
     }
     /// The fraction of precipitation falling as snow at a cell, `[0, 1]`,
     /// derived from annual-mean temperature (see
     /// [`crate::precipitation::snow_fraction`]).
     /// type-audit: bare-ok(ratio)
-    pub fn snow_fraction_at(&self, cell: CellId) -> f64 {
+    pub fn snow_fraction_at(&self, cell: Vertex) -> f64 {
         *self.snow_fraction.get(cell)
     }
     /// The seasonal precipitation regime at a cell (see
     /// [`crate::precipitation::precip_regime`]).
-    pub fn regime_at(&self, cell: CellId) -> PrecipRegime {
+    pub fn regime_at(&self, cell: Vertex) -> PrecipRegime {
         *self.precip_regime.get(cell)
     }
     /// Diagnostic cloud fraction at a cell, `[0, 1]` (see
@@ -423,13 +423,13 @@ impl GeneratedClimate {
     /// insolation or temperature term reads this back; it is a readable
     /// field only.
     /// type-audit: bare-ok(ratio)
-    pub fn cloud_fraction_at(&self, cell: CellId) -> f64 {
+    pub fn cloud_fraction_at(&self, cell: Vertex) -> f64 {
         *self.cloud_fraction.get(cell)
     }
     /// The synoptic weather state at a cell on a day (The Firmament) — sampled,
     /// never integrated (the Lorenz guard-rail). Level 0: an observation read.
     /// type-audit: pending(wave-2: day)
-    pub fn weather_at(&self, cell: CellId, day: f64) -> WeatherState {
+    pub fn weather_at(&self, cell: Vertex, day: f64) -> WeatherState {
         let coord = self.geosphere.coord(cell);
         let phase = crate::weather::weather_phase_with_fbm(
             &self.weather_fbm,
@@ -442,7 +442,7 @@ impl GeneratedClimate {
     /// The cloud type worn at a cell on a day — the projection of
     /// [`Self::weather_at`].
     /// type-audit: pending(wave-2: day)
-    pub fn cloud_type_at(&self, cell: CellId, day: f64) -> CloudType {
+    pub fn cloud_type_at(&self, cell: Vertex, day: f64) -> CloudType {
         let coord = self.geosphere.coord(cell);
         let prop = *self.weather_propensity.get(cell);
         let phase = crate::weather::weather_phase_with_fbm(
@@ -457,7 +457,7 @@ impl GeneratedClimate {
     }
     /// The climatological storm propensity at a cell, `[0,1]` (the slow prior).
     /// type-audit: bare-ok(ratio: return)
-    pub fn storm_propensity_at(&self, cell: CellId) -> f64 {
+    pub fn storm_propensity_at(&self, cell: Vertex) -> f64 {
         *self.weather_propensity.get(cell)
     }
     /// The precomputed diurnal half-range amplitude at a cell, °C: the
@@ -466,28 +466,28 @@ impl GeneratedClimate {
     /// zero when locked) — the amplitude is always computed, but only the
     /// `Spinning` branch of `temperature_at` ever applies it.
     /// type-audit: bare-ok(diagnostic-value: return)
-    pub fn diurnal_amp_at(&self, cell: CellId) -> f64 {
+    pub fn diurnal_amp_at(&self, cell: Vertex) -> f64 {
         *self.diurnal_amp.get(cell)
     }
     /// The precomputed ocean surface-current vector at a cell (a unit-sphere
     /// tangent vector, zero over land and zero everywhere when locked — see
     /// [`crate::currents::ocean_current`]).
     /// type-audit: bare-ok(diagnostic-value: return)
-    pub fn current_at(&self, cell: CellId) -> [f64; 3] {
+    pub fn current_at(&self, cell: Vertex) -> [f64; 3] {
         *self.current.get(cell)
     }
     /// The biome at a cell.
-    pub fn biome_at(&self, cell: CellId) -> Biome {
+    pub fn biome_at(&self, cell: Vertex) -> Biome {
         *self.biome.get(cell)
     }
     /// The full biome field (a clone of the derived map).
-    pub fn biome_map(&self) -> CellMap<Biome> {
+    pub fn biome_map(&self) -> VertexMap<Biome> {
         self.biome.clone()
     }
     /// The faceted biome at a cell — realm, formation, and stratum (The
     /// Stratum §3). [`GeneratedClimate::biome_at`] is this projected through
     /// [`BiomeExpr::biome`], so the two always agree.
-    pub fn biome_expr_at(&self, cell: CellId) -> BiomeExpr {
+    pub fn biome_expr_at(&self, cell: Vertex) -> BiomeExpr {
         *self.biome_expr.get(cell)
     }
     /// Every stratum present at a cell, shallowest first — the cell's
@@ -500,7 +500,7 @@ impl GeneratedClimate {
     /// **Direction:** this answers *which strata exist here*, never *which are
     /// reachable*. A sealed void exists and is unreachable; reachability is
     /// [`crate::facets::Access`]'s question, not this one.
-    pub fn strata_at(&self, cell: CellId) -> Vec<Stratum> {
+    pub fn strata_at(&self, cell: Vertex) -> Vec<Stratum> {
         let e = self.biome_expr_at(cell);
         let ladder = e.realm.strata();
         let floor = ladder
@@ -520,7 +520,7 @@ impl GeneratedClimate {
     /// the reading [`crate::biome::classify_marine_expr`] already argues for,
     /// where a vent is a community *at* a depth rather than one that displaced
     /// a depth.
-    pub fn biome_expr_at_stratum(&self, cell: CellId, stratum: Stratum) -> Option<BiomeExpr> {
+    pub fn biome_expr_at_stratum(&self, cell: Vertex, stratum: Stratum) -> Option<BiomeExpr> {
         let e = self.biome_expr_at(cell);
         let ladder = e.realm.strata();
         let floor = ladder
@@ -540,7 +540,7 @@ impl GeneratedClimate {
     }
     /// The per-cell habitability mask.
     /// type-audit: bare-ok(flag)
-    pub fn habitability(&self) -> &CellMap<bool> {
+    pub fn habitability(&self) -> &VertexMap<bool> {
         &self.habitability
     }
     /// The fraction of cells that are habitable.
@@ -569,7 +569,7 @@ impl GeneratedClimate {
     /// `Locked` worlds have no diurnal term at all (`temperature_at`'s
     /// `Locked` branch never reads the diurnal amplitude), so `temperature_at`
     /// is already the correct per-day mean there.
-    pub fn year_of_day_contexts(&self, cell: CellId) -> Vec<DayContext> {
+    pub fn year_of_day_contexts(&self, cell: Vertex) -> Vec<DayContext> {
         let days = self.year_length_std().max(1.0).round() as usize;
         let states: Vec<WeatherState> =
             (0..days).map(|d| self.weather_at(cell, d as f64)).collect();
@@ -607,7 +607,7 @@ impl GeneratedClimate {
     /// makes every substrate sink nonlinear. Not a substrate itself: it has
     /// no integral.
     /// type-audit: bare-ok(diagnostic-value: day), bare-ok(flag: return)
-    pub fn is_frozen_at(&self, cell: CellId, day: f64) -> bool {
+    pub fn is_frozen_at(&self, cell: Vertex, day: f64) -> bool {
         self.temperature_at(cell, day).get() <= 0.0
     }
 }
@@ -680,7 +680,7 @@ impl PhenomenaSource for GeneratedClimate {
             return out;
         };
         let cell = self
-            .nearest_cell
+            .nearest_vertex
             .nearest(&self.geosphere, coord.latitude, coord.longitude);
 
         // Felt temperature: deviation from the temperate baseline. Warm past
@@ -783,7 +783,7 @@ pub fn summarize(climate: &GeneratedClimate) -> ClimateSummary {
 /// `ClimateInputs { .. }` drifts from this one.
 #[cfg(test)]
 pub mod test_support {
-    use super::{CellMap, ClimateInputs, GeneratedClimate, ReferenceElevation, Seed};
+    use super::{ClimateInputs, GeneratedClimate, ReferenceElevation, Seed, VertexMap};
     use crate::biome::SeafloorFeature;
     use crate::circulation::RotationRegime;
     use hornvale_kernel::Geosphere;
@@ -793,8 +793,8 @@ pub mod test_support {
     /// and rotation regime the caller supplies.
     pub fn inputs<'a>(
         geo: &'a Geosphere,
-        elev: &'a CellMap<ReferenceElevation>,
-        sea: &'a CellMap<SeafloorFeature>,
+        elev: &'a VertexMap<ReferenceElevation>,
+        sea: &'a VertexMap<SeafloorFeature>,
         regime: RotationRegime,
     ) -> ClimateInputs<'a> {
         ClimateInputs {
@@ -834,7 +834,7 @@ pub mod test_support {
     /// rather than removed.
     pub fn sample_world() -> (Geosphere, GeneratedClimate) {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |c| {
+        let elev = VertexMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[2] > 0.0 {
                 300.0
             } else {
@@ -842,7 +842,7 @@ pub mod test_support {
             };
             ReferenceElevation::new(m).unwrap()
         });
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let climate = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
         (geo, climate)
@@ -858,7 +858,7 @@ mod tests {
     #[test]
     fn provider_answers_every_query_and_is_deterministic() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |c| {
+        let elev = VertexMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[2] > 0.0 {
                 300.0
             } else {
@@ -866,7 +866,7 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         });
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let a = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
         let b = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
@@ -874,7 +874,7 @@ mod tests {
         assert_eq!(a.biome_map(), b.biome_map());
         assert!((0.0..=1.0).contains(&a.habitable_fraction()));
         // biome_map and biome_at agree.
-        for c in geo.cells().take(50) {
+        for c in geo.vertices().take(50) {
             assert_eq!(*a.biome_map().get(c), a.biome_at(c));
         }
     }
@@ -882,8 +882,8 @@ mod tests {
     #[test]
     fn locked_provider_has_no_band_count() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let elev = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let c = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, RotationRegime::Locked));
         assert_eq!(c.band_count(), None);
     }
@@ -892,8 +892,8 @@ mod tests {
     fn documented_evaluator_restates_temperature_at_exactly() {
         use hornvale_kernel::math;
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let elev = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let RotationRegime::Spinning { day_std } = regime else {
             unreachable!("this test builds a spinning regime")
@@ -903,7 +903,7 @@ mod tests {
         assert!(period > 0.0);
         // The documented client evaluator, restated in Rust with the SAME libm sin
         // and the SAME frac. Must equal temperature_at to the last bit.
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let mean = climate.mean_temperature_at(cell).get();
             let swing = climate.seasonal_swing_at(cell);
             let diurnal_amp = climate.diurnal_amp_at(cell);
@@ -934,11 +934,11 @@ mod tests {
     #[test]
     fn seasonal_swing_is_zero_when_locked() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let elev = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let climate =
             GeneratedClimate::generate(&inputs(&geo, &elev, &sea, RotationRegime::Locked));
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             assert_eq!(climate.seasonal_swing_at(cell), 0.0);
         }
     }
@@ -946,7 +946,7 @@ mod tests {
     #[test]
     fn ocean_cells_map_to_marine_biomes() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |c| {
+        let elev = VertexMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[2] > 0.0 {
                 300.0
             } else {
@@ -954,14 +954,14 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         });
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let c = GeneratedClimate::generate(&inputs(
             &geo,
             &elev,
             &sea,
             RotationRegime::Spinning { day_std: 1.0 },
         ));
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let marine = elev.get(cell).get() < 0.0;
             assert_eq!(
                 c.biome_at(cell).is_marine(),
@@ -977,8 +977,8 @@ mod tests {
         // Build a climate with a known offset and confirm it is retained for
         // the time-varying temperature phase (regression guard for the plumbing).
         let geo = Geosphere::new(2);
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
-        let seafloor = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let seafloor = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let climate = GeneratedClimate::generate(&ClimateInputs {
             geosphere: &geo,
             elevation: &elevation,
@@ -1003,7 +1003,7 @@ mod tests {
     /// mean temperatures and moistures — enough to exercise every emitter arm.
     fn varied_climate() -> GeneratedClimate {
         let geo = Geosphere::new(5);
-        let elev = CellMap::from_fn(&geo, |c| {
+        let elev = VertexMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[2] > 0.0 {
                 200.0
             } else {
@@ -1011,7 +1011,7 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         });
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         GeneratedClimate::generate(&ClimateInputs {
             insolation: 1.6,
             ..inputs(&geo, &elev, &sea, RotationRegime::Spinning { day_std: 1.0 })
@@ -1029,7 +1029,7 @@ mod tests {
     #[test]
     fn emitter_is_pure() {
         let climate = varied_climate();
-        let coord = climate.geosphere().coord(CellId(7));
+        let coord = climate.geosphere().coord(Vertex(7));
         assert_eq!(observe_at(&climate, coord), observe_at(&climate, coord));
     }
 
@@ -1053,7 +1053,7 @@ mod tests {
             WorldTime::new(3.0).expect("a day value is finite"),
         ));
         assert_eq!(blind, expected, "ambient is byte-identical to tier 0");
-        for cell in climate.geosphere().cells() {
+        for cell in climate.geosphere().vertices() {
             let out = observe_at(&climate, climate.geosphere().coord(cell));
             assert!(
                 out.iter().any(|p| p.kind == AMBIENT),
@@ -1068,7 +1068,7 @@ mod tests {
         // with the documented EMISSION rule computed from the same fields — a
         // strong correctness+purity check without forcing a specific extreme.
         let climate = varied_climate();
-        for cell in climate.geosphere().cells() {
+        for cell in climate.geosphere().vertices() {
             let out = observe_at(&climate, climate.geosphere().coord(cell));
             let mean = climate.mean_temperature_at(cell).get();
             let deviation = mean - TEMPERATE_BASELINE_C;
@@ -1108,7 +1108,7 @@ mod tests {
         // floor (crossing 0.25 needs a genuinely brutal deviation).
         let climate = varied_climate();
         let mut saw_felt_subfloor = false;
-        for cell in climate.geosphere().cells() {
+        for cell in climate.geosphere().vertices() {
             let out = observe_at(&climate, climate.geosphere().coord(cell));
             let deviation = climate.mean_temperature_at(cell).get() - TEMPERATE_BASELINE_C;
             let felt = out.iter().find(|p| p.kind == HEAT || p.kind == COLD);
@@ -1173,7 +1173,7 @@ mod tests {
     fn coastal_current_does_not_flow_into_land() {
         let geo = Geosphere::new(5);
         let sea_level = ReferenceElevation::new(0.0).unwrap();
-        let elev = CellMap::from_fn(&geo, |c| {
+        let elev = VertexMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[2] > 0.0 {
                 300.0
             } else {
@@ -1181,13 +1181,13 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         });
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let sea = VertexMap::from_fn(&geo, |_| SeafloorFeature::None);
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let climate = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
-        let is_ocean = |c: CellId| *elev.get(c) < sea_level;
+        let is_ocean = |c: Vertex| *elev.get(c) < sea_level;
 
         let mut checked = false;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if !is_ocean(cell) {
                 continue;
             }
@@ -1249,7 +1249,7 @@ mod tests {
     #[test]
     fn weather_is_defined_and_deterministic_over_the_globe() {
         let climate = varied_climate();
-        for cell in climate.geosphere().cells().take(64) {
+        for cell in climate.geosphere().vertices().take(64) {
             let w1 = climate.weather_at(cell, 100.0);
             let w2 = climate.weather_at(cell, 100.0);
             assert_eq!(w1, w2);
@@ -1268,7 +1268,7 @@ mod tests {
     #[test]
     fn the_expression_and_the_legacy_biome_agree_at_every_cell() {
         let c = sample_climate();
-        for cell in c.geosphere().cells() {
+        for cell in c.geosphere().vertices() {
             assert_eq!(
                 c.biome_expr_at(cell).biome(),
                 c.biome_at(cell),
@@ -1284,7 +1284,7 @@ mod tests {
         // Quantified over CELL EXPRESSIONS (`biome_expr_at`), which stay
         // OVERWORLD/WATERWORLD — a cell has no notion of an underworld
         // beneath it. Not a claim about strata.
-        for cell in c.geosphere().cells() {
+        for cell in c.geosphere().vertices() {
             let e = c.biome_expr_at(cell);
             assert_eq!(
                 e.realm == Realm::WATERWORLD,

@@ -197,9 +197,9 @@ pub fn run_simulation_with_locale(
     npcs: &[Body],
     ctx: &LocaleContext,
     calendar: Option<&hornvale_astronomy::Calendar>,
-    predator: Option<&hornvale_kernel::CellMap<f64>>,
-    prey: Option<&hornvale_kernel::CellMap<f64>>,
-    built: Option<&std::collections::BTreeSet<hornvale_kernel::RoomId>>,
+    predator: Option<&hornvale_kernel::VertexMap<f64>>,
+    prey: Option<&hornvale_kernel::VertexMap<f64>>,
+    built: Option<&std::collections::BTreeSet<hornvale_kernel::FacetId>>,
     ticks: usize,
     day_length_std: Option<f64>,
 ) -> Vec<Vec<Affect>> {

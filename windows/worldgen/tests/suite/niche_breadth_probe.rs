@@ -112,10 +112,10 @@ fn report(seed_value: u64) {
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
     println!("== seed {seed_value} ==");
-    println!("land cells: {} of {}", land.len(), geo.cell_count());
+    println!("land cells: {} of {}", land.len(), geo.vertex_count());
 
     let biosphere: Vec<&hornvale_species::BiosphereTraits> = SETTLERS
         .iter()

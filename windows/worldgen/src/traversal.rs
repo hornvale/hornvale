@@ -10,7 +10,7 @@
 //! field.
 
 use hornvale_climate::Biome;
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{Geosphere, ReferenceElevation, VertexMap};
 
 /// The flat-ground cost paid to enter any passable (non-ocean) cell with
 /// zero slope to every neighbor -- the floor every other passable cell's
@@ -35,7 +35,7 @@ const SLOPE_SCALE: f64 = 1.0;
 /// scaled by [`SLOPE_SCALE`] and truncated to an integer), rising steeply
 /// for peaks and escarpments. Ocean cells (`biome`'s marine classification,
 /// `Biome::is_marine`) are impassable to land travel: `u64::MAX`, entered
-/// nowhere and skipped by `hornvale_topology::route::CellRoute` rather than
+/// nowhere and skipped by `hornvale_topology::route::VertexRoute` rather than
 /// summed as an ordinary (very expensive) step.
 ///
 /// Reuses the already-committed `elevation` and `biome` fields -- this draws
@@ -48,10 +48,10 @@ const SLOPE_SCALE: f64 = 1.0;
 /// type-audit: bare-ok(count: return)
 pub fn traversal_cost(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
-    biome: &CellMap<Biome>,
-) -> CellMap<u64> {
-    CellMap::from_fn(geo, |cell| {
+    elevation: &VertexMap<ReferenceElevation>,
+    biome: &VertexMap<Biome>,
+) -> VertexMap<u64> {
+    VertexMap::from_fn(geo, |cell| {
         if biome.get(cell).is_marine() {
             return u64::MAX;
         }
@@ -78,10 +78,10 @@ pub fn traversal_cost(
 /// type-audit: bare-ok(count: return)
 pub fn traversal_cost_at(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-) -> CellMap<u64> {
-    CellMap::from_fn(geo, |cell| {
+) -> VertexMap<u64> {
+    VertexMap::from_fn(geo, |cell| {
         let here = elevation.get(cell).get();
         if here < sea_level.get() {
             return u64::MAX;
@@ -101,7 +101,7 @@ pub fn traversal_cost_at(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::CellId;
+    use hornvale_kernel::Vertex;
 
     fn e(m: f64) -> ReferenceElevation {
         ReferenceElevation::new(m).unwrap()
@@ -110,10 +110,10 @@ mod tests {
     #[test]
     fn zero_slope_yields_exactly_the_base_cost() {
         let geo = Geosphere::new(0);
-        let elevation = CellMap::from_fn(&geo, |_| e(100.0));
-        let biome = CellMap::from_fn(&geo, |_| Biome::TemperateGrassland);
+        let elevation = VertexMap::from_fn(&geo, |_| e(100.0));
+        let biome = VertexMap::from_fn(&geo, |_| Biome::TemperateGrassland);
         let cost = traversal_cost(&geo, &elevation, &biome);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             assert_eq!(*cost.get(cell), BASE_COST);
         }
     }
@@ -121,14 +121,14 @@ mod tests {
     #[test]
     fn every_marine_biome_is_impassable() {
         let geo = Geosphere::new(0);
-        let elevation = CellMap::from_fn(&geo, |_| e(-200.0));
+        let elevation = VertexMap::from_fn(&geo, |_| e(-200.0));
         for &marine in hornvale_climate::biome::ALL
             .iter()
             .filter(|b| b.is_marine())
         {
-            let biome = CellMap::from_fn(&geo, |_| marine);
+            let biome = VertexMap::from_fn(&geo, |_| marine);
             let cost = traversal_cost(&geo, &elevation, &biome);
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 assert_eq!(*cost.get(cell), u64::MAX, "{marine:?} must be impassable");
             }
         }
@@ -145,9 +145,9 @@ mod tests {
         // the flat region is built far enough from the peak to be unaffected
         // by it.
         let geo = Geosphere::new(0);
-        let peak = CellId(0);
-        let elevation = CellMap::from_fn(&geo, |c| if c == peak { e(1000.0) } else { e(0.0) });
-        let biome = CellMap::from_fn(&geo, |_| Biome::TemperateGrassland);
+        let peak = Vertex(0);
+        let elevation = VertexMap::from_fn(&geo, |c| if c == peak { e(1000.0) } else { e(0.0) });
+        let biome = VertexMap::from_fn(&geo, |_| Biome::TemperateGrassland);
         let cost = traversal_cost(&geo, &elevation, &biome);
         assert!(*cost.get(peak) > BASE_COST);
     }

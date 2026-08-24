@@ -32,7 +32,7 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{Band, CellId, Seed, Stream};
+use hornvale_kernel::{Band, Seed, Stream, Vertex};
 use hornvale_terrain::{
     Cave, GeneratedTerrain, GeothermalGradient, Horizon, StratigraphicColumn, delta_t_range_of,
     rung_at_depth,
@@ -153,7 +153,7 @@ pub const LEVELS_PER_BRANCH_CEILING: u8 = 20;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChamberAddr {
     /// Which surface cell this chamber lies beneath.
-    pub cell: CellId,
+    pub cell: Vertex,
     /// Which branch of that cave system this chamber sits on
     /// (`0..BRANCHES_PER_SYSTEM`) — a column persisting downward through the
     /// bands, and the thing a character and a barrier state attach to (spec
@@ -214,7 +214,7 @@ impl ChamberAddr {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RunAddr {
     /// Which surface cell this run lies beneath.
-    pub cell: CellId,
+    pub cell: Vertex,
     /// Which branch of that cave system this run sits on
     /// (`0..BRANCHES_PER_SYSTEM`).
     pub branch: u8,
@@ -659,7 +659,7 @@ impl DescentRole {
 /// my parent" keyed at the Deeps; the Shallows↔Deeps pair therefore reads
 /// one key at each end rather than two keys at the same end. That keeps a
 /// key naming a band the branch actually occupies.
-fn descent_key(cell: CellId, branch: u8, band: Band, role: DescentRole) -> String {
+fn descent_key(cell: Vertex, branch: u8, band: Band, role: DescentRole) -> String {
     format!("{}/{branch}/{}/{}", cell.0, rung_name(band), role.word())
 }
 
@@ -673,7 +673,7 @@ fn descent_key(cell: CellId, branch: u8, band: Band, role: DescentRole) -> Strin
 /// pair before reaching here, so no draw is ever taken over an empty range.
 fn descent_pick(
     seed: Seed,
-    cell: CellId,
+    cell: Vertex,
     branch: u8,
     band: Band,
     role: DescentRole,
@@ -704,7 +704,7 @@ fn descent_pick(
 /// Empty for [`Band::Surface`] (not a habitation band, so it has no branches
 /// to connect), for [`Band::Nadir`] (nothing below it on the ladder), and
 /// for a zero width on either side (no pair of branches to join).
-fn descent_edges(seed: Seed, cell: CellId, band: Band, upper: u8, lower: u8) -> Vec<(u8, u8)> {
+fn descent_edges(seed: Seed, cell: Vertex, band: Band, upper: u8, lower: u8) -> Vec<(u8, u8)> {
     if band == Band::Surface || upper == 0 || lower == 0 {
         return Vec::new();
     }
@@ -755,7 +755,7 @@ fn descent_edges(seed: Seed, cell: CellId, band: Band, upper: u8, lower: u8) -> 
 /// is a fact about `(cell, band, branch)` alone, independent of what has
 /// been asked before it.
 /// type-audit: bare-ok(index: branch), bare-ok(index: return)
-pub fn descents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
+pub fn descents_from(seed: Seed, cell: Vertex, band: Band, branch: u8) -> Vec<u8> {
     if band == Band::Surface || branch >= BRANCHES_PER_SYSTEM {
         return Vec::new();
     }
@@ -796,7 +796,7 @@ pub fn descents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8
 /// test that wants the parent set can re-derive it from the public
 /// [`descents_from`] over the band above — which is a genuinely independent
 /// check rather than a re-invocation of the code under test.
-fn ascents_from(seed: Seed, cell: CellId, band: Band, branch: u8) -> Vec<u8> {
+fn ascents_from(seed: Seed, cell: Vertex, band: Band, branch: u8) -> Vec<u8> {
     if band == Band::Surface || branch >= BRANCHES_PER_SYSTEM {
         return Vec::new();
     }
@@ -892,14 +892,14 @@ pub struct EntranceMouth {
 /// which is exactly the case an epoch exists to record. See
 /// [`crate::streams::ENTRANCE_COUNT`].
 /// type-audit: bare-ok(count: return)
-pub fn entrance_count(seed: Seed, cell: CellId) -> u8 {
+pub fn entrance_count(seed: Seed, cell: Vertex) -> u8 {
     aperture_count_at(seed, cell, top_band_width(seed, cell))
 }
 
 /// The top band's drawn branch width — the ONE read [`entrance_count`] and
 /// [`entrance_mouth`] share, so the two can never disagree about how many
 /// branches there are to cover.
-fn top_band_width(seed: Seed, cell: CellId) -> u8 {
+fn top_band_width(seed: Seed, cell: Vertex) -> u8 {
     crate::character::branch_count_of(seed, cell, top_band())
 }
 
@@ -909,7 +909,7 @@ fn top_band_width(seed: Seed, cell: CellId) -> u8 {
 /// reading them. A guarantee constructed over every width the lattice admits
 /// is a guarantee; the same guarantee found absent on a seed panel is
 /// evidence about that panel (spec §6).
-fn aperture_count_at(seed: Seed, cell: CellId, width: u8) -> u8 {
+fn aperture_count_at(seed: Seed, cell: Vertex, width: u8) -> u8 {
     let r = seed
         .derive(crate::streams::ENTRANCE_COUNT)
         .derive(StreamLabel::dynamic(&format!("{}", cell.0)))
@@ -989,7 +989,7 @@ fn aperture_count_at(seed: Seed, cell: CellId, width: u8) -> u8 {
 /// branches, so both the key and the meaning moved. Every door in every
 /// world moves with them.
 /// type-audit: bare-ok(index: entrance)
-pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
+pub fn entrance_mouth(seed: Seed, cell: Vertex, entrance: u8) -> EntranceMouth {
     EntranceMouth {
         branch: aperture_branch_at(seed, cell, entrance, top_band_width(seed, cell)),
         band: rung_rank(top_band()).expect("a habitation band always has a rank"),
@@ -1012,7 +1012,7 @@ pub fn entrance_mouth(seed: Seed, cell: CellId, entrance: u8) -> EntranceMouth {
 /// * `width..` are the FREE apertures, each drawing a side branch on its
 ///   own, independently and possibly onto a branch another door already
 ///   opens on.
-fn aperture_branch_at(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+fn aperture_branch_at(seed: Seed, cell: Vertex, entrance: u8, width: u8) -> u8 {
     if entrance == 0 || width <= 1 {
         // Entrance 0 is the main line's head by definition; and where no
         // side branch exists to open into, every other door joins it — a
@@ -1050,7 +1050,7 @@ fn aperture_branch_at(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
 /// The pool cannot run dry: it starts at `width - 1` branches and the caller
 /// guarantees `entrance < width`, so step `e` still has `width - e >= 1`
 /// left. `expect` states that rather than masking it.
-fn shared_out_branch(seed: Seed, cell: CellId, entrance: u8, width: u8) -> u8 {
+fn shared_out_branch(seed: Seed, cell: Vertex, entrance: u8, width: u8) -> u8 {
     debug_assert!(
         entrance >= 1 && entrance < width,
         "shared_out_branch is for the guaranteed apertures only"
@@ -1110,7 +1110,7 @@ impl ApertureRole {
 /// a given index asks one or the other depends on the top band's width, so
 /// one key answering both would mean one stream serving two questions at two
 /// widths. Spelling the role out makes them different keys instead.
-fn mouth_key(cell: CellId, entrance: u8, role: ApertureRole) -> String {
+fn mouth_key(cell: Vertex, entrance: u8, role: ApertureRole) -> String {
     format!("{}/{entrance}/{}", cell.0, role.word())
 }
 
@@ -1706,7 +1706,7 @@ pub fn junctions_at(seed: Seed, terrain: &GeneratedTerrain, addr: ChamberAddr) -
         joined.push(there);
     }
     // Deterministic answer order regardless of the geosphere's neighbour
-    // ordering; `CellId` is an integer newtype, so `sort_by_key` is total.
+    // ordering; `Vertex` is an integer newtype, so `sort_by_key` is total.
     joined.sort_by_key(|a| a.cell);
     joined
 }
@@ -1745,7 +1745,7 @@ mod tests {
     fn the_chamber_key_spelling_is_pinned() {
         assert_eq!(
             chamber_key(ChamberAddr {
-                cell: CellId(9),
+                cell: Vertex(9),
                 branch: 3,
                 band: Band::Deeps,
                 level: 0,
@@ -1754,7 +1754,7 @@ mod tests {
         );
         assert_eq!(
             chamber_key(ChamberAddr {
-                cell: CellId(0),
+                cell: Vertex(0),
                 branch: 0,
                 band: Band::Undercroft,
                 level: 0,
@@ -1765,7 +1765,7 @@ mod tests {
         // rather than only its zero value.
         assert_eq!(
             chamber_key(ChamberAddr {
-                cell: CellId(9),
+                cell: Vertex(9),
                 branch: 3,
                 band: Band::Deeps,
                 level: 7,
@@ -1781,7 +1781,7 @@ mod tests {
     #[test]
     fn the_chamber_key_drops_the_entrance_and_names_the_band() {
         let addr = ChamberAddr {
-            cell: CellId(31942),
+            cell: Vertex(31942),
             band: Band::Deeps,
             branch: 2,
             level: 3,
@@ -1799,7 +1799,7 @@ mod tests {
         // collision would make the second assertion below fire for the wrong
         // reason.
         let key = chamber_key(ChamberAddr {
-            cell: CellId(7),
+            cell: Vertex(7),
             branch: 1,
             band: Band::Underdeep,
             level: 2,
@@ -1824,7 +1824,7 @@ mod tests {
         let stratigraphic = ["regolith", "cover", "basement", "roots", "underneath"];
         for &band in Band::habitation() {
             let key = chamber_key(ChamberAddr {
-                cell: CellId(1),
+                cell: Vertex(1),
                 branch: 0,
                 band,
                 level: 0,
@@ -1927,7 +1927,7 @@ mod tests {
     #[test]
     fn the_key_spells_the_level() {
         let base = ChamberAddr {
-            cell: CellId(9),
+            cell: Vertex(9),
             branch: 3,
             band: Band::Deeps,
             level: 0,
@@ -1964,7 +1964,7 @@ mod tests {
                     for level in 0..LEVELS_PER_BRANCH_CEILING {
                         count += 1;
                         keys.insert(chamber_key(ChamberAddr {
-                            cell: CellId(cell),
+                            cell: Vertex(cell),
                             branch,
                             band,
                             level,
@@ -2104,7 +2104,7 @@ mod tests {
                         &cave,
                         gradient,
                         ChamberAddr {
-                            cell: CellId(9),
+                            cell: Vertex(9),
                             branch,
                             band,
                             level,
@@ -2141,7 +2141,7 @@ mod tests {
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
         let base = ChamberAddr {
-            cell: CellId(1),
+            cell: Vertex(1),
             branch: 0,
             band: Band::Undercroft,
             level: 0,
@@ -2184,7 +2184,7 @@ mod tests {
         let cave = Cave::from_reach(hornvale_terrain::CaveKind::Karst, 3000.0, &column);
         let gradient = GeothermalGradient::new(24.0);
         let base = ChamberAddr {
-            cell: CellId(31942),
+            cell: Vertex(31942),
             branch: 0,
             band: Band::Undercroft,
             level: 0,
@@ -2361,7 +2361,7 @@ mod tests {
                 for raw_cell in 0u32..40 {
                     for branch in 0..BRANCHES_PER_SYSTEM {
                         let run = RunAddr {
-                            cell: CellId(raw_cell),
+                            cell: Vertex(raw_cell),
                             branch,
                             band,
                         };
@@ -2398,7 +2398,7 @@ mod tests {
     fn a_runs_level_count_is_deterministic_for_one_address() {
         let seed = Seed(90210);
         let run = RunAddr {
-            cell: CellId(9),
+            cell: Vertex(9),
             branch: 3,
             band: Band::Deeps,
         };
@@ -2408,7 +2408,7 @@ mod tests {
                 let _ = levels_in_branch(
                     seed,
                     RunAddr {
-                        cell: CellId(raw_cell),
+                        cell: Vertex(raw_cell),
                         branch: 0,
                         band,
                     },
@@ -2440,7 +2440,7 @@ mod tests {
     fn every_component_of_the_run_key_is_load_bearing() {
         let seed = Seed(4242);
         let base = RunAddr {
-            cell: CellId(0),
+            cell: Vertex(0),
             branch: 0,
             band: Band::Deeps,
         };
@@ -2449,7 +2449,7 @@ mod tests {
             levels_in_branch(
                 seed,
                 RunAddr {
-                    cell: CellId(c),
+                    cell: Vertex(c),
                     ..base
                 },
             ) != levels_in_branch(seed, base)
@@ -2466,7 +2466,7 @@ mod tests {
                     levels_in_branch(
                         seed,
                         RunAddr {
-                            cell: CellId(c),
+                            cell: Vertex(c),
                             branch,
                             ..base
                         },
@@ -2501,7 +2501,7 @@ mod tests {
     fn the_run_key_spelling_is_pinned() {
         assert_eq!(
             run_key(RunAddr {
-                cell: CellId(9),
+                cell: Vertex(9),
                 branch: 3,
                 band: Band::Deeps,
             }),
@@ -2509,7 +2509,7 @@ mod tests {
         );
         assert_eq!(
             run_key(RunAddr {
-                cell: CellId(0),
+                cell: Vertex(0),
                 branch: 0,
                 band: Band::Undercroft,
             }),
@@ -2533,7 +2533,7 @@ mod tests {
                 for &band in Band::habitation() {
                     count += 1;
                     keys.insert(run_key(RunAddr {
-                        cell: CellId(cell),
+                        cell: Vertex(cell),
                         branch,
                         band,
                     }));
@@ -2637,7 +2637,7 @@ mod tests {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for &band in Band::habitation() {
                     let run = RunAddr {
-                        cell: CellId(raw_cell),
+                        cell: Vertex(raw_cell),
                         branch,
                         band,
                     };
@@ -2700,7 +2700,7 @@ mod tests {
             (5, 1, Band::Underdeep, 5),     // 5/1/underdeep,  range 5-10
         ] {
             let run = RunAddr {
-                cell: CellId(cell),
+                cell: Vertex(cell),
                 branch,
                 band,
             };
@@ -2788,7 +2788,7 @@ mod tests {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for &band in Band::habitation() {
                     let run = RunAddr {
-                        cell: CellId(raw_cell),
+                        cell: Vertex(raw_cell),
                         branch,
                         band,
                     };
@@ -2873,7 +2873,7 @@ mod tests {
     #[test]
     fn some_system_draws_more_than_one_entrance() {
         let multi = (0u64..8)
-            .flat_map(|s| (0u32..60).map(move |c| entrance_count(Seed(s * 1000 + 7), CellId(c))))
+            .flat_map(|s| (0u32..60).map(move |c| entrance_count(Seed(s * 1000 + 7), Vertex(c))))
             .any(|n| n > 1);
         assert!(
             multi,
@@ -2901,7 +2901,7 @@ mod tests {
         'outer: for s in 0u64..40 {
             for c in 0u32..80 {
                 let seed = Seed(s * 1000 + 7);
-                let cell = CellId(c);
+                let cell = Vertex(c);
                 if entrance_count(seed, cell) < 2 {
                     continue;
                 }
@@ -2929,7 +2929,7 @@ mod tests {
         for s in 0u64..4 {
             for c in 0u32..30 {
                 let seed = Seed(s * 1000 + 7);
-                let cell = CellId(c);
+                let cell = Vertex(c);
                 let once = entrance_mouth(seed, cell, 1);
                 let twice = entrance_mouth(seed, cell, 1);
                 assert_eq!(
@@ -2956,7 +2956,7 @@ mod tests {
         for s in 0u64..3 {
             for c in 0u32..20 {
                 assert_eq!(
-                    entrance_mouth(Seed(s * 1000 + 7), CellId(c), 0),
+                    entrance_mouth(Seed(s * 1000 + 7), Vertex(c), 0),
                     EntranceMouth {
                         branch: 0,
                         band: 0,
@@ -3004,7 +3004,7 @@ mod tests {
         let seed = Seed(42);
         for (cell, expected) in [(9u32, 2u8), (6, 4), (17, 1), (5, 2)] {
             assert_eq!(
-                entrance_count(seed, CellId(cell)),
+                entrance_count(seed, Vertex(cell)),
                 expected,
                 "cell {cell} moved off its entrance-count pin"
             );
@@ -3057,7 +3057,7 @@ mod tests {
             ),
         ] {
             assert_eq!(
-                entrance_mouth(seed, CellId(cell), entrance),
+                entrance_mouth(seed, Vertex(cell), entrance),
                 expected,
                 "cell {cell} entrance {entrance} moved off its mouth pin"
             );
@@ -3082,7 +3082,7 @@ mod tests {
         // --- entrance count ---
         let mut count_disagreed = false;
         for c in 0u32..40 {
-            let cell = CellId(c);
+            let cell = Vertex(c);
             let width = crate::character::branch_count_of(seed, cell, top_band());
             let shipped = entrance_count(seed, cell);
             let own = seed
@@ -3112,7 +3112,7 @@ mod tests {
         // --- entrance mouth ---
         let mut mouth_disagreed = false;
         for c in 0u32..200 {
-            let cell = CellId(c);
+            let cell = Vertex(c);
             // A width-two system cannot disagree: its single side branch is
             // the only thing either leg could pick. Only a wider system
             // discriminates the legs. Aperture 1 is a `share` draw at every
@@ -3182,7 +3182,7 @@ mod tests {
     /// aperture 1 alone, which is why this helper takes no aperture index.
     fn mouth_from_raw(
         seed: Seed,
-        cell: CellId,
+        cell: Vertex,
         mut stream: hornvale_kernel::Stream,
     ) -> Option<EntranceMouth> {
         // Same top-band reference `entrance_mouth` itself uses, read off the
@@ -3215,7 +3215,7 @@ mod tests {
     /// A one-line composition of the two shipped width-parameterised halves,
     /// because the probed path must be the shipped path: a test-only
     /// reimplementation would assert a guarantee about code no world runs.
-    fn aperture_branches_at(seed: Seed, cell: CellId, width: u8) -> std::collections::BTreeSet<u8> {
+    fn aperture_branches_at(seed: Seed, cell: Vertex, width: u8) -> std::collections::BTreeSet<u8> {
         (0..aperture_count_at(seed, cell, width))
             .map(|entrance| aperture_branch_at(seed, cell, entrance, width))
             .collect()
@@ -3242,7 +3242,7 @@ mod tests {
         let seed = Seed(42);
         for cell in [0u32, 5, 6, 7, 9, 17, 31, 4096] {
             for width in 1..=BRANCHES_PER_SYSTEM {
-                let named = aperture_branches_at(seed, CellId(cell), width);
+                let named = aperture_branches_at(seed, Vertex(cell), width);
                 for branch in 0..width {
                     assert!(
                         named.contains(&branch),
@@ -3269,7 +3269,7 @@ mod tests {
     /// `entrance` out of the lattice entirely, so it is gone here too.
     fn descent_edges_for(
         seed: Seed,
-        cell: CellId,
+        cell: Vertex,
         band: Band,
         upper: u8,
         lower: u8,
@@ -3292,7 +3292,7 @@ mod tests {
         let seed = Seed(42);
         for upper in 1..=BRANCHES_PER_SYSTEM {
             for lower in 1..=BRANCHES_PER_SYSTEM {
-                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                let edges = descent_edges_for(seed, Vertex(7), Band::Deeps, upper, lower);
                 for b in 0..upper {
                     assert!(
                         edges.iter().any(|&(from, _)| from == b),
@@ -3313,7 +3313,7 @@ mod tests {
         let seed = Seed(42);
         for upper in 1..=BRANCHES_PER_SYSTEM {
             for lower in 1..=BRANCHES_PER_SYSTEM {
-                let edges = descent_edges_for(seed, CellId(7), Band::Deeps, upper, lower);
+                let edges = descent_edges_for(seed, Vertex(7), Band::Deeps, upper, lower);
                 for b in 0..lower {
                     assert!(
                         edges.iter().any(|&(_, to)| to == b),
@@ -3344,7 +3344,7 @@ mod tests {
                 let Some(_) = band.deeper() else { continue };
                 for upper in 1..=BRANCHES_PER_SYSTEM {
                     for lower in 1..=BRANCHES_PER_SYSTEM {
-                        let edges = descent_edges_for(seed, CellId(cell), band, upper, lower);
+                        let edges = descent_edges_for(seed, Vertex(cell), band, upper, lower);
                         let n = u8::try_from(edges.len()).expect("at most 8 edges");
                         assert!(
                             n >= upper.max(lower) && n <= upper + lower,
@@ -3369,15 +3369,15 @@ mod tests {
     #[test]
     fn the_band_descent_key_spelling_is_pinned() {
         assert_eq!(
-            descent_key(CellId(9), 3, Band::Deeps, DescentRole::Child),
+            descent_key(Vertex(9), 3, Band::Deeps, DescentRole::Child),
             "9/3/deeps/child"
         );
         assert_eq!(
-            descent_key(CellId(0), 0, Band::Undercroft, DescentRole::Parent),
+            descent_key(Vertex(0), 0, Band::Undercroft, DescentRole::Parent),
             "0/0/undercroft/parent"
         );
         assert_eq!(
-            descent_key(CellId(12), 1, Band::Nadir, DescentRole::Parent),
+            descent_key(Vertex(12), 1, Band::Nadir, DescentRole::Parent),
             "12/1/nadir/parent"
         );
     }
@@ -3393,12 +3393,12 @@ mod tests {
     /// re-key an existing band.
     #[test]
     fn every_component_of_the_band_descent_key_is_load_bearing() {
-        let base = descent_key(CellId(9), 1, Band::Deeps, DescentRole::Child);
+        let base = descent_key(Vertex(9), 1, Band::Deeps, DescentRole::Child);
         for other in [
-            descent_key(CellId(8), 1, Band::Deeps, DescentRole::Child),
-            descent_key(CellId(9), 2, Band::Deeps, DescentRole::Child),
-            descent_key(CellId(9), 1, Band::Shallows, DescentRole::Child),
-            descent_key(CellId(9), 1, Band::Deeps, DescentRole::Parent),
+            descent_key(Vertex(8), 1, Band::Deeps, DescentRole::Child),
+            descent_key(Vertex(9), 2, Band::Deeps, DescentRole::Child),
+            descent_key(Vertex(9), 1, Band::Shallows, DescentRole::Child),
+            descent_key(Vertex(9), 1, Band::Deeps, DescentRole::Parent),
         ] {
             assert_ne!(base, other, "a key component is not load-bearing");
         }
@@ -3463,15 +3463,15 @@ mod tests {
     #[test]
     fn the_descent_edges_are_byte_pinned_for_known_calls() {
         assert_eq!(
-            descent_edges(Seed(42), CellId(9), Band::Deeps, 2, 3),
+            descent_edges(Seed(42), Vertex(9), Band::Deeps, 2, 3),
             vec![(0, 0), (1, 0), (1, 1), (1, 2)]
         );
         assert_eq!(
-            descent_edges(Seed(42), CellId(9), Band::Shallows, 3, 2),
+            descent_edges(Seed(42), Vertex(9), Band::Shallows, 3, 2),
             vec![(0, 0), (0, 1), (1, 0), (2, 0)]
         );
         assert_eq!(
-            descent_edges(Seed(42), CellId(0), Band::Undercroft, 4, 4),
+            descent_edges(Seed(42), Vertex(0), Band::Undercroft, 4, 4),
             vec![
                 (0, 3),
                 (1, 2),
@@ -3484,7 +3484,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            descent_edges(Seed(90210), CellId(7), Band::Underdeep, 2, 4),
+            descent_edges(Seed(90210), Vertex(7), Band::Underdeep, 2, 4),
             vec![(0, 0), (0, 2), (1, 0), (1, 1), (1, 3)]
         );
     }
@@ -3507,9 +3507,9 @@ mod tests {
         for cell in 0u32..64 {
             for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let key = descent_key(CellId(cell), branch, band, DescentRole::Child);
+                    let key = descent_key(Vertex(cell), branch, band, DescentRole::Child);
                     let shipped =
-                        descent_pick(seed, CellId(cell), branch, band, DescentRole::Child, width);
+                        descent_pick(seed, Vertex(cell), branch, band, DescentRole::Child, width);
                     let own = seed
                         .derive(crate::streams::BAND_DESCENT)
                         .derive(StreamLabel::dynamic(&key))
@@ -3548,11 +3548,11 @@ mod tests {
         for cell in 0u32..64 {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 assert!(
-                    descents_from(seed, CellId(cell), Band::Nadir, branch).is_empty(),
+                    descents_from(seed, Vertex(cell), Band::Nadir, branch).is_empty(),
                     "cell {cell} branch {branch} descends below the Nadir"
                 );
                 assert!(
-                    descents_from(seed, CellId(cell), Band::Surface, branch).is_empty(),
+                    descents_from(seed, Vertex(cell), Band::Surface, branch).is_empty(),
                     "cell {cell} branch {branch} descends out of the overworld"
                 );
             }
@@ -3576,9 +3576,9 @@ mod tests {
                 if band.deeper().is_none() {
                     continue;
                 }
-                let width = crate::character::branch_count_of(seed, CellId(cell), band);
+                let width = crate::character::branch_count_of(seed, Vertex(cell), band);
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let d = descents_from(seed, CellId(cell), band, branch);
+                    let d = descents_from(seed, Vertex(cell), band, branch);
                     if branch >= width {
                         assert!(
                             d.is_empty(),
@@ -3595,7 +3595,7 @@ mod tests {
                     }
                 }
                 // And an out-of-lattice branch is refused outright.
-                assert!(descents_from(seed, CellId(cell), band, BRANCHES_PER_SYSTEM).is_empty());
+                assert!(descents_from(seed, Vertex(cell), band, BRANCHES_PER_SYSTEM).is_empty());
             }
         }
         assert!(saw_a_realized_branch, "the sweep realized no branch at all");
@@ -3612,9 +3612,9 @@ mod tests {
         for cell in 0u32..256 {
             for &band in Band::habitation() {
                 let Some(below) = band.deeper() else { continue };
-                let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                let lower = crate::character::branch_count_of(seed, Vertex(cell), below);
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let d = descents_from(seed, CellId(cell), band, branch);
+                    let d = descents_from(seed, Vertex(cell), band, branch);
                     let mut sorted = d.clone();
                     sorted.sort_unstable();
                     sorted.dedup();
@@ -3656,11 +3656,11 @@ mod tests {
             for cell in 0u32..256 {
                 for &band in Band::habitation() {
                     let Some(below) = band.deeper() else { continue };
-                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
-                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
+                    let upper = crate::character::branch_count_of(seed, Vertex(cell), band);
+                    let lower = crate::character::branch_count_of(seed, Vertex(cell), below);
                     let mut parented: Vec<u8> = Vec::new();
                     for branch in 0..upper {
-                        let d = descents_from(seed, CellId(cell), band, branch);
+                        let d = descents_from(seed, Vertex(cell), band, branch);
                         assert!(
                             !d.is_empty(),
                             "seed {seed:?} cell {cell} {band:?} branch {branch} dead-ends"
@@ -3688,15 +3688,15 @@ mod tests {
     #[test]
     fn the_descent_edges_are_the_same_however_the_lattice_is_queried() {
         let seed = Seed(42);
-        let subject = descents_from(seed, CellId(9), Band::Deeps, 0);
+        let subject = descents_from(seed, Vertex(9), Band::Deeps, 0);
         for cell in 0u32..64 {
             for &band in Band::habitation() {
                 for branch in 0..BRANCHES_PER_SYSTEM {
-                    let _ = descents_from(seed, CellId(cell), band, branch);
+                    let _ = descents_from(seed, Vertex(cell), band, branch);
                     let _ = levels_in_branch(
                         seed,
                         RunAddr {
-                            cell: CellId(cell),
+                            cell: Vertex(cell),
                             branch,
                             band,
                         },
@@ -3706,7 +3706,7 @@ mod tests {
         }
         assert_eq!(
             subject,
-            descents_from(seed, CellId(9), Band::Deeps, 0),
+            descents_from(seed, Vertex(9), Band::Deeps, 0),
             "the descent edges moved when unrelated places were queried"
         );
     }
@@ -3743,9 +3743,9 @@ mod tests {
             for cell in 0u32..512 {
                 for &band in Band::habitation() {
                     let Some(below) = band.deeper() else { continue };
-                    let upper = crate::character::branch_count_of(seed, CellId(cell), band);
-                    let lower = crate::character::branch_count_of(seed, CellId(cell), below);
-                    let n = descent_edges(seed, CellId(cell), band, upper, lower).len();
+                    let upper = crate::character::branch_count_of(seed, Vertex(cell), band);
+                    let lower = crate::character::branch_count_of(seed, Vertex(cell), below);
+                    let n = descent_edges(seed, Vertex(cell), band, upper, lower).len();
                     assert!(
                         n >= usize::from(upper.max(lower)) && n <= usize::from(upper + lower),
                         "edge count {n} outside its construction bounds at {upper}x{lower}"
@@ -3831,7 +3831,7 @@ mod tests {
         for raw_seed in [42u64, 7, 90210] {
             let seed = Seed(raw_seed);
             for raw_cell in 0u32..40 {
-                let cell = CellId(raw_cell);
+                let cell = Vertex(raw_cell);
                 for &band in Band::habitation() {
                     for branch in 0..BRANCHES_PER_SYSTEM {
                         let levels = levels_in_branch(seed, RunAddr { cell, branch, band });
@@ -3925,7 +3925,7 @@ mod tests {
         for raw_seed in [42u64, 7, 90210] {
             let seed = Seed(raw_seed);
             for raw_cell in 0u32..40 {
-                let cell = CellId(raw_cell);
+                let cell = Vertex(raw_cell);
                 for &band in Band::habitation() {
                     for branch in 0..BRANCHES_PER_SYSTEM {
                         for level in 0..LEVELS_PER_BRANCH_CEILING {
@@ -3978,7 +3978,7 @@ mod tests {
         for raw_seed in [42u64, 7, 90210] {
             let seed = Seed(raw_seed);
             for raw_cell in 0u32..64 {
-                let cell = CellId(raw_cell);
+                let cell = Vertex(raw_cell);
                 for &band in Band::habitation() {
                     let Some(below) = band.deeper() else { continue };
                     for up in 0..BRANCHES_PER_SYSTEM {
@@ -4033,7 +4033,7 @@ mod tests {
         for raw_seed in [42u64, 7, 90210, 1234] {
             let seed = Seed(raw_seed);
             for raw_cell in 0u32..256 {
-                let cell = CellId(raw_cell);
+                let cell = Vertex(raw_cell);
                 for entrance in 0..entrance_count(seed, cell) {
                     let mouth = entrance_mouth(seed, cell, entrance);
                     let band = Band::from_rank(mouth.band)

@@ -35,7 +35,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{Band, CellId, CellMap, Geosphere, KindId, Seed, Stream};
+use hornvale_kernel::{Band, Geosphere, KindId, Seed, Stream, Vertex, VertexMap};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet};
@@ -45,8 +45,8 @@ use std::collections::{BTreeMap, BTreeSet};
 /// deduplicated, matching `Geosphere::neighbors`' contract so the rerouted
 /// BFS/scans stay deterministic. On an all-land graph this equals
 /// `geo.neighbors(cell)`.
-fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
-    let mut ns: Vec<CellId> = graph
+fn traversable_neighbors(graph: &ConnectionGraph, cell: Vertex) -> Vec<Vertex> {
+    let mut ns: Vec<Vertex> = graph
         .edges(cell)
         .iter()
         .filter(|e| e.conductance > 0.0)
@@ -81,7 +81,7 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
 /// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
 /// module's tests until it lands.
 #[allow(dead_code)]
-fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
+fn approach_ease(graph: &ConnectionGraph, cell: Vertex) -> f64 {
     graph
         .edges(cell)
         .iter()
@@ -131,7 +131,7 @@ const DEF_SCALE: f64 = 1.0;
 /// consumes no draw and cannot move stream consumption order. Returns
 /// `DEF_MAX` for a nonexistent or wholly impassable link, which no caller
 /// reaches: both call sites walk edges that exist.
-fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+fn defensibility(graph: &ConnectionGraph, from: Vertex, to: Vertex) -> f64 {
     let best = graph
         .edges(from)
         .iter()
@@ -151,7 +151,7 @@ fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
 /// of this crate's real public surface.
 /// type-audit: bare-ok(ratio: return)
 #[doc(hidden)]
-pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+pub fn defensibility_for_test(graph: &ConnectionGraph, from: Vertex, to: Vertex) -> f64 {
     defensibility(graph, from, to)
 }
 
@@ -187,7 +187,7 @@ pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId)
 /// adjacency index is needed to enumerate "every `from` with an edge into
 /// `cell`"; `traversable_neighbors(graph, cell)` already is that set.
 /// type-audit: bare-ok(ratio: return)
-pub fn weakest_point_defensibility(graph: &ConnectionGraph, cell: CellId) -> f64 {
+pub fn weakest_point_defensibility(graph: &ConnectionGraph, cell: Vertex) -> f64 {
     let approaches = traversable_neighbors(graph, cell);
     if approaches.is_empty() {
         return DEF_MAX;
@@ -521,7 +521,7 @@ const DAUGHTER_POP: f64 = 8.0;
 /// This restores The Confluence's shipped property — settlements condensing
 /// near fresh water — which the epoch (Task 5a) diluted: 5a's daughters
 /// settled the first vacant neighbour (ignoring both capacity AND rivers) and
-/// its migrations picked by refugia/CellId alone, so occupations spread off
+/// its migrations picked by refugia/Vertex alone, so occupations spread off
 /// the river network the base capacity spikes on. The dominant restoring
 /// lever is re-ranking daughter founding by capacity at all: `capacity`
 /// already folds the Confluence freshwater term (which rides
@@ -922,7 +922,7 @@ struct Community {
     /// only thing ever serialized (decision 0015); this is a per-build handle.
     people_idx: usize,
     /// The cell this community currently occupies.
-    site: CellId,
+    site: Vertex,
     /// The rung of the delve ladder this community occupies **in that cell**
     /// (The Underworld, spec §4.6). `Band::Surface` for a surface people
     /// — the overworld is a rung of the same ladder, not the absence of one.
@@ -1100,7 +1100,7 @@ struct Bake<'a> {
     cur_graph: usize,
     /// **Per-people** headcount capacity, one field per entry of `peoples` and
     /// indexed by the same position (`Community::people_idx`). This replaced a
-    /// single species-blind `CellMap<f64>` (The Tilth): a cell's worth is a
+    /// single species-blind `VertexMap<f64>` (The Tilth): a cell's worth is a
     /// property of the *pairing* of ground and people, not of the ground alone,
     /// so gnoll's arid optimum and kobold's high band are no longer read
     /// through one field that calls both marginal.
@@ -1125,9 +1125,9 @@ struct Bake<'a> {
     /// Per-cell proximity to fresh flowing water in `[0, 1]` (~1 on a river,
     /// ~0 far from one). Biases all three site-picking paths toward water so
     /// settlements condense near rivers (Task 5b, restoring The Confluence).
-    river_prox: &'a CellMap<f64>,
+    river_prox: &'a VertexMap<f64>,
     /// Cells habitable through the glacial maximum (migration preference).
-    refugia: &'a CellMap<bool>,
+    refugia: &'a VertexMap<bool>,
     /// The world's seed, kept so [`Bake::open`] can derive each community's
     /// own disposition draw. It is NOT another dynamics stream: the draw hangs
     /// off `settlement/disposition/v1`, keyed on the community's own `(site,
@@ -1158,7 +1158,7 @@ struct Bake<'a> {
     /// **Surface density is unchanged, and that is structural rather than
     /// hoped for**: `Band::Surface` is one rung, so `(cell, Surface)` is
     /// one key, so a cell still holds exactly one surface community. What the
-    /// wider key buys is the two things a `BTreeMap<CellId, _>` could not
+    /// wider key buys is the two things a `BTreeMap<Vertex, _>` could not
     /// express — an underworld community no longer competes with the surface
     /// one for a cell's single slot, and two underworld communities at
     /// different rungs can share a column (spec §4.6).
@@ -1166,7 +1166,7 @@ struct Bake<'a> {
     /// The rung is never `None`. `Band` carries an explicit `Surface`
     /// variant precisely so the type is total and no reader can mistake "no
     /// rung recorded" for "the overworld".
-    node_index: BTreeMap<(CellId, Band), usize>,
+    node_index: BTreeMap<(Vertex, Band), usize>,
     /// Where each people sits in the delve ladder, per cell — one entry per
     /// entry of `peoples`, in the same order, exactly as `caps_by_era`'s
     /// slices are. Borrowed off the composition root, which is the only layer
@@ -1174,7 +1174,7 @@ struct Bake<'a> {
     ///
     /// A surface people's seating is `Surface` at every cell, which makes the
     /// re-key inert for it.
-    seating: &'a [CellMap<Band>],
+    seating: &'a [VertexMap<Band>],
     /// Next entity id to mint (never reused).
     next_id: u64,
     /// The epoch-dynamics random stream (drawn sequentially in commit order).
@@ -1256,7 +1256,7 @@ enum Relocation {
 #[derive(Clone, Copy, Debug)]
 struct HomeOption {
     /// The cell being scored.
-    cell: CellId,
+    cell: Vertex,
     /// Its worth to a homeless people — `eff_capacity`, times
     /// `1 + SETTLED_PREMIUM` when the cell is held.
     score: f64,
@@ -1387,7 +1387,7 @@ impl<'a> Bake<'a> {
     /// exactly the conflation just removed. The term is kept because ice is the
     /// right *kind* of exclusion to be species-blind, so a future campaign that
     /// models real glaciation has the seam it needs.
-    fn factor(era: &EraClimate, cell: CellId) -> f64 {
+    fn factor(era: &EraClimate, cell: Vertex) -> f64 {
         if *era.ice.get(cell) { 0.0 } else { 1.0 }
     }
 
@@ -1396,7 +1396,7 @@ impl<'a> Bake<'a> {
     ///
     /// `pidx` is a dense index into `caps` (a [`Community::people_idx`]), never a
     /// `KindId` — see that field for why the lookup is resolved at `open` time.
-    fn eff_capacity(&self, era: &EraClimate, cell: CellId, pidx: usize) -> f64 {
+    fn eff_capacity(&self, era: &EraClimate, cell: Vertex, pidx: usize) -> f64 {
         self.caps_now()[pidx].at(cell) * Self::factor(era, cell)
     }
 
@@ -1409,7 +1409,7 @@ impl<'a> Bake<'a> {
     /// value it was then judged on came from a field that knew nothing about who
     /// was standing there. A cell where this people has no capacity is not a
     /// refuge for them, whatever it is for someone else.
-    fn vacant_for(&self, era: &EraClimate, cell: CellId, pidx: usize) -> bool {
+    fn vacant_for(&self, era: &EraClimate, cell: Vertex, pidx: usize) -> bool {
         Self::factor(era, cell) > 0.0
             && self.caps_now()[pidx].at(cell) > 0.0
             && !self
@@ -1430,7 +1430,7 @@ impl<'a> Bake<'a> {
     /// Resolved through the seating rather than off the community, because
     /// every caller here is asking about a cell the asker does **not** yet
     /// occupy: which rung would I be on if I went there.
-    fn rung_for(&self, pidx: usize, cell: CellId) -> Band {
+    fn rung_for(&self, pidx: usize, cell: Vertex) -> Band {
         *self.seating[pidx].get(cell)
     }
 
@@ -1443,7 +1443,7 @@ impl<'a> Bake<'a> {
     ///
     /// **Determinism.** Ring membership is a graph property (a full ring is
     /// consumed before the next is expanded), and each ring is handed to
-    /// `pick` as an ascending, deduplicated `CellId` slice, so neither the
+    /// `pick` as an ascending, deduplicated `Vertex` slice, so neither the
     /// discovery order within a ring nor the order edges were added can reach
     /// the result. `pick` is still responsible for a total order among the
     /// cells of the one ring it accepts.
@@ -1453,16 +1453,16 @@ impl<'a> Bake<'a> {
     /// [`Bake::best_home`] (a displaced people's roll-downhill).
     fn nearest_ring<T>(
         &self,
-        from: CellId,
-        mut pick: impl FnMut(&[CellId]) -> Option<T>,
+        from: Vertex,
+        mut pick: impl FnMut(&[Vertex]) -> Option<T>,
     ) -> Option<T> {
-        let mut visited: BTreeSet<CellId> = BTreeSet::new();
+        let mut visited: BTreeSet<Vertex> = BTreeSet::new();
         visited.insert(from);
-        let mut frontier: Vec<CellId> = vec![from];
+        let mut frontier: Vec<Vertex> = vec![from];
         while !frontier.is_empty() {
-            // A BTreeSet, so the ring reaches `pick` in ascending CellId order
+            // A BTreeSet, so the ring reaches `pick` in ascending Vertex order
             // however its cells were discovered.
-            let mut ring: BTreeSet<CellId> = BTreeSet::new();
+            let mut ring: BTreeSet<Vertex> = BTreeSet::new();
             for &c in &frontier {
                 for n in traversable_neighbors(self.cur(), c) {
                     if visited.insert(n) {
@@ -1470,7 +1470,7 @@ impl<'a> Bake<'a> {
                     }
                 }
             }
-            let next: Vec<CellId> = ring.into_iter().collect();
+            let next: Vec<Vertex> = ring.into_iter().collect();
             if let Some(found) = pick(&next) {
                 return Some(found);
             }
@@ -1482,7 +1482,7 @@ impl<'a> Bake<'a> {
     /// The nearest cell to `from` (excluding `from` itself) that can receive a
     /// settler **of this people**, by breadth-first hop distance. Within the
     /// nearest layer, refugial cells win over non-refugial, then river-adjacent,
-    /// then lowest `CellId` — a total, deterministic order. `None` if the whole
+    /// then lowest `Vertex` — a total, deterministic order. `None` if the whole
     /// reachable graph is full or worthless to them.
     ///
     /// The ordering deliberately still does **not** rank by capacity: a migrant
@@ -1491,9 +1491,9 @@ impl<'a> Bake<'a> {
     /// capacity at all). Making the tie-break prefer richer ground would turn a
     /// flight into an optimisation, which is [`Bake::best_home`]'s rule, not
     /// this one's.
-    fn nearest_dest(&self, era: &EraClimate, from: CellId, pidx: usize) -> Option<CellId> {
+    fn nearest_dest(&self, era: &EraClimate, from: Vertex, pidx: usize) -> Option<Vertex> {
         self.nearest_ring(from, |ring| {
-            let mut candidates: Vec<CellId> = ring
+            let mut candidates: Vec<Vertex> = ring
                 .iter()
                 .copied()
                 .filter(|&n| self.vacant_for(era, n, pidx))
@@ -1504,7 +1504,7 @@ impl<'a> Bake<'a> {
             // Refugial first (survival through the glacial maximum is the
             // point of a migration), then river-adjacent as a tie-break
             // (Task 5b — bias toward water among otherwise-equal refuges),
-            // then lowest CellId — total & deterministic (`f64::total_cmp`).
+            // then lowest Vertex — total & deterministic (`f64::total_cmp`).
             candidates.sort_by(|a, b| {
                 let ra = *self.refugia.get(*a);
                 let rb = *self.refugia.get(*b);
@@ -1541,7 +1541,7 @@ impl<'a> Bake<'a> {
     ///   anybody and is not an option at all.
     ///
     /// The best score in the accepted ring wins, tie-broken by the WEAKEST
-    /// defender (vacant land defends with 0) and then the lowest `CellId` —
+    /// defender (vacant land defends with 0) and then the lowest `Vertex` —
     /// the same total, deterministic chain [`Bake::maybe_raid`] uses,
     /// `f64::total_cmp` throughout. `None` means nothing is admissible
     /// anywhere reachable.
@@ -1561,7 +1561,7 @@ impl<'a> Bake<'a> {
         &self,
         pidx: usize,
         era: &EraClimate,
-        from: CellId,
+        from: Vertex,
         strength: f64,
         can_fight: bool,
         disposition: Option<f64>,
@@ -1616,7 +1616,7 @@ impl<'a> Bake<'a> {
                     Some(b) => score
                         .total_cmp(&b.score) // the MOST valuable home
                         .then(b.defender.total_cmp(&defender)) // among equals, the WEAKEST held
-                        .then(b.cell.cmp(&n)) // then the lowest CellId
+                        .then(b.cell.cmp(&n)) // then the lowest Vertex
                         .is_gt(),
                 };
                 if better {
@@ -1677,7 +1677,7 @@ impl<'a> Bake<'a> {
         lineage: BakeId,
         predecessor: BakeId,
         offset: f64,
-        from: CellId,
+        from: Vertex,
         era: &EraClimate,
         year: f64,
         depth: u32,
@@ -1846,7 +1846,7 @@ impl<'a> Bake<'a> {
         lineage: BakeId,
         predecessor: BakeId,
         offset: f64,
-        from: CellId,
+        from: Vertex,
         era: &EraClimate,
         year: f64,
         depth: u32,
@@ -1876,7 +1876,7 @@ impl<'a> Bake<'a> {
     /// the gate existed. A people that IS authored always draws — with spread 0
     /// if `disposition_spread` has no row for it, which returns its authored
     /// location unchanged.
-    fn drawn_disposition(&self, people: KindId, site: CellId, founded: f64) -> Option<f64> {
+    fn drawn_disposition(&self, people: KindId, site: Vertex, founded: f64) -> Option<f64> {
         let location = *self.disposition.get(&people)?;
         let spread = self.disposition_spread.get(&people).copied().unwrap_or(0.0);
         Some(crate::disposition::drawn_threat_response(
@@ -2238,7 +2238,7 @@ impl<'a> Bake<'a> {
     fn open(
         &mut self,
         people: KindId,
-        site: CellId,
+        site: Vertex,
         year: f64,
         population: f64,
         founded_from: Founding<BakeId>,
@@ -3132,7 +3132,7 @@ impl<'a> Bake<'a> {
     ///
     /// Deterministic and draw-free: it picks the most valuable such target,
     /// tie-broken by eviction over subordination (see [`Spoil::rank`]), then
-    /// the weakest, then the lowest `CellId` (`f64::total_cmp`
+    /// the weakest, then the lowest `Vertex` (`f64::total_cmp`
     /// throughout), and never touches the epoch stream — `maybe_raid` itself
     /// consumes no draw. It does change which communities exist and how
     /// pressured they are, so the *sequence* of `grow`'s `DAUGHTER_PROB` draws
@@ -3175,7 +3175,7 @@ impl<'a> Bake<'a> {
             .count();
         // (target index, that cell's value, the target's strength, its cell,
         //  and how a raid on it would resolve)
-        let mut best: Option<(usize, f64, f64, CellId, Spoil)> = None;
+        let mut best: Option<(usize, f64, f64, Vertex, Spoil)> = None;
         for n in traversable_neighbors(self.cur(), raider_site) {
             // A raider reaches only its OWN rung of a neighbouring column
             // (spec §4.6): what it could take is what it could then hold, and
@@ -3244,7 +3244,7 @@ impl<'a> Bake<'a> {
                     .total_cmp(&bv) // the MOST valuable land
                     .then(kind.rank().cmp(&bk.rank())) // at equal value, EVICTION
                     .then(bs.total_cmp(&t_str)) // then the WEAKEST
-                    .then(bc.cmp(&n)) // then the lowest CellId
+                    .then(bc.cmp(&n)) // then the lowest Vertex
                     .is_gt(),
             };
             if better {
@@ -3468,14 +3468,14 @@ impl<'a> Bake<'a> {
             // of new settlements, so this is the main lever that pulls the
             // occupied set toward fresh water. `RIVER_SITE_WEIGHT` tunes how
             // hard river proximity outbids raw capacity here. Tie-broken by
-            // lowest CellId — total & deterministic (`f64::total_cmp`).
+            // lowest Vertex — total & deterministic (`f64::total_cmp`).
             let dest = traversable_neighbors(self.cur(), site)
                 .into_iter()
                 .filter(|&n| self.vacant_for(era, n, dpidx))
                 .max_by(|a, b| {
                     let sa = self.caps_now()[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
                     let sb = self.caps_now()[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
-                    // Higher score wins; among equal score, lower CellId wins
+                    // Higher score wins; among equal score, lower Vertex wins
                     // (treated as "greater" for `max_by`).
                     sa.total_cmp(&sb).then(b.cmp(a))
                 });
@@ -3519,11 +3519,11 @@ pub fn bake(
     seed: Seed,
     geo: &Geosphere,
     caps_by_era: &[Vec<hornvale_kernel::ecology::CapacityMap>],
-    river_prox: &CellMap<f64>,
+    river_prox: &VertexMap<f64>,
     eras: &[EraClimate],
-    refugia: &CellMap<bool>,
+    refugia: &VertexMap<bool>,
     peoples: &[KindId],
-    seating: &[CellMap<Band>],
+    seating: &[VertexMap<Band>],
     cfg: &BakeConfig,
     graphs: &[ConnectionGraph],
 ) -> History {
@@ -3586,8 +3586,8 @@ pub fn bake(
         .iter()
         .min_by(|a, b| a.day.total_cmp(&b.day))
         .expect("at least one era");
-    let admissible: Vec<CellId> = geo
-        .cells()
+    let admissible: Vec<Vertex> = geo
+        .vertices()
         .filter(|&c| Bake::factor(earliest, c) > 0.0)
         .collect();
 
@@ -3613,7 +3613,7 @@ pub fn bake(
         // So the pool is each people's own best ground, and the zero-capacity
         // filter is load-bearing rather than tidy: a proto-site a people cannot
         // feed is not a founding, it is a death two epochs later.
-        let mut pool: Vec<CellId> = admissible
+        let mut pool: Vec<Vertex> = admissible
             .iter()
             .copied()
             .filter(|c| {
@@ -3623,7 +3623,7 @@ pub fn bake(
             .collect();
         // Rank by river-weighted capacity IN THIS PEOPLE'S UNITS (Task 5b's river
         // bias, preserved): a river-adjacent cell outranks an equally-fertile one
-        // far from water. Tie-broken by lowest CellId — total and deterministic.
+        // far from water. Tie-broken by lowest Vertex — total and deterministic.
         pool.sort_by(|a, b| {
             let sa = bake.caps_now()[pidx].at(*a) * river_factor(*river_prox.get(*a));
             let sb = bake.caps_now()[pidx].at(*b) * river_factor(*river_prox.get(*b));
@@ -3742,32 +3742,32 @@ mod tests {
     fn traversable_neighbors_excludes_ocean_includes_lanes() {
         let mut g = ConnectionGraph::new(4);
         g.add_edge(
-            CellId(0),
+            Vertex(0),
             Edge {
-                to: CellId(1),
+                to: Vertex(1),
                 kind: EdgeKind::Adjacency,
                 conductance: 1.0,
             },
         );
         g.add_edge(
-            CellId(1),
+            Vertex(1),
             Edge {
-                to: CellId(2),
+                to: Vertex(2),
                 kind: EdgeKind::Adjacency,
                 conductance: 0.0,
             },
         );
         g.add_edge(
-            CellId(1),
+            Vertex(1),
             Edge {
-                to: CellId(3),
+                to: Vertex(3),
                 kind: EdgeKind::WaterRoute,
                 conductance: 0.5,
             },
         );
         assert_eq!(
-            traversable_neighbors(&g, CellId(1)),
-            vec![CellId(0), CellId(3)]
+            traversable_neighbors(&g, Vertex(1)),
+            vec![Vertex(0), Vertex(3)]
         );
     }
 
@@ -3775,22 +3775,22 @@ mod tests {
     fn traversable_neighbors_dedups_parallel_edges() {
         let mut g = ConnectionGraph::new(2);
         g.add_edge(
-            CellId(0),
+            Vertex(0),
             Edge {
-                to: CellId(1),
+                to: Vertex(1),
                 kind: EdgeKind::Adjacency,
                 conductance: 1.0,
             },
         );
         g.add_edge(
-            CellId(0),
+            Vertex(0),
             Edge {
-                to: CellId(1),
+                to: Vertex(1),
                 kind: EdgeKind::WaterRoute,
                 conductance: 0.5,
             },
         );
-        assert_eq!(traversable_neighbors(&g, CellId(0)), vec![CellId(1)]);
+        assert_eq!(traversable_neighbors(&g, Vertex(0)), vec![Vertex(1)]);
     }
 
     #[test]
@@ -3798,17 +3798,17 @@ mod tests {
         use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
         let mut g = ConnectionGraph::new(4);
         g.add_edge(
-            CellId(0),
+            Vertex(0),
             Edge {
-                to: CellId(1),
+                to: Vertex(1),
                 kind: EdgeKind::Adjacency,
                 conductance: 0.25,
             },
         );
         g.add_edge(
-            CellId(0),
+            Vertex(0),
             Edge {
-                to: CellId(2),
+                to: Vertex(2),
                 kind: EdgeKind::LandRoute,
                 conductance: 0.75,
             },
@@ -3819,21 +3819,21 @@ mod tests {
         // first, so this edge's presence is here only to document the
         // ocean-touching case, not to exercise exclusion behaviour.
         g.add_edge(
-            CellId(0),
+            Vertex(0),
             Edge {
-                to: CellId(3),
+                to: Vertex(3),
                 kind: EdgeKind::Adjacency,
                 conductance: 0.0,
             },
         );
-        assert_eq!(approach_ease(&g, CellId(0)), 1.0);
+        assert_eq!(approach_ease(&g, Vertex(0)), 1.0);
     }
 
     #[test]
     fn approach_ease_is_zero_for_an_isolated_cell() {
         use hornvale_topology::ConnectionGraph;
         let g = ConnectionGraph::new(2);
-        assert_eq!(approach_ease(&g, CellId(0)), 0.0);
+        assert_eq!(approach_ease(&g, Vertex(0)), 0.0);
     }
 
     /// A pure-land connection graph over `geo` (unit-conductance adjacency,
@@ -3842,8 +3842,8 @@ mod tests {
     /// private to this module and the unit test can't reach the integration
     /// file's helper.
     fn full_land_graph(geo: &Geosphere) -> ConnectionGraph {
-        let mut g = ConnectionGraph::new(geo.cell_count());
-        for cell in geo.cells() {
+        let mut g = ConnectionGraph::new(geo.vertex_count());
+        for cell in geo.vertices() {
             for &n in geo.neighbors(cell) {
                 if n.0 > cell.0 {
                     g.add_edge(
@@ -3872,12 +3872,12 @@ mod tests {
 
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
             day: 0.0,
-            ice: CellMap::from_fn(&geo, |_| false),
-            habitable: CellMap::from_fn(&geo, |_| true),
+            ice: VertexMap::from_fn(&geo, |_| false),
+            habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
             ice_fraction: 0.0,
         };
@@ -3911,10 +3911,10 @@ mod tests {
         // lineage root.
         let r1_idx = bake.open(
             people,
-            CellId(5),
+            Vertex(5),
             0.0,
             10.0,
-            Founding::Genesis(CellId(5)),
+            Founding::Genesis(Vertex(5)),
             None,
             0.0,
         );
@@ -3933,7 +3933,7 @@ mod tests {
             lineage,
             r1_id,
             0.0,
-            CellId(5),
+            Vertex(5),
             &era,
             100.0,
             0,
@@ -3994,22 +3994,22 @@ mod tests {
         Geosphere,
         Vec<ConnectionGraph>,
         Vec<Vec<hornvale_kernel::ecology::CapacityMap>>,
-        CellMap<f64>,
-        CellMap<bool>,
+        VertexMap<f64>,
+        VertexMap<bool>,
         EraClimate,
     );
 
-    fn cascade_world(capacity_of: impl Fn(CellId) -> f64) -> CascadeWorld {
+    fn cascade_world(capacity_of: impl Fn(Vertex) -> f64) -> CascadeWorld {
         use hornvale_kernel::ReferenceElevation;
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, capacity_of);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
             day: 0.0,
-            ice: CellMap::from_fn(&geo, |_| false),
-            habitable: CellMap::from_fn(&geo, |_| true),
+            ice: VertexMap::from_fn(&geo, |_| false),
+            habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
             ice_fraction: 0.0,
         };
@@ -4044,13 +4044,13 @@ mod tests {
     /// — not about niche differentiation, and a field that varied per people
     /// would quietly make each of them a test of who prefers what as well. Giving
     /// every people the identical field reproduces exactly the pre-Tilth
-    /// species-blind `CellMap` these tests were written against, so a failure
+    /// species-blind `VertexMap` these tests were written against, so a failure
     /// still means the rule moved and not that the fixture did.
     fn caps_from_fn(
         geo: &Geosphere,
-        capacity_of: impl Fn(CellId) -> f64,
+        capacity_of: impl Fn(Vertex) -> f64,
     ) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
-        let field = CellMap::from_fn(geo, capacity_of);
+        let field = VertexMap::from_fn(geo, capacity_of);
         let per_people: Vec<_> = all_settlers()
             .iter()
             .map(|_| {
@@ -4124,20 +4124,20 @@ mod tests {
     ///
     /// This is the pre-campaign world, restated in the wider key. Every test
     /// written before spec §4.6 keys `(cell, Surface)` and behaves exactly as
-    /// it did against a `BTreeMap<CellId, _>` — which is what makes those
+    /// it did against a `BTreeMap<Vertex, _>` — which is what makes those
     /// tests, unchanged, the re-key's surface-invariance evidence rather than
     /// a set of expectations that had to be re-pinned.
     ///
     /// `Geosphere::new(1)` is every fixture's globe in this module; a
     /// `OnceLock` keeps the maps borrowable at `'static` without each fixture
     /// having to own them.
-    fn surface_seating() -> &'static [CellMap<Band>] {
-        static S: std::sync::OnceLock<Vec<CellMap<Band>>> = std::sync::OnceLock::new();
+    fn surface_seating() -> &'static [VertexMap<Band>] {
+        static S: std::sync::OnceLock<Vec<VertexMap<Band>>> = std::sync::OnceLock::new();
         S.get_or_init(|| {
             let geo = Geosphere::new(1);
             all_settlers()
                 .iter()
-                .map(|_| CellMap::from_fn(&geo, |_| Band::Surface))
+                .map(|_| VertexMap::from_fn(&geo, |_| Band::Surface))
                 .collect()
         })
     }
@@ -4148,7 +4148,7 @@ mod tests {
     ///
     /// Owned rather than `'static`, because the whole point is that it varies
     /// per test.
-    fn seating_with(rungs: &[(KindId, Band)]) -> Vec<CellMap<Band>> {
+    fn seating_with(rungs: &[(KindId, Band)]) -> Vec<VertexMap<Band>> {
         let geo = Geosphere::new(1);
         all_settlers()
             .iter()
@@ -4157,7 +4157,7 @@ mod tests {
                     .iter()
                     .find(|(k, _)| k == people)
                     .map_or(Band::Surface, |(_, r)| *r);
-                CellMap::from_fn(&geo, |_| rung)
+                VertexMap::from_fn(&geo, |_| rung)
             })
             .collect()
     }
@@ -4168,9 +4168,9 @@ mod tests {
     fn hand_bake_seated<'a>(
         graphs: &'a [ConnectionGraph],
         caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
-        river_prox: &'a CellMap<f64>,
-        refugia: &'a CellMap<bool>,
-        seating: &'a [CellMap<Band>],
+        river_prox: &'a VertexMap<f64>,
+        refugia: &'a VertexMap<bool>,
+        seating: &'a [VertexMap<Band>],
     ) -> Bake<'a> {
         let mut bake = hand_bake_spread(
             graphs,
@@ -4189,8 +4189,8 @@ mod tests {
     fn hand_bake<'a>(
         graphs: &'a [ConnectionGraph],
         caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
-        river_prox: &'a CellMap<f64>,
-        refugia: &'a CellMap<bool>,
+        river_prox: &'a VertexMap<f64>,
+        refugia: &'a VertexMap<bool>,
         disposition: &'a BTreeMap<KindId, f64>,
     ) -> Bake<'a> {
         hand_bake_spread(graphs, caps, river_prox, refugia, disposition, no_spread())
@@ -4203,8 +4203,8 @@ mod tests {
     fn hand_bake_spread<'a>(
         graphs: &'a [ConnectionGraph],
         caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
-        river_prox: &'a CellMap<f64>,
-        refugia: &'a CellMap<bool>,
+        river_prox: &'a VertexMap<f64>,
+        refugia: &'a VertexMap<bool>,
         disposition: &'a BTreeMap<KindId, f64>,
         disposition_spread: &'a BTreeMap<KindId, f64>,
     ) -> Bake<'a> {
@@ -4239,8 +4239,8 @@ mod tests {
         let geo = Geosphere::new(1);
         EraClimate {
             day,
-            ice: CellMap::from_fn(&geo, |_| false),
-            habitable: CellMap::from_fn(&geo, |_| true),
+            ice: VertexMap::from_fn(&geo, |_| false),
+            habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
             ice_fraction: 0.0,
         }
@@ -4257,15 +4257,15 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| 100.0);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             10.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -4300,7 +4300,7 @@ mod tests {
         use hornvale_kernel::ReferenceElevation;
 
         let geo = Geosphere::new(1);
-        let raider_site = CellId(0);
+        let raider_site = Vertex(0);
         let neighbors = geo.neighbors(raider_site);
         assert!(
             neighbors.len() >= 2,
@@ -4314,7 +4314,7 @@ mod tests {
         // `raider_site`'s edge list, so nothing else needs to exist. Same
         // edge kind, wildly different conductance: the only difference
         // between the two approaches is how easy the road is.
-        let mut graph = ConnectionGraph::new(geo.cell_count());
+        let mut graph = ConnectionGraph::new(geo.vertex_count());
         graph.add_edge(
             raider_site,
             Edge {
@@ -4337,12 +4337,12 @@ mod tests {
         // land value, so nothing but the approach conductance can decide
         // which holder falls.
         let capacity = caps_from_fn(&geo, |_| 100.0);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let era = EraClimate {
             day: 0.0,
-            ice: CellMap::from_fn(&geo, |_| false),
-            habitable: CellMap::from_fn(&geo, |_| true),
+            ice: VertexMap::from_fn(&geo, |_| false),
+            habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: ReferenceElevation::new(0.0).unwrap(),
             ice_fraction: 0.0,
         };
@@ -4422,17 +4422,17 @@ mod tests {
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
         capacity: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
-        river_prox: &'a CellMap<f64>,
-        refugia: &'a CellMap<bool>,
+        river_prox: &'a VertexMap<f64>,
+        refugia: &'a VertexMap<bool>,
     ) -> (Bake<'a>, usize, usize) {
         let mut bake = hand_bake(graphs, capacity, river_prox, refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             40.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -4704,8 +4704,8 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| 100.0);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         bake.in_group_radius = &goblin_radius;
@@ -4839,14 +4839,14 @@ mod tests {
         // better than its own, so the only prize on offer is their product.
         bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             40.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
-        for &n in geo.neighbors(CellId(0)) {
+        for &n in geo.neighbors(Vertex(0)) {
             bake.open(
                 KindId("kobold"),
                 n,
@@ -4986,15 +4986,15 @@ mod tests {
         // sets (`eff_capacity × ASSESS_RATE`), not one a test wrote in.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         // 40 clears 10 × RAID_MARGIN four times over, and the land is
         // value-flat, so the only prize on offer is the neighbour's product.
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             40.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -5204,16 +5204,16 @@ mod tests {
             .collect();
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
             bake.time_horizon = &horizons;
-            let far = geo.neighbors(CellId(0))[0];
+            let far = geo.neighbors(Vertex(0))[0];
             // 40 clears 10 × RAID_MARGIN four times over, and the land is
             // value-flat, so the only prize on offer is the neighbour's
             // product: the raid subordinates rather than evicts.
             let patron = bake.open(
                 KindId("goblin"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 40.0,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -5371,16 +5371,16 @@ mod tests {
             .collect();
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
             bake.time_horizon = &horizons;
-            let far = geo.neighbors(CellId(0))[0];
+            let far = geo.neighbors(Vertex(0))[0];
             // Value-flat land, so `t_val > raider_val` is false and the only
             // prize on offer is the neighbour's product: a raid here can only
             // ever resolve as a subordination.
             let patron = bake.open(
                 KindId("goblin"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 PATRON_POP,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -5547,7 +5547,7 @@ mod tests {
         for extras in [0, EXTRAS] {
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
             bake.time_horizon = &horizons;
-            let ring = geo.neighbors(CellId(0));
+            let ring = geo.neighbors(Vertex(0));
             assert!(
                 ring.len() > EXTRAS,
                 "precondition: the patron's cell must have room for {EXTRAS} further vassals \
@@ -5556,10 +5556,10 @@ mod tests {
             );
             let patron = bake.open(
                 KindId("goblin"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 PATRON_POP,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -5684,8 +5684,8 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| RICH);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         /// The patron people's authored horizon under test — kobold's value,
         /// the longest sighted the shipped roster reaches.
@@ -5784,13 +5784,13 @@ mod tests {
         /// satisfiable by the wrong event.
         const DEMAND: f64 = 6.0;
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             PATRON_POP,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -5903,7 +5903,7 @@ mod tests {
         );
         assert!(
             bake.communities[patron].alive
-                && bake.communities[patron].site == CellId(0)
+                && bake.communities[patron].site == Vertex(0)
                 && bake.communities[patron].stores > 0.0,
             "the patron keeps its cell and what it already collected: it loses the stream, \
              not the hoard — the flight is not a raid on it"
@@ -5940,9 +5940,9 @@ mod tests {
         // `vassal_flights` 1 vs 0.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
-        let far = geo.neighbors(CellId(0))[0];
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let far = geo.neighbors(Vertex(0))[0];
         // The whole world is dead ground except the two cells this fixture
         // occupies. Since The Tilth that is said in CAPACITY, not in a mask:
         // `vacant_for` admits a cell only where this people's capacity is
@@ -5954,7 +5954,7 @@ mod tests {
         // and a fixture that wants unusable ground has to say so in that
         // language.
         let capacity = caps_from_fn(&geo, |c| {
-            if c == CellId(0) || c == far {
+            if c == Vertex(0) || c == far {
                 RICH
             } else {
                 0.0
@@ -5964,8 +5964,8 @@ mod tests {
             use hornvale_kernel::ReferenceElevation;
             EraClimate {
                 day: 0.0,
-                ice: CellMap::from_fn(&geo, |_| false),
-                habitable: CellMap::from_fn(&geo, |_| true),
+                ice: VertexMap::from_fn(&geo, |_| false),
+                habitable: VertexMap::from_fn(&geo, |_| true),
                 sea_level: ReferenceElevation::new(0.0).unwrap(),
                 ice_fraction: 0.0,
             }
@@ -5987,10 +5987,10 @@ mod tests {
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             PATRON_POP,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -6120,13 +6120,13 @@ mod tests {
         /// Years per driven epoch (the bake's own default step).
         const EPOCH_YEARS: f64 = 25.0;
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             PATRON_POP,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -6293,10 +6293,10 @@ mod tests {
         // resolve this test by having the loser eat its own vassal.
         let (geo, graphs, capacity, river_prox, refugia, era) = {
             let geo = Geosphere::new(1);
-            let ring = geo.neighbors(CellId(0));
+            let ring = geo.neighbors(Vertex(0));
             let (seat, vassal_cell) = (ring[0], ring[1]);
             cascade_world(move |c| match c {
-                CellId(0) => 200.0,      // the patron's prize land — the reason it is raided
+                Vertex(0) => 200.0,      // the patron's prize land — the reason it is raided
                 c if c == seat => 150.0, // the attacker's poorer holding, vacated by its win
                 c if c == vassal_cell => 60.0, // enough that the vassal is no husk
                 _ => POOR,
@@ -6316,14 +6316,14 @@ mod tests {
         /// mechanism, so it is the one number this fixture tunes.
         const VASSAL_POP: f64 = 43.0;
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let ring = geo.neighbors(CellId(0));
+        let ring = geo.neighbors(Vertex(0));
         let (seat, vassal_cell) = (ring[0], ring[1]);
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             PATRON_POP,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -6409,7 +6409,7 @@ mod tests {
             .expect("the beaten patron must be standing somewhere else — it fled, it did not die");
         assert_ne!(
             bake.communities[reseated].site,
-            CellId(0),
+            Vertex(0),
             "…on a different cell from the one it lost"
         );
 
@@ -6556,10 +6556,10 @@ mod tests {
         //   stayer's  demand 1 on 20 pop      → 0.05 < FLIGHT_BURDEN       (stays)
         let (geo, graphs, capacity, river_prox, refugia, era) = {
             let geo = Geosphere::new(1);
-            let ring = geo.neighbors(CellId(0));
+            let ring = geo.neighbors(Vertex(0));
             let (seat, stayer_cell, runaway_cell) = (ring[0], ring[1], ring[2]);
             cascade_world(move |c| match c {
-                CellId(0) => 200.0,            // the lord's prize land
+                Vertex(0) => 200.0,            // the lord's prize land
                 c if c == seat => 150.0,       // the attacker's poorer holding
                 c if c == stayer_cell => 60.0, // enough that neither vassal is a husk
                 c if c == runaway_cell => 60.0,
@@ -6584,14 +6584,14 @@ mod tests {
         /// The demand the stayer goes on paying: well below `FLIGHT_BURDEN`.
         const LIGHT_DEMAND: f64 = 1.0;
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let ring = geo.neighbors(CellId(0));
+        let ring = geo.neighbors(Vertex(0));
         let (seat, stayer_cell, runaway_cell) = (ring[0], ring[1], ring[2]);
         let lord = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             LORD_POP,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -6841,7 +6841,7 @@ mod tests {
         // only the raider's own cell is poorer, which is what turns the prize
         // from a mobile one into an immobile one.
         let (geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(|c| if c == CellId(0) { POOR } else { RICH });
+            cascade_world(|c| if c == Vertex(0) { POOR } else { RICH });
         /// kobold's authored horizon — the longest sighted patron the shipped
         /// roster produces, and so the strictest size gate available.
         const GENERATIONAL: f64 = 0.8;
@@ -6849,13 +6849,13 @@ mod tests {
             [(KindId("goblin"), GENERATIONAL)].into_iter().collect();
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         bake.time_horizon = &horizons;
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         let raider = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             40.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -6904,8 +6904,8 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| RICH);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let none: BTreeMap<KindId, f64> = BTreeMap::new();
         bake.time_horizon = &none;
@@ -6954,8 +6954,8 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| RICH);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         let horizons: BTreeMap<KindId, f64> = [(KindId("goblin"), 1.0)].into_iter().collect();
         bake.time_horizon = &horizons;
@@ -6993,17 +6993,17 @@ mod tests {
         // invariant in a way no census field would show.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
 
         // Equal-value cells (the world is value-flat), so `t_val > raider_val`
         // is FALSE and the shipped eviction path cannot fire. A big raider, a
         // small but far-from-capacity — i.e. productive — neighbour.
         let raider = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             80.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7057,7 +7057,7 @@ mod tests {
             bake.communities[raider].alive && bake.communities[target].alive,
             "both communities must survive a subordination"
         );
-        assert_eq!(bake.communities[raider].site, CellId(0), "raider stays put");
+        assert_eq!(bake.communities[raider].site, Vertex(0), "raider stays put");
         assert_eq!(bake.communities[target].site, far, "subordinate stays put");
         assert_eq!(
             bake.communities[target].population.to_bits(),
@@ -7070,8 +7070,8 @@ mod tests {
     /// — deterministically chosen (lowest ids first) and asserted rather than
     /// hoped for: on a triangle every community would see every other and
     /// neither depth guard could be exercised in isolation.
-    fn line_of_three(geo: &Geosphere) -> (CellId, CellId, CellId) {
-        let x = CellId(0);
+    fn line_of_three(geo: &Geosphere) -> (Vertex, Vertex, Vertex) {
+        let x = Vertex(0);
         for &y in geo.neighbors(x) {
             for &z in geo.neighbors(y) {
                 if z != x && !geo.neighbors(x).contains(&z) {
@@ -7227,16 +7227,16 @@ mod tests {
     #[test]
     fn the_assessment_reads_the_subordinates_cell_not_the_raiders() {
         let (geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(|c| if c == CellId(0) { RICH } else { POOR });
+            cascade_world(|c| if c == Vertex(0) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
 
         let raider = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             80.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7305,13 +7305,13 @@ mod tests {
         // adjustment to the assessment unobservable.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             80.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7365,18 +7365,18 @@ mod tests {
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
         capacity: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
-        river_prox: &'a CellMap<f64>,
-        refugia: &'a CellMap<bool>,
+        river_prox: &'a VertexMap<f64>,
+        refugia: &'a VertexMap<bool>,
         era: &EraClimate,
     ) -> (Bake<'a>, usize, usize, f64) {
         let mut bake = hand_bake(graphs, capacity, river_prox, refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             80.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7613,13 +7613,13 @@ mod tests {
         // the ceiling in one step.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             80.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7817,15 +7817,15 @@ mod tests {
         // tweak could have deleted the rule with every test still green.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let ring = geo.neighbors(CellId(0));
+        let ring = geo.neighbors(Vertex(0));
         let (incumbent_cell, rival_cell) = (ring[0], ring[1]);
 
         let target = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             10.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7880,15 +7880,15 @@ mod tests {
         // margin's subject is the single thing this test reads.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let ring = geo.neighbors(CellId(0));
+        let ring = geo.neighbors(Vertex(0));
         let (incumbent_cell, rival_cell) = (ring[0], ring[1]);
 
         let target = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             10.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7941,14 +7941,14 @@ mod tests {
         // re-inserted every scan and counted as a takeover of itself.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let far = geo.neighbors(CellId(0))[0];
+        let far = geo.neighbors(Vertex(0))[0];
 
         let raider = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             80.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -7998,15 +7998,15 @@ mod tests {
         // an explicit §9 non-goal.
         let (geo, graphs, capacity, river_prox, refugia, _era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        let ring = geo.neighbors(CellId(0));
+        let ring = geo.neighbors(Vertex(0));
         let (cell_a, cell_b) = (ring[0], ring[1]);
 
         let patron = bake.open(
             KindId("goblin"),
-            CellId(0),
+            Vertex(0),
             0.0,
             80.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8081,26 +8081,26 @@ mod tests {
         // vacant-first rule this returns `cascade: 0` and no cascade is ever
         // recorded.
         let (_geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+            cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         // A weak community sits on the one rich cell; a strong people is
         // driven off cell 0 (poor land) and must find a home.
         let holder = bake.open(
             KindId("goblin"),
-            CellId(20),
+            Vertex(20),
             0.0,
             5.0,
-            Founding::Genesis(CellId(20)),
+            Founding::Genesis(Vertex(20)),
             None,
             0.0,
         );
         let roller = bake.open(
             KindId("kobold"),
-            CellId(0),
+            Vertex(0),
             0.0,
             50.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8117,7 +8117,7 @@ mod tests {
             r_lineage,
             r_id,
             0.0,
-            CellId(0),
+            Vertex(0),
             &era,
             0.0,
             0,
@@ -8133,7 +8133,7 @@ mod tests {
         // population, and the holder is dead and driven off.
         let seated = *bake
             .node_index
-            .get(&(CellId(20), Band::Surface))
+            .get(&(Vertex(20), Band::Surface))
             .expect("the rich cell must be occupied");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
@@ -8156,7 +8156,7 @@ mod tests {
         // The evicted holder rolled onward and found marginal vacant land.
         assert!(
             bake.communities.iter().any(|c| c.alive
-                && c.site != CellId(20)
+                && c.site != Vertex(20)
                 && c.lineage == bake.communities[holder].lineage),
             "the evicted holder must have resettled somewhere"
         );
@@ -8184,7 +8184,7 @@ mod tests {
         // resettle — restoring the old call-site increment alongside the new
         // one makes this read 2.
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(CellId(0))[0];
+        let target_cell = probe.neighbors(Vertex(0))[0];
         let (_geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -8192,10 +8192,10 @@ mod tests {
         // beatable target holding the better cell.
         let raider = bake.open(
             KindId("kobold"),
-            CellId(0),
+            Vertex(0),
             0.0,
             200.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8240,7 +8240,7 @@ mod tests {
         // pins where the threshold sits and not merely that one exists.
         let take_the_rich_cell = |roller_pop: f64| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
-                cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+                cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
             // A very weak holder sits on the one rich cell: beatable by even a
@@ -8248,19 +8248,19 @@ mod tests {
             // far enough below its cell's capacity to have spoils worth taking.
             bake.open(
                 KindId("goblin"),
-                CellId(20),
+                Vertex(20),
                 0.0,
                 1.0,
-                Founding::Genesis(CellId(20)),
+                Founding::Genesis(Vertex(20)),
                 None,
                 0.0,
             );
             let roller = bake.open(
                 KindId("kobold"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 roller_pop,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -8276,7 +8276,7 @@ mod tests {
                 r_lineage,
                 r_id,
                 0.0,
-                CellId(0),
+                Vertex(0),
                 &era,
                 0.0,
                 0,
@@ -8284,7 +8284,7 @@ mod tests {
             );
             let seated = *bake
                 .node_index
-                .get(&(CellId(20), Band::Surface))
+                .get(&(Vertex(20), Band::Surface))
                 .expect("the rich cell is occupied either way");
             let holder_people = bake.records[bake.communities[seated].record].core.people;
             (outcome, holder_people)
@@ -8337,7 +8337,7 @@ mod tests {
         // empty rich cell further out and distance, not the premium, would be
         // doing the work.
         let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|c| {
-            if c == CellId(20) || c == CellId(18) {
+            if c == Vertex(20) || c == Vertex(18) {
                 RICH
             } else {
                 POOR
@@ -8351,19 +8351,19 @@ mod tests {
         // same ring; the comment lagged. Final review F-6.)
         bake.open(
             KindId("goblin"),
-            CellId(20),
+            Vertex(20),
             0.0,
             5.0,
-            Founding::Genesis(CellId(20)),
+            Founding::Genesis(Vertex(20)),
             None,
             0.0,
         );
         let roller = bake.open(
             KindId("kobold"),
-            CellId(0),
+            Vertex(0),
             0.0,
             50.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8380,7 +8380,7 @@ mod tests {
             r_lineage,
             r_id,
             0.0,
-            CellId(0),
+            Vertex(0),
             &era,
             0.0,
             0,
@@ -8393,7 +8393,7 @@ mod tests {
         );
         let seated = *bake
             .node_index
-            .get(&(CellId(20), Band::Surface))
+            .get(&(Vertex(20), Band::Surface))
             .expect("the held rich cell must have changed hands");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
@@ -8408,18 +8408,18 @@ mod tests {
         // for a better cell: ten times the capacity, three hops away, loses to
         // marginal land next door. Against an unrestricted scan over the whole
         // connected component this test fails — the roller seats itself on
-        // CellId(30) instead, and the occupied set of a real world drifts
+        // Vertex(30) instead, and the occupied set of a real world drifts
         // toward the globe's high-capacity cells.
         let (geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(|c| if c == CellId(30) { RICH } else { POOR });
+            cascade_world(|c| if c == Vertex(30) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let roller = bake.open(
             KindId("kobold"),
-            CellId(0),
+            Vertex(0),
             0.0,
             50.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8436,7 +8436,7 @@ mod tests {
             r_lineage,
             r_id,
             0.0,
-            CellId(0),
+            Vertex(0),
             &era,
             0.0,
             0,
@@ -8454,12 +8454,12 @@ mod tests {
             .expect("the roller must have settled somewhere")
             .site;
         assert!(
-            geo.neighbors(CellId(0)).contains(&seat),
-            "the roller must settle in the nearest ring, not cross the world for CellId(30): sat on {seat:?}"
+            geo.neighbors(Vertex(0)).contains(&seat),
+            "the roller must settle in the nearest ring, not cross the world for Vertex(30): sat on {seat:?}"
         );
         // Within that ring every cell is equally poor and equally undefended,
-        // so the CellId tie-break decides — a total, deterministic order.
-        assert_eq!(seat, CellId(12), "the ring's tie-break must be total");
+        // so the Vertex tie-break decides — a total, deterministic order.
+        assert_eq!(seat, Vertex(12), "the ring's tie-break must be total");
     }
 
     #[test]
@@ -8471,7 +8471,7 @@ mod tests {
         // a people whose whole neighbourhood is unusable still migrates as far
         // as it must. (Capacity is uniform across everything admissible, so
         // nothing but distance orders the options; an unrestricted scan takes
-        // the globally lowest `CellId`, which sits a ring further out again.)
+        // the globally lowest `Vertex`, which sits a ring further out again.)
         //
         // "Unusable" is said in CAPACITY, not in a mask. `vacant_for` admits a
         // cell only where this people's capacity is positive; the two inner
@@ -8481,19 +8481,19 @@ mod tests {
         // stopped in ring 1, which is what `left: Some(1) right: Some(3)` was
         // reporting.
         let (geo, graphs, _uniform, river_prox, refugia, era) = cascade_world(|_| POOR);
-        let blocked: BTreeSet<CellId> = geo
-            .cells()
-            .filter(|&c| matches!(geo.hops_between(CellId(0), c, 16), Some(1 | 2)))
+        let blocked: BTreeSet<Vertex> = geo
+            .vertices()
+            .filter(|&c| matches!(geo.hops_between(Vertex(0), c, 16), Some(1 | 2)))
             .collect();
         let capacity = caps_from_fn(&geo, |c| if blocked.contains(&c) { 0.0 } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let roller = bake.open(
             KindId("kobold"),
-            CellId(0),
+            Vertex(0),
             0.0,
             50.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8510,7 +8510,7 @@ mod tests {
             r_lineage,
             r_id,
             0.0,
-            CellId(0),
+            Vertex(0),
             &era,
             0.0,
             0,
@@ -8524,7 +8524,7 @@ mod tests {
             .expect("the roller must have settled somewhere")
             .site;
         assert_eq!(
-            geo.hops_between(CellId(0), seat, 16),
+            geo.hops_between(Vertex(0), seat, 16),
             Some(3),
             "the roller must widen its search to the nearest usable ring, and stop there: sat on {seat:?}"
         );
@@ -8537,25 +8537,25 @@ mod tests {
         // never sees the held cell in its option set at all, so it pioneers —
         // the same one rule, a different outcome.
         let (_geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+            cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let holder = bake.open(
             KindId("goblin"),
-            CellId(20),
+            Vertex(20),
             0.0,
             5.0,
-            Founding::Genesis(CellId(20)),
+            Founding::Genesis(Vertex(20)),
             None,
             0.0,
         );
         let holder_id = bake.communities[holder].id;
         let roller = bake.open(
             KindId("kobold"),
-            CellId(0),
+            Vertex(0),
             0.0,
             3.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8574,7 +8574,7 @@ mod tests {
             r_lineage,
             r_id,
             0.0,
-            CellId(0),
+            Vertex(0),
             &era,
             0.0,
             0,
@@ -8588,7 +8588,7 @@ mod tests {
         assert_eq!(
             bake.communities[*bake
                 .node_index
-                .get(&(CellId(20), Band::Surface))
+                .get(&(Vertex(20), Band::Surface))
                 .expect("still held")]
             .id,
             holder_id,
@@ -8599,10 +8599,10 @@ mod tests {
 
     /// The three cells of [`a_cascade_runs_three_hops_and_dies_of_dissipation`]'s
     /// strength ladder, in the order the chain takes them. Each is a `Geosphere::new(1)`
-    /// neighbour of the one before it, and all three are neighbours of `CellId(0)`
+    /// neighbour of the one before it, and all three are neighbours of `Vertex(0)`
     /// (the origin the first roller is driven off), so every hop finds its
     /// next prize in ring 1 and the widening scan never has to look past it.
-    const LADDER: [CellId; 3] = [CellId(20), CellId(12), CellId(14)];
+    const LADDER: [Vertex; 3] = [Vertex(20), Vertex(12), Vertex(14)];
 
     /// The people holding the bottom rung of
     /// [`a_cascade_runs_three_hops_and_dies_of_dissipation`]'s ladder — the one
@@ -8663,10 +8663,10 @@ mod tests {
             }
             let roller = bake.open(
                 KindId("kobold"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 400.0,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -8682,7 +8682,7 @@ mod tests {
                 r_lineage,
                 r_id,
                 0.0,
-                CellId(0),
+                Vertex(0),
                 &era,
                 0.0,
                 0,
@@ -8780,25 +8780,25 @@ mod tests {
         // defect: the recursion dropped it silently while the top-level call
         // mapped `Lost` to `collapsed`, so communities vanished uncounted).
         let (_geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+            cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let holder = bake.open(
             KindId("goblin"),
-            CellId(20),
+            Vertex(20),
             0.0,
             5.0,
-            Founding::Genesis(CellId(20)),
+            Founding::Genesis(Vertex(20)),
             None,
             0.0,
         );
         let holder_lineage = bake.communities[holder].lineage;
         let roller = bake.open(
             KindId("kobold"),
-            CellId(0),
+            Vertex(0),
             0.0,
             50.0,
-            Founding::Genesis(CellId(0)),
+            Founding::Genesis(Vertex(0)),
             None,
             0.0,
         );
@@ -8817,7 +8817,7 @@ mod tests {
             r_lineage,
             r_id,
             0.0,
-            CellId(0),
+            Vertex(0),
             &era,
             0.0,
             CASCADE_DEPTH_CAP,
@@ -8842,7 +8842,7 @@ mod tests {
             r_lineage,
             r_id,
             0.0,
-            CellId(0),
+            Vertex(0),
             &era,
             0.0,
             CASCADE_DEPTH_CAP - 1,
@@ -8875,7 +8875,7 @@ mod tests {
         // is the ONLY thing that differs, and the fed arm proves the fixture
         // really does reach a raid.
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(CellId(0))[0];
+        let target_cell = probe.neighbors(Vertex(0))[0];
         let raid_with_target_pop = |target_pop: f64| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
                 cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
@@ -8883,10 +8883,10 @@ mod tests {
             // The raider: strong, on land worth less than its neighbour's.
             let raider = bake.open(
                 KindId("kobold"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 200.0,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -8926,23 +8926,23 @@ mod tests {
         // preying on remnants all the way down".
         let roll_against_holder_pop = |holder_pop: f64| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
-                cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+                cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
             bake.open(
                 KindId("goblin"),
-                CellId(20),
+                Vertex(20),
                 0.0,
                 holder_pop,
-                Founding::Genesis(CellId(20)),
+                Founding::Genesis(Vertex(20)),
                 None,
                 0.0,
             );
             let roller = bake.open(
                 KindId("kobold"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 200.0,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -8958,7 +8958,7 @@ mod tests {
                 r_lineage,
                 r_id,
                 0.0,
-                CellId(0),
+                Vertex(0),
                 &era,
                 0.0,
                 0,
@@ -8997,17 +8997,17 @@ mod tests {
         // claim of `two_settlements_of_one_people_can_differ_in_raiding`; this
         // test's job is still the veto itself.
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(CellId(0))[0];
+        let target_cell = probe.neighbors(Vertex(0))[0];
         let raid_with_disposition = |disposition: BTreeMap<KindId, f64>| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
                 cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, &disposition);
             let raider = bake.open(
                 KindId("kobold"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 200.0,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -9061,7 +9061,7 @@ mod tests {
     #[test]
     fn two_settlements_of_one_people_can_differ_in_raiding() {
         let probe = Geosphere::new(1);
-        let target_cell = probe.neighbors(CellId(0))[0];
+        let target_cell = probe.neighbors(Vertex(0))[0];
         // Authored exactly AT the gate, so a symmetric spread puts roughly half
         // the draws on each side of it and the test is not fishing for a rare
         // tail.
@@ -9074,10 +9074,10 @@ mod tests {
                 hand_bake_spread(&graphs, &capacity, &river_prox, &refugia, &authored, spread);
             let raider = bake.open(
                 KindId("kobold"),
-                CellId(0),
+                Vertex(0),
                 founded,
                 200.0,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -9132,23 +9132,23 @@ mod tests {
         // neighbour would have rolled over the very same holder.
         let roll_with_disposition = |disposition: BTreeMap<KindId, f64>| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
-                cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+                cascade_world(|c| if c == Vertex(20) { RICH } else { POOR });
             let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, &disposition);
             bake.open(
                 KindId("goblin"),
-                CellId(20),
+                Vertex(20),
                 0.0,
                 5.0,
-                Founding::Genesis(CellId(20)),
+                Founding::Genesis(Vertex(20)),
                 None,
                 0.0,
             );
             let roller = bake.open(
                 KindId("kobold"),
-                CellId(0),
+                Vertex(0),
                 0.0,
                 50.0,
-                Founding::Genesis(CellId(0)),
+                Founding::Genesis(Vertex(0)),
                 None,
                 0.0,
             );
@@ -9164,7 +9164,7 @@ mod tests {
                 r_lineage,
                 r_id,
                 0.0,
-                CellId(0),
+                Vertex(0),
                 &era,
                 0.0,
                 0,
@@ -9222,13 +9222,13 @@ mod tests {
     /// The place the three tests below settle on. Any cell would do — the
     /// index is keyed on the pair, not on the cell's identity — and naming it
     /// once keeps the three readable.
-    const COLUMN: CellId = CellId(0);
+    const COLUMN: Vertex = Vertex(0);
 
     /// How many alive communities the index holds in one cell, across every
     /// rung. The quantity "surface density" and "two at different rungs" are
     /// both statements about, counted off the index rather than off a scan so
     /// the assertion is about the thing the bake actually consults.
-    fn held_in_column(bake: &Bake<'_>, cell: CellId) -> Vec<(Band, usize)> {
+    fn held_in_column(bake: &Bake<'_>, cell: Vertex) -> Vec<(Band, usize)> {
         bake.node_index
             .iter()
             .filter(|((c, _), _)| *c == cell)
@@ -9248,8 +9248,8 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| 100.0);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let seating = seating_with(&[]); // everybody overhead
         let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
         let era = era_at(0.0);
@@ -9287,7 +9287,7 @@ mod tests {
     }
 
     /// The defect decision 0102 named and this task removes: a
-    /// `BTreeMap<CellId, _>` cannot hold two polities, so an underworld
+    /// `BTreeMap<Vertex, _>` cannot hold two polities, so an underworld
     /// community could only settle a cell by evicting whoever lived overhead.
     ///
     /// Same cell, same era, two peoples — one seated on the surface and one in
@@ -9297,8 +9297,8 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| 100.0);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let seating = seating_with(&[(KindId("kobold"), Band::Deeps)]);
         let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
         let era = era_at(0.0);
@@ -9355,8 +9355,8 @@ mod tests {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| 100.0);
-        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-        let refugia = CellMap::from_fn(&geo, |_| false);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
         let seating = seating_with(&[
             (KindId("kobold"), Band::Deeps),
             (KindId("goblin"), Band::Nadir),

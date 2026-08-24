@@ -1,5 +1,5 @@
 #![warn(missing_docs)]
-//! The locale window: a `RoomAddr` rendered as an observable place.
+//! The locale window: a `Facet` rendered as an observable place.
 
 mod streams;
 pub use streams::stream_labels;
@@ -23,7 +23,7 @@ use budget::StrangenessBudget;
 
 use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::{
-    CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, band, quantize,
+    Facet, NearestVertexIndex, SeaLevelHeight, Seed, Vertex, World, WorldTime, band, quantize,
 };
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::branch::{CatchmentCut, rill_reading};
@@ -71,7 +71,7 @@ pub struct StrangeSiteRow {
 pub struct Locale {
     /// Schema tag (`locale/room/v2`).
     pub schema: &'static str,
-    /// Packed room id (`RoomId.0`).
+    /// Packed room id (`FacetId.0`).
     pub id: u64,
     /// Base icosahedron face.
     pub face: u8,
@@ -97,7 +97,7 @@ pub struct Locale {
     /// Blended continuous fields.
     pub fields: LocaleFields,
     /// The three canonical-grid corner cells and their integer weights.
-    pub corners: Vec<CellWeight>,
+    pub corners: Vec<VertexWeight>,
     /// The strangeness overlay: descriptor, negation vector, and magnitude.
     pub regime: Regime,
     /// Base + vertical exits.
@@ -244,7 +244,7 @@ pub struct Resolution {
 /// A canonical-grid corner cell and its integer blend weight.
 /// type-audit: bare-ok(index: cell), bare-ok(count: weight)
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct CellWeight {
+pub struct VertexWeight {
     /// Canonical-grid cell index.
     pub cell: u32,
     /// Integer weight (numerator over the summed denominator).
@@ -368,7 +368,7 @@ pub enum LocaleError {
     /// The room is coarser than the canonical grid, so it has no inheritance.
     AboveGrid,
     /// The room address has no packed id (e.g. `path.len() > MAX_DEPTH`); its
-    /// `RoomAddrError` debug is carried. Fail fast rather than mint a
+    /// `FacetError` debug is carried. Fail fast rather than mint a
     /// meaningless `id: 0`.
     Unaddressable(String),
 }
@@ -396,20 +396,20 @@ pub struct LocaleContext {
     seed: Seed,
     climate: GeneratedClimate,
     terrain: GeneratedTerrain,
-    index: NearestCellIndex,
+    index: NearestVertexIndex,
     globe_level: u32,
     budget: StrangenessBudget,
 }
 
 /// The corner cell a room's *categorical* readings come from: the greatest
-/// blend weight, tie-broken to the lowest `CellId`.
+/// blend weight, tie-broken to the lowest `Vertex`.
 ///
 /// One rule, one caller-visible consequence: every categorical field a room
 /// reports — biome, water kind, substrate, and (since The Pigment) the rock
 /// whose reflectance the colour layer reads — names the same cell. Splitting
 /// this would let a room be described as granite lowland and drawn in
 /// basalt grey.
-fn dominant_corner(weights: &[(CellId, u64); 3]) -> (CellId, u64) {
+fn dominant_corner(weights: &[(Vertex, u64); 3]) -> (Vertex, u64) {
     let mut best = weights[0];
     for &cand in &weights[1..] {
         if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
@@ -449,14 +449,14 @@ pub enum Crossing {
 /// The shortest of a room's three edges, radians — the smallest step the mesh
 /// offers out of it, and the unit "narrower than one step" is measured in.
 ///
-/// Derived from [`RoomAddr::corners`], so it is the mesh's own geometry at
+/// Derived from [`Facet::corners`], so it is the mesh's own geometry at
 /// whatever depth the room sits at; there is no length scale anywhere in this
 /// project to state a width in, and inventing one would be a defect. The
 /// *shortest* edge rather than the mean or the longest because the criterion
 /// is a claim about crossability and the strictest of a room's steps is the
 /// one that has to clear the water.
 /// type-audit: pending(wave-1: return)
-pub fn room_edge(addr: &RoomAddr) -> f64 {
+pub fn room_edge(addr: &Facet) -> f64 {
     let [a, b, c] = addr.corners();
     let sep = |u: [f64; 3], v: [f64; 3]| -> f64 {
         let d: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
@@ -499,7 +499,7 @@ impl LocaleContext {
         terrain: &GeneratedTerrain,
         climate: &GeneratedClimate,
     ) -> LocaleContext {
-        let index = NearestCellIndex::new(climate.geosphere());
+        let index = NearestVertexIndex::new(climate.geosphere());
         let globe_level = climate.geosphere().level();
         let budget = StrangenessBudget::build(world.seed, climate, terrain);
         LocaleContext {
@@ -536,7 +536,7 @@ impl LocaleContext {
     /// resolve an address to a cell itself (the same role `terrain()` plays for
     /// the terrain provider). Building a second index would duplicate a
     /// structure this context exists to hold once.
-    pub fn nearest_index(&self) -> &NearestCellIndex {
+    pub fn nearest_index(&self) -> &NearestVertexIndex {
         &self.index
     }
 
@@ -555,7 +555,7 @@ impl LocaleContext {
         self.strange_sites()
             .into_iter()
             .map(|s| {
-                let cell = CellId(s.cell);
+                let cell = Vertex(s.cell);
                 let coord = self.climate.geosphere().coord(cell);
                 StrangeSiteRow {
                     cell: s.cell,
@@ -581,7 +581,7 @@ impl LocaleContext {
     /// (context, addr, at): same inputs → byte-identical `Locale`. v1 samples
     /// the time-independent annual mean and does not yet vary with `at`
     /// (threaded for the P8 temporal-phase layer).
-    pub fn describe(&self, addr: &RoomAddr, at: WorldTime) -> Result<Locale, LocaleError> {
+    pub fn describe(&self, addr: &Facet, at: WorldTime) -> Result<Locale, LocaleError> {
         self.describe_at(addr, at, None)
     }
 
@@ -594,7 +594,7 @@ impl LocaleContext {
     ///
     /// The cell is the same *categorical* corner [`LocaleContext::describe`]
     /// takes its biome and water kind from (max blend weight, tie-break
-    /// lowest `CellId` — the shared `dominant_corner`), never a blend of the
+    /// lowest `Vertex` — the shared `dominant_corner`), never a blend of the
     /// three: rock class is categorical, and averaging granite with basalt
     /// would name a rock that is not there. Sharing that one rule is what
     /// makes the colour and the prose agree about which ground a room
@@ -608,7 +608,7 @@ impl LocaleContext {
     /// this integrates.
     pub fn reflectance_at(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         micro: &MicroField,
         at: WorldTime,
     ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
@@ -630,7 +630,7 @@ impl LocaleContext {
     /// [`surface`]'s module doc.
     pub fn reflectance_mixture_at(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         micro: &MicroField,
         at: WorldTime,
     ) -> Result<hornvale_kernel::color::Mixture, LocaleError> {
@@ -688,7 +688,7 @@ impl LocaleContext {
     /// (Task 9).
     pub fn cover_class_at(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         micro: &MicroField,
         at: WorldTime,
     ) -> Result<CoverClass, LocaleError> {
@@ -715,7 +715,7 @@ impl LocaleContext {
     /// there to descend through", so on land the answer is `Vec::new()`, not
     /// climate's `[Surface]` (its answer for a *land* cell's own one-stratum
     /// ladder — a different question this method never asks).
-    pub fn water_column_at(&self, cell: CellId) -> Vec<Stratum> {
+    pub fn water_column_at(&self, cell: Vertex) -> Vec<Stratum> {
         if self.climate.biome_expr_at(cell).realm != Realm::WATERWORLD {
             return Vec::new();
         }
@@ -738,14 +738,14 @@ impl LocaleContext {
     /// last-element-wins tie-break, while this window's own
     /// `dominant_corner` (used by the two `describe_*` callers at `:763`/
     /// `:792` that ultimately reach this method) tie-breaks to the *lowest*
-    /// `CellId` — and `RoomAddr::corner_weights` does not sort its three
+    /// `Vertex` — and `Facet::corner_weights` does not sort its three
     /// corners by id, so the two selections are not provably identical on an
     /// exact corner-weight tie. **BELOW-FLOOR FALLBACK, PRESERVED VERBATIM
     /// AND KNOWN WRONG:** a rung beneath the seabed (or, on land, any
     /// stratum but `Surface`) is rock, and this answers open water. Kept
     /// byte-for-byte because The Fathom may not move behaviour; see
     /// followup F-10.
-    pub fn expr_at_stratum(&self, cell: CellId, stratum: Stratum) -> BiomeExpr {
+    pub fn expr_at_stratum(&self, cell: Vertex, stratum: Stratum) -> BiomeExpr {
         let expr = self.climate.biome_expr_at(cell);
         self.climate
             .biome_expr_at_stratum(cell, stratum)
@@ -760,7 +760,7 @@ impl LocaleContext {
     /// the water column rather than from the surface.
     pub fn describe_at(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         at: WorldTime,
         stratum: Option<Stratum>,
     ) -> Result<Locale, LocaleError> {
@@ -785,11 +785,11 @@ impl LocaleContext {
     /// (`windows/vessel`'s `LocaleTerrain`) can hold a prefilled cache and
     /// consult it from an ordinary `&self` trait method, never needing `&mut`
     /// access at read time. A cache miss falls through to a fresh
-    /// [`RoomAddr::corner_weights`] call — correctness never depends on the
+    /// [`Facet::corner_weights`] call — correctness never depends on the
     /// cache being complete, only speed does. `cache: None` is byte-identical
     /// to `describe_at` (always a miss). Byte-identical to `describe_at` on
     /// a hit too, by construction (`corner_weights_lookup` only ever returns
-    /// what [`RoomAddr::corner_weights_memo`] would have inserted, which is
+    /// what [`Facet::corner_weights_memo`] would have inserted, which is
     /// pinned bit-equal to `corner_weights` itself). The same `corner_weights`
     /// result [`Self::temperature_at_cached`], [`Self::productivity_at_cached`],
     /// [`Self::blend_at_cached`], and [`Self::hazards_at_cached`] would each
@@ -798,7 +798,7 @@ impl LocaleContext {
     /// cache across all five collapses that back down to one scan.
     pub fn describe_at_cached(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         at: WorldTime,
         stratum: Option<Stratum>,
         cache: Option<&hornvale_kernel::RoomMeshMemo>,
@@ -820,15 +820,15 @@ impl LocaleContext {
     /// `None`, which is why the lookup itself returns `Option<Option<_>>` —
     /// see [`hornvale_kernel::RoomMeshMemo::corner_weights_lookup`]'s own
     /// doc); a miss (or no cache at all) falls through to a fresh
-    /// [`RoomAddr::corner_weights`] call. No mutation — this never fills a
+    /// [`Facet::corner_weights`] call. No mutation — this never fills a
     /// miss back into `cache`, which is exactly what lets a `&self` reader
     /// use it without `&mut` access.
     fn corner_weights_for(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         geo: &hornvale_kernel::Geosphere,
         cache: Option<&hornvale_kernel::RoomMeshMemo>,
-    ) -> Option<[(CellId, u64); 3]> {
+    ) -> Option<[(Vertex, u64); 3]> {
         if let Some(cache) = cache {
             // The read-path half of the geo-aliasing guard (the-waymark fix
             // round, round 2): `corner_weights_memo`'s own `debug_assert_eq!`
@@ -843,8 +843,8 @@ impl LocaleContext {
                     .corner_weights_geo_level()
                     .is_none_or(|level| level == geo.level()),
                 "RoomMeshMemo read against a geosphere at a different level than it was \
-                 filled with — a RoomAddr alone does not name which (Geosphere, \
-                 NearestCellIndex) resolved it, so reading a cache built for a different \
+                 filled with — a Facet alone does not name which (Geosphere, \
+                 NearestVertexIndex) resolved it, so reading a cache built for a different \
                  world/context silently returns a stale corner_weights answer"
             );
             if let Some(hit) = cache.corner_weights_lookup(addr) {
@@ -859,14 +859,14 @@ impl LocaleContext {
     /// never drift apart in how a `Locale` is built from them.
     fn describe_with_weights(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         stratum: Option<Stratum>,
         id: u64,
-        weights: [(CellId, u64); 3],
+        weights: [(Vertex, u64); 3],
     ) -> Result<Locale, LocaleError> {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
 
-        // Categorical biome: max weight, tie-break lowest CellId. Inherited,
+        // Categorical biome: max weight, tie-break lowest Vertex. Inherited,
         // never re-quantized (decision 0038).
         let best = dominant_corner(&weights);
         let biome = match stratum {
@@ -876,7 +876,7 @@ impl LocaleContext {
 
         // Continuous fields: integer-weighted mean, full precision, quantize
         // at emit.
-        let blend = |value: &dyn Fn(CellId) -> f64| -> f64 {
+        let blend = |value: &dyn Fn(Vertex) -> f64| -> f64 {
             let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
             quantize(sum / denom as f64)
         };
@@ -964,7 +964,7 @@ impl LocaleContext {
             fields,
             corners: weights
                 .iter()
-                .map(|&(c, w)| CellWeight {
+                .map(|&(c, w)| VertexWeight {
                     cell: c.0,
                     weight: w,
                 })
@@ -1067,7 +1067,7 @@ impl LocaleContext {
     /// reach the distance was measured to and the same vertex the bands came
     /// from. Symmetric in its arguments: swapping `a` and `b` swaps a pair of
     /// symmetric tests and nothing else.
-    pub fn crossing_between(&self, a: &RoomAddr, b: &RoomAddr) -> Crossing {
+    pub fn crossing_between(&self, a: &Facet, b: &Facet) -> Crossing {
         let net = self.terrain.channels();
         let (Some(ra), Some(rb)) = (
             net.bank_reading(a.centroid()),
@@ -1138,7 +1138,7 @@ impl LocaleContext {
     /// bank to be on, and `Dry` would be an answer about water rather than the
     /// absence of any.
     /// type-audit: pending(wave-1: return)
-    pub fn transverse_of(&self, addr: &RoomAddr) -> Option<(Transverse, f64)> {
+    pub fn transverse_of(&self, addr: &Facet) -> Option<(Transverse, f64)> {
         let reading = self.terrain.channels().bank_reading(addr.centroid())?;
         Some((
             Transverse::from_band(band(reading.signed_distance, &reading.band_edges)),
@@ -1157,7 +1157,7 @@ impl LocaleContext {
     /// room the canonical grid does not cover (above the grid or unaddressable);
     /// the caller supplies the never-chosen fallback.
     /// type-audit: pending(wave-2: return)
-    pub fn temperature_at(&self, addr: &RoomAddr, at: WorldTime) -> Option<f64> {
+    pub fn temperature_at(&self, addr: &Facet, at: WorldTime) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
         Some(self.temperature_with_weights(at, weights))
@@ -1170,7 +1170,7 @@ impl LocaleContext {
     /// type-audit: pending(wave-2: return)
     pub fn temperature_at_cached(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         at: WorldTime,
         cache: Option<&hornvale_kernel::RoomMeshMemo>,
     ) -> Option<f64> {
@@ -1182,7 +1182,7 @@ impl LocaleContext {
     /// The shared tail of [`Self::temperature_at`]/[`Self::temperature_at_cached`]:
     /// the blend itself, once `weights` is resolved (the-waymark fix round,
     /// round 2 — kills the base/`_cached` duplicate body).
-    fn temperature_with_weights(&self, at: WorldTime, weights: [(CellId, u64); 3]) -> f64 {
+    fn temperature_with_weights(&self, at: WorldTime, weights: [(Vertex, u64); 3]) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights
             .iter()
@@ -1206,7 +1206,7 @@ impl LocaleContext {
     /// the never-fed fallback). Time-independent (standing biomass is a slow,
     /// annual field), so it takes no observation time.
     /// type-audit: pending(wave-2: return)
-    pub fn productivity_at(&self, addr: &RoomAddr) -> Option<f64> {
+    pub fn productivity_at(&self, addr: &Facet) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
         Some(self.productivity_with_weights(weights))
@@ -1219,7 +1219,7 @@ impl LocaleContext {
     /// type-audit: pending(wave-2: return)
     pub fn productivity_at_cached(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         cache: Option<&hornvale_kernel::RoomMeshMemo>,
     ) -> Option<f64> {
         let geo = self.climate.geosphere();
@@ -1229,9 +1229,9 @@ impl LocaleContext {
 
     /// The shared tail of [`Self::productivity_at`]/[`Self::productivity_at_cached`]
     /// (the-waymark fix round, round 2).
-    fn productivity_with_weights(&self, weights: [(CellId, u64); 3]) -> f64 {
+    fn productivity_with_weights(&self, weights: [(Vertex, u64); 3]) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
-        let blend = |value: &dyn Fn(CellId) -> f64| -> f64 {
+        let blend = |value: &dyn Fn(Vertex) -> f64| -> f64 {
             let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
             sum / denom as f64
         };
@@ -1248,7 +1248,7 @@ impl LocaleContext {
     /// (a compute-path read, not quantized). `None` for a room the canonical grid
     /// does not cover.
     /// type-audit: bare-ok(ratio: field), bare-ok(ratio: return)
-    pub fn blend_at(&self, addr: &RoomAddr, field: &hornvale_kernel::CellMap<f64>) -> Option<f64> {
+    pub fn blend_at(&self, addr: &Facet, field: &hornvale_kernel::VertexMap<f64>) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
         Some(Self::blend_with_weights(weights, field))
@@ -1261,8 +1261,8 @@ impl LocaleContext {
     /// type-audit: bare-ok(ratio: field), bare-ok(ratio: return)
     pub fn blend_at_cached(
         &self,
-        addr: &RoomAddr,
-        field: &hornvale_kernel::CellMap<f64>,
+        addr: &Facet,
+        field: &hornvale_kernel::VertexMap<f64>,
         cache: Option<&hornvale_kernel::RoomMeshMemo>,
     ) -> Option<f64> {
         let geo = self.climate.geosphere();
@@ -1274,8 +1274,8 @@ impl LocaleContext {
     /// fix round, round 2). No `&self` needed — the blend reads only `weights`
     /// and the injected `field`.
     fn blend_with_weights(
-        weights: [(CellId, u64); 3],
-        field: &hornvale_kernel::CellMap<f64>,
+        weights: [(Vertex, u64); 3],
+        field: &hornvale_kernel::VertexMap<f64>,
     ) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
@@ -1295,7 +1295,7 @@ impl LocaleContext {
     /// cover (the caller supplies the safe fallback). Time-independent, so it
     /// takes no observation time.
     /// type-audit: pending(wave-2: return)
-    pub fn hazards_at(&self, addr: &RoomAddr) -> Option<(f64, f64, f64)> {
+    pub fn hazards_at(&self, addr: &Facet) -> Option<(f64, f64, f64)> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
         Some(self.hazards_with_weights(weights))
@@ -1308,7 +1308,7 @@ impl LocaleContext {
     /// type-audit: pending(wave-2: return)
     pub fn hazards_at_cached(
         &self,
-        addr: &RoomAddr,
+        addr: &Facet,
         cache: Option<&hornvale_kernel::RoomMeshMemo>,
     ) -> Option<(f64, f64, f64)> {
         let geo = self.climate.geosphere();
@@ -1318,8 +1318,8 @@ impl LocaleContext {
 
     /// The shared tail of [`Self::hazards_at`]/[`Self::hazards_at_cached`] (the-waymark
     /// fix round, round 2).
-    fn hazards_with_weights(&self, weights: [(CellId, u64); 3]) -> (f64, f64, f64) {
-        // The dominant corner cell (max weight, tie-break lowest CellId) — the
+    fn hazards_with_weights(&self, weights: [(Vertex, u64); 3]) -> (f64, f64, f64) {
+        // The dominant corner cell (max weight, tie-break lowest Vertex) — the
         // same pick `describe` uses for the categorical biome/regime.
         let mut best = weights[0];
         for &cand in &weights[1..] {
@@ -1550,7 +1550,7 @@ fn compass(bearing_deg: f64) -> Compass {
     ][idx as usize]
 }
 
-fn exits_of(addr: &RoomAddr) -> Vec<Exit> {
+fn exits_of(addr: &Facet) -> Vec<Exit> {
     let mut exits = Vec::new();
     for n in addr.neighbors() {
         exits.push(Exit {
@@ -1581,7 +1581,7 @@ fn exits_of(addr: &RoomAddr) -> Vec<Exit> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{RoomAddr, Seed, World, WorldTime};
+    use hornvale_kernel::{Facet, Seed, World, WorldTime};
 
     fn land_world() -> World {
         // Seed 42 is the project's canonical fixture; it has land.
@@ -1610,8 +1610,8 @@ mod tests {
             let world = World::new(Seed(seed));
             let terrain = terrain_of(&world).expect("terrain sculpts");
             let geo = terrain.geosphere();
-            for i in (0..geo.cell_count() as u32).step_by(53) {
-                let cell = CellId(i);
+            for i in (0..geo.vertex_count() as u32).step_by(53) {
+                let cell = Vertex(i);
                 let buffer = terrain.material_at(cell);
                 let rock = terrain.rock_at(cell);
                 let mineral = hornvale_terrain::lithology::reflectance(&buffer, rock);
@@ -1632,7 +1632,7 @@ mod tests {
     #[test]
     fn describe_is_deterministic_across_two_contexts() {
         let world = land_world();
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 0,
             path: vec![1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0],
         };
@@ -1651,7 +1651,7 @@ mod tests {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         // A room coarser than the canonical grid has no corner weights.
-        let coarse = RoomAddr {
+        let coarse = Facet {
             face: 0,
             path: vec![1],
         };
@@ -1695,7 +1695,7 @@ mod tests {
         // A weighted blend never leaves the min..max of its inputs.
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -1712,7 +1712,7 @@ mod tests {
         let ctx = LocaleContext::build(&world).unwrap();
         // The same address `fields_are_within_the_corner_range` uses, for the same
         // reason: it resolves on seed 42's mesh without needing a settlement.
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -1742,7 +1742,7 @@ mod tests {
                 hornvale_kernel::math::sin(t * 0.023) * 0.5,
                 hornvale_kernel::math::cos(t * 0.031),
             ];
-            let addr = RoomAddr::containing(dir, 6);
+            let addr = Facet::containing(dir, 6);
             if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS) {
                 kinds.insert(loc.fields.water);
                 if loc.fields.water == WaterKind::River {
@@ -1790,7 +1790,7 @@ mod tests {
                 hornvale_kernel::math::sin(t * 0.023) * 0.5,
                 hornvale_kernel::math::cos(t * 0.031),
             ];
-            let addr = RoomAddr::containing(dir, ctx.globe_level());
+            let addr = Facet::containing(dir, ctx.globe_level());
             let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
                 continue;
             };
@@ -1821,7 +1821,7 @@ mod tests {
         // Unaddressable, never mint a valid-looking Locale with id: 0.
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let over_deep = RoomAddr {
+        let over_deep = Facet {
             face: 0,
             path: vec![0; 30],
         };
@@ -1845,7 +1845,7 @@ mod tests {
         // to keep the both-platform workspace gate stable.
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -1872,15 +1872,15 @@ mod tests {
         assert_eq!(
             loc.corners,
             vec![
-                CellWeight {
+                VertexWeight {
                     cell: 3799,
                     weight: 46
                 },
-                CellWeight {
+                VertexWeight {
                     cell: 15109,
                     weight: 16
                 },
-                CellWeight {
+                VertexWeight {
                     cell: 15099,
                     weight: 130
                 },
@@ -1957,7 +1957,7 @@ mod tests {
                 hornvale_kernel::math::sin(t * 0.023) * 0.5,
                 hornvale_kernel::math::cos(t * 0.031),
             ];
-            let addr = RoomAddr::containing(dir, 6);
+            let addr = Facet::containing(dir, 6);
             let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
                 continue;
             };
@@ -2017,7 +2017,7 @@ mod tests {
 
     /// The room's dominant corner, read back off a rendered [`Locale`] through
     /// the SAME rule `describe` used to pick it — [`dominant_corner`]: max
-    /// weight, tie-break lowest `CellId`.
+    /// weight, tie-break lowest `Vertex`.
     ///
     /// **Not `max_by_key(|c| c.weight)`**, which returns the LAST maximum on a
     /// tie. Three equal weights are common enough on this mesh that the two
@@ -2025,11 +2025,11 @@ mod tests {
     /// against a cell production never chose — passing for a reason unrelated
     /// to what it claimed to measure. (Two paths in `windows/vessel` still
     /// resolve a cell that way; that divergence is recorded and unfixed.)
-    fn dominant_of(loc: &Locale) -> CellId {
-        let w: [(CellId, u64); 3] = [
-            (CellId(loc.corners[0].cell), loc.corners[0].weight),
-            (CellId(loc.corners[1].cell), loc.corners[1].weight),
-            (CellId(loc.corners[2].cell), loc.corners[2].weight),
+    fn dominant_of(loc: &Locale) -> Vertex {
+        let w: [(Vertex, u64); 3] = [
+            (Vertex(loc.corners[0].cell), loc.corners[0].weight),
+            (Vertex(loc.corners[1].cell), loc.corners[1].weight),
+            (Vertex(loc.corners[2].cell), loc.corners[2].weight),
         ];
         dominant_corner(&w).0
     }
@@ -2050,7 +2050,7 @@ mod tests {
     /// them.** Rooms and cells subdivide the *same* icosphere, so a level-6 cell
     /// centre is also an exact corner of the level-12 room lattice, and the arc
     /// between two adjacent centres is an exact edge path of it.
-    /// `RoomAddr::containing`'s spherical point-in-triangle test straddles on
+    /// `Facet::containing`'s spherical point-in-triangle test straddles on
     /// both: the descent falls through to its middle-child fallback at every
     /// level and converges on the centre of a base-face sub-triangle — measured
     /// ~5° from the point asked for, with all three corner weights equal
@@ -2059,11 +2059,7 @@ mod tests {
     /// it claimed.** Hence `t` never reaches 0, and every sample carries a
     /// small off-lattice third component (`SKEW`) to leave the arc. `containing`
     /// is sound for ordinary points; it is lattice coincidences that degenerate.
-    fn rooms_across_cell(
-        geo: &hornvale_kernel::Geosphere,
-        cell: CellId,
-        depth: u32,
-    ) -> Vec<RoomAddr> {
+    fn rooms_across_cell(geo: &hornvale_kernel::Geosphere, cell: Vertex, depth: u32) -> Vec<Facet> {
         /// Off-lattice third component. Small enough not to move which cell
         /// owns the sample, large enough to leave the arc.
         const SKEW: f64 = 0.031;
@@ -2081,7 +2077,7 @@ mod tests {
                     w * a[2] + t * b[2] + SKEW * c[2],
                 ];
                 let n = (raw[0] * raw[0] + raw[1] * raw[1] + raw[2] * raw[2]).sqrt();
-                out.push(RoomAddr::containing(
+                out.push(Facet::containing(
                     [raw[0] / n, raw[1] / n, raw[2] / n],
                     depth,
                 ));
@@ -2113,7 +2109,7 @@ mod tests {
     /// How many canonical cells the conservation scan below covers, in each of
     /// its two halves. Capped because the scan pays a `describe` per room.
     ///
-    /// The scan takes two samples deliberately. A **stride** over `CellId`
+    /// The scan takes two samples deliberately. A **stride** over `Vertex`
     /// order spans the globe, so conservation is asserted over ocean and dry
     /// land as well as rivers. A **River prefix** targets the one category the
     /// reverted mechanism actually deleted: a stride sample is ~94% ocean and
@@ -2175,9 +2171,9 @@ mod tests {
         let depth = ctx.globe_level() + 6;
         let sea_level_m = quantize(globe.sea_level.get());
 
-        let all: Vec<CellId> = geo.cells().collect();
+        let all: Vec<Vertex> = geo.vertices().collect();
         let stride = (all.len() / CONSERVATION_CELLS).max(1);
-        let mut scan: Vec<CellId> = all
+        let mut scan: Vec<Vertex> = all
             .iter()
             .copied()
             .step_by(stride)
@@ -2234,7 +2230,7 @@ mod tests {
                 let drainage_blend: f64 = loc
                     .corners
                     .iter()
-                    .map(|c| c.weight as f64 * *globe.drainage.get(CellId(c.cell)))
+                    .map(|c| c.weight as f64 * *globe.drainage.get(Vertex(c.cell)))
                     .sum::<f64>()
                     / denom;
                 let is_terminal_sink =
@@ -2282,11 +2278,11 @@ mod tests {
     fn regime_is_deterministic_and_siblings_differ() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let a = RoomAddr {
+        let a = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 0],
         };
-        let b = RoomAddr {
+        let b = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 1],
         };
@@ -2303,7 +2299,7 @@ mod tests {
     fn schema_is_v2_and_regime_present() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -2325,7 +2321,7 @@ mod tests {
     fn exits_are_three_lateral_plus_vertical() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -2368,12 +2364,12 @@ mod tests {
     }
 
     /// A small walk-visited neighborhood: `start` plus every room reachable
-    /// within `hops` edge-steps (BFS over `RoomAddr::neighbors`, the same
+    /// within `hops` edge-steps (BFS over `Facet::neighbors`, the same
     /// mesh a real possession walk traverses) — the-waymark Task 3's
     /// "rooms a real walk visits" fixture, sized for a fast unit test rather
     /// than a full possession transcript.
-    fn walk_visited(start: &RoomAddr, hops: u32) -> Vec<RoomAddr> {
-        let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    fn walk_visited(start: &Facet, hops: u32) -> Vec<Facet> {
+        let mut seen: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut frontier = vec![start.clone()];
         seen.insert(start.clone());
         for _ in 0..hops {
@@ -2400,14 +2396,14 @@ mod tests {
         // call) — correctness must never depend on prefill completeness.
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
-        let start = RoomAddr {
+        let start = Facet {
             face: 4,
             path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
         };
         let rooms = walk_visited(&start, 3);
         assert!(rooms.len() > 10, "fixture must cover a real neighborhood");
         let at = WorldTime::new(12.5).expect("a day value is finite");
-        let zero_field = hornvale_kernel::CellMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
+        let zero_field = hornvale_kernel::VertexMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
 
         // Prefill only the EVEN-indexed rooms (under `&mut`) — the rest stay
         // deliberately un-prefilled, so this run exercises both a hit and a
@@ -2512,15 +2508,15 @@ mod tests {
         let real_level = ctx.climate().geosphere().level();
         let other_level = real_level + 1;
         let fake_geo = hornvale_kernel::Geosphere::new(other_level);
-        let fake_index = NearestCellIndex::new(&fake_geo);
+        let fake_index = NearestVertexIndex::new(&fake_geo);
         let mut memo = hornvale_kernel::RoomMeshMemo::new();
-        let fake_addr = RoomAddr {
+        let fake_addr = Facet {
             face: 0,
             path: vec![0; other_level as usize],
         };
         fake_addr.corner_weights_memo(&fake_geo, &fake_index, &mut memo);
 
-        let real_addr = RoomAddr {
+        let real_addr = Facet {
             face: 4,
             path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
         };

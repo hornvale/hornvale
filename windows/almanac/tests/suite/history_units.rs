@@ -19,7 +19,7 @@ use hornvale_history::{
     HISTORY_NOW, IS_OCCUPATION, OCC_FOUNDED, OCC_FOUNDED_FROM, OCC_FUNCTION, OCC_NOTABILITY,
     OCC_PEAK, OCC_PEOPLE, OCC_SITE, OCC_TECH,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, Seed, Value, World, WorldTime};
+use hornvale_kernel::{EntityId, Fact, Seed, Value, Vertex, World, WorldTime};
 
 /// Bake year → standard day, the crossing `emit_history` performs. Shared with
 /// production as a constant (`Years::DAYS_PER_YEAR`), not as a function.
@@ -89,7 +89,7 @@ fn world_with_a_living_community() -> World {
 #[test]
 fn a_founding_renders_as_the_bake_year_not_the_stored_day() {
     let prose =
-        hornvale_almanac::history::render_site(&world_with_a_living_community(), CellId(1400));
+        hornvale_almanac::history::render_site(&world_with_a_living_community(), Vertex(1400));
     assert!(
         prose.contains("Founded in the year 500,"),
         "the founding must render as its bake year; got:\n{prose}"
@@ -107,7 +107,7 @@ fn a_founding_renders_as_the_bake_year_not_the_stored_day() {
 #[test]
 fn a_living_communitys_tenure_is_measured_from_the_committed_present() {
     let prose =
-        hornvale_almanac::history::render_site(&world_with_a_living_community(), CellId(1400));
+        hornvale_almanac::history::render_site(&world_with_a_living_community(), Vertex(1400));
     let expected = (NOW_YEAR - FOUNDED_YEAR) as i64;
     assert!(
         prose.contains(&format!("it stands yet — {expected} years and counting")),

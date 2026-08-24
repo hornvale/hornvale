@@ -139,7 +139,7 @@
 //! actively trying to change the pipeline out from under.
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed, Value};
+use hornvale_kernel::{Seed, Value, Vertex};
 use hornvale_lab::FullView;
 use hornvale_language::{
     Headedness, LexEntry, Lexicon, Namer, Phonology, Segment, draw_wear_cascade, evolve,
@@ -290,7 +290,7 @@ fn the_wear_funnel_is_reproducible() {
                 world,
                 &world.seed,
                 &species,
-                CellId(*cell as u32),
+                Vertex(*cell as u32),
                 terrain,
                 climate,
                 None,

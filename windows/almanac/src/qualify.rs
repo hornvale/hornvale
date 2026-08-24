@@ -100,7 +100,7 @@
 //! separates. No float comparison, no hashing, no wall clock. Same world and
 //! same roster ⇒ same labels, byte for byte.
 
-use hornvale_kernel::{CellId, EntityId, Value, World};
+use hornvale_kernel::{EntityId, Value, Vertex, World};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The disambiguating site facts this module reads for one settlement.
@@ -218,7 +218,7 @@ pub struct SiteLabels {
     /// Cell → the label that document should print for it. A cell holding no
     /// settlement is absent; [`SiteLabels::label`] renders it as a bare cell
     /// id.
-    labels: BTreeMap<CellId, String>,
+    labels: BTreeMap<Vertex, String>,
 }
 
 impl SiteLabels {
@@ -233,8 +233,8 @@ impl SiteLabels {
     /// first in ledger commit order wins; that has not been observed in any
     /// generated world sampled (953 settlements over seven seeds, all on
     /// distinct cells), so this is defence, not a path anything walks.
-    pub fn for_document(world: &World, cells: &[CellId]) -> SiteLabels {
-        let lines: Vec<(CellId, String)> = cells.iter().map(|&c| (c, String::new())).collect();
+    pub fn for_document(world: &World, cells: &[Vertex]) -> SiteLabels {
+        let lines: Vec<(Vertex, String)> = cells.iter().map(|&c| (c, String::new())).collect();
         SiteLabels::for_lines(world, &lines)
     }
 
@@ -267,10 +267,10 @@ impl SiteLabels {
     /// would be a caller printing one place on two different lines, which
     /// neither caller does.
     /// type-audit: bare-ok(prose: lines)
-    pub fn for_lines(world: &World, lines: &[(CellId, String)]) -> SiteLabels {
-        let roster: BTreeSet<CellId> = lines.iter().map(|(c, _)| *c).collect();
+    pub fn for_lines(world: &World, lines: &[(Vertex, String)]) -> SiteLabels {
+        let roster: BTreeSet<Vertex> = lines.iter().map(|(c, _)| *c).collect();
         let facts = site_facts(world, &roster);
-        let mut context: BTreeMap<CellId, &str> = BTreeMap::new();
+        let mut context: BTreeMap<Vertex, &str> = BTreeMap::new();
         for (cell, shown) in lines {
             context.entry(*cell).or_insert(shown.as_str());
         }
@@ -278,7 +278,7 @@ impl SiteLabels {
         // Group by (name, rest of the line). `BTreeMap` keyed by that pair
         // gives a deterministic group order and a deterministic membership
         // order (the roster is already ascending by cell).
-        let mut groups: BTreeMap<(&str, &str), Vec<CellId>> = BTreeMap::new();
+        let mut groups: BTreeMap<(&str, &str), Vec<Vertex>> = BTreeMap::new();
         for (cell, site) in &facts {
             let shown = context.get(cell).copied().unwrap_or("");
             groups
@@ -331,7 +331,7 @@ impl SiteLabels {
     /// bare cell id — a caller that names a site it did not declare gets an
     /// honest, unqualifiable label rather than a silently unqualified name.
     /// type-audit: bare-ok(prose: return)
-    pub fn label(&self, cell: CellId) -> String {
+    pub fn label(&self, cell: Vertex) -> String {
         self.labels
             .get(&cell)
             .cloned()
@@ -347,7 +347,7 @@ impl SiteLabels {
 /// unqualified. A rung whose renderings are not all distinct is skipped for
 /// the same reason: a qualifier that separates two of three "Roa"s has spent
 /// characters and bought nothing.
-fn separating_rung(facts: &BTreeMap<CellId, SiteFacts>, group: &[CellId]) -> Option<Vec<String>> {
+fn separating_rung(facts: &BTreeMap<Vertex, SiteFacts>, group: &[Vertex]) -> Option<Vec<String>> {
     RUNGS.iter().find_map(|rung| {
         let rendered: Vec<String> = group
             .iter()
@@ -360,8 +360,8 @@ fn separating_rung(facts: &BTreeMap<CellId, SiteFacts>, group: &[CellId]) -> Opt
 
 /// Read the site facts of every settlement standing on a cell in `roster`,
 /// in one pass over the settlement roster rather than one pass per cell.
-fn site_facts(world: &World, roster: &BTreeSet<CellId>) -> BTreeMap<CellId, SiteFacts> {
-    let mut out: BTreeMap<CellId, SiteFacts> = BTreeMap::new();
+fn site_facts(world: &World, roster: &BTreeSet<Vertex>) -> BTreeMap<Vertex, SiteFacts> {
+    let mut out: BTreeMap<Vertex, SiteFacts> = BTreeMap::new();
     for settlement in hornvale_settlement::all_settlements(world) {
         let Some(Value::Number(n)) = world
             .ledger
@@ -369,7 +369,7 @@ fn site_facts(world: &World, roster: &BTreeSet<CellId>) -> BTreeMap<CellId, Site
         else {
             continue;
         };
-        let cell = CellId(*n as u32);
+        let cell = Vertex(*n as u32);
         if !roster.contains(&cell) || out.contains_key(&cell) {
             continue;
         }
@@ -445,17 +445,17 @@ mod tests {
     #[test]
     fn the_ladder_stops_at_the_first_separating_rung_not_the_shortest() {
         let both_separate = BTreeMap::from([
-            (CellId(1), facts("Ice-Home", "hobgoblin", "bog", 11.0, 21.0)),
-            (CellId(2), facts("Ice-Home", "bugbear", "fen", 12.0, 22.0)),
+            (Vertex(1), facts("Ice-Home", "hobgoblin", "bog", 11.0, 21.0)),
+            (Vertex(2), facts("Ice-Home", "bugbear", "fen", 12.0, 22.0)),
         ]);
-        let chosen = separating_rung(&both_separate, &[CellId(1), CellId(2)]).unwrap();
+        let chosen = separating_rung(&both_separate, &[Vertex(1), Vertex(2)]).unwrap();
         assert_eq!(
             chosen,
             vec!["Ice-Home of the hobgoblins", "Ice-Home of the bugbears"],
         );
         // Non-vacuity: the rung it passed over really would have separated
         // them, and really is shorter.
-        let biome: Vec<String> = [CellId(1), CellId(2)]
+        let biome: Vec<String> = [Vertex(1), Vertex(2)]
             .iter()
             .map(|c| Rung::Biome.apply(&both_separate[c]).unwrap())
             .collect();
@@ -474,11 +474,11 @@ mod tests {
     #[test]
     fn a_partially_separating_rung_is_rejected() {
         let three = BTreeMap::from([
-            (CellId(1), facts("Roa", "kobold", "taiga", 11.0, 21.0)),
-            (CellId(2), facts("Roa", "kobold", "desert", 12.0, 22.0)),
-            (CellId(3), facts("Roa", "gnoll", "steppe", 13.0, 23.0)),
+            (Vertex(1), facts("Roa", "kobold", "taiga", 11.0, 21.0)),
+            (Vertex(2), facts("Roa", "kobold", "desert", 12.0, 22.0)),
+            (Vertex(3), facts("Roa", "gnoll", "steppe", 13.0, 23.0)),
         ]);
-        let chosen = separating_rung(&three, &[CellId(1), CellId(2), CellId(3)]).unwrap();
+        let chosen = separating_rung(&three, &[Vertex(1), Vertex(2), Vertex(3)]).unwrap();
         assert!(
             chosen.iter().all(|label| !label.contains("of the kobolds")),
             "the people rung cannot separate two kobold Roas: {chosen:?}"
@@ -492,11 +492,11 @@ mod tests {
     #[test]
     fn the_pair_rung_catches_what_neither_fact_catches_alone() {
         let three = BTreeMap::from([
-            (CellId(1), facts("Roa", "kobold", "taiga", 11.0, 21.0)),
-            (CellId(2), facts("Roa", "kobold", "desert", 12.0, 22.0)),
-            (CellId(3), facts("Roa", "gnoll", "taiga", 13.0, 23.0)),
+            (Vertex(1), facts("Roa", "kobold", "taiga", 11.0, 21.0)),
+            (Vertex(2), facts("Roa", "kobold", "desert", 12.0, 22.0)),
+            (Vertex(3), facts("Roa", "gnoll", "taiga", 13.0, 23.0)),
         ]);
-        let chosen = separating_rung(&three, &[CellId(1), CellId(2), CellId(3)]).unwrap();
+        let chosen = separating_rung(&three, &[Vertex(1), Vertex(2), Vertex(3)]).unwrap();
         assert_eq!(
             chosen,
             vec![
@@ -512,9 +512,9 @@ mod tests {
     #[test]
     fn twins_alike_in_every_fact_have_no_separating_rung() {
         let identical = BTreeMap::from([
-            (CellId(1), facts("Roa", "kobold", "taiga", 1.0, 1.0)),
-            (CellId(2), facts("Roa", "kobold", "taiga", 1.0, 1.0)),
+            (Vertex(1), facts("Roa", "kobold", "taiga", 1.0, 1.0)),
+            (Vertex(2), facts("Roa", "kobold", "taiga", 1.0, 1.0)),
         ]);
-        assert_eq!(separating_rung(&identical, &[CellId(1), CellId(2)]), None);
+        assert_eq!(separating_rung(&identical, &[Vertex(1), Vertex(2)]), None);
     }
 }

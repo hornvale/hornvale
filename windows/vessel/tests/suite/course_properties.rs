@@ -17,14 +17,14 @@
 //! the cross-track bound's own difference computation had a live ±180°
 //! wraparound bug.
 
-use hornvale_kernel::{GeoCoord, RoomAddr, math, quantize};
+use hornvale_kernel::{Facet, GeoCoord, math, quantize};
 use hornvale_locale::Compass;
 use hornvale_vessel::course::{bearing_of, nearest_neighbour, rhumb_advance, step_length_rad};
 use hornvale_vessel::{PossessOpts, Session, Turn, WorldContext};
 
 use crate::common;
 
-/// A mid-latitude, walk-depth `RoomAddr`. Depth 12 (walk depth on the
+/// A mid-latitude, walk-depth `Facet`. Depth 12 (walk depth on the
 /// canonical grid — globe level 6 + 6) and a fixed face match Task 2's own
 /// unit-test helper in `course.rs`'s `#[cfg(test)] mod tests` — `walk_depth`
 /// itself needs a `LocaleContext` a pure test cannot cheaply build, so the
@@ -50,10 +50,10 @@ use crate::common;
 /// milli-degrees from the antimeridian, which exposed a real wraparound bug
 /// in the cross-track difference itself (see [`wrapped_lon_diff_deg`]) — the
 /// fix is in the computation, not in moving this fixture again.
-fn walk_band_addr() -> RoomAddr {
+fn walk_band_addr() -> Facet {
     let mut path = vec![0u8; 12];
     path[0] = 1;
-    RoomAddr { face: 0, path }
+    Facet { face: 0, path }
 }
 
 /// **NOT cross-track — this measures TOTAL separation, and Task 3's review
@@ -299,14 +299,14 @@ fn circular_bearing_distance(a_deg: f64, b_deg: f64) -> f64 {
 }
 
 /// The neighbour of `origin` whose OWN bearing from `origin`
-/// (`RoomAddr::bearing_to`) is closest to `want_deg`.
+/// (`Facet::bearing_to`) is closest to `want_deg`.
 ///
 /// Deliberately independent of the production path: this never calls
 /// `nearest_neighbour` or `rhumb_advance`, which would make the expectation
 /// circular with the code under test — it would pass whenever `go` and this
 /// helper made the SAME mistake together, not just when `go` is correct.
-fn neighbour_nearest_by_bearing(origin: &RoomAddr, want_deg: f64) -> RoomAddr {
-    let mut best: Option<(f64, RoomAddr)> = None;
+fn neighbour_nearest_by_bearing(origin: &Facet, want_deg: f64) -> Facet {
+    let mut best: Option<(f64, Facet)> = None;
     for n in origin.neighbors() {
         let d = circular_bearing_distance(origin.bearing_to(&n), want_deg);
         best = match best {
@@ -397,7 +397,7 @@ const FIXED_PRIORITY_CYCLE: [Compass; 8] = [
 /// of the room's 3 occupied compass buckets (move there) or it doesn't
 /// (refuse — "No way X from here" under the old locale-exit system — a
 /// no-op here).
-fn fixed_priority_attempt(addr: &RoomAddr, want: Compass) -> RoomAddr {
+fn fixed_priority_attempt(addr: &Facet, want: Compass) -> Facet {
     match addr
         .neighbors()
         .into_iter()

@@ -7,7 +7,7 @@
 use crate::pins::TerrainPins;
 use crate::streams;
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellMap, Geosphere, Seed, Stream, math};
+use hornvale_kernel::{Geosphere, Seed, Stream, VertexMap, math};
 
 /// A tectonic plate.
 /// type-audit: bare-ok(index: id), bare-ok(ratio: seed_position), bare-ok(ratio: euler_axis), bare-ok(ratio: rate), bare-ok(ratio: maturity), bare-ok(ratio: weight)
@@ -148,7 +148,7 @@ const EDGE_AMP: f64 = 0.06;
 /// plate id. Noise is stateless per-plate hash-noise (`plate-edge`) — no
 /// draws, so any grid level samples the same boundaries.
 /// type-audit: bare-ok(index)
-pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> CellMap<u32> {
+pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> VertexMap<u32> {
     let edge_root = terrain_seed.derive(crate::streams::PLATE_EDGE);
     // Precompute one edge-noise sampler per plate: its seed depends only on
     // the plate id, not the cell, so the `format!`, the `derive`, and the
@@ -161,7 +161,7 @@ pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> C
             crate::crust::SphereFbm::new(noise_seed, 8.0, 4)
         })
         .collect();
-    CellMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |cell| {
         let position = geo.position(cell);
         let mut best = 0u32;
         let mut best_score = f64::INFINITY;
@@ -241,7 +241,7 @@ mod tests {
         let terrain_seed = Seed(42).derive(streams::ROOT);
         let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let assignment = assign_plates(&geo, terrain_seed, &plates);
-        assert_eq!(assignment.len(), geo.cell_count());
+        assert_eq!(assignment.len(), geo.vertex_count());
         for (_, plate) in assignment.iter() {
             assert!((*plate as usize) < plates.len());
         }
@@ -255,7 +255,7 @@ mod tests {
             &TerrainPins::default(),
             &mut Vec::new(),
         );
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let p = geo.position(cell);
             for plate in &plates {
                 assert!(dot(velocity_at(plate, p), p).abs() < 1e-12);
@@ -327,7 +327,7 @@ mod tests {
         let plates = two_test_plates();
         let assignment = assign_plates(&geo, Seed(42).derive(streams::ROOT), &plates);
         let mut boundary_lats = Vec::new();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let mine = *assignment.get(cell);
             if geo
                 .neighbors(cell)

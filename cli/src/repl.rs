@@ -1,7 +1,7 @@
 //! The REPL window: interrogate a world line by line. Generic over
 //! input/output so tests drive it with buffers.
 
-use hornvale_kernel::{CellId, EntityId, Value, World, WorldTime};
+use hornvale_kernel::{EntityId, Value, Vertex, World, WorldTime};
 use hornvale_worldgen as world_builder;
 use std::io::{BufRead, Write};
 
@@ -89,7 +89,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     None => writeln!(output, "usage: land <latitude> <longitude>")?,
                     Some((lat, lon)) => match world_builder::terrain_of(world) {
                         Ok(terrain) => {
-                            let cell = terrain.nearest_cell(lat, lon);
+                            let cell = terrain.nearest_vertex(lat, lon);
                             let relative = terrain.elevation_at(cell) - terrain.sea_level();
                             let surface = if terrain.is_ocean(cell) {
                                 format!("ocean, {:.0} m deep", -relative)
@@ -130,7 +130,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     Some((lat, lon)) => match world_builder::terrain_of(world) {
                         Ok(terrain) => match world_builder::climate_from(world, &terrain) {
                             Ok(climate) => {
-                                let cell = terrain.nearest_cell(lat, lon);
+                                let cell = terrain.nearest_vertex(lat, lon);
                                 writeln!(
                                     output,
                                     "cell {}: biome {} — {:.0}°C, moisture {:.2}",
@@ -175,7 +175,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 // entities' own site facts, and only where the whole line
                 // coincides -- population and biome already separate most
                 // colliding names here, and `for_lines` is told so.
-                let rows: Vec<(hornvale_terrain::PlaceInfo, u32, Option<CellId>)> =
+                let rows: Vec<(hornvale_terrain::PlaceInfo, u32, Option<Vertex>)> =
                     hornvale_terrain::places(world)
                         .into_iter()
                         .map(|place| {
@@ -190,13 +190,13 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                                 .ledger
                                 .value_of(place.id, hornvale_settlement::CELL_ID)
                             {
-                                Some(Value::Number(n)) => Some(CellId(*n as u32)),
+                                Some(Value::Number(n)) => Some(Vertex(*n as u32)),
                                 _ => None,
                             };
                             (place, population, cell)
                         })
                         .collect();
-                let lines: Vec<(CellId, String)> = rows
+                let lines: Vec<(Vertex, String)> = rows
                     .iter()
                     .filter_map(|(place, population, cell)| {
                         Some(((*cell)?, format!("{population} — {}", place.biome)))
@@ -225,7 +225,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     None => writeln!(output, "usage: settlement <latitude> <longitude>")?,
                     Some((lat, lon)) => match world_builder::terrain_of(world) {
                         Ok(terrain) => {
-                            let cell = terrain.nearest_cell(lat, lon);
+                            let cell = terrain.nearest_vertex(lat, lon);
                             let found = hornvale_terrain::places(world).into_iter().find(|p| {
                                 matches!(
                                     world.ledger.value_of(p.id, hornvale_settlement::CELL_ID),

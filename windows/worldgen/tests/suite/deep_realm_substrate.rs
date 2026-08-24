@@ -60,7 +60,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Band, CellId, Geosphere, Seed, Value};
+use hornvale_kernel::{Band, Geosphere, Seed, Value, Vertex};
 use hornvale_settlement::CELL_ID;
 use hornvale_terrain::{
     Cave, CaveKind, GeneratedTerrain, GeothermalGradient, Horizon, TerrainPins, rung_at_depth,
@@ -163,9 +163,9 @@ fn measure_one(seed: Seed) -> SeedReport {
     let mut kind_karst = 0usize;
     let mut kind_lava_tube = 0usize;
     let mut kind_fracture = 0usize;
-    let mut cave_set: BTreeSet<CellId> = BTreeSet::new();
+    let mut cave_set: BTreeSet<Vertex> = BTreeSet::new();
 
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -545,7 +545,7 @@ fn addresses_in_budget_per_floor(rung_idx: usize) -> usize {
 /// surface, and that file already restates the band ladder for the same
 /// reason. Always probes `entrance: 0`: today's terrain model reports one
 /// aperture per cave cell (see `ChamberAddr::entrance`'s own doc).
-fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
+fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: Vertex) -> usize {
     let mut count = 0usize;
     for &band in Band::habitation() {
         for branch in 0..BRANCHES_PER_SYSTEM {
@@ -577,7 +577,7 @@ fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell:
 /// kept rather than deleted because restricted passage is owed work
 /// (`MAP-restricted-passage`) and this is the instrument that will report it
 /// returning; a constant `false` today is a measurement, not dead code.
-fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> bool {
+fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: Vertex) -> bool {
     !chamber_exists(
         seed,
         cave,
@@ -604,11 +604,11 @@ fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId
 fn land_distances(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
-    sources: &BTreeSet<CellId>,
+    sources: &BTreeSet<Vertex>,
 ) -> Vec<Option<u32>> {
-    let mut dist: Vec<Option<u32>> = vec![None; geo.cell_count()];
-    let mut queue: VecDeque<CellId> = VecDeque::new();
-    for cell in geo.cells() {
+    let mut dist: Vec<Option<u32>> = vec![None; geo.vertex_count()];
+    let mut queue: VecDeque<Vertex> = VecDeque::new();
+    for cell in geo.vertices() {
         if sources.contains(&cell) {
             dist[cell.0 as usize] = Some(0);
             queue.push_back(cell);
@@ -782,21 +782,21 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
     // The flagship's cell, via the same `CELL_ID` fact `confluence.rs`
     // already reads a settlement's location through — no separate,
     // independently-chosen lookup.
-    let flagship_cell: Option<CellId> = hornvale_settlement::all_settlements(&world)
+    let flagship_cell: Option<Vertex> = hornvale_settlement::all_settlements(&world)
         .into_iter()
         .next()
         .and_then(|s| match world.ledger.value_of(s.id, CELL_ID) {
-            Some(Value::Number(n)) => Some(CellId(*n as u32)),
+            Some(Value::Number(n)) => Some(Vertex(*n as u32)),
             _ => None,
         });
 
     let mut land_cells = 0usize;
-    let mut land_cell_ids: Vec<CellId> = Vec::new();
+    let mut land_cell_ids: Vec<Vertex> = Vec::new();
     let mut cave_cells: Vec<(usize, Band, bool)> = Vec::new();
     let mut per_cell_counts: Vec<usize> = Vec::new();
-    let mut non_sealed: BTreeSet<CellId> = BTreeSet::new();
+    let mut non_sealed: BTreeSet<Vertex> = BTreeSet::new();
 
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }

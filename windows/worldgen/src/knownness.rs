@@ -82,7 +82,7 @@
 //! tested prediction. A campaign that wants the question answered properly
 //! now has a live axis and should preregister against it from a fresh spec.
 
-use hornvale_kernel::{CellId, Seed, WorldTime, Years, math};
+use hornvale_kernel::{Seed, Vertex, WorldTime, Years, math};
 use hornvale_terrain::GeneratedTerrain;
 
 use crate::hazard::HazardEventKind;
@@ -233,7 +233,7 @@ pub fn knownness(
     terrain: &GeneratedTerrain,
     holder: &'static str,
     generation_length: Option<Years>,
-    cell: CellId,
+    cell: Vertex,
     now: WorldTime,
 ) -> Knownness {
     if crate::volcano::volcano_at(seed, terrain, cell).is_none() {
@@ -324,9 +324,9 @@ mod tests {
 
     /// Every edifice cell on a globe, grouped by the source contact that
     /// identifies its cone.
-    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<CellId, Vec<CellId>> {
-        let mut cones: BTreeMap<CellId, Vec<CellId>> = BTreeMap::new();
-        for cell in geo.cells() {
+    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<Vertex, Vec<Vertex>> {
+        let mut cones: BTreeMap<Vertex, Vec<Vertex>> = BTreeMap::new();
+        for cell in geo.vertices() {
             if let Some(source) = terrain.edifice_source_at(cell) {
                 cones.entry(source).or_default().push(cell);
             }
@@ -340,7 +340,7 @@ mod tests {
     }
 
     /// This cell's eruptions over a long span of world time, in order.
-    fn eruptions(seed: u64, terrain: &GeneratedTerrain, cell: CellId) -> Vec<HazardEvent> {
+    fn eruptions(seed: u64, terrain: &GeneratedTerrain, cell: Vertex) -> Vec<HazardEvent> {
         let window = (WorldTime::GENESIS, at(200_000.0 * Years::DAYS_PER_YEAR));
         crate::hazard::events_in(Seed(seed), terrain, cell, window)
             .into_iter()
@@ -357,7 +357,7 @@ mod tests {
         geo: &Geosphere,
         terrain: &GeneratedTerrain,
         min_gap_days: f64,
-    ) -> (CellId, HazardEvent, f64) {
+    ) -> (Vertex, HazardEvent, f64) {
         for source in cones(geo, terrain).keys() {
             let events = eruptions(seed, terrain, *source);
             for pair in events.windows(2) {
@@ -387,7 +387,7 @@ mod tests {
         seed: u64,
         geo: &Geosphere,
         terrain: &GeneratedTerrain,
-    ) -> (CellId, HazardEvent, HazardEvent) {
+    ) -> (Vertex, HazardEvent, HazardEvent) {
         let (lower, upper) = (half_life_days(), 0.9 * horizon_days());
         for source in cones(geo, terrain).keys() {
             let events = eruptions(seed, terrain, *source);
@@ -644,7 +644,7 @@ mod tests {
     fn a_cell_with_no_edifice_has_nothing_to_remember() {
         let (geo, terrain) = globe();
         let mut checked = 0_u32;
-        for cell in geo.cells().take(2_000) {
+        for cell in geo.vertices().take(2_000) {
             if crate::hazard::has_edifice(&terrain, cell) {
                 continue;
             }

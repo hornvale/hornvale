@@ -18,7 +18,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_kernel::{Band, Seed, Vertex};
 use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, Horizon, TerrainPins, rung_at_depth};
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
@@ -100,7 +100,7 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 /// identical density, so the comparison is sound and the slice is not a
 /// confound. What this number is NOT is the count of chambers under a cell;
 /// do not read it as one.
-fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
+fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: Vertex) -> usize {
     let mut count = 0usize;
     for &band in &BAND_LADDER {
         for branch in 0..BRANCHES_PER_SYSTEM {
@@ -129,7 +129,7 @@ fn deepest_reached(
     seed: Seed,
     cave: &Cave,
     gradient: GeothermalGradient,
-    cell: CellId,
+    cell: Vertex,
 ) -> Option<Band> {
     BAND_LADDER.iter().rev().find_map(|&band| {
         let reached = (0..BRANCHES_PER_SYSTEM).any(|branch| {
@@ -193,7 +193,7 @@ const DEEP_REACH_M: f64 = 2000.0;
 #[test]
 fn a_shallow_cave_has_a_shallow_graph() {
     let seed = Seed(90210);
-    let cell = CellId(9);
+    let cell = Vertex(9);
 
     let deep_cave = cave_reaching_m(DEEP_REACH_M);
     let shallow_cave = cave_reaching_m(SHALLOW_REACH_M);
@@ -310,7 +310,7 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
     let geo = terrain.geosphere();
 
     let (cell, real_cave) = geo
-        .cells()
+        .vertices()
         .filter(|&c| !terrain.is_ocean(c))
         .find_map(|c| terrain.cave_at(c).map(|cave| (c, cave)))
         .expect("seed 42 has at least one land cave cell at BuildDepth::Terrain");

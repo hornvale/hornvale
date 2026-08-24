@@ -5,7 +5,7 @@
 //! westerlies, polar easterlies. Tidal-lock is a distinct regime with no
 //! bands (organized around the substellar point instead).
 
-use hornvale_kernel::{CellId, Geosphere};
+use hornvale_kernel::{Geosphere, Vertex};
 
 /// The rotation regime a climate is built under (climate-owned mirror of the
 /// astronomy rotation; mapped at the composition root so climate imports no
@@ -72,7 +72,7 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 /// the poles, where east is undefined (their bands carry no rain-shadow
 /// tracing). Coordinate convention: latitude = asin(z), longitude = atan2(y, x).
 /// type-audit: bare-ok(ratio)
-pub fn wind_east_tangent(geo: &Geosphere, cell: CellId) -> [f64; 3] {
+pub fn wind_east_tangent(geo: &Geosphere, cell: Vertex) -> [f64; 3] {
     let east = cross([0.0, 0.0, 1.0], geo.position(cell));
     let len = (east[0] * east[0] + east[1] * east[1] + east[2] * east[2]).sqrt();
     if len < 1e-9 {
@@ -87,7 +87,7 @@ pub fn wind_east_tangent(geo: &Geosphere, cell: CellId) -> [f64; 3] {
 /// odd (sinking) bands blow westerly (`+east`, e.g. mid-latitude westerlies).
 /// Zero at the poles.
 /// type-audit: bare-ok(count: bands), bare-ok(ratio: return)
-pub fn prevailing_wind(geo: &Geosphere, cell: CellId, bands: u32) -> [f64; 3] {
+pub fn prevailing_wind(geo: &Geosphere, cell: Vertex, bands: u32) -> [f64; 3] {
     let east = wind_east_tangent(geo, cell);
     let band = band_index(geo.coord(cell).latitude, bands);
     let sign = if is_rising_band(band) { -1.0 } else { 1.0 };
@@ -141,7 +141,7 @@ mod tests {
         let geo = Geosphere::new(3);
         // Some equatorial cell has a nonzero eastward tangent orthogonal to +z.
         let cell = geo
-            .cells()
+            .vertices()
             .min_by(|a, b| {
                 geo.position(*a)[2]
                     .abs()

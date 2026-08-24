@@ -39,7 +39,7 @@
 //! commit).
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 use hornvale_worldgen::{
@@ -53,7 +53,7 @@ use hornvale_worldgen::{
 /// it `pub` or add a second `#[doc(hidden)] pub` wrapper — this is the
 /// two-line fold over the public `ConnectionGraph::edges` the brief asks
 /// for instead.
-fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
+fn approach_ease(graph: &ConnectionGraph, cell: Vertex) -> f64 {
     graph
         .edges(cell)
         .iter()
@@ -68,7 +68,7 @@ fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
 /// is" (an attacker uses one approach — Thermopylae is defensible because
 /// its best approach is bad, not because a total is low); this isolates the
 /// latter.
-fn max_approach(graph: &ConnectionGraph, cell: CellId) -> f64 {
+fn max_approach(graph: &ConnectionGraph, cell: Vertex) -> f64 {
     graph
         .edges(cell)
         .iter()
@@ -80,7 +80,7 @@ fn max_approach(graph: &ConnectionGraph, cell: CellId) -> f64 {
 /// Task 2b companion measurement: how many traversable (`conductance >
 /// 0.0`) edges lead into `cell`. Isolates "how many ways in" from `sum`'s
 /// conflation of that with "how good the best way in is".
-fn approach_count(graph: &ConnectionGraph, cell: CellId) -> f64 {
+fn approach_count(graph: &ConnectionGraph, cell: Vertex) -> f64 {
     graph
         .edges(cell)
         .iter()
@@ -92,7 +92,7 @@ fn approach_count(graph: &ConnectionGraph, cell: CellId) -> f64 {
 /// `cell`'s traversable edges of exactly `kind`, or `0.0` if it has none.
 /// Same shape as [`max_approach`], restricted to one `EdgeKind` — the water/
 /// land split the successor hypothesis needs.
-fn max_approach_of_kind(graph: &ConnectionGraph, cell: CellId, kind: EdgeKind) -> f64 {
+fn max_approach_of_kind(graph: &ConnectionGraph, cell: Vertex, kind: EdgeKind) -> f64 {
     graph
         .edges(cell)
         .iter()
@@ -105,7 +105,7 @@ fn max_approach_of_kind(graph: &ConnectionGraph, cell: CellId, kind: EdgeKind) -
 /// the denominator context for [`max_approach_of_kind`]'s quantiles (a `0.0`
 /// in that series can mean either "has this kind, but it's ocean-touching/
 /// impassable" or "has no edge of this kind at all"; this disambiguates).
-fn has_kind(graph: &ConnectionGraph, cell: CellId, kind: EdgeKind) -> bool {
+fn has_kind(graph: &ConnectionGraph, cell: Vertex, kind: EdgeKind) -> bool {
     graph
         .edges(cell)
         .iter()
@@ -118,7 +118,7 @@ fn has_kind(graph: &ConnectionGraph, cell: CellId, kind: EdgeKind) -> bool {
 /// `Iterator::max_by` returns the LAST of equal maxima, and `graph.edges`
 /// iterates in deterministic insertion order, so ties resolve
 /// deterministically without a second sort key.
-fn max_approach_with_kind(graph: &ConnectionGraph, cell: CellId) -> Option<(f64, EdgeKind)> {
+fn max_approach_with_kind(graph: &ConnectionGraph, cell: Vertex) -> Option<(f64, EdgeKind)> {
     graph
         .edges(cell)
         .iter()
@@ -223,8 +223,8 @@ fn print_quantiles_capture(label: &str, mut values: Vec<f64>) -> [f64; 5] {
 /// Task 2b double-count defect, read here only to measure, not to fix.
 fn best_conductance_with_kind(
     graph: &ConnectionGraph,
-    from: CellId,
-    to: CellId,
+    from: Vertex,
+    to: Vertex,
 ) -> Option<(f64, EdgeKind)> {
     graph
         .edges(from)
@@ -297,7 +297,7 @@ fn print_approach_ease_quantiles() {
             &carrying_inputs_of(geo, &terrain, &climate),
         );
         // `scaled` keeps this a capacity by construction (decision 0103).
-        let capacity = productivity.scaled(SETTLERS_PER_CAPACITY).into_cell_map();
+        let capacity = productivity.scaled(SETTLERS_PER_CAPACITY).into_vertex_map();
 
         let graph = connection_graph_of(&artifacts.world, &GraphConfig::default());
 
@@ -337,7 +337,7 @@ fn print_approach_ease_quantiles() {
             if *cap_from <= 0.0 {
                 continue;
             }
-            let mut tos: Vec<CellId> = graph
+            let mut tos: Vec<Vertex> = graph
                 .edges(from)
                 .iter()
                 .filter(|e| e.conductance > 0.0)

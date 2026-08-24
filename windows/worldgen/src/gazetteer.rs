@@ -10,7 +10,7 @@
 //! module is the composition root that gathers the complete set and joins it
 //! to a name.
 
-use hornvale_kernel::{CellId, Geosphere, Seed};
+use hornvale_kernel::{Geosphere, Seed, Vertex};
 use hornvale_language::{GeneratedName, MorphOptions, NameKind, Namer, Phonology};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::landscape::{Feature, FeatureClass, FeatureId};
@@ -39,10 +39,10 @@ pub fn gazetteer_features(seed: Seed, geo: &Geosphere, terrain: &GeneratedTerrai
 /// it occupies (`crate::volcano` module docs). Grouping by the query cell
 /// instead of the source would split every multi-cell cone into two
 /// features, exactly the mistake `volcano_name`'s signature (taking a
-/// `Volcano`, not a `CellId`) exists to prevent.
+/// `Volcano`, not a `Vertex`) exists to prevent.
 fn volcano_features(seed: Seed, geo: &Geosphere, terrain: &GeneratedTerrain) -> Vec<Feature> {
-    let mut by_source: BTreeMap<CellId, BTreeSet<CellId>> = BTreeMap::new();
-    for cell in geo.cells() {
+    let mut by_source: BTreeMap<Vertex, BTreeSet<Vertex>> = BTreeMap::new();
+    for cell in geo.vertices() {
         if let Some(volcano) = crate::volcano_at(seed, terrain, cell) {
             by_source.entry(volcano.source).or_default().insert(cell);
         }
@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn two_classes_at_one_cell_do_not_share_a_name() {
         let (ph, morph) = test_phonology();
-        let cell = CellId(1234);
+        let cell = Vertex(1234);
         let a = feature_name(
             Seed(42),
             FeatureId {
@@ -216,7 +216,7 @@ mod tests {
             for cell in 0u32..5000 {
                 let id = FeatureId {
                     class,
-                    cell: CellId(cell),
+                    cell: Vertex(cell),
                 };
                 if let Some(prev) = seen.insert(feature_salt(id), id) {
                     panic!("salt collision between {prev:?} and {id:?}");
@@ -232,7 +232,7 @@ mod tests {
         for cell in [0u32, 1, 4095, 99999] {
             let id = FeatureId {
                 class: FeatureClass::Volcano,
-                cell: CellId(cell),
+                cell: Vertex(cell),
             };
             assert_eq!(feature_salt(id), u64::from(cell));
         }
@@ -261,7 +261,7 @@ mod tests {
         let (ph, morph) = test_phonology();
         let id = FeatureId {
             class: FeatureClass::Landmass,
-            cell: CellId(77),
+            cell: Vertex(77),
         };
         let a = feature_name(Seed(42), id, "aeldrin", &ph, &morph);
         let b = feature_name(Seed(42), id, "khorrun", &ph, &morph);

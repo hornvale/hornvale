@@ -149,7 +149,7 @@ fn what_does_a_depth_budget_have_to_read() {
             let mut dtb = Vec::new();
             let mut soil = Vec::new();
             let mut unconformities = 0usize;
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 if terrain.is_ocean(cell) {
                     continue;
                 }

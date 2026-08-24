@@ -7,7 +7,7 @@
 //! caller wiring (`windows/worldgen`) migrates in a later task.
 
 use crate::condense::{Condensation, condense};
-use hornvale_kernel::{CellId, CellMap, Geosphere, Mass};
+use hornvale_kernel::{Geosphere, Mass, Vertex, VertexMap};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A present species' headcount, rendered relative to its own body mass
@@ -36,7 +36,7 @@ pub enum HeadcountRender {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StackSettlement {
     /// The attractor cell the settlement sits on.
-    pub cell: CellId,
+    pub cell: Vertex,
     /// Unit-sphere position.
     pub position: [f64; 3],
     /// Total biomass (kilograms) accumulated in the catchment — the tier
@@ -64,7 +64,7 @@ struct PresentSpecies {
 
 /// Every species with strictly positive density at `cell`, sorted by id.
 fn present_at(
-    cell: CellId,
+    cell: Vertex,
     stack: &crate::coexist::CoexistStack,
     mass_of: &BTreeMap<u32, Mass>,
 ) -> Vec<PresentSpecies> {
@@ -95,7 +95,7 @@ fn present_at(
 /// and a rendered headcount (biomass-fraction apportioned against
 /// `mass_total`, then divided by each species' own body mass).
 fn build_settlement(
-    cell: CellId,
+    cell: Vertex,
     position: [f64; 3],
     mass_total: f64,
     stack: &crate::coexist::CoexistStack,
@@ -191,7 +191,7 @@ fn build_settlement(
 /// 5. **Sort.** Flagship first: `mass_total` descending (`total_cmp`), then
 ///    ascending cell id.
 ///
-/// Draws nothing from the seed; deterministic (`BTreeMap`/`Vec`/`CellMap`,
+/// Draws nothing from the seed; deterministic (`BTreeMap`/`Vec`/`VertexMap`,
 /// `total_cmp` throughout, no `HashMap`).
 ///
 /// **Contract:** `mass_of` MUST contain an entry for every species present
@@ -205,7 +205,7 @@ pub fn condense_stack(
     mass_of: &BTreeMap<u32, Mass>,
     threshold: f64,
 ) -> Vec<StackSettlement> {
-    let mass_field: CellMap<f64> = CellMap::from_fn(geo, |c| {
+    let mass_field: VertexMap<f64> = VertexMap::from_fn(geo, |c| {
         stack
             .density
             .iter()
@@ -242,7 +242,7 @@ pub fn condense_stack(
             continue;
         }
         let mass_kg = mass_of.get(id).map(|m| m.kilograms()).unwrap_or(0.0);
-        let species_mass_field = CellMap::from_fn(geo, |c| density.get(c) * mass_kg);
+        let species_mass_field = VertexMap::from_fn(geo, |c| density.get(c) * mass_kg);
         if let Some(flagship) = condense(geo, &species_mass_field, 0.0).into_iter().next() {
             // `flagship` LOCATES the settlement (S's own strongest
             // attractor), but `mass_total` must reflect the WHOLE stack's
@@ -273,20 +273,20 @@ pub fn condense_stack(
 mod tests {
     use super::*;
     use crate::coexist::CoexistStack;
-    use hornvale_kernel::CellId;
+    use hornvale_kernel::Vertex;
 
     /// Mirrors `founder.rs`'s `peak_at` helper: a dot-product bump peaking at
     /// `cell`, scaled by `scale`, clamped to `0.0` on the far hemisphere.
-    fn peak_at(geo: &Geosphere, cell: u32, scale: f64) -> CellMap<f64> {
-        let peak = geo.position(CellId(cell));
-        CellMap::from_fn(geo, |c| {
+    fn peak_at(geo: &Geosphere, cell: u32, scale: f64) -> VertexMap<f64> {
+        let peak = geo.position(Vertex(cell));
+        VertexMap::from_fn(geo, |c| {
             let p = geo.position(c);
             (p[0] * peak[0] + p[1] * peak[1] + p[2] * peak[2]).max(0.0) * scale
         })
     }
 
-    fn zero_pressure(geo: &Geosphere) -> CellMap<f64> {
-        CellMap::from_fn(geo, |_| 0.0)
+    fn zero_pressure(geo: &Geosphere) -> VertexMap<f64> {
+        VertexMap::from_fn(geo, |_| 0.0)
     }
 
     #[test]
@@ -296,7 +296,7 @@ mod tests {
         // 0.0005 individuals/cell at its only present cell means the whole
         // catchment's biomass is 0.0005 * 4000 = 2.0 kg -- far under one
         // 4000 kg body, so the render must be `Lone`, never a `Count`.
-        let density = CellMap::from_fn(&geo, |c| if c == CellId(0) { 0.0005 } else { 0.0 });
+        let density = VertexMap::from_fn(&geo, |c| if c == Vertex(0) { 0.0005 } else { 0.0 });
         let stack = CoexistStack {
             density: vec![(0u32, density)],
             emigration_pressure: zero_pressure(&geo),
@@ -377,10 +377,10 @@ mod tests {
             (1u32, Mass::new(s_mass).unwrap()),
         ]);
 
-        let mass_field: CellMap<f64> = CellMap::from_fn(&geo, |c| {
+        let mass_field: VertexMap<f64> = VertexMap::from_fn(&geo, |c| {
             t_density.get(c) * t_mass + s_density.get(c) * s_mass
         });
-        let total_mass: f64 = geo.cells().map(|c| *mass_field.get(c)).sum();
+        let total_mass: f64 = geo.vertices().map(|c| *mass_field.get(c)).sum();
         let threshold = total_mass + 1.0; // finite, but excludes every normal settlement
 
         let settlements = condense_stack(&geo, &stack, &mass_of, threshold);
@@ -399,7 +399,7 @@ mod tests {
         let s_settlement = &settlements[1];
         assert_eq!(
             s_settlement.cell,
-            CellId(0),
+            Vertex(0),
             "S's flagship search lands on the shared peak cell"
         );
 
@@ -418,9 +418,9 @@ mod tests {
         );
 
         let full_flow = crate::flow::flow(&geo, &mass_field);
-        let whole_stack_mass_at_c = *full_flow.accumulation.get(CellId(0));
-        let mass_field_at_c = *mass_field.get(CellId(0));
-        let s_isolated_single_cell_biomass = *s_density.get(CellId(0)) * s_mass;
+        let whole_stack_mass_at_c = *full_flow.accumulation.get(Vertex(0));
+        let mass_field_at_c = *mass_field.get(Vertex(0));
+        let s_isolated_single_cell_biomass = *s_density.get(Vertex(0)) * s_mass;
 
         assert_eq!(
             s_settlement.mass_total, whole_stack_mass_at_c,

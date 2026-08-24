@@ -167,7 +167,7 @@ fn how_deep_is_a_cave() {
         let mut land = 0usize;
         let mut cave_cells = 0usize;
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

@@ -1,7 +1,7 @@
 //! `interior_of` — a real room to a real `Interior` (The Threshold, spec §3).
 //!
 //! The Hearth builds an interior nobody can reach; this is the path from a
-//! `RoomAddr` to a composed pattern set. It takes NO era parameter: the only
+//! `Facet` to a composed pattern set. It takes NO era parameter: the only
 //! `Era` in this codebase is stratigraphic (rock bands), and a room's
 //! furnishing must not flicker with the seasons anyway, so `cold` is read at a
 //! canonical day and the result is a pure function of the room.
@@ -12,12 +12,12 @@
 use super::anchor::Interior;
 use super::pattern::{compose, selection};
 use crate::liveness::Terrain;
-use hornvale_kernel::RoomAddr;
+use hornvale_kernel::Facet;
 
 /// The interior of `room`: which patterns it draws, composed into an anchor
 /// graph. `built` is "is anyone's territory this" and `cold` is "does warmth
 /// matter here" — both read from `terrain`, both stable.
-pub fn interior_of(room: &RoomAddr, terrain: &dyn Terrain) -> Interior {
+pub fn interior_of(room: &Facet, terrain: &dyn Terrain) -> Interior {
     let built = terrain.is_built(room);
     let cold = terrain.is_cold(room);
     // `selection` takes no seed: The Hearth's revised T4 dropped it, since v1's
@@ -52,7 +52,7 @@ pub fn interior_of(room: &RoomAddr, terrain: &dyn Terrain) -> Interior {
 /// every caller's hand.
 /// type-audit: bare-ok(count: walk_depth), bare-ok(index: chamber_index)
 pub fn chamber_interior_of(
-    chamber: &RoomAddr,
+    chamber: &Facet,
     terrain: &dyn Terrain,
     walk_depth: u32,
     brief: &crate::brief::Brief,
@@ -88,25 +88,25 @@ mod tests {
         cold: bool,
     }
     impl Terrain for Stub {
-        fn elevation(&self, _r: &RoomAddr) -> f64 {
+        fn elevation(&self, _r: &Facet) -> f64 {
             0.0
         }
-        fn is_fresh_water(&self, _r: &RoomAddr) -> bool {
+        fn is_fresh_water(&self, _r: &Facet) -> bool {
             false
         }
-        fn temperature(&self, _r: &RoomAddr, _d: WorldTime) -> f64 {
+        fn temperature(&self, _r: &Facet, _d: WorldTime) -> f64 {
             if self.cold { -20.0 } else { 25.0 }
         }
-        fn is_built(&self, _r: &RoomAddr) -> bool {
+        fn is_built(&self, _r: &Facet) -> bool {
             self.built
         }
     }
 
-    /// An arbitrary room. `RoomAddr` carries no `Default` (both fields are
+    /// An arbitrary room. `Facet` carries no `Default` (both fields are
     /// public; the depth-0 base face is the natural stand-in) — derivation
     /// reads nothing about WHICH room beyond what `terrain` reports.
-    fn room() -> RoomAddr {
-        RoomAddr {
+    fn room() -> Facet {
+        Facet {
             face: 0,
             path: Vec::new(),
         }
@@ -206,16 +206,16 @@ mod tests {
         built_walk_ids: std::collections::BTreeSet<u64>,
     }
     impl Terrain for WalkKeyedTerrain {
-        fn elevation(&self, _r: &RoomAddr) -> f64 {
+        fn elevation(&self, _r: &Facet) -> f64 {
             0.0
         }
-        fn is_fresh_water(&self, _r: &RoomAddr) -> bool {
+        fn is_fresh_water(&self, _r: &Facet) -> bool {
             false
         }
-        fn temperature(&self, _r: &RoomAddr, _d: WorldTime) -> f64 {
+        fn temperature(&self, _r: &Facet, _d: WorldTime) -> f64 {
             -20.0
         }
-        fn is_built(&self, r: &RoomAddr) -> bool {
+        fn is_built(&self, r: &Facet) -> bool {
             r.pack()
                 .ok()
                 .is_some_and(|id| self.built_walk_ids.contains(&id.0))
@@ -224,17 +224,17 @@ mod tests {
 
     const WALK: u32 = 12;
 
-    fn walk_addr() -> RoomAddr {
-        RoomAddr {
+    fn walk_addr() -> Facet {
+        Facet {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         }
     }
 
-    fn chamber_addr() -> RoomAddr {
+    fn chamber_addr() -> Facet {
         let mut path: Vec<u8> = walk_addr().path;
         path.extend((0..crate::band::CHAMBER_DEPTH_OFFSET).map(|i| (i % 4) as u8));
-        RoomAddr { face: 3, path }
+        Facet { face: 3, path }
     }
 
     /// A brief matching [`WalkKeyedTerrain`]'s reads (which are always cold), so

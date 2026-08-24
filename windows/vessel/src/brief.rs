@@ -21,7 +21,7 @@
 //! not read at all.
 
 use hornvale_history::record::{Function, Notability, TechHorizon};
-use hornvale_kernel::{CellId, Geosphere, KindId, NearestCellIndex, RoomAddr, World};
+use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Vertex, World};
 
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
@@ -86,7 +86,7 @@ impl Brief {
 }
 
 /// The geosphere cell a place sits in: the maximum-weight corner of its
-/// barycentric blend, tie-broken by ascending `CellId`.
+/// barycentric blend, tie-broken by ascending `Vertex`.
 ///
 /// Integer weights only (`corner_weights` returns `u64` numerators), so the
 /// choice is cross-platform exact — no float comparison enters world identity.
@@ -98,10 +98,10 @@ impl Brief {
 /// lowland") and its *picture* would come to disagree about which ground it
 /// stands on.
 pub(crate) fn containing_cell(
-    place: &RoomAddr,
+    place: &Facet,
     geo: &Geosphere,
-    index: &NearestCellIndex,
-) -> Option<CellId> {
+    index: &NearestVertexIndex,
+) -> Option<Vertex> {
     let weights = place.corner_weights(geo, index)?;
     weights
         .iter()
@@ -116,8 +116,8 @@ pub(crate) fn containing_cell(
 pub fn brief_of(
     world: &World,
     geo: &Geosphere,
-    index: &NearestCellIndex,
-    place: &RoomAddr,
+    index: &NearestVertexIndex,
+    place: &Facet,
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
 ) -> Brief {

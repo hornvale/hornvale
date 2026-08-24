@@ -1,11 +1,11 @@
 //! Deterministic biome-map renders: an equirectangular PNG and a 72×24
 //! ASCII map, recolored from the elevation-map tradition. Same biome field,
 //! same bytes — a changed artifact in review means changed behavior.
-//! Pixel→cell lookup uses the kernel's `NearestCellIndex` (a latitude-band
+//! Pixel→cell lookup uses the kernel's `NearestVertexIndex` (a latitude-band
 //! index, 30 bands of 6°), the same projection the elevation renderer uses.
 
 use crate::biome::Biome;
-use hornvale_kernel::{CellMap, Geosphere, NearestCellIndex};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, VertexMap};
 
 /// Raster image width in pixels; equirectangular, so height is `MAP_WIDTH / 2`.
 /// type-audit: bare-ok(render-internal)
@@ -21,9 +21,9 @@ pub const ASCII_HEIGHT: u32 = 24;
 /// first) — also the base image settlement's overlay stamps at the
 /// composition root.
 /// type-audit: bare-ok(artifact)
-pub fn biome_pixels(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
+pub fn biome_pixels(geo: &Geosphere, biomes: &VertexMap<Biome>) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
@@ -39,14 +39,14 @@ pub fn biome_pixels(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
 /// Render the biome field as an equirectangular PNG (decision 0018). Same
 /// field, same bytes.
 /// type-audit: bare-ok(artifact)
-pub fn biome_png(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
+pub fn biome_png(geo: &Geosphere, biomes: &VertexMap<Biome>) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &biome_pixels(geo, biomes))
 }
 
 /// Render the biome field as a 72×24 ASCII map, one newline per row.
 /// type-audit: bare-ok(artifact)
-pub fn biome_ascii(geo: &Geosphere, biomes: &CellMap<Biome>) -> String {
-    let index = NearestCellIndex::new(geo);
+pub fn biome_ascii(geo: &Geosphere, biomes: &VertexMap<Biome>) -> String {
+    let index = NearestVertexIndex::new(geo);
     let mut out = String::with_capacity(((ASCII_WIDTH + 1) * ASCII_HEIGHT) as usize);
     for py in 0..ASCII_HEIGHT {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
@@ -66,8 +66,8 @@ mod tests {
     use crate::biome::Biome;
     use hornvale_kernel::Geosphere;
 
-    fn checker(geo: &Geosphere) -> CellMap<Biome> {
-        CellMap::from_fn(geo, |c| {
+    fn checker(geo: &Geosphere) -> VertexMap<Biome> {
+        VertexMap::from_fn(geo, |c| {
             if geo.position(c)[2] > 0.0 {
                 Biome::TropicalRainforest
             } else {

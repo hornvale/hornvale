@@ -41,7 +41,7 @@
 //! roster check would NOT have caught that mutation — it used an inline
 //! `StreamLabel::dynamic`, which no `stream_labels()` roster can see.
 
-use hornvale_kernel::{Band, CellId, Geosphere, Seed};
+use hornvale_kernel::{Band, Geosphere, Seed, Vertex};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, LEVELS_PER_BRANCH_CEILING, chamber_exists, junctions_at,
@@ -104,10 +104,10 @@ fn habitation_bands() -> Vec<(u8, Band)> {
 /// No `is_ocean` filter: `cave_at` refuses an ocean cell as its first act, so
 /// a test-side ocean guard is the same dead pairing review found inside
 /// `junctions_at` (round 1, F8).
-fn cave_cells(terrain: &GeneratedTerrain) -> Vec<CellId> {
+fn cave_cells(terrain: &GeneratedTerrain) -> Vec<Vertex> {
     terrain
         .geosphere()
-        .cells()
+        .vertices()
         .filter(|&cell| terrain.cave_at(cell).is_some())
         .collect()
 }
@@ -125,7 +125,7 @@ fn cave_cells(terrain: &GeneratedTerrain) -> Vec<CellId> {
 fn branch_admits(
     seed: Seed,
     terrain: &GeneratedTerrain,
-    cell: CellId,
+    cell: Vertex,
     branch: u8,
     rung: Band,
 ) -> bool {
@@ -147,7 +147,7 @@ fn branch_admits(
 /// The canonical address of one system at one `(band, branch)` — what the
 /// whole panel scan asks from, and the only address shape `junctions_at`
 /// projects onto.
-fn canonical(cell: CellId, band: Band, branch: u8) -> ChamberAddr {
+fn canonical(cell: Vertex, band: Band, branch: u8) -> ChamberAddr {
     ChamberAddr {
         cell,
         branch,
@@ -201,9 +201,9 @@ fn a_junction_is_the_derivation_rule_and_nothing_else() {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 // Clauses 3 and 4 for the asking side; clause 1 is entailed
                 // by `cave_at` inside `branch_admits`.
-                let expected: Vec<CellId> = if branch_admits(Seed(42), &terrain, cell, branch, rung)
+                let expected: Vec<Vertex> = if branch_admits(Seed(42), &terrain, cell, branch, rung)
                 {
-                    let mut near: Vec<CellId> = geo
+                    let mut near: Vec<Vertex> = geo
                         .neighbors(cell)
                         .iter()
                         .copied()
@@ -217,7 +217,7 @@ fn a_junction_is_the_derivation_rule_and_nothing_else() {
                 } else {
                     Vec::new()
                 };
-                let shipped: Vec<CellId> =
+                let shipped: Vec<Vertex> =
                     junctions_at(Seed(42), &terrain, canonical(cell, rung, branch))
                         .iter()
                         .map(|a| a.cell)
@@ -279,7 +279,7 @@ fn a_junction_never_crosses_a_band() {
         );
         assert_eq!(b.level, 0, "junction endpoint named a level");
         assert_ne!(b.cell, a.cell, "a system joined itself");
-        let neighbours: Vec<CellId> = geo.neighbors(a.cell).to_vec();
+        let neighbours: Vec<Vertex> = geo.neighbors(a.cell).to_vec();
         assert!(
             neighbours.contains(&b.cell),
             "junction {a:?} -> {b:?} crossed to a non-adjacent cell"
@@ -427,8 +427,8 @@ fn the_projection_is_scoped_to_the_branch() {
                         "{other:?} answered with an endpoint on another branch"
                     );
                 }
-                let same_cells: Vec<CellId> = answer.iter().map(|a| a.cell).collect();
-                let base_cells: Vec<CellId> = expected.iter().map(|a| a.cell).collect();
+                let same_cells: Vec<Vertex> = answer.iter().map(|a| a.cell).collect();
+                let base_cells: Vec<Vertex> = expected.iter().map(|a| a.cell).collect();
                 if same_cells != base_cells {
                     disagreements += 1;
                 }

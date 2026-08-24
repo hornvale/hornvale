@@ -127,7 +127,7 @@ fn a_subterranean_kind_scores_zero_where_there_is_no_cave() {
     let mut land_cave_nonzero = 0usize;
     let mut land_no_cave = 0usize;
     let mut land_cave = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }
@@ -230,7 +230,7 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
         &regime,
     );
     let mineral = mineral_supply_field(geo, &terrain, 1.0);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let detritus = detritus_supply_field(geo, &terrain);
     let marine = marine_forage_supply_field(geo, &terrain, &climate, 1.0);
     let prey = prey_supply_field(geo, &forage);
@@ -239,7 +239,7 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
     let cn = &goblin.condition_niche;
 
     let mut mismatches = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let s = substrate.get(cell);
         use hornvale_kernel::{
             ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,

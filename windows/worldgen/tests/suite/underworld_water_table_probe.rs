@@ -281,7 +281,7 @@ fn the_water_table_is_not_degenerate() {
         // Columns whose whole cave is above the table: dry to the bottom.
         let mut wholly_vadose = 0usize;
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }
@@ -525,7 +525,7 @@ fn how_far_does_the_dryness_gain_reach() {
         // than not having two traversals.
         let mut columns: Vec<(f64, f64, f64, f64, f64)> = Vec::new();
         let mut ceiling = f64::MIN;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

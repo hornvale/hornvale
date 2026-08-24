@@ -638,14 +638,14 @@ fn world_level_population_conserves_against_total_capacity() {
     // naming the same cell would otherwise double-count that cell's
     // suitability, though the bake's invariant should already make that
     // impossible.
-    let occupied_cells: std::collections::BTreeSet<hornvale_kernel::CellId> = settlements
+    let occupied_cells: std::collections::BTreeSet<hornvale_kernel::Vertex> = settlements
         .iter()
         .filter_map(|f| {
             match world
                 .ledger
                 .value_of(f.subject, hornvale_settlement::CELL_ID)
             {
-                Some(Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                Some(Value::Number(n)) => Some(hornvale_kernel::Vertex(*n as u32)),
                 _ => None,
             }
         })

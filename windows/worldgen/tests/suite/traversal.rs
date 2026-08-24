@@ -8,7 +8,7 @@
 //! `Geosphere::new(1)` (42 cells, fully deterministic).
 
 use hornvale_climate::Biome;
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, VertexMap};
 use hornvale_worldgen::traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 
 /// Test-only helper: a validated `ReferenceElevation`.
@@ -31,20 +31,20 @@ fn e(m: f64) -> ReferenceElevation {
 /// harmless (see that assertion's comment).
 fn fixture() -> (
     Geosphere,
-    CellId,
-    CellId,
-    CellId,
-    CellMap<ReferenceElevation>,
-    CellMap<Biome>,
+    Vertex,
+    Vertex,
+    Vertex,
+    VertexMap<ReferenceElevation>,
+    VertexMap<Biome>,
 ) {
     let geo = Geosphere::new(1); // 42 cells
 
-    let peak = CellId(0);
-    let flat = CellId(3);
-    let ocean = CellId(6);
+    let peak = Vertex(0);
+    let flat = Vertex(3);
+    let ocean = Vertex(6);
 
-    let peak_neighbors: Vec<CellId> = geo.neighbors(peak).to_vec();
-    let flat_neighbors: Vec<CellId> = geo.neighbors(flat).to_vec();
+    let peak_neighbors: Vec<Vertex> = geo.neighbors(peak).to_vec();
+    let flat_neighbors: Vec<Vertex> = geo.neighbors(flat).to_vec();
 
     // Guard the fixture's own assumption that matters for a zero flat-side
     // gap: `peak` must not be one of `flat`'s neighbors (adjacency is
@@ -57,7 +57,7 @@ fn fixture() -> (
     assert!(peak != flat && peak != ocean && flat != ocean);
     assert!(!peak_neighbors.contains(&flat) && !flat_neighbors.contains(&peak));
 
-    let elevation = CellMap::from_fn(&geo, |c| {
+    let elevation = VertexMap::from_fn(&geo, |c| {
         if c == peak {
             e(5000.0)
         } else if c == flat || flat_neighbors.contains(&c) {
@@ -69,7 +69,7 @@ fn fixture() -> (
         }
     });
 
-    let biome = CellMap::from_fn(&geo, |c| {
+    let biome = VertexMap::from_fn(&geo, |c| {
         if c == ocean {
             Biome::Epipelagic
         } else {
@@ -112,7 +112,7 @@ fn the_field_is_deterministic_across_rebuilds() {
     let (geo, _peak, _flat, _ocean, elevation, biome) = fixture();
     let a = traversal_cost(&geo, &elevation, &biome);
     let b = traversal_cost(&geo, &elevation, &biome);
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         assert_eq!(*a.get(cell), *b.get(cell));
     }
 }
@@ -120,9 +120,9 @@ fn the_field_is_deterministic_across_rebuilds() {
 #[test]
 fn a_shelf_cell_is_ocean_at_present_but_a_bridge_at_glacial_low_stand() {
     let geo = Geosphere::new(1);
-    let shelf = CellId(5);
+    let shelf = Vertex(5);
     // shelf sits at -50 m; everything else is upland at +100 m.
-    let elevation = CellMap::from_fn(&geo, |c| if c == shelf { e(-50.0) } else { e(100.0) });
+    let elevation = VertexMap::from_fn(&geo, |c| if c == shelf { e(-50.0) } else { e(100.0) });
     let present = traversal_cost_at(&geo, &elevation, e(0.0));
     let glacial = traversal_cost_at(&geo, &elevation, e(-120.0));
     assert_eq!(

@@ -11,7 +11,7 @@
 //! of `hornvale-almanac`, so this integration test reaches them for free.
 
 use hornvale_almanac::connections::{render_connections, render_overview};
-use hornvale_kernel::{CellId, Seed, World};
+use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 
 /// Five cells: 0-1 a sea-lane, 0-2 a land route (both real natural routes),
@@ -20,25 +20,25 @@ use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 fn fixture_graph() -> ConnectionGraph {
     let mut graph = ConnectionGraph::new(5);
     graph.add_edge(
-        CellId(0),
+        Vertex(0),
         Edge {
-            to: CellId(1),
+            to: Vertex(1),
             kind: EdgeKind::WaterRoute,
             conductance: 0.5,
         },
     );
     graph.add_edge(
-        CellId(0),
+        Vertex(0),
         Edge {
-            to: CellId(2),
+            to: Vertex(2),
             kind: EdgeKind::LandRoute,
             conductance: 0.1,
         },
     );
     graph.add_edge(
-        CellId(3),
+        Vertex(3),
         Edge {
-            to: CellId(4),
+            to: Vertex(4),
             kind: EdgeKind::Adjacency,
             conductance: 1.0,
         },
@@ -54,7 +54,7 @@ fn fixture_world() -> World {
 fn a_site_with_a_water_and_land_route_names_both() {
     let world = fixture_world();
     let graph = fixture_graph();
-    let text = render_connections(&world, CellId(0), &graph);
+    let text = render_connections(&world, Vertex(0), &graph);
     assert!(text.contains("sea-lane"), "names the sea-lane:\n{text}");
     assert!(text.contains("route"), "names a route at all:\n{text}");
     assert!(text.contains("by land"), "names the land route:\n{text}");
@@ -66,7 +66,7 @@ fn a_site_in_the_smaller_region_reads_as_cut_off() {
     let graph = fixture_graph();
     // Cell 3's region ({3, 4}, size 2) is smaller than cell 0's region
     // ({0, 1, 2}, size 3) -- it must read as isolated.
-    let text = render_connections(&world, CellId(3), &graph);
+    let text = render_connections(&world, Vertex(3), &graph);
     assert!(
         text.contains("cut off"),
         "an isolated region's site names its isolation:\n{text}"
@@ -77,7 +77,7 @@ fn a_site_in_the_smaller_region_reads_as_cut_off() {
 fn a_site_in_the_largest_region_does_not_read_as_cut_off() {
     let world = fixture_world();
     let graph = fixture_graph();
-    let text = render_connections(&world, CellId(0), &graph);
+    let text = render_connections(&world, Vertex(0), &graph);
     assert!(
         !text.contains("cut off"),
         "the largest region must not read as isolated:\n{text}"
@@ -89,18 +89,18 @@ fn rendering_is_deterministic() {
     let world = fixture_world();
     let graph = fixture_graph();
     assert_eq!(
-        render_connections(&world, CellId(0), &graph),
-        render_connections(&world, CellId(0), &graph)
+        render_connections(&world, Vertex(0), &graph),
+        render_connections(&world, Vertex(0), &graph)
     );
 }
 
 #[test]
 fn a_site_with_no_routes_at_all_says_so_honestly() {
     let world = fixture_world();
-    // CellId(4) is only adjacency-linked to 3 (no water or land route of its
+    // Vertex(4) is only adjacency-linked to 3 (no water or land route of its
     // own reaches it), so its route paragraph must not fabricate one.
     let graph = fixture_graph();
-    let text = render_connections(&world, CellId(4), &graph);
+    let text = render_connections(&world, Vertex(4), &graph);
     assert!(
         !text.contains("linked by sea-lane"),
         "cell 4 must not be claimed to have a sea-lane of its own:\n{text}"
@@ -168,7 +168,7 @@ fn a_known_settlement_name_stands_in_for_a_bare_cell_id() {
         .unwrap();
 
     let graph = fixture_graph();
-    let text = render_connections(&world, CellId(0), &graph);
+    let text = render_connections(&world, Vertex(0), &graph);
     assert!(
         text.contains("Harrowgate"),
         "a named settlement replaces its bare cell id:\n{text}"
@@ -207,17 +207,17 @@ fn overview_reports_one_region_as_fully_connected() {
     // claim a "cut off" region exists.
     let mut graph = ConnectionGraph::new(3);
     graph.add_edge(
-        CellId(0),
+        Vertex(0),
         Edge {
-            to: CellId(1),
+            to: Vertex(1),
             kind: EdgeKind::Adjacency,
             conductance: 1.0,
         },
     );
     graph.add_edge(
-        CellId(1),
+        Vertex(1),
         Edge {
-            to: CellId(2),
+            to: Vertex(2),
             kind: EdgeKind::Adjacency,
             conductance: 1.0,
         },

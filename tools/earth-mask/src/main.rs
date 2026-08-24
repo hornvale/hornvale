@@ -37,7 +37,7 @@
 //!
 //! ## Method
 //!
-//! For every L6 cell (ascending `CellId`), take its geographic center
+//! For every L6 cell (ascending `Vertex`), take its geographic center
 //! (`Geosphere::coord`) and test it against every ring (outer boundaries
 //! and holes, of every `Polygon`/`MultiPolygon` feature) with an even-odd
 //! ray cast in longitude/latitude degrees: a horizontal ray from the point
@@ -205,7 +205,7 @@ fn main() {
     let rings = load_rings();
     let geo = Geosphere::new(GLOBE_LEVEL);
     let mut out = String::from("cell,land\n");
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let coord = geo.coord(cell);
         let lon = normalize_lon(coord.longitude);
         let land = is_land(&rings, lon, coord.latitude);

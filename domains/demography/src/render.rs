@@ -1,12 +1,12 @@
 //! Deterministic debug render of a carrying-capacity field: a fixed-size
 //! ASCII density map. Follows `paleoclimate::render`'s pattern exactly (same
-//! `NearestCellIndex` projection, same fixed-grid/one-glyph-per-cell shape,
+//! `NearestVertexIndex` projection, same fixed-grid/one-glyph-per-cell shape,
 //! same `String` return, one trailing newline per row) — bucketing K into a
 //! discrete glyph ramp is the render-time analogue of that module's discrete
 //! stratum glyphs, so no float ever crosses into the emitted text and there
 //! is nothing to quantize.
 
-use hornvale_kernel::{CellMap, Geosphere, NearestCellIndex};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, VertexMap};
 
 /// ASCII map width, characters.
 /// type-audit: bare-ok(render-internal)
@@ -19,8 +19,8 @@ pub const DENSITY_HEIGHT: u32 = 24;
 const RAMP: [char; 5] = [' ', '.', ':', '*', '#'];
 
 /// The densest K value in the field (0.0 for an empty/all-zero field).
-fn max_k(geo: &Geosphere, k: &CellMap<f64>) -> f64 {
-    geo.cells()
+fn max_k(geo: &Geosphere, k: &VertexMap<f64>) -> f64 {
+    geo.vertices()
         .map(|c| *k.get(c))
         .fold(0.0_f64, |acc, v| acc.max(v))
 }
@@ -42,8 +42,8 @@ fn glyph(k: f64, peak: f64) -> char {
 /// darkest glyph at the field's densest cell. See module docs for the render
 /// pattern this matches.
 /// type-audit: bare-ok(artifact)
-pub fn density_ppm(geo: &Geosphere, k: &CellMap<f64>) -> String {
-    let index = NearestCellIndex::new(geo);
+pub fn density_ppm(geo: &Geosphere, k: &VertexMap<f64>) -> String {
+    let index = NearestVertexIndex::new(geo);
     let peak = max_k(geo, k);
     let mut out = String::with_capacity(((DENSITY_WIDTH + 1) * DENSITY_HEIGHT) as usize);
     for py in 0..DENSITY_HEIGHT {
@@ -72,16 +72,16 @@ pub fn stack_density_ppm(
 ) -> String {
     match stack.density.iter().find(|(id, _)| *id == species_id) {
         Some((_, k)) => density_ppm(geo, k),
-        None => density_ppm(geo, &CellMap::from_fn(geo, |_| 0.0)),
+        None => density_ppm(geo, &VertexMap::from_fn(geo, |_| 0.0)),
     }
 }
 
 /// 72×24 ASCII density map of the [`crate::byproducts::strife`] field
 /// (inverse-Herfindahl composition evenness): darkest glyph at the most
 /// evenly-contested cell. Thin wrapper over [`density_ppm`] — `strife` is
-/// already the same `CellMap<f64>` shape.
+/// already the same `VertexMap<f64>` shape.
 /// type-audit: bare-ok(artifact)
-pub fn strife_ppm(geo: &Geosphere, strife: &CellMap<f64>) -> String {
+pub fn strife_ppm(geo: &Geosphere, strife: &VertexMap<f64>) -> String {
     density_ppm(geo, strife)
 }
 
@@ -89,20 +89,20 @@ pub fn strife_ppm(geo: &Geosphere, strife: &CellMap<f64>) -> String {
 /// field (its realized density in cells where the world's dominant species
 /// falls below the viability floor): darkest glyph at its strongest
 /// stronghold. Thin wrapper over [`density_ppm`] — a `refugia` entry is
-/// already the same `CellMap<f64>` shape.
+/// already the same `VertexMap<f64>` shape.
 /// type-audit: bare-ok(artifact)
-pub fn refugia_ppm(geo: &Geosphere, refugia: &CellMap<f64>) -> String {
+pub fn refugia_ppm(geo: &Geosphere, refugia: &VertexMap<f64>) -> String {
     density_ppm(geo, refugia)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{CellId, Geosphere};
+    use hornvale_kernel::{Geosphere, Vertex};
 
-    fn bump_k(geo: &Geosphere) -> CellMap<f64> {
-        let peak = geo.position(CellId(0));
-        CellMap::from_fn(geo, |c| {
+    fn bump_k(geo: &Geosphere) -> VertexMap<f64> {
+        let peak = geo.position(Vertex(0));
+        VertexMap::from_fn(geo, |c| {
             let p = geo.position(c);
             (p[0] * peak[0] + p[1] * peak[1] + p[2] * peak[2]).max(0.0)
         })
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn an_all_zero_field_renders_as_all_blank() {
         let geo = Geosphere::new(3);
-        let k = CellMap::from_fn(&geo, |_| 0.0);
+        let k = VertexMap::from_fn(&geo, |_| 0.0);
         let a = density_ppm(&geo, &k);
         assert!(a.chars().all(|c| c == ' ' || c == '\n'));
     }
@@ -137,8 +137,8 @@ mod tests {
         assert!(a.contains(*RAMP.last().unwrap()), "densest glyph appears");
     }
 
-    fn zero_pressure(geo: &Geosphere) -> CellMap<f64> {
-        CellMap::from_fn(geo, |_| 0.0)
+    fn zero_pressure(geo: &Geosphere) -> VertexMap<f64> {
+        VertexMap::from_fn(geo, |_| 0.0)
     }
 
     #[test]

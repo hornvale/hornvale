@@ -42,7 +42,7 @@
 //! under a second. If a later campaign grows these samples into real minutes,
 //! the `heavy:` token is the move then; it is not the move now.
 
-use hornvale_kernel::{CellId, Geosphere, Seed, WorldTime, Years, math};
+use hornvale_kernel::{Geosphere, Seed, Vertex, WorldTime, Years, math};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::hazard::{
     B_VALUE, HazardEventKind, M_MAX, M_MIN, VEI_B, VEI_MAX, VEI_MIN, event_block_length, events_in,
@@ -65,8 +65,8 @@ fn globe_of(seed: Seed) -> (Geosphere, GeneratedTerrain) {
 
 /// The cell with the shortest seismic interval on the globe — the busiest
 /// ground there is, and the cheapest place to draw a large sample.
-fn busiest_cell(geo: &Geosphere, terrain: &GeneratedTerrain) -> CellId {
-    geo.cells()
+fn busiest_cell(geo: &Geosphere, terrain: &GeneratedTerrain) -> Vertex {
+    geo.vertices()
         .min_by(|a, b| {
             hazard_at(terrain, *a)
                 .seismic
@@ -77,14 +77,14 @@ fn busiest_cell(geo: &Geosphere, terrain: &GeneratedTerrain) -> CellId {
 }
 
 /// The edifice cell with the shortest eruption interval.
-fn busiest_edifice(geo: &Geosphere, terrain: &GeneratedTerrain) -> CellId {
-    geo.cells()
+fn busiest_edifice(geo: &Geosphere, terrain: &GeneratedTerrain) -> Vertex {
+    geo.vertices()
         .filter(|c| hazard_at(terrain, *c).volcanic.is_some())
         .min_by(|a, b| volcanic_years(terrain, *a).total_cmp(&volcanic_years(terrain, *b)))
         .expect("an edifice on the test globe")
 }
 
-fn volcanic_years(terrain: &GeneratedTerrain, cell: CellId) -> f64 {
+fn volcanic_years(terrain: &GeneratedTerrain, cell: Vertex) -> f64 {
     hazard_at(terrain, cell)
         .volcanic
         .expect("filtered to edifice cells")
@@ -129,7 +129,7 @@ fn authored_mean(min: f64, max: f64, b: f64) -> f64 {
 fn magnitudes_of(
     seed: Seed,
     terrain: &GeneratedTerrain,
-    cell: CellId,
+    cell: Vertex,
     window: (WorldTime, WorldTime),
     kind: HazardEventKind,
 ) -> Vec<f64> {
@@ -281,7 +281,7 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
 fn drawn_magnitudes_recover_the_authored_gutenberg_richter_b_value() {
     let (geo, terrain) = globe_of(Seed(42));
     let quietest = geo
-        .cells()
+        .vertices()
         .max_by(|a, b| {
             hazard_at(&terrain, *a)
                 .seismic
@@ -357,7 +357,7 @@ fn drawn_magnitudes_recover_the_authored_gutenberg_richter_b_value() {
 #[test]
 fn inter_event_times_recover_the_authored_recurrence() {
     let (geo, terrain) = globe_of(Seed(42));
-    let mut by_interval: Vec<CellId> = geo.cells().collect();
+    let mut by_interval: Vec<Vertex> = geo.vertices().collect();
     by_interval.sort_by(|a, b| {
         hazard_at(&terrain, *a)
             .seismic

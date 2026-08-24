@@ -17,7 +17,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, KindId, Lineage, Value, World, WorldTime};
+use hornvale_kernel::{EntityId, Fact, KindId, Lineage, Value, Vertex, World, WorldTime};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// **The unit boundary (The Ell, spec §2a).** A bake-side YEAR becomes the
@@ -193,7 +193,7 @@ fn resolve_people(label: &str) -> Option<KindId> {
 pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
     // Mint one entity per record, strictly in `records` order (determinism:
     // same history ⇒ same ids ⇒ same facts, every time).
-    // An occupation has no ledger entity above it — its site is a `CellId` and
+    // An occupation has no ledger entity above it — its site is a `Vertex` and
     // its people a `KindId`, neither of which is an entity — so it roots, and
     // its ordinal is its position in the baked `records` order. Spec P4: a
     // future bake that reorders `records` still moves these ids, and that is
@@ -473,7 +473,7 @@ pub fn occupation_records(world: &World) -> Vec<OccupationRecord> {
 /// peak population, then the predecessor's founding coordinates) — never by
 /// mint order, so a site's stratigraphy is a property of the world, not of
 /// the order a bake loop happened to mint its entities in.
-pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
+pub fn occupations_at(world: &World, cell: Vertex) -> Vec<OccupationRecord> {
     let all = occupation_records(world);
     let coords = founding_coords_by_id(&all);
     let mut v: Vec<OccupationRecord> = all.into_iter().filter(|o| o.core.site == cell).collect();
@@ -517,10 +517,10 @@ pub(crate) fn parent_coords(
 /// map is built **once** for the whole world, not per cell — `layer_key`'s
 /// ancestry tail can point at a predecessor on any site, so a per-cell map
 /// would miss it.
-pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationRecord>> {
+pub fn occupations_by_cell(world: &World) -> BTreeMap<Vertex, Vec<OccupationRecord>> {
     let all = occupation_records(world);
     let coords = founding_coords_by_id(&all);
-    let mut by_cell: BTreeMap<CellId, Vec<OccupationRecord>> = BTreeMap::new();
+    let mut by_cell: BTreeMap<Vertex, Vec<OccupationRecord>> = BTreeMap::new();
     for occ in all {
         by_cell.entry(occ.core.site).or_default().push(occ);
     }
@@ -540,7 +540,7 @@ pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationReco
 fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
     let people = resolve_people(people_label)?;
-    let site = CellId(occ_number(world, entity, hornvale_history::OCC_SITE)? as u32);
+    let site = Vertex(occ_number(world, entity, hornvale_history::OCC_SITE)? as u32);
     // The inverse crossing: the ledger stores days, an `Occupation` carries the
     // bake's years. Every key derived from this record downstream
     // (`founder_handle`, `material_key`, `founding_key`, `layer_key`) is keyed
@@ -577,7 +577,7 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
         .value_of(entity, hornvale_history::OCC_FOUNDED_FROM)
     {
         Some(Value::Entity(e)) => Founding::From(*e),
-        Some(Value::Number(cell)) => Founding::Genesis(CellId(*cell as u32)),
+        Some(Value::Number(cell)) => Founding::Genesis(Vertex(*cell as u32)),
         _ => Founding::Genesis(site),
     };
 
@@ -655,8 +655,8 @@ fn parse_notability(label: &str) -> Option<Notability> {
 /// committed `is-settlement`) sits on, grouped by that occupation's people.
 /// Reads purely off the ledger — the present-as-query the campaign's
 /// keystone names.
-pub fn territories(world: &World) -> BTreeMap<KindId, BTreeSet<CellId>> {
-    let mut map: BTreeMap<KindId, BTreeSet<CellId>> = BTreeMap::new();
+pub fn territories(world: &World) -> BTreeMap<KindId, BTreeSet<Vertex>> {
+    let mut map: BTreeMap<KindId, BTreeSet<Vertex>> = BTreeMap::new();
     for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
         let id = f.subject;
         let Some(label) = world.ledger.text_of(id, hornvale_history::OCC_PEOPLE) else {
@@ -669,7 +669,7 @@ pub fn territories(world: &World) -> BTreeMap<KindId, BTreeSet<CellId>> {
         else {
             continue;
         };
-        map.entry(people).or_default().insert(CellId(*cell as u32));
+        map.entry(people).or_default().insert(Vertex(*cell as u32));
     }
     map
 }
@@ -808,7 +808,7 @@ pub fn collapse_events(world: &World) -> u64 {
 /// type-audit: bare-ok(identifier-text: peoples)
 pub struct Landmass {
     /// The component's cells.
-    pub cells: BTreeSet<CellId>,
+    pub cells: BTreeSet<Vertex>,
     /// The raw people-label text of every alive occupation on this landmass.
     pub peoples: BTreeSet<String>,
 }
@@ -833,7 +833,7 @@ pub fn sundered_landmasses(world: &World) -> Vec<Landmass> {
         &crate::graph_derive::GraphConfig::default(),
     );
 
-    let mut site_people: BTreeMap<CellId, String> = BTreeMap::new();
+    let mut site_people: BTreeMap<Vertex, String> = BTreeMap::new();
     for s in hornvale_settlement::all_settlements(world) {
         let Some(Value::Number(cell)) = world.ledger.value_of(s.id, hornvale_settlement::CELL_ID)
         else {
@@ -842,7 +842,7 @@ pub fn sundered_landmasses(world: &World) -> Vec<Landmass> {
         let Some(label) = world.ledger.text_of(s.id, hornvale_history::OCC_PEOPLE) else {
             continue;
         };
-        site_people.insert(CellId(*cell as u32), label.to_string());
+        site_people.insert(Vertex(*cell as u32), label.to_string());
     }
 
     graph
@@ -882,7 +882,7 @@ pub const TERRITORY_DILATION_RINGS: u32 = 1;
 /// type-audit: bare-ok(ratio: return)
 pub fn goblinoid_overlap(world: &World) -> f64 {
     let terr = territories(world);
-    let sets: Vec<BTreeSet<CellId>> = GOBLINOIDS
+    let sets: Vec<BTreeSet<Vertex>> = GOBLINOIDS
         .iter()
         .map(|k| terr.get(k).cloned().unwrap_or_default())
         .collect();
@@ -906,7 +906,7 @@ pub fn goblinoid_region_overlap(world: &World) -> f64 {
     let terrain = crate::terrain_of(world).expect("a built world's terrain reconstructs");
     let geo = terrain.geosphere();
     let terr = territories(world);
-    let sets: Vec<BTreeSet<CellId>> = GOBLINOIDS
+    let sets: Vec<BTreeSet<Vertex>> = GOBLINOIDS
         .iter()
         .map(|k| {
             let base = terr.get(k).cloned().unwrap_or_default();
@@ -928,7 +928,7 @@ pub fn goblinoid_region_overlap(world: &World) -> f64 {
 
 /// Mean Jaccard overlap over all unordered pairs of the given cell-sets
 /// (0.0 for an empty pair). Integer set-cardinality arithmetic — deterministic.
-fn mean_pairwise_jaccard(sets: &[BTreeSet<CellId>]) -> f64 {
+fn mean_pairwise_jaccard(sets: &[BTreeSet<Vertex>]) -> f64 {
     let (mut sum, mut pairs) = (0.0, 0.0);
     for i in 0..sets.len() {
         for j in (i + 1)..sets.len() {

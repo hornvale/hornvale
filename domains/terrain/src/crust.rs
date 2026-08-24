@@ -1365,7 +1365,7 @@ mod tests {
 
     use crate::streams;
     use hornvale_kernel::seed::StreamLabel;
-    use hornvale_kernel::{Geosphere, NearestCellIndex};
+    use hornvale_kernel::{Geosphere, NearestVertexIndex};
 
     /// The default-pins ocean-fraction target for a given terrain seed —
     /// what `generate` resolves once and threads to both `draw_cratons`
@@ -1781,9 +1781,9 @@ mod tests {
         );
         let coarse = Geosphere::new(4);
         let fine = Geosphere::new(5);
-        let index = NearestCellIndex::new(&fine);
+        let index = NearestVertexIndex::new(&fine);
         let mut shared = 0;
-        for cell in coarse.cells() {
+        for cell in coarse.vertices() {
             let p = coarse.position(cell);
             let c = coarse.coord(cell);
             let twin = index.nearest(&fine, c.latitude, c.longitude);
@@ -1798,7 +1798,7 @@ mod tests {
             }
         }
         assert!(
-            shared > coarse.cell_count() / 2,
+            shared > coarse.vertex_count() / 2,
             "nesting assumption broken: {shared}"
         );
     }

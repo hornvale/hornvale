@@ -28,7 +28,7 @@
 
 use hornvale_kernel::color::BANDS;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
-use hornvale_kernel::{CellId, RoomAddr, Seed, World, WorldTime};
+use hornvale_kernel::{Facet, Seed, Vertex, World, WorldTime};
 use hornvale_locale::{LocaleContext, MicroField};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 use std::collections::BTreeSet;
@@ -46,7 +46,7 @@ fn neutral_micro() -> MicroField {
     }
 }
 
-/// A depth at which every constructed `RoomAddr` is guaranteed addressable:
+/// A depth at which every constructed `Facet` is guaranteed addressable:
 /// `corner_weights` requires `path.len() >= geo.level()`, and the seed-42
 /// world's canonical grid sits at level 6 (`GLOBE_LEVEL`), so 12 — the same
 /// "six refinement levels below the canonical grid" convention
@@ -58,20 +58,20 @@ const DEPTH: usize = 12;
 const PER_FACE: u8 = 10;
 
 /// A spread of exactly `20 * PER_FACE` (= 200) distinct, addressable
-/// `RoomAddr`s, round-robin distributed 10 per face across all 20
+/// `Facet`s, round-robin distributed 10 per face across all 20
 /// icosahedron faces (never filled greedily from one face — the earlier
 /// version of this test claimed "all 20 faces" while actually only
 /// reaching 13 of them, because it broke out of the loop as soon as it had
 /// 200 addresses). Each face's 10 addresses vary the leading two path
 /// digits (`i % 4`, `i / 4` for `i` in `0..PER_FACE`, base-4 digits so all
 /// ten are distinct), padded to `DEPTH` with zeros.
-fn spread() -> Vec<RoomAddr> {
+fn spread() -> Vec<Facet> {
     let mut out = Vec::with_capacity(20 * PER_FACE as usize);
     for face in 0..20u8 {
         for i in 0..PER_FACE {
             let mut path = vec![i % 4, i / 4];
             path.resize(DEPTH, 0);
-            out.push(RoomAddr { face, path });
+            out.push(Facet { face, path });
         }
     }
     out
@@ -111,10 +111,10 @@ fn integrating_the_kept_mixture_equals_integrating_immediately() {
 /// seasonal claim (spec §3, "a peak is white in winter because its mixture
 /// changed").
 ///
-/// **Why `CellId(30344)`, not the global elevation maximum.** Task 1
-/// measured seed 42's global max-elevation land cell (`CellId(21329)`) as
+/// **Why `Vertex(30344)`, not the global elevation maximum.** Task 1
+/// measured seed 42's global max-elevation land cell (`Vertex(21329)`) as
 /// frozen 32/32 across a full-year sweep — white *all year*, not seasonally
-/// white, so it cannot demonstrate a seasonal crossing. `CellId(30344)` is
+/// white, so it cannot demonstrate a seasonal crossing. `Vertex(30344)` is
 /// the land cell whose annual mean sits closest to the freeze line
 /// (-0.001 C); Task 1's resampled 32-point sweep there found 16/32 frozen,
 /// annual minimum -8.898 C at day 337.35, first frozen day 328.14
@@ -160,21 +160,21 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     )
     .expect("seed 42 builds with a generated sky");
     let ctx = LocaleContext::build(&world).unwrap();
-    let cell = CellId(30344);
+    let cell = Vertex(30344);
 
-    // A `RoomAddr` whose dominant corner is exactly this cell: `containing`
+    // A `Facet` whose dominant corner is exactly this cell: `containing`
     // at the cell's own centroid, at the walking depth this crate uses
     // everywhere else (`globe_level() + 6`).
     let coord = ctx.climate().geosphere().coord(cell);
     let depth = ctx.globe_level() + 6;
-    let addr = RoomAddr::containing(
+    let addr = Facet::containing(
         unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
         depth,
     );
     let corners = addr
         .corner_weights(ctx.climate().geosphere(), ctx.nearest_index())
         .expect("a cell's own centroid resolves on the grid it came from");
-    // The same "max weight, tie-break lowest CellId" rule
+    // The same "max weight, tie-break lowest Vertex" rule
     // `LocaleContext`'s private `dominant_corner` uses — restated here
     // rather than imported, since it is not `pub` and this is an
     // integration test in a separate crate.
@@ -190,7 +190,7 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
         .0;
     assert_eq!(
         dominant, cell,
-        "the constructed address must resolve to CellId(30344), the cell Task 1 measured"
+        "the constructed address must resolve to Vertex(30344), the cell Task 1 measured"
     );
 
     // Neutral micro-field: isolate the seasonal (climate) term the test

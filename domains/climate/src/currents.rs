@@ -5,7 +5,7 @@
 //! bands to drive it).
 
 use crate::circulation::prevailing_wind;
-use hornvale_kernel::{CellId, CellMap, Geosphere, math};
+use hornvale_kernel::{Geosphere, Vertex, VertexMap, math};
 
 /// Fixed Ekman deflection angle: 45°, applied about the local outward
 /// normal, signed by hemisphere (right in the north, left in the south).
@@ -65,8 +65,8 @@ fn tangent_project(w: [f64; 3], up: [f64; 3]) -> [f64; 3] {
 /// type-audit: bare-ok(count: bands), bare-ok(ratio: return)
 pub fn ocean_current(
     geo: &Geosphere,
-    is_ocean: &dyn Fn(CellId) -> bool,
-    cell: CellId,
+    is_ocean: &dyn Fn(Vertex) -> bool,
+    cell: Vertex,
     bands: u32,
 ) -> [f64; 3] {
     if !is_ocean(cell) {
@@ -115,24 +115,24 @@ pub fn ocean_current(
 /// type-audit: bare-ok(count: bands), bare-ok(ratio: return)
 pub fn ocean_current_field(
     geo: &Geosphere,
-    is_ocean: &dyn Fn(CellId) -> bool,
+    is_ocean: &dyn Fn(Vertex) -> bool,
     bands: Option<u32>,
-) -> CellMap<[f64; 3]> {
+) -> VertexMap<[f64; 3]> {
     match bands {
-        None => CellMap::from_fn(geo, |_| [0.0, 0.0, 0.0]),
-        Some(bands) => CellMap::from_fn(geo, |cell| ocean_current(geo, is_ocean, cell, bands)),
+        None => VertexMap::from_fn(geo, |_| [0.0, 0.0, 0.0]),
+        Some(bands) => VertexMap::from_fn(geo, |cell| ocean_current(geo, is_ocean, cell, bands)),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{CellId, Geosphere};
+    use hornvale_kernel::{Geosphere, Vertex};
 
-    fn all_ocean(_: CellId) -> bool {
+    fn all_ocean(_: Vertex) -> bool {
         true
     }
-    fn no_ocean(_: CellId) -> bool {
+    fn no_ocean(_: Vertex) -> bool {
         false
     }
 
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn land_cells_are_zero() {
         let geo = Geosphere::new(4);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let c = ocean_current(&geo, &no_ocean, cell, 3);
             assert_eq!(c, [0.0, 0.0, 0.0], "land current must be zero");
         }
@@ -152,7 +152,7 @@ mod tests {
     fn current_is_tangent_and_nonzero_over_ocean() {
         let geo = Geosphere::new(5);
         let mut saw_nonzero = false;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let p = geo.position(cell);
             let c = ocean_current(&geo, &all_ocean, cell, 3);
             let radial = c[0] * p[0] + c[1] * p[1] + c[2] * p[2];
@@ -176,7 +176,7 @@ mod tests {
         let geo = Geosphere::new(5);
         // pick an ocean cell at clearly-northern mid-latitude with a nonzero wind
         let cell = geo
-            .cells()
+            .vertices()
             .min_by(|a, b| {
                 (geo.coord(*a).latitude - 40.0)
                     .abs()
@@ -207,7 +207,7 @@ mod tests {
     fn locked_field_is_all_zero() {
         let geo = Geosphere::new(4);
         let field = ocean_current_field(&geo, &all_ocean, None);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             assert_eq!(*field.get(cell), [0.0, 0.0, 0.0]);
         }
     }

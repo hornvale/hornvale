@@ -54,7 +54,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellMap, Mass, ResourceVector, Seed};
+use hornvale_kernel::{Mass, ResourceVector, Seed, VertexMap};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, carrying_inputs_of,
@@ -83,14 +83,14 @@ const SEEDS: [u64; 13] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 42];
 /// for a β-sweep that holds geography fixed and varies only β.
 struct SeedFixture {
     geo: hornvale_kernel::Geosphere,
-    per_species_inputs: Vec<(u32, CellMap<hornvale_demography::CarryingInput>)>,
+    per_species_inputs: Vec<(u32, VertexMap<hornvale_demography::CarryingInput>)>,
     species: Vec<(u32, Mass, ResourceVector)>,
-    habitable: CellMap<bool>,
+    habitable: VertexMap<bool>,
     /// Each species' carrying-capacity field, precomputed once (β-free) —
     /// both `measure` (via `hornvale_demography::report`) and
     /// `measure_pretrophic` (hand-rolled, skipping `couple_trophic`) read
     /// off the same field, never recomputing `carrying_capacity` per β.
-    per_species_k: Vec<(u32, CellMap<f64>)>,
+    per_species_k: Vec<(u32, VertexMap<f64>)>,
     /// The guild-overlap matrix, precomputed once — depends only on
     /// `species`' niche vectors, never on β or a cell.
     overlap: BTreeMap<(u32, u32), f64>,
@@ -129,12 +129,12 @@ fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
     // The peopled kinds (the psyche key-set); fauna carry no psyche row. Tags
     // are the shared build-local dense index — both `per_species_inputs` and
     // `species` enumerate the SAME `wc.psyche` order.
-    let per_species_inputs: Vec<(u32, CellMap<hornvale_demography::CarryingInput>)> = wc
+    let per_species_inputs: Vec<(u32, VertexMap<hornvale_demography::CarryingInput>)> = wc
         .psyche
         .iter()
         .enumerate()
         .map(|(tag, (_kind, psych))| {
-            let inputs = CellMap::from_fn(&geo, |cell| {
+            let inputs = VertexMap::from_fn(&geo, |cell| {
                 species_carrying_input(*base_inputs.get(cell), psych)
             });
             (tag as u32, inputs)
@@ -153,12 +153,12 @@ fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
         })
         .collect();
 
-    let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
+    let per_species_k: Vec<(u32, VertexMap<f64>)> = per_species_inputs
         .iter()
         .map(|(tag, inputs)| {
             (
                 *tag,
-                hornvale_demography::carrying_capacity(&geo, inputs).into_cell_map(),
+                hornvale_demography::carrying_capacity(&geo, inputs).into_vertex_map(),
             )
         })
         .collect();
@@ -216,7 +216,7 @@ fn measure(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
     let (mut sum_claimed, mut n_claimed) = (0.0_f64, 0u32);
     let (mut sum_occupancy, mut n_occupancy) = (0.0_f64, 0u32);
 
-    for cell in fixture.geo.cells() {
+    for cell in fixture.geo.vertices() {
         if !*fixture.habitable.get(cell) {
             continue;
         }
@@ -273,7 +273,7 @@ fn measure_pretrophic(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
     let (mut sum_claimed, mut n_claimed) = (0.0_f64, 0u32);
     let (mut sum_occupancy, mut n_occupancy) = (0.0_f64, 0u32);
 
-    for cell in fixture.geo.cells() {
+    for cell in fixture.geo.vertices() {
         if !*fixture.habitable.get(cell) {
             continue;
         }

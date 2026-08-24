@@ -8,7 +8,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, KindId, Seed, World, WorldTime};
+use hornvale_kernel::{EntityId, KindId, Seed, Vertex, World, WorldTime};
 use hornvale_worldgen::{
     BakeId, BakeOccupation, History, SkyChoice, TributeRelation, build_world, emit_history,
     occupation_records, occupations_at, occupations_by_cell, ruins_of_people, territories,
@@ -36,7 +36,7 @@ fn base_record(community: u64, people: &'static str, site: u32, founded: f64) ->
     BakeOccupation {
         core: Occupation {
             people: KindId(people),
-            site: CellId(site),
+            site: Vertex(site),
             founded,
             ended: None,
             peak_population: 50,
@@ -49,7 +49,7 @@ fn base_record(community: u64, people: &'static str, site: u32, founded: f64) ->
         },
         community: bid(community),
         lineage: bid(community),
-        founded_from: Founding::Genesis(CellId(site)),
+        founded_from: Founding::Genesis(Vertex(site)),
         ended_by: Ended::Nature,
     }
 }
@@ -223,12 +223,12 @@ fn territories_group_alive_occupations_by_people() {
     let mut w = test_world();
     emit_history(&mut w, &hand_history()).unwrap();
     let t = territories(&w);
-    assert_eq!(t.get(&KindId("goblin")).unwrap(), &[CellId(0)].into());
-    assert_eq!(t.get(&KindId("kobold")).unwrap(), &[CellId(2)].into());
+    assert_eq!(t.get(&KindId("goblin")).unwrap(), &[Vertex(0)].into());
+    assert_eq!(t.get(&KindId("kobold")).unwrap(), &[Vertex(2)].into());
     // Dead occupations never contribute a cell to any territory.
-    let all_cells: std::collections::BTreeSet<CellId> = t.values().flatten().copied().collect();
-    assert!(!all_cells.contains(&CellId(1)));
-    assert!(!all_cells.contains(&CellId(3)));
+    let all_cells: std::collections::BTreeSet<Vertex> = t.values().flatten().copied().collect();
+    assert!(!all_cells.contains(&Vertex(1)));
+    assert!(!all_cells.contains(&Vertex(3)));
 }
 
 #[test]
@@ -406,7 +406,7 @@ fn occupation_records_round_trip_every_committed_field() {
 
     let alive_goblin = recs
         .iter()
-        .find(|r| r.core.site == CellId(0))
+        .find(|r| r.core.site == Vertex(0))
         .expect("alive goblin at cell 0");
     assert_eq!(alive_goblin.core.people, KindId("goblin"));
     assert_eq!(alive_goblin.core.founded, 0.0);
@@ -417,11 +417,11 @@ fn occupation_records_round_trip_every_committed_field() {
     assert_eq!(alive_goblin.core.notability, Notability::Common);
     assert_eq!(alive_goblin.core.cause, None);
     assert_eq!(alive_goblin.ended_by, Ended::Nature);
-    assert_eq!(alive_goblin.founded_from, Founding::Genesis(CellId(0)));
+    assert_eq!(alive_goblin.founded_from, Founding::Genesis(Vertex(0)));
 
     let starved_goblin = recs
         .iter()
-        .find(|r| r.core.site == CellId(1))
+        .find(|r| r.core.site == Vertex(1))
         .expect("starved goblin at cell 1");
     assert_eq!(starved_goblin.core.ended, Some(100.0));
     assert_eq!(starved_goblin.core.cause, Some(CauseOfEnd::Famine));
@@ -429,14 +429,14 @@ fn occupation_records_round_trip_every_committed_field() {
 
     let alive_kobold = recs
         .iter()
-        .find(|r| r.core.site == CellId(2))
+        .find(|r| r.core.site == Vertex(2))
         .expect("alive kobold at cell 2");
     assert_eq!(alive_kobold.core.people, KindId("kobold"));
     assert_eq!(alive_kobold.core.founded, 50.0);
 
     let fled_goblin = recs
         .iter()
-        .find(|r| r.core.site == CellId(3))
+        .find(|r| r.core.site == Vertex(3))
         .expect("fled goblin at cell 3");
     assert_eq!(fled_goblin.core.ended, Some(60.0));
     assert_eq!(fled_goblin.core.cause, Some(CauseOfEnd::Fled));
@@ -485,7 +485,7 @@ fn world_with_registry() -> World {
 /// **records order and ascending-id order are the same order**, which is what
 /// lets the test below still arrange a materially-backward mint sequence.
 fn an_occupation(
-    site: CellId,
+    site: Vertex,
     founded: f64,
     ended: Option<f64>,
     peak_population: u32,
@@ -544,9 +544,9 @@ fn same_day_layers_order_by_material_facts_not_mint_order() {
     let ids = commit_occupations(
         &mut w,
         vec![
-            an_occupation(CellId(4), 100.0, None, 20),
-            an_occupation(CellId(4), 100.0, Some(900.0), 20),
-            an_occupation(CellId(4), 100.0, Some(150.0), 20),
+            an_occupation(Vertex(4), 100.0, None, 20),
+            an_occupation(Vertex(4), 100.0, Some(900.0), 20),
+            an_occupation(Vertex(4), 100.0, Some(150.0), 20),
         ],
     );
     let (none_end, late_end, early_end) = (ids[0], ids[1], ids[2]);
@@ -555,7 +555,7 @@ fn same_day_layers_order_by_material_facts_not_mint_order() {
         "fixture must mint in exactly this (materially-backward) order, or the test proves nothing"
     );
 
-    let layers = occupations_at(&w, CellId(4));
+    let layers = occupations_at(&w, Vertex(4));
     assert_eq!(layers.len(), 3);
     assert_eq!(
         layers[0].id, early_end,

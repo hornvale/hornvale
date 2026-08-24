@@ -94,7 +94,7 @@
 //! hard-codes `cache: None`. `Session` passes `Some(&self.mesh_memo)` at every
 //! construction site, so the bench was measuring a configuration the game
 //! never runs: every drive's terrain read re-resolved room->cell through a
-//! full `NearestCellIndex` scan. A profile blamed 14.9% of the whole run on
+//! full `NearestVertexIndex` scan. A profile blamed 14.9% of the whole run on
 //! `scan_at`, and the obvious conclusion -- that the number was a harness
 //! artifact -- was WRONG. Wiring the cache in moved it only 14.9% -> 13.4%.
 //! The cost is real; the missing cache was about a tenth of it.
@@ -384,7 +384,7 @@ fn run_rung(
         day = WorldTime::new(day.day() + 1.0).expect("day advance stays finite");
         // THE CACHE PRODUCTION ALWAYS PASSES. `LocaleTerrain::new` hard-codes
         // `cache: None`, so every drive's terrain read re-resolves room->cell
-        // through a full `NearestCellIndex` scan — which a profile of the
+        // through a full `NearestVertexIndex` scan — which a profile of the
         // previous version attributed 15% of the whole run to, an artifact of
         // this harness rather than a property of the sim. `Session` passes
         // `Some(&self.mesh_memo)` at every construction site; so does this now.

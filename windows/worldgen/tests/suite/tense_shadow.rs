@@ -129,8 +129,8 @@ fn temperature_gate_versus_era_mask() {
 
             // Land at this era. Ocean is excluded by capacity already (proven in
             // `era_substrate.rs`), so counting it here would drown the signal.
-            let land: Vec<hornvale_kernel::CellId> = geo
-                .cells()
+            let land: Vec<hornvale_kernel::Vertex> = geo
+                .vertices()
                 .filter(|&c| terrain.elevation_at(c) >= adjust.sea_level)
                 .collect();
 
@@ -225,8 +225,8 @@ fn would_moisture_as_a_gate_add_exclusion() {
         sea_level: terrain.sea_level(),
     };
     let substrate = substrate_field_at(geo, &terrain, &climate, &hoisted.insolation, &adjust);
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     println!(
         "{:<10} {:>14} {:>16} {:>14}",

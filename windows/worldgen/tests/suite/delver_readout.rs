@@ -155,7 +155,7 @@
 // for.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_kernel::{CellId, ConditionResponse, Mass, Seed, Value, World, sovereignty_floor};
+use hornvale_kernel::{ConditionResponse, Mass, Seed, Value, Vertex, World, sovereignty_floor};
 use hornvale_species::ConditionNiche;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
@@ -298,7 +298,7 @@ fn bind_shares(seed_value: u64, kinds: &[&'static str]) -> Vec<BindProfile> {
         insolation_scalar,
         &regime,
     );
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     println!("== seed {seed_value} ==  land cells: {}", land.len());
     println!(
@@ -480,7 +480,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     let column = |name: &str| -> Vec<f64> {
         let idx = roster
@@ -607,7 +607,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
     // assembles them.
     let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
-    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let forage = forage_supply_field(geo, base_carrying.as_vertex_map());
     let prey = prey_supply_field(geo, &forage);
     let era = EraInvariantSupply::build(
         geo,
@@ -667,7 +667,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     // Per kind: the supply-only column, and the mirror proof that
     // `saturated * tolerance` reproduces production bit-for-bit.

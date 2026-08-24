@@ -7,7 +7,7 @@
 use crate::regime::{EnergySource, Kingdom, Negations, Substrate};
 use crate::streams::LOCALE_PLACE;
 use hornvale_climate::GeneratedClimate;
-use hornvale_kernel::{CellId, Seed, quantize};
+use hornvale_kernel::{Seed, Vertex, quantize};
 use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -40,7 +40,7 @@ pub(crate) struct StrangenessBudget {
 struct Candidate {
     energy: EnergySource,
     kingdom: Kingdom,
-    score: fn(&GeneratedTerrain, CellId) -> f64,
+    score: fn(&GeneratedTerrain, Vertex) -> f64,
 }
 
 /// Flow-accumulation at which the damp term reaches half its ceiling. Chosen
@@ -135,14 +135,14 @@ impl StrangenessBudget {
     ) -> StrangenessBudget {
         let geo = climate.geosphere();
         let globe = terrain.globe();
-        // Land cells only, in CellId order (deterministic).
-        let land: Vec<CellId> = geo
-            .cells()
+        // Land cells only, in Vertex order (deterministic).
+        let land: Vec<Vertex> = geo
+            .vertices()
             .filter(|&c| quantize(globe.elevation.get(c).get()) > quantize(globe.sea_level.get()))
             .collect();
         let cands = candidates();
         let mut sites: BTreeMap<u32, StrangeSite> = BTreeMap::new();
-        let mut accepted: Vec<CellId> = Vec::new();
+        let mut accepted: Vec<Vertex> = Vec::new();
 
         // (2) Founder floor: reserve each candidate's single most-eligible cell.
         for cand in &cands {
@@ -195,7 +195,7 @@ impl StrangenessBudget {
     }
 
     /// The negation vector a placed cell carries, if any.
-    pub(crate) fn regime_at(&self, cell: CellId) -> Option<Negations> {
+    pub(crate) fn regime_at(&self, cell: Vertex) -> Option<Negations> {
         self.sites.get(&cell.0).map(|s| Negations {
             substrate: Substrate::Ordinary, // substrate comes from the derived proxy
             energy: s.energy,
@@ -212,8 +212,8 @@ impl StrangenessBudget {
 
 fn insert_site(
     sites: &mut BTreeMap<u32, StrangeSite>,
-    accepted: &mut Vec<CellId>,
-    cell: CellId,
+    accepted: &mut Vec<Vertex>,
+    cell: Vertex,
     cand: &Candidate,
     endemic: bool,
 ) {
@@ -230,7 +230,7 @@ fn insert_site(
 }
 
 /// A Fisher–Yates permutation off the given stream (deterministic).
-fn permute(cells: &[CellId], stream: &mut hornvale_kernel::Stream) -> Vec<CellId> {
+fn permute(cells: &[Vertex], stream: &mut hornvale_kernel::Stream) -> Vec<Vertex> {
     let mut v = cells.to_vec();
     for i in (1..v.len()).rev() {
         let j = (stream.next_u64() % (i as u64 + 1)) as usize;
@@ -243,7 +243,7 @@ fn permute(cells: &[CellId], stream: &mut hornvale_kernel::Stream) -> Vec<CellId
 /// Uses the geosphere's integer neighbour graph (no transcendentals).
 /// `hops_between(a, b, max)` returns `Some(hops)` iff `b` is within `max`
 /// hops of `a` (a bounded BFS), else `None`.
-fn within_repulsion(accepted: &[CellId], c: CellId, geo: &hornvale_kernel::Geosphere) -> bool {
+fn within_repulsion(accepted: &[Vertex], c: Vertex, geo: &hornvale_kernel::Geosphere) -> bool {
     accepted
         .iter()
         .any(|&a| geo.hops_between(a, c, REPULSION_HOPS).is_some())
@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn placed_sites_are_a_small_minority() {
         let (b, climate, _terrain) = budget_for(42);
-        let land = climate.geosphere().cells().count(); // upper bound
+        let land = climate.geosphere().vertices().count(); // upper bound
         assert!(b.sites().len() * 20 < land, "strange sites must stay rare");
     }
 
@@ -344,7 +344,7 @@ mod tests {
             let globe = terrain.globe();
             let land_count = climate
                 .geosphere()
-                .cells()
+                .vertices()
                 .filter(|&c| {
                     quantize(globe.elevation.get(c).get()) > quantize(globe.sea_level.get())
                 })

@@ -5,7 +5,7 @@
 
 use crate::history_emit::{occupations_at, occupations_by_cell, present_year};
 use hornvale_history::record::{CauseOfEnd, Function, OccupationRecord};
-use hornvale_kernel::{CellId, CellMap, World, math};
+use hornvale_kernel::{Vertex, VertexMap, World, math};
 use hornvale_terrain::GeneratedTerrain;
 
 /// What a residue site is, by maker → purpose.
@@ -143,7 +143,7 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
 /// label is introduced. Ocean cells never qualify (nothing pre-human is
 /// legible under open water in this model). `founded_day` is `None`:
 /// pre-human residue predates the narrated (people) timeline entirely.
-pub fn prehuman_vestige(terrain: &GeneratedTerrain, cell: CellId) -> Option<Vestige> {
+pub fn prehuman_vestige(terrain: &GeneratedTerrain, cell: Vertex) -> Option<Vestige> {
     if !terrain.prehuman_scar_at(cell) {
         return None;
     }
@@ -168,7 +168,7 @@ pub fn prehuman_vestige(terrain: &GeneratedTerrain, cell: CellId) -> Option<Vest
 /// present frame (see [`crate::present_year`]) — a bake **year**, the same
 /// unit `OccupationRecord::founded` carries, which is what
 /// `vestige_from_occupation` subtracts it from.
-pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> Vec<Vestige> {
+pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: Vertex) -> Vec<Vestige> {
     let now = present_year(world);
     let mut layers = Vec::new();
     if let Some(prehuman) = prehuman_vestige(terrain, cell) {
@@ -186,7 +186,7 @@ pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> V
 /// batched sibling of [`vestiges_at`] the per-cell dread field and residue
 /// lens now build over. `vestiges_at` calls `occupations_at`, which rescans
 /// the entire ledger (`occupation_records`) on every call; asking for it once
-/// per cell in a `CellMap::from_fn` loop is `O(cells × occupations)` ledger
+/// per cell in a `VertexMap::from_fn` loop is `O(cells × occupations)` ledger
 /// reconstructions. This instead scans the ledger exactly once
 /// ([`occupations_by_cell`]) and reads `present_year` once, so the whole field
 /// costs `O(occupations + cells)`. Per cell, the stack is built in the exact
@@ -196,11 +196,11 @@ pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> V
 /// is byte-for-byte identical to `&vestiges_at(world, terrain, cell)` for
 /// every cell (see this module's `vestiges_field_matches_vestiges_at_per_cell`
 /// test).
-pub fn vestiges_field(world: &World, terrain: &GeneratedTerrain) -> CellMap<Vec<Vestige>> {
+pub fn vestiges_field(world: &World, terrain: &GeneratedTerrain) -> VertexMap<Vec<Vestige>> {
     let now = present_year(world);
     let by_cell = occupations_by_cell(world);
     let geo = terrain.geosphere();
-    CellMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |cell| {
         let mut layers = Vec::new();
         if let Some(prehuman) = prehuman_vestige(terrain, cell) {
             layers.push(prehuman);
@@ -223,7 +223,7 @@ mod tests {
         CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord,
         TechHorizon,
     };
-    use hornvale_kernel::{CellId, EntityId, KindId};
+    use hornvale_kernel::{EntityId, KindId, Vertex};
 
     fn eid(n: u64) -> EntityId {
         EntityId::new(n).unwrap()
@@ -238,7 +238,7 @@ mod tests {
         OccupationRecord {
             core: Occupation {
                 people: KindId("test-people"),
-                site: CellId(0),
+                site: Vertex(0),
                 founded: 0.0,
                 ended,
                 peak_population: 100,
@@ -250,7 +250,7 @@ mod tests {
                 notability,
             },
             id: eid(1),
-            founded_from: Founding::Genesis(CellId(0)),
+            founded_from: Founding::Genesis(Vertex(0)),
             ended_by: Ended::Nature,
         }
     }
@@ -313,7 +313,7 @@ mod tests {
     /// the module's default fixture rather than being re-pinned on a different
     /// cell of it. The scar gate is `land && crust_age > ANCIENT_CRUST_AGE &&
     /// fbm01(...) < PREHUMAN_SCAR_THRESHOLD (0.3)`, and seed 42 cleared it on
-    /// exactly ONE cell before decision 0134 — `CellId(21966)`, described in
+    /// exactly ONE cell before decision 0134 — `Vertex(21966)`, described in
     /// this module's own comment as "the one pre-human hit among that seed's
     /// ~1900 ancient-crust cells". The terrain epoch moved the coastline to the
     /// shelf break, and seed 42's ancient-crust land fell to 1,664 cells whose
@@ -347,7 +347,7 @@ mod tests {
     /// and a presence draw that clears terrain's `prehuman_scar_at` gate.
     ///
     /// **Searched, not pinned, and that is a repair.** This used to be the
-    /// constant `CellId(21966)`, described in its own doc comment as "the one
+    /// constant `Vertex(21966)`, described in its own doc comment as "the one
     /// pre-human hit among that seed's ~1900 ancient-crust cells" — a single
     /// sample standing in for a property, and the narrowest possible one. The
     /// terrain epoch of decision 0134 turned it to ocean, so every test that
@@ -357,14 +357,14 @@ mod tests {
     ///
     /// This is not the seed-hunting decision 0093 forbids: no world is built to
     /// find the cell. The scan is a pure read over one already-built terrain,
-    /// in deterministic `CellId` order, and it selects on the same gate
+    /// in deterministic `Vertex` order, and it selects on the same gate
     /// [`prehuman_vestige`] itself applies — so the assertions downstream are
     /// about what a pre-human vestige *is*, which is the constructor's property
     /// and not the cell's.
-    fn deep_ancient_numinous_cell(terrain: &GeneratedTerrain) -> CellId {
+    fn deep_ancient_numinous_cell(terrain: &GeneratedTerrain) -> Vertex {
         terrain
             .geosphere()
-            .cells()
+            .vertices()
             .find(|&c| {
                 !terrain.is_ocean(c)
                     && terrain.crust_age_at(c) > ANCIENT_CRUST_AGE_FOR_TEST
@@ -380,7 +380,7 @@ mod tests {
     /// A land cell at seed 42 whose crust falls short of the ancient
     /// threshold (`crust_age_at` ~0.716) — fails the age gate regardless of
     /// the noise draw.
-    const SHALLOW_YOUNG_CELL: CellId = CellId(5);
+    const SHALLOW_YOUNG_CELL: Vertex = Vertex(5);
 
     /// Terrain's ancient-crust threshold, mirrored here only for these
     /// fixture assertions (`GeneratedTerrain::prehuman_scar_at`'s internal
@@ -486,7 +486,7 @@ mod tests {
         // no longer running on seed 42.
         let shallow = terrain
             .geosphere()
-            .cells()
+            .vertices()
             .find(|&c| prehuman_vestige(&terrain, c).is_none())
             .expect("some cell carries no pre-human layer");
         assert_eq!(
@@ -497,7 +497,7 @@ mod tests {
         // A sample of cells that actually carry people occupations, so the
         // grouped-by-site path is checked against populated stacks too, not
         // just the two fixture cells above.
-        let occupied_cells: std::collections::BTreeSet<CellId> = occupation_records(&world)
+        let occupied_cells: std::collections::BTreeSet<Vertex> = occupation_records(&world)
             .iter()
             .map(|o| o.core.site)
             .collect();

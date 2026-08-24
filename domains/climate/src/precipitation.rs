@@ -1,7 +1,7 @@
 //! Precipitation derivations: pure scalar functions that turn the moisture
 //! field (`crate::moisture`) and annual-mean temperature into an Earth-ranged
 //! mm/yr total, a snow fraction, and a seasonal regime label. Kept pure (no
-//! `Geosphere`/`CellMap`) so each is unit-tested without building a world;
+//! `Geosphere`/`VertexMap`) so each is unit-tested without building a world;
 //! the provider (`crate::provider`) precomputes them per cell and exposes
 //! `precip_at`/`snow_fraction_at`/`regime_at`.
 

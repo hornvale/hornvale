@@ -58,9 +58,9 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 }
 
 /// A short human description of a representative band/refugium cell: the cell
-/// with the largest latitude magnitude (deterministic; ties → lowest CellId).
-fn representative(geo: &Geosphere, mask: &hornvale_kernel::CellMap<bool>) -> Option<String> {
-    let cell = geo.cells().filter(|c| *mask.get(*c)).max_by(|a, b| {
+/// with the largest latitude magnitude (deterministic; ties → lowest Vertex).
+fn representative(geo: &Geosphere, mask: &hornvale_kernel::VertexMap<bool>) -> Option<String> {
+    let cell = geo.vertices().filter(|c| *mask.get(*c)).max_by(|a, b| {
         geo.coord(*a)
             .latitude
             .abs()
@@ -141,7 +141,7 @@ mod tests {
     use super::*;
     use crate::strata::{EraClimate, extract};
     use hornvale_kernel::test_lineage;
-    use hornvale_kernel::{CellMap, ReferenceElevation, Seed, World};
+    use hornvale_kernel::{ReferenceElevation, Seed, VertexMap, World};
 
     /// Test-only helper: a validated `ReferenceElevation`.
     fn e(m: f64) -> ReferenceElevation {
@@ -149,11 +149,11 @@ mod tests {
     }
 
     fn cold_world_record(geo: &Geosphere) -> PaleoRecord {
-        let elev = CellMap::from_fn(geo, |_| e(100.0));
+        let elev = VertexMap::from_fn(geo, |_| e(100.0));
         let eras = vec![EraClimate {
             day: 500_000.0,
-            ice: CellMap::from_fn(geo, |_| true),
-            habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
+            ice: VertexMap::from_fn(geo, |_| true),
+            habitable: VertexMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
             sea_level: e(-60.0),
             ice_fraction: 0.8,
         }];
@@ -188,11 +188,11 @@ mod tests {
     #[test]
     fn zero_ice_world_records_no_frost_retreat() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |_| e(100.0));
+        let elev = VertexMap::from_fn(&geo, |_| e(100.0));
         let eras = vec![EraClimate {
             day: 0.0,
-            ice: CellMap::from_fn(&geo, |_| false),
-            habitable: CellMap::from_fn(&geo, |_| true),
+            ice: VertexMap::from_fn(&geo, |_| false),
+            habitable: VertexMap::from_fn(&geo, |_| true),
             sea_level: e(0.0),
             ice_fraction: 0.0,
         }];

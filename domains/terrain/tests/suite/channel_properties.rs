@@ -8,7 +8,7 @@
 //! that pin it are the only things asserting the referent is downstream rather
 //! than build order.
 
-use hornvale_kernel::{CellId, Geosphere, Seed, math};
+use hornvale_kernel::{Geosphere, Seed, Vertex, math};
 use hornvale_terrain::{ChannelNetwork, GeneratedTerrain, TerrainPins, generate};
 
 /// Level 5: the minimum subdivision that actually accumulates
@@ -31,7 +31,7 @@ fn build_seed_42_terrain() -> GeneratedTerrain {
 /// adjacent cell positions because `Geosphere` has no public
 /// `mean_cell_edge()` and one integration-test caller does not earn it a
 /// new kernel method.
-fn local_cell_edge(geo: &hornvale_kernel::Geosphere, c: CellId) -> f64 {
+fn local_cell_edge(geo: &hornvale_kernel::Geosphere, c: Vertex) -> f64 {
     let neighbors = geo.neighbors(c);
     assert!(!neighbors.is_empty(), "cell {c:?} has no neighbours");
     let p = geo.position(c);
@@ -52,7 +52,7 @@ fn seed_42_has_channels_and_they_are_narrower_than_a_cell() {
     let net = terrain.channels();
     assert!(!net.polylines.is_empty(), "seed 42 has no channels at all");
     let widest = net.widest_half_width() * 2.0;
-    let cell_edge = local_cell_edge(terrain.geosphere(), CellId(0));
+    let cell_edge = local_cell_edge(terrain.geosphere(), Vertex(0));
     assert!(
         widest < cell_edge / 10.0,
         "widest channel {widest} is not far narrower than a cell edge {cell_edge}"
@@ -99,7 +99,7 @@ fn seed_42_has_channels_and_they_are_narrower_than_a_cell() {
 fn provider_transverse_at_agrees_with_the_network() {
     let terrain = build_seed_42_terrain();
     let net = terrain.channels();
-    for c in terrain.geosphere().cells().step_by(53) {
+    for c in terrain.geosphere().vertices().step_by(53) {
         let p = terrain.geosphere().position(c);
         assert_eq!(terrain.transverse_at(p), net.transverse_at(p));
     }
@@ -833,8 +833,8 @@ fn equality_probes(terrain: &GeneratedTerrain) -> Vec<Probe> {
     // gets its FAR-FROM-NETWORK positions — mid-ocean, deep desert — which the
     // near-channel sampler cannot produce and which are the only positions
     // that exercise the search radius growing past its first guess.
-    let stride = (geo.cell_count() / CATEGORY_BUDGET).max(1);
-    for c in geo.cells().step_by(stride) {
+    let stride = (geo.vertex_count() / CATEGORY_BUDGET).max(1);
+    for c in geo.vertices().step_by(stride) {
         out.push(Probe {
             at: geo.position(c),
             why: "a cell centre",

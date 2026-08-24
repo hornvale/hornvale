@@ -10,7 +10,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, founding_key_from,
 };
-use hornvale_kernel::{CellId, EntityId, KindId, Seed};
+use hornvale_kernel::{EntityId, KindId, Seed, Vertex};
 
 fn eid(n: u64) -> EntityId {
     EntityId(std::num::NonZeroU64::new(n).unwrap())
@@ -22,7 +22,7 @@ fn burned_goblin_village() -> OccupationRecord {
     OccupationRecord {
         core: Occupation {
             people: KindId("goblin"),
-            site: CellId(3),
+            site: Vertex(3),
             founded: 340.0,
             ended: Some(1980.0),
             peak_population: 40,
@@ -35,7 +35,7 @@ fn burned_goblin_village() -> OccupationRecord {
         },
         id: eid(10),
         ended_by: Ended::By(eid(42)),
-        founded_from: Founding::Genesis(CellId(3)),
+        founded_from: Founding::Genesis(Vertex(3)),
     }
 }
 
@@ -193,7 +193,7 @@ fn structures_are_deterministic_and_gated_by_function() {
 fn parent_at(site: u32, founded: f64) -> FoundingCoords<'static> {
     FoundingCoords {
         people: "goblin",
-        site: CellId(site),
+        site: Vertex(site),
         founded,
     }
 }
@@ -294,7 +294,7 @@ fn a_founder_handle_ignores_entity_ids_and_notices_semantics() {
     let mut a = OccupationRecord {
         core: Occupation {
             people: KindId("goblin"),
-            site: CellId(4),
+            site: Vertex(4),
             founded: 25.0,
             ended: None,
             peak_population: 40,
@@ -307,7 +307,7 @@ fn a_founder_handle_ignores_entity_ids_and_notices_semantics() {
         },
         id: eid(1),
         ended_by: Ended::Nature,
-        founded_from: Founding::Genesis(CellId(4)),
+        founded_from: Founding::Genesis(Vertex(4)),
     };
     let mut b = a.clone();
     b.id = eid(9_999);

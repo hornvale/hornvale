@@ -10,7 +10,7 @@
 
 use crate::terrain_of;
 use crate::vestige::{Valence, Vestige, VestigeKind, vestiges_field};
-use hornvale_kernel::{CellMap, NearestCellIndex, World};
+use hornvale_kernel::{NearestVertexIndex, VertexMap, World};
 
 /// Raster width, pixels (equirectangular → height is half). Matches the
 /// paleoclimate/deep-time lens's resolution (`hornvale_paleoclimate::render::
@@ -71,7 +71,7 @@ fn most_dread(stack: &[Vestige]) -> Option<&Vestige> {
 /// [`EMPTY_BASE`] where the palimpsest is empty) over the geosphere's actual
 /// cells, then the pixel grid looks each pixel's nearest cell up in that
 /// precomputed table. Computing per-cell first (not per pixel, as
-/// `NearestCellIndex`-based lenses elsewhere do) matters here because
+/// `NearestVertexIndex`-based lenses elsewhere do) matters here because
 /// `vestiges_at` rescans the ledger's committed occupation history on every
 /// call — so this builds the whole palimpsest field with one scan via
 /// [`vestiges_field`] and then reads each cell's stack out of it, keeping the
@@ -79,12 +79,12 @@ fn most_dread(stack: &[Vestige]) -> Option<&Vestige> {
 fn residue_pixels(world: &World, terrain: &hornvale_terrain::GeneratedTerrain) -> Vec<u8> {
     let geo = terrain.geosphere();
     let field = vestiges_field(world, terrain);
-    let colors = CellMap::from_fn(geo, |cell| match most_dread(field.get(cell)) {
+    let colors = VertexMap::from_fn(geo, |cell| match most_dread(field.get(cell)) {
         Some(v) => vestige_color(v.kind, v.valence),
         None => EMPTY_BASE,
     });
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;

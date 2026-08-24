@@ -124,7 +124,7 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let mut viable = BTreeSet::new();
     for (tag, k) in &ks {
         let name = kinds[*tag as usize].0;
-        if geo.cells().any(|cell| *k.get(cell) >= VIABILITY_FLOOR) {
+        if geo.vertices().any(|cell| *k.get(cell) >= VIABILITY_FLOOR) {
             viable.insert(name);
         }
     }

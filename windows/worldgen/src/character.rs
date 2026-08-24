@@ -45,7 +45,7 @@
 //! made of.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_kernel::{Band, Seed, Vertex};
 
 use crate::chamber::ChamberAddr;
 
@@ -172,7 +172,7 @@ pub fn parse_barrier_pin(s: &str, pins: &mut BarrierPins) -> Result<(), String> 
 /// numeric rank, for the same reason `chamber_key`/`run_key` do: a rank is a
 /// declaration position that shifts if the delve ladder ever gains a rung in
 /// the middle, and a name only moves if the name itself does.
-fn band_branch_key(cell: CellId, branch: u8, band: Band) -> String {
+fn band_branch_key(cell: Vertex, branch: u8, band: Band) -> String {
     format!("{}/{branch}/{}", cell.0, crate::chamber::rung_name(band))
 }
 
@@ -180,7 +180,7 @@ fn band_branch_key(cell: CellId, branch: u8, band: Band) -> String {
 /// 5) — cell, band, no branch, because the count is a fact about the SYSTEM
 /// at that band, not about any one branch. Same name-not-rank discipline as
 /// [`band_branch_key`].
-fn band_system_key(cell: CellId, band: Band) -> String {
+fn band_system_key(cell: Vertex, band: Band) -> String {
     format!("{}/{}", cell.0, crate::chamber::rung_name(band))
 }
 
@@ -204,7 +204,7 @@ fn band_system_key(cell: CellId, band: Band) -> String {
 /// module's tests, which asserts the new granularity rather than the old
 /// one.
 /// type-audit: bare-ok(index: branch)
-pub fn character_of(seed: Seed, cell: CellId, band: Band, branch: u8) -> Character {
+pub fn character_of(seed: Seed, cell: Vertex, band: Band, branch: u8) -> Character {
     let r = seed
         .derive(crate::streams::BRANCH_CHARACTER)
         .derive(StreamLabel::dynamic(&band_branch_key(cell, branch, band)))
@@ -246,7 +246,7 @@ pub fn character_at(seed: Seed, addr: ChamberAddr) -> Character {
 /// type-audit: bare-ok(index: branch)
 pub fn barrier_of(
     seed: Seed,
-    cell: CellId,
+    cell: Vertex,
     band: Band,
     branch: u8,
     pins: &BarrierPins,
@@ -285,7 +285,7 @@ pub fn barrier_of(
 /// `branch_count_varies_by_band_somewhere_on_the_panel` in this module's
 /// tests.
 /// type-audit: bare-ok(count: return)
-pub fn branch_count_of(seed: Seed, cell: CellId, band: Band) -> u8 {
+pub fn branch_count_of(seed: Seed, cell: Vertex, band: Band) -> u8 {
     let r = seed
         .derive(crate::streams::BRANCH_COUNT)
         .derive(StreamLabel::dynamic(&band_system_key(cell, band)))
@@ -359,7 +359,7 @@ mod tests {
         for c in 0u32..400 {
             let counts: Vec<u8> = Band::habitation()
                 .iter()
-                .map(|&band| branch_count_of(seed, CellId(c), band))
+                .map(|&band| branch_count_of(seed, Vertex(c), band))
                 .collect();
             if counts.windows(2).any(|w| w[0] != w[1]) {
                 varied = true;
@@ -389,7 +389,7 @@ mod tests {
     #[test]
     fn character_and_barrier_are_keyed_at_the_same_granularity() {
         let seed = Seed(42);
-        let (cell, branch) = (CellId(31942), 0u8);
+        let (cell, branch) = (Vertex(31942), 0u8);
         let pins = BarrierPins::default();
         let mut chars = BTreeSet::new();
         let mut barriers = BTreeSet::new();
@@ -422,7 +422,7 @@ mod tests {
             (5, Band::Undercroft, 1, BarrierState::Warded),
         ] {
             assert_eq!(
-                barrier_of(seed, CellId(cell), band, branch, &BarrierPins::default()),
+                barrier_of(seed, Vertex(cell), band, branch, &BarrierPins::default()),
                 expected,
                 "cell {cell} band {band:?} branch {branch} moved off its \
                  barrier pin"
@@ -441,7 +441,7 @@ mod tests {
             (5, Band::Undercroft, 1, Character::WildCave),
         ] {
             assert_eq!(
-                character_of(seed, CellId(cell), band, branch),
+                character_of(seed, Vertex(cell), band, branch),
                 expected,
                 "cell {cell} band {band:?} branch {branch} moved off its \
                  character pin"
@@ -460,7 +460,7 @@ mod tests {
             (5, Band::Undercroft, 2),
         ] {
             assert_eq!(
-                branch_count_of(seed, CellId(cell), band),
+                branch_count_of(seed, Vertex(cell), band),
                 expected,
                 "cell {cell} band {band:?} moved off its branch-count pin"
             );
@@ -484,10 +484,10 @@ mod tests {
         // All three surviving draws (character, barrier, count) sweep every
         // habitation band. There used to be a fourth arm here, keyed on an
         // entrance; `root_floor_of` retired with The Drift's Task 7.
-        let band_places: Vec<(CellId, Band, u8)> = (0u32..12)
+        let band_places: Vec<(Vertex, Band, u8)> = (0u32..12)
             .flat_map(|c| {
                 Band::habitation().iter().flat_map(move |&band| {
-                    (0u8..BRANCHES_PER_SYSTEM).map(move |b| (CellId(c), band, b))
+                    (0u8..BRANCHES_PER_SYSTEM).map(move |b| (Vertex(c), band, b))
                 })
             })
             .collect();
@@ -550,11 +550,11 @@ mod tests {
         );
 
         // --- branch count ---
-        let systems: Vec<(CellId, Band)> = (0u32..40)
+        let systems: Vec<(Vertex, Band)> = (0u32..40)
             .flat_map(|c| {
                 Band::habitation()
                     .iter()
-                    .map(move |&band| (CellId(c), band))
+                    .map(move |&band| (Vertex(c), band))
             })
             .collect();
         let mut count_disagreed = false;

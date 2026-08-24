@@ -289,7 +289,7 @@ fn measure_fits(
             let k_h = at(i as u32);
             let mut fits_h: Vec<f64> = Vec::new();
             let mut fits_g: Vec<f64> = Vec::new();
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 let vh = *k_h.get(cell);
                 let vg = *k_goblin.get(cell);
                 if vh >= VIABILITY_FLOOR || vg >= VIABILITY_FLOOR {

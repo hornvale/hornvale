@@ -498,9 +498,9 @@ fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, us
     // Unordered `(lo, hi)` cell pairs, keyed by the band they join at. The
     // per-band split is not presentation: it is what keeps the component
     // sweep below inside one traversable layer.
-    let mut by_band: BTreeMap<u8, BTreeSet<(hornvale_kernel::CellId, hornvale_kernel::CellId)>> =
+    let mut by_band: BTreeMap<u8, BTreeSet<(hornvale_kernel::Vertex, hornvale_kernel::Vertex)>> =
         BTreeMap::new();
-    for cell in terrain.geosphere().cells() {
+    for cell in terrain.geosphere().vertices() {
         // `cave_at` refuses an ocean cell as its first act, so it is the land
         // gate too; an `is_ocean` test beside it could never fire.
         if terrain.cave_at(cell).is_none() {
@@ -541,15 +541,15 @@ fn junction_network(seed: Seed, terrain: &GeneratedTerrain) -> (usize, usize, us
 /// determinism is constitutional even where iteration order cannot change
 /// the answer.
 fn largest_component(
-    edges: &BTreeSet<(hornvale_kernel::CellId, hornvale_kernel::CellId)>,
+    edges: &BTreeSet<(hornvale_kernel::Vertex, hornvale_kernel::Vertex)>,
 ) -> usize {
-    let mut adjacency: BTreeMap<hornvale_kernel::CellId, BTreeSet<hornvale_kernel::CellId>> =
+    let mut adjacency: BTreeMap<hornvale_kernel::Vertex, BTreeSet<hornvale_kernel::Vertex>> =
         BTreeMap::new();
     for &(lo, hi) in edges {
         adjacency.entry(lo).or_default().insert(hi);
         adjacency.entry(hi).or_default().insert(lo);
     }
-    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    let mut visited: BTreeSet<hornvale_kernel::Vertex> = BTreeSet::new();
     let mut largest = 0usize;
     for start in adjacency.keys().copied().collect::<Vec<_>>() {
         if visited.contains(&start) {
@@ -608,13 +608,13 @@ pub fn render_underworld(seed: Seed, terrain: &GeneratedTerrain) -> String {
         open_entrances: 0,
     };
     // The first `TRANSECT_SYSTEMS` cave systems in cell order, walked in full.
-    let mut transect: Vec<(hornvale_kernel::CellId, String, Vec<RunRow>)> = Vec::new();
+    let mut transect: Vec<(hornvale_kernel::Vertex, String, Vec<RunRow>)> = Vec::new();
     // THE OVERRIDE SOURCE, named rather than inlined: this is the one line
     // Task 4 replaces to put `ChamberOrigin::Made` into the artifact. Empty
     // today, so `by_origin[1]` is 0 by construction — see the module doc.
     let overrides = crate::chamber::ChamberOverrides::new();
 
-    for cell in terrain.geosphere().cells() {
+    for cell in terrain.geosphere().vertices() {
         let Some(cave) = terrain.cave_at(cell) else {
             continue;
         };

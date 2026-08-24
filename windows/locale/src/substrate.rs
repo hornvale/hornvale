@@ -5,7 +5,7 @@
 
 use crate::regime::Substrate;
 use hornvale_climate::GeneratedClimate;
-use hornvale_kernel::{CellId, quantize};
+use hornvale_kernel::{Vertex, quantize};
 use hornvale_terrain::GeneratedTerrain;
 
 /// Thresholds are compared on quantized values so the discrete substrate
@@ -13,7 +13,7 @@ use hornvale_terrain::GeneratedTerrain;
 pub(crate) fn substrate_at(
     climate: &GeneratedClimate,
     terrain: &GeneratedTerrain,
-    cell: CellId,
+    cell: Vertex,
 ) -> Substrate {
     let globe = terrain.globe();
     let elevation = quantize(globe.elevation.get(cell).get());
@@ -64,7 +64,7 @@ mod tests {
         let climate = climate_of(&w).unwrap();
         let terrain = terrain_of(&w).unwrap();
         let geo = climate.geosphere();
-        for c in geo.cells() {
+        for c in geo.vertices() {
             let a = substrate_at(&climate, &terrain, c);
             let b = substrate_at(&climate, &terrain, c);
             assert_eq!(a, b);
@@ -80,7 +80,7 @@ mod tests {
         let terrain = terrain_of(&w).unwrap();
         let geo = climate.geosphere();
         let globe = terrain.globe();
-        for c in geo.cells() {
+        for c in geo.vertices() {
             let above_sea = hornvale_kernel::quantize(globe.elevation.get(c).get())
                 > hornvale_kernel::quantize(globe.sea_level.get());
             if above_sea && hornvale_kernel::quantize(*globe.unrest.get(c)) > 0.6 {

@@ -51,7 +51,7 @@
 // for.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_kernel::CellId;
+use hornvale_kernel::Vertex;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
@@ -121,7 +121,7 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
 /// to notice it. `per_species_suitability` scores each kind independently, so
 /// passing the whole roster costs a little time and changes no value.
 ///
-/// The `u32` in the returned `Vec<(u32, CellMap<f64>)>` is a **build-local
+/// The `u32` in the returned `Vec<(u32, VertexMap<f64>)>` is a **build-local
 /// dense index, not a stable species id** — it is a position in the
 /// `species_biosphere` slice, which is why the kind order is captured from that
 /// same iteration and used to map a name back to a column.
@@ -198,7 +198,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         &species_affinity,
     );
 
-    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     // A kind's suitability over land, found by mapping its NAME through the
     // roster order above to the build-local index, then through the returned

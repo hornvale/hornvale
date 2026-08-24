@@ -17,7 +17,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::{CaveKind, Horizon, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
@@ -193,12 +193,12 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
         .unwrap_or_else(|| panic!("{seed:?} at BuildDepth::Terrain produced no terrain"));
     let geo = terrain.geosphere();
 
-    let mut cave_set: BTreeSet<CellId> = BTreeSet::new();
+    let mut cave_set: BTreeSet<Vertex> = BTreeSet::new();
     let (mut world_land, mut world_caves) = (0usize, 0usize);
     let mut world_kinds = [0usize; 3];
     let mut world_gate = [(0usize, 0usize, 0.0f64); 20];
 
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) {
             continue;
         }

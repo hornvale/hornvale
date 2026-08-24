@@ -37,7 +37,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::color::{Illuminant, Observer, Reflectance, blackbody, standard_observer};
-use hornvale_kernel::{CellId, Seed, Value};
+use hornvale_kernel::{Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::fabric::{self, Fabric, FabricContext};
 use hornvale_vessel::lens::{self, Lens};
@@ -116,7 +116,7 @@ fn settlement_ground(seed: u64) -> Vec<FabricContext> {
         .iter()
         .map(|s| {
             let cell = match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             };
             FabricContext::at(terrain, climate, cell)

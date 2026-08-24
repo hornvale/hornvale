@@ -10,7 +10,7 @@
 use crate::circulation::RotationRegime;
 use crate::diurnal::{diurnal_amplitude, diurnal_anomaly};
 use hornvale_kernel::math;
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomaly, Temperature};
+use hornvale_kernel::{Geosphere, ReferenceElevation, TempAnomaly, Temperature, Vertex, VertexMap};
 
 /// Standard (ICAO) environmental lapse rate: °C lost per meter of elevation
 /// above sea level. **Not** the dry adiabatic rate (9.8 K/km) — 6.5 K/km is
@@ -163,9 +163,9 @@ const LAT_TERM_SIN4_COEFF_C: f64 = -37.5;
 /// type-audit: bare-ok(ratio: return)
 pub fn continentality(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    cell: CellId,
+    cell: Vertex,
 ) -> f64 {
     let neighbors = geo.neighbors(cell);
     if neighbors.is_empty() {
@@ -188,18 +188,18 @@ pub fn continentality(
 /// type-audit: pending(wave-2: insolation), pending(wave-2: greenhouse_forcing_k)
 pub fn mean_temperature(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     insolation: f64,
     regime: &RotationRegime,
     greenhouse_forcing_k: f64,
-) -> CellMap<Temperature> {
+) -> VertexMap<Temperature> {
     // The Locked branch keeps the plain blackbody exponent applied to raw
     // `S` — its own, unthermostatted formula (`locked_cell_temperature`),
     // untouched by The Glasshouse. `Spinning` computes its own scale below,
     // through `THERMOSTAT_RESIDUAL_FRACTION`'s damped `effective_s`.
     let locked_scale = math::powf(insolation.max(0.0), 0.25);
-    CellMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |cell| {
         let above = (*elevation.get(cell) - sea_level).max(0.0);
         let lapse = LAPSE_C_PER_M * above;
         let c = match regime {
@@ -239,10 +239,10 @@ pub fn mean_temperature(
 /// type-audit: pending(wave-2)
 pub fn seasonal_amplitude(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     obliquity_deg: f64,
-    cell: CellId,
+    cell: Vertex,
 ) -> f64 {
     let cont = continentality(geo, elevation, sea_level, cell);
     (obliquity_deg / 90.0) * 25.0 * cont
@@ -258,17 +258,17 @@ pub fn seasonal_amplitude(
 /// type-audit: pending(wave-2)
 #[allow(clippy::too_many_arguments)]
 pub fn temperature_at(
-    mean: &CellMap<Temperature>,
-    diurnal_amp: &CellMap<f64>,
+    mean: &VertexMap<Temperature>,
+    diurnal_amp: &VertexMap<f64>,
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     obliquity_deg: f64,
     insolation: f64,
     year_length_std: f64,
     year_phase_offset: f64,
     regime: &RotationRegime,
-    cell: CellId,
+    cell: Vertex,
     day: f64,
 ) -> Temperature {
     let base = *mean.get(cell);
@@ -325,11 +325,11 @@ pub fn temperature_at(
 /// type-audit: bare-ok(ratio: moisture), bare-ok(diagnostic-value: return)
 pub fn diurnal_amplitude_field(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    moisture: &CellMap<f64>,
-) -> CellMap<f64> {
-    CellMap::from_fn(geo, |cell| {
+    moisture: &VertexMap<f64>,
+) -> VertexMap<f64> {
+    VertexMap::from_fn(geo, |cell| {
         let cont = continentality(geo, elevation, sea_level, cell);
         let above = (*elevation.get(cell) - sea_level).max(0.0);
         diurnal_amplitude(*moisture.get(cell), cont, above)
@@ -343,7 +343,7 @@ pub fn diurnal_amplitude_field(
 /// the caller's precomputed elevation lapse (LAPSE_C_PER_M · max(0, elev−sea)).
 /// Arithmetically identical to `temperature_at`'s `RotationRegime::Locked`
 /// branch — same year_phase/sub_lat/dir/scale/mapping — with a position in
-/// place of a `CellId` (so it never touches a `Geosphere` or `CellMap`).
+/// place of a `Vertex` (so it never touches a `Geosphere` or `VertexMap`).
 /// type-audit: bare-ok(ratio: p), bare-ok(ratio: insolation), pending(wave-2: lapse), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase_offset), bare-ok(diagnostic-value: year_length_std), pending(wave-2: return)
 #[allow(clippy::too_many_arguments)]
 pub fn locked_temperature_at_position(
@@ -371,9 +371,9 @@ mod tests {
     fn flat_ocean_then_land(
         geo: &Geosphere,
         sea: ReferenceElevation,
-    ) -> CellMap<ReferenceElevation> {
+    ) -> VertexMap<ReferenceElevation> {
         // Half the globe below sea level (x<0), half above — a crude land mask.
-        CellMap::from_fn(geo, |c| {
+        VertexMap::from_fn(geo, |c| {
             let m = if geo.position(c)[0] < 0.0 {
                 sea.get() - 1000.0
             } else {
@@ -399,7 +399,7 @@ mod tests {
     #[test]
     fn spec_3_2_bounds_hold_at_s_equals_1_with_earth_anchor_greenhouse() {
         let geo = Geosphere::new(6);
-        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let elev = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let mean = mean_temperature(
             &geo,
@@ -410,14 +410,14 @@ mod tests {
             0.0,
         );
         let area_mean: f64 =
-            geo.cells().map(|c| mean.get(c).get()).sum::<f64>() / geo.cell_count() as f64;
+            geo.vertices().map(|c| mean.get(c).get()).sum::<f64>() / geo.vertex_count() as f64;
         assert!(
             (area_mean - 14.0).abs() <= 1.0,
             "area-weighted mean {area_mean} is not within 1 K of +14 C"
         );
 
         let equator = geo
-            .cells()
+            .vertices()
             .min_by(|a, b| {
                 geo.coord(*a)
                     .latitude
@@ -432,7 +432,7 @@ mod tests {
         );
 
         let pole = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| {
                 geo.coord(*a)
                     .latitude
@@ -454,7 +454,7 @@ mod tests {
     #[test]
     fn temperature_falls_with_latitude_on_a_spinning_world() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let elev = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let mean = mean_temperature(
             &geo,
             &elev,
@@ -464,7 +464,7 @@ mod tests {
             0.0,
         );
         let equator = geo
-            .cells()
+            .vertices()
             .min_by(|a, b| {
                 geo.coord(*a)
                     .latitude
@@ -473,7 +473,7 @@ mod tests {
             })
             .unwrap();
         let pole = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| {
                 geo.coord(*a)
                     .latitude
@@ -490,13 +490,13 @@ mod tests {
     #[test]
     fn temperature_falls_with_altitude() {
         let geo = Geosphere::new(3);
-        let low = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
-        let high = CellMap::from_fn(&geo, |_| ReferenceElevation::new(3000.0).unwrap());
+        let low = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let high = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(3000.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let sea = ReferenceElevation::new(0.0).unwrap();
         let mlow = mean_temperature(&geo, &low, sea, 1.0, &regime, 0.0);
         let mhigh = mean_temperature(&geo, &high, sea, 1.0, &regime, 0.0);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             assert!(
                 mhigh.get(c) < mlow.get(c),
                 "altitude must cool cell {}",
@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn locked_world_is_hottest_at_substellar_and_coldest_at_antistellar() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let elev = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let mean = mean_temperature(
             &geo,
             &elev,
@@ -518,11 +518,11 @@ mod tests {
             0.0,
         );
         let sub = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
             .unwrap();
         let anti = geo
-            .cells()
+            .vertices()
             .min_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
             .unwrap();
         assert!(
@@ -534,15 +534,15 @@ mod tests {
     #[test]
     fn spinning_seasonal_peak_tracks_the_year_phase_offset() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // Zero diurnal amplitude: this test targets the seasonal term only.
-        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
+        let diurnal_amp = VertexMap::from_fn(&geo, |_| 0.0);
         // A clearly-northern cell.
         let north = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| geo.coord(*a).latitude.total_cmp(&geo.coord(*b).latitude))
             .unwrap();
         let year = 360.0;
@@ -584,7 +584,7 @@ mod tests {
         let elev = flat_ocean_then_land(&geo, sea);
         // A land cell touching ocean vs a land cell deep inland at similar latitude.
         let coastal = geo
-            .cells()
+            .vertices()
             .find(|c| {
                 elev.get(*c) >= &sea
                     && geo.neighbors(*c).iter().any(|n| elev.get(*n) < &sea)
@@ -593,7 +593,7 @@ mod tests {
             })
             .unwrap();
         let inland = geo
-            .cells()
+            .vertices()
             .find(|c| {
                 elev.get(*c) >= &sea
                     && geo.neighbors(*c).iter().all(|n| elev.get(*n) >= &sea)
@@ -609,11 +609,11 @@ mod tests {
     #[test]
     fn locked_substellar_hot_spot_librates_with_obliquity() {
         let geo = Geosphere::new(4);
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
-        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
+        let diurnal_amp = VertexMap::from_fn(&geo, |_| 0.0);
         let year = 240.0;
         let obliq = 22.0;
         // At the northern solstice (frac(day/year + 0) = 0.25) the substellar
@@ -621,7 +621,7 @@ mod tests {
         // not the equator.
         let solstice = 0.25 * year;
         let warmest = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| {
                 let ta = temperature_at(
                     &mean,
@@ -667,18 +667,18 @@ mod tests {
     fn locked_temperature_at_position_matches_temperature_at_the_cells_own_position() {
         let geo = Geosphere::new(4);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let elevation = VertexMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[0] > 0.0 { 500.0 } else { 0.0 };
             ReferenceElevation::new(m).unwrap()
         });
         let regime = RotationRegime::Locked;
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
-        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
+        let diurnal_amp = VertexMap::from_fn(&geo, |_| 0.0);
         // The substellar-ish cell: the position formula must agree with the
         // cell-based one everywhere, but pick a cell with nonzero lapse too
         // (elevation above sea level) so the lapse term is exercised.
         let cell = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
             .unwrap();
         let obliquity = 21.8;
@@ -713,12 +713,12 @@ mod tests {
     #[test]
     fn locked_temperature_is_static_at_zero_obliquity() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
-        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
-        let cell = CellId(0);
+        let diurnal_amp = VertexMap::from_fn(&geo, |_| 0.0);
+        let cell = Vertex(0);
         let a = temperature_at(
             &mean,
             &diurnal_amp,
@@ -765,13 +765,13 @@ mod tests {
     #[test]
     fn locked_worlds_have_no_diurnal_term() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
-        let diurnal_amp = CellMap::from_fn(&geo, |_| 12.0);
+        let diurnal_amp = VertexMap::from_fn(&geo, |_| 12.0);
         let cell = geo
-            .cells()
+            .vertices()
             .find(|c| {
                 let lat = geo.coord(*c).latitude.abs();
                 lat > 5.0 && lat < 80.0
@@ -821,17 +821,17 @@ mod tests {
         let geo = Geosphere::new(4);
         let sea = ReferenceElevation::new(0.0).unwrap();
         // All land, well above sea level: every cell is fully continental.
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // A near-equatorial cell: the sun reliably rises there every day.
         let cell = geo
-            .cells()
+            .vertices()
             .find(|c| geo.coord(*c).latitude.abs() < 15.0)
             .unwrap();
         // A dry, fully-continental amplitude (desert-like swing) at that cell.
         let dry_amplitude = diurnal_amplitude(0.05, 1.0, 0.0);
-        let diurnal_amp = CellMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
+        let diurnal_amp = VertexMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
         let year = 360.0;
         let day = 100.0;
         // The diurnal term is phased on LOCAL solar time (day_fraction +
@@ -875,17 +875,17 @@ mod tests {
         let geo = Geosphere::new(4);
         let sea = ReferenceElevation::new(0.0).unwrap();
         // All land, well above sea level: every cell is fully continental.
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // A near-equatorial cell: the sun reliably rises there every day.
         let cell = geo
-            .cells()
+            .vertices()
             .find(|c| geo.coord(*c).latitude.abs() < 15.0)
             .unwrap();
         // A dry, fully-continental amplitude (desert-like swing) at that cell.
         let dry_amplitude = diurnal_amplitude(0.05, 1.0, 0.0);
-        let diurnal_amp = CellMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
+        let diurnal_amp = VertexMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
         let year = 360.0;
         let day = 100.0;
         // The diurnal term is phased on LOCAL solar time (day_fraction +
@@ -928,13 +928,13 @@ mod tests {
     fn daily_mean_is_unchanged_by_the_diurnal_term() {
         let geo = Geosphere::new(4);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // An equatorial cell: away from any polar-night clamp in the
         // waveform, so the zero-mean cancellation converges cleanly.
         let cell = geo
-            .cells()
+            .vertices()
             .find(|c| geo.coord(*c).latitude.abs() < 10.0)
             .unwrap();
         // A real, nonzero diurnal amplitude everywhere — a stubbed-to-zero
@@ -942,7 +942,7 @@ mod tests {
         // `spinning_afternoon_is_warmer_than_predawn` above already catches
         // that; here the amplitude stays nonzero so this test exercises the
         // actual zero-mean cancellation, not an absent term.
-        let diurnal_amp = CellMap::from_fn(&geo, |_| 20.0);
+        let diurnal_amp = VertexMap::from_fn(&geo, |_| 20.0);
         // A deliberately long year: the seasonal phase must stay effectively
         // fixed across the single rotation this test averages over, so the
         // only thing under test is the diurnal term's zero-mean cancellation

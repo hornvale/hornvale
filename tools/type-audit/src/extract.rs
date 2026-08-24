@@ -234,7 +234,7 @@ mod tests {
             /// type-audit: bare-ok(count)
             pub fn seed_count(octaves: u32, label: &str) -> f64 { 0.0 }
             fn private(x: f64) {}
-            pub fn opaque(cell: CellId) -> CellId { cell }
+            pub fn opaque(cell: Vertex) -> Vertex { cell }
             "#,
         );
         let items = positions_in_file(&f);
@@ -270,7 +270,7 @@ mod tests {
         let f = file(
             r#"
             /// A cell id.
-            pub struct CellId(pub u32);
+            pub struct Vertex(pub u32);
         "#,
         );
         let items = positions_in_file(&f);

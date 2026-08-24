@@ -15,7 +15,7 @@
 use crate::circulation::{
     RotationRegime, band_count_for, band_index, is_rising_band, prevailing_wind,
 };
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, math};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, VertexMap, math};
 
 /// Cells traced upwind when building the moisture-budget path.
 const BUDGET_STEPS: usize = 48;
@@ -52,9 +52,9 @@ const DRY_BAND_BASE: f64 = 0.25;
 /// ocean), tapering to `0.0` fully inland.
 fn ocean_bonus(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    cell: CellId,
+    cell: Vertex,
 ) -> f64 {
     if is_ocean(elevation, sea_level, cell) {
         return 0.3;
@@ -73,9 +73,9 @@ fn ocean_bonus(
 /// Whether a cell lies below sea level — an ocean cell, and thus its own
 /// moisture source in the budget trace.
 fn is_ocean(
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    cell: CellId,
+    cell: Vertex,
 ) -> bool {
     *elevation.get(cell) < sea_level
 }
@@ -83,7 +83,7 @@ fn is_ocean(
 /// Evaporative warmth at a cell: `cos(latitude)`, clamped to `[0, 1]` (the
 /// equator evaporates most, the poles none). Deliberately uncoupled from any
 /// temperature field (spec approximation).
-fn warmth(geo: &Geosphere, cell: CellId) -> f64 {
+fn warmth(geo: &Geosphere, cell: Vertex) -> f64 {
     math::cos(geo.coord(cell).latitude.to_radians()).clamp(0.0, 1.0)
 }
 
@@ -92,7 +92,7 @@ fn warmth(geo: &Geosphere, cell: CellId) -> f64 {
 /// by every upwind trace over the globe. `pub(crate)`: `provider.rs` reuses
 /// it to find the single upwind hop for the diagnostic cloud-fraction field's
 /// local uplift term, the same orographic signal `carried_water` sinks on.
-pub(crate) fn upwind_neighbor(geo: &Geosphere, cell: CellId, wind: [f64; 3]) -> Option<CellId> {
+pub(crate) fn upwind_neighbor(geo: &Geosphere, cell: Vertex, wind: [f64; 3]) -> Option<Vertex> {
     let cp = geo.position(cell);
     geo.neighbors(cell).iter().copied().max_by(|a, b| {
         let da = geo.position(*a);
@@ -118,9 +118,9 @@ pub(crate) fn upwind_neighbor(geo: &Geosphere, cell: CellId, wind: [f64; 3]) -> 
 /// route).
 fn budget_dryness(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    cell: CellId,
+    cell: Vertex,
     wind: [f64; 3],
     bands: u32,
 ) -> f64 {
@@ -133,9 +133,9 @@ fn budget_dryness(
 /// upwind budget replay (see `budget_dryness`), before normalization.
 fn carried_water(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    cell: CellId,
+    cell: Vertex,
     wind: [f64; 3],
     bands: u32,
 ) -> f64 {
@@ -181,22 +181,22 @@ fn carried_water(
 /// type-audit: bare-ok(ratio: return)
 pub fn moisture_field(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     regime: &RotationRegime,
-) -> CellMap<f64> {
+) -> VertexMap<f64> {
     match band_count_for(regime) {
         None => {
             // Locked: wettest at the terminator (|cos θ| ≈ 0), dry at the poles
             // of the day/night axis.
-            CellMap::from_fn(geo, |cell| {
+            VertexMap::from_fn(geo, |cell| {
                 let p = geo.position(cell);
                 let cos_theta = crate::substellar_cosine(p);
                 let base = 0.7 * (1.0 - cos_theta.abs());
                 (base + ocean_bonus(geo, elevation, sea_level, cell)).clamp(0.0, 1.0)
             })
         }
-        Some(bands) => CellMap::from_fn(geo, |cell| {
+        Some(bands) => VertexMap::from_fn(geo, |cell| {
             let band = band_index(geo.coord(cell).latitude, bands);
             let base = if is_rising_band(band) {
                 WET_BAND_BASE
@@ -223,7 +223,7 @@ mod tests {
     /// The neighbor of `from` most aligned with `wind` (i.e., downwind) —
     /// the mirror image of production's `upwind_neighbor`, used only to walk
     /// a deterministic downwind transect for the interior-drying test.
-    fn downwind_neighbor(geo: &Geosphere, from: CellId, wind: [f64; 3]) -> CellId {
+    fn downwind_neighbor(geo: &Geosphere, from: Vertex, wind: [f64; 3]) -> Vertex {
         let p = geo.position(from);
         *geo.neighbors(from)
             .iter()
@@ -253,7 +253,7 @@ mod tests {
         // number of overland hops between the transect's end and the ocean
         // source, so decay/convective drying is identical between them —
         // isolating the orographic sink as the only remaining difference.
-        let start = geo.cells().nth(2000).unwrap();
+        let start = geo.vertices().nth(2000).unwrap();
         let mut chain = vec![start];
         for _ in 1..5 {
             let current = *chain.last().unwrap();
@@ -263,7 +263,7 @@ mod tests {
         let end = *chain.last().unwrap();
 
         let build = |ridge_at: usize| {
-            CellMap::from_fn(&geo, |c| {
+            VertexMap::from_fn(&geo, |c| {
                 let e = match chain.iter().position(|&x| x == c) {
                     Some(idx) if idx == ridge_at => 5000.0,
                     Some(_) => 200.0,
@@ -293,7 +293,7 @@ mod tests {
         let bands = band_count_for(&regime).unwrap();
         // Walk a downwind transect of flat land from an arbitrary start;
         // everything off the transect is ocean, so the start is coastal.
-        let mut chain = vec![geo.cells().nth(500).unwrap()];
+        let mut chain = vec![geo.vertices().nth(500).unwrap()];
         for _ in 0..7 {
             let current = *chain.last().unwrap();
             let wind = prevailing_wind(&geo, current, bands);
@@ -301,7 +301,7 @@ mod tests {
         }
         let coast = chain[0];
         let inland = *chain.last().unwrap();
-        let elev = CellMap::from_fn(&geo, |c| {
+        let elev = VertexMap::from_fn(&geo, |c| {
             let e = if chain.contains(&c) { 200.0 } else { -500.0 };
             ReferenceElevation::new(e).unwrap()
         });
@@ -320,14 +320,14 @@ mod tests {
         // BUDGET_STEPS) can find a source, so precipitable water never
         // accumulates.
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let elev = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let m = moisture_field(
             &geo,
             &elev,
             ReferenceElevation::new(0.0).unwrap(),
             &RotationRegime::Spinning { day_std: 1.0 },
         );
-        let cell = geo.cells().nth(1234).unwrap();
+        let cell = geo.vertices().nth(1234).unwrap();
         assert!(
             *m.get(cell) < 0.05,
             "cell with no upwind ocean is not dry: {}",
@@ -340,8 +340,8 @@ mod tests {
         let geo = Geosphere::new(4);
         let sea = ReferenceElevation::new(0.0).unwrap();
         // Bounded: a mixed ocean/ridge/land world under the spinning branch.
-        let ridge = geo.cells().nth(1000).unwrap();
-        let elev = CellMap::from_fn(&geo, |c| {
+        let ridge = geo.vertices().nth(1000).unwrap();
+        let elev = VertexMap::from_fn(&geo, |c| {
             let e = if c == ridge {
                 5000.0
             } else if c.0.is_multiple_of(2) {
@@ -358,18 +358,18 @@ mod tests {
 
         // Locked: unchanged — wettest at the terminator, dry at the
         // substellar and antistellar points.
-        let flat = CellMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
+        let flat = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
         let ml = moisture_field(&geo, &flat, sea, &RotationRegime::Locked);
         let sub = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
             .unwrap();
         let anti = geo
-            .cells()
+            .vertices()
             .min_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
             .unwrap();
         let term = geo
-            .cells()
+            .vertices()
             .min_by(|a, b| {
                 geo.position(*a)[0]
                     .abs()

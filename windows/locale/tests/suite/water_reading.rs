@@ -56,7 +56,7 @@
 //!   file's deliberate-exclusion roster with the reason. 0123 warns that a
 //!   stale list is worse than none.
 
-use hornvale_kernel::{CellId, RoomAddr, Seed, World, WorldTime, math};
+use hornvale_kernel::{Facet, Seed, Vertex, World, WorldTime, math};
 use hornvale_locale::{Crossing, LocaleContext, ROOM_SCHEMA, room_edge};
 use hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE;
 use hornvale_terrain::channel::Transverse;
@@ -71,9 +71,9 @@ fn world() -> World {
 }
 
 /// The room each fixture line describes, recovered from the line itself.
-fn room_of(line: &str) -> RoomAddr {
+fn room_of(line: &str) -> Facet {
     let v: Value = serde_json::from_str(line).expect("fixture line is JSON");
-    RoomAddr {
+    Facet {
         face: v["face"].as_u64().expect("face") as u8,
         path: v["path"]
             .as_array()
@@ -240,7 +240,7 @@ fn top_level_keys(doc: &str) -> Vec<String> {
 /// a scalar, or an enum that serializes as a bare string on one side and as a
 /// single-key object on the other — is left alone, because that is a VALUE
 /// difference and values are exactly what this test no longer claims.
-fn assert_same_key_shape(was: &Value, now: &Value, path: &str, room: &RoomAddr) {
+fn assert_same_key_shape(was: &Value, now: &Value, path: &str, room: &Facet) {
     match (was, now) {
         (Value::Object(a), Value::Object(b)) => {
             let ka: Vec<&String> = a.keys().collect();
@@ -760,7 +760,7 @@ fn offset_from(base: [f64; 3], dir: [f64; 3], off: f64) -> [f64; 3] {
 /// One transect of the channel network: the room the centreline runs through,
 /// and the **three mesh steps out of it**, plus the reach it belongs to.
 ///
-/// The three steps are `RoomAddr::neighbors()`, so every pair this population
+/// The three steps are `Facet::neighbors()`, so every pair this population
 /// asks about is a walker's step **by construction** rather than by filtering.
 /// That matters, and it is the second construction this test has had:
 ///
@@ -777,14 +777,14 @@ struct Transect {
     vertex: (usize, usize),
     /// The room the centreline runs through: the transect's origin, and the
     /// one room guaranteed to be inside its own bands.
-    home: RoomAddr,
+    home: Facet,
     /// The three mesh steps out of `home`.
-    steps: [RoomAddr; 3],
+    steps: [Facet; 3],
     /// The transected vertex's own band edges (channel/bank, bank/floodplain,
     /// floodplain/terrace, terrace/dry).
     edges: [f64; 4],
     /// The cell that vertex was placed from — this reach's discharge.
-    cell: CellId,
+    cell: Vertex,
 }
 
 impl Transect {
@@ -852,7 +852,7 @@ struct Drops {
 /// Transects of the network, one per sampled vertex, at most `wanted` of them.
 ///
 /// **Strided, never truncated.** Taking the first `wanted` vertices in polyline
-/// order would sample only the lowest-`CellId` rivers; `windows/lab`'s
+/// order would sample only the lowest-`Vertex` rivers; `windows/lab`'s
 /// `lab_band_transects` derives a stride from the same cap for exactly that
 /// reason, and this follows it. Deterministic in order and count; makes no
 /// draws.
@@ -895,7 +895,7 @@ fn transects_at(ctx: &LocaleContext, wanted: usize, depth: u32) -> (Vec<Transect
 /// have reached.
 fn transect_at_vertex(ctx: &LocaleContext, i: usize, j: usize, depth: u32) -> Option<Transect> {
     let net = ctx.terrain().channels();
-    let home = RoomAddr::containing(net.polylines[i].points[j], depth);
+    let home = Facet::containing(net.polylines[i].points[j], depth);
     net.bank_reading(home.centroid())?;
     Some(Transect {
         vertex: (i, j),
@@ -1005,7 +1005,7 @@ fn same_bank_neighbours_are_not_a_crossing() {
         for &vertex in &line.points {
             // The room the centreline runs through: the one reading that is
             // guaranteed to be inside its own bank, whatever the reach.
-            let room = RoomAddr::containing(vertex, depth);
+            let room = Facet::containing(vertex, depth);
             let Some(here) = net.bank_reading(room.centroid()) else {
                 continue;
             };
@@ -1907,8 +1907,8 @@ fn a_dry_land_sign_change_exists_and_the_crossing_gate_excludes_it() {
                         h * t[2] + sign * h * n[2],
                     ])
                 };
-                let left = RoomAddr::containing(offset_from(e, diag(1.0), radius), depth);
-                let right = RoomAddr::containing(offset_from(e, diag(-1.0), radius), depth);
+                let left = Facet::containing(offset_from(e, diag(1.0), radius), depth);
+                let right = Facet::containing(offset_from(e, diag(-1.0), radius), depth);
                 if left == right {
                     continue;
                 }

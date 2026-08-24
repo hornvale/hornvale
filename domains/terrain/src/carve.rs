@@ -14,10 +14,10 @@
 //! task's functions populate only the incision and repose contributions —
 //! see [`CarveDelta::from_incision_and_repose`].
 
-use crate::boundaries::{BoundaryKind, CellBoundary};
+use crate::boundaries::{BoundaryKind, VertexBoundary};
 use crate::elevation::TrailSeamount;
 use crate::lithology::MarginPolarity;
-use hornvale_kernel::{CellId, CellMap, Geosphere, NearestCellIndex, ReferenceElevation, math};
+use hornvale_kernel::{Geosphere, NearestVertexIndex, ReferenceElevation, Vertex, VertexMap, math};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Tuning knobs for the carve (engine A). Global constants only —
@@ -144,11 +144,11 @@ impl Default for CarveParams {
 #[derive(Clone, Copy)]
 pub struct MarginGeometry<'a> {
     /// Passive/active margin polarity per cell.
-    pub margins: &'a CellMap<MarginPolarity>,
+    pub margins: &'a VertexMap<MarginPolarity>,
     /// Plate boundary at each cell, if any.
-    pub boundary: &'a CellMap<Option<CellBoundary>>,
+    pub boundary: &'a VertexMap<Option<VertexBoundary>>,
     /// Owning plate id per cell.
-    pub plate_of: &'a CellMap<u32>,
+    pub plate_of: &'a VertexMap<u32>,
 }
 
 /// The carve's output: an elevation delta plus the sediment bookkeeping.
@@ -165,14 +165,14 @@ pub struct MarginGeometry<'a> {
 pub struct CarveDelta {
     /// Elevation delta to add to the base field, meters (± — incision
     /// subtracts, repose/deposition/wedge/delta/atoll all add).
-    pub delta_m: CellMap<f64>,
+    pub delta_m: VertexMap<f64>,
     /// Deposited sediment thickness, meters (≥ 0): repose's receiver-side
     /// gains, routing's floodplain/playa deposit, the marine wedge/delta
     /// fill, and atoll cap material, all summed.
-    pub sediment_thickness_m: CellMap<f64>,
+    pub sediment_thickness_m: VertexMap<f64>,
     /// River mouths and their exported sediment volume, sorted by volume
-    /// descending (`CellId` tiebreak). Filled by [`carve`] (Task 9).
-    pub mouths: Vec<(CellId, f64)>,
+    /// descending (`Vertex` tiebreak). Filled by [`carve`] (Task 9).
+    pub mouths: Vec<(Vertex, f64)>,
     /// Total eroded volume proxy — a cell-area-weighted volume proxy
     /// (Σ depth, one unit per cell) — summing stream-power incision,
     /// hillslope repose's donor-side losses, and atoll volume (a paired
@@ -189,22 +189,22 @@ pub struct CarveDelta {
     pub ocean_loss_m3: f64,
     /// Cells a river-mouth delta lobe raised above sea level (Task 9).
     /// Empty until [`carve`] runs.
-    pub delta_cells: Vec<CellId>,
+    pub delta_cells: Vec<Vertex>,
     /// Cells an atoll rim capped (Task 9). Empty until [`carve`] runs; feeds
     /// lithology's carbonate override (Task 10).
-    pub atoll_cells: Vec<CellId>,
+    pub atoll_cells: Vec<Vertex>,
     /// Cells a barrier bar raised above sea level (tuning iteration 4,
     /// ledger #9, spec §5's banked spit/barrier extension). Empty until
     /// [`carve`] runs. Like `delta_cells`, exempt from the sea-trim
     /// ([`trim_to_sea`]) — meant to stay subaerial past the final re-solve.
-    pub barrier_cells: Vec<CellId>,
+    pub barrier_cells: Vec<Vertex>,
     /// Waterfall (knickpoint) sites the carve found (spec §5): land cells
     /// where a high-drainage watercourse crosses a sharp induration step,
     /// evaluated on the PRE-carve surface — "where the carve worked
-    /// hardest against contrast". Sorted ascending `CellId`. Filled by
+    /// hardest against contrast". Sorted ascending `Vertex`. Filled by
     /// [`carve`] via [`find_waterfalls`]; empty from
     /// [`CarveDelta::from_incision_and_repose`] alone.
-    pub waterfall_sites: Vec<CellId>,
+    pub waterfall_sites: Vec<Vertex>,
 }
 
 impl CarveDelta {
@@ -219,12 +219,12 @@ impl CarveDelta {
     /// type-audit: pending(wave-2: incision_m), pending(wave-2: repose_delta_m)
     pub fn from_incision_and_repose(
         geo: &Geosphere,
-        incision_m: &CellMap<f64>,
-        repose_delta_m: &CellMap<f64>,
+        incision_m: &VertexMap<f64>,
+        repose_delta_m: &VertexMap<f64>,
     ) -> CarveDelta {
         let mut eroded_total_m3 = 0.0_f64;
         let mut deposited_total_m3 = 0.0_f64;
-        let delta_m = CellMap::from_fn(geo, |c| {
+        let delta_m = VertexMap::from_fn(geo, |c| {
             let inc = *incision_m.get(c);
             let rep = *repose_delta_m.get(c);
             eroded_total_m3 += -inc.min(0.0);
@@ -235,7 +235,7 @@ impl CarveDelta {
             }
             inc + rep
         });
-        let sediment_thickness_m = CellMap::from_fn(geo, |c| repose_delta_m.get(c).max(0.0));
+        let sediment_thickness_m = VertexMap::from_fn(geo, |c| repose_delta_m.get(c).max(0.0));
         CarveDelta {
             delta_m,
             sediment_thickness_m,
@@ -284,19 +284,19 @@ pub const WATERFALL_INDURATION_STEP: f64 = 0.35;
 /// `sea_level` gate the source cell; the downhill target's induration is
 /// read regardless of its own land/ocean status (a river dropping straight
 /// into the sea over resistant rock is a real waterfall). Output sorted
-/// ascending `CellId` (cell iteration is already ascending; sorted
+/// ascending `Vertex` (cell iteration is already ascending; sorted
 /// defensively, matching the house style elsewhere in this module).
 /// type-audit: bare-ok(count: drainage), bare-ok(ratio: induration)
 pub fn find_waterfalls(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    drainage: &CellMap<f64>,
-    induration: &CellMap<f64>,
-    downhill: &[Option<CellId>],
-) -> Vec<CellId> {
-    let mut sites: Vec<CellId> = geo
-        .cells()
+    drainage: &VertexMap<f64>,
+    induration: &VertexMap<f64>,
+    downhill: &[Option<Vertex>],
+) -> Vec<Vertex> {
+    let mut sites: Vec<Vertex> = geo
+        .vertices()
         .filter(|&c| {
             if *elevation.get(c) < sea_level {
                 return false; // land cells only
@@ -332,13 +332,13 @@ pub const REROUTE_TOP_RIVERS: usize = 20;
 /// by [`crate::drainage::drainage_field`]'s own construction) — ranked by
 /// the mouth's own pre-carve drainage (a river's mouth carries its whole
 /// watershed's flux, so ranking mouths by their own drainage ranks the
-/// rivers), `CellId`-ascending tiebreak. This is the "20 largest rivers"
+/// rivers), `Vertex`-ascending tiebreak. This is the "20 largest rivers"
 /// proxy the plan preregistered.
 ///
 /// **Mainstem**: for each mouth, the path is built by walking UPSTREAM from
 /// the mouth, at each step following the predecessor (a cell whose
 /// pre-carve downhill target is the current cell) with the highest
-/// pre-carve drainage — `CellId`-ascending tiebreak — until a headwater (no
+/// pre-carve drainage — `Vertex`-ascending tiebreak — until a headwater (no
 /// predecessor) is reached. That walk, reversed, is exactly "the farthest
 /// upstream max-drainage cell down via pre-carve downhill" the plan
 /// specifies (the two descriptions name the same edges, walked in opposite
@@ -347,8 +347,8 @@ pub const REROUTE_TOP_RIVERS: usize = 20;
 /// **Divergence**: for every cell on a mouth's path (headwater through the
 /// mouth itself, inclusive — always at least one cell, the mouth), the
 /// PRE-carve downhill target (`pre_downhill`) is compared against the
-/// POST-carve one (`post_downhill`) at the same `CellId`; they differ when
-/// the `Option<CellId>` values differ. A mouth's score is the fraction of
+/// POST-carve one (`post_downhill`) at the same `Vertex`; they differ when
+/// the `Option<Vertex>` values differ. A mouth's score is the fraction of
 /// its path cells that diverged; the returned value is the mean of every
 /// scored mouth's score, weighted by the mouth's own pre-carve drainage
 /// flux. `0.0` when there are no pre-carve mouths at all (a landless or
@@ -372,10 +372,10 @@ pub const REROUTE_TOP_RIVERS: usize = 20;
 #[allow(clippy::too_many_arguments)]
 pub fn rerouted_flow_fraction(
     geo: &Geosphere,
-    pre_drainage: &CellMap<f64>,
-    pre_downhill: &[Option<CellId>],
-    _post_drainage: &CellMap<f64>,
-    post_downhill: &[Option<CellId>],
+    pre_drainage: &VertexMap<f64>,
+    pre_downhill: &[Option<Vertex>],
+    _post_drainage: &VertexMap<f64>,
+    post_downhill: &[Option<Vertex>],
     _sea_level_pre: ReferenceElevation,
     _sea_level_post: ReferenceElevation,
     n_rivers: usize,
@@ -383,19 +383,19 @@ pub fn rerouted_flow_fraction(
     if n_rivers == 0 {
         return 0.0;
     }
-    let n = geo.cell_count();
+    let n = geo.vertex_count();
 
     // Reverse of `pre_downhill`: every land cell whose pre-carve downhill
     // target is `t` is a predecessor of `t`.
-    let mut predecessors: Vec<Vec<CellId>> = vec![Vec::new(); n];
-    for c in geo.cells() {
+    let mut predecessors: Vec<Vec<Vertex>> = vec![Vec::new(); n];
+    for c in geo.vertices() {
         if let Some(t) = pre_downhill[c.0 as usize] {
             predecessors[t.0 as usize].push(c);
         }
     }
 
-    let mut mouths: Vec<CellId> = geo
-        .cells()
+    let mut mouths: Vec<Vertex> = geo
+        .vertices()
         .filter(|&c| match pre_downhill[c.0 as usize] {
             Some(t) => *pre_drainage.get(t) == 0.0,
             None => false,
@@ -466,19 +466,19 @@ pub fn erodibility(induration: f64, carbonate: f64) -> f64 {
 /// stream power scales with drainage like everywhere else, so rias form
 /// where drainage concentrates instead of every cliff coast saturating at
 /// the cap. A local minimum (no lower land neighbor) returns `0.0`:
-/// deposition country, Task 8. Iteration is in ascending `CellId` order
-/// (via `CellMap::from_fn`).
+/// deposition country, Task 8. Iteration is in ascending `Vertex` order
+/// (via `VertexMap::from_fn`).
 /// type-audit: bare-ok(count: drainage), bare-ok(ratio: induration), bare-ok(ratio: carbonate), pending(wave-2: return)
 pub fn carve_incision(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    drainage: &CellMap<f64>,
-    induration: &CellMap<f64>,
-    carbonate: &CellMap<f64>,
+    drainage: &VertexMap<f64>,
+    induration: &VertexMap<f64>,
+    carbonate: &VertexMap<f64>,
     params: &CarveParams,
-) -> CellMap<f64> {
-    CellMap::from_fn(geo, |cell| {
+) -> VertexMap<f64> {
+    VertexMap::from_fn(geo, |cell| {
         if *elevation.get(cell) < sea_level {
             return 0.0;
         }
@@ -505,7 +505,7 @@ pub fn carve_incision(
 /// moves against the *previous* sweep's elevation and applies them only at
 /// the sweep's end — order-independent within a sweep, hence deterministic
 /// and symmetric regardless of cell iteration order (still ascending
-/// `CellId`, per house style). For each land cell and each of its lower
+/// `Vertex`, per house style). For each land cell and each of its lower
 /// land neighbors whose inter-cell drop exceeds `params.repose_drop_m`, a
 /// quarter of the excess drop moves from the high cell to the low one.
 /// Ocean cells, and any land-cell edge touching one, are skipped entirely
@@ -523,16 +523,16 @@ pub fn carve_incision(
 /// type-audit: pending(wave-2: return)
 pub fn apply_repose(
     geo: &Geosphere,
-    elevation_after_incision: &CellMap<ReferenceElevation>,
+    elevation_after_incision: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     params: &CarveParams,
-) -> CellMap<f64> {
-    let n = geo.cell_count();
-    let is_land = |c: CellId| *elevation_after_incision.get(c) >= sea_level;
+) -> VertexMap<f64> {
+    let n = geo.vertex_count();
+    let is_land = |c: Vertex| *elevation_after_incision.get(c) >= sea_level;
     let mut total = vec![0.0_f64; n];
     for _ in 0..params.repose_sweeps {
         let mut sweep_delta = vec![0.0_f64; n];
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if !is_land(c) {
                 continue;
             }
@@ -554,7 +554,7 @@ pub fn apply_repose(
             *t += *s;
         }
     }
-    CellMap::from_fn(geo, |c| total[c.0 as usize])
+    VertexMap::from_fn(geo, |c| total[c.0 as usize])
 }
 
 /// Wave-cut coastal erosion (spec §5/§12's banked extension, activated by
@@ -572,22 +572,22 @@ pub fn apply_repose(
 /// Returns `(cut_m, micro_mouths)`: `cut_m` is the per-cell cut (≤ 0,
 /// coast land cells only); `micro_mouths` lists every cut cell with its
 /// eroded volume proxy (Σ depth, one cell-area unit per cell — the
-/// carve's own volume convention), sorted volume-descending (`CellId`
+/// carve's own volume convention), sorted volume-descending (`Vertex`
 /// ascending tiebreak). The caller merges these micro-mouths into the
 /// wedge's mouth list — wave material feeds the shelf supply through the
 /// existing wedge/ocean-loss machinery, no new bookkeeping category.
 /// type-audit: bare-ok(ratio: induration), bare-ok(ratio: carbonate), pending(wave-2: return)
 pub fn wave_erosion(
     geo: &Geosphere,
-    elevation_after_repose: &CellMap<ReferenceElevation>,
+    elevation_after_repose: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    induration: &CellMap<f64>,
-    carbonate: &CellMap<f64>,
+    induration: &VertexMap<f64>,
+    carbonate: &VertexMap<f64>,
     params: &CarveParams,
-) -> (CellMap<f64>, Vec<(CellId, f64)>) {
-    let is_ocean = |c: CellId| *elevation_after_repose.get(c) < sea_level;
+) -> (VertexMap<f64>, Vec<(Vertex, f64)>) {
+    let is_ocean = |c: Vertex| *elevation_after_repose.get(c) < sea_level;
     let floor = sea_level.get() - params.wave_cut_floor_m;
-    let cut_m = CellMap::from_fn(geo, |cell| {
+    let cut_m = VertexMap::from_fn(geo, |cell| {
         if is_ocean(cell) {
             return 0.0;
         }
@@ -601,7 +601,7 @@ pub fn wave_erosion(
         -(params.wave_cut_m * erodibility(*induration.get(cell), *carbonate.get(cell)) * exposure)
             .min(allowed)
     });
-    let mut micro_mouths: Vec<(CellId, f64)> = cut_m
+    let mut micro_mouths: Vec<(Vertex, f64)> = cut_m
         .iter()
         .filter(|(_, d)| **d < 0.0)
         .map(|(c, d)| (c, -*d))
@@ -613,7 +613,7 @@ pub fn wave_erosion(
 /// Route eroded volume down the drainage tree: deposit on flats, fill
 /// endorheic sinks toward playa floors, and export the rest at each
 /// coastal outlet ("mouth"). Land cells only, processed in **descending
-/// elevation order** (`total_cmp`, `CellId` ascending tiebreak) — the
+/// elevation order** (`total_cmp`, `Vertex` ascending tiebreak) — the
 /// downhill forest guarantees every upstream cell is processed before its
 /// downstream target, so a single forward sweep suffices (no iteration to
 /// convergence).
@@ -636,24 +636,24 @@ pub fn wave_erosion(
 /// Returns `(deposit_m, mouths, ocean_loss)`: `deposit_m` is the
 /// non-negative floodplain/playa deposition thickness; `mouths` lists each
 /// river-mouth land cell with its exported volume, sorted by volume
-/// descending (`CellId` ascending tiebreak); `ocean_loss` is the playa
+/// descending (`Vertex` ascending tiebreak); `ocean_loss` is the playa
 /// overflow only — the marine wedge (Task 9) adds to it separately.
 /// type-audit: pending(wave-2: incision), bare-ok(flag: endorheic), pending(wave-2: return)
 pub fn route_sediment(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    incision: &CellMap<f64>,
-    downhill: &[Option<CellId>],
-    endorheic: &CellMap<bool>,
+    incision: &VertexMap<f64>,
+    downhill: &[Option<Vertex>],
+    endorheic: &VertexMap<bool>,
     params: &CarveParams,
-) -> (CellMap<f64>, Vec<(CellId, f64)>, f64) {
-    let n = geo.cell_count();
-    let is_land = |c: CellId| *elevation.get(c) >= sea_level;
+) -> (VertexMap<f64>, Vec<(Vertex, f64)>, f64) {
+    let n = geo.vertex_count();
+    let is_land = |c: Vertex| *elevation.get(c) >= sea_level;
 
-    // Descending elevation, CellId ascending tiebreak — upstream before
+    // Descending elevation, Vertex ascending tiebreak — upstream before
     // downstream in a single forward pass.
-    let mut order: Vec<CellId> = geo.cells().filter(|c| is_land(*c)).collect();
+    let mut order: Vec<Vertex> = geo.vertices().filter(|c| is_land(*c)).collect();
     order.sort_by(|a, b| {
         elevation
             .get(*b)
@@ -718,9 +718,9 @@ pub fn route_sediment(
         }
     }
 
-    let deposit_m = CellMap::from_fn(geo, |c| deposit[c.0 as usize]);
-    let mut mouths: Vec<(CellId, f64)> = geo
-        .cells()
+    let deposit_m = VertexMap::from_fn(geo, |c| deposit[c.0 as usize]);
+    let mut mouths: Vec<(Vertex, f64)> = geo
+        .vertices()
         .filter(|c| mouths_acc[c.0 as usize] > 0.0)
         .map(|c| (c, mouths_acc[c.0 as usize]))
         .collect();
@@ -738,7 +738,7 @@ pub fn route_sediment(
 /// sediment too, only piled high enough to clear the waterline.
 ///
 /// **Deviation from the brief's two-tuple return**: the brief's interface
-/// stub returns `(CellMap<f64>, f64)`. `CarveDelta::delta_cells` needs to
+/// stub returns `(VertexMap<f64>, f64)`. `CarveDelta::delta_cells` needs to
 /// know exactly which cells a lobe raised; deriving that after the fact
 /// from "did this cell cross sea level" would only be sound because
 /// `wedge_freeboard_m` happens to keep the ordinary wedge strictly below
@@ -747,7 +747,7 @@ pub fn route_sediment(
 /// element) is the boring, explicit choice; see `apply_repose`'s own
 /// documented deviation for the precedent.
 ///
-/// Mechanics, per mouth (processed volume-descending, `CellId` ascending
+/// Mechanics, per mouth (processed volume-descending, `Vertex` ascending
 /// tiebreak — re-sorted defensively even though `route_sediment` already
 /// returns them that way):
 /// - **Delta** (top-K only): the mouth cell itself (hop 0) plus its
@@ -761,7 +761,7 @@ pub fn route_sediment(
 ///   These hop-1 cells are then excluded from this mouth's own wedge BFS
 ///   below — the two mechanisms never double-fill one cell.
 /// - **Wedge**: BFS over ocean cells from the mouth's (non-delta) adjacent
-///   ocean cells, frontier expansion in ascending `CellId` order, depth-
+///   ocean cells, frontier expansion in ascending `Vertex` order, depth-
 ///   limited to `wedge_reach_active` hops on an active-margin mouth or
 ///   `wedge_reach_passive` otherwise (`margins.get(mouth)`; Oceanic/
 ///   Interior treated as passive). Every reachable cell (trench cells
@@ -794,20 +794,20 @@ pub fn route_sediment(
 /// type-audit: pending(wave-2: mouths), pending(wave-2: return)
 pub fn deposit_wedge(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    mouths: &[(CellId, f64)],
+    mouths: &[(Vertex, f64)],
     geom: MarginGeometry,
-    delta_eligible: &BTreeSet<CellId>,
+    delta_eligible: &BTreeSet<Vertex>,
     params: &CarveParams,
-) -> (CellMap<f64>, Vec<CellId>, f64) {
+) -> (VertexMap<f64>, Vec<Vertex>, f64) {
     let MarginGeometry {
         margins,
         boundary,
         plate_of,
     } = geom;
-    let n = geo.cell_count();
-    let is_ocean = |c: CellId| *elevation.get(c) < sea_level;
+    let n = geo.vertex_count();
+    let is_ocean = |c: Vertex| *elevation.get(c) < sea_level;
     // The trench is the SUBDUCTING side only: a CoastalRange contact's
     // whole oceanic side (no offshore arc on an Andean margin; a5ba274
     // adjudication), or an IslandArc cell on the non-arc side — the side
@@ -815,7 +815,7 @@ pub fn deposit_wedge(
     // contact.other_plate` (a plate's `id` equals its index, so
     // `plate_of` carries it directly); `arc_side` true is the overriding
     // plate, which takes normal wedge fill.
-    let is_trench = |c: CellId| match boundary.get(c) {
+    let is_trench = |c: Vertex| match boundary.get(c) {
         Some(b) => match b.kind {
             BoundaryKind::CoastalRange => true,
             BoundaryKind::IslandArc => *plate_of.get(c) <= b.other_plate,
@@ -826,7 +826,7 @@ pub fn deposit_wedge(
     // Headroom below the shelf cap, meters, net of whatever this call has
     // already filled at `c` (by an earlier mouth, or this mouth's own
     // pass-1 share) — never negative. Trench cells get none at all.
-    let cap_m = |c: CellId, fill: &[f64]| -> f64 {
+    let cap_m = |c: Vertex, fill: &[f64]| -> f64 {
         if is_trench(c) {
             return 0.0;
         }
@@ -836,9 +836,9 @@ pub fn deposit_wedge(
 
     let mut fill = vec![0.0_f64; n];
     let mut ocean_loss = 0.0_f64;
-    let mut delta_cells: Vec<CellId> = Vec::new();
+    let mut delta_cells: Vec<Vertex> = Vec::new();
 
-    let mut sorted_mouths: Vec<(CellId, f64)> = mouths.to_vec();
+    let mut sorted_mouths: Vec<(Vertex, f64)> = mouths.to_vec();
     sorted_mouths.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.0.cmp(&b.0.0)));
 
     let mut eligible_seen = 0u32;
@@ -854,10 +854,10 @@ pub fn deposit_wedge(
         if delta_eligible.contains(&mouth) {
             eligible_seen += 1;
         }
-        let mut lobe_cells: Vec<CellId> = Vec::new();
+        let mut lobe_cells: Vec<Vertex> = Vec::new();
         if grows_delta {
             lobe_cells.push(mouth); // hop 0
-            let mut ring: Vec<CellId> = geo
+            let mut ring: Vec<Vertex> = geo
                 .neighbors(mouth)
                 .iter()
                 .copied()
@@ -910,14 +910,14 @@ pub fn deposit_wedge(
         // Hop-1 cells already claimed by this mouth's own delta lobe are
         // off-limits to its wedge BFS (the mouth cell itself, hop 0, was
         // never ocean, so it was never wedge-eligible anyway).
-        let exclude: std::collections::BTreeSet<CellId> =
+        let exclude: std::collections::BTreeSet<Vertex> =
             lobe_cells.iter().skip(1).copied().collect();
 
         let mut visited = vec![false; n];
         let mut hop_of: Vec<u32> = vec![0; n];
-        let mut reachable: Vec<CellId> = Vec::new();
+        let mut reachable: Vec<Vertex> = Vec::new();
 
-        let mut frontier: Vec<CellId> = geo
+        let mut frontier: Vec<Vertex> = geo
             .neighbors(mouth)
             .iter()
             .copied()
@@ -933,7 +933,7 @@ pub fn deposit_wedge(
         let mut hop = 1u32;
         let mut cur = frontier;
         while hop < reach && !cur.is_empty() {
-            let mut next: Vec<CellId> = Vec::new();
+            let mut next: Vec<Vertex> = Vec::new();
             for &c in &cur {
                 if is_trench(c) {
                     continue; // the trench is a wall: nothing propagates past it
@@ -1003,7 +1003,7 @@ pub fn deposit_wedge(
         }
     }
 
-    let marine_deposit = CellMap::from_fn(geo, |c| fill[c.0 as usize]);
+    let marine_deposit = VertexMap::from_fn(geo, |c| fill[c.0 as usize]);
     delta_cells.sort_by_key(|c| c.0);
     delta_cells.dedup();
     (marine_deposit, delta_cells, ocean_loss)
@@ -1035,7 +1035,7 @@ pub fn deposit_wedge(
 /// delta lobe (never restyled as a barrier).
 ///
 /// **Alternating selection**: eligible cells are walked in ascending
-/// `CellId` order (the coastal-walk convention every other carve stage
+/// `Vertex` order (the coastal-walk convention every other carve stage
 /// uses) and every OTHER one is skipped. Raising every eligible cell in a
 /// row would weld a solid offshore wall whose interior land-land edges are
 /// wasted perimeter — exactly the ordinary-coastline problem this
@@ -1060,30 +1060,30 @@ pub fn deposit_wedge(
 /// (never down — every candidate starts below `sea_level` by
 /// construction, so the raise is always positive). Returns
 /// `(fill, barrier_cells, volume_used)`, `barrier_cells` sorted ascending
-/// `CellId`; the caller ([`carve`]) folds `fill` into
+/// `Vertex`; the caller ([`carve`]) folds `fill` into
 /// `elevation_after_wedge` before atolls cap, and the sea-trim
 /// ([`trim_to_sea`]) must exempt `barrier_cells` like `delta_cells` — a
 /// barrier is meant to stay subaerial past the final re-solve.
 /// type-audit: pending(wave-2: mouths), pending(wave-2: return)
 pub fn raise_barriers(
     geo: &Geosphere,
-    elevation_after_wedge: &CellMap<ReferenceElevation>,
+    elevation_after_wedge: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     geom: MarginGeometry,
-    delta_cells: &BTreeSet<CellId>,
-    mouths: &[(CellId, f64)],
+    delta_cells: &BTreeSet<Vertex>,
+    mouths: &[(Vertex, f64)],
     params: &CarveParams,
-) -> (CellMap<f64>, Vec<CellId>, f64) {
+) -> (VertexMap<f64>, Vec<Vertex>, f64) {
     let MarginGeometry {
         margins,
         boundary,
         plate_of,
     } = geom;
-    let is_ocean = |c: CellId| *elevation_after_wedge.get(c) < sea_level;
+    let is_ocean = |c: Vertex| *elevation_after_wedge.get(c) < sea_level;
     // The trench is a wall to barrier building too — the same test
     // `deposit_wedge` uses (a CoastalRange contact's whole oceanic side,
     // or an IslandArc contact's subducting side only).
-    let is_trench = |c: CellId| match boundary.get(c) {
+    let is_trench = |c: Vertex| match boundary.get(c) {
         Some(b) => match b.kind {
             BoundaryKind::CoastalRange => true,
             BoundaryKind::IslandArc => *plate_of.get(c) <= b.other_plate,
@@ -1095,8 +1095,8 @@ pub fn raise_barriers(
     // Ordinary coastal fringe: ocean cells with >= 1 land neighbor. These
     // stay ocean — the lagoon between the mainland and any barrier raised
     // beyond them.
-    let fringe: BTreeSet<CellId> = geo
-        .cells()
+    let fringe: BTreeSet<Vertex> = geo
+        .vertices()
         .filter(|&c| is_ocean(c) && geo.neighbors(c).iter().any(|&nb| !is_ocean(nb)))
         .collect();
 
@@ -1104,8 +1104,8 @@ pub fn raise_barriers(
     // adjacent to at least one fringe cell whose own land neighbor is on
     // a Passive margin — a genuine two-hops-from-the-mainland barrier
     // site, not an arbitrary open-ocean cell.
-    let mut candidates: Vec<CellId> = geo
-        .cells()
+    let mut candidates: Vec<Vertex> = geo
+        .vertices()
         .filter(|&c| {
             if !is_ocean(c) || is_trench(c) || delta_cells.contains(&c) {
                 return false;
@@ -1126,8 +1126,8 @@ pub fn raise_barriers(
     candidates.sort_by_key(|c| c.0);
 
     // Alternating selection: every OTHER eligible cell, in the coastal
-    // walk's CellId order.
-    let spaced: Vec<CellId> = candidates.into_iter().step_by(2).collect();
+    // walk's Vertex order.
+    let spaced: Vec<Vertex> = candidates.into_iter().step_by(2).collect();
 
     // Supply gate: budget in cells, from PASSIVE-margin mouths only (the
     // river+wave exports `deposit_wedge` already fully spent).
@@ -1142,10 +1142,10 @@ pub fn raise_barriers(
         0
     };
 
-    let barrier_cells: Vec<CellId> = spaced.into_iter().take(budget).collect();
+    let barrier_cells: Vec<Vertex> = spaced.into_iter().take(budget).collect();
 
     let target = sea_level.get() + params.barrier_height_m;
-    let mut fill = vec![0.0_f64; geo.cell_count()];
+    let mut fill = vec![0.0_f64; geo.vertex_count()];
     let mut volume_used = 0.0_f64;
     for &c in &barrier_cells {
         let raise = (target - elevation_after_wedge.get(c).get()).max(0.0);
@@ -1153,7 +1153,7 @@ pub fn raise_barriers(
         volume_used += raise;
     }
 
-    let raised = CellMap::from_fn(geo, |c| fill[c.0 as usize]);
+    let raised = VertexMap::from_fn(geo, |c| fill[c.0 as usize]);
     (raised, barrier_cells, volume_used)
 }
 
@@ -1179,26 +1179,26 @@ pub fn raise_barriers(
 /// point features at this resolution), and each cell caps at most once
 /// (a later seamount mapping to an already-capped cell is skipped).
 ///
-/// **Deviation from the brief's single-`CellMap` return**: as with
+/// **Deviation from the brief's single-`VertexMap` return**: as with
 /// `deposit_wedge`, `CarveDelta::atoll_cells` needs the exact cell list,
 /// not a value re-derived from the fill map after the fact — returning it
 /// directly is the explicit, boring choice.
 /// type-audit: pending(wave-2: return)
 pub fn cap_atolls(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     trail_seamounts: &[TrailSeamount],
     params: &CarveParams,
-) -> (CellMap<f64>, Vec<CellId>) {
-    let n = geo.cell_count();
-    let index = NearestCellIndex::new(geo);
+) -> (VertexMap<f64>, Vec<Vertex>) {
+    let n = geo.vertex_count();
+    let index = NearestVertexIndex::new(geo);
     let cap = sea_level.get() - params.atoll_freeboard_m;
     let floor = sea_level.get() - params.atoll_max_depth_m;
 
     let mut fill = vec![0.0_f64; n];
     let mut done = vec![false; n];
-    let mut atoll_cells: Vec<CellId> = Vec::new();
+    let mut atoll_cells: Vec<Vertex> = Vec::new();
 
     for seamount in trail_seamounts {
         if seamount.age_index < 2 {
@@ -1222,7 +1222,7 @@ pub fn cap_atolls(
     }
 
     atoll_cells.sort_by_key(|c| c.0);
-    let raised = CellMap::from_fn(geo, |c| fill[c.0 as usize]);
+    let raised = VertexMap::from_fn(geo, |c| fill[c.0 as usize]);
     (raised, atoll_cells)
 }
 
@@ -1262,20 +1262,20 @@ pub fn cap_atolls(
 #[allow(clippy::too_many_arguments)]
 pub fn trim_to_sea(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
-    elevation_pre: &CellMap<ReferenceElevation>,
-    sediment_thickness: &CellMap<f64>,
-    delta_cells: &[CellId],
-    atoll_cells: &[CellId],
-    barrier_cells: &[CellId],
+    elevation: &VertexMap<ReferenceElevation>,
+    elevation_pre: &VertexMap<ReferenceElevation>,
+    sediment_thickness: &VertexMap<f64>,
+    delta_cells: &[Vertex],
+    atoll_cells: &[Vertex],
+    barrier_cells: &[Vertex],
     sea_pre: ReferenceElevation,
     sea_1: ReferenceElevation,
     params: &CarveParams,
-) -> (CellMap<f64>, f64) {
+) -> (VertexMap<f64>, f64) {
     let wedge_cap = sea_1.get() - params.wedge_freeboard_m;
     let atoll_cap = sea_1.get() - params.atoll_freeboard_m;
     let mut trimmed_volume = 0.0_f64;
-    let trim = CellMap::from_fn(geo, |c| {
+    let trim = VertexMap::from_fn(geo, |c| {
         if delta_cells.contains(&c) || barrier_cells.contains(&c) {
             return 0.0;
         }
@@ -1337,13 +1337,13 @@ pub fn trim_to_sea(
 #[allow(clippy::too_many_arguments)]
 pub fn carve(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    drainage: &CellMap<f64>,
-    endorheic: &CellMap<bool>,
-    downhill: &[Option<CellId>],
-    induration: &CellMap<f64>,
-    carbonate: &CellMap<f64>,
+    drainage: &VertexMap<f64>,
+    endorheic: &VertexMap<bool>,
+    downhill: &[Option<Vertex>],
+    induration: &VertexMap<f64>,
+    carbonate: &VertexMap<f64>,
     geom: MarginGeometry,
     trail_seamounts: &[TrailSeamount],
     params: &CarveParams,
@@ -1351,7 +1351,7 @@ pub fn carve(
     let incision = carve_incision(
         geo, elevation, sea_level, drainage, induration, carbonate, params,
     );
-    let elevation_after_incision = CellMap::from_fn(geo, |c| {
+    let elevation_after_incision = VertexMap::from_fn(geo, |c| {
         ReferenceElevation::new(elevation.get(c).get() + *incision.get(c))
             .expect("elevation plus incision is finite")
     });
@@ -1371,7 +1371,7 @@ pub fn carve(
 
     // Wave-cut coastal erosion (ledgers #6+#7), on the post-repose surface
     // — the coastline the waves actually meet after the fluvial stages.
-    let elevation_after_repose = CellMap::from_fn(geo, |c| {
+    let elevation_after_repose = VertexMap::from_fn(geo, |c| {
         ReferenceElevation::new(elevation.get(c).get() + *incision.get(c) + *repose.get(c))
             .expect("elevation plus incision plus repose is finite")
     });
@@ -1385,15 +1385,15 @@ pub fn carve(
     );
 
     // Merge river mouths with the wave micro-mouths (volumes summed where
-    // a cell is both), re-sorted per the volume-desc/CellId-asc convention;
+    // a cell is both), re-sorted per the volume-desc/Vertex-asc convention;
     // only river mouths stay delta-eligible.
-    let mut merged: BTreeMap<CellId, f64> = BTreeMap::new();
+    let mut merged: BTreeMap<Vertex, f64> = BTreeMap::new();
     for &(c, v) in mouths.iter().chain(wave_mouths.iter()) {
         *merged.entry(c).or_insert(0.0) += v;
     }
-    let mut all_mouths: Vec<(CellId, f64)> = merged.into_iter().collect();
+    let mut all_mouths: Vec<(Vertex, f64)> = merged.into_iter().collect();
     all_mouths.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.0.cmp(&b.0.0)));
-    let river_mouth_cells: BTreeSet<CellId> = mouths.iter().map(|(c, _)| *c).collect();
+    let river_mouth_cells: BTreeSet<Vertex> = mouths.iter().map(|(c, _)| *c).collect();
 
     let (marine_deposit, delta_cells, wedge_ocean_loss) = deposit_wedge(
         geo,
@@ -1408,11 +1408,11 @@ pub fn carve(
     // already built, before atolls (spec order; see this function's own
     // doc). Delta lobes are passed through so a river-mouth lobe is never
     // restyled as a barrier.
-    let elevation_after_wedge = CellMap::from_fn(geo, |c| {
+    let elevation_after_wedge = VertexMap::from_fn(geo, |c| {
         ReferenceElevation::new(elevation.get(c).get() + *marine_deposit.get(c))
             .expect("elevation plus wedge fill is finite")
     });
-    let delta_cell_set: BTreeSet<CellId> = delta_cells.iter().copied().collect();
+    let delta_cell_set: BTreeSet<Vertex> = delta_cells.iter().copied().collect();
     let (barrier_fill, barrier_cells, barrier_volume) = raise_barriers(
         geo,
         &elevation_after_wedge,
@@ -1426,10 +1426,10 @@ pub fn carve(
     // the raw pre-wedge floor — the same fold-forward the incision→repose
     // seam uses above. Without it, wedge fill and atoll fill each capped
     // against raw elevation independently and their SUM overtopped the
-    // atoll freeboard (review-measured on seed 42/L4: CellId(1965)
+    // atoll freeboard (review-measured on seed 42/L4: Vertex(1965)
     // composed to sea_level + 222.322 m from raw -2713.534 + wedge
     // 227.322 + atoll 296.707).
-    let elevation_after_barriers = CellMap::from_fn(geo, |c| {
+    let elevation_after_barriers = VertexMap::from_fn(geo, |c| {
         ReferenceElevation::new(elevation_after_wedge.get(c).get() + *barrier_fill.get(c))
             .expect("elevation plus barrier fill is finite")
     });
@@ -1449,7 +1449,7 @@ pub fn carve(
 
     let old_delta_m = delta.delta_m.clone();
     let old_sediment = delta.sediment_thickness_m.clone();
-    delta.delta_m = CellMap::from_fn(geo, |c| {
+    delta.delta_m = VertexMap::from_fn(geo, |c| {
         *old_delta_m.get(c)
             + *wave_cut.get(c)
             + *routing_deposit.get(c)
@@ -1457,7 +1457,7 @@ pub fn carve(
             + *barrier_fill.get(c)
             + *atoll_fill.get(c)
     });
-    delta.sediment_thickness_m = CellMap::from_fn(geo, |c| {
+    delta.sediment_thickness_m = VertexMap::from_fn(geo, |c| {
         *old_sediment.get(c)
             + *routing_deposit.get(c)
             + *marine_deposit.get(c)
@@ -1499,14 +1499,14 @@ mod tests {
 
     /// Maximum land-to-land inter-cell drop over the whole globe, under a
     /// caller-supplied elevation function (lets the repose test compare
-    /// "before" and "after" without building two full `CellMap`s).
+    /// "before" and "after" without building two full `VertexMap`s).
     fn max_land_drop(
         geo: &Geosphere,
-        is_land: impl Fn(CellId) -> bool,
-        elev: impl Fn(CellId) -> f64,
+        is_land: impl Fn(Vertex) -> bool,
+        elev: impl Fn(Vertex) -> f64,
     ) -> f64 {
         let mut max_drop = 0.0_f64;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if !is_land(c) {
                 continue;
             }
@@ -1533,7 +1533,7 @@ mod tests {
         let outcome =
             crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
         let g = &outcome.globe;
-        let carbonate = CellMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
+        let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let inc = carve_incision(
             &geo,
             &g.elevation,
@@ -1553,7 +1553,7 @@ mod tests {
         // Valleys, not ridges: incision correlates with drainage — the most
         // incised decile has higher median drainage than the least.
         let mut pairs: Vec<(f64, f64)> = geo
-            .cells()
+            .vertices()
             .map(|c| (*inc.get(c), *g.drainage.get(c)))
             .collect();
         pairs.sort_by(|a, b| a.0.total_cmp(&b.0)); // ascending: most-negative (most incised) first
@@ -1591,7 +1591,7 @@ mod tests {
         // have grown; if a violation of the critical drop existed before,
         // it must have strictly shrunk (a fixed sweep count needn't
         // eliminate every violation, only reduce it).
-        let is_land = |c: CellId| *g.elevation.get(c) >= g.sea_level;
+        let is_land = |c: Vertex| *g.elevation.get(c) >= g.sea_level;
         let before_max = max_land_drop(&geo, is_land, |c| g.elevation.get(c).get());
         let after_max = max_land_drop(&geo, is_land, |c| {
             g.elevation.get(c).get() + adjusted.get(c)
@@ -1615,7 +1615,7 @@ mod tests {
             crate::globe::generate(Seed(7), &geo, &crate::pins::TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let p = CarveParams::default();
-        let carbonate = CellMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
+        let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let incision = carve_incision(
             &geo,
             &g.elevation,
@@ -1654,7 +1654,7 @@ mod tests {
             crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let p = CarveParams::default();
-        let carbonate = CellMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
+        let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let incision = carve_incision(
             &geo,
             &g.elevation,
@@ -1684,7 +1684,7 @@ mod tests {
         for (_, d) in deposit.iter() {
             assert!(*d >= 0.0);
         }
-        // Mouths sorted by exported volume descending, CellId ascending tiebreak.
+        // Mouths sorted by exported volume descending, Vertex ascending tiebreak.
         for w in mouths.windows(2) {
             assert!(w[0].1 > w[1].1 || (w[0].1 == w[1].1 && w[0].0 < w[1].0));
         }
@@ -1717,7 +1717,7 @@ mod tests {
             crate::globe::generate(Seed(3), &geo, &crate::pins::TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let p = CarveParams::default();
-        let carbonate = CellMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
+        let carbonate = VertexMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
         let incision = carve_incision(
             &geo,
             &g.elevation,
@@ -1738,7 +1738,7 @@ mod tests {
             &p,
         );
         let mut sinks = 0usize;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if *g.elevation.get(c) < g.sea_level || downhill[c.0 as usize].is_some() {
                 continue;
             }
@@ -1875,7 +1875,7 @@ mod tests {
         // bounded solve-2 residual (≤ wedge_freeboard_m) above the atoll
         // cap — far below a double-count regression's hundreds-of-meters
         // overshoot (the bug class this ceiling was written against:
-        // CellId(1965) once composed to sea_level + 222 m).
+        // Vertex(1965) once composed to sea_level + 222 m).
         let atoll_ceiling = g.sea_level.get() - p.atoll_freeboard_m + p.wedge_freeboard_m + 1e-6;
         for c in &g.atoll_cells {
             assert!(
@@ -1896,24 +1896,24 @@ mod tests {
         // never-below-the-floor cap, and volume export as micro-mouths.
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let islet = CellId(0);
-        let patch_center = CellId(geo.cell_count() as u32 - 1);
+        let islet = Vertex(0);
+        let patch_center = Vertex(geo.vertex_count() as u32 - 1);
         assert!(
             !geo.neighbors(islet).contains(&patch_center)
                 && !geo.neighbors(patch_center).contains(&islet),
             "probe wants the islet and the patch disjoint"
         );
-        let is_patch = |c: CellId| c == patch_center || geo.neighbors(patch_center).contains(&c);
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let is_patch = |c: Vertex| c == patch_center || geo.neighbors(patch_center).contains(&c);
+        let elevation = VertexMap::from_fn(&geo, |c| {
             if c == islet || is_patch(c) {
                 ReferenceElevation::new(100.0).unwrap()
             } else {
                 ReferenceElevation::new(-500.0).unwrap()
             }
         });
-        let soft = CellMap::from_fn(&geo, |_| 0.0);
-        let hard = CellMap::from_fn(&geo, |_| 1.0);
-        let no_carbonate = CellMap::from_fn(&geo, |_| 0.0);
+        let soft = VertexMap::from_fn(&geo, |_| 0.0);
+        let hard = VertexMap::from_fn(&geo, |_| 1.0);
+        let no_carbonate = VertexMap::from_fn(&geo, |_| 0.0);
         // A deliberately small scale so neither probe cell hits the
         // elevation cap — this test pins the FORMULA's differential
         // structure; the default's magnitude is the batteries' business.
@@ -1958,7 +1958,7 @@ mod tests {
             cut_soft.get(islet)
         );
         // Micro-mouths: every cut cell exports exactly its |cut| as
-        // volume, sorted volume-descending, CellId-ascending tiebreak.
+        // volume, sorted volume-descending, Vertex-ascending tiebreak.
         let cut_total: f64 = cut_soft.iter().map(|(_, d)| -*d).sum();
         let export_total: f64 = mouths_soft.iter().map(|(_, v)| v).sum();
         assert!((cut_total - export_total).abs() < 1e-9);
@@ -1972,7 +1972,7 @@ mod tests {
         // The floor cap binds exactly on low land: a 5 m islet may cut at
         // most 35 m (down to sea - 30), not its uncapped candidate
         // (60 * 1.75 = 105 m at this test's scale).
-        let low = CellMap::from_fn(&geo, |c| {
+        let low = VertexMap::from_fn(&geo, |c| {
             if c == islet {
                 ReferenceElevation::new(5.0).unwrap()
             } else {
@@ -1995,29 +1995,29 @@ mod tests {
         // every river mouth by volume must still grow no lobe.
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let river = CellId(0);
-        let wave = CellId(geo.cell_count() as u32 - 1);
+        let river = Vertex(0);
+        let wave = Vertex(geo.vertex_count() as u32 - 1);
         assert!(!geo.neighbors(river).contains(&wave));
         // Shallow (-20 m) ocean so the river's 1,000-unit export can raise
         // its hop-1 lobe cells above sea level (a -500 m floor would leave
         // every lobe cell submerged and the assertion vacuous).
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let elevation = VertexMap::from_fn(&geo, |c| {
             if c == river || c == wave {
                 ReferenceElevation::new(50.0).unwrap()
             } else {
                 ReferenceElevation::new(-20.0).unwrap()
             }
         });
-        let margins = CellMap::from_fn(&geo, |_| MarginPolarity::Passive);
-        let boundary = CellMap::from_fn(&geo, |_| None);
-        let plate_of = CellMap::from_fn(&geo, |_| 0u32);
+        let margins = VertexMap::from_fn(&geo, |_| MarginPolarity::Passive);
+        let boundary = VertexMap::from_fn(&geo, |_| None);
+        let plate_of = VertexMap::from_fn(&geo, |_| 0u32);
         let p = CarveParams {
             delta_count: 1,
             ..CarveParams::default()
         };
         // The wave mouth carries 10x the river mouth's volume.
         let mouths = vec![(wave, 10_000.0), (river, 1_000.0)];
-        let eligible: BTreeSet<CellId> = [river].into_iter().collect();
+        let eligible: BTreeSet<Vertex> = [river].into_iter().collect();
         let (_, delta_cells, _) = deposit_wedge(
             &geo,
             &elevation,
@@ -2054,23 +2054,23 @@ mod tests {
         // ocean_loss, and no trench cell may receive any fill.
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let mouth = CellId(0);
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let mouth = Vertex(0);
+        let elevation = VertexMap::from_fn(&geo, |c| {
             if c == mouth {
                 ReferenceElevation::new(50.0).unwrap()
             } else {
                 ReferenceElevation::new(-500.0).unwrap()
             }
         });
-        let margins = CellMap::from_fn(&geo, |_| MarginPolarity::Passive);
-        let boundary = CellMap::from_fn(&geo, |_| {
-            Some(CellBoundary {
+        let margins = VertexMap::from_fn(&geo, |_| MarginPolarity::Passive);
+        let boundary = VertexMap::from_fn(&geo, |_| {
+            Some(VertexBoundary {
                 kind: BoundaryKind::IslandArc,
                 magnitude: 1.0,
                 other_plate: 1,
             })
         });
-        let plate_of = CellMap::from_fn(&geo, |_| 0u32); // 0 <= 1: subducting side
+        let plate_of = VertexMap::from_fn(&geo, |_| 0u32); // 0 <= 1: subducting side
         let p = CarveParams {
             delta_count: 0, // isolate the wedge/trench mechanic from deltas
             ..CarveParams::default()
@@ -2114,25 +2114,25 @@ mod tests {
         // the trench and must receive none.
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let mouth = CellId(0);
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let mouth = Vertex(0);
+        let elevation = VertexMap::from_fn(&geo, |c| {
             if c == mouth {
                 ReferenceElevation::new(50.0).unwrap()
             } else {
                 ReferenceElevation::new(-500.0).unwrap()
             }
         });
-        let margins = CellMap::from_fn(&geo, |_| MarginPolarity::Passive);
-        let boundary = CellMap::from_fn(&geo, |_| {
-            Some(CellBoundary {
+        let margins = VertexMap::from_fn(&geo, |_| MarginPolarity::Passive);
+        let boundary = VertexMap::from_fn(&geo, |_| {
+            Some(VertexBoundary {
                 kind: BoundaryKind::IslandArc,
                 magnitude: 1.0,
                 other_plate: 1,
             })
         });
         // Alternate the mouth's neighbors between the overriding plate (2)
-        // and the subducting plate (0), by parity of CellId.
-        let plate_of = CellMap::from_fn(&geo, |c| if c.0 % 2 == 0 { 2u32 } else { 0u32 });
+        // and the subducting plate (0), by parity of Vertex.
+        let plate_of = VertexMap::from_fn(&geo, |c| if c.0 % 2 == 0 { 2u32 } else { 0u32 });
         let p = CarveParams {
             delta_count: 0, // isolate the wedge/trench mechanic from deltas
             ..CarveParams::default()
@@ -2180,8 +2180,8 @@ mod tests {
     fn cap_atolls_caps_a_deep_submerged_trail_seamount_within_range() {
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let target = CellId(0);
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let target = Vertex(0);
+        let elevation = VertexMap::from_fn(&geo, |c| {
             if c == target {
                 ReferenceElevation::new(-200.0).unwrap()
             } else {
@@ -2198,7 +2198,7 @@ mod tests {
             },
             // Too young (age_index < 2): must not cap anything.
             TrailSeamount {
-                position: geo.position(CellId(1)),
+                position: geo.position(Vertex(1)),
                 strength_m: 2000.0,
                 age_index: 1,
             },
@@ -2207,7 +2207,7 @@ mod tests {
         assert_eq!(atoll_cells, vec![target]);
         let expected = sea.get() - p.atoll_freeboard_m - elevation.get(target).get();
         assert!((*fill.get(target) - expected).abs() < 1e-9);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if c != target {
                 assert_eq!(*fill.get(c), 0.0);
             }
@@ -2222,11 +2222,11 @@ mod tests {
     /// that function's `D = L / (2 sqrt(pi A))` normalization.
     fn raw_perimeter(
         geo: &Geosphere,
-        elevation: &CellMap<ReferenceElevation>,
+        elevation: &VertexMap<ReferenceElevation>,
         sea: ReferenceElevation,
     ) -> f64 {
         let mut perimeter = 0.0_f64;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let land = *elevation.get(cell) >= sea;
             for &neighbor in geo.neighbors(cell) {
                 if neighbor.0 <= cell.0 {
@@ -2246,7 +2246,7 @@ mod tests {
     }
 
     /// Shared scaffold for the barrier tests below: a single land cell
-    /// (`CellId(0)`) on an otherwise all-ocean globe, plus a real,
+    /// (`Vertex(0)`) on an otherwise all-ocean globe, plus a real,
     /// mesh-derived detached candidate two hops out (the ledger #9
     /// diagnostic's "isolated offshore cell" case) — asserted, not
     /// assumed, so a mesh-generation change fails loudly here instead of
@@ -2254,26 +2254,26 @@ mod tests {
     struct BarrierScaffold {
         geo: Geosphere,
         sea: ReferenceElevation,
-        elevation: CellMap<ReferenceElevation>,
-        land: CellId,
+        elevation: VertexMap<ReferenceElevation>,
+        land: Vertex,
         /// A real detached candidate (zero land neighbors, two hops from
         /// `land` via a fringe cell) that the candidate rule must accept
         /// when the fringe's land neighbor is Passive.
-        detached_candidate: CellId,
+        detached_candidate: Vertex,
     }
 
     fn barrier_scaffold() -> BarrierScaffold {
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let land = CellId(0);
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let land = Vertex(0);
+        let elevation = VertexMap::from_fn(&geo, |c| {
             if c == land {
                 ReferenceElevation::new(100.0).unwrap()
             } else {
                 ReferenceElevation::new(-500.0).unwrap()
             }
         });
-        let land_neighbors: BTreeSet<CellId> = geo.neighbors(land).iter().copied().collect();
+        let land_neighbors: BTreeSet<Vertex> = geo.neighbors(land).iter().copied().collect();
         let mut detached_candidate = None;
         'search: for &fringe in geo.neighbors(land) {
             for &b in geo.neighbors(fringe) {
@@ -2302,9 +2302,9 @@ mod tests {
         // own neighbors — a full ring, the maximal per-cell gain the
         // diagnostic identified.
         let s = barrier_scaffold();
-        let margins = CellMap::from_fn(&s.geo, |_| MarginPolarity::Passive);
-        let boundary = CellMap::from_fn(&s.geo, |_| None);
-        let plate_of = CellMap::from_fn(&s.geo, |_| 0u32);
+        let margins = VertexMap::from_fn(&s.geo, |_| MarginPolarity::Passive);
+        let boundary = VertexMap::from_fn(&s.geo, |_| None);
+        let plate_of = VertexMap::from_fn(&s.geo, |_| 0u32);
         let no_deltas = BTreeSet::new();
         // Ample supply: the barrier-selection/spacing mechanics are not
         // under test here, only whether the specific mesh-derived detached
@@ -2341,7 +2341,7 @@ mod tests {
             s.elevation.get(s.detached_candidate).get() + *fill.get(s.detached_candidate),
         )
         .unwrap();
-        let after_elevation = CellMap::from_fn(&s.geo, |c| {
+        let after_elevation = VertexMap::from_fn(&s.geo, |c| {
             if c == s.detached_candidate {
                 raised
             } else {
@@ -2375,9 +2375,9 @@ mod tests {
         // even though the geometry/margin candidate rule is otherwise
         // satisfied identically to the test above.
         let s = barrier_scaffold();
-        let margins = CellMap::from_fn(&s.geo, |_| MarginPolarity::Passive);
-        let boundary = CellMap::from_fn(&s.geo, |_| None);
-        let plate_of = CellMap::from_fn(&s.geo, |_| 0u32);
+        let margins = VertexMap::from_fn(&s.geo, |_| MarginPolarity::Passive);
+        let boundary = VertexMap::from_fn(&s.geo, |_| None);
+        let plate_of = VertexMap::from_fn(&s.geo, |_| 0u32);
         let no_deltas = BTreeSet::new();
         let p = CarveParams::default();
 
@@ -2411,21 +2411,21 @@ mod tests {
         // land cell sits on an ACTIVE margin — the detached candidate must
         // now be rejected.
         let s = barrier_scaffold();
-        let margins = CellMap::from_fn(&s.geo, |c| {
+        let margins = VertexMap::from_fn(&s.geo, |c| {
             if c == s.land {
                 MarginPolarity::Active
             } else {
                 MarginPolarity::Passive
             }
         });
-        let boundary = CellMap::from_fn(&s.geo, |_| None);
-        let plate_of = CellMap::from_fn(&s.geo, |_| 0u32);
+        let boundary = VertexMap::from_fn(&s.geo, |_| None);
+        let plate_of = VertexMap::from_fn(&s.geo, |_| 0u32);
         let no_deltas = BTreeSet::new();
         // Supply comes from a DIFFERENT, ordinary Passive-margin cell —
         // ample budget exists, so a rejection here can only be the
         // candidate rule's own margin check, not the supply gate (which
         // the previous test already covers in isolation).
-        let supply_mouth = CellId(s.geo.cell_count() as u32 - 1);
+        let supply_mouth = Vertex(s.geo.vertex_count() as u32 - 1);
         assert_ne!(supply_mouth, s.land);
         assert_ne!(supply_mouth, s.detached_candidate);
         let mouths = vec![(supply_mouth, 1_000_000.0)];
@@ -2468,10 +2468,10 @@ mod tests {
         // 0.6 induration step, well past WATERFALL_INDURATION_STEP (0.35).
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let source = CellId(0);
+        let source = Vertex(0);
         let target = geo.neighbors(source)[0];
-        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
-        let induration = CellMap::from_fn(&geo, |c| {
+        let elevation = VertexMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
+        let induration = VertexMap::from_fn(&geo, |c| {
             if c == source {
                 0.9
             } else if c == target {
@@ -2480,11 +2480,11 @@ mod tests {
                 0.5
             }
         });
-        let n = geo.cell_count();
-        let mut downhill: Vec<Option<CellId>> = vec![None; n];
+        let n = geo.vertex_count();
+        let mut downhill: Vec<Option<Vertex>> = vec![None; n];
         downhill[source.0 as usize] = Some(target);
 
-        let high_drainage = CellMap::from_fn(&geo, |c| {
+        let high_drainage = VertexMap::from_fn(&geo, |c| {
             if c == source {
                 WATERFALL_MIN_DRAINAGE + 1.0
             } else {
@@ -2502,7 +2502,7 @@ mod tests {
         assert_eq!(sites, vec![source], "the hard-over-soft step must be found");
 
         // A low-drainage clone (same induration step) must NOT be found.
-        let low_drainage = CellMap::from_fn(&geo, |c| {
+        let low_drainage = VertexMap::from_fn(&geo, |c| {
             if c == source {
                 WATERFALL_MIN_DRAINAGE - 1.0
             } else {
@@ -2623,7 +2623,7 @@ mod tests {
         // top-`n_rivers` truncation regardless of how many mouths this
         // small geosphere happens to have.
         let mouth = geo
-            .cells()
+            .vertices()
             .filter(|&c| match downhill[c.0 as usize] {
                 Some(t) => *drainage.get(t) == 0.0,
                 None => false,
@@ -2681,13 +2681,13 @@ mod tests {
         let p = CarveParams::default();
         let sea_pre = ReferenceElevation::new(5.0).unwrap();
         let sea_1 = ReferenceElevation::new(0.0).unwrap();
-        let wedge_cell = CellId(1); // ocean-by-sea_pre, sediment, above the wedge cap
-        let atoll_cell = CellId(2); // atoll, above the atoll cap
-        let delta_cell = CellId(3); // delta lobe, subaerial: exempt
-        let playa_cell = CellId(4); // LAND-by-sea_pre sediment: exempt
-        let bank_cell = CellId(5); // ocean, shallow, NO sediment: untouched
-        let emergent_cell = CellId(6); // ocean-by-sea_pre, wedge-filled to ABOVE sea_1
-        let elevation_pre = CellMap::from_fn(&geo, |c| {
+        let wedge_cell = Vertex(1); // ocean-by-sea_pre, sediment, above the wedge cap
+        let atoll_cell = Vertex(2); // atoll, above the atoll cap
+        let delta_cell = Vertex(3); // delta lobe, subaerial: exempt
+        let playa_cell = Vertex(4); // LAND-by-sea_pre sediment: exempt
+        let bank_cell = Vertex(5); // ocean, shallow, NO sediment: untouched
+        let emergent_cell = Vertex(6); // ocean-by-sea_pre, wedge-filled to ABOVE sea_1
+        let elevation_pre = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(match c {
                 c if c == wedge_cell => -20.0,
                 c if c == atoll_cell => -30.0,
@@ -2699,7 +2699,7 @@ mod tests {
             })
             .unwrap()
         });
-        let elevation = CellMap::from_fn(&geo, |c| {
+        let elevation = VertexMap::from_fn(&geo, |c| {
             ReferenceElevation::new(match c {
                 c if c == wedge_cell => -10.0,
                 c if c == atoll_cell => -1.0,
@@ -2711,7 +2711,7 @@ mod tests {
             })
             .unwrap()
         });
-        let sediment = CellMap::from_fn(&geo, |c| match c {
+        let sediment = VertexMap::from_fn(&geo, |c| match c {
             c if c == wedge_cell => 5.0,
             c if c == atoll_cell => 6.0,
             c if c == delta_cell => 8.0,

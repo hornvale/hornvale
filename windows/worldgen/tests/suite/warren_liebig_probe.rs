@@ -75,7 +75,7 @@ fn which_axis_binds_for_a_subterranean_kind() {
     let subterranean = subterranean_substrate_field(geo, &terrain, &substrate);
 
     let mut shown = 0;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if terrain.is_ocean(cell) || terrain.cave_at(cell).is_none() {
             continue;
         }

@@ -30,12 +30,12 @@
 //! world keeps `SHELF_BREAK_LAND_FACTOR × supply` land, placing the
 //! percentile at the isostatic shelf break instead of the abyssal plain.
 
-use crate::boundaries::{BoundaryKind, CellBoundary};
+use crate::boundaries::{BoundaryKind, VertexBoundary};
 use crate::pins::TerrainPins;
 use crate::plates::{Plate, dot, unit_vector};
 use crate::streams;
 use hornvale_kernel::{
-    CellId, CellMap, Geosphere, NearestCellIndex, ReferenceElevation, Seed, math,
+    Geosphere, NearestVertexIndex, ReferenceElevation, Seed, Vertex, VertexMap, math,
 };
 
 /// Airy isostasy: meters of elevation per kilometer of crust thickness.
@@ -424,11 +424,11 @@ pub const TRAIL_DECAY: f64 = 0.55;
 pub fn trail_seamounts(
     terrain_seed: Seed,
     plates: &[Plate],
-    plate_of: &CellMap<u32>,
+    plate_of: &VertexMap<u32>,
     geo: &Geosphere,
 ) -> Vec<TrailSeamount> {
     let hotspots = draw_hotspots(terrain_seed);
-    let index = NearestCellIndex::new(geo);
+    let index = NearestVertexIndex::new(geo);
     let step = TRAIL_LENGTH_RAD / f64::from(TRAIL_STEPS);
     let mut out = Vec::new();
     for h in &hotspots {
@@ -504,16 +504,16 @@ impl ElevationTerms {
 pub(crate) fn cell_elevation_terms(
     geo: &Geosphere,
     plates: &[Plate],
-    plate_of: &CellMap<u32>,
-    boundaries: &CellMap<Option<CellBoundary>>,
-    distances: &CellMap<Option<(u32, CellId)>>,
+    plate_of: &VertexMap<u32>,
+    boundaries: &VertexMap<Option<VertexBoundary>>,
+    distances: &VertexMap<Option<(u32, Vertex)>>,
     seamounts: &[TrailSeamount],
-    crust: &CellMap<f64>,
-    continental: &CellMap<bool>,
-    induration: &CellMap<f64>,
+    crust: &VertexMap<f64>,
+    continental: &VertexMap<bool>,
+    induration: &VertexMap<f64>,
     arc_gate_fbm: &crate::crust::SphereFbm,
     relief_fbm: &crate::crust::SphereFbm,
-    cell: CellId,
+    cell: Vertex,
 ) -> ElevationTerms {
     let plate = &plates[*plate_of.get(cell) as usize];
     let cell_continental = *continental.get(cell);
@@ -598,7 +598,7 @@ pub(crate) fn globe_elevation_terms(
     geo: &Geosphere,
     globe: &crate::globe::TectonicGlobe,
     world_seed: Seed,
-) -> CellMap<ElevationTerms> {
+) -> VertexMap<ElevationTerms> {
     let terrain_seed = world_seed.derive(streams::ROOT);
     let arc_gate_fbm = crate::crust::SphereFbm::new(
         terrain_seed.derive(streams::ARC_GATE),
@@ -610,10 +610,10 @@ pub(crate) fn globe_elevation_terms(
         RELIEF_FREQUENCY,
         RELIEF_OCTAVES,
     );
-    let continental = CellMap::from_fn(geo, |c| {
+    let continental = VertexMap::from_fn(geo, |c| {
         *globe.crust.get(c) >= crate::crust::CONTINENTAL_THRESHOLD_KM
     });
-    CellMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |cell| {
         cell_elevation_terms(
             geo,
             &globe.plates,
@@ -658,23 +658,23 @@ pub(crate) fn globe_elevation_terms(
 pub(crate) fn assemble_elevation(
     geo: &Geosphere,
     plates: &[Plate],
-    plate_of: &CellMap<u32>,
-    boundaries: &CellMap<Option<CellBoundary>>,
-    distances: &CellMap<Option<(u32, CellId)>>,
+    plate_of: &VertexMap<u32>,
+    boundaries: &VertexMap<Option<VertexBoundary>>,
+    distances: &VertexMap<Option<(u32, Vertex)>>,
     seamounts: &[TrailSeamount],
-    crust: &CellMap<f64>,
-    continental: &CellMap<bool>,
+    crust: &VertexMap<f64>,
+    continental: &VertexMap<bool>,
     arc_gate_seed: Seed,
-    induration: &CellMap<f64>,
+    induration: &VertexMap<f64>,
     relief_seed: Seed,
-) -> CellMap<ReferenceElevation> {
+) -> VertexMap<ReferenceElevation> {
     // Hoist the two spherical-fBm samplers out of the per-cell loop: their
     // seeds/frequencies/octaves are loop-invariant, so the slice- and
     // octave-seed derivations run once per field instead of once per cell
     // (byte-identical — same seeds, same math). See `crust::SphereFbm`.
     let arc_gate_fbm = arc_gate_fbm(arc_gate_seed);
     let relief_fbm = crate::crust::SphereFbm::new(relief_seed, RELIEF_FREQUENCY, RELIEF_OCTAVES);
-    CellMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |cell| {
         // The per-cell body lives in `cell_elevation_terms` so the
         // attribution probe can read the terms individually; `total()` sums
         // them in the original left-associative order, which is a
@@ -712,14 +712,14 @@ pub fn generate_elevation(
     terrain_seed: Seed,
     geo: &Geosphere,
     plates: &[Plate],
-    plate_of: &CellMap<u32>,
-    boundaries: &CellMap<Option<CellBoundary>>,
-    distances: &CellMap<Option<(u32, CellId)>>,
+    plate_of: &VertexMap<u32>,
+    boundaries: &VertexMap<Option<VertexBoundary>>,
+    distances: &VertexMap<Option<(u32, Vertex)>>,
     seamounts: &[TrailSeamount],
-    crust: &CellMap<f64>,
-    continental: &CellMap<bool>,
-    induration: &CellMap<f64>,
-) -> CellMap<ReferenceElevation> {
+    crust: &VertexMap<f64>,
+    continental: &VertexMap<bool>,
+    induration: &VertexMap<f64>,
+) -> VertexMap<ReferenceElevation> {
     let arc_gate_seed = arc_gate_seed(terrain_seed);
     let relief_seed = terrain_seed.derive(streams::RELIEF);
     assemble_elevation(
@@ -861,7 +861,7 @@ pub fn effective_ocean_target(target: f64, supply: f64, notes: &mut Vec<String>)
 /// closest-approach, not strictly conservative.
 /// type-audit: bare-ok(ratio: target)
 pub fn derive_sea_level(
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     target: f64,
 ) -> ReferenceElevation {
     let mut sorted: Vec<ReferenceElevation> = elevation.iter().map(|(_, e)| *e).collect();
@@ -903,11 +903,11 @@ const UNREST_DECAY_CELLS: f64 = 2.0;
 pub fn generate_unrest(
     geo: &Geosphere,
     plates: &[Plate],
-    plate_of: &CellMap<u32>,
-    boundaries: &CellMap<Option<CellBoundary>>,
-    distances: &CellMap<Option<(u32, CellId)>>,
-) -> CellMap<f64> {
-    CellMap::from_fn(geo, |cell| {
+    plate_of: &VertexMap<u32>,
+    boundaries: &VertexMap<Option<VertexBoundary>>,
+    distances: &VertexMap<Option<(u32, Vertex)>>,
+) -> VertexMap<f64> {
+    VertexMap::from_fn(geo, |cell| {
         let Some((distance, source)) = *distances.get(cell) else {
             return 0.0;
         };
@@ -929,7 +929,7 @@ mod tests {
     use crate::pins::TerrainPins;
     use crate::plates::{Plate, assign_plates, generate_plates};
     use crate::streams;
-    use hornvale_kernel::{CellMap, Geosphere, Seed};
+    use hornvale_kernel::{Geosphere, Seed, VertexMap};
 
     /// Two hemisphere plates spinning against each other: convergent where
     /// y < 0, divergent where y > 0. Continental character lives in the
@@ -960,10 +960,10 @@ mod tests {
     /// isostasy gives that thickness (900 m at the Task 8 constants).
     const TEST_CRUST_KM: f64 = 35.0;
 
-    fn all_continental_crust(geo: &Geosphere) -> (CellMap<f64>, CellMap<bool>) {
+    fn all_continental_crust(geo: &Geosphere) -> (VertexMap<f64>, VertexMap<bool>) {
         (
-            CellMap::from_fn(geo, |_| TEST_CRUST_KM),
-            CellMap::from_fn(geo, |_| true),
+            VertexMap::from_fn(geo, |_| TEST_CRUST_KM),
+            VertexMap::from_fn(geo, |_| true),
         )
     }
 
@@ -979,7 +979,7 @@ mod tests {
         // stays well inside this test's pre-existing 100 m interior
         // tolerance regardless of the sampled noise value (relief_scale's
         // floor at induration 0 caps the term at ~66 m here).
-        let induration = CellMap::from_fn(&geo, |_| 0.0);
+        let induration = VertexMap::from_fn(&geo, |_| 0.0);
         let elevation = assemble_elevation(
             &geo,
             &plates,
@@ -1035,12 +1035,12 @@ mod tests {
             let cratons =
                 crate::crust::draw_cratons(terrain_seed, &pins, ocean_target, &mut Vec::new());
             let field = crate::crust::CrustField::new(terrain_seed, cratons);
-            let crust = CellMap::from_fn(&geo, |c| field.thickness_at(geo.position(c)).get());
-            let continental = CellMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
+            let crust = VertexMap::from_fn(&geo, |c| field.thickness_at(geo.position(c)).get());
+            let continental = VertexMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
             let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
             let distances = boundary_distance(&geo, &plate_of, &boundaries);
-            let crust_age = CellMap::from_fn(&geo, |c| field.age_at(geo.position(c)));
-            let induration = CellMap::from_fn(&geo, |c| {
+            let crust_age = VertexMap::from_fn(&geo, |c| field.age_at(geo.position(c)));
+            let induration = VertexMap::from_fn(&geo, |c| {
                 crate::lithology::induration_at(
                     *crust_age.get(c),
                     *continental.get(c),
@@ -1260,7 +1260,7 @@ mod tests {
     /// itself (a neighbor outside the set does not link two components).
     fn count_components(
         geo: &Geosphere,
-        cells: &std::collections::BTreeSet<hornvale_kernel::CellId>,
+        cells: &std::collections::BTreeSet<hornvale_kernel::Vertex>,
     ) -> usize {
         let mut unvisited = cells.clone();
         let mut components = 0;
@@ -1288,8 +1288,8 @@ mod tests {
         let g = &outcome.globe;
         // Above-sea arc cells at IslandArc boundaries form >1 connected
         // component somewhere (discreteness), across land at arc boundaries.
-        let arc_land: BTreeSet<hornvale_kernel::CellId> = geo
-            .cells()
+        let arc_land: BTreeSet<hornvale_kernel::Vertex> = geo
+            .vertices()
             .filter(|c| {
                 matches!(
                     g.boundary.get(*c).map(|b| b.kind),
@@ -1333,7 +1333,7 @@ mod tests {
         let (crust, continental) = all_continental_crust(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
-        let induration = CellMap::from_fn(&geo, |_| 0.0);
+        let induration = VertexMap::from_fn(&geo, |_| 0.0);
         let hotspot_position = [0.0, 1.0, 0.0];
         let hotspot_strength_m = 2200.0;
         let seamounts = [TrailSeamount {
@@ -1367,7 +1367,7 @@ mod tests {
             &induration,
             Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
         );
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let position = geo.position(cell);
             let expected_dome = dome_m(hotspot_position, hotspot_strength_m, position);
             let expected_e = baseline.get(cell).get() + expected_dome;

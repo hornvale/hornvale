@@ -19,7 +19,7 @@
 //! the campaign's G3 package.
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellId, Seed, Value};
+use hornvale_kernel::{Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
@@ -58,15 +58,15 @@ fn landmasses(
     terrain: &hornvale_terrain::GeneratedTerrain,
 ) -> (BTreeMap<u32, u32>, BTreeMap<u32, usize>) {
     let geo = terrain.geosphere();
-    let n = geo.cell_count();
+    let n = geo.vertex_count();
     let mut component: Vec<Option<u32>> = vec![None; n];
     let mut sizes: BTreeMap<u32, usize> = BTreeMap::new();
-    for start in geo.cells() {
+    for start in geo.vertices() {
         if terrain.is_ocean(start) || component[start.0 as usize].is_some() {
             continue;
         }
         // Flood fill. The key is the lowest cell id in the component, which
-        // `start` already is: `geo.cells()` walks in ascending id order, so
+        // `start` already is: `geo.vertices()` walks in ascending id order, so
         // the first unvisited land cell of a component is its minimum.
         let key = start.0;
         let mut stack = vec![start];
@@ -100,17 +100,17 @@ fn rivers(
     terrain: &hornvale_terrain::GeneratedTerrain,
 ) -> (BTreeMap<u32, u32>, BTreeMap<u32, usize>) {
     let geo = terrain.geosphere();
-    let n = geo.cell_count();
+    let n = geo.vertex_count();
     let sea = terrain.sea_level();
     // Downhill pointer per land cell, mirroring `drainage::downhill_targets`:
     // the strictly-lowest neighbor, `None` at a local minimum or on ocean.
-    let mut downhill: Vec<Option<CellId>> = vec![None; n];
-    for c in geo.cells() {
+    let mut downhill: Vec<Option<Vertex>> = vec![None; n];
+    for c in geo.vertices() {
         if terrain.elevation_at(c) < sea {
             continue;
         }
         let here = terrain.elevation_at(c);
-        let mut best: Option<CellId> = None;
+        let mut best: Option<Vertex> = None;
         let mut best_e = here;
         for &nb in geo.neighbors(c) {
             let e = terrain.elevation_at(nb);
@@ -123,7 +123,7 @@ fn rivers(
     }
     // Walk each land cell to its terminal, memoizing.
     let mut terminal: Vec<Option<u32>> = vec![None; n];
-    for c in geo.cells() {
+    for c in geo.vertices() {
         if terrain.elevation_at(c) < sea || terminal[c.0 as usize].is_some() {
             continue;
         }
@@ -197,7 +197,7 @@ fn watershed_individuation_matches_the_spec_counts() {
     println!("named rivers (catchment >= {RIVER_MIN_CATCHMENT}): {named_rv}  (spec says 115)");
     let endorheic = catchments
         .iter()
-        .filter(|(t, c)| **c >= RIVER_MIN_CATCHMENT && !terrain.is_ocean(CellId(**t)))
+        .filter(|(t, c)| **c >= RIVER_MIN_CATCHMENT && !terrain.is_ocean(Vertex(**t)))
         .count();
     println!("of which endorheic: {endorheic}  (spec says 66)");
 }

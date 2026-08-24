@@ -130,7 +130,7 @@ use hornvale_climate::GeneratedClimate;
 use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
-use hornvale_kernel::{CellId, CellMap, Seed, Value};
+use hornvale_kernel::{Seed, Value, Vertex, VertexMap};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
@@ -237,10 +237,10 @@ const H3_SAMPLE_STRIDE_TARGET: usize = 24;
 /// One built world's cached readout surface: everything the per-day sampling
 /// loop needs, computed exactly once per world.
 struct WorldSample {
-    /// Every land cell (`!Biome::is_marine()`), in ascending `CellId` order.
-    land_cells: Vec<CellId>,
+    /// Every land cell (`!Biome::is_marine()`), in ascending `Vertex` order.
+    land_cells: Vec<Vertex>,
     /// `land_cells`, partitioned by `BANDS` (same order).
-    land_by_band: [Vec<CellId>; 3],
+    land_by_band: [Vec<Vertex>; 3],
     /// The converged annual period, standard days.
     year_length: f64,
     /// The unweathered connection graph — `GraphConfig::default()`, `day:
@@ -284,13 +284,13 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;
     let biome = climate.biome_map();
-    let current = CellMap::from_fn(geo, |c| climate.current_at(c));
+    let current = VertexMap::from_fn(geo, |c| climate.current_at(c));
 
-    let settlements: Vec<CellId> = hornvale_settlement::all_settlements(&world)
+    let settlements: Vec<Vertex> = hornvale_settlement::all_settlements(&world)
         .iter()
         .map(
             |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             },
         )
@@ -305,8 +305,11 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let wetness = SubstrateField::compute(&climate, &DEFAULT_WETNESS);
     let snow = SubstrateField::compute(&climate, &DEFAULT_SNOWPACK);
 
-    let land_cells: Vec<CellId> = geo.cells().filter(|&c| !biome.get(c).is_marine()).collect();
-    let mut land_by_band: [Vec<CellId>; 3] = Default::default();
+    let land_cells: Vec<Vertex> = geo
+        .vertices()
+        .filter(|&c| !biome.get(c).is_marine())
+        .collect();
+    let mut land_by_band: [Vec<Vertex>; 3] = Default::default();
     for &c in &land_cells {
         let lat = geo.coord(c).latitude.abs();
         for (band_idx, &(lo, hi)) in BANDS.iter().enumerate() {
@@ -340,7 +343,7 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
 /// mechanism rather than a parallel reimplementation of it.
 fn gated_graph(sample: &WorldSample, day: f64) -> ConnectionGraph {
     let mut graph = sample.ungated.clone();
-    let factor_at = |cell: CellId| -> f64 {
+    let factor_at = |cell: Vertex| -> f64 {
         let wetness_mm = sample.wetness.at(cell, day);
         let snow_mm = sample.snow.at(cell, day);
         let frozen = sample.climate.is_frozen_at(cell, day);
@@ -359,9 +362,9 @@ fn gated_graph(sample: &WorldSample, day: f64) -> ConnectionGraph {
 
 /// The largest connected region at `min_conductance` -- the "mainland" a
 /// day's weather leaves standing. Deterministic: `reachable_regions` already
-/// orders its output by each region's minimum `CellId`, so ties in `len()`
+/// orders its output by each region's minimum `Vertex`, so ties in `len()`
 /// resolve the same way every run.
-fn largest_region(graph: &ConnectionGraph, min_conductance: f64) -> BTreeSet<CellId> {
+fn largest_region(graph: &ConnectionGraph, min_conductance: f64) -> BTreeSet<Vertex> {
     graph
         .reachable_regions(min_conductance)
         .into_iter()
@@ -370,7 +373,7 @@ fn largest_region(graph: &ConnectionGraph, min_conductance: f64) -> BTreeSet<Cel
 }
 
 /// What share of `cells` sit inside `region`.
-fn fraction_in(cells: &[CellId], region: &BTreeSet<CellId>) -> f64 {
+fn fraction_in(cells: &[Vertex], region: &BTreeSet<Vertex>) -> f64 {
     if cells.is_empty() {
         return 0.0;
     }
@@ -404,7 +407,7 @@ fn median(values: &[f64]) -> f64 {
 /// many H3 cell samples it checked, and the H3 violations (cell, daily-summed
 /// precipitation, annual climatology) it found. The unit of parallel work in
 /// [`the_mires_preregistered_readout`].
-type SeedContribution = (SeedReadout, usize, Vec<(CellId, f64, f64)>);
+type SeedContribution = (SeedReadout, usize, Vec<(Vertex, f64, f64)>);
 
 /// One seed's H1/H2 readout: the all-land swing, and each band's swing
 /// (`None` if that seed carries no land in that band).
@@ -461,7 +464,7 @@ fn h3_stride(land_cell_count: usize) -> usize {
 /// stride of land cells (see [`H3_SAMPLE_STRIDE_TARGET`]'s doc comment for
 /// why a stride rather than every cell). Returns `(checked_count,
 /// violations)`.
-fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(CellId, f64, f64)>) {
+fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(Vertex, f64, f64)>) {
     let stride = h3_stride(sample.land_cells.len());
     let mut checked = 0usize;
     let mut violations = Vec::new();

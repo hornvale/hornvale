@@ -228,7 +228,7 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
         let mut rung_addressable = 0usize;
         let mut realized = 0usize;
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }
@@ -428,7 +428,7 @@ fn how_many_floors_does_a_run_realize() {
         // sentence is actually about.
         let mut full_ladder_branch_drawn: Vec<usize> = Vec::new();
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

@@ -19,7 +19,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_kernel::{Band, Seed, Vertex};
 use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, Horizon, rung_at_depth};
 use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, ChamberOrigin, LEVELS_PER_BRANCH_CEILING, RunAddr,
@@ -168,7 +168,7 @@ const DEEP_REACH_M: f64 = 2000.0;
 #[test]
 fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     let seed = Seed(90210);
-    let cell = CellId(9);
+    let cell = Vertex(9);
     let col = fixture_column();
     let shallow = Cave::from_reach(CaveKind::Karst, SHALLOW_REACH_M, &col);
     let deep = Cave::from_reach(CaveKind::Karst, DEEP_REACH_M, &col);
@@ -258,7 +258,7 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 /// named explicitly in the task brief)
 #[test]
 fn the_lattice_is_fixed_and_existence_is_sparse() {
-    let cell = CellId(42);
+    let cell = Vertex(42);
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
     assert!(
         rung_at_depth(cave.depth_reach_m, fixture_gradient()) >= Band::Deeps,
@@ -332,7 +332,7 @@ fn every_passage_is_traversable_in_both_directions() {
     for raw_seed in [1u64, 2, 3, 4, 5] {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 1, 9, 42] {
-            let cell = CellId(raw_cell);
+            let cell = Vertex(raw_cell);
             for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     for level in [0, 1, 7, LEVELS_PER_BRANCH_CEILING - 1] {
@@ -389,7 +389,7 @@ fn every_passage_is_one_step_of_the_descent_sequence() {
     for raw_seed in [1u64, 2, 3] {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 9, 42] {
-            let cell = CellId(raw_cell);
+            let cell = Vertex(raw_cell);
             for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     for level in 0..LEVELS_PER_BRANCH_CEILING {
@@ -488,7 +488,7 @@ fn descending_from_a_runs_last_floor_lands_on_floor_zero_of_the_next_band() {
     for raw_seed in 1u64..=20 {
         let seed = Seed(raw_seed);
         for raw_cell in 0u32..10 {
-            let cell = CellId(raw_cell);
+            let cell = Vertex(raw_cell);
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
                     let run = RunAddr { cell, branch, band };
@@ -567,7 +567,7 @@ fn descending_from_an_earlier_floor_stays_in_the_band() {
     for raw_seed in 1u64..=20 {
         let seed = Seed(raw_seed);
         for raw_cell in 0u32..10 {
-            let cell = CellId(raw_cell);
+            let cell = Vertex(raw_cell);
             for branch in 0..BRANCHES_PER_SYSTEM {
                 for band in [Band::Undercroft, Band::Shallows, Band::Deeps] {
                     let run = RunAddr { cell, branch, band };
@@ -662,7 +662,7 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
     for raw_seed in 1u64..=20 {
         let seed = Seed(raw_seed);
         for raw_cell in 0u32..10 {
-            let cell = CellId(raw_cell);
+            let cell = Vertex(raw_cell);
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let run = RunAddr {
                     cell,
@@ -736,7 +736,7 @@ fn every_realized_floor_descends_unless_it_ends_the_deepest_band() {
     for raw_seed in [1u64, 2, 3, 4, 5] {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 9, 42] {
-            let cell = CellId(raw_cell);
+            let cell = Vertex(raw_cell);
             for &band in &bands {
                 for branch in 0..BRANCHES_PER_SYSTEM {
                     for level in 0..LEVELS_PER_BRANCH_CEILING {
@@ -850,7 +850,7 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
     for raw_seed in 1u64..=100 {
         let seed = Seed(raw_seed);
         for raw_cell in 0u32..10 {
-            let cell = CellId(raw_cell);
+            let cell = Vertex(raw_cell);
             let entrance = ChamberAddr {
                 cell,
                 band: Band::Undercroft,
@@ -934,7 +934,7 @@ fn an_override_wins_over_the_derived_default() {
     let seed = Seed(2026);
     let col = fixture_column();
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &col);
-    let cell = CellId(4);
+    let cell = Vertex(4);
 
     // Find two addresses that both exist under this (seed, cave, cell) —
     // one to override, one to leave alone as the "unaffected" witness.
@@ -1057,7 +1057,7 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     let seed = Seed(11);
     let col = fixture_column();
     let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &col);
-    let cell = CellId(3);
+    let cell = Vertex(3);
     let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
 
     // Direction 1: same stratum, different rung. On this column the basement
@@ -1208,7 +1208,7 @@ fn the_bands_index_and_the_reported_rung_are_the_same_ladder() {
         for band in bands {
             for branch in 0..BRANCHES_PER_SYSTEM {
                 let addr = ChamberAddr {
-                    cell: CellId(raw_cell),
+                    cell: Vertex(raw_cell),
                     band,
                     branch,
                     level: 0,
@@ -1263,7 +1263,7 @@ fn every_non_surface_rungs_frozen_range_draws_at_least_one_floor() {
             for branch in 0u8..2 {
                 for &band in Band::habitation() {
                     let run = RunAddr {
-                        cell: CellId(raw_cell),
+                        cell: Vertex(raw_cell),
                         branch,
                         band,
                     };

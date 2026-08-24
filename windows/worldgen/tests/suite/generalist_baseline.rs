@@ -305,7 +305,7 @@ fn measure_one(
     let mut per_people: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
     let mut per_people_share: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
 
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let settleable = ks.iter().any(|(_, k)| *k.get(cell) >= VIABILITY_FLOOR);
         if !settleable {
             continue;

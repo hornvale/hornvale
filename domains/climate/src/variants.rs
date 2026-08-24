@@ -18,7 +18,7 @@
 use crate::facets::{Formation, Stratum};
 use crate::streams::VARIANT_CELL;
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed};
+use hornvale_kernel::{Seed, Vertex};
 
 /// A named sub-type of a formation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -746,7 +746,7 @@ pub fn variant_pool(
 /// nothing that existed before it.
 pub fn variant_at_cell(
     seed: Seed,
-    cell: CellId,
+    cell: Vertex,
     formation: Formation,
     stratum: Stratum,
     ground: GroundKind,

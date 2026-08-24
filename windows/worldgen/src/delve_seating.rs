@@ -42,7 +42,7 @@
 //! the absence of one.
 
 use hornvale_climate::underworld::underworld_assignment;
-use hornvale_kernel::{Band, CellId, CellMap, Geosphere};
+use hornvale_kernel::{Band, Geosphere, Vertex, VertexMap};
 use hornvale_species::{EnvironmentNiche, environment_fit};
 use hornvale_terrain::{
     Cave, CaveKind, GeneratedTerrain, GeothermalGradient, delta_t_range_of, rungs,
@@ -383,17 +383,17 @@ pub fn seat_at(
 /// One people's seating over the whole globe: its rung at every cell, and the
 /// factor its capacity there is scaled by.
 ///
-/// Two `CellMap`s rather than one of pairs because the bake reads them at
+/// Two `VertexMap`s rather than one of pairs because the bake reads them at
 /// different moments — the rung on every index lookup, the multiplier once,
 /// when the capacity fields are built.
 /// type-audit: bare-ok(ratio: multiplier)
 pub struct Seating {
     /// The rung this people occupies at each cell. `Surface` everywhere for a
     /// surface people.
-    pub rung: CellMap<Band>,
+    pub rung: VertexMap<Band>,
     /// The factor this people's capacity at each cell is scaled by. `1.0`
     /// everywhere for a surface people, which is an IEEE-754 no-op.
-    pub multiplier: CellMap<f64>,
+    pub multiplier: VertexMap<f64>,
 }
 
 impl Seating {
@@ -405,8 +405,8 @@ impl Seating {
     /// than approximately so.
     pub fn all_surface(geo: &Geosphere) -> Seating {
         Seating {
-            rung: CellMap::from_fn(geo, |_| Band::Surface),
-            multiplier: CellMap::from_fn(geo, |_| 1.0),
+            rung: VertexMap::from_fn(geo, |_| Band::Surface),
+            multiplier: VertexMap::from_fn(geo, |_| 1.0),
         }
     }
 }
@@ -438,7 +438,7 @@ pub fn seating_for(
     };
     let sea = terrain.sea_level().get();
     let seats: Vec<Option<RungSeat>> = geo
-        .cells()
+        .vertices()
         .map(|cell| {
             let cave = terrain.cave_at(cell)?;
             let table = water_table_depth_m(
@@ -449,10 +449,10 @@ pub fn seating_for(
             seat_at(niche, &cave, terrain.geothermal_gradient_at(cell), table)
         })
         .collect();
-    let at = |cell: CellId| seats[cell.0 as usize];
+    let at = |cell: Vertex| seats[cell.0 as usize];
     Seating {
-        rung: CellMap::from_fn(geo, |c| at(c).map_or(Band::Undercroft, |seat| seat.rung)),
-        multiplier: CellMap::from_fn(geo, |c| at(c).map_or(0.0, |seat| seat.multiplier)),
+        rung: VertexMap::from_fn(geo, |c| at(c).map_or(Band::Undercroft, |seat| seat.rung)),
+        multiplier: VertexMap::from_fn(geo, |c| at(c).map_or(0.0, |seat| seat.multiplier)),
     }
 }
 

@@ -26,7 +26,7 @@
 //! only where the ambiguity is.
 
 use crate::qualify::SiteLabels;
-use hornvale_kernel::{CellId, World};
+use hornvale_kernel::{Vertex, World};
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 
 /// Below this conductance, an edge carries no real natural route -- it is
@@ -72,7 +72,7 @@ const MIN_NOTABLE_REGION_SIZE: usize = 2;
 /// only against the other sites *this* document names (see
 /// [`crate::qualify`]).
 /// type-audit: bare-ok(artifact: return)
-pub fn render_connections(world: &World, site: CellId, graph: &ConnectionGraph) -> String {
+pub fn render_connections(world: &World, site: Vertex, graph: &ConnectionGraph) -> String {
     let water = destinations(graph, site, EdgeKind::WaterRoute);
     let land = destinations(graph, site, EdgeKind::LandRoute);
 
@@ -100,11 +100,11 @@ pub fn render_connections(world: &World, site: CellId, graph: &ConnectionGraph) 
 }
 
 /// Every distinct destination `site` reaches by an edge of `kind`,
-/// ascending `CellId` order (deterministic regardless of the graph's own
+/// ascending `Vertex` order (deterministic regardless of the graph's own
 /// edge-insertion order, and de-duplicated: a real derivation never emits a
 /// parallel edge between the same pair, but a hand-built graph might).
-fn destinations(graph: &ConnectionGraph, site: CellId, kind: EdgeKind) -> Vec<CellId> {
-    let mut out: Vec<CellId> = graph
+fn destinations(graph: &ConnectionGraph, site: Vertex, kind: EdgeKind) -> Vec<Vertex> {
+    let mut out: Vec<Vertex> = graph
         .edges(site)
         .iter()
         .filter(|e| e.kind == kind)
@@ -120,7 +120,7 @@ fn destinations(graph: &ConnectionGraph, site: CellId, kind: EdgeKind) -> Vec<Ce
 /// `labels` and the already-collected destination lists rather than
 /// re-deriving them, so the roster the qualification was computed over and
 /// the roster this paragraph prints cannot drift apart.
-fn routes_paragraph(labels: &SiteLabels, water: &[CellId], land: &[CellId], label: &str) -> String {
+fn routes_paragraph(labels: &SiteLabels, water: &[Vertex], land: &[Vertex], label: &str) -> String {
     if water.is_empty() && land.is_empty() {
         return format!(
             "{label} opens onto no sea-lane and no natural overland route of its own: \
@@ -156,7 +156,7 @@ fn routes_paragraph(labels: &SiteLabels, water: &[CellId], land: &[CellId], labe
 /// region is always counted even if it falls below that floor, so a
 /// genuinely single-cell islet still reports honestly rather than vanishing
 /// from its own sentence.
-fn isolation_paragraph(site: CellId, graph: &ConnectionGraph, label: &str) -> String {
+fn isolation_paragraph(site: Vertex, graph: &ConnectionGraph, label: &str) -> String {
     let regions = graph.reachable_regions(ISOLATION_THRESHOLD);
     let region = regions
         .iter()

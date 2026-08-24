@@ -325,7 +325,7 @@ fn cave_cells(seed_value: u64, wc: &WorldComponents) -> CaveCells {
         chamber: Vec::new(),
         hydrology: Vec::new(),
     };
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let Some(cave) = terrain.cave_at(cell) else {
             continue;
         };

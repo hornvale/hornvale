@@ -32,7 +32,7 @@
 //! depend on each other at all — that was checked and found false; see the
 //! Gazetteer campaign's Task 8 fix round 1.
 
-use hornvale_kernel::CellId;
+use hornvale_kernel::Vertex;
 use hornvale_terrain::landscape::FeatureClass;
 use std::collections::BTreeMap;
 
@@ -44,7 +44,7 @@ use std::collections::BTreeMap;
 /// type-audit: bare-ok(count: magnitude), bare-ok(identifier-text: names)
 pub struct Entry {
     /// The cell a label is drawn at (`hornvale_terrain::landscape::Feature::anchor`).
-    pub anchor: CellId,
+    pub anchor: Vertex,
     /// The integer scalar ranking this feature within its class.
     pub magnitude: u32,
     /// Every people's name for this feature, keyed by species label.
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn render_prints_shown_count_not_the_nominal_cap_when_fewer_exist() {
         let entry = Entry {
-            anchor: CellId(7),
+            anchor: Vertex(7),
             magnitude: 40962,
             names: names(&[("aeldrin", "Voa")]),
         };
@@ -186,7 +186,7 @@ mod tests {
     fn render_states_the_true_total_when_capped() {
         let entries: Vec<Entry> = (0..3)
             .map(|i| Entry {
-                anchor: CellId(i),
+                anchor: Vertex(i),
                 magnitude: 10 - i,
                 names: names(&[("aeldrin", "Roa")]),
             })

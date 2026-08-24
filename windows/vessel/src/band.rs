@@ -14,7 +14,7 @@
 //! session state (`Session::inside`), not a property an address can answer. An
 //! address at chamber depth is a chamber only because a structure put one there.
 
-use hornvale_kernel::RoomAddr;
+use hornvale_kernel::Facet;
 
 /// How many refinements below the walk band a chamber sits. Nine halvings of a
 /// ~1.7 km locale edge is ≈3.3 m — a human-scale room. Declared as a constant
@@ -37,8 +37,8 @@ pub fn chamber_depth(walk_depth: u32) -> u32 {
 /// so callers may apply this unconditionally — which is the whole point, and the
 /// only thing this adds over the kernel primitive it delegates to.
 /// type-audit: bare-ok(count: walk_depth)
-pub fn truncate_to_walk(addr: &RoomAddr, walk_depth: u32) -> RoomAddr {
-    // `RoomAddr::ancestor` (kernel/src/room.rs) already does the bounds-checked
+pub fn truncate_to_walk(addr: &Facet, walk_depth: u32) -> Facet {
+    // `Facet::ancestor` (kernel/src/room.rs) already does the bounds-checked
     // slice and returns `None` when `walk_depth` is deeper than the address.
     // Delegate: re-deriving the slice here would duplicate a save-format-
     // adjacent primitive, and a second copy is a second thing to get wrong.
@@ -48,13 +48,13 @@ pub fn truncate_to_walk(addr: &RoomAddr, walk_depth: u32) -> RoomAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::RoomAddr;
+    use hornvale_kernel::Facet;
 
     /// The walk depth on the canonical globe (`GLOBE_LEVEL` 6 + 6).
     const WALK: u32 = 12;
 
-    fn addr(depth: u32) -> RoomAddr {
-        RoomAddr {
+    fn addr(depth: u32) -> Facet {
+        Facet {
             face: 3,
             // a fixed, arbitrary child sequence: 0,1,2,3,0,1,2,3,...
             path: (0..depth).map(|i| (i % 4) as u8).collect(),

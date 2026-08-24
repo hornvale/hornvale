@@ -17,7 +17,7 @@
 use hornvale_climate::{
     ClimateInputs, Formation, GeneratedClimate, Realm, RotationRegime, Stratum,
 };
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Seed};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Seed, VertexMap};
 
 /// A small mixed land/ocean, spinning world — the same land/ocean split and
 /// scalar inputs `hornvale_climate::provider::test_support::sample_world`
@@ -26,7 +26,7 @@ use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Seed};
 /// `-1000.0` m, so every ocean cell has the same depth and floor stratum.
 fn sample_world() -> (Geosphere, GeneratedClimate) {
     let geo = Geosphere::new(4);
-    let elevation = CellMap::from_fn(&geo, |c| {
+    let elevation = VertexMap::from_fn(&geo, |c| {
         let m = if geo.position(c)[2] > 0.0 {
             300.0
         } else {
@@ -34,7 +34,7 @@ fn sample_world() -> (Geosphere, GeneratedClimate) {
         };
         ReferenceElevation::new(m).unwrap()
     });
-    let seafloor = CellMap::from_fn(&geo, |_| hornvale_climate::SeafloorFeature::None);
+    let seafloor = VertexMap::from_fn(&geo, |_| hornvale_climate::SeafloorFeature::None);
     let climate = GeneratedClimate::generate(&ClimateInputs {
         geosphere: &geo,
         elevation: &elevation,
@@ -58,7 +58,7 @@ fn sample_world() -> (Geosphere, GeneratedClimate) {
 #[test]
 fn the_column_agrees_with_biome_expr_at_at_every_cell() {
     let (geo, climate) = sample_world();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let e = climate.biome_expr_at(cell);
         assert_eq!(
             climate.biome_expr_at_stratum(cell, e.stratum),
@@ -73,7 +73,7 @@ fn the_column_agrees_with_biome_expr_at_at_every_cell() {
 fn a_land_cell_has_a_one_rung_column() {
     let (geo, climate) = sample_world();
     let land = geo
-        .cells()
+        .vertices()
         .find(|c| climate.biome_expr_at(*c).realm == Realm::OVERWORLD)
         .expect("this fixture has land");
     assert_eq!(climate.strata_at(land), vec![Stratum::Surface]);
@@ -84,7 +84,7 @@ fn a_land_cell_has_a_one_rung_column() {
 #[test]
 fn a_marine_column_runs_from_the_surface_to_its_own_floor() {
     let (geo, climate) = sample_world();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let e = climate.biome_expr_at(cell);
         if e.realm != Realm::WATERWORLD {
             continue;
@@ -116,7 +116,7 @@ fn a_marine_column_runs_from_the_surface_to_its_own_floor() {
 #[test]
 fn nothing_exists_below_the_floor() {
     let (geo, climate) = sample_world();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let e = climate.biome_expr_at(cell);
         let ladder = e.realm.strata();
         let floor = ladder
@@ -146,7 +146,7 @@ fn nothing_exists_below_the_floor() {
 #[test]
 fn water_above_the_floor_is_open_water_at_its_own_depth() {
     let (geo, climate) = sample_world();
-    let deep = geo.cells().find(|c| climate.strata_at(*c).len() > 1);
+    let deep = geo.vertices().find(|c| climate.strata_at(*c).len() > 1);
     let Some(deep) = deep else {
         panic!(
             "the fixture's ocean is uniformly 1000 m deep, so every ocean \
@@ -169,7 +169,7 @@ fn water_above_the_floor_is_open_water_at_its_own_depth() {
 fn a_rung_from_another_realms_ladder_is_absent() {
     let (geo, climate) = sample_world();
     let land = geo
-        .cells()
+        .vertices()
         .find(|c| climate.biome_expr_at(*c).realm == Realm::OVERWORLD)
         .expect("this fixture has land");
     assert_eq!(climate.biome_expr_at_stratum(land, Stratum::Abyssal), None);

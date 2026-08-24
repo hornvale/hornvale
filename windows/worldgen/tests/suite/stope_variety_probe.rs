@@ -710,7 +710,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Band, CellId, Seed};
+use hornvale_kernel::{Band, Seed, Vertex};
 use hornvale_terrain::{Cave, GeothermalGradient, TerrainPins, rung_at_depth, rungs};
 use hornvale_worldgen::chamber::{
     ChamberAddr, RunAddr, chamber_exists, entrance_count, entrance_mouth, levels_in_branch,
@@ -1135,7 +1135,7 @@ fn reachable_union(
 /// Read one cave system through the shipped entry points only.
 fn read_system(
     seed: Seed,
-    cell: CellId,
+    cell: Vertex,
     cave: &Cave,
     gradient: GeothermalGradient,
     bands: &[(u8, Band)],
@@ -1993,7 +1993,7 @@ fn did_the_stope_solve_the_oatmeal_problem() {
         let geo = terrain.geosphere();
 
         let mut t = Tallies::default();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 if terrain.cave_at(cell).is_some() {
                     t.ocean_caves += 1;

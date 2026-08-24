@@ -23,7 +23,7 @@ use crate::{
     reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, RoomId, Seed, Value, World, WorldTime, tick,
+    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, Value, World, WorldTime, tick,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
@@ -532,7 +532,7 @@ pub struct Session<'w> {
     /// function is the single source of "every other body".
     driven: usize,
     knowledge: Knowledge,
-    trail: Vec<RoomAddr>,
+    trail: Vec<Facet>,
     /// The walk-band course, if the possession is mid-traverse.
     ///
     /// `None` before the first `go` and after any verb that invalidates a
@@ -575,18 +575,18 @@ pub struct Session<'w> {
     /// The world's predator-pressure field (The Quarry), computed once at
     /// `start`, so the danger drive senses carnivore territory; `None` if the
     /// demography fit fails.
-    predator: Option<hornvale_kernel::CellMap<f64>>,
+    predator: Option<hornvale_kernel::VertexMap<f64>>,
     /// The world's prey-pressure field (The Teeth), computed once at `start`, so
     /// a carnivore's hunger senses prey territory; `None` if the demography fit
     /// fails.
-    prey: Option<hornvale_kernel::CellMap<f64>>,
+    prey: Option<hornvale_kernel::VertexMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
     /// `built_rooms`), computed once at `start`, so a room a settlement
     /// actually occupies reads as built and can draw a real hearth.
     /// `Session::start` requires `mint_flagship` to resolve a settlement
     /// first, so in practice this always carries at least the possessed
     /// agent's own home room by the time a session exists.
-    built: std::collections::BTreeSet<RoomId>,
+    built: std::collections::BTreeSet<FacetId>,
     /// Each NPC's within-room anchor as of the most recent `wait` tick's own
     /// walk (The Threshold whole-branch review, Important 4) — recovered via
     /// [`DriveMovements::step_with_occupancy`] the same way the lab's health
@@ -651,7 +651,7 @@ pub struct Session<'w> {
     /// The session-lived geometry memo (the-waymark fix round, Finding 2):
     /// `RoomMeshMemo` is fixed for this session's whole lifetime (`neighbors`
     /// is world-independent; `corner_weights` is fixed once `ctx`'s
-    /// `(Geosphere, NearestCellIndex)` pair is built at `start` and never
+    /// `(Geosphere, NearestVertexIndex)` pair is built at `start` and never
     /// changes), so it is owned HERE — one level above
     /// `DriveMovements::step_with_occupancy`'s own per-tick loop, not rebuilt
     /// (and discarded) inside it every `wait`. `wait` prefills it for each
@@ -1069,7 +1069,7 @@ impl<'w> Session<'w> {
     /// position update, so there is no separate mutable field to go stale
     /// against it. Every `.agent().position` reader from before The Hand
     /// reads through here now.
-    pub fn position(&self) -> RoomAddr {
+    pub fn position(&self) -> Facet {
         agent_position(&self.ledger, self.driven_body(), self.day)
     }
 
@@ -1313,7 +1313,7 @@ impl<'w> Session<'w> {
                 room: self
                     .position()
                     .pack()
-                    // `RoomAddrError` implements `Debug` but not `Display`, so
+                    // `FacetError` implements `Debug` but not `Display`, so
                     // `{e:?}` is the only rendering available here — the same
                     // choice `windows/locale`'s `LocaleError::Unaddressable`
                     // makes for the identical error type.
@@ -1971,7 +1971,7 @@ impl<'w> Session<'w> {
     /// path reads it: `climb_factor` over the two rooms' elevations, before
     /// the position moves. A `MoveTo` modifier alone (spec §3.1).
     /// type-audit: bare-ok(ratio: return)
-    fn climb_to(&self, dest: &RoomAddr) -> f64 {
+    fn climb_to(&self, dest: &Facet) -> f64 {
         let terrain = self.terrain_here();
         climb_factor(terrain.elevation(&self.position()), terrain.elevation(dest))
     }
@@ -1986,7 +1986,7 @@ impl<'w> Session<'w> {
     /// mutated in place before calling this: position is read-model now
     /// ([`Self::position`]), and committing this fact **is** the update
     /// (spec §3.1).
-    fn commit_agent_at(&mut self, position: &RoomAddr, provenance: &str) {
+    fn commit_agent_at(&mut self, position: &Facet, provenance: &str) {
         let fact = agent_at_fact(self.agent_entity(), position, self.day.day(), provenance);
         self.ledger
             .commit(fact, &self.registry)
@@ -2370,7 +2370,7 @@ impl<'w> Session<'w> {
         };
         self.wctx
             .ctx
-            .water_column_at(hornvale_kernel::CellId(cw.cell))
+            .water_column_at(hornvale_kernel::Vertex(cw.cell))
     }
 
     /// The cave at the cell the possession stands on, if the terrain places
@@ -2379,11 +2379,11 @@ impl<'w> Session<'w> {
     /// here to descend into," one for water, one for rock. `None` on a cell
     /// with no cave, or before terrain built at all.
     ///
-    /// Returns the resolved [`hornvale_kernel::CellId`] alongside the cave
+    /// Returns the resolved [`hornvale_kernel::Vertex`] alongside the cave
     /// rather than the bare `Cave` `column_here` analogy would suggest:
     /// addressing a chamber (`ChamberAddr`) needs the cell, where a water
     /// stratum needs no address at all, so the caller needs both.
-    fn chamber_column_here(&self) -> Option<(hornvale_kernel::CellId, hornvale_terrain::Cave)> {
+    fn chamber_column_here(&self) -> Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)> {
         let terrain = self.wctx.terrain.as_ref()?;
         let v = crate::vantage::observable_at(
             self.world,
@@ -2395,7 +2395,7 @@ impl<'w> Session<'w> {
         )
         .ok()?;
         let cw = v.locale.corners.iter().max_by_key(|c| c.weight)?;
-        let cell = hornvale_kernel::CellId(cw.cell);
+        let cell = hornvale_kernel::Vertex(cw.cell);
         terrain.cave_at(cell).map(|cave| (cell, cave))
     }
 
@@ -2512,7 +2512,7 @@ impl<'w> Session<'w> {
     /// behaviour moved.
     fn delve_column(
         &mut self,
-        column: Option<(hornvale_kernel::CellId, hornvale_terrain::Cave)>,
+        column: Option<(hornvale_kernel::Vertex, hornvale_terrain::Cave)>,
     ) -> Turn {
         let Some((cell, cave)) = column else {
             return Turn::Out("There is no cave here to delve into.".to_string());
@@ -2537,7 +2537,7 @@ impl<'w> Session<'w> {
     /// thirty worlds; and there is consequently no sealed cell to steer to at
     /// all. The seam is still worth having for the reason its first sentence
     /// gives, and it is what restricted passage will be tested through.
-    fn delve_at(&mut self, cell: hornvale_kernel::CellId, cave: hornvale_terrain::Cave) -> Turn {
+    fn delve_at(&mut self, cell: hornvale_kernel::Vertex, cave: hornvale_terrain::Cave) -> Turn {
         let addr = hornvale_worldgen::chamber::ChamberAddr {
             cell,
             band: hornvale_kernel::Band::Undercroft,
@@ -3325,7 +3325,7 @@ impl<'w> Session<'w> {
     /// it has.
     ///
     /// The cell is `brief::containing_cell`'s — greatest blend weight, tie-broken
-    /// to the lowest `CellId` — which is the SAME rule `brief_of` selects the
+    /// to the lowest `Vertex` — which is the SAME rule `brief_of` selects the
     /// building's own brief with and the same one `hornvale_locale`'s
     /// `dominant_corner` takes a room's biome, water and substrate from. Shared,
     /// never re-derived: a caption that says granite over a picture drawn in
@@ -3632,7 +3632,7 @@ impl<'w> Session<'w> {
     /// # The join, and the honest name for it
     ///
     /// Hornvale's two fine layers meet here (spec §2). `liveness::Occupancy`
-    /// records `(RoomAddr, AnchorId)` — the anchor a creature stands at in its
+    /// records `(Facet, AnchorId)` — the anchor a creature stands at in its
     /// ROOM's interior, [`crate::interior::interior_of`]'s graph. A chamber
     /// composes a DIFFERENT graph ([`crate::interior::chamber_interior_of`] is
     /// role-gated, so a threshold chamber and a hearthroom do not compose alike),
@@ -3856,7 +3856,7 @@ impl<'w> Session<'w> {
         // before advancing — the "before" half of the departure/arrival
         // comparison `narrate_motion` needs to name a specific transition
         // rather than just count facts.
-        let before: Vec<RoomAddr> = other_bodies(&self.bodies, self.driven)
+        let before: Vec<Facet> = other_bodies(&self.bodies, self.driven)
             .iter()
             .map(|npc| agent_position(&self.ledger, npc, self.day))
             .collect();
@@ -4089,7 +4089,7 @@ impl<'w> Session<'w> {
     fn narrate_motion(
         &self,
         moved: usize,
-        before: &[RoomAddr],
+        before: &[Facet],
         sensed_before: &std::collections::BTreeSet<EntityId>,
         how: Perceiving,
     ) -> String {
@@ -4914,11 +4914,11 @@ fn felt_phrase(affect: &Affect) -> String {
 
 /// A chamber's packed room id, for the blocks that print one.
 ///
-/// One place rather than two: `RoomAddrError` implements `Debug` but not
+/// One place rather than two: `FacetError` implements `Debug` but not
 /// `Display` (the constraint `snapshot` documents at its own `pack` call), so the
 /// mapping has a shape worth stating once — and the chamber block and the plan
 /// block must print the same id for the same chamber.
-fn chamber_id(chamber: &RoomAddr) -> Result<u64, VesselError> {
+fn chamber_id(chamber: &Facet) -> Result<u64, VesselError> {
     Ok(chamber
         .pack()
         .map_err(|e| VesselError::Build(format!("{e:?}")))?
@@ -5206,7 +5206,7 @@ mod tests {
     /// into a bare empty `Vec`, so a genuine lens failure rendered as the
     /// same "You see no <noun> here." as an honest absence. We force
     /// `focalized()` to fail by corrupting the possessed agent's own
-    /// position with an out-of-range path digit (`RoomAddr::pack` rejects
+    /// position with an out-of-range path digit (`Facet::pack` rejects
     /// any digit >= 4 — see `kernel/src/room.rs`), which `LocaleContext::
     /// describe` hits on its very first line, well before any geometry
     /// runs. This mutates the session's private state directly (this test
@@ -5588,8 +5588,8 @@ mod tests {
     /// A walk-band address to hang a synthetic structure under. Which locale it
     /// is does not matter to the link graph; the resolution tests pass the
     /// session's OWN position instead, so the interiors they read are real.
-    fn synthetic_locale() -> RoomAddr {
-        RoomAddr {
+    fn synthetic_locale() -> Facet {
+        Facet {
             face: 3,
             path: (0..12).map(|i| (i % 4) as u8).collect(),
         }
@@ -5599,12 +5599,12 @@ mod tests {
     /// rooted at the threshold that `structure_at` builds. Synthetic because
     /// `structure_at`'s own count is a seed draw, and the naming layer must hold
     /// for every count — so these tests choose it rather than hoping for it.
-    fn path_structure(base: &RoomAddr, count: usize) -> crate::structure::Structure {
+    fn path_structure(base: &Facet, count: usize) -> crate::structure::Structure {
         assert!(
             (1..=crate::structure::MAX_CHAMBERS).contains(&count),
             "a chamber index is one base-4 path digit"
         );
-        let chambers: Vec<RoomAddr> = (0..count)
+        let chambers: Vec<Facet> = (0..count)
             .map(|i| {
                 let mut path = base.path.clone();
                 path.extend(std::iter::repeat_n(
@@ -5613,7 +5613,7 @@ mod tests {
                 ));
                 let last = path.len() - 1;
                 path[last] = i as u8;
-                RoomAddr {
+                Facet {
                     face: base.face,
                     path,
                 }
@@ -5939,7 +5939,7 @@ mod tests {
             let mut path = here.path.clone();
             path[0] = (path[0] + i % 4) % 4;
             path[1] = (path[1] + i / 4) % 4;
-            let locale = RoomAddr {
+            let locale = Facet {
                 face: here.face,
                 path,
             };
@@ -6252,9 +6252,9 @@ mod tests {
     fn cave_entrance_states<'a>(
         terrain: &'a hornvale_terrain::GeneratedTerrain,
         seed: Seed,
-    ) -> impl Iterator<Item = (hornvale_kernel::CellId, hornvale_terrain::Cave, bool)> + 'a {
+    ) -> impl Iterator<Item = (hornvale_kernel::Vertex, hornvale_terrain::Cave, bool)> + 'a {
         let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
-        terrain.geosphere().cells().filter_map(move |cell| {
+        terrain.geosphere().vertices().filter_map(move |cell| {
             if terrain.is_ocean(cell) {
                 return None;
             }
@@ -6289,7 +6289,7 @@ mod tests {
     fn find_open_cave_cell(
         terrain: &hornvale_terrain::GeneratedTerrain,
         seed: Seed,
-    ) -> (hornvale_kernel::CellId, hornvale_terrain::Cave) {
+    ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
         cave_entrance_states(terrain, seed)
             .find_map(|(cell, cave, is_open)| is_open.then_some((cell, cave)))
             .unwrap_or_else(|| {
@@ -6410,7 +6410,7 @@ mod tests {
         // finding nothing rather than by finding the world genuinely
         // connected.
         let mut caves_examined = 0usize;
-        let mut sealed: Vec<hornvale_kernel::CellId> = Vec::new();
+        let mut sealed: Vec<hornvale_kernel::Vertex> = Vec::new();
         for (cell, _cave, is_open) in cave_entrance_states(&terrain, world.seed) {
             caves_examined += 1;
             if !is_open {
@@ -6681,7 +6681,7 @@ mod tests {
     /// edge — any caller that commits at `now` and reads at `now` still has
     /// it, `Session::wait`'s own tick included — and that is recorded as a
     /// finding rather than papered over here.
-    fn place_agent_now(session: &mut Session<'_>, who: EntityId, room: &RoomAddr) {
+    fn place_agent_now(session: &mut Session<'_>, who: EntityId, room: &Facet) {
         let fact = crate::liveness::place_agent(who, room, session.day);
         session
             .ledger
@@ -6972,13 +6972,13 @@ mod tests {
         // test; "I could not reach it" is not coverage.
         //
         // A real, packable room that is NOT this one: the last path digit
-        // stepped one place. Built rather than invented so `RoomAddr::pack`
+        // stepped one place. Built rather than invented so `Facet::pack`
         // (which rejects any digit >= 4) still accepts it.
         let elsewhere = {
             let mut path = room.path.clone();
             let last = path.last_mut().expect("a walk-band address has a path");
             *last = (*last + 1) % 4;
-            RoomAddr {
+            Facet {
                 face: room.face,
                 path,
             }
@@ -6988,7 +6988,7 @@ mod tests {
         // THE ARRIVAL. `before` says the creature was elsewhere; the ledger
         // still says it is here; `moved` is nonzero so the early return does
         // not swallow the call.
-        let arriving: Vec<RoomAddr> = other_bodies(&session.bodies, session.driven)
+        let arriving: Vec<Facet> = other_bodies(&session.bodies, session.driven)
             .iter()
             .map(|npc| {
                 if npc.entity == who {
@@ -7029,7 +7029,7 @@ mod tests {
         // the sensed-before set says the player could not see it while it was.
         // Watching something go that you never saw arrive is the same
         // disclosure as watching it arrive.
-        let was_here: Vec<RoomAddr> = other_bodies(&session.bodies, session.driven)
+        let was_here: Vec<Facet> = other_bodies(&session.bodies, session.driven)
             .iter()
             .map(|npc| agent_position(&session.ledger, npc, session.day))
             .collect();

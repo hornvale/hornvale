@@ -317,8 +317,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::ecology::{ConditionResponse, ResourceVector};
 use hornvale_kernel::{
-    ANIMAL_PREY, Band, CellId, DETRITUS, ENERGY, LIGHT, Mass, PHYSIOGNOMY, PLANT_FORAGE, SUBSTRATE,
-    Seed, WATER, sovereignty_floor,
+    ANIMAL_PREY, Band, DETRITUS, ENERGY, LIGHT, Mass, PHYSIOGNOMY, PLANT_FORAGE, SUBSTRATE, Seed,
+    Vertex, WATER, sovereignty_floor,
 };
 use hornvale_species::{
     AxisPreference, BiosphereTraits, ConditionNiche, EnvironmentNiche, HabitatRealm, LifeSchedule,
@@ -668,28 +668,28 @@ fn the_candidate_fit_tables_and_the_elevation_precondition() {
 /// cannot disagree about which cells they describe.
 struct KindReadings {
     /// The seated rung at every cave-bearing land cell, in cell order.
-    seated: Vec<(CellId, Band)>,
+    seated: Vec<(Vertex, Band)>,
     /// The seating-scaled capacity at every cave-bearing land cell — what the
     /// deep-history bake actually reasons in.
-    capacity: Vec<(CellId, f64)>,
+    capacity: Vec<(Vertex, f64)>,
     /// The **unscaled** capacity — the same field before the seat's multiplier
     /// is applied. The first arm of the attribution control below: everything
     /// this campaign did NOT ship, i.e. the condition niches against the
     /// chamber substrate.
-    capacity_unscaled: Vec<(CellId, f64)>,
+    capacity_unscaled: Vec<(Vertex, f64)>,
     /// The seat's multiplier alone. The second arm: everything this campaign
     /// DID ship, i.e. `chamber_fit` times the works discount, and nothing else.
-    multiplier: Vec<(CellId, f64)>,
+    multiplier: Vec<(Vertex, f64)>,
     /// The dimensionless suitability field, the quantity `non_void_roster`
     /// checks H2's floor against. Not seating-scaled, exactly as that test
     /// takes it.
     suitability_max: f64,
 }
 
-/// Descending sort by value with a deterministic tie-break on `CellId`, so a
+/// Descending sort by value with a deterministic tie-break on `Vertex`, so a
 /// quartile boundary is a fact about the world rather than about iteration
 /// order. `total_cmp`, never `>`.
-fn rank_descending(mut rows: Vec<(CellId, f64)>) -> Vec<(CellId, f64)> {
+fn rank_descending(mut rows: Vec<(Vertex, f64)>) -> Vec<(Vertex, f64)> {
     rows.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.0.cmp(&b.0.0)));
     rows
 }
@@ -716,7 +716,7 @@ struct Quartile {
 }
 
 /// The top quartile of a descending ranking, with its tie evidence.
-fn top_quartile(ranked: &[(CellId, f64)]) -> Quartile {
+fn top_quartile(ranked: &[(Vertex, f64)]) -> Quartile {
     let n = ranked.len();
     let take = n / 4;
     let cells: BTreeSet<u32> = ranked.iter().take(take).map(|(c, _)| c.0).collect();
@@ -813,7 +813,7 @@ fn the_separation_readout() {
         // --------------------------------------------------------------
         let mut chamber_hist: BTreeMap<usize, usize> = BTreeMap::new();
         let mut caves = 0usize;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let Some(cave) = terrain.cave_at(cell) else {
                 continue;
             };
@@ -902,7 +902,7 @@ fn the_separation_readout() {
             let mut capacity_unscaled = Vec::new();
             let mut multiplier = Vec::new();
             let mut suitability_max = 0.0f64;
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 if terrain.cave_at(cell).is_none() {
                     continue;
                 }
@@ -1162,7 +1162,7 @@ fn the_separation_readout() {
         for (name, _, niche) in &cands {
             let mut works = 0usize;
             let mut total = 0usize;
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 let Some(cave) = terrain.cave_at(cell) else {
                     continue;
                 };

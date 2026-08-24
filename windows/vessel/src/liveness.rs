@@ -16,8 +16,8 @@ use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
 use hornvale_kernel::{
-    ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, Lineage, PHOTOSYNTHATE, PLANT_FORAGE,
-    ResourceVector, RoomAddr, RoomId, RoomMeshMemo, TickSystem, Value, World, WorldTime,
+    ANIMAL_PREY, ConditionResponse, EntityId, Facet, FacetId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
+    PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, World, WorldTime,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, MetabolicClass};
@@ -38,7 +38,7 @@ pub const AGENT_AT: &str = "agent-at";
 /// transient-danger memory (The Phantom, §1) re-derive a PAST alarm field:
 /// re-placing each emitter where it stood on the remembered day, not where it
 /// stands now (a herd's panic is recovered even after the herd has moved on).
-pub fn agent_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> RoomAddr {
+pub fn agent_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Facet {
     latest_committed_position(ledger, npc, t).unwrap_or_else(|| npc.home.clone())
 }
 
@@ -81,7 +81,7 @@ pub fn village_or_fallback(npc: &Body) -> hornvale_settlement::VillageInfo {
 /// this comparison run on the possessed body's OWN position every turn
 /// (previously a mutable field, byte-identical by construction) rather than
 /// only in the narrow `wait`/`narrate_motion` case that exposed it first.
-fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Option<RoomAddr> {
+fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Option<Facet> {
     let t = hornvale_kernel::quantize(t.day());
     ledger
         .facts_of(npc.entity, AGENT_AT)
@@ -93,26 +93,26 @@ fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Optio
         })
 }
 
-/// Encode a `RoomAddr` as save-format text: the packed `RoomId` (decision
+/// Encode a `Facet` as save-format text: the packed `FacetId` (decision
 /// 0006), rendered as a decimal `u64` string. Reuses the existing pack/unpack
 /// contract rather than inventing a new encoding.
-fn room_to_text(r: &RoomAddr) -> String {
+fn room_to_text(r: &Facet) -> String {
     r.pack()
         .expect("a scheduled room is always within MAX_DEPTH")
         .0
         .to_string()
 }
 
-/// Decode a `RoomAddr` from its packed-`RoomId` decimal text. Panics on a
+/// Decode a `Facet` from its packed-`FacetId` decimal text. Panics on a
 /// malformed committed value — a corrupted save is a bug, not a runtime case
 /// to route around.
-fn room_from_text(s: &str) -> RoomAddr {
+fn room_from_text(s: &str) -> Facet {
     let id: u64 = s
         .parse()
-        .unwrap_or_else(|_| panic!("agent-at text '{s}' is not a decimal RoomId"));
-    RoomId(id)
+        .unwrap_or_else(|_| panic!("agent-at text '{s}' is not a decimal FacetId"));
+    FacetId(id)
         .unpack()
-        .unwrap_or_else(|_| panic!("agent-at RoomId {id} does not unpack to a valid RoomAddr"))
+        .unwrap_or_else(|_| panic!("agent-at FacetId {id} does not unpack to a valid Facet"))
 }
 
 /// The homeostatic-drive parameters (authored constants; §4.2/§4.3): the rise
@@ -345,7 +345,7 @@ pub trait Terrain {
     /// itself is no longer classified by elevation (the-surmise T5 re-wire;
     /// see `is_fresh_water`).
     /// type-audit: waiver(elevation-convention: return)
-    fn elevation(&self, room: &RoomAddr) -> f64;
+    fn elevation(&self, room: &Facet) -> f64;
 
     /// Whether the room's water is FRESH — drinkable — rather than salt.
     /// Reads The Freshet's own classification (`WaterKind::is_fresh`), not
@@ -355,7 +355,7 @@ pub trait Terrain {
     /// this from the locale's own `water` field; planted test terrain marks
     /// specific rooms fresh directly.
     /// type-audit: bare-ok(flag: return)
-    fn is_fresh_water(&self, room: &RoomAddr) -> bool;
+    fn is_fresh_water(&self, room: &Facet) -> bool;
 
     /// The room's PER-DAY temperature on `day`, °C — the diurnal+seasonal
     /// signal a thermal (flow) drive senses at its own cell, distinct from
@@ -367,7 +367,7 @@ pub trait Terrain {
     /// is never chosen as a comfort target (mirroring `elevation`'s
     /// never-chosen-downhill convention).
     /// type-audit: waiver(temperature-convention: return)
-    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64;
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64;
 
     /// The sun's altitude above the horizon at `room` on `day`, in degrees
     /// (positive = up, negative = below), or `None` on a world with NO day/night
@@ -378,7 +378,7 @@ pub trait Terrain {
     /// `LocaleTerrain` OVERRIDES it with the real astronomy altitude (latitude ×
     /// season × the terminator).
     /// type-audit: waiver(altitude-convention: return)
-    fn solar_altitude(&self, _room: &RoomAddr, day: WorldTime) -> Option<f64> {
+    fn solar_altitude(&self, _room: &Facet, day: WorldTime) -> Option<f64> {
         fractional_day_sun(day)
     }
 
@@ -394,7 +394,7 @@ pub trait Terrain {
     /// undisturbed unless a scenario plants barrenness; a live `LocaleTerrain`
     /// OVERRIDES it with the real climate's NPP proxy (`productivity_at`).
     /// type-audit: bare-ok(ratio: return)
-    fn forage_value(&self, _room: &RoomAddr) -> f64 {
+    fn forage_value(&self, _room: &Facet) -> f64 {
         DEFAULT_FORAGE
     }
 
@@ -406,7 +406,7 @@ pub trait Terrain {
     /// live `LocaleTerrain` OVERRIDES it with the real climate (`hazards_at`: the
     /// uncanny strangeness plus graded heat/cold). A slow field, so it takes no
     /// `day`.
-    fn hazards(&self, _room: &RoomAddr) -> Hazards {
+    fn hazards(&self, _room: &Facet) -> Hazards {
         Hazards::ZERO
     }
 
@@ -418,7 +418,7 @@ pub trait Terrain {
     /// territory this? Defaults false, so every existing implementation reads
     /// as wilderness and nothing moves.
     /// type-audit: bare-ok(flag: return)
-    fn is_built(&self, _room: &RoomAddr) -> bool {
+    fn is_built(&self, _room: &Facet) -> bool {
         false
     }
 
@@ -437,7 +437,7 @@ pub trait Terrain {
     /// `temperature`, and one that returns a non-finite value reads as
     /// temperate, since the comparison is false for `NaN`.
     /// type-audit: bare-ok(flag: return)
-    fn is_cold(&self, room: &RoomAddr) -> bool {
+    fn is_cold(&self, room: &Facet) -> bool {
         self.temperature(room, FURNISHING_REFERENCE_DAY) < FURNISHING_COLD_C
     }
 
@@ -451,7 +451,7 @@ pub trait Terrain {
     /// scenario plants prey; a live `LocaleTerrain` OVERRIDES it with the
     /// injected prey-pressure field. A slow field, so it takes no `day`.
     /// type-audit: bare-ok(ratio: return)
-    fn prey_value(&self, _room: &RoomAddr) -> f64 {
+    fn prey_value(&self, _room: &Facet) -> f64 {
         0.0
     }
 }
@@ -478,17 +478,17 @@ fn fractional_day_sun(day: WorldTime) -> Option<f64> {
 /// ocean or a salt basin). Pure over the terrain field; rivers scatter along
 /// drainage, so sources are naturally many, not one.
 /// type-audit: bare-ok(flag: return)
-pub fn is_water(room: &RoomAddr, terrain: &dyn Terrain) -> bool {
+pub fn is_water(room: &Facet, terrain: &dyn Terrain) -> bool {
     terrain.is_fresh_water(room)
 }
 
 /// The single steepest-descent neighbour ("water lies low" — the prior an
-/// ignorant agent explores along). `total_cmp` with an ascending-`RoomAddr`
+/// ignorant agent explores along). `total_cmp` with an ascending-`Facet`
 /// tie-break (the constitutional no-native-float-cmp rule), the same rule
 /// `nearest_water`'s BFS and `lowest_unvisited_neighbor_memo` use. Always a
 /// neighbour (never `from` itself).
-pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
-    let mut best: Option<(RoomAddr, f64)> = None;
+pub fn downhill_step(from: &Facet, terrain: &dyn Terrain) -> Facet {
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let elev = terrain.elevation(&n);
         let keep_existing = match &best {
@@ -504,12 +504,12 @@ pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
 
 /// The true nearest water room to `from` (ground-truth-best) — a deterministic
 /// breadth-first walk over the mesh to the closest `is_water` room, frontier
-/// processed in `RoomAddr` order, capped at `budget` expansions (`None` if no
+/// processed in `Facet` order, capped at `budget` expansions (`None` if no
 /// water within it). The agent does not know this until it has PERCEIVED it.
 /// type-audit: bare-ok(count: budget)
-pub fn nearest_water(from: &RoomAddr, terrain: &dyn Terrain, budget: usize) -> Option<RoomAddr> {
-    let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
-    let mut frontier: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+pub fn nearest_water(from: &Facet, terrain: &dyn Terrain, budget: usize) -> Option<Facet> {
+    let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
+    let mut frontier: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     frontier.insert(from.clone());
     let mut expansions = 0usize;
     while let Some(room) = frontier.iter().next().cloned() {
@@ -551,18 +551,18 @@ pub struct LocaleTerrain<'a> {
     /// The world's predator-pressure field (The Quarry — `worldgen::
     /// predator_pressure_from`), injected here (a domain/window can't reach up
     /// to demography); `None` → no PREDATOR hazard (throwaway reads / no field).
-    predator: Option<&'a hornvale_kernel::CellMap<f64>>,
+    predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
     /// The world's prey-pressure field (The Teeth — `worldgen::
     /// prey_pressure_from`), the dual of `predator`, injected the same way;
     /// `None` → no prey draw (throwaway reads / no field), so a carnivore
     /// reads only ordinary productivity.
-    prey: Option<&'a hornvale_kernel::CellMap<f64>>,
+    prey: Option<&'a hornvale_kernel::VertexMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
     /// `built_rooms`), injected the same way (a domain/window can't reach up
     /// to `hornvale_settlement`); `None` → every room reads unbuilt (a
     /// throwaway read with no world), the same fail-safe-to-wilderness
     /// posture `Terrain::is_built`'s own default takes.
-    built: Option<&'a std::collections::BTreeSet<RoomId>>,
+    built: Option<&'a std::collections::BTreeSet<FacetId>>,
     /// A PREFILLED, READ-ONLY [`hornvale_kernel::RoomMeshMemo`] (the-waymark
     /// fix round, Finding 1): every `corner_weights`-backed read below
     /// consults it first, falling through to a fresh recompute on a miss.
@@ -620,7 +620,7 @@ impl<'a> LocaleTerrain<'a> {
     pub fn with_calendar_and_predators(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
-        predator: Option<&'a hornvale_kernel::CellMap<f64>>,
+        predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
     ) -> Self {
         Self::with_fields(ctx, calendar, predator, None, None, None)
     }
@@ -638,9 +638,9 @@ impl<'a> LocaleTerrain<'a> {
     pub fn with_fields(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
-        predator: Option<&'a hornvale_kernel::CellMap<f64>>,
-        prey: Option<&'a hornvale_kernel::CellMap<f64>>,
-        built: Option<&'a std::collections::BTreeSet<RoomId>>,
+        predator: Option<&'a hornvale_kernel::VertexMap<f64>>,
+        prey: Option<&'a hornvale_kernel::VertexMap<f64>>,
+        built: Option<&'a std::collections::BTreeSet<FacetId>>,
         cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
     ) -> Self {
         Self {
@@ -654,19 +654,19 @@ impl<'a> LocaleTerrain<'a> {
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
-    fn elevation(&self, room: &RoomAddr) -> f64 {
+    fn elevation(&self, room: &Facet) -> f64 {
         self.ctx
             .describe_at_cached(room, WorldTime::GENESIS, None, self.cache)
             .map(|l| l.fields.elevation_m)
             .unwrap_or(f64::INFINITY)
     }
-    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+    fn is_fresh_water(&self, room: &Facet) -> bool {
         self.ctx
             .describe_at_cached(room, WorldTime::GENESIS, None, self.cache)
             .map(|l| l.fields.water.is_fresh())
             .unwrap_or(false)
     }
-    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64 {
+    fn temperature(&self, room: &Facet, day: WorldTime) -> f64 {
         // The PER-DAY field (`LocaleContext::temperature_at`), NOT `describe`'s
         // annual-mean `temperature_c` — so the drive gets a diurnal/seasonal
         // swing while the render path stays byte-identical. INFINITY for an
@@ -675,7 +675,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .temperature_at_cached(room, day, self.cache)
             .unwrap_or(f64::INFINITY)
     }
-    fn solar_altitude(&self, room: &RoomAddr, day: WorldTime) -> Option<f64> {
+    fn solar_altitude(&self, room: &Facet, day: WorldTime) -> Option<f64> {
         // The real sun where the world carries a calendar (latitude from the
         // room's centroid; `None` on a locked world → no cycle); else the
         // fractional-day fallback. No `corner_weights` read here (a pure
@@ -687,7 +687,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             None => fractional_day_sun(day),
         }
     }
-    fn forage_value(&self, room: &RoomAddr) -> f64 {
+    fn forage_value(&self, room: &Facet) -> f64 {
         // The real climate's net-primary-productivity proxy (The Provender);
         // an undescribable/above-grid room reads 0 (no food), the never-fed
         // fallback (the dual of `temperature`'s never-chosen INFINITY).
@@ -695,7 +695,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .productivity_at_cached(room, self.cache)
             .unwrap_or(0.0)
     }
-    fn hazards(&self, room: &RoomAddr) -> Hazards {
+    fn hazards(&self, room: &Facet) -> Hazards {
         // The real climate's per-axis hazard field (The Bane: the uncanny plus
         // graded heat/cold); an undescribable/above-grid room reads all-zero
         // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
@@ -717,7 +717,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             predator,
         }
     }
-    fn prey_value(&self, room: &RoomAddr) -> f64 {
+    fn prey_value(&self, room: &Facet) -> f64 {
         // The PREY field (The Teeth): the injected prey-pressure field, corner-
         // blended per room (the same read as the predator axis); `0` where no
         // field is injected or the room is above the grid — the prey-empty
@@ -726,7 +726,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
             .unwrap_or(0.0)
     }
-    fn is_built(&self, room: &RoomAddr) -> bool {
+    fn is_built(&self, room: &Facet) -> bool {
         // THE THRESHOLD's real answer (task 5b): built iff `room` packs to a
         // room id in the injected settlement-territory set (`built_rooms`).
         // `None` (no set injected — a throwaway read with no world) or a pack
@@ -803,8 +803,8 @@ fn rise_at(temp: f64, class: MetabolicClass, p: &DriveParams) -> f64 {
 /// The committed `agent-at` sightings of `entity` at or before day `upto`, as
 /// `(arrival_day, room)` sorted ascending — the occupancy timeline the thirst
 /// integral reads.
-fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, RoomAddr)> {
-    let mut v: Vec<(f64, RoomAddr)> = ledger
+fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Facet)> {
+    let mut v: Vec<(f64, Facet)> = ledger
         .facts_of(entity, AGENT_AT)
         .filter_map(|f| {
             let d = f.day?.day();
@@ -833,8 +833,8 @@ fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Ro
 /// identically. `sightings` must be ascending and ≤ `t`.
 #[allow(clippy::too_many_arguments)]
 fn integrate_thirst(
-    sightings: &[(f64, RoomAddr)],
-    home: &RoomAddr,
+    sightings: &[(f64, Facet)],
+    home: &Facet,
     last_drank: f64,
     t: f64,
     terrain: &dyn Terrain,
@@ -884,7 +884,7 @@ fn integrate_thirst(
 pub fn drive_at(
     ledger: &Ledger,
     entity: EntityId,
-    home: &RoomAddr,
+    home: &Facet,
     t: WorldTime,
     p: &DriveParams,
     terrain: &dyn Terrain,
@@ -901,7 +901,7 @@ pub fn drive_at(
 /// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
 /// `agent-at` history ∩ water-truth. Among the water rooms the agent has stood in
 /// at or before `t`, the one nearest to `npc.home` by planned hop-distance (ties
-/// by ascending `RoomAddr`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
+/// by ascending `Facet`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
 /// no stored belief — it re-derives from facts already committed (the matrix
 /// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
 /// type-audit: bare-ok(count: budget)
@@ -911,8 +911,8 @@ pub fn believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
-) -> Option<RoomAddr> {
-    let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+) -> Option<Facet> {
+    let mut seen: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     for f in ledger.facts_of(npc.entity, AGENT_AT) {
         let sighted = f.day.map(|d| d <= t).unwrap_or(false);
         if sighted && let Value::Text(s) = &f.object {
@@ -973,9 +973,9 @@ impl PrimaryAfraidMemo {
 /// alarms could reach. Shared across every creature's re-derivation at one time.
 struct EmitterScan {
     /// The ever-terrain-afraid members and their day-sorted position timelines.
-    emitters: Vec<(Body, Vec<(f64, RoomAddr)>)>,
+    emitters: Vec<(Body, Vec<(f64, Facet)>)>,
     /// Every cell within one hop of some emitter's frightening position.
-    alarm_source_cells: std::collections::BTreeSet<RoomAddr>,
+    alarm_source_cells: std::collections::BTreeSet<Facet>,
 }
 
 /// Scan `roster` for the members ever on terrain frightening to them (the only
@@ -988,14 +988,14 @@ fn build_emitter_scan(
     terrain: &dyn Terrain,
     t: WorldTime,
 ) -> EmitterScan {
-    let mut emitters: Vec<(Body, Vec<(f64, RoomAddr)>)> = Vec::new();
-    let mut alarm_source_cells: std::collections::BTreeSet<RoomAddr> =
+    let mut emitters: Vec<(Body, Vec<(f64, Facet)>)> = Vec::new();
+    let mut alarm_source_cells: std::collections::BTreeSet<Facet> =
         std::collections::BTreeSet::new();
     for m in roster {
         let mettle = mettle_factor(m.boldness);
         let frightening =
-            |room: &RoomAddr| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
-        let mut timeline: Vec<(f64, RoomAddr)> = ledger
+            |room: &Facet| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
+        let mut timeline: Vec<(f64, Facet)> = ledger
             .facts_of(m.entity, AGENT_AT)
             .filter_map(|f| {
                 let d = f.day.filter(|d| *d <= t)?.day();
@@ -1009,7 +1009,7 @@ fn build_emitter_scan(
         // `agent_position`'s last-committed-≤-day read on the monotonic timeline).
         timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
         let mut ever = false;
-        let mut note_halo = |p: &RoomAddr| {
+        let mut note_halo = |p: &Facet| {
             alarm_source_cells.insert(p.clone());
             for n in p.neighbors() {
                 alarm_source_cells.insert(n);
@@ -1077,12 +1077,12 @@ fn emitter_arousal(
 pub struct HazardMemory {
     /// Every remembered-frightening cell, both provenances — the planner's
     /// finite route-cost set (exactly the historical `believed_hazard`).
-    pub shunned: std::collections::BTreeSet<RoomAddr>,
+    pub shunned: std::collections::BTreeSet<Facet>,
     /// The TRANSIENT subset, keyed to the remembered ALARM magnitude at that
     /// cell: ground whose terrain alone never crossed `DANGER_ACT`, tipped over
     /// it only by the re-derived alarm of a herd that has long since moved on.
     /// A subset of `shunned`'s keys. Empty ⇒ no phobia (the settled worlds).
-    pub dread: std::collections::BTreeMap<RoomAddr, f64>,
+    pub dread: std::collections::BTreeMap<Facet, f64>,
 }
 
 /// Belief (L1): the ground the creature has stood on that FRIGHTENS it — a pure
@@ -1136,7 +1136,7 @@ pub fn believed_hazard(
     t: WorldTime,
     terrain: &dyn Terrain,
     roster: &[Body],
-) -> std::collections::BTreeSet<RoomAddr> {
+) -> std::collections::BTreeSet<Facet> {
     hazard_memory(ledger, npc, t, terrain, roster).shunned
 }
 
@@ -1152,7 +1152,7 @@ pub fn believed_hazard_memo(
     terrain: &dyn Terrain,
     roster: &[Body],
     memo: &mut PrimaryAfraidMemo,
-) -> std::collections::BTreeSet<RoomAddr> {
+) -> std::collections::BTreeSet<Facet> {
     hazard_memory_memo(ledger, npc, t, terrain, roster, memo).shunned
 }
 
@@ -1183,7 +1183,7 @@ pub fn hazard_memory_memo(
 ) -> HazardMemory {
     // Most-recent visit per cell (day ≤ t): the cell is judged at its LATEST
     // visit, so a later safe visit clears an earlier phantom (the staleness rule).
-    let mut latest: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+    let mut latest: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
     for f in ledger.facts_of(npc.entity, AGENT_AT) {
         if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::day)
             && let Value::Text(s) = &f.object
@@ -1214,7 +1214,7 @@ pub fn hazard_memory_memo(
     // The emitter's committed position AT `day`: the latest entry with day ≤ it,
     // else its home (the pre-history fallback) — `agent_position` over the
     // precomputed timeline.
-    let position_at = |m: &Body, timeline: &[(f64, RoomAddr)], day: f64| -> RoomAddr {
+    let position_at = |m: &Body, timeline: &[(f64, Facet)], day: f64| -> Facet {
         let idx = timeline.partition_point(|(d, _)| *d <= day);
         if idx == 0 {
             m.home.clone()
@@ -1314,7 +1314,7 @@ pub fn hazard_memory_memo(
 /// (this is what keeps the live one-per-settlement population byte-identical).
 /// With a co-located peer, pools `npc`'s and every co-located peer's
 /// `believed_water` and returns the one nearest to `npc`'s CURRENT position
-/// (ties: ascending `RoomAddr`), `None` if the pool is empty. Current-position
+/// (ties: ascending `Facet`), `None` if the pool is empty. Current-position
 /// anchoring is the semantics of hearsay — "water near HERE" — and is what lets
 /// a stranded creature adopt a here-reachable water its home-anchored memory
 /// could never admit. Order-independent by construction (`BTreeSet` union +
@@ -1327,10 +1327,10 @@ pub fn shared_believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
-) -> Option<RoomAddr> {
+) -> Option<Facet> {
     let own = believed_water(frozen, npc, t, terrain, budget);
     let here = agent_position(frozen, npc, t);
-    let mut pool: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     let mut has_peer = false;
     // Co-located OTHERS (never npc itself) contribute what they know of water.
     for other in band {
@@ -1346,7 +1346,7 @@ pub fn shared_believed_water(
         return own;
     }
     // CO-LOCATED: rank the pooled beliefs (npc's + peers') by nearness to npc's
-    // CURRENT position (ties: ascending RoomAddr) — act on what's reachable HERE.
+    // CURRENT position (ties: ascending Facet) — act on what's reachable HERE.
     if let Some(w) = own {
         pool.insert(w);
     }
@@ -1369,23 +1369,23 @@ pub fn shared_believed_water(
 #[derive(Clone, Debug)]
 pub struct Perceived {
     /// The agent's current room (self-knowledge — always true).
-    pub position: RoomAddr,
+    pub position: Facet,
     /// The agent's perceived thirst drive level (self-knowledge — always true).
     pub drive: f64,
     /// The agent's perceived fatigue level (self-knowledge — always true, The
     /// Slumber): time since it last rested, normalized `[0, 1]`.
     pub fatigue: f64,
     /// The nearest water the agent KNOWS of (belief), or `None` (ignorant).
-    pub believed_water: Option<RoomAddr>,
+    pub believed_water: Option<Facet>,
     /// The ground the agent remembers being FRIGHTENED on (belief, The Haunt):
     /// the set of cells its planners route AROUND — the inverted twin of
     /// `believed_water`. EMPTY ⇒ today's behaviour (every planner edge stays
     /// `1`, byte-identical). Read by the planning drives (thirst/homing) as a
     /// finite route cost; the greedy drives ignore it.
-    pub believed_hazard: std::collections::BTreeSet<RoomAddr>,
+    pub believed_hazard: std::collections::BTreeSet<Facet>,
     /// The next exploration move for an ignorant agent (lowest-elevation
     /// unvisited neighbour), or `None` (nowhere new to look → Hold).
-    pub explore_step: Option<RoomAddr>,
+    pub explore_step: Option<Facet>,
 }
 
 /// The decision's output — the FIRST action of the agent's current plan, or
@@ -1791,7 +1791,7 @@ impl<'a> Thermal<'a> {
     /// The absolute temperature deviation from the niche optimum at `room`,
     /// °C — the discomfort distance the drive minimizes. `INFINITY` for an
     /// undescribable room (never chosen as a comfort target).
-    fn deviation(&self, room: &RoomAddr) -> f64 {
+    fn deviation(&self, room: &Facet) -> f64 {
         (self.terrain.temperature(room, self.day) - self.niche.optimum).abs()
     }
 
@@ -1807,7 +1807,7 @@ impl<'a> Thermal<'a> {
     /// thirst tests plant no temperatures, so their thermal drive stays
     /// inactive (urgency `0.0`) at every cell and never enters arbitration.
     /// type-audit: bare-ok(ratio: return)
-    fn urgency_at(&self, room: &RoomAddr) -> f64 {
+    fn urgency_at(&self, room: &Facet) -> f64 {
         self.urgency_of(self.terrain.temperature(room, self.day))
     }
 
@@ -1840,7 +1840,7 @@ impl<'a> Thermal<'a> {
     /// there, so it is folded 1:1 with no second dial to tune — one source of
     /// scale, unlike the alarm's separate [`ALARM_SCALE`].
     /// type-audit: bare-ok(count: budget), bare-ok(ratio: return)
-    fn urgency_here(&self, room: &RoomAddr, budget: usize) -> f64 {
+    fn urgency_here(&self, room: &Facet, budget: usize) -> f64 {
         let temp = self.terrain.temperature(room, self.day);
         match self.interior {
             Some((interior, anchor)) => self.urgency_of(temp + warmth_at(interior, anchor, budget)),
@@ -1867,7 +1867,7 @@ impl<'a> Thermal<'a> {
     /// reachability check of its own, so an unguarded `warmest_anchor` call
     /// would teleport a stranded creature across an impassable edge.
     /// type-audit: bare-ok(count: budget)
-    fn preferred_anchor(&self, position: &RoomAddr, budget: usize) -> Option<AnchorId> {
+    fn preferred_anchor(&self, position: &Facet, budget: usize) -> Option<AnchorId> {
         if self.deviation(position) <= self.niche.width {
             return None;
         }
@@ -1949,7 +1949,7 @@ impl<'a> Drive for Thermal<'a> {
     }
     fn candidate_actions(&self, view: &Perceived, budget: usize) -> Vec<Action> {
         // Make the within-room step visible to `arbitrate`'s multi-drive
-        // utility scan: its fixed candidate set is built from `RoomAddr`
+        // utility scan: its fixed candidate set is built from `Facet`
         // neighbours and cannot express an `AnchorId`. Rather than a second,
         // independent enumeration of the interior's anchors (which could
         // drift from what `proposal` itself would choose), this simply
@@ -2041,18 +2041,18 @@ impl<'a> Drive for Thermal<'a> {
 /// CLOSEST to `optimum` (minimizing `|temp − optimum|`), or `None` when no
 /// neighbour is strictly more comfortable than `from` itself. A near-copy of
 /// [`downhill_step`] — the same three-neighbour scan and the same
-/// `total_cmp`-then-ascending-`RoomAddr` tie-break — but the objective is the
+/// `total_cmp`-then-ascending-`Facet` tie-break — but the objective is the
 /// minimized absolute temperature deviation rather than elevation, so a
 /// too-cold cell steps toward a warmer neighbour and a too-hot one toward a
 /// cooler, both toward the optimum.
 fn comfort_step(
-    from: &RoomAddr,
+    from: &Facet,
     optimum: f64,
     terrain: &dyn Terrain,
     day: WorldTime,
-) -> Option<RoomAddr> {
-    let deviation = |room: &RoomAddr| (terrain.temperature(room, day) - optimum).abs();
-    let mut best: Option<(RoomAddr, f64)> = None;
+) -> Option<Facet> {
+    let deviation = |room: &Facet| (terrain.temperature(room, day) - optimum).abs();
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let dev = deviation(&n);
         let keep_existing = match &best {
@@ -2185,7 +2185,7 @@ pub fn waking_offset(activity: ActivityCycle) -> f64 {
 pub(crate) fn next_awake_day(
     activity: ActivityCycle,
     terrain: &dyn Terrain,
-    room: &RoomAddr,
+    room: &Facet,
     day: f64,
 ) -> f64 {
     let limit = day + 1.5;
@@ -2207,12 +2207,7 @@ pub(crate) fn next_awake_day(
 }
 
 /// (true solar altitude is deferred).
-fn is_awake(
-    activity: ActivityCycle,
-    terrain: &dyn Terrain,
-    room: &RoomAddr,
-    day: WorldTime,
-) -> bool {
+fn is_awake(activity: ActivityCycle, terrain: &dyn Terrain, room: &Facet, day: WorldTime) -> bool {
     match terrain.solar_altitude(room, day) {
         // No day/night cycle (a tidally locked world): the solar zeitgeber is
         // absent, so the wake-gate cannot fire — the creature is effectively
@@ -2248,7 +2243,7 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 pub struct Fatigue {
     /// The creature's home — reserved for a future rest-quality refinement
     /// (unused by the proposal today: rest is in place).
-    pub home: RoomAddr,
+    pub home: Facet,
 }
 
 impl Drive for Fatigue {
@@ -2336,12 +2331,7 @@ const PREY_LATENT_SCALE: f64 = 1.0;
 /// carnivore" branch (spec §0). A locked world (no solar cycle) counts as lit
 /// for the sun-fed (its permanently-lit hemisphere); no autotroph is an agent
 /// yet, so this is a reserved seam either way.
-fn food_value(
-    niche: &ResourceVector,
-    terrain: &dyn Terrain,
-    room: &RoomAddr,
-    day: WorldTime,
-) -> f64 {
+fn food_value(niche: &ResourceVector, terrain: &dyn Terrain, room: &Facet, day: WorldTime) -> f64 {
     let productivity = terrain.forage_value(room);
     let material = niche.weight(PLANT_FORAGE) + niche.weight(ANIMAL_PREY);
     let light = match terrain.solar_altitude(room, day) {
@@ -2368,19 +2358,19 @@ fn food_value(
 /// `from` itself (boxed in / a local food optimum — the creature holds). The
 /// hunger analogue of [`comfort_step`], maximizing food rather than minimizing
 /// thermal deviation; same three-neighbour scan and the same
-/// `total_cmp`-then-ascending-`RoomAddr` tie-break.
+/// `total_cmp`-then-ascending-`Facet` tie-break.
 fn forage_step(
-    from: &RoomAddr,
+    from: &Facet,
     niche: &ResourceVector,
     terrain: &dyn Terrain,
     day: WorldTime,
-) -> Option<RoomAddr> {
-    let value = |room: &RoomAddr| food_value(niche, terrain, room, day);
-    let mut best: Option<(RoomAddr, f64)> = None;
+) -> Option<Facet> {
+    let value = |room: &Facet| food_value(niche, terrain, room, day);
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let v = value(&n);
         let take = match &best {
-            // Higher food wins; ties break to the smaller RoomAddr (replace the
+            // Higher food wins; ties break to the smaller Facet (replace the
             // incumbent only when the candidate is strictly richer, or equal but
             // a smaller address).
             Some((ba, bv)) => v.total_cmp(bv).then_with(|| ba.cmp(&n)).is_gt(),
@@ -2409,7 +2399,7 @@ fn forage_step(
 pub fn hunger_at(
     ledger: &Ledger,
     entity: EntityId,
-    home: &RoomAddr,
+    home: &Facet,
     t: WorldTime,
     terrain: &dyn Terrain,
     class: MetabolicClass,
@@ -2452,7 +2442,7 @@ pub struct Hunger<'a> {
 impl<'a> Hunger<'a> {
     /// The food-value at `room` for this creature's niche — the drive's own
     /// perception of a cell.
-    fn food_value_at(&self, room: &RoomAddr) -> f64 {
+    fn food_value_at(&self, room: &Facet) -> f64 {
         food_value(&self.niche, self.terrain, room, self.day)
     }
 }
@@ -2565,7 +2555,7 @@ pub struct Danger<'a> {
     /// neighbours, so reading neighbours again would double-count) and folded
     /// ADDITIVELY into the felt threat, scaled by [`ALARM_SCALE`]. `None` ⇒ no
     /// contagion — the current (pre-Alarm) behaviour, byte-identical.
-    pub alarm: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
+    pub alarm: Option<&'a std::collections::BTreeMap<Facet, f64>>,
     /// The remembered DREAD map (The Shudder): the TRANSIENT subset of this
     /// creature's hazard memory — cells whose present terrain is safe but where
     /// a herd's alarm once frightened it — keyed to the remembered alarm
@@ -2575,7 +2565,7 @@ pub struct Danger<'a> {
     /// Provenance is the only difference from `alarm`: that one is SENSED
     /// (present, external, a per-tick field), this one is BELIEVED (past,
     /// internal, a fold over committed history).
-    pub dread: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
+    pub dread: Option<&'a std::collections::BTreeMap<Facet, f64>>,
 }
 
 /// The boldness at which fear is felt AS IS (unscaled) — the steady value the
@@ -2601,7 +2591,7 @@ fn mettle_factor(boldness: f64) -> f64 {
 /// [`threat_value`], boldness applied separately). The alarm-free terrain half
 /// of the drive's urgency, factored out so the live drive and
 /// [`believed_hazard`]'s memory read the SAME danger — one source of truth.
-fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64 {
+fn threat_field(room: &Facet, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64 {
     let here = threat_value(niche, &terrain.hazards(room));
     room.neighbors()
         .iter()
@@ -2623,7 +2613,7 @@ fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> 
 /// `believed_hazard` → `frightened_at` → here as an empty roster, so the field
 /// build sees a terrain-only replay and never re-enters the transient path.
 fn alarm_at(
-    room: &RoomAddr,
+    room: &Facet,
     day: WorldTime,
     roster: &[Body],
     terrain: &dyn Terrain,
@@ -2649,7 +2639,7 @@ fn alarm_at(
 /// this to The Haunt's terrain-only verdict (the recursion base case / the
 /// seed-42 path, where no primary-afraid emitter ever raises an alarm).
 fn frightened_at(
-    room: &RoomAddr,
+    room: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
     day: WorldTime,
@@ -2677,13 +2667,13 @@ impl<'a> Danger<'a> {
     /// The creature's OWN felt threat at `room` (The Bane): its threat niche
     /// dotted with the cell's hazards. Per-kind — two species read the same cell
     /// differently. (Boldness is applied separately, in `urgency`.)
-    fn threat_at(&self, room: &RoomAddr) -> f64 {
+    fn threat_at(&self, room: &Facet) -> f64 {
         threat_value(&self.threat_niche, &self.terrain.hazards(room))
     }
 
     /// The remembered dread at `room` (`0.0` when unremembered or `None`).
     /// type-audit: bare-ok(ratio: return)
-    fn dread_at(&self, room: &RoomAddr) -> f64 {
+    fn dread_at(&self, room: &Facet) -> f64 {
         self.dread.and_then(|m| m.get(room)).copied().unwrap_or(0.0)
     }
 
@@ -2694,7 +2684,7 @@ impl<'a> Danger<'a> {
     /// always exists), dread sits on now-SAFE ground: without it in the
     /// gradient a dreading creature has nowhere to go and reads `Lost`.
     /// type-audit: bare-ok(ratio: return)
-    fn felt_threat_at(&self, room: &RoomAddr) -> f64 {
+    fn felt_threat_at(&self, room: &Facet) -> f64 {
         self.threat_at(room) + ALARM_SCALE * self.dread_at(room)
     }
 }
@@ -2805,22 +2795,22 @@ impl<'a> Drive for Danger<'a> {
 /// now-safe, so terrain alone offers no gradient to step down. The sign-flip of
 /// [`comfort_step`] / [`forage_step`]: minimize threat rather than thermal
 /// deviation or maximize food; same three-neighbour scan and
-/// `total_cmp`-then-ascending-`RoomAddr` tie-break.
+/// `total_cmp`-then-ascending-`Facet` tie-break.
 fn flee_step(
-    from: &RoomAddr,
+    from: &Facet,
     terrain: &dyn Terrain,
     niche: &ThreatNiche,
-    dread: Option<&std::collections::BTreeMap<RoomAddr, f64>>,
-) -> Option<RoomAddr> {
-    let threat = |room: &RoomAddr| {
+    dread: Option<&std::collections::BTreeMap<Facet, f64>>,
+) -> Option<Facet> {
+    let threat = |room: &Facet| {
         threat_value(niche, &terrain.hazards(room))
             + ALARM_SCALE * dread.and_then(|m| m.get(room)).copied().unwrap_or(0.0)
     };
-    let mut best: Option<(RoomAddr, f64)> = None;
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors() {
         let t = threat(&n);
         let keep_existing = match &best {
-            // Lower threat wins; ties break to the smaller RoomAddr.
+            // Lower threat wins; ties break to the smaller Facet.
             Some((ba, bt)) => t.total_cmp(bt).then_with(|| n.cmp(ba)).is_ge(),
             None => false,
         };
@@ -2965,7 +2955,7 @@ struct HomeNavState {
     avoid_epoch: u64,
     /// The avoid set as of the most recent `home_nav` call, compared against
     /// on the NEXT call to detect a belief change.
-    last_avoid: std::collections::BTreeSet<RoomAddr>,
+    last_avoid: std::collections::BTreeSet<Facet>,
     /// `(pos, home, budget, avoid_epoch, feature)` as of the last real search
     /// for this entity — `None` before its first `home_nav` call. `home`/
     /// `budget` are part of the key (Task 4 fix round, key hardening): they
@@ -2975,7 +2965,7 @@ struct HomeNavState {
     /// future caller asking about a DIFFERENT home or budget for the same
     /// entity must miss the cache, not silently read a stale answer computed
     /// for a different question.
-    cached: Option<(RoomAddr, RoomAddr, usize, u64, HomeNavFeature)>,
+    cached: Option<(Facet, Facet, usize, u64, HomeNavFeature)>,
 }
 
 /// `home_nav`'s cross-tick, per-entity backing (the-waymark, Task 4 — the
@@ -3048,16 +3038,16 @@ impl HomeNavCache {
     /// counts it in `searches`. `mesh_memo` (the-waymark, Task 6 — ledger #7's
     /// re-plan) is threaded straight through to a real search's
     /// [`crate::action::plan_to_room_memo`] call, so a MISS no longer recomputes
-    /// `RoomAddr::neighbors` from scratch on every `astar` expansion when the
+    /// `Facet::neighbors` from scratch on every `astar` expansion when the
     /// caller has a session-lived [`RoomMeshMemo`] to share — a cache HIT
     /// above never touches it at all.
     #[allow(clippy::too_many_arguments)]
     fn home_nav(
         &mut self,
         entity: EntityId,
-        pos: &RoomAddr,
-        home: &RoomAddr,
-        avoid: &std::collections::BTreeSet<RoomAddr>,
+        pos: &Facet,
+        home: &Facet,
+        avoid: &std::collections::BTreeSet<Facet>,
         budget: usize,
         mesh_memo: &mut RoomMeshMemo,
     ) -> HomeNavFeature {
@@ -3111,7 +3101,7 @@ impl HomeNavCache {
 /// costs nothing beyond what this seam always paid. Likewise builds a
 /// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
-pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
+pub fn decide(view: &Perceived, home: &Facet, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
     // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
@@ -3184,7 +3174,7 @@ pub struct Disposition {
 ///   releases below `act − h`, and is switched for a challenger only when the
 ///   challenger's best-action utility beats the incumbent's by `δ`. With no
 ///   active drive the NPC falls to `Homing` (a step toward `home`) or `Idle`.
-/// - **Determinism:** candidate actions are scanned in ascending-`RoomAddr`
+/// - **Determinism:** candidate actions are scanned in ascending-`Facet`
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
@@ -3287,7 +3277,7 @@ fn cached_serviceability(
 #[allow(clippy::too_many_arguments)]
 pub fn arbitrate(
     view: &Perceived,
-    home: &RoomAddr,
+    home: &Facet,
     drives: &[&dyn Drive],
     disposition: &Disposition,
     incoming: Mode,
@@ -3492,7 +3482,7 @@ pub fn arbitrate(
             .sum()
     };
 
-    // The max-utility action, earliest-on-ties (ascending RoomAddr, Drink last).
+    // The max-utility action, earliest-on-ties (ascending Facet, Drink last).
     let mut best_i = 0usize;
     let mut best_u = utility(&mut proposal_cache, &candidates[0]);
     for (i, a) in candidates.iter().enumerate().skip(1) {
@@ -3915,7 +3905,7 @@ pub fn alarm_field(
     npcs: &[Body],
     terrain: &dyn Terrain,
     day: WorldTime,
-) -> std::collections::BTreeMap<RoomAddr, f64> {
+) -> std::collections::BTreeMap<Facet, f64> {
     let mut memo = PrimaryAfraidMemo::new();
     alarm_field_memo(frozen, npcs, terrain, day, &mut memo)
 }
@@ -3930,8 +3920,8 @@ pub fn alarm_field_memo(
     terrain: &dyn Terrain,
     day: WorldTime,
     memo: &mut PrimaryAfraidMemo,
-) -> std::collections::BTreeMap<RoomAddr, f64> {
-    let mut field: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+) -> std::collections::BTreeMap<Facet, f64> {
+    let mut field: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
     for npc in npcs {
         let pos = agent_position(frozen, npc, day);
         // THE CHEAP GATE (The Phantom perf, byte-identical). A creature can be
@@ -4062,7 +4052,7 @@ const INTERIOR_WARMTH_BUDGET: usize = 64;
 /// answer; [`Thermal::interior`]'s own `None` case already reads as the
 /// correct identity (no interior applies) regardless of which of these two
 /// reasons produced it.
-fn landing_interior(pos: &RoomAddr, terrain: &dyn Terrain) -> Option<(Interior, AnchorId)> {
+fn landing_interior(pos: &Facet, terrain: &dyn Terrain) -> Option<(Interior, AnchorId)> {
     let interior = interior_of(pos, terrain);
     let kind = seam_kind(terrain.is_built(pos));
     let anchor = landing(&interior, kind)?;
@@ -4071,12 +4061,7 @@ fn landing_interior(pos: &RoomAddr, terrain: &dyn Terrain) -> Option<(Interior, 
 
 /// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
 /// `provenance` naming why.
-pub(crate) fn agent_at_fact(
-    entity: EntityId,
-    target: &RoomAddr,
-    day: f64,
-    provenance: &str,
-) -> Fact {
+pub(crate) fn agent_at_fact(entity: EntityId, target: &Facet, day: f64, provenance: &str) -> Fact {
     Fact {
         subject: entity,
         predicate: AGENT_AT.to_string(),
@@ -4095,7 +4080,7 @@ pub(crate) fn agent_at_fact(
 /// over it is the synthetic complement to the real-world health sweep — the
 /// same seam, a hand-built scenario instead of a derived population. Typed
 /// throughout (no primitive at the boundary), so it needs no type-audit tag.
-pub fn place_agent(entity: EntityId, room: &RoomAddr, day: WorldTime) -> Fact {
+pub fn place_agent(entity: EntityId, room: &Facet, day: WorldTime) -> Fact {
     agent_at_fact(entity, room, day.day(), "harness-placement")
 }
 
@@ -4211,7 +4196,7 @@ enum HoldStep {
 /// that redundancy.
 fn hold_step(
     day: f64,
-    pos: &RoomAddr,
+    pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
     drive: f64,
@@ -4284,13 +4269,13 @@ fn hold_step(
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
     day: f64,
-    pos: &RoomAddr,
+    pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
-    believed: &mut Option<RoomAddr>,
+    believed: &mut Option<Facet>,
     hazard: &HazardMemory,
-    alarm: &std::collections::BTreeMap<RoomAddr, f64>,
-    visited: &std::collections::BTreeSet<RoomAddr>,
+    alarm: &std::collections::BTreeMap<Facet, f64>,
+    visited: &std::collections::BTreeSet<Facet>,
     last_drank: f64,
     last_ate: f64,
     last_rested: f64,
@@ -4502,13 +4487,13 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
 fn catch_up(
     entry_day: f64,
     horizon: f64,
-    pos: &RoomAddr,
+    pos: &Facet,
     npc: &Body,
     terrain: &dyn Terrain,
-    believed: &mut Option<RoomAddr>,
+    believed: &mut Option<Facet>,
     hazard: &HazardMemory,
-    alarm: &std::collections::BTreeMap<RoomAddr, f64>,
-    visited: &std::collections::BTreeSet<RoomAddr>,
+    alarm: &std::collections::BTreeMap<Facet, f64>,
+    visited: &std::collections::BTreeSet<Facet>,
     occupancy: &mut Occupancy,
     interior: &Interior,
     mut mode: Mode,
@@ -4909,7 +4894,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
 /// Tick-local and re-derived, never persisted — like [`Mode`], which it carries.
 struct WalkState {
     /// Where the creature currently stands.
-    pos: RoomAddr,
+    pos: Facet,
     /// How far into the interval the walk has got.
     day: f64,
     /// The day of its most recent drink, `frozen`-seeded and advanced by this
@@ -4921,9 +4906,9 @@ struct WalkState {
     last_ate: f64,
     /// The water source it believes in, seeded from the band's pooled belief and
     /// grown whenever it stands in water.
-    believed: Option<RoomAddr>,
+    believed: Option<Facet>,
     /// The cells this walk has already stood on — the explorer's frontier.
-    visited: std::collections::BTreeSet<RoomAddr>,
+    visited: std::collections::BTreeSet<Facet>,
     /// How many decisions this walk has taken, against `MAX_STEPS`.
     steps: usize,
     /// The commitment mode carried across this walk's steps (hysteresis).
@@ -4976,7 +4961,7 @@ impl WalkState {
         // The Tidings: seed from the BAND's pooled belief (co-located
         // members share what they know), not the creature's alone.
         let believed = shared_believed_water(frozen, npc, band, from, terrain, PLAN_BUDGET);
-        let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         visited.insert(pos.clone());
         let steps = 0usize;
         // The commitment mode, carried across this walk's steps (session-
@@ -5035,7 +5020,7 @@ impl<'a> DriveMovements<'a> {
         npc: &Body,
         st: &mut WalkState,
         occupancy: &mut Occupancy,
-        alarm: &std::collections::BTreeMap<RoomAddr, f64>,
+        alarm: &std::collections::BTreeMap<Facet, f64>,
         memory: &HazardMemory,
         out: &mut Vec<Fact>,
         mesh_memo: &mut RoomMeshMemo,
@@ -5407,17 +5392,17 @@ impl<'a> DriveMovements<'a> {
 
 /// The nearer-to-home of an existing belief and a newly-perceived water room.
 /// The tick's incremental fold — and its tie-break MUST match `believed_water`'s
-/// (smaller `RoomAddr` wins on an equal hop-distance), or a mid-walk incremental
+/// (smaller `Facet` wins on an equal hop-distance), or a mid-walk incremental
 /// belief could disagree with the same belief re-derived from the committed
 /// history, making the chosen source faintly sensitive to `wait` granularity
 /// (the-surmise T3+T4 review). Aligned here so the two folds are identical.
 fn nearer_to_home(
-    home: &RoomAddr,
-    current: Option<RoomAddr>,
-    found: RoomAddr,
+    home: &Facet,
+    current: Option<Facet>,
+    found: Facet,
     budget: usize,
-) -> Option<RoomAddr> {
-    let d = |r: &RoomAddr| {
+) -> Option<Facet> {
+    let d = |r: &Facet| {
         plan_to_room(home, r, budget, &std::collections::BTreeSet::new()).map(|p| p.len())
     };
     match current {
@@ -5426,8 +5411,8 @@ fn nearer_to_home(
             (Some(dc), Some(df)) => Some(match df.cmp(&dc) {
                 std::cmp::Ordering::Less => found,
                 std::cmp::Ordering::Greater => c,
-                // Tie on hop-distance: smaller RoomAddr wins (matches
-                // `believed_water`'s `min_by((hop, RoomAddr))`).
+                // Tie on hop-distance: smaller Facet wins (matches
+                // `believed_water`'s `min_by((hop, Facet))`).
                 std::cmp::Ordering::Equal => std::cmp::min(c, found),
             }),
             (None, Some(_)) => Some(found),
@@ -5447,12 +5432,12 @@ fn nearer_to_home(
 /// [`affect_of_memo_occupied`] (rider (b)) — both thread whatever memo THEIR
 /// own caller supplies, never build one silently inline.
 fn lowest_unvisited_neighbor_memo(
-    from: &RoomAddr,
-    visited: &std::collections::BTreeSet<RoomAddr>,
+    from: &Facet,
+    visited: &std::collections::BTreeSet<Facet>,
     terrain: &dyn Terrain,
     memo: &mut RoomMeshMemo,
-) -> Option<RoomAddr> {
-    let mut best: Option<(RoomAddr, f64)> = None;
+) -> Option<Facet> {
+    let mut best: Option<(Facet, f64)> = None;
     for n in from.neighbors_memo(memo) {
         if visited.contains(&n) {
             continue;
@@ -5684,7 +5669,7 @@ pub fn derive_wild_npcs(
         .into_iter()
         .enumerate()
         .map(|(i, (species, position))| {
-            let home = RoomAddr::containing(position, walk_depth(ctx));
+            let home = Facet::containing(position, walk_depth(ctx));
             let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
                 .unwrap_or_else(|| home.clone());
             let activity = species_activity(world, &species);
@@ -5802,9 +5787,9 @@ const DEFAULT_TEMPERATURE_NICHE: ConditionResponse = ConditionResponse {
 
 /// The room containing a settlement's cell at walk depth (mirrors
 /// `mint_flagship`, via the shared `settlement_position` helper).
-fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> RoomAddr {
+fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> Facet {
     let pos = settlement_position(world, settlement);
-    RoomAddr::containing(pos, walk_depth(ctx))
+    Facet::containing(pos, walk_depth(ctx))
 }
 
 /// The set of packed room ids a settlement's territory occupies — the real
@@ -5823,14 +5808,14 @@ fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> 
 /// honest about) — a later campaign's to ask, not an oversight here. Built
 /// once, at session/sweep start, and injected into `LocaleTerrain` the same
 /// way the predator/prey fields are (`with_fields`) — a domain/window can't
-/// reach up to `hornvale_settlement` on its own. `RoomAddr::pack`'s only
+/// reach up to `hornvale_settlement` on its own. `Facet::pack`'s only
 /// failure mode is a path past `MAX_DEPTH`, never reached at a session's own
 /// walk depth, so a pack failure is silently dropped rather than panicking —
 /// the same "coarse constrains fine, never blocks" posture the rest of this
 /// module takes toward world-derived data. `BTreeSet`, never `HashSet`
-/// (constitutional): `RoomId` is the packed, `Ord` form of a `RoomAddr`, the
+/// (constitutional): `FacetId` is the packed, `Ord` form of a `Facet`, the
 /// natural key.
-pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTreeSet<RoomId> {
+pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTreeSet<FacetId> {
     hornvale_settlement::all_settlements(world)
         .iter()
         .filter_map(|v| settlement_room(world, ctx, v.id).pack().ok())
@@ -5883,7 +5868,7 @@ fn parse_activity(t: &str) -> ActivityCycle {
 /// follows suit rather than inventing a parallel identity for the same thing.
 ///
 /// Two creatures standing at the same anchor is intentional, not an
-/// oversight: the map is a `BTreeMap<EntityId, (RoomAddr, AnchorId)>`, one
+/// oversight: the map is a `BTreeMap<EntityId, (Facet, AnchorId)>`, one
 /// entry per creature, and nothing here enforces exclusivity over the value
 /// side. A hearth crowded with three NPCs is a legitimate occupancy, the same
 /// way a room can hold more than one creature at the coarser scale.
@@ -5902,7 +5887,7 @@ fn parse_activity(t: &str) -> ActivityCycle {
 /// belongs to the room it is about to pair it with, via [`Self::anchor_in`],
 /// before ever handing it to [`crate::interior::warmth_at`].
 #[derive(Debug, Default)]
-pub struct Occupancy(std::collections::BTreeMap<EntityId, (RoomAddr, AnchorId)>);
+pub struct Occupancy(std::collections::BTreeMap<EntityId, (Facet, AnchorId)>);
 
 impl Occupancy {
     /// Where `who` currently stands, or `None` if it has not arrived (or has
@@ -5927,7 +5912,7 @@ impl Occupancy {
     /// its own room-only answer (e.g. [`landing_interior`]) rather than risk
     /// [`crate::interior::warmth_at`] indexing a foreign `Interior` with a
     /// stale offset.
-    pub fn anchor_in(&self, who: EntityId, room: &RoomAddr) -> Option<AnchorId> {
+    pub fn anchor_in(&self, who: EntityId, room: &Facet) -> Option<AnchorId> {
         self.0
             .get(&who)
             .and_then(|(r, anchor)| (r == room).then_some(*anchor))
@@ -5942,7 +5927,7 @@ impl Occupancy {
     /// anchor (see the struct doc) so a later, room-checked read
     /// ([`Self::anchor_in`]) can tell this arrival apart from one in some
     /// other room.
-    pub fn arrive(&mut self, who: EntityId, room: &RoomAddr, interior: &Interior, kind: SeamKind) {
+    pub fn arrive(&mut self, who: EntityId, room: &Facet, interior: &Interior, kind: SeamKind) {
         if let Some(at) = landing(interior, kind) {
             self.0.insert(who, (room.clone(), at));
         }
@@ -5990,7 +5975,7 @@ impl Occupancy {
     /// otherwise have occurred. Callers elsewhere should almost always
     /// prefer [`Self::walk`] — this exists for exactly the one case where
     /// stepping through is what the budget was spent trying to avoid.
-    pub fn place(&mut self, who: EntityId, room: &RoomAddr, at: AnchorId) {
+    pub fn place(&mut self, who: EntityId, room: &Facet, at: AnchorId) {
         self.0.insert(who, (room.clone(), at));
     }
 
@@ -6041,7 +6026,7 @@ mod tests {
     #[allow(clippy::too_many_arguments)]
     fn arb(
         view: &Perceived,
-        home: &RoomAddr,
+        home: &Facet,
         drives: &[&dyn Drive],
         latency: f64,
         horizon: f64,
@@ -6075,7 +6060,7 @@ mod tests {
         ledger: &mut Ledger,
         reg: &ConceptRegistry,
         entity: EntityId,
-        room: &RoomAddr,
+        room: &Facet,
         day: f64,
     ) {
         ledger
@@ -6370,9 +6355,9 @@ mod tests {
         // DETERMINISM UNDER GENUINE TIES (the tie-break the reload/isolation test
         // can't reach — it never has two equal-distance candidates): two water
         // sources the SAME hop-distance from home (two neighbours, both 1 hop) must
-        // resolve to the smaller-`RoomAddr` one, identically every run and across
+        // resolve to the smaller-`Facet` one, identically every run and across
         // reload. A nondeterministic (HashSet) accumulation would make this flaky;
-        // the `BTreeSet` + `min_by((hop, RoomAddr))` fold makes it total.
+        // the `BTreeSet` + `min_by((hop, Facet))` fold makes it total.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
@@ -6416,7 +6401,7 @@ mod tests {
         assert_eq!(
             got,
             Some(smaller.clone()),
-            "an equal-hop tie resolves to the smaller RoomAddr, not sighting order"
+            "an equal-hop tie resolves to the smaller Facet, not sighting order"
         );
         let json = serde_json::to_string(&ledger).unwrap();
         let reloaded: Ledger = serde_json::from_str(&json).unwrap();
@@ -6436,7 +6421,7 @@ mod tests {
     /// A steady mortal NPC for the believed_hazard folds — the default mortal
     /// threat niche weights UNCANNY `1`, so a planted UNCANNY hazard reads as
     /// felt threat directly, and steady boldness (`0.5`) leaves it unscaled.
-    fn haunt_npc(entity: EntityId, home: RoomAddr) -> Body {
+    fn haunt_npc(entity: EntityId, home: Facet) -> Body {
         Body {
             entity,
             village: None,
@@ -6464,12 +6449,7 @@ mod tests {
     /// label. Mirrors the `Body` literal repeated across the `believed_water`
     /// tests above — factored here only to keep the four-band-member Tidings
     /// tests below from repeating it four times over.
-    fn shared_belief_npc(
-        entity: EntityId,
-        home: RoomAddr,
-        resource: RoomAddr,
-        label: &str,
-    ) -> Body {
+    fn shared_belief_npc(entity: EntityId, home: Facet, resource: Facet, label: &str) -> Body {
         Body {
             entity,
             village: None,
@@ -6529,7 +6509,7 @@ mod tests {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0); // safe, visited ([1,0,0])
         let scary = raddr(-1.0); // UNCANNY 0.8 ≥ act, visited → shunned ([-1,0,0])
-        let unvisited_scary = RoomAddr::containing([0.0, 1.0, 0.0], 6); // dangerous, never stood in ([0,1,0])
+        let unvisited_scary = Facet::containing([0.0, 1.0, 0.0], 6); // dangerous, never stood in ([0,1,0])
         let t = PlantedTerrain::hazard(
             std::iter::empty(),
             [(scary.clone(), 0.8), (unvisited_scary.clone(), 0.8)],
@@ -6544,7 +6524,7 @@ mod tests {
             &t,
             &[],
         );
-        let expected: std::collections::BTreeSet<RoomAddr> = [scary].into_iter().collect();
+        let expected: std::collections::BTreeSet<Facet> = [scary].into_iter().collect();
         assert_eq!(
             got, expected,
             "shuns exactly the visited-and-dangerous cell"
@@ -6574,7 +6554,7 @@ mod tests {
             &t,
             &[],
         );
-        let expected: std::collections::BTreeSet<RoomAddr> = [scary].into_iter().collect();
+        let expected: std::collections::BTreeSet<Facet> = [scary].into_iter().collect();
         assert_eq!(got, expected, "empty roster ⇒ The Haunt's any-visit set");
     }
 
@@ -8156,7 +8136,7 @@ mod tests {
 
     #[test]
     fn room_text_round_trips() {
-        let home = hornvale_kernel::RoomAddr::containing([1.0, 0.0, 0.0], 6);
+        let home = hornvale_kernel::Facet::containing([1.0, 0.0, 0.0], 6);
         let dest = home.neighbors()[0].clone();
         for r in [home, dest] {
             assert_eq!(room_from_text(&room_to_text(&r)), r);
@@ -8389,8 +8369,8 @@ mod tests {
         );
     }
 
-    fn addr(seed: f64) -> RoomAddr {
-        RoomAddr::containing([seed, 0.0, 0.0], 6)
+    fn addr(seed: f64) -> Facet {
+        Facet::containing([seed, 0.0, 0.0], 6)
     }
 
     #[test]
@@ -8465,8 +8445,8 @@ mod tests {
         assert_eq!(decide(&away_not_thirsty, &home, &p, 0), Intent::Hold);
     }
 
-    fn raddr(seed: f64) -> RoomAddr {
-        RoomAddr::containing([seed, 0.0, 0.0], 6)
+    fn raddr(seed: f64) -> Facet {
+        Facet::containing([seed, 0.0, 0.0], 6)
     }
 
     #[test]
@@ -8585,7 +8565,7 @@ mod tests {
         // Elevation still steers the exploration prior (downhill), separate
         // from fresh-water truth: `water` must be the uniquely lowest
         // neighbor for the comment above's "very first thirsty step"
-        // guarantee to hold deterministically (not by RoomAddr tie-break
+        // guarantee to hold deterministically (not by Facet tie-break
         // luck among equally-INFINITY neighbors).
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
@@ -8925,7 +8905,7 @@ mod tests {
         let ledger = Ledger::default();
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
-        let water = RoomAddr::containing([-1.0, 0.0, 0.0], 6); // irrelevant now: no water exists anywhere
+        let water = Facet::containing([-1.0, 0.0, 0.0], 6); // irrelevant now: no water exists anywhere
         let npc = Body {
             entity: e,
             village: None,
@@ -9344,7 +9324,7 @@ mod tests {
             straight.len() >= 4,
             "need a path with an interior cell not adjacent to either endpoint"
         );
-        let path_cells: Vec<RoomAddr> = straight
+        let path_cells: Vec<Facet> = straight
             .iter()
             .map(|a| match a {
                 Action::MoveTo(r) => r.clone(),
@@ -9412,7 +9392,7 @@ mod tests {
         };
 
         // The committed positions the tick EMITTED (day ≥ from), decoded to rooms.
-        let walked = |ledger: &Ledger, e: EntityId| -> Vec<RoomAddr> {
+        let walked = |ledger: &Ledger, e: EntityId| -> Vec<Facet> {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
@@ -9517,7 +9497,7 @@ mod tests {
         let empty = std::collections::BTreeSet::new();
         let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
         assert!(straight.len() >= 4, "need a path with an interior cell");
-        let path_cells: Vec<RoomAddr> = straight
+        let path_cells: Vec<Facet> = straight
             .iter()
             .map(|a| match a {
                 Action::MoveTo(r) => r.clone(),
@@ -9700,7 +9680,7 @@ mod tests {
         };
 
         // The committed positions the tick EMITTED (day ≥ from), decoded to rooms.
-        let walked = |ledger: &Ledger, e: EntityId, from_day: f64| -> Vec<RoomAddr> {
+        let walked = |ledger: &Ledger, e: EntityId, from_day: f64| -> Vec<Facet> {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
@@ -9800,7 +9780,7 @@ mod tests {
         let empty = std::collections::BTreeSet::new();
         let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
         assert!(straight.len() >= 4, "need a path with an interior cell");
-        let path_cells: Vec<RoomAddr> = straight
+        let path_cells: Vec<Facet> = straight
             .iter()
             .map(|a| match a {
                 Action::MoveTo(r) => r.clone(),
@@ -9825,7 +9805,7 @@ mod tests {
         let far = raddr(-1.0);
         let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
 
-        let npc_at = |entity: EntityId, home: RoomAddr, label: &str| Body {
+        let npc_at = |entity: EntityId, home: Facet, label: &str| Body {
             entity,
             village: None,
             perception: hornvale_species::PerceptionVector::MANIKIN,
@@ -9927,7 +9907,7 @@ mod tests {
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
-        let walked: Vec<RoomAddr> = next
+        let walked: Vec<Facet> = next
             .find(AGENT_AT)
             .filter(|f| f.subject == a_e)
             .filter(|f| f.day.map(|d| d >= now).unwrap_or(false))
@@ -9974,33 +9954,33 @@ mod tests {
     /// an elevation threshold — `Terrain::is_fresh_water` is authoritative).
     #[derive(Default)]
     struct PlantedTerrain {
-        elevations: std::collections::BTreeMap<RoomAddr, f64>,
-        fresh: std::collections::BTreeSet<RoomAddr>,
+        elevations: std::collections::BTreeMap<Facet, f64>,
+        fresh: std::collections::BTreeSet<Facet>,
         /// Planted per-room temperatures (°C) for the thermal-drive tests;
         /// INFINITY elsewhere (the thirst tests never read temperature).
-        temps: std::collections::BTreeMap<RoomAddr, f64>,
+        temps: std::collections::BTreeMap<Facet, f64>,
         /// Planted per-room food productivity for the hunger-drive tests;
         /// rooms without an entry read `DEFAULT_FORAGE` (fed) — so the thirst/
         /// thermal tests, which plant none, keep their creatures fed and
         /// hunger-inactive (byte-identical to pre-Provender behaviour).
-        forage: std::collections::BTreeMap<RoomAddr, f64>,
+        forage: std::collections::BTreeMap<Facet, f64>,
         /// Planted per-room hazards for the danger-drive tests; rooms without an
         /// entry read `Hazards::ZERO` (safe) — so the other tests, which plant
         /// none, are danger-inactive. Named `threat` for continuity; the
         /// `hazard()` constructor plants a scalar as the UNCANNY axis (the axis a
         /// mortal niche weights `1`, so the pre-Bane danger tests are byte-
         /// identical), and thermal tests plant `Hazards` directly.
-        threat: std::collections::BTreeMap<RoomAddr, Hazards>,
+        threat: std::collections::BTreeMap<Facet, Hazards>,
         /// Planted per-room prey presence (The Teeth's hunt tests); rooms without
         /// an entry read `0.0` (prey-empty) — so every other test is byte-
         /// identical (a carnivore there reads only ordinary productivity).
-        prey: std::collections::BTreeMap<RoomAddr, f64>,
+        prey: std::collections::BTreeMap<Facet, f64>,
     }
     impl PlantedTerrain {
         /// No elevation data — just a set of fresh-water rooms (the common
         /// case for the belief-fold tests, which never exercise
         /// `downhill_step`/`nearest_water`'s elevation reads).
-        fn fresh_only(rooms: impl IntoIterator<Item = RoomAddr>) -> Self {
+        fn fresh_only(rooms: impl IntoIterator<Item = Facet>) -> Self {
             Self {
                 fresh: rooms.into_iter().collect(),
                 ..Default::default()
@@ -10008,7 +9988,7 @@ mod tests {
         }
         /// No fresh water anywhere — just planted elevations (the
         /// exploration/downhill tests, which never exercise belief).
-        fn dry(elevations: std::collections::BTreeMap<RoomAddr, f64>) -> Self {
+        fn dry(elevations: std::collections::BTreeMap<Facet, f64>) -> Self {
             Self {
                 elevations,
                 ..Default::default()
@@ -10017,7 +9997,7 @@ mod tests {
         /// Just planted per-room temperatures (the thermal-drive tests, which
         /// never exercise elevation/water). Rooms without a planted temperature
         /// read `INFINITY` (never chosen as a comfort target).
-        fn thermal(temps: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
+        fn thermal(temps: impl IntoIterator<Item = (Facet, f64)>) -> Self {
             Self {
                 temps: temps.into_iter().collect(),
                 ..Default::default()
@@ -10025,7 +10005,7 @@ mod tests {
         }
         /// Just planted per-room food productivity (the hunger-drive tests).
         /// Rooms without an entry read `DEFAULT_FORAGE` (fed).
-        fn forage(forage: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
+        fn forage(forage: impl IntoIterator<Item = (Facet, f64)>) -> Self {
             Self {
                 forage: forage.into_iter().collect(),
                 ..Default::default()
@@ -10037,8 +10017,8 @@ mod tests {
         /// A mortal threat niche weights UNCANNY `1`, so a scalar `s` reads as
         /// felt threat `s` — the pre-Bane danger tests stay byte-identical.
         fn hazard(
-            fresh: impl IntoIterator<Item = RoomAddr>,
-            threat: impl IntoIterator<Item = (RoomAddr, f64)>,
+            fresh: impl IntoIterator<Item = Facet>,
+            threat: impl IntoIterator<Item = (Facet, f64)>,
         ) -> Self {
             Self {
                 fresh: fresh.into_iter().collect(),
@@ -10058,7 +10038,7 @@ mod tests {
             }
         }
         /// Planted per-room `Hazards` directly (the per-axis thermal-fear tests).
-        fn hazards_map(hazards: impl IntoIterator<Item = (RoomAddr, Hazards)>) -> Self {
+        fn hazards_map(hazards: impl IntoIterator<Item = (Facet, Hazards)>) -> Self {
             Self {
                 threat: hazards.into_iter().collect(),
                 ..Default::default()
@@ -10069,8 +10049,8 @@ mod tests {
         /// forage axis and the prey field for its prey axis. Rooms without a
         /// forage entry read `DEFAULT_FORAGE`; without a prey entry, `0.0`.
         fn forage_and_prey(
-            forage: impl IntoIterator<Item = (RoomAddr, f64)>,
-            prey: impl IntoIterator<Item = (RoomAddr, f64)>,
+            forage: impl IntoIterator<Item = (Facet, f64)>,
+            prey: impl IntoIterator<Item = (Facet, f64)>,
         ) -> Self {
             Self {
                 forage: forage.into_iter().collect(),
@@ -10080,22 +10060,22 @@ mod tests {
         }
     }
     impl Terrain for PlantedTerrain {
-        fn elevation(&self, room: &RoomAddr) -> f64 {
+        fn elevation(&self, room: &Facet) -> f64 {
             self.elevations.get(room).copied().unwrap_or(f64::INFINITY)
         }
-        fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+        fn is_fresh_water(&self, room: &Facet) -> bool {
             self.fresh.contains(room)
         }
-        fn temperature(&self, room: &RoomAddr, _day: WorldTime) -> f64 {
+        fn temperature(&self, room: &Facet, _day: WorldTime) -> f64 {
             self.temps.get(room).copied().unwrap_or(f64::INFINITY)
         }
-        fn forage_value(&self, room: &RoomAddr) -> f64 {
+        fn forage_value(&self, room: &Facet) -> f64 {
             self.forage.get(room).copied().unwrap_or(DEFAULT_FORAGE)
         }
-        fn hazards(&self, room: &RoomAddr) -> Hazards {
+        fn hazards(&self, room: &Facet) -> Hazards {
             self.threat.get(room).copied().unwrap_or(Hazards::ZERO)
         }
-        fn prey_value(&self, room: &RoomAddr) -> f64 {
+        fn prey_value(&self, room: &Facet) -> f64 {
             self.prey.get(room).copied().unwrap_or(0.0)
         }
     }
@@ -10178,7 +10158,7 @@ mod tests {
         // uniform-forage tie-break (smallest address) can never land on it —
         // any pull toward it is the prey draw, not an artefact of the tie-break.
         let prey_cell = neighbors.iter().max().unwrap().clone();
-        let uniform: Vec<(RoomAddr, f64)> = neighbors
+        let uniform: Vec<(Facet, f64)> = neighbors
             .iter()
             .cloned()
             .chain(std::iter::once(c.clone()))
@@ -10327,7 +10307,7 @@ mod tests {
 
     /// A `Perceived` view standing at `pos`, with the non-danger drives quiet
     /// (danger reads only `position` + the terrain it holds).
-    fn view_at(pos: RoomAddr) -> Perceived {
+    fn view_at(pos: Facet) -> Perceived {
         Perceived {
             position: pos,
             drive: 0.0,
@@ -10642,9 +10622,9 @@ mod tests {
         // but a borrowed alarm at its cell wakes its Danger drive additively.
         let cell = raddr(1.0);
         let t = PlantedTerrain::default(); // no hazard anywhere — nothing to fear
-        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        let mut map: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
         map.insert(cell.clone(), 0.8);
-        let feel = |alarm: Option<&std::collections::BTreeMap<RoomAddr, f64>>| {
+        let feel = |alarm: Option<&std::collections::BTreeMap<Facet, f64>>| {
             Danger {
                 terrain: &t,
                 threat_niche: mortal_threat_niche(),
@@ -10674,7 +10654,7 @@ mod tests {
         // panic exactly as it shrugs off a hazard.
         let cell = raddr(1.0);
         let t = PlantedTerrain::default();
-        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        let mut map: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
         map.insert(cell.clone(), 0.8);
         let feel = |boldness: f64| {
             Danger {
@@ -10704,7 +10684,7 @@ mod tests {
         // stacks on the creature's own felt threat, strictly above either alone.
         let cell = raddr(1.0);
         let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.2)]);
-        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        let mut map: std::collections::BTreeMap<Facet, f64> = std::collections::BTreeMap::new();
         map.insert(cell.clone(), 0.5);
         let both = Danger {
             terrain: &t,
@@ -10736,12 +10716,7 @@ mod tests {
     /// A steady mortal NPC placed (via `commit_agent_at`) at `pos`, minted into
     /// `ledger` — the common emitter/reader for the `alarm_field` tests.
     /// `boldness` dials whether it is primary-afraid on hazard ground.
-    fn alarm_npc(
-        ledger: &mut Ledger,
-        reg: &ConceptRegistry,
-        pos: &RoomAddr,
-        boldness: f64,
-    ) -> Body {
+    fn alarm_npc(ledger: &mut Ledger, reg: &ConceptRegistry, pos: &Facet, boldness: f64) -> Body {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         commit_agent_at(ledger, reg, e, pos, 0.0);
         Body {
@@ -10892,12 +10867,12 @@ mod tests {
         let b_start = ns[0].clone(); // B stands here: one hop from A, in the halo
         // The hazard patch = A's cell AND its neighbours, so A is boxed in (no
         // neighbour is strictly safer → cornered, holds, keeps emitting).
-        let patch: std::collections::BTreeSet<RoomAddr> = std::iter::once(x.clone())
+        let patch: std::collections::BTreeSet<Facet> = std::iter::once(x.clone())
             .chain(ns.iter().cloned())
             .collect();
         // B's escape: a neighbour of B's cell OUTSIDE the patch — and thus
         // outside A's one-hop halo. The mesh gives B such a way out; assert it.
-        let escape: std::collections::BTreeSet<RoomAddr> = b_start
+        let escape: std::collections::BTreeSet<Facet> = b_start
             .neighbors()
             .into_iter()
             .filter(|n| !patch.contains(n))
@@ -10907,7 +10882,7 @@ mod tests {
             "B must have a hop out of the halo for the wave to terminate"
         );
         // `flee_step` (and arbitration) pick the safest neighbour, ties to the
-        // smallest RoomAddr — among the equally-safe escape cells that is the
+        // smallest Facet — among the equally-safe escape cells that is the
         // minimum. Make it B's home, so B flees home to safety and rests there
         // (no home-ward pull back into the halo → no oscillation).
         let b_home = escape.iter().min().unwrap().clone();
@@ -11432,7 +11407,7 @@ mod tests {
 
     #[test]
     fn is_water_delegates_to_terrain_is_fresh_water() {
-        // `raddr(seed)` feeds `RoomAddr::containing([seed, 0.0, 0.0], 6)`, which
+        // `raddr(seed)` feeds `Facet::containing([seed, 0.0, 0.0], 6)`, which
         // normalizes its input direction first — so `raddr(1.0)` and `raddr(2.0)`
         // collapse to the SAME room (both are the direction [1,0,0]). Use a
         // genuine mesh neighbor for `high` instead, so the two planted rooms
@@ -11507,7 +11482,7 @@ mod tests {
             .unwrap()
             .clone(); // far source
         let terrain = PlantedTerrain::fresh_only([w1.clone(), w2.clone()]);
-        let run = |seed_room: &RoomAddr| -> Vec<RoomAddr> {
+        let run = |seed_room: &Facet| -> Vec<Facet> {
             let mut ledger = Ledger::default();
             let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             // The prior sighting (day 0), THEN a return-home (day 0.5): history holds
@@ -11682,7 +11657,7 @@ mod tests {
     }
     /// The zero-drive, ignorant view a flow-drive test reads (thirst state is
     /// irrelevant to the thermal drive — it senses temperature at `position`).
-    fn at(position: RoomAddr) -> Perceived {
+    fn at(position: Facet) -> Perceived {
         Perceived {
             position,
             drive: 0.0,
@@ -11849,8 +11824,8 @@ mod tests {
     fn thermal_comfort_step_breaks_ties_by_ascending_room_addr() {
         // DETERMINISM UNDER A GENUINE TIE: two neighbours EQUIDISTANT from the
         // optimum (symmetric about it, 0 °C and 12 °C around optimum 6, both
-        // dev 6) must resolve to the smaller-`RoomAddr` one — the same
-        // `total_cmp` + ascending-`RoomAddr` tie-break `downhill_step` uses (cf.
+        // dev 6) must resolve to the smaller-`Facet` one — the same
+        // `total_cmp` + ascending-`Facet` tie-break `downhill_step` uses (cf.
         // `downhill_step_picks_the_lowest_neighbor_deterministically`).
         let home = raddr(1.0);
         let ns = home.neighbors();
@@ -11872,7 +11847,7 @@ mod tests {
         assert_eq!(
             drive.proposal(&view, PLAN_BUDGET),
             Some(Action::MoveTo(smaller)),
-            "an equal-deviation tie resolves to the smaller RoomAddr"
+            "an equal-deviation tie resolves to the smaller Facet"
         );
     }
 
@@ -12960,7 +12935,7 @@ mod tests {
         // DETERMINISM + TIE-BREAK: arbitration reads only view + terrain + niche
         // (no ledger), so it recomputes identically (reload-stable by
         // construction). And a genuine two-way utility tie resolves to the
-        // smaller `RoomAddr` — the constitutional `total_cmp` + ascending-addr
+        // smaller `Facet` — the constitutional `total_cmp` + ascending-addr
         // rule, here on the arbitration's own action scan.
         let home = raddr(1.0);
         let ns = home.neighbors();
@@ -13017,7 +12992,7 @@ mod tests {
         assert_eq!(
             a.intent,
             Intent::Do(Action::MoveTo(smaller)),
-            "an equal-utility tie resolves to the smaller RoomAddr"
+            "an equal-utility tie resolves to the smaller Facet"
         );
     }
 
@@ -13225,13 +13200,13 @@ mod tests {
             built: bool,
         }
         impl Terrain for FurnishingStub {
-            fn elevation(&self, _r: &RoomAddr) -> f64 {
+            fn elevation(&self, _r: &Facet) -> f64 {
                 0.0
             }
-            fn is_fresh_water(&self, _r: &RoomAddr) -> bool {
+            fn is_fresh_water(&self, _r: &Facet) -> bool {
                 false
             }
-            fn temperature(&self, _r: &RoomAddr, _d: WorldTime) -> f64 {
+            fn temperature(&self, _r: &Facet, _d: WorldTime) -> f64 {
                 // Just past `test_niche`'s tolerance band (optimum 15, width
                 // 10 → band edge at 5.0): deviation 10.5, comfortably inside
                 // the open interval (0, 1) on urgency before AND after a
@@ -13240,7 +13215,7 @@ mod tests {
                 // unrelated to the hearth.
                 4.5
             }
-            fn is_built(&self, _r: &RoomAddr) -> bool {
+            fn is_built(&self, _r: &Facet) -> bool {
                 self.built
             }
         }
@@ -13504,7 +13479,7 @@ mod tests {
     #[test]
     fn arbitrate_chooses_the_within_room_step_when_thermal_proposes_one() {
         // THE THRESHOLD'S CROSSING wired all the way through: `arbitrate`'s
-        // fixed room-scale candidate set is built from `RoomAddr` neighbours
+        // fixed room-scale candidate set is built from `Facet` neighbours
         // and cannot express an `AnchorId` on its own — this proves
         // `Drive::candidate_actions` actually makes `MoveWithin` reachable
         // via the live multi-drive path, not merely via `Thermal::proposal`
@@ -13584,16 +13559,16 @@ mod tests {
             inner: &'a PlantedTerrain,
         }
         impl Terrain for BuiltOverlay<'_> {
-            fn elevation(&self, r: &RoomAddr) -> f64 {
+            fn elevation(&self, r: &Facet) -> f64 {
                 self.inner.elevation(r)
             }
-            fn is_fresh_water(&self, r: &RoomAddr) -> bool {
+            fn is_fresh_water(&self, r: &Facet) -> bool {
                 self.inner.is_fresh_water(r)
             }
-            fn temperature(&self, r: &RoomAddr, d: WorldTime) -> f64 {
+            fn temperature(&self, r: &Facet, d: WorldTime) -> f64 {
                 self.inner.temperature(r, d)
             }
-            fn is_built(&self, _r: &RoomAddr) -> bool {
+            fn is_built(&self, _r: &Facet) -> bool {
                 self.built
             }
         }
@@ -13743,7 +13718,7 @@ mod tests {
         // The check: every action is classified, and every movement action's
         // precondition is declared positional.
         for a in [
-            Action::MoveTo(RoomAddr {
+            Action::MoveTo(Facet {
                 face: 0,
                 path: vec![],
             }),
@@ -13767,7 +13742,7 @@ mod tests {
     fn exactly_the_non_committing_actions_are_replayable() {
         assert!(is_replayable_in_catch_up(&Action::MoveWithin(AnchorId(0))));
         // Coarse movement writes `agent-at` — replaying it would fabricate history.
-        assert!(!is_replayable_in_catch_up(&Action::MoveTo(RoomAddr {
+        assert!(!is_replayable_in_catch_up(&Action::MoveTo(Facet {
             face: 0,
             path: vec![]
         })));
@@ -13782,7 +13757,7 @@ mod tests {
         // them together. This is the tie: an action catch-up may replay must
         // be one whose effect is position, or the partition has drifted.
         for a in [
-            Action::MoveTo(RoomAddr {
+            Action::MoveTo(Facet {
                 face: 0,
                 path: vec![],
             }),
@@ -14016,16 +13991,16 @@ mod tests {
         inner: &'a PlantedTerrain,
     }
     impl Terrain for BuiltOverlay<'_> {
-        fn elevation(&self, r: &RoomAddr) -> f64 {
+        fn elevation(&self, r: &Facet) -> f64 {
             self.inner.elevation(r)
         }
-        fn is_fresh_water(&self, r: &RoomAddr) -> bool {
+        fn is_fresh_water(&self, r: &Facet) -> bool {
             self.inner.is_fresh_water(r)
         }
-        fn temperature(&self, r: &RoomAddr, d: WorldTime) -> f64 {
+        fn temperature(&self, r: &Facet, d: WorldTime) -> f64 {
             self.inner.temperature(r, d)
         }
-        fn is_built(&self, _r: &RoomAddr) -> bool {
+        fn is_built(&self, _r: &Facet) -> bool {
             true
         }
     }
@@ -14034,7 +14009,7 @@ mod tests {
     /// OTHER drive (ignorant of water, empty diet, no hazards, already
     /// home) — the shared fixture the catch-up tests below build on, so
     /// Thermal is provably the ONLY drive that can ever move it.
-    fn cold_thermal_npc(entity: EntityId, home: RoomAddr, niche: ConditionResponse) -> Body {
+    fn cold_thermal_npc(entity: EntityId, home: Facet, niche: ConditionResponse) -> Body {
         Body {
             entity,
             village: None,
@@ -14179,15 +14154,15 @@ mod tests {
             .unwrap();
 
         let hazard = HazardMemory::default();
-        let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
-        let visited: std::collections::BTreeSet<RoomAddr> = [home.clone()].into_iter().collect();
+        let alarm: std::collections::BTreeMap<Facet, f64> = Default::default();
+        let visited: std::collections::BTreeSet<Facet> = [home.clone()].into_iter().collect();
 
         let correct_last_drank = last_fact_day_at_or_before(&ledger, DRANK, npc.entity, read_day);
         assert_eq!(
             correct_last_drank, 0.0,
             "no drink has been committed as of read_day yet"
         );
-        let mut believed_correct: Option<RoomAddr> = None;
+        let mut believed_correct: Option<Facet> = None;
         let (_, correct_thirst) = decide_step(
             read_day,
             &home,
@@ -14226,7 +14201,7 @@ mod tests {
             buggy_last_drank, drank_day,
             "sanity check: the unfiltered fold finds the FUTURE drink"
         );
-        let mut believed_buggy: Option<RoomAddr> = None;
+        let mut believed_buggy: Option<Facet> = None;
         let (_, buggy_thirst) = decide_step(
             read_day,
             &home,
@@ -14294,10 +14269,10 @@ mod tests {
         let ledger = Ledger::default();
         let mut occ = Occupancy::default();
         occ.place(npc.entity, &home, door);
-        let mut believed: Option<RoomAddr> = None;
+        let mut believed: Option<Facet> = None;
         let hazard = HazardMemory::default();
-        let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
-        let visited: std::collections::BTreeSet<RoomAddr> = [home.clone()].into_iter().collect();
+        let alarm: std::collections::BTreeMap<Facet, f64> = Default::default();
+        let visited: std::collections::BTreeSet<Facet> = [home.clone()].into_iter().collect();
 
         let entry_day = waking_offset(ActivityCycle::Diurnal);
         let before = ledger.len();
@@ -14509,11 +14484,10 @@ mod tests {
         let run = |horizon: f64| -> Option<AnchorId> {
             let mut occ = Occupancy::default();
             occ.place(npc.entity, &home, anchors[0]);
-            let mut believed: Option<RoomAddr> = None;
+            let mut believed: Option<Facet> = None;
             let hazard = HazardMemory::default();
-            let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
-            let visited: std::collections::BTreeSet<RoomAddr> =
-                [home.clone()].into_iter().collect();
+            let alarm: std::collections::BTreeMap<Facet, f64> = Default::default();
+            let visited: std::collections::BTreeSet<Facet> = [home.clone()].into_iter().collect();
             let _mode = catch_up(
                 entry_day,
                 horizon,
@@ -14583,7 +14557,7 @@ mod tests {
     fn home_nav_pays_zero_searches_for_a_stationary_unchanged_belief_entity_after_warmup() {
         let start = raddr(1.0);
         let home = start.neighbors()[0].neighbors()[0].clone();
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14618,7 +14592,7 @@ mod tests {
         let start = raddr(1.0);
         let elsewhere = start.neighbors()[1].clone();
         let home = start.neighbors()[0].neighbors()[0].clone();
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14654,7 +14628,7 @@ mod tests {
     fn home_nav_a_belief_change_triggers_exactly_one_new_search() {
         let start = raddr(1.0);
         let home = start.neighbors()[0].neighbors()[0].clone();
-        let mut avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14695,7 +14669,7 @@ mod tests {
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let (a, b) = (npc_id(1), npc_id(2));
-        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let empty: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
 
         let _ = cache.home_nav(a, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
         let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
@@ -14735,7 +14709,7 @@ mod tests {
             .find(|n| **n != start)
             .unwrap()
             .clone();
-        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let empty: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14777,7 +14751,7 @@ mod tests {
         let home_a = start.neighbors()[0].clone();
         let home_b = start.neighbors()[1].clone();
         assert_ne!(home_a, home_b, "sanity: two distinct neighbor destinations");
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
         let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
@@ -14835,7 +14809,7 @@ mod tests {
     struct ReverseField {
         /// Every room reached within the build budget: `(distance-to-home,
         /// next-hop-toward-home)`. `home` itself maps to `(0, None)`.
-        nodes: std::collections::BTreeMap<RoomAddr, (usize, Option<RoomAddr>)>,
+        nodes: std::collections::BTreeMap<Facet, (usize, Option<Facet>)>,
     }
 
     impl ReverseField {
@@ -14843,7 +14817,7 @@ mod tests {
         /// own shape — both `None` if `room` was not reached within budget
         /// (mirrors `plan_to_room`'s budget-exhaustion `None`); `first_step`
         /// is `None` exactly at `home` itself (mirrors the empty-plan case).
-        fn feature(&self, room: &RoomAddr) -> HomeNavFeature {
+        fn feature(&self, room: &Facet) -> HomeNavFeature {
             match self.nodes.get(room) {
                 None => HomeNavFeature {
                     distance: None,
@@ -14859,11 +14833,11 @@ mod tests {
 
     /// Build a [`ReverseField`] rooted at `home`, expanding up to `budget`
     /// nodes — a full single-source search with no goal test.
-    fn build_reverse_field(home: &RoomAddr, budget: usize) -> ReverseField {
+    fn build_reverse_field(home: &Facet, budget: usize) -> ReverseField {
         use std::collections::{BTreeMap, BTreeSet};
-        let mut frontier: BTreeSet<(u64, u64, RoomAddr)> = BTreeSet::new();
-        let mut best_g: BTreeMap<RoomAddr, u64> = BTreeMap::new();
-        let mut came_from: BTreeMap<RoomAddr, RoomAddr> = BTreeMap::new();
+        let mut frontier: BTreeSet<(u64, u64, Facet)> = BTreeSet::new();
+        let mut best_g: BTreeMap<Facet, u64> = BTreeMap::new();
+        let mut came_from: BTreeMap<Facet, Facet> = BTreeMap::new();
 
         frontier.insert((0, 0, home.clone()));
         best_g.insert(home.clone(), 0);
@@ -14930,7 +14904,7 @@ mod tests {
     #[test]
     fn reverse_field_matches_forward_search_for_every_empty_avoid_room() {
         let home = raddr(1.0);
-        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let avoid: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         // A modest budget: large enough to reach several hundred rooms
         // (well past the health population's actual walking radius) while
         // keeping the O(field_size) forward re-searches below it fast.
@@ -14942,7 +14916,7 @@ mod tests {
             field.nodes.len()
         );
 
-        let mut mismatches: Vec<(RoomAddr, HomeNavFeature, HomeNavFeature)> = Vec::new();
+        let mut mismatches: Vec<(Facet, HomeNavFeature, HomeNavFeature)> = Vec::new();
         for room in field.nodes.keys() {
             if *room == home {
                 continue;
@@ -14963,7 +14937,7 @@ mod tests {
             "the field/forward equivalence FAILED for {} of {} rooms (showing \
              up to 5): {:#?}\n\
              This is the tie-break-root-dependence failure mode the campaign \
-             spec names as a legitimate exit: astar's smallest-RoomAddr \
+             spec names as a legitimate exit: astar's smallest-Facet \
              relaxation winner is root-relative (see ReverseField's own \
              doc), so a field rooted at `home` need not agree with a forward \
              search rooted at each individual query room whenever a room has \

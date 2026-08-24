@@ -264,7 +264,7 @@ mod tests {
     use crate::brief::Brief;
     use crate::lattice::{Cell, Lattice, embed_with, extent_for, kind_of, shadowcast};
     use crate::structure::{Structure, structure_at};
-    use hornvale_kernel::{RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed};
     use std::collections::{BTreeMap, BTreeSet};
 
     const WALK: u32 = 12;
@@ -279,14 +279,14 @@ mod tests {
         Brief::from_parts(None, None, None, None, 0, false, true)
     }
 
-    fn locale_number(n: u64) -> RoomAddr {
-        RoomAddr {
+    fn locale_number(n: u64) -> Facet {
+        Facet {
             face: 3,
             path: (0..WALK).map(|i| ((n >> (2 * i)) & 0b11) as u8).collect(),
         }
     }
 
-    fn structure_of(chamber_count: usize, seed: Seed) -> (RoomAddr, Structure) {
+    fn structure_of(chamber_count: usize, seed: Seed) -> (Facet, Structure) {
         for n in 0u64..4096 {
             let locale = locale_number(n);
             let s = structure_at(&locale, &built(), seed, WALK).expect("built");

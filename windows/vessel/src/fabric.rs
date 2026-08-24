@@ -28,7 +28,7 @@
 //!   `climate.biome_at` at when it committed the settlement's biome, so the
 //!   fact *is* the shared resolution;
 //! - a **room** resolves through `hornvale_locale`'s `dominant_corner`
-//!   (greatest blend weight, tie-broken to the lowest `CellId`) — the same
+//!   (greatest blend weight, tie-broken to the lowest `Vertex`) — the same
 //!   rule `LocaleContext::describe` takes biome, water and substrate from,
 //!   and the same one `LocaleContext::reflectance_at` already takes the
 //!   ground's rock from.
@@ -38,7 +38,7 @@
 //! prevent.
 
 use hornvale_climate::{Biome, GeneratedClimate};
-use hornvale_kernel::CellId;
+use hornvale_kernel::Vertex;
 use hornvale_kernel::color::{BANDS, Reflectance};
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::lithology::{MaterialBuffer, RockClass};
@@ -111,7 +111,7 @@ impl FabricContext {
     /// **No land-only shortcut.** Settlements can be marine — founded on
     /// land that later drowned — so this reads whatever cell it is given,
     /// and `rock_at` answers for an ocean cell as readily as a land one.
-    pub fn at(terrain: &GeneratedTerrain, climate: &GeneratedClimate, cell: CellId) -> Self {
+    pub fn at(terrain: &GeneratedTerrain, climate: &GeneratedClimate, cell: Vertex) -> Self {
         let biome = climate.biome_at(cell);
         let material = terrain.material_at(cell);
         FabricContext {

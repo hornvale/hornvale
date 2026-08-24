@@ -143,10 +143,10 @@ pub(crate) fn micro_field(room_seed: Seed, grounded: Option<f64>) -> MicroField 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{CellId, RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed, Vertex};
 
     fn seed_for(path: Vec<u8>) -> Seed {
-        RoomAddr { face: 3, path }.seed(Seed(42))
+        Facet { face: 3, path }.seed(Seed(42))
     }
 
     fn reading(distance: f64) -> RillReading {
@@ -154,7 +154,7 @@ mod tests {
             distance,
             band_edges: [0.01, 0.02, 0.03, 0.04],
             catchment: 1e-4,
-            cell: CellId(0),
+            cell: Vertex(0),
         }
     }
 

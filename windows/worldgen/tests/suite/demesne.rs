@@ -49,7 +49,7 @@ fn mineral_supply_tracks_prospectivity_spatially() {
 
     // Genuinely spatial: at least two distinct values across cells.
     let mut distinct: Vec<f64> = Vec::new();
-    for c in geo.cells() {
+    for c in geo.vertices() {
         let v = *field.get(c);
         if !distinct.iter().any(|d: &f64| (*d - v).abs() < 1e-12) {
             distinct.push(v);
@@ -69,9 +69,9 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     // The probes must be LAND cells: since The Tumult's land mask the field
     // is 0 at sea regardless of the seafloor's (honestly derived, but
     // unreachable) prospectivity — the first and last land cell in ascending
-    // `CellId` order, a deterministic choice with no float ordering.
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|c| !terrain.is_ocean(*c)).collect();
+    // `Vertex` order, a deterministic choice with no float ordering.
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|c| !terrain.is_ocean(*c)).collect();
     assert!(land.len() >= 2, "seed 42 must have at least two land cells");
     let probe_a = land[0];
     let probe_b = land[land.len() - 1];
@@ -88,7 +88,7 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     }
 
     // Bounds: prospectivity is [0,1], so the field is [0, scale].
-    for c in geo.cells() {
+    for c in geo.vertices() {
         let v = *field.get(c);
         assert!(
             (0.0..=scale + 1e-9).contains(&v),
@@ -203,8 +203,8 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
         geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
 
-    let submerged: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|c| terrain.is_ocean(*c)).collect();
+    let submerged: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|c| terrain.is_ocean(*c)).collect();
     assert!(
         !submerged.is_empty(),
         "seed 42 must have ocean cells for this test to mean anything"
@@ -215,7 +215,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
         let kind = kinds[*tag as usize].0;
         let mut wet = 0.0_f64;
         let mut dry = 0.0_f64;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             let v = *k.get(c);
             if terrain.is_ocean(c) {
                 wet += v;
@@ -258,10 +258,10 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
 #[test]
 fn forage_supply_is_a_fraction_of_base_carrying_and_deterministic() {
     let geo = hornvale_kernel::Geosphere::new(3);
-    let base = hornvale_kernel::CellMap::from_fn(&geo, |c| (c.0 as f64) * 0.1);
+    let base = hornvale_kernel::VertexMap::from_fn(&geo, |c| (c.0 as f64) * 0.1);
     let a = hornvale_worldgen::forage_supply_field(&geo, &base);
     let b = hornvale_worldgen::forage_supply_field(&geo, &base);
-    for c in geo.cells() {
+    for c in geo.vertices() {
         assert_eq!(a.get(c), b.get(c));
         assert!(
             *a.get(c) <= *base.get(c),
@@ -647,11 +647,11 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
         {
             continue;
         }
-        let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+        let inputs = hornvale_kernel::VertexMap::from_fn(geo, |c| {
             species_carrying_input(*base_inputs.get(c), psych)
         });
         let k = hornvale_demography::carrying_capacity(geo, &inputs);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

@@ -158,7 +158,7 @@ fn an_absent_affinity_is_bit_identical() {
     // (1) The real "absent == no-op" claim: `None` and an explicit 1.0
     // no-op must be bit-identical at every cell.
     let mut compared = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         assert_eq!(
             absent.get(cell).to_bits(),
             explicit.get(cell).to_bits(),
@@ -173,7 +173,7 @@ fn an_absent_affinity_is_bit_identical() {
     // affinity must move the result away from BOTH baselines.
     let mut moved_from_absent = 0usize;
     let mut moved_from_explicit = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if varied.get(cell).to_bits() != absent.get(cell).to_bits() {
             moved_from_absent += 1;
         }
@@ -243,7 +243,7 @@ fn a_declared_affinity_multiplies_outside_the_minimum() {
     let biome = climate.biome_map();
 
     let mut moved = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         let f = if biome.get(cell).name() == "desert" {
             1.0
         } else {
@@ -307,7 +307,7 @@ fn the_affinity_reaches_the_capacity_path_too() {
     let with = caps(&declared);
 
     let mut moved = 0usize;
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if base.at(cell).to_bits() != with.at(cell).to_bits() {
             moved += 1;
         }

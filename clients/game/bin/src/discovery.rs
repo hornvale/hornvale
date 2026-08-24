@@ -10,7 +10,7 @@
 //! - **[`Visited`] answers "where have I been?"** — a property of the
 //!   possession's own walk-band CELLS (rooms). It reuses
 //!   `windows/vessel/src/purview.rs`'s own fog predicate SHAPE — an
-//!   ancestor test over [`RoomAddr::path`], upward-only by construction —
+//!   ancestor test over [`Facet::path`], upward-only by construction —
 //!   rather than inventing a second notion of visitedness. That module's
 //!   doc states the overlay "WRITES NOTHING"; this struct is the same kind
 //!   of read, just accumulated across turns instead of rebuilt from
@@ -43,30 +43,30 @@
 //! already flowing rather than needing to add the write path too.
 //! Recorded as `CLIENT-world-map-visitedness-is-unwired`.
 
-use hornvale_kernel::{CellId, RoomAddr};
+use hornvale_kernel::{Vertex, Facet};
 use std::collections::BTreeSet;
 
 /// Every walk-band room the possession has stood in this session — the raw
 /// material [`Visited::contains_at_rung`]'s ancestor test reads.
 ///
-/// **Why `RoomAddr`, not `hornvale_kernel::CellId`.** `CellId` is a flat
+/// **Why `Facet`, not `hornvale_kernel::Vertex`.** `Vertex` is a flat
 /// index into one fixed-resolution icosphere mesh
 /// (`kernel/src/geosphere.rs`) with no parent/child structure of its own —
-/// there is no coarser or finer `CellId` to be "rung-aware" against without
+/// there is no coarser or finer `Vertex` to be "rung-aware" against without
 /// inventing a second coarsening scheme, which is exactly the kind of new
-/// machinery the task brief warns against minting. `RoomAddr` **is** the
+/// machinery the task brief warns against minting. `Facet` **is** the
 /// rung system already shipped (`path: Vec<u8>`, depth up to
-/// [`hornvale_kernel::RoomAddr`]'s own `MAX_DEPTH`), and it is the type
+/// [`hornvale_kernel::Facet`]'s own `MAX_DEPTH`), and it is the type
 /// `windows/vessel/src/purview.rs`'s own fog predicate already operates
 /// over — reusing it here is "reuse that predicate's shape," not a
 /// substitution of one for the other.
 #[derive(Debug, Clone, Default)]
-pub struct Visited(BTreeSet<RoomAddr>);
+pub struct Visited(BTreeSet<Facet>);
 
 impl Visited {
     /// Record one walked room. Idempotent: walking the same room twice (or
     /// standing still while `Driver::refresh` runs) costs nothing extra.
-    pub fn record(&mut self, addr: RoomAddr) {
+    pub fn record(&mut self, addr: Facet) {
         self.0.insert(addr);
     }
 
@@ -83,7 +83,7 @@ impl Visited {
     /// walking one fine room lights every coarser cell that contains it and
     /// **no sibling** (a different branch at the same depth never matches
     /// the truncated-path equality test below).
-    pub fn contains_at_rung(&self, addr: &RoomAddr, rung: u32) -> bool {
+    pub fn contains_at_rung(&self, addr: &Facet, rung: u32) -> bool {
         let keep = (rung as usize).min(addr.path.len());
         let wanted = &addr.path[..keep];
         self.0.iter().any(|walked| {
@@ -96,7 +96,7 @@ impl Visited {
 
 /// A discoverable feature's own identity — the union of both §A4b kinds,
 /// because a point site is not in `hornvale_terrain::landscape`'s own
-/// `FeatureId`/`CellFeatureIndex` at all (that index only ever carries the
+/// `FeatureId`/`VertexFeatureIndex` at all (that index only ever carries the
 /// five extent classes — see `FeatureClass`) and [`Discovered`] answers
 /// both.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -106,17 +106,17 @@ pub enum FeatureId {
     /// already carry.
     Extent(hornvale_terrain::landscape::FeatureId),
     /// A settlement, keyed to the terrain cell its committed
-    /// latitude/longitude resolves nearest to (`NearestCellIndex::nearest`)
+    /// latitude/longitude resolves nearest to (`NearestVertexIndex::nearest`)
     /// — the same canonical-cell keying
     /// `hornvale_terrain::landscape::FeatureId` already uses for an extent
     /// feature's own identity, so two settlements can never collide unless
     /// they share a nearest cell (in which case they are, for this map's
     /// purposes, the same point).
-    Settlement(CellId),
+    Settlement(Vertex),
     /// A cave mouth, keyed to the terrain cell it occupies
     /// (`hornvale_terrain::GeneratedTerrain::cave_at`'s own key — one cave
     /// per cell, by that function's own contract).
-    Cave(CellId),
+    Cave(Vertex),
 }
 
 /// Every feature the possession has DISCOVERED this session (§A4b:
@@ -163,8 +163,8 @@ impl Discovered {
 mod tests {
     use super::*;
 
-    fn addr(face: u8, path: &[u8]) -> RoomAddr {
-        RoomAddr {
+    fn addr(face: u8, path: &[u8]) -> Facet {
+        Facet {
             face,
             path: path.to_vec(),
         }
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn discovered_is_idempotent() {
         let mut d = Discovered::default();
-        let id = FeatureId::Cave(CellId(42));
+        let id = FeatureId::Cave(Vertex(42));
         assert!(!d.contains(id));
         d.record(id);
         assert!(d.contains(id));
@@ -227,11 +227,11 @@ mod tests {
 
     /// The three site kinds are genuinely distinct identities even when
     /// their underlying cell coincides — a settlement and a cave at the
-    /// same `CellId` are two different discoverable things.
+    /// same `Vertex` are two different discoverable things.
     #[test]
     fn site_kinds_at_the_same_cell_are_distinct() {
         let mut d = Discovered::default();
-        let cell = CellId(7);
+        let cell = Vertex(7);
         d.record(FeatureId::Settlement(cell));
         assert!(d.contains(FeatureId::Settlement(cell)));
         assert!(!d.contains(FeatureId::Cave(cell)));

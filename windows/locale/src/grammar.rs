@@ -6,7 +6,7 @@ use crate::regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substr
 use crate::streams::{LOCALE_SUBSTRATE_DETAIL, LOCALE_VARIETY};
 use hornvale_climate::{BiomeExpr, Formation, Medium, Stratum};
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{RoomAddr, Seed};
+use hornvale_kernel::{Facet, Seed};
 
 /// A weighted descriptor pool.
 type Pool = &'static [(f64, &'static str)];
@@ -14,7 +14,7 @@ type Pool = &'static [(f64, &'static str)];
 /// The derived overlay for a room (substrate-only negation; mundane energy/kingdom).
 pub(crate) fn derived_regime(
     seed: Seed,
-    addr: &RoomAddr,
+    addr: &Facet,
     expr: BiomeExpr,
     substrate: Substrate,
     micro: MicroField,
@@ -47,7 +47,7 @@ pub(crate) fn render(
     micro: MicroField,
     expr: BiomeExpr,
     seed: Seed,
-    addr: &RoomAddr,
+    addr: &Facet,
 ) -> (String, String) {
     let room = addr.seed(seed);
     let variety = draw_variety(room, expr.formation, expr.stratum, negations.substrate);
@@ -317,7 +317,7 @@ mod tests {
     use super::*;
     use hornvale_climate::Biome;
     use hornvale_climate::BiomeExpr;
-    use hornvale_kernel::{RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed};
 
     fn micro0() -> MicroField {
         MicroField {
@@ -333,7 +333,7 @@ mod tests {
         // `render` already builds the descriptor as (variety + substrate_detail)
         // then qualifiers; the noun phrase is that first part, and a player names
         // it rather than the qualifiers.
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn derived_is_deterministic() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -386,7 +386,7 @@ mod tests {
     #[test]
     fn derived_tier_is_never_exotic() {
         // The derived tier only negates substrate; energy/kingdom stay mundane.
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -410,7 +410,7 @@ mod tests {
         let biome = Biome::TemperateForest;
         let mut seen = std::collections::BTreeSet::new();
         for last in 0..4u8 {
-            let addr = RoomAddr {
+            let addr = Facet {
                 face: 3,
                 path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, last],
             };
@@ -448,7 +448,7 @@ mod tests {
 
     #[test]
     fn re_keying_the_pool_leaves_every_land_descriptor_untouched() {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
@@ -482,8 +482,8 @@ mod tests {
         }
     }
 
-    fn addr_() -> RoomAddr {
-        RoomAddr {
+    fn addr_() -> Facet {
+        Facet {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         }

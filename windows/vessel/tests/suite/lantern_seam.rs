@@ -17,7 +17,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::color::{Illuminant, Observer, blackbody, standard_observer};
-use hornvale_kernel::{CellId, Seed, Value, World};
+use hornvale_kernel::{Seed, Value, Vertex, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::fabric::{Fabric, FabricContext, reflectance_of};
 use hornvale_vessel::light::{HEARTH_KELVIN, Source, hearth_cell, light_field};
@@ -116,7 +116,7 @@ fn flagship_ground(seed: u64) -> (FabricContext, String) {
         .ledger
         .value_of(flagship.id, hornvale_settlement::CELL_ID)
     {
-        Some(Value::Number(n)) => CellId(*n as u32),
+        Some(Value::Number(n)) => Vertex(*n as u32),
         _ => panic!("settlement {} has no cell-id fact", flagship.id.0),
     };
     let ctx = FabricContext::at(terrain, climate, cell);
@@ -131,7 +131,7 @@ fn flagship_ground(seed: u64) -> (FabricContext, String) {
 /// light; the search says so out loud rather than silently measuring nothing.
 fn lattice_with_a_doorway(seed: Seed) -> Lattice {
     for n in 0u64..4096 {
-        let locale = hornvale_kernel::RoomAddr {
+        let locale = hornvale_kernel::Facet {
             face: 3,
             path: (0..WALK).map(|i| ((n >> (2 * i)) & 0b11) as u8).collect(),
         };

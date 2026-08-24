@@ -41,7 +41,7 @@
 //! `spacing` were two guesses at a quantity that is now simply known, and
 //! Task 3's own row 3 was computed the same way — by integrating the line.
 
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, RoomAddr, Seed, math};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex, math};
 use hornvale_terrain::{
     CatchmentCut, ChannelNetwork, Rill, TectonicGlobe, TerrainPins, WaterKind, cell_catchment,
     channel_half_width, generate, rills_of, room_spacing,
@@ -59,7 +59,7 @@ const LEVEL: u32 = 6;
 const WALK_DEPTH: u32 = 12;
 
 /// Coarse cells sampled per seed for containment and channel area, by stride
-/// over the whole `CellId` ordering. Each carries its whole partition — tens
+/// over the whole `Vertex` ordering. Each carries its whole partition — tens
 /// of thousands of branches — and every branch is walked at a fraction of a
 /// room's edge, so this is the expensive constant.
 const CELL_SAMPLE: usize = 60;
@@ -123,7 +123,7 @@ fn mark_at(a: [f64; 3], b: [f64; 3], step: f64, octave: u32, rooms: &mut BTreeMa
         ];
         let n = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
         let unit = [p[0] / n, p[1] / n, p[2] / n];
-        let id = RoomAddr::containing(unit, WALK_DEPTH)
+        let id = Facet::containing(unit, WALK_DEPTH)
             .pack()
             .expect("walk depth is inside the address range")
             .0;
@@ -139,14 +139,14 @@ fn mark_at(a: [f64; 3], b: [f64; 3], step: f64, octave: u32, rooms: &mut BTreeMa
 /// in the denominator with no channel of its own. Restricting to reaches would
 /// measure containment over the land that already has a channel, which is the
 /// shape of error the previous Tier 2's 74% was.
-fn sampled_land(globe: &TectonicGlobe, geo: &Geosphere, sample: usize) -> Vec<CellId> {
+fn sampled_land(globe: &TectonicGlobe, geo: &Geosphere, sample: usize) -> Vec<Vertex> {
     // Strided over the LAND cells rather than over all cells, so the sample
     // size is the sample size. Striding over the whole ordering and filtering
     // afterwards leaves a count that varies with the world's land fraction,
     // which is how the first run of this probe measured seed 42 on nineteen
     // cells and reported a trunk arm 34% below Task 3's.
-    let land: Vec<CellId> = geo
-        .cells()
+    let land: Vec<Vertex> = geo
+        .vertices()
         .filter(|&c| !matches!(*globe.water_kind.get(c), WaterKind::Ocean))
         .collect();
     let stride = (land.len() / sample).max(1);
@@ -156,7 +156,7 @@ fn sampled_land(globe: &TectonicGlobe, geo: &Geosphere, sample: usize) -> Vec<Ce
 /// The cell's own stretch of trunk, as up to two great-circle segments —
 /// exactly the stretch `branch.rs` hangs the cell's partition from, rebuilt
 /// here from the published polyline.
-fn trunk_segments(cell: CellId, net: &ChannelNetwork) -> Vec<[[f64; 3]; 2]> {
+fn trunk_segments(cell: Vertex, net: &ChannelNetwork) -> Vec<[[f64; 3]; 2]> {
     let Some((line, j)) = net.trunk_vertex(cell) else {
         return Vec::new();
     };
@@ -206,9 +206,9 @@ fn containment_and_channel_area_of_the_branch_network() {
     // (`10·4^level + 2`), so this ratio is not a power of four and mixing the
     // two counts is the factor-of-two error this campaign has now made three
     // times. Stated as one division so there is nowhere for it to hide.
-    let rooms_per_cell = (20u64 << (2 * WALK_DEPTH)) as f64 / geo.cell_count() as f64;
+    let rooms_per_cell = (20u64 << (2 * WALK_DEPTH)) as f64 / geo.vertex_count() as f64;
     let room_area = 4.0 * std::f64::consts::PI / (20u64 << (2 * WALK_DEPTH)) as f64;
-    let step = room_spacing(&RoomAddr {
+    let step = room_spacing(&Facet {
         face: 0,
         path: vec![0; WALK_DEPTH as usize],
     }) / SAMPLES_PER_ROOM;
@@ -230,7 +230,7 @@ fn containment_and_channel_area_of_the_branch_network() {
         let mut world_rooms: BTreeSet<u64> = BTreeSet::new();
         let mut world_area = 0.0_f64;
         let mut world_cells = 0usize;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if matches!(*globe.water_kind.get(cell), WaterKind::Ocean) {
                 continue;
             }
@@ -254,7 +254,7 @@ fn containment_and_channel_area_of_the_branch_network() {
         let mut branch_length = 0.0_f64;
         let mut spill = 0usize;
         let mut spill_of = 0usize;
-        let index = NearestCellIndex::new(&geo);
+        let index = NearestVertexIndex::new(&geo);
 
         for cell in sampled_land(globe, &geo, CELL_SAMPLE) {
             cells += 1;
@@ -305,7 +305,7 @@ fn containment_and_channel_area_of_the_branch_network() {
             .map(|c| c.0)
             .collect();
         let owns = |id: u64| {
-            let addr = hornvale_kernel::RoomId(id)
+            let addr = hornvale_kernel::FacetId(id)
                 .unpack()
                 .expect("a packed room unpacks");
             sampled.contains(&index.nearest_to_position(&geo, addr.centroid()).0)
@@ -400,7 +400,7 @@ fn containment_and_channel_area_of_the_branch_network() {
 
 /// Mean angular separation of a cell from its neighbours — `channel.rs`'s own
 /// `cell_spacing`, which is private, restated here from `Geosphere::position`.
-fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
+fn cell_spacing(geo: &Geosphere, c: Vertex) -> f64 {
     let neighbors = geo.neighbors(c);
     let p = geo.position(c);
     neighbors
@@ -509,7 +509,7 @@ fn geometric_mean(ratios: &[f64]) -> f64 {
 /// branch of every one of those reaches — as `(outlet, length)` arrays ready
 /// for [`strahler`].
 fn basin_network(
-    basin: &[CellId],
+    basin: &[Vertex],
     globe: &TectonicGlobe,
     geo: &Geosphere,
     net: &ChannelNetwork,
@@ -583,11 +583,11 @@ fn horton_ratios_of_the_branch_network() {
         let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
 
         // Basins: group reaches by the cell their downhill chain terminates in.
-        let is_reach = |c: CellId| {
+        let is_reach = |c: Vertex| {
             !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
         };
-        let mut basins: BTreeMap<u32, Vec<CellId>> = BTreeMap::new();
-        for c in geo.cells() {
+        let mut basins: BTreeMap<u32, Vec<Vertex>> = BTreeMap::new();
+        for c in geo.vertices() {
             if !is_reach(c) {
                 continue;
             }
@@ -599,7 +599,7 @@ fn horton_ratios_of_the_branch_network() {
                     Some(next) => {
                         current = next;
                         hops += 1;
-                        assert!(hops < geo.cell_count(), "the coarse graph cycles");
+                        assert!(hops < geo.vertex_count(), "the coarse graph cycles");
                     }
                 }
             };

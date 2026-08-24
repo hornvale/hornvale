@@ -5,7 +5,7 @@ use hornvale_astronomy::{
 };
 use hornvale_climate::GeneratedClimate;
 use hornvale_history::record::{Ended, OccupationRecord};
-use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
+use hornvale_kernel::{EntityId, Phenomenon, Seed, Value, Vertex, World};
 use hornvale_language::{
     GapReason, LexEntry, Manner, NameKind, Namer, Phonology, Segment, concept_domain,
     distinctiveness, distortion, domain_distortion, recoverability, romanize,
@@ -1350,7 +1350,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let sea = v.terrain.sea_level();
                 let (mut land, mut high) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     let e = v.terrain.elevation_at(cell);
                     if e >= sea {
                         land += 1;
@@ -1384,7 +1384,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let sea = v.terrain.sea_level();
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     let e = v.terrain.elevation_at(cell);
                     if e >= sea {
                         sum += e - sea;
@@ -1431,9 +1431,9 @@ pub fn registry() -> Vec<Metric> {
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
-                let total = geo.cell_count();
+                let total = geo.vertex_count();
                 let restless = geo
-                    .cells()
+                    .vertices()
                     .filter(|c| v.terrain.unrest_at(*c) > 0.3)
                     .count();
                 MetricValue::Number(if total == 0 {
@@ -1456,7 +1456,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<RockClass, usize> =
                     std::collections::BTreeMap::new();
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         *counts.entry(v.terrain.rock_at(cell)).or_insert(0) += 1;
                     }
@@ -1479,7 +1479,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut karst) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         if v.terrain.hydro_at(cell) == Hydro::Karst {
@@ -1508,7 +1508,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let mut seen: std::collections::BTreeSet<hornvale_terrain::Hydro> =
                     std::collections::BTreeSet::new();
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     seen.insert(v.terrain.hydro_at(cell));
                 }
                 // `Hydro::ALL` order, not BTreeSet order, so the string is stable
@@ -1534,7 +1534,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut aquifer) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         if v.terrain.hydro_at(cell) == Hydro::Aquifer {
@@ -1560,7 +1560,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         sum += v.terrain.depth_to_basement_at(cell);
@@ -1580,7 +1580,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut gaps) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         if v.terrain.unconformity_at(cell) {
@@ -1606,7 +1606,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         sum += v.terrain.geothermal_gradient_at(cell).get();
@@ -1630,7 +1630,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut caves) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         if v.terrain.cave_at(cell).is_some() {
@@ -1656,7 +1656,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut deposits) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         if v.terrain.deposit_at(cell).is_some() {
@@ -1682,7 +1682,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<Commodity, usize> =
                     std::collections::BTreeMap::new();
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell)
                         && let Some(deposit) = v.terrain.deposit_at(cell)
                     {
@@ -1709,7 +1709,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut deposits, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell)
                         && let Some(deposit) = v.terrain.deposit_at(cell)
                     {
@@ -1730,7 +1730,7 @@ pub fn registry() -> Vec<Metric> {
         // residue is derived from committed settlement history
         // (`vestiges_field`), which does not exist until `BuildDepth::Full`.
         // Each metric computes `vestiges_field` exactly ONCE (a single
-        // grouped ledger scan) and then iterates its `CellMap` — never
+        // grouped ledger scan) and then iterates its `VertexMap` — never
         // `vestiges_at` per cell, which would rescan the whole ledger once
         // per cell. ---
         Metric {
@@ -1747,7 +1747,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = terrain.geosphere();
                 let field = vestiges_field(v.world(), terrain);
                 let (mut land, mut bearing) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !terrain.is_ocean(cell) {
                         land += 1;
                         if !field.get(cell).is_empty() {
@@ -1799,7 +1799,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = terrain.geosphere();
                 let field = vestiges_field(v.world(), terrain);
                 let (mut bearing, mut forgotten) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !terrain.is_ocean(cell)
                         && let Some(top) = most_dread_vestige(field.get(cell))
                     {
@@ -1837,7 +1837,7 @@ pub fn registry() -> Vec<Metric> {
                     HazardKind::Cursed,
                 ];
                 let mut counts = [0usize; 6];
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !terrain.is_ocean(cell) {
                         for vestige in field.get(cell) {
                             let idx = kinds
@@ -1875,7 +1875,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = terrain.geosphere();
                 let field = vestiges_field(v.world(), terrain);
                 let (mut count, mut sum) = (0usize, 0.0f64);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !terrain.is_ocean(cell) {
                         for vestige in field.get(cell) {
                             count += 1;
@@ -2164,7 +2164,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain().is_ocean(cell) {
                         sum += v.climate.mean_temperature_at(cell).get();
                         count += 1;
@@ -2189,7 +2189,7 @@ pub fn registry() -> Vec<Metric> {
                 let soils = soil_of(v.terrain(), &v.climate, geo);
                 let mut counts: std::collections::BTreeMap<SoilOrder, usize> =
                     std::collections::BTreeMap::new();
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain().is_ocean(cell) {
                         *counts.entry(*soils.get(cell)).or_insert(0) += 1;
                     }
@@ -2213,7 +2213,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain().geosphere();
                 let soils = soil_of(v.terrain(), &v.climate, geo);
                 let (mut land, mut fertile) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain().is_ocean(cell) {
                         land += 1;
                         let depth = v.terrain().material_at(cell).soil_depth;
@@ -2342,11 +2342,11 @@ pub fn registry() -> Vec<Metric> {
                     {
                         continue;
                     }
-                    let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+                    let inputs = hornvale_kernel::VertexMap::from_fn(geo, |c| {
                         hornvale_worldgen::species_carrying_input(*base_inputs.get(c), psych)
                     });
                     let k = hornvale_demography::carrying_capacity(geo, &inputs);
-                    for cell in geo.cells() {
+                    for cell in geo.vertices() {
                         if v.terrain().is_ocean(cell) {
                             continue;
                         }
@@ -2408,7 +2408,7 @@ pub fn registry() -> Vec<Metric> {
                 let geo = v.terrain().geosphere();
                 let habitability = v.climate().habitability();
                 let (mut sum, mut n) = (0.0_f64, 0u32);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if *habitability.get(cell) {
                         sum += *report.byproducts.strife.get(cell);
                         n += 1;
@@ -2628,7 +2628,7 @@ pub fn registry() -> Vec<Metric> {
                 else {
                     return MetricValue::Absent;
                 };
-                let cell = CellId(*cell_id as u32);
+                let cell = Vertex(*cell_id as u32);
                 let coastal = v
                     .terrain()
                     .geosphere()
@@ -2669,7 +2669,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut endorheic) = (0usize, 0usize);
-                for cell in geo.cells() {
+                for cell in geo.vertices() {
                     if !v.terrain.is_ocean(cell) {
                         land += 1;
                         if v.terrain.is_endorheic(cell) {
@@ -3457,7 +3457,7 @@ pub fn registry() -> Vec<Metric> {
                   least-squares slope of ln(shoreline development) against \
                   mesh level, measured at L4/L5/L6 by projecting each \
                   level's cells onto the canonical L6 land/ocean truth \
-                  (NearestCellIndex). A companion to shoreline-development, \
+                  (NearestVertexIndex). A companion to shoreline-development, \
                   not a replacement — that estimator is unchanged. Positive \
                   means roughness concentrates at fine scales, which makes \
                   this slope immune to the single-hex land/ocean \
@@ -3736,14 +3736,14 @@ pub fn registry() -> Vec<Metric> {
                 let land = v
                     .terrain
                     .geosphere()
-                    .cells()
+                    .vertices()
                     .filter(|&c| !v.terrain.is_ocean(c))
                     .count();
                 if land == 0 {
                     return MetricValue::Absent;
                 }
                 let land_area = 4.0 * std::f64::consts::PI * land as f64
-                    / v.terrain.geosphere().cell_count() as f64;
+                    / v.terrain.geosphere().vertex_count() as f64;
                 MetricValue::Number(lab_channel_area(v.terrain.channels()) / land_area)
             }),
         },
@@ -5385,7 +5385,7 @@ fn pearson_correlation(xs: &[f64], ys: &[f64]) -> Option<f64> {
 /// capacity field `bake_history_from` itself feeds into the bake (up to
 /// its private `SETTLERS_PER_CAPACITY` scale, which cannot move a RANK
 /// correlation — Spearman is invariant under any positive linear
-/// rescaling). Cells iterate in ascending `CellId` order
+/// rescaling). Cells iterate in ascending `Vertex` order
 /// (`Geosphere::cells()`), so this is deterministic without an explicit
 /// sort of the cell set itself.
 fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
@@ -5402,7 +5402,7 @@ fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
 
     let mut defs: Vec<f64> = Vec::new();
     let mut caps: Vec<f64> = Vec::new();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if !*habitability.get(cell) {
             continue;
         }
@@ -5435,17 +5435,17 @@ fn median(values: &mut [f64]) -> Option<f64> {
 
 /// Shelf width (Sculpting Task 12, spec §8) from a single coast land cell:
 /// hops seaward, each hop stepping to the current cell's deepest ocean
-/// neighbor (`CellId`-ascending tiebreak among equally deep candidates),
+/// neighbor (`Vertex`-ascending tiebreak among equally deep candidates),
 /// until a stepped-to cell's depth first exceeds `cap_depth_m`, or 8 hops
 /// are spent. A coast cell always has at least one ocean neighbor by
 /// definition; a dead end thereafter (an ocean cell with no further ocean
 /// neighbor — a landlocked single-cell inlet) returns however many hops
 /// were completed.
-fn shelf_width_hops(v: &TerrainView, coast: CellId, cap_depth_m: f64) -> u32 {
+fn shelf_width_hops(v: &TerrainView, coast: Vertex, cap_depth_m: f64) -> u32 {
     let geo = v.terrain.geosphere();
     let mut cur = coast;
     for hop in 1..=8u32 {
-        let mut candidates: Vec<CellId> = geo
+        let mut candidates: Vec<Vertex> = geo
             .neighbors(cur)
             .iter()
             .copied()
@@ -5484,7 +5484,7 @@ fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
     let geo = v.terrain.geosphere();
     let cap_depth_m = 2.0 * CarveParams::default().wedge_freeboard_m;
     let mut widths: Vec<f64> = Vec::new();
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if v.terrain.is_ocean(cell) {
             continue;
         }
@@ -5508,7 +5508,7 @@ fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
 /// companion to `shoreline-development`, not a replacement — that estimator
 /// is unchanged. Builds the level 4/5/6 `Geosphere`s and, for each, derives
 /// a land mask by looking up each cell's NEAREST canonical L6 cell (by
-/// unit-sphere position, `NearestCellIndex::nearest_to_position` — the same
+/// unit-sphere position, `NearestVertexIndex::nearest_to_position` — the same
 /// projection the scene/region window uses to sample canonical truth from a
 /// coarser or finer mesh) and testing that L6 cell's elevation against the
 /// world's sea level; at k = 6 every cell is its own nearest, so the mapping
@@ -5524,12 +5524,12 @@ fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
 fn coast_roughness_slope(v: &TerrainView) -> MetricValue {
     let l6_geo = v.terrain.geosphere();
     let globe = v.terrain.globe();
-    let l6_index = hornvale_kernel::NearestCellIndex::new(l6_geo);
+    let l6_index = hornvale_kernel::NearestVertexIndex::new(l6_geo);
     let mut ks: Vec<f64> = Vec::new();
     let mut ys: Vec<f64> = Vec::new();
     for k in [4u32, 5, 6] {
         let geo_k = hornvale_kernel::Geosphere::new(k);
-        let land = hornvale_kernel::CellMap::from_fn(&geo_k, |cell| {
+        let land = hornvale_kernel::VertexMap::from_fn(&geo_k, |cell| {
             let pos = geo_k.position(cell);
             let l6_cell = l6_index.nearest_to_position(l6_geo, pos);
             *globe.elevation.get(l6_cell) >= globe.sea_level
@@ -5656,7 +5656,7 @@ fn flagship_surplus(v: &SettlementView, species: &str) -> MetricValue {
     else {
         return MetricValue::Absent;
     };
-    let cell = CellId(*cell_id as u32);
+    let cell = Vertex(*cell_id as u32);
     let class = hornvale_worldgen::biome_class(v.climate().biome_at(cell));
     let surplus =
         (hornvale_culture::fertility(class) * v.climate().moisture_at(cell)).clamp(0.0, 1.0);
@@ -5676,7 +5676,7 @@ fn flagship_coastal(v: &SettlementView, species: &str) -> MetricValue {
     else {
         return MetricValue::Absent;
     };
-    let cell = CellId(*cell_id as u32);
+    let cell = Vertex(*cell_id as u32);
     let coastal = v
         .terrain()
         .geosphere()
@@ -6285,7 +6285,7 @@ fn settlement_site_concepts(
     else {
         return None;
     };
-    let cell = CellId(*cell_id as u32);
+    let cell = Vertex(*cell_id as u32);
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
@@ -6611,7 +6611,7 @@ fn name_transparency(v: &FullView) -> MetricValue {
             v.world(),
             &v.world().seed,
             &species,
-            CellId(*cell as u32),
+            Vertex(*cell as u32),
             v.terrain(),
             v.climate(),
             None,
@@ -7146,7 +7146,7 @@ fn name_prefix_region_full_stack(v: &FullView) -> MetricValue {
 /// One toponymic gate: does this cell satisfy the terrain condition that
 /// steeps a concept? Named so the seven-entry table below reads as a table
 /// rather than as a type signature.
-type TerrainGate = fn(&hornvale_terrain::GeneratedTerrain, CellId) -> bool;
+type TerrainGate = fn(&hornvale_terrain::GeneratedTerrain, Vertex) -> bool;
 
 /// The wetness floor `marsh` sits above. Restated, not imported —
 /// worldgen's own `MARSH_MIN_DRAINAGE` is private, and see the module note
@@ -7159,13 +7159,13 @@ const LAB_MARSH_MIN_DRAINAGE: f64 = 5.0;
 const LAB_ISLAND_CELL_CAP: usize = 200;
 
 /// Whether `cell` is a river channel: its water kind is exactly `River`.
-fn lab_is_river_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_river_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> bool {
     terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
 }
 
 /// Whether `cell` is a river shallow enough to cross: a river cell whose
 /// drainage has not reached waterfall scale.
-fn lab_is_ford_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_ford_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> bool {
     lab_is_river_cell(terrain, cell)
         && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
 }
@@ -7174,7 +7174,7 @@ fn lab_is_ford_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) 
 /// neighbour ring, with an ocean neighbour read at sea level rather than at
 /// its true depth — otherwise every coastal cell is a hill, since an ocean
 /// cell is by definition below any land cell.
-fn lab_is_hill_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_hill_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> bool {
     let sea_level = terrain.sea_level().get();
     let here = terrain.elevation_at(cell).get();
     let neighbors = terrain.geosphere().neighbors(cell);
@@ -7186,7 +7186,7 @@ fn lab_is_hill_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) 
 
 /// The symmetric counterpart of [`lab_is_hill_cell`]: a strict local
 /// elevation minimum over the same sea-level-clamped ring.
-fn lab_is_valley_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_valley_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> bool {
     let sea_level = terrain.sea_level().get();
     let here = terrain.elevation_at(cell).get();
     let neighbors = terrain.geosphere().neighbors(cell);
@@ -7198,7 +7198,7 @@ fn lab_is_valley_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId
 
 /// Whether `cell` is damp ground that has not channelized: dry land whose
 /// drainage clears [`LAB_MARSH_MIN_DRAINAGE`].
-fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> bool {
     terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
         && terrain.drainage_at(cell) >= LAB_MARSH_MIN_DRAINAGE
 }
@@ -7216,7 +7216,7 @@ fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId)
 /// `Aquifer` cell with a lower non-`Aquifer` neighbour) — independently
 /// restated here rather than calling `worldgen`'s `is_spring_cell` (the lab
 /// does not depend on worldgen's window-local predicates).
-fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> bool {
     terrain.hydro_at(cell) == Hydro::Spring
 }
 
@@ -7224,9 +7224,9 @@ fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId
 /// [`LAB_ISLAND_CELL_CAP`] cells — a flood-fill that stops as soon as it
 /// has seen more than the cap, so a continent costs the same bounded walk
 /// as an islet. Tests the ground underfoot, not proximity to open water.
-fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: Vertex) -> bool {
     let geo = terrain.geosphere();
-    let mut visited: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
+    let mut visited: std::collections::BTreeSet<Vertex> = std::collections::BTreeSet::new();
     visited.insert(cell);
     let mut frontier = vec![cell];
     while !frontier.is_empty() {
@@ -7271,7 +7271,7 @@ const LAB_FORD_TRANSECT_STEPS: usize = 48;
 /// At most this many vertices are transected for
 /// `channel-band-monotonicity`, so a large world does not cost more than a
 /// small one. The stride is derived from it, never the count truncated —
-/// taking the first N vertices would sample only the lowest-`CellId` rivers.
+/// taking the first N vertices would sample only the lowest-`Vertex` rivers.
 const LAB_FORD_MAX_TRANSECTS: usize = 256;
 
 fn lab_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
@@ -7404,9 +7404,9 @@ fn lab_channel_transect_width(
 #[cfg(test)]
 fn lab_run_owner(
     net: &hornvale_terrain::channel::ChannelNetwork,
-    cell_count: usize,
+    vertex_count: usize,
 ) -> Vec<Option<(usize, usize)>> {
-    let mut owner = vec![None; cell_count];
+    let mut owner = vec![None; vertex_count];
     for (i, run) in net.run_cells.iter().enumerate() {
         for (j, &c) in run.iter().enumerate() {
             if j + 1 < run.len() {
@@ -7432,7 +7432,7 @@ fn lab_run_owner(
 /// `drainage >= RIVER_MIN_DRAINAGE`, so a tributary ending on a *sub-threshold*
 /// trunk stopped the walk before its join was ever examined). See
 /// [`lab_channel_connectivity`] for what that cost the measurement.
-fn lab_flow_continues(globe: &hornvale_terrain::TectonicGlobe, cell: CellId) -> bool {
+fn lab_flow_continues(globe: &hornvale_terrain::TectonicGlobe, cell: Vertex) -> bool {
     !matches!(
         *globe.water_kind.get(cell),
         hornvale_terrain::WaterKind::Ocean
@@ -7482,7 +7482,7 @@ enum LabHopVerdict {
 /// reads a constant, so a badly wrong transcription reproduces it exactly.
 fn lab_connectivity_verdicts(
     net: &hornvale_terrain::channel::ChannelNetwork,
-    flow_continues: impl Fn(CellId) -> bool,
+    flow_continues: impl Fn(Vertex) -> bool,
 ) -> Vec<LabHopVerdict> {
     (0..net.polylines.len())
         .map(|line| {
@@ -7928,7 +7928,7 @@ fn independently_steeped_concepts(
         }
     }
 
-    let settled: Vec<CellId> = hornvale_terrain::places(v.world())
+    let settled: Vec<Vertex> = hornvale_terrain::places(v.world())
         .into_iter()
         .filter(|p| hornvale_species::species_of(v.world(), p.id).as_deref() == Some(species))
         .filter_map(|p| {
@@ -7937,7 +7937,7 @@ fn independently_steeped_concepts(
                 .ledger
                 .value_of(p.id, hornvale_settlement::CELL_ID)
             {
-                Some(Value::Number(n)) => Some(CellId(*n as u32)),
+                Some(Value::Number(n)) => Some(Vertex(*n as u32)),
                 _ => None,
             }
         })
@@ -9229,7 +9229,7 @@ mod tests {
         OccupationRecord {
             core: Occupation {
                 people: hornvale_kernel::KindId("goblin"),
-                site: CellId(0),
+                site: Vertex(0),
                 founded: 0.0,
                 ended: match ended_by {
                     Ended::By(_) => Some(1.0),
@@ -9247,7 +9247,7 @@ mod tests {
                 notability: Notability::Common,
             },
             id: eid(id),
-            founded_from: Founding::Genesis(CellId(0)),
+            founded_from: Founding::Genesis(Vertex(0)),
             ended_by,
         }
     }
@@ -9985,7 +9985,7 @@ mod tests {
     /// than through a transcribed walk, so the two arms of the repair are
     /// comparable on the shipped geometry. Nothing in the shipped path calls
     /// it.
-    fn lab_river_continues(globe: &hornvale_terrain::TectonicGlobe, cell: CellId) -> bool {
+    fn lab_river_continues(globe: &hornvale_terrain::TectonicGlobe, cell: Vertex) -> bool {
         match *globe.downhill.get(cell) {
             Some(next) => matches!(
                 *globe.water_kind.get(next),
@@ -10103,11 +10103,11 @@ mod tests {
         // `trunk_vertex` the FIRST, so this is an assertion that the claim
         // relation is functional — `domains/terrain`'s R-4 — re-checked at the
         // point where this file starts depending on it.
-        let owner = lab_run_owner(net, terrain.geosphere().cell_count());
+        let owner = lab_run_owner(net, terrain.geosphere().vertex_count());
         for (index, entry) in owner.iter().enumerate() {
             assert_eq!(
                 *entry,
-                net.trunk_vertex(CellId(index as u32)),
+                net.trunk_vertex(Vertex(index as u32)),
                 "the per-world owner rebuild and the published trunk_vertex disagree at cell \
                  {index}: the claim relation is not functional, and R-4 — which the metric's \
                  substitution of the published accessor rests on — does not hold here"
@@ -12291,7 +12291,7 @@ mod tests {
 
         let geo = view.settlement.terrain().geosphere();
         let mut strife: Vec<f64> = geo
-            .cells()
+            .vertices()
             .map(|c| *report.byproducts.strife.get(c))
             .filter(|x| *x > 0.0)
             .collect();

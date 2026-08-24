@@ -6,7 +6,7 @@
 //! with these without doing surgery inside a 14,700-line file.
 
 use crate::interior::AnchorId;
-use hornvale_kernel::{AStarSolver, RoomAddr, RoomMeshMemo, SearchSpace, Solver, astar};
+use hornvale_kernel::{AStarSolver, Facet, RoomMeshMemo, SearchSpace, Solver, astar};
 
 /// A GOAP action — a precondition/effect transformation over the plan state.
 /// Minimal + heterogeneous (the precondition chain needs two kinds); the MAP-27
@@ -14,7 +14,7 @@ use hornvale_kernel::{AStarSolver, RoomAddr, RoomMeshMemo, SearchSpace, Solver, 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Action {
     /// Walk to an adjacent room (precondition: adjacency; effect: position).
-    MoveTo(RoomAddr),
+    MoveTo(Facet),
     /// Drink (precondition: at the water room; effect: hydrated).
     Drink,
     /// Rest / sleep (precondition: at home; effect: fatigue reset) — The
@@ -188,7 +188,7 @@ impl Action {
     /// enter the world without the audit noticing it has no word.
     pub fn all() -> Vec<Action> {
         vec![
-            Action::MoveTo(RoomAddr {
+            Action::MoveTo(Facet {
                 face: 0,
                 path: Vec::new(),
             }),
@@ -345,7 +345,7 @@ fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PlanState {
     /// The agent's room.
-    pub position: RoomAddr,
+    pub position: Facet,
     /// Whether the sustenance goal is met (has drunk this plan).
     pub hydrated: bool,
 }
@@ -371,7 +371,7 @@ const REMEMBERED_PENALTY: u64 = 5;
 /// `1`, plus [`REMEMBERED_PENALTY`] when `n` is remembered-dangerous. For an
 /// EMPTY `avoid` set every edge stays `1` — the byte-identity property both
 /// planners share.
-fn move_cost(n: &RoomAddr, avoid: &std::collections::BTreeSet<RoomAddr>) -> u64 {
+fn move_cost(n: &Facet, avoid: &std::collections::BTreeSet<Facet>) -> u64 {
     if avoid.contains(n) {
         1 + REMEMBERED_PENALTY
     } else {
@@ -382,10 +382,10 @@ fn move_cost(n: &RoomAddr, avoid: &std::collections::BTreeSet<RoomAddr>) -> u64 
 /// The GOAP search space for the sustenance goal: reach water and drink.
 pub struct GoapSpace<'a> {
     /// The water room the `Drink` action requires.
-    pub water: RoomAddr,
+    pub water: Facet,
     /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
     /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
-    pub avoid: &'a std::collections::BTreeSet<RoomAddr>,
+    pub avoid: &'a std::collections::BTreeSet<Facet>,
 }
 impl<'a> SearchSpace for GoapSpace<'a> {
     type State = PlanState;
@@ -435,10 +435,10 @@ impl<'a> SearchSpace for GoapSpace<'a> {
 /// the A* routes around (The Haunt); pass an empty set for the memory-less path.
 /// type-audit: bare-ok(count: budget)
 pub fn plan_to_water(
-    from: &RoomAddr,
-    water: &RoomAddr,
+    from: &Facet,
+    water: &Facet,
     budget: usize,
-    avoid: &std::collections::BTreeSet<RoomAddr>,
+    avoid: &std::collections::BTreeSet<Facet>,
 ) -> Option<Vec<Action>> {
     astar(
         &GoapSpace {
@@ -455,10 +455,10 @@ pub fn plan_to_water(
 
 /// A navigation-only space (the home-return goal — no Drink): goal is arrival.
 struct NavSpace<'a> {
-    dest: RoomAddr,
+    dest: Facet,
     /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
     /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
-    avoid: &'a std::collections::BTreeSet<RoomAddr>,
+    avoid: &'a std::collections::BTreeSet<Facet>,
 }
 impl<'a> NavSpace<'a> {
     /// The `move_cost`/`avoid` edge-building rule, shared verbatim by
@@ -467,7 +467,7 @@ impl<'a> NavSpace<'a> {
     /// never accidentally also change how an edge's cost is computed — the
     /// memo boundary is `neighbors`/`neighbors_memo` ALONE, never the
     /// successor list this builds from it.
-    fn edges_from(&self, neighbors: [RoomAddr; 3]) -> Vec<(Action, RoomAddr, u64)> {
+    fn edges_from(&self, neighbors: [Facet; 3]) -> Vec<(Action, Facet, u64)> {
         neighbors
             .into_iter()
             .map(|n| {
@@ -478,43 +478,43 @@ impl<'a> NavSpace<'a> {
     }
 }
 impl<'a> SearchSpace for NavSpace<'a> {
-    type State = RoomAddr;
+    type State = Facet;
     type Action = Action;
-    fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
+    fn successors(&self, s: &Facet) -> Vec<(Action, Facet, u64)> {
         self.edges_from(s.neighbors())
     }
     /// Ledger #7's re-plan (the-waymark, Task 6): consults a caller-owned
     /// [`RoomMeshMemo`] for the neighbor lookup instead of recomputing the
     /// icosphere lattice arithmetic on every `astar` expansion — this is the
-    /// specific hot path (`RoomAddr::neighbors` inside `NavSpace::successors`
+    /// specific hot path (`Facet::neighbors` inside `NavSpace::successors`
     /// → `astar` expansions) Task 3's memo was built for but could not reach,
     /// because `SearchSpace::successors(&self, ...)` alone had no way to
     /// thread a caller's memo down into it. Byte-identical to `successors`
-    /// either way ([`RoomAddr::neighbors_memo`] is a cache of the same pure
+    /// either way ([`Facet::neighbors_memo`] is a cache of the same pure
     /// function `neighbors` computes), and the `edges_from` cost rule is
     /// untouched — only which of `neighbors`/`neighbors_memo` supplies the
     /// three rooms it costs.
     fn successors_memo(
         &self,
-        s: &RoomAddr,
+        s: &Facet,
         memo: Option<&mut RoomMeshMemo>,
-    ) -> Vec<(Action, RoomAddr, u64)> {
+    ) -> Vec<(Action, Facet, u64)> {
         let neighbors = match memo {
             Some(m) => s.neighbors_memo(m),
             None => s.neighbors(),
         };
         self.edges_from(neighbors)
     }
-    fn goal(&self, s: &RoomAddr) -> bool {
+    fn goal(&self, s: &Facet) -> bool {
         *s == self.dest
     }
-    fn heuristic(&self, _s: &RoomAddr) -> u64 {
+    fn heuristic(&self, _s: &Facet) -> u64 {
         0
     }
 }
 
 /// [`plan_to_room`], threading a caller-owned [`RoomMeshMemo`] through the
-/// underlying [`AStarSolver`] search instead of recomputing `RoomAddr::
+/// underlying [`AStarSolver`] search instead of recomputing `Facet::
 /// neighbors` on every expansion (the-waymark, Task 6 — ledger #7's
 /// re-plan). `mesh_memo: None` is exactly `plan_to_room`'s own behavior
 /// (`NavSpace::successors_memo`'s default-free override still falls back to
@@ -523,10 +523,10 @@ impl<'a> SearchSpace for NavSpace<'a> {
 /// caller worth the memo is `HomeNavCache::home_nav` in [`crate::liveness`];
 /// a future external caller can widen this if it ever needs to.
 pub(crate) fn plan_to_room_memo(
-    from: &RoomAddr,
-    dest: &RoomAddr,
+    from: &Facet,
+    dest: &Facet,
     budget: usize,
-    avoid: &std::collections::BTreeSet<RoomAddr>,
+    avoid: &std::collections::BTreeSet<Facet>,
     mesh_memo: Option<&mut RoomMeshMemo>,
 ) -> Option<Vec<Action>> {
     AStarSolver.solve(
@@ -548,10 +548,10 @@ pub(crate) fn plan_to_room_memo(
 /// unchanged.
 /// type-audit: bare-ok(count: budget)
 pub fn plan_to_room(
-    from: &RoomAddr,
-    dest: &RoomAddr,
+    from: &Facet,
+    dest: &Facet,
     budget: usize,
-    avoid: &std::collections::BTreeSet<RoomAddr>,
+    avoid: &std::collections::BTreeSet<Facet>,
 ) -> Option<Vec<Action>> {
     plan_to_room_memo(from, dest, budget, avoid, None)
 }

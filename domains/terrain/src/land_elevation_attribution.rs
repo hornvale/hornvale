@@ -335,7 +335,7 @@ fn the_land_elevation_terms_attribute_their_variance() {
         let sea = globe.sea_level.get();
         sea_levels.push(sea);
         let mut rows: Vec<Row> = Vec::new();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let elevation = globe.elevation.get(cell).get();
             if elevation < sea {
                 continue; // ocean: land is `e >= sea`, matching the metric
@@ -365,7 +365,7 @@ fn the_land_elevation_terms_attribute_their_variance() {
         assert!(!rows.is_empty(), "seed {seed} has no land cells");
         supply_sum += crate::crust::continental_supply(&globe.cratons);
         let mut seed_retained = 0_usize;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let crust_km = *globe.crust.get(cell);
             if crust_km >= crate::crust::CONTINENTAL_THRESHOLD_KM {
                 seed_retained += 1;

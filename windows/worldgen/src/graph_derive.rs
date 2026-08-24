@@ -9,7 +9,7 @@
 //! Purely derived, never committed to the ledger: no epoch, no seed draw, no
 //! wall-clock read. Same inputs (geosphere, elevation, biome, current,
 //! settlement cells, config) always produce a byte-identical graph -- every
-//! candidate iteration/selection below is ordered by `CellId` (ascending, no
+//! candidate iteration/selection below is ordered by `Vertex` (ascending, no
 //! `HashMap`/`HashSet`) and every float choice is tie-broken by
 //! `f64::total_cmp`.
 
@@ -18,7 +18,7 @@ use hornvale_climate::Biome;
 use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Value, World};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Value, Vertex, VertexMap, World};
 use hornvale_topology::route::least_cost;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use std::collections::BTreeSet;
@@ -114,18 +114,18 @@ const SNOW_PENALTY: f64 = 0.7;
 /// type-audit: bare-ok(diagnostic-value: current)
 pub fn connection_graph(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
-    biome: &CellMap<Biome>,
-    current: &CellMap<[f64; 3]>,
-    settlements: &[CellId],
+    elevation: &VertexMap<ReferenceElevation>,
+    biome: &VertexMap<Biome>,
+    current: &VertexMap<[f64; 3]>,
+    settlements: &[Vertex],
     cfg: &GraphConfig,
 ) -> ConnectionGraph {
     let cost = traversal_cost(geo, elevation, biome);
-    let mut graph = ConnectionGraph::new(geo.cell_count());
+    let mut graph = ConnectionGraph::new(geo.vertex_count());
 
     // Separates SURFACE traversal only. Underworld edges beneath a marine or
     // land cell are a later campaign's addition, not a defect in this line.
-    let marine = CellMap::from_fn(geo, |c| biome.get(c).is_marine());
+    let marine = VertexMap::from_fn(geo, |c| biome.get(c).is_marine());
     add_adjacency_edges(geo, &cost, &mut graph);
     add_water_routes(geo, &marine, current, cfg, &mut graph);
     add_land_routes(geo, &cost, settlements, cfg, &mut graph);
@@ -143,15 +143,15 @@ pub fn connection_graph(
 /// type-audit: bare-ok(diagnostic-value: current)
 pub fn connection_graph_at(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    current: &CellMap<[f64; 3]>,
-    settlements: &[CellId],
+    current: &VertexMap<[f64; 3]>,
+    settlements: &[Vertex],
     cfg: &GraphConfig,
 ) -> ConnectionGraph {
-    let marine = CellMap::from_fn(geo, |c| elevation.get(c).get() < sea_level.get());
+    let marine = VertexMap::from_fn(geo, |c| elevation.get(c).get() < sea_level.get());
     let cost = crate::traversal::traversal_cost_at(geo, elevation, sea_level);
-    let mut graph = ConnectionGraph::new(geo.cell_count());
+    let mut graph = ConnectionGraph::new(geo.vertex_count());
     add_adjacency_edges(geo, &cost, &mut graph);
     add_water_routes(geo, &marine, current, cfg, &mut graph);
     add_land_routes(geo, &cost, settlements, cfg, &mut graph);
@@ -164,8 +164,8 @@ pub fn connection_graph_at(
 /// too). Reconstructs terrain and climate (`crate::terrain_of` /
 /// `crate::climate_from`), reads the current field pointwise
 /// (`GeneratedClimate::current_at`, no `current_map()` accessor exists) into
-/// a `CellMap`, and reads each settlement's `cell-id` fact
-/// (`hornvale_settlement::CELL_ID`) into the `Vec<CellId>` `connection_graph`
+/// a `VertexMap`, and reads each settlement's `cell-id` fact
+/// (`hornvale_settlement::CELL_ID`) into the `Vec<Vertex>` `connection_graph`
 /// wants -- then calls `connection_graph`. Derivation logic stays there;
 /// this function is only the adapter, so it never duplicates
 /// `connection_graph`'s edge-assembly.
@@ -195,13 +195,13 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;
     let biome = climate.biome_map();
-    let current = CellMap::from_fn(geo, |c| climate.current_at(c));
+    let current = VertexMap::from_fn(geo, |c| climate.current_at(c));
 
-    let settlements: Vec<CellId> = hornvale_settlement::all_settlements(world)
+    let settlements: Vec<Vertex> = hornvale_settlement::all_settlements(world)
         .iter()
         .map(
             |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             },
         )
@@ -220,7 +220,7 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
         // `SubstrateField::compute` calls, just without the duplicate year.
         let (wetness_field, snow_field) =
             SubstrateField::compute_pair(&climate, &DEFAULT_WETNESS, &DEFAULT_SNOWPACK);
-        let factor_at = |cell: CellId| -> f64 {
+        let factor_at = |cell: Vertex| -> f64 {
             let wetness_mm = wetness_field.at(cell, day);
             let snow_mm = snow_field.at(cell, day);
             let frozen = climate.is_frozen_at(cell, day);
@@ -252,10 +252,10 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
 /// type-audit: bare-ok(count: return)
 pub fn land_route_attempt_count(
     geo: &Geosphere,
-    settlements: &[CellId],
+    settlements: &[Vertex],
     cfg: &GraphConfig,
 ) -> usize {
-    let mut sorted: Vec<CellId> = settlements.to_vec();
+    let mut sorted: Vec<Vertex> = settlements.to_vec();
     sorted.sort();
     sorted.dedup();
 
@@ -272,12 +272,12 @@ pub fn land_route_attempt_count(
 
 /// Bare mesh adjacency: one `Adjacency` edge per unordered neighbor pair.
 /// `geo.neighbors` is symmetric, so iterating every cell's every neighbor
-/// would otherwise add each pair twice -- only the lower-`CellId` side of a
+/// would otherwise add each pair twice -- only the lower-`Vertex` side of a
 /// pair adds it, canonically. Conductance is the reciprocal of the pair's
 /// average traversal cost, or zero if either endpoint is impassable
 /// (`u64::MAX`, e.g. ocean).
-fn add_adjacency_edges(geo: &Geosphere, cost: &CellMap<u64>, graph: &mut ConnectionGraph) {
-    for cell in geo.cells() {
+fn add_adjacency_edges(geo: &Geosphere, cost: &VertexMap<u64>, graph: &mut ConnectionGraph) {
+    for cell in geo.vertices() {
         for &neighbor in geo.neighbors(cell) {
             if neighbor.0 <= cell.0 {
                 continue;
@@ -306,11 +306,15 @@ fn cost_conductance(a: u64, b: u64) -> f64 {
     1.0 / ((a as f64 + b as f64) / 2.0)
 }
 
-/// A coastal cell's launch point onto the water: its own lowest-`CellId`
+/// A coastal cell's launch point onto the water: its own lowest-`Vertex`
 /// marine neighbor (`geo.neighbors` is already ascending, so this is a
 /// stable, deterministic pick when a coastal cell borders more than one
 /// ocean cell). `None` if `cell` is not coastal (no marine neighbor at all).
-fn first_marine_neighbor(geo: &Geosphere, marine: &CellMap<bool>, cell: CellId) -> Option<CellId> {
+fn first_marine_neighbor(
+    geo: &Geosphere,
+    marine: &VertexMap<bool>,
+    cell: Vertex,
+) -> Option<Vertex> {
     geo.neighbors(cell)
         .iter()
         .copied()
@@ -324,9 +328,9 @@ fn first_marine_neighbor(geo: &Geosphere, marine: &CellMap<bool>, cell: CellId) 
 /// picks the one most ALIGNED with a current vector instead. Ties are
 /// broken by `f64::total_cmp` via `Iterator::max_by`, which returns the
 /// LAST maximum on a tie -- since `geo.neighbors` is ascending, a tie
-/// resolves toward the higher `CellId`, deterministically (e.g. a dead
+/// resolves toward the higher `Vertex`, deterministically (e.g. a dead
 /// current pocket, where every neighbor scores the same zero alignment).
-fn downstream_neighbor(geo: &Geosphere, cell: CellId, vector: [f64; 3]) -> Option<CellId> {
+fn downstream_neighbor(geo: &Geosphere, cell: Vertex, vector: [f64; 3]) -> Option<Vertex> {
     let here = geo.position(cell);
     geo.neighbors(cell).iter().copied().max_by(|&a, &b| {
         let pa = geo.position(a);
@@ -349,12 +353,12 @@ fn downstream_neighbor(geo: &Geosphere, cell: CellId, vector: [f64; 3]) -> Optio
 /// in time.
 fn follow_current(
     geo: &Geosphere,
-    marine: &CellMap<bool>,
-    current: &CellMap<[f64; 3]>,
-    start: CellId,
+    marine: &VertexMap<bool>,
+    current: &VertexMap<[f64; 3]>,
+    start: Vertex,
     max_steps: u32,
-) -> Option<CellId> {
-    let mut visited: BTreeSet<CellId> = BTreeSet::new();
+) -> Option<Vertex> {
+    let mut visited: BTreeSet<Vertex> = BTreeSet::new();
     visited.insert(start);
     let mut cell = start;
     for _ in 0..max_steps {
@@ -379,18 +383,18 @@ fn vector_magnitude(v: [f64; 3]) -> f64 {
 
 /// Sailing lanes: for every coastal cell (a non-marine cell with at least
 /// one marine neighbor), launch a current-following trace
-/// ([`follow_current`]) from its lowest-`CellId` marine neighbor
+/// ([`follow_current`]) from its lowest-`Vertex` marine neighbor
 /// ([`first_marine_neighbor`]); if it reaches another, distinct coastal cell
 /// within `cfg.water_route_max_steps`, add a `WaterRoute` edge, conductance
 /// the current's strength at the launch cell.
 fn add_water_routes(
     geo: &Geosphere,
-    marine: &CellMap<bool>,
-    current: &CellMap<[f64; 3]>,
+    marine: &VertexMap<bool>,
+    current: &VertexMap<[f64; 3]>,
     cfg: &GraphConfig,
     graph: &mut ConnectionGraph,
 ) {
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         if *marine.get(cell) {
             continue;
         }
@@ -426,16 +430,16 @@ fn add_water_routes(
 /// `cfg.corridor_max_cost` becomes a `LandRoute` edge, conductance the
 /// reciprocal of its total cost. Settlements are sorted and deduplicated
 /// first so pair iteration is deterministic regardless of the input
-/// slice's order (settlement facts commit in ledger order, not `CellId`
+/// slice's order (settlement facts commit in ledger order, not `Vertex`
 /// order).
 fn add_land_routes(
     geo: &Geosphere,
-    cost: &CellMap<u64>,
-    settlements: &[CellId],
+    cost: &VertexMap<u64>,
+    settlements: &[Vertex],
     cfg: &GraphConfig,
     graph: &mut ConnectionGraph,
 ) {
-    let mut sorted: Vec<CellId> = settlements.to_vec();
+    let mut sorted: Vec<Vertex> = settlements.to_vec();
     sorted.sort();
     sorted.dedup();
 
@@ -482,12 +486,12 @@ fn add_land_routes(
 /// calls this once per `a`, replacing what was previously one
 /// `hops_between` call per `(a, b)` pair -- a genuine reduction in repeated
 /// work, not a change to which pairs pass the filter.
-fn cells_within_hops(geo: &Geosphere, from: CellId, radius: u32) -> BTreeSet<CellId> {
-    let mut visited: BTreeSet<CellId> = BTreeSet::new();
+fn cells_within_hops(geo: &Geosphere, from: Vertex, radius: u32) -> BTreeSet<Vertex> {
+    let mut visited: BTreeSet<Vertex> = BTreeSet::new();
     visited.insert(from);
-    let mut frontier: Vec<CellId> = vec![from];
+    let mut frontier: Vec<Vertex> = vec![from];
     for _ in 1..=radius {
-        let mut next: Vec<CellId> = Vec::new();
+        let mut next: Vec<Vertex> = Vec::new();
         for &c in &frontier {
             for &n in geo.neighbors(c) {
                 if visited.insert(n) {
@@ -594,12 +598,12 @@ mod tests {
         let geo = terrain.geosphere();
         let elevation = &terrain.globe().elevation;
         let biome = climate.biome_map();
-        let current = CellMap::from_fn(geo, |c| climate.current_at(c));
-        let settlements: Vec<CellId> = hornvale_settlement::all_settlements(&world)
+        let current = VertexMap::from_fn(geo, |c| climate.current_at(c));
+        let settlements: Vec<Vertex> = hornvale_settlement::all_settlements(&world)
             .iter()
             .map(
                 |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                    Some(Value::Number(n)) => CellId(*n as u32),
+                    Some(Value::Number(n)) => Vertex(*n as u32),
                     _ => panic!("settlement {} has no cell-id fact", s.id.0),
                 },
             )

@@ -36,7 +36,7 @@ pub mod water_table;
 
 pub use streams::stream_labels;
 
-pub use boundaries::{BoundaryKind, CellBoundary};
+pub use boundaries::{BoundaryKind, VertexBoundary};
 pub use branch::{
     CatchmentCut, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_CELL_MAX, Rill, RillReading,
     cell_catchment, rill_reading, rills_of, room_spacing,
@@ -82,7 +82,7 @@ use hornvale_kernel::{
 /// epoch (spec §5): the coarser grid under-resolved shelf and coastline
 /// structure for the sculpting work that campaign does. The composition
 /// root builds `Geosphere::new(level)` (per-level cached) once per process
-/// per level; every terrain (and, in Plan 3c, climate) CellMap in a world
+/// per level; every terrain (and, in Plan 3c, climate) VertexMap in a world
 /// is built against the mesh its level selected and must only ever be
 /// queried with it.
 /// type-audit: bare-ok(count)

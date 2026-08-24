@@ -171,10 +171,10 @@ fn map_focus_at_the_walk_band_resolves_a_real_name() {
 /// rather than two different NAMED features**, checked and worth recording:
 /// a swept probe over every reachable box within seed 42's flagship
 /// walk-band view found every `Some` box resolves to the SAME nearest
-/// terrain `CellId` as the observer (`CellId(22195)`, confirmed by
+/// terrain `Vertex` as the observer (`Vertex(22195)`, confirmed by
 /// instrumenting `resolve_walk_band` directly) — the visible neighbourhood
 /// spans `distance_rad` on the order of 1e-4 (tens of metres), while
-/// `NearestCellIndex` snaps onto one of only 40,962 cells tiling the whole
+/// `NearestVertexIndex` snaps onto one of only 40,962 cells tiling the whole
 /// globe (roughly hundreds of kilometres apart at seed 42's `GLOBE_LEVEL`).
 /// So a walk-band session structurally cannot cross a terrain-feature
 /// boundary within view except by standing within metres of one — a real

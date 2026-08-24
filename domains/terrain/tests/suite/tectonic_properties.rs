@@ -3,7 +3,7 @@
 //! elevation envelope, ocean-fraction tolerance, determinism, and the
 //! convergent-vs-interior elevation contrast).
 
-use hornvale_kernel::{CellMap, Geosphere, Seed};
+use hornvale_kernel::{Geosphere, Seed, VertexMap};
 use hornvale_terrain::{GeneratedTerrain, GenesisError, TerrainPins, generate, streams, summarize};
 
 #[test]
@@ -238,7 +238,7 @@ fn every_default_globe_satisfies_every_invariant() {
             (8..=40).contains(&plate_count),
             "seed {seed}: plate count {plate_count}"
         );
-        assert_eq!(globe.plate_of.len(), geo.cell_count());
+        assert_eq!(globe.plate_of.len(), geo.vertex_count());
         for (cell, plate) in globe.plate_of.iter() {
             assert!(
                 (*plate as usize) < globe.plates.len(),
@@ -297,8 +297,8 @@ fn boundary_classification_agrees_from_both_sides_across_seeds() {
             &mut Vec::new(),
         );
         let field = CrustField::new(terrain_seed, cratons);
-        let continental = CellMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
-        for a in geo.cells() {
+        let continental = VertexMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
+        for a in geo.vertices() {
             for &b in geo.neighbors(a) {
                 let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
                 if pa == pb {
@@ -718,7 +718,7 @@ fn the_clip_reshapes_real_coastlines_on_seed_42() {
     );
     let plain = CrustField::new_with_terranes(terrain_seed, all, g.terranes.clone());
     let flips = geo
-        .cells()
+        .vertices()
         .filter(|&c| {
             let p = geo.position(c);
             clipped.continental_at(p) != plain.continental_at(p)
@@ -742,7 +742,7 @@ fn the_column_is_deterministic() {
         geo.clone(),
         generate(Seed(42), &geo, &TerrainPins::default()).unwrap(),
     );
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         assert_eq!(a.column_at(cell), b.column_at(cell));
         assert_eq!(
             a.geothermal_gradient_at(cell),
@@ -764,7 +764,7 @@ fn the_column_is_a_pure_projection_unperturbed_by_pins() {
         ..TerrainPins::default()
     };
     let pinned = GeneratedTerrain::new(geo.clone(), generate(Seed(42), &geo, &pins).unwrap());
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         assert_eq!(base.column_at(cell), pinned.column_at(cell));
     }
 }
@@ -854,7 +854,7 @@ fn features_are_a_pure_pin_invariant_projection() {
         ..TerrainPins::default()
     };
     let pinned = GeneratedTerrain::new(geo.clone(), generate(Seed(42), &geo, &pins).unwrap());
-    for cell in geo.cells() {
+    for cell in geo.vertices() {
         assert_eq!(base.cave_at(cell), pinned.cave_at(cell));
         assert_eq!(base.deposit_at(cell), pinned.deposit_at(cell));
     }

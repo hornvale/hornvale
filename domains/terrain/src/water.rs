@@ -1,9 +1,9 @@
 //! Salt/fresh water classification (The Freshet, DOM-5 first slice): a pure
 //! projection over the drainage substrate the globe already computes. No seed
-//! draws, no stored state beyond a recomputed-at-genesis `CellMap` — the
+//! draws, no stored state beyond a recomputed-at-genesis `VertexMap` — the
 //! MAP-39/The Ground shape.
 
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, VertexMap};
 
 /// The kind of water (if any) at a cell. `Ocean`/`SaltBasin` are salt;
 /// `River` is the only drinkable (fresh) class this slice.
@@ -101,20 +101,20 @@ pub const RIVER_REACH: u32 = 3;
 /// Per-cell proximity to fresh flowing water, in `[0, 1]`: `1.0` on a
 /// `WaterKind::River` cell, decaying linearly to `0.0` at `reach` hops. A
 /// deterministic multi-source BFS outward from all River cells (frontier
-/// processed in `CellId` order — no RNG, no HashMap). The carrying-capacity
+/// processed in `Vertex` order — no RNG, no HashMap). The carrying-capacity
 /// freshwater term (The Confluence) rides this instead of the smooth
 /// drainage/moisture proxy, so condensation pulls towns near rivers.
 /// type-audit: bare-ok(count: reach), bare-ok(ratio: return)
 pub fn river_proximity(
     geo: &Geosphere,
-    water_kind: &CellMap<WaterKind>,
+    water_kind: &VertexMap<WaterKind>,
     reach: u32,
-) -> CellMap<f64> {
+) -> VertexMap<f64> {
     // hop distance to nearest River, capped at reach+1 (unreached).
     let unreached = reach + 1;
-    let mut dist: Vec<u32> = vec![unreached; geo.cell_count()];
-    let mut frontier: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
-    for c in geo.cells() {
+    let mut dist: Vec<u32> = vec![unreached; geo.vertex_count()];
+    let mut frontier: std::collections::BTreeSet<Vertex> = std::collections::BTreeSet::new();
+    for c in geo.vertices() {
         if matches!(*water_kind.get(c), WaterKind::River) {
             dist[c.0 as usize] = 0;
             frontier.insert(c);
@@ -122,7 +122,7 @@ pub fn river_proximity(
     }
     let mut d = 0u32;
     while d < reach && !frontier.is_empty() {
-        let mut next: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
+        let mut next: std::collections::BTreeSet<Vertex> = std::collections::BTreeSet::new();
         for c in &frontier {
             for &n in geo.neighbors(*c) {
                 if dist[n.0 as usize] > d + 1 {
@@ -134,7 +134,7 @@ pub fn river_proximity(
         frontier = next;
         d += 1;
     }
-    CellMap::from_fn(geo, |c| {
+    VertexMap::from_fn(geo, |c| {
         let h = dist[c.0 as usize];
         if h > reach {
             0.0
@@ -150,14 +150,14 @@ pub fn river_proximity(
 /// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic)
 pub fn water_field(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    drainage: &CellMap<f64>,
-    endorheic: &CellMap<bool>,
-    downhill: &[Option<CellId>],
-) -> CellMap<WaterKind> {
+    drainage: &VertexMap<f64>,
+    endorheic: &VertexMap<bool>,
+    downhill: &[Option<Vertex>],
+) -> VertexMap<WaterKind> {
     let sea = sea_level.get();
-    CellMap::from_fn(geo, |c| {
+    VertexMap::from_fn(geo, |c| {
         let terminal_sink = *endorheic.get(c) && downhill[c.0 as usize].is_none();
         classify(
             elevation.get(c).get(),
@@ -259,28 +259,28 @@ mod tests {
         // build the field twice, assert equal (determinism) and the two cells' kinds.
         let geo = hornvale_kernel::Geosphere::new(2);
         let sea = hornvale_kernel::ReferenceElevation::new(0.0).unwrap();
-        let elevation = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+        let elevation = hornvale_kernel::VertexMap::from_fn(&geo, |c| {
             hornvale_kernel::ReferenceElevation::new(if c.0 == 0 { -100.0 } else { 100.0 }).unwrap()
         });
-        let drainage = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+        let drainage = hornvale_kernel::VertexMap::from_fn(&geo, |c| {
             if c.0 == 1 {
                 RIVER_MIN_DRAINAGE + 1.0
             } else {
                 0.0
             }
         });
-        let endorheic = hornvale_kernel::CellMap::from_fn(&geo, |_| false);
-        let downhill: Vec<Option<hornvale_kernel::CellId>> =
-            (0..geo.cell_count()).map(|_| None).collect();
+        let endorheic = hornvale_kernel::VertexMap::from_fn(&geo, |_| false);
+        let downhill: Vec<Option<hornvale_kernel::Vertex>> =
+            (0..geo.vertex_count()).map(|_| None).collect();
         let a = water_field(&geo, &elevation, sea, &drainage, &endorheic, &downhill);
         let b = water_field(&geo, &elevation, sea, &drainage, &endorheic, &downhill);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             assert_eq!(a.get(c), b.get(c));
         }
-        assert_eq!(*a.get(hornvale_kernel::CellId(0)), WaterKind::Ocean);
+        assert_eq!(*a.get(hornvale_kernel::Vertex(0)), WaterKind::Ocean);
         // cell 1 is land + high drainage + not-a-sink (downhill None makes it a sink
         // ONLY if endorheic; endorheic is false here) -> River.
-        assert_eq!(*a.get(hornvale_kernel::CellId(1)), WaterKind::River);
+        assert_eq!(*a.get(hornvale_kernel::Vertex(1)), WaterKind::River);
     }
 
     #[test]
@@ -288,8 +288,8 @@ mod tests {
         // A tiny globe; mark one cell River, rest DryLand; proximity is 1.0 on it,
         // strictly decreasing by hop distance, 0.0 beyond reach.
         let geo = hornvale_kernel::Geosphere::new(3);
-        let river = hornvale_kernel::CellId(0);
-        let wk = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+        let river = hornvale_kernel::Vertex(0);
+        let wk = hornvale_kernel::VertexMap::from_fn(&geo, |c| {
             if c == river {
                 WaterKind::River
             } else {
@@ -320,9 +320,9 @@ mod tests {
     #[test]
     fn river_proximity_is_zero_with_no_rivers() {
         let geo = hornvale_kernel::Geosphere::new(3);
-        let wk = hornvale_kernel::CellMap::from_fn(&geo, |_| WaterKind::DryLand);
+        let wk = hornvale_kernel::VertexMap::from_fn(&geo, |_| WaterKind::DryLand);
         let prox = river_proximity(&geo, &wk, RIVER_REACH);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             assert_eq!(*prox.get(c), 0.0);
         }
     }
@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn river_proximity_is_deterministic_and_reload_stable() {
         let geo = hornvale_kernel::Geosphere::new(3);
-        let wk = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+        let wk = hornvale_kernel::VertexMap::from_fn(&geo, |c| {
             if c.0 % 7 == 0 {
                 WaterKind::River
             } else {
@@ -339,7 +339,7 @@ mod tests {
         });
         let a = river_proximity(&geo, &wk, RIVER_REACH);
         let b = river_proximity(&geo, &wk, RIVER_REACH);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             assert_eq!(a.get(c), b.get(c));
         }
     }
@@ -352,10 +352,10 @@ mod tests {
         // source), so this distinguishes the correct multi-source BFS from a
         // single-source one — which every other test passes.
         let geo = hornvale_kernel::Geosphere::new(4);
-        let r1 = hornvale_kernel::CellId(0);
-        let r2 = hornvale_kernel::CellId(geo.cell_count() as u32 / 2);
+        let r1 = hornvale_kernel::Vertex(0);
+        let r2 = hornvale_kernel::Vertex(geo.vertex_count() as u32 / 2);
         assert_ne!(r1, r2);
-        let wk = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+        let wk = hornvale_kernel::VertexMap::from_fn(&geo, |c| {
             if c == r1 || c == r2 {
                 WaterKind::River
             } else {

@@ -6,7 +6,7 @@
 //! lowest-neighbor flow direction (no splitting), unit-area accumulation
 //! (no precipitation weighting), no sub-cell river geometry or lake filling.
 
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Vertex, VertexMap};
 
 /// Downhill target per land cell: the strictly-lowest neighbor (elevations
 /// are strictly ordered by C3's per-cell epsilon, so there is no tie). A
@@ -23,18 +23,18 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 /// type-audit: bare-ok(count: return)
 pub fn downhill_targets(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-) -> Vec<Option<CellId>> {
-    let n = geo.cell_count();
-    let is_land = |c: CellId| *elevation.get(c) >= sea_level;
-    let mut downhill: Vec<Option<CellId>> = vec![None; n];
-    for c in geo.cells() {
+) -> Vec<Option<Vertex>> {
+    let n = geo.vertex_count();
+    let is_land = |c: Vertex| *elevation.get(c) >= sea_level;
+    let mut downhill: Vec<Option<Vertex>> = vec![None; n];
+    for c in geo.vertices() {
         if !is_land(c) {
             continue;
         }
         let here = *elevation.get(c);
-        let mut best: Option<CellId> = None;
+        let mut best: Option<Vertex> = None;
         let mut best_e = here;
         for &nb in geo.neighbors(c) {
             let e = *elevation.get(nb);
@@ -55,11 +55,11 @@ pub fn downhill_targets(
 /// type-audit: bare-ok(count: return)
 pub fn drainage_field(
     geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
+    elevation: &VertexMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-) -> (CellMap<f64>, CellMap<bool>) {
-    let n = geo.cell_count();
-    let is_land = |c: CellId| *elevation.get(c) >= sea_level;
+) -> (VertexMap<f64>, VertexMap<bool>) {
+    let n = geo.vertex_count();
+    let is_land = |c: Vertex| *elevation.get(c) >= sea_level;
 
     let downhill = downhill_targets(geo, elevation, sea_level);
     let mut reaches_sea = vec![false; n];
@@ -69,7 +69,7 @@ pub fn drainage_field(
     // Endorheic = land cell that does NOT reach the sea.
     // 0 = unknown, 1 = reaches sea, 2 = does not.
     let mut state = vec![0u8; n];
-    for start in geo.cells() {
+    for start in geo.vertices() {
         if !is_land(start) || state[start.0 as usize] != 0 {
             continue;
         }
@@ -100,16 +100,16 @@ pub fn drainage_field(
             state[c.0 as usize] = verdict;
         }
     }
-    for c in geo.cells() {
+    for c in geo.vertices() {
         if is_land(c) {
             reaches_sea[c.0 as usize] = state[c.0 as usize] == 1;
         }
     }
 
     // Flow accumulation: process land cells high → low (strict order, total_cmp
-    // tie-break by CellId), each pushing its running total to its downhill
+    // tie-break by Vertex), each pushing its running total to its downhill
     // neighbor. Ocean cells stay 0.
-    let mut order: Vec<CellId> = geo.cells().filter(|c| is_land(*c)).collect();
+    let mut order: Vec<Vertex> = geo.vertices().filter(|c| is_land(*c)).collect();
     order.sort_by(|a, b| {
         elevation
             .get(*b)
@@ -124,8 +124,8 @@ pub fn drainage_field(
         }
     }
 
-    let drainage = CellMap::from_fn(geo, |c| if is_land(c) { acc[c.0 as usize] } else { 0.0 });
-    let endorheic = CellMap::from_fn(geo, |c| is_land(c) && !reaches_sea[c.0 as usize]);
+    let drainage = VertexMap::from_fn(geo, |c| if is_land(c) { acc[c.0 as usize] } else { 0.0 });
+    let endorheic = VertexMap::from_fn(geo, |c| is_land(c) && !reaches_sea[c.0 as usize]);
     (drainage, endorheic)
 }
 
@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(a, b, "drainage must be deterministic");
         // Every land cell drains at least itself; ocean cells are zero.
         let mut land = 0usize;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if *globe.elevation.get(c) >= globe.sea_level {
                 land += 1;
                 assert!(*a.get(c) >= 1.0, "land cell {} drains < 1", c.0);
@@ -180,8 +180,8 @@ mod tests {
             .unwrap()
             .globe;
         let (d, _e) = drainage_field(&geo, &globe.elevation, globe.sea_level);
-        let land: Vec<CellId> = geo
-            .cells()
+        let land: Vec<Vertex> = geo
+            .vertices()
             .filter(|c| *globe.elevation.get(*c) >= globe.sea_level)
             .collect();
         let mean: f64 = land

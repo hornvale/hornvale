@@ -18,7 +18,7 @@
 //!
 //! Measured 2026-07-26 on seed 42, this branch's base (includes The Vigil).
 //! A throwaway gate was added as the first statement of `per_species_suitability`'s
-//! `CellMap::from_fn` closure in `windows/worldgen/src/lib.rs` (reverted
+//! `VertexMap::from_fn` closure in `windows/worldgen/src/lib.rs` (reverted
 //! immediately after measuring, not shipped here):
 //! ```text
 //! if terrain.is_ocean(cell) { return 0.0; }
@@ -65,7 +65,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_demography::home_range;
-use hornvale_kernel::{ANIMAL_PREY, CellMap, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE};
+use hornvale_kernel::{ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, VertexMap};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
@@ -149,10 +149,10 @@ fn waterline_probe() {
         &realm,
         &affinity,
     );
-    let k_of = |tag: u32| -> &CellMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
+    let k_of = |tag: u32| -> &VertexMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
     let tag_of = |name: &str| -> u32 { names.iter().position(|n| *n == name).unwrap() as u32 };
 
-    let cells: Vec<_> = geo.cells().collect();
+    let cells: Vec<_> = geo.vertices().collect();
     println!(
         "\n=== THE WATERLINE — feasibility probe (seed 42, {} cells)\n",
         cells.len()
@@ -352,7 +352,7 @@ fn waterline_probe() {
     }
 
     // --- Is the SHIPPED dominance result land-masked? ---------------------
-    // `menagerie_full_roster_dominant_breakdown` iterates `geo.cells()` with
+    // `menagerie_full_roster_dominant_breakdown` iterates `geo.vertices()` with
     // no land filter. Measure the split directly rather than inferring it.
     println!("\n-- dominance by land/ocean (the shipped metric's own definition)");
     let report = hornvale_worldgen::demography_report_from(&world, &wc, &terrain, &climate)
@@ -454,7 +454,7 @@ fn waterline_probe() {
 
     // Per-axis supply at a sample of ocean cells: which axes are non-zero
     // where the mask says "not habitable"?
-    let base_inputs_nonhab: Vec<hornvale_kernel::CellId> = cells
+    let base_inputs_nonhab: Vec<hornvale_kernel::Vertex> = cells
         .iter()
         .copied()
         .filter(|&c| !*habitable.get(c))

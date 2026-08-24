@@ -454,7 +454,7 @@ impl EnvironmentVector {
 ///
 /// Distinct from [`CapacityMap`] by decision 0103, which exists because a
 /// campaign spec was written on the belief that a suitability field was a
-/// capacity field — both were `CellMap<f64>`, so neither the compiler, the
+/// capacity field — both were `VertexMap<f64>`, so neither the compiler, the
 /// reviewer, nor the type-audit objected to a 20–100× silent rescale. The
 /// only legal way to combine the two is [`CapacityMap::modulated_by`].
 ///
@@ -463,12 +463,12 @@ impl EnvironmentVector {
 /// reproduce the very blur this type exists to prevent.
 /// type-audit: bare-ok(ratio: element)
 #[derive(Debug, Clone, PartialEq)]
-pub struct SuitabilityMap(crate::CellMap<f64>);
+pub struct SuitabilityMap(crate::VertexMap<f64>);
 
 impl SuitabilityMap {
     /// Validating constructor: every element must be finite and in `[0, 1]`.
     /// type-audit: bare-ok(ratio: values)
-    pub fn new(values: crate::CellMap<f64>) -> Result<Self, UnitError> {
+    pub fn new(values: crate::VertexMap<f64>) -> Result<Self, UnitError> {
         for (_, v) in values.iter() {
             if !v.is_finite() || *v < 0.0 || *v > 1.0 {
                 return Err(UnitError {
@@ -483,7 +483,7 @@ impl SuitabilityMap {
 
     /// Suitability at one cell.
     /// type-audit: bare-ok(ratio: return)
-    pub fn at(&self, id: crate::CellId) -> f64 {
+    pub fn at(&self, id: crate::Vertex) -> f64 {
         *self.0.get(id)
     }
 
@@ -505,12 +505,12 @@ impl SuitabilityMap {
 /// distinction and decision 0103 for why it is enforced in the type system.
 /// type-audit: bare-ok(count: element)
 #[derive(Debug, Clone, PartialEq)]
-pub struct CapacityMap(crate::CellMap<f64>);
+pub struct CapacityMap(crate::VertexMap<f64>);
 
 impl CapacityMap {
     /// Validating constructor: every element must be finite and non-negative.
     /// type-audit: bare-ok(count: values)
-    pub fn new(values: crate::CellMap<f64>) -> Result<Self, UnitError> {
+    pub fn new(values: crate::VertexMap<f64>) -> Result<Self, UnitError> {
         for (_, v) in values.iter() {
             if !v.is_finite() || *v < 0.0 {
                 return Err(UnitError {
@@ -525,7 +525,7 @@ impl CapacityMap {
 
     /// Headcount capacity at one cell.
     /// type-audit: bare-ok(count: return)
-    pub fn at(&self, id: crate::CellId) -> f64 {
+    pub fn at(&self, id: crate::Vertex) -> f64 {
         *self.0.get(id)
     }
 
@@ -542,17 +542,17 @@ impl CapacityMap {
     }
 
     /// Borrow the untyped field. An **explicit** escape hatch: consumers that
-    /// still take a bare `CellMap<f64>` need one, and making the unwrap visible
+    /// still take a bare `VertexMap<f64>` need one, and making the unwrap visible
     /// at the call site is the point — an implicit `Deref` would restore exactly
     /// the interchangeability decision 0103 removes.
     /// type-audit: bare-ok(count: return)
-    pub fn as_cell_map(&self) -> &crate::CellMap<f64> {
+    pub fn as_vertex_map(&self) -> &crate::VertexMap<f64> {
         &self.0
     }
 
-    /// Consume into the untyped field. See [`CapacityMap::as_cell_map`].
+    /// Consume into the untyped field. See [`CapacityMap::as_vertex_map`].
     /// type-audit: bare-ok(count: return)
-    pub fn into_cell_map(self) -> crate::CellMap<f64> {
+    pub fn into_vertex_map(self) -> crate::VertexMap<f64> {
         self.0
     }
 
@@ -739,11 +739,11 @@ mod tests {
     #[test]
     fn a_suitability_map_accepts_the_unit_interval_and_rejects_outside_it() {
         let geo = tiny_geo();
-        let ok = crate::CellMap::from_fn(&geo, |c| f64::from(c.0 % 2));
+        let ok = crate::VertexMap::from_fn(&geo, |c| f64::from(c.0 % 2));
         assert!(SuitabilityMap::new(ok).is_ok());
 
         for bad in [-0.01, 1.01, f64::NAN, f64::INFINITY] {
-            let m = crate::CellMap::from_fn(&geo, |_| bad);
+            let m = crate::VertexMap::from_fn(&geo, |_| bad);
             assert!(
                 SuitabilityMap::new(m).is_err(),
                 "suitability must reject {bad}"
@@ -754,11 +754,11 @@ mod tests {
     #[test]
     fn a_capacity_map_accepts_any_non_negative_magnitude_and_rejects_negatives() {
         let geo = tiny_geo();
-        let ok = crate::CellMap::from_fn(&geo, |c| f64::from(c.0) * 37.5);
+        let ok = crate::VertexMap::from_fn(&geo, |c| f64::from(c.0) * 37.5);
         assert!(CapacityMap::new(ok).is_ok());
 
         for bad in [-1.0, f64::NAN, f64::NEG_INFINITY] {
-            let m = crate::CellMap::from_fn(&geo, |_| bad);
+            let m = crate::VertexMap::from_fn(&geo, |_| bad);
             assert!(CapacityMap::new(m).is_err(), "capacity must reject {bad}");
         }
     }
@@ -766,16 +766,16 @@ mod tests {
     #[test]
     fn modulating_a_capacity_by_a_suitability_yields_a_capacity() {
         let geo = tiny_geo();
-        let cap = CapacityMap::new(crate::CellMap::from_fn(&geo, |_| 40.0)).unwrap();
-        let suit = SuitabilityMap::new(crate::CellMap::from_fn(&geo, |_| 0.25)).unwrap();
+        let cap = CapacityMap::new(crate::VertexMap::from_fn(&geo, |_| 40.0)).unwrap();
+        let suit = SuitabilityMap::new(crate::VertexMap::from_fn(&geo, |_| 0.25)).unwrap();
         let eff = cap.modulated_by(&suit);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             assert_eq!(eff.at(c), 10.0);
         }
         // Scaling stays a capacity and composes the other way round identically.
         assert_eq!(
-            cap.scaled(0.25).at(crate::CellId(0)),
-            eff.at(crate::CellId(0))
+            cap.scaled(0.25).at(crate::Vertex(0)),
+            eff.at(crate::Vertex(0))
         );
     }
 
@@ -785,11 +785,13 @@ mod tests {
         // because a suitability cannot exceed 1.
         let geo = tiny_geo();
         let cap =
-            CapacityMap::new(crate::CellMap::from_fn(&geo, |c| f64::from(c.0) + 1.0)).unwrap();
-        let suit = SuitabilityMap::new(crate::CellMap::from_fn(&geo, |c| f64::from(c.0 % 3) / 2.0))
-            .unwrap();
+            CapacityMap::new(crate::VertexMap::from_fn(&geo, |c| f64::from(c.0) + 1.0)).unwrap();
+        let suit = SuitabilityMap::new(crate::VertexMap::from_fn(&geo, |c| {
+            f64::from(c.0 % 3) / 2.0
+        }))
+        .unwrap();
         let eff = cap.modulated_by(&suit);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             assert!(
                 eff.at(c) <= cap.at(c),
                 "modulation must never raise capacity at {c:?}"

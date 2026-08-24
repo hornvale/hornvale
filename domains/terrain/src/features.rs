@@ -1041,7 +1041,7 @@ mod tests {
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let terrain = GeneratedTerrain::new(geo.clone(), outcome);
             let noise_seed = terrain.globe().features_noise_seed();
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 let raw = crate::crust::sphere_fbm01(
                     noise_seed,
                     geo.position(cell),

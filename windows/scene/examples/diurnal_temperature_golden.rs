@@ -20,7 +20,7 @@
 //! sanctioned test-fixture posture the weir's spec carves out.
 #![allow(clippy::disallowed_methods)]
 use hornvale_climate::{RotationRegime, diurnal_waveform};
-use hornvale_kernel::{NearestCellIndex, Seed};
+use hornvale_kernel::{NearestVertexIndex, Seed};
 use hornvale_worldgen::{SkyChoice, build_world, climate_of, terrain_of};
 use serde::Serialize;
 
@@ -83,8 +83,8 @@ fn main() {
         (DAY / climate.year_length_std() + climate.year_phase_offset()).rem_euclid(1.0);
 
     let height = WIDTH / 2;
-    let terrain_index = NearestCellIndex::new(terrain.geosphere());
-    let climate_index = NearestCellIndex::new(climate.geosphere());
+    let terrain_index = NearestVertexIndex::new(terrain.geosphere());
+    let climate_index = NearestVertexIndex::new(climate.geosphere());
 
     // Scan the full lattice once, at tile-CENTER coordinates (matching
     // `scene/tiles/v1`'s own formula exactly), collecting each tile's

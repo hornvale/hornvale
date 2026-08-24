@@ -33,7 +33,7 @@ use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
 use crate::plates::{Plate, dot, normalize, sub, velocity_at};
 use hornvale_kernel::color::{Mixture, Reflectance};
-use hornvale_kernel::{CellId, CellMap, Fbm, Geosphere, math};
+use hornvale_kernel::{Fbm, Geosphere, Vertex, VertexMap, math};
 
 /// Regolith thickness in metres.
 /// type-audit: newtype
@@ -515,18 +515,18 @@ pub(crate) fn carbonate_at(continental: bool, thickness_km: f64, lat: f64) -> f6
 /// axes derive from crust age/thickness and plate motion; grid-bound terms
 /// (metamorphic grade near boundaries, soil depth from slope/drainage) use
 /// the globe's boundary-distance and drainage fields. No draws.
-pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<MaterialBuffer> {
+pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> VertexMap<MaterialBuffer> {
     // Built once, not per cell: the seed (`globe.lithology_noise_seed()`)
     // does not vary by cell, so `Fbm::new` (which precomputes per-octave
     // seeds from the base seed) constructing a fresh instance on every one
-    // of `CellMap::from_fn`'s per-cell calls was pure waste. `Fbm::sample`
+    // of `VertexMap::from_fn`'s per-cell calls was pure waste. `Fbm::sample`
     // is byte-identical to `fbm_2d` with the same seed/octaves (`kernel/
     // src/noise.rs`'s `fbm_2d` is literally `Fbm::new(seed,
     // octaves).sample(x, y)`), so hoisting the construction changes no
     // output. Same "build the sampler once above the loop" discipline
     // `domains/terrain/CLAUDE.md` documents for `SphereFbm`.
     let lithology_noise = Fbm::new(globe.lithology_noise_seed(), 3);
-    CellMap::from_fn(geo, |cell| {
+    VertexMap::from_fn(geo, |cell| {
         let thickness = *globe.crust.get(cell);
         let continental = thickness >= crate::crust::CONTINENTAL_THRESHOLD_KM;
         let age = *globe.crust_age.get(cell);
@@ -663,7 +663,7 @@ pub(crate) fn margin_polarity(plate: &Plate, pos: [f64; 3], continental: bool) -
 fn soil_depth_at(
     geo: &Geosphere,
     globe: &TectonicGlobe,
-    cell: CellId,
+    cell: Vertex,
     sediment_m: f64,
 ) -> SoilDepth {
     if *globe.elevation.get(cell) < globe.sea_level {
@@ -1015,7 +1015,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(7), &geo, &TerrainPins::default()).unwrap();
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-        let classes: BTreeSet<_> = geo.cells().map(|c| terrain.rock_at(c)).collect();
+        let classes: BTreeSet<_> = geo.vertices().map(|c| terrain.rock_at(c)).collect();
         assert!(classes.len() >= 3, "world felt monolithic: {classes:?}");
     }
 
@@ -1028,7 +1028,7 @@ mod tests {
             let geo = Geosphere::new(6);
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 if !terrain.is_ocean(cell) {
                     classes.insert(terrain.rock_at(cell));
                 }
@@ -1064,7 +1064,7 @@ mod tests {
             let geo = Geosphere::new(4);
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 classes.insert(terrain.rock_at(cell));
             }
         }
@@ -1100,7 +1100,7 @@ mod tests {
             let geo = Geosphere::new(4);
             let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
             let lith = assemble_material(&geo, &outcome.globe);
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 match lith.get(cell).margin {
                     MarginPolarity::Active => saw_active = true,
                     MarginPolarity::Passive => saw_passive = true,
@@ -1117,7 +1117,7 @@ mod tests {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let lith = assemble_material(&geo, &outcome.globe);
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let b = *lith.get(cell);
             for v in [
                 b.silica,
@@ -1247,7 +1247,7 @@ mod tests {
         let geo = Geosphere::new(6);
         let outcome = generate(Seed(0), &geo, &TerrainPins::default()).unwrap();
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-        let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        let land: Vec<Vertex> = geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
         let land_count = land.len() as f64;
         let aquifer = land
             .iter()
@@ -1307,14 +1307,14 @@ mod tests {
         let lith = assemble_material(&geo, &outcome.globe);
         // Oceanic floor (thin crust) reads low-silica (mafic) and Oceanic margin.
         let ocean = geo
-            .cells()
+            .vertices()
             .find(|c| *outcome.globe.crust.get(*c) < crate::crust::CONTINENTAL_THRESHOLD_KM)
             .unwrap();
         assert!(lith.get(ocean).silica < 0.5);
         assert_eq!(lith.get(ocean).margin, MarginPolarity::Oceanic);
         // At least one continental cell is a non-Oceanic margin.
         assert!(
-            geo.cells()
+            geo.vertices()
                 .any(|c| lith.get(c).margin != MarginPolarity::Oceanic)
         );
     }

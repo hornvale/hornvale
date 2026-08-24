@@ -65,7 +65,7 @@
 //! the mean interval's.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, Seed, Stream, WorldTime, Years, math};
+use hornvale_kernel::{Seed, Stream, Vertex, WorldTime, Years, math};
 use hornvale_terrain::GeneratedTerrain;
 
 /// How often a cell's ground acts, as mean intervals between events.
@@ -200,7 +200,7 @@ fn geometric_years(quiet_years: f64, active_years: f64, unrest: f64) -> Years {
 /// terrain's concept, and a copy of the gate here could drift from the
 /// elevation it is supposed to describe.
 /// type-audit: bare-ok(flag: return)
-pub fn has_edifice(terrain: &GeneratedTerrain, cell: CellId) -> bool {
+pub fn has_edifice(terrain: &GeneratedTerrain, cell: Vertex) -> bool {
     terrain.has_edifice(cell)
 }
 
@@ -232,7 +232,7 @@ pub fn has_edifice(terrain: &GeneratedTerrain, cell: CellId) -> bool {
 /// terrain field upstream, and the same range assertion above already fails
 /// on it (`contains` is false for NaN). Pinning it here would convert a
 /// loud upstream bug into a quiet 200-year recurrence.
-pub fn hazard_at(terrain: &GeneratedTerrain, cell: CellId) -> Recurrence {
+pub fn hazard_at(terrain: &GeneratedTerrain, cell: Vertex) -> Recurrence {
     let unrest = terrain.unrest_at(cell).clamp(0.0, 1.0);
     let seismic = geometric_years(SEISMIC_QUIET_YEARS, SEISMIC_ACTIVE_YEARS, unrest);
     let volcanic = has_edifice(terrain, cell)
@@ -402,7 +402,7 @@ fn process_label(kind: HazardEventKind) -> &'static str {
 /// collide with today's — a place in space, which process, and a place in
 /// time. **No ordinal appears anywhere in it**, which is what lets a query
 /// filter the sequence instead of generating it (decision 0102).
-fn event_key(cell: CellId, kind: HazardEventKind, block: i64) -> String {
+fn event_key(cell: Vertex, kind: HazardEventKind, block: i64) -> String {
     format!(
         "cell/{}/process/{}/block/{}",
         cell.0,
@@ -412,7 +412,7 @@ fn event_key(cell: CellId, kind: HazardEventKind, block: i64) -> String {
 }
 
 /// The stream one block of one process at one cell draws from.
-fn event_stream(seed: Seed, cell: CellId, kind: HazardEventKind, block: i64) -> Stream {
+fn event_stream(seed: Seed, cell: Vertex, kind: HazardEventKind, block: i64) -> Stream {
     seed.derive(crate::streams::HAZARD_EVENT)
         .derive(StreamLabel::dynamic(&event_key(cell, kind, block)))
         .stream()
@@ -473,7 +473,7 @@ fn magnitude_of(kind: HazardEventKind, u: f64) -> f64 {
 /// window bounds.
 fn process_events(
     seed: Seed,
-    key: CellId,
+    key: Vertex,
     kind: HazardEventKind,
     recurrence: Years,
     window: (WorldTime, WorldTime),
@@ -562,7 +562,7 @@ fn process_events(
 pub fn events_in(
     seed: Seed,
     terrain: &GeneratedTerrain,
-    cell: CellId,
+    cell: Vertex,
     window: (WorldTime, WorldTime),
 ) -> Vec<HazardEvent> {
     let recurrence = hazard_at(terrain, cell);
@@ -613,7 +613,7 @@ mod tests {
     fn a_transform_boundary_is_seismic_and_never_volcanic() {
         let (geo, terrain) = globe();
         let mut transforms = 0_u32;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.boundary_at(cell).map(|b| b.kind) != Some(BoundaryKind::Transform) {
                 continue;
             }
@@ -637,7 +637,7 @@ mod tests {
     fn volcanic_recurrence_exists_exactly_where_an_edifice_does() {
         let (geo, terrain) = globe();
         let mut edifices = 0_u32;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let hazard = hazard_at(&terrain, cell);
             if has_edifice(&terrain, cell) {
                 edifices += 1;
@@ -661,7 +661,7 @@ mod tests {
     fn hazard_is_pure_and_carries_no_state() {
         let (geo, terrain) = globe();
         let cell = geo
-            .cells()
+            .vertices()
             .max_by(|a, b| terrain.unrest_at(*a).total_cmp(&terrain.unrest_at(*b)))
             .expect("a non-empty globe");
         assert!(terrain.unrest_at(cell) > 0.0, "the scan found dead ground");
@@ -678,7 +678,7 @@ mod tests {
     fn higher_unrest_shortens_the_seismic_interval() {
         let (geo, terrain) = globe();
         let mut rows: Vec<(f64, f64)> = geo
-            .cells()
+            .vertices()
             .map(|c| (terrain.unrest_at(c), hazard_at(&terrain, c).seismic.get()))
             .collect();
         rows.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -716,7 +716,7 @@ mod tests {
     #[test]
     fn every_interval_lies_inside_its_authored_bracket() {
         let (geo, terrain) = globe();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let hazard = hazard_at(&terrain, cell);
             assert!(
                 (SEISMIC_ACTIVE_YEARS..=SEISMIC_QUIET_YEARS).contains(&hazard.seismic.get()),
@@ -743,8 +743,8 @@ mod tests {
     }
 
     /// The busiest cell on the test globe, and the quietest.
-    fn extremes(geo: &Geosphere, terrain: &GeneratedTerrain) -> (CellId, CellId) {
-        let mut cells: Vec<CellId> = geo.cells().collect();
+    fn extremes(geo: &Geosphere, terrain: &GeneratedTerrain) -> (Vertex, Vertex) {
+        let mut cells: Vec<Vertex> = geo.vertices().collect();
         cells.sort_by(|a, b| {
             hazard_at(terrain, *a)
                 .seismic
@@ -847,7 +847,7 @@ mod tests {
         );
         let mut seismic = 0_u32;
         let mut eruptions = 0_u32;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if hazard_at(&terrain, cell).volcanic.is_none() && seismic > 1_000 {
                 continue;
             }
@@ -884,7 +884,7 @@ mod tests {
             WorldTime::new(100_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         );
         let mut checked = 0_u32;
-        for cell in geo.cells().take(400) {
+        for cell in geo.vertices().take(400) {
             if has_edifice(&terrain, cell) {
                 continue;
             }
@@ -924,16 +924,16 @@ mod tests {
             WorldTime::GENESIS,
             WorldTime::new(50_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         );
-        let mut cones: std::collections::BTreeMap<CellId, Vec<CellId>> =
+        let mut cones: std::collections::BTreeMap<Vertex, Vec<Vertex>> =
             std::collections::BTreeMap::new();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if let Some(source) = terrain.edifice_source_at(cell) {
                 cones.entry(source).or_default().push(cell);
             }
         }
         let mut compared = 0_u32;
         for (source, cells) in cones.iter().filter(|(_, cells)| cells.len() > 1) {
-            let eruptions = |cell: CellId| -> Vec<HazardEvent> {
+            let eruptions = |cell: Vertex| -> Vec<HazardEvent> {
                 events_in(Seed(42), &terrain, cell, long)
                     .into_iter()
                     .filter(|e| e.kind == HazardEventKind::Eruption)
@@ -963,9 +963,9 @@ mod tests {
 
     /// Every edifice cell on a globe, grouped by the source contact that
     /// identifies its cone.
-    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<CellId, Vec<CellId>> {
-        let mut cones: BTreeMap<CellId, Vec<CellId>> = BTreeMap::new();
-        for cell in geo.cells() {
+    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<Vertex, Vec<Vertex>> {
+        let mut cones: BTreeMap<Vertex, Vec<Vertex>> = BTreeMap::new();
+        for cell in geo.vertices() {
             if let Some(source) = terrain.edifice_source_at(cell) {
                 cones.entry(source).or_default().push(cell);
             }
@@ -1094,11 +1094,11 @@ mod tests {
     #[test]
     fn the_event_key_spelling_is_pinned() {
         assert_eq!(
-            event_key(CellId(0), HazardEventKind::Seismic, 0),
+            event_key(Vertex(0), HazardEventKind::Seismic, 0),
             "cell/0/process/seismic/block/0"
         );
         assert_eq!(
-            event_key(CellId(4127), HazardEventKind::Eruption, -3),
+            event_key(Vertex(4127), HazardEventKind::Eruption, -3),
             "cell/4127/process/eruption/block/-3"
         );
     }

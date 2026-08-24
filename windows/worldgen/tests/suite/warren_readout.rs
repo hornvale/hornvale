@@ -216,7 +216,7 @@ fn measure_seed(
         let before_map = &k_before.iter().find(|(t, _)| *t == tag).unwrap().1;
 
         let mut s = KindSeedStats::default();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

@@ -6,7 +6,7 @@
 //!
 //! **Why climate alone cannot supply this.** Every climate accessor
 //! (`biome_expr_at`, `snow_fraction_at`, `temperature_at`, `moisture_at`) is
-//! keyed on a canonical-grid [`CellId`], and a walk-depth room addresses six
+//! keyed on a canonical-grid [`Vertex`], and a walk-depth room addresses six
 //! refinement levels below that grid — `4^6` rooms share one corner. A cover
 //! model built from climate alone would therefore return one colour for
 //! every room in a band, exactly reproducing the bedrock-era defect this
@@ -19,7 +19,7 @@
 use crate::regime::MicroField;
 use hornvale_climate::{Formation, GeneratedClimate, Realm};
 use hornvale_kernel::color::Reflectance;
-use hornvale_kernel::{CellId, WorldTime};
+use hornvale_kernel::{Vertex, WorldTime};
 
 /// Visible-band reflectance curves for surface cover, the surface analogue
 /// of [`hornvale_terrain::lithology::endmembers`]. Authored constants, not
@@ -244,7 +244,7 @@ const WETNESS_TIER_DELTA: f64 = 0.2;
 /// non-negative too).
 fn cover_components(
     climate: &GeneratedClimate,
-    cell: CellId,
+    cell: Vertex,
     micro: &MicroField,
     at: WorldTime,
 ) -> Vec<Component> {
@@ -356,7 +356,7 @@ fn cover_components(
 /// the class tag a colour caller has no use for.
 pub(crate) fn cover_weights(
     climate: &GeneratedClimate,
-    cell: CellId,
+    cell: Vertex,
     micro: &MicroField,
     at: WorldTime,
 ) -> Vec<(Reflectance, f64)> {
@@ -380,11 +380,11 @@ pub(crate) fn cover_weights(
 /// [`crate::dominant_corner`] uses for a room's categorical corner, chosen
 /// here rather than left to `Iterator::max_by`'s "last on a tie" default.
 /// Called from production code via [`crate::LocaleContext::cover_class_at`]
-/// (Task 9), which resolves `cell` from a `RoomAddr` the same way
+/// (Task 9), which resolves `cell` from a `Facet` the same way
 /// [`crate::LocaleContext::reflectance_mixture_at`] does.
 pub(crate) fn cover_class_at(
     climate: &GeneratedClimate,
-    cell: CellId,
+    cell: Vertex,
     micro: &MicroField,
     at: WorldTime,
 ) -> CoverClass {
@@ -406,7 +406,7 @@ mod tests {
 
     /// Seed 42's tier-1 climate, built the same way [`crate::LocaleContext::
     /// build`] does — but standalone, so these tests don't need a full
-    /// `LocaleContext` (a `GeneratedClimate` and a `CellId` are all
+    /// `LocaleContext` (a `GeneratedClimate` and a `Vertex` are all
     /// [`cover_weights`]/[`cover_class_at`] take). `World::new` (no sky pin
     /// committed) defaults to `ConstantSun`, which is fine here: these tests
     /// probe the cover model's shape, not the seasonal swing H2 measures
@@ -431,13 +431,15 @@ mod tests {
         }
     }
 
-    /// The first cell (in ascending `CellId` order, for a deterministic
+    /// The first cell (in ascending `Vertex` order, for a deterministic
     /// pick) whose climate satisfies `pred` — a real cell, not a synthetic
     /// one, because every accessor `cover_weights` reads is inherent on
     /// `GeneratedClimate` and cannot be mocked.
-    fn find_cell(climate: &GeneratedClimate, pred: impl Fn(CellId) -> bool) -> Option<CellId> {
+    fn find_cell(climate: &GeneratedClimate, pred: impl Fn(Vertex) -> bool) -> Option<Vertex> {
         let geo = climate.geosphere();
-        (0..geo.cell_count() as u32).map(CellId).find(|&c| pred(c))
+        (0..geo.vertex_count() as u32)
+            .map(Vertex)
+            .find(|&c| pred(c))
     }
 
     /// FINDING 4 (fix round 1): `LEGEND`, `index()`, and `name()` are three
@@ -486,8 +488,8 @@ mod tests {
             openness: -1.0,
         };
         let mut sampled = 0;
-        for i in (0..geo.cell_count() as u32).step_by(29) {
-            let cell = CellId(i);
+        for i in (0..geo.vertex_count() as u32).step_by(29) {
+            let cell = Vertex(i);
             for day in [0.0, 91.0, 182.0, 273.0] {
                 let at = WorldTime::new(day).expect("finite day");
                 let cover = cover_weights(&climate, cell, &micro, at);

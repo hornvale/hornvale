@@ -50,7 +50,7 @@ fn main() {
         #[allow(clippy::disallowed_types)]
         let t1 = Instant::now();
         let mut sink = 0.0_f64;
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             let p = geo.position(cell);
             sink += field.thickness_at(p).get();
             sink += field.age_at(p);

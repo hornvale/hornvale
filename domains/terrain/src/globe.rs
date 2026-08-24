@@ -1,7 +1,7 @@
 //! The tectonic globe: the assembled outcome of terrain genesis. A world is
 //! a seed plus a ledger — the globe is never serialized, always re-derived.
 
-use crate::boundaries::{self, CellBoundary};
+use crate::boundaries::{self, VertexBoundary};
 use crate::crust::{Craton, Terrane};
 use crate::elevation::TrailSeamount;
 use crate::pins::{self, GenesisError, TerrainPins};
@@ -9,7 +9,7 @@ use crate::plates::Plate;
 use crate::streams;
 use crate::water::WaterKind;
 use crate::{crust, elevation, plates};
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math};
+use hornvale_kernel::{Geosphere, ReferenceElevation, Seed, Vertex, VertexMap, math};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
@@ -17,22 +17,22 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
-    pub plate_of: CellMap<u32>,
+    pub plate_of: VertexMap<u32>,
     /// Crust thickness per cell, in kilometers (bare f64 under the
     /// `crust-km-convention` type-audit waiver, its own family's future
     /// wave — see decision 0044's roadmap). The field's own `CrustKm`
     /// newtype validates at construction; the per-cell sample here is a
     /// plain `f64` because it feeds bulk numeric assembly, not a single
     /// validated boundary crossing.
-    pub crust: CellMap<f64>,
+    pub crust: VertexMap<f64>,
     /// Winning-craton age per cell, in `[0, 1]` (0 on oceanic floor). Sampled
     /// from the same `CrustField` `crust` was, at genesis; never serialized.
-    pub crust_age: CellMap<f64>,
+    pub crust_age: VertexMap<f64>,
     /// Elevation per cell, relative to the isostatic reference datum (see
     /// `hornvale_kernel::ReferenceElevation`).
-    pub elevation: CellMap<ReferenceElevation>,
+    pub elevation: VertexMap<ReferenceElevation>,
     /// Unrest per cell, in [0, 1]. Banked for future consumers (spec §15).
-    pub unrest: CellMap<f64>,
+    pub unrest: VertexMap<f64>,
     /// Sea level: cells strictly below it are ocean.
     pub sea_level: ReferenceElevation,
     /// The plates, indexed by `plate_of`'s values.
@@ -40,20 +40,20 @@ pub struct TectonicGlobe {
     /// The strongest cross-plate boundary contact per cell (`None` for plate
     /// interiors). Recomputed at genesis, never serialized; consumed by
     /// marine biomes via the composition root (spec §6).
-    pub boundary: CellMap<Option<CellBoundary>>,
+    pub boundary: VertexMap<Option<VertexBoundary>>,
     /// Flow-accumulation drainage per cell (upstream land-cell count; 0 on
     /// ocean). Recomputed at genesis, never serialized.
-    pub drainage: CellMap<f64>,
+    pub drainage: VertexMap<f64>,
     /// Endorheic mask: land cells whose downhill path never reaches the sea.
-    pub endorheic: CellMap<bool>,
+    pub endorheic: VertexMap<bool>,
     /// Salt/fresh water classification per cell (The Freshet). Recomputed at
     /// genesis, never serialized; a pure projection over drainage/endorheic.
-    pub water_kind: CellMap<WaterKind>,
+    pub water_kind: VertexMap<WaterKind>,
     /// Post-carve downhill target per cell — the flow graph `water_field`
     /// classifies against, retained so the channel network can read it on
     /// every query. `None` on ocean cells and at terminal sinks. Recomputed
     /// at genesis, never serialized.
-    pub downhill: CellMap<Option<CellId>>,
+    pub downhill: VertexMap<Option<Vertex>>,
     /// The drawn craton set this globe's crust field was built from
     /// (Crust epoch, Task 8). Majors only — microcontinents live in
     /// `microcontinents` instead, so `continental_supply`, `--continents`
@@ -73,7 +73,7 @@ pub struct TectonicGlobe {
     /// Graph distance from each cell to the nearest same-plate boundary
     /// cell, with that boundary attributed. Recomputed at genesis, never
     /// serialized. `None` = no reachable same-plate boundary.
-    pub boundary_distance: CellMap<Option<(u32, CellId)>>,
+    pub boundary_distance: VertexMap<Option<(u32, Vertex)>>,
     /// Induration/hardness per cell, `[0,1]` (the Sculpting/Ground seam,
     /// spec §4). Computed before elevation from crust age,
     /// continental-vs-oceanic, and boundary proximity — a pure function, no
@@ -81,7 +81,7 @@ pub struct TectonicGlobe {
     /// runs. Agrees with `lithology`'s `induration` axis everywhere (see
     /// `induration_field_matches_the_assembled_buffer`); recomputed at
     /// genesis, never serialized.
-    pub induration: CellMap<f64>,
+    pub induration: VertexMap<f64>,
     /// Hotspot trail seamounts (Sculpting Task 6): each drawn hotspot
     /// smeared into an age-progressive chain along its plate's local
     /// velocity, upstream. `age_index == 0` entries are the live hotspot
@@ -97,34 +97,34 @@ pub struct TectonicGlobe {
     /// 0). Feeds `lithology`'s `soil_depth` and the `Alluvium` gate (see
     /// `crate::lithology::soil_depth_at` / `classify_rock`). Recomputed at
     /// genesis, never serialized.
-    pub sediment_thickness: CellMap<f64>,
+    pub sediment_thickness: VertexMap<f64>,
     /// The generate-level net elevation delta per cell, metres (± —
     /// incision subtracts, repose/deposition/wedge/delta/atoll all add,
     /// the sea-trim of ruling #5c subtracts again): the full carve + trim
     /// composition, so `elevation == elevation_pre + carve_delta_m` is an
     /// identity. Retained so consumers can see how much of a cell's relief
     /// the carve moved. Recomputed at genesis, never serialized.
-    pub carve_delta_m: CellMap<f64>,
+    pub carve_delta_m: VertexMap<f64>,
     /// Cells a river-mouth delta lobe raised above sea level (the carve,
     /// Sculpting Task 9). Recomputed at genesis, never serialized.
-    pub delta_cells: Vec<CellId>,
+    pub delta_cells: Vec<Vertex>,
     /// Cells an atoll rim capped over a drowned seamount (the carve,
     /// Sculpting Task 9); `assemble_material` overrides these cells'
     /// carbonate to a reef-building high value regardless of the ordinary
     /// shallow-shelf test. Recomputed at genesis, never serialized.
-    pub atoll_cells: Vec<CellId>,
+    pub atoll_cells: Vec<Vertex>,
     /// Cells a barrier bar raised above sea level (the carve, tuning
     /// iteration 4, ledger #9; spec §5's banked spit/barrier extension).
     /// Exempt from the sea-trim like `delta_cells`. No lithology override
     /// yet (a barrier reads as the generic buffer this campaign — a
     /// followup register item, unconsolidated-sand coupling deferred).
     /// Recomputed at genesis, never serialized.
-    pub barrier_cells: Vec<CellId>,
+    pub barrier_cells: Vec<Vertex>,
     /// Waterfall (knickpoint) sites the carve found (Sculpting Task 11, spec
     /// §5): land cells where a high-drainage watercourse crosses a sharp
-    /// PRE-carve induration step. Sorted ascending `CellId`. Recomputed at
+    /// PRE-carve induration step. Sorted ascending `Vertex`. Recomputed at
     /// genesis, never serialized.
-    pub waterfall_sites: Vec<CellId>,
+    pub waterfall_sites: Vec<Vertex>,
     /// The A→B→C escalation diagnostic (Sculpting Task 12, spec §8,
     /// preregistered — a permanent census column): the flux-weighted
     /// fraction of this world's [`crate::carve::REROUTE_TOP_RIVERS`]
@@ -149,7 +149,7 @@ pub struct TectonicGlobe {
     pub trim_ocean_loss_m3: f64,
     /// The material buffer per cell (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
-    pub lithology: CellMap<crate::lithology::MaterialBuffer>,
+    pub lithology: VertexMap<crate::lithology::MaterialBuffer>,
     /// Seed for lithology sub-cell patchiness hash-noise. Hash-noise only —
     /// never consumed as a `Stream`, so it carries no draw-order/save-format
     /// contract (see `streams::LITHOLOGY`).
@@ -297,10 +297,10 @@ pub fn generate(
         Some(rift.clone()),
         cratons.len(),
     );
-    let crust_map = CellMap::from_fn(geosphere, |c| {
+    let crust_map = VertexMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
     });
-    let crust_age_map = CellMap::from_fn(geosphere, |c| field.age_at(geosphere.position(c)));
+    let crust_age_map = VertexMap::from_fn(geosphere, |c| field.age_at(geosphere.position(c)));
     // Continental mask, derived from `crust_map` rather than a third full
     // field-sampling pass: `CrustField::continental_at(p)` is definitionally
     // `thickness_at(p).get() >= CONTINENTAL_THRESHOLD_KM`, and `crust_map`
@@ -309,7 +309,7 @@ pub fn generate(
     // deletes one of the three per-cell field passes `generate` used to pay
     // (Nathan-authorized during the Task 6 perf recovery, with the epoch's
     // marginal near-seam clip cost recorded alongside the deletion).
-    let continental = CellMap::from_fn(geosphere, |c| {
+    let continental = VertexMap::from_fn(geosphere, |c| {
         *crust_map.get(c) >= crust::CONTINENTAL_THRESHOLD_KM
     });
     let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
@@ -321,7 +321,7 @@ pub fn generate(
     // `assemble_material` (below) calls the same `induration_at` function
     // over the fully-assembled globe; the two must always agree (see
     // `induration_field_matches_the_assembled_buffer`).
-    let induration_map = CellMap::from_fn(geosphere, |c| {
+    let induration_map = VertexMap::from_fn(geosphere, |c| {
         crate::lithology::induration_at(
             *crust_age_map.get(c),
             *continental.get(c),
@@ -362,11 +362,11 @@ pub fn generate(
     // two functions, so the pre-carve fields and the assembled buffer's
     // `carbonate`/`margin` axes can never diverge (barring the atoll
     // carbonate override, which only applies post-carve).
-    let carbonate_pre = CellMap::from_fn(geosphere, |c| {
+    let carbonate_pre = VertexMap::from_fn(geosphere, |c| {
         let lat = math::asin(geosphere.position(c)[2].clamp(-1.0, 1.0)).abs();
         crate::lithology::carbonate_at(*continental.get(c), *crust_map.get(c), lat)
     });
-    let margins = CellMap::from_fn(geosphere, |c| {
+    let margins = VertexMap::from_fn(geosphere, |c| {
         let plate = &plate_list[*plate_of.get(c) as usize];
         crate::lithology::margin_polarity(plate, geosphere.position(c), *continental.get(c))
     });
@@ -388,7 +388,7 @@ pub fn generate(
         &trail_seamounts_list,
         &carve_params,
     );
-    let elevation_carved = CellMap::from_fn(geosphere, |c| {
+    let elevation_carved = VertexMap::from_fn(geosphere, |c| {
         ReferenceElevation::new(elevation_pre.get(c).get() + cd.delta_m.get(c))
             .expect("carved elevation finite")
     });
@@ -425,11 +425,11 @@ pub fn generate(
         sea_1,
         &carve_params,
     );
-    let elevation_map = CellMap::from_fn(geosphere, |c| {
+    let elevation_map = VertexMap::from_fn(geosphere, |c| {
         ReferenceElevation::new(elevation_carved.get(c).get() + trim_delta.get(c))
             .expect("trimmed elevation finite")
     });
-    let sediment_final = CellMap::from_fn(geosphere, |c| {
+    let sediment_final = VertexMap::from_fn(geosphere, |c| {
         (cd.sediment_thickness_m.get(c) + trim_delta.get(c)).max(0.0)
     });
     // Solve 2 (final): sea level on the trimmed surface. The second solve
@@ -453,7 +453,7 @@ pub fn generate(
     // The A→B→C escalation diagnostic (Sculpting Task 12, spec §8): both
     // drainage trees are already in scope here, so the fraction is folded
     // in now and only the number retained (`carve_reroute_fraction`), not a
-    // second drainage `CellMap` — cheaper, and the globe never needs the
+    // second drainage `VertexMap` — cheaper, and the globe never needs the
     // pre-carve tree again once this line runs. `downhill_targets` is cheap
     // relative to `drainage_field`, which the line above already paid for
     // to get `drainage`/`endorheic`; calling it once more on the final
@@ -485,7 +485,7 @@ pub fn generate(
     // every query, instead of every consumer re-deriving it. Shadows the
     // pre-carve `downhill` local above — its last reader was the
     // `rerouted_flow_fraction` call just above this line.
-    let downhill = CellMap::from_fn(geosphere, |c| post_downhill[c.0 as usize]);
+    let downhill = VertexMap::from_fn(geosphere, |c| post_downhill[c.0 as usize]);
 
     let mut populated = vec![false; plate_list.len()];
     for (_, plate) in plate_of.iter() {
@@ -524,18 +524,19 @@ pub fn generate(
     // A NEW labeled leg. `derive` is a pure hash and consumes no `Stream`, so
     // adding it perturbs no existing draw and no existing world.
     let rill_seed = terrain_seed.derive(streams::RILL_PARTITION);
-    let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
-        silica: 0.0,
-        grain: 0.0,
-        induration: 0.0,
-        carbonate: 0.0,
-        metamorphic_grade: 0.0,
-        porosity: 0.0,
-        margin: crate::lithology::MarginPolarity::Interior,
-        soil_depth: crate::lithology::SoilDepth::new(0.0),
-        basement: crate::lithology::Basement::Oceanic,
-        thaumic: 0.0,
-    });
+    let placeholder_lithology =
+        VertexMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
+            silica: 0.0,
+            grain: 0.0,
+            induration: 0.0,
+            carbonate: 0.0,
+            metamorphic_grade: 0.0,
+            porosity: 0.0,
+            margin: crate::lithology::MarginPolarity::Interior,
+            soil_depth: crate::lithology::SoilDepth::new(0.0),
+            basement: crate::lithology::Basement::Oceanic,
+            thaumic: 0.0,
+        });
 
     let mut globe = TectonicGlobe {
         plate_of,
@@ -560,7 +561,7 @@ pub fn generate(
         // The retained delta is the FULL generate-level composition
         // (carve + trim), so `elevation == elevation_pre + carve_delta_m`
         // stays an identity for consumers.
-        carve_delta_m: CellMap::from_fn(geosphere, |c| *cd.delta_m.get(c) + *trim_delta.get(c)),
+        carve_delta_m: VertexMap::from_fn(geosphere, |c| *cd.delta_m.get(c) + *trim_delta.get(c)),
         delta_cells: cd.delta_cells,
         atoll_cells: cd.atoll_cells,
         barrier_cells: cd.barrier_cells,
@@ -628,7 +629,7 @@ mod tests {
         let g = &outcome.globe;
         // Every land cell either has a downhill target or is a terminal sink.
         let mut with_target = 0usize;
-        for c in geo.cells() {
+        for c in geo.vertices() {
             if *g.elevation.get(c) < g.sea_level {
                 // ocean: no downhill target
                 assert!(g.downhill.get(c).is_none(), "ocean cell {c:?} has a target");
@@ -648,7 +649,7 @@ mod tests {
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let fresh = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
-        for c in geo.cells() {
+        for c in geo.vertices() {
             assert_eq!(*g.downhill.get(c), fresh[c.0 as usize], "cell {c:?}");
         }
     }
@@ -657,7 +658,7 @@ mod tests {
     fn induration_field_matches_the_assembled_buffer() {
         let geo = Geosphere::new(4);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             assert_eq!(
                 *outcome.globe.induration.get(cell),
                 outcome.globe.lithology.get(cell).induration,

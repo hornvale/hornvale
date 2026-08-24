@@ -34,7 +34,7 @@ use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
 use hornvale_kernel::math::acos;
-use hornvale_kernel::{CellId, CellMap, Geosphere, Seed, Value};
+use hornvale_kernel::{Geosphere, Seed, Value, Vertex, VertexMap};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{CostSweep, least_cost_from};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
@@ -150,7 +150,7 @@ const PILOT_SEEDS: std::ops::RangeInclusive<u64> = 1..=5;
 /// redundancy control sample per seed — a deterministic stride over the
 /// ordered reachable-pair list, same idiom as `the_mire_calibration.rs`'s
 /// `H3_SAMPLE_STRIDE_TARGET`. The redundancy control needs a blocked
-/// re-sweep PER PAIR (a fresh `CellMap` plus a fresh `least_cost_from`), so
+/// re-sweep PER PAIR (a fresh `VertexMap` plus a fresh `least_cost_from`), so
 /// running it over every reachable pair (up to ~62k for one pilot seed)
 /// would dominate the pilot's cost; F2 is measured over the same sampled
 /// subset rather than exhaustively, so the two numbers are read together
@@ -194,7 +194,7 @@ fn geo_landmark_stride(land_cell_count: usize) -> usize {
 /// position vectors — no latitude/longitude wraparound edge case near a
 /// pole or the dateline the way a haversine-on-coordinates formula would
 /// carry.
-fn angular_separation_deg(geo: &Geosphere, a: CellId, b: CellId) -> f64 {
+fn angular_separation_deg(geo: &Geosphere, a: Vertex, b: Vertex) -> f64 {
     let pa = geo.position(a);
     let pb = geo.position(b);
     let dot = pa[0] * pb[0] + pa[1] * pb[1] + pa[2] * pb[2];
@@ -203,18 +203,18 @@ fn angular_separation_deg(geo: &Geosphere, a: CellId, b: CellId) -> f64 {
 
 /// Among `landmarks` (excluding `landmarks[src_idx]` itself), the one whose
 /// angular separation from the source is closest to `target_deg`, and that
-/// achieved separation. Ties (equal `|diff|`) break on the lower `CellId` —
+/// achieved separation. Ties (equal `|diff|`) break on the lower `Vertex` —
 /// a pure function of the mesh and the target, never of iteration order,
 /// same discipline `CostSweep`'s tie-break follows. Returns `(destination,
 /// actual_separation_deg)`.
 fn nearest_at_separation(
     geo: &Geosphere,
-    landmarks: &[CellId],
+    landmarks: &[Vertex],
     src_idx: usize,
     target_deg: f64,
-) -> (CellId, f64) {
+) -> (Vertex, f64) {
     let src = landmarks[src_idx];
-    let mut best: Option<(f64, CellId)> = None;
+    let mut best: Option<(f64, Vertex)> = None;
     for (j, &candidate) in landmarks.iter().enumerate() {
         if j == src_idx {
             continue;
@@ -248,9 +248,9 @@ struct WorldSample {
     /// The mesh, kept for neighbour and coordinate reads.
     geo: Geosphere,
     /// The **dry** traversal-cost field — the one production plans over.
-    dry: CellMap<u64>,
+    dry: VertexMap<u64>,
     /// Every settlement's cell, ascending and deduplicated.
-    settlements: Vec<CellId>,
+    settlements: Vec<Vertex>,
     /// The converged annual period, standard days.
     year_length: f64,
     /// Surface wetness's converged annual trajectory, every cell.
@@ -292,11 +292,11 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let elevation = &terrain.globe().elevation;
     let biome = climate.biome_map();
 
-    let mut settlements: Vec<CellId> = hornvale_settlement::all_settlements(&world)
+    let mut settlements: Vec<Vertex> = hornvale_settlement::all_settlements(&world)
         .iter()
         .map(
             |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
-                Some(Value::Number(n)) => CellId(*n as u32),
+                Some(Value::Number(n)) => Vertex(*n as u32),
                 _ => panic!("settlement {} has no cell-id fact", s.id.0),
             },
         )
@@ -326,8 +326,8 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
 /// reads, so the cost instrument and the conductance instrument agree on the
 /// world and differ only in transform. Marine cells stay `u64::MAX` untouched:
 /// weather never creates or removes impassability (spec §5a).
-fn weathered_cost(sample: &WorldSample, day: f64) -> CellMap<u64> {
-    CellMap::from_fn(&sample.geo, |cell| {
+fn weathered_cost(sample: &WorldSample, day: f64) -> VertexMap<u64> {
+    VertexMap::from_fn(&sample.geo, |cell| {
         let base = *sample.dry.get(cell);
         if base == u64::MAX {
             return u64::MAX;
@@ -614,13 +614,13 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
     let sample = build_sample(seed, wc);
 
     // ---------- Geographic frame (primary) ----------
-    let land_cells: Vec<CellId> = sample
+    let land_cells: Vec<Vertex> = sample
         .geo
-        .cells()
+        .vertices()
         .filter(|&c| *sample.dry.get(c) != u64::MAX)
         .collect();
     let geo_stride = geo_landmark_stride(land_cells.len());
-    let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+    let landmarks: Vec<Vertex> = land_cells.iter().step_by(geo_stride).copied().collect();
     let landmark_count = landmarks.len();
     let band_count = SEPARATION_BANDS_DEG.len();
 
@@ -629,7 +629,7 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
         .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
         .collect();
 
-    let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+    let mut pair_dst: Vec<Vertex> = Vec::with_capacity(landmark_count * band_count);
     for i in 0..landmark_count {
         for &target in SEPARATION_BANDS_DEG {
             let (dst, _actual) = nearest_at_separation(&sample.geo, &landmarks, i, target);
@@ -767,9 +767,9 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
                 continue;
             }
             redundancy_sample += 1;
-            let blocked: BTreeSet<CellId> =
+            let blocked: BTreeSet<Vertex> =
                 best_path[1..best_path.len() - 1].iter().copied().collect();
-            let scratch = CellMap::from_fn(&sample.geo, |c| {
+            let scratch = VertexMap::from_fn(&sample.geo, |c| {
                 if blocked.contains(&c) {
                     u64::MAX
                 } else {
@@ -920,8 +920,8 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
             continue;
         }
         redundancy_sample_count += 1;
-        let blocked: BTreeSet<CellId> = best_path[1..best_path.len() - 1].iter().copied().collect();
-        let scratch = CellMap::from_fn(&sample.geo, |c| {
+        let blocked: BTreeSet<Vertex> = best_path[1..best_path.len() - 1].iter().copied().collect();
+        let scratch = VertexMap::from_fn(&sample.geo, |c| {
             if blocked.contains(&c) {
                 u64::MAX
             } else {
@@ -1021,13 +1021,13 @@ struct ExploratorySeedReadout {
 fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeedReadout {
     let sample = build_sample(seed, wc);
 
-    let land_cells: Vec<CellId> = sample
+    let land_cells: Vec<Vertex> = sample
         .geo
-        .cells()
+        .vertices()
         .filter(|&c| *sample.dry.get(c) != u64::MAX)
         .collect();
     let geo_stride = geo_landmark_stride(land_cells.len());
-    let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+    let landmarks: Vec<Vertex> = land_cells.iter().step_by(geo_stride).copied().collect();
     let landmark_count = landmarks.len();
     let band_count = SEPARATION_BANDS_DEG.len();
 
@@ -1036,7 +1036,7 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
         .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
         .collect();
 
-    let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+    let mut pair_dst: Vec<Vertex> = Vec::with_capacity(landmark_count * band_count);
     for i in 0..landmark_count {
         for &target in SEPARATION_BANDS_DEG {
             let (dst, _actual) = nearest_at_separation(&sample.geo, &landmarks, i, target);
@@ -1048,7 +1048,7 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
     // and never re-planned across the day loop below. `None` if
     // unreachable on the dry field (matches every other frame's
     // reachability test in this file).
-    let pair_path: Vec<Option<Vec<CellId>>> = (0..landmark_count * band_count)
+    let pair_path: Vec<Option<Vec<Vertex>>> = (0..landmark_count * band_count)
         .map(|idx| {
             let i = idx / band_count;
             landmark_dry_sweeps[i].path_to(pair_dst[idx])
@@ -1062,10 +1062,10 @@ fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeed
         .collect();
 
     // All SAMPLE_DAYS weathered fields, retained rather than rebuilt per
-    // pair or per E3 lookup — SAMPLE_DAYS (12) x cell_count u64s is a few
+    // pair or per E3 lookup — SAMPLE_DAYS (12) x vertex_count u64s is a few
     // MB, trivial, and this is what makes E3's "look up an arbitrary day's
     // field for the worst-cell surcharge" cheap instead of a rebuild storm.
-    let weathered_fields: Vec<CellMap<u64>> = (0..SAMPLE_DAYS)
+    let weathered_fields: Vec<VertexMap<u64>> = (0..SAMPLE_DAYS)
         .map(|day_idx| {
             let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
             weathered_cost(&sample, day)
@@ -1192,7 +1192,7 @@ mod weathering {
         let wet = weathered_cost(&sample, day);
 
         let mut raised = 0usize;
-        for cell in sample.geo.cells() {
+        for cell in sample.geo.vertices() {
             let dry = *sample.dry.get(cell);
             let w = *wet.get(cell);
             assert!(
@@ -1262,13 +1262,13 @@ mod weathering {
             let sample = build_sample(seed, &wc);
 
             // ============ PRIMARY: geographic land-cell frame (§4a) ============
-            let land_cells: Vec<CellId> = sample
+            let land_cells: Vec<Vertex> = sample
                 .geo
-                .cells()
+                .vertices()
                 .filter(|&c| *sample.dry.get(c) != u64::MAX)
                 .collect();
             let geo_stride = geo_landmark_stride(land_cells.len());
-            let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+            let landmarks: Vec<Vertex> = land_cells.iter().step_by(geo_stride).copied().collect();
             let landmark_count = landmarks.len();
             let band_count = SEPARATION_BANDS_DEG.len();
 
@@ -1283,7 +1283,7 @@ mod weathering {
             // Each landmark pairs with the OTHER landmark whose actual
             // separation is closest to each band's target. `pair_dst`/
             // `pair_sep` are flat, indexed `i * band_count + k`.
-            let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+            let mut pair_dst: Vec<Vertex> = Vec::with_capacity(landmark_count * band_count);
             let mut pair_sep: Vec<f64> = Vec::with_capacity(landmark_count * band_count);
             for i in 0..landmark_count {
                 for &target in SEPARATION_BANDS_DEG {
@@ -1404,9 +1404,9 @@ mod weathering {
                         continue;
                     }
                     redundancy_sample_count += 1;
-                    let blocked: BTreeSet<CellId> =
+                    let blocked: BTreeSet<Vertex> =
                         best_path[1..best_path.len() - 1].iter().copied().collect();
-                    let scratch = CellMap::from_fn(&sample.geo, |c| {
+                    let scratch = VertexMap::from_fn(&sample.geo, |c| {
                         if blocked.contains(&c) {
                             u64::MAX
                         } else {
@@ -1638,9 +1638,9 @@ mod weathering {
                     continue;
                 }
                 redundancy_sample_count += 1;
-                let blocked: BTreeSet<CellId> =
+                let blocked: BTreeSet<Vertex> =
                     best_path[1..best_path.len() - 1].iter().copied().collect();
-                let scratch = CellMap::from_fn(&sample.geo, |c| {
+                let scratch = VertexMap::from_fn(&sample.geo, |c| {
                     if blocked.contains(&c) {
                         u64::MAX
                     } else {

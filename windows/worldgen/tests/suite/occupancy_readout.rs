@@ -165,7 +165,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
 
         for (tag, k) in &ks {
             let kind = kinds[*tag as usize].0;
-            for cell in geo.cells() {
+            for cell in geo.vertices() {
                 let v = *k.get(cell);
                 *kind_k_total.entry(kind).or_insert(0.0) += v;
                 let biome = biome_map.get(cell).name();

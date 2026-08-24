@@ -5,7 +5,7 @@
 //! `ConnectionGraph` edges from it is Task 4) — this module only finds the
 //! least-cost path between two cells.
 
-use hornvale_kernel::{CellId, CellMap, Geosphere, SearchSpace, astar};
+use hornvale_kernel::{Geosphere, SearchSpace, Vertex, VertexMap, astar};
 use std::collections::BTreeSet;
 
 /// A least-cost search space over `geo`'s cell adjacency: each step from a
@@ -17,26 +17,26 @@ use std::collections::BTreeSet;
 /// ordinary (very expensive) step. This both encodes "cannot enter" and
 /// guards the running cost total against overflow — no path this search
 /// space returns ever sums a `u64::MAX` step cost.
-pub struct CellRoute<'a> {
+pub struct VertexRoute<'a> {
     geo: &'a Geosphere,
-    cost: &'a CellMap<u64>,
-    goal: CellId,
+    cost: &'a VertexMap<u64>,
+    goal: Vertex,
 }
 
-impl<'a> CellRoute<'a> {
+impl<'a> VertexRoute<'a> {
     /// Build a search space over `geo`'s adjacency, weighted by `cost`,
     /// aimed at `goal`.
     /// type-audit: bare-ok(count: cost)
-    pub fn new(geo: &'a Geosphere, cost: &'a CellMap<u64>, goal: CellId) -> CellRoute<'a> {
-        CellRoute { geo, cost, goal }
+    pub fn new(geo: &'a Geosphere, cost: &'a VertexMap<u64>, goal: Vertex) -> VertexRoute<'a> {
+        VertexRoute { geo, cost, goal }
     }
 }
 
-impl<'a> SearchSpace for CellRoute<'a> {
-    type State = CellId;
-    type Action = CellId;
+impl<'a> SearchSpace for VertexRoute<'a> {
+    type State = Vertex;
+    type Action = Vertex;
 
-    fn successors(&self, s: &CellId) -> Vec<(CellId, CellId, u64)> {
+    fn successors(&self, s: &Vertex) -> Vec<(Vertex, Vertex, u64)> {
         self.geo
             .neighbors(*s)
             .iter()
@@ -47,7 +47,7 @@ impl<'a> SearchSpace for CellRoute<'a> {
             .collect()
     }
 
-    fn goal(&self, s: &CellId) -> bool {
+    fn goal(&self, s: &Vertex) -> bool {
         *s == self.goal
     }
 
@@ -59,7 +59,7 @@ impl<'a> SearchSpace for CellRoute<'a> {
     /// `0` is trivially admissible (never overestimates), so `astar` still
     /// finds the true optimum — it just explores more nodes than a tighter
     /// heuristic would. Correctness over pruning: get this right first.
-    fn heuristic(&self, _s: &CellId) -> u64 {
+    fn heuristic(&self, _s: &Vertex) -> u64 {
         0
     }
 }
@@ -72,12 +72,12 @@ impl<'a> SearchSpace for CellRoute<'a> {
 /// type-audit: bare-ok(count: cost), bare-ok(count: budget), bare-ok(count: return)
 pub fn least_cost(
     geo: &Geosphere,
-    cost: &CellMap<u64>,
-    from: CellId,
-    to: CellId,
+    cost: &VertexMap<u64>,
+    from: Vertex,
+    to: Vertex,
     budget: usize,
-) -> Option<(Vec<CellId>, u64)> {
-    let space = CellRoute::new(geo, cost, to);
+) -> Option<(Vec<Vertex>, u64)> {
+    let space = VertexRoute::new(geo, cost, to);
     let actions = astar(&space, from, budget)?;
 
     let mut path = Vec::with_capacity(actions.len() + 1);
@@ -97,7 +97,7 @@ pub fn least_cost(
 /// **The tie-break is a pure function of the cost field, never of expansion
 /// order.** When two edges reach the same cell at the exact same total cost,
 /// the predecessor is fixed by comparing the two candidate predecessors'
-/// `CellId` and keeping the lower one — not by which edge the sweep happened
+/// `Vertex` and keeping the lower one — not by which edge the sweep happened
 /// to relax first. This exists because a consumer of `path_to` measures
 /// whether *the world* changed which route is cheapest (weather shifting the
 /// optimal path between two settlements) by comparing paths across two
@@ -108,21 +108,21 @@ pub fn least_cost(
 /// the world.
 pub struct CostSweep {
     /// The sweep's source cell.
-    from: CellId,
+    from: Vertex,
     /// `dist[cell.0]` is the least-cost total from `from` to `cell`, or
     /// `None` if unreachable.
     dist: Vec<Option<u64>>,
     /// `prev[cell.0]` is the predecessor `cell` was reached from on its
     /// least-cost path, or `None` for `from` itself (which has none) and for
     /// any unreached cell.
-    prev: Vec<Option<CellId>>,
+    prev: Vec<Option<Vertex>>,
 }
 
 impl CostSweep {
     /// The least-cost total from the sweep's source to `cell`, or `None` if
     /// `cell` is unreachable. `Some(0)` when `cell` is the source itself.
     /// type-audit: bare-ok(count: return)
-    pub fn cost_to(&self, cell: CellId) -> Option<u64> {
+    pub fn cost_to(&self, cell: Vertex) -> Option<u64> {
         self.dist[cell.0 as usize]
     }
 
@@ -130,7 +130,7 @@ impl CostSweep {
     /// cell]` (a single-element path if `cell` is the source), reconstructed
     /// by walking [`CostSweep`]'s predecessor chain backward from `cell` to
     /// `from`. `None` if `cell` is unreachable.
-    pub fn path_to(&self, cell: CellId) -> Option<Vec<CellId>> {
+    pub fn path_to(&self, cell: Vertex) -> Option<Vec<Vertex>> {
         self.dist[cell.0 as usize]?;
         let mut path = vec![cell];
         let mut current = cell;
@@ -158,15 +158,15 @@ impl CostSweep {
 /// alongside distances makes every destination's path a free by-product of
 /// the same sweep rather than a second search. The costs are identical to
 /// repeated `least_cost` calls; only the work is shared. Determinism comes
-/// from the `BTreeSet` frontier keyed on `(cost, CellId)` — a total order
+/// from the `BTreeSet` frontier keyed on `(cost, Vertex)` — a total order
 /// with no hash seed and no float — matching the guarantee
 /// `hornvale_kernel::astar` makes, and from `CostSweep`'s tie-break rule
 /// (documented there) for predecessor choice among equal-cost routes.
 /// type-audit: bare-ok(count: cost)
-pub fn least_cost_from(geo: &Geosphere, cost: &CellMap<u64>, from: CellId) -> CostSweep {
-    let mut dist: Vec<Option<u64>> = vec![None; geo.cell_count()];
-    let mut prev: Vec<Option<CellId>> = vec![None; geo.cell_count()];
-    let mut frontier: BTreeSet<(u64, CellId)> = BTreeSet::new();
+pub fn least_cost_from(geo: &Geosphere, cost: &VertexMap<u64>, from: Vertex) -> CostSweep {
+    let mut dist: Vec<Option<u64>> = vec![None; geo.vertex_count()];
+    let mut prev: Vec<Option<Vertex>> = vec![None; geo.vertex_count()];
+    let mut frontier: BTreeSet<(u64, Vertex)> = BTreeSet::new();
 
     dist[from.0 as usize] = Some(0);
     frontier.insert((0, from));
@@ -196,7 +196,7 @@ pub fn least_cost_from(geo: &Geosphere, cost: &CellMap<u64>, from: CellId) -> Co
                     frontier.insert((candidate, next));
                 }
                 Some(old) if candidate == old => {
-                    // Exact tie: keep the lower-CellId predecessor. Pure
+                    // Exact tie: keep the lower-Vertex predecessor. Pure
                     // function of the cost field — see CostSweep's doc.
                     if let Some(existing) = prev[next.0 as usize]
                         && cell < existing
@@ -219,10 +219,10 @@ mod tests {
     #[test]
     fn a_cell_with_no_impassable_neighbors_lists_every_neighbor() {
         let geo = Geosphere::new(0);
-        let cost = CellMap::from_fn(&geo, |_| 1);
-        let route = CellRoute::new(&geo, &cost, CellId(0));
-        let successors = route.successors(&CellId(1));
-        assert_eq!(successors.len(), geo.neighbors(CellId(1)).len());
+        let cost = VertexMap::from_fn(&geo, |_| 1);
+        let route = VertexRoute::new(&geo, &cost, Vertex(0));
+        let successors = route.successors(&Vertex(1));
+        assert_eq!(successors.len(), geo.neighbors(Vertex(1)).len());
         for (action, next, step_cost) in successors {
             assert_eq!(action, next);
             assert_eq!(step_cost, 1);
@@ -232,23 +232,23 @@ mod tests {
     #[test]
     fn an_impassable_neighbor_is_skipped_not_included_at_high_cost() {
         let geo = Geosphere::new(0);
-        let blocked = geo.neighbors(CellId(0))[0];
-        let cost = CellMap::from_fn(&geo, |id| if id == blocked { u64::MAX } else { 1 });
-        let route = CellRoute::new(&geo, &cost, CellId(0));
-        let successors = route.successors(&CellId(0));
+        let blocked = geo.neighbors(Vertex(0))[0];
+        let cost = VertexMap::from_fn(&geo, |id| if id == blocked { u64::MAX } else { 1 });
+        let route = VertexRoute::new(&geo, &cost, Vertex(0));
+        let successors = route.successors(&Vertex(0));
         assert!(
             successors.iter().all(|&(_, next, _)| next != blocked),
             "an impassable neighbor must not appear in successors at all"
         );
-        assert_eq!(successors.len(), geo.neighbors(CellId(0)).len() - 1);
+        assert_eq!(successors.len(), geo.neighbors(Vertex(0)).len() - 1);
     }
 
     #[test]
     fn heuristic_is_always_zero() {
         let geo = Geosphere::new(0);
-        let cost = CellMap::from_fn(&geo, |_| 1);
-        let route = CellRoute::new(&geo, &cost, CellId(0));
-        for cell in geo.cells() {
+        let cost = VertexMap::from_fn(&geo, |_| 1);
+        let route = VertexRoute::new(&geo, &cost, Vertex(0));
+        for cell in geo.vertices() {
             assert_eq!(route.heuristic(&cell), 0);
         }
     }
@@ -256,20 +256,20 @@ mod tests {
     #[test]
     fn a_source_reaches_itself_at_zero_cost() {
         let geo = Geosphere::new(0);
-        let cost = CellMap::from_fn(&geo, |_| 10u64);
-        let d = least_cost_from(&geo, &cost, CellId(0));
-        assert_eq!(d.cost_to(CellId(0)), Some(0));
-        assert_eq!(d.path_to(CellId(0)), Some(vec![CellId(0)]));
+        let cost = VertexMap::from_fn(&geo, |_| 10u64);
+        let d = least_cost_from(&geo, &cost, Vertex(0));
+        assert_eq!(d.cost_to(Vertex(0)), Some(0));
+        assert_eq!(d.path_to(Vertex(0)), Some(vec![Vertex(0)]));
     }
 
     #[test]
     fn impassable_cells_are_unreachable_and_do_not_overflow() {
         let geo = Geosphere::new(0);
         // Everything impassable except the source itself.
-        let cost = CellMap::from_fn(&geo, |c| if c == CellId(0) { 10 } else { u64::MAX });
-        let d = least_cost_from(&geo, &cost, CellId(0));
-        assert_eq!(d.cost_to(CellId(0)), Some(0));
-        for c in geo.cells().filter(|&c| c != CellId(0)) {
+        let cost = VertexMap::from_fn(&geo, |c| if c == Vertex(0) { 10 } else { u64::MAX });
+        let d = least_cost_from(&geo, &cost, Vertex(0));
+        assert_eq!(d.cost_to(Vertex(0)), Some(0));
+        for c in geo.vertices().filter(|&c| c != Vertex(0)) {
             assert_eq!(d.cost_to(c), None, "cell {c:?} should be unreachable");
             assert_eq!(d.path_to(c), None, "cell {c:?} should have no path");
         }
@@ -292,10 +292,10 @@ mod tests {
         // number — i.e. the reconstructed path is genuinely optimal, not
         // merely present.
         let geo = Geosphere::new(1);
-        let cost = CellMap::from_fn(&geo, |c| 10 + (c.0 as u64 % 7) * 13);
-        let from = CellId(0);
+        let cost = VertexMap::from_fn(&geo, |c| 10 + (c.0 as u64 % 7) * 13);
+        let from = Vertex(0);
         let swept = least_cost_from(&geo, &cost, from);
-        for to in geo.cells() {
+        for to in geo.vertices() {
             let single = least_cost(&geo, &cost, from, to, 1_000_000).map(|(_, total)| total);
             assert_eq!(
                 swept.cost_to(to),
@@ -337,31 +337,31 @@ mod tests {
 
     #[test]
     fn a_tie_is_broken_by_the_lower_cell_id_predecessor_not_expansion_order() {
-        // `Geosphere::new(0)` is the level-0 icosphere: CellId(0)'s
+        // `Geosphere::new(0)` is the level-0 icosphere: Vertex(0)'s
         // neighbors are [1, 5, 7, 10, 11] (all at cost 1 under a uniform
-        // field), and CellId(9) is a common neighbor of both CellId(1) and
-        // CellId(5) — two routes into 9 (via 1, or via 5) tie at cost 2.
-        // The rule picks the lower CellId predecessor, here 1, regardless of
+        // field), and Vertex(9) is a common neighbor of both Vertex(1) and
+        // Vertex(5) — two routes into 9 (via 1, or via 5) tie at cost 2.
+        // The rule picks the lower Vertex predecessor, here 1, regardless of
         // which edge the BTreeSet frontier happens to relax first (it always
-        // relaxes CellId(1) before CellId(5) here, since the frontier is
-        // ordered by (cost, CellId) and both are at cost 1 — but the
+        // relaxes Vertex(1) before Vertex(5) here, since the frontier is
+        // ordered by (cost, Vertex) and both are at cost 1 — but the
         // tie-resolution logic itself does not depend on that order, only on
         // the final comparison, which this test pins).
         let geo = Geosphere::new(0);
         assert_eq!(
-            geo.neighbors(CellId(0)),
-            &[CellId(1), CellId(5), CellId(7), CellId(10), CellId(11)]
+            geo.neighbors(Vertex(0)),
+            &[Vertex(1), Vertex(5), Vertex(7), Vertex(10), Vertex(11)]
         );
-        assert!(geo.neighbors(CellId(9)).contains(&CellId(1)));
-        assert!(geo.neighbors(CellId(9)).contains(&CellId(5)));
+        assert!(geo.neighbors(Vertex(9)).contains(&Vertex(1)));
+        assert!(geo.neighbors(Vertex(9)).contains(&Vertex(5)));
 
-        let cost = CellMap::from_fn(&geo, |_| 1u64);
-        let sweep = least_cost_from(&geo, &cost, CellId(0));
-        assert_eq!(sweep.cost_to(CellId(9)), Some(2));
+        let cost = VertexMap::from_fn(&geo, |_| 1u64);
+        let sweep = least_cost_from(&geo, &cost, Vertex(0));
+        assert_eq!(sweep.cost_to(Vertex(9)), Some(2));
         assert_eq!(
-            sweep.path_to(CellId(9)),
-            Some(vec![CellId(0), CellId(1), CellId(9)]),
-            "the tie between predecessors 1 and 5 should resolve to the lower CellId, 1"
+            sweep.path_to(Vertex(9)),
+            Some(vec![Vertex(0), Vertex(1), Vertex(9)]),
+            "the tie between predecessors 1 and 5 should resolve to the lower Vertex, 1"
         );
     }
 }

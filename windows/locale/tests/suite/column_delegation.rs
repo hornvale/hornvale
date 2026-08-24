@@ -23,7 +23,7 @@
 //!   be constructed.
 
 use hornvale_climate::{Realm, Stratum};
-use hornvale_kernel::{CellId, Seed, World};
+use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_locale::LocaleContext;
 use std::fmt::Write as _;
 
@@ -60,11 +60,11 @@ fn world() -> World {
 /// comparison meaningful: any drift in the text is a drift in what the two
 /// methods answer, not in how the test samples cells.
 fn regenerate(ctx: &LocaleContext) -> String {
-    let cell_count = ctx.climate().geosphere().cell_count();
-    let stride = (cell_count / 80).max(1);
+    let vertex_count = ctx.climate().geosphere().vertex_count();
+    let stride = (vertex_count / 80).max(1);
     let mut out = String::new();
-    for id in (0..cell_count).step_by(stride) {
-        let cell = CellId(id as u32);
+    for id in (0..vertex_count).step_by(stride) {
+        let cell = Vertex(id as u32);
         let col = ctx.water_column_at(cell);
         writeln!(out, "CELL {id} COLUMN {col:?}").unwrap();
         for s in ALL_STRATA {
@@ -148,10 +148,10 @@ fn expr_at_stratum_agrees_with_climate_in_column() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let climate = ctx.climate();
-    let cell_count = climate.geosphere().cell_count();
+    let vertex_count = climate.geosphere().vertex_count();
     let mut checked = 0usize;
-    for id in 0..cell_count {
-        let cell = CellId(id as u32);
+    for id in 0..vertex_count {
+        let cell = Vertex(id as u32);
         let e = climate.biome_expr_at(cell);
         let ladder = e.realm.strata();
         let floor = ladder
@@ -177,7 +177,7 @@ fn expr_at_stratum_agrees_with_climate_in_column() {
 /// true by construction from the source it is checking, for the same reason
 /// [`expr_at_stratum_agrees_with_climate_in_column`] is: both compare a
 /// delegating wrapper's output to the callee it delegates to, and a
-/// pass-through cannot disagree with what it passes through to. No `CellId`
+/// pass-through cannot disagree with what it passes through to. No `Vertex`
 /// in this world (or any world) can make it fail while the delegation
 /// stands, so it is not evidence that duplication was replaced — only
 /// reading the diff in `windows/locale/src/lib.rs` is. What this test *is*
@@ -189,10 +189,10 @@ fn water_column_at_agrees_with_climate_strata_at_on_every_water_cell() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let climate = ctx.climate();
-    let cell_count = climate.geosphere().cell_count();
+    let vertex_count = climate.geosphere().vertex_count();
     let mut water_cells = 0usize;
-    for id in 0..cell_count {
-        let cell = CellId(id as u32);
+    for id in 0..vertex_count {
+        let cell = Vertex(id as u32);
         if climate.biome_expr_at(cell).realm != Realm::WATERWORLD {
             continue;
         }

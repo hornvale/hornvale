@@ -325,7 +325,7 @@ fn where_does_a_delve_terminate() {
         let mut reach: Vec<f64> = Vec::new();
         let mut reach_by_rung: [Vec<f64>; 5] = Default::default();
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 if terrain.cave_at(cell).is_some() {
                     ocean_caves += 1;
@@ -574,7 +574,7 @@ fn could_nadir_be_split_into_a_sixth_rung() {
         let lavatube_ceiling_m = 200.0_f64;
         let mut at_lavatube_ceiling = 0usize;
 
-        for cell in geo.cells() {
+        for cell in geo.vertices() {
             if terrain.is_ocean(cell) {
                 continue;
             }

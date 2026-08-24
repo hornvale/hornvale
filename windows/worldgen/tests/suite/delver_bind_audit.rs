@@ -177,8 +177,8 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
         insolation_scalar,
         &regime,
     );
-    let land: Vec<hornvale_kernel::CellId> =
-        geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    let land: Vec<hornvale_kernel::Vertex> =
+        geo.vertices().filter(|&c| !terrain.is_ocean(c)).collect();
 
     println!("== seed {seed_value} ==  land cells: {}", land.len());
     println!(

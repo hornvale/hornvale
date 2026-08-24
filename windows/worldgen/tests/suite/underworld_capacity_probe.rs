@@ -303,7 +303,7 @@ fn where_underworld_communities_found_and_what_they_cut() {
         // observable. That was the measurement the decision not to wire it
         // rests on, so it is committed rather than narrated.
         let mut occupied_bands: BTreeMap<u8, usize> = BTreeMap::new();
-        let mut columns: std::collections::BTreeSet<(KindId, hornvale_kernel::CellId)> =
+        let mut columns: std::collections::BTreeSet<(KindId, hornvale_kernel::Vertex)> =
             std::collections::BTreeSet::new();
         for record in &history.records {
             if seating.contains_key(&record.core.people) {
