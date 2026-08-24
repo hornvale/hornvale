@@ -123,6 +123,60 @@ inventory covers. No metric name moved and no metric value moved. It is
 benign, and it is a class worth knowing about the next time an artifact diff
 appears where none was expected.
 
+## Byte-identity held, and it did not hold by itself
+
+The zero-bytes result at the top of this page is not what the first sweep
+produced. Three separate things moved committed output, and each is a class
+the freeze inventory did not have:
+
+**Rendered prose is a serialization boundary.** Sweepers renamed "992 cells"
+to "992 vertices" inside almanac and connections output. The almanac ended up
+saying *both* words in one sentence — "region holds only 1 vertex … run 1876,
+1654, 914, 638, and 417 cells" — because some sites had already been protected
+and some had not. A player reads that string; `vertex` is engine vocabulary.
+Rendered prose stays "cell", and every such site now carries a comment saying
+why.
+
+**A predicate's description travels in every world.** Four moved — `cell-id`,
+`occ-site`, `ocean-fraction`, `highest-elevation-m` — and `world-seed-42.json`
+grew by exactly the nine bytes those four account for. A description is
+documentation, but it is documentation *inside the serialized registry*, so
+decision 0246 freezes it the same way it freezes a name.
+
+**Not every byte-golden is reachable by a rebaseline command.** A diagnostic
+dump's header, `"CELL {id} COLUMN"`, is pinned by
+`windows/locale/tests/fixtures/column_before.txt`. `make rebaseline-goldens`
+does not run that test, so the drift was invisible to every regeneration path
+and only the full workspace suite caught it. The golden set is larger than the
+set any rebaseline rewrites.
+
+The pattern across all three: **the freeze inventory was built by asking "what
+is a contract?" and the answer left out everything that is a contract by
+accident** — prose that happens to be rendered, documentation that happens to
+be serialized, a label that happens to be pinned.
+
+## The guard is a ratchet, because an allowlist would have been a lie
+
+About 108 files still hold the word legitimately: a `Cell` in the chamber
+lattice, a `SurroundsCell` in the chart, a markdown-table cell in the trope
+report. A check that failed on the word's mere existence would be red on day
+one and trained away within a week. An allowlist of forty type names would
+pass a *new* vertex-sense `cell` local sitting in the same file as an
+allowlisted one.
+
+So it fails on **novelty**, like `tropes check` and the timings baseline
+before it: a file may carry no more `cell`-bearing tokens than the committed
+inventory records, and a file absent from the inventory may carry none.
+Numbers may fall freely; raising one needs a human's reason.
+
+It counts case-insensitively, which the campaign's own greps did not. The
+plan's definition-of-done and all six dispatch briefs specified
+`\b\w*[Cc]ell\w*\b`, which cannot match `CELL` — so about eighty
+occurrences across five crates were invisible to the check that was supposed
+to *prove* the sweep complete. That is the smaller lesson. The larger one is
+that **a check that proves the work must not inherit the blind spot of the
+check that did it.**
+
 ## What is deliberately not done
 
 The design conversation reached a further simplification and did not adopt it:

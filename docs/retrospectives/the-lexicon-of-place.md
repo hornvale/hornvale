@@ -189,6 +189,31 @@ frozen byte-golden CSV header, the retired `subcell-outlet` label, and the
 cross-crate leak all came from — none of which a clean-sweep report would have
 mentioned.
 
+## The freeze inventory was built by asking the wrong question
+
+It was assembled by asking "what is a contract?" — labels, epoch keys, wire
+keys, predicate names, census columns. Three things moved committed output
+anyway, and all three are contracts *by accident*:
+
+| what moved | why it was not on the list |
+|---|---|
+| almanac prose ("992 cells") | it is prose that happens to be rendered into a committed artifact |
+| four predicate descriptions | it is documentation that happens to sit inside the serialized registry |
+| a test's dump header | it is a label that happens to be pinned by a byte-golden |
+
+**The better question is "what reaches a committed byte?"** — which is
+answerable mechanically, by moving the thing and regenerating, rather than by
+reasoning about intent.
+
+And one of the three could not have been caught by regenerating:
+`make rebaseline-goldens` does not run the test that owns
+`windows/locale/tests/fixtures/column_before.txt`, so that golden's staleness
+was invisible to every regeneration path. **The byte-golden set is larger than
+the set any rebaseline command rewrites**, which means the full workspace suite
+is not redundant with the drift check — it is the only thing that sees that
+gap. Running it locally before submitting cost ten minutes and caught the one
+failure of the campaign.
+
 ## Follow-ups
 
 - **`docs/timings/subfloor-roster.tsv` selects tests by exact name**, and this
