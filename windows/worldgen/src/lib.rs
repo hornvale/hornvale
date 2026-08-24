@@ -4501,7 +4501,7 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     // callers below, which always pass a literal. A non-finite value must
     // fail through this function's existing `Result`, not panic (The Ell's
     // Task 1 fix round: this used to be an `.expect()`).
-    let time = WorldTime::new(day).map_err(|e| BuildError::Pins(e.to_string()))?;
+    let time = WorldTime::from_std_days(day).map_err(|e| BuildError::Pins(e.to_string()))?;
     Ok(observe(
         &sources,
         &ObserverContext {
@@ -4540,7 +4540,7 @@ fn observed_phenomena_occluded(
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime::new(day).expect("a day value is finite"),
+            time: WorldTime::from_std_days(day).expect("a day value is finite"),
             lens: occlusion_lens_at(world, climate, position, day),
             position,
         },
@@ -4872,7 +4872,7 @@ fn observe_with_sources(
         sources,
         &ObserverContext {
             place,
-            time: WorldTime::new(day).expect("a day value is finite"),
+            time: WorldTime::from_std_days(day).expect("a day value is finite"),
             // NO occlusion here, deliberately. This is the observation GENESIS
             // derives from — settlement name glosses and the deities a people
             // believe in (`derived-from-phenomenon` is a committed predicate).
@@ -8862,8 +8862,8 @@ pub fn sky_report_from(
     let Some(cell) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(cell, time.day());
-    let cloud = climate.cloud_type_at(cell, time.day());
+    let state = climate.weather_at(cell, time.as_std_days());
+    let cloud = climate.cloud_type_at(cell, time.as_std_days());
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
@@ -12182,7 +12182,7 @@ mod tests {
         let world = generated(42);
         let report = sky_report(
             &world,
-            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+            hornvale_kernel::WorldTime::from_std_days(10.0).expect("a day value is finite"),
         )
         .unwrap();
         let text = &report.description;
@@ -12195,7 +12195,7 @@ mod tests {
 
         let again = sky_report(
             &world,
-            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+            hornvale_kernel::WorldTime::from_std_days(10.0).expect("a day value is finite"),
         )
         .unwrap();
         assert_eq!(report, again, "the weather clause is deterministic");

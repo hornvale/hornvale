@@ -251,7 +251,7 @@ fn cover_components(
     let expr = climate.biome_expr_at(cell);
 
     // --- Snow: seasonal gate x annual propensity x a bounded aspect swing.
-    let frozen = climate.is_frozen_at(cell, at.day());
+    let frozen = climate.is_frozen_at(cell, at.as_std_days());
     let annual_snow = climate.snow_fraction_at(cell).clamp(0.0, 1.0);
     let aspect_factor = (1.0 - ASPECT_SNOW_SWING * tier3(micro.aspect)).clamp(0.0, 2.0);
     // A frozen cell always carries a snow floor (SNOW_FLOOR) even at zero
@@ -489,7 +489,7 @@ mod tests {
         for i in (0..geo.cell_count() as u32).step_by(29) {
             let cell = CellId(i);
             for day in [0.0, 91.0, 182.0, 273.0] {
-                let at = WorldTime::new(day).expect("finite day");
+                let at = WorldTime::from_std_days(day).expect("finite day");
                 let cover = cover_weights(&climate, cell, &micro, at);
                 let covered: f64 = cover.iter().map(|(_, w)| w).sum();
                 assert!(

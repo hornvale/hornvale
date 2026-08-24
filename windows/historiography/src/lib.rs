@@ -51,7 +51,7 @@ pub fn recount(world: &World, entity: EntityId) -> Option<String> {
                 "- {label}: {} (asserted by {}, day {})\n",
                 render_value(&f.object),
                 f.provenance,
-                day.day()
+                day.as_std_days()
             )),
             None => out.push_str(&format!(
                 "- {label}: {} (asserted by {})\n",
@@ -155,7 +155,7 @@ mod tests {
         w.ledger
             .commit(
                 Fact {
-                    day: Some(WorldTime::new(5.0).expect("finite")),
+                    day: Some(WorldTime::from_std_days(5.0).expect("finite")),
                     ..fact(
                         e,
                         "tenet",

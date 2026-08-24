@@ -209,7 +209,7 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     let mut temps_c = Vec::with_capacity(SAMPLES);
     for i in 0..SAMPLES {
         let day = year_length * i as f64 / SAMPLES as f64;
-        let at = WorldTime::new(day).expect("finite day");
+        let at = WorldTime::from_std_days(day).expect("finite day");
         let reflectance = ctx.reflectance_at(&addr, &micro, at).unwrap();
         let mean: f64 = reflectance.get().iter().sum::<f64>() / BANDS as f64;
         lightness.push(mean);

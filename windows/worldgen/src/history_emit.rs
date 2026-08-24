@@ -32,7 +32,7 @@ use std::collections::{BTreeMap, BTreeSet};
 ///
 /// Finiteness is not checked: the input is bake output (a `f64` stepped from
 /// `start_year` by `epoch_years`), never parsed text, and a finite year times a
-/// finite constant is finite. The `WorldTime::new(...).expect(...)` in [`fact`]
+/// finite constant is finite. The `WorldTime::from_std_days(...).expect(...)` in [`fact`]
 /// is the assertion of that.
 /// seam-guard: identity(0) scope(hornvale-worldgen)
 ///
@@ -120,7 +120,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: Some(subject),
-        day: Some(WorldTime::new(day).expect("history-bake day is finite")),
+        day: Some(WorldTime::from_std_days(day).expect("history-bake day is finite")),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     }
 }
@@ -431,7 +431,7 @@ pub fn present_year(world: &World) -> f64 {
 /// [`present_year`], crossed forward into the standard **day** every
 /// [`WorldTime`] consumer needs — the composition a caller wanting "now" as a
 /// day would otherwise hand-write as
-/// `WorldTime::new(ledger_day_of_bake_year(present_year(world)))`.
+/// `WorldTime::from_std_days(ledger_day_of_bake_year(present_year(world)))`.
 ///
 /// That hand-written composition is exactly what sat at
 /// `windows/worldgen/tests/repose_exposure.rs`'s TASK 7 call, and it reported
@@ -447,7 +447,7 @@ pub fn present_year(world: &World) -> f64 {
 /// `present_frame_crosses_the_bake_year_by_days_per_year` in this crate's
 /// `tests/history_emit.rs`.
 pub fn present_frame(world: &World) -> WorldTime {
-    WorldTime::new(ledger_day_of_bake_year(present_year(world)))
+    WorldTime::from_std_days(ledger_day_of_bake_year(present_year(world)))
         .expect("a derived present-day crossing is finite")
 }
 

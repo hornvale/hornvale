@@ -96,7 +96,7 @@ fn volcanic_years(terrain: &GeneratedTerrain, cell: CellId) -> f64 {
 fn window_for(events: f64, interval: Years) -> (WorldTime, WorldTime) {
     (
         WorldTime::GENESIS,
-        WorldTime::new(events * interval.days()).expect("a finite span"),
+        WorldTime::from_std_days(events * interval.days()).expect("a finite span"),
     )
 }
 
@@ -174,8 +174,8 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
     // is 365,250 days) as well as on them, and so one window opens before
     // genesis.
     let outer = (
-        WorldTime::new(-500_000.0).expect("finite"),
-        WorldTime::new(4_000_000.0).expect("finite"),
+        WorldTime::from_std_days(-500_000.0).expect("finite"),
+        WorldTime::from_std_days(4_000_000.0).expect("finite"),
     );
     let inner: [(f64, f64); 6] = [
         (-500_000.0, 4_000_000.0),
@@ -209,24 +209,24 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
             // round-numbered windows hits this by luck or not at all.
             let cuts: Vec<f64> = all
                 .windows(2)
-                .filter(|p| block_of(p[0].day.day()) == block_of(p[1].day.day()))
-                .map(|p| p[1].day.day())
+                .filter(|p| block_of(p[0].day.as_std_days()) == block_of(p[1].day.as_std_days()))
+                .map(|p| p[1].day.as_std_days())
                 .take(4)
                 .collect();
             interior_cuts += cuts.len() as u32;
             let derived: Vec<(f64, f64)> = cuts
                 .iter()
-                .flat_map(|cut| [(*cut, outer.1.day()), (outer.0.day(), *cut)])
+                .flat_map(|cut| [(*cut, outer.1.as_std_days()), (outer.0.as_std_days(), *cut)])
                 .collect();
             for (lo, hi) in inner.into_iter().chain(derived) {
                 let sub = (
-                    WorldTime::new(lo).expect("finite"),
-                    WorldTime::new(hi).expect("finite"),
+                    WorldTime::from_std_days(lo).expect("finite"),
+                    WorldTime::from_std_days(hi).expect("finite"),
                 );
                 let expected: Vec<_> = all
                     .iter()
                     .copied()
-                    .filter(|e| e.day.day() >= lo && e.day.day() < hi)
+                    .filter(|e| e.day.as_std_days() >= lo && e.day.as_std_days() < hi)
                     .collect();
                 let got = events_in(Seed(seed), &terrain, cell, sub);
                 assert_eq!(
@@ -375,7 +375,7 @@ fn inter_event_times_recover_the_authored_recurrence() {
         let days: Vec<f64> = events_in(Seed(42), &terrain, cell, window)
             .into_iter()
             .filter(|e| e.kind == HazardEventKind::Seismic)
-            .map(|e| e.day.day())
+            .map(|e| e.day.as_std_days())
             .collect();
         assert!(
             days.len() as f64 > 0.9 * target,

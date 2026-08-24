@@ -478,7 +478,7 @@ fn process_events(
     recurrence: Years,
     window: (WorldTime, WorldTime),
 ) -> Vec<HazardEvent> {
-    let (start, end) = (window.0.day(), window.1.day());
+    let (start, end) = (window.0.as_std_days(), window.1.as_std_days());
     if end <= start {
         return Vec::new();
     }
@@ -504,7 +504,8 @@ fn process_events(
             let magnitude = magnitude_of(kind, stream.next_f64());
             if day >= start && day < end {
                 events.push(HazardEvent {
-                    day: WorldTime::new(day).expect("a finite day inside a finite window"),
+                    day: WorldTime::from_std_days(day)
+                        .expect("a finite day inside a finite window"),
                     kind,
                     magnitude,
                 });
@@ -585,7 +586,7 @@ pub fn events_in(
     // Stable, so the tie-break on a shared day is seismic-before-eruption by
     // construction (the seismic events were pushed first) — deterministic
     // without a second sort key.
-    events.sort_by(|a, b| a.day.day().total_cmp(&b.day.day()));
+    events.sort_by(|a, b| a.day.as_std_days().total_cmp(&b.day.as_std_days()));
     events
 }
 
@@ -738,7 +739,7 @@ mod tests {
     fn window() -> (WorldTime, WorldTime) {
         (
             WorldTime::GENESIS,
-            WorldTime::new(10_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
+            WorldTime::from_std_days(10_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         )
     }
 
@@ -804,7 +805,7 @@ mod tests {
         assert!(!events.is_empty(), "no events to check");
         for pair in events.windows(2) {
             assert!(
-                pair[0].day.day() <= pair[1].day.day(),
+                pair[0].day.as_std_days() <= pair[1].day.as_std_days(),
                 "events came back out of order: {:?} then {:?}",
                 pair[0],
                 pair[1]
@@ -812,7 +813,8 @@ mod tests {
         }
         for event in &events {
             assert!(
-                event.day.day() >= start.day() && event.day.day() < end.day(),
+                event.day.as_std_days() >= start.as_std_days()
+                    && event.day.as_std_days() < end.as_std_days(),
                 "{event:?} fell outside the window it was asked for"
             );
         }
@@ -824,17 +826,9 @@ mod tests {
     fn an_empty_or_reversed_window_yields_nothing() {
         let (geo, terrain) = globe();
         let (busiest, _) = extremes(&geo, &terrain);
-        let day = WorldTime::new(1_000.0).expect("finite");
+        let day = WorldTime::from_std_days(1_000.0).expect("finite");
         assert!(events_in(Seed(42), &terrain, busiest, (day, day)).is_empty());
-        assert!(
-            events_in(
-                Seed(42),
-                &terrain,
-                busiest,
-                (day, WorldTime::new(0.0).expect("finite"))
-            )
-            .is_empty()
-        );
+        assert!(events_in(Seed(42), &terrain, busiest, (day, WorldTime::GENESIS)).is_empty());
     }
 
     /// Both laws stay inside their authored brackets, and both kinds occur.
@@ -843,7 +837,7 @@ mod tests {
         let (geo, terrain) = globe();
         let long = (
             WorldTime::GENESIS,
-            WorldTime::new(200_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
+            WorldTime::from_std_days(200_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         );
         let mut seismic = 0_u32;
         let mut eruptions = 0_u32;
@@ -881,7 +875,7 @@ mod tests {
         let (geo, terrain) = globe();
         let long = (
             WorldTime::GENESIS,
-            WorldTime::new(100_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
+            WorldTime::from_std_days(100_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         );
         let mut checked = 0_u32;
         for cell in geo.cells().take(400) {
@@ -922,7 +916,7 @@ mod tests {
         let terrain = GeneratedTerrain::new(geo.clone(), outcome);
         let long = (
             WorldTime::GENESIS,
-            WorldTime::new(50_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
+            WorldTime::from_std_days(50_000.0 * Years::DAYS_PER_YEAR).expect("finite"),
         );
         let mut cones: std::collections::BTreeMap<CellId, Vec<CellId>> =
             std::collections::BTreeMap::new();

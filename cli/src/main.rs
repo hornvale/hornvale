@@ -605,7 +605,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         writeln!(out, "```text").map_err(|e| e.to_string())?;
         let opts = hornvale_vessel::PossessOpts {
-            day: WorldTime::new(day).expect("a day value is finite"),
+            day: WorldTime::from_std_days(day).expect("a day value is finite"),
             echo: true,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -621,7 +621,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     } else {
         let stdin = std::io::stdin();
         let opts = hornvale_vessel::PossessOpts {
-            day: WorldTime::new(day).expect("a day value is finite"),
+            day: WorldTime::from_std_days(day).expect("a day value is finite"),
             echo: false,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -2014,7 +2014,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                 let (light, sun_altitude_deg) = hornvale_vessel::eyes::daylight_at(
                     &world,
                     calendar.as_ref(),
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     latitude,
                 );
                 hornvale_scene::surrounds_scene_colored_in(
@@ -2022,7 +2022,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     &ctx,
                     &room,
                     radius,
-                    WorldTime::new(day).expect("a day value is finite"),
+                    WorldTime::from_std_days(day).expect("a day value is finite"),
                     &hornvale_kernel::color::standard_observer(),
                     &light,
                     hornvale_scene::Sight {
@@ -2038,7 +2038,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     },
                 )
             } else {
-                hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime::new(day).expect("a day value is finite"))
+                hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime::from_std_days(day).expect("a day value is finite"))
             }
             .map_err(|e| e.to_string())?;
             if render_mode == "ascii" {
@@ -2049,7 +2049,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                 // exactly how a CLI caption and the possession's would end
                 // up disagreeing.
                 let locale = ctx
-                    .describe(&room, WorldTime::new(day).expect("a day value is finite"))
+                    .describe(&room, WorldTime::from_std_days(day).expect("a day value is finite"))
                     .map_err(|e| e.to_string())?;
                 let ways: Vec<String> = locale
                     .exits

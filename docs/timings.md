@@ -2329,3 +2329,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T01:26:17Z | gate-commit | 177.346 | 191.997 | 82.709 | 1.55 | 0 | 545b53f46 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T01:28:48Z | gate-commit | 107.541 | 66.249 | 39.031 | 0.98 | 0 | 545b53f46 | campaign/the-escapement | ambrose | 12 |
 | 2026-08-24T01:55:43Z | gate-commit | 179.305 | 135.450 | 92.221 | 1.27 | 0 | 3bc4fd871 | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:30:33Z | vessel-check | 41.916 | 59.743 | 5.165 | 1.55 | 0 | 0fbbce11c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:31:19Z | world-check | 40.334 | 53.349 | 4.714 | 1.44 | 0 | 0fbbce11c | campaign/the-escapement | ambrose | 12 |
+| 2026-08-24T02:33:09Z | gate-commit | 89.375 | 199.522 | 41.275 | 2.69 | 0 | 0fbbce11c | campaign/the-escapement | ambrose | 12 |

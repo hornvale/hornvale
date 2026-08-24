@@ -119,7 +119,9 @@ fn synthetic_settlement(
                     predicate: predicate.to_string(),
                     object,
                     place: None,
-                    day: Some(WorldTime::new(founded_day).expect("test fixture day is finite")),
+                    day: Some(
+                        WorldTime::from_std_days(founded_day).expect("test fixture day is finite"),
+                    ),
                     provenance: "tolerance-draw-test".to_string(),
                 },
                 &world.registry,

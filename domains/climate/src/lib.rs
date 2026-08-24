@@ -319,7 +319,7 @@ mod tests {
         let c = UniformClimate;
         let seen = c.phenomena(&ObserverContext::at(
             EntityId::new(1).unwrap(),
-            WorldTime::new(3.0).expect("a day value is finite"),
+            WorldTime::from_std_days(3.0).expect("a day value is finite"),
         ));
         assert_eq!(seen.len(), 1);
         assert_eq!(seen[0].kind, AMBIENT);
