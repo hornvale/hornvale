@@ -2541,6 +2541,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T13:19:24Z | sluice:outboard | 39.476 | 23.297 | 32.213 | 1.41 | 0 | b48505c47 |  | lefford | 40 |
 | 2026-08-24T13:26:34Z | sluice:gate | 429.438 | 11612.714 | 492.426 | 28.19 | 0 | 5220517ee |  | lefford | 40 |
 | 2026-08-24T13:33:38Z | sluice:clients | 423.516 | 4108.800 | 61.388 | 9.85 | 0 | 0b0fb182f |  | lefford | 40 |
+| 2026-08-24T14:36:42Z | gate-commit | 121.616 | 646.957 | 96.424 | 6.11 | 0 | 0b4850dfb | fix/marquee-ticks-on-time | MacBookPro | 10 |
+| 2026-08-24T14:37:02Z | gate-commit | 20.139 | 47.282 | 12.183 | 2.95 | 0 | 0b4850dfb | fix/marquee-ticks-on-time | MacBookPro | 10 |
+| 2026-08-24T15:23:42Z | gate-commit | 32.680 | 50.904 | 12.959 | 1.95 | 0 | 70c05214f | fix/marquee-ticks-on-time | MacBookPro | 10 |
+| 2026-08-24T15:24:16Z | gate-commit | 34.473 | 51.077 | 12.760 | 1.85 | 0 | 70c05214f | fix/marquee-ticks-on-time | MacBookPro | 10 |
 | 2026-08-24T14:21:39Z | rebaseline | 395.926 | 256.376 | 21.017 | 0.70 | 0 | bb37a1a1c | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T14:33:02Z | gate-commit | 677.578 | 780.251 | 171.510 | 1.40 | 0 | bb37a1a1c | campaign/the-forebay | ambrose | 12 |
 | 2026-08-24T14:40:34Z | sluice:artifacts | 128.043 | 1058.917 | 50.950 | 8.67 | 0 | 1561dc001 |  | lefford | 40 |
@@ -2552,3 +2556,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T16:07:03Z | sluice:outboard | 39.704 | 24.362 | 37.708 | 1.56 | 0 | b6a9d1336 |  | lefford | 40 |
 | 2026-08-24T16:13:39Z | sluice:gate | 396.167 | 10636.228 | 393.973 | 27.84 | 0 | 7d36d8297 |  | lefford | 40 |
 | 2026-08-24T16:20:42Z | sluice:clients | 422.755 | 4002.615 | 44.893 | 9.57 | 0 | ab2464ffa |  | lefford | 40 |
+| 2026-08-24T15:49:53Z | rebaseline | 86.084 | 238.427 | 12.786 | 2.92 | 0 | 4ce5e9263 | fix/marquee-ticks-on-time | MacBookPro | 10 |
+| 2026-08-24T15:51:20Z | gate-commit | 87.164 | 458.960 | 81.319 | 6.20 | 0 | 4ce5e9263 | fix/marquee-ticks-on-time | MacBookPro | 10 |

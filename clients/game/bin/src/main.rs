@@ -148,13 +148,29 @@ fn redraw(term: &term::Term, driver: &mut Driver) -> std::io::Result<()> {
 /// never on a plain key press, since a terminal's size does not change
 /// between resize events, and `resize` itself is cheap (one subtraction
 /// plus a cursor re-clamp).
+/// How long one marquee column lasts. Authored, not derived: fast enough to
+/// read as motion, slow enough to read as text. The ONLY wall-clock value in
+/// this client, and it is a render cadence rather than world time — the sim's
+/// ban on `Instant` (decision 0001) is about `WorldTime`, and does not reach
+/// `clients/game` (its own workspace, outside the determinism boundary,
+/// decision 0055).
+const MARQUEE_TICK: std::time::Duration = std::time::Duration::from_millis(300);
+
 fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
-    use crossterm::event::{Event, read};
+    use crossterm::event::{Event, poll, read};
 
     let (w, h) = terminal_size()?;
     driver.resize(w, h);
     redraw(term, &mut *driver)?;
     loop {
+        // BLOCK unless the strip actually has somewhere to scroll. An idle
+        // client whose strip fits its plate wakes for nothing; only a
+        // genuinely overflowing strip costs a timed poll.
+        if driver.strip_is_scrolling() && !poll(MARQUEE_TICK)? {
+            driver.tick_marquee();
+            redraw(term, &mut *driver)?;
+            continue;
+        }
         match read()? {
             Event::Key(key) => {
                 let action = input::action_for(key, driver.focus());
