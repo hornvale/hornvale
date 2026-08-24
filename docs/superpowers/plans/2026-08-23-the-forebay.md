@@ -225,14 +225,29 @@ The premise of the whole program's read side is unverified. `RoomMeshMemo` alrea
 
 Follow `HomeNavCache::searches`' precedent — a private counter with a read-only accessor, "the scaling property's own deterministic witness, never a wall-clock proxy." Counters are `u64` and never reset.
 
-**Read `RoomAddr::new`'s real signature first** (`kernel/src/room.rs:298`/`:361`); if it differs from the shape below, build the address the way the neighbouring tests do. Neither property under test depends on how the address is constructed.
+**`RoomAddr::new` DOES NOT EXIST** — an earlier draft of this plan used it and
+would not have compiled. The controller verified the real shape:
+
+```
+kernel/src/room.rs:26   pub struct RoomAddr { pub face: u8, pub path: Vec<u8> }
+```
+
+Both fields are `pub`, so a struct literal is the construction — which is
+exactly what the in-module `all_addrs` helper at `:860` does
+(`RoomAddr { face, path: vec![] }`). The only other constructors are
+`RoomId::unpack()` at `:342` and `RoomAddr::child(digit)` at `:589`. Use the
+literal, as the sketches below now do.
+
+`RoomAddr` derives `Clone` and **not** `Copy` (it holds a `Vec<u8>`), and it
+derives `Ord` — which is what makes it a legal `BTreeMap` key for Task 2's
+`Derived<K, V>`.
 
 ```rust
 #[test]
 fn memo_counts_hits_and_misses_separately_per_half() {
     let geo = Geosphere::new(3);
     let index = NearestCellIndex::new(&geo);
-    let addr = RoomAddr::new(0, &[0, 0, 0]).expect("a level-3 address is valid");
+    let addr = RoomAddr { face: 0, path: vec![0, 0, 0] };
     let mut memo = RoomMeshMemo::new();
 
     // Cold: one miss on each half, no hits.
@@ -261,7 +276,7 @@ fn a_cached_none_counts_as_a_hit_not_a_miss() {
     // permanently cold cache for every above-the-grid room.
     let geo = Geosphere::new(5);
     let index = NearestCellIndex::new(&geo);
-    let shallow = RoomAddr::new(0, &[0]).expect("a level-1 address is valid");
+    let shallow = RoomAddr { face: 0, path: vec![0] };
     assert!(shallow.depth() < geo.level(), "this address must be above the grid");
 
     let mut memo = RoomMeshMemo::new();
@@ -480,7 +495,7 @@ fn room_mesh_memo_public_surface_is_unchanged_by_the_forebay() {
 
     let geo = Geosphere::new(3);
     let index = NearestCellIndex::new(&geo);
-    let addr = RoomAddr::new(0, &[0, 0, 0]).expect("valid");
+    let addr = RoomAddr { face: 0, path: vec![0, 0, 0] };
 
     let _: Option<[(CellId, u64); 3]> = addr.corner_weights(&geo, &index);
     let _: Option<[(CellId, u64); 3]> = addr.corner_weights_memo(&geo, &index, &mut memo);
