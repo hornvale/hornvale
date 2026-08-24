@@ -188,3 +188,51 @@ fn skipping_a_position_panics() {
     let second = l.iter().nth(1).expect("the ledger has 3 facts");
     f.absorb_at(1, second); // position 0 was never absorbed
 }
+
+/// CHAOS-REBUILD: metaplan §7's chaos-eviction rung, for folds.
+///
+/// Walk the ledger one fact at a time and, at EVERY position, throw the
+/// accumulated state away and rebuild it from the ledger prefix — then carry
+/// on. If the fold is genuinely a fold, the end state is identical to never
+/// having discarded anything, for every possible discard schedule. This is the
+/// most aggressive schedule there is.
+#[test]
+fn discarding_the_state_at_every_position_is_unobservable() {
+    let l = ledger_of(24);
+    let resident: Folded<Probe> = Folded::rebuild(&l);
+
+    let mut chaotic: Folded<Probe> = Folded::new();
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
+        // Throw it all away and come back from the ledger.
+        chaotic = Folded::rebuild_upto(&l, chaotic.position());
+    }
+
+    assert_eq!(
+        chaotic.state(),
+        resident.state(),
+        "a discard schedule must not be observable"
+    );
+    assert_eq!(chaotic.position(), resident.position());
+}
+
+/// The same property under a SPARSER schedule. Not redundant: a bug can cancel
+/// out under the every-step schedule — where the rebuilt state is recomputed
+/// immediately after every single absorb — and survive one that lets several
+/// absorbs accumulate between discards.
+#[test]
+fn discarding_the_state_at_every_third_position_is_unobservable() {
+    let l = ledger_of(24);
+    let resident: Folded<Probe> = Folded::rebuild(&l);
+
+    let mut chaotic: Folded<Probe> = Folded::new();
+    for (i, f) in l.iter().enumerate() {
+        chaotic.absorb_at(i as u64, f);
+        if i % 3 == 0 {
+            chaotic = Folded::rebuild_upto(&l, chaotic.position());
+        }
+    }
+
+    assert_eq!(chaotic.state(), resident.state());
+    assert_eq!(chaotic.position(), resident.position());
+}
