@@ -1431,25 +1431,6 @@ impl<'w> Session<'w> {
     /// — into the ledger at the DRIVEN body's current position, through the
     /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
     /// arrival commits with, so a manufactured co-location is
-    /// indistinguishable from one the world produced.
-    ///
-    /// **A test seam, not a verb — `handle` never reaches this.** The Hand's
-    /// Task 3 deleted the possessed body's duplicate representation, and
-    /// with it went the only thing that ever guaranteed a fresh possession
-    /// starts co-located with anything: every other settlement lives
-    /// elsewhere, and wild concentrations are scattered independently
-    /// (confirmed live: seed 42's flagship possession still finds nobody to
-    /// provoke after sixty `wait`s). The fidelity ruling on that finding
-    /// (idea registry: `SOC-one-creature-per-settlement`) is that changing
-    /// world population to restore an incidental co-location guarantee is
-    /// its own campaign — The Penstock already measured tick cost
-    /// superlinear in exactly that dimension — so a test that needs a
-    /// co-located body now asks for one explicitly, through here, rather
-    /// than relying on a population side effect.
-    /// Commit `who` — another body from this session's own [`Self::bodies`]
-    /// — into the ledger at the DRIVEN body's current position, through the
-    /// same `agent-at` constructor ([`crate::liveness::place_agent`]) a real
-    /// arrival commits with, so a manufactured co-location is
     /// indistinguishable from one the world produced. If the possession is
     /// currently INDOORS, `who` also gets a fine-layer anchor at a cell the
     /// possession can actually see — the same `Occupancy`/lit-cell join
