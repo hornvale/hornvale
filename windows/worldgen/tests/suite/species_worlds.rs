@@ -15,7 +15,7 @@
 //! flagship at all. At seed 42, under the frozen `BETA`/`FLOOR`, goblin and
 //! hobgoblin win every attractor's dominance (29 and 37 of the world's 66
 //! settlements respectively); bugbear and kobold never dominate a single
-//! cell, so neither places a flagship, even though the coexistence stack
+//! vertex, so neither places a flagship, even though the coexistence stack
 //! still packs nonzero density for both of them almost everywhere. Also:
 //! every registry people, given exclusive placement via its own species
 //! pin (no competing dominance to lose), places its own flagship; an
@@ -48,7 +48,7 @@ fn default_world_carries_all_four_peoples_with_their_own_flagships() {
     )
     .unwrap();
     // The Living Community epoch: the deep-history bake seeds every people its
-    // own proto-communities (GENESIS_TOP_CELLS is kept above the total genesis
+    // own proto-communities (GENESIS_TOP_VERTICES is kept above the total genesis
     // count so no people is starved of sites), so ALL FOUR goblinoid peoples
     // hold their own flagships in the shared default world — fulfilling this
     // test's name. Under the retired demography condensation placer, bugbear

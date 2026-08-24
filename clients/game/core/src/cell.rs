@@ -151,7 +151,7 @@ pub enum Source {
     /// `Identity` each trace to a field this crate itself parsed off
     /// `Snapshot` — the crate can point at the exact struct field that
     /// justifies the label. `Look`'s text does not: it traces to
-    /// `resolve_at` in `windows/worldgen`, answered by a `CellFeatureIndex`
+    /// `resolve_at` in `windows/worldgen`, answered by a `VertexFeatureIndex`
     /// over `domains/terrain` and queried live by `bin` (Task 3) — it is
     /// not carried on `vessel/session/v2` at all, so there is no `Snapshot`
     /// field for this crate to check the label against. Structurally, the

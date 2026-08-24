@@ -30,8 +30,9 @@ pub fn chart_ascii(neighbors: &[Neighbor]) -> String {
     let mut grid = vec![vec![' '; ASCII_WIDTH]; ASCII_HEIGHT];
     let equator = ASCII_HEIGHT / 2;
     for (col, cell) in grid[equator].iter_mut().enumerate() {
+        // lexicon: an ASCII star-chart grid square — the AREA sense, correct here
         if col % 2 == 0 {
-            *cell = '-';
+            *cell = '-'; // lexicon: an ASCII star-chart grid square — the AREA sense, correct here
         }
     }
     // Dimmest first, so a brighter star's digit overwrites on collision.
@@ -58,8 +59,9 @@ pub fn chart_ansi(neighbors: &[Neighbor]) -> String {
     let mut grid: Vec<Vec<(char, &'static str)>> = vec![vec![(' ', ""); ASCII_WIDTH]; ASCII_HEIGHT];
     let equator = ASCII_HEIGHT / 2;
     for (col, cell) in grid[equator].iter_mut().enumerate() {
+        // lexicon: an ASCII star-chart grid square — the AREA sense, correct here
         if col % 2 == 0 {
-            *cell = ('-', "");
+            *cell = ('-', ""); // lexicon: an ASCII star-chart grid square — the AREA sense, correct here
         }
     }
     for (index, neighbor) in neighbors.iter().enumerate().rev() {
@@ -74,6 +76,7 @@ pub fn chart_ansi(neighbors: &[Neighbor]) -> String {
 }
 
 /// Emit a `(glyph, sgr)` grid as rows, resetting after every colored cell.
+/// lexicon: an ASCII star-chart grid square — the AREA sense, correct here
 fn emit_ansi_grid(grid: &[Vec<(char, &'static str)>]) -> String {
     let mut out = String::new();
     for row in grid {
@@ -316,6 +319,7 @@ mod tests {
     #[test]
     fn collision_keeps_the_brighter_digit() {
         // Same cell: identical dec/RA. Index 0 is the brighter by contract.
+        // lexicon: an ASCII star-chart grid square — the AREA sense, correct here
         let stars = vec![star(10.0, 100.0, 5.0), star(10.0, 100.0, 1.0)];
         let chart = chart_ascii(&stars);
         assert!(chart.contains('1'));

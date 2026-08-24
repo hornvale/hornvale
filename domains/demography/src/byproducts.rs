@@ -1,85 +1,85 @@
 //! The three first-class derived byproducts of the coexistence stack:
 //! strife (a balanced-fitness contest measure), wilderness (the unclaimed
 //! capacity fraction), and refugia (per-species hostility-shadow strongholds).
-//! None of these feed back into `pack`/`cell_share` — they are pure reads off
+//! None of these feed back into `pack`/`vertex_share` — they are pure reads off
 //! an already-assembled [`crate::coexist::CoexistStack`] and the per-species
 //! `K` fields that built it, kept here as a separate module so the packer
 //! itself stays free of presentation-layer concerns.
 
 use crate::coexist::CoexistStack;
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{Geosphere, Vertex, VertexMap};
 
 /// The three derived byproducts of a [`CoexistStack`], all read off the same
-/// per-cell density stack and per-species `K` fields.
+/// per-vertex density stack and per-species `K` fields.
 /// type-audit: bare-ok(count: strife), bare-ok(ratio: wilderness), bare-ok(index: refugia)
 pub struct Byproducts {
-    /// Contest intensity per cell — the inverse-Herfindahl evenness of the
-    /// cell's density vector across present species. `0.0` where no species
+    /// Contest intensity per vertex — the inverse-Herfindahl evenness of the
+    /// vertex's density vector across present species. `0.0` where no species
     /// is present; approaches the count of present species where they are
     /// evenly matched; approaches `1.0` where one species dominates. See
     /// [`strife`] for the exact formula.
-    pub strife: CellMap<f64>,
-    /// Unclaimed capacity fraction per cell, in `[0, 1]`: how much of the
-    /// cell's summed carrying capacity no species' realized density has
+    pub strife: VertexMap<f64>,
+    /// Unclaimed capacity fraction per vertex, in `[0, 1]`: how much of the
+    /// vertex's summed carrying capacity no species' realized density has
     /// actually claimed — the untamed interstitial marches. See
     /// [`wilderness`] for the exact formula.
-    pub wilderness: CellMap<f64>,
-    /// Per non-dominant species, its stronghold cells: cells where the
+    pub wilderness: VertexMap<f64>,
+    /// Per non-dominant species, its stronghold vertices: vertices where the
     /// world's normally-dominant species is hostility-excluded (`K_D <
     /// floor`) but this species still persists (`K_s >= floor`). Tagged by
     /// species id; the dominant species itself is omitted (its own refugia
     /// map would be trivially empty — see [`refugia`]'s doc for why).
-    pub refugia: Vec<(u32, CellMap<f64>)>,
+    pub refugia: Vec<(u32, VertexMap<f64>)>,
 }
 
-/// Contest intensity at one cell: the inverse Herfindahl index (inverse
-/// Simpson index) of `density`'s per-species fractional shares at `cell`.
+/// Contest intensity at one vertex: the inverse Herfindahl index (inverse
+/// Simpson index) of `density`'s per-species fractional shares at `vertex`.
 ///
-/// `frac_s = density_s(cell) / Σ_j density_j(cell)` for every species `j` in
-/// `density` (species absent from the cell contribute `density_s(cell) ==
+/// `frac_s = density_s(vertex) / Σ_j density_j(vertex)` for every species `j` in
+/// `density` (species absent from the vertex contribute `density_s(vertex) ==
 /// 0.0`, which drops out of the sum on its own — no filtering needed).
 /// `strife = 1.0 / Σ_s frac_s^2`, which is `1.0` when a single species holds
-/// the entire cell and rises toward the count of present species as they
-/// become evenly matched. A cell with zero total density (no species
+/// the entire vertex and rises toward the count of present species as they
+/// become evenly matched. A vertex with zero total density (no species
 /// present) reports `0.0` rather than dividing by zero — there is no contest
 /// where nobody is contesting.
 ///
-/// Deliberately tracks **balance**, not **magnitude**: a cell where one
+/// Deliberately tracks **balance**, not **magnitude**: a vertex where one
 /// species density dwarfs another is low-strife regardless of how large the
-/// dominant's density is, and a cell where two species are evenly matched is
+/// dominant's density is, and a vertex where two species are evenly matched is
 /// high-strife even at low absolute density. This is why `strife` does not
 /// use `hornvale_kernel::math` — squaring and dividing plain `f64` ratios are
 /// exact IEEE-754 operations, not transcendentals, so no platform-libm route
 /// is needed for determinism.
 ///
 /// type-audit: bare-ok(index: density), bare-ok(count: return)
-fn strife_at(density: &[(u32, CellMap<f64>)], cell: CellId) -> f64 {
-    let total: f64 = density.iter().map(|(_, d)| *d.get(cell)).sum();
+fn strife_at(density: &[(u32, VertexMap<f64>)], vertex: Vertex) -> f64 {
+    let total: f64 = density.iter().map(|(_, d)| *d.get(vertex)).sum();
     if total <= 0.0 {
         return 0.0;
     }
     let herfindahl: f64 = density
         .iter()
         .map(|(_, d)| {
-            let frac = *d.get(cell) / total;
+            let frac = *d.get(vertex) / total;
             frac * frac
         })
         .sum();
     1.0 / herfindahl
 }
 
-/// The full strife field: [`strife_at`] evaluated over every cell of `geo`.
+/// The full strife field: [`strife_at`] evaluated over every vertex of `geo`.
 ///
 /// type-audit: bare-ok(index: density), bare-ok(count: return)
-pub fn strife(geo: &Geosphere, density: &[(u32, CellMap<f64>)]) -> CellMap<f64> {
-    CellMap::from_fn(geo, |c| strife_at(density, c))
+pub fn strife(geo: &Geosphere, density: &[(u32, VertexMap<f64>)]) -> VertexMap<f64> {
+    VertexMap::from_fn(geo, |c| strife_at(density, c))
 }
 
-/// Unclaimed capacity fraction at one cell.
+/// Unclaimed capacity fraction at one vertex.
 ///
-/// `capacity = Σ_j K_j(cell)` over `per_species_k`; `claimed = Σ_s
-/// density_s(cell)` over `density`. `wilderness = max(0, capacity -
-/// claimed) / capacity` when `capacity > 0`, else `0.0` (a cell nobody can
+/// `capacity = Σ_j K_j(vertex)` over `per_species_k`; `claimed = Σ_s
+/// density_s(vertex)` over `density`. `wilderness = max(0, capacity -
+/// claimed) / capacity` when `capacity > 0`, else `0.0` (a vertex nobody can
 /// live in has no unclaimed wilderness either — it is simply outside the
 /// question). The result is clamped to `[0, 1]`: `claimed` is a realized,
 /// post-coexistence density that can in principle sit anywhere relative to
@@ -89,32 +89,32 @@ pub fn strife(geo: &Geosphere, density: &[(u32, CellMap<f64>)]) -> CellMap<f64> 
 ///
 /// type-audit: bare-ok(index: per_species_k), bare-ok(index: density), bare-ok(count: return)
 fn wilderness_at(
-    per_species_k: &[(u32, CellMap<f64>)],
-    density: &[(u32, CellMap<f64>)],
-    cell: CellId,
+    per_species_k: &[(u32, VertexMap<f64>)],
+    density: &[(u32, VertexMap<f64>)],
+    vertex: Vertex,
 ) -> f64 {
-    let capacity: f64 = per_species_k.iter().map(|(_, k)| *k.get(cell)).sum();
+    let capacity: f64 = per_species_k.iter().map(|(_, k)| *k.get(vertex)).sum();
     if capacity <= 0.0 {
         return 0.0;
     }
-    let claimed: f64 = density.iter().map(|(_, d)| *d.get(cell)).sum();
+    let claimed: f64 = density.iter().map(|(_, d)| *d.get(vertex)).sum();
     ((capacity - claimed).max(0.0) / capacity).clamp(0.0, 1.0)
 }
 
-/// The full wilderness field: [`wilderness_at`] evaluated over every cell of
+/// The full wilderness field: [`wilderness_at`] evaluated over every vertex of
 /// `geo`.
 ///
 /// type-audit: bare-ok(index: per_species_k), bare-ok(index: density), bare-ok(count: return)
 pub fn wilderness(
     geo: &Geosphere,
-    per_species_k: &[(u32, CellMap<f64>)],
-    density: &[(u32, CellMap<f64>)],
-) -> CellMap<f64> {
-    CellMap::from_fn(geo, |c| wilderness_at(per_species_k, density, c))
+    per_species_k: &[(u32, VertexMap<f64>)],
+    density: &[(u32, VertexMap<f64>)],
+) -> VertexMap<f64> {
+    VertexMap::from_fn(geo, |c| wilderness_at(per_species_k, density, c))
 }
 
 /// The world's normally-dominant species: the one with the greatest total
-/// `K` summed over every cell of `per_species_k`. Deterministic: totals
+/// `K` summed over every vertex of `per_species_k`. Deterministic: totals
 /// compare via `total_cmp`, ties broken by the lower species id (found by
 /// scanning `per_species_k` in its given order, keeping the current best
 /// only on a *strict* improvement — the first-seen id among equal totals
@@ -126,7 +126,7 @@ pub fn wilderness(
 /// species over no species.
 ///
 /// type-audit: bare-ok(index: per_species_k), bare-ok(index: return), bare-ok(count: return)
-fn dominant_species(per_species_k: &[(u32, CellMap<f64>)]) -> Option<u32> {
+fn dominant_species(per_species_k: &[(u32, VertexMap<f64>)]) -> Option<u32> {
     let mut totals: Vec<(u32, f64)> = per_species_k
         .iter()
         .map(|(id, k)| (*id, k.iter().map(|(_, v)| *v).sum::<f64>()))
@@ -154,16 +154,16 @@ fn dominant_species(per_species_k: &[(u32, CellMap<f64>)]) -> Option<u32> {
 
 /// Per-species refugia: for every species in `per_species_k` other than the
 /// world's normally-dominant species `D` (see [`dominant_species`]), the
-/// cells where `D` is hostility-excluded (`K_D(cell) < floor`) while the
-/// species itself still persists (`K_s(cell) >= floor`) — the weak's
+/// vertices where `D` is hostility-excluded (`K_D(vertex) < floor`) while the
+/// species itself still persists (`K_s(vertex) >= floor`) — the weak's
 /// strongholds, where the dominant simply cannot reach.
 ///
-/// The marked value at a qualifying cell is the species' realized density
-/// there (`density_s(cell)`, falling back to `0.0` if the species is absent
+/// The marked value at a qualifying vertex is the species' realized density
+/// there (`density_s(vertex)`, falling back to `0.0` if the species is absent
 /// from `density` entirely), not a bare `1.0` indicator: a refugium with
 /// more individuals in it is a stronger stronghold than a barely-persisting
 /// one, and callers that only want presence can threshold `> 0.0` themselves
-/// without losing information the other way. Non-qualifying cells are
+/// without losing information the other way. Non-qualifying vertices are
 /// `0.0`.
 ///
 /// The dominant species `D` is omitted from the returned `Vec` entirely
@@ -179,10 +179,10 @@ fn dominant_species(per_species_k: &[(u32, CellMap<f64>)]) -> Option<u32> {
 /// type-audit: bare-ok(index: per_species_k), bare-ok(index: density), bare-ok(count: floor), bare-ok(index: return)
 pub fn refugia(
     geo: &Geosphere,
-    per_species_k: &[(u32, CellMap<f64>)],
-    density: &[(u32, CellMap<f64>)],
+    per_species_k: &[(u32, VertexMap<f64>)],
+    density: &[(u32, VertexMap<f64>)],
     floor: f64,
-) -> Vec<(u32, CellMap<f64>)> {
+) -> Vec<(u32, VertexMap<f64>)> {
     let Some(dominant_id) = dominant_species(per_species_k) else {
         return Vec::new();
     };
@@ -195,7 +195,7 @@ pub fn refugia(
         .filter(|(id, _)| *id != dominant_id)
         .map(|(id, k_species)| {
             let own_density = density.iter().find(|(d_id, _)| d_id == id).map(|(_, d)| d);
-            let map = CellMap::from_fn(geo, |c| {
+            let map = VertexMap::from_fn(geo, |c| {
                 let dominant_excluded = *k_dominant.get(c) < floor;
                 let species_persists = *k_species.get(c) >= floor;
                 if dominant_excluded && species_persists {
@@ -212,14 +212,14 @@ pub fn refugia(
 /// Assemble all three derived byproducts of a [`CoexistStack`] in one call:
 /// [`strife`] and [`wilderness`] read `stack.density` against `per_species_k`
 /// directly; [`refugia`] additionally needs `floor`, the same
-/// hostility-exclusion threshold [`crate::coexist::cell_share`] zeroes shares
+/// hostility-exclusion threshold [`crate::coexist::vertex_share`] zeroes shares
 /// below.
 ///
 /// type-audit: bare-ok(index: per_species_k), bare-ok(count: floor)
 pub fn byproducts(
     geo: &Geosphere,
     stack: &CoexistStack,
-    per_species_k: &[(u32, CellMap<f64>)],
+    per_species_k: &[(u32, VertexMap<f64>)],
     floor: f64,
 ) -> Byproducts {
     Byproducts {
@@ -237,14 +237,14 @@ mod tests {
     #[test]
     fn strife_peaks_at_balanced_fitness_not_at_high_k() {
         let geo = Geosphere::new(3);
-        // Cell A (id 0): one dominant + one weak species.
-        // Cell B (id 1): two equal species.
-        let density0 = CellMap::from_fn(&geo, |c| match c.0 {
+        // Vertex A (id 0): one dominant + one weak species.
+        // Vertex B (id 1): two equal species.
+        let density0 = VertexMap::from_fn(&geo, |c| match c.0 {
             0 => 0.9,
             1 => 0.5,
             _ => 0.0,
         });
-        let density1 = CellMap::from_fn(&geo, |c| match c.0 {
+        let density1 = VertexMap::from_fn(&geo, |c| match c.0 {
             0 => 0.1,
             1 => 0.5,
             _ => 0.0,
@@ -253,22 +253,22 @@ mod tests {
         let field = strife(&geo, &density);
 
         assert!(
-            *field.get(CellId(1)) > *field.get(CellId(0)),
-            "balanced cell B ({}) should out-strife dominated cell A ({})",
-            field.get(CellId(1)),
-            field.get(CellId(0))
+            *field.get(Vertex(1)) > *field.get(Vertex(0)),
+            "balanced vertex B ({}) should out-strife dominated vertex A ({})",
+            field.get(Vertex(1)),
+            field.get(Vertex(0))
         );
 
         // High-density-but-dominated vs. low-density-but-balanced: strife
-        // tracks balance, not magnitude. Cell C (id 2): high density,
-        // dominated (50.0 vs 0.5). Cell D (id 3): low density, balanced
+        // tracks balance, not magnitude. Vertex C (id 2): high density,
+        // dominated (50.0 vs 0.5). Vertex D (id 3): low density, balanced
         // (0.01 vs 0.01).
-        let mixed0 = CellMap::from_fn(&geo, |c| match c.0 {
+        let mixed0 = VertexMap::from_fn(&geo, |c| match c.0 {
             2 => 50.0,
             3 => 0.01,
             _ => 0.0,
         });
-        let mixed1 = CellMap::from_fn(&geo, |c| match c.0 {
+        let mixed1 = VertexMap::from_fn(&geo, |c| match c.0 {
             2 => 0.5,
             3 => 0.01,
             _ => 0.0,
@@ -276,10 +276,10 @@ mod tests {
         let mixed = vec![(0u32, mixed0), (1u32, mixed1)];
         let mixed_field = strife(&geo, &mixed);
         assert!(
-            *mixed_field.get(CellId(3)) > *mixed_field.get(CellId(2)),
-            "low-density balanced cell D ({}) should out-strife high-density dominated cell C ({})",
-            mixed_field.get(CellId(3)),
-            mixed_field.get(CellId(2))
+            *mixed_field.get(Vertex(3)) > *mixed_field.get(Vertex(2)),
+            "low-density balanced vertex D ({}) should out-strife high-density dominated vertex C ({})",
+            mixed_field.get(Vertex(3)),
+            mixed_field.get(Vertex(2))
         );
     }
 
@@ -287,12 +287,12 @@ mod tests {
     fn strife_is_zero_with_no_density() {
         let geo = Geosphere::new(3);
         let density = vec![
-            (0u32, CellMap::from_fn(&geo, |_| 0.0)),
-            (1u32, CellMap::from_fn(&geo, |_| 0.0)),
+            (0u32, VertexMap::from_fn(&geo, |_| 0.0)),
+            (1u32, VertexMap::from_fn(&geo, |_| 0.0)),
         ];
         let field = strife(&geo, &density);
         assert!(
-            geo.cells().all(|c| *field.get(c) == 0.0),
+            geo.vertices().all(|c| *field.get(c) == 0.0),
             "no species present anywhere means no contest anywhere"
         );
     }
@@ -302,14 +302,14 @@ mod tests {
         let geo = Geosphere::new(3);
         let floor = 0.1;
         // D (id 0): dominant everywhere (high K, far larger total than s),
-        // except cell 0 where D's K drops below floor (hostility-excluded).
-        let k_d = CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 });
-        // s (id 1): low K everywhere, but still >= floor at cell 0.
-        let k_s = CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 });
+        // except vertex 0 where D's K drops below floor (hostility-excluded).
+        let k_d = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 });
+        // s (id 1): low K everywhere, but still >= floor at vertex 0.
+        let k_s = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 });
         let per_species_k = vec![(0u32, k_d), (1u32, k_s)];
 
-        let density_d = CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 });
-        let density_s = CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 });
+        let density_d = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 });
+        let density_s = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 });
         let density = vec![(0u32, density_d), (1u32, density_s)];
 
         let maps = refugia(&geo, &per_species_k, &density, floor);
@@ -322,15 +322,15 @@ mod tests {
         assert_eq!(*id, 1u32, "s is the only non-dominant species");
 
         assert!(
-            *map.get(CellId(0)) > 0.0,
-            "cell 0: D excluded (K<floor), s persists (K>=floor) — a refugium"
+            *map.get(Vertex(0)) > 0.0,
+            "vertex 0: D excluded (K<floor), s persists (K>=floor) — a refugium"
         );
-        // A cell where D is present (K_D >= floor) must NOT be marked, even
+        // A vertex where D is present (K_D >= floor) must NOT be marked, even
         // though s is also present there.
         assert_eq!(
-            *map.get(CellId(1)),
+            *map.get(Vertex(1)),
             0.0,
-            "cell 1: D is present — not a refugium for s"
+            "vertex 1: D is present — not a refugium for s"
         );
     }
 
@@ -338,20 +338,20 @@ mod tests {
     fn refugia_excludes_species_that_do_not_persist() {
         let geo = Geosphere::new(3);
         let floor = 0.1;
-        // D excluded at cell 0, but s also below floor there — no refugium.
-        let k_d = CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 });
-        let k_s = CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.01 } else { 0.05 });
+        // D excluded at vertex 0, but s also below floor there — no refugium.
+        let k_d = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 });
+        let k_s = VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.01 } else { 0.05 });
         let per_species_k = vec![(0u32, k_d), (1u32, k_s)];
         let density = vec![
-            (0u32, CellMap::from_fn(&geo, |_| 0.0)),
-            (1u32, CellMap::from_fn(&geo, |_| 0.01)),
+            (0u32, VertexMap::from_fn(&geo, |_| 0.0)),
+            (1u32, VertexMap::from_fn(&geo, |_| 0.01)),
         ];
         let maps = refugia(&geo, &per_species_k, &density, floor);
         let (_, map) = maps.iter().find(|(id, _)| *id == 1).unwrap();
         assert_eq!(
-            *map.get(CellId(0)),
+            *map.get(Vertex(0)),
             0.0,
-            "s below floor at cell 0 too — not a persisting refugium"
+            "s below floor at vertex 0 too — not a persisting refugium"
         );
     }
 
@@ -359,22 +359,22 @@ mod tests {
     fn wilderness_is_a_bounded_nonzero_fraction() {
         let geo = Geosphere::new(3);
         let per_species_k = vec![
-            (0u32, CellMap::from_fn(&geo, |_| 1.0)),
-            (1u32, CellMap::from_fn(&geo, |_| 1.0)),
+            (0u32, VertexMap::from_fn(&geo, |_| 1.0)),
+            (1u32, VertexMap::from_fn(&geo, |_| 1.0)),
         ];
         // Claimed density is well under the summed capacity (2.0) at every
-        // cell, so wilderness should be positive everywhere and bounded.
+        // vertex, so wilderness should be positive everywhere and bounded.
         let density = vec![
-            (0u32, CellMap::from_fn(&geo, |_| 0.3)),
-            (1u32, CellMap::from_fn(&geo, |_| 0.2)),
+            (0u32, VertexMap::from_fn(&geo, |_| 0.3)),
+            (1u32, VertexMap::from_fn(&geo, |_| 0.2)),
         ];
         let field = wilderness(&geo, &per_species_k, &density);
         assert!(
-            geo.cells().all(|c| (0.0..=1.0).contains(field.get(c))),
-            "wilderness must stay within [0, 1] on every cell"
+            geo.vertices().all(|c| (0.0..=1.0).contains(field.get(c))),
+            "wilderness must stay within [0, 1] on every vertex"
         );
         assert!(
-            geo.cells().any(|c| *field.get(c) > 0.0),
+            geo.vertices().any(|c| *field.get(c) > 0.0),
             "claimed < capacity everywhere, so wilderness must be positive somewhere"
         );
     }
@@ -382,11 +382,11 @@ mod tests {
     #[test]
     fn wilderness_is_zero_with_no_capacity() {
         let geo = Geosphere::new(3);
-        let per_species_k = vec![(0u32, CellMap::from_fn(&geo, |_| 0.0))];
-        let density = vec![(0u32, CellMap::from_fn(&geo, |_| 0.0))];
+        let per_species_k = vec![(0u32, VertexMap::from_fn(&geo, |_| 0.0))];
+        let density = vec![(0u32, VertexMap::from_fn(&geo, |_| 0.0))];
         let field = wilderness(&geo, &per_species_k, &density);
         assert!(
-            geo.cells().all(|c| *field.get(c) == 0.0),
+            geo.vertices().all(|c| *field.get(c) == 0.0),
             "no capacity means no unclaimed wilderness either"
         );
     }
@@ -397,30 +397,30 @@ mod tests {
         let per_species_k = vec![
             (
                 0u32,
-                CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 }),
+                VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 }),
             ),
             (
                 1u32,
-                CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 }),
+                VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 }),
             ),
         ];
         let density = vec![
             (
                 0u32,
-                CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 }),
+                VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.0 } else { 5.0 }),
             ),
             (
                 1u32,
-                CellMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 }),
+                VertexMap::from_fn(&geo, |c| if c.0 == 0 { 0.2 } else { 0.05 }),
             ),
         ];
         let stack = CoexistStack {
             density,
-            emigration_pressure: CellMap::from_fn(&geo, |_| 0.0),
+            emigration_pressure: VertexMap::from_fn(&geo, |_| 0.0),
         };
         let result = byproducts(&geo, &stack, &per_species_k, 0.1);
-        assert_eq!(result.strife.len(), geo.cells().count());
-        assert_eq!(result.wilderness.len(), geo.cells().count());
+        assert_eq!(result.strife.len(), geo.vertices().count());
+        assert_eq!(result.wilderness.len(), geo.vertices().count());
         assert_eq!(result.refugia.len(), 1, "only species 1 is non-dominant");
     }
 }

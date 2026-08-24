@@ -598,7 +598,7 @@ fn print_scale_check(seed: u64, components: &hornvale_worldgen::WorldComponents)
             .span(Precision::FINEST)
             .map(|span| span.get())
             .unwrap_or(0.0);
-        let cells: Vec<String> = ladder
+        let vertices: Vec<String> = ladder
             .labels()
             .iter()
             .enumerate()
@@ -612,7 +612,7 @@ fn print_scale_check(seed: u64, components: &hornvale_worldgen::WorldComponents)
                 )
             })
             .collect();
-        println!("    {people:<14} {}", cells.join("  "));
+        println!("    {people:<14} {}", vertices.join("  "));
     }
 
     let coarsest_spans: Vec<f64> = read

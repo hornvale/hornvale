@@ -29,7 +29,7 @@
 /// their pre-parallel selves, and it stays available so the check can be
 /// repeated against any future change. And a small value caps peak memory on
 /// a box that cannot hold one live world per core: each worker holds a full
-/// `WorldSample` (two `SubstrateField`s over ~41k cells × a year of days,
+/// `WorldSample` (two `SubstrateField`s over ~41k vertices × a year of days,
 /// plus the climate and the cost/graph fields derived from it).
 const THREADS_ENV: &str = "HV_SEED_SWEEP_THREADS";
 

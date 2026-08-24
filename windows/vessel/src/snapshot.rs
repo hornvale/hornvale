@@ -97,7 +97,7 @@ pub struct SelfChannel {
     pub settlement: String,
     /// How many live there.
     pub population: u32,
-    /// The agent's room, as a packed `RoomId`.
+    /// The agent's room, as a packed `FacetId`.
     pub room: u64,
 }
 

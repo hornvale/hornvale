@@ -1,17 +1,17 @@
 //! Tier-1 settlement genesis: commit a scatter of generated settlements, each
-//! its own place entity tagged with its cell, coordinates, biome, name, and
+//! its own place entity tagged with its vertex, coordinates, biome, name, and
 //! population. The first entry is the flagship. Replaces the tier-0 single
 //! hand-fed village.
 
 use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World, WorldTime};
 
-/// The fully-resolved per-cell data the composition root hands to genesis
+/// The fully-resolved per-vertex data the composition root hands to genesis
 /// (placement geometry plus the name/biome/population the root drew or read).
-/// type-audit: pending(wave-3: cell), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(identifier-text: biome), bare-ok(identifier-text: name), bare-ok(count: population)
+/// type-audit: pending(wave-3: vertex), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(identifier-text: biome), bare-ok(identifier-text: name), bare-ok(count: population)
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlacedSettlement {
-    /// The Geosphere cell id this settlement sits on.
-    pub cell: u32,
+    /// The Geosphere vertex id this settlement sits on.
+    pub vertex: u32,
     /// Latitude, degrees.
     pub latitude: f64,
     /// Longitude, degrees.
@@ -78,7 +78,7 @@ pub fn genesis(
             &world.registry,
         )?;
         world.ledger.commit(
-            fact(id, crate::CELL_ID, Value::Number(f64::from(s.cell))),
+            fact(id, crate::VERTEX_ID, Value::Number(f64::from(s.vertex))),
             &world.registry,
         )?;
         world.ledger.commit(
@@ -100,9 +100,9 @@ mod tests {
     use crate::register_concepts;
     use hornvale_kernel::Seed;
 
-    fn placed(cell: u32, name: &str, pop: u32) -> PlacedSettlement {
+    fn placed(vertex: u32, name: &str, pop: u32) -> PlacedSettlement {
         PlacedSettlement {
-            cell,
+            vertex,
             latitude: 10.0,
             longitude: 20.0,
             biome: "temperate-forest".to_string(),
@@ -141,11 +141,11 @@ mod tests {
             w.ledger.find(crate::IS_SETTLEMENT).next().unwrap().subject,
             ids[0]
         );
-        // Each is both a place and a settlement, tagged with its cell.
-        for (id, cell) in ids.iter().zip([5u32, 99]) {
+        // Each is both a place and a settlement, tagged with its vertex.
+        for (id, vertex) in ids.iter().zip([5u32, 99]) {
             assert!(w.ledger.text_of(*id, hornvale_kernel::NAME).is_some());
             assert!(
-                matches!(w.ledger.value_of(*id, crate::CELL_ID), Some(Value::Number(n)) if *n as u32 == cell)
+                matches!(w.ledger.value_of(*id, crate::VERTEX_ID), Some(Value::Number(n)) if *n as u32 == vertex)
             );
             assert_eq!(
                 w.ledger.text_of(*id, crate::BIOME),

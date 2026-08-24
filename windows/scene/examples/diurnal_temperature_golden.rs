@@ -20,7 +20,7 @@
 //! sanctioned test-fixture posture the weir's spec carves out.
 #![allow(clippy::disallowed_methods)]
 use hornvale_climate::{RotationRegime, diurnal_waveform};
-use hornvale_kernel::{NearestCellIndex, Seed};
+use hornvale_kernel::{NearestVertexIndex, Seed};
 use hornvale_worldgen::{SkyChoice, build_world, climate_of, terrain_of};
 use serde::Serialize;
 
@@ -56,7 +56,7 @@ struct Row {
 }
 
 /// A tile-center sample: its coordinate, the climate's diurnal half-range
-/// amplitude there, and whether the underlying terrain cell is ocean.
+/// amplitude there, and whether the underlying terrain vertex is ocean.
 struct Coord {
     latitude: f64,
     longitude: f64,
@@ -83,8 +83,8 @@ fn main() {
         (DAY / climate.year_length_std() + climate.year_phase_offset()).rem_euclid(1.0);
 
     let height = WIDTH / 2;
-    let terrain_index = NearestCellIndex::new(terrain.geosphere());
-    let climate_index = NearestCellIndex::new(climate.geosphere());
+    let terrain_index = NearestVertexIndex::new(terrain.geosphere());
+    let climate_index = NearestVertexIndex::new(climate.geosphere());
 
     // Scan the full lattice once, at tile-CENTER coordinates (matching
     // `scene/tiles/v1`'s own formula exactly), collecting each tile's
@@ -94,13 +94,13 @@ fn main() {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(WIDTH) * 360.0 - 180.0;
-            let t_cell = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
-            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            let t_vertex = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
+            let c_vertex = climate_index.nearest(climate.geosphere(), latitude, longitude);
             coords.push(Coord {
                 latitude,
                 longitude,
-                amplitude_c: climate.diurnal_amp_at(c_cell),
-                is_ocean: terrain.is_ocean(t_cell),
+                amplitude_c: climate.diurnal_amp_at(c_vertex),
+                is_ocean: terrain.is_ocean(t_vertex),
             });
         }
     }

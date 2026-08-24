@@ -168,13 +168,13 @@ mod tests {
     use crate::brief::Brief;
     use crate::lattice::{embed_with, extent_for};
     use crate::structure::structure_at;
-    use hornvale_kernel::{RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 12;
     const SEEDS: std::ops::Range<u64> = 0..48;
 
-    fn locale(n: u64) -> RoomAddr {
-        RoomAddr {
+    fn locale(n: u64) -> Facet {
+        Facet {
             face: 3,
             path: (0..WALK).map(|i| ((i as u64 + n) % 4) as u8).collect(),
         }
@@ -365,7 +365,7 @@ mod tests {
         // a tall plan scrolls, which costs a reader nothing — so it is bounded
         // only loosely, as a ceiling a real regression would blow through.
         for n in 1..=crate::structure::MAX_CHAMBERS {
-            let chambers: Vec<RoomAddr> = (0..n).map(|i| locale(i as u64)).collect();
+            let chambers: Vec<Facet> = (0..n).map(|i| locale(i as u64)).collect();
             let s = crate::structure::Structure {
                 threshold: chambers[0].clone(),
                 links: (1..n).map(|i| (i - 1, i)).collect(),

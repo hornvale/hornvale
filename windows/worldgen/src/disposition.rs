@@ -43,7 +43,7 @@
 //! what the bake does.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, ComponentStore, EntityId, KindId, Seed, Stream, Value, World};
+use hornvale_kernel::{ComponentStore, EntityId, KindId, Seed, Stream, Value, Vertex, World};
 use hornvale_species::{Dispersion, MindVector};
 
 /// Half-width of a symmetric uniform offset with unit standard deviation:
@@ -90,7 +90,7 @@ pub fn occupation_draw_key(founded: f64) -> i64 {
 /// here, so the leg-string format (`"{site}/{founded_year}"`) is written once
 /// and cannot drift between the two entry points; `the_draw_is_byte_pinned_
 /// for_a_known_key` pins the format itself.
-fn draw_stream(seed: Seed, site: CellId, founded_year: i64) -> Stream {
+fn draw_stream(seed: Seed, site: Vertex, founded_year: i64) -> Stream {
     // The dynamic leg IS the key: site and founding year, joined. Composed
     // under the flat `settlement/disposition/v1` root exactly as the deity
     // stream composes its per-settlement leg.
@@ -142,7 +142,7 @@ fn perturb(stream: &mut Stream, location: f64, spread: f64) -> f64 {
 /// type-audit: bare-ok(count: founded_year), bare-ok(ratio: location), bare-ok(ratio: spread), bare-ok(ratio: return)
 pub fn drawn_threat_response(
     seed: Seed,
-    site: CellId,
+    site: Vertex,
     founded_year: i64,
     location: f64,
     spread: f64,
@@ -166,20 +166,20 @@ pub fn drawn_threat_response(
 ///   and *circular* inside the bake: disposition drives raiding drives
 ///   founding drives `BakeId` assignment);
 /// - its bare `cell-id` alone, which is **not unique over occupations**. The
-///   bake's `node_index` holds one *alive* community per cell, so bare
+///   bake's `node_index` holds one *alive* community per vertex, so bare
 ///   `cell-id` separates the settlements standing at `now` — but nothing more
-///   than that. `Bake::vacant_habitable` only excludes cells an *alive*
-///   community holds, so a dead community's cell is re-settleable, and
+///   than that. `Bake::vacant_habitable` only excludes vertices an *alive*
+///   community holds, so a dead community's vertex is re-settleable, and
 ///   `Bake::relocate`'s conquest path opens the raider's record at the
-///   victim's cell in the very year the victim's record closes. Successive
+///   victim's vertex in the very year the victim's record closes. Successive
 ///   occupations of one site are different settlements with different
-///   histories; a bare cell key would hand them one and the same mind.
+///   histories; a bare vertex key would hand them one and the same mind.
 ///
 /// A relocation never edits a record — it opens a *new* one (`Bake::open`,
 /// reached from both of `relocate`'s branches), which this model already
 /// treats as a new occupation everywhere else. So a record's own `site` and
 /// `founded` are immutable once opened, and the pair separates occupations
-/// that share a site, which is exactly what the cell alone cannot do.
+/// that share a site, which is exactly what the vertex alone cannot do.
 ///
 /// # The key's uniqueness, as MEASURED rather than assumed
 ///
@@ -195,11 +195,11 @@ pub fn drawn_threat_response(
 /// most one alive record per colliding group, and always at least one
 /// **zero-tenure** record — a community opened and closed inside one epoch,
 /// which is what `relocate`'s conquest path produces when it opens the raider's
-/// record at the victim's cell in the same year the victim's closes.
+/// record at the victim's vertex in the same year the victim's closes.
 ///
 /// So a within-epoch transient can share a drawn mind with the record that
 /// displaced it. Two *simultaneously alive* communities never can
-/// (`Bake.node_index` holds one alive community per cell). It was not resolved
+/// (`Bake.node_index` holds one alive community per vertex). It was not resolved
 /// here by adding a third key component, because every available candidate
 /// (`BakeId`, a within-year sequence number, population) is either the
 /// sequential-counter trap or circular through raiding itself.
@@ -250,7 +250,7 @@ pub fn drawn_threat_response(
 /// have to be paid for in exactly the currency spec D3 rules out.
 ///
 /// (An earlier draft of this reasoning leaned on a ratified ruling, numbered
-/// just past the end of the log, said to retire one-community-per-cell. No such
+/// just past the end of the log, said to retire one-community-per-vertex. No such
 /// record exists — `docs/decisions/` ends at 0097 — and the invariant is live in
 /// `Bake.node_index`, not scheduled for removal. The argument above is the one
 /// the code actually supports, and it is checked rather than cited.)
@@ -351,7 +351,7 @@ pub fn drawn_threat_response(
 /// type-audit: bare-ok(count: founded_year), bare-ok(identifier-text: people)
 pub fn people_disposition(
     seed: Seed,
-    site: CellId,
+    site: Vertex,
     founded_year: i64,
     people: &str,
     psyche: &ComponentStore<KindId, MindVector>,
@@ -374,7 +374,7 @@ pub fn people_disposition(
 /// The ledger-side read of [`people_disposition`]: a settlement's effective
 /// mind, from its committed facts alone.
 ///
-/// Reads the draw key off `settlement` — `hornvale_settlement::CELL_ID` (its
+/// Reads the draw key off `settlement` — `hornvale_settlement::VERTEX_ID` (its
 /// site) and `hornvale_history::OCC_FOUNDED` (its founding year, reduced
 /// through [`occupation_draw_key`]) — plus `hornvale_history::OCC_PEOPLE`, and
 /// resolves the authored registries at the composition root. `None` when the
@@ -387,9 +387,9 @@ pub fn people_disposition(
 pub fn settlement_disposition(world: &World, settlement: EntityId) -> Option<MindVector> {
     let site = match world
         .ledger
-        .value_of(settlement, hornvale_settlement::CELL_ID)?
+        .value_of(settlement, hornvale_settlement::VERTEX_ID)?
     {
-        Value::Number(n) => CellId(*n as u32),
+        Value::Number(n) => Vertex(*n as u32),
         _ => return None,
     };
     let founded = match world
@@ -465,8 +465,8 @@ mod tests {
         let n = 20_000u32;
         let mut sum = 0.0;
         let mut sum_sq = 0.0;
-        for cell in 0..n {
-            let v = people_disposition(Seed(42), CellId(cell), 0, "probe", &psyche, &dispersion)
+        for vertex in 0..n {
+            let v = people_disposition(Seed(42), Vertex(vertex), 0, "probe", &psyche, &dispersion)
                 .expect("the probe kind carries a mind")
                 .threat_response;
             assert!(

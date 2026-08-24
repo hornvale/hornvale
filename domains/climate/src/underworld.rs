@@ -446,7 +446,7 @@ fn build() -> Vec<UnderworldName> {
         // WATER: `W_NONE`, matching `axes.rs`'s `ice` — frozen water is not
         //   available water, and reading it as saturated would put an ice cave
         //   next to a sump.
-        // SUBSTRATE: ice. Needs a cold surface cell, which is climate's own
+        // SUBSTRATE: ice. Needs a cold surface vertex, which is climate's own
         //   input rather than terrain's — the one row driven from this side.
         // ZONE: a cold trap is a downward pocket near the surface.
         c(

@@ -2,7 +2,7 @@
 //! claim is that the derived transport topology adds legibility WITHOUT
 //! changing the world. Two assertions, on a real seed-42 world built to
 //! [`BuildDepth::Settlements`] (deep enough for `connection_graph_of` to read
-//! terrain, climate, and every committed settlement's cell):
+//! terrain, climate, and every committed settlement's vertex):
 //!
 //! 1. **Byte-identity** — deriving the graph twice from the same world (same
 //!    seed, same pins) yields identical edge sets for every node. The
@@ -66,7 +66,7 @@ fn connection_graph_is_byte_identical_across_two_derivations() {
         let edges_b = b.edges(node);
         assert_eq!(
             edges_a, edges_b,
-            "cell {}'s edges diverged across two derivations of the same \
+            "vertex {}'s edges diverged across two derivations of the same \
              world's connection graph — the derivation must be a total, \
              seedless function of already-committed state",
             node.0

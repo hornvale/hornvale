@@ -20,7 +20,7 @@
 //! terrain sculpt.
 
 use hornvale_kernel::color::blackbody;
-use hornvale_kernel::{RoomAddr, Seed};
+use hornvale_kernel::{Facet, Seed};
 use hornvale_vessel::lattice::shadowcast;
 use hornvale_vessel::light::{ATTENUATION, Source, TORCH_KELVIN, light_field};
 
@@ -47,8 +47,8 @@ fn wild() -> Brief {
     Brief::from_parts(None, None, None, None, 0, false, true)
 }
 
-fn locale_number(n: u64) -> RoomAddr {
-    RoomAddr {
+fn locale_number(n: u64) -> Facet {
+    Facet {
         face: 3,
         path: (0..WALK).map(|i| ((n >> (2 * i)) & 0b11) as u8).collect(),
     }

@@ -15,7 +15,7 @@
 
 use hornvale_kernel::color::standard_observer;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
-use hornvale_kernel::{RoomAddr, Seed, Value, World, WorldTime};
+use hornvale_kernel::{Facet, Seed, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_scene::{Sight, SurroundsScene, surrounds_scene, surrounds_scene_colored_in};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
@@ -66,7 +66,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
         _ => panic!("flagship settlement has no longitude fact"),
     };
     let depth = ctx.globe_level() + 6;
-    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+    let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
 
     let star = hornvale_astronomy::star::generate_star(
         world.seed.derive(hornvale_astronomy::streams::ROOT),
@@ -107,7 +107,7 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
 pub fn real_band(world: &World, lat: f64, lon: f64) -> SurroundsScene {
     let ctx = LocaleContext::build(world).expect("world builds a locale context");
     let depth = ctx.globe_level() + 6;
-    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+    let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
 
     let star = hornvale_astronomy::star::generate_star(
         world.seed.derive(hornvale_astronomy::streams::ROOT),
@@ -148,7 +148,7 @@ pub fn real_band(world: &World, lat: f64, lon: f64) -> SurroundsScene {
 pub fn real_band_uncolored(world: &World, lat: f64, lon: f64) -> SurroundsScene {
     let ctx = LocaleContext::build(world).expect("world builds a locale context");
     let depth = ctx.globe_level() + 6;
-    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+    let observer_room = Facet::containing(unit_sphere_from_lat_lon(lat, lon), depth);
     surrounds_scene(world, &observer_room, WALK_BAND_RADIUS, WorldTime::GENESIS)
         .expect("uncoloured surrounds scene builds")
 }

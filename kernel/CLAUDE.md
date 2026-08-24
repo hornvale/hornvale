@@ -54,22 +54,22 @@ decision 0061).
 `noise::Fbm` (and terrain's `SphereFbm`) precompute their per-octave/per-slice
 seeds once, then sample without re-deriving. `fbm_2d`/`sphere_fbm01` are the
 random-access convenience forms that construct a sampler per call — fine for
-one-off use, but a hot per-cell loop with a fixed seed must build the sampler
+one-off use, but a hot per-vertex loop with a fixed seed must build the sampler
 above the loop. `Seed::derive` was the dominant cost in world generation
 until this pattern landed; keep it out of inner loops.
 
 ## Dense-index storage uses `Vec`, not a map
 
-A collection keyed by a **dense, complete `0..N` index** — a `CellId`, a
+A collection keyed by a **dense, complete `0..N` index** — a `Vertex`, a
 `KindId`'s dense build-index, any `0..count` id — is a `Vec` indexed by that
-id, never a `BTreeMap`. `CellMap` is the canonical example: one entry per
-cell, O(1) access, iteration in ascending-id order for free. A `BTreeMap`
+id, never a `BTreeMap`. `VertexMap` is the canonical example: one entry per
+vertex, O(1) access, iteration in ascending-id order for free. A `BTreeMap`
 over a dense key buys nothing the `Vec` doesn't already give (the id *is* the
 order) and costs an O(log N) tree traversal plus a per-key allocation on every
 access — which a flamegraph will find (The Lookup, 2026-07-23: a dense-keyed
 `BTreeMap` adjacency list was ~22% of genesis self-time; a `Vec<Vec<_>>`
 dropped it to ~2%). Reserve `BTreeMap`/`BTreeSet` for genuinely **sparse** or
-**non-index** keys (an edge-pair `(u32,u32)`, a working set of some cells, a
+**non-index** keys (an edge-pair `(u32,u32)`, a working set of some vertices, a
 subset accumulation). Same spirit as "build a sampler once": a value that is a
 pure function of immutable dense-indexed data is precomputed into a `Vec` once
 (e.g. `Geosphere::coord`), not re-derived per call.

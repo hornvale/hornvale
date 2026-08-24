@@ -7,7 +7,7 @@
 //! libration signal is visible, every latitude band) x days spanning the
 //! year. Values are evaluated at the equirect tile-CENTER position (the
 //! same position the client reconstructs from width/height/i), NOT snapped
-//! to the nearest climate cell the way `temperature_grid` samples — the
+//! to the nearest climate vertex the way `temperature_grid` samples — the
 //! snap is exactly what the client's tile-center reconstruction cannot
 //! reproduce (Task 7, ~1.1°C divergence). `locked_temperature_at_position`
 //! is the shared, position-based evaluator both this golden and the client
@@ -58,7 +58,7 @@ fn main() {
     println!("# Producer-sourced golden for the locked-world (scene/tiles/v1 `locked: true`)");
     println!("# librating-substellar temperature reconstruction test.");
     println!("# Provenance: hornvale `locked_temperature_at_position` evaluated at equirect");
-    println!("#   tile-CENTER positions — NOT snapped to the nearest climate cell — matching");
+    println!("#   tile-CENTER positions — NOT snapped to the nearest climate vertex — matching");
     println!("#   the client reconstruction exactly (Task 7, The Wandering Sun); world: seed");
     println!("#   8, generated sky, tidally locked (`hornvale new --seed 8`); lattice:");
     println!("#   width=64 (height=32); node set: px=32 (longitude ~0, the substellar");

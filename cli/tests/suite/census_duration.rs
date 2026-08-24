@@ -72,7 +72,7 @@ use std::path::{Path, PathBuf};
 /// `descendants_of` in `lineage.rs` filters every node through
 /// `ancestry(*k).contains(&of)`, allocating per node, and `median_hops` calls it
 /// twice per node — O(nodes² × depth). A 17% larger lineage tree bought a 44%
-/// larger bill. `defensibility` grew 24.8% on 30.1% more habitable cells:
+/// larger bill. `defensibility` grew 24.8% on 30.1% more habitable vertices:
 /// sub-linear, nothing to fix.
 ///
 /// **So ~51% of the regression is optimisable** and the fix is contained to two

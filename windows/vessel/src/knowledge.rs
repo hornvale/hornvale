@@ -4,7 +4,7 @@
 
 use crate::Vantage;
 use hornvale_book::{LineError, parse_line};
-use hornvale_kernel::{RoomId, Value, World, WorldTime};
+use hornvale_kernel::{FacetId, Value, World, WorldTime};
 use hornvale_language::clause::ParseContext;
 use hornvale_locale::LocaleContext;
 use hornvale_species::PerceptionVector;
@@ -22,6 +22,30 @@ use std::collections::{BTreeMap, BTreeSet};
 /// type-audit: bare-ok(artifact: 0)
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Knowledge(pub BTreeMap<String, String>);
+
+/// The first path segment of a locale knowledge key — `room/<packed FacetId>`.
+///
+/// **FROZEN WIRE VALUE (The Lexicon of Place, spec §5).** The campaign that
+/// renamed `Facet` to `Facet` deliberately did NOT rename this, and no
+/// later campaign may: the key is serialized into session snapshots that
+/// `clients/game` reads back, so the string is a wire contract, not an
+/// internal convention.
+///
+/// **Three sites share it, and they must agree:**
+///
+/// - written here, by [`IdentityProjection::project`];
+/// - read here, by [`knowledge_is_subset`]'s default-deny match;
+/// - read in `windows/vessel/src/purview.rs`, by the `strip_prefix` that
+///   recovers every facet a session has walked — the fog of war.
+///
+/// See [`the_locale_key_prefix_is_frozen`] for what happens if it moves.
+/// type-audit: bare-ok(identifier-text)
+pub const LOCALE_KEY_SEGMENT: &str = "room";
+
+/// [`LOCALE_KEY_SEGMENT`] with its separator, for prefix tests. Same freeze,
+/// and `the_locale_key_prefix_is_frozen` asserts the two agree.
+/// type-audit: bare-ok(identifier-text)
+pub const LOCALE_KEY_PREFIX: &str = "room/";
 
 impl Knowledge {
     /// Fold another projection into this knowledge (walking accumulates).
@@ -107,7 +131,7 @@ impl Projection for IdentityProjection {
     fn project(&self, vantage: &Vantage, _perception: &PerceptionVector) -> Knowledge {
         let mut k = BTreeMap::new();
         k.insert(
-            format!("room/{}", vantage.locale.id),
+            format!("{LOCALE_KEY_PREFIX}{}", vantage.locale.id),
             serde_json::to_string(&vantage.locale).expect("locale serializes"),
         );
         k.insert(
@@ -141,9 +165,9 @@ pub fn knowledge_is_subset(
     for (key, value) in &k.0 {
         let parts: Vec<&str> = key.split('/').collect();
         match parts.as_slice() {
-            ["room", id] => {
+            [segment, id] if *segment == LOCALE_KEY_SEGMENT => {
                 let raw: u64 = id.parse().map_err(|_| format!("bad room key {key}"))?;
-                let addr = RoomId(raw).unpack().map_err(|e| format!("{key}: {e:?}"))?;
+                let addr = FacetId(raw).unpack().map_err(|e| format!("{key}: {e:?}"))?;
                 let truth = ctx.describe(&addr, at).map_err(|e| format!("{key}: {e}"))?;
                 let truth = serde_json::to_string(&truth).expect("locale serializes");
                 if truth != *value {
@@ -206,12 +230,58 @@ mod tests {
     fn seam_body(
         world: &World,
         ctx: &LocaleContext,
-    ) -> (crate::body::Body, hornvale_kernel::RoomAddr) {
+    ) -> (crate::body::Body, hornvale_kernel::Facet) {
         let village = hornvale_settlement::village_info(world).expect("seed 42 has a flagship");
         let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
         let npc = crate::liveness::body_at(world, ctx, &village, entity);
         let position = npc.home.clone();
         (npc, position)
+    }
+
+    /// The locale knowledge key's spelling is a WIRE VALUE, and this asserts it
+    /// directly so that nothing else has to.
+    ///
+    /// **Direction this enforces:** the frozen string has not moved. It says
+    /// nothing about whether the three sites listed on [`LOCALE_KEY_SEGMENT`]
+    /// still route through the constants — a future author who re-inlines a
+    /// literal defeats it, and only a reader of that diff would notice.
+    ///
+    /// **Why it exists, measured rather than assumed (2026-08-24).** The
+    /// design spec claimed this coupling had no cover at all: "rename one and
+    /// the fog of war silently stops working: no test fails". That is not what
+    /// the tree does. Mutating the writer alone reddens six tests, and
+    /// mutating the writer plus `purview.rs` reddens five. But mutating ALL
+    /// THREE sites consistently — which is exactly what a tidy-minded rename
+    /// campaign would do — reddens only two, `session_snapshot::v2_bytes_are_pinned`
+    /// and `session_snapshot::the_client_fixtures_are_current`, and **both are
+    /// byte-goldens whose documented remedy is `make rebaseline-goldens`.**
+    ///
+    /// So the hazard is worse than "no cover", not milder: the suite goes red,
+    /// one command makes it green, and a changed session-snapshot wire format
+    /// ships to `clients/game` with a green gate behind it. This test cannot be
+    /// rebaselined, which is the entire point of writing it out as a literal.
+    #[test]
+    fn the_locale_key_prefix_is_frozen() {
+        assert_eq!(
+            LOCALE_KEY_SEGMENT, "room",
+            "the locale knowledge key segment is a FROZEN WIRE VALUE (The \
+             Lexicon of Place, spec §5). It is serialized into session \
+             snapshots that clients/game reads back. The code says Facet and \
+             the key says room, and that mismatch is correct and permanent. \
+             Three sites depend on it: the writer in \
+             windows/vessel/src/knowledge.rs, knowledge_is_subset in the same \
+             file, and the strip_prefix in windows/vessel/src/purview.rs."
+        );
+        assert_eq!(
+            LOCALE_KEY_PREFIX, "room/",
+            "LOCALE_KEY_PREFIX must be LOCALE_KEY_SEGMENT plus its separator"
+        );
+        assert_eq!(
+            LOCALE_KEY_PREFIX,
+            format!("{LOCALE_KEY_SEGMENT}/"),
+            "the two constants disagree; every reader of one is now wrong \
+             about the other"
+        );
     }
 
     #[test]

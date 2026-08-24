@@ -12,13 +12,13 @@
 //! is hand-built and the world is a hand-committed ledger.
 
 use hornvale_almanac::connections::render_connections;
-use hornvale_kernel::{CellId, EntityId, Fact, Seed, Value, World};
+use hornvale_kernel::{EntityId, Fact, Seed, Value, Vertex, World};
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 
-/// One settlement to plant in the fixture world: which cell it sits on, its
+/// One settlement to plant in the fixture world: which vertex it sits on, its
 /// (possibly colliding) name, its people, its biome, and its coordinate.
 struct Site {
-    cell: u32,
+    vertex: u32,
     name: &'static str,
     people: &'static str,
     biome: &'static str,
@@ -35,7 +35,7 @@ fn world_with(sites: &[Site]) -> World {
             hornvale_settlement::IS_SETTLEMENT,
             "subject is a settlement",
         ),
-        (hornvale_settlement::CELL_ID, "cell id"),
+        (hornvale_settlement::VERTEX_ID, "vertex id"),
         (hornvale_settlement::BIOME, "biome of a place"),
         (
             hornvale_settlement::LATITUDE,
@@ -79,8 +79,8 @@ fn world_with(sites: &[Site]) -> World {
         commit(hornvale_settlement::IS_SETTLEMENT, Value::Flag(true));
         commit(hornvale_kernel::NAME, Value::Text(site.name.to_string()));
         commit(
-            hornvale_settlement::CELL_ID,
-            Value::Number(f64::from(site.cell)),
+            hornvale_settlement::VERTEX_ID,
+            Value::Number(f64::from(site.vertex)),
         );
         commit(
             hornvale_settlement::BIOME,
@@ -99,14 +99,14 @@ fn world_with(sites: &[Site]) -> World {
     world
 }
 
-/// A land route from `from` to each of `to`, on a graph of `size` cells.
+/// A land route from `from` to each of `to`, on a graph of `size` vertices.
 fn routes_from(size: u32, from: u32, to: &[u32]) -> ConnectionGraph {
     let mut graph = ConnectionGraph::new(size as usize);
     for &t in to {
         graph.add_edge(
-            CellId(from),
+            Vertex(from),
             Edge {
-                to: CellId(t),
+                to: Vertex(t),
                 kind: EdgeKind::LandRoute,
                 conductance: 0.5,
             },
@@ -116,12 +116,12 @@ fn routes_from(size: u32, from: u32, to: &[u32]) -> ConnectionGraph {
 }
 
 /// Two same-named settlements differing in biome, one differently-named
-/// neighbour, and a hub (cell 0, no settlement) whose land routes name all
+/// neighbour, and a hub (vertex 0, no settlement) whose land routes name all
 /// three.
 fn three_neighbours() -> World {
     world_with(&[
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -129,7 +129,7 @@ fn three_neighbours() -> World {
             longitude: -12.25,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Ice-Home",
             people: "kobold",
             biome: "desert",
@@ -137,7 +137,7 @@ fn three_neighbours() -> World {
             longitude: 44.5,
         },
         Site {
-            cell: 3,
+            vertex: 3,
             name: "Sun-Home",
             people: "goblin",
             biome: "taiga",
@@ -150,7 +150,7 @@ fn three_neighbours() -> World {
 #[test]
 fn two_same_named_settlements_in_one_document_are_both_qualified() {
     let world = three_neighbours();
-    let text = render_connections(&world, CellId(0), &routes_from(4, 0, &[1, 2, 3]));
+    let text = render_connections(&world, Vertex(0), &routes_from(4, 0, &[1, 2, 3]));
 
     // Both Ice-Homes are named in this document, so both carry a qualifier
     // drawn from their own site facts -- and the two qualifiers differ, which
@@ -183,7 +183,7 @@ fn a_settlement_named_alone_is_bare_even_when_the_world_holds_its_twin() {
     // the roster the document names changes.
     let world = three_neighbours();
 
-    let alone = render_connections(&world, CellId(0), &routes_from(4, 0, &[1, 3]));
+    let alone = render_connections(&world, Vertex(0), &routes_from(4, 0, &[1, 3]));
     assert!(
         bare_mention(&alone, "Ice-Home"),
         "an Ice-Home whose twin this document never names stays bare:\n{alone}"
@@ -200,7 +200,7 @@ fn a_settlement_named_alone_is_bare_even_when_the_world_holds_its_twin() {
     // Positive control, same world: the twin-naming document DOES qualify.
     // Without this half the test above would pass on a tree that never
     // qualifies anything.
-    let together = render_connections(&world, CellId(0), &routes_from(4, 0, &[1, 2]));
+    let together = render_connections(&world, Vertex(0), &routes_from(4, 0, &[1, 2]));
     assert!(
         together.contains("Ice-Home (taiga)") && together.contains("Ice-Home (desert)"),
         "the same world qualifies when both twins are in the room:\n{together}"
@@ -213,7 +213,7 @@ fn twins_of_two_different_peoples_are_qualified_by_their_people() {
     // anyway (both taiga), so this is the only rung that can fire.
     let world = world_with(&[
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -221,7 +221,7 @@ fn twins_of_two_different_peoples_are_qualified_by_their_people() {
             longitude: -12.25,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Ice-Home",
             people: "goblin",
             biome: "taiga",
@@ -229,7 +229,7 @@ fn twins_of_two_different_peoples_are_qualified_by_their_people() {
             longitude: 44.5,
         },
     ]);
-    let text = render_connections(&world, CellId(0), &routes_from(3, 0, &[1, 2]));
+    let text = render_connections(&world, Vertex(0), &routes_from(3, 0, &[1, 2]));
     assert!(
         text.contains("Ice-Home of the kobolds"),
         "the kobold Ice-Home is qualified by its people:\n{text}"
@@ -248,7 +248,7 @@ fn twins_of_two_different_peoples_are_qualified_by_their_people() {
 fn twins_alike_in_people_and_biome_fall_through_to_their_coordinates() {
     let world = world_with(&[
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -256,7 +256,7 @@ fn twins_alike_in_people_and_biome_fall_through_to_their_coordinates() {
             longitude: -12.25,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -264,7 +264,7 @@ fn twins_alike_in_people_and_biome_fall_through_to_their_coordinates() {
             longitude: 44.5,
         },
     ]);
-    let text = render_connections(&world, CellId(0), &routes_from(3, 0, &[1, 2]));
+    let text = render_connections(&world, Vertex(0), &routes_from(3, 0, &[1, 2]));
     assert!(
         text.contains("Ice-Home (61.5°N, 12.2°W)"),
         "the northern twin falls through to its coordinate:\n{text}"
@@ -277,29 +277,29 @@ fn twins_alike_in_people_and_biome_fall_through_to_their_coordinates() {
 
 #[test]
 fn one_settlement_reached_twice_is_not_an_ambiguity() {
-    // Cell 1 is reachable by both a sea-lane and a land route, so it is named
+    // Vertex 1 is reachable by both a sea-lane and a land route, so it is named
     // twice in the same document -- but it is one place, not two, and must
-    // not be qualified. The contrast half (cell 2's genuine twin) keeps this
+    // not be qualified. The contrast half (vertex 2's genuine twin) keeps this
     // from passing on a tree that never qualifies anything.
     let world = three_neighbours();
     let mut graph = ConnectionGraph::new(4);
     graph.add_edge(
-        CellId(0),
+        Vertex(0),
         Edge {
-            to: CellId(1),
+            to: Vertex(1),
             kind: EdgeKind::WaterRoute,
             conductance: 0.5,
         },
     );
     graph.add_edge(
-        CellId(0),
+        Vertex(0),
         Edge {
-            to: CellId(1),
+            to: Vertex(1),
             kind: EdgeKind::LandRoute,
             conductance: 0.5,
         },
     );
-    let text = render_connections(&world, CellId(0), &graph);
+    let text = render_connections(&world, Vertex(0), &graph);
     assert_eq!(
         text.matches("Ice-Home").count(),
         2,
@@ -311,14 +311,14 @@ fn one_settlement_reached_twice_is_not_an_ambiguity() {
     );
 
     graph.add_edge(
-        CellId(0),
+        Vertex(0),
         Edge {
-            to: CellId(2),
+            to: Vertex(2),
             kind: EdgeKind::LandRoute,
             conductance: 0.5,
         },
     );
-    let contrast = render_connections(&world, CellId(0), &graph);
+    let contrast = render_connections(&world, Vertex(0), &graph);
     assert!(
         !bare_mention(&contrast, "Ice-Home"),
         "adding the genuine twin does qualify both:\n{contrast}"
@@ -333,7 +333,7 @@ fn the_documents_own_subject_is_qualified_against_its_neighbours() {
     // header above qualified destinations of the same name.
     let world = world_with(&[
         Site {
-            cell: 0,
+            vertex: 0,
             name: "Ice-Home",
             people: "kobold",
             biome: "taiga",
@@ -341,7 +341,7 @@ fn the_documents_own_subject_is_qualified_against_its_neighbours() {
             longitude: -12.25,
         },
         Site {
-            cell: 1,
+            vertex: 1,
             name: "Ice-Home",
             people: "kobold",
             biome: "desert",
@@ -349,7 +349,7 @@ fn the_documents_own_subject_is_qualified_against_its_neighbours() {
             longitude: 44.5,
         },
         Site {
-            cell: 2,
+            vertex: 2,
             name: "Sun-Home",
             people: "goblin",
             biome: "taiga",
@@ -357,7 +357,7 @@ fn the_documents_own_subject_is_qualified_against_its_neighbours() {
             longitude: 5.0,
         },
     ]);
-    let text = render_connections(&world, CellId(0), &routes_from(3, 0, &[1, 2]));
+    let text = render_connections(&world, Vertex(0), &routes_from(3, 0, &[1, 2]));
     assert!(
         text.starts_with("The connections of Ice-Home (taiga)\n"),
         "the subject's own header carries its qualifier:\n{text}"
@@ -387,8 +387,8 @@ fn qualification_is_deterministic() {
     let world = three_neighbours();
     let graph = routes_from(4, 0, &[1, 2, 3]);
     assert_eq!(
-        render_connections(&world, CellId(0), &graph),
-        render_connections(&world, CellId(0), &graph)
+        render_connections(&world, Vertex(0), &graph),
+        render_connections(&world, Vertex(0), &graph)
     );
 }
 

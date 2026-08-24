@@ -84,7 +84,7 @@ mod tests {
     use crate::brief::Brief;
     use crate::lattice::{embed_with, extent_for};
     use crate::structure::structure_at;
-    use hornvale_kernel::{RoomAddr, Seed};
+    use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 12;
 
@@ -95,7 +95,7 @@ mod tests {
     }
 
     fn plan() -> Lattice {
-        let addr = RoomAddr {
+        let addr = Facet {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         };

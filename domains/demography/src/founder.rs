@@ -5,14 +5,14 @@
 //! campaign; this is only the floor.
 
 use crate::condense::{Condensation, condense};
-use hornvale_kernel::{CellMap, Geosphere};
+use hornvale_kernel::{Geosphere, VertexMap};
 
 /// Condense each species' K independently, guaranteeing every species its
 /// strongest attractor (the founder floor). Returns `(settlement, tag)` pairs,
-/// flagship (largest population) first; ties by ascending cell then tag.
+/// flagship (largest population) first; ties by ascending vertex then tag.
 /// type-audit: bare-ok(index: per_species), bare-ok(count: threshold), bare-ok(index: return)
 pub fn condense_tagged(
-    per_species: &[(u32, CellMap<f64>)],
+    per_species: &[(u32, VertexMap<f64>)],
     geo: &Geosphere,
     threshold: f64,
 ) -> Vec<(Condensation, u32)> {
@@ -40,7 +40,7 @@ pub fn condense_tagged(
     out.sort_by(|a, b| {
         b.0.population
             .total_cmp(&a.0.population)
-            .then(a.0.cell.0.cmp(&b.0.cell.0))
+            .then(a.0.vertex.0.cmp(&b.0.vertex.0))
             .then(a.1.cmp(&b.1))
     });
     out
@@ -49,11 +49,11 @@ pub fn condense_tagged(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{CellId, CellMap, Geosphere};
+    use hornvale_kernel::{Geosphere, Vertex, VertexMap};
 
-    fn peak_at(geo: &Geosphere, cell: u32) -> CellMap<f64> {
-        let peak = geo.position(CellId(cell));
-        CellMap::from_fn(geo, |c| {
+    fn peak_at(geo: &Geosphere, vertex: u32) -> VertexMap<f64> {
+        let peak = geo.position(Vertex(vertex));
+        VertexMap::from_fn(geo, |c| {
             let p = geo.position(c);
             (p[0] * peak[0] + p[1] * peak[1] + p[2] * peak[2]).max(0.0)
         })
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn every_tag_keeps_its_strongest_attractor_above_threshold() {
         let geo = Geosphere::new(3);
-        // Two species peaking at different cells; a threshold above their
+        // Two species peaking at different vertices; a threshold above their
         // catchment totals would drop both without the founder floor.
         let per = vec![(0u32, peak_at(&geo, 0)), (1u32, peak_at(&geo, 40))];
         let placed = condense_tagged(&per, &geo, f64::INFINITY);
@@ -77,13 +77,13 @@ mod tests {
     #[test]
     fn founder_floor_never_places_a_zero_population_settlement() {
         let geo = Geosphere::new(3);
-        // A species with only a trace of carrying capacity at a single cell:
+        // A species with only a trace of carrying capacity at a single vertex:
         // its lone attractor's catchment accumulation is far below one
-        // person, and every other cell is exactly zero. Without the floor,
+        // person, and every other vertex is exactly zero. Without the floor,
         // `.round() as u32` at the emit boundary would commit a
         // population-0 settlement (the wrinkle this test guards).
-        let trace_cell = CellId(5);
-        let k = CellMap::from_fn(&geo, |c| if c == trace_cell { 1e-6 } else { 0.0 });
+        let trace_vertex = Vertex(5);
+        let k = VertexMap::from_fn(&geo, |c| if c == trace_vertex { 1e-6 } else { 0.0 });
         let per = vec![(0u32, k)];
         // A threshold far above the trace K forces the founder-floor path.
         let placed = condense_tagged(&per, &geo, 1.0);

@@ -250,7 +250,7 @@ pub(crate) fn land_formation(b: Biome) -> Formation {
         Biome::TropicalSeasonalForest => Formation::TropicalSeasonalForest,
         Biome::TropicalRainforest => Formation::TropicalRainforest,
         Biome::Alpine => Formation::Alpine,
-        // Not land. `classify` never routes a submerged cell here, and the
+        // Not land. `classify` never routes a submerged vertex here, and the
         // marine arm of `for_legacy` handles these directly; answering
         // `OpenWater` keeps the function total rather than panicking.
         _ => Formation::OpenWater,

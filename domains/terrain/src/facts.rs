@@ -1,4 +1,4 @@
-//! Tectonic genesis facts: summary truths only, never per-cell data — the
+//! Tectonic genesis facts: summary truths only, never per-vertex data — the
 //! ledger keeps singular authored truths and saves stay small (spec §3).
 
 use crate::globe::{GenesisOutcome, summarize};
@@ -14,7 +14,7 @@ pub const OCEAN_FRACTION: &str = "ocean-fraction";
 /// Predicate: sea level in meters (functional, Number).
 /// type-audit: bare-ok(identifier-text)
 pub const SEA_LEVEL_M: &str = "sea-level-m";
-/// Predicate: highest cell elevation in meters (functional, Number).
+/// Predicate: highest vertex elevation in meters (functional, Number).
 /// type-audit: bare-ok(identifier-text)
 pub const HIGHEST_ELEVATION_M: &str = "highest-elevation-m";
 /// Predicate: one round-trippable terrain pin string per pinned value
@@ -55,7 +55,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 }
 
 /// Commit the globe's summary facts and genesis notes against `subject`
-/// (the world entity). Summary only — never per-cell facts.
+/// (the world entity). Summary only — never per-vertex facts.
 pub fn genesis(
     world: &mut World,
     subject: EntityId,

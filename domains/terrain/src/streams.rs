@@ -41,9 +41,9 @@ hornvale_kernel::stream_labels! {
         PLATE_WEIGHTS = "plate-weights" => "per-plate heavy-tailed Voronoi weight draws";
         /// Plate-edge noise. Hash-noise only — never consumed as a `Stream`.
         PLATE_EDGE = "plate-edge" => "plate-edge noise (hash-noise only; no stream draws)";
-        /// Lithology sub-cell patchiness noise (The Ground, spec §2). Hash-noise
+        /// Lithology sub-vertex patchiness noise (The Ground, spec §2). Hash-noise
         /// only — never consumed as a `Stream`; no draw-order/save-format contract.
-        LITHOLOGY = "lithology" => "lithology sub-cell hash-noise (hash-noise only; no stream draws)";
+        LITHOLOGY = "lithology" => "lithology sub-vertex hash-noise (hash-noise only; no stream draws)";
         /// Subsurface-features point-process noise (The Lode, spec §6).
         /// Hash-noise only — never consumed as a `Stream`; no draw-order /
         /// save-format contract. A NEW label — existing consumption order is
@@ -92,15 +92,15 @@ hornvale_kernel::stream_labels! {
         /// The rift's crenulation-noise sub-leg.
         RIFT_CRENULATION = "crenulation" => "rift crenulation-noise sub-leg (hash-noise only; no stream draws)";
         /// Channel meander displacement — the position-continuous noise field
-        /// that wanders a river within its cell. Hash-noise only, sampled by
+        /// that wanders a river within its vertex. Hash-noise only, sampled by
         /// POSITION and never by room address: address-hashed noise cannot
         /// form a connected watercourse (see `windows/locale/src/micro.rs`).
         CHANNEL_MEANDER = "channel-meander" => "channel meander displacement field (hash-noise only; no stream draws)";
-        /// Where a sub-cell catchment divides between its two branches (The
-        /// Rill, Tier 2). Named for what it draws: the partition of a cell's
+        /// Where a sub-vertex catchment divides between its two branches (The
+        /// Rill, Tier 2). Named for what it draws: the partition of a vertex's
         /// own unit of catchment into shares, from which the branching
         /// follows. Hash-noise only — the label is derived once per world and
-        /// then sub-derived per cell and per path through the partition, and
+        /// then sub-derived per vertex and per path through the partition, and
         /// no `Stream` is ever consumed, so it carries no draw-order or
         /// save-format contract beyond the label itself, exactly like
         /// `CHANNEL_MEANDER`. A NEW label; existing consumption order is
@@ -111,6 +111,6 @@ hornvale_kernel::stream_labels! {
         /// children of a room, an object this design does not have. A label
         /// that never shipped is not a save-format contract, so this is a
         /// replacement rather than an epoch.
-        RILL_PARTITION = "rill-partition" => "where a sub-cell catchment divides between its two branches (hash-noise only; no stream draws)";
+        RILL_PARTITION = "rill-partition" => "where a sub-vertex catchment divides between its two branches (hash-noise only; no stream draws)";
     }
 }

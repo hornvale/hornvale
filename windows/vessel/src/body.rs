@@ -4,7 +4,7 @@
 //! body is one `Body` among the roster, not a separate kind.
 
 use crate::liveness::ThreatNiche;
-use hornvale_kernel::{ConditionResponse, EntityId, ResourceVector, RoomAddr};
+use hornvale_kernel::{ConditionResponse, EntityId, Facet, ResourceVector};
 use hornvale_species::{ActivityCycle, MetabolicClass};
 
 /// A derived non-player agent: a minted entity, a home and a resource room,
@@ -16,10 +16,10 @@ pub struct Body {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
     pub entity: EntityId,
     /// Where the NPC rests (its home settlement's room).
-    pub home: RoomAddr,
+    pub home: Facet,
     /// The room its sustenance drive seeks (the-wanting supersedes the old
     /// fixed-schedule destination: this IS the drive's resource anchor now).
-    pub resource: RoomAddr,
+    pub resource: Facet,
     /// The NPC's species (kind label), threaded from `species_of` at derivation
     /// the same way the niche and latency are — the health metric's by-species
     /// distress attribution reads it.
@@ -72,7 +72,7 @@ pub struct Body {
     /// hazard, DERIVED at derivation from its temperature niche (HEAT/COLD) and
     /// metabolic class (UNCANNY) — a cold-adapted creature fears heat, an
     /// elemental does not fear the eldritch. Read by the Danger drive against the
-    /// cell's hazards for per-kind fear.
+    /// room's hazards for per-kind fear.
     pub threat_niche: ThreatNiche,
     /// The species' adult body mass in kilograms (`BiosphereTraits::mass`),
     /// threaded from `biosphere_registry` at derivation beside the metabolic

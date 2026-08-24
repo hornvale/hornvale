@@ -21,7 +21,7 @@ user, and biomes arrive as its first queryable payoff. `GeneratedClimate`
 still depends on `hornvale-kernel` and nothing else — never
 `hornvale-terrain` or `hornvale-astronomy` directly — so terrain's
 elevation and astronomy's sky reach it only as kernel types: the shared
-`CellMap<ReferenceElevation>` field and its `ReferenceElevation` sea level
+`VertexMap<ReferenceElevation>` field and its `ReferenceElevation` sea level
 (typed in [The Datum](../chronicle/the-datum.md); bare `f64` remains only
 where the quantity is dimensionless) and climate-owned enums
 (`SeafloorFeature`, `RotationRegime`), mapped once at the composition root

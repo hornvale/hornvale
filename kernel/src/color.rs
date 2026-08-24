@@ -492,7 +492,7 @@ impl Projection {
     /// (spec §4.1). **This does not cover [`Observer::to_srgb`]'s scotopic
     /// branch**: below the photopic threshold, `to_srgb` mixes in the rod
     /// response through `SCOTOPIC_GAIN`/`SCOTOPIC_NORM`, kernel constants
-    /// that are not on the wire, so a cell that took that branch cannot be
+    /// that are not on the wire, so a vertex that took that branch cannot be
     /// reprojected from `signal` alone — a client must fall back to the
     /// carried `color` for it.
     /// type-audit: bare-ok(index: return)
@@ -811,7 +811,7 @@ const SCOTOPIC_NORM: f64 = 3.63;
 ///
 /// For scale, and measured rather than assumed
 /// (`windows/vessel/tests/lantern_night.rs`, the H4a reading): the dimmest
-/// cell the shipped game renders across seeds 1, 42, 99 and 256 is
+/// vertex the shipped game renders across seeds 1, 42, 99 and 256 is
 /// `[2, 2, 0]`, a linear `6.07e-4` — four times this threshold, and two
 /// bytes clear of the floor. The term is unreachable on the chamber band.
 /// type-audit: bare-ok(ratio)
@@ -1503,7 +1503,7 @@ mod tests {
     /// one rung lower and the term takes over. Two rungs are there for
     /// reasons rather than for spacing: `5.88e-2` is `1 / (1 + 4²)`, the
     /// attenuation a chamber wall sees at the far edge of the sight radius,
-    /// and `3e-3` renders `[2, 2, 0]`, which is exactly the dimmest cell the
+    /// and `3e-3` renders `[2, 2, 0]`, which is exactly the dimmest vertex the
     /// shipped game was measured to emit (the H4a reading in
     /// `windows/vessel/tests/lantern_night.rs`). The pin therefore brackets
     /// the whole range the chamber band actually occupies.

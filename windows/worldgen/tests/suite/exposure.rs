@@ -190,7 +190,7 @@ fn toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap() {
 /// with ZERO exposure rules; measured, not assumed — see this file's
 /// history). At seed 42 `river` itself turns out to be `Steeped` for
 /// EVERY one of the four placed peoples (deep-history settlement scatter
-/// touches a river cell for all of them), so even "at least one Root"
+/// touches a river vertex for all of them), so even "at least one Root"
 /// would be too weak: that was ALSO true before Task 4, back when `river`
 /// was (by a bug in `hornvale_language::packs::universal_stratum` this
 /// task found and fixed) unconditionally `Steeped` for every species
@@ -198,7 +198,7 @@ fn toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap() {
 /// regardless of any seed's particular geography: an UNPLACED species
 /// (one this build never settled anywhere) must be a Gap for `river`,
 /// because every terrain rule in `exposure_of_impl` only ever looks at
-/// `settled` cells. Under the pre-fix bug this assertion would have
+/// `settled` vertices. Under the pre-fix bug this assertion would have
 /// FAILED (kobold held a root for `river` — and every other toponymic
 /// terrain concept — without ever having stood on one).
 #[test]
@@ -270,7 +270,7 @@ fn river_exposure_tracks_real_proximity() {
 /// a discriminator: it is now 5/5 Root — saturated, the same shape `marsh`
 /// and `river`/`ford` already have, for the same reason (deep-history
 /// settlement scatter across five peoples makes hitting at least one
-/// spring-adjacent cell near-certain). This is a genuine behavior change,
+/// spring-adjacent vertex near-certain). This is a genuine behavior change,
 /// not a broken gate — the rule that classifies `spring` did not change,
 /// and reachability for a genuine `spring` Gap is still proven across the
 /// census by `some_census_world_steeps_every_toponymic_concept`
@@ -294,7 +294,7 @@ fn river_exposure_tracks_real_proximity() {
 /// `Experiential` Gap ("has no exposure to 'spring'") rather than the
 /// toponymic-classification Gap the pre-absorb measurement recorded. Not a
 /// combination of the two prior deltas — cascade/v2 and `defensibility`
-/// interact on WHICH cells peoples settle near, and this seed's outcome
+/// interact on WHICH vertices peoples settle near, and this seed's outcome
 /// happens to land back on a discriminating shape. This is why the test is
 /// renamed and rewritten again, to the same exact-partition idiom `hill`
 /// and `valley` already use rather than the saturated shape this file
@@ -329,7 +329,7 @@ fn river_exposure_tracks_real_proximity() {
 /// 0106 is about — a wrong label defends itself.
 /// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
 /// a sixth competitor, redeciding seed 42's settlement placement once more —
-/// kobold's flagship no longer has exposure to a spring cell either.
+/// kobold's flagship no longer has exposure to a spring vertex either.
 /// `spring` is saturated again: a Gap for every placed people (0/6 Root,
 /// 6/6 Gap), the shape `river`/`ford` already carry. Renamed to match, per
 /// this test's own established policy of renaming to the shape rather than
@@ -667,8 +667,8 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
 ///
 /// The cause is the same one running through all four of this file's concepts
 /// this time, and it runs the OPPOSITE way to `k`'s: re-keying the deep-history
-/// node index on `(cell, rung)` takes drow out of the competition for surface
-/// cells, and seed 42's settlement volume falls with it (521 occupations
+/// node index on `(vertex, rung)` takes drow out of the competition for surface
+/// vertices, and seed 42's settlement volume falls with it (521 occupations
 /// across 217 sites, against 826 across 302). Less settlement is fewer peoples
 /// standing beside a landform, and drow — the people that moved underground —
 /// is the one that stops rooting the word for a hill. That is the causal chain
@@ -731,7 +731,7 @@ fn dump_the_landform_partitions_at_seed_42() {
 /// `"karst-cave"` and `"fracture-cave"`, so two formations of three never
 /// matched their own rows and silently read the genus-blind fallback. Fixing
 /// the join moves drow's seated rung in karst and fracture columns, which
-/// moves which surface cells it leaves free, which re-places seed 42's
+/// moves which surface vertices it leaves free, which re-places seed 42's
 /// settlements for the second time in one campaign. Read forwards: this time
 /// settlement volume RISES rather than falls, and the four measures move
 /// accordingly — three gain roots, none loses one on net.
@@ -931,10 +931,10 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
 /// The Wearing absorbed main's terrain/settlement drift it is now a
 /// `Root` for EVERY placed people at seed 42 — the same saturated shape
 /// `river`/`ford` already have (deep-history settlement scatter across
-/// many cells makes hitting at least one damp-but-not-riverine cell
+/// many vertices makes hitting at least one damp-but-not-riverine vertex
 /// near-certain once the roster grows to five). This is a genuine
 /// behavior change, not a broken gate: the rule is unchanged
-/// (`water_kind_at(cell) == WaterKind::DryLand && drainage_at(cell) >=
+/// (`water_kind_at(vertex) == WaterKind::DryLand && drainage_at(vertex) >=
 /// 5.0`, see the Task 4 report), and it still produces a real Gap for at
 /// least some species on other seeds (nothing in this campaign requires
 /// `marsh` to discriminate on every seed, only that it is reachable —
@@ -945,7 +945,7 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
 ///
 /// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
 /// lefford, 0063): the BAKE label bump reseats settlements again, and
-/// bugbear's flagship no longer has exposure to a marsh cell at seed 42.
+/// bugbear's flagship no longer has exposure to a marsh vertex at seed 42.
 /// `marsh` is no longer a Root for EVERY placed people — it splits 4/5
 /// Root, 1/5 Gap (bugbear). Renamed to match; asserted as an exact
 /// partition, by name, the same discipline `hill`/`valley`/`spring`
@@ -954,14 +954,14 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
 ///
 /// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
 /// a sixth competitor, redeciding seed 42's settlement placement once more —
-/// bugbear's flagship now has exposure to a marsh cell after all (rooting it
+/// bugbear's flagship now has exposure to a marsh vertex after all (rooting it
 /// as `Qadoo`), and human's flagship is the new sole gapper. `marsh` keeps
 /// the same 5/6-Root, 1/6-Gap shape, just with a different exception;
 /// renamed to name it.
 ///
 /// The Tolerance re-pin (2026-08-04): the raid gate became a per-settlement
 /// draw rather than a per-species constant, redeciding seed 42's settlement
-/// placement once more — and human's flagship now sits beside a marsh cell
+/// placement once more — and human's flagship now sits beside a marsh vertex
 /// after all, rooting it as `Meashngeo`. `marsh` is back to a Root for EVERY
 /// placed people (6/6), which is where this test started and why its name
 /// returns to that form.
@@ -993,7 +993,7 @@ fn valley_is_a_root_at_seed_42_for_three_peoples() {
 /// `Meashngeo`, both byte-identical to the words they held two re-pins ago)
 /// while GNOLL loses it, which is the one movement this campaign can claim
 /// directly: gnoll is the kind whose affinity was declared, and its two
-/// surviving seed-42 settlements no longer sit beside a marsh cell. The other
+/// surviving seed-42 settlements no longer sit beside a marsh vertex. The other
 /// two are the competitive cascade.
 ///
 /// **Case (2) a third time.** Every people that rooted `marsh` before this
@@ -1108,7 +1108,7 @@ fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
 /// The mirror of [`river_exposure_tracks_real_proximity`] over the whole
 /// nine-concept terrain vocabulary, not just `river`: an unplaced species
 /// gets a Gap for every one of them, because every Steeped/KnowsOf rule
-/// this task adds reads only `settled` cells, which are empty for a
+/// this task adds reads only `settled` vertices, which are empty for a
 /// species this build never placed. This is the assertion that would have
 /// failed outright, for all nine at once, under the pre-fix
 /// `universal_stratum` bug.

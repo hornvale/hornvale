@@ -154,7 +154,7 @@ pub fn run_simulation(
         // One primary-afraid memo for this tick's reads: `ledger` is fixed across
         // them, so an emitter's `(entity, day)` fear verdict — folded by EVERY
         // creature's `believed_hazard` (The Phantom) — is re-derived once, not
-        // once per creature per cell. Byte-identical: a cache of a pure function
+        // once per creature per room. Byte-identical: a cache of a pure function
         // over a fixed ledger (see `PrimaryAfraidMemo`).
         let mut afraid_memo = PrimaryAfraidMemo::new();
         for (i, npc) in npcs.iter().enumerate() {
@@ -197,9 +197,9 @@ pub fn run_simulation_with_locale(
     npcs: &[Body],
     ctx: &LocaleContext,
     calendar: Option<&hornvale_astronomy::Calendar>,
-    predator: Option<&hornvale_kernel::CellMap<f64>>,
-    prey: Option<&hornvale_kernel::CellMap<f64>>,
-    built: Option<&std::collections::BTreeSet<hornvale_kernel::RoomId>>,
+    predator: Option<&hornvale_kernel::VertexMap<f64>>,
+    prey: Option<&hornvale_kernel::VertexMap<f64>>,
+    built: Option<&std::collections::BTreeSet<hornvale_kernel::FacetId>>,
     ticks: usize,
     day_length_std: Option<f64>,
 ) -> Vec<Vec<Affect>> {

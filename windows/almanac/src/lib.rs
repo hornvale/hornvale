@@ -203,7 +203,7 @@ pub struct AlmanacContext {
     /// own site facts where this document would otherwise print two
     /// indistinguishable lines (decision 0024; see [`qualify`]). The
     /// composition root fills this: qualification needs the `&World` and the
-    /// cell ids that [`PlaceInfo`] does not carry, and a window may not
+    /// vertex ids that [`PlaceInfo`] does not carry, and a window may not
     /// reach back to the root.
     ///
     /// Shorter than `places` (an empty vector, in particular) is legal and

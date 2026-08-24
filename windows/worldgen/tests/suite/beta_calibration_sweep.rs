@@ -12,15 +12,15 @@
 //! (seed, β) and averaged across seeds:
 //!
 //! 1. **mean-diversity-all** — mean `byproducts.strife` over every habitable
-//!    cell (the existing `per-cell-diversity` Lab metric's definition; a
-//!    habitable-but-unclaimed cell reads `strife == 0.0`, which drags this
-//!    mean toward 0 regardless of how balanced claimed cells are).
+//!    vertex (the existing `per-cell-diversity` Lab metric's definition; a
+//!    habitable-but-unclaimed vertex reads `strife == 0.0`, which drags this
+//!    mean toward 0 regardless of how balanced claimed vertices are).
 //! 2. **mean-diversity-claimed** — mean `byproducts.strife` over habitable
-//!    cells that are additionally CLAIMED (Σ density > 0): the cleaner
+//!    vertices that are additionally CLAIMED (Σ density > 0): the cleaner
 //!    "when species are present, how many co-occur" signal, undiluted by
 //!    unclaimed wilderness.
 //! 3. **mean-occupancy** — mean count of species with density >= `FLOOR` per
-//!    claimed cell: a direct occupancy count, complementing the
+//!    claimed vertex: a direct occupancy count, complementing the
 //!    Herfindahl-based diversity statistics above with a simple headcount.
 //!
 //! This is a MEASUREMENT, not a freeze: it never touches `BETA` and reports
@@ -32,7 +32,7 @@
 //!
 //! **A second, PRE-TROPHIC table is also printed** (`measure_pretrophic`):
 //! the same three statistics computed from [`hornvale_demography::coexist::
-//! cell_share`] directly (the β-driven packer share, converted to density by
+//! vertex_share`] directly (the β-driven packer share, converted to density by
 //! [`hornvale_demography::home_range`]) WITHOUT running
 //! [`hornvale_demography::coexist::couple_trophic`] afterward. This exists
 //! because the post-trophic table, measured first, turned out flat across
@@ -54,7 +54,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{CellMap, Mass, ResourceVector, Seed};
+use hornvale_kernel::{Mass, ResourceVector, Seed, VertexMap};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, carrying_inputs_of,
@@ -83,16 +83,16 @@ const SEEDS: [u64; 13] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 42];
 /// for a β-sweep that holds geography fixed and varies only β.
 struct SeedFixture {
     geo: hornvale_kernel::Geosphere,
-    per_species_inputs: Vec<(u32, CellMap<hornvale_demography::CarryingInput>)>,
+    per_species_inputs: Vec<(u32, VertexMap<hornvale_demography::CarryingInput>)>,
     species: Vec<(u32, Mass, ResourceVector)>,
-    habitable: CellMap<bool>,
+    habitable: VertexMap<bool>,
     /// Each species' carrying-capacity field, precomputed once (β-free) —
     /// both `measure` (via `hornvale_demography::report`) and
     /// `measure_pretrophic` (hand-rolled, skipping `couple_trophic`) read
     /// off the same field, never recomputing `carrying_capacity` per β.
-    per_species_k: Vec<(u32, CellMap<f64>)>,
+    per_species_k: Vec<(u32, VertexMap<f64>)>,
     /// The guild-overlap matrix, precomputed once — depends only on
-    /// `species`' niche vectors, never on β or a cell.
+    /// `species`' niche vectors, never on β or a vertex.
     overlap: BTreeMap<(u32, u32), f64>,
     /// Each species' body mass, keyed by id — `measure_pretrophic`'s
     /// share-to-density conversion reads this via `home_range`.
@@ -129,13 +129,13 @@ fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
     // The peopled kinds (the psyche key-set); fauna carry no psyche row. Tags
     // are the shared build-local dense index — both `per_species_inputs` and
     // `species` enumerate the SAME `wc.psyche` order.
-    let per_species_inputs: Vec<(u32, CellMap<hornvale_demography::CarryingInput>)> = wc
+    let per_species_inputs: Vec<(u32, VertexMap<hornvale_demography::CarryingInput>)> = wc
         .psyche
         .iter()
         .enumerate()
         .map(|(tag, (_kind, psych))| {
-            let inputs = CellMap::from_fn(&geo, |cell| {
-                species_carrying_input(*base_inputs.get(cell), psych)
+            let inputs = VertexMap::from_fn(&geo, |vertex| {
+                species_carrying_input(*base_inputs.get(vertex), psych)
             });
             (tag as u32, inputs)
         })
@@ -153,12 +153,12 @@ fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
         })
         .collect();
 
-    let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
+    let per_species_k: Vec<(u32, VertexMap<f64>)> = per_species_inputs
         .iter()
         .map(|(tag, inputs)| {
             (
                 *tag,
-                hornvale_demography::carrying_capacity(&geo, inputs).into_cell_map(),
+                hornvale_demography::carrying_capacity(&geo, inputs).into_vertex_map(),
             )
         })
         .collect();
@@ -183,15 +183,15 @@ fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
 /// The three statistics measured for one (seed, β) pair.
 #[derive(Clone, Copy, Debug, Default)]
 struct SeedBetaStats {
-    /// Mean `strife` over every habitable cell.
+    /// Mean `strife` over every habitable vertex.
     diversity_all: f64,
-    /// Mean `strife` over habitable, CLAIMED (Σ density > 0) cells. `None`
-    /// (represented as `NaN`, filtered before averaging) if no cell in this
+    /// Mean `strife` over habitable, CLAIMED (Σ density > 0) vertices. `None`
+    /// (represented as `NaN`, filtered before averaging) if no vertex in this
     /// seed's world is claimed at this β.
     diversity_claimed: f64,
-    /// Mean count of species with density >= FLOOR, over claimed cells.
+    /// Mean count of species with density >= FLOOR, over claimed vertices.
     occupancy: f64,
-    /// Whether any claimed cell existed (gates `diversity_claimed`/
+    /// Whether any claimed vertex existed (gates `diversity_claimed`/
     /// `occupancy`'s validity).
     has_claimed: bool,
 }
@@ -216,15 +216,20 @@ fn measure(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
     let (mut sum_claimed, mut n_claimed) = (0.0_f64, 0u32);
     let (mut sum_occupancy, mut n_occupancy) = (0.0_f64, 0u32);
 
-    for cell in fixture.geo.cells() {
-        if !*fixture.habitable.get(cell) {
+    for vertex in fixture.geo.vertices() {
+        if !*fixture.habitable.get(vertex) {
             continue;
         }
-        let strife = *report.byproducts.strife.get(cell);
+        let strife = *report.byproducts.strife.get(vertex);
         sum_all += strife;
         n_all += 1;
 
-        let total_density: f64 = report.stack.density.iter().map(|(_, d)| *d.get(cell)).sum();
+        let total_density: f64 = report
+            .stack
+            .density
+            .iter()
+            .map(|(_, d)| *d.get(vertex))
+            .sum();
         if total_density > 0.0 {
             sum_claimed += strife;
             n_claimed += 1;
@@ -233,7 +238,7 @@ fn measure(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
                 .stack
                 .density
                 .iter()
-                .filter(|(_, d)| *d.get(cell) >= hornvale_demography::FLOOR)
+                .filter(|(_, d)| *d.get(vertex) >= hornvale_demography::FLOOR)
                 .count();
             sum_occupancy += occupants as f64;
             n_occupancy += 1;
@@ -261,8 +266,8 @@ fn measure(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
 }
 
 /// Diagnostic companion to [`measure`]: the SAME three statistics, but
-/// computed from the packer's raw per-cell [`hornvale_demography::coexist::
-/// cell_share`] output (converted to a per-cell density by
+/// computed from the packer's raw per-vertex [`hornvale_demography::coexist::
+/// vertex_share`] output (converted to a per-vertex density by
 /// [`hornvale_demography::home_range`], exactly as [`hornvale_demography::
 /// coexist::pack`] does) WITHOUT then running [`hornvale_demography::
 /// coexist::couple_trophic`] — isolating β's effect on the packer alone from
@@ -273,8 +278,8 @@ fn measure_pretrophic(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
     let (mut sum_claimed, mut n_claimed) = (0.0_f64, 0u32);
     let (mut sum_occupancy, mut n_occupancy) = (0.0_f64, 0u32);
 
-    for cell in fixture.geo.cells() {
-        if !*fixture.habitable.get(cell) {
+    for vertex in fixture.geo.vertices() {
+        if !*fixture.habitable.get(vertex) {
             continue;
         }
         n_all += 1;
@@ -282,12 +287,12 @@ fn measure_pretrophic(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
         let mut present: Vec<(u32, f64)> = fixture
             .per_species_k
             .iter()
-            .map(|(id, k)| (*id, *k.get(cell)))
+            .map(|(id, k)| (*id, *k.get(vertex)))
             .filter(|(_, k)| *k > 0.0)
             .collect();
         present.sort_by_key(|(id, _)| *id);
         let capacity: f64 = present.iter().map(|(_, k)| *k).sum();
-        let shares = hornvale_demography::coexist::cell_share(
+        let shares = hornvale_demography::coexist::vertex_share(
             capacity,
             &present,
             &fixture.overlap,
@@ -304,7 +309,7 @@ fn measure_pretrophic(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
 
         let total: f64 = density.values().sum();
         if total <= 0.0 {
-            // strife contributes 0.0 at an unclaimed cell — nothing to add.
+            // strife contributes 0.0 at an unclaimed vertex — nothing to add.
             continue;
         }
         let herfindahl: f64 = density

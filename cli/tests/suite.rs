@@ -53,6 +53,9 @@ mod id_stability_under_insertion;
 mod lane_claim_roundtrip;
 #[path = "suite/lane_sets.rs"]
 mod lane_sets;
+#[path = "suite/lexicon_guard.rs"]
+mod lexicon_guard;
+
 #[path = "suite/lens_purity.rs"]
 mod lens_purity;
 #[path = "suite/locale_cli.rs"]
