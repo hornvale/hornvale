@@ -342,7 +342,25 @@ pub struct Driver {
     /// preference mechanism only has to flip a field. Cleared by any edit
     /// or submission.
     cycle: Option<CycleState>,
+    /// The bare-`x` noun prompt (spec §4.4): `Some` while the line
+    /// temporarily reads `examine …`, holding the buffer it replaced. The
+    /// prompt is a MODE, not a picker — the client still sends text
+    /// unconditionally, and the sim answers unknown nouns in its own prose.
+    noun_prompt: Option<NounPrompt>,
 }
+
+/// What [`Driver::noun_prompt`] saves for `Esc` to restore.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NounPrompt {
+    /// The buffer as the player left it before submitting bare `x`.
+    saved_buffer: String,
+    /// Its caret position.
+    saved_caret: usize,
+}
+
+/// The prefix the noun prompt dispatches — the line reads exactly this
+/// plus whatever noun the player has typed.
+const EXAMINE_PROMPT_PREFIX: &str = "examine ";
 
 /// How an ambiguous completion presents (spec §4.2). Cycle is implemented
 /// and unit-tested but unbound — no preference mechanism exists yet.
@@ -632,6 +650,7 @@ impl Driver {
             tab_style: TabStyle::Hint,
             hint: None,
             cycle: None,
+            noun_prompt: None,
         };
         driver.refresh();
         Ok(driver)
@@ -822,6 +841,16 @@ impl Driver {
     pub fn apply(&mut self, action: Action) -> bool {
         match action {
             Action::ToggleFocus => {
+                // Esc during the noun prompt CANCELS it rather than
+                // toggling focus — restoring the buffer verbatim is the
+                // stash convention the history semantics established.
+                if let Some(saved) = self.noun_prompt.take() {
+                    self.line.set(saved.saved_buffer);
+                    while self.line.caret() < saved.saved_caret {
+                        self.line.caret_right();
+                    }
+                    return false;
+                }
                 self.toggle_focus();
                 false
             }
@@ -857,6 +886,14 @@ impl Driver {
                 false
             }
             Action::DeleteBack => {
+                // In the noun prompt, backspace stops at the dispatched
+                // prefix: deleting into "examine " would corrupt what
+                // Enter sends.
+                if self.noun_prompt.is_some()
+                    && self.line.text().chars().count() <= EXAMINE_PROMPT_PREFIX.chars().count()
+                {
+                    return false;
+                }
                 self.line.backspace();
                 self.clear_completion();
                 false
@@ -871,6 +908,9 @@ impl Driver {
                 false
             }
             Action::HistoryPrev => {
+                // Recalling history commits the prompt: the composed line
+                // becomes the ordinary buffer the recall replaces.
+                self.noun_prompt = None;
                 if let Some(text) = self.history.prev() {
                     self.line.set(text.to_string());
                 }
@@ -878,6 +918,7 @@ impl Driver {
                 false
             }
             Action::HistoryNext => {
+                self.noun_prompt = None;
                 match self.history.next() {
                     Some(text) => self.line.set(text.to_string()),
                     None => self.line.set(String::new()),
@@ -889,7 +930,30 @@ impl Driver {
                 if self.line.is_empty() {
                     return false;
                 }
+                let caret = self.line.caret();
                 let taken = self.line.take();
+                // BARE `x` — the conventional examine shorthand — enters the
+                // noun prompt instead of dispatching and burning a turn on
+                // "Examine what?" (spec §4.4). Nothing is echoed, nothing
+                // enters history, no turn advances: the prompt is a question
+                // the client asks locally.
+                if taken.trim() == "x" {
+                    if self.noun_prompt.is_none() {
+                        self.noun_prompt = Some(NounPrompt {
+                            saved_buffer: taken,
+                            saved_caret: caret,
+                        });
+                        self.line.set(EXAMINE_PROMPT_PREFIX.to_string());
+                    } else {
+                        // Already prompting: a bare `x` typed INTO the
+                        // prompt is just text — put it back.
+                        self.line.set(taken);
+                    }
+                    return false;
+                }
+                // Any other submission exits the prompt: the composed line
+                // IS what the player chose to send.
+                self.noun_prompt = None;
                 self.clear_completion();
                 self.history.push(taken.clone());
                 self.echo = Some(taken.clone());
@@ -2799,7 +2863,7 @@ mod completion_tests {
     /// catalog — the real refresh path (`scope.update` from a parsed
     /// snapshot) is exercised by the integration suite; these tests need a
     /// KNOWN vocabulary.
-    fn seeded_driver() -> Driver {
+    pub(crate) fn seeded_driver() -> Driver {
         let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
         d.scope.update(&fixture_narration());
         d
@@ -2953,6 +3017,92 @@ mod completion_tests {
         assert_eq!(
             completion_decision("examine bramble", 11, &cands(&["bramble"])),
             CompletionDecision::Fill("bramble".into())
+        );
+    }
+}
+
+/// The bare-`x` noun prompt (spec §4.4): submitting `x` alone asks for a
+/// noun instead of burning a turn on "Examine what?".
+#[cfg(test)]
+mod noun_prompt_tests {
+    use super::completion_tests::seeded_driver;
+    use super::*;
+    use crate::input::Action;
+
+    /// Enter the modal by submitting bare `x`, the way a player would.
+    fn entered_driver() -> Driver {
+        let mut d = seeded_driver();
+        d.line.set("x".to_string());
+        d.apply(Action::Submit);
+        d
+    }
+
+    #[test]
+    fn bare_x_enters_the_prompt_instead_of_burning_a_turn() {
+        let mut d = seeded_driver();
+        d.line.set("x".to_string());
+        assert!(
+            !d.apply(Action::Submit),
+            "entering the prompt is not a turn"
+        );
+        assert_eq!(d.line.text(), "examine ");
+        assert!(d.noun_prompt.is_some());
+        assert_eq!(d.echo, None, "nothing was submitted");
+    }
+
+    #[test]
+    fn typing_builds_the_noun_after_the_prefix() {
+        let mut d = entered_driver();
+        d.apply(Action::Type('b'));
+        d.apply(Action::Type('r'));
+        assert_eq!(d.line.text(), "examine br");
+    }
+
+    #[test]
+    fn backspace_clamps_at_the_dispatched_prefix() {
+        let mut d = entered_driver();
+        d.apply(Action::DeleteBack);
+        assert_eq!(d.line.text(), "examine ");
+    }
+
+    #[test]
+    fn submitting_the_prompt_dispatches_examine_and_exits() {
+        let mut d = entered_driver();
+        for c in "bramble".chars() {
+            d.apply(Action::Type(c));
+        }
+        let released = d.apply(Action::Submit);
+        assert!(!released, "examining bramble does not end the possession");
+        assert!(d.noun_prompt.is_none(), "the modal exits on submit");
+        assert_eq!(d.echo.as_deref(), Some("examine bramble"));
+        d.history.prev();
+        assert!(d.history.next().is_none(), "the dispatch entered history");
+    }
+
+    #[test]
+    fn esc_cancels_and_restores_the_saved_buffer() {
+        let mut d = seeded_driver();
+        d.focus = Focus::Cli; // the player submits `x` from the command line
+        d.line.set("look".to_string());
+        for _ in 0..2 {
+            d.line.caret_left();
+        }
+        d.line.set("x".to_string()); // entering saves; see entered-by-hand below
+        // enter by hand so we control what was saved
+        d.noun_prompt = None;
+        d.line.set("look".to_string());
+        while d.line.caret() < 2 {
+            d.line.caret_right();
+        }
+        d.line.set("x".to_string());
+        d.apply(Action::Submit);
+        d.apply(Action::ToggleFocus); // Esc
+        assert!(d.noun_prompt.is_none());
+        assert_eq!(d.line.text(), "x", "the saved buffer is restored verbatim");
+        assert_eq!(
+            d.focus,
+            Focus::Cli,
+            "Esc in the modal does not toggle focus"
         );
     }
 }
