@@ -703,9 +703,14 @@ walls — held across 1505 settlements over eight seeds, at a median of 41 `u8`
 steps out of 255. The tenth percentile is 1, and every sampled flagship
 settlement stands on the same rock class, plausibly because the biggest
 settlements go where the rivers are ([The Confluence](./chronicle/the-confluence.md)).
-So the population varies and the head of it does not, and a possession always
-starts at the head. A divergence claim measured over a population is not
-automatically a claim about what anyone will see.
+So the population varies and the head of it does not, and a possession starts
+at the head *by default*. That default has been a parameter since decision
+0116 — `--target most-populous-settlement` picks a different settlement's
+head — and The Hand widened it again: `--creature <ID>` names any already-
+derived roster member, so a possession need not start at a head at all. The
+caution therefore narrows rather than dissolving: a divergence claim measured
+over a population is not automatically a claim about what anyone will see, and
+what anyone sees now depends on which body they asked for.
 
 **Population has a physically-grounded, self-checking prior.** Every
 settlement used to carry a population number a formula handed it, with no
@@ -1766,6 +1771,27 @@ and the discipline that catches these is not review but **mutation** — every
 one of the six was settled by neutralising the code under test and watching
 whether anything went red. Nothing in the standing gate does that for a
 Laboratory metric.
+
+[The Hand](./chronicle/the-hand.md) adds the clause about what to do once you
+find that the instrument is structurally blind. Arc II of The Bridle predicted
+that routing a possessed body through the creature tick would not change the
+ledger's growth rate, on the argument that a driven body *holds* most ticks and
+holding commits nothing. Measured before and after: 0.25 facts per body per
+tick, identical. The prediction held and the argument behind it is not what
+produced the number — the driven walk's facts are discarded unconditionally
+before they can reach the ledger, so the rate is flat **whatever the controller
+answers**, and forcing the controller to return a real action leaves the
+guarding test green. The same measurement had already been vacuous once, for an
+unrelated reason, against an earlier implementation that never touched the
+ledger at all: two vacuities with different causes, both hiding behind the same
+confirming number. What the campaign did next is the part worth keeping. It
+declined to run a third measurement and corrected the specification instead. A
+prediction whose instrument cannot separate it from its own negation is not
+confirmed by agreeing with it, and the residue that survives — *routing a
+possessed body through the tick costs no committed facts* — is a strictly
+smaller claim than the one preregistered. Recording the smaller claim is what
+keeps this chapter's accounting honest; staging measurements until one agrees
+is what would corrupt it.
 
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,

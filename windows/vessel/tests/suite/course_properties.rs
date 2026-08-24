@@ -344,9 +344,9 @@ fn go_lands_on_the_neighbour_nearest_its_requested_bearing() {
     let world = common::build(42).expect("seed 42 builds");
     for (dir, compass) in DIRECTIONS {
         let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        let origin = s.agent().position.clone();
+        let origin = s.position();
         s.handle(&format!("go {dir}"));
-        let dest = s.agent().position.clone();
+        let dest = s.position();
         let expected = neighbour_nearest_by_bearing(&origin, bearing_of(compass));
         assert_eq!(
             dest,
