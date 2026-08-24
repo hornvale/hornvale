@@ -28,15 +28,62 @@
 //! a mean, because robustness to one disturbed pass is the entire point of
 //! taking more than one.
 //!
+//! ## The mechanism this bench found, and why it now sweeps TWO regimes
+//!
+//! An earlier version of this file ran one sweep only -- a single `drank`
+//! fact at day 0.0, never repeated -- and measured a fit with `k > 0` but a
+//! NEGATIVE `C`: the signature of a superlinear, not affine, relationship.
+//! Reading `integrate_thirst` (`windows/vessel/src/liveness.rs`) explains it.
+//! Write `H` for the agent's WHOLE `agent-at` history (what `agent_sightings`
+//! builds, `O(H)`) and `S` for the sightings since its last drink (what
+//! `integrate_thirst`'s outer loop over segment boundaries actually walks,
+//! `O(S)`). Each of those `S` segments looks up its governing position with:
+//!
+//! ```text
+//! let pos = sightings
+//!     .iter()
+//!     .rev()
+//!     .find(|(d, _)| *d <= s)
+//! ```
+//!
+//! -- a backward linear scan of the FULL `H`-length sightings vector, not an
+//! indexed or incrementally-tracked lookup. So the real cost is
+//! `O(H + S*H)`, not the `O(history)` the sibling benches' docs narrate for
+//! the six production folds. The old single-reset sweep committed exactly
+//! one `drank` at the start, so every posting is a sighting since that one
+//! drink: `S == H`, and the measured cost is dominated by the quadratic
+//! `S*H == H^2` term -- a real pathology, but not the regime a production
+//! agent actually runs in (one that drinks regularly keeps `S` small and
+//! bounded while `H` grows, which is why the spec's own in-situ measurement
+//! read an elasticity of 0.86-1.24, not ~2).
+//!
+//! So this bench now sweeps BOTH regimes, driven by the same `DEPTHS`/
+//! `PASSES`/`FOLD_REPS` machinery, clearly labelled so neither is mistaken
+//! for the other:
+//!
+//! - **PERIODIC RESETS** (`Some(RESET_EVERY)`): a `drank` fact every
+//!   `RESET_EVERY` postings, so `S` stays bounded near `RESET_EVERY` while
+//!   `H` grows across the sweep. This isolates the `O(H)` term and is the
+//!   sweep comparable to the spec's own in-situ regime.
+//! - **SINGLE EARLY RESET** (`None`): the original regime, `S == H`,
+//!   exposing the `O(S*H)` term in isolation.
+//!
+//! Both are real measurements of the same function; they are not in
+//! conflict with each other, and a disagreement between either of them and
+//! spec §4 is a finding about the mechanism, not a bench defect to smooth
+//! over.
+//!
 //! ## What this bench does, and does not, measure
 //!
 //! `drive_at` alone, over a synthetic ledger with no genesis, no A* search,
 //! no roster, no commits inside the timed span, and a constant-answering
-//! `Terrain` (`FlatTerrain`, below) so the only thing that varies across the
-//! sweep is the number of segments the fold walks. `session_length_scaling
-//! .rs`'s `fold_us` column is the same instrument, measured in situ instead;
-//! this is its synthetic complement, not a replacement -- a disagreement
-//! between the two is a real finding about one of them, not a tiebreak.
+//! `Terrain` (`FlatTerrain`, below) so the only thing that varies across
+//! either sweep is the number of postings the fold walks. `session_length_
+//! scaling.rs`'s `fold_us` column is the same instrument, measured in situ
+//! instead (and, by construction, in the periodic-ish regime a real session
+//! actually runs in); this file is its synthetic complement, not a
+//! replacement -- a disagreement between the two is a real finding about
+//! one of them, not a tiebreak.
 
 use hornvale_kernel::registry::ConceptRegistry;
 use hornvale_kernel::{EntityId, Fact, Ledger, RoomAddr, Value, WorldTime};
@@ -68,6 +115,16 @@ const PASSES: usize = 6;
 
 /// Back-to-back `drive_at` calls averaged into one reading.
 const FOLD_REPS: u32 = 50;
+
+/// Reset cadence for the PERIODIC sweep: a `drank` fact committed every this
+/// many `agent-at` postings, so sightings-since-last-drink (`S`, in the
+/// module doc's notation) stays bounded near this value while the whole
+/// history (`H`) grows across `DEPTHS` -- isolating the `O(H)` term from the
+/// `O(S*H)` one the single-reset sweep exposes. Below `RESET_EVERY` postings
+/// (the `DEPTHS` entries of 10) no reset ever triggers, so the periodic
+/// sweep is identical to the single-reset one at that one depth -- expected,
+/// not a bug, and worth knowing when reading that row.
+const RESET_EVERY: usize = 20;
 
 /// A `Terrain` that answers the same thing everywhere -- so the only variable
 /// in this sweep is the ledger's depth.
@@ -139,27 +196,43 @@ fn agent_at(entity: EntityId, i: usize) -> Fact {
     }
 }
 
-/// The one `drank` fact that bounds the thirst integral's window: the reset
-/// day the fold starts from.
+/// A `drank` fact on `day` -- either the one reset that bounds the
+/// single-reset regime's window, or one of the periodic regime's repeated
+/// resets (see [`synthetic_ledger`]'s doc).
 fn drank_at(entity: EntityId, day: f64) -> Fact {
     Fact {
         subject: entity,
         predicate: DRANK.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(WorldTime::new(day).expect("0.0 is finite")),
+        day: Some(WorldTime::new(day).expect("day is finite")),
         provenance: "synthetic".to_string(),
     }
 }
 
-/// A ledger holding exactly `depth` `agent-at` facts for `entity`, one per day,
-/// plus the one `drank` fact that bounds the thirst integral's window.
+/// A ledger holding exactly `depth` `agent-at` facts for `entity`, one per
+/// day, under one of two reset regimes for the `drank` fact(s) that bound
+/// the thirst integral's window (see the module doc's `O(H + S*H)` finding
+/// for why the regime matters to what this bench actually measures):
 ///
-/// Days ascend by 1.0 so the integral has `depth` segments to walk. The rooms
-/// cycle through a small fixed set rather than being constant, because a
-/// constant room would let a future optimisation collapse the segments and
+/// - `reset_every == None`: ONE `drank` fact, at day 0.0, and never again --
+///   the SINGLE-RESET regime. Sightings-since-last-drink `S` equals the
+///   whole history `H`, so this exposes the `O(S*H)` term.
+/// - `reset_every == Some(n)`: the initial day-0.0 `drank` fact, PLUS another
+///   `drank` fact every `n` postings (same day as that posting) -- the
+///   PERIODIC regime. `S` stays bounded near `n` regardless of how large `H`
+///   grows, isolating the `O(H)` term.
+///
+/// Days ascend by 1.0 so the integral has `depth` segments to walk. The
+/// rooms cycle through a small fixed set rather than being constant, because
+/// a constant room would let a future optimisation collapse the segments and
 /// silently flatter the fold.
-fn synthetic_ledger(entity: EntityId, depth: usize, registry: &ConceptRegistry) -> Ledger {
+fn synthetic_ledger(
+    entity: EntityId,
+    depth: usize,
+    reset_every: Option<usize>,
+    registry: &ConceptRegistry,
+) -> Ledger {
     let mut ledger = Ledger::default();
     ledger
         .commit(drank_at(entity, 0.0), registry)
@@ -168,6 +241,15 @@ fn synthetic_ledger(entity: EntityId, depth: usize, registry: &ConceptRegistry) 
         ledger
             .commit(agent_at(entity, i), registry)
             .expect("a synthetic agent-at fact commits");
+        let posting_count = i + 1;
+        if let Some(n) = reset_every
+            && n > 0
+            && posting_count % n == 0
+        {
+            ledger
+                .commit(drank_at(entity, posting_count as f64), registry)
+                .expect("a synthetic periodic drank fact commits");
+        }
     }
     ledger
 }
@@ -205,6 +287,18 @@ fn binomial_tail(k: usize, n: usize) -> f64 {
     total / 2.0_f64.powi(n as i32)
 }
 
+/// Monotonicity of a median column, ascending by depth, with the correct
+/// tail probability (see `binomial_tail`'s doc). Shared by both sweeps so
+/// neither prints it slightly differently.
+fn report_monotonicity(ys: &[f64]) {
+    let rises = ys.windows(2).filter(|w| w[1] > w[0]).count();
+    let steps = ys.len() - 1;
+    println!(
+        "  monotonicity of the median column: {rises}/{steps} rises (one-sided binomial p = {:.4})",
+        binomial_tail(rises, steps)
+    );
+}
+
 /// Fit `ys = C + k * xs` by ordinary least squares and print it, with the `r^2`
 /// that says how much of the variance the fit actually explains. Reused,
 /// shape and all, from `session_length_scaling.rs::report_affine` -- same
@@ -234,15 +328,16 @@ fn report_affine(title: &str, unit: &str, xs: &[f64], ys: &[f64], x_first: f64, 
 
     // Elasticity between the first and last swept depth: 1.0 means cost is
     // PROPORTIONAL to history (a pure walk over it), 0.0 means history is
-    // free. Needs no intercept, so it survives `C` being unidentifiable --
-    // same reasoning `session_length_scaling.rs` states at length.
+    // free, ~2.0 means quadratic. Needs no intercept, so it survives `C`
+    // being unidentifiable -- same reasoning `session_length_scaling.rs`
+    // states at length.
     let y_first = my - k * (mx - x_first);
     let y_last = my - k * (mx - x_last);
     if x_first > 0.0 && y_first > 0.0 && y_last > 0.0 {
         let elasticity = hornvale_kernel::math::ln(y_last / y_first)
             / hornvale_kernel::math::ln(x_last / x_first);
         println!(
-            "    elasticity over the measured range = {elasticity:.2} (1.0 = cost proportional to history, 0.0 = history free)"
+            "    elasticity over the measured range = {elasticity:.2} (1.0 = proportional to history, 0.0 = history free, 2.0 = quadratic)"
         );
     }
     println!(
@@ -261,30 +356,21 @@ fn report_affine(title: &str, unit: &str, xs: &[f64], ys: &[f64], x_first: f64, 
     }
 }
 
-fn main() {
-    let mut registry = ConceptRegistry::default();
-    registry
-        .register_predicate(AGENT_AT, false, "an agent's position on a day")
-        .expect("AGENT_AT registers identically every run");
-    registry
-        .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
-        .expect("DRANK registers identically every run");
-
+/// Run one full interleaved sweep -- all `PASSES` passes, alternating
+/// direction, `FOLD_REPS` reps per reading -- under one reset regime
+/// (`reset_every`, see [`synthetic_ledger`]'s doc), printing its table.
+/// Returns the swept depths and their medians (ascending by depth) for the
+/// caller's fit and monotonicity check.
+fn run_sweep(
+    label: &str,
+    reset_every: Option<usize>,
+    registry: &ConceptRegistry,
+) -> (Vec<f64>, Vec<f64>) {
     let entity = EntityId::new(1).expect("1 is nonzero");
     let home = room_for(0);
     let terrain = FlatTerrain;
     let class = MetabolicClass::Endotherm;
 
-    println!(
-        "fold_depth_sweep: {} depths x {PASSES} passes (alternating direction) x {FOLD_REPS} reps/reading",
-        DEPTHS.len()
-    );
-    println!("depths swept: {DEPTHS:?}");
-    println!();
-
-    // Every pass's reading at each depth, keyed by depth -- a `BTreeMap`
-    // rather than a `HashMap` (decision 0005: no nondeterministic iteration
-    // order in this workspace, even in a bench harness).
     let mut by_depth: BTreeMap<usize, Vec<f64>> = BTreeMap::new();
     for &d in DEPTHS {
         by_depth.insert(d, Vec::with_capacity(PASSES));
@@ -298,7 +384,7 @@ fn main() {
             DEPTHS.iter().rev().copied().collect()
         };
         for depth in order {
-            let ledger = synthetic_ledger(entity, depth, &registry);
+            let ledger = synthetic_ledger(entity, depth, reset_every, registry);
             // One past the last posted day, so the fold walks every one of
             // this depth's `depth` segments.
             let t = WorldTime::new(depth as f64 + 1.0).expect("depth + 1 is finite");
@@ -323,6 +409,8 @@ fn main() {
         }
     }
 
+    println!();
+    println!("{label}:");
     println!(
         "{:>8} {:>12} {:>12} {:>12}",
         "depth", "median us*", "min us", "max us"
@@ -345,23 +433,51 @@ fn main() {
         xs.push(d as f64);
         ys.push(med);
     }
+    (xs, ys)
+}
 
-    println!();
-    report_affine(
-        "DECISIVE -- drive_at alone (us/call) vs synthetic ledger depth, interleaved",
-        "us/call",
-        &xs,
-        &ys,
-        *xs.first().expect("DEPTHS is non-empty"),
-        *xs.last().expect("DEPTHS is non-empty"),
-    );
+fn main() {
+    let mut registry = ConceptRegistry::default();
+    registry
+        .register_predicate(AGENT_AT, false, "an agent's position on a day")
+        .expect("AGENT_AT registers identically every run");
+    registry
+        .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
+        .expect("DRANK registers identically every run");
 
-    // Monotonicity of the median column across ascending depth, with the
-    // correct tail probability (see `binomial_tail`'s doc).
-    let rises = ys.windows(2).filter(|w| w[1] > w[0]).count();
-    let steps = ys.len() - 1;
     println!(
-        "  monotonicity of the median column: {rises}/{steps} rises (one-sided binomial p = {:.4})",
-        binomial_tail(rises, steps)
+        "fold_depth_sweep: {} depths x {PASSES} passes (alternating direction) x {FOLD_REPS} reps/reading, two reset regimes",
+        DEPTHS.len()
     );
+    println!("depths swept: {DEPTHS:?}");
+
+    let (periodic_xs, periodic_ys) = run_sweep(
+        "PERIODIC RESETS (a drank fact every RESET_EVERY=20 postings -- S stays bounded, isolates O(H))",
+        Some(RESET_EVERY),
+        &registry,
+    );
+    report_affine(
+        "PERIODIC -- drive_at (us/call) vs depth, S bounded near RESET_EVERY",
+        "us/call",
+        &periodic_xs,
+        &periodic_ys,
+        *periodic_xs.first().expect("DEPTHS is non-empty"),
+        *periodic_xs.last().expect("DEPTHS is non-empty"),
+    );
+    report_monotonicity(&periodic_ys);
+
+    let (single_xs, single_ys) = run_sweep(
+        "SINGLE EARLY RESET (one drank fact at day 0.0, never repeated -- S == H, exposes O(S*H))",
+        None,
+        &registry,
+    );
+    report_affine(
+        "SINGLE-RESET -- drive_at (us/call) vs depth, S == H",
+        "us/call",
+        &single_xs,
+        &single_ys,
+        *single_xs.first().expect("DEPTHS is non-empty"),
+        *single_xs.last().expect("DEPTHS is non-empty"),
+    );
+    report_monotonicity(&single_ys);
 }
