@@ -1433,6 +1433,18 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
 ///    names has not reappeared. It is also what makes [`WORLD_SHARE_FLOOR`]
 ///    one-sided rather than incomplete.
 ///
+/// # NOTHING RUNS THIS FOR YOU
+///
+/// Every assertion listed above sits behind this test's own `ignore`
+/// attribute, whose reason puts it in the `heavy` set — and `heavy` is
+/// not in the merge queue's phase list (decision 0148 took it off, with
+/// `seam-guard`, because the two were 80.5% of a merge's wall time). So this
+/// readout, its ratchet, both gated arms and seed 42's equality run **only
+/// when a human types `make heavy-remote`** — on no schedule, and not at a
+/// merge. The honest sentence about anything below is *"it closes that on any
+/// heavy run"*, never *"it closes that"*. Still a strict improvement on the
+/// state before this campaign, where even a heavy run printed and passed.
+///
 /// # What is NOT asserted, and must never be
 ///
 /// **The p10 and the median.** Amendment D.4 is explicit: under both defects
@@ -1620,7 +1632,8 @@ fn the_drift_reachability_baseline() {
 ///
 /// A pure test over the four classifiers, costing no world build, because
 /// **the panel reaches exactly one arm of each** — `Intent`, `Intent`,
-/// `ModeIsOne`, `WouldReadTheIntent`. Without this the other eleven variants
+/// `ModeIsOne`, `WouldReadTheIntent`. The four enums declare **14** variants
+/// between them (4 + 3 + 3 + 4), so without this the other **ten**
 /// would be unexercised code asserting nothing, and a classifier that silently
 /// folded a gap into its passing arm would read as a healthy green forever.
 /// It is `stope_variety_probe.rs`'s

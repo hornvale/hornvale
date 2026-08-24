@@ -33,7 +33,7 @@ The `junctions` line counts the links between DIFFERENT cave systems that
 `junctions_at` derives at each shared delve band -- derived, not drawn: it
 consumes no stream leg OF ITS OWN, so a shortcut is a fact about the geology
 rather than a die roll on top of an epoch. (It does travel the legs the facts
-it reads already have -- an existence draw here, a branch character there --
+it reads already have -- a branch-count draw here, a branch character there --
 and an earlier version of this page dropped that qualifier and asserted the
 falsehood that it consumes no stream at all.) A link is an EDGE, counted once
 rather than once per endpoint; `largest network` is the largest component

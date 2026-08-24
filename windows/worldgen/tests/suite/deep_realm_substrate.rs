@@ -367,7 +367,11 @@ fn report_cave_substrate() {
 //    has a narrow relative spread by construction — structurally close to
 //    spec §7's falsification ("nothing about it differs by place"). This is
 //    tested, not assumed: measured mean/sd/CV are printed beside the
-//    theoretical Binomial values for every band that occurs.
+//    theoretical Binomial values for every band that occurs. **The coin was
+//    deleted by The Drift (spec §4.1) and this prediction is falsified; it is
+//    kept unretuned and the gap is printed on every run — see
+//    [`PREDICTED_EXISTENCE_DENSITY`]'s own doc for the measurement and for
+//    what actually produces the narrow spread now.**
 // 3. The depth-weld breakdown (ledger #16, `MAP-cave-depth-weld`). The same
 //    per-band grouping used for (2) is C2a's first real evidence for or
 //    against splitting the weld: uniform WITHIN a band but differing BETWEEN
@@ -445,6 +449,39 @@ const N_RADII: usize = 5;
 /// not a tunable: if the measured spread disagrees with the Binomial this
 /// constant predicts, that is a finding about the model, not a cue to edit
 /// this line.
+///
+/// # FALSIFIED BY THE DRIFT (spec §4.1, 2026-08-23) — AND NOT RETUNED
+///
+/// **The mechanism this constant names no longer exists.** `chamber_exists`'s
+/// sixth gate — `chamber_stream(..).next_f64() < EXISTENCE_DENSITY` — was
+/// deleted outright, not lowered, because it was punching random holes through
+/// a contiguous shape the five gates above it had already specified. So the
+/// per-address existence rate is not a coin any more, and the Binomial printed
+/// beside every measured row below is a prediction from a deleted model.
+///
+/// **The constant is left at 0.5 deliberately.** Editing it to agree with the
+/// measurement would be retuning a frozen prediction after unblinding, which
+/// is the thing preregistration exists to stop; the honest act is to record
+/// the falsification and keep printing both numbers so the gap is visible on
+/// every run. Measured 2026-08-23 over 30 seeds, floor-0 slice:
+///
+/// ```text
+///   rung        in-budget addrs   measured mean   predicted Bin(n, 0.5)
+///   Undercroft         4              1.6114            2.0000
+///   Shallows           8              3.1950            4.0000
+///   Deeps             12              4.7882            6.0000
+///   Underdeep         16              6.3664            8.0000
+///   Nadir             20              7.9912           10.0000
+/// ```
+///
+/// **The measured ratio is 0.403 / 0.399 / 0.399 / 0.398 / 0.400 — flat, and
+/// it is an authored constant rather than a draw.** With the coin gone the
+/// only per-address filter left at floor 0 is `branch < branch_count_of(..)`,
+/// and `branch_count_of`'s authored weights give a mean width of 1.60 against
+/// `BRANCHES_PER_SYSTEM = 4`, i.e. exactly **0.400**. The narrow relative
+/// spread the original prediction was reaching for survives; its *cause* is
+/// now a branch-width draw, not a coin flip, and a reader taking 0.5 as a
+/// description of shipped behaviour would be wrong by a fifth.
 /// type-audit: bare-ok(ratio)
 const PREDICTED_EXISTENCE_DENSITY: f64 = 0.5;
 
@@ -532,6 +569,14 @@ fn chamber_count_at(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell:
 /// chamber` measures) holds no chamber: spec §3.4 rung 0, `Sealed` — "the
 /// void exists and is unreachable." Task 5's `delve` refuses such a cave by
 /// naming it sealed rather than claiming there is nothing there.
+///
+/// **This returns `false` for every cave in every world since The Drift**
+/// (spec §4.1 and amendment B): a cave was sealed when its chambers lost
+/// their existence coin flips, and with the coin deleted every cave in shape
+/// realizes chambers. Measured 0 of 48,316 over 30 seeds. The predicate is
+/// kept rather than deleted because restricted passage is owed work
+/// (`MAP-restricted-passage`) and this is the instrument that will report it
+/// returning; a constant `false` today is a measurement, not dead code.
 fn is_sealed(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> bool {
     !chamber_exists(
         seed,
@@ -875,8 +920,9 @@ fn report_h2_depth_weld_and_reachability() {
     // ---- together — both read off the same per-band grouping. -------------
     println!();
     println!(
-        "== EXISTENCE_DENSITY = {PREDICTED_EXISTENCE_DENSITY} prediction (narrow relative \
-         spread, a coin flip per address) vs. the measured depth-weld breakdown, by delve rung =="
+        "== EXISTENCE_DENSITY = {PREDICTED_EXISTENCE_DENSITY} prediction — FALSIFIED by The \
+         Drift (spec §4.1 deleted the coin; see PREDICTED_EXISTENCE_DENSITY's doc), kept \
+         unretuned beside the measurement — vs. the measured depth-weld breakdown, by delve rung =="
     );
     let mut band_bucket_total = 0usize;
     for (idx, name) in RUNG_NAMES.iter().enumerate() {
@@ -972,7 +1018,9 @@ fn report_h2_depth_weld_and_reachability() {
         .count();
     println!();
     println!(
-        "== Sealed fraction (ledger #23): {total_sealed}/{total_caves} = {:.4} (predicted ~0.485) ==",
+        "== Sealed fraction (ledger #23): {total_sealed}/{total_caves} = {:.4} — the ~0.485 this \
+         ledger predicted is FALSIFIED: The Drift deleted the existence coin, so a sealed cave is \
+         IMPOSSIBLE rather than rare, and the descent verb lost an outcome (spec amendment B) ==",
         total_sealed as f64 / total_caves.max(1) as f64
     );
 

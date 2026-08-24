@@ -579,8 +579,12 @@ fn descending_from_an_earlier_floor_stays_in_the_band() {
                              descent — the next level of its own run"
                         );
                         let down = downs[0];
-                        // Only assert when the forced target cleared the same
-                        // existence coin every chamber faces.
+                        // Only assert when the forced target clears the
+                        // same gates every chamber faces. Those gates were
+                        // five structural ones plus a per-address existence
+                        // coin; The Drift deleted the coin (spec §4.1), so
+                        // this now skips only addresses the lattice, the
+                        // rock budget or the run's drawn length refuse.
                         if !chamber_exists(seed, &cave, fixture_gradient(), down) {
                             continue;
                         }
@@ -697,11 +701,12 @@ fn the_deepest_bands_last_floor_has_no_downward_neighbour() {
 ///    inside its own run's drawn length — checked through `levels_in_branch`,
 ///    never through a copied constant. The old rule failed THIS half: from
 ///    Deeps floor 15 it offered Underdeep floor 15, past that run's drawn 10.
-/// 2. **Graph**: when the target clears the same existence coin every
-///    chamber faces, `passages_from` offers it. The density draw may refuse
-///    the target — that is the ordinary per-address coin, not a structural
-///    gate — but a refused-by-the-draw target must never be the ONLY reason
-///    a descent is missing.
+/// 2. **Graph**: when the target clears the same gates every chamber faces,
+///    `passages_from` offers it. **The Drift (spec §4.1) deleted the
+///    per-address existence coin this clause was written around**, so the
+///    only refusals left are structural — the lattice ceiling, the rock's
+///    depth budget, the drawn branch width and the run's drawn length — and
+///    a refused target must never be the ONLY reason a descent is missing.
 ///
 /// claim: invariant(forall-seed) — every realized floor descends unless it
 /// ends the deepest band, over a hand-built lattice (audit §5: builds no world)
@@ -797,7 +802,20 @@ fn every_realized_floor_descends_unless_it_ends_the_deepest_band() {
 /// canonical entrance address (`branch = 0, band = 0, floor = 0`) has at most
 /// two lattice neighbours (`branch 1/band 0` and `branch 0/band 1`) plus needs to
 /// exist itself, so back-of-envelope under independence the reach rate is
-/// well under half (`0.5 * (1 - 0.5^2) = 0.375`). **Measured over 1000
+/// well under half (`0.5 * (1 - 0.5^2) = 0.375`).
+///
+/// **THAT PREDICTION IS FALSIFIED AND THE MECHANISM BEHIND IT IS DELETED**
+/// (The Drift, spec §4.1, 2026-08-23). There is no coin: `chamber_exists`
+/// admits every address inside the shape its five structural gates describe.
+/// Re-measured over the same 1000 probe caves, the entrance chamber exists in
+/// **1000/1000** and **all** of those reach a neighbour — 1.0000 against a
+/// predicted 0.375. The paragraph above is kept because the bar below was set
+/// from it and a bar's provenance is part of the bar; the figures in it are
+/// not currently-true claims about shipped code. **The bar is now saturated
+/// but not vacuous**: it is a coin-free structural 1.0, so it still falls if
+/// `passages_from` stops offering a reachable neighbour, which is the only
+/// thing it was ever measuring. Everything below this line is the original
+/// reading. **Measured over 1000
 /// probe entrances (seeds 1..=100 x 10 cells): 410/1000 = 0.4100** — close
 /// to that back-of-envelope prediction and comfortably nonzero, confirming
 /// the lattice is not systematically disconnected from its entrances. A
@@ -861,7 +879,10 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
     println!(
         "  NOTE: an entrance address holding NO chamber is spec §3.4 rung 0 — \
          `Sealed`, \"the void exists and is unreachable\" — not a defect. \
-         Task 5's `delve` must refuse such a cave BY NAMING IT sealed."
+         Task 5's `delve` must refuse such a cave BY NAMING IT sealed. \
+         SINCE THE DRIFT (spec §4.1) this rate is a structural 1.0000: the \
+         existence coin is gone, so a sealed cave is impossible rather than \
+         rare, and the descent verb ships with two outcomes (amendment B)."
     );
 
     assert!(
@@ -869,11 +890,15 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
         "0 of {probed} probe entrances reached any chamber — the lattice is \
          disconnected from every entrance"
     );
-    // The conditional rate is the one that actually measures connectivity,
-    // and it has a prediction: an existing entrance has at most two lattice
+    // The conditional rate is the one that actually measures connectivity.
+    // Its original prediction — an existing entrance has at most two lattice
     // neighbours, so under independence at EXISTENCE_DENSITY = 0.5 it should
-    // reach one with probability 1 - 0.5^2 = 0.75. A collapse here would mean
-    // adjacency is generating candidates that can never exist.
+    // reach one with probability 1 - 0.5^2 = 0.75 — is FALSIFIED: The Drift
+    // deleted the coin (spec §4.1) and the measured rate is 1.0000. The bar
+    // stays where it was set rather than being raised to meet the
+    // measurement, because raising it after unblinding is a retune; it still
+    // falls if adjacency starts generating candidates that cannot exist,
+    // which is the only thing it was ever measuring.
     assert!(
         conditional > 0.5,
         "only {conditional:.4} of EXISTING entrance chambers reach a \

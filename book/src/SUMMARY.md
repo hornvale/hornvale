@@ -393,6 +393,7 @@
 - [The Deed](./chronicle/the-deed.md)
 - [The Stope](./chronicle/the-stope.md)
 - [The Stride](./chronicle/the-stride.md)
+- [The Drift](./chronicle/the-drift.md)
 
 # Appendix: The Frontier
 

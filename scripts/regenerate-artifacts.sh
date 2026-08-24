@@ -689,7 +689,7 @@ gen_underworld_lattice() {
     printf '`junctions_at` derives at each shared delve band -- derived, not drawn: it\n'
     printf 'consumes no stream leg OF ITS OWN, so a shortcut is a fact about the geology\n'
     printf 'rather than a die roll on top of an epoch. (It does travel the legs the facts\n'
-    printf 'it reads already have -- an existence draw here, a branch character there --\n'
+    printf 'it reads already have -- a branch-count draw here, a branch character there --\n'
     printf 'and an earlier version of this page dropped that qualifier and asserted the\n'
     printf 'falsehood that it consumes no stream at all.) A link is an EDGE, counted once\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal

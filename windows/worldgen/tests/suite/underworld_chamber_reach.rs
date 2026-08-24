@@ -88,11 +88,43 @@
 //! (`Undercroft` 1–5, `Shallows` 3–10, `Deeps` 5–20, `Underdeep` 5–10, `Nadir`
 //! 1–5), so **floor 0 exists in every run that exists at all** and the
 //! floor-0 slice is invariant under the draw by construction. What moved is
-//! everything above it: `how_many_floors_does_a_run_realize` measures the
+//! everything above it: `how_many_floors_does_a_run_realize` measured the
 //! unsliced population at **42.8 / 43.6 / 49.2 realized chambers per cave**,
 //! against the ~128 the ceiling was standing in for — a **3.0×/3.0×/2.6×
 //! reduction**. Read the two readouts together or the first one will tell you
 //! nothing happened.
+//!
+//! ## RE-READ, 2026-08-23 (The Drift) — every figure ABOVE is pre-Drift
+//!
+//! Two of this file's standing claims are falsified and neither test went red,
+//! because this probe asserts only vacuity guards. Re-run at close:
+//!
+//! ```text
+//! seed 42:   rung hist=[77, 131, 399, 53, 214]  addr 12.897 | realized 4512  (5.162/cave)
+//! seed 7:    rung hist=[84, 599, 121, 150, 727] addr 13.992 | realized 9353  (5.564/cave)
+//! seed 1234: rung hist=[91, 144, 366, 129, 536] addr 14.765 | realized 7372  (5.823/cave)
+//! ```
+//!
+//! **The control still does its job and the reading it gives is the opposite
+//! of the one above.** Both arms' histograms and both addressable means are
+//! byte-identical across four epochs now — terrain has not moved and a cave's
+//! REACH has not moved — while `realized / addressable` fell from **~0.500 to
+//! 0.400 / 0.398 / 0.394**. That is not the coin drifting; The Drift deleted
+//! the coin (spec §4.1), so the only per-address filter left at floor 0 is
+//! `branch < branch_count_of(..)`, whose authored weights give a mean width of
+//! 1.60 against `BRANCHES_PER_SYSTEM = 4` — exactly **0.400**. **So every
+//! sentence below reading "still `EXISTENCE_DENSITY = 0.5`" describes a
+//! constant that no longer exists**, and the ratio it names now measures a
+//! branch-width draw.
+//!
+//! The unsliced population moved too, and downward rather than up: the
+//! per-system realized median is **34 / 35 / 38** against the 42.8 / 43.6 /
+//! 49.2 quoted above. Two changes push in opposite directions and the second
+//! wins — deleting the coin roughly doubles what a realized branch contains,
+//! while amendment A.3 collapses four per-entrance sublattices into one
+//! lattice per system. **Absolute chamber counts are therefore not comparable
+//! across The Drift**, which is amendment A.5's own warning; the comparable
+//! quantity is the per-system reachable *share*, and it is 100.00%.
 //!
 //! The "after" arm was re-taken when review's finer re-bin moved
 //! `DEEPS_TOP_K` from 10 K to 8 K (see that constant's own doc). The earlier
