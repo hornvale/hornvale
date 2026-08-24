@@ -2593,3 +2593,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T17:56:47Z | gate-commit | 23.238 | 17.899 | 4.558 | 0.97 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T17:57:22Z | gate-commit | 15.588 | 16.913 | 4.279 | 1.36 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T17:58:08Z | gate-commit | 36.874 | 120.745 | 23.232 | 3.90 | 0 | 834fb910d | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T18:08:00Z | gate-commit | 122.306 | 811.765 | 64.859 | 7.17 | 0 | 600bf2a3c | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T18:09:06Z | rebaseline | 60.420 | 231.663 | 11.306 | 4.02 | 0 | b16381579 | campaign/the-lexicon-of-place | MacBookPro | 10 |
