@@ -4,7 +4,7 @@
 //! composes both into a coloured [`hornvale_scene::SurroundsScene`], but
 //! neither knows the other exists.
 
-use crate::liveness::Npc;
+use crate::body::Body;
 use hornvale_astronomy::{Calendar, StdDays};
 use hornvale_kernel::color::{BANDS, Illuminant, Observer};
 use hornvale_kernel::{World, WorldTime};
@@ -39,7 +39,7 @@ pub enum Eyes {
 /// generation never guesses (spec §4.6): an unknown name colours nothing
 /// rather than falling back to a default eye.
 /// type-audit: bare-ok(identifier-text: return)
-pub fn resolve(eyes: &Eyes, npc: &Npc) -> Option<(Observer, String)> {
+pub fn resolve(eyes: &Eyes, npc: &Body) -> Option<(Observer, String)> {
     match eyes {
         Eyes::Own => Some((
             hornvale_worldgen::observer::observer_for(&npc.perception),

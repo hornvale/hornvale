@@ -4,8 +4,8 @@
 //! projection already absorbs on every visit, so a possession that draws the
 //! chart is byte-identical to one that never does.
 
+use crate::body::Body;
 use crate::eyes::Eyes;
-use crate::liveness::Npc;
 use crate::{Knowledge, VesselError, liveness};
 use hornvale_astronomy::Calendar;
 use hornvale_kernel::{Ledger, RoomAddr, RoomId, World, WorldTime};
@@ -13,7 +13,7 @@ use hornvale_locale::LocaleContext;
 use hornvale_scene::{Mark, Sight, SurroundsScene, surrounds_scene_colored_in, surrounds_scene_in};
 
 /// The chart's sense radius, in BFS rings. A constant this slice; the seam
-/// for a per-species radius is `Npc::perception` (EXP-3), untouched here.
+/// for a per-species radius is `Body::perception` (EXP-3), untouched here.
 /// type-audit: bare-ok(count)
 pub const PURVIEW_RADIUS: u32 = 4;
 
@@ -81,17 +81,17 @@ pub fn purview_scene(
     ctx: &LocaleContext,
     position: &RoomAddr,
     knowledge: &Knowledge,
-    // `&[&Npc]`, not `&[Npc]` (The Hand, Task 4 fix round 1): this
+    // `&[&Body]`, not `&[Body]` (The Hand, Task 4 fix round 1): this
     // function's only caller (`Session::purview_through`) now sources this
     // from `other_bodies`, which returns borrows into the session's own
     // roster rather than a contiguous owned slice, since `driven` can name
     // any index. This is the function's only call site in the workspace,
     // so widening it costs nothing elsewhere.
-    npcs: &[&liveness::Npc],
+    npcs: &[&Body],
     ledger: &Ledger,
     at: WorldTime,
     zoom_out: u32,
-    agent: &Npc,
+    agent: &Body,
     eyes: &Eyes,
     calendar: Option<&Calendar>,
 ) -> Result<SurroundsScene, VesselError> {

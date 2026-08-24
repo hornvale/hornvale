@@ -2,7 +2,7 @@
 //! to this agent. Refinement steps 1 and 6 only — no elaboration.
 
 use crate::VesselError;
-use crate::liveness::Npc;
+use crate::body::Body;
 use hornvale_kernel::{RoomAddr, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext};
 use hornvale_settlement::VillageInfo;
@@ -34,7 +34,7 @@ pub struct Vantage {
 pub fn observable(
     world: &World,
     ctx: &LocaleContext,
-    npc: &Npc,
+    npc: &Body,
     position: &RoomAddr,
     at: WorldTime,
 ) -> Result<Vantage, VesselError> {
@@ -67,7 +67,7 @@ pub fn submerged_in(stratum: Option<hornvale_climate::Stratum>) -> bool {
 pub fn observable_at(
     world: &World,
     ctx: &LocaleContext,
-    npc: &Npc,
+    npc: &Body,
     position: &RoomAddr,
     at: WorldTime,
     stratum: Option<hornvale_climate::Stratum>,

@@ -6,6 +6,7 @@
 pub mod action;
 mod agent;
 pub mod band;
+pub mod body;
 pub mod brief;
 pub mod chamber_prose;
 pub mod clock;

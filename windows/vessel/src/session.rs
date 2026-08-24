@@ -3,12 +3,13 @@
 
 use crate::action::{Action, Mood};
 use crate::agent::check_species_known;
+use crate::body::Body;
 use crate::clock::{climb_factor, cost_ticks, days_of, mass_for_species};
 use crate::controller::PlayerController;
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, Mode, Npc, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain,
     affect_of_memo_occupied, agent_at_fact, agent_position, built_rooms, derive_npcs,
     derive_wild_npcs, next_awake_day, rested_fact, species_activity, village_or_fallback,
 };
@@ -517,7 +518,7 @@ pub struct Session<'w> {
     /// every field that matters). What `self.agent`/`self.npcs` used to split
     /// into "the possessed one" and "the others" is now one list plus an
     /// index.
-    bodies: Vec<Npc>,
+    bodies: Vec<Body>,
     /// Which element of `bodies` is being driven. `derive_npcs`'s
     /// `ordered_for_derivation` step hoists the settlement-anchored roster's
     /// own body to index `0`, and every `PossessTarget` before Task 4 drove
@@ -800,7 +801,7 @@ enum Perceiving {
 /// handle between the old and new driven slots, a user-visible regression
 /// no test caught until spec review measured it directly
 /// (`possessing_a_creature_does_not_renumber_other_bodies_handles`).
-fn other_bodies(bodies: &[Npc], driven: usize) -> Vec<&Npc> {
+fn other_bodies(bodies: &[Body], driven: usize) -> Vec<&Body> {
     bodies
         .iter()
         .enumerate()
@@ -1050,7 +1051,7 @@ impl<'w> Session<'w> {
     /// The body being driven (read-only) — a member of [`Self::bodies`], not
     /// a second, separately-minted representation of the same villager (The
     /// Hand, Task 3). Replaces the pre-Hand `Session::agent()`.
-    pub fn driven_body(&self) -> &Npc {
+    pub fn driven_body(&self) -> &Body {
         &self.bodies[self.driven]
     }
 
@@ -1058,7 +1059,7 @@ impl<'w> Session<'w> {
     /// asserts a specific body committed by reading this alongside
     /// [`Self::agent_entity`]; `windows/vessel/tests/suite/one_roster.rs`
     /// asserts the driven body appears exactly once in it.
-    pub fn bodies(&self) -> &[Npc] {
+    pub fn bodies(&self) -> &[Body] {
         &self.bodies
     }
 
@@ -1189,10 +1190,10 @@ impl<'w> Session<'w> {
         // `band` is cloned ONCE here, outside the `.map()` below, rather than
         // re-derived per creature: `other_bodies` (The Hand, Task 4 fix round
         // 1) now filters and allocates rather than slicing a fixed front, and
-        // `affect_of_memo_occupied`'s `band: &[Npc]` — shared with
+        // `affect_of_memo_occupied`'s `band: &[Body]` — shared with
         // `windows/lab`'s health metric, so not a signature this scope can
-        // narrow to `&[&Npc]` alone — needs owned data to borrow from.
-        let band: Vec<Npc> = other_bodies(&self.bodies, self.driven)
+        // narrow to `&[&Body]` alone — needs owned data to borrow from.
+        let band: Vec<Body> = other_bodies(&self.bodies, self.driven)
             .into_iter()
             .cloned()
             .collect();
@@ -3897,7 +3898,7 @@ impl<'w> Session<'w> {
             Some(&mesh_snapshot),
         );
         let sys = DriveMovements {
-            // `DriveMovements.npcs: Vec<Npc>` is a widely-shared field
+            // `DriveMovements.npcs: Vec<Body>` is a widely-shared field
             // (28+ construction sites across `windows/vessel`/`windows/lab`),
             // so this clones out of `other_bodies`'s borrows rather than
             // widening that struct.
@@ -4447,11 +4448,11 @@ impl<'w> Session<'w> {
     /// `ExcludeFromWhoElse`-like marker, served by an indexed query and
     /// iterated as an array (the Infocom/Inform scenery-flag pattern). That
     /// is Penstock-lineage work, not this task's.
-    fn colocated_npcs(&self) -> Vec<&Npc> {
+    fn colocated_npcs(&self) -> Vec<&Body> {
         // `.into_iter()`, not `.iter()`: `other_bodies` returns an owned
-        // `Vec<&Npc>` now (The Hand, Task 4 fix round 1), so `.into_iter()`
-        // yields `&Npc` directly — `.iter()` would yield `&&Npc` and this
-        // could no longer collect into `Vec<&Npc>`.
+        // `Vec<&Body>` now (The Hand, Task 4 fix round 1), so `.into_iter()`
+        // yields `&Body` directly — `.iter()` would yield `&&Body` and this
+        // could no longer collect into `Vec<&Body>`.
         other_bodies(&self.bodies, self.driven)
             .into_iter()
             .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.position())
@@ -4509,7 +4510,7 @@ impl<'w> Session<'w> {
     /// `sighting()` and this predicate called with `None`. The
     /// out-of-character halves take exactly the limit the sentence above
     /// already describes, so every row of the table holds under both moods.
-    fn sensed_npcs(&self, sighting: Option<&Sighting>) -> Vec<&Npc> {
+    fn sensed_npcs(&self, sighting: Option<&Sighting>) -> Vec<&Body> {
         self.colocated_npcs()
             .into_iter()
             .filter(|npc| {
@@ -4531,7 +4532,7 @@ impl<'w> Session<'w> {
     /// `sensed_npcs` exists at all: three copies of a perception rule is how
     /// a verb and a channel come to disagree about who the possession can
     /// see, which is the defect The Sighting spent four fix rounds closing.
-    fn perceived_npcs(&self, how: Perceiving) -> Vec<&Npc> {
+    fn perceived_npcs(&self, how: Perceiving) -> Vec<&Body> {
         match how {
             Perceiving::Body => self.sensed_npcs(self.sighting().as_ref()),
             // `sensed_npcs`' own filter with nothing to filter ON — exactly
@@ -4571,7 +4572,7 @@ impl<'w> Session<'w> {
     ///
     /// The unplaced row of `sensed_npcs`' table holds here as everywhere: a
     /// creature the embedding could not place is sensed, so it stays provokable.
-    fn colocated_npc(&self, who: &str) -> Option<&Npc> {
+    fn colocated_npc(&self, who: &str) -> Option<&Body> {
         let here = self.sensed_npcs(self.sighting().as_ref());
         let who = who.trim();
         if who.is_empty() {
@@ -4580,9 +4581,9 @@ impl<'w> Session<'w> {
         who.parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
-            // `.copied()`: `other_bodies` (now an owned `Vec<&Npc>`, The Hand,
+            // `.copied()`: `other_bodies` (now an owned `Vec<&Body>`, The Hand,
             // Task 4 fix round 1) is a temporary here, and `.get()` on it
-            // borrows from that temporary — `.copied()` copies the `&Npc` it
+            // borrows from that temporary — `.copied()` copies the `&Body` it
             // holds out before the temporary Vec drops, rather than trying to
             // return a reference into it.
             .and_then(|n| other_bodies(&self.bodies, self.driven).get(n - 1).copied())
@@ -4694,9 +4695,9 @@ impl<'w> Session<'w> {
         let mut home_nav_cache = HomeNavCache::new();
         // Cloned once, outside the `.map()` below — see `snapshot`'s
         // identical comment on why (`other_bodies` now allocates, and
-        // `affect_of_memo_occupied`'s shared `band: &[Npc]` needs owned data
+        // `affect_of_memo_occupied`'s shared `band: &[Body]` needs owned data
         // to borrow from).
-        let band: Vec<Npc> = other_bodies(&self.bodies, self.driven)
+        let band: Vec<Body> = other_bodies(&self.bodies, self.driven)
             .into_iter()
             .cloned()
             .collect();

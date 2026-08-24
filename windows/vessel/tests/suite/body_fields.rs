@@ -79,7 +79,7 @@ fn a_derived_creature_carries_its_species_perception_and_its_village() {
 /// not either), so any value works; `first.entity` is used because it is
 /// the natural one on hand. The brief also compared `first.village.id` to
 /// `minted.village.id` directly — stale against Task 1, which made
-/// `Npc.village` an `Option<VillageInfo>`.
+/// `Body.village` an `Option<VillageInfo>`.
 #[test]
 fn the_flagship_body_and_the_first_derived_creature_are_the_same_body() {
     let (world, ctx) = seed_42();

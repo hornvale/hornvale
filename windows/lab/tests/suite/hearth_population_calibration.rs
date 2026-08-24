@@ -161,9 +161,10 @@ use hornvale_kernel::{
 use hornvale_lab::health::{AffectTrace, health_report, run_simulation};
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, MetabolicClass};
+use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, EATEN, LocaleTerrain, Npc, RESTED, Terrain, ThreatNiche, built_rooms,
-    derive_npcs, place_agent,
+    AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, Terrain, ThreatNiche, built_rooms, derive_npcs,
+    place_agent,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -374,8 +375,8 @@ const WARM_BUILT_C: f64 = 20.0;
 /// defaults `synthetic.rs`'s own `creature` helper uses — duplicated rather
 /// than shared because that helper is private to its module and this file's
 /// niche varies per scenario, not per call site.
-fn creature(entity: EntityId, home: RoomAddr, species: &str, niche: ConditionResponse) -> Npc {
-    Npc {
+fn creature(entity: EntityId, home: RoomAddr, species: &str, niche: ConditionResponse) -> Body {
+    Body {
         entity,
         home: home.clone(),
         resource: home,
@@ -422,7 +423,7 @@ fn creature(entity: EntityId, home: RoomAddr, species: &str, niche: ConditionRes
 /// two runs it is reduced under).
 fn subgroup_report(
     idx: &[usize],
-    npcs: &[Npc],
+    npcs: &[Body],
     traces: &[Vec<hornvale_vessel::liveness::Affect>],
 ) -> hornvale_lab::health::HealthReport {
     let group: Vec<AffectTrace> = idx
@@ -456,7 +457,7 @@ fn planted_registry() -> ConceptRegistry {
 struct PlantedPopulation {
     ledger: Ledger,
     registry: ConceptRegistry,
-    npcs: Vec<Npc>,
+    npcs: Vec<Body>,
     cold_idx: Vec<usize>,
     warm_idx: Vec<usize>,
     fresh: BTreeSet<RoomAddr>,

@@ -18,7 +18,8 @@
 //! and `PlayerController` can override it without needing to re-derive it.
 
 use crate::action::Action;
-use crate::liveness::{Intent, Npc, Resolution};
+use crate::body::Body;
+use crate::liveness::{Intent, Resolution};
 
 /// One tick's decision-maker for one body: given the [`Resolution`] the
 /// body's own arbitration ALREADY reached this tick (its mode, its affect,
@@ -34,7 +35,7 @@ use crate::liveness::{Intent, Npc, Resolution};
 pub trait Controller {
     /// The intent this controller has for `body`, given the resolution its
     /// own arbitration already reached this tick.
-    fn intend(&mut self, body: &Npc, resolution: &Resolution) -> Intent;
+    fn intend(&mut self, body: &Body, resolution: &Resolution) -> Intent;
 }
 
 /// GOAP, demoted to "the default controller" (The Bridle's own phrasing,
@@ -48,7 +49,7 @@ pub trait Controller {
 pub struct DefaultController;
 
 impl Controller for DefaultController {
-    fn intend(&mut self, _body: &Npc, resolution: &Resolution) -> Intent {
+    fn intend(&mut self, _body: &Body, resolution: &Resolution) -> Intent {
         resolution.intent.clone()
     }
 }
@@ -92,7 +93,7 @@ impl PlayerController {
 }
 
 impl Controller for PlayerController {
-    fn intend(&mut self, _body: &Npc, _resolution: &Resolution) -> Intent {
+    fn intend(&mut self, _body: &Body, _resolution: &Resolution) -> Intent {
         match self.pending.take() {
             Some(action) => Intent::Do(action),
             None => Intent::Hold,

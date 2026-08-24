@@ -1,7 +1,7 @@
 //! Settlement-selection helpers for a possession (The Hand, Task 3): which
 //! settlement a session drives from, and the walk-band depth every derived
 //! body shares. There is no `Agent` type here any more — `Session` drives a
-//! member of its own derived roster (a [`crate::liveness::Npc`]) rather than
+//! member of its own derived roster (a [`crate::body::Body`]) rather than
 //! a second, separately-minted representation of the same villager.
 
 use crate::VesselError;

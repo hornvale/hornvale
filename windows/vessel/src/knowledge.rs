@@ -206,7 +206,7 @@ mod tests {
     fn seam_body(
         world: &World,
         ctx: &LocaleContext,
-    ) -> (crate::liveness::Npc, hornvale_kernel::RoomAddr) {
+    ) -> (crate::body::Body, hornvale_kernel::RoomAddr) {
         let village = hornvale_settlement::village_info(world).expect("seed 42 has a flagship");
         let entity = EntityId::new(1).expect("1 is a valid nonzero entity id");
         let npc = crate::liveness::body_at(world, ctx, &village, entity);
