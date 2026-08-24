@@ -101,6 +101,13 @@ can say the word.
 
 ### Rung 2 — THE SOURCES: an energy field over the rock
 
+**`BIO-subterranean-energy-sources` does not exist on `main`.** It is added by
+`campaign/the-winze`, unmerged as of this writing, and verified absent from
+this branch's registry. Every reference to it here is a forward reference; if
+The Winze is abandoned, rung 2 must author the row itself rather than assume
+it. Nothing mechanical catches this — the drift check resolves LINKS, and a
+registry ID named in prose under `docs/` resolves against nothing.
+
 The six sources of §3.2, keyed on lithology, producing a per-place energy
 quantity. Moves `Chemotrophic` from `Declared` to `Witnessed`. **Unblocks
 hydrothermal vents at the same time** — the surface half of the same defect,
