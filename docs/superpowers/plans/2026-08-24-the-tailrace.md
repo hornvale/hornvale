@@ -180,7 +180,9 @@ Spec §4 establishes that `drive_at` is proportional to its history and that the
   - `hazard_memory_memo(&Ledger, &Body, WorldTime, &dyn Terrain, &[Body], &mut PrimaryAfraidMemo) -> HazardMemory`
 - Produces: the attribution table stage 4's gate reads.
 
-`Body` is private to the crate, so it cannot be *named* in the example — but a `&Body` obtained from `derive_npcs`'s returned roster can be *passed*, which is all these need. `build_emitter_scan` is private and unreachable directly; it is reached through `hazard_memory_memo`, so timing that covers it. Say so in the report rather than reporting it as unmeasured.
+`Body` **is** public and nameable, at `hornvale_vessel::body::Body` — `pub struct` in `windows/vessel/src/body.rs:15` behind `pub mod body` (`lib.rs:9`). An earlier draft of this plan said it was "private to the crate"; that was wrong, and the mistake is worth recording because of how it was made. `hornvale_vessel::liveness::Body` does fail with "struct `Body` is private", and that error is about a **path**, not about the **type**. Concluding the second from the first is the cheaper-neighbour inference this project has been bitten by before. Import it from `body`.
+
+`build_emitter_scan` is genuinely private and unreachable directly; it is reached through `hazard_memory_memo`, so timing that covers it. Say so in the report rather than reporting it as unmeasured.
 
 - [ ] **Step 1: Read the existing probe**
 
