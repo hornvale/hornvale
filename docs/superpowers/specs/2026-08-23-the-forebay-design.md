@@ -194,6 +194,48 @@ what comes next, and §6.5's N×M argument says the ledger-derived column
 becomes hot when belief or the social graph lands. What Task 1 forbids is
 *claiming* a win this campaign did not measure.
 
+### 4.1 The measurement, and which headline it selects
+
+The wire route to `campaign/the-hand` failed (a cross-session message expired
+unapproved), and the board `ask`
+(`thread=forebay-memo-hitrate-readout`, post `f62af82f2`) went unanswered
+through the end of this task — the plan's designated fallback, not the
+preferred branch. So the number below comes from a **kernel-side synthetic
+probe**, `kernel/examples/room_mesh_memo_hitrate.rs`, not from
+`agent_scaling.rs` itself.
+
+**The instrument's weakness, stated once so it cannot be read past.** The
+probe's access pattern — creatures returning to a home address across
+"expeditions," wandering a bounded random walk between returns, clustered
+into a handful of settlement anchors — is *invented* to be locality-shaped
+(the one property this question needs), not observed from
+`windows/vessel`'s actual movement code, creature density, or tick
+structure. **The number below is evidence about the store's structural
+ceiling, not a measurement of `agent_scaling.rs`.** It answers "can a
+locality-shaped access pattern make this memo's reuse high?", not "does the
+real workload's memo see this hit rate."
+
+| metric | value | source |
+|---|---|---|
+| `corner_weights` hit rate | **96.2%** (42,335 hits / 44,000 lookups) | `kernel/examples/room_mesh_memo_hitrate.rs`, synthetic locality-shaped walk, 100 creatures × 40 expeditions × 11 visits/expedition, deterministic (reproduced byte-identical across two runs) |
+| `neighbors` hit rate | **96.2%** (42,335 hits / 44,000 lookups) | same probe, same run — identical because both halves are keyed by the same visited `RoomAddr` sequence |
+
+**Which headline this selects: the second row of the table above.** A 96.2%
+hit rate under a pattern *designed* to be reuse-friendly is the "hit rate is
+already high; the residual is misses" branch — the store is very likely
+built for the mature workload rather than retiring a large share of today's
+13.4%. This campaign does **not** claim the migration is the win; it claims
+the store is built for generality (§6.6's direction) while an honest
+follow-up — a faster `scan_at`, or a reachable-set prefill — is what would
+address the residual 13.4% if it is genuinely miss-bound, exactly as the
+table's second consequence column already names. §10's first falsifier ("the
+memo's hit rate is already near-total and the residual is pure miss cost")
+is the closer read of this result, though it is read off a synthetic
+distribution and not the bench itself, so it is corroborating rather than
+conclusive: a future campaign with access to `agent_scaling.rs` (once
+`windows/vessel` frees) should still take the real reading before treating
+this as settled.
+
 A second, cheaper instrument finding to confirm: `agent_scaling.rs` clones the
 whole memo every tick (`let mesh_snapshot = mesh_memo.clone();`) to satisfy a
 borrow. With `malloc`+`memcpy` at 33.3% of that bench, a full `BTreeMap` clone
