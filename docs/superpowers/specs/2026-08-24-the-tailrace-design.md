@@ -383,8 +383,12 @@ here the five history-proportional folds separate sharply. All ratios below
 are the same method throughout: the ratio of each fold's own final-band raw
 µs/call to `drive_at`'s own final-band raw µs/call, run by run across the
 four runs — stated explicitly so a reader can recompute it from the table
-above rather than trust it.** At the final band, `hunger_at` costs almost
-exactly what `drive_at` costs across every run (within ~1–30% of it — the two
+above rather than trust it.** At the final band, `hunger_at` costs close to
+what `drive_at` costs across every run (within 0.7–34% of it — run by run:
+2375.58/1772.14=1.34, 770.26/764.55=1.01, 770.28/809.35=0.95,
+1018.29/1011.08=1.01, so three of four runs sit within 1% while run 1 is the
+outlier at 34% — fix round 3 correction: an earlier draft rounded this to
+"~1–30%", a range that undersold run 1's actual deviation) — the two folds
 are structural twins over the same `integrate_thirst` machinery, differing
 only in which predicate resets the fold, so this is the expected result, not
 a surprise).
@@ -420,7 +424,7 @@ task's own probe functions already print at every band, in every run — the
 `seen` set `believed_water`/`shared_believed_water` fold over is empty
 throughout this entire run, so `plan_to_room` is called **zero times** for
 this probe. Candidate 1 (the per-posting vs. per-segment terrain-check
-count) is therefore the sole applicable explanation for the 5–7× figures
+count) is therefore the sole applicable explanation for the 5.0–6.7× figures
 measured here. Candidate 2 remains a real, unmeasured cost for a
 DIFFERENT — better-water-located — agent: this task did not measure a probe
 that ever finds water, so it cannot say how much `plan_to_room` would add for
@@ -601,36 +605,51 @@ table is wrong; §4's own module doc already documents this class of run-to-
 run scatter at microsecond scale.
 
 **A rule that reads a mechanical "first interval past 1.5" is more brittle
-than the underlying question needs, so the robust statement is a
-central-difference interpolation across BOTH tables instead of a single
-bracket.** Interpolating (in log-depth, between each interval's own
+than the underlying question needs, so the robust statement interpolates
+each table separately rather than asserting one shared value across both —
+fix round 3 correction: an earlier draft of this paragraph asserted "H ≈ 190
+under both tables," relayed rather than independently recomputed, and it was
+wrong.** Interpolating (in log-depth, between each interval's own
 geometric-mean representative point) for where local elasticity crosses
-exactly 1.5 lands near **H ≈ 190 under both tables** — inside the 100–320
-window either way, regardless of which table supplies the bracket. **The
-claim this task can actually support is therefore "the crossover sits on the
-order of a couple of hundred facts of single-reset history"** — not a
-specific bracket, and not the more precise-sounding "H=322 sits almost
-exactly at the upper edge of the 100–320 window" framing the original
-submission used, which was an artifact of applying the bracket rule to one
-of the two available tables rather than a robust reading of both.
+exactly 1.5, computed separately per table:
 
-This bound is what reconciles the two instruments, and the campaign-level
-conclusion survives however the crossover is stated precisely: **a crossover
-around a couple of hundred facts per agent means a production agent enters
-the quadratic regime early in an ordinary session, not late.**
-`fold_depth_sweep.rs`'s `320` depth already reads 31.7–32.0 µs/call
-(single-reset, both tables) against the periodic sweep's 8.1–10.6 µs/call at
-the same depth — a real and growing gap — and Task 2's own probe agent, over
-a real 200-tick session, reached `H = 322`, inside that same couple-hundred-
-fact window. Its own measured elasticity (median ≈0.98, ranging 0.18–1.33
-across four runs) reading close to but not cleanly at 1.0 is consistent with
-sitting near a bend in the curve rather than safely below it, without this
-task asserting a more specific position on that curve than the data
-supports. Both `fold_depth_sweep.rs`'s ~2.0 at depth ≥1,000 and
-`session_length_scaling.rs`'s figures at depth ≤322 are correct readings of
-the SAME `a·H + b·H²` mechanism — they differ because they sample different
-windows of the same curve. Neither instrument is wrong, and this is precisely
-the shape §4's own model (`ms/tick = C + k·h`, an affine fit with no single
+- **Round 1: H ≈ 146** (crossing between the 32→100 point at elasticity
+  1.190 and the 100→320 point at elasticity 1.567).
+- **Round 2: H ≈ 189** (crossing between the 100→320 point at elasticity
+  1.485 and the 320→1,000 point at elasticity 1.795).
+
+That is a real ~30% gap between the two re-measurements, not one shared
+figure — the same run-to-run scatter this section's own table already shows
+in the raw local elasticities. **The claim this task can actually support is
+a range, not a point: the crossover sits at roughly H ≈ 146–189 facts of
+single-reset history, depending on which run's table supplies it.** Both
+values sit inside the same 100–320 window identified above, and both are
+"a couple of hundred facts," not a hundredfold or a thousandfold different
+figure — which is the part that is actually robust, and the part the
+original "H=322 sits almost exactly at the upper edge of the 100–320 window"
+framing overstated by asserting a single precise position rather than a
+range.
+
+This bound is what reconciles the two instruments, and **the campaign-level
+conclusion is unchanged by the round-3 correction above, and does not depend
+on the precise crossing point: a crossover at a couple of hundred facts per
+agent means a production agent enters the quadratic regime early in an
+ordinary session, not late.** `fold_depth_sweep.rs`'s `320` depth already
+reads 31.7–32.0 µs/call (single-reset, both tables) against the periodic
+sweep's 8.1–10.6 µs/call at the same depth — a real and growing gap — and
+Task 2's own probe agent, over a real 200-tick session, reached `H = 322`:
+past both tables' own interpolated crossing (146 and 189), not merely near
+it, though still the same order of magnitude — a couple of hundred facts,
+not a thousand or ten thousand. Its own measured elasticity (median ≈0.98,
+ranging 0.18–1.33 across four runs) reading close to but not cleanly at 1.0
+is consistent with sitting near, at, or just past that bend rather than
+safely below it, without this task asserting a more specific position on
+that curve than the data supports. Both `fold_depth_sweep.rs`'s ~2.0 at
+depth ≥1,000 and `session_length_scaling.rs`'s figures at depth ≤322 are
+correct readings of the SAME `a·H + b·H²` mechanism — they differ because
+they sample different windows of the same curve. Neither instrument is
+wrong, and this is precisely the shape §4's own model (`ms/tick = C + k·h`,
+an affine fit with no single
 power-law exponent) already warned a naive log-log read would misrepresent.
 
 This also connects to the selection-effect finding directly above: the
