@@ -160,58 +160,85 @@ Informative, never a gate."
 
 ---
 
-### Task 2: Attribute the history term across the six folds
+### Task 2: Attribute the history term across the six folds, by direct timing
 
 Spec §4 establishes that `drive_at` is proportional to its history and that the history term is 70–80% of a tick. It does not say which of the other five folds carry the rest. Stage 4's entry gate is exactly that answer.
 
+**This task originally specified a `samply` profile and no longer does — see the ruling below.** It extends `session_length_scaling.rs`'s existing probe technique across all six folds instead.
+
 **Files:**
+- Modify: `windows/vessel/examples/session_length_scaling.rs`
 - Modify: `docs/superpowers/specs/2026-08-24-the-tailrace-design.md` (§4, adding the attribution)
 
 **Interfaces:**
-- Consumes: Task 1's confirmation that the history term is real.
+- Consumes: the existing `probe_fold_us` and `Band` machinery in `session_length_scaling.rs`, and its `npcs: Vec<Body>` roster. All six folds are `pub` in `hornvale_vessel::liveness`, with these signatures (verified against source):
+  - `drive_at(&Ledger, EntityId, &RoomAddr, WorldTime, &DriveParams, &dyn Terrain, MetabolicClass) -> f64` — already probed
+  - `hunger_at(&Ledger, EntityId, &RoomAddr, WorldTime, &dyn Terrain, MetabolicClass) -> f64`
+  - `fatigue_at(&Ledger, EntityId, WorldTime) -> f64`
+  - `believed_water(&Ledger, &Body, WorldTime, &dyn Terrain, usize) -> Option<RoomAddr>`
+  - `shared_believed_water(&Ledger, &Body, &[Body], WorldTime, &dyn Terrain, usize) -> Option<RoomAddr>`
+  - `hazard_memory_memo(&Ledger, &Body, WorldTime, &dyn Terrain, &[Body], &mut PrimaryAfraidMemo) -> HazardMemory`
 - Produces: the attribution table stage 4's gate reads.
 
-- [ ] **Step 1: Build the profiling binary**
+`Body` is private to the crate, so it cannot be *named* in the example — but a `&Body` obtained from `derive_npcs`'s returned roster can be *passed*, which is all these need. `build_emitter_scan` is private and unreachable directly; it is reached through `hazard_memory_memo`, so timing that covers it. Say so in the report rather than reporting it as unmeasured.
+
+- [ ] **Step 1: Read the existing probe**
+
+Read `probe_fold_us` in `windows/vessel/examples/session_length_scaling.rs` and the band loop that calls it. You are adding five siblings alongside it, following the same shape: a fixed probe agent, `FOLD_REPS` back-to-back calls, a consumed result so nothing is optimised away, and normalisation by the same `calibrate()` yardstick.
+
+- [ ] **Step 2: Add one probe per fold**
+
+Write one `probe_*_us` function per fold, each timing `FOLD_REPS` back-to-back calls on the same fixed probe agent the existing `drive_at` probe uses. Consume every result (the existing probe's `if sink < 0.0` guard is the pattern — a branch the compiler cannot prove is never taken).
+
+`shared_believed_water` and `hazard_memory_memo` need a band/roster slice: pass the whole roster, which is what `step_with_occupancy` does and therefore what production cost looks like. `hazard_memory_memo` needs a `&mut PrimaryAfraidMemo` — construct a **fresh** one per probe call, because a memo shared across `FOLD_REPS` calls would measure the memo's hit rate rather than the fold, and that would silently read as the fold being nearly free.
+
+Extend `Band` with one field per fold plus its normalised twin, following the existing `fold_us`/`norm_fold_us` pair exactly.
+
+- [ ] **Step 3: Report each fold's own elasticity**
+
+Print one row per fold: its µs/call at the first and last warm band, its `k`, its `r²`, and its elasticity against **the probe agent's own history** (the existing `probe_history` column). Reuse `report_affine`.
+
+The elasticity is the attribution: a fold at ~1.0 walks history, a fold at ~0.0 does not. Print the six absolute µs/call values at the final band too — a fold can be history-proportional and still cheap, and stage 4's gate is about *material* share, not about the exponent alone.
+
+- [ ] **Step 4: Run it and read the result**
 
 ```bash
-cargo build --profile profiling -p hornvale-vessel --example session_length_scaling
+cargo fmt -p hornvale-vessel
+cargo clippy --release -p hornvale-vessel --example session_length_scaling -- -D warnings
+cargo run --release -p hornvale-vessel --example session_length_scaling
 ```
 
-`[profile.profiling]` is declared in the root `Cargo.toml` at line 21 and inherits release with `debug = true`, so symbols survive. `samply` is installed at `/opt/homebrew/bin/samply`.
+Record the six-fold table in your report. Wall time on this box is noisy — read the elasticities and the relative magnitudes, and say so rather than quoting a magnitude as if it were stable.
 
-- [ ] **Step 2: Record the profile**
+- [ ] **Step 5: Write the attribution into the spec and answer stage 4's gate**
 
-Check the flags first rather than guessing:
+Add a subsection to §4, "Attribution across the six folds": the table, and one sentence per fold on whether it carries a material share.
 
-```bash
-samply record --help
-samply record -o /tmp/tailrace.json.gz ./target/profiling/examples/session_length_scaling
-```
-
-- [ ] **Step 3: Attribute the six folds**
-
-Read inclusive time for each fold named in spec §2: `agent_sightings`, `integrate_thirst` (via `drive_at`), `hunger_at`, `fatigue_at`, `believed_water`, `hazard_memory_memo`, `build_emitter_scan`.
-
-**Symbolication caveat, learned on this project:** an inlined function may not appear as its own frame, so **a missing symbol is not a zero measurement.** If a fold is absent from the profile, check whether it was inlined into its caller before concluding it is free. `#[inline(never)]` applied temporarily and reverted is the way to force a frame.
-
-- [ ] **Step 4: Write the attribution into the spec**
-
-Add a subsection to §4, "Attribution across the six folds": a table of fold then inclusive % of the run, and one sentence per fold on whether it carries a material share.
-
-Then answer stage 4's gate explicitly, in the spec, with one of:
-- belief and hazard carry a material share, so **stage 4 is entered**;
+Then answer stage 4's gate explicitly, with one of:
+- `believed_water`/`shared_believed_water`/`hazard_memory_memo` carry a material share, so **stage 4 is entered**;
 - they do not, so **stage 4 is not entered** — and the spec records that migrating them would be unmotivated memory for no measured gain, the same judgement metaplan §6.5 made against its own stage 2.
 
-- [ ] **Step 5: Commit**
+Also record in §4 that the attribution came from **direct timing rather than a profile**, and why: a sampling profile cannot distinguish a fold that was inlined into its caller from one that is free, and a missing symbol is not a zero measurement. Direct timing has a known call count and no symbolication step.
+
+- [ ] **Step 6: Gate and commit**
 
 ```bash
-git add docs/superpowers/specs/2026-08-24-the-tailrace-design.md
-git commit -m "spec(the-tailrace): attribute the history term across the six folds
+cargo fmt
+make gate-commit
+git add windows/vessel/examples/session_length_scaling.rs docs/superpowers/specs/2026-08-24-the-tailrace-design.md
+git commit -m "feat(vessel): attribute the history term across all six folds
 
-Stage 1's remaining deliverable. Section 4 measured that drive_at is
-proportional to its history and that the history term is 70-80% of a
-tick; this says which folds carry it, which is stage 4's entry gate."
+Stage 1's remaining deliverable, and stage 4's entry gate. Extends the
+existing drive_at probe to the other five folds rather than profiling:
+a sampling profile cannot distinguish a fold inlined into its caller from
+one that is free, and a missing symbol is not a zero measurement. Direct
+timing has a known call count and no symbolication step.
+
+hazard_memory_memo gets a FRESH PrimaryAfraidMemo per probe call --
+sharing one across the repetitions would measure the memo's hit rate and
+read as the fold being nearly free."
 ```
+
 
 ---
 
@@ -937,7 +964,7 @@ A merge and a stage gate run the same four phases (`artifacts`, `outboard`, `gat
 
 ## Self-Review
 
-**1. Spec coverage.** §0's re-carve is recorded by Task 6. §1's motivation is Tasks 1–2. §2's six folds are Task 2's attribution; §2's four traps belong to stages 3–5, not here. §3's mechanism and its "why not `Derived`" argument is Task 3's module doc. §3's correctness ladder: rung 1 (type-level — `state()` hands out `&S`, so a read cannot advance what it reads) Task 3; rung 2 (FOLD equals SCAN) Task 3; rung 3 (advance-exactly-once) Task 4; rung 4 (chaos) Task 5; rung 5 (master oracle — the drift check) Task 6 Step 5. §4's limitations note is Task 1. §5's H1 is already met and H2/H3 belong to stage 5, out of scope. §6's stages 1–2 are all six tasks; stages 3–5 are explicitly deferred in Global Constraints. §7's contracts are Task 6 Step 2. §9's decisions 1–2 are Task 6 Step 1; decision 3 ("the trail's provenance is content") belongs to 7c.
+**1. Spec coverage.** §0's re-carve is recorded by Task 6. §1's motivation is Tasks 1–2 (Task 2 by direct timing, not a profile — see its own ruling). §2's six folds are Task 2's attribution; §2's four traps belong to stages 3–5, not here. §3's mechanism and its "why not `Derived`" argument is Task 3's module doc. §3's correctness ladder: rung 1 (type-level — `state()` hands out `&S`, so a read cannot advance what it reads) Task 3; rung 2 (FOLD equals SCAN) Task 3; rung 3 (advance-exactly-once) Task 4; rung 4 (chaos) Task 5; rung 5 (master oracle — the drift check) Task 6 Step 5. §4's limitations note is Task 1. §5's H1 is already met and H2/H3 belong to stage 5, out of scope. §6's stages 1–2 are all six tasks; stages 3–5 are explicitly deferred in Global Constraints. §7's contracts are Task 6 Step 2. §9's decisions 1–2 are Task 6 Step 1; decision 3 ("the trail's provenance is content") belongs to 7c.
 
 **Gap found and closed:** an earlier draft had no task writing a `docs/decisions/` record, so the reserved 0236–0245 block would have gone unused and §9 unsatisfied. Added as Task 6 Step 1, with the `render`-writes-nothing hazard spelled out because a bare `render` leaves the artifact untouched and the drift check then reads as clean.
 
