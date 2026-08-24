@@ -124,6 +124,62 @@ process* rather than in the code it was writing — which is the more
 valuable half of what a gate can do, and the harder half to notice when it
 works.
 
+## `gate-commit`'s documented cost is wrong for this host by about 10x
+
+CLAUDE.md says a `gate-commit` run with no source change costs 10-16 s. On
+`ambrose` the measured **warm floor is 110-155 s**, and the first run in a
+freshly-taken or freshly-absorbed worktree costs 450-700 s. A Task-0 implementer
+flagged a 547 s run it could not explain and honestly declined to guess a cause;
+re-running on the identical tree gave 116 s, which isolated it to cold-cache
+cost rather than to the change under test.
+
+Aggregating `docs/timings.md` (738 `gate-commit` rows) showed the cold/warm pair
+is reproducible across three branches on this host:
+
+```
+  the-scour    454.1  ->  110.3
+  the-leat     239.1  ->  155.6
+  the-forebay  547.7  ->  115.1
+```
+
+Per-host means: ambrose 140.6 s, MacBookPro 96.2 s, lefford 57.5 s.
+
+**`cpu_ratio` says what the warm floor actually is.** Cold runs sit near 2.85 —
+a parallel build. Warm runs sit at **0.71-0.98**, i.e. serial work, and the
+sub-floor tier itself ran 483 tests in 12.0 s inside a 115 s wall. So roughly
+100 s of a warm `gate-commit` here is single-threaded work *ahead of* the tests,
+which no amount of test-scoping can touch — the same reason `gate-fast`'s
+test-scoping only ever bought ~10%.
+
+Two lessons, one of them a trap. First: budget from the ledger, per host, not
+from prose — CLAUDE.md's own guidance about census cost teaches exactly that for
+a different label, and the same discipline was needed here. Second, for whoever
+re-derives it: **`wall_s` is field 4 of `docs/timings.md`, not field 3.** Field 3
+is the label, so a naive `awk -F'|' '{print $3}'` gives every row `0.0` and a
+mean of zero, which looks like a broken ledger rather than a mis-indexed column.
+
+Posted to the board as a `technique` with the aggregation, since the number will
+decay and a board post is where a corrected one can land.
+
+## The merge went in without a stage gate first, deliberately
+
+Nathan chose to submit the merge rather than wait for the queued stage gate to
+report. Recording why that is not a shortcut: a **merge** request runs all six
+chamber phases — including the whole-workspace suite a stage gate runs — and
+pushes only on green, holding the request and leaving `main` untouched
+otherwise. The stage gate's distinct value is that a red costs *milliseconds at
+the mouth* rather than the box; going straight to merge trades that cheapness
+for one queue slot instead of two. With `gate-commit` green, both byte-identity
+goldens passing, a clean post-absorption regeneration and a conflict-free
+`merge-tree` against a current `main`, the residual risk was a phase this branch
+has no plausible way to redden.
+
+What made that judgement worth recording is that the **whole-workspace suite had
+not run anywhere** — `gate-commit` covers only the sub-floor tier, and the local
+wrapper correctly refuses a workspace-wide test invocation, naming the sluice as
+the thing that runs it. So the merge submission is not skipping the full suite;
+it is the first and only place it runs.
+
 ## Deferred, with homes
 
 Every deferred item from this campaign is registered in the idea registry
