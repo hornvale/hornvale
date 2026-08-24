@@ -2915,7 +2915,8 @@ after_n="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
 # commit. The test then passes for a reason that has nothing to do with the
 # behaviour it claims to check. Assert the guard's OWN output, which only the
 # guard can produce.
-still_log="$(ls -t "$tmp/cen-state"/census-*.log 2>/dev/null | head -1)"
+still_log=""
+for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && still_log="$_f"; done
 if [ "$rc_still" = "0" ] && [ "$before_n" = "$after_n" ] \
    && [ -n "$still_log" ] && grep -q 'NO GOLDENS MOVED' "$still_log"; then
     ok "a census that moves nothing reports NO GOLDENS MOVED, exits 0, and pushes no branch"
