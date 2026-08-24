@@ -5022,27 +5022,49 @@ mod tests {
     }
 
     #[test]
-    fn wait_routes_a_clock_overflow_instead_of_panicking() {
+    fn wait_routes_a_construction_failure_instead_of_panicking() {
         // Fix round 1 (The Ell, Task 2 review, Important finding): `wait`
         // validates its PARSED argument (`d.is_finite() && d > 0.0`), but the
         // day it feeds `WorldTime::from_std_days` is an ACCUMULATION
-        // (`self.day.as_std_days() + days`), which can overflow to infinity even when
-        // both operands are individually finite. That used to `.expect()`,
-        // so a long enough possession session (or a single adversarial `wait
-        // 1e308` twice, driven live from `possess`'s stdin) panicked the
-        // whole process instead of failing one verb. `self.day` starts at
-        // `WorldTime::GENESIS` and only this test's own setup pushes it to
-        // `f64::MAX`, so nothing else in the suite depends on the clock
-        // reaching this range.
+        // (`self.day.as_std_days() + days`), so a single adversarial `wait
+        // 1e308` driven live from `possess`'s stdin can build a value
+        // `from_std_days` rejects even though every individual operand it
+        // saw was finite. That used to `.expect()`, so it panicked the
+        // whole process instead of failing one verb.
+        //
+        // The Escapement's Ruling 9 (kernel/src/field.rs) changed WHICH
+        // rejection is reachable here, and this test used to assert on the
+        // wrong one. `from_std_days` now checks the representable tick
+        // range as well as finiteness, and that range is roughly nine
+        // orders of magnitude narrower than f64's own range — so two
+        // constructible `WorldTime`s can never sum to `f64::MAX`, let alone
+        // overflow it to infinity: overflow-to-infinity is no longer
+        // reachable through this accumulation at all. "outside the
+        // representable tick range" is what fires instead, from the exact
+        // same `Err` arm of the exact same `from_std_days` call, so the
+        // invariant this test exists for — a construction failure inside
+        // `wait`'s accumulation routes through `wait`'s own error channel,
+        // never a panic, and never releases the session — is still fully
+        // exercised. Starting from `WorldTime::GENESIS` (day 0.0) and
+        // waiting `f64::MAX` days is now the adversarial case itself,
+        // closer to The Ell's original "a single `wait 1e308`" than the
+        // old setup's hand-built `f64::MAX` starting day, and it needs no
+        // unconstructible state to get there.
         let world = seam_world();
-        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        session.day = WorldTime::from_std_days(f64::MAX).expect("f64::MAX is finite");
+        let (mut session, _) = Session::start(
+            &world,
+            &PossessOpts {
+                day: WorldTime::GENESIS,
+                ..PossessOpts::default()
+            },
+        )
+        .unwrap();
         match session.wait(&f64::MAX.to_string(), Perceiving::Body) {
             Turn::Out(msg) => assert!(
-                msg.contains("finite") || msg.to_lowercase().contains("day"),
-                "expected an error naming the clock overflow, got: {msg}"
+                msg.contains("outside the representable tick range"),
+                "expected an error naming the tick-range rejection, got: {msg}"
             ),
-            Turn::Released(_) => panic!("an overflowing wait must not release the session"),
+            Turn::Released(_) => panic!("a rejected wait must not release the session"),
         }
     }
 
