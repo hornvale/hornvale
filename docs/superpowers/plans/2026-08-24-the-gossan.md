@@ -8,7 +8,10 @@ chemotroph is expressible, changing no number in any world.
 **Architecture:** The mapping is bijective, so the campaign is one axis renamed
 1:1 plus a second axis nothing reads. Two goldens are captured on `main`'s
 behaviour and land GREEN before the type is touched; the split then lands as a
-change to ~100 compiler-found sites that moves zero golden bytes.
+change to 221 compiler-found sites across 34 files in 7 crates, moving zero
+golden bytes. (That figure was first stated as ~100 and corrected under File
+Structure below — the correction is measured, and the reason it was low is
+worth reading before trusting any other count in this plan.)
 
 **Tech Stack:** Rust edition 2024, `cargo nextest`, `hornvale_kernel::golden`'s
 `REBASELINE=1` fixture idiom, `scripts/mutate.py` for the positive controls.
@@ -75,7 +78,43 @@ MODIFY  windows/almanac/src/lib.rs                1 read site
 MODIFY  windows/worldgen/tests/suite/underworld_separation.rs   2 sites
 MODIFY  windows/lab/tests/suite/hearth_population_calibration.rs  1 site
 MODIFY  docs/superpowers/specs/2026-08-24-the-gossan-design.md    C-1 and C-2
+
+MODIFY  windows/vessel/src/body.rs                THE THIRD STRUCT CARRIER
+MODIFY  windows/hearsay/**                        11 files, an ENTIRE CRATE
+MODIFY  windows/worldgen/src/{descent,lib,person_promote}.rs
+MODIFY  windows/worldgen/tests/suite/{delver_readout,descent_graph,waterline_probe}.rs
+MODIFY  windows/lab/src/metrics.rs
 ```
+
+**THE LIST ABOVE WAS WRONG AND LOW, AND THE CORRECTION IS MEASURED.** The plan
+first named 12 files. Grepped 2026-08-24 against the real tree:
+
+```
+221  occurrences of `metabolic_class` / `MetabolicClass`
+ 34  files
+  7  crates   domains/species + windows/{almanac,hearsay,lab,sentiment,vessel,worldgen}
+  3  struct carriers of the field, not 2:
+       domains/species/src/lib.rs:3138   BiosphereTraits
+       windows/sentiment/src/lib.rs:66   PeopleTraits
+       windows/vessel/src/body.rs:55     <- never previously found
+ 80  construction sites spelled `metabolic_class: MetabolicClass::X,`
+  3  exhaustive match arms
+```
+
+**Why the first figure was low, because the same mistake is easy to repeat.**
+The blast-radius probe applied the field split, reported "14 errors remaining
+in 5 files", and stopped. Those 14 were the FIRST WAVE: a compile error in an
+early crate means every downstream crate is never checked at all, so the error
+list was a floor read as a total. **A `cargo check` that fails early has
+enumerated nothing.** The separate probe that added a fifth *variant* did run
+to a clean workspace, which is why its "3 match arms" figure is trustworthy
+and the field-split figure was not.
+
+**"Every one compiler-found" still holds**, and that claim was re-verified
+rather than carried over: every site is a named use of a named type or field,
+there is no `serde` on any of the three carriers, and no macro constructs
+them — so renaming both the field and the type guarantees the compiler flags
+every use. Only the COUNT was wrong.
 
 ---
 

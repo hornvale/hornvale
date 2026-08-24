@@ -27,17 +27,46 @@ bijective, and no number moves.**
 Measured by stubbing the change and running `cargo check --workspace
 --all-targets` on `5ccde4bb1`:
 
+**CORRECTED 2026-08-24, and the first figure was low.** What this section
+originally reported:
+
 ```
-81  construction sites   9 files   scripted in one pass
-14  read sites           5 files   `.metabolic_class` accessors
- 3  exhaustive matches   2 files   allometry x2, liveness x1
- 1  projection struct    windows/sentiment's PeopleTraits copies the field
+81  construction sites   9 files
+14  read sites           5 files
+ 3  exhaustive matches   2 files
+ 1  projection struct
 ```
+
+The read-site count was a floor read as a total. The probe applied the field
+split, saw "14 errors in 5 files", and stopped — but a compile error in an
+early crate means every downstream crate is never checked, so the list was the
+first wave. **A `cargo check` that fails early has enumerated nothing.**
+Re-measured by grep, which cannot fail early:
+
+```
+221  occurrences of `metabolic_class` / `MetabolicClass`
+ 34  files
+  7  crates   domains/species + windows/{almanac,hearsay,lab,sentiment,vessel,worldgen}
+  3  struct carriers, not 2 — BiosphereTraits, PeopleTraits, and
+       `windows/vessel/src/body.rs:55`, which the first pass never found
+ 80  construction sites spelled `metabolic_class: MetabolicClass::X,`
+  3  exhaustive match arms
+```
+
+`windows/hearsay` is an entire crate — eleven files — that this spec did not
+previously mention at all. The 3-match-arm figure stands: it came from the
+fifth-variant probe, which DID run to a clean workspace.
 
 The figure in circulation was 94, from `BIO-chemotrophy`'s "widening that enum
 makes every reader a blast radius". That 94 was 94 *uses of the `Endotherm`
 value*, nearly all in a Rust-authored kind table and in test fixtures. Those
-do not break.
+do not break — but the real total is larger than either number, as above.
+
+**"Every one compiler-found" survives the correction, and was re-verified
+rather than carried over:** every site is a named use of a named type or
+field, no `serde` derive exists on any of the three carriers, and no macro
+constructs them. Renaming the field and the type therefore makes the compiler
+enumerate every use. Only the count was wrong, never the method.
 
 ### 3.2 No save-format consequence
 

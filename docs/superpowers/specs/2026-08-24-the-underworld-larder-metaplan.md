@@ -62,10 +62,19 @@ and the figure in circulation was 94 sites. Measured by stubbing the change and
 running `cargo check --workspace --all-targets`:
 
 ```
-adding a fifth variant           3 exhaustive match arms
-splitting into two fields       81 construction sites, 14 read sites,
-                                 1 projection struct  (~100, all compiler-found)
+adding a fifth variant           3 exhaustive match arms   (probe ran to a
+                                 CLEAN workspace — this figure is sound)
+splitting into two fields      221 occurrences, 34 files, 7 crates,
+                                 3 struct carriers, 80 construction sites
+                                 (all compiler-found)
 ```
+
+**The second row was first reported as "~100, all compiler-found" and that was
+low.** The probe stopped at "14 errors in 5 files", which was the first wave —
+a compile error in an early crate means every downstream crate is never
+checked at all. Re-measured by grep, which cannot fail early. The
+compiler-found property still holds (no serde on the carriers, no macro
+construction); only the count was wrong.
 
 The 94 was 94 *uses of the `Endotherm` value*, nearly all in a Rust-authored
 kind table and in test fixtures. Those do not break. `MetabolicClass` derives
