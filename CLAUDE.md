@@ -272,6 +272,33 @@ make doctor        # the repo self-map — run this first in a fresh session
 # runs that set's own command from `scripts/lane-sets.tsv` directly, which is
 # what "one session managing one machine" means in practice.
 #
+#   make sluice-census BRANCH=<requester> REF=<full-sha>  # A CENSUS, QUEUED
+#
+# THE THIRD KIND (2026-08-24). A census takes the same serial claim every
+# chamber job takes, but until now it was INVISIBLE to the queue that claim
+# exists to order — it simply grabbed the lock. Measured: a merge queued at
+# 11:30:37Z waited ~19 minutes because an unqueued census took the box at
+# 11:50:14Z, turning ~600 s of work into 1913 s. `kind=census` puts it under
+# the same FIFO as everything else.
+#
+# IT IS NOT RUN BY sluice-run.sh, and cannot be. `census-run.sh` takes the
+# shared flock ITSELF and `rm -f`s the claim file on exit, so nesting it inside
+# a job already holding the claim would clobber and then delete that job's own
+# claim mid-run — which is why sluice-run.sh has always refused `census` as a
+# phase. `scripts/sluice-census.sh` runs it instead; the queue row is for
+# ORDERING, not dispatch.
+#
+# IT NEVER PUSHES main, and the restraint is deliberate rather than a
+# limitation. The pre-push hook would ALLOW it — a census holds the canonical
+# box's live claim, the one thing that hook checks (0139) — so nothing in the
+# substrate stops it. But census goldens are what the calibration batteries
+# ASSERT AGAINST: landing them un-gated moves the reference without anything
+# checking the world still agrees with it. So it commits the regenerated
+# goldens, pushes a `census/<ref>-<stamp>` BRANCH, and prints the `make sluice`
+# line to submit it. CLAUDE.md's standing rule that committing a moved column
+# is a deliberate human act is intact; it is just no longer manual labour.
+# A run that moves nothing pushes no branch and says so — a null is a result.
+#
 #   make sluice-ack REASON='...'         # adjudicate an out-of-band landing (see below)
 #   make sluice-status                   # what is queued, running, held, landed, reported
 #   make sluice-log [JOB=<id>]           # read a finished chamber job back
