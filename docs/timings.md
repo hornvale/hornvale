@@ -2358,3 +2358,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T00:08:07Z | sluice:clients | 383.207 | 3450.336 | 46.161 | 9.12 | 0 | 91dc00fbc |  | lefford | 40 |
 | 2026-08-24T01:44:12Z | gate-commit | 73.043 | 208.456 | 54.890 | 3.61 | 0 | 2157300d9 | perf/world-plate-memo | MacBookPro | 10 |
 | 2026-08-24T01:45:03Z | gate-commit | 19.473 | 46.688 | 11.815 | 3.00 | 0 | 2157300d9 | perf/world-plate-memo | MacBookPro | 10 |
+| 2026-08-24T02:59:18Z | gate-commit | 75.596 | 581.278 | 108.215 | 9.12 | 0 | 71a1d9e99 | fix/seam-guard-ignores-untracked | lefford | 40 |
+| 2026-08-24T03:00:16Z | gate-commit | 38.453 | 127.539 | 47.486 | 4.55 | 0 | 71a1d9e99 | fix/seam-guard-ignores-untracked | lefford | 40 |
+| 2026-08-24T03:02:57Z | gate-commit | 36.946 | 121.960 | 47.469 | 4.59 | 0 | 2157300d9 | fix/seam-guard-ignores-untracked | lefford | 40 |
+| 2026-08-24T03:05:17Z | sluice:artifacts | 61.035 | 542.520 | 23.501 | 9.27 | 0 | 26f12a54a |  | lefford | 40 |
+| 2026-08-24T03:05:57Z | sluice:outboard | 39.964 | 27.209 | 39.494 | 1.67 | 0 | b3655ae13 |  | lefford | 40 |
+| 2026-08-24T03:12:02Z | sluice:gate | 364.738 | 10263.819 | 350.851 | 29.10 | 0 | 89bbfb7c1 |  | lefford | 40 |
+| 2026-08-24T03:18:02Z | sluice:clients | 359.065 | 3384.581 | 33.587 | 9.52 | 0 | bb6da9248 |  | lefford | 40 |

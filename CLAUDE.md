@@ -499,10 +499,24 @@ cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # na
 # artifact was right the whole time and the prose beside it rotted. A verdict
 # is a fact with a timestamp and this file has no way to keep one fresh, so it
 # no longer states one — **run `make seam-guard` and read its output; that is
-# the only current answer, and it needs a CLEAN working tree** (it refuses on
-# a dirty one, including a merely TRACKED modification, and that refusal exits
-# non-zero in a way that reads like "found survivors" rather than "your tree
-# is dirty").
+# the only current answer, and it needs no uncommitted changes to TRACKED
+# files** — a modification or a staged addition refuses, and that refusal exits
+# non-zero in a way that reads like "found survivors" rather than "your tree is
+# dirty".
+#
+# UNTRACKED FILES NO LONGER REFUSE IT, AND THEY USED TO. `tree_is_clean` ran a
+# bare `git status --porcelain` and required the output EMPTY, so a single
+# stray untracked directory blocked the entire run — which is what happened on
+# 2026-08-23, to another tool's 619 KB of day-old state sitting in the
+# checkout. That was stricter than the rationale the check itself cites
+# (recovery from an interruption is always `git checkout -- <file>`, which is a
+# claim about the TRACKED files it rewrites in place; untracked files play no
+# part in it). It matters because 0148 leaves this tool running ONLY when a
+# human types it, and a tool that refuses on the first attempt for a reason
+# unrelated to its own job is a tool people stop typing — silently, since the
+# committed roster still lists every registration and reads healthy. Now
+# `--untracked-files=no`, with tests pinning BOTH directions: untracked is
+# ignored, a tracked edit or a staged addition still refuses.
 #
 # No `expect(survives: …)` declaration exists anywhere in the tree, so a
 # survivor at any site would fail the run. The declaration mechanism stays
