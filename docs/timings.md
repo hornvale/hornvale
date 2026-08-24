@@ -2605,3 +2605,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-24T20:43:48Z | game-check | 401.982 | 2192.470 | 27.007 | 5.52 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T20:44:21Z | gate-commit | 19.884 | 47.420 | 12.162 | 3.00 | 0 | 1bf250dbe | campaign/the-lexicon-of-place | MacBookPro | 10 |
 | 2026-08-24T21:10:23Z | rebaseline | 57.868 | 242.100 | 11.589 | 4.38 | 0 | bb1163cda | campaign/the-lexicon-of-place | MacBookPro | 10 |
+| 2026-08-24T21:30:34Z | gate-commit | 43.531 | 78.005 | 55.835 | 3.07 | 0 | 2cd6f5e79 | campaign/the-lexicon-of-place | MacBookPro | 10 |
