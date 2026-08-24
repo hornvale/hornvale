@@ -1993,7 +1993,29 @@ fn name_collision_rate_is_measured_and_pinned() {
         // carries no directional claim (H4 already failed and is recorded as
         // such above), and the rate stays inside the range decision 0024
         // sanctions (see the note above).
-        (mean - 0.508_151_833_319_999).abs() < 1e-6,
+        //
+        // The Escapement's re-pin (2026-08-23, canonical census on lefford):
+        // the mover is `3bc4fd871`, this campaign's fix to
+        // `Calendar::local_day`'s day-fraction — the old formula returned a
+        // *negative* fraction for a negative local day, which put a local
+        // day's start after its own sample. `domains/astronomy/src/
+        // heliacal.rs` reaches that path directly, since its `year_start` is
+        // negative at genesis for essentially every world; an instrumented
+        // build recorded 1,293,003 divergences in one seed-267 world alone,
+        // every one at `local < 0`. This is NOT the `WorldTime`
+        // representation flip landed earlier in the same campaign, which
+        // moved zero census cells — bisected across the 701 commits since
+        // the previous refresh. The corrected fraction changes which
+        // heliacal events a scan finds, which changes the phenomena list, a
+        // settlement's presiding concept, and its gloss and name. Only two
+        // cells move in this metric (seed 267: 193/388 -> 191/388; seed 831:
+        // 0.43521595 -> 0.42857143), so zero/nonzero/absent are unmoved at
+        // 0/1000/0 (checked, not assumed). Mean:
+        // 0.508_151_833_319_999 -> 0.508_140_034_159_999. This row still
+        // carries no directional claim (H4 already failed and is recorded as
+        // such above), and the rate stays inside the range decision 0024
+        // sanctions (see the note above).
+        (mean - 0.508_140_034_159_999).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2566,6 +2588,9 @@ fn name_syllable_distributions_are_measured_and_pinned() {
     }
 }
 
+/// claim: rate(census: name-transparency, all 1000 rows) — the share is pinned
+/// exactly at its census mean, every world's reading is a share in [0, 1], and
+/// the column stays a DISTRIBUTION rather than settling back to a uniform 1.0
 #[test]
 fn name_transparency_is_measured_and_pinned() {
     // NEW ROW — The Wearing (2026-07-28; lefford regen f32d6ce2, 0063). The
@@ -2739,7 +2764,20 @@ fn name_transparency_is_measured_and_pinned() {
         // mean 0.706_817_471_809_999 -> 0.714_474_321_670_000. Still
         // emphatically NOT 1.0 — the claim this row exists to guard —
         // re-checked rather than assumed.
-        (mean - 0.714_474_321_670_000).abs() < 1e-9,
+        //
+        // The Escapement's re-pin (2026-08-23, canonical census on lefford):
+        // same mover as the name-collision-rate re-pin above —
+        // `3bc4fd871`'s fix to `Calendar::local_day`'s day-fraction, which
+        // was returning a negative fraction for a negative local day
+        // (`domains/astronomy/src/heliacal.rs` reaches that path directly at
+        // genesis for essentially every world). Only seed 267 moves in this
+        // metric (106/118 -> 107/118); present/absent are unmoved at
+        // 1000/0. Mean: 0.714_474_321_670_000 -> 0.714_482_796_250_000.
+        // Still emphatically NOT 1.0 — the claim this row exists to guard —
+        // re-checked rather than assumed. Min and max are unmoved at
+        // 0.300_000_0 and 0.971_204_19 (checked directly against the
+        // committed census, not assumed).
+        (mean - 0.714_482_796_250_000).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827

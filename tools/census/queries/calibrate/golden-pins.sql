@@ -621,7 +621,10 @@ checks AS (
   -- The Underworld resync, 0063/0079: 0.50869314782 -> 0.507408222281.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 0.507408222281 -> 0.5081518333199995.
-         collision_mean, 0.5081518333199995, abs(collision_mean - 0.5081518333199995) < 1e-6 FROM agg
+  -- The Escapement resync (3bc4fd871's Calendar::local_day day-fraction
+  -- fix, not the WorldTime representation flip): 0.5081518333199995 ->
+  -- 0.5081400341599994.
+         collision_mean, 0.5081400341599994, abs(collision_mean - 0.5081400341599994) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -900,7 +903,9 @@ checks AS (
   -- The Underworld resync, 0063/0079: 0.7039082305 -> 0.70681747181.
   -- The Burr resync (ROOT_EPOCH v4, census committed as 635d116d):
   -- 0.70681747181 -> 0.7144743216700004.
-         transparency_mean, 0.7144743216700004, abs(transparency_mean - 0.7144743216700004) < 1e-6 FROM agg
+  -- The Escapement resync (same mover as the name-collision-rate pin above):
+  -- 0.7144743216700004 -> 0.7144827962500003.
+         transparency_mean, 0.7144827962500003, abs(transparency_mean - 0.7144827962500003) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
