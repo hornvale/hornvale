@@ -254,7 +254,7 @@ closed-canopy: root Noaba /noaba/
 coast: compound earth+water -> Bobeqa /bobeqa/
 cold: gap (experiential): hobgoblin has no exposure to 'cold'
 cold-upwelling: gap (experiential): hobgoblin has no exposure to 'cold-upwelling'
-content: gap (experiential): hobgoblin has no exposure to 'content'
+content: root Nooqo /nooqo/
 coral-head: gap (experiential): hobgoblin has no exposure to 'coral-head'
 coral-reef: root Nae /nae/
 crevasse-field: gap (experiential): hobgoblin has no exposure to 'crevasse-field'
@@ -284,7 +284,7 @@ foot: root Ke /ke/
 ford: root Naabee /naabee/
 forest-gap: root Goa /goa/
 frost-heave: gap (experiential): hobgoblin has no exposure to 'frost-heave'
-frustrated: gap (experiential): hobgoblin has no exposure to 'frustrated'
+frustrated: root Qoneo /qoneo/
 gallery-forest: root Takee /takee/
 giant-constrictor-snake-kind: gap (experiential): hobgoblin has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): hobgoblin has no exposure to 'giant-crocodile-kind'
@@ -499,7 +499,7 @@ die: root Do /do/
 dire-wolf-kind: gap (experiential): bugbear has no exposure to 'dire-wolf-kind'
 drink: root Qoogo /qoogo/
 drow-kind: root Godoa /godoa/
-eager: gap (experiential): bugbear has no exposure to 'eager'
+eager: root Dodo /dodo/
 earth: root Bodo /bodo/
 east: root Baodao /baodao/
 eat: root Doadoo /doadoo/
@@ -515,7 +515,7 @@ foot: root Go /go/
 ford: root Daadoo /daadoo/
 forest-gap: root Goa /goa/
 frost-heave: gap (experiential): bugbear has no exposure to 'frost-heave'
-frustrated: gap (experiential): bugbear has no exposure to 'frustrated'
+frustrated: root Qodoo /qodoo/
 gallery-forest: root Dagoo /dagoo/
 giant-constrictor-snake-kind: gap (experiential): bugbear has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): bugbear has no exposure to 'giant-crocodile-kind'
@@ -625,7 +625,7 @@ scoured-ice: gap (experiential): bugbear has no exposure to 'scoured-ice'
 sea: compound many+water -> Daodaqa /daodaqa/
 sea-elf-kind: root Bo /bo/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
-searching: gap (experiential): bugbear has no exposure to 'searching'
+searching: root Godoa /godoa/
 sense: gap (experiential): bugbear has no exposure to 'sense'
 shadow: root Dado /dado/
 shrieker-kind: gap (experiential): bugbear has no exposure to 'shrieker-kind'
@@ -716,7 +716,7 @@ closed-canopy: gap (experiential): kobold has no exposure to 'closed-canopy'
 coast: gap (experiential): kobold has no exposure to 'coast'
 cold: gap (experiential): kobold has no exposure to 'cold'
 cold-upwelling: gap (experiential): kobold has no exposure to 'cold-upwelling'
-content: gap (experiential): kobold has no exposure to 'content'
+content: root Raroaxaa /raroaxaa/
 coral-head: gap (experiential): kobold has no exposure to 'coral-head'
 coral-reef: gap (experiential): no settlement in or beside coral-reef
 crevasse-field: gap (experiential): kobold has no exposure to 'crevasse-field'
@@ -746,7 +746,7 @@ foot: root Xoxo /xoxo/
 ford: root Roroaraa /roroaraa/
 forest-gap: root Roaroaro /roaroaro/
 frost-heave: gap (experiential): kobold has no exposure to 'frost-heave'
-frustrated: gap (experiential): kobold has no exposure to 'frustrated'
+frustrated: root Roxoxao /roxoxao/
 gallery-forest: gap (experiential): kobold has no exposure to 'gallery-forest'
 giant-constrictor-snake-kind: gap (experiential): kobold has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): kobold has no exposure to 'giant-crocodile-kind'
@@ -770,7 +770,7 @@ hand: root Raarao /raarao/
 hearth: root Xoaro /xoaro/
 heat: gap (experiential): kobold has no exposure to 'heat'
 help: gap (extradiegetic): help is an operator instrument; it has no referent in the world
-helpless: gap (experiential): kobold has no exposure to 'helpless'
+helpless: root Xaroro /xaroro/
 high: root Roxaaxo /roxaaxo/
 high-elf-kind: root Roaxora /roaxora/
 hill: root Raraaroa /raraaroa/
@@ -961,7 +961,7 @@ die: root Smoxzmaap /smoxzmaap/
 dire-wolf-kind: gap (experiential): gnoll has no exposure to 'dire-wolf-kind'
 drink: root Zhmax /ʒmax/
 drow-kind: root Dsoopdshoov /dsoopdʃoov/
-eager: gap (experiential): gnoll has no exposure to 'eager'
+eager: root Zhngopsnaav /ʒŋopsnaav/
 earth: root Pzhaaznoa /pʒaaznoa/
 east: root Shmaaxgzaav /ʃmaaxgzaav/
 eat: root Shngaosmoa /ʃŋaosmoa/
@@ -977,7 +977,7 @@ foot: root Snao /snao/
 ford: root Dzoxgzhop /dzoxgʒop/
 forest-gap: gap (experiential): gnoll has no exposure to 'forest-gap'
 frost-heave: gap (experiential): gnoll has no exposure to 'frost-heave'
-frustrated: gap (experiential): gnoll has no exposure to 'frustrated'
+frustrated: root Gzaxdzov /gzaxdzov/
 gallery-forest: gap (experiential): gnoll has no exposure to 'gallery-forest'
 giant-constrictor-snake-kind: gap (experiential): gnoll has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): gnoll has no exposure to 'giant-crocodile-kind'
@@ -1087,7 +1087,7 @@ scoured-ice: gap (experiential): gnoll has no exposure to 'scoured-ice'
 sea: compound many+water -> Qsooxpshaozhmosnaap /qsooxpʃaoʒmosnaap/
 sea-elf-kind: root Psop /psop/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
-searching: gap (experiential): gnoll has no exposure to 'searching'
+searching: root Snoox /snoox/
 sense: gap (experiential): gnoll has no exposure to 'sense'
 shadow: root Qzaagsao /qzaagsao/
 shrieker-kind: gap (experiential): gnoll has no exposure to 'shrieker-kind'
@@ -1178,7 +1178,7 @@ closed-canopy: gap (experiential): human has no exposure to 'closed-canopy'
 coast: compound earth+water -> Teatxaoxatvao /teatxaoxatvao/
 cold: gap (experiential): human has no exposure to 'cold'
 cold-upwelling: gap (experiential): human has no exposure to 'cold-upwelling'
-content: gap (experiential): human has no exposure to 'content'
+content: root Retao /retao/
 coral-head: gap (experiential): human has no exposure to 'coral-head'
 coral-reef: gap (experiential): no settlement in or beside coral-reef
 crevasse-field: gap (experiential): human has no exposure to 'crevasse-field'
@@ -1232,7 +1232,7 @@ hand: root Tea /tea/
 hearth: root Goo /goo/
 heat: gap (experiential): human has no exposure to 'heat'
 help: gap (extradiegetic): help is an operator instrument; it has no referent in the world
-helpless: gap (experiential): human has no exposure to 'helpless'
+helpless: root Roga /roga/
 high: root Foa /foa/
 high-elf-kind: root Geagxa /geagxa/
 hill: gap (experiential): human has no exposure to 'hill'
@@ -1409,7 +1409,7 @@ closed-canopy: gap (experiential): desert-dwarf has no exposure to 'closed-canop
 coast: compound earth+water -> Xanapdavag /xanapdavag/
 cold: gap (experiential): desert-dwarf has no exposure to 'cold'
 cold-upwelling: gap (experiential): desert-dwarf has no exposure to 'cold-upwelling'
-content: gap (experiential): desert-dwarf has no exposure to 'content'
+content: root Dapad /dapad/
 coral-head: gap (experiential): desert-dwarf has no exposure to 'coral-head'
 coral-reef: gap (experiential): no settlement in or beside coral-reef
 crevasse-field: gap (experiential): desert-dwarf has no exposure to 'crevasse-field'
@@ -1463,7 +1463,7 @@ hand: root Javas /javas/
 hearth: root Xadad /xadad/
 heat: gap (experiential): desert-dwarf has no exposure to 'heat'
 help: gap (extradiegetic): help is an operator instrument; it has no referent in the world
-helpless: gap (experiential): desert-dwarf has no exposure to 'helpless'
+helpless: root Qagash /qagaʃ/
 high: root Nganas /ŋanas/
 high-elf-kind: root Qaxav /qaxav/
 hill: gap (experiential): desert-dwarf has no exposure to 'hill'
@@ -1489,7 +1489,7 @@ light: root Pangas /paŋas/
 lightless-water: gap (experiential): desert-dwarf has no exposure to 'lightless-water'
 little: root Danag /danag/
 look: gap (experiential): desert-dwarf has no exposure to 'look'
-lost: gap (experiential): desert-dwarf has no exposure to 'lost'
+lost: root Jasap /jasap/
 low: root Xasash /xasaʃ/
 many: root Dangang /daŋaŋ/
 marine-snow: gap (experiential): desert-dwarf has no exposure to 'marine-snow'
@@ -1654,7 +1654,7 @@ die: root Jatan /jatan/
 dire-wolf-kind: gap (experiential): gully-dwarf has no exposure to 'dire-wolf-kind'
 drink: root Nangaj /naŋaj/
 drow-kind: root Shaban /ʃaban/
-eager: gap (experiential): gully-dwarf has no exposure to 'eager'
+eager: root Naxab /naxab/
 earth: root Nabag /nabag/
 east: root Gashagab /gaʃagab/
 eat: root Shabang /ʃabaŋ/
@@ -1694,7 +1694,7 @@ hand: root Jabat /jabat/
 hearth: root Xabat /xabat/
 heat: gap (experiential): gully-dwarf has no exposure to 'heat'
 help: gap (extradiegetic): help is an operator instrument; it has no referent in the world
-helpless: gap (experiential): gully-dwarf has no exposure to 'helpless'
+helpless: root Qagash /qagaʃ/
 high: root Nganat /ŋanat/
 high-elf-kind: root Qaxab /qaxab/
 hill: gap (experiential): gully-dwarf has no exposure to 'hill'
@@ -1720,7 +1720,7 @@ light: root Bangat /baŋat/
 lightless-water: gap (experiential): gully-dwarf has no exposure to 'lightless-water'
 little: root Banag /banag/
 look: gap (experiential): gully-dwarf has no exposure to 'look'
-lost: gap (experiential): gully-dwarf has no exposure to 'lost'
+lost: root Jatab /jatab/
 low: root Xatash /xataʃ/
 many: root Bangang /baŋaŋ/
 marine-snow: gap (experiential): gully-dwarf has no exposure to 'marine-snow'
@@ -1871,7 +1871,7 @@ closed-canopy: root Basag /basag/
 coast: compound earth+water -> Xamabsavag /xamabsavag/
 cold: gap (experiential): hill-dwarf has no exposure to 'cold'
 cold-upwelling: gap (experiential): hill-dwarf has no exposure to 'cold-upwelling'
-content: gap (experiential): hill-dwarf has no exposure to 'content'
+content: root Tabat /tabat/
 coral-head: gap (experiential): hill-dwarf has no exposure to 'coral-head'
 coral-reef: gap (experiential): no compound recipe for 'coral-reef'
 crevasse-field: gap (experiential): hill-dwarf has no exposure to 'crevasse-field'
@@ -1901,7 +1901,7 @@ foot: root Masax /masax/
 ford: root Shaxas /ʃaxas/
 forest-gap: root Sabax /sabax/
 frost-heave: gap (experiential): hill-dwarf has no exposure to 'frost-heave'
-frustrated: gap (experiential): hill-dwarf has no exposure to 'frustrated'
+frustrated: root Sasax /sasax/
 gallery-forest: gap (experiential): hill-dwarf has no exposure to 'gallery-forest'
 giant-constrictor-snake-kind: gap (experiential): hill-dwarf has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): hill-dwarf has no exposure to 'giant-crocodile-kind'
@@ -1925,7 +1925,7 @@ hand: root Javas /javas/
 hearth: root Xabat /xabat/
 heat: gap (experiential): hill-dwarf has no exposure to 'heat'
 help: gap (extradiegetic): help is an operator instrument; it has no referent in the world
-helpless: gap (experiential): hill-dwarf has no exposure to 'helpless'
+helpless: root Qagash /qagaʃ/
 high: root Ngamas /ŋamas/
 high-elf-kind: root Qaxav /qaxav/
 hill: gap (experiential): hill-dwarf has no exposure to 'hill'
