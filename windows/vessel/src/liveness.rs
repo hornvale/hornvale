@@ -8294,6 +8294,15 @@ mod tests {
         // Autotroph flat; an unreadable cell couples as neutral.
         assert!((rise_at(80.0, Autotroph, &p) - base).abs() < 1e-12);
         assert!((rise_at(f64::INFINITY, Endotherm, &p) - base).abs() < 1e-12);
+        // Ametabolic flat, in BOTH directions. `rise_at` never reaches here in
+        // production (a construct has no thirst drive) and the arm is kept
+        // total; asserting it anyway is what makes this test an instrument for
+        // THE GOSSAN, which needs every thermal branch pinned before the type
+        // splits. Autotroph and Ametabolic share this arm today, and that is
+        // exactly the grouping `basal_metabolic_rate_w` does NOT use — the
+        // disagreement `ThermalStrategy::Unmodelled` exists to express.
+        assert!((rise_at(80.0, Ametabolic, &p) - base).abs() < 1e-12);
+        assert!((rise_at(-100.0, Ametabolic, &p) - base).abs() < 1e-12);
     }
 
     #[test]
